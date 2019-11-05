@@ -26,7 +26,7 @@ import org.neo4j.kernel.impl.store.record.NodeRecord;
 import org.neo4j.kernel.impl.transaction.SimpleLogVersionRepository;
 import org.neo4j.kernel.impl.transaction.SimpleTransactionIdStore;
 import org.neo4j.kernel.impl.transaction.TransactionRepresentation;
-import org.neo4j.kernel.impl.transaction.log.FlushablePositionAwareChannel;
+import org.neo4j.kernel.impl.transaction.log.FlushablePositionAwareChecksumChannel;
 import org.neo4j.kernel.impl.transaction.log.LogPosition;
 import org.neo4j.kernel.impl.transaction.log.LogPositionMarker;
 import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionRepresentation;
@@ -56,6 +56,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.storageengine.api.LogVersionRepository.BASE_TX_LOG_VERSION;
+import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_CHECKSUM;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_ID;
 
 @Neo4jLayoutExtension
@@ -73,7 +74,7 @@ class TransactionLogAnalyzerTest
     @Inject
     private RandomRule random;
     private LogFile logFile;
-    private FlushablePositionAwareChannel writer;
+    private FlushablePositionAwareChecksumChannel writer;
     private TransactionLogWriter transactionLogWriter;
     private AtomicLong lastCommittedTxId;
     private VerifyingMonitor monitor;
@@ -253,10 +254,11 @@ class TransactionLogAnalyzerTest
 
     private void writeTransactions( int count ) throws IOException
     {
+        int previousChecksum = BASE_TX_CHECKSUM;
         for ( int i = 0; i < count; i++ )
         {
             long id = lastCommittedTxId.incrementAndGet();
-            transactionLogWriter.append( tx( id ), id );
+            previousChecksum = transactionLogWriter.append( tx( id ), id, previousChecksum );
         }
         writer.prepareForFlush().flush();
     }
@@ -267,7 +269,7 @@ class TransactionLogAnalyzerTest
         commands.add( new Command.NodeCommand( new NodeRecord( nodeId ), new NodeRecord( nodeId )
                 .initialize( true, nodeId, false, nodeId, 0 ) ) );
         PhysicalTransactionRepresentation tx = new PhysicalTransactionRepresentation( commands );
-        tx.setHeader( new byte[0], 0, 0, 0, 0, 0, 0 );
+        tx.setHeader( new byte[0], 0, 0, 0, 0 );
         return tx;
     }
 

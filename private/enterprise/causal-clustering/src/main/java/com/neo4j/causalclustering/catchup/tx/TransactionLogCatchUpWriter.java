@@ -17,7 +17,7 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
 import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
-import org.neo4j.kernel.impl.transaction.log.FlushablePositionAwareChannel;
+import org.neo4j.kernel.impl.transaction.log.FlushablePositionAwareChecksumChannel;
 import org.neo4j.kernel.impl.transaction.log.LogPosition;
 import org.neo4j.kernel.impl.transaction.log.LogPositionMarker;
 import org.neo4j.kernel.impl.transaction.log.TransactionLogWriter;
@@ -51,7 +51,7 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
     private final DatabasePageCache databasePageCache;
     private final boolean rotateTransactionsManually;
     private final LongRange validInitialTxId;
-    private final FlushablePositionAwareChannel logChannel;
+    private final FlushablePositionAwareChecksumChannel logChannel;
     private final LogPositionMarker logPositionMarker = new LogPositionMarker();
 
     private long lastTxId = -1;
@@ -137,7 +137,7 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
         try
         {
             logChannel.getCurrentPosition( logPositionMarker );
-            writer.append( tx.getTransactionRepresentation(), lastTxId );
+            writer.append( tx.getTransactionRepresentation(), lastTxId, tx.getStartEntry().getPreviousChecksum() );
         }
         catch ( IOException e )
         {

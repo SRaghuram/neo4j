@@ -22,8 +22,6 @@ import org.neo4j.function.Predicates;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.kernel.api.net.NetworkConnectionTracker;
-import org.neo4j.kernel.impl.api.TransactionHeaderInformation;
-import org.neo4j.kernel.impl.transaction.TransactionHeaderInformationFactory;
 import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFilesHelper;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.monitoring.Monitors;
@@ -42,16 +40,9 @@ public abstract class ClusteringEditionModule extends AbstractEditionModule
     {
         ioLimiter = new ConfigurableIOLimiter( globalModule.getGlobalConfig() );
 
-        headerInformationFactory = createHeaderInformationFactory();
-
         constraintSemantics = new EnterpriseConstraintSemantics();
 
         connectionTracker = dependencies.satisfyDependency( createConnectionTracker() );
-    }
-
-    private static TransactionHeaderInformationFactory createHeaderInformationFactory()
-    {
-        return () -> new TransactionHeaderInformation( -1, -1, new byte[0] );
     }
 
     @Override

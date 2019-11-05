@@ -7,12 +7,12 @@ package com.neo4j.causalclustering.messaging;
 
 import io.netty.buffer.ByteBuf;
 
-import org.neo4j.io.fs.WritableChannel;
+import org.neo4j.io.fs.WritableChecksumChannel;
 
 import static java.lang.String.format;
 import static org.neo4j.io.ByteUnit.mebiBytes;
 
-public class BoundedNetworkWritableChannel implements WritableChannel, ByteBufBacked
+public class BoundedNetworkWritableChannel implements WritableChecksumChannel, ByteBufBacked
 {
     /**
      * This implementation puts an upper limit to the size of the state serialized in the buffer. The default
@@ -39,7 +39,7 @@ public class BoundedNetworkWritableChannel implements WritableChannel, ByteBufBa
     }
 
     @Override
-    public WritableChannel put( byte value ) throws MessageTooBigException
+    public WritableChecksumChannel put( byte value ) throws MessageTooBigException
     {
         checkSize( Byte.BYTES );
         delegate.writeByte( value );
@@ -47,7 +47,7 @@ public class BoundedNetworkWritableChannel implements WritableChannel, ByteBufBa
     }
 
     @Override
-    public WritableChannel putShort( short value ) throws MessageTooBigException
+    public WritableChecksumChannel putShort( short value ) throws MessageTooBigException
     {
         checkSize( Short.BYTES );
         delegate.writeShort( value );
@@ -55,7 +55,7 @@ public class BoundedNetworkWritableChannel implements WritableChannel, ByteBufBa
     }
 
     @Override
-    public WritableChannel putInt( int value ) throws MessageTooBigException
+    public WritableChecksumChannel putInt( int value ) throws MessageTooBigException
     {
         checkSize( Integer.BYTES );
         delegate.writeInt( value );
@@ -63,7 +63,7 @@ public class BoundedNetworkWritableChannel implements WritableChannel, ByteBufBa
     }
 
     @Override
-    public WritableChannel putLong( long value ) throws MessageTooBigException
+    public WritableChecksumChannel putLong( long value ) throws MessageTooBigException
     {
         checkSize( Long.BYTES );
         delegate.writeLong( value );
@@ -71,7 +71,7 @@ public class BoundedNetworkWritableChannel implements WritableChannel, ByteBufBa
     }
 
     @Override
-    public WritableChannel putFloat( float value ) throws MessageTooBigException
+    public WritableChecksumChannel putFloat( float value ) throws MessageTooBigException
     {
         checkSize( Float.BYTES );
         delegate.writeFloat( value );
@@ -79,7 +79,7 @@ public class BoundedNetworkWritableChannel implements WritableChannel, ByteBufBa
     }
 
     @Override
-    public WritableChannel putDouble( double value ) throws MessageTooBigException
+    public WritableChecksumChannel putDouble( double value ) throws MessageTooBigException
     {
         checkSize( Double.BYTES );
         delegate.writeDouble( value );
@@ -87,7 +87,7 @@ public class BoundedNetworkWritableChannel implements WritableChannel, ByteBufBa
     }
 
     @Override
-    public WritableChannel put( byte[] value, int length ) throws MessageTooBigException
+    public WritableChecksumChannel put( byte[] value, int length ) throws MessageTooBigException
     {
         checkSize( length );
         delegate.writeBytes( value, 0, length );
@@ -110,5 +110,18 @@ public class BoundedNetworkWritableChannel implements WritableChannel, ByteBufBa
     public ByteBuf byteBuf()
     {
         return delegate;
+    }
+
+    @Override
+    public void beginChecksum()
+    {
+        // no op
+    }
+
+    @Override
+    public int putChecksum()
+    {
+        // no op
+        return 0;
     }
 }

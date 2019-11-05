@@ -11,9 +11,9 @@ import java.io.IOException;
 
 import org.neo4j.io.fs.ReadPastEndException;
 import org.neo4j.kernel.impl.transaction.log.LogPositionMarker;
-import org.neo4j.kernel.impl.transaction.log.ReadableClosablePositionAwareChannel;
+import org.neo4j.kernel.impl.transaction.log.ReadableClosablePositionAwareChecksumChannel;
 
-public class NetworkReadableChannel implements ReadableClosablePositionAwareChannel
+public class NetworkReadableChannel implements ReadableClosablePositionAwareChecksumChannel
 {
     private final ByteBuf delegate;
 
@@ -90,5 +90,18 @@ public class NetworkReadableChannel implements ReadableClosablePositionAwareChan
     public void close()
     {
         // no op
+    }
+
+    @Override
+    public void beginChecksum()
+    {
+        // no op
+    }
+
+    @Override
+    public int endChecksumAndValidate()
+    {
+        // no op
+        return 0;
     }
 }

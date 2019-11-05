@@ -29,7 +29,7 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
 import org.neo4j.kernel.impl.store.MetaDataStore;
-import org.neo4j.kernel.impl.transaction.log.FlushablePositionAwareChannel;
+import org.neo4j.kernel.impl.transaction.log.FlushablePositionAwareChecksumChannel;
 import org.neo4j.kernel.impl.transaction.log.LogPositionMarker;
 import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.log.TransactionLogWriter;
@@ -257,17 +257,17 @@ public class RaftBootstrapper
             LogPositionMarker logPositionMarker = new LogPositionMarker();
             try ( Lifespan ignored = new Lifespan( logFiles ) )
             {
-                FlushablePositionAwareChannel channel = logFiles.getLogFile().getWriter();
+                FlushablePositionAwareChecksumChannel channel = logFiles.getLogFile().getWriter();
                 TransactionLogWriter writer = new TransactionLogWriter( new LogEntryWriter( channel ) );
 
                 long lastCommittedTransactionId = readOnlyTransactionIdStore.getLastCommittedTransactionId();
                 PhysicalTransactionRepresentation tx = new PhysicalTransactionRepresentation( Collections.emptyList() );
                 byte[] txHeaderBytes = LogIndexTxHeaderEncoding.encodeLogIndexAsTxHeader( -1 );
-                tx.setHeader( txHeaderBytes, -1, -1, -1, lastCommittedTransactionId, -1, -1 );
+                tx.setHeader( txHeaderBytes, -1, lastCommittedTransactionId, -1, -1 );
 
                 dummyTransactionId = lastCommittedTransactionId + 1;
                 channel.getCurrentPosition( logPositionMarker );
-                writer.append( tx, dummyTransactionId );
+                writer.append( tx, dummyTransactionId, BASE_TX_CHECKSUM );
                 channel.prepareForFlush().flush();
             }
 

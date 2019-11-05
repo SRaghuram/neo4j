@@ -6,8 +6,8 @@
 package com.neo4j.causalclustering.messaging.marshalling.v2.encoding;
 
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
-import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.messaging.NetworkWritableChannel;
 import com.neo4j.causalclustering.messaging.marshalling.v2.ContentType;
 import io.netty.buffer.ByteBuf;

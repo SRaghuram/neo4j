@@ -11,7 +11,7 @@ import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
 
 import org.neo4j.common.DependencyResolver;
-import org.neo4j.kernel.impl.transaction.log.FlushablePositionAwareChannel;
+import org.neo4j.kernel.impl.transaction.log.FlushablePositionAwareChecksumChannel;
 import org.neo4j.kernel.impl.transaction.log.files.LogFile;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -20,7 +20,7 @@ import org.neo4j.kernel.internal.GraphDatabaseAPI;
 public abstract class AbstractTransactionLogsBenchmark extends BaseDatabaseBenchmark
 {
     LogFile logFile;
-    FlushablePositionAwareChannel writer;
+    FlushablePositionAwareChecksumChannel writer;
 
     @Override
     public String benchmarkGroup()

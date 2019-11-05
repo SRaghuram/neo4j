@@ -58,7 +58,6 @@ import static com.neo4j.causalclustering.catchup.CatchupResult.E_STORE_ID_MISMAT
 import static com.neo4j.causalclustering.catchup.CatchupResult.E_STORE_UNAVAILABLE;
 import static com.neo4j.causalclustering.catchup.CatchupResult.E_TRANSACTION_PRUNED;
 import static com.neo4j.causalclustering.catchup.CatchupResult.SUCCESS_END_OF_STREAM;
-import static java.lang.Math.toIntExact;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
@@ -69,6 +68,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.neo4j.kernel.impl.api.state.StubCursors.cursor;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
+import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_CHECKSUM;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_ID;
 
 @ExtendWith( LifeExtension.class )
@@ -288,10 +288,10 @@ class TxPullRequestHandlerTest
     private static CommittedTransactionRepresentation tx( long id )
     {
         var tx = new PhysicalTransactionRepresentation( Collections.singletonList( new TestCommand() ) );
-        tx.setHeader( new byte[0], 0, 0, 0, 0, 0, 0 );
+        tx.setHeader( new byte[0], 0, 0, 0, 0 );
         return new CommittedTransactionRepresentation(
-                new LogEntryStart( toIntExact( id ), toIntExact( id ), id, id - 1, new byte[]{}, LogPosition.UNSPECIFIED ),
-                tx, new LogEntryCommit( id, id ) );
+                new LogEntryStart( id, id - 1, 0, new byte[]{}, LogPosition.UNSPECIFIED ),
+                tx, new LogEntryCommit( id, id, BASE_TX_CHECKSUM ) );
     }
 
     private static TransactionCursor txCursor( CommittedTransactionRepresentation... transactions )

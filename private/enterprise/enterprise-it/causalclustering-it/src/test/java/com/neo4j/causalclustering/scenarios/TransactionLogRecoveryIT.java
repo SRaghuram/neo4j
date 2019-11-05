@@ -25,6 +25,7 @@ import org.neo4j.kernel.impl.transaction.log.entry.LogEntryWriter;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 import org.neo4j.kernel.lifecycle.Lifespan;
+import org.neo4j.storageengine.api.TransactionIdStore;
 import org.neo4j.test.extension.DefaultFileSystemExtension;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.pagecache.PageCacheExtension;
@@ -138,7 +139,8 @@ class TransactionLogRecoveryIT
         try ( Lifespan ignored = new Lifespan( logFiles ) )
         {
             LogEntryWriter writer = new LogEntryWriter( logFiles.getLogFile().getWriter() );
-            writer.writeStartEntry( 0, 0, 0x123456789ABCDEFL, logFiles.getLogFileInformation().getLastEntryId() + 1, new byte[]{0} );
+            writer.writeStartEntry( 0x123456789ABCDEFL, logFiles.getLogFileInformation().getLastEntryId() + 1, TransactionIdStore.BASE_TX_CHECKSUM,
+                    new byte[]{0} );
         }
     }
 }

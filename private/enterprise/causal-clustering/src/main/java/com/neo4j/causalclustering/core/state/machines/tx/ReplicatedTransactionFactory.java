@@ -72,8 +72,6 @@ public class ReplicatedTransactionFactory
         {
             try
             {
-                int authorId = channel.getInt();
-                int masterId = channel.getInt();
                 long latestCommittedTxWhenStarted = channel.getLong();
                 long timeStarted = channel.getLong();
                 long timeCommitted = channel.getLong();
@@ -101,7 +99,7 @@ public class ReplicatedTransactionFactory
                 }
 
                 PhysicalTransactionRepresentation tx = new PhysicalTransactionRepresentation( commands );
-                tx.setHeader( header, masterId, authorId, timeStarted, latestCommittedTxWhenStarted, timeCommitted, lockSessionId );
+                tx.setHeader( header, timeStarted, latestCommittedTxWhenStarted, timeCommitted, lockSessionId );
 
                 return tx;
             }
@@ -121,8 +119,6 @@ public class ReplicatedTransactionFactory
         {
             nextJob = channel ->
             {
-                channel.putInt( tx.getAuthorId() );
-                channel.putInt( tx.getMasterId() );
                 channel.putLong( tx.getLatestCommittedTxWhenStarted() );
                 channel.putLong( tx.getTimeStarted() );
                 channel.putLong( tx.getTimeCommitted() );

@@ -22,7 +22,7 @@ import java.util.function.LongFunction;
 import org.neo4j.function.ThrowingConsumer;
 import org.neo4j.internal.recordstorage.Command;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.io.fs.PhysicalFlushableChannel;
+import org.neo4j.io.fs.PhysicalFlushableChecksumChannel;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.impl.store.PropertyStore;
@@ -61,6 +61,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.verify;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogHeaderWriter.writeLogHeader;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogVersions.CURRENT_FORMAT_LOG_HEADER_SIZE;
+import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_CHECKSUM;
 
 @EphemeralNeo4jLayoutExtension
 @ExtendWith( SuppressOutputExtension.class )
@@ -845,8 +846,8 @@ class CheckTxLogsTest
     private void writeTxContent( File log, long txId, Command... commands ) throws IOException
     {
         PhysicalTransactionRepresentation tx = new PhysicalTransactionRepresentation( Arrays.asList( commands ) );
-        tx.setHeader( new byte[0], 0, 0, 0, 0, 0, 0 );
-        writeContent( log, txWriter -> txWriter.append( tx, txId ) );
+        tx.setHeader( new byte[0], 0, 0, 0, 0 );
+        writeContent( log, txWriter -> txWriter.append( tx, txId, BASE_TX_CHECKSUM ) );
     }
 
     private void writeCheckPoint( File log, long logVersion, long byteOffset ) throws IOException
@@ -861,7 +862,7 @@ class CheckTxLogsTest
         ensureLogExists( log );
         try ( StoreChannel channel = fs.write( log );
               LogVersionedStoreChannel versionedChannel = new PhysicalLogVersionedStoreChannel( channel, 0, (byte) 0, log );
-              PhysicalFlushableChannel writableLogChannel = new PhysicalFlushableChannel( versionedChannel ) )
+              PhysicalFlushableChecksumChannel writableLogChannel = new PhysicalFlushableChecksumChannel( versionedChannel ) )
         {
             long offset = channel.size();
             channel.position( offset );

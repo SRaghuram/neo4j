@@ -44,7 +44,6 @@ import org.neo4j.kernel.impl.constraints.StandardConstraintSemantics;
 import org.neo4j.kernel.impl.factory.CanWrite;
 import org.neo4j.kernel.impl.locking.ActiveLock;
 import org.neo4j.kernel.impl.query.clientconnection.HttpConnectionInfo;
-import org.neo4j.kernel.impl.transaction.TransactionHeaderInformationFactory;
 import org.neo4j.kernel.impl.transaction.stats.DatabaseTransactionStats;
 import org.neo4j.kernel.impl.transaction.tracing.TransactionTracer;
 import org.neo4j.kernel.impl.util.DefaultValueMapper;
@@ -236,7 +235,7 @@ class TransactionStatusResultTest
             dependencies.satisfyDependency( mock( DefaultValueMapper.class ) );
             KernelTransactionImplementation transaction = new KernelTransactionImplementation( Config.defaults(),
                         mock( DatabaseTransactionEventListeners.class ),
-                        mock( ConstraintIndexCreator.class ), mock( GlobalProcedures.class ), TransactionHeaderInformationFactory.DEFAULT,
+                        mock( ConstraintIndexCreator.class ), mock( GlobalProcedures.class ),
                         mock( TransactionCommitProcess.class ), new DatabaseTransactionStats(),
                         mock( Pool.class ), Clocks.fakeClock(),
                         new AtomicReference<>( CpuClock.NOT_AVAILABLE ), new AtomicReference<>( HeapAllocation.NOT_AVAILABLE ),

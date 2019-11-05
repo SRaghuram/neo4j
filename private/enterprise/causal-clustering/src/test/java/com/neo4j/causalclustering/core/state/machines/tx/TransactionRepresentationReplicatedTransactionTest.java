@@ -34,7 +34,7 @@ public class TransactionRepresentationReplicatedTransactionTest
         PhysicalTransactionRepresentation expectedTx =
                 new PhysicalTransactionRepresentation( Collections.singleton( new Command.NodeCommand( new NodeRecord( 1 ), new NodeRecord( 2 ) ) ) );
 
-        expectedTx.setHeader( new byte[0], 1, 2, 3, 4, 5, 6 );
+        expectedTx.setHeader( new byte[0], 3, 4, 5, 6 );
         var replicatedTransaction = ReplicatedTransaction.from( expectedTx, new TestDatabaseIdRepository().defaultDatabase() );
 
         ByteArrayOutputStream stream = new ByteArrayOutputStream();

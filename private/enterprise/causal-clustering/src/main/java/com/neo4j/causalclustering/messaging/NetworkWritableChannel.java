@@ -7,9 +7,9 @@ package com.neo4j.causalclustering.messaging;
 
 import io.netty.buffer.ByteBuf;
 
-import org.neo4j.io.fs.WritableChannel;
+import org.neo4j.io.fs.WritableChecksumChannel;
 
-public class NetworkWritableChannel implements WritableChannel, ByteBufBacked
+public class NetworkWritableChannel implements WritableChecksumChannel, ByteBufBacked
 {
     private final ByteBuf delegate;
 
@@ -19,49 +19,49 @@ public class NetworkWritableChannel implements WritableChannel, ByteBufBacked
     }
 
     @Override
-    public WritableChannel put( byte value )
+    public WritableChecksumChannel put( byte value )
     {
         delegate.writeByte( value );
         return this;
     }
 
     @Override
-    public WritableChannel putShort( short value )
+    public WritableChecksumChannel putShort( short value )
     {
         delegate.writeShort( value );
         return this;
     }
 
     @Override
-    public WritableChannel putInt( int value )
+    public WritableChecksumChannel putInt( int value )
     {
         delegate.writeInt( value );
         return this;
     }
 
     @Override
-    public WritableChannel putLong( long value )
+    public WritableChecksumChannel putLong( long value )
     {
         delegate.writeLong( value );
         return this;
     }
 
     @Override
-    public WritableChannel putFloat( float value )
+    public WritableChecksumChannel putFloat( float value )
     {
         delegate.writeFloat( value );
         return this;
     }
 
     @Override
-    public WritableChannel putDouble( double value )
+    public WritableChecksumChannel putDouble( double value )
     {
         delegate.writeDouble( value );
         return this;
     }
 
     @Override
-    public WritableChannel put( byte[] value, int length )
+    public WritableChecksumChannel put( byte[] value, int length )
     {
         delegate.writeBytes( value, 0, length );
         return this;
@@ -71,5 +71,18 @@ public class NetworkWritableChannel implements WritableChannel, ByteBufBacked
     public ByteBuf byteBuf()
     {
         return delegate;
+    }
+
+    @Override
+    public void beginChecksum()
+    {
+        // no op
+    }
+
+    @Override
+    public int putChecksum()
+    {
+        // no op
+        return 0;
     }
 }

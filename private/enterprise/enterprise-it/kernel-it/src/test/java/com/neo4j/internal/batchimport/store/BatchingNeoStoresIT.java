@@ -106,7 +106,7 @@ class BatchingNeoStoresIT
         }
 
         @Override
-        public long lastCommittedTransactionChecksum()
+        public int lastCommittedTransactionChecksum()
         {
             return 11;
         }

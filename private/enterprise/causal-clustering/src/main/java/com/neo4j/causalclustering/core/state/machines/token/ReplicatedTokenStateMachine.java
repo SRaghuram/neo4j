@@ -85,7 +85,7 @@ public class ReplicatedTokenStateMachine implements StateMachine<ReplicatedToken
     private void applyToStore( Collection<StorageCommand> commands, long logIndex )
     {
         var representation = new PhysicalTransactionRepresentation( commands );
-        representation.setHeader( LogIndexTxHeaderEncoding.encodeLogIndexAsTxHeader( logIndex ), 0, 0, 0, 0L, 0L, 0 );
+        representation.setHeader( LogIndexTxHeaderEncoding.encodeLogIndexAsTxHeader( logIndex ), 0, 0L, 0L, 0 );
 
         try
         {

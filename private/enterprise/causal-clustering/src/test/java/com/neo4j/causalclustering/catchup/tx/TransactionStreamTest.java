@@ -30,6 +30,7 @@ import static org.mockito.AdditionalAnswers.returnsElementsOf;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_CHECKSUM;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_ID;
 
 @SuppressWarnings( {"UnnecessaryLocalVariable"} )
@@ -142,7 +143,7 @@ class TransactionStreamTest
     private CommittedTransactionRepresentation tx( int txId )
     {
         CommittedTransactionRepresentation tx = mock( CommittedTransactionRepresentation.class );
-        when( tx.getCommitEntry() ).thenReturn( new LogEntryCommit( txId, 0 ) );
+        when( tx.getCommitEntry() ).thenReturn( new LogEntryCommit( txId, 0, BASE_TX_CHECKSUM ) );
         return tx;
     }
 }

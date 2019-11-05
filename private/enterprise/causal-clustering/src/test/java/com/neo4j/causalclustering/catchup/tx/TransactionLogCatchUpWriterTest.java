@@ -68,6 +68,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.neo4j_home;
 import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
 import static org.neo4j.kernel.impl.transaction.log.TestLogEntryReader.logEntryReader;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogVersions.CURRENT_FORMAT_LOG_HEADER_SIZE;
+import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_CHECKSUM;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_ID;
 
 @RunWith( Parameterized.class )
@@ -309,9 +310,9 @@ public class TransactionLogCatchUpWriterTest
 
     private static CommittedTransactionRepresentation tx( long txId )
     {
-        TransactionRepresentation tx = new PhysicalTransactionRepresentation( Collections.singletonList( new TestCommand() ), new byte[0], 0, 0, 0, 0, 0, 0 );
+        TransactionRepresentation tx = new PhysicalTransactionRepresentation( Collections.singletonList( new TestCommand() ), new byte[0], 0, 0, 0, 0 );
         return new CommittedTransactionRepresentation(
-                new LogEntryStart( 0, 0, 0, txId - 1, new byte[]{}, LogPosition.UNSPECIFIED ),
-                tx, new LogEntryCommit( txId, 0 ) );
+                new LogEntryStart( 0, txId - 1, 0, new byte[]{}, LogPosition.UNSPECIFIED ),
+                tx, new LogEntryCommit( txId, 0, BASE_TX_CHECKSUM ) );
     }
 }

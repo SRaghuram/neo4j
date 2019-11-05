@@ -58,7 +58,6 @@ import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.security.provider.SecurityProvider;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.query.QueryEngineProvider;
-import org.neo4j.kernel.impl.transaction.TransactionHeaderInformationFactory;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.LogService;
@@ -158,12 +157,6 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
         Config config = globalModule.getGlobalConfig();
         LogProvider logProvider = globalModule.getLogService().getInternalLogProvider();
         return new ReadReplicaRoutingProcedureInstaller( databaseManager, portRegister, config, logProvider );
-    }
-
-    @Override
-    public TransactionHeaderInformationFactory getHeaderInformationFactory()
-    {
-        return TransactionHeaderInformationFactory.DEFAULT;
     }
 
     @Override

@@ -26,7 +26,7 @@ import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
 import org.neo4j.kernel.impl.storemigration.DatabaseMigrator;
 import org.neo4j.kernel.impl.storemigration.LegacyTransactionLogsLocator;
 import org.neo4j.kernel.impl.storemigration.StoreUpgrader;
-import org.neo4j.kernel.impl.transaction.log.FlushablePositionAwareChannel;
+import org.neo4j.kernel.impl.transaction.log.FlushablePositionAwareChecksumChannel;
 import org.neo4j.kernel.impl.transaction.log.TransactionLogWriter;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryWriter;
 import org.neo4j.kernel.impl.transaction.log.entry.VersionAwareLogEntryReader;
@@ -142,7 +142,7 @@ public class StoreMigration
     {
         try ( Lifespan lifespan = new Lifespan( logFiles ) )
         {
-            FlushablePositionAwareChannel writer = logFiles.getLogFile().getWriter();
+            FlushablePositionAwareChecksumChannel writer = logFiles.getLogFile().getWriter();
             TransactionLogWriter transactionLogWriter = new TransactionLogWriter( new LogEntryWriter( writer ) );
             transactionLogWriter.checkPoint( tailScanner.getTailInformation().lastCheckPoint.getLogPosition() );
             writer.prepareForFlush().flush();

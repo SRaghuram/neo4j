@@ -23,7 +23,6 @@ import org.neo4j.kernel.impl.factory.StatementLocksFactorySelector;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.impl.locking.StatementLocksFactory;
 import org.neo4j.kernel.impl.query.QueryEngineProvider;
-import org.neo4j.kernel.impl.transaction.TransactionHeaderInformationFactory;
 import org.neo4j.kernel.impl.transaction.stats.DatabaseTransactionStats;
 import org.neo4j.logging.internal.DatabaseLogService;
 import org.neo4j.token.TokenHolders;
@@ -77,12 +76,6 @@ public class CoreDatabaseComponents implements EditionDatabaseComponents
     public CommitProcessFactory getCommitProcessFactory()
     {
         return kernelComponents.commitProcessFactory();
-    }
-
-    @Override
-    public TransactionHeaderInformationFactory getHeaderInformationFactory()
-    {
-        return editionModule.getHeaderInformationFactory();
     }
 
     @Override

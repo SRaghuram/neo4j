@@ -51,7 +51,7 @@ class CoreReplicatedContentMarshalV2Test
         ByteBuf buffer = Unpooled.buffer();
         PhysicalTransactionRepresentation representation =
                 new PhysicalTransactionRepresentation( Collections.emptyList() );
-        representation.setHeader( new byte[]{0}, 1, 1, 1, 1, 1, 1 );
+        representation.setHeader( new byte[]{0}, 1, 1, 1, 1 );
 
         TransactionRepresentationReplicatedTransaction replicatedTx = ReplicatedTransaction.from( representation, DATABASE_ID );
 
@@ -118,8 +118,8 @@ class CoreReplicatedContentMarshalV2Test
         if ( extraHeader == null )
         {
             // hackishly set additional header to empty array...
-            ((PhysicalTransactionRepresentation) tx).setHeader( new byte[0], tx.getMasterId(), tx.getAuthorId(), tx.getTimeStarted(),
-                    tx.getLatestCommittedTxWhenStarted(), tx.getTimeCommitted(), tx.getEpochTokenId() );
+            ((PhysicalTransactionRepresentation) tx)
+                    .setHeader( new byte[0], tx.getTimeStarted(), tx.getLatestCommittedTxWhenStarted(), tx.getTimeCommitted(), tx.getEpochTokenId() );
             extraHeader = tx.additionalHeader();
         }
         TransactionRepresentation representation =

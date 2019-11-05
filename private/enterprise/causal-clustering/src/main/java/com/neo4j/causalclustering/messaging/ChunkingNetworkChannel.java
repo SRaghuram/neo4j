@@ -11,7 +11,7 @@ import io.netty.buffer.ByteBufAllocator;
 import java.util.Objects;
 import java.util.Queue;
 
-import org.neo4j.io.fs.WritableChannel;
+import org.neo4j.io.fs.WritableChecksumChannel;
 
 import static java.lang.Integer.min;
 
@@ -19,7 +19,7 @@ import static java.lang.Integer.min;
  * Uses provided allocator to create {@link ByteBuf}. The buffers will be split if maximum size is reached. The full buffer is then added
  * to the provided output and a new buffer is allocated. If the output queue is bounded then writing to this channel may block!
  */
-public class ChunkingNetworkChannel implements WritableChannel, AutoCloseable
+public class ChunkingNetworkChannel implements WritableChecksumChannel, AutoCloseable
 {
     private static final int DEFAULT_INIT_CHUNK_SIZE = 512;
     private final ByteBufAllocator allocator;
@@ -49,7 +49,7 @@ public class ChunkingNetworkChannel implements WritableChannel, AutoCloseable
     }
 
     @Override
-    public WritableChannel put( byte value )
+    public WritableChecksumChannel put( byte value )
     {
         checkState();
         prepareWrite( 1 );
@@ -58,7 +58,7 @@ public class ChunkingNetworkChannel implements WritableChannel, AutoCloseable
     }
 
     @Override
-    public WritableChannel putShort( short value )
+    public WritableChecksumChannel putShort( short value )
     {
         checkState();
         prepareWrite( Short.BYTES );
@@ -67,7 +67,7 @@ public class ChunkingNetworkChannel implements WritableChannel, AutoCloseable
     }
 
     @Override
-    public WritableChannel putInt( int value )
+    public WritableChecksumChannel putInt( int value )
     {
         checkState();
         prepareWrite( Integer.BYTES );
@@ -76,7 +76,7 @@ public class ChunkingNetworkChannel implements WritableChannel, AutoCloseable
     }
 
     @Override
-    public WritableChannel putLong( long value )
+    public WritableChecksumChannel putLong( long value )
     {
         checkState();
         prepareWrite( Long.BYTES );
@@ -85,7 +85,7 @@ public class ChunkingNetworkChannel implements WritableChannel, AutoCloseable
     }
 
     @Override
-    public WritableChannel putFloat( float value )
+    public WritableChecksumChannel putFloat( float value )
     {
         checkState();
         prepareWrite( Float.BYTES );
@@ -94,7 +94,7 @@ public class ChunkingNetworkChannel implements WritableChannel, AutoCloseable
     }
 
     @Override
-    public WritableChannel putDouble( double value )
+    public WritableChecksumChannel putDouble( double value )
     {
         checkState();
         prepareWrite( Double.BYTES );
@@ -103,7 +103,7 @@ public class ChunkingNetworkChannel implements WritableChannel, AutoCloseable
     }
 
     @Override
-    public WritableChannel put( byte[] value, int length )
+    public WritableChecksumChannel put( byte[] value, int length )
     {
         checkState();
         int writeIndex = 0;
@@ -122,7 +122,7 @@ public class ChunkingNetworkChannel implements WritableChannel, AutoCloseable
     /**
      * Move the current buffer to the output.
      */
-    public WritableChannel flush()
+    public WritableChecksumChannel flush()
     {
         storeCurrent();
         return this;
@@ -216,5 +216,17 @@ public class ChunkingNetworkChannel implements WritableChannel, AutoCloseable
     public boolean closed()
     {
         return isClosed;
+    }
+
+    @Override
+    public void beginChecksum()
+    {
+        // no op
+    }
+
+    @Override
+    public int putChecksum()
+    {
+        return 0; // no op
     }
 }

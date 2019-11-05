@@ -128,6 +128,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.databases_root_path;
 import static org.neo4j.configuration.GraphDatabaseSettings.dense_node_threshold;
 import static org.neo4j.configuration.GraphDatabaseSettings.keep_logical_logs;
 import static org.neo4j.configuration.GraphDatabaseSettings.logs_directory;
+import static org.neo4j.configuration.GraphDatabaseSettings.neo4j_home;
 import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_memory;
 import static org.neo4j.configuration.GraphDatabaseSettings.read_only;
 import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
@@ -137,6 +138,7 @@ import static org.neo4j.kernel.impl.MyRelTypes.TEST;
 import static org.neo4j.kernel.impl.store.record.Record.NO_LABELS_FIELD;
 import static org.neo4j.kernel.impl.store.record.Record.NO_NEXT_PROPERTY;
 import static org.neo4j.kernel.impl.store.record.Record.NO_NEXT_RELATIONSHIP;
+import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_CHECKSUM;
 
 @PageCacheExtension
 @ExtendWith( {RandomExtension.class, SuppressOutputExtension.class} )
@@ -247,7 +249,7 @@ class BackupIT
         executeBackup( db );
 
         assertEquals( DbRepresentation.of( db ), getBackupDbRepresentation() );
-        assertEquals( 0, lastTxChecksumOf( backupDatabaseLayout, pageCache ) );
+        assertEquals( BASE_TX_CHECKSUM, lastTxChecksumOf( backupDatabaseLayout, pageCache ) );
     }
 
     @TestWithRecordFormats
@@ -782,7 +784,7 @@ class BackupIT
         assertThat( reportFiles, emptyArray() );
 
         // store is inconsistent after backup
-        ConsistencyCheckService.Result backupConsistencyCheckResult = checkConsistency( backupDatabaseLayout );
+        ConsistencyCheckService.Result backupConsistencyCheckResult = checkConsistency( backupDatabaseLayout ); // wrong file location
         assertFalse( backupConsistencyCheckResult.isSuccessful() );
     }
 
@@ -975,7 +977,7 @@ class BackupIT
         }
 
         PhysicalTransactionRepresentation txRepresentation = new PhysicalTransactionRepresentation( commands );
-        txRepresentation.setHeader( new byte[0], 42, 42, 42, 42, 42, 42 );
+        txRepresentation.setHeader( new byte[0], 42, 42, 42, 42 );
         TransactionToApply txToApply = new TransactionToApply( txRepresentation );
 
         TransactionCommitProcess commitProcess = dependencyResolver( db ).resolveDependency( TransactionCommitProcess.class );
@@ -984,7 +986,10 @@ class BackupIT
 
     private static ConsistencyCheckService.Result checkConsistency( DatabaseLayout layout ) throws ConsistencyCheckIncompleteException
     {
-        Config config = Config.defaults(pagecache_memory, "8m" );
+        Config config = Config.newBuilder()
+                .set( pagecache_memory, "8m" )
+                .set( neo4j_home, layout.getNeo4jLayout().homeDirectory().toPath() )
+                .build();
 
         ConsistencyCheckService consistencyCheckService = new ConsistencyCheckService();
 
@@ -1039,7 +1044,7 @@ class BackupIT
         assertEquals( DbRepresentation.of( db ), getBackupDbRepresentation() );
     }
 
-    private void ensureStoresHaveIdFiles( DatabaseLayout databaseLayout ) throws IOException
+    private void ensureStoresHaveIdFiles( DatabaseLayout databaseLayout )
     {
         for ( File idFile : databaseLayout.idFiles() )
         {

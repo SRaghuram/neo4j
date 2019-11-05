@@ -8,15 +8,15 @@ package com.neo4j.causalclustering.messaging;
 import java.io.IOException;
 
 import org.neo4j.kernel.impl.transaction.log.LogPositionMarker;
-import org.neo4j.kernel.impl.transaction.log.ReadableClosablePositionAwareChannel;
+import org.neo4j.kernel.impl.transaction.log.ReadableClosablePositionAwareChecksumChannel;
 
 import static java.util.Objects.requireNonNull;
 
-public class ReadableNetworkChannelDelegator implements ReadableClosablePositionAwareChannel
+public class ReadableNetworkChannelDelegator implements ReadableClosablePositionAwareChecksumChannel
 {
-    private ReadableClosablePositionAwareChannel delegate;
+    private ReadableClosablePositionAwareChecksumChannel delegate;
 
-    public void delegateTo( ReadableClosablePositionAwareChannel channel )
+    public void delegateTo( ReadableClosablePositionAwareChecksumChannel channel )
     {
         this.delegate = requireNonNull( channel );
     }
@@ -90,5 +90,17 @@ public class ReadableNetworkChannelDelegator implements ReadableClosablePosition
         {
             throw new IllegalArgumentException( "No assigned channel to delegate reads" );
         }
+    }
+
+    @Override
+    public void beginChecksum()
+    {
+        // no op
+    }
+
+    @Override
+    public int endChecksumAndValidate() throws IOException
+    {
+        return 0; // no op
     }
 }
