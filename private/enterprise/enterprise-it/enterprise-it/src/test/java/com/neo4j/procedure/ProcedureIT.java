@@ -165,6 +165,22 @@ public class ProcedureIT
     }
 
     @Test
+    void shouldCallProcedureWithInheritedResultType()
+    {
+        try ( Transaction transaction = db.beginTx() )
+        {
+            // Given/When
+            Result res = transaction.execute( "CALL com.neo4j.procedure.inheritedOutput" );
+
+            // Then
+            assertThat( res.next(), equalTo( map( "someVal", 42L, "anotherVal", "a" ) ) );
+            assertThat( res.next(), equalTo( map( "someVal", 42L, "anotherVal", "b" ) ) );
+            assertFalse( res.hasNext() );
+            transaction.commit();
+        }
+    }
+
+    @Test
     void shouldCallYieldProcedureWithDefaultArgument()
     {
         try ( Transaction transaction = db.beginTx() )
@@ -1634,6 +1650,17 @@ public class ProcedureIT
         }
     }
 
+    public static class InheritedOutput extends Output
+    {
+        public String anotherVal;
+
+        public InheritedOutput( final String anotherVal )
+        {
+            super( 42 );
+            this.anotherVal = anotherVal;
+        }
+    }
+
     public static class PrimitiveOutput
     {
         public String string;
@@ -1819,6 +1846,12 @@ public class ProcedureIT
         public Stream<Output> simpleArgumentWithDefault( @Name( value = "name", defaultValue = "42" ) long someValue )
         {
             return Stream.of( new Output( someValue ) );
+        }
+
+        @Procedure
+        public Stream<InheritedOutput> inheritedOutput()
+        {
+            return Stream.of( "a", "b" ).map( InheritedOutput::new );
         }
 
         @Procedure
