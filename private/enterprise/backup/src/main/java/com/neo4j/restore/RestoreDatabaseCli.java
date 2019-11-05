@@ -26,7 +26,7 @@ public class RestoreDatabaseCli extends AbstractCommand
 {
     @Option( names = "--from", paramLabel = "<path>", required = true, description = "Path to backup to restore from." )
     private File from;
-    @Option( names = "--database", description = "Name of database.", defaultValue = GraphDatabaseSettings.DEFAULT_DATABASE_NAME )
+    @Option( names = "--database", description = "Name of the database to restore.", defaultValue = GraphDatabaseSettings.DEFAULT_DATABASE_NAME )
     private String database;
     @Option( names = "--force", arity = "0", description = "If an existing database should be replaced." )
     private boolean force;

@@ -42,7 +42,7 @@ class RestoreDatabaseCliTest
                 "      --verbose       Enable verbose output.%n" +
                 "      --from=<path>   Path to backup to restore from.%n" +
                 "      --database=<database>%n" +
-                "                      Name of database.%n" +
+                "                      Name of the database to restore.%n" +
                 "                        Default: neo4j%n" +
                 "      --force         If an existing database should be replaced."
         ) ) );
