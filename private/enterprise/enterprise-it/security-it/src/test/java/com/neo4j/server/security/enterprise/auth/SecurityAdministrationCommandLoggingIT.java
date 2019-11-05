@@ -293,12 +293,12 @@ class SecurityAdministrationCommandLoggingIT
         execute( adminContext, "CREATE ROLE foo" );
 
         // WHEN
-        execute( adminContext, "GRANT WRITE {*} ON GRAPH * TO foo" );
+        execute( adminContext, "GRANT WRITE ON GRAPH * TO foo" );
 
         // THEN
         List<String> logLines = readAllLines( logFilename );
         assertThat( logLines, hasSize( 2 ) );
-        assertThat( logLines.get( 1 ), containsString( withSubject( adminContext, "GRANT WRITE {*} ON GRAPH * ELEMENTS * (*) TO foo" ) ) );
+        assertThat( logLines.get( 1 ), containsString( withSubject( adminContext, "GRANT WRITE ON GRAPH * ELEMENTS * (*) TO foo" ) ) );
     }
 
     @Test
@@ -352,12 +352,12 @@ class SecurityAdministrationCommandLoggingIT
         execute( adminContext, "CREATE ROLE foo" );
 
         // WHEN
-        execute( adminContext, "DENY WRITE {*} ON GRAPH * TO foo" );
+        execute( adminContext, "DENY WRITE ON GRAPH * TO foo" );
 
         // THEN
         List<String> logLines = readAllLines( logFilename );
         assertThat( logLines, hasSize( 2 ) );
-        assertThat( logLines.get( 1 ), containsString( withSubject( adminContext, "DENY WRITE {*} ON GRAPH * ELEMENTS * (*) TO foo" ) ) );
+        assertThat( logLines.get( 1 ), containsString( withSubject( adminContext, "DENY WRITE ON GRAPH * ELEMENTS * (*) TO foo" ) ) );
     }
 
     @Test
@@ -432,15 +432,15 @@ class SecurityAdministrationCommandLoggingIT
     {
         // GIVEN
         execute( adminContext, "CREATE ROLE foo" );
-        execute( adminContext, "GRANT WRITE {*} ON GRAPH * TO foo" );
+        execute( adminContext, "GRANT WRITE ON GRAPH * TO foo" );
 
         // WHEN
-        execute( adminContext, "REVOKE WRITE {*} ON GRAPH * FROM foo" );
+        execute( adminContext, "REVOKE WRITE ON GRAPH * FROM foo" );
 
         // THEN
         List<String> logLines = readAllLines( logFilename );
         assertThat( logLines, hasSize( 3 ) );
-        assertThat( logLines.get( 2 ), containsString( withSubject( adminContext, "REVOKE WRITE {*} ON GRAPH * ELEMENTS * (*) FROM foo" ) ) );
+        assertThat( logLines.get( 2 ), containsString( withSubject( adminContext, "REVOKE WRITE ON GRAPH * ELEMENTS * (*) FROM foo" ) ) );
     }
 
     private List<String> readAllLines( File logFilename ) throws IOException

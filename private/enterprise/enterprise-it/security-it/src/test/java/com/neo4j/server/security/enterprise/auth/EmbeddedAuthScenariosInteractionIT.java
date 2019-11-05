@@ -95,7 +95,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         {
             transaction.execute( String.format( "GRANT ACCESS ON DATABASE * TO %s", roleName ) );
             transaction.execute( String.format( "GRANT TRAVERSE ON GRAPH * TO %s", roleName ) );
-            transaction.execute( String.format( "GRANT WRITE {*} ON GRAPH * TO %s", roleName ) );
+            transaction.execute( String.format( "GRANT WRITE ON GRAPH * TO %s", roleName ) );
             transaction.commit();
         }
 
@@ -106,7 +106,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         // When
         try ( Transaction transaction = systemGraph.beginTx() )
         {
-            transaction.execute( String.format( "REVOKE WRITE {*} ON GRAPH * FROM %s", roleName ) );
+            transaction.execute( String.format( "REVOKE WRITE ON GRAPH * FROM %s", roleName ) );
             transaction.commit();
         }
 
@@ -365,7 +365,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         try ( Transaction transaction = systemGraph.beginTx() )
         {
             transaction.execute( String.format( "GRANT ACCESS ON DATABASE * TO %s", role ) );
-            transaction.execute( String.format( "GRANT WRITE {*} ON GRAPH * TO %s", role ) );
+            transaction.execute( String.format( "GRANT WRITE ON GRAPH * TO %s", role ) );
             transaction.commit();
         }
         EnterpriseLoginContext subject = neo.login( "Alice", PASSWORD );
@@ -387,7 +387,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         try ( Transaction transaction = systemGraph.beginTx() )
         {
             transaction.execute( String.format( "GRANT ACCESS ON DATABASE * TO %s", role ) );
-            transaction.execute( String.format( "GRANT WRITE {*} ON GRAPH * TO %s", role ) );
+            transaction.execute( String.format( "GRANT WRITE ON GRAPH * TO %s", role ) );
             transaction.commit();
         }
         EnterpriseLoginContext subject = neo.login( "Alice", PASSWORD );
@@ -490,7 +490,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         {
             transaction.execute( String.format( "GRANT ACCESS ON DATABASE * TO %s", role ) );
             transaction.execute( String.format( "GRANT TRAVERSE ON GRAPH * TO %s", role ) );
-            transaction.execute( String.format( "GRANT WRITE {*} ON GRAPH * TO %s", role ) );
+            transaction.execute( String.format( "GRANT WRITE ON GRAPH * TO %s", role ) );
             transaction.commit();
         }
         EnterpriseLoginContext subject = neo.login( "Alice", PASSWORD );
@@ -512,7 +512,7 @@ public class EmbeddedAuthScenariosInteractionIT extends AuthScenariosInteraction
         {
             transaction.execute( String.format( "GRANT ACCESS ON DATABASE * TO %s", role ) );
             transaction.execute( String.format( "GRANT TRAVERSE ON GRAPH * TO %s", role ) );
-            transaction.execute( String.format( "GRANT WRITE {*} ON GRAPH * TO %s", role ) );
+            transaction.execute( String.format( "GRANT WRITE ON GRAPH * TO %s", role ) );
             transaction.commit();
         }
         EnterpriseLoginContext subject = neo.login( "Alice", PASSWORD );

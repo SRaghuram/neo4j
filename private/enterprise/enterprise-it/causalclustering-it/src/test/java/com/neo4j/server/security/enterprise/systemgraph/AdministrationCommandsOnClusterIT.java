@@ -1043,7 +1043,7 @@ class AdministrationCommandsOnClusterIT
         leaderTx( ( sys, tx ) ->
         {
             tx.execute( "CREATE ROLE " + roleName );
-            tx.execute( "GRANT WRITE {*} ON GRAPH * TO " + roleName );
+            tx.execute( "GRANT WRITE ON GRAPH * TO " + roleName );
             tx.commit();
         } );
 
@@ -1051,7 +1051,7 @@ class AdministrationCommandsOnClusterIT
         {
             try
             {
-                tx.execute( "REVOKE WRITE {*} ON GRAPH * FROM " + roleName );
+                tx.execute( "REVOKE WRITE ON GRAPH * FROM " + roleName );
                 fail( "Should have failed to write on a FOLLOWER, but succeeded." );
             }
             catch ( IllegalStateException e )
@@ -1071,7 +1071,7 @@ class AdministrationCommandsOnClusterIT
         // But it works on leader
         leaderTx( ( sys, tx ) ->
         {
-            tx.execute( "REVOKE WRITE {*} ON GRAPH * FROM " + roleName );
+            tx.execute( "REVOKE WRITE ON GRAPH * FROM " + roleName );
 
             var result = tx.execute( "SHOW ROLE " + roleName + " PRIVILEGES" ).columnAs( "grant" );
             assertFalse( result.hasNext() );

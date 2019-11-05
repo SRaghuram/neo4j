@@ -1619,7 +1619,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
   test("should get correct count within transaction for restricted user") {
     // GIVEN
     setupUserWithCustomRole()
-    execute("GRANT WRITE {*} ON GRAPH * TO custom")
+    execute("GRANT WRITE ON GRAPH * TO custom")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
     execute("CREATE (:A), (:A:B), (:B)")
@@ -1664,7 +1664,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
   test("should get correct count within transaction for restricted user using count store") {
     // GIVEN
     setupUserWithCustomRole()
-    execute("GRANT WRITE {*} ON GRAPH * TO custom")
+    execute("GRANT WRITE ON GRAPH * TO custom")
 
     selectDatabase(DEFAULT_DATABASE_NAME)
     execute("CREATE (:A), (:A:B), (:B)")
