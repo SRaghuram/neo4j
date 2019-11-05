@@ -35,7 +35,6 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
-import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 
 public class AWSBatchJobScheduler implements JobScheduler
@@ -105,6 +104,9 @@ public class AWSBatchJobScheduler implements JobScheduler
                 .withJobQueue( jobQueue )
                 .withJobName( jobName )
                 .withParameters( paramsMap );
+
+        System.out.println( submitJobRequest );
+        System.out.println( submitJobRequest.getParameters() );
 
         SubmitJobResult submitJobResult = awsBatch.submitJob( submitJobRequest );
         return new JobId( submitJobResult.getJobId() );

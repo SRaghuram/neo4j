@@ -150,7 +150,7 @@ public class InfraParams
         map.put( CMD_DB_NAME, storeName );
         map.put( CMD_RESULTS_STORE_URI, resultsStoreUri.toString() );
         map.put( CMD_RESULTS_STORE_USER, resultsStoreUsername );
-        map.put( CMD_ERROR_POLICY, String.valueOf( errorPolicy ) );
+        map.put( CMD_ERROR_POLICY, errorPolicy.name() );
         return map;
     }
 }
