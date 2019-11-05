@@ -1318,7 +1318,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
 
   private def initSystemGraph(config: Config): Unit = {
     val databaseManager = graph.getDependencyResolver.resolveDependency(classOf[DatabaseManager[DatabaseContext]])
-    val importOptions = new SystemGraphImportOptions(false, false, false, false, null, null, null, null, null, null)
+    val importOptions = new SystemGraphImportOptions(null, null, null, null)
     val systemGraphInitializer = new EnterpriseSystemGraphInitializer(databaseManager, config)
     val securityGraphInitializer = new EnterpriseSecurityGraphInitializer(databaseManager, systemGraphInitializer, mock[Log], importOptions, new SecureHasher)
     securityGraphInitializer.initializeSecurityGraph()

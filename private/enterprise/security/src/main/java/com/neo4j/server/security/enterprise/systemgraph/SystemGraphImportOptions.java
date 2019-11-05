@@ -13,36 +13,18 @@ import org.neo4j.server.security.auth.UserRepository;
 
 public class SystemGraphImportOptions
 {
-    boolean shouldPerformImport;
-    boolean mayPerformMigration;
-    boolean shouldPurgeImportRepositoriesAfterSuccesfulImport;
-    boolean shouldResetSystemGraphAuthBeforeImport;
-    Supplier<UserRepository> importUserRepositorySupplier;
-    Supplier<RoleRepository> importRoleRepositorySupplier;
     Supplier<UserRepository> migrationUserRepositorySupplier;
     Supplier<RoleRepository> migrationRoleRepositorySupplier;
     Supplier<UserRepository> initialUserRepositorySupplier;
     Supplier<UserRepository> defaultAdminRepositorySupplier;
 
     public SystemGraphImportOptions(
-            boolean shouldPerformImport,
-            boolean mayPerformMigration,
-            boolean shouldPurgeImportRepositoriesAfterSuccesfulImport,
-            boolean shouldResetSystemGraphAuthBeforeImport,
-            Supplier<UserRepository> importUserRepositorySupplier,
-            Supplier<RoleRepository> importRoleRepositorySupplier,
             Supplier<UserRepository> migrationUserRepositorySupplier,
             Supplier<RoleRepository> migrationRoleRepositorySupplier,
             Supplier<UserRepository> initialUserRepositorySupplier,
             Supplier<UserRepository> defaultAdminRepositorySupplier
     )
     {
-        this.shouldPerformImport = shouldPerformImport;
-        this.mayPerformMigration = mayPerformMigration;
-        this.shouldPurgeImportRepositoriesAfterSuccesfulImport = shouldPurgeImportRepositoriesAfterSuccesfulImport;
-        this.shouldResetSystemGraphAuthBeforeImport = shouldResetSystemGraphAuthBeforeImport;
-        this.importUserRepositorySupplier = importUserRepositorySupplier;
-        this.importRoleRepositorySupplier = importRoleRepositorySupplier;
         this.migrationUserRepositorySupplier = migrationUserRepositorySupplier;
         this.migrationRoleRepositorySupplier = migrationRoleRepositorySupplier;
         this.initialUserRepositorySupplier = initialUserRepositorySupplier;

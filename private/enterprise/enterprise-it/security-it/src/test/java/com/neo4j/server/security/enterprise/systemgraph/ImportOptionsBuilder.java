@@ -22,57 +22,8 @@ import org.neo4j.server.security.auth.UserRepository;
 
 public class ImportOptionsBuilder extends BasicImportOptionsBuilder
 {
-    private boolean shouldPerformImport;
-    private boolean mayPerformMigration;
-    private boolean shouldPurgeImportRepositoriesAfterSuccesfulImport;
-    private boolean shouldResetSystemGraphAuthBeforeImport;
-    private List<User> importUsers = new ArrayList<>();
-    private List<Pair<String,String[]>> importRoles = new ArrayList<>();
     private List<Pair<String,String[]>> migrateRoles = new ArrayList<>();
     private List<User> defaultAdmins = new ArrayList<>();
-
-    public ImportOptionsBuilder()
-    {
-        super();
-        shouldPurgeImportRepositoriesAfterSuccesfulImport = false;
-        shouldResetSystemGraphAuthBeforeImport = false;
-    }
-
-    ImportOptionsBuilder shouldPerformImport()
-    {
-        shouldPerformImport = true;
-        return this;
-    }
-
-    ImportOptionsBuilder shouldNotPerformImport()
-    {
-        shouldPerformImport = false;
-        return this;
-    }
-
-    ImportOptionsBuilder mayPerformMigration()
-    {
-        mayPerformMigration = true;
-        return this;
-    }
-
-    ImportOptionsBuilder mayNotPerformMigration()
-    {
-        mayPerformMigration = false;
-        return this;
-    }
-
-    ImportOptionsBuilder importUsers( String... importUsers )
-    {
-        fillListWithUsers( this.importUsers, importUsers );
-        return this;
-    }
-
-    ImportOptionsBuilder importRole( String role, String... users )
-    {
-        this.importRoles.add( Pair.of( role, users ) );
-        return this;
-    }
 
     protected ImportOptionsBuilder migrateUser( String userName, String password, boolean pwdChangeRequired )
     {
@@ -108,15 +59,9 @@ public class ImportOptionsBuilder extends BasicImportOptionsBuilder
     }
 
     @SuppressWarnings( "unchecked" )
-    public SystemGraphImportOptions build() throws IOException, InvalidArgumentsException
+    SystemGraphImportOptions build() throws IOException, InvalidArgumentsException
     {
         return testImportOptions(
-                shouldPerformImport,
-                mayPerformMigration,
-                shouldPurgeImportRepositoriesAfterSuccesfulImport,
-                shouldResetSystemGraphAuthBeforeImport,
-                importUsers,
-                importRoles.toArray( new Pair[0] ),
                 migrateUsers,
                 migrateRoles.toArray( new Pair[0] ),
                 initialUsers,
@@ -124,39 +69,23 @@ public class ImportOptionsBuilder extends BasicImportOptionsBuilder
     }
 
     private static SystemGraphImportOptions testImportOptions(
-            boolean shouldPerformImport,
-            boolean mayPerformMigration,
-            boolean shouldPurgeImportRepositoriesAfterSuccesfulImport,
-            boolean shouldResetSystemGraphAuthBeforeImport,
-            List<User> importUsers,
-            Pair<String,String[]>[] importRoles,
             List<User> migrateUsers,
             Pair<String,String[]>[] migrateRoles,
             List<User> initialUsers,
             List<User> defaultAdmins
     ) throws IOException, InvalidArgumentsException
     {
-        UserRepository importUserRepository = new InMemoryUserRepository();
-        RoleRepository importRoleRepository = new InMemoryRoleRepository();
         UserRepository migrationUserRepository = new InMemoryUserRepository();
         RoleRepository migrationRoleRepository = new InMemoryRoleRepository();
         UserRepository initialUserRepository = new InMemoryUserRepository();
         UserRepository defaultAdminRepository = new InMemoryUserRepository();
 
-        populateUserRepository( importUserRepository, importUsers );
-        populateRoleRepository( importRoleRepository, importRoles );
         populateUserRepository( migrationUserRepository, migrateUsers );
         populateRoleRepository( migrationRoleRepository, migrateRoles );
         populateUserRepository( initialUserRepository, initialUsers );
         populateUserRepository( defaultAdminRepository, defaultAdmins );
 
         return new SystemGraphImportOptions(
-                shouldPerformImport,
-                mayPerformMigration,
-                shouldPurgeImportRepositoriesAfterSuccesfulImport,
-                shouldResetSystemGraphAuthBeforeImport,
-                () -> importUserRepository,
-                () -> importRoleRepository,
                 () -> migrationUserRepository,
                 () -> migrationRoleRepository,
                 () -> initialUserRepository,

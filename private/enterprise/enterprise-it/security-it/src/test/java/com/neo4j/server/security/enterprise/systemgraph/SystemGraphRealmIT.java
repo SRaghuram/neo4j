@@ -85,30 +85,9 @@ class SystemGraphRealmIT
     }
 
     @Test
-    void shouldImportExplicitAdmin() throws Throwable
-    {
-        SystemGraphRealm realm = TestSystemGraphRealm.testRealm( new ImportOptionsBuilder()
-                .shouldPerformImport()
-                .mayNotPerformMigration()
-                .importUsers( "alice" )
-                .importRole( PredefinedRoles.ADMIN, "alice" )
-                .build(), securityLog, dbManager, defaultConfig
-        );
-
-        assertTrue( dbManager.userHasRole( "alice", PredefinedRoles.ADMIN ) );
-        assertAuthenticationSucceeds( realm, "alice" );
-        log.assertExactly(
-                info( "Completed import of %s %s into system graph.", "1", "user" ),
-                info( "Completed import of %s %s into system graph.", "1", "role" )
-        );
-    }
-
-    @Test
     void shouldPerformMigration() throws Throwable
     {
         SystemGraphRealm realm = TestSystemGraphRealm.testRealm( new ImportOptionsBuilder()
-                .shouldNotPerformImport()
-                .mayPerformMigration()
                 .migrateUsers( "alice", "bob" )
                 .migrateRole( PredefinedRoles.ADMIN, "alice" )
                 .migrateRole( "goon", "bob" )
@@ -129,8 +108,6 @@ class SystemGraphRealmIT
     void shouldSetInitialUserAsAdminWithPredefinedUsername() throws Throwable
     {
         SystemGraphRealm realm = TestSystemGraphRealm.testRealm( new ImportOptionsBuilder()
-                .shouldNotPerformImport()
-                .mayPerformMigration()
                 .initialUsers( INITIAL_USER_NAME )
                 .build(), securityLog, dbManager, defaultConfig
         );
@@ -146,8 +123,6 @@ class SystemGraphRealmIT
     void shouldSetInitialUserAsAdminWithChangedPassword() throws Throwable
     {
         SystemGraphRealm realm = TestSystemGraphRealm.testRealm( new ImportOptionsBuilder()
-                .shouldNotPerformImport()
-                .mayPerformMigration()
                 .initialUser( "neo4j1", false )
                 .build(), securityLog, dbManager, defaultConfig
         );
@@ -223,8 +198,6 @@ class SystemGraphRealmIT
     void shouldNotSetInitialUsersAsAdminWithCustomUsernames() throws Throwable
     {
         SystemGraphRealm realm = TestSystemGraphRealm.testRealm( new ImportOptionsBuilder()
-                .shouldNotPerformImport()
-                .mayPerformMigration()
                 .initialUsers( "jane", "joe" )
                 .build(), securityLog, dbManager, defaultConfig
         );
@@ -243,8 +216,6 @@ class SystemGraphRealmIT
     void shouldMigrateOnlyUserAsAdminEvenWithoutRolesFile() throws Throwable
     {
         SystemGraphRealm realm = TestSystemGraphRealm.testRealm( new ImportOptionsBuilder()
-                .shouldNotPerformImport()
-                .mayPerformMigration()
                 .migrateUsers( "jane" )
                 .build(), securityLog, dbManager, defaultConfig
         );
@@ -262,8 +233,6 @@ class SystemGraphRealmIT
     void shouldNotMigrateMultipleExistingUsersAsAdminWithCustomUsernames() throws Throwable
     {
         SystemGraphImportOptions importOptions = new ImportOptionsBuilder()
-                .shouldNotPerformImport()
-                .mayPerformMigration()
                 .migrateUsers( "jane", "alice" )
                 .build();
 
@@ -276,8 +245,6 @@ class SystemGraphRealmIT
     void shouldMigrateDefaultAdminWithMultipleExistingUsers() throws Throwable
     {
         SystemGraphRealm realm = TestSystemGraphRealm.testRealm( new ImportOptionsBuilder()
-                .shouldNotPerformImport()
-                .mayPerformMigration()
                 .migrateUsers( "jane", "alice", "neo4j" )
                 .build(), securityLog, dbManager, defaultConfig
         );
@@ -295,13 +262,15 @@ class SystemGraphRealmIT
     void shouldSetDefaultAdmin() throws Throwable
     {
         // Given existing users but no admin
-        InvalidArgumentsException exception = assertThrows( InvalidArgumentsException.class, () -> prePopulateUsers( "alice", "bob", "trinity" ) );
+        InvalidArgumentsException exception = assertThrows( InvalidArgumentsException.class, () -> TestSystemGraphRealm.testRealm(
+                new ImportOptionsBuilder()
+                .migrateUsers( "alice", "bob", "trinity" )
+                .build(), securityLog, dbManager, defaultConfig
+        ) );
         assertThat( exception.getMessage(), startsWith( "No roles defined, and cannot determine which user should be admin" ) );
 
         // When a default admin is set by command
         TestSystemGraphRealm.testRealm( new ImportOptionsBuilder()
-                .shouldNotPerformImport()
-                .mayPerformMigration()
                 .defaultAdmins( "trinity" )
                 .build(), securityLog, dbManager, defaultConfig
         );
@@ -316,33 +285,9 @@ class SystemGraphRealmIT
     }
 
     @Test
-    void shouldNotAssignAdminWhenExplicitlyImportingRole() throws Throwable
-    {
-        TestSystemGraphRealm.testRealm( new ImportOptionsBuilder()
-                .shouldPerformImport()
-                .mayNotPerformMigration()
-                .importUsers( "alice" )
-                .importRole( "not_admin", "alice" )
-                .build(), securityLog, dbManager, defaultConfig
-        );
-
-        assertTrue( dbManager.userHasRole( "alice", "not_admin" ) );
-        assertFalse( dbManager.userHasRole( "alice", PredefinedRoles.ADMIN ) );
-        assertFalse( dbManager.userHasRole( INITIAL_USER_NAME, PredefinedRoles.ADMIN ) );
-
-        log.assertExactly(
-                info( "Completed import of %s %s into system graph.", "1", "user" ),
-                info( "Completed import of %s %s into system graph.", "1", "role" )
-        );
-    }
-
-    @Test
     void shouldGetDefaultPrivilegesForDefaultRoles() throws Throwable
     {
-        SystemGraphRealm realm = TestSystemGraphRealm.testRealm( new ImportOptionsBuilder()
-                .shouldNotPerformImport()
-                .mayPerformMigration()
-                .build(), securityLog, dbManager, defaultConfig );
+        SystemGraphRealm realm = TestSystemGraphRealm.testRealm( new ImportOptionsBuilder().build(), securityLog, dbManager, defaultConfig );
 
         ResourcePrivilege accessPrivilege = new ResourcePrivilege( GRANT, ACCESS, new Resource.DatabaseResource(), DatabaseSegment.ALL );
         ResourcePrivilege readNodePrivilege = new ResourcePrivilege( GRANT, READ, new Resource.AllPropertiesResource(), LabelSegment.ALL );
@@ -401,8 +346,6 @@ class SystemGraphRealmIT
         defaultConfig.set( default_database, "foo" );
 
         SystemGraphRealm realm = TestSystemGraphRealm.testRealm( new ImportOptionsBuilder()
-                .shouldNotPerformImport()
-                .mayPerformMigration()
                 .initialUsers( INITIAL_USER_NAME )
                 .build(), securityLog, dbManager, defaultConfig
         );
@@ -418,8 +361,6 @@ class SystemGraphRealmIT
     void shouldHandleSwitchOfDefaultDatabase() throws Throwable
     {
         SystemGraphRealm realm = TestSystemGraphRealm.testRealm( new ImportOptionsBuilder()
-                .shouldNotPerformImport()
-                .mayPerformMigration()
                 .migrateUsers( "alice" )
                 .migrateRole( "custom", "alice" )
                 .build(), securityLog, dbManager, defaultConfig
@@ -471,17 +412,6 @@ class SystemGraphRealmIT
         // Alice should still have read privileges in 'neo4j'
         privileges = realm.getPrivilegesForRoles( Collections.singleton( "custom" ) );
         assertThat( privileges, containsInAnyOrder( readPrivilege, findPrivilege ) );
-    }
-
-    private void prePopulateUsers( String... usernames ) throws Throwable
-    {
-        SystemGraphRealm realm = TestSystemGraphRealm.testRealm( new ImportOptionsBuilder()
-                .shouldPerformImport()
-                .importUsers( usernames )
-                .build(), securityLog, dbManager, defaultConfig
-        );
-        realm.stop();
-        realm.shutdown();
     }
 
     private AssertableLogProvider.LogMatcher info( String message, String... arguments )

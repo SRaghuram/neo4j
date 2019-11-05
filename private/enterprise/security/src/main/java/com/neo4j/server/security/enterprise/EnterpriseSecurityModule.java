@@ -74,9 +74,6 @@ import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
 public class EnterpriseSecurityModule extends SecurityModule
 {
     private static final String ROLE_STORE_FILENAME = "roles";
-    public static final String IMPORT_AUTH_COMMAND_NAME = "import-auth";
-    private static final String USER_IMPORT_FILENAME = ".users.import";
-    private static final String ROLE_IMPORT_FILENAME = ".roles.import";
     private static final String DEFAULT_ADMIN_STORE_FILENAME = SetDefaultAdminCommand.ADMIN_INI;
 
     private DatabaseManager<?> databaseManager;
@@ -269,29 +266,12 @@ public class EnterpriseSecurityModule extends SecurityModule
 
     private static SystemGraphImportOptions configureImportOptions( Config config, LogProvider logProvider, FileSystemAbstraction fileSystem )
     {
-        File parentFile = CommunitySecurityModule.getUserRepositoryFile( config ).getParentFile();
-        File userImportFile = new File( parentFile, USER_IMPORT_FILENAME );
-        File roleImportFile = new File( parentFile, ROLE_IMPORT_FILENAME );
-
-        boolean shouldPerformImport = fileSystem.fileExists( userImportFile ) || fileSystem.fileExists( roleImportFile );
-        boolean mayPerformMigration = !shouldPerformImport;
-        boolean shouldPurgeImportRepositoriesAfterSuccessfulImport = shouldPerformImport;
-        boolean shouldResetSystemGraphAuthBeforeImport = false;
-
-        Supplier<UserRepository> importUserRepositorySupplier = () -> new FileUserRepository( fileSystem, userImportFile, logProvider );
-        Supplier<RoleRepository> importRoleRepositorySupplier = () -> new FileRoleRepository( fileSystem, roleImportFile, logProvider );
         Supplier<UserRepository> migrationUserRepositorySupplier = () -> CommunitySecurityModule.getUserRepository( config, logProvider, fileSystem );
         Supplier<RoleRepository> migrationRoleRepositorySupplier = () -> EnterpriseSecurityModule.getRoleRepository( config, logProvider, fileSystem );
         Supplier<UserRepository> initialUserRepositorySupplier = () -> CommunitySecurityModule.getInitialUserRepository( config, logProvider, fileSystem );
         Supplier<UserRepository> defaultAdminRepositorySupplier = () -> getDefaultAdminRepository( config, logProvider, fileSystem );
 
         return new SystemGraphImportOptions(
-                shouldPerformImport,
-                mayPerformMigration,
-                shouldPurgeImportRepositoriesAfterSuccessfulImport,
-                shouldResetSystemGraphAuthBeforeImport,
-                importUserRepositorySupplier,
-                importRoleRepositorySupplier,
                 migrationUserRepositorySupplier,
                 migrationRoleRepositorySupplier,
                 initialUserRepositorySupplier,

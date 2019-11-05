@@ -5,7 +5,6 @@
  */
 package com.neo4j.server.security.enterprise.systemgraph;
 
-import com.neo4j.server.security.enterprise.EnterpriseSecurityModule;
 import com.neo4j.server.security.enterprise.auth.PredefinedRolesBuilder;
 import com.neo4j.server.security.enterprise.auth.Resource;
 import com.neo4j.server.security.enterprise.auth.RoleRecord;
@@ -95,18 +94,8 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
 
     private void doInitializeSecurityGraph() throws Exception
     {
-        if ( importOptions.shouldResetSystemGraphAuthBeforeImport )
-        {
-            deleteAllSystemGraphAuthData();
-        }
-
         // Must be done outside main transaction since it changes the schema
         setupConstraints();
-
-        // If the system graph has not been initialized (typically the first time you start neo4j) we set it up with auth data in the following order:
-        // 1) Do we have import files from running the `neo4j-admin import-auth` command?
-        // 2) Otherwise, are there existing userNodes and roles in the internal flat file realm, and are we allowed to migrate them to the system graph?
-        // 3) If no userNodes or roles were imported or migrated, create the predefined roles and one default admin user
 
         try ( Transaction tx = systemDb.beginTx() )
         {
@@ -114,63 +103,19 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
             userNodes.forEach( node -> usernames.add( (String) node.getProperty( "name" ) ) );
             roleNodes = findInitialNodes( tx, ROLE_LABEL );
 
+            // Perform migration if all of the following are true:
+            // 1) The system graph has not been initialized (typically the first time you start neo4j).
+            // 2) There exists users and/or roles in the internal flat file realm
             if ( userNodes.isEmpty() )
             {
-                if ( importOptions.shouldPerformImport )
-                {
-                    importUsersAndRoles( tx );
-                }
-                else if ( importOptions.mayPerformMigration )
-                {
-                    migrateFromFlatFileRealm( tx );
-                }
-            }
-            else if ( importOptions.shouldPerformImport )
-            {
-                importUsersAndRoles( tx );
+                migrateFromFlatFileRealm( tx );
             }
 
-            // If no users or roles were imported we setup the
+            // If no users or roles were migrated we setup the
             // default predefined roles and user and make sure we have an admin user
             ensureDefaultUserAndRoles( tx );
             tx.commit();
         }
-    }
-
-    /**
-     * This method should delete all existing auth data from the system graph.
-     * It is used in preparation for an import where the admin has requested
-     * a reset of the auth graph.
-     */
-    private void deleteAllSystemGraphAuthData()
-    {
-        // TODO:this does not clean up all security data anymore
-        // This is not an efficient implementation, since it executes many queries
-        // If performance becomes an issue we could do this with a single query instead
-
-        try ( Transaction tx = systemDb.beginTx() )
-        {
-            for ( Node user : userNodes )
-            {
-                deleteNodeWithRelationships( user );
-            }
-
-            for ( Node role : roleNodes )
-            {
-                deleteNodeWithRelationships( role );
-            }
-            tx.commit();
-        }
-
-        String userString = userNodes.size() == 1 ? "user" : "users";
-        String roleString = roleNodes.size() == 1 ? "role" : "roles";
-
-        log.info( "Deleted %s %s and %s %s into system graph.", Integer.toString( userNodes.size() ), userString, Integer.toString( roleNodes.size() ),
-                roleString );
-
-        userNodes.clear();
-        usernames.clear();
-        roleNodes.clear();
     }
 
     private void setupConstraints()
@@ -429,35 +374,7 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
         if ( !importOk )
         {
             throw new InvalidArgumentsException(
-                    "Automatic migration of users and roles into system graph failed because repository files are inconsistent. " + "Please use `neo4j-admin " +
-                            EnterpriseSecurityModule.IMPORT_AUTH_COMMAND_NAME + "` to perform migration manually." );
-        }
-
-        stopUserRepository( userRepository );
-        stopRoleRepository( roleRepository );
-    }
-
-    private void importUsersAndRoles( Transaction tx ) throws Exception
-    {
-        UserRepository userRepository = startUserRepository( importOptions.importUserRepositorySupplier );
-        RoleRepository roleRepository = startRoleRepository( importOptions.importRoleRepositorySupplier );
-
-        doImportUsers( tx, userRepository );
-
-        boolean importOK = doImportRoles( tx, userRepository, roleRepository );
-        // If transaction succeeded, we purge the repositories so that we will not try to import them again the next time we restart
-        if ( importOK && importOptions.shouldPurgeImportRepositoriesAfterSuccesfulImport )
-        {
-            userRepository.purge();
-            roleRepository.purge();
-
-            log.debug( "Source import user and role repositories were purged." );
-        }
-        if ( !importOK )
-        {
-            throw new InvalidArgumentsException(
-                    "Import of users and roles into system graph failed because the import files are inconsistent. " + "Please use `neo4j-admin " +
-                            EnterpriseSecurityModule.IMPORT_AUTH_COMMAND_NAME + "` to retry import again." );
+                    "Automatic migration of users and roles into system graph failed because repository files are inconsistent. " );
         }
 
         stopUserRepository( userRepository );
@@ -495,8 +412,6 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
         if ( rolesToImport )
         {
             setUpDefaultPrivileges( tx );
-            // This is not an efficient implementation, since it executes many queries
-            // If performance ever becomes an issue we could do this with a single query instead
             for ( RoleRecord roleRecord : roles.values() )
             {
                 String roleName = roleRecord.name();
@@ -563,13 +478,6 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
         node.setProperty( "name", roleName );
         roleNodes.add( node );
         return node;
-    }
-
-    private void deleteNodeWithRelationships( Node node )
-    {
-        final Iterable<Relationship> relationships = node.getRelationships();
-        relationships.forEach( Relationship::delete );
-        node.delete();
     }
 
     private void addRoleToUser( Transaction tx, Node role, String username ) throws InvalidArgumentsException
