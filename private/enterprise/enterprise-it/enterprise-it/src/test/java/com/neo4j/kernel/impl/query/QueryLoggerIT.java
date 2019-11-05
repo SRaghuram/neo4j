@@ -471,7 +471,7 @@ class QueryLoggerIT
         buildDatabase();
 
         EnterpriseLoginContext neo = login( "neo4j", "neo4j" );
-        executeQueryOnSystem ( neo, "ALTER CURRENT USER SET PASSWORD FROM 'neo4j' TO 'abc123'", Collections.emptyMap() );
+        executeQueryOnSystem( neo, "ALTER CURRENT USER SET PASSWORD FROM 'neo4j' TO 'abc123'", Collections.emptyMap() );
         databaseManagementService.shutdown();
 
         List<String> logLines = readAllLines( logFilename );
@@ -536,7 +536,7 @@ class QueryLoggerIT
         executeSystemCommandSuperUser( "ALTER USER neo4j SET PASSWORD CHANGE NOT REQUIRED" );
 
         EnterpriseLoginContext neo = login( "neo4j", "neo4j" );
-        executeQueryOnSystem ( neo, "CREATE USER foo SET PASSWORD \"abc123\"", Collections.emptyMap() );
+        executeQueryOnSystem( neo, "CREATE USER foo SET PASSWORD \"abc123\"", Collections.emptyMap() );
         databaseManagementService.shutdown();
 
         List<String> logLines = readAllLines( logFilename );
@@ -558,7 +558,7 @@ class QueryLoggerIT
         executeSystemCommandSuperUser( "ALTER USER neo4j SET PASSWORD CHANGE NOT REQUIRED" );
 
         EnterpriseLoginContext neo = login( "neo4j", "neo4j" );
-        executeQueryOnSystem ( neo, "CALL dbms.security.createUser('foo', 'abc123')", Collections.emptyMap() );
+        executeQueryOnSystem( neo, "CALL dbms.security.createUser('foo', 'abc123')", Collections.emptyMap() );
         databaseManagementService.shutdown();
 
         List<String> logLines = readAllLines( logFilename );
