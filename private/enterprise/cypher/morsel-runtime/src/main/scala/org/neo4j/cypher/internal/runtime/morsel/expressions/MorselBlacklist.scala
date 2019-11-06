@@ -5,6 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.morsel.expressions
 
+import org.neo4j.cypher.internal.ir.ProvidedOrder
 import org.neo4j.cypher.internal.logical.plans.{CartesianProduct, LogicalPlan, NestedPlanExpression, ResolvedFunctionInvocation}
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.ProvidedOrders
 import org.neo4j.cypher.internal.v4_0.expressions.FunctionInvocation
@@ -30,7 +31,7 @@ object MorselBlacklist {
         case f: FunctionInvocation if f.function == Type && parallelExecution =>
           _ + (f.functionName.name+"()")
 
-        case c:CartesianProduct if !providedOrders.get(c.left.id).isEmpty =>
+        case c: CartesianProduct if !providedOrders.getOrElse(c.left.id, ProvidedOrder.empty).isEmpty =>
           _ + "CartesianProduct if the LHS has a provided order"
       }
     if (unsupport.nonEmpty) {
