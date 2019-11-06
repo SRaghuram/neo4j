@@ -235,8 +235,11 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
             throw new TimeoutException( format( "Failed to join a raft group with id %s and members %s. Another member should have published " +
                     "the raftId but none was detected. Please restart the cluster.", raftId, topology ) );
         }
+        else if ( snapshot != null )
+        {
+            monitor.bootstrapped( snapshot, databaseId, raftId );
+        }
 
-        monitor.bootstrapped( snapshot, databaseId, raftId );
         raftIdStorage.writeState( raftId );
         return new BoundState( raftId, snapshot );
     }
