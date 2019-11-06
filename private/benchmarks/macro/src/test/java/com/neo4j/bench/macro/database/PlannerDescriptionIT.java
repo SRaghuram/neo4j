@@ -42,6 +42,7 @@ import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static java.lang.String.format;
+import static java.nio.file.Files.createTempDirectory;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -65,7 +66,7 @@ class PlannerDescriptionIT
                 Path neo4jConfigFile = Files.createTempFile( temporaryFolder.absolutePath().toPath(), "neo4j", ".conf" );
                 Neo4jConfigBuilder.withDefaults().writeToFile( neo4jConfigFile );
                 try ( Store store = StoreTestUtil.createEmptyStoreFor( workload,
-                                                                       Files.createTempDirectory( temporaryFolder.absolutePath().toPath(), "store" ), /* store */
+                                                                       createTempDirectory( temporaryFolder.absolutePath().toPath(), "store" ), /* store */
                                                                        neo4jConfigFile ) )
                 {
                     try ( EmbeddedDatabase database = EmbeddedDatabase.startWith( store, Edition.ENTERPRISE, neo4jConfigFile ) )
