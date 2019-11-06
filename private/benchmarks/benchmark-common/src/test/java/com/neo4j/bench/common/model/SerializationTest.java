@@ -189,7 +189,7 @@ public class SerializationTest
     void shouldSerializeBenchmarkConfigFromFile() throws IOException
     {
         // given
-        File benchmarkConfig = temporaryFolder.absolutePath();
+        File benchmarkConfig = temporaryFolder.file( "benchmark.config" );
         try ( FileWriter fileWriter = new FileWriter( benchmarkConfig ) )
         {
             fileWriter.append( "key1=value1" );
@@ -406,7 +406,7 @@ public class SerializationTest
 
     private Object shouldSerializeAndDeserialize( Object before )
     {
-        File jsonFile = temporaryFolder.absolutePath();
+        File jsonFile = temporaryFolder.file( "file.json" );
         JsonUtil.serializeJson( jsonFile.toPath(), before );
         Object after = JsonUtil.deserializeJson( jsonFile.toPath(), before.getClass() );
         assertThat( before, equalTo( after ) );

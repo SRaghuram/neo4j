@@ -58,11 +58,12 @@ public class ProcessTest
     @Test
     void shouldLaunchSimpleProcessAndWriteItsOutputToFile() throws Exception
     {
-        Path folder = temporaryFolder.absolutePath().toPath();
+        Path folder = temporaryFolder.directory( "folder" ).toPath();
         Files.createFile( folder.resolve( "file1.txt" ) );
         Files.createFile( folder.resolve( "file2.txt" ) );
 
         File processOutput = temporaryFolder.file( "processOutput" );
+        Files.createFile( processOutput.toPath() );
 
         assertThat( "Expected process output to be empty", Files.lines( processOutput.toPath() ).count(), equalTo( 0L ) );
 
