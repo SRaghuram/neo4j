@@ -470,7 +470,7 @@ public class ValueGeneratorTest
             values.add( fun.next( rng ) );
         }
 
-        File jsonFile = temporaryFolder.absolutePath();
+        File jsonFile = temporaryFolder.file( "file.json" );
         JsonUtil.serializeJson( jsonFile.toPath(), factory );
         ValueGeneratorFactory factoryAfter = JsonUtil.deserializeJson( jsonFile.toPath(), factory.getClass() );
 
