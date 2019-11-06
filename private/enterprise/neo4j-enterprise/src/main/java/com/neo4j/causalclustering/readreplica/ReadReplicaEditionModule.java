@@ -239,11 +239,16 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
         SecurityProvider securityProvider;
         if ( globalConfig.get( GraphDatabaseSettings.auth_enabled ) )
         {
-            EnterpriseSecurityModule securityModule =
-                    (EnterpriseSecurityModule) setupSecurityModule( globalModule,
-                                                                    globalModule.getLogService()
-                                                                                .getUserLog( ReadReplicaEditionModule.class ),
-                                                                                                      globalProcedures, "enterprise-security-module" );
+            EnterpriseSecurityModule securityModule = new EnterpriseSecurityModule(
+                    globalModule.getLogService().getUserLogProvider(),
+                    globalConfig,
+                    globalProcedures,
+                    jobScheduler,
+                    globalModule.getFileSystem(),
+                    globalModule.getGlobalDependencies(),
+                    globalModule.getTransactionEventListeners()
+            );
+            securityModule.setup();
             globalModule.getGlobalLife().add( securityModule );
             securityProvider = securityModule;
         }

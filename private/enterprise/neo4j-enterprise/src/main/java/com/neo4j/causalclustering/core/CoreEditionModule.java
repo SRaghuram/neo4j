@@ -359,9 +359,16 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         SecurityProvider securityProvider;
         if ( globalModule.getGlobalConfig().get( GraphDatabaseSettings.auth_enabled ) )
         {
-            EnterpriseSecurityModule securityModule =
-                    (EnterpriseSecurityModule) setupSecurityModule( globalModule, globalModule.getLogService().getUserLog( CoreEditionModule.class ),
-                                                                    globalProcedures, "enterprise-security-module" );
+            EnterpriseSecurityModule securityModule = new EnterpriseSecurityModule(
+                    globalModule.getLogService().getUserLogProvider(),
+                    globalConfig,
+                    globalProcedures,
+                    globalModule.getJobScheduler(),
+                    globalModule.getFileSystem(),
+                    globalModule.getGlobalDependencies(),
+                    globalModule.getTransactionEventListeners()
+            );
+            securityModule.setup();
             securityModule.getDatabaseInitializer().ifPresent( dbInit -> databaseInitializerMap.put( SYSTEM_DATABASE_ID, dbInit ) );
             globalModule.getGlobalLife().add( securityModule );
             securityProvider = securityModule;

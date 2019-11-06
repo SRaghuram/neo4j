@@ -41,8 +41,8 @@ import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.commandline.admin.security.SetDefaultAdminCommand;
+import org.neo4j.common.DependencySatisfier;
 import org.neo4j.configuration.Config;
 import org.neo4j.cypher.internal.security.SecureHasher;
 import org.neo4j.dbms.DatabaseManagementSystemSettings;
@@ -55,8 +55,10 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.security.AuthManager;
 import org.neo4j.kernel.api.security.SecurityModule;
+import org.neo4j.kernel.internal.event.GlobalTransactionEventListeners;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.logging.internal.LogService;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.server.security.auth.CommunitySecurityModule;
 import org.neo4j.server.security.auth.FileUserRepository;
@@ -65,12 +67,10 @@ import org.neo4j.server.security.systemgraph.SecurityGraphInitializer;
 import org.neo4j.service.Services;
 import org.neo4j.time.Clocks;
 
-import static com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings.ENTERPRISE_SECURITY_MODULE_ID;
 import static java.lang.String.format;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
 
-@ServiceProvider
 public class EnterpriseSecurityModule extends SecurityModule
 {
     private static final String ROLE_STORE_FILENAME = "roles";
@@ -79,40 +79,59 @@ public class EnterpriseSecurityModule extends SecurityModule
     private DatabaseManager<?> databaseManager;
     private boolean isClustered;
     private Config config;
+    private final GlobalProcedures globalProcedures;
+    private final JobScheduler scheduler;
     private LogProvider logProvider;
     private FileSystemAbstraction fileSystem;
+    private final DependencySatisfier dependencySatisfier;
+    private final GlobalTransactionEventListeners transactionEventListeners;
     private SystemGraphInitializer systemGraphInitializer;
     private EnterpriseAuthManager authManager;
     private SecurityConfig securityConfig;
 
-    @Override
-    public String getName()
+    public EnterpriseSecurityModule( LogProvider logProvider,
+            Config config,
+            GlobalProcedures procedures,
+            JobScheduler scheduler,
+            FileSystemAbstraction fileSystem,
+            DependencySatisfier dependencySatisfier,
+            GlobalTransactionEventListeners transactionEventListeners )
     {
-        return ENTERPRISE_SECURITY_MODULE_ID;
+        this.logProvider = logProvider;
+        this.config = config;
+        this.globalProcedures = procedures;
+        this.scheduler = scheduler;
+        this.fileSystem = fileSystem;
+        this.dependencySatisfier = dependencySatisfier;
+        this.transactionEventListeners = transactionEventListeners;
     }
 
     @Override
-    public void setup( Dependencies dependencies ) throws KernelException, IOException
+    public void setup()
     {
-        org.neo4j.collection.Dependencies platformDependencies = (org.neo4j.collection.Dependencies) dependencies.dependencySatisfier();
+        org.neo4j.collection.Dependencies platformDependencies = (org.neo4j.collection.Dependencies) dependencySatisfier;
         this.databaseManager = platformDependencies.resolveDependency( DatabaseManager.class );
         this.systemGraphInitializer = platformDependencies.resolveDependency( SystemGraphInitializer.class );
-
-        this.config = dependencies.config();
-        this.logProvider = dependencies.logService().getUserLogProvider();
-        this.fileSystem = dependencies.fileSystem();
 
         isClustered = config.get( EnterpriseEditionSettings.mode ) == EnterpriseEditionSettings.Mode.CORE ||
                       config.get( EnterpriseEditionSettings.mode ) == EnterpriseEditionSettings.Mode.READ_REPLICA;
 
-        GlobalProcedures globalProcedures = dependencies.procedures();
-        JobScheduler jobScheduler = dependencies.scheduler();
+        SecurityLog securityLog;
+        try
+        {
+            securityLog = SecurityLog.create( config, fileSystem, scheduler );
+        }
+        catch ( IOException e )
+        {
+            Log log = logProvider.getLog( getClass() );
+            log.error( e.getMessage() );
+            throw new RuntimeException( e );
+        }
 
-        SecurityLog securityLog = SecurityLog.create( config, fileSystem, jobScheduler );
         life.add( securityLog );
 
-        authManager = newAuthManager( config, logProvider, securityLog, fileSystem );
-        life.add( dependencies.dependencySatisfier().satisfyDependency( authManager ) );
+        authManager = newAuthManager( securityLog );
+        life.add( dependencySatisfier.satisfyDependency( authManager ) );
 
         AuthCacheClearingDatabaseEventListener databaseEventListener = new AuthCacheClearingDatabaseEventListener( authManager );
 
@@ -123,8 +142,7 @@ public class EnterpriseSecurityModule extends SecurityModule
         }
         else
         {
-            var standaloneTxEventListeners = dependencies.transactionEventListeners();
-            standaloneTxEventListeners.registerTransactionEventListener( SYSTEM_DATABASE_NAME, databaseEventListener );
+            transactionEventListeners.registerTransactionEventListener( SYSTEM_DATABASE_NAME, databaseEventListener );
         }
 
         // Register procedures
@@ -132,20 +150,28 @@ public class EnterpriseSecurityModule extends SecurityModule
         globalProcedures.registerComponent( EnterpriseAuthManager.class, ctx -> authManager, false );
         globalProcedures.registerComponent( EnterpriseSecurityContext.class, ctx -> asEnterpriseEdition( ctx.securityContext() ), true );
 
-        if ( securityConfig.nativeAuthEnabled )
+        try
         {
-            // TODO shouldn't this be registered always now with assignable privileges?
-            if ( config.get( SecuritySettings.authentication_providers ).size() > 1 || config.get( SecuritySettings.authorization_providers ).size() > 1 )
+            if ( securityConfig.nativeAuthEnabled )
             {
-                globalProcedures.registerProcedure( UserManagementProcedures.class, true, "%s only applies to native users." );
+                if ( config.get( SecuritySettings.authentication_providers ).size() > 1 || config.get( SecuritySettings.authorization_providers ).size() > 1 )
+                {
+                    globalProcedures.registerProcedure( UserManagementProcedures.class, true, "%s only applies to native users." );
+                }
+                else
+                {
+                    globalProcedures.registerProcedure( UserManagementProcedures.class, true );
+                }
             }
-            else
-            {
-                globalProcedures.registerProcedure( UserManagementProcedures.class, true );
-            }
-        }
 
-        globalProcedures.registerProcedure( SecurityProcedures.class, true );
+            globalProcedures.registerProcedure( SecurityProcedures.class, true );
+        }
+        catch ( KernelException e )
+        {
+            Log log = logProvider.getLog( getClass() );
+            log.error( e.getMessage() );
+            throw new RuntimeException( e );
+        }
     }
 
     @Override
@@ -190,7 +216,7 @@ public class EnterpriseSecurityModule extends SecurityModule
         throw new RuntimeException( "Expected " + EnterpriseSecurityContext.class.getName() + ", got " + securityContext.getClass().getName() );
     }
 
-    EnterpriseAuthManager newAuthManager( Config config, LogProvider logProvider, SecurityLog securityLog, FileSystemAbstraction fileSystem )
+    EnterpriseAuthManager newAuthManager( SecurityLog securityLog )
     {
         securityConfig = getValidatedSecurityConfig( config );
 

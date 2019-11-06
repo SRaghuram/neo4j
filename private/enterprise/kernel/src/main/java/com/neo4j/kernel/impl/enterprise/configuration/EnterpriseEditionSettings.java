@@ -9,7 +9,6 @@ import java.util.List;
 
 import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Description;
-import org.neo4j.configuration.Internal;
 import org.neo4j.configuration.SettingsDeclaration;
 import org.neo4j.graphdb.config.Setting;
 
@@ -26,14 +25,8 @@ import static org.neo4j.configuration.SettingValueParsers.ofEnum;
 @ServiceProvider
 public class EnterpriseEditionSettings implements SettingsDeclaration
 {
-    public static final String ENTERPRISE_SECURITY_MODULE_ID = "enterprise-security-module";
-
     @Description( "The maximum number of databases." )
     public static final Setting<Long> maxNumberOfDatabases = newBuilder( "dbms.max_databases", LONG, 100L ).addConstraint( min( 2L ) ).build();
-
-    @Internal
-    public static final Setting<String> security_module =
-            newBuilder( "unsupported.dbms.security.module", STRING, ENTERPRISE_SECURITY_MODULE_ID ).build();
 
     @Description( "A list of setting name patterns (comma separated) that are allowed to be dynamically changed. " +
             "The list may contain both full setting names, and partial names with the wildcard '*'. " +

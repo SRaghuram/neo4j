@@ -35,6 +35,7 @@ import com.neo4j.kernel.impl.pagecache.PageCacheWarmer;
 import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInDbmsProcedures;
 import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInProcedures;
 import com.neo4j.procedure.enterprise.builtin.SettingsWhitelist;
+import com.neo4j.server.security.enterprise.EnterpriseSecurityModule;
 
 import java.time.Duration;
 import java.util.Optional;
@@ -66,7 +67,6 @@ import org.neo4j.kernel.api.Kernel;
 import org.neo4j.kernel.api.net.NetworkConnectionTracker;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.security.AuthManager;
-import org.neo4j.kernel.api.security.SecurityModule;
 import org.neo4j.kernel.api.security.provider.SecurityProvider;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseStartupController;
@@ -218,10 +218,16 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
         SecurityProvider securityProvider;
         if ( globalModule.getGlobalConfig().get( GraphDatabaseSettings.auth_enabled ) )
         {
-            SecurityModule securityModule =
-                    setupSecurityModule( globalModule,
-                                         globalModule.getLogService().getUserLog( EnterpriseEditionModule.class ),
-                                         globalProcedures, "enterprise-security-module" );
+            EnterpriseSecurityModule securityModule = new EnterpriseSecurityModule(
+                    globalModule.getLogService().getUserLogProvider(),
+                    globalModule.getGlobalConfig(),
+                    globalProcedures,
+                    globalModule.getJobScheduler(),
+                    globalModule.getFileSystem(),
+                    globalModule.getGlobalDependencies(),
+                    globalModule.getTransactionEventListeners()
+            );
+            securityModule.setup();
             globalModule.getGlobalLife().add( securityModule );
             securityProvider = securityModule;
         }

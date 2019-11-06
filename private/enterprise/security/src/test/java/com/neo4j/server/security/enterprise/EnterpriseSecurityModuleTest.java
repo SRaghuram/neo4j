@@ -15,24 +15,24 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
+import org.neo4j.common.DependencySatisfier;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.DatabaseManagementSystemSettings;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.kernel.database.DatabaseIdRepository;
-import org.neo4j.kernel.database.TestDatabaseIdRepository;
+import org.neo4j.kernel.api.procedure.GlobalProcedures;
+import org.neo4j.kernel.internal.event.GlobalTransactionEventListeners;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.scheduler.JobScheduler;
 
 import static com.neo4j.server.security.enterprise.EnterpriseSecurityModule.mergeAuthenticationAndAuthorization;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsInRelativeOrder;
-import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -46,7 +46,6 @@ class EnterpriseSecurityModuleTest
     private Config config;
     private LogProvider mockLogProvider;
     private FileSystemAbstraction mockFileSystem;
-    private final DatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
 
     @BeforeEach
     void setup()
@@ -264,14 +263,15 @@ class EnterpriseSecurityModuleTest
 
     private void assertSuccess()
     {
-        new EnterpriseSecurityModule().newAuthManager( config, mockLogProvider, mock( SecurityLog.class ), mockFileSystem );
+        new EnterpriseSecurityModule( mockLogProvider, config, mock( GlobalProcedures.class ), mock( JobScheduler.class ), mockFileSystem,
+                mock( DependencySatisfier.class ), mock( GlobalTransactionEventListeners.class ) ).newAuthManager( mock( SecurityLog.class ) );
     }
 
     private void assertIllegalArgumentException( String errorMsg )
     {
         IllegalArgumentException e = assertThrows( IllegalArgumentException.class,
-                () -> new EnterpriseSecurityModule().newAuthManager( config, mockLogProvider, mock( SecurityLog.class ), mockFileSystem
-                ) );
+                () -> new EnterpriseSecurityModule( mockLogProvider, config, mock( GlobalProcedures.class ), mock( JobScheduler.class ), mockFileSystem,
+                        mock( DependencySatisfier.class ), mock( GlobalTransactionEventListeners.class ) ).newAuthManager( mock( SecurityLog.class ) ) );
         assertEquals( e.getMessage(), errorMsg );
     }
 }
