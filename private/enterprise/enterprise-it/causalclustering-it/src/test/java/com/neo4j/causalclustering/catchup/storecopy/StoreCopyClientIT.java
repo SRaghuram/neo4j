@@ -52,7 +52,6 @@ import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.SkipThreadLeakageGuard;
 import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.ports.PortAuthority;
@@ -67,7 +66,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
 
-@SkipThreadLeakageGuard
 @TestDirectoryExtension
 @ExtendWith( SuppressOutputExtension.class )
 class StoreCopyClientIT

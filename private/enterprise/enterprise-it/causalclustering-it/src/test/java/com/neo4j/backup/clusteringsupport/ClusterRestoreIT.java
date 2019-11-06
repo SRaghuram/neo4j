@@ -28,7 +28,6 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.test.DbRepresentation;
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.SkipThreadLeakageGuard;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
@@ -50,7 +49,6 @@ import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.function.Predicates.await;
 import static org.neo4j.graphdb.Label.label;
 
-@SkipThreadLeakageGuard
 @ClusterExtension
 @TestDirectoryExtension
 class ClusterRestoreIT

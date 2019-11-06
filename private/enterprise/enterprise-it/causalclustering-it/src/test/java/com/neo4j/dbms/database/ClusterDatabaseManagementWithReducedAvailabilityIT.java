@@ -10,7 +10,6 @@ import com.neo4j.causalclustering.common.ClusterMember;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -22,7 +21,6 @@ import java.util.stream.Stream;
 
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.SkipThreadLeakageGuard;
 
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.assertDatabaseEventuallyDoesNotExist;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.assertDatabaseEventuallyStarted;
@@ -34,7 +32,6 @@ import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.stop
 import static java.util.stream.Collectors.toSet;
 import static java.util.stream.Stream.concat;
 
-@SkipThreadLeakageGuard
 @ClusterExtension
 @TestInstance( TestInstance.Lifecycle.PER_METHOD )
 class ClusterDatabaseManagementWithReducedAvailabilityIT

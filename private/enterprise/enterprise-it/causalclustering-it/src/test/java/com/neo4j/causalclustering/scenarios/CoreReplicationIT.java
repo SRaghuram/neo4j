@@ -32,7 +32,6 @@ import org.neo4j.graphdb.WriteOperationsNotAllowedException;
 import org.neo4j.io.pagecache.monitoring.PageCacheCounters;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.SkipThreadLeakageGuard;
 
 import static com.neo4j.causalclustering.common.DataMatching.dataMatchesEventually;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -47,7 +46,6 @@ import static org.neo4j.function.Predicates.await;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
-@SkipThreadLeakageGuard
 @ClusterExtension
 class CoreReplicationIT
 {
@@ -62,8 +60,7 @@ class CoreReplicationIT
             .clusterConfig()
             .withNumberOfCoreMembers( 3 )
             .withSharedCoreParam( CausalClusteringSettings.minimum_core_cluster_size_at_formation, "3" )
-            .withNumberOfReadReplicas( 0 )
-            .withTimeout( 1000, SECONDS );
+            .withNumberOfReadReplicas( 0 );
 
     @BeforeAll
     void setup() throws Exception

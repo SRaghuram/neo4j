@@ -30,7 +30,6 @@ import org.neo4j.test.extension.Inject;
 
 import static com.neo4j.causalclustering.common.DataMatching.dataMatchesEventually;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
-import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -53,8 +52,7 @@ class ClusterIndexProcedureIT
     {
         var clusterConfig = clusterConfig()
                 .withNumberOfCoreMembers( 3 )
-                .withNumberOfReadReplicas( 3 )
-                .withTimeout( 1000, SECONDS );
+                .withNumberOfReadReplicas( 3 );
 
         cluster = clusterFactory.createCluster( clusterConfig );
         cluster.start();

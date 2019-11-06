@@ -5,86 +5,68 @@
  */
 package com.neo4j.causalclustering.scenarios;
 
-import com.neo4j.causalclustering.common.Cluster;
-import com.neo4j.causalclustering.core.CausalClusteringSettings;
-import com.neo4j.causalclustering.core.CoreClusterMember;
-import com.neo4j.causalclustering.discovery.IpFamily;
-import com.neo4j.causalclustering.discovery.akka.AkkaDiscoveryServiceFactory;
+import com.neo4j.test.causalclustering.ClusterExtension;
+import com.neo4j.test.causalclustering.ClusterFactory;
 import org.hamcrest.Description;
 import org.hamcrest.TypeSafeMatcher;
-import org.junit.After;
-import org.junit.Rule;
 import org.junit.Test;
+import org.junit.jupiter.api.TestInstance;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.IntFunction;
 
-import org.neo4j.graphdb.Result;
-import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
-import org.neo4j.kernel.impl.store.format.standard.Standard;
-import org.neo4j.test.rule.TestDirectory;
-import org.neo4j.test.rule.fs.DefaultFileSystemRule;
+import org.neo4j.test.extension.Inject;
 
+import static com.neo4j.causalclustering.core.CausalClusteringSettings.server_groups;
+import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
-import static java.util.Collections.emptyMap;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
+@ClusterExtension
+@TestInstance( PER_METHOD )
 public class ServerGroupsIT
 {
-    @Rule
-    public TestDirectory testDir = TestDirectory.testDirectory();
-    @Rule
-    public DefaultFileSystemRule fsRule = new DefaultFileSystemRule();
-
-    private Cluster cluster;
-
-    @After
-    public void after()
-    {
-        if ( cluster != null )
-        {
-            cluster.shutdown();
-        }
-    }
+    @Inject
+    private ClusterFactory clusterFactory;
 
     @Test
     public void shouldUpdateGroupsOnStart() throws Exception
     {
-        AtomicReference<String> suffix = new AtomicReference<>( "before" );
-        List<List<String>> expected;
+        var suffix = new AtomicReference<>( "before" );
 
-        Map<String,IntFunction<String>> instanceCoreParams = new HashMap<>();
-        instanceCoreParams.put( CausalClusteringSettings.server_groups.name(),
-                id -> String.join( ", ", makeCoreGroups( suffix.get(), id ) ) );
+        var instanceCoreParams = Map.<String,IntFunction<String>>of(
+                server_groups.name(), id -> String.join( ", ", makeCoreGroups( suffix.get(), id ) ) );
 
-        Map<String,IntFunction<String>> instanceReplicaParams = new HashMap<>();
-        instanceReplicaParams.put( CausalClusteringSettings.server_groups.name(),
-                id -> String.join( ", ", makeReplicaGroups( suffix.get(), id ) ) );
+        var instanceReplicaParams = Map.<String,IntFunction<String>>of(
+                server_groups.name(), id -> String.join( ", ", makeReplicaGroups( suffix.get(), id ) ) );
 
-        int nServers = 3;
-        cluster = new Cluster( testDir.directory( "cluster" ), nServers, nServers,
-                new AkkaDiscoveryServiceFactory(), emptyMap(), instanceCoreParams,
-                emptyMap(), instanceReplicaParams, Standard.LATEST_NAME, IpFamily.IPV4, false );
+        var clusterConfig = clusterConfig()
+                .withNumberOfCoreMembers( 3 )
+                .withNumberOfReadReplicas( 3 )
+                .withInstanceCoreParams( instanceCoreParams )
+                .withInstanceReadReplicaParams( instanceReplicaParams );
+
+        var cluster = clusterFactory.createCluster( clusterConfig );
 
         // when
         cluster.start();
 
         // then
-        expected = new ArrayList<>();
-        for ( CoreClusterMember core : cluster.coreMembers() )
+        var expected = new ArrayList<List<String>>();
+        for ( var core : cluster.coreMembers() )
         {
             expected.add( makeCoreGroups( suffix.get(), core.serverId() ) );
             expected.add( makeReplicaGroups( suffix.get(), core.serverId() ) );
         }
 
-        for ( CoreClusterMember core : cluster.coreMembers() )
+        for ( var core : cluster.coreMembers() )
         {
             assertEventually( core + " should have groups", () -> getServerGroups( core.defaultDatabase() ),
                     new GroupsMatcher( expected ), 30, SECONDS );
@@ -103,16 +85,16 @@ public class ServerGroupsIT
         expected.add( makeReplicaGroups( suffix.get(), 2 ) );
 
         // then
-        for ( CoreClusterMember core : cluster.coreMembers() )
+        for ( var core : cluster.coreMembers() )
         {
             assertEventually( core + " should have groups", () -> getServerGroups( core.defaultDatabase() ),
                     new GroupsMatcher( expected ), 30, SECONDS );
         }
     }
 
-    class GroupsMatcher extends TypeSafeMatcher<List<List<String>>>
+    private static class GroupsMatcher extends TypeSafeMatcher<List<List<String>>>
     {
-        private final List<List<String>> expected;
+        final List<List<String>> expected;
 
         GroupsMatcher( List<List<String>> expected )
         {
@@ -127,10 +109,10 @@ public class ServerGroupsIT
                 return false;
             }
 
-            for ( List<String> actualGroups : actual )
+            for ( var actualGroups : actual )
             {
-                boolean matched = false;
-                for ( List<String> expectedGroups : expected )
+                var matched = false;
+                for ( var expectedGroups : expected )
                 {
                     if ( actualGroups.size() != expectedGroups.size() )
                     {
@@ -162,29 +144,27 @@ public class ServerGroupsIT
         }
     }
 
-    private List<String> makeCoreGroups( String suffix, int id )
+    private static List<String> makeCoreGroups( String suffix, int id )
     {
         return asList( format( "core-%d-%s", id, suffix ), "core" );
     }
 
-    private List<String> makeReplicaGroups( String suffix, int id )
+    private static List<String> makeReplicaGroups( String suffix, int id )
     {
         return asList( format( "replica-%d-%s", id, suffix ), "replica" );
     }
 
-    private List<List<String>> getServerGroups( GraphDatabaseFacade db )
+    private static List<List<String>> getServerGroups( GraphDatabaseFacade db )
     {
-        List<List<String>> serverGroups = new ArrayList<>();
-        try ( Transaction transaction = db.beginTx() )
+        var serverGroups = new ArrayList<List<String>>();
+        try ( var transaction = db.beginTx();
+              var result = transaction.execute( "CALL dbms.cluster.overview" ) )
         {
-            try ( Result result = transaction.execute( "CALL dbms.cluster.overview" ) )
+            while ( result.hasNext() )
             {
-                while ( result.hasNext() )
-                {
-                    @SuppressWarnings( "unchecked" )
-                    List<String> groups = (List<String>) result.next().get( "groups" );
-                    serverGroups.add( groups );
-                }
+                @SuppressWarnings( "unchecked" )
+                var groups = (List<String>) result.next().get( "groups" );
+                serverGroups.add( groups );
             }
         }
         return serverGroups;

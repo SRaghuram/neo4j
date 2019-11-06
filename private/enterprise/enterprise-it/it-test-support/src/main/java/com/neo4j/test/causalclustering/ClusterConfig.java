@@ -12,29 +12,25 @@ import com.neo4j.causalclustering.discovery.IpFamily;
 import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 import java.util.function.IntFunction;
 
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
-import org.neo4j.test.rule.VerboseTimeout;
 
 import static com.neo4j.causalclustering.discovery.IpFamily.IPV4;
-import static org.neo4j.internal.helpers.collection.MapUtil.stringMap;
 
 public class ClusterConfig
 {
     private int noCoreMembers = 3;
     private int noReadReplicas = 3;
     private DiscoveryServiceType discoveryServiceType = DiscoveryServiceType.AKKA;
-    private Map<String,String> coreParams = stringMap();
-    private Map<String,IntFunction<String>> instanceCoreParams = new HashMap<>();
-    private Map<String,String> readReplicaParams = stringMap();
-    private Map<String,IntFunction<String>> instanceReadReplicaParams = new HashMap<>();
+    private final Map<String,String> coreParams = new HashMap<>();
+    private final Map<String,IntFunction<String>> instanceCoreParams = new HashMap<>();
+    private final Map<String,String> readReplicaParams = new HashMap<>();
+    private final Map<String,IntFunction<String>> instanceReadReplicaParams = new HashMap<>();
     private String recordFormat = Standard.LATEST_NAME;
     private IpFamily ipFamily = IPV4;
     private boolean useWildcard;
-    private VerboseTimeout.VerboseTimeoutBuilder timeoutBuilder = new VerboseTimeout.VerboseTimeoutBuilder().withTimeout( 15, TimeUnit.MINUTES );
 
     public static ClusterConfig clusterConfig()
     {
@@ -133,18 +129,6 @@ public class ClusterConfig
     public ClusterConfig useWildcard( boolean useWildcard )
     {
         this.useWildcard = useWildcard;
-        return this;
-    }
-
-    public ClusterConfig withTimeout( long timeout, TimeUnit unit )
-    {
-        this.timeoutBuilder = new VerboseTimeout.VerboseTimeoutBuilder().withTimeout( timeout, unit );
-        return this;
-    }
-
-    public ClusterConfig withNoTimeout()
-    {
-        this.timeoutBuilder = null;
         return this;
     }
 }

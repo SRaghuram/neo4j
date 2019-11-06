@@ -6,28 +6,20 @@
 package com.neo4j.enterprise;
 
 import com.neo4j.causalclustering.common.Cluster;
-import com.neo4j.causalclustering.core.CoreClusterMember;
-import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
-import com.neo4j.causalclustering.discovery.IpFamily;
-import com.neo4j.causalclustering.discovery.akka.AkkaDiscoveryServiceFactory;
-import com.neo4j.causalclustering.read_replica.ReadReplica;
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
-import org.junit.jupiter.api.AfterEach;
+import com.neo4j.test.causalclustering.ClusterExtension;
+import com.neo4j.test.causalclustering.ClusterFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
-import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
-import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.security.SecurityHelpers.getAllRoleNames;
 import static com.neo4j.security.SecurityHelpers.newUser;
@@ -37,72 +29,63 @@ import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRol
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.EDITOR;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLISHER;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER;
-import static java.util.Arrays.asList;
-import static java.util.Collections.emptyMap;
+import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
 import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.function.Predicates.await;
-import static org.neo4j.internal.helpers.collection.MapUtil.stringMap;
 
-@TestDirectoryExtension
 @ExtendWith( SuppressOutputExtension.class )
+@ClusterExtension
+@TestInstance( PER_METHOD )
 class SystemGraphSecurityReplicationIT
 {
     private static final int DEFAULT_TIMEOUT_MS = 20_000;
 
     @Inject
-    private TestDirectory testDir;
+    private ClusterFactory clusterFactory;
 
     private Cluster cluster;
 
     @BeforeEach
-    void setup() throws Exception
+    void beforeEach() throws Exception
     {
-        Map<String,String> params = stringMap(
+        var params = Map.of(
                 GraphDatabaseSettings.auth_enabled.name(), TRUE,
                 SecuritySettings.authentication_providers.name(), SecuritySettings.NATIVE_REALM_NAME,
-                SecuritySettings.authorization_providers.name(), SecuritySettings.NATIVE_REALM_NAME
-        );
+                SecuritySettings.authorization_providers.name(), SecuritySettings.NATIVE_REALM_NAME );
 
-        int noOfCoreMembers = 3;
-        int noOfReadReplicas = 3;
+        var clusterConfig = clusterConfig()
+                .withNumberOfCoreMembers( 3 )
+                .withNumberOfReadReplicas( 3 )
+                .withSharedCoreParams( params )
+                .withSharedReadReplicaParams( params );
 
-        DiscoveryServiceFactory discoveryServiceFactory = new AkkaDiscoveryServiceFactory();
-        cluster = new Cluster( testDir.absolutePath(), noOfCoreMembers, noOfReadReplicas, discoveryServiceFactory, params,
-                emptyMap(), params, emptyMap(), Standard.LATEST_NAME, IpFamily.IPV4, false );
-
+        cluster = clusterFactory.createCluster( clusterConfig );
         cluster.start();
-    }
-
-    @AfterEach
-    void cleanup()
-    {
-        if ( cluster != null )
-        {
-            cluster.shutdown();
-        }
     }
 
     @Test
     void shouldHaveInitialRoles() throws Exception
     {
-        Set<String> expectedRoles = new HashSet<>( asList( ADMIN, ARCHITECT, EDITOR, PUBLISHER, READER ) );
+        var expectedRoles = Set.of( ADMIN, ARCHITECT, EDITOR, PUBLISHER, READER );
 
-        for ( CoreClusterMember core : cluster.coreMembers() )
+        for ( var core : cluster.coreMembers() )
         {
-            await( () -> getAllRoleNames( core.managementService() ).equals( expectedRoles ), DEFAULT_TIMEOUT_MS, TimeUnit.MILLISECONDS );
+            await( () -> getAllRoleNames( core.managementService() ).equals( expectedRoles ), DEFAULT_TIMEOUT_MS, MILLISECONDS );
         }
 
-        for ( ReadReplica replica : cluster.readReplicas() )
+        for ( var replica : cluster.readReplicas() )
         {
-            await( () -> getAllRoleNames( replica.managementService() ).equals( expectedRoles ), DEFAULT_TIMEOUT_MS, TimeUnit.MILLISECONDS );
+            await( () -> getAllRoleNames( replica.managementService() ).equals( expectedRoles ), DEFAULT_TIMEOUT_MS, MILLISECONDS );
         }
     }
 
     @Test
     void shouldReplicateNewUser() throws Exception
     {
-        String username = "martin";
-        String password = "235711";
+        var username = "martin";
+        var password = "235711";
 
         cluster.systemTx( ( db, tx ) ->
         {
@@ -110,14 +93,14 @@ class SystemGraphSecurityReplicationIT
             tx.commit();
         } );
 
-        for ( CoreClusterMember core : cluster.coreMembers() )
+        for ( var core : cluster.coreMembers() )
         {
-            await( () -> userCanLogin( username, password, core.defaultDatabase() ), DEFAULT_TIMEOUT_MS, TimeUnit.MILLISECONDS );
+            await( () -> userCanLogin( username, password, core.defaultDatabase() ), DEFAULT_TIMEOUT_MS, MILLISECONDS );
         }
 
-        for ( ReadReplica replica : cluster.readReplicas() )
+        for ( var replica : cluster.readReplicas() )
         {
-            await( () -> userCanLogin( username, password, replica.defaultDatabase() ), DEFAULT_TIMEOUT_MS, TimeUnit.MILLISECONDS );
+            await( () -> userCanLogin( username, password, replica.defaultDatabase() ), DEFAULT_TIMEOUT_MS, MILLISECONDS );
         }
     }
 }

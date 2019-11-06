@@ -89,7 +89,7 @@ class OnlineBackupIT
     @AfterEach
     void tearDown()
     {
-        if ( db != null )
+        if ( managementService != null )
         {
             managementService.shutdown();
         }

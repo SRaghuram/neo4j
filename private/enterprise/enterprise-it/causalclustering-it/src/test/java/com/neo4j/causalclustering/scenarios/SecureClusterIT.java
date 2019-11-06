@@ -5,16 +5,12 @@
  */
 package com.neo4j.causalclustering.scenarios;
 
-import com.neo4j.causalclustering.common.Cluster;
-import com.neo4j.causalclustering.common.DataMatching;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
-import com.neo4j.causalclustering.core.CoreClusterMember;
-import com.neo4j.causalclustering.discovery.IpFamily;
-import com.neo4j.causalclustering.discovery.akka.AkkaDiscoveryServiceFactory;
-import com.neo4j.causalclustering.read_replica.ReadReplica;
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
-import org.junit.jupiter.api.AfterEach;
+import com.neo4j.test.causalclustering.ClusterExtension;
+import com.neo4j.test.causalclustering.ClusterFactory;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
@@ -23,103 +19,94 @@ import java.util.Map;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.ssl.SslPolicyConfig;
-import org.neo4j.graphdb.Node;
-import org.neo4j.internal.helpers.collection.MapUtil;
-import org.neo4j.io.fs.DefaultFileSystemAbstraction;
-import org.neo4j.kernel.impl.store.format.standard.Standard;
+import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.logging.Level;
 import org.neo4j.ssl.SslResourceBuilder;
+import org.neo4j.test.extension.DefaultFileSystemExtension;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
-import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
-import org.neo4j.test.rule.TestDirectory;
 
-import static java.util.Collections.emptyMap;
+import static com.neo4j.causalclustering.common.DataMatching.dataMatchesEventually;
+import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
+import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
 import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.configuration.ssl.SslPolicyScope.CLUSTER;
 import static org.neo4j.graphdb.Label.label;
 
-@TestDirectoryExtension
-@ExtendWith( SuppressOutputExtension.class )
+@ExtendWith( {SuppressOutputExtension.class, DefaultFileSystemExtension.class} )
+@ClusterExtension
+@TestInstance( PER_METHOD )
 class SecureClusterIT
 {
-    @Inject
-    private TestDirectory testDir;
-    @Inject
-    private DefaultFileSystemAbstraction fs;
+    private static final String CERTIFICATES_DIR = "certificates/cluster";
 
-    private Cluster cluster;
-
-    @AfterEach
-    void cleanup()
-    {
-        if ( cluster != null )
-        {
-            cluster.shutdown();
-        }
-    }
+    @Inject
+    private FileSystemAbstraction fs;
+    @Inject
+    private ClusterFactory clusterFactory;
 
     @Test
     void shouldReplicateInSecureCluster() throws Exception
     {
         // given
-        SslPolicyConfig policyConfig = SslPolicyConfig.forScope( CLUSTER );
+        var sslPolicyConfig = SslPolicyConfig.forScope( CLUSTER );
 
-        Map<String,String> coreParams = MapUtil.stringMap(
+        var coreParams = Map.of(
                 CausalClusteringSettings.middleware_logging_level.name(), Level.DEBUG.toString(),
                 GraphDatabaseSettings.auth_enabled.name(), TRUE,
                 SecuritySettings.authentication_providers.name(), SecuritySettings.NATIVE_REALM_NAME,
                 SecuritySettings.authorization_providers.name(), SecuritySettings.NATIVE_REALM_NAME,
-                policyConfig.enabled.name(), Boolean.TRUE.toString(),
-                policyConfig.base_directory.name(), "certificates/cluster"
+                sslPolicyConfig.enabled.name(), TRUE,
+                sslPolicyConfig.base_directory.name(), CERTIFICATES_DIR
         );
-        Map<String,String> readReplicaParams = MapUtil.stringMap(
+        var readReplicaParams = Map.of(
                 CausalClusteringSettings.middleware_logging_level.name(), Level.DEBUG.toString(),
-                policyConfig.enabled.name(), Boolean.TRUE.toString(),
-                policyConfig.base_directory.name(), "certificates/cluster"
+                sslPolicyConfig.enabled.name(), TRUE,
+                sslPolicyConfig.base_directory.name(), CERTIFICATES_DIR
         );
 
-        int noOfCoreMembers = 3;
-        int noOfReadReplicas = 3;
+        var clusterConfig = clusterConfig()
+                .withNumberOfCoreMembers( 3 )
+                .withNumberOfReadReplicas( 3 )
+                .withSharedCoreParams( coreParams )
+                .withSharedReadReplicaParams( readReplicaParams );
 
-        cluster = new Cluster( testDir.absolutePath(), noOfCoreMembers, noOfReadReplicas,
-                new AkkaDiscoveryServiceFactory(), coreParams, emptyMap(), readReplicaParams,
-                emptyMap(), Standard.LATEST_NAME, IpFamily.IPV4, false );
+        var cluster = clusterFactory.createCluster( clusterConfig );
 
         // install the cryptographic objects for each core
-        for ( CoreClusterMember core : cluster.coreMembers() )
+        for ( var core : cluster.coreMembers() )
         {
-            File homeDir = cluster.getCoreMemberById( core.serverId() ).homeDir();
-            int keyId = core.serverId();
+            var keyId = core.serverId();
+            var homeDir = cluster.getCoreMemberById( core.serverId() ).homeDir();
             installKeyToInstance( homeDir, keyId );
         }
 
         // install the cryptographic objects for each read replica
-        for ( ReadReplica replica : cluster.readReplicas() )
+        for ( var replica : cluster.readReplicas() )
         {
-            int keyId = replica.serverId() + noOfCoreMembers;
-            File homeDir = cluster.getReadReplicaById( replica.serverId() ).homeDir();
+            var keyId = replica.serverId() + cluster.coreMembers().size();
+            var homeDir = cluster.getReadReplicaById( replica.serverId() ).homeDir();
             installKeyToInstance( homeDir, keyId );
         }
 
         // when
         cluster.start();
 
-        CoreClusterMember leader = cluster.coreTx( ( db, tx ) ->
+        var leader = cluster.coreTx( ( db, tx ) ->
         {
-            Node node = tx.createNode( label( "boo" ) );
+            var node = tx.createNode( label( "boo" ) );
             node.setProperty( "foobar", "baz_bat" );
             tx.commit();
         } );
 
         // then
-        DataMatching.dataMatchesEventually( leader, cluster.coreMembers() );
-        DataMatching.dataMatchesEventually( leader, cluster.readReplicas() );
+        dataMatchesEventually( leader, cluster.coreMembers() );
+        dataMatchesEventually( leader, cluster.readReplicas() );
     }
 
     private void installKeyToInstance( File homeDir, int keyId ) throws IOException
     {
-        File baseDir = new File( homeDir, "certificates/cluster" );
+        var baseDir = new File( homeDir, CERTIFICATES_DIR );
         fs.mkdirs( new File( baseDir, "trusted" ) );
         fs.mkdirs( new File( baseDir, "revoked" ) );
 

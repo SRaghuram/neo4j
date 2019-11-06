@@ -19,7 +19,6 @@ import java.util.UUID;
 
 import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.SkipThreadLeakageGuard;
 
 import static com.neo4j.causalclustering.common.DataMatching.dataMatchesEventually;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.compression_implementations;
@@ -29,7 +28,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
 import static org.neo4j.graphdb.Label.label;
 
-@SkipThreadLeakageGuard
 @ClusterExtension
 @TestInstance( PER_METHOD )
 class ClusterCompressionIT

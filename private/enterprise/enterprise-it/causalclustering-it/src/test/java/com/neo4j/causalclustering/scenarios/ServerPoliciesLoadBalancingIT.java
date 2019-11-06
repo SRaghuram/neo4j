@@ -47,7 +47,6 @@ import org.neo4j.procedure.builtin.routing.ParameterNames;
 import org.neo4j.procedure.builtin.routing.RoutingResult;
 import org.neo4j.procedure.builtin.routing.RoutingResultFormat;
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.SkipThreadLeakageGuard;
 import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.values.virtual.MapValueBuilder;
 
@@ -62,7 +61,6 @@ import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 import static org.neo4j.internal.helpers.collection.MapUtil.stringMap;
 
-@SkipThreadLeakageGuard
 @ExtendWith( SuppressOutputExtension.class )
 @ClusterExtension
 @TestInstance( PER_METHOD )

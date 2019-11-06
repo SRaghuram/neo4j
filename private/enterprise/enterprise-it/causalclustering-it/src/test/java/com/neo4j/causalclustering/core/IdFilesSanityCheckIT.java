@@ -23,7 +23,6 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.test.extension.Inject;
 
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
-import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @ClusterExtension
@@ -41,8 +40,7 @@ class IdFilesSanityCheckIT
     {
         var clusterConfig = clusterConfig()
                 .withNumberOfCoreMembers( 3 )
-                .withNumberOfReadReplicas( 0 )
-                .withTimeout( 1000, SECONDS );
+                .withNumberOfReadReplicas( 0 );
 
         cluster = clusterFactory.createCluster( clusterConfig );
         cluster.start();

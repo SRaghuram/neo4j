@@ -17,7 +17,6 @@ import static com.neo4j.causalclustering.core.CausalClusteringSettings.leader_el
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.minimum_core_cluster_size_at_formation;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.minimum_core_cluster_size_at_runtime;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
-import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
@@ -38,8 +37,7 @@ class ConsensusGroupSettingsIT
                 .withNumberOfReadReplicas( 0 )
                 .withInstanceCoreParam( minimum_core_cluster_size_at_formation, value -> "5" )
                 .withInstanceCoreParam( minimum_core_cluster_size_at_runtime, value -> "3" )
-                .withInstanceCoreParam( leader_election_timeout, value -> "1s" )
-                .withTimeout( 1000, SECONDS );
+                .withInstanceCoreParam( leader_election_timeout, value -> "1s" );
 
         var cluster = clusterFactory.createCluster( clusterConfig );
         cluster.start();

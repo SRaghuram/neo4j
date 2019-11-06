@@ -35,7 +35,6 @@ import org.neo4j.kernel.lifecycle.LifecycleException;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.extension.DefaultFileSystemExtension;
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.SkipThreadLeakageGuard;
 import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 
 import static com.neo4j.causalclustering.upstream.TestStoreId.assertAllStoresHaveTheSameStoreId;
@@ -49,7 +48,6 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 import static org.neo4j.kernel.impl.store.MetaDataStore.Position.RANDOM_NUMBER;
 import static org.neo4j.logging.internal.DatabaseLogProvider.nullDatabaseLogProvider;
 
-@SkipThreadLeakageGuard
 @ExtendWith( DefaultFileSystemExtension.class )
 @ClusterExtension
 @TestInstance( PER_METHOD )

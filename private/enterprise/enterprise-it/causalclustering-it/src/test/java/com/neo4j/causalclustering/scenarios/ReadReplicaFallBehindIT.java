@@ -48,8 +48,7 @@ class ReadReplicaFallBehindIT
             .clusterConfig()
             .withNumberOfCoreMembers( 3 )
             .withSharedCoreParam( keep_logical_logs, FALSE )
-            .withNumberOfReadReplicas( 1 )
-            .withTimeout( 1000, SECONDS );
+            .withNumberOfReadReplicas( 1 );
 
     @BeforeAll
     void setup() throws Exception

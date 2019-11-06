@@ -61,8 +61,7 @@ class CoreFallBehindIT
             .withSharedCoreParam( raft_log_pruning_strategy, "keep_none" )
             .withSharedCoreParam( raft_log_rotation_size, "1K" )
             .withSharedCoreParam( raft_log_pruning_frequency, "100ms" )
-            .withNumberOfReadReplicas( 0 )
-            .withTimeout( 1000, SECONDS );
+            .withNumberOfReadReplicas( 0 );
 
     static class DownloadMonitor implements PersistentSnapshotDownloader.Monitor
     {

@@ -21,7 +21,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.SkipThreadLeakageGuard;
 
 import static com.neo4j.causalclustering.discovery.InitialDiscoveryMembersResolver.advertisedSocketAddressComparator;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
@@ -35,7 +34,6 @@ import static org.neo4j.internal.helpers.NamedThreadFactory.daemon;
 import static org.neo4j.internal.helpers.collection.Iterables.last;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
-@SkipThreadLeakageGuard
 @ClusterExtension
 @Execution( CONCURRENT )
 public class ClusterFormationIT
