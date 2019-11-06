@@ -370,6 +370,7 @@ class IndexProceduresIT
 
     private void verifyCanDropAndRecreateAllSchemaRulesUsingSchemaStatements()
     {
+        awaitIndexesOnline();
         List<UnboundIndexDefinition> allIndexes = allIndexes();
         List<UnboundConstraintDefinition> allConstraints = allConstraints();
         Map<String,Map<String,Object>> schemaRuleNameToSchemaStatements = callSchemaStatements();
@@ -458,15 +459,14 @@ class IndexProceduresIT
     private Map<String,Map<String,Object>> callSchemaStatements()
     {
         Map<String,Map<String,Object>> indexNameToSchemaStatements = new HashMap<>();
-        try ( Transaction tx = db.beginTx() )
+        try ( Transaction tx = db.beginTx();
+              Result result = tx.execute( "CALL " + SCHEMA_STATEMENTS ) )
         {
-            final Result result = tx.execute( "CALL " + SCHEMA_STATEMENTS );
             while ( result.hasNext() )
             {
                 final Map<String,Object> next = result.next();
                 indexNameToSchemaStatements.put( (String) next.get( "name" ), next );
             }
-            result.close();
             tx.commit();
         }
         return indexNameToSchemaStatements;
