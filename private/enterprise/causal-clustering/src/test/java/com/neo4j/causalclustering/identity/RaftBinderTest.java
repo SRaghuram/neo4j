@@ -13,6 +13,8 @@ import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
+import com.neo4j.causalclustering.discovery.DiscoveryTimeoutException;
+import com.neo4j.causalclustering.discovery.PublishRaftIdOutcome;
 import com.neo4j.dbms.ClusterSystemGraphDbmsModel;
 import com.neo4j.dbms.DatabaseStartAborter;
 import org.junit.jupiter.api.Test;
@@ -36,36 +38,37 @@ import org.neo4j.dbms.database.DatabaseStartAbortedException;
 import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.DatabaseIdFactory;
-import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.time.Clocks;
 import org.neo4j.time.FakeClock;
 
 import static com.neo4j.causalclustering.discovery.TestTopology.addressesForCore;
-import static java.time.temporal.ChronoUnit.MILLIS;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.emptySet;
+import static java.util.Collections.singleton;
 import static java.util.UUID.randomUUID;
 import static java.util.stream.Collectors.toSet;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
+import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId;
 import static org.neo4j.logging.internal.DatabaseLogProvider.nullDatabaseLogProvider;
 
 class RaftBinderTest
 {
-    private static final DatabaseId SOME_DATABASE_ID = TestDatabaseIdRepository.randomDatabaseId();
+    private static final DatabaseId SOME_DATABASE_ID = randomDatabaseId();
     private static final DatabaseId DEFAULT_DATABASE_ID = DatabaseIdFactory.from( DEFAULT_DATABASE_NAME, UUID.randomUUID() );
 
     private static final StoreId SOME_STORE_ID = new StoreId( 0, 0, 0 );
@@ -101,14 +104,14 @@ class RaftBinderTest
     {
         ClusterSystemGraphDbmsModel systemGraph = systemGraphFor( SOME_DATABASE_ID, emptySet() );
         return new RaftBinder( SOME_DATABASE_ID, myIdentity, raftIdStorage, topologyService, systemGraph, clock, () -> clock.forward( 1, TimeUnit.SECONDS ),
-                Duration.of( 3_000, MILLIS ), raftBootstrapper, minCoreHosts, new Monitors(), nullDatabaseLogProvider() );
+                Duration.ofSeconds( 10 ), raftBootstrapper, minCoreHosts, new Monitors(), nullDatabaseLogProvider() );
     }
 
     private RaftBinder raftBinder( SimpleStorage<RaftId> raftIdStorage, CoreTopologyService topologyService, DatabaseId databaseId,
             ClusterSystemGraphDbmsModel systemGraph )
     {
         return new RaftBinder( databaseId, myIdentity, raftIdStorage, topologyService, systemGraph, clock, () -> clock.forward( 1, TimeUnit.SECONDS ),
-                Duration.of( 3_000, MILLIS ), raftBootstrapper, minCoreHosts, new Monitors(), nullDatabaseLogProvider() );
+                Duration.ofSeconds( 10 ), raftBootstrapper, minCoreHosts, new Monitors(), nullDatabaseLogProvider() );
     }
 
     @Test
@@ -179,6 +182,7 @@ class RaftBinderTest
         Optional<RaftId> raftId = binder.get();
         assertTrue( raftId.isPresent() );
         assertEquals( publishedRaftId, raftId.get() );
+        verify( topologyService, never() ).publishRaftId( publishedRaftId );
         verify( topologyService, atLeast( 2 ) ).coreTopologyForDatabase( SOME_DATABASE_ID );
     }
 
@@ -189,7 +193,7 @@ class RaftBinderTest
         RaftId previouslyBoundRaftId = RaftId.from( SOME_DATABASE_ID );
 
         CoreTopologyService topologyService = mock( CoreTopologyService.class );
-        when( topologyService.setRaftId( previouslyBoundRaftId ) ).thenReturn( true );
+        when( topologyService.publishRaftId( previouslyBoundRaftId ) ).thenReturn( PublishRaftIdOutcome.SUCCESSFUL_PUBLISH_BY_ME );
 
         InMemorySimpleStorage<RaftId> raftIdStorage = new InMemorySimpleStorage<>();
         raftIdStorage.writeState( previouslyBoundRaftId );
@@ -200,28 +204,113 @@ class RaftBinderTest
         binder.bindToRaft( neverAbort() );
 
         // then
-        verify( topologyService ).setRaftId( previouslyBoundRaftId );
+        verify( topologyService ).publishRaftId( previouslyBoundRaftId );
         Optional<RaftId> raftId = binder.get();
         assertTrue( raftId.isPresent() );
         assertEquals( previouslyBoundRaftId, raftId.get() );
     }
 
     @Test
-    void shouldThrowWhenFailsToPublishStoredRaftId() throws Throwable
+    void shouldRetryWhenPublishOfStoredRaftIdFailsWithTransientErrors() throws Throwable
     {
         // given
         RaftId previouslyBoundRaftId = RaftId.from( SOME_DATABASE_ID );
 
         CoreTopologyService topologyService = mock( CoreTopologyService.class );
-        when( topologyService.setRaftId( previouslyBoundRaftId ) ).thenReturn( false );
+        when( topologyService.publishRaftId( previouslyBoundRaftId ) )
+                .thenReturn( PublishRaftIdOutcome.FAILED_PUBLISH )
+                .thenReturn( PublishRaftIdOutcome.SUCCESSFUL_PUBLISH_BY_ME );
 
         InMemorySimpleStorage<RaftId> raftIdStorage = new InMemorySimpleStorage<>();
         raftIdStorage.writeState( previouslyBoundRaftId );
 
         RaftBinder binder = raftBinder( raftIdStorage, topologyService );
 
+        // when
+        binder.bindToRaft( neverAbort() );
+
+        // then
+        verify( topologyService, atLeast( 2 ) ).publishRaftId( previouslyBoundRaftId );
+    }
+
+    @Test
+    void shouldNotRetryWhenOtherMemberPublishesStoredRaftId() throws Throwable
+    {
+        // given
+        RaftId previouslyBoundRaftId = RaftId.from( SOME_DATABASE_ID );
+
+        CoreTopologyService topologyService = mock( CoreTopologyService.class );
+        when( topologyService.publishRaftId( previouslyBoundRaftId ) )
+                .thenReturn( PublishRaftIdOutcome.SUCCESSFUL_PUBLISH_BY_OTHER );
+
+        InMemorySimpleStorage<RaftId> raftIdStorage = new InMemorySimpleStorage<>();
+        raftIdStorage.writeState( previouslyBoundRaftId );
+
+        RaftBinder binder = raftBinder( raftIdStorage, topologyService );
+
+        // when
+        binder.bindToRaft( neverAbort() );
+
+        // then
+        verify( topologyService, times( 1 ) ).publishRaftId( previouslyBoundRaftId );
+    }
+
+    @Test
+    void shouldRetryWhenPublishFailsWithTransientErrors() throws Throwable
+    {
+        // given
+        var databaseId = randomDatabaseId();
+        var members = IntStream.range( 0, minCoreHosts )
+                .mapToObj( i -> Pair.of( new MemberId( randomUUID() ), addressesForCore( i, false, singleton( databaseId ) ) ) )
+                .collect( Collectors.toMap( Pair::first, Pair::other ) );
+
+        var bootstrappableTopology = new DatabaseCoreTopology( databaseId, null, members );
+        var topologyService = mock( CoreTopologyService.class );
+
+        when( topologyService.publishRaftId( any( RaftId.class ) ) )
+                .thenThrow( DiscoveryTimeoutException.class ) // Cause first retry
+                .thenReturn( PublishRaftIdOutcome.FAILED_PUBLISH ) // Cause second retry
+                .thenReturn( PublishRaftIdOutcome.SUCCESSFUL_PUBLISH_BY_OTHER ) // Cause third retry
+                .thenReturn( PublishRaftIdOutcome.SUCCESSFUL_PUBLISH_BY_ME ); // Finally succeed
+        when( topologyService.coreTopologyForDatabase( databaseId ) ).thenReturn( bootstrappableTopology );
+        when( topologyService.canBootstrapRaftGroup( databaseId ) ).thenReturn( true );
+
+        CoreSnapshot snapshot = mock( CoreSnapshot.class );
+        when( raftBootstrapper.bootstrap( members.keySet() ) ).thenReturn( snapshot );
+
+        var binder = raftBinder( new InMemorySimpleStorage<>(), topologyService, databaseId, systemGraphFor( databaseId, emptySet() ) );
+
+        // when
+        binder.bindToRaft( neverAbort() );
+
+        // then
+        verify( topologyService, atLeast( 4 ) ).publishRaftId( RaftId.from( databaseId ) );
+    }
+
+    @Test
+    void shouldTimeoutIfPublishRaftIdContinuallyFailsWithTransientErrors() throws Throwable
+    {
+        // given
+        var databaseId = randomDatabaseId();
+        var members = IntStream.range( 0, minCoreHosts )
+                .mapToObj( i -> Pair.of( new MemberId( randomUUID() ), addressesForCore( i, false, singleton( databaseId ) ) ) )
+                .collect( Collectors.toMap( Pair::first, Pair::other ) );
+
+        var bootstrappableTopology = new DatabaseCoreTopology( databaseId, null, members );
+        var topologyService = mock( CoreTopologyService.class );
+
+        when( topologyService.publishRaftId( any( RaftId.class ) ) ).thenThrow( DiscoveryTimeoutException.class );
+        when( topologyService.coreTopologyForDatabase( databaseId ) ).thenReturn( bootstrappableTopology );
+        when( topologyService.canBootstrapRaftGroup( databaseId ) ).thenReturn( true );
+
+        CoreSnapshot snapshot = mock( CoreSnapshot.class );
+        when( raftBootstrapper.bootstrap( members.keySet() ) ).thenReturn( snapshot );
+
+        var binder = raftBinder( new InMemorySimpleStorage<>(), topologyService, databaseId, systemGraphFor( databaseId, emptySet() ) );
+
         // when / then
-        assertThrows( BindingException.class, () -> binder.bindToRaft( neverAbort() ) );
+        assertThrows( TimeoutException.class, () -> binder.bindToRaft( neverAbort() ) );
+        verify( topologyService, atLeast( 1 ) ).publishRaftId( RaftId.from( databaseId ) );
     }
 
     static Stream<Arguments> initialDatabases()
@@ -246,7 +335,7 @@ class RaftBinderTest
 
         CoreTopologyService topologyService = mock( CoreTopologyService.class );
         when( topologyService.coreTopologyForDatabase( databaseId ) ).thenReturn( topology );
-        when( topologyService.setRaftId( any() ) ).thenReturn( true );
+        when( topologyService.publishRaftId( any() ) ).thenReturn( PublishRaftIdOutcome.SUCCESSFUL_PUBLISH_BY_ME );
         when( topologyService.canBootstrapRaftGroup( databaseId ) ).thenReturn( true );
 
         CoreSnapshot snapshot = mock( CoreSnapshot.class );
@@ -263,7 +352,7 @@ class RaftBinderTest
         Optional<RaftId> raftId = binder.get();
         assertTrue( raftId.isPresent() );
         assertEquals( raftId.get().uuid(), databaseId.uuid() );
-        verify( topologyService ).setRaftId( raftId.get() );
+        verify( topologyService ).publishRaftId( raftId.get() );
         assertTrue( boundState.snapshot().isPresent() );
         assertEquals( snapshot, boundState.snapshot().get() );
     }
@@ -282,7 +371,7 @@ class RaftBinderTest
 
         CoreTopologyService topologyService = mock( CoreTopologyService.class );
         when( topologyService.coreTopologyForDatabase( SOME_DATABASE_ID ) ).thenReturn( topology );
-        when( topologyService.setRaftId( any() ) ).thenReturn( true );
+        when( topologyService.publishRaftId( any() ) ).thenReturn( PublishRaftIdOutcome.SUCCESSFUL_PUBLISH_BY_ME );
         when( topologyService.canBootstrapRaftGroup( SOME_DATABASE_ID ) ).thenReturn( true );
 
         CoreSnapshot snapshot = mock( CoreSnapshot.class );
@@ -299,7 +388,7 @@ class RaftBinderTest
         Optional<RaftId> raftId = binder.get();
         assertTrue( raftId.isPresent() );
         assertEquals( raftId.get().uuid(), SOME_DATABASE_ID.uuid() );
-        verify( topologyService ).setRaftId( raftId.get() );
+        verify( topologyService ).publishRaftId( raftId.get() );
         assertTrue( boundState.snapshot().isPresent() );
         assertEquals( snapshot, boundState.snapshot().get() );
     }

@@ -12,6 +12,7 @@ import akka.cluster.Cluster;
 import akka.cluster.Member;
 import akka.cluster.UniqueAddress;
 import akka.stream.javadsl.SourceQueueWithComplete;
+import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.akka.AbstractActorWithTimersAndLogging;
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStartedMessage;
@@ -55,6 +56,7 @@ public class CoreTopologyActor extends AbstractActorWithTimersAndLogging
     private final SourceQueueWithComplete<CoreTopologyMessage> topologyUpdateSink;
     private final SourceQueueWithComplete<BootstrapState> bootstrapStateSink;
     private final TopologyBuilder topologyBuilder;
+    private final int minCoreHostsAtRuntime;
 
     private final UniqueAddress myClusterAddress;
 
@@ -86,6 +88,7 @@ public class CoreTopologyActor extends AbstractActorWithTimersAndLogging
         this.bootstrapStateSink = bootstrapStateSink;
         this.readReplicaTopologyActor = readReplicaTopologyActor;
         this.topologyBuilder = topologyBuilder;
+        this.minCoreHostsAtRuntime = config.get( CausalClusteringSettings.minimum_core_cluster_size_at_runtime );
         this.memberData = MetadataMessage.EMPTY;
         this.bootstrappedRafts = emptySet();
         this.clusterView = ClusterViewMessage.EMPTY;
@@ -96,7 +99,7 @@ public class CoreTopologyActor extends AbstractActorWithTimersAndLogging
         metadataActor = getContext().actorOf( MetadataActor.props( myself, cluster, replicator, getSelf(), config, replicatedDataMonitor ) );
         ActorRef downingActor = getContext().actorOf( ClusterDowningActor.props( cluster ) );
         getContext().actorOf( ClusterStateActor.props( cluster, getSelf(), downingActor, metadataActor, config, clusterSizeMonitor ) );
-        raftIdActor = getContext().actorOf( RaftIdActor.props( cluster, replicator, getSelf(), replicatedDataMonitor ) );
+        raftIdActor = getContext().actorOf( RaftIdActor.props( cluster, replicator, getSelf(), replicatedDataMonitor, minCoreHostsAtRuntime ) );
     }
 
     @Override
@@ -105,8 +108,8 @@ public class CoreTopologyActor extends AbstractActorWithTimersAndLogging
         return receiveBuilder()
                 .match( ClusterViewMessage.class,        this::handleClusterViewMessage)
                 .match( MetadataMessage.class,           this::handleMetadataMessage )
-                .match( BootstrappedRaftsMessage.class,    this::handleRaftIdDirectoryMessage )
-                .match( RaftIdSettingMessage.class,      this::handleRaftIdSettingMessage )
+                .match( BootstrappedRaftsMessage.class,  this::handleBootstrappedRaftsMessage )
+                .match( RaftIdSetRequest.class,          this::handleRaftIdSetRequest )
                 .match( DatabaseStartedMessage.class,    this::handleDatabaseStartedMessage )
                 .match( DatabaseStoppedMessage.class,    this::handleDatabaseStoppedMessage )
                 .build();
@@ -124,15 +127,15 @@ public class CoreTopologyActor extends AbstractActorWithTimersAndLogging
         buildTopologies();
     }
 
-    private void handleRaftIdDirectoryMessage( BootstrappedRaftsMessage message )
+    private void handleBootstrappedRaftsMessage( BootstrappedRaftsMessage message )
     {
         bootstrappedRafts = message.bootstrappedRafts();
         buildTopologies();
     }
 
-    private void handleRaftIdSettingMessage( RaftIdSettingMessage message )
+    private void handleRaftIdSetRequest( RaftIdSetRequest message )
     {
-        raftIdActor.forward( message, context() );
+        raftIdActor.forward( message, getContext() );
     }
 
     private void handleDatabaseStartedMessage( DatabaseStartedMessage message )
@@ -166,7 +169,8 @@ public class CoreTopologyActor extends AbstractActorWithTimersAndLogging
 
     private void buildTopology( DatabaseId databaseId )
     {
-        log().debug( "Building new view of core topology from actor {}, cluster state is: {}, metadata is {}", myClusterAddress, clusterView, memberData );
+        log().debug( "Building new view of core topology from actor {}, cluster state is: {}, metadata is {}",
+                myClusterAddress, clusterView, memberData );
 
         var raftId = RaftId.from( databaseId );
         raftId = bootstrappedRafts.contains( raftId ) ? raftId : null;

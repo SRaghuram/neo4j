@@ -16,13 +16,14 @@ import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataMonito
 import scala.concurrent.duration.FiniteDuration;
 
 import java.time.Duration;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
 public abstract class BaseReplicatedDataActor<T extends ReplicatedData> extends AbstractActorWithTimersAndLogging
 {
-    private static final Replicator.WriteConsistency METADATA_CONSISTENCY = new Replicator.WriteAll( new FiniteDuration( 10, TimeUnit.SECONDS ) );
+    private static final Replicator.WriteConsistency WRITE_CONSISTENCY = new Replicator.WriteAll( new FiniteDuration( 10, TimeUnit.SECONDS ) );
     private static final String METRIC_TIMER_KEY = "refresh metric";
 
     protected final Cluster cluster;
@@ -103,7 +104,12 @@ public abstract class BaseReplicatedDataActor<T extends ReplicatedData> extends 
 
     protected void modifyReplicatedData( Key<T> key, Function<T,T> modify )
     {
-        Replicator.Update<T> update = new Replicator.Update<>( key, emptyData.get(), METADATA_CONSISTENCY, modify );
+        modifyReplicatedData( key, modify, null );
+    }
+
+    protected <M> void modifyReplicatedData( Key<T> key, Function<T,T> modify, M message )
+    {
+        Replicator.Update<T> update = new Replicator.Update<>( key, emptyData.get(), WRITE_CONSISTENCY, Optional.ofNullable( message ), modify );
 
         replicator.tell( update, self() );
     }

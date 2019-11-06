@@ -10,8 +10,10 @@ import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
-import com.neo4j.dbms.ClusterSystemGraphDbmsModel;
+import com.neo4j.causalclustering.discovery.DiscoveryTimeoutException;
+import com.neo4j.causalclustering.discovery.PublishRaftIdOutcome;
 import com.neo4j.dbms.DatabaseStartAborter;
+import com.neo4j.dbms.ClusterSystemGraphDbmsModel;
 
 import java.io.IOException;
 import java.time.Clock;
@@ -119,24 +121,57 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
      */
     public BoundState bindToRaft( DatabaseStartAborter databaseStartAborter ) throws Exception
     {
+        long endTime = clock.millis() + timeout.toMillis();
+
         if ( raftIdStorage.exists() )
         {
-            // If raft id state exists, read it and verify that it corresponds to the database being started
-            raftId = raftIdStorage.readState();
-            if ( !Objects.equals( raftId.uuid(), databaseId.uuid() ) )
-            {
-                throw new IllegalStateException( format( "Pre-existing cluster state found with an unexpected id %s. The id for this database is %s. " +
-                        "This may indicate a previous DROP operation for %s did not complete.", raftId.uuid(), databaseId.uuid(), databaseId.name() ) );
-            }
-            publishRaftId( raftId );
-            monitor.boundToRaft( databaseId, raftId );
-            return new BoundState( raftId );
+            return bindToRaftIdFromDisk( databaseStartAborter, endTime );
+        }
+        else
+        {
+            return bindToRaftGroupBootstrapper( databaseStartAborter, endTime );
+        }
+    }
+
+    private BoundState bindToRaftIdFromDisk( DatabaseStartAborter databaseStartAborter, long endTime ) throws Exception
+    {
+        boolean shouldAbort;
+        boolean publishSucceeded;
+
+        // If raft id state exists, read it and verify that it corresponds to the database being started
+        raftId = raftIdStorage.readState();
+        if ( !Objects.equals( raftId.uuid(), databaseId.uuid() ) )
+        {
+            throw new IllegalStateException( format( "Pre-existing cluster state found with an unexpected id %s. The id for this database is %s. " +
+                    "This may indicate a previous DROP operation for %s did not complete.", raftId.uuid(), databaseId.uuid(), databaseId.name() ) );
         }
 
+        do
+        {
+            publishSucceeded = publishRaftId( raftId, true );
+            shouldAbort = databaseStartAborter.shouldAbort( databaseId );
+        } while ( !publishSucceeded && !shouldAbort && clock.millis() < endTime );
+
+        if ( shouldAbort )
+        {
+            throw new DatabaseStartAbortedException( databaseId );
+        }
+        else if ( !publishSucceeded )
+        {
+            throw new TimeoutException( format( "Failed to publish or observe the previously bound raftId %s. This, or another member must successfully " +
+                    "publish the raft Id when starting the corresponding database. Please restart the cluster.", raftId ) );
+        }
+
+        monitor.boundToRaft( databaseId, raftId );
+        return new BoundState( raftId );
+    }
+
+    private BoundState bindToRaftGroupBootstrapper( DatabaseStartAborter databaseStartAborter, long endTime ) throws Exception
+    {
         CoreSnapshot snapshot = null;
         DatabaseCoreTopology topology;
-        long endTime = clock.millis() + timeout.toMillis();
-        boolean shouldAbort = false;
+        boolean shouldAbort;
+        boolean publishSucceeded = false;
 
         do
         {
@@ -154,6 +189,7 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
                     raftBootstrapper.removeStore();
                 }
                 raftId = topology.raftId();
+                publishSucceeded = true;
                 monitor.boundToRaft( databaseId, raftId );
             }
             else if ( databaseId.isSystemDatabase() || systemGraph.getInitialMembers( databaseId ).isEmpty() )
@@ -182,25 +218,25 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
             {
                 // Alright, we managed to bootstrap, we're done!
                 raftId = RaftId.from( databaseId );
-                publishRaftId( raftId );
-                monitor.bootstrapped( snapshot, databaseId, raftId );
+                publishSucceeded = publishRaftId( raftId, false );
             }
 
             shouldAbort = databaseStartAborter.shouldAbort( databaseId );
             retryWaiter.apply();
         }
-        while ( raftId == null && clock.millis() < endTime && !shouldAbort );
+        while ( !publishSucceeded && clock.millis() < endTime && !shouldAbort );
 
         if ( shouldAbort )
         {
             throw new DatabaseStartAbortedException( databaseId );
         }
-        else if ( raftId == null )
+        else if ( !publishSucceeded )
         {
-            throw new TimeoutException( format( "Failed to join a cluster with members %s. Another member should have published " +
-                    "a raftId but none was detected. Please restart the cluster.", topology ) );
+            throw new TimeoutException( format( "Failed to join a raft group with id %s and members %s. Another member should have published " +
+                    "the raftId but none was detected. Please restart the cluster.", raftId, topology ) );
         }
 
+        monitor.bootstrapped( snapshot, databaseId, raftId );
         raftIdStorage.writeState( raftId );
         return new BoundState( raftId, snapshot );
     }
@@ -229,12 +265,37 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
         return Optional.ofNullable( raftId );
     }
 
-    private void publishRaftId( RaftId localRaftId ) throws BindingException, InterruptedException
+    /**
+     * Publish the raft Id for the database being started to the discovery service,
+     * as a signal to other members that this database has been bootstrapped
+     *
+     * @param localRaftId the raftId to be published
+     * @param ifNotExists whether or not to treat an {@link PublishRaftIdOutcome#SUCCESSFUL_PUBLISH_BY_OTHER} outcome as a success or not
+     * @return whether or not the publish operation succeeded, or failed and should be retried
+     * @throws BindingException in the event of a non-retryable error.
+     */
+    private boolean publishRaftId( RaftId localRaftId, boolean ifNotExists ) throws BindingException
     {
-        boolean success = topologyService.setRaftId( localRaftId );
-        if ( !success )
+        try
         {
-            throw new BindingException( "Failed to publish: " + localRaftId );
+            var outcome = topologyService.publishRaftId( localRaftId );
+            switch ( outcome )
+            {
+                case SUCCESSFUL_PUBLISH_BY_OTHER:
+                    return ifNotExists;
+                case SUCCESSFUL_PUBLISH_BY_ME:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+        catch ( DiscoveryTimeoutException e )
+        {
+            return false;
+        }
+        catch ( Throwable t )
+        {
+            throw new BindingException( format( "Failed to publish raftId %s", localRaftId ), t );
         }
     }
 }

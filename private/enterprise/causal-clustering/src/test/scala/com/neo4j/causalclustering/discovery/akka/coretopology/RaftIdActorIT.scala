@@ -23,7 +23,7 @@ class RaftIdActorIT extends BaseAkkaIT("RaftIdActorTest") {
     "update replicator with raft ID from this core server" in new Fixture {
       When("send raft ID locally")
       val memberId = new MemberId(UUID.randomUUID)
-      replicatedDataActorRef ! new RaftIdSettingMessage(RaftId.from(randomDatabaseId), memberId)
+      replicatedDataActorRef ! new RaftIdSetRequest(RaftId.from(randomDatabaseId), memberId, java.time.Duration.ofSeconds( 2 ))
 
       Then("update metadata")
       expectReplicatorUpdates(replicator, dataKey)
@@ -57,9 +57,9 @@ class RaftIdActorIT extends BaseAkkaIT("RaftIdActorTest") {
       Then("Only the first cluster ID should be persisted")
       val expected = LWWMap.empty.put(cluster, raftId, memberId1)
 
-      replicatedDataActorRef ! new RaftIdSettingMessage(raftId, memberId1)
+      replicatedDataActorRef ! new RaftIdSetRequest(raftId, memberId1, java.time.Duration.ofSeconds( 2 ))
       expectClusterIdReplicatorUpdatesWithOutcome(LWWMap.empty, expected)
-      replicatedDataActorRef ! new RaftIdSettingMessage(raftId, memberId2)
+      replicatedDataActorRef ! new RaftIdSetRequest(raftId, memberId2, java.time.Duration.ofSeconds( 2 ))
       expectClusterIdReplicatorUpdatesWithOutcome(expected, expected)
     }
   }
@@ -68,7 +68,7 @@ class RaftIdActorIT extends BaseAkkaIT("RaftIdActorTest") {
     override val dataKey: Key[LWWMap[RaftId,MemberId]] = LWWMapKey(ReplicatedDataIdentifier.RAFT_ID.keyName())
     override val data = LWWMap.empty[RaftId,MemberId]
     val coreTopologyProbe = TestProbe("coreTopologyActor")
-    val props = RaftIdActor.props(cluster, replicator.ref, coreTopologyProbe.ref, monitor)
+    val props = RaftIdActor.props(cluster, replicator.ref, coreTopologyProbe.ref, monitor, 3)
     override val replicatedDataActorRef: ActorRef = system.actorOf(props)
 
     def expectClusterIdReplicatorUpdatesWithOutcome(initial: LWWMap[RaftId,MemberId], expected: LWWMap[RaftId,MemberId]): Unit =

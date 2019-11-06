@@ -224,6 +224,11 @@ public class CausalClusteringSettings implements SettingsDeclaration
             newBuilder( "causal_clustering.kubernetes.service_port_name", STRING, null ).build();
 
     @Internal
+    @Description( "Configures the time taken attempting to publish a cluster id to the discovery service before potentially retrying." )
+    public static final Setting<Duration> raft_id_publish_timeout =
+            newBuilder( "causal_clustering.cluster_id_publish_timeout", DURATION, ofSeconds( 15 ) ).build();
+
+    @Internal
     @Description( "The polling interval when attempting to resolve initial_discovery_members from DNS and SRV records." )
     public static final Setting<Duration> discovery_resolution_retry_interval =
             newBuilder( "causal_clustering.discovery_resolution_retry_interval", DURATION, ofSeconds( 5 ) ).build();

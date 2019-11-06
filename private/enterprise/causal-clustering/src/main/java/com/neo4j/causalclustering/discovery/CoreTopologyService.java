@@ -22,13 +22,15 @@ public interface CoreTopologyService extends TopologyService
     void removeLocalCoreTopologyListener( Listener listener );
 
     /**
-     * Publishes the raft ID so that other members might discover it.
-     * Should only succeed to publish if one missing or already the same (CAS logic).
+     * Publishes the raft ID as a signal to other cluster members that this raft group bas been bootstrapped.
+     * Raft groups should have a single bootstrapper, so this operation should only succeed if the given
+     * raft Id is missing from the discovery service's shared state, or has been previously published by
+     * this same cluster member.
      *
      * @param raftId The Raft ID to publish.
-     * @return True if the raft ID was successfully CAS:ed, otherwise false.
+     * @return The outcome of this publish attempt
      */
-    boolean setRaftId( RaftId raftId ) throws InterruptedException;
+    PublishRaftIdOutcome publishRaftId( RaftId raftId ) throws DiscoveryTimeoutException;
 
     /**
      * Sets or updates the leader memberId for the given database (i.e. Raft consensus group).

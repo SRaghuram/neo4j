@@ -10,14 +10,18 @@ import akka.actor.Props;
 import akka.cluster.Cluster;
 import akka.cluster.client.ClusterClientReceptionist;
 import akka.event.EventStream;
+import akka.pattern.AskTimeoutException;
+import akka.pattern.Patterns;
 import akka.stream.javadsl.SourceQueueWithComplete;
 import com.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
+import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.CoreTopologyListenerService;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
+import com.neo4j.causalclustering.discovery.DiscoveryTimeoutException;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.RetryStrategy;
 import com.neo4j.causalclustering.discovery.RoleInfo;
@@ -26,7 +30,8 @@ import com.neo4j.causalclustering.discovery.akka.common.DatabaseStoppedMessage;
 import com.neo4j.causalclustering.discovery.akka.coretopology.BootstrapState;
 import com.neo4j.causalclustering.discovery.akka.coretopology.CoreTopologyActor;
 import com.neo4j.causalclustering.discovery.akka.coretopology.CoreTopologyMessage;
-import com.neo4j.causalclustering.discovery.akka.coretopology.RaftIdSettingMessage;
+import com.neo4j.causalclustering.discovery.PublishRaftIdOutcome;
+import com.neo4j.causalclustering.discovery.akka.coretopology.RaftIdSetRequest;
 import com.neo4j.causalclustering.discovery.akka.coretopology.RestartNeededListeningActor;
 import com.neo4j.causalclustering.discovery.akka.coretopology.TopologyBuilder;
 import com.neo4j.causalclustering.discovery.akka.directory.DirectoryActor;
@@ -43,6 +48,7 @@ import com.neo4j.causalclustering.identity.RaftId;
 import java.time.Clock;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeoutException;
@@ -57,6 +63,7 @@ import org.neo4j.monitoring.Monitors;
 import org.neo4j.util.VisibleForTesting;
 
 import static akka.actor.ActorRef.noSender;
+import static java.lang.String.format;
 
 public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopologyService
 {
@@ -190,15 +197,39 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     }
 
     @Override
-    public boolean setRaftId( RaftId raftId )
+    public PublishRaftIdOutcome publishRaftId( RaftId raftId ) throws DiscoveryTimeoutException
     {
         var coreTopologyActor = coreTopologyActorRef;
         if ( coreTopologyActor != null )
         {
-            coreTopologyActor.tell( new RaftIdSettingMessage( raftId, myself ), noSender() );
-            return true;
+            var timeout = config.get( CausalClusteringSettings.raft_id_publish_timeout );
+            var request = new RaftIdSetRequest( raftId, myself, timeout );
+
+            var idSetJob = Patterns.ask( coreTopologyActor, request, timeout )
+                    .thenApply( response ->
+                    {
+                        if ( !(response instanceof PublishRaftIdOutcome ) )
+                        {
+                            throw new IllegalArgumentException( format( "Unexpected response when attempting to publish cluster Id. " +
+                                            "Expected PublishClusterIdOutcome, received %s", response.getClass().getCanonicalName() ) );
+                        }
+                        return (PublishRaftIdOutcome) response;
+                    } ).toCompletableFuture();
+
+            try
+            {
+                return  idSetJob.join();
+            }
+            catch ( CompletionException e )
+            {
+                if ( e.getCause() instanceof AskTimeoutException )
+                {
+                    throw new DiscoveryTimeoutException( e );
+                }
+                throw new RuntimeException( e.getCause() );
+            }
         }
-        return false;
+        return PublishRaftIdOutcome.FAILED_PUBLISH;
     }
 
     @Override
