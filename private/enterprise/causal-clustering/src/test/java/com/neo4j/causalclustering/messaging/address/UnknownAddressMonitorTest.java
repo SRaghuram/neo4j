@@ -13,7 +13,6 @@ import org.neo4j.time.Clocks;
 import org.neo4j.time.FakeClock;
 
 import static com.neo4j.causalclustering.identity.RaftTestMember.member;
-import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -33,7 +32,7 @@ public class UnknownAddressMonitorTest
         logger.logAttemptToSendToMemberWithNoKnownAddress( to );
 
         // then
-        verify( log ).info( format( "No address found for %s, probably because the member has been shut down.", to ) );
+        verify( log ).info( "No address found for %s, probably because the member has been shut down.", to );
     }
 
     private FakeClock testClock()
@@ -56,8 +55,7 @@ public class UnknownAddressMonitorTest
         logger.logAttemptToSendToMemberWithNoKnownAddress( to );
 
         // then
-        verify( log )
-                .info( format( "No address found for %s, probably because the member has been shut " + "down.", to ) );
+        verify( log ).info( "No address found for %s, probably because the member has been shut down.", to );
     }
 
     @Test
@@ -77,7 +75,6 @@ public class UnknownAddressMonitorTest
         logger.logAttemptToSendToMemberWithNoKnownAddress( to );
 
         // then
-        verify( log, times( 3 ) )
-                .info( format( "No address found for %s, probably because the member has been shut " + "down.", to ) );
+        verify( log, times( 3 ) ).info( "No address found for %s, probably because the member has been shut down.", to );
     }
 }

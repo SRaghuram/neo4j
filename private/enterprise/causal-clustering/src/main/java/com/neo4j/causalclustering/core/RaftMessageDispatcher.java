@@ -34,7 +34,7 @@ public class RaftMessageDispatcher implements MessageHandler<ReceivedInstantRaft
         MessageHandler<ReceivedInstantRaftIdAwareMessage<?>> head = handlersById.get( id );
         if ( head == null )
         {
-            log.warn( "Unable to process message " + message + " because handler for Raft ID " + id + " is not installed" );
+            log.warn( "Unable to process message %s because handler for Raft ID %s is not installed", message, id );
         }
         else
         {

@@ -11,13 +11,12 @@ import com.neo4j.causalclustering.identity.RaftId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.UUID;
-
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.internal.SimpleLogService;
 import org.neo4j.monitoring.Monitors;
+import org.neo4j.time.Clocks;
 
 import static java.lang.String.format;
 import static org.hamcrest.Matchers.containsString;
@@ -38,7 +37,7 @@ class RaftMonitorTest
     void setUp()
     {
         var monitors = new Monitors();
-        RaftMonitor.register( new SimpleLogService( user, debug ), monitors );
+        RaftMonitor.register( new SimpleLogService( user, debug ), monitors, Clocks.systemClock() );
 
         raftBinderMonitor = monitors.newMonitor( RaftBinder.Monitor.class );
         snapshotMonitor = monitors.newMonitor( PersistentSnapshotDownloader.Monitor.class );

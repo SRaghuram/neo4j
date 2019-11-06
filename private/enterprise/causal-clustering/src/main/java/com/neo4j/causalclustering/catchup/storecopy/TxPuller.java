@@ -28,7 +28,6 @@ import org.neo4j.util.VisibleForTesting;
 
 import static com.neo4j.causalclustering.catchup.CatchupResult.SUCCESS_END_OF_STREAM;
 import static java.lang.Long.max;
-import static java.lang.String.format;
 
 class TxPuller
 {
@@ -100,12 +99,12 @@ class TxPuller
             }
             catch ( ConnectException e )
             {
-                connectionErrorLogger.info( format( "Unable to connect. [Address: %s] [Message: %s]", fromAddress, e.getMessage() ) );
+                connectionErrorLogger.info( "Unable to connect. [Address: %s] [Message: %s]", fromAddress, e.getMessage() );
                 return Result.TRANSIENT_ERROR;
             }
             catch ( Exception e )
             {
-                log.warn( format( "Unexpected exception when pulling transactions. [Address: %s]", fromAddress ), e );
+                log.warn( "Unexpected exception when pulling transactions. [Address: %s]", fromAddress, e );
                 return Result.ERROR;
             }
         }
@@ -124,7 +123,7 @@ class TxPuller
         }
         else
         {
-            log.info( "Transaction pulling attempt failed with error: " + status );
+            log.info( "Transaction pulling attempt failed with error: %s", status );
             return Result.ERROR;
         }
     }

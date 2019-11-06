@@ -152,7 +152,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         SettingsWhitelist settingsWhiteList = new SettingsWhitelist( globalConfig );
         globalDependencies.satisfyDependency( settingsWhiteList );
 
-        RaftMonitor.register( logService, globalModule.getGlobalMonitors() );
+        RaftMonitor.register( logService, globalModule.getGlobalMonitors(), globalModule.getGlobalClock() );
 
         final FileSystemAbstraction fileSystem = globalModule.getFileSystem();
 

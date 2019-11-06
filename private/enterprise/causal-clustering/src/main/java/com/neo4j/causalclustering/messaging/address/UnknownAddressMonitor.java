@@ -39,6 +39,6 @@ public class UnknownAddressMonitor
             cappedLogger.setTimeLimit( timeLimitMs, MILLISECONDS, clock );
             loggers.put( to, cappedLogger );
         }
-        cappedLogger.info(String.format("No address found for %s, probably because the member has been shut down.", to)  );
+        cappedLogger.info( "No address found for %s, probably because the member has been shut down.", to );
     }
 }

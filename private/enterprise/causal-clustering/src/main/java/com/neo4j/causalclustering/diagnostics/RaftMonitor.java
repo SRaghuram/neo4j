@@ -7,15 +7,15 @@ package com.neo4j.causalclustering.diagnostics;
 
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.core.state.snapshot.PersistentSnapshotDownloader;
-import com.neo4j.causalclustering.helper.Limiters;
 import com.neo4j.causalclustering.identity.RaftBinder;
 import com.neo4j.causalclustering.identity.RaftId;
 
-import java.time.Duration;
-import java.util.function.Consumer;
+import java.time.Clock;
+import java.util.concurrent.TimeUnit;
 
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
+import org.neo4j.logging.internal.CappedLogger;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.monitoring.Monitors;
 
@@ -37,30 +37,33 @@ public class RaftMonitor implements RaftBinder.Monitor, PersistentSnapshotDownlo
     private final Log debug;
     private final Log user;
 
-    private final Consumer<Runnable> binderLimit = Limiters.rateLimiter( Duration.ofSeconds( 10 ) );
+    private final CappedLogger coreMemberWaitLog;
+    private final CappedLogger bootstrapWaitLog;
 
-    public static void register( LogService logService, Monitors monitors )
+    public static void register( LogService logService, Monitors monitors, Clock clock )
     {
-        var raftMonitor = new RaftMonitor( logService );
+        var raftMonitor = new RaftMonitor( logService, clock );
         monitors.addMonitorListener( raftMonitor );
     }
 
-    private RaftMonitor( LogService logService )
+    private RaftMonitor( LogService logService, Clock clock )
     {
         this.debug = logService.getInternalLogProvider().getLog( getClass() );
         this.user = logService.getUserLogProvider().getLog( getClass() );
+        coreMemberWaitLog = new CappedLogger( user ).setTimeLimit( 10, TimeUnit.SECONDS, clock );
+        bootstrapWaitLog = new CappedLogger( user ).setTimeLimit( 10, TimeUnit.SECONDS, clock );
     }
 
     @Override
     public void waitingForCoreMembers( DatabaseId databaseId, int minimumCount )
     {
-        binderLimit.accept( () -> user.info( "Database '%s' is waiting for a total of %d core members...", databaseId.name(), minimumCount ) );
+        coreMemberWaitLog.info( "Database '%s' is waiting for a total of %d core members...", databaseId.name(), minimumCount );
     }
 
     @Override
     public void waitingForBootstrap( DatabaseId databaseId )
     {
-        binderLimit.accept( () -> user.info( "Database '%s' is waiting for bootstrap by other instance...", databaseId.name() ) );
+        bootstrapWaitLog.info( "Database '%s' is waiting for bootstrap by other instance...", databaseId.name() );
     }
 
     @Override

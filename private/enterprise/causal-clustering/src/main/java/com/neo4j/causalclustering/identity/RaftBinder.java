@@ -20,12 +20,14 @@ import java.time.Duration;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 
 import org.neo4j.dbms.database.DatabaseStartAbortedException;
 import org.neo4j.function.ThrowingAction;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.logging.internal.CappedLogger;
 import org.neo4j.logging.internal.DatabaseLog;
 import org.neo4j.logging.internal.DatabaseLogProvider;
 import org.neo4j.monitoring.Monitors;
@@ -58,7 +60,7 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
     private final ThrowingAction<InterruptedException> retryWaiter;
     private final Duration timeout;
     private final int minCoreHosts;
-    private final DatabaseLog log;
+    private final BootstrapDatabaseLogger bootstrapDbLogger;
 
     private RaftId raftId;
 
@@ -77,7 +79,7 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
         this.retryWaiter = retryWaiter;
         this.timeout = timeout;
         this.minCoreHosts = minCoreHosts;
-        this.log = logProvider.getLog( getClass() );
+        this.bootstrapDbLogger = new BootstrapDatabaseLogger( logProvider.getLog( getClass() ), clock );
     }
 
     /**
@@ -173,7 +175,7 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
                     /* Because the bootstrapping instance might modify the seed and change
                        the store ID, other instances have to remove their seeds and perform
                        a store copy later in the startup. */
-                    log.info( "Removing system database to force store copy" );
+                    bootstrapDbLogger.logRemoveSystemDatabase();
                     raftBootstrapper.removeStore();
                 }
                 raftId = topology.raftId();
@@ -184,7 +186,7 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
             {
                 // Used for initial databases (system + default) in conjunction with new cluster formation,
                 // or when cluster has been restored from a backup of the system database which defines other databases.
-                log.info( "Trying bootstrap using discovery service method" );
+                bootstrapDbLogger.logBootstrapAttemptWithDiscoveryService();
                 snapshot = tryBootstrapUsingDiscoveryService( topology );
                 bound = publishBootstrapper( databaseId, snapshot, bindingConditions, false );
             }
@@ -195,7 +197,7 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
                 StoreId storeId = systemGraph.getStoreId( databaseId );
 
                 // Used for databases created during runtime in response to operator commands.
-                log.info( "Trying bootstrap using initial members " + initialMembers + " and store ID " + storeId );
+                bootstrapDbLogger.logBootstrapWithInitialMembersAndStoreID( initialMembers, storeId );
                 snapshot = tryBootstrapUsingSystemDatabase( initialMembers, storeId );
                 bound = publishBootstrapper( databaseId, snapshot, bindingConditions, true );
             }
@@ -326,6 +328,35 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
                 throw new TimeoutException( timeoutMessage );
             }
             return true;
+        }
+    }
+
+    private static class BootstrapDatabaseLogger
+    {
+        private final DatabaseLog log;
+        private final CappedLogger discoveryServiceAttemptLog;
+        private final CappedLogger initialMembersAttempLog;
+
+        private BootstrapDatabaseLogger( DatabaseLog log, Clock clock )
+        {
+            discoveryServiceAttemptLog = new CappedLogger( log ).setTimeLimit( 10, TimeUnit.SECONDS, clock );
+            initialMembersAttempLog = new CappedLogger( log ).setTimeLimit( 10, TimeUnit.SECONDS, clock );
+            this.log = log;
+        }
+
+        private void logRemoveSystemDatabase()
+        {
+            log.info( "Removing system database to force store copy" );
+        }
+
+        private void logBootstrapAttemptWithDiscoveryService()
+        {
+            discoveryServiceAttemptLog.info( "Trying bootstrap using discovery service method" );
+        }
+
+        private void logBootstrapWithInitialMembersAndStoreID( Set<MemberId> initialMembers, StoreId storeId )
+        {
+            initialMembersAttempLog.info( "Trying bootstrap using initial members %s and store ID %s", initialMembers, storeId );
         }
     }
 }
