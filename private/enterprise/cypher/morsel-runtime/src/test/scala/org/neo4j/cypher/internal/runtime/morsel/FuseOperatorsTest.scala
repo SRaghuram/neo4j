@@ -16,14 +16,14 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.Size
 import org.neo4j.cypher.internal.physicalplanning._
 import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.expressionVariableAllocation.AvailableExpressionVariables
-import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
+import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{CommunityExpressionConverter, ExpressionConverters}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{DropResultPipe, FlatMapAndAppendToRow, NonFilteringOptionalExpandAllPipe, OptionalExpandAllPipe, Pipe, PipeMapper, ProcedureCallPipe, RelationshipTypes}
 import org.neo4j.cypher.internal.runtime.morsel.InterpretedPipesFallbackPolicy.INTERPRETED_PIPES_FALLBACK_DISABLED
 import org.neo4j.cypher.internal.runtime.morsel.execution.{QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.morsel.operators._
 import org.neo4j.cypher.internal.runtime.morsel.state.StateFactory
 import org.neo4j.cypher.internal.runtime.scheduling.{WorkIdentity, WorkIdentityImpl}
-import org.neo4j.cypher.internal.runtime.slotted.expressions.CompiledExpressionConverter
+import org.neo4j.cypher.internal.runtime.slotted.expressions.{CompiledExpressionConverter, SlottedExpressionConverters}
 import org.neo4j.cypher.internal.runtime.{ParameterMapping, ProcedureCallMode, QueryContext, QueryIndexRegistrator}
 import org.neo4j.cypher.internal.v4_0.ast.AstConstructionTestSupport
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
@@ -415,7 +415,9 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
       codeGenerationMode = ByteCodeGeneration(new CodeSaver(false, false)),
       neverFail = false)
 
-    val expressionConverters = new ExpressionConverters(converter)
+    val expressionConverters = new ExpressionConverters(converter,
+                                                        SlottedExpressionConverters(physicalPlan),
+                                                        CommunityExpressionConverter(TokenContext.EMPTY))
 
     val executionGraphDefinition = ExecutionGraphDefinition(physicalPlan, null, null, null, Map.empty)
     val operatorFactory = new DummyOperatorFactory(executionGraphDefinition, expressionConverters)
