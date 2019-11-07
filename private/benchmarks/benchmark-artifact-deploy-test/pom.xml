@@ -28,13 +28,14 @@
     </dependencies>
 
     <repositories>
-        <repository>
-            <id>neorj-maven-local-repo</id>
-            <url>https://neo.jfrog.io/neo/docs-maven-local/</url>
-            <snapshots>
-                <enabled>true</enabled>
-            </snapshots>
-        </repository>
+      <repository>
+        <id>benchmarking-thirdparty</id>
+        <name>Benchmarking thirdparty libs</name>
+        <url>https://neo.jfrog.io/neo/benchmarking-thirdparty/</url>
+        <snapshots>
+          <enabled>true</enabled>
+        </snapshots>
+      </repository>
     </repositories>
 
 </project>
