@@ -125,7 +125,7 @@ public class StoreUpgradeIT
         @Rule
         public SuppressOutput suppressOutput = SuppressOutput.suppressAll();
         @Rule
-        public TestDirectory testDir = TestDirectory.testDirectory();
+        public TestDirectory testDir = TestDirectory.testDirectory().keepDirectoryAfterSuccessfulTest();
 
         @Test
         public void embeddedDatabaseShouldStartOnOlderStoreWhenUpgradeIsEnabled() throws Throwable
