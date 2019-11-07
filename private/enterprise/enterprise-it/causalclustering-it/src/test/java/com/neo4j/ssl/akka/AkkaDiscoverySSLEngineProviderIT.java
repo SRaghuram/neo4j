@@ -11,7 +11,6 @@ import akka.actor.ActorSelection;
 import akka.actor.ActorSystem;
 import akka.actor.Address;
 import akka.actor.BootstrapSetup;
-import akka.actor.CoordinatedShutdown;
 import akka.actor.Props;
 import akka.actor.ProviderSelection;
 import akka.actor.setup.ActorSystemSetup;
@@ -305,11 +304,11 @@ class AkkaDiscoverySSLEngineProviderIT
         }
         finally
         {
-            CompletableFuture[] cleanup = Stream.of( clientActorSystem, serverActorSystem )
-                    .map( CoordinatedShutdown::get )
-                    .map( CoordinatedShutdown::runAll )
+            var cleanup = Stream.of( clientActorSystem, serverActorSystem )
+                    .peek( ActorSystem::terminate )
+                    .map( ActorSystem::getWhenTerminated )
                     .map( CompletionStage::toCompletableFuture )
-                    .toArray( CompletableFuture[]::new );
+                    .toArray( CompletableFuture<?>[]::new );
 
             CompletableFuture.allOf( cleanup ).get( 60, TimeUnit.SECONDS );
         }

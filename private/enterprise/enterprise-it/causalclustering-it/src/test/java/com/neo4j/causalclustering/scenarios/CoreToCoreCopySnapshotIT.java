@@ -13,7 +13,6 @@ import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.core.state.RaftLogPruner;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -135,7 +134,6 @@ class CoreToCoreCopySnapshotIT
     }
 
     @Test
-    @Disabled( "Pending fixes for transactional ids" )
     void shouldBeAbleToDownloadToRejoinedInstanceAfterPruning() throws Exception
     {
         // given

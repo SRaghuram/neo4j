@@ -47,6 +47,8 @@ import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.function.ThrowingAction.executeAll;
 
 class ChannelPoolServiceIT
 {
@@ -63,7 +65,7 @@ class ChannelPoolServiceIT
     private ThreadPoolJobScheduler poolScheduler;
 
     @BeforeEach
-    void setUpServers() throws ExecutionException, InterruptedException
+    void setUpServers() throws Exception
     {
         poolEventsMonitor = new PoolEventsMonitor();
         poolScheduler = new ThreadPoolJobScheduler();
@@ -76,11 +78,9 @@ class ChannelPoolServiceIT
     }
 
     @AfterEach
-    void tearDown() throws ExecutionException, InterruptedException
+    void tearDown() throws Exception
     {
-        closeServers();
-        pool.stop();
-        poolScheduler.shutdown();
+        executeAll( this::closeServers, pool::stop, poolScheduler::shutdown );
     }
 
     @Test
@@ -147,7 +147,7 @@ class ChannelPoolServiceIT
     }
 
     @Test
-    void shouldBeAbleToSendToServerAfterServerBeingRestarted() throws InterruptedException, ExecutionException, TimeoutException
+    void shouldBeAbleToSendToServerAfterServerBeingRestarted() throws Exception
     {
         PooledChannel preRestartChannel = pool.acquire( to1 ).get( DEFAULT_TIME_OUT, DEFAULT_TIME_UNIT );
 
@@ -163,7 +163,7 @@ class ChannelPoolServiceIT
     }
 
     @Test
-    void shouldBeAbleToSendToServerAfterPoolBeingRestarted() throws InterruptedException, ExecutionException, TimeoutException
+    void shouldBeAbleToSendToServerAfterPoolBeingRestarted() throws Exception
     {
         PooledChannel preRestartChannel = pool.acquire( to1 ).get( DEFAULT_TIME_OUT, DEFAULT_TIME_UNIT );
 
@@ -188,7 +188,7 @@ class ChannelPoolServiceIT
     }
 
     @Test
-    void shouldReturnEmptyStreamOfInstalledProtocolsIfNoOpenChannels() throws ExecutionException, InterruptedException
+    void shouldReturnEmptyStreamOfInstalledProtocolsIfNoOpenChannels() throws Exception
     {
         // when
         Stream<Pair<SocketAddress,ProtocolStack>> installedProtocols = pool.installedProtocols();
@@ -211,7 +211,7 @@ class ChannelPoolServiceIT
     }
 
     @Test
-    void shouldReturnStreamOfInstalledProtocolsForChannelsThatHaveCompletedHandshake() throws ExecutionException, InterruptedException
+    void shouldReturnStreamOfInstalledProtocolsForChannelsThatHaveCompletedHandshake() throws Exception
     {
         pool.acquire( to1 ).get().release().get();
         pool.acquire( to2 ).get().release().get();
@@ -247,10 +247,15 @@ class ChannelPoolServiceIT
         return new SocketAddress( inetSocketAddress.getHostName(), inetSocketAddress.getPort() );
     }
 
-    private void closeServers() throws ExecutionException, InterruptedException
+    private void closeServers() throws Exception
     {
-        executor.shutdown();
-        serverEventExecutor.shutdownGracefully().get();
+        executeAll(
+                () ->
+                {
+                    executor.shutdownNow();
+                    assertTrue( executor.awaitTermination( 30, DEFAULT_TIME_UNIT ) );
+                },
+                () -> serverEventExecutor.shutdownGracefully().get() );
     }
 
     @ChannelHandler.Sharable

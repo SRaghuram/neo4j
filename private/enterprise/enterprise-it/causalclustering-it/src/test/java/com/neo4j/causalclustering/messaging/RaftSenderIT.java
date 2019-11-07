@@ -58,6 +58,7 @@ import static java.util.Collections.emptyList;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toList;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.function.ThrowingAction.executeAll;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 
 class RaftSenderIT
@@ -86,10 +87,13 @@ class RaftSenderIT
     }
 
     @AfterAll
-    static void cleanUp()
+    static void cleanUp() throws Exception
     {
-        scheduler.shutdown();
-        serverExecutor.shutdown();
+        executeAll( scheduler::shutdown, () ->
+        {
+            serverExecutor.shutdownNow();
+            assertTrue( serverExecutor.awaitTermination( 30, SECONDS ) );
+        } );
     }
 
     @ParameterizedTest

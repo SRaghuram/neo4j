@@ -7,8 +7,8 @@ package com.neo4j.causalclustering.core.consensus.election;
 
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.TestNetwork;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import java.util.Set;
 
@@ -31,11 +31,11 @@ import static org.neo4j.internal.helpers.collection.Iterators.asSet;
  * rare false positives should not be used as an indication for increasing the
  * limits.
  */
-public class ElectionPerformanceIT
+class ElectionPerformanceIT
 {
-    @Ignore( "This belongs better in a benchmarking suite." )
+    @Disabled( "This belongs better in a benchmarking suite." )
     @Test
-    public void electionPerformance_NormalConditions() throws Throwable
+    void electionPerformance_NormalConditions() throws Throwable
     {
         /* This test runs with with few iterations. Hence it does not have the power to catch
          * regressions efficiently. Its purpose is mainly to run elections using real-world
@@ -80,9 +80,9 @@ public class ElectionPerformanceIT
         assertThat( result.timeoutCount, is( 0L ) );
     }
 
-    @Ignore( "This belongs better in a benchmarking suite." )
+    @Disabled( "This belongs better in a benchmarking suite." )
     @Test
-    public void electionPerformance_RapidConditions() throws Throwable
+    void electionPerformance_RapidConditions() throws Throwable
     {
         // given parameters
         final long networkLatency = 1L;
