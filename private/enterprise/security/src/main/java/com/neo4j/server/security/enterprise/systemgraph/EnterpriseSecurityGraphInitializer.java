@@ -106,7 +106,7 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
             // Perform migration if all of the following are true:
             // 1) The system graph has not been initialized (typically the first time you start neo4j).
             // 2) There exists users and/or roles in the internal flat file realm
-            if ( userNodes.isEmpty() && importOptions.mayPerformMigration )
+            if ( userNodes.isEmpty() )
             {
                 migrateFromFlatFileRealm( tx );
             }

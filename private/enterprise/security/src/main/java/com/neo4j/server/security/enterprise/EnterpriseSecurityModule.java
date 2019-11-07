@@ -272,7 +272,6 @@ public class EnterpriseSecurityModule extends SecurityModule
         Supplier<UserRepository> defaultAdminRepositorySupplier = () -> getDefaultAdminRepository( config, logProvider, fileSystem );
 
         return new SystemGraphImportOptions(
-                true,
                 migrationUserRepositorySupplier,
                 migrationRoleRepositorySupplier,
                 initialUserRepositorySupplier,

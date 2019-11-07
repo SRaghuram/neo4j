@@ -86,7 +86,6 @@ public class ImportOptionsBuilder extends BasicImportOptionsBuilder
         populateUserRepository( defaultAdminRepository, defaultAdmins );
 
         return new SystemGraphImportOptions(
-                true,
                 () -> migrationUserRepository,
                 () -> migrationRoleRepository,
                 () -> initialUserRepository,

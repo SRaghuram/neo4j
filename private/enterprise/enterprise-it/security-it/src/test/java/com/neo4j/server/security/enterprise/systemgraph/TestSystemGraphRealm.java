@@ -35,7 +35,6 @@ class TestSystemGraphRealm extends TestBasicSystemGraphRealm
         Supplier<UserRepository> migrationUserRepositorySupplier = () -> CommunitySecurityModule.getUserRepository( config, logProvider, fileSystem );
         Supplier<UserRepository> initialUserRepositorySupplier = () -> CommunitySecurityModule.getInitialUserRepository( config, logProvider, fileSystem );
         SystemGraphImportOptions importOptions = new SystemGraphImportOptions(
-                true,
                 migrationUserRepositorySupplier,
                 InMemoryRoleRepository::new,
                 initialUserRepositorySupplier,

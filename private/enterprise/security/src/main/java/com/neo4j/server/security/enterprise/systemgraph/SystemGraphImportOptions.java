@@ -13,21 +13,18 @@ import org.neo4j.server.security.auth.UserRepository;
 
 public class SystemGraphImportOptions
 {
-    boolean mayPerformMigration;
     Supplier<UserRepository> migrationUserRepositorySupplier;
     Supplier<RoleRepository> migrationRoleRepositorySupplier;
     Supplier<UserRepository> initialUserRepositorySupplier;
     Supplier<UserRepository> defaultAdminRepositorySupplier;
 
     public SystemGraphImportOptions(
-            boolean mayPerformMigration,
             Supplier<UserRepository> migrationUserRepositorySupplier,
             Supplier<RoleRepository> migrationRoleRepositorySupplier,
             Supplier<UserRepository> initialUserRepositorySupplier,
             Supplier<UserRepository> defaultAdminRepositorySupplier
     )
     {
-        this.mayPerformMigration = mayPerformMigration;
         this.migrationUserRepositorySupplier = migrationUserRepositorySupplier;
         this.migrationRoleRepositorySupplier = migrationRoleRepositorySupplier;
         this.initialUserRepositorySupplier = initialUserRepositorySupplier;
