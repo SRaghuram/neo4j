@@ -236,9 +236,9 @@
 
     <repositories>
       <repository>
-        <id>docs-maven-local</id>
-        <name>Docs Maven Local</name>
-        <url>https://neo.jfrog.io/neo/docs-maven-local/</url>
+        <id>benchmarking-thirdparty</id>
+        <name>Benchmarking thirdparty libs</name>
+        <url>https://neo.jfrog.io/neo/benchmarking-thirdparty/</url>
         <snapshots>
           <enabled>true</enabled>
         </snapshots>
