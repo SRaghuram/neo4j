@@ -26,6 +26,7 @@
         <airline.version>2.7.1</airline.version>
         <neo4j.version>${project.version}</neo4j.version>
         <s3mock.version>0.2.5</s3mock.version>
+        <benchmarks.deploy.skip>true</benchmarks.deploy.skip>
     </properties>
 
     <licenses>
@@ -110,20 +111,12 @@
     </modules>
 
     <profiles>
-        <profile>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-deploy-plugin</artifactId>
-                        <configuration>
-                            <skip>true</skip>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
-            <id>benchmarksDeploy</id>
-        </profile>
+		<profile>
+			<properties>
+				<benchmarks.deploy.skip>false</benchmarks.deploy.skip>
+			</properties>
+			<id>benchmarksDeploy</id>
+		</profile>
         <profile>
             <build>
                 <plugins>
@@ -231,6 +224,13 @@
                     <fail>true</fail>
                 </configuration>
             </plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-deploy-plugin</artifactId>
+				<configuration>
+					<skip>${benchmarks.deploy.skip}</skip>
+				</configuration>
+			</plugin>
         </plugins>
     </build>
 
