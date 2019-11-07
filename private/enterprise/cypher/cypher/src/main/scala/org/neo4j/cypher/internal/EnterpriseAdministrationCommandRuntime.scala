@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal
 
 import java.util
+import java.util.UUID
 import java.util.concurrent.ThreadLocalRandom
 
 import com.neo4j.causalclustering.core.consensus.RaftMachine
@@ -442,8 +443,16 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         case Failure(_) => None
       }
 
-      val virtualKeys: Array[String] = Array("name", "status", "default")
-      val virtualValues: Array[AnyValue] = Array(Values.stringValue(dbName), DatabaseStatus.Online, Values.booleanValue(default))
+      val virtualKeys: Array[String] = Array(
+        "name",
+        "status",
+        "default",
+        "uuid")
+      val virtualValues: Array[AnyValue] = Array(
+        Values.stringValue(dbName),
+        DatabaseStatus.Online,
+        Values.booleanValue(default),
+        Values.stringValue(UUID.randomUUID().toString))
 
       val clusterProperties =
         """
@@ -470,7 +479,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           |  d.status = $$status,
           |  d.default = $$default,
           |  d.created_at = datetime(),
-          |  d.uuid = randomUUID()
+          |  d.uuid = $$uuid
           |  $queryAdditions
           |RETURN d.name as name, d.status as status, d.uuid as uuid
         """.stripMargin, virtualMap,
