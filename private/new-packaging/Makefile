@@ -54,3 +54,7 @@ $(RPM_E): $(TARBALL_E) $(COMMON_FILES) $(RPM_FILES)
 
 $(TARBALLS):
 	cd ../packaging && mvn package -DskipTests -T2C
+
+rpm-adapter:
+	bin/build-rpm-java-adapter out/rpm/build_adapter
+.PHONY: rpm-adapter

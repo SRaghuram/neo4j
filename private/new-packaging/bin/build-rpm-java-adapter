@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -eu
+# Build RPM package for Neo4j java 11 adapter
+
+if [ $# -ne 1 ]
+then
+  echo "Usage: ${0} <workspace>"
+  exit 1
+fi
+
+package_directory=${1}
+
+# Make path absolute
+if [[ ! "${package_directory}" =~ "^/" ]]; then
+  package_directory="$(pwd)/${package_directory}"
+fi
+
+# Prepare workspace
+mkdir -p ${package_directory}/{BUILD,RPMS,SOURCES,BUILDROOT,SPECS,SRPMS}/
+cp src/rpm/neo4j-java11-adapter.spec ${package_directory}/SPECS
+
+# build package and metadata files
+(cd ${package_directory} && rpmbuild --define "_topdir ${package_directory}" -bb SPECS/neo4j-java11-adapter.spec)
+cp ${package_directory}/RPMS/noarch/*.rpm ${package_directory}/..
