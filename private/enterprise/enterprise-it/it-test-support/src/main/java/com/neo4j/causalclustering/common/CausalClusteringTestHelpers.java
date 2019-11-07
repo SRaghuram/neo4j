@@ -37,8 +37,11 @@ import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.graphdb.DatabaseShutdownException;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Label;
+import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Result;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.TransactionFailureException;
 import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
@@ -356,19 +359,7 @@ public final class CausalClusteringTestHelpers
 
     private static Set<String> getMemberUsers( ClusterMember member )
     {
-        GraphDatabaseFacade system = member.systemDatabase();
-        Set<String> users = new HashSet<>();
-        try ( var tx = system.beginTx() )
-        {
-            Result result = tx.execute( "SHOW USERS" );
-            ResourceIterator<Object> user = result.columnAs( "user" );
-            while ( user.hasNext() )
-            {
-                users.add( user.next().toString() );
-            }
-            tx.commit();
-        }
-        return users;
+        return getNodeNames(member, "User");
     }
 
     private static Map<ClusterMember,Set<String>> memberRoleStates( Cluster cluster )
@@ -384,19 +375,35 @@ public final class CausalClusteringTestHelpers
 
     private static Set<String> getMemberRoles( ClusterMember member )
     {
+        return getNodeNames(member, "Role");
+    }
+
+    private static Set<String> getNodeNames( ClusterMember member, String label )
+    {
         GraphDatabaseFacade system = member.systemDatabase();
-        Set<String> roles = new HashSet<>();
-        try ( var tx = system.beginTx() )
+        Set<String> nodeNames = new HashSet<>();
+        try ( Transaction tx = system.beginTx() )
         {
-            Result result = tx.execute( "SHOW ROLES" );
-            ResourceIterator<Object> role = result.columnAs( "role" );
-            while ( role.hasNext() )
+            ResourceIterator<Node> nodes = tx.findNodes( Label.label( label ) );
+            while ( nodes.hasNext() )
             {
-                roles.add( role.next().toString() );
+                var node = nodes.next();
+                if ( node == null )
+                {
+                    throw new IllegalStateException( "null " + label + " found" );
+                }
+
+                var name = node.getProperty( "name" );
+                if ( name == null )
+                {
+                    throw new IllegalStateException( label + " without a name found" );
+                }
+
+                nodeNames.add( name.toString() );
             }
             tx.commit();
         }
-        return roles;
+        return nodeNames;
     }
 
     public static void stopDiscoveryService( ClusterMember member ) throws Exception
