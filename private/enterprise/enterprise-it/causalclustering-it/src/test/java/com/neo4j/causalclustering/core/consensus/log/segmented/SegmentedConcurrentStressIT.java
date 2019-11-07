@@ -7,29 +7,27 @@ package com.neo4j.causalclustering.core.consensus.log.segmented;
 
 import com.neo4j.causalclustering.core.consensus.log.ConcurrentStressIT;
 import com.neo4j.causalclustering.core.consensus.log.DummyRaftableContentSerializer;
+import com.neo4j.causalclustering.core.consensus.log.RaftLog;
 
 import java.io.File;
 
 import org.neo4j.io.ByteUnit;
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.logging.LogProvider;
+import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.OnDemandJobScheduler;
 import org.neo4j.time.Clocks;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_pruning_strategy;
-import static org.neo4j.logging.NullLogProvider.getInstance;
 
-public class SegmentedConcurrentStressIT extends ConcurrentStressIT<SegmentedRaftLog>
+public class SegmentedConcurrentStressIT extends ConcurrentStressIT
 {
     @Override
-    public SegmentedRaftLog createRaftLog( FileSystemAbstraction fsa, File dir )
+    public RaftLog createRaftLog( FileSystemAbstraction fsa, File dir )
     {
-        long rotateAtSize = ByteUnit.mebiBytes( 8 );
-        LogProvider logProvider = getInstance();
-        int readerPoolSize = 8;
-        CoreLogPruningStrategy pruningStrategy =
-                new CoreLogPruningStrategyFactory( raft_log_pruning_strategy.defaultValue(), logProvider )
-                        .newInstance();
+        var rotateAtSize = ByteUnit.mebiBytes( 8 );
+        var logProvider = NullLogProvider.getInstance();
+        var readerPoolSize = 8;
+        var pruningStrategy = new CoreLogPruningStrategyFactory( raft_log_pruning_strategy.defaultValue(), logProvider ).newInstance();
         return new SegmentedRaftLog( fsa, dir, rotateAtSize, ignored -> new DummyRaftableContentSerializer(), logProvider,
                 readerPoolSize, Clocks.fakeClock(), new OnDemandJobScheduler(), pruningStrategy );
     }

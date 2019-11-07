@@ -21,9 +21,9 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.LengthFieldPrepender;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.net.InetSocketAddress;
 import java.util.Collection;
@@ -39,12 +39,15 @@ import static com.neo4j.causalclustering.protocol.modifier.ModifierProtocolCateg
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.Matchers.instanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.neo4j.function.ThrowingAction.executeAll;
 
-public class NettyProtocolHandshakeIT
+class NettyProtocolHandshakeIT
 {
     private ApplicationSupportedProtocols supportedRaftApplicationProtocol =
             new ApplicationSupportedProtocols( RAFT, emptyList() );
@@ -67,8 +70,8 @@ public class NettyProtocolHandshakeIT
     private HandshakeClient handshakeClient;
     private Client client;
 
-    @Before
-    public void setUp()
+    @BeforeEach
+    void beforeEach()
     {
         server = new Server();
         server.start( raftApplicationProtocolRepository, compressionModifierProtocolRepository );
@@ -79,15 +82,14 @@ public class NettyProtocolHandshakeIT
         client.connect( server.port() );
     }
 
-    @After
-    public void tearDown()
+    @AfterEach
+    void afterEach() throws Exception
     {
-        client.disconnect();
-        server.stop();
+        executeAll( client::disconnect, server::stop );
     }
 
     @Test
-    public void shouldSuccessfullyHandshakeKnownProtocolOnClientWithCompression() throws Exception
+    void shouldSuccessfullyHandshakeKnownProtocolOnClientWithCompression() throws Exception
     {
         // when
         handshakeClient.initiate( new SimpleNettyChannel( client.channel, NullLog.getInstance() ), raftApplicationProtocolRepository,
@@ -95,12 +97,12 @@ public class NettyProtocolHandshakeIT
 
         // then
         ProtocolStack clientProtocolStack = handshakeClient.protocol().get( 1, TimeUnit.MINUTES );
-        assertThat( clientProtocolStack.applicationProtocol(), equalTo( TestApplicationProtocols.latest( RAFT) ) );
+        assertThat( clientProtocolStack.applicationProtocol(), equalTo( TestApplicationProtocols.latest( RAFT ) ) );
         assertThat( clientProtocolStack.modifierProtocols(), contains( TestModifierProtocols.latest( COMPRESSION ) ) );
     }
 
     @Test
-    public void shouldSuccessfullyHandshakeKnownProtocolOnServerWithCompression() throws Exception
+    void shouldSuccessfullyHandshakeKnownProtocolOnServerWithCompression() throws Exception
     {
         // when
         handshakeClient.initiate( new SimpleNettyChannel( client.channel, NullLog.getInstance() ), raftApplicationProtocolRepository,
@@ -114,7 +116,7 @@ public class NettyProtocolHandshakeIT
     }
 
     @Test
-    public void shouldSuccessfullyHandshakeKnownProtocolOnClientNoModifiers() throws Exception
+    void shouldSuccessfullyHandshakeKnownProtocolOnClientNoModifiers() throws Exception
     {
         // when
         handshakeClient.initiate( new SimpleNettyChannel( client.channel, NullLog.getInstance() ), raftApplicationProtocolRepository,
@@ -123,12 +125,12 @@ public class NettyProtocolHandshakeIT
 
         // then
         ProtocolStack clientProtocolStack = clientHandshakeFuture.get( 1, TimeUnit.MINUTES );
-        assertThat( clientProtocolStack.applicationProtocol(), equalTo( TestApplicationProtocols.latest( RAFT) ) );
+        assertThat( clientProtocolStack.applicationProtocol(), equalTo( TestApplicationProtocols.latest( RAFT ) ) );
         assertThat( clientProtocolStack.modifierProtocols(), empty() );
     }
 
     @Test
-    public void shouldSuccessfullyHandshakeKnownProtocolOnServerNoModifiers() throws Exception
+    void shouldSuccessfullyHandshakeKnownProtocolOnServerNoModifiers() throws Exception
     {
         // when
         handshakeClient.initiate( new SimpleNettyChannel( client.channel, NullLog.getInstance() ), raftApplicationProtocolRepository,
@@ -141,26 +143,20 @@ public class NettyProtocolHandshakeIT
         assertThat( serverProtocolStack.modifierProtocols(), empty() );
     }
 
-    @Test( expected = ClientHandshakeException.class )
-    public void shouldFailHandshakeForUnknownProtocolOnClient() throws Throwable
+    @Test
+    void shouldFailHandshakeForUnknownProtocolOnClient()
     {
         // when
         handshakeClient.initiate( new SimpleNettyChannel( client.channel, NullLog.getInstance() ), catchupApplicationProtocolRepository,
                 compressionModifierProtocolRepository );
 
         // then
-        try
-        {
-            handshakeClient.protocol().get( 1, TimeUnit.MINUTES );
-        }
-        catch ( ExecutionException ex )
-        {
-            throw ex.getCause();
-        }
+        var ex = assertThrows( ExecutionException.class, () -> handshakeClient.protocol().get( 1, TimeUnit.MINUTES ) );
+        assertThat( ex.getCause(), instanceOf( ClientHandshakeException.class ) );
     }
 
-    @Test( expected = ServerHandshakeException.class )
-    public void shouldFailHandshakeForUnknownProtocolOnServer() throws Throwable
+    @Test
+    void shouldFailHandshakeForUnknownProtocolOnServer()
     {
         // when
         handshakeClient.initiate( new SimpleNettyChannel( client.channel, NullLog.getInstance() ), catchupApplicationProtocolRepository,
@@ -169,14 +165,8 @@ public class NettyProtocolHandshakeIT
         CompletableFuture<ProtocolStack> serverHandshakeFuture = getServerHandshakeFuture( handshakeClient.protocol() );
 
         // then
-        try
-        {
-            serverHandshakeFuture.get( 1, TimeUnit.MINUTES );
-        }
-        catch ( ExecutionException ex )
-        {
-            throw ex.getCause();
-        }
+        var ex = assertThrows( ExecutionException.class, () -> serverHandshakeFuture.get( 1, TimeUnit.MINUTES ) );
+        assertThat( ex.getCause(), instanceOf( ServerHandshakeException.class ) );
     }
 
     /**

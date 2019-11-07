@@ -22,22 +22,16 @@ import akka.remote.artery.tcp.SSLEngineProviderSetup;
 import akka.testkit.TestProbe;
 import com.neo4j.causalclustering.discovery.AkkaDiscoverySSLEngineProvider;
 import com.typesafe.config.ConfigFactory;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import scala.concurrent.duration.FiniteDuration;
 
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.stream.Stream;
@@ -50,23 +44,24 @@ import org.neo4j.logging.NullLogProvider;
 import org.neo4j.ssl.SslPolicy;
 import org.neo4j.ssl.SslResource;
 import org.neo4j.ssl.config.SslPolicyLoader;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.ports.PortAuthority;
 import org.neo4j.test.rule.TestDirectory;
-import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
 import static com.neo4j.ssl.HostnameVerificationHelper.aConfig;
 import static com.neo4j.ssl.HostnameVerificationHelper.trust;
 import static com.neo4j.ssl.SslContextFactory.SslParameters.protocols;
 import static com.neo4j.ssl.SslContextFactory.makeSslPolicy;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.anyOf;
 import static org.hamcrest.Matchers.containsString;
-import static org.junit.Assert.assertThat;
 import static org.neo4j.configuration.ssl.SslPolicyScope.CLUSTER;
 import static org.neo4j.ssl.SslResourceBuilder.caSignedKeyId;
 import static org.neo4j.ssl.SslResourceBuilder.selfSignedKeyId;
 
-@RunWith( Parameterized.class )
-public class AkkaDiscoverySSLEngineProviderIT
+@TestDirectoryExtension
+class AkkaDiscoverySSLEngineProviderIT
 {
     private static final String MSG = "When in doubt, burn it to the ground and start from scratch";
 
@@ -79,121 +74,120 @@ public class AkkaDiscoverySSLEngineProviderIT
 
     private static final FiniteDuration TIMEOUT = new FiniteDuration( 30L, TimeUnit.SECONDS );
 
-    @Rule
-    public TestDirectory testDir = TestDirectory.testDirectory();
+    @Inject
+    private TestDirectory testDir;
 
-    @Rule
-    public DefaultFileSystemRule fsRule = new DefaultFileSystemRule();
-
-    @Parameterized.Parameter
-    public Function<SslPolicy,SSLEngineProvider> sslEngineProviderFactory;
-
-    @Parameterized.Parameters
-    public static Collection<Function<SslPolicy, SSLEngineProvider>> data()
-    {
-        return Arrays.asList( AkkaDiscoverySSLEngineProvider::new, TestSSLEngineProvider::new );
-    }
-
-    @Test
-    public void shouldConnectWithMutualTrust() throws Throwable
+    @ParameterizedTest
+    @EnumSource( SslEngineProviderFactory.class )
+    void shouldConnectWithMutualTrust( SslEngineProviderFactory sslEngineProviderFactory ) throws Throwable
     {
         SslResource sslServerResource = selfSignedKeyId( 0 ).trustKeyId( 1 ).install( testDir.directory( "server" ) );
         SslResource sslClientResource = selfSignedKeyId( 1 ).trustKeyId( 0 ).install( testDir.directory( "client" ) );
 
-        testConnection( sslClientResource, sslServerResource, this::accept );
+        testConnection( sslEngineProviderFactory, sslClientResource, sslServerResource, this::accept );
     }
 
-    @Test
-    public void shouldConnectWithMutualTrustViaCA() throws Throwable
+    @ParameterizedTest
+    @EnumSource( SslEngineProviderFactory.class )
+    void shouldConnectWithMutualTrustViaCA( SslEngineProviderFactory sslEngineProviderFactory ) throws Throwable
     {
         SslResource sslServerResource = caSignedKeyId( 0 ).trustSignedByCA().install( testDir.directory( "server" ) );
         SslResource sslClientResource = caSignedKeyId( 1 ).trustSignedByCA().install( testDir.directory( "client" ) );
 
-        testConnection( sslClientResource, sslServerResource, this::accept );
+        testConnection( sslEngineProviderFactory, sslClientResource, sslServerResource, this::accept );
     }
 
-    @Test
-    public void shouldNotConnectWithUntrustedClient() throws Throwable
+    @ParameterizedTest
+    @EnumSource( SslEngineProviderFactory.class )
+    void shouldNotConnectWithUntrustedClient( SslEngineProviderFactory sslEngineProviderFactory ) throws Throwable
     {
         SslResource sslClientResource = selfSignedKeyId( 1 ).trustKeyId( 0 ).install( testDir.directory( "client" ) );
         SslResource sslServerResource = selfSignedKeyId( 0 ).trustKeyId( UNRELATED_ID ).install( testDir.directory( "server" ) );
 
-        testConnection( sslClientResource, sslServerResource, this::decline );
+        testConnection( sslEngineProviderFactory, sslClientResource, sslServerResource, this::decline );
     }
 
-    @Test
-    public void shouldNotConnectWithUntrustedServer() throws Throwable
+    @ParameterizedTest
+    @EnumSource( SslEngineProviderFactory.class )
+    void shouldNotConnectWithUntrustedServer( SslEngineProviderFactory sslEngineProviderFactory ) throws Throwable
     {
         SslResource sslClientResource = selfSignedKeyId( 0 ).trustKeyId( UNRELATED_ID ).install( testDir.directory( "client" ) );
         SslResource sslServerResource = selfSignedKeyId( 1 ).trustKeyId( 0 ).install( testDir.directory( "server" ) );
 
-        testConnection( sslClientResource, sslServerResource, this::decline );
+        testConnection( sslEngineProviderFactory, sslClientResource, sslServerResource, this::decline );
     }
 
-    @Test
-    public void shouldNotConnectWhenTrustedByCAAndServerRevoked() throws Throwable
+    @ParameterizedTest
+    @EnumSource( SslEngineProviderFactory.class )
+    void shouldNotConnectWhenTrustedByCAAndServerRevoked( SslEngineProviderFactory sslEngineProviderFactory ) throws Throwable
     {
         SslResource sslServerResource = caSignedKeyId( 0 ).trustSignedByCA().install( testDir.directory( "server" ) );
         SslResource sslClientResource = caSignedKeyId( 1 ).trustSignedByCA().revoke( 0 ).install( testDir.directory( "client" ) );
 
-        testConnection( sslClientResource, sslServerResource, this::decline );
+        testConnection( sslEngineProviderFactory, sslClientResource, sslServerResource, this::decline );
     }
 
-    @Test
-    public void shouldNotConnectWhenTrustedByCAAndClientRevoked() throws Throwable
+    @ParameterizedTest
+    @EnumSource( SslEngineProviderFactory.class )
+    void shouldNotConnectWhenTrustedByCAAndClientRevoked( SslEngineProviderFactory sslEngineProviderFactory ) throws Throwable
     {
         SslResource sslServerResource = caSignedKeyId( 0 ).trustSignedByCA().revoke( 1 ).install( testDir.directory( "server" ) );
         SslResource sslClientResource = caSignedKeyId( 1 ).trustSignedByCA().install( testDir.directory( "client" ) );
 
-        testConnection( sslClientResource, sslServerResource, this::decline );
+        testConnection( sslEngineProviderFactory, sslClientResource, sslServerResource, this::decline );
     }
 
-    @Test
-    public void shouldConnectIfProtocolsInCommon() throws Throwable
+    @ParameterizedTest
+    @EnumSource( SslEngineProviderFactory.class )
+    void shouldConnectIfProtocolsInCommon( SslEngineProviderFactory sslEngineProviderFactory ) throws Throwable
     {
         SslResource sslServerResource = selfSignedKeyId( 0 ).trustKeyId( 1 ).install( testDir.directory( "server" ) );
         SslResource sslClientResource = selfSignedKeyId( 1 ).trustKeyId( 0 ).install( testDir.directory( "client" ) );
         SslPolicy serverSslPolicy = makeSslPolicy( sslServerResource, protocols( TLSv12 ).ciphers(), CLUSTER );
         SslPolicy clientSslPolicy = makeSslPolicy( sslClientResource, protocols( TLSv12 ).ciphers(), CLUSTER );
 
-        testConnection( clientSslPolicy, serverSslPolicy, this::accept );
+        testConnection( sslEngineProviderFactory, clientSslPolicy, serverSslPolicy, this::accept );
     }
 
-    @Test
-    public void shouldNotConnectIfNoProtocolsInCommon() throws Throwable
+    @ParameterizedTest
+    @EnumSource( SslEngineProviderFactory.class )
+    void shouldNotConnectIfNoProtocolsInCommon( SslEngineProviderFactory sslEngineProviderFactory ) throws Throwable
     {
         SslResource sslServerResource = selfSignedKeyId( 0 ).trustKeyId( 1 ).install( testDir.directory( "server" ) );
         SslResource sslClientResource = selfSignedKeyId( 1 ).trustKeyId( 0 ).install( testDir.directory( "client" ) );
         SslPolicy serverSslPolicy = makeSslPolicy( sslServerResource, protocols( TLSv12 ).ciphers(), CLUSTER );
         SslPolicy clientSslPolicy = makeSslPolicy( sslClientResource, protocols( TLSv11 ).ciphers(), CLUSTER );
 
-        testConnection( clientSslPolicy, serverSslPolicy, this::decline );
+        testConnection( sslEngineProviderFactory, clientSslPolicy, serverSslPolicy, this::decline );
     }
 
-    @Test
-    public void shouldConnectIfCiphersInCommon() throws Throwable
+    @ParameterizedTest
+    @EnumSource( SslEngineProviderFactory.class )
+    void shouldConnectIfCiphersInCommon( SslEngineProviderFactory sslEngineProviderFactory ) throws Throwable
     {
         SslResource sslServerResource = selfSignedKeyId( 0 ).trustKeyId( 1 ).install( testDir.directory( "server" ) );
         SslResource sslClientResource = selfSignedKeyId( 1 ).trustKeyId( 0 ).install( testDir.directory( "client" ) );
         SslPolicy serverSslPolicy = makeSslPolicy( sslServerResource, protocols().ciphers( NEW_CIPHER_A ), CLUSTER );
         SslPolicy clientSslPolicy = makeSslPolicy( sslClientResource, protocols().ciphers( NEW_CIPHER_A ), CLUSTER );
 
-        testConnection( clientSslPolicy, serverSslPolicy, this::accept );
+        testConnection( sslEngineProviderFactory, clientSslPolicy, serverSslPolicy, this::accept );
     }
 
-    @Test
-    public void shouldNotConnectIfNoCiphersInCommon() throws Throwable
+    @ParameterizedTest
+    @EnumSource( SslEngineProviderFactory.class )
+    void shouldNotConnectIfNoCiphersInCommon( SslEngineProviderFactory sslEngineProviderFactory ) throws Throwable
     {
         SslResource sslServerResource = selfSignedKeyId( 0 ).trustKeyId( 1 ).install( testDir.directory( "server" ) );
         SslResource sslClientResource = selfSignedKeyId( 1 ).trustKeyId( 0 ).install( testDir.directory( "client" ) );
         SslPolicy serverSslPolicy = makeSslPolicy( sslServerResource, protocols().ciphers( NEW_CIPHER_A ), CLUSTER );
         SslPolicy clientSslPolicy = makeSslPolicy( sslClientResource, protocols().ciphers( NEW_CIPHER_B ), CLUSTER );
 
-        testConnection( clientSslPolicy, serverSslPolicy, this::decline );
+        testConnection( sslEngineProviderFactory, clientSslPolicy, serverSslPolicy, this::decline );
     }
 
-    @Test
-    public void shouldNotConnectIfInvalidCommonNameOnServer() throws Throwable
+    @ParameterizedTest
+    @EnumSource( SslEngineProviderFactory.class )
+    void shouldNotConnectIfInvalidCommonNameOnServer( SslEngineProviderFactory sslEngineProviderFactory ) throws Throwable
     {
         Config serverConfig = aConfig( "invalid", testDir, CLUSTER );
 
@@ -205,11 +199,12 @@ public class AkkaDiscoverySSLEngineProviderIT
         SslPolicy serverPolicy = SslPolicyLoader.create( serverConfig, NullLogProvider.getInstance() ).getPolicy( CLUSTER );
         SslPolicy clientPolicy = SslPolicyLoader.create( clientConfig, NullLogProvider.getInstance() ).getPolicy( CLUSTER );
 
-        testConnection( clientPolicy, serverPolicy, this::decline );
+        testConnection( sslEngineProviderFactory, clientPolicy, serverPolicy, this::decline );
     }
 
-    @Test
-    public void shouldConnectIfValidCommonName() throws Throwable
+    @ParameterizedTest
+    @EnumSource( SslEngineProviderFactory.class )
+    void shouldConnectIfValidCommonName( SslEngineProviderFactory sslEngineProviderFactory ) throws Throwable
     {
         Config serverConfig = aConfig( "localhost", testDir, CLUSTER );
 
@@ -221,11 +216,12 @@ public class AkkaDiscoverySSLEngineProviderIT
         SslPolicy serverPolicy = SslPolicyLoader.create( serverConfig, NullLogProvider.getInstance() ).getPolicy( CLUSTER );
         SslPolicy clientPolicy = SslPolicyLoader.create( clientConfig, NullLogProvider.getInstance() ).getPolicy( CLUSTER );
 
-        testConnection( clientPolicy, serverPolicy, this::accept );
+        testConnection( sslEngineProviderFactory, clientPolicy, serverPolicy, this::accept );
     }
 
-    @Test
-    public void shouldConnectWithHostnameVerificationAndClientAuth() throws Throwable
+    @ParameterizedTest
+    @EnumSource( SslEngineProviderFactory.class )
+    void shouldConnectWithHostnameVerificationAndClientAuth( SslEngineProviderFactory sslEngineProviderFactory ) throws Throwable
     {
         SslPolicyConfig policy = SslPolicyConfig.forScope( CLUSTER );
 
@@ -241,7 +237,7 @@ public class AkkaDiscoverySSLEngineProviderIT
         SslPolicy serverPolicy = SslPolicyLoader.create( serverConfig, NullLogProvider.getInstance() ).getPolicy( CLUSTER );
         SslPolicy clientPolicy = SslPolicyLoader.create( clientConfig, NullLogProvider.getInstance() ).getPolicy( CLUSTER );
 
-        testConnection( clientPolicy, serverPolicy, this::accept );
+        testConnection( sslEngineProviderFactory, clientPolicy, serverPolicy, this::accept );
     }
 
     private ActorSystem createActorSystem( String name, SSLEngineProvider sslEngineProvider )
@@ -276,19 +272,19 @@ public class AkkaDiscoverySSLEngineProviderIT
                 .withFallback( ConfigFactory.defaultReference() );
     }
 
-    private void testConnection( SslResource clientSslResource, SslResource serverSslResource, BiConsumer<TestProbe,TestProbe> verify )
-            throws InterruptedException, ExecutionException
+    private void testConnection( SslEngineProviderFactory sslEngineProviderFactory, SslResource clientSslResource, SslResource serverSslResource,
+            BiConsumer<TestProbe,TestProbe> verify ) throws Exception
     {
-        testConnection( makeSslPolicy( clientSslResource, CLUSTER ), makeSslPolicy( serverSslResource, CLUSTER ), verify );
+        testConnection( sslEngineProviderFactory, makeSslPolicy( clientSslResource, CLUSTER ), makeSslPolicy( serverSslResource, CLUSTER ), verify );
     }
 
-    private void testConnection( SslPolicy clientSslPolicy, SslPolicy serverSslPolicy, BiConsumer<TestProbe,TestProbe> verify )
-            throws InterruptedException, ExecutionException
+    private void testConnection( SslEngineProviderFactory sslEngineProviderFactory, SslPolicy clientSslPolicy, SslPolicy serverSslPolicy,
+            BiConsumer<TestProbe,TestProbe> verify ) throws Exception
     {
-        SSLEngineProvider clientSslProvider = sslEngineProviderFactory.apply( clientSslPolicy );
+        SSLEngineProvider clientSslProvider = sslEngineProviderFactory.newProvider( clientSslPolicy );
         ActorSystem clientActorSystem = createActorSystem( "client", clientSslProvider );
 
-        SSLEngineProvider serverSslProvider = sslEngineProviderFactory.apply( serverSslPolicy );
+        SSLEngineProvider serverSslProvider = sslEngineProviderFactory.newProvider( serverSslPolicy );
         ActorSystem serverActorSystem = createActorSystem( "server", serverSslProvider );
 
         TestProbe serverMsgProbe = new TestProbe( serverActorSystem );
@@ -315,14 +311,7 @@ public class AkkaDiscoverySSLEngineProviderIT
                     .map( CompletionStage::toCompletableFuture )
                     .toArray( CompletableFuture[]::new );
 
-            try
-            {
-                CompletableFuture.allOf( cleanup ).get( 60, TimeUnit.SECONDS );
-            }
-            catch ( TimeoutException e )
-            {
-                e.printStackTrace();
-            }
+            CompletableFuture.allOf( cleanup ).get( 60, TimeUnit.SECONDS );
         }
     }
 
@@ -382,6 +371,24 @@ public class AkkaDiscoverySSLEngineProviderIT
         public SSLEngine createServerSSLEngine( String hostname, int port )
         {
             return super.createServerSSLEngine( "0.0.0.0", port );
+        }
+    }
+
+    private enum SslEngineProviderFactory
+    {
+        AKKA_SSL_ENGINE( AkkaDiscoverySSLEngineProvider::new ),
+        TEST_SSL_ENGINE( TestSSLEngineProvider::new );
+
+        final Function<SslPolicy,SSLEngineProvider> factory;
+
+        SslEngineProviderFactory( Function<SslPolicy,SSLEngineProvider> factory )
+        {
+            this.factory = factory;
+        }
+
+        SSLEngineProvider newProvider( SslPolicy sslPolicy )
+        {
+            return factory.apply( sslPolicy );
         }
     }
 }

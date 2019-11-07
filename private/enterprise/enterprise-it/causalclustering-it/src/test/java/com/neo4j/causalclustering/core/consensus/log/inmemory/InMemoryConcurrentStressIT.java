@@ -7,45 +7,17 @@ package com.neo4j.causalclustering.core.consensus.log.inmemory;
 
 import com.neo4j.causalclustering.core.consensus.log.ConcurrentStressIT;
 import com.neo4j.causalclustering.core.consensus.log.InMemoryRaftLog;
+import com.neo4j.causalclustering.core.consensus.log.RaftLog;
 
 import java.io.File;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
-import org.neo4j.kernel.lifecycle.Lifecycle;
 
-public class InMemoryConcurrentStressIT extends ConcurrentStressIT<InMemoryConcurrentStressIT.LifecycledInMemoryRaftLog>
+public class InMemoryConcurrentStressIT extends ConcurrentStressIT
 {
     @Override
-    public LifecycledInMemoryRaftLog createRaftLog( FileSystemAbstraction fsa, File dir )
+    public RaftLog createRaftLog( FileSystemAbstraction fsa, File dir )
     {
-        return new LifecycledInMemoryRaftLog();
-    }
-
-    public static class LifecycledInMemoryRaftLog extends InMemoryRaftLog implements Lifecycle
-    {
-
-        @Override
-        public void init()
-        {
-
-        }
-
-        @Override
-        public void start()
-        {
-
-        }
-
-        @Override
-        public void stop()
-        {
-
-        }
-
-        @Override
-        public void shutdown()
-        {
-
-        }
+        return new InMemoryRaftLog();
     }
 }

@@ -9,7 +9,7 @@ import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
 import org.hamcrest.Description;
 import org.hamcrest.TypeSafeMatcher;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
 import java.util.ArrayList;
@@ -31,13 +31,13 @@ import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @ClusterExtension
 @TestInstance( PER_METHOD )
-public class ServerGroupsIT
+class ServerGroupsIT
 {
     @Inject
     private ClusterFactory clusterFactory;
 
     @Test
-    public void shouldUpdateGroupsOnStart() throws Exception
+    void shouldUpdateGroupsOnStart() throws Exception
     {
         var suffix = new AtomicReference<>( "before" );
 

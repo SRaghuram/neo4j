@@ -19,9 +19,7 @@ import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.SslConnectionFactory;
 import org.eclipse.jetty.server.handler.AbstractHandler;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -41,22 +39,25 @@ import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.internal.SimpleLogService;
 import org.neo4j.ssl.SslPolicy;
 import org.neo4j.ssl.SslResource;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.ports.PortAuthority;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.causalclustering.discovery.RetryStrategyTest.testRetryStrategy;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.configuration.ssl.SslPolicyScope.CLUSTER;
+import static org.neo4j.function.ThrowingAction.executeAll;
 import static org.neo4j.ssl.SslResourceBuilder.selfSignedKeyId;
 
+@TestDirectoryExtension
 public class KubernetesResolverIT
 {
-    @Rule
-    public ExpectedException expected = ExpectedException.none();
-
-    @Rule
-    public TestDirectory testDir = TestDirectory.testDirectory();
+    @Inject
+    private TestDirectory testDir;
 
     private final int port = PortAuthority.allocatePort();
     private final AssertableLogProvider logProvider = new AssertableLogProvider();
@@ -109,9 +110,10 @@ public class KubernetesResolverIT
     @Test
     public void shouldLogResolvedAddressesToUserLog() throws Throwable
     {
-        withServer( longJson(), () -> {
-           resolver.resolve( null );
-           userLogProvider.rawMessageMatcher().assertContains( "Resolved %s from Kubernetes API at %s namespace %s labelSelector %s" );
+        withServer( longJson(), () ->
+        {
+            resolver.resolve( null );
+            userLogProvider.rawMessageMatcher().assertContains( "Resolved %s from Kubernetes API at %s namespace %s labelSelector %s" );
         } );
     }
 
@@ -138,12 +140,10 @@ public class KubernetesResolverIT
     @Test
     public void shouldReportFailureDueToAuth() throws Throwable
     {
-        expected.expect( IllegalStateException.class );
-        expected.expectMessage( "Forbidden" );
+        IllegalStateException ex = assertThrows( IllegalStateException.class,
+                () -> withServer( failJson(), () -> resolver.resolve( null ) ) );
 
-        withServer( failJson(), () -> {
-            resolver.resolve( null );
-        } );
+        assertThat( ex.getMessage(), containsString( "Forbidden" ) );
     }
 
     public void withServer( String json, Runnable test ) throws Exception
@@ -220,8 +220,7 @@ public class KubernetesResolverIT
 
     private void tearDown( Server server ) throws Exception
     {
-        httpClient.stop();
-        server.stop();
+        executeAll( httpClient::stop, server::stop );
     }
 
     private static class FakeKubernetesHandler extends AbstractHandler

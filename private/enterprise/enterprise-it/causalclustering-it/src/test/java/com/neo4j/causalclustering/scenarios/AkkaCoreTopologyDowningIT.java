@@ -17,10 +17,11 @@ import com.neo4j.causalclustering.discovery.akka.AkkaCoreTopologyService;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemFactory;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
 import com.neo4j.causalclustering.discovery.akka.system.JoinMessageFactory;
+import com.neo4j.causalclustering.helper.ErrorHandler;
 import com.neo4j.causalclustering.identity.MemberId;
 import org.hamcrest.Matchers;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -53,30 +54,26 @@ import static org.neo4j.test.assertion.Assert.assertEventually;
 // ClusterShuttingDown will be detected and acted upon.
 // Does not trigger the ThisActorSystemQuarantinedEvent. It may not be viable to write a test that does so.
 // But much of the code path is the same.
-public class AkkaCoreTopologyDowningIT
+class AkkaCoreTopologyDowningIT
 {
-    private List<TopologyServiceComponents> services = new ArrayList<>();
-    private Set<Integer> dynamicPorts = new HashSet<>();
+    private final List<TopologyServiceComponents> services = new ArrayList<>();
+    private final Set<Integer> dynamicPorts = new HashSet<>();
 
-    @After
-    public void tearDown()
+    @AfterEach
+    public void afterEach()
     {
-        for ( TopologyServiceComponents service : services )
+        try ( var errorHandler = new ErrorHandler( "Error when trying to shutdown services" ) )
         {
-            try
+            for ( var service : services )
             {
-                stopShutdown( service );
+                errorHandler.execute( () -> stopShutdown( service ) );
             }
-            catch ( Throwable throwable )
-            {
-                throwable.printStackTrace();
-            }
+            services.clear();
         }
-        services.clear();
     }
 
     @Test
-    public void shouldReconnectAfterDowning() throws Throwable
+    void shouldReconnectAfterDowning() throws Throwable
     {
         // Given two topology services
         int port1 = PortAuthority.allocatePort();
@@ -101,7 +98,7 @@ public class AkkaCoreTopologyDowningIT
     }
 
     @Test
-    public void shouldRestartIfInitialDiscoMembersNoLongerValid() throws Throwable
+    void shouldRestartIfInitialDiscoMembersNoLongerValid() throws Throwable
     {
         // Given two topology services
         int port1 = PortAuthority.allocatePort();
@@ -143,7 +140,7 @@ public class AkkaCoreTopologyDowningIT
     }
 
     @Test
-    public void shouldReconnectEachAfterDowningUsingDynamicResolver() throws Throwable
+    void shouldReconnectEachAfterDowningUsingDynamicResolver() throws Throwable
     {
         // Given two topology services
         int port1 = PortAuthority.allocatePort();
@@ -200,7 +197,7 @@ public class AkkaCoreTopologyDowningIT
         assertEventuallyHasTopologySize( akkaCoreTopologyService3, 3 );
     }
 
-    private void assertEventuallyHasTopologySize( TopologyServiceComponents services, int expected ) throws InterruptedException
+    private static void assertEventuallyHasTopologySize( TopologyServiceComponents services, int expected ) throws InterruptedException
     {
         assertEventually( () -> services.topologyService().allCoreServers().entrySet(), Matchers.hasSize( expected ), 5, TimeUnit.MINUTES );
     }
@@ -262,7 +259,7 @@ public class AkkaCoreTopologyDowningIT
         return pair;
     }
 
-    private void stopShutdown( TopologyServiceComponents service ) throws Throwable
+    private static void stopShutdown( TopologyServiceComponents service ) throws Throwable
     {
         service.topologyService().stop();
         service.topologyService().shutdown();
