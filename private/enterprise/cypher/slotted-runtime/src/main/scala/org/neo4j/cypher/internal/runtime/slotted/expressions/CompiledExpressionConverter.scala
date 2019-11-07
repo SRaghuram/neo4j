@@ -35,6 +35,7 @@ class CompiledExpressionConverter(log: Log,
                                   codeGenerationMode: CodeGenerationMode,
                                   neverFail: Boolean = false) extends ExpressionConverter {
 
+  import CompiledExpressionConverter.COMPILE_LIMIT
   //uses an inner converter to simplify compliance with Expression trait
   private val inner = new ExpressionConverters(SlottedExpressionConverters(physicalPlan), CommunityExpressionConverter(tokenContext))
 
@@ -44,7 +45,7 @@ class CompiledExpressionConverter(log: Log,
     //we don't deal with aggregations
     case f: FunctionInvocation if f.function.isInstanceOf[AggregatingFunction] => None
 
-    case e => try {
+    case e if sizeOf(e) > COMPILE_LIMIT => try {
       log.debug(s"Compiling expression: $expression")
       defaultGenerator(physicalPlan.slotConfigurations(id), readOnly, codeGenerationMode)
         .compileExpression(e)
@@ -58,15 +59,27 @@ class CompiledExpressionConverter(log: Log,
         else log.debug(s"Failed to compile expression: $e", t)
         None
     }
+
+    case _ => None
+  }
+
+
+  import org.neo4j.cypher.internal.v4_0.util.Foldable._
+
+  private def sizeOf(expression: ast.Expression)= expression.treeCount {
+    case _: ast.Expression => true
   }
 
   override def toCommandProjection(id: Id, projections: Map[String, ast.Expression],
                                    self: ExpressionConverters): Option[CommandProjection] = {
     try {
-      log.debug(s" Compiling projection: $projections")
-      defaultGenerator(physicalPlan.slotConfigurations(id), readOnly, codeGenerationMode)
-        .compileProjection(projections)
-        .map(CompileWrappingProjection(_, projections.isEmpty))
+      val totalSize = projections.values.foldLeft(0)((acc, current) => acc + sizeOf(current))
+      if (totalSize > COMPILE_LIMIT) {
+        log.debug(s" Compiling projection: $projections")
+        defaultGenerator(physicalPlan.slotConfigurations(id), readOnly, codeGenerationMode)
+          .compileProjection(projections)
+          .map(CompileWrappingProjection(_, projections.isEmpty))
+      } else None
     }
     catch {
       case NonFatalCypherError(t) =>
@@ -89,10 +102,13 @@ class CompiledExpressionConverter(log: Log,
         // UPDATE: In theory this should now be supported...
         None
       } else {
-        log.debug(s" Compiling grouping expression: $projections")
-        defaultGenerator(physicalPlan.slotConfigurations(id), readOnly, codeGenerationMode)
-          .compileGrouping(orderGroupingKeyExpressions(projections, orderToLeverage))
-          .map(CompileWrappingDistinctGroupingExpression(_, projections.isEmpty))
+        val totalSize = projections.values.foldLeft(0)((acc, current) => acc + sizeOf(current))
+        if (totalSize > COMPILE_LIMIT) {
+          log.debug(s" Compiling grouping expression: $projections")
+          defaultGenerator(physicalPlan.slotConfigurations(id), readOnly, codeGenerationMode)
+            .compileGrouping(orderGroupingKeyExpressions(projections, orderToLeverage))
+            .map(CompileWrappingDistinctGroupingExpression(_, projections.isEmpty))
+        } else None
       }
     }
     catch {
@@ -110,6 +126,7 @@ class CompiledExpressionConverter(log: Log,
 }
 
 object CompiledExpressionConverter {
+  private val COMPILE_LIMIT: Int = 2
 
   def parametersOrFail(state: QueryState): Array[AnyValue] = state match {
     case s: SlottedQueryState => s.params
