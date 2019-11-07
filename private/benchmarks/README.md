@@ -59,3 +59,13 @@ tar -C /usr/lib/async-profiler --strip-components=1 -xzf /tmp/v1.4.tar.gz
 (cd /usr/lib/async-profiler && make)
 ```
 Then set `ASYNC_PROFILER_DIR` to the directory of async-profiler
+
+### Deployment of benchmarking artifacts
+
+We use two maven repos:
+* one for thirdparty artifacts like gcviewer or JMC, [Benchmarking thirdparty](https://neo.jfrog.io/neo/benchmarking-thirdparty)
+    * anonymous read is enabled for this repo
+    * only users which have permission `benchmarking-publisher` can publish to it
+ * second repo, which hosts benchmarking artifacts (so called commons), [Benchmarking local](https://neo.jfrog.io/neo/benchmarking-local)
+    * anonymous access is disabled, you need to belong to `readers` group or have `benchmarking-reader` permissions
+    * only users which have permission `benchmarking-publisher` can publish to it
