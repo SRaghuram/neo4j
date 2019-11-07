@@ -40,7 +40,7 @@ import java.util.stream.Stream;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
-import org.neo4j.driver.v1.StatementResult;
+import org.neo4j.driver.Result;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.harness.junit.extension.Neo4jExtension;
@@ -180,7 +180,7 @@ public class CommandsSmokeTestIT
     {
         try ( StoreClient client = StoreClient.connect( boltUri, USERNAME, PASSWORD, 1 ) )
         {
-            StatementResult result = client.session().run( "RETURN size((:TestRun)-[:WITH_ANNOTATION]->(:Annotation)) AS testRunAnnotations" );
+            Result result = client.session().run( "RETURN size((:TestRun)-[:WITH_ANNOTATION]->(:Annotation)) AS testRunAnnotations" );
             return result.next().get( "testRunAnnotations" ).asLong();
         }
     }
@@ -189,7 +189,7 @@ public class CommandsSmokeTestIT
     {
         try ( StoreClient client = StoreClient.connect( boltUri, USERNAME, PASSWORD, 1 ) )
         {
-            StatementResult result = client.session().run( "RETURN size((:Metrics)-[:WITH_ANNOTATION]->(:Annotation)) AS metricsAnnotations" );
+            Result result = client.session().run( "RETURN size((:Metrics)-[:WITH_ANNOTATION]->(:Annotation)) AS metricsAnnotations" );
             return result.next().get( "metricsAnnotations" ).asLong();
         }
     }

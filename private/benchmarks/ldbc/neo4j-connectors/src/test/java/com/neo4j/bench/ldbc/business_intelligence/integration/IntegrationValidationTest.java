@@ -18,6 +18,7 @@ import com.ldbc.driver.temporal.TimeSource;
 import com.ldbc.driver.validation.DbValidationResult;
 import com.ldbc.driver.workloads.ldbc.snb.bi.LdbcSnbBiWorkload;
 import com.ldbc.driver.workloads.ldbc.snb.bi.LdbcSnbBiWorkloadConfiguration;
+import com.neo4j.bench.common.database.Neo4jStore;
 import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
@@ -154,7 +155,7 @@ class IntegrationValidationTest
                 false
         );
 
-        Store store = Store.createFrom( storeDir.toPath() );
+        Store store = Neo4jStore.createFrom( storeDir.toPath() );
 
         configuration = (ConsoleAndFileDriverConfiguration) configuration.applyArgs(
                 Neo4jDb.neo4jConnectorPropertiesFor(

@@ -11,6 +11,7 @@ import com.github.rvesse.airline.annotations.OptionType;
 import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.collect.Lists;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
+import com.neo4j.bench.common.database.Neo4jStore;
 import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.common.model.Neo4jConfig;
 import com.neo4j.bench.common.model.Parameters;
@@ -160,15 +161,13 @@ public class RunSingleEmbeddedCommand implements Runnable
     public void run()
     {
         // At this point if it was necessary to copy store (due to mutating query) it should have been done already, trust that store is safe to use
-        try ( Store store = Store.createFrom( storeDir.toPath() ) )
+        try ( Store store = Neo4jStore.createFrom( storeDir.toPath() ) )
         {
             if ( neo4jConfigFile != null )
             {
                 BenchmarkUtil.assertFileNotEmpty( neo4jConfigFile.toPath() );
             }
-            Neo4jConfig neo4jConfig = Neo4jConfigBuilder.fromFile( neo4jConfigFile )
-                                                        .withSetting( BoltConnector.enabled, FALSE )
-                                                        .build();
+            Neo4jConfig neo4jConfig = getNeo4jConfig();
             QueryRunner queryRunner = QueryRunner.queryRunnerFor( executionMode,
                                                                   forkDirectory -> createDatabase( store, edition, neo4jConfig, forkDirectory ) );
             Pid clientPid = HasPid.getPid();
@@ -189,6 +188,13 @@ public class RunSingleEmbeddedCommand implements Runnable
                                           Deployment.embedded(),
                                           workDir.toPath() );
         }
+    }
+
+    Neo4jConfig getNeo4jConfig()
+    {
+        return Neo4jConfigBuilder.fromFile( neo4jConfigFile )
+                .withSetting( BoltConnector.enabled, FALSE )
+                .build();
     }
 
     static EmbeddedDatabase createDatabase( Store store,

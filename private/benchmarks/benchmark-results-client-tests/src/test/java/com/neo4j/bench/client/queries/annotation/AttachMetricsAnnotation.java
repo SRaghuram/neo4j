@@ -13,9 +13,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
-import org.neo4j.driver.v1.Driver;
-import org.neo4j.driver.v1.Session;
-import org.neo4j.driver.v1.StatementResult;
+import org.neo4j.driver.Driver;
+import org.neo4j.driver.Session;
+import org.neo4j.driver.Result;
 
 import static com.neo4j.bench.common.util.BenchmarkUtil.prettyPrint;
 import static java.lang.String.format;
@@ -47,7 +47,7 @@ public class AttachMetricsAnnotation implements Query<Void>
     {
         try ( Session session = driver.session() )
         {
-            StatementResult statementResult = session.run( ATTACH_ANNOTATION, params() );
+            Result statementResult = session.run( ATTACH_ANNOTATION, params() );
             int annotationsCreated = statementResult.consume().counters().nodesCreated();
             if ( 1 != annotationsCreated )
             {

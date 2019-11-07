@@ -6,7 +6,9 @@
 package com.neo4j.bench.macro.execution.database;
 
 import com.google.common.collect.Lists;
+import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.database.Store;
+import com.neo4j.bench.common.model.Neo4jConfig;
 import com.neo4j.bench.common.options.Edition;
 import com.neo4j.bench.common.process.HasPid;
 import com.neo4j.bench.common.process.Pid;
@@ -26,6 +28,7 @@ import org.neo4j.cli.ExecutionContext;
 import org.neo4j.commandline.dbms.StoreInfoCommand;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
+import org.neo4j.dbms.database.DatabaseManagementServiceImpl;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Result;
@@ -37,6 +40,7 @@ import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MINUTES;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 public class EmbeddedDatabase implements Database
 {
@@ -45,7 +49,13 @@ public class EmbeddedDatabase implements Database
     private final GraphDatabaseService db;
     private final CountingResultVisitor resultVisitor;
 
-    public static void recreateSchema( Store store, Edition edition, Path neo4jConfig, Schema schema )
+    public static void recreateSchema( Store store, Edition edition, Path neo4jConfigFile, Schema schema )
+    {
+        Neo4jConfig neo4jConfig = Neo4jConfigBuilder.fromFile( neo4jConfigFile ).build();
+        recreateSchema( store, edition, neo4jConfig, schema );
+    }
+
+    public static void recreateSchema( Store store, Edition edition, Neo4jConfig neo4jConfig, Schema schema )
     {
         System.out.println( "Dropping schema..." );
         try ( EmbeddedDatabase db = EmbeddedDatabase.startWith( store, edition, neo4jConfig ) )
@@ -94,12 +104,21 @@ public class EmbeddedDatabase implements Database
         //if the output contains superseded we know that there is a new store format that we should upgrade to.
         return output.contains( "superseded" );
     }
+    public static void verifySchema( Store store, Edition edition, Path neo4jConfigFile, Schema expectedSchema )
+    {
+        Neo4jConfig neo4jConfig = Neo4jConfigBuilder.fromFile( neo4jConfigFile ).build();
+        verifySchema( store, edition, neo4jConfig, expectedSchema );
+    }
 
-    public static void verifySchema( Store store, Edition edition, Path neo4jConfig, Schema expectedSchema )
+    public static void verifySchema( Store store, Edition edition, Neo4jConfig neo4jConfig, Schema expectedSchema )
     {
         try ( EmbeddedDatabase db = EmbeddedDatabase.startWith( store, edition, neo4jConfig ) )
         {
             verifySchema( db, expectedSchema );
+        }
+        catch ( Exception e )
+        {
+            e.printStackTrace(  );
         }
     }
 
@@ -108,7 +127,13 @@ public class EmbeddedDatabase implements Database
         Schema.assertEqual( expectedSchema, db.getSchema() );
     }
 
-    public static EmbeddedDatabase startWith( Store store, Edition edition, Path neo4jConfig )
+    public static EmbeddedDatabase startWith( Store store, Edition edition, Path neo4jConfigFile )
+    {
+        Neo4jConfig neo4jConfig = Neo4jConfigBuilder.fromFile( neo4jConfigFile ).build();
+        return startWith( store, edition, neo4jConfig );
+    }
+
+    public static EmbeddedDatabase startWith( Store store, Edition edition, Neo4jConfig neo4jConfig )
     {
         DatabaseManagementService managementService = newDb( store, edition, neo4jConfig );
         return new EmbeddedDatabase( store, managementService );
@@ -120,21 +145,22 @@ public class EmbeddedDatabase implements Database
         requireNonNull( managementService );
         this.store = store;
         this.managementService = managementService;
-        this.db = managementService.database( store.graphDbDirectory().getFileName().toString() );
+        this.db = managementService.database( store.databaseName() );
         this.resultVisitor = new CountingResultVisitor();
     }
 
     private boolean isRunning()
     {
-        return db != null && db.isAvailable( MINUTES.toMillis( 5 ) );
+//        return db != null && db.isAvailable( MINUTES.toMillis( 5 ) );
+        return db != null && db.isAvailable( SECONDS.toMillis( 5 ) );
     }
 
-    private static DatabaseManagementService newDb( Store store, Edition edition, Path neo4jConfig )
+    private static DatabaseManagementService newDb( Store store, Edition edition, Neo4jConfig neo4jConfig )
     {
         DatabaseManagementServiceBuilder builder = newBuilder( store, edition );
         if ( null != neo4jConfig )
         {
-            builder.loadPropertiesFromFile( neo4jConfig.toAbsolutePath().toString() );
+            builder.setConfigRaw( neo4jConfig.toMap() );
         }
         return builder.build();
     }
@@ -332,7 +358,7 @@ public class EmbeddedDatabase implements Database
     {
         return "Neo4j EmbeddedDatabase\n" +
                "\t* Path:    " + store.topLevelDirectory().toAbsolutePath() + "\n" +
-               "\t* Running: " + isRunning() + "\n" +
+               //"\t* Running: " + isRunning() + "\n" +
                "\t* Size:    " + BenchmarkUtil.bytesToString( store.bytes() );
     }
 

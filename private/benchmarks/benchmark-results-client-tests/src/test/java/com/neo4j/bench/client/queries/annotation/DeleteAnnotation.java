@@ -13,10 +13,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
-import org.neo4j.driver.v1.Driver;
-import org.neo4j.driver.v1.Session;
-import org.neo4j.driver.v1.StatementResult;
-import org.neo4j.driver.v1.summary.SummaryCounters;
+import org.neo4j.driver.Driver;
+import org.neo4j.driver.Session;
+import org.neo4j.driver.Result;
+import org.neo4j.driver.summary.SummaryCounters;
 
 import static com.neo4j.bench.common.util.BenchmarkUtil.prettyPrint;
 import static java.lang.String.format;
@@ -38,7 +38,7 @@ public class DeleteAnnotation implements Query<Void>
     {
         try ( Session session = driver.session() )
         {
-            StatementResult statementResult = session.run( DELETE_ANNOTATION, params() );
+            Result statementResult = session.run( DELETE_ANNOTATION, params() );
             SummaryCounters counters = statementResult.consume().counters();
             assertDeleted( counters.nodesDeleted(), counters.relationshipsDeleted() );
         }

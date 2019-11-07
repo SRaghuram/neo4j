@@ -5,7 +5,9 @@
  */
 package com.neo4j.common.util;
 
+import com.neo4j.bench.common.database.Neo4jStore;
 import com.neo4j.bench.common.database.Store;
+import com.neo4j.bench.common.model.Neo4jConfig;
 import com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder;
 
 import java.nio.file.Path;
@@ -21,7 +23,17 @@ public class TestSupport
                         .loadPropertiesFromFile( neo4jConfigFile.toFile().getAbsolutePath() )
                         .build();
         managementService.shutdown();
-        return Store.createFrom( homeDir );
+        return Neo4jStore.createFrom( homeDir );
+    }
+
+    public static Store createEmptyStore( Path homeDir, Neo4jConfig neo4jConfig )
+    {
+        DatabaseManagementService managementService =
+                new EnterpriseDatabaseManagementServiceBuilder( homeDir.toFile() )
+                        .setConfigRaw( neo4jConfig.toMap() )
+                        .build();
+        managementService.shutdown();
+        return Neo4jStore.createFrom( homeDir );
     }
 
     public static Store createTemporaryEmptyStore( Path homeDir, Path neo4jConfigFile )
@@ -31,7 +43,7 @@ public class TestSupport
                         .loadPropertiesFromFile( neo4jConfigFile.toFile().getAbsolutePath() )
                         .build();
         managementService.shutdown();
-        return Store.createTemporaryFrom( homeDir );
+        return Neo4jStore.createTemporaryFrom( homeDir );
     }
 
 }

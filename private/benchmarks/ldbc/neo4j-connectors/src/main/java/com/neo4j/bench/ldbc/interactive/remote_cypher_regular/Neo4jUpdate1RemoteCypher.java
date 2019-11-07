@@ -16,7 +16,7 @@ import com.neo4j.bench.ldbc.interactive.Neo4jUpdate1;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.neo4j.driver.v1.Session;
+import org.neo4j.driver.Session;
 
 import static java.lang.String.format;
 

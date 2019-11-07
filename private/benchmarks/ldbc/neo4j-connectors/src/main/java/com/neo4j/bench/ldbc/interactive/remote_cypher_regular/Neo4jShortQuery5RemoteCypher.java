@@ -14,9 +14,9 @@ import com.neo4j.bench.ldbc.interactive.Neo4jShortQuery5;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.neo4j.driver.v1.Record;
-import org.neo4j.driver.v1.Session;
-import org.neo4j.driver.v1.StatementResult;
+import org.neo4j.driver.Record;
+import org.neo4j.driver.Session;
+import org.neo4j.driver.Result;
 
 import static java.lang.String.format;
 
@@ -30,7 +30,7 @@ public class Neo4jShortQuery5RemoteCypher extends Neo4jShortQuery5<Neo4jConnecti
     {
         try ( Session session = connection.session() )
         {
-            StatementResult statementResult = session.run(
+            Result statementResult = session.run(
                     connection.queries().queryFor( operation ).queryString(),
                     buildParams( operation )
             );

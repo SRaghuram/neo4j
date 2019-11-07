@@ -7,7 +7,7 @@ package com.neo4j.bench.macro;
 
 import com.google.common.collect.Lists;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
-import com.neo4j.bench.common.database.Store;
+import com.neo4j.bench.common.database.Neo4jStore;
 import com.neo4j.bench.common.model.Neo4jConfig;
 import com.neo4j.bench.common.options.Edition;
 import com.neo4j.bench.common.options.Planner;
@@ -75,8 +75,6 @@ class ConvenientLocalExecutionIT
     @Test
     void executeWorkload() throws Exception
     {
-        try ( Store store = Store.createFrom( STORE_DIR ) )
-        {
             String neo4jVersion = "1.2.3";
             String neo4jBranch = "1.2";
             String neo4jBranchOwner = "neo-technology";
@@ -94,7 +92,7 @@ class ConvenientLocalExecutionIT
             Path jvmPath = Paths.get( Jvm.defaultJvmOrFail().launchJava() );
 
             List<String> runWorkloadArgs = RunMacroWorkloadCommand.argsFor(
-                    store.topLevelDirectory(),
+                    STORE_DIR,
                     neo4jConfigFile(),
                     RESULT_DIR,
                     resultsJson,
@@ -129,7 +127,6 @@ class ConvenientLocalExecutionIT
                             triggeredBy ) );
 
             Main.main( runWorkloadArgs.stream().toArray( String[]::new ) );
-        }
     }
 
     // Required fields for running Single query
@@ -160,7 +157,7 @@ class ConvenientLocalExecutionIT
                                                                  jvm ),
                                     groupDir,
                                     query.copyWith( PLANNER ).copyWith( RUNTIME ),
-                                    Store.createFrom( STORE_DIR ),
+                                    Neo4jStore.createFrom( STORE_DIR, workload.getDatabaseName() ),
                                     EDITION,
                                     neo4jConfig(),
                                     PROFILERS,

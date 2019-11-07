@@ -18,15 +18,16 @@ import java.util.Objects;
 import java.util.concurrent.TimeoutException;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.driver.v1.AuthTokens;
-import org.neo4j.driver.v1.Config;
-import org.neo4j.driver.v1.Driver;
-import org.neo4j.driver.v1.GraphDatabase;
-import org.neo4j.driver.v1.Logging;
-import org.neo4j.driver.v1.Record;
-import org.neo4j.driver.v1.Session;
-import org.neo4j.driver.v1.StatementResult;
-import org.neo4j.driver.v1.Transaction;
+import org.neo4j.driver.AuthTokens;
+import org.neo4j.driver.Config;
+import org.neo4j.driver.Driver;
+import org.neo4j.driver.GraphDatabase;
+import org.neo4j.driver.Logging;
+import org.neo4j.driver.Record;
+import org.neo4j.driver.Session;
+import org.neo4j.driver.SessionConfig;
+import org.neo4j.driver.Result;
+import org.neo4j.driver.Transaction;
 
 import static java.lang.ProcessBuilder.Redirect;
 import static org.neo4j.configuration.SettingValueParsers.FALSE;
@@ -41,12 +42,14 @@ public class ServerDatabase implements Database
                                               Redirect errorRedirect,
                                               Path copyLogsToOnClose )
     {
+        String databaseName = store.databaseName();
+
         Neo4jConfigBuilder.fromFile( neo4jConfigFile )
                           .setBoltUri( generateBoltUriString() )
                           .withSetting( GraphDatabaseSettings.auth_enabled, FALSE )
                           .withSetting( GraphDatabaseSettings.databases_root_path,
                                         store.topLevelDirectory().resolve( "data" ).resolve( "databases" ).toString() )
-                          .withSetting( GraphDatabaseSettings.default_database, store.graphDbDirectory().getFileName().toString() )
+                          .withSetting( GraphDatabaseSettings.default_database, databaseName )
                           .withSetting( GraphDatabaseSettings.transaction_logs_root_path,
                                         store.topLevelDirectory().resolve( "data" ).resolve( "transactions" ).toString() )
                           .writeToFile( neo4jConfigFile );
@@ -54,7 +57,7 @@ public class ServerDatabase implements Database
         Neo4jServerWrapper neo4jServer = new Neo4jServerWrapper( neo4jDir );
         neo4jServer.clearLogs();
         Neo4jServerConnection connection = neo4jServer.start( jvm, neo4jConfigFile, outputRedirect, errorRedirect );
-        return new ServerDatabase( neo4jServer, connection.boltUri(), connection.pid(), copyLogsToOnClose );
+        return new ServerDatabase( neo4jServer, connection.boltUri(), databaseName, connection.pid(), copyLogsToOnClose );
     }
 
     private static String generateBoltUriString()
@@ -63,22 +66,24 @@ public class ServerDatabase implements Database
         return "127.0.0.1:7687";
     }
 
-    public static ServerDatabase connectClient( URI boltUri, Pid pid )
+    public static ServerDatabase connectClient( URI boltUri, String databaseName, Pid pid )
     {
-        return new ServerDatabase( null, boltUri, pid, null );
+        return new ServerDatabase( null, boltUri, databaseName, pid, null );
     }
 
     private final Neo4jServerWrapper neo4jServer;
     private final URI boltUri;
+    private final String databaseName;
     private final Pid pid;
     private final Driver driver;
     private final Session session;
     private final Path copyLogsToOnClose;
 
-    private ServerDatabase( Neo4jServerWrapper neo4jServer, URI boltUri, Pid pid, Path copyLogsToOnClose )
+    private ServerDatabase( Neo4jServerWrapper neo4jServer, URI boltUri, String databaseName, Pid pid, Path copyLogsToOnClose )
     {
         this.neo4jServer = neo4jServer;
         this.boltUri = Objects.requireNonNull( boltUri );
+        this.databaseName = databaseName;
         this.pid = Objects.requireNonNull( pid );
         this.copyLogsToOnClose = copyLogsToOnClose;
         try
@@ -90,7 +95,14 @@ public class ServerDatabase implements Database
             this.driver = GraphDatabase.driver( boltUri,
                                                 AuthTokens.none(),
                                                 driverConfig );
-            this.session = driver.session();
+            if (databaseName == null)
+            {
+                this.session = driver.session();
+            }
+            else
+            {
+                this.session = driver.session( SessionConfig.builder().withDatabase( this.databaseName ).build() );
+            }
         }
         catch ( Exception e )
         {
@@ -115,7 +127,7 @@ public class ServerDatabase implements Database
     {
         try ( Transaction tx = session.beginTransaction() )
         {
-            StatementResult result = tx.run( query, parameters );
+            Result result = tx.run( query, parameters );
             int rowCount = 0;
             while ( result.hasNext() )
             {
@@ -129,11 +141,11 @@ public class ServerDatabase implements Database
 
             if ( shouldRollback )
             {
-                tx.failure();
+                tx.rollback();
             }
             else
             {
-                tx.success();
+                tx.commit();
             }
             return rowCount;
         }

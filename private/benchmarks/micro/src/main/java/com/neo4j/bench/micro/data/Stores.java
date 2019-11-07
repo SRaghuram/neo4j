@@ -6,6 +6,7 @@
 package com.neo4j.bench.micro.data;
 
 import com.neo4j.bench.common.Neo4jConfigBuilder;
+import com.neo4j.bench.common.database.Neo4jStore;
 import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.common.model.Benchmark;
 import com.neo4j.bench.common.model.BenchmarkGroup;
@@ -168,7 +169,7 @@ public class Stores
 
         try
         {
-            new DataGenerator( config ).generate( Store.createFrom( topLevelStoreDir ), neo4jConfigFile );
+            new DataGenerator( config ).generate( Neo4jStore.createFrom( topLevelStoreDir ), neo4jConfigFile );
             String storeName = topLevelStoreDir.getFileName().toString();
             StoreUsage.loadOrCreateIfAbsent( storesDir )
                       .register( storeName, benchmarkGroup, benchmark );
@@ -344,7 +345,7 @@ public class Stores
 
         private StoreAndConfig( Path topLevelStoreDir, Path config )
         {
-            this.store = Store.createFrom( topLevelStoreDir );
+            this.store = Neo4jStore.createFrom( topLevelStoreDir );
             this.config = config;
         }
 

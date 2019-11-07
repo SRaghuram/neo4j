@@ -18,11 +18,14 @@ import com.neo4j.bench.common.process.Pid;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.tool.macro.Deployment;
+import com.neo4j.bench.common.tool.macro.DeploymentMode;
 import com.neo4j.bench.common.tool.macro.ExecutionMode;
 import com.neo4j.bench.common.util.Jvm;
+import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.macro.execution.QueryRunner;
 import com.neo4j.bench.macro.execution.database.ServerDatabase;
 import com.neo4j.bench.macro.workload.Query;
+import com.neo4j.bench.macro.workload.Workload;
 
 import java.io.File;
 import java.net.URI;
@@ -165,24 +168,31 @@ public class RunSingleServerCommand implements Runnable
         pidProfilers.put( clientPid, ProfilerType.deserializeProfilers( clientProfilerNames ) );
         pidProfilers.put( serverPid, ProfilerType.deserializeProfilers( serverProfilerNames ) );
 
-        QueryRunner queryRunner = QueryRunner.queryRunnerFor( executionMode,
-                                                              forkDirectory -> ServerDatabase.connectClient( boltUri, new Pid( neo4jPid ) ) );
-        QueryRunner.runSingleCommand( queryRunner,
-                                      Jvm.bestEffortOrFail( jvmFile ),
-                                      ForkDirectory.openAt( outputDir.toPath() ),
-                                      workloadName,
-                                      queryName,
-                                      planner,
-                                      runtime,
-                                      executionMode,
-                                      pidParameters,
-                                      pidProfilers,
-                                      warmupCount,
-                                      minMeasurementSeconds,
-                                      maxMeasurementSeconds,
-                                      measurementCount,
-                                      Deployment.server(),
-                                      workDir.toPath() );
+        try ( Resources resources = new Resources( workDir.toPath() ) )
+        {
+            DeploymentMode deploymentMode = Deployment.server();
+            Workload workload = Workload.fromName( workloadName, resources, deploymentMode );
+
+            QueryRunner queryRunner = QueryRunner.queryRunnerFor( executionMode,
+                                                                  forkDirectory -> ServerDatabase.connectClient( boltUri, workload.getDatabaseName(), new Pid( neo4jPid ) ) );
+
+            QueryRunner.runSingleCommand( queryRunner,
+                                          Jvm.bestEffortOrFail( jvmFile ),
+                                          ForkDirectory.openAt( outputDir.toPath() ),
+                                          workloadName,
+                                          queryName,
+                                          planner,
+                                          runtime,
+                                          executionMode,
+                                          pidParameters,
+                                          pidProfilers,
+                                          warmupCount,
+                                          minMeasurementSeconds,
+                                          maxMeasurementSeconds,
+                                          measurementCount,
+                                          deploymentMode,
+                                          workDir.toPath() );
+        }
     }
 
     public static List<String> argsFor(

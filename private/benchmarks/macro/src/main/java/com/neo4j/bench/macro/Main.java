@@ -8,7 +8,7 @@ package com.neo4j.bench.macro;
 import com.github.rvesse.airline.Cli;
 import com.github.rvesse.airline.builder.CliBuilder;
 import com.github.rvesse.airline.help.Help;
-import com.neo4j.bench.common.database.Store;
+import com.neo4j.bench.common.database.Neo4jStore;
 import com.neo4j.bench.common.model.BenchmarkGroupBenchmarkMetrics;
 import com.neo4j.bench.common.options.Edition;
 import com.neo4j.bench.common.process.JvmArgs;
@@ -65,7 +65,7 @@ public class Main
                                                            options.jvm() ),
                     benchmarkGroupDir,
                     options.query(),
-                    Store.createFrom( options.storeDir() ),
+                    Neo4jStore.createFrom( options.storeDir() ),
                     options.edition(),
                     options.neo4jConfig(),
                     options.profilers(),

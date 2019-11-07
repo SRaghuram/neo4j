@@ -10,6 +10,7 @@ import com.ldbc.driver.client.ResultsDirectory;
 import com.ldbc.driver.control.ConsoleAndFileDriverConfiguration;
 import com.ldbc.driver.workloads.ldbc.snb.bi.LdbcSnbBiWorkload;
 import com.ldbc.driver.workloads.ldbc.snb.bi.LdbcSnbBiWorkloadConfiguration;
+import com.neo4j.bench.common.database.Neo4jStore;
 import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.ldbc.DriverConfigUtils;
@@ -93,7 +94,7 @@ public abstract class SnbBiExecutionTest
                 false
         );
         File resultDir = temporaryFolder.directory( "results" );
-        Store store = Store.createFrom( storeDir.toPath() );
+        Store store = Neo4jStore.createFrom( storeDir.toPath() );
         assertThat( resultDir.listFiles().length, is( 0 ) );
 
         int threadCount = 1;

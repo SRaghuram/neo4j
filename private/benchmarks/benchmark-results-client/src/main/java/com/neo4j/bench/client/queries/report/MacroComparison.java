@@ -18,12 +18,13 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
-import org.neo4j.driver.v1.Driver;
-import org.neo4j.driver.v1.Session;
-import org.neo4j.driver.v1.StatementResult;
+import org.neo4j.driver.Driver;
+import org.neo4j.driver.Session;
+import org.neo4j.driver.Result;
+import org.neo4j.driver.SessionConfig;
 
 import static java.util.stream.Collectors.toList;
-import static org.neo4j.driver.v1.AccessMode.READ;
+import static org.neo4j.driver.AccessMode.READ;
 
 public class MacroComparison implements Query<List<MacroComparisonResult>>, CsvHeader
 {
@@ -45,12 +46,12 @@ public class MacroComparison implements Query<List<MacroComparisonResult>>, CsvH
     @Override
     public List<MacroComparisonResult> execute( Driver driver )
     {
-        try ( Session session = driver.session( READ ) )
+        try ( Session session = driver.session( SessionConfig.builder().withDefaultAccessMode( READ ).build() ) )
         {
             Map<String,Object> params = new HashMap<>();
             params.put( "old_version", oldNeo4jVersion );
             params.put( "new_version", newNeo4jVersion );
-            StatementResult result = session.run( QUERY, params );
+            Result result = session.run( QUERY, params );
             return result.list().stream()
                          .map( row ->
                                {

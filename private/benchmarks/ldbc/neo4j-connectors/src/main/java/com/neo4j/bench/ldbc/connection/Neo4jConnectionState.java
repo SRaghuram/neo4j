@@ -16,10 +16,10 @@ import java.util.Calendar;
 import java.util.Map;
 
 import org.neo4j.dbms.api.DatabaseManagementService;
-import org.neo4j.driver.v1.AuthToken;
-import org.neo4j.driver.v1.Logger;
-import org.neo4j.driver.v1.Logging;
-import org.neo4j.driver.v1.Session;
+import org.neo4j.driver.AuthToken;
+import org.neo4j.driver.Logger;
+import org.neo4j.driver.Logging;
+import org.neo4j.driver.Session;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;

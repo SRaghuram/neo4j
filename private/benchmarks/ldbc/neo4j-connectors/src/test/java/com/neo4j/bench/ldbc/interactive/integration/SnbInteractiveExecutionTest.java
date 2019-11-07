@@ -13,6 +13,7 @@ import com.ldbc.driver.control.DriverConfigurationException;
 import com.ldbc.driver.util.MapUtils;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcSnbInteractiveWorkload;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcSnbInteractiveWorkloadConfiguration;
+import com.neo4j.bench.common.database.Neo4jStore;
 import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.ldbc.DriverConfigUtils;
@@ -128,7 +129,7 @@ abstract class SnbInteractiveExecutionTest
                 true,
                 false
         );
-        Store store = Store.createFrom( storeDir.toPath() );
+        Store store = Neo4jStore.createFrom( storeDir.toPath() );
         File resultDir = temporaryFolder.directory( "results" );
         assertThat( resultDir.listFiles().length, is( 0 ) );
 
@@ -263,7 +264,7 @@ abstract class SnbInteractiveExecutionTest
                 false
         );
         File resultDir = temporaryFolder.directory( "results" );
-        Store store = Store.createFrom( storeDir.toPath() );
+        Store store = Neo4jStore.createFrom( storeDir.toPath() );
         assertThat( resultDir.listFiles().length, is( 0 ) );
 
         try ( DatabaseAndUrl databaseAndUrl = createRemoteConnector( store.topLevelDirectory().toFile() ) )
@@ -411,7 +412,7 @@ abstract class SnbInteractiveExecutionTest
                 false
         );
         File resultDir = temporaryFolder.directory( "results" );
-        Store store = Store.createFrom( storeDir.toPath() );
+        Store store = Neo4jStore.createFrom( storeDir.toPath() );
         assertThat( resultDir.listFiles().length, is( 0 ) );
 
         try ( DatabaseAndUrl databaseAndUrl = createRemoteConnector( store.topLevelDirectory().toFile() ) )

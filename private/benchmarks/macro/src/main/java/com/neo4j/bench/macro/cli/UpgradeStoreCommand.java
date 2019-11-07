@@ -10,6 +10,7 @@ import com.github.rvesse.airline.annotations.Option;
 import com.github.rvesse.airline.annotations.OptionType;
 import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
+import com.neo4j.bench.common.database.AutoDetectStore;
 import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.common.options.Edition;
 import com.neo4j.bench.common.tool.macro.Deployment;
@@ -78,11 +79,11 @@ public class UpgradeStoreCommand implements Runnable
                                     originalDbDir.getAbsolutePath(),
                                     upgradedDbDir.getAbsolutePath() ) );
 
-        Store.assertDirectoryIsNeoStore( originalDbDir.toPath() );
         Path workDir = Paths.get( System.getProperty( "user.dir" ) );
-        try ( Store originalStore = Store.createFrom( originalDbDir.toPath() );
+        try ( Store originalStore = AutoDetectStore.createFrom( originalDbDir.toPath() );
               Resources resources = new Resources( workDir ) )
         {
+            originalStore.assertDirectoryIsNeoStore();
             Workload workload = Workload.fromName( workloadName, resources, Deployment.embedded() );
 
             Path neo4jConfigPath = (null == neo4jConfigFile) ? null : neo4jConfigFile.toPath();

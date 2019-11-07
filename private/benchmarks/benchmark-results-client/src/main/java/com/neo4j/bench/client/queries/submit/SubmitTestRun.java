@@ -19,19 +19,20 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import org.neo4j.driver.v1.Driver;
-import org.neo4j.driver.v1.Record;
-import org.neo4j.driver.v1.Session;
-import org.neo4j.driver.v1.StatementResult;
-import org.neo4j.driver.v1.Transaction;
-import org.neo4j.driver.v1.Value;
+import org.neo4j.driver.Driver;
+import org.neo4j.driver.Record;
+import org.neo4j.driver.Session;
+import org.neo4j.driver.SessionConfig;
+import org.neo4j.driver.Result;
+import org.neo4j.driver.Transaction;
+import org.neo4j.driver.Value;
 
 import static com.neo4j.bench.common.model.BenchmarkMetrics.extractBenchmarkMetrics;
 import static com.neo4j.bench.common.util.BenchmarkUtil.prettyPrint;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
-import static org.neo4j.driver.v1.AccessMode.WRITE;
+import static org.neo4j.driver.AccessMode.WRITE;
 
 public class SubmitTestRun implements Query<SubmitTestRunResult>
 {
@@ -56,12 +57,12 @@ public class SubmitTestRun implements Query<SubmitTestRunResult>
     @Override
     public SubmitTestRunResult execute( Driver driver )
     {
-        try ( Session session = driver.session( WRITE ) )
+        try ( Session session = driver.session( SessionConfig.builder().withDefaultAccessMode( WRITE ).build() ) )
         {
             try ( Transaction tx = session.beginTransaction() )
             {
                 Map<String,Object> params = params();
-                StatementResult statementResult = tx.run( SUBMIT_TEST_RUN, params );
+                Result statementResult = tx.run( SUBMIT_TEST_RUN, params );
                 if ( statementResult.hasNext() )
                 {
                     Record record = statementResult.next();
@@ -111,12 +112,12 @@ public class SubmitTestRun implements Query<SubmitTestRunResult>
                     {
                         PlanTreeSubmitter.execute( tx, report.testRun(), report.benchmarkPlans(), submitTreeWithPlanner );
                     }
-                    tx.success();
+                    tx.commit();
                     return result;
                 }
                 else
                 {
-                    tx.failure();
+                    tx.rollback();
                     maybeSetNonFatalError( 0 );
                     return null;
                 }

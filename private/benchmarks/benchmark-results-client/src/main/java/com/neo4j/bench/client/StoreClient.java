@@ -12,15 +12,16 @@ import com.neo4j.bench.client.queries.schema.VerifyStoreSchema;
 import java.net.URI;
 import java.util.function.Supplier;
 
-import org.neo4j.driver.v1.AuthToken;
-import org.neo4j.driver.v1.AuthTokens;
-import org.neo4j.driver.v1.Config;
-import org.neo4j.driver.v1.Driver;
-import org.neo4j.driver.v1.GraphDatabase;
-import org.neo4j.driver.v1.Session;
+import org.neo4j.driver.AuthToken;
+import org.neo4j.driver.AuthTokens;
+import org.neo4j.driver.Config;
+import org.neo4j.driver.Driver;
+import org.neo4j.driver.GraphDatabase;
+import org.neo4j.driver.Session;
+import org.neo4j.driver.SessionConfig;
 
 import static java.lang.String.format;
-import static org.neo4j.driver.v1.AccessMode.READ;
+import static org.neo4j.driver.AccessMode.READ;
 
 public class StoreClient implements AutoCloseable
 {
@@ -105,7 +106,7 @@ public class StoreClient implements AutoCloseable
     {
         if ( driver != null )
         {
-            try ( Session session = driver.session( READ ) )
+            try ( Session session = driver.session( SessionConfig.builder().withDefaultAccessMode( READ ).build() ) )
             {
                 return !session.run( "RETURN 1" ).hasNext();
             }
@@ -149,7 +150,7 @@ public class StoreClient implements AutoCloseable
 
     private int versionNodeCount()
     {
-        try ( Session session = driver.session( READ ) )
+        try ( Session session = driver.session( SessionConfig.builder().withDefaultAccessMode( READ ).build() ) )
         {
             return session.run( "MATCH (ss:StoreSchema) RETURN count(ss) AS c" ).single().get( "c" ).asInt();
         }

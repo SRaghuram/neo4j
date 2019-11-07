@@ -19,9 +19,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Stack;
 
-import org.neo4j.driver.v1.Record;
-import org.neo4j.driver.v1.StatementResult;
-import org.neo4j.driver.v1.Transaction;
+import org.neo4j.driver.Record;
+import org.neo4j.driver.Result;
+import org.neo4j.driver.Transaction;
 
 import static com.neo4j.bench.common.model.PlanTree.PLAN_DESCRIPTION;
 import static java.lang.String.format;
@@ -40,7 +40,7 @@ public class PlanTreeSubmitter
             Map<String,Object> params = new HashMap<>();
             params.put( "plan_description", plan.planTree().asciiPlanDescription() );
             params.put( "plan_description_hash", plan.planTree().hashedPlanDescription() );
-            StatementResult statementResult = tx.run( SUBMIT_PLAN_TREE, params );
+            Result statementResult = tx.run( SUBMIT_PLAN_TREE, params );
             Record record = statementResult.next();
             String storedPlanTreeDescription = record
                     .get( "planTree" ).asNode()
@@ -68,7 +68,7 @@ public class PlanTreeSubmitter
                 tx.run( format( "CYPHER planner=%s %s", planner.value(), sb.toString() ), params );
                 break;
             default:
-                tx.failure();
+                tx.rollback();
                 throw new RuntimeException(
                         format( "Submit plan tree query created multiple nodes\n" +
                                 " * nodes created: %s\n" +
@@ -96,7 +96,7 @@ public class PlanTreeSubmitter
         }
         if ( !collisionBenchmarkPlans.isEmpty() )
         {
-            tx.failure();
+            tx.rollback();
             throw new RuntimeException( toCollisionsErrorMessage( collisionBenchmarkPlans ) );
         }
     }

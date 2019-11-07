@@ -7,7 +7,7 @@ package com.neo4j.bench.client.queries;
 
 import java.util.Optional;
 
-import org.neo4j.driver.v1.Driver;
+import org.neo4j.driver.Driver;
 
 public interface Query<RESULT>
 {

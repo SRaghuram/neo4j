@@ -16,6 +16,7 @@ import com.ldbc.driver.control.DriverConfiguration;
 import com.ldbc.driver.util.FileUtils;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcSnbInteractiveWorkload;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcSnbInteractiveWorkloadConfiguration;
+import com.neo4j.bench.common.database.Neo4jStore;
 import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.ldbc.Neo4jDb;
 import com.neo4j.bench.ldbc.connection.GraphMetadataProxy;
@@ -220,7 +221,7 @@ public class RunCommand implements Runnable
                     ConsoleAndFileDriverConfiguration.RESULT_DIR_PATH_ARG, resultsDir.getAbsolutePath() );
             if ( !neo4jConnector.equals( Neo4jDb.DB_TYPE_VALUE__REMOTE_CYPHER ) )
             {
-                Store store = Store.createFrom( storeDir.toPath() );
+                Store store = Neo4jStore.createFrom( storeDir.toPath() );
                 ldbcConfig = ldbcConfig.applyArg( Neo4jDb.DB_PATH_KEY, store.topLevelDirectory().toAbsolutePath().toString() );
             }
             ldbcConfig = ldbcConfig.applyArg( Neo4jDb.DB_TYPE_KEY, neo4jConnector );
@@ -367,7 +368,7 @@ public class RunCommand implements Runnable
             // This error can happen if another process already started the DB, which is common in 'remote' scenario
             return Neo4jSchema.NEO4J_REGULAR;
         }
-        Store store = Store.createFrom( storeDir.toPath() );
+        Store store = Neo4jStore.createFrom( storeDir.toPath() );
         DatabaseManagementService managementService = Neo4jDb.newDb( storeDir, neo4jConfig );
         GraphDatabaseService db = managementService.database( store.graphDbDirectory().getFileName().toString() );
         try

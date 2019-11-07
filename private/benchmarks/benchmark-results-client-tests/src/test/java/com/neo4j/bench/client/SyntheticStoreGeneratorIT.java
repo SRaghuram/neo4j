@@ -29,9 +29,9 @@ import java.util.Map;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
-import org.neo4j.driver.v1.Record;
-import org.neo4j.driver.v1.Session;
-import org.neo4j.driver.v1.StatementResult;
+import org.neo4j.driver.Record;
+import org.neo4j.driver.Session;
+import org.neo4j.driver.Result;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.harness.junit.extension.Neo4jExtension;
@@ -399,7 +399,7 @@ public class SyntheticStoreGeneratorIT
 
     private static int executeCountQuery( Session session, String query, Map<String,Object> params )
     {
-        StatementResult result = session.run( query, params );
+        Result result = session.run( query, params );
         Record record = result.next();
         return record.get( "count" ).asInt();
     }

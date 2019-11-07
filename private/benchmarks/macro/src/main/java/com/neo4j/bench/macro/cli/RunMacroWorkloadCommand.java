@@ -12,6 +12,7 @@ import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
+import com.neo4j.bench.common.database.Neo4jStore;
 import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.common.model.BenchmarkConfig;
 import com.neo4j.bench.common.model.BenchmarkGroupBenchmarkMetrics;
@@ -76,7 +77,7 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
              description = "Store directory matching the selected workload. E.g. 'accesscontrol/' not 'accesscontrol/graph.db/'",
              title = "Store directory" )
     @Required
-    private File storeDir;
+    File storeDir;
 
     @Option( type = OptionType.COMMAND,
              name = {CMD_NEO4J_CONFIG},
@@ -90,7 +91,7 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
              description = "Work directory: where intermediate results, logs, profiler recordings, etc. will be written",
              title = "Work directory" )
     @Required
-    private File workDir;
+    protected File workDir;
 
     @Option( type = OptionType.COMMAND,
              name = {CMD_RESULTS_JSON},
@@ -152,13 +153,13 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
             System.out.println( "Running with Neo4j configuration:\n" + neo4jConfig.toString() );
 
             System.out.println( "Verifying store..." );
-            try ( Store store = Store.createFrom( storeDir.toPath() ) )
+            try ( Store store = Neo4jStore.createFrom( storeDir.toPath(), workload.getDatabaseName() ) )
             {
-                EmbeddedDatabase.verifySchema( store, params.neo4jEdition(), neo4jConfigFile.toPath(), workload.expectedSchema() );
+                EmbeddedDatabase.verifySchema( store, params.neo4jEdition(), neo4jConfig, workload.expectedSchema() );
                 if ( params.isRecreateSchema() )
                 {
                     System.out.println( "Preparing to recreate schema..." );
-                    EmbeddedDatabase.recreateSchema( store, params.neo4jEdition(), neo4jConfigFile.toPath(), workload.expectedSchema() );
+                    EmbeddedDatabase.recreateSchema( store, params.neo4jEdition(), neo4jConfig, workload.expectedSchema() );
                 }
                 System.out.println( "Store verified\n" );
                 EmbeddedDatabase.verifyStoreFormat( store );
@@ -183,7 +184,7 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
                                                                                                            jvm ),
                                                                               groupDir,
                                                                               query,
-                                                                              Store.createFrom( storeDir.toPath().toAbsolutePath() ),
+                                                                              Neo4jStore.createFrom( storeDir.toPath().toAbsolutePath() ),
                                                                               params.neo4jEdition(),
                                                                               neo4jConfig,
                                                                               params.profilers(),

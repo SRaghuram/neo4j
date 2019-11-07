@@ -36,11 +36,13 @@ public class Workload
     private static final String NAME = "name";
     private static final String QUERIES = "queries";
     private static final String SCHEMA = "schema";
+    private static final String DATABASE_NAME = "databaseName";
 
     private final List<Query> queries;
     private final String name;
     private final Path configFile;
     private final Schema schema;
+    private final String databaseName;
 
     public static Workload fromName( String workloadName, Resources resources, DeploymentMode mode )
     {
@@ -119,6 +121,7 @@ public class Workload
             assertConfigHasAllAndOnlyExpectedKeys( config );
             String workloadName = ((String) config.get( NAME )).trim();
             List<Query> queries = AdditionalQueries.queriesFor( workloadName, mode );
+
             if ( config.containsKey( QUERIES ) )
             {
                 List<Query> staticQueries = getQueries( (List<Map<String,Object>>) config.get( QUERIES ),
@@ -141,7 +144,8 @@ public class Workload
             }
             Path schemaFile = workloadConfigFile.getParent().resolve( (String) config.get( SCHEMA ) );
             Schema schema = loadSchema( schemaFile );
-            return new Workload( queries, workloadName, workloadConfigFile, schema );
+            String databaseName = (String) config.get( DATABASE_NAME );
+            return new Workload( queries, workloadName, workloadConfigFile, schema, databaseName );
         }
         catch ( WorkloadConfigException e )
         {
@@ -189,6 +193,7 @@ public class Workload
         Set<String> invalidKeys = Sets.newHashSet( workloadConfig.keySet() );
         // not compulsory, and is checked for elsewhere
         invalidKeys.remove( QUERIES );
+        invalidKeys.remove( DATABASE_NAME );
 
         if ( !workloadConfig.containsKey( NAME ) )
         {
@@ -228,12 +233,13 @@ public class Workload
         }
     }
 
-    private Workload( List<Query> queries, String name, Path configFile, Schema schema )
+    private Workload( List<Query> queries, String name, Path configFile, Schema schema, String databaseName )
     {
         this.queries = queries;
         this.name = name;
         this.configFile = configFile;
         this.schema = schema;
+        this.databaseName = databaseName;
     }
 
     public Schema expectedSchema()
@@ -279,5 +285,10 @@ public class Workload
         return "Workload\n" +
                "\tname        : " + name + "\n" +
                "\tconfigFile  : " + configFile;
+    }
+
+    public String getDatabaseName()
+    {
+        return databaseName;
     }
 }

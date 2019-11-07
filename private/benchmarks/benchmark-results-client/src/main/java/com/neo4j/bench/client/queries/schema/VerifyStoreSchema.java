@@ -12,13 +12,14 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
 
-import org.neo4j.driver.v1.Driver;
-import org.neo4j.driver.v1.Record;
-import org.neo4j.driver.v1.Session;
+import org.neo4j.driver.Driver;
+import org.neo4j.driver.Record;
+import org.neo4j.driver.Session;
+import org.neo4j.driver.SessionConfig;
 
 import static com.neo4j.bench.client.StoreClient.VERSION;
 import static java.lang.String.format;
-import static org.neo4j.driver.v1.AccessMode.READ;
+import static org.neo4j.driver.AccessMode.READ;
 
 public class VerifyStoreSchema implements Query<Void>
 {
@@ -45,7 +46,7 @@ public class VerifyStoreSchema implements Query<Void>
 
     private void verifyStoreSchema( Driver driver )
     {
-        try ( Session session = driver.session( READ ) )
+        try ( Session session = driver.session( SessionConfig.builder().withDefaultAccessMode( READ ).build() ) )
         {
             assertExactlyOneStoreVersion( session );
             assertCorrectStoreVersion( session );

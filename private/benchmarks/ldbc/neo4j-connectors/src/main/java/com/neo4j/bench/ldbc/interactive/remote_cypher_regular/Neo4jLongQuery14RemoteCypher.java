@@ -16,10 +16,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.neo4j.driver.v1.Record;
-import org.neo4j.driver.v1.Session;
-import org.neo4j.driver.v1.StatementResult;
-import org.neo4j.driver.v1.Values;
+import org.neo4j.driver.Record;
+import org.neo4j.driver.Session;
+import org.neo4j.driver.Result;
+import org.neo4j.driver.Values;
 
 import static java.lang.String.format;
 
@@ -35,7 +35,7 @@ public class Neo4jLongQuery14RemoteCypher extends Neo4jQuery14<Neo4jConnectionSt
         List<LdbcQuery14Result> result = new ArrayList<>();
         try ( Session session = connection.session() )
         {
-            StatementResult statementResult = session.run(
+            Result statementResult = session.run(
                     connection.queries().queryFor( operation ).queryString(),
                     buildParams( operation )
             );

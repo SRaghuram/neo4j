@@ -10,6 +10,7 @@ import com.github.rvesse.airline.annotations.Option;
 import com.github.rvesse.airline.annotations.OptionType;
 import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.collect.Lists;
+import com.neo4j.bench.common.database.Neo4jStore;
 import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.common.options.Edition;
 import com.neo4j.bench.common.results.ForkDirectory;
@@ -90,7 +91,7 @@ public class ExportPlanCommand implements Runnable
 
         try ( Resources resources = new Resources( workDir.toPath() );
               // At this point if it was necessary to copy store (due to mutating query) it should have been done already, trust that store is safe to use
-              Store store = Store.createFrom( storeDir.toPath() ) )
+              Store store = Neo4jStore.createFrom( storeDir.toPath() ) )
         {
             Workload workload = Workload.fromName( workloadName, resources, Deployment.embedded() );
             Query query = workload.queryForName( queryName );

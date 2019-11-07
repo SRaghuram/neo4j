@@ -12,6 +12,7 @@ import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.ldbc.driver.DbException;
 import com.ldbc.driver.util.FileUtils;
 import com.ldbc.driver.util.MapUtils;
+import com.neo4j.bench.common.database.AutoDetectStore;
 import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.ldbc.Neo4jDb;
 import com.neo4j.bench.ldbc.connection.Neo4jSchema;
@@ -75,8 +76,8 @@ public class UpgradeStoreCommand implements Runnable
         String recordFormat = recordFormatOrFail( neo4jConfigFile );
 
         System.out.println( "Store upgrade..." );
-        Store.assertDirectoryIsNeoStore( originalDbDir.toPath() );
-        Store originalStore = Store.createFrom( originalDbDir.toPath() );
+        Store originalStore = AutoDetectStore.createFrom( originalDbDir.toPath() );
+        originalStore.assertDirectoryIsNeoStore();
         Store upgradedStore = originalStore.makeCopyAt( upgradedDbDir.toPath() );
         // Note, index & transaction log removal may break if store directory structure changes between previous and current versions
         upgradedStore.removeIndexDir();

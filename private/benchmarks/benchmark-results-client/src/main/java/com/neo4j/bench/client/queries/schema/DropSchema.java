@@ -10,8 +10,8 @@ import com.neo4j.bench.common.util.Resources;
 
 import java.util.Optional;
 
-import org.neo4j.driver.v1.Driver;
-import org.neo4j.driver.v1.Session;
+import org.neo4j.driver.Driver;
+import org.neo4j.driver.Session;
 
 public class DropSchema implements Query<Void>
 {
