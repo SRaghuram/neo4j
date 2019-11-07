@@ -130,6 +130,19 @@
 			</properties>
 			<id>benchmarksDeploy</id>
 		</profile>
+        <!-- needed for packaging builds -->
+        <profile>
+            <properties>
+                <benchmarks.deploy.skip>false</benchmarks.deploy.skip>
+            </properties>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+                <property>
+                    <name>fullBuild</name>
+                </property>
+            </activation>
+            <id>packagningDeploy</id>
+        </profile>
         <profile>
             <build>
                 <plugins>
