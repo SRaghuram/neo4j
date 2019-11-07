@@ -7,6 +7,11 @@ package com.neo4j.causalclustering.identity;
 
 class BindingException extends Exception
 {
+    BindingException( String message )
+    {
+        super( message );
+    }
+
     BindingException( String message, Throwable cause )
     {
         super( message, cause );

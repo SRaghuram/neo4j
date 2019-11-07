@@ -45,23 +45,6 @@ class RaftIdActorIT extends BaseAkkaIT("RaftIdActorTest") {
       coreTopologyProbe.expectMsg(new BootstrappedRaftsMessage(bootstrappedRaft1.getEntries.keySet))
       coreTopologyProbe.expectMsg(new BootstrappedRaftsMessage(bootstrappedRaft1.merge(bootstrappedRaft2).getEntries.keySet))
     }
-
-    "refuse to update replicators with additional raft ID" in new Fixture {
-      Given("a raft id and 2 publishers")
-      val databaseId = randomDatabaseId
-      val raftId = RaftId.from(databaseId)
-      val memberId1 = new MemberId(UUID.randomUUID)
-      val memberId2 = new MemberId(UUID.randomUUID)
-
-      When("2 members are both sending both raft IDs")
-      Then("Only the first cluster ID should be persisted")
-      val expected = LWWMap.empty.put(cluster, raftId, memberId1)
-
-      replicatedDataActorRef ! new RaftIdSetRequest(raftId, memberId1, java.time.Duration.ofSeconds( 2 ))
-      expectClusterIdReplicatorUpdatesWithOutcome(LWWMap.empty, expected)
-      replicatedDataActorRef ! new RaftIdSetRequest(raftId, memberId2, java.time.Duration.ofSeconds( 2 ))
-      expectClusterIdReplicatorUpdatesWithOutcome(expected, expected)
-    }
   }
 
   class Fixture extends ReplicatedDataActorFixture[LWWMap[RaftId,MemberId]] {
@@ -70,15 +53,5 @@ class RaftIdActorIT extends BaseAkkaIT("RaftIdActorTest") {
     val coreTopologyProbe = TestProbe("coreTopologyActor")
     val props = RaftIdActor.props(cluster, replicator.ref, coreTopologyProbe.ref, monitor, 3)
     override val replicatedDataActorRef: ActorRef = system.actorOf(props)
-
-    def expectClusterIdReplicatorUpdatesWithOutcome(initial: LWWMap[RaftId,MemberId], expected: LWWMap[RaftId,MemberId]): Unit =
-    {
-      replicator.fishForSpecificMessage(defaultWaitTime) {
-        case update @ Replicator.Update(`dataKey`, _, _) =>
-          val mapUpdate = update.asInstanceOf[Replicator.Update[LWWMap[RaftId,MemberId]]]
-          val result: java.util.Map[RaftId,MemberId] = mapUpdate.modify(Option(initial)).getEntries()
-          assert(result == expected.getEntries())
-      }
-    }
   }
 }

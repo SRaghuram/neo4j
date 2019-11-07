@@ -30,7 +30,7 @@ public interface CoreTopologyService extends TopologyService
      * @param raftId The Raft ID to publish.
      * @return The outcome of this publish attempt
      */
-    PublishRaftIdOutcome publishRaftId( RaftId raftId ) throws DiscoveryTimeoutException;
+    PublishRaftIdOutcome publishRaftId( RaftId raftId );
 
     /**
      * Sets or updates the leader memberId for the given database (i.e. Raft consensus group).

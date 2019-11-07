@@ -28,7 +28,7 @@ public class RaftIdActor extends BaseReplicatedDataActor<LWWMap<RaftId,MemberId>
 {
     private final ActorRef coreTopologyActor;
     //We use a reverse clock because we want the RaftId map to observe first-write-wins semantics, not the standard last-write-wins
-    private final LWWRegister.Clock<RaftId> clock = LWWRegister.reverseClock();
+    private final LWWRegister.Clock<MemberId> clock = LWWRegister.reverseClock();
     private final int minRuntimeQuorumSize;
 
     RaftIdActor( Cluster cluster, ActorRef replicator, ActorRef coreTopologyActor, ReplicatedDataMonitor monitors, int minRuntimeCores )
@@ -61,14 +61,7 @@ public class RaftIdActor extends BaseReplicatedDataActor<LWWMap<RaftId,MemberId>
     private void setRaftId( RaftIdSetRequest message )
     {
         log().debug( "Setting RaftId: {}", message );
-        modifyReplicatedData( key, map ->
-        {
-            if ( map.contains( message.raftId() ) )
-            {
-                return map;
-            }
-            return map.put( cluster, message.raftId(), message.publisher() );
-        } );
+        modifyReplicatedData( key, map -> map.put( cluster, message.raftId(), message.publisher(), clock ), message.withReplyTo( getSender() ) );
     }
 
     private void handleUpdateSuccess( Replicator.UpdateSuccess<?> updateSuccess )

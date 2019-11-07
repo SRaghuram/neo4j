@@ -260,17 +260,15 @@ class RaftBinderTest
     {
         // given
         var databaseId = randomDatabaseId();
-        var members = IntStream.range( 0, minCoreHosts )
-                .mapToObj( i -> Pair.of( new MemberId( randomUUID() ), addressesForCore( i, false, singleton( databaseId ) ) ) )
-                .collect( Collectors.toMap( Pair::first, Pair::other ) );
+        var members = IntStream.range( 0, minCoreHosts ).boxed()
+                .collect( Collectors.toMap( i -> new MemberId( randomUUID() ), i -> addressesForCore( i, false, singleton( databaseId ) ) ) );
 
         var bootstrappableTopology = new DatabaseCoreTopology( databaseId, null, members );
         var topologyService = mock( CoreTopologyService.class );
 
         when( topologyService.publishRaftId( any( RaftId.class ) ) )
-                .thenThrow( DiscoveryTimeoutException.class ) // Cause first retry
-                .thenReturn( PublishRaftIdOutcome.FAILED_PUBLISH ) // Cause second retry
-                .thenReturn( PublishRaftIdOutcome.SUCCESSFUL_PUBLISH_BY_OTHER ) // Cause third retry
+                .thenReturn( PublishRaftIdOutcome.FAILED_PUBLISH ) // Cause first retry
+                .thenReturn( PublishRaftIdOutcome.SUCCESSFUL_PUBLISH_BY_OTHER ) // Cause second retry
                 .thenReturn( PublishRaftIdOutcome.SUCCESSFUL_PUBLISH_BY_ME ); // Finally succeed
         when( topologyService.coreTopologyForDatabase( databaseId ) ).thenReturn( bootstrappableTopology );
         when( topologyService.canBootstrapRaftGroup( databaseId ) ).thenReturn( true );
@@ -284,7 +282,7 @@ class RaftBinderTest
         binder.bindToRaft( neverAbort() );
 
         // then
-        verify( topologyService, atLeast( 4 ) ).publishRaftId( RaftId.from( databaseId ) );
+        verify( topologyService, atLeast( 3 ) ).publishRaftId( RaftId.from( databaseId ) );
     }
 
     @Test
@@ -292,14 +290,13 @@ class RaftBinderTest
     {
         // given
         var databaseId = randomDatabaseId();
-        var members = IntStream.range( 0, minCoreHosts )
-                .mapToObj( i -> Pair.of( new MemberId( randomUUID() ), addressesForCore( i, false, singleton( databaseId ) ) ) )
-                .collect( Collectors.toMap( Pair::first, Pair::other ) );
+        var members = IntStream.range( 0, minCoreHosts ).boxed()
+                .collect( Collectors.toMap( i -> new MemberId( randomUUID() ), i -> addressesForCore( i, false, singleton( databaseId ) ) ) );
 
         var bootstrappableTopology = new DatabaseCoreTopology( databaseId, null, members );
         var topologyService = mock( CoreTopologyService.class );
 
-        when( topologyService.publishRaftId( any( RaftId.class ) ) ).thenThrow( DiscoveryTimeoutException.class );
+        when( topologyService.publishRaftId( any( RaftId.class ) ) ).thenReturn( PublishRaftIdOutcome.FAILED_PUBLISH );
         when( topologyService.coreTopologyForDatabase( databaseId ) ).thenReturn( bootstrappableTopology );
         when( topologyService.canBootstrapRaftGroup( databaseId ) ).thenReturn( true );
 
@@ -327,9 +324,8 @@ class RaftBinderTest
     void shouldBootstrapInitialDatabasesUsingDiscoveryMethod( DatabaseId databaseId, @SuppressWarnings( "unused" ) String databaseName ) throws Throwable
     {
         // given
-        Map<MemberId,CoreServerInfo> topologyMembers = IntStream.range( 0, minCoreHosts )
-                .mapToObj( i -> Pair.of( new MemberId( randomUUID() ), addressesForCore( i, false ) ) )
-                .collect( Collectors.toMap( Pair::first, Pair::other ) );
+        var topologyMembers = IntStream.range( 0, minCoreHosts ).boxed()
+                .collect( Collectors.toMap( i -> new MemberId( randomUUID() ), i -> addressesForCore( i, false ) ) );
 
         DatabaseCoreTopology topology = new DatabaseCoreTopology( databaseId, null, topologyMembers );
 

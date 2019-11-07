@@ -197,7 +197,7 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     }
 
     @Override
-    public PublishRaftIdOutcome publishRaftId( RaftId raftId ) throws DiscoveryTimeoutException
+    public PublishRaftIdOutcome publishRaftId( RaftId raftId )
     {
         var coreTopologyActor = coreTopologyActorRef;
         if ( coreTopologyActor != null )
@@ -210,8 +210,8 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
                     {
                         if ( !(response instanceof PublishRaftIdOutcome ) )
                         {
-                            throw new IllegalArgumentException( format( "Unexpected response when attempting to publish cluster Id. " +
-                                            "Expected PublishClusterIdOutcome, received %s", response.getClass().getCanonicalName() ) );
+                            throw new IllegalArgumentException( format( "Unexpected response when attempting to publish raftId. " +
+                                            "Expected %s, received %s", PublishRaftIdOutcome.class.getSimpleName(), response.getClass().getCanonicalName() ) );
                         }
                         return (PublishRaftIdOutcome) response;
                     } ).toCompletableFuture();
@@ -224,7 +224,7 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
             {
                 if ( e.getCause() instanceof AskTimeoutException )
                 {
-                    throw new DiscoveryTimeoutException( e );
+                    return PublishRaftIdOutcome.FAILED_PUBLISH;
                 }
                 throw new RuntimeException( e.getCause() );
             }

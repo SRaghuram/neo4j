@@ -66,8 +66,8 @@ public abstract class BaseReplicatedDataActor<T extends ReplicatedData> extends 
     public final Receive createReceive()
     {
         ReceiveBuilder receiveBuilder = new ReceiveBuilder();
-        handleReplicationEvents( receiveBuilder );
         handleCustomEvents( receiveBuilder );
+        handleReplicationEvents( receiveBuilder );
         return receiveBuilder.build();
     }
 

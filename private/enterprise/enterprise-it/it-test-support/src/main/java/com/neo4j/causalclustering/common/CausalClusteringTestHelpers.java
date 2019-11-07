@@ -241,13 +241,13 @@ public final class CausalClusteringTestHelpers
     public static void assertDatabaseEventuallyStarted( String databaseName, Cluster cluster ) throws InterruptedException
     {
         assertEventually( ignore -> "Database is not started on all members: " + memberDatabaseStates( databaseName, cluster ),
-                () -> allMembersHaveDatabaseState( DatabaseAvailability.AVAILABLE, cluster, databaseName ), is( true ), 1, MINUTES );
+                () -> allMembersHaveDatabaseState( DatabaseAvailability.AVAILABLE, cluster, databaseName ), is( true ), 10, MINUTES );
     }
 
     public static void assertDatabaseEventuallyStarted( String databaseName, Set<? extends ClusterMember> members ) throws InterruptedException
     {
         assertEventually( ignore -> "Database is not started on all members: " + memberDatabaseStates( databaseName, members ),
-                () -> membersHaveDatabaseState( DatabaseAvailability.AVAILABLE, members, databaseName ), is( true ), 1, MINUTES );
+                () -> membersHaveDatabaseState( DatabaseAvailability.AVAILABLE, members, databaseName ), is( true ), 10, MINUTES );
     }
 
     public static void assertDatabaseEventuallyStopped( String databaseName, Cluster cluster ) throws InterruptedException
