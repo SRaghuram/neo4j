@@ -109,20 +109,12 @@
     </build>
 
     <profiles>
-        <profile>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-deploy-plugin</artifactId>
-                        <configuration>
-                            <skip>false</skip>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
-            <id>benchmarksDeploy</id>
-        </profile>
+		<profile>
+			<properties>
+				<benchmarks.deploy.skip>false</benchmarks.deploy.skip>
+			</properties>
+			<id>benchmarksDeploy</id>
+		</profile>
     </profiles>
 
 </project>

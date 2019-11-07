@@ -27,6 +27,7 @@
         <!-- this required since LDBC code uses underscore as identifier and javadocs fail -->
         <maven.javadoc.skip>true</maven.javadoc.skip>
         <neo4j.version>${project.version}</neo4j.version>
+        <benchmarks.deploy.skip>true</benchmarks.deploy.skip>
         <s3mock.version>0.2.4</s3mock.version>
     </properties>
 
@@ -123,20 +124,12 @@
     </modules>
 
     <profiles>
-        <profile>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-deploy-plugin</artifactId>
-                        <configuration>
-                            <skip>true</skip>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
-            <id>benchmarksDeploy</id>
-        </profile>
+		<profile>
+			<properties>
+				<benchmarks.deploy.skip>false</benchmarks.deploy.skip>
+			</properties>
+			<id>benchmarksDeploy</id>
+		</profile>
         <profile>
             <build>
                 <plugins>
@@ -231,6 +224,13 @@
                         <skipITs>true</skipITs>
                     </configuration>
             </plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-deploy-plugin</artifactId>
+				<configuration>
+					<skip>${benchmarks.deploy.skip}</skip>
+				</configuration>
+			</plugin>
         </plugins>
     </build>
 
