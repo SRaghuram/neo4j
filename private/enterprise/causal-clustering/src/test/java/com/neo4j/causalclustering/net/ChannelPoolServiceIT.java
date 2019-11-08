@@ -250,12 +250,12 @@ class ChannelPoolServiceIT
     private void closeServers() throws Exception
     {
         executeAll(
+                () -> serverEventExecutor.shutdownGracefully().get(),
                 () ->
                 {
                     executor.shutdownNow();
                     assertTrue( executor.awaitTermination( 30, DEFAULT_TIME_UNIT ) );
-                },
-                () -> serverEventExecutor.shutdownGracefully().get() );
+                } );
     }
 
     @ChannelHandler.Sharable
