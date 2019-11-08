@@ -20,7 +20,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -35,6 +34,7 @@ import java.util.Iterator;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.internal.helpers.ConstantTimeTimeoutStrategy;
@@ -42,7 +42,7 @@ import org.neo4j.internal.helpers.collection.Iterators;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.StoreChannel;
 import org.neo4j.kernel.database.DatabaseId;
-import org.neo4j.kernel.database.TestDatabaseIdRepository;
+import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.DuplicatingLogProvider;
 import org.neo4j.logging.FormattedLogProvider;
@@ -52,40 +52,47 @@ import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.LifeExtension;
 import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.ports.PortAuthority;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 
+import static java.lang.Math.toIntExact;
 import static org.hamcrest.CoreMatchers.any;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.neo4j.io.ByteUnit.kibiBytes;
+import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
 
 @TestDirectoryExtension
-@ExtendWith( SuppressOutputExtension.class )
+@ExtendWith( {SuppressOutputExtension.class, LifeExtension.class} )
 class StoreCopyClientIT
 {
+    private static final int MAX_CHUNK_SIZE = toIntExact( kibiBytes( 32 ) );
+
     @Inject
     private FileSystemAbstraction fs;
     @Inject
     private TestDirectory testDirectory;
+    @Inject
+    private LifeSupport life;
 
     private final AssertableLogProvider assertableLogProvider = new AssertableLogProvider( true );
-    private final TerminationCondition defaultTerminationCondition = TerminationCondition.CONTINUE_INDEFINITELY;
+    private final Supplier<TerminationCondition> defaultTerminationCondition = () -> TerminationCondition.CONTINUE_INDEFINITELY;
     private final FakeFile fileA = new FakeFile( "fileA", "This is file a content" );
     private final FakeFile fileB = new FakeFile( "another-file-b", "Totally different content 123" );
     private final File targetLocation = new File( "copyTargetLocation" );
     private JobScheduler scheduler;
     private LogProvider logProvider;
-    private StoreCopyClient subject;
+    private StoreCopyClient storeCopyClient;
     private Server catchupServer;
     private FakeCatchupServer serverHandler;
-    private int maxChunkSize = 32768;
 
     private static void writeContents( FileSystemAbstraction fileSystemAbstraction, File file, String contents )
     {
@@ -101,9 +108,9 @@ class StoreCopyClientIT
     }
 
     @BeforeEach
-    void setup() throws Throwable
+    void setup()
     {
-        scheduler = new ThreadPoolJobScheduler();
+        scheduler = life.add( new ThreadPoolJobScheduler() );
         logProvider = new DuplicatingLogProvider( assertableLogProvider, FormattedLogProvider.withDefaultLogLevel( Level.DEBUG ).toOutputStream( System.out ) );
         serverHandler = new FakeCatchupServer( logProvider, testDirectory, fs );
         serverHandler.addFile( fileA );
@@ -112,22 +119,13 @@ class StoreCopyClientIT
         writeContents( fs, relative( fileB.getFilename() ), fileB.getContent() );
 
         SocketAddress listenAddress = new SocketAddress( "localhost", PortAuthority.allocatePort() );
-        catchupServer = CausalClusteringTestHelpers.getCatchupServer( serverHandler, listenAddress, scheduler );
-        catchupServer.start();
+        catchupServer = life.add( CausalClusteringTestHelpers.getCatchupServer( serverHandler, listenAddress, scheduler ) );
 
-        CatchupClientFactory catchUpClient = CausalClusteringTestHelpers.getCatchupClient( logProvider, scheduler );
-        catchUpClient.start();
+        CatchupClientFactory catchupClient = life.add( CausalClusteringTestHelpers.getCatchupClient( logProvider, scheduler ) );
 
         ConstantTimeTimeoutStrategy storeCopyBackoffStrategy = new ConstantTimeTimeoutStrategy( 1, TimeUnit.MILLISECONDS );
 
-        subject = new StoreCopyClient( catchUpClient, new TestDatabaseIdRepository().defaultDatabase(), Monitors::new, logProvider, storeCopyBackoffStrategy );
-    }
-
-    @AfterEach
-    void shutdown() throws Throwable
-    {
-        catchupServer.stop();
-        scheduler.shutdown();
+        storeCopyClient = new StoreCopyClient( catchupClient, randomDatabaseId(), Monitors::new, logProvider, storeCopyBackoffStrategy );
     }
 
     @Test
@@ -138,7 +136,8 @@ class StoreCopyClientIT
 
         // when catchup is performed for valid transactionId and StoreId
         CatchupAddressProvider catchupAddressProvider = new SingleAddressProvider( from( catchupServer.address().getPort() ) );
-        subject.copyStoreFiles( catchupAddressProvider, serverHandler.getStoreId(), storeFileStream, () -> defaultTerminationCondition, targetLocation );
+        storeCopyClient
+                .copyStoreFiles( catchupAddressProvider, serverHandler.getStoreId(), storeFileStream, defaultTerminationCondition, targetLocation );
 
         // then the catchup is successful
         Set<String> expectedFiles = new HashSet<>( Arrays.asList( fileA.getFilename(), fileB.getFilename() ) );
@@ -154,9 +153,8 @@ class StoreCopyClientIT
         for ( int i = 0; i < 100; i++ )
         {
             StoreFileStreamProvider storeFileStream = new IgnoringStoreFileStreamProvider();
-            assertDoesNotThrow(
-                    () -> subject.copyStoreFiles( catchupAddressProvider, serverHandler.getStoreId(), storeFileStream, () -> defaultTerminationCondition,
-                            targetLocation ) );
+            assertDoesNotThrow( () -> storeCopyClient.copyStoreFiles( catchupAddressProvider, serverHandler.getStoreId(), storeFileStream,
+                    defaultTerminationCondition, targetLocation ) );
         }
     }
 
@@ -172,7 +170,8 @@ class StoreCopyClientIT
 
         // when catchup is performed for valid transactionId and StoreId
         CatchupAddressProvider catchupAddressProvider = new SingleAddressProvider( from( catchupServer.address().getPort() ) );
-        subject.copyStoreFiles( catchupAddressProvider, serverHandler.getStoreId(), clientStoreFileStream, () -> defaultTerminationCondition, targetLocation );
+        storeCopyClient.copyStoreFiles( catchupAddressProvider, serverHandler.getStoreId(), clientStoreFileStream,
+                defaultTerminationCondition, targetLocation );
 
         // then the catchup is successful
         Set<String> expectedFiles = new HashSet<>( Arrays.asList( fileA.getFilename(), fileB.getFilename() ) );
@@ -221,7 +220,7 @@ class StoreCopyClientIT
                         sendFile( ctx, fileCopy );
                         StoreCopyFinishedResponse.Status status =
                                 contents.hasNext() ? StoreCopyFinishedResponse.Status.E_UNKNOWN : StoreCopyFinishedResponse.Status.SUCCESS;
-                        new StoreFileStreamingProtocol( maxChunkSize ).end( ctx, status, -1 );
+                        new StoreFileStreamingProtocol( MAX_CHUNK_SIZE ).end( ctx, status, -1 );
                         catchupServerProtocol.expect( CatchupServerProtocol.State.MESSAGE_TYPE );
                     }
 
@@ -229,7 +228,7 @@ class StoreCopyClientIT
                     {
                         ctx.write( ResponseMessageType.FILE );
                         ctx.write( new FileHeader( file.getName() ) );
-                        ctx.writeAndFlush( new FileSender( new StoreResource( file, file.getName(), 16, fs ), maxChunkSize ) ).addListener(
+                        ctx.writeAndFlush( new FileSender( new StoreResource( file, file.getName(), 16, fs ), MAX_CHUNK_SIZE ) ).addListener(
                                 future -> fs.deleteFile( file ) );
                     }
                 };
@@ -251,43 +250,32 @@ class StoreCopyClientIT
             }
         };
 
-        Server halfWayFailingServer = null;
+        // when
+        SocketAddress listenAddress = new SocketAddress( "localhost", PortAuthority.allocatePort() );
+        life.add( CausalClusteringTestHelpers.getCatchupServer( halfWayFailingServerHandler, listenAddress, scheduler ) );
 
-        try
+        CatchupAddressProvider addressProvider =
+                new SingleAddressProvider( new SocketAddress( listenAddress.getHostname(), listenAddress.getPort() ) );
+
+        StoreId storeId = halfWayFailingServerHandler.getStoreId();
+        File databaseDir = testDirectory.homeDir();
+        StreamToDiskProvider streamToDiskProvider = new StreamToDiskProvider( databaseDir, fs, new Monitors() );
+
+        // and
+        storeCopyClient.copyStoreFiles( addressProvider, storeId, streamToDiskProvider, defaultTerminationCondition, targetLocation );
+
+        // then
+        assertEquals( fileContent( new File( databaseDir, fileName ) ), finishedContent );
+
+        // and
+        File fileCopy = new File( databaseDir, copyFileName );
+
+        ByteBuffer buffer = ByteBuffer.wrap( new byte[finishedContent.length()] );
+        try ( StoreChannel storeChannel = fs.write( fileCopy ) )
         {
-            // when
-            SocketAddress listenAddress = new SocketAddress( "localhost", PortAuthority.allocatePort() );
-            halfWayFailingServer = CausalClusteringTestHelpers.getCatchupServer( halfWayFailingServerHandler, listenAddress, scheduler );
-            halfWayFailingServer.start();
-
-            CatchupAddressProvider addressProvider =
-                    new SingleAddressProvider( new SocketAddress( listenAddress.getHostname(), listenAddress.getPort() ) );
-
-            StoreId storeId = halfWayFailingServerHandler.getStoreId();
-            File databaseDir = testDirectory.homeDir();
-            StreamToDiskProvider streamToDiskProvider = new StreamToDiskProvider( databaseDir, fs, new Monitors() );
-
-            // and
-            subject.copyStoreFiles( addressProvider, storeId, streamToDiskProvider, () -> defaultTerminationCondition, targetLocation );
-
-            // then
-            assertEquals( fileContent( new File( databaseDir, fileName ) ), finishedContent );
-
-            // and
-            File fileCopy = new File( databaseDir, copyFileName );
-
-            ByteBuffer buffer = ByteBuffer.wrap( new byte[finishedContent.length()] );
-            try ( StoreChannel storeChannel = fs.write( fileCopy ) )
-            {
-                storeChannel.read( buffer );
-            }
-            assertEquals( finishedContent, new String( buffer.array(), StandardCharsets.UTF_8 ) );
+            storeChannel.read( buffer );
         }
-        finally
-        {
-            halfWayFailingServer.stop();
-            halfWayFailingServer.shutdown();
-        }
+        assertEquals( finishedContent, new String( buffer.array(), StandardCharsets.UTF_8 ) );
     }
 
     @Test
@@ -313,7 +301,7 @@ class StoreCopyClientIT
         };
 
         assertThrows( StoreCopyFailedException.class, () ->
-                subject.copyStoreFiles( addressProvider, serverHandler.getStoreId(), clientStoreFileStream, Once::new, targetLocation ) );
+                storeCopyClient.copyStoreFiles( addressProvider, serverHandler.getStoreId(), clientStoreFileStream, Once::new, targetLocation ) );
 
         assertableLogProvider.containsMatchingLogCall( inLog( StoreCopyClient.class )
                 .warn( any( String.class ), equalTo( "Connection refused: localhost/127.0.0.1:" + port ) ) );
@@ -341,7 +329,7 @@ class StoreCopyClientIT
         };
 
         assertThrows( StoreCopyFailedException.class, () ->
-                subject.copyStoreFiles( addressProvider, serverHandler.getStoreId(), clientStoreFileStream, Once::new, targetLocation ) );
+                storeCopyClient.copyStoreFiles( addressProvider, serverHandler.getStoreId(), clientStoreFileStream, Once::new, targetLocation ) );
 
         assertableLogProvider.rawMessageMatcher().assertContainsSingle( startsWith( "Unable to resolve address for" ) );
         assertableLogProvider.internalToStringMessageMatcher().assertContains( catchupAddressResolutionException.getMessage() );
