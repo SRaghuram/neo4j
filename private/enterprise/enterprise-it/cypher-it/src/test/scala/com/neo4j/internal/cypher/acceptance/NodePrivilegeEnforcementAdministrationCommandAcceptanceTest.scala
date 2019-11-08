@@ -385,9 +385,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     execute("DENY TRAVERSE ON GRAPH * NODES * TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (_, _) => {
-      fail("should get no result")
-    }) should be(0)
+    executeOnDefault("joe", "soap", query) should be(0)
   }
 
   test("should not be able to traverse labels with grant and deny on all label traversal") {
@@ -426,18 +424,14 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     execute("DENY TRAVERSE ON GRAPH * NODES * TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (_, _) => {
-      fail("should get no result")
-    }) should be(0)
+    executeOnDefault("joe", "soap", query) should be(0)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT TRAVERSE ON GRAPH * NODES * TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (_, _) => {
-      fail("should get no result")
-    }) should be(0)
+    executeOnDefault("joe", "soap", query) should be(0)
   }
 
   test("should see correct nodes and labels with grant traversal on all labels and deny on specific label") {
@@ -1300,20 +1294,14 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     execute("DENY MATCH {*} ON GRAPH * NODES * (*) TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query,
-      resultHandler = (_, _) => {
-        fail("should get no result")
-      }) should be(0)
+    executeOnDefault("joe", "soap", query) should be(0)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT MATCH {*} ON GRAPH * NODES * (*) TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query,
-      resultHandler = (_, _) => {
-        fail("should get no result")
-      }) should be(0)
+    executeOnDefault("joe", "soap", query) should be(0)
   }
 
   test("should not be able read properties using properties() function when denied match privilege for all labels and all properties") {
@@ -1346,20 +1334,14 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     execute("DENY MATCH {*} ON GRAPH * NODES * (*) TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query,
-      resultHandler = (_, _) => {
-        fail("should get no result")
-      }) should be(0)
+    executeOnDefault("joe", "soap", query) should be(0)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT MATCH {*} ON GRAPH * NODES * (*) TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query,
-      resultHandler = (_, _) => {
-        fail("should get no result")
-      }) should be(0)
+    executeOnDefault("joe", "soap", query) should be(0)
   }
 
   test("should read correct properties when denied match privilege for all labels and specific property") {
@@ -1399,7 +1381,6 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     )
 
     // THEN
-    // THEN
     executeOnDefault("joe", "soap", query,
       resultHandler = (row, index) => {
         (row.getNumber("n.foo"), row.getNumber("n.bar")) should be(expected2(index))
@@ -1409,7 +1390,6 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT MATCH {foo} ON GRAPH * NODES * (*) TO custom")
 
-    // THEN
     // THEN
     executeOnDefault("joe", "soap", query,
       resultHandler = (row, index) => {

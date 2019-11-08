@@ -29,9 +29,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
       row.get("n.name") should be(expected(index))
     }) should be(2)
 
-    executeOnDefault("joe", "soap", "MATCH (n)-->(m) RETURN n.name", resultHandler = (_, _) => {
-      fail("should not get a match")
-    }) should be(0)
+    executeOnDefault("joe", "soap", "MATCH (n)-->(m) RETURN n.name") should be(0)
 
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS LOVES TO custom")
@@ -65,9 +63,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     execute("DENY TRAVERSE ON GRAPH * RELATIONSHIPS * TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (_, _) => {
-      fail("should get no result")
-    }) should be(0)
+    executeOnDefault("joe", "soap", query) should be(0)
   }
 
   test("should not find relationship with grant and deny on all reltype traversal") {
@@ -96,18 +92,14 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     execute("DENY TRAVERSE ON GRAPH * RELATIONSHIPS * TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (_, _) => {
-      fail("should get no result")
-    }) should be(0)
+    executeOnDefault("joe", "soap", query) should be(0)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS * TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (_, _) => {
-      fail("should get no result")
-    }) should be(0)
+    executeOnDefault("joe", "soap", query) should be(0)
   }
 
   test("should find correct relationships with grant traversal on all reltypes and deny on specific reltype") {
@@ -394,9 +386,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
 
     val query = "MATCH ()-[r]->() RETURN properties(r) as props ORDER BY r.id"
 
-    executeOnDefault("joe", "soap", query, resultHandler = (_, _) => {
-      fail("should get no result")
-    }) should be(0)
+    executeOnDefault("joe", "soap", query) should be(0)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -1050,9 +1040,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
 
     val query = "MATCH ()-[r]->() WHERE r.foo = 1 OR r.bar = 1 RETURN r.id, r.foo, r.bar"
 
-    executeOnDefault("joe", "soap", query, resultHandler = (_, _) => {
-      fail("should get no result")
-    }) should be(0)
+    executeOnDefault("joe", "soap", query) should be(0)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -1121,20 +1109,14 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     execute("DENY MATCH {*} ON GRAPH * RELATIONSHIPS * TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query,
-      resultHandler = (_, _) => {
-        fail("should get no result")
-      }) should be(0)
+    executeOnDefault("joe", "soap", query) should be(0)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT MATCH {*} ON GRAPH * RELATIONSHIPS * TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query,
-      resultHandler = (_, _) => {
-        fail("should get no result")
-      }) should be(0)
+    executeOnDefault("joe", "soap", query) should be(0)
   }
 
   test("should not be able to read properties using properties() function when denied match privilege for all reltypes and all properties") {
@@ -1171,20 +1153,14 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     execute("DENY MATCH {*} ON GRAPH * RELATIONSHIPS * TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query,
-      resultHandler = (_, _) => {
-        fail("should get no result")
-      }) should be(0)
+    executeOnDefault("joe", "soap", query) should be(0)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT MATCH {*} ON GRAPH * RELATIONSHIPS * TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query,
-      resultHandler = (_, _) => {
-        fail("should get no result")
-      }) should be(0)
+    executeOnDefault("joe", "soap", query) should be(0)
   }
 
   test("should read correct properties when denied match privilege for all reltypes and specific property") {
@@ -1525,18 +1501,14 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
 
     val query = "CALL db.index.fulltext.queryRelationships('relIndex', 'true') YIELD relationship AS r RETURN r.id, r.foo, r.bar ORDER BY r.id"
 
-    executeOnDefault("joe", "soap", query, resultHandler = (_, _) => {
-      fail("should get no result")
-    }) should be(0)
+    executeOnDefault("joe", "soap", query) should be(0)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT MATCH {foo} ON GRAPH * RELATIONSHIPS A TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (_, _) => {
-      fail("should get no result")
-    }) should be(0)
+    executeOnDefault("joe", "soap", query) should be(0)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -1574,18 +1546,14 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
 
     val query = "MATCH ()-[r]->() WHERE r.prop contains 'words' RETURN r.prop AS prop"
 
-    executeOnDefault("joe", "soap", query, resultHandler = (_, _) => {
-      fail("should get no result")
-    }) should be(0)
+    executeOnDefault("joe", "soap", query) should be(0)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIP A TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (_, _) => {
-      fail("should get no result")
-    }) should be(0)
+    executeOnDefault("joe", "soap", query) should be(0)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -1656,18 +1624,14 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
 
     val query = "CALL db.index.fulltext.queryRelationships('relIndex', 'words') YIELD relationship RETURN relationship.prop AS prop"
 
-    executeOnDefault("joe", "soap", query, resultHandler = (_, _) => {
-      fail("should get no result")
-    }) should be(0)
+    executeOnDefault("joe", "soap", query) should be(0)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIP A TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (_, _) => {
-      fail("should get no result")
-    }) should be(0)
+    executeOnDefault("joe", "soap", query) should be(0)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -1787,9 +1751,6 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     execute("DENY TRAVERSE ON GRAPH * RELATIONSHIPS B TO custom" )
 
     // THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (_, _) => {
-      fail("Should get no result")
-    }) should be(0)
-
+    executeOnDefault("joe", "soap", query) should be(0)
   }
 }
