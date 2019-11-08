@@ -15,6 +15,7 @@ import org.neo4j.configuration.GroupSetting;
 import org.neo4j.configuration.Internal;
 import org.neo4j.configuration.SettingValueParsers;
 import org.neo4j.configuration.SettingsDeclaration;
+import org.neo4j.configuration.helpers.NormalizedGraphName;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.logging.Level;
@@ -160,7 +161,7 @@ public class FabricSettings implements SettingsDeclaration
         public final Setting<String> database = getBuilder( "database", SettingValueParsers.STRING, null ).build();
 
         @Description( "Name assigned to the Fabric graph. The name can be used in Fabric queries." )
-        public final Setting<String> name = getBuilder( "name", SettingValueParsers.STRING, null ).build();
+        public final Setting<NormalizedGraphName> name = getBuilder( "name", SettingValueParsers.GRAPHNAME, null ).build();
 
         public final Setting<Level> driverLoggingLevel = getBuilder( DRIVER_LOGGING_LEVEL, ofEnum(Level.class), null ).build();
         public final Setting<Boolean> driverLogLeakedSessions = getBuilder( DRIVER_LOG_LEAKED_SESSIONS, BOOL, null ).build();

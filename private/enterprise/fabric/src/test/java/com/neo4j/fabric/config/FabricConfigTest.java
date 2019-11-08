@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.helpers.NormalizedGraphName;
 import org.neo4j.configuration.helpers.SocketAddress;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -46,7 +47,7 @@ class FabricConfigTest
         assertEquals( "mega", database.getName().name() );
         assertEquals( Set.of(
                 new FabricConfig.Graph( 0L, FabricConfig.RemoteUri.create( "bolt://mega:1111" ), null, null, emptyDriverConfig() ),
-                new FabricConfig.Graph( 1L, FabricConfig.RemoteUri.create( "bolt://mega:2222" ), "db0", "source-of-all-wisdom", emptyDriverConfig() )
+                new FabricConfig.Graph( 1L, FabricConfig.RemoteUri.create( "bolt://mega:2222" ), "db0", new NormalizedGraphName( "source-of-all-wisdom" ), emptyDriverConfig() )
         ), database.getGraphs() );
     }
 
@@ -103,7 +104,7 @@ class FabricConfigTest
         var e = assertThrows( IllegalArgumentException.class,
                 () -> FabricConfig.from( config ) );
 
-        assertEquals( e.getMessage(), "Graphs with ids: 0, 1, have conflicting names: foo");
+        assertEquals( e.getMessage(), "Graphs with ids: 0, 1, have conflicting names");
     }
 
     @Test
@@ -129,7 +130,7 @@ class FabricConfigTest
         var e = assertThrows( IllegalArgumentException.class,
                 () -> FabricConfig.from( config ) );
 
-        assertEquals( e.getMessage(), "Graphs with ids: 0, 1, 3, have conflicting names: foo, Foo, FOO");
+        assertEquals( e.getMessage(), "Graphs with ids: 0, 1, 3, have conflicting names");
     }
 
     @Test
@@ -143,6 +144,22 @@ class FabricConfigTest
                 () -> Config.newBuilder()
                         .setRaw( properties )
                         .build()
+        );
+    }
+
+    @Test
+    void testInvalidGraphName()
+    {
+        var properties = Map.of(
+                "fabric.database.name", "mega",
+                "fabric.graph.0.uri", "bolt://localhost:7687",
+                "fabric.graph.0.name", "foo!"
+        );
+
+        assertThrows( IllegalArgumentException.class,
+                      () -> Config.newBuilder()
+                              .setRaw( properties )
+                              .build()
         );
     }
 

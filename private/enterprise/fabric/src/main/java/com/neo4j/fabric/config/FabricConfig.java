@@ -25,6 +25,7 @@ import java.util.stream.Stream;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.helpers.NormalizedDatabaseName;
+import org.neo4j.configuration.helpers.NormalizedGraphName;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.logging.Level;
 
@@ -205,19 +206,18 @@ public class FabricConfig
 
     private static void validateGraphNames( Set<Graph> graphSettings )
     {
-        MutableSetMultimap<String,Graph> graphsByName = Multimaps.mutable.set.empty();
+        MutableSetMultimap<NormalizedGraphName,Graph> graphsByName = Multimaps.mutable.set.empty();
         graphSettings.stream()
                 .filter( g -> g.name != null )
-                .forEach( g -> graphsByName.put( new NormalizedDatabaseName( g.name ).name(), g ) );
+                .forEach( g -> graphsByName.put( g.name, g ) );
 
         graphsByName.multiValuesView().forEach( graphs ->
         {
             if ( graphs.size() > 1 )
             {
                 var sortedGraphs = graphs.toSortedList( Comparator.comparingLong( Graph::getId ) );
-                var names = sortedGraphs.collect( Graph::getName ).distinct().makeString( ", " );
                 var ids = sortedGraphs.collect( Graph::getId ).distinct().makeString( ", " );
-                throw new IllegalArgumentException( "Graphs with ids: " + ids + ", have conflicting names: " + names );
+                throw new IllegalArgumentException( "Graphs with ids: " + ids + ", have conflicting names");
             }
         } );
     }
@@ -267,10 +267,10 @@ public class FabricConfig
         private final long id;
         private final RemoteUri uri;
         private final String database;
-        private final String name;
+        private final NormalizedGraphName name;
         private final DriverConfig driverConfig;
 
-        public Graph( long id, RemoteUri uri, String database, String name, DriverConfig driverConfig )
+        public Graph( long id, RemoteUri uri, String database, NormalizedGraphName name, DriverConfig driverConfig )
         {
             if ( uri == null )
             {
@@ -299,7 +299,7 @@ public class FabricConfig
             return database;
         }
 
-        public String getName()
+        public NormalizedGraphName getName()
         {
             return name;
         }

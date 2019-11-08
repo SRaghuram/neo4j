@@ -8,6 +8,7 @@ package com.neo4j.fabric.eval
 import com.neo4j.fabric.config.FabricConfig
 import com.neo4j.fabric.util.Errors
 import com.neo4j.fabric.util.Errors.show
+import org.neo4j.configuration.helpers.NormalizedGraphName
 import org.neo4j.cypher.internal.v4_0.ast.CatalogName
 import org.neo4j.cypher.internal.v4_0.util.InputPosition
 import org.neo4j.values.AnyValue
@@ -61,7 +62,7 @@ object Catalog {
 
     val byName = Catalog((for {
       graph <- graphs
-      name <- Option(graph.getName)
+      name <- Option(graph.getName).map(_.name)
     } yield CatalogName(namespace, name) -> RemoteGraph(graph)).toMap)
 
     val byId = Catalog(Map(
@@ -83,7 +84,7 @@ case class Catalog(entries: Map[CatalogName, Catalog.Entry]) {
     resolve(name, Seq())
 
   def resolve(name: CatalogName, args: Seq[AnyValue]): Catalog.Graph = {
-    val normalizedName = CatalogName(name.parts.map(_.toLowerCase))
+    val normalizedName = CatalogName(name.parts.map(normalize))
     entries.get(normalizedName) match {
       case None => Errors.entityNotFound("Catalog entry", show(name))
 
@@ -94,6 +95,9 @@ case class Catalog(entries: Map[CatalogName, Catalog.Entry]) {
       case Some(v: Catalog.View) => v.eval(args)
     }
   }
+
+  private def normalize(name: String): String =
+    new NormalizedGraphName(name).name
 
   def ++(that: Catalog): Catalog = Catalog(this.entries ++ that.entries)
 }
