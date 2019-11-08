@@ -50,11 +50,18 @@ triggered_by="${30}"
 error_policy="${31}"
 deployment="${32}"
 
+
+# here we are checking for optional AWS Batch Job Id,
+BATCH_JOB_ID=
+if [[ $# -ge 33 ]]; then
+	BATCH_JOB_ID="--batch-job-id=${33}"
+fi
+
 # here we are checking for optional AWS endpoint URL,
 # this is required for end to end testing, where we mock s3
 AWS_EXTRAS=
-if [[ $# -eq 33 ]]; then
-	AWS_EXTRAS="--endpoint-url=${33}"
+if [[ $# -eq 34 ]]; then
+	AWS_EXTRAS="--endpoint-url=${34}"
 fi
 if [[ -z "$JAVA_HOME" ]]; then
     echo "JAVA_HOME not set, bye, bye"
@@ -112,6 +119,7 @@ echo "Profiler Recording directory                                   : ${profile
 echo "Triggered by                                                   : ${triggered_by}"
 echo "Error policy                                                   : ${error_policy}"
 echo "Neo4j Directory                                                : ${deployment}"
+echo "Batch job id                                                   : ${BATCH_JOB_ID}"
 
 function runExport {
     #shellcheck disable=SC2068
@@ -151,9 +159,11 @@ function runExport {
 
 if [ "${recreate_schema}" = "true" ]
 then
-    runExport "--recreate-schema" && echo "Will recreate the schema"
+    #shellcheck disable=SC2086
+    runExport "--recreate-schema" ${BATCH_JOB_ID} && echo "Will recreate the schema"
 else
-    runExport
+    #shellcheck disable=SC2086
+    runExport ${BATCH_JOB_ID}
 fi
 
 # --- create archive of profiler recording artifacts---

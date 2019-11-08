@@ -4,6 +4,7 @@ CREATE CONSTRAINT ON ( benchmarktool:BenchmarkTool ) ASSERT benchmarktool.name I
 CREATE CONSTRAINT ON ( plantree:PlanTree ) ASSERT plantree.description_hash IS UNIQUE
 CREATE CONSTRAINT ON ( testrun:TestRun ) ASSERT testrun.archive IS UNIQUE
 CREATE CONSTRAINT ON ( testrun:TestRun ) ASSERT testrun.id IS UNIQUE
+CREATE CONSTRAINT ON ( testrun:TestRun ) ASSERT testrun.jobId IS UNIQUE
 // Exists
 CREATE CONSTRAINT ON ( annotation:Annotation ) ASSERT exists(annotation.author)
 CREATE CONSTRAINT ON ( annotation:Annotation ) ASSERT exists(annotation.comment)

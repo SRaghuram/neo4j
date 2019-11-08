@@ -35,4 +35,4 @@ aws --region eu-north-1 s3 cp "${workerArtifactUri}" "${worker_artifact}"
 mkdir "${work_dir}"
 
 # shellcheck disable=SC2086
-java ${JAVA_OPTS:+"$JAVA_OPTS"} -jar benchmark-worker.jar "${params[@]}" --workspace-dir "${work_dir}" --worker-artifact-uri "${workerArtifactUri}"
+java ${JAVA_OPTS:+"$JAVA_OPTS"} -jar benchmark-worker.jar "${params[@]}" --workspace-dir "${work_dir}" --worker-artifact-uri "${workerArtifactUri}" --batch-job-id "${AWS_BATCH_JOB_ID}"

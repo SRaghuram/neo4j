@@ -7,6 +7,9 @@ package com.neo4j.bench.infra.worker;
 
 import com.amazonaws.SdkClientException;
 import com.github.rvesse.airline.annotations.Command;
+import com.github.rvesse.airline.annotations.Option;
+import com.github.rvesse.airline.annotations.OptionType;
+import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.collect.Lists;
 import com.neo4j.bench.common.options.Version;
 import com.neo4j.bench.common.profiling.ProfilerType;
@@ -29,6 +32,7 @@ import java.nio.file.attribute.PosixFilePermissions;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_BATCH_JOB_ID;
 import static java.lang.String.format;
 import static java.lang.String.join;
 
@@ -36,6 +40,12 @@ import static java.lang.String.join;
 public class RunWorkerCommand extends BaseInfraCommand
 {
     private static final Logger LOG = LoggerFactory.getLogger( RunWorkerCommand.class );
+
+    @Option( type = OptionType.COMMAND,
+             name = CMD_BATCH_JOB_ID,
+             title = "AWS Batch JOB ID" )
+    @Required
+    private String batchJobId = "";
 
     @Override
     protected void doRunInfra( RunWorkloadParams runWorkloadParams, InfraParams infraParams )
@@ -94,7 +104,7 @@ public class RunWorkerCommand extends BaseInfraCommand
 
             List<String> runReportCommands = new ArrayList<>();
             runReportCommands.add( "./run-report-benchmarks.sh" );
-            runReportCommands.addAll( createRunReportArgs( runWorkloadParams, infraParams, workDir, storeDir, neo4jConfigFile, resultsJson ) );
+            runReportCommands.addAll( createRunReportArgs( runWorkloadParams, infraParams, workDir, storeDir, neo4jConfigFile, resultsJson, batchJobId ) );
 
             LOG.info( "starting run report benchmark process, {}", join( " ", runReportCommands ) );
             Process process = new ProcessBuilder( runReportCommands )
@@ -124,7 +134,8 @@ public class RunWorkerCommand extends BaseInfraCommand
                                                      Path workDir,
                                                      Path storeDir,
                                                      Path neo4jConfigFile,
-                                                     Path resultsJson )
+                                                     Path resultsJson,
+                                                     String batchJobId )
     {
         return Lists.newArrayList( runWorkloadParams.workloadName(),
                                    storeDir.toAbsolutePath().toString(),
@@ -157,6 +168,7 @@ public class RunWorkerCommand extends BaseInfraCommand
                                    runWorkloadParams.runtime().name(),
                                    runWorkloadParams.triggeredBy(),
                                    infraParams.errorReportingPolicy().name(),
-                                   runWorkloadParams.deployment().parsableValue() );
+                                   runWorkloadParams.deployment().parsableValue(),
+                                   batchJobId );
     }
 }

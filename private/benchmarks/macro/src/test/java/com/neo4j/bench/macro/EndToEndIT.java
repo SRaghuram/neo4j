@@ -133,6 +133,8 @@ class EndToEndIT extends BaseEndToEndIT
                        ErrorPolicy.FAIL.name(),
                        // embedded OR server:<path>
                        neo4jDeployment.toString(),
+                       //Batch Job id
+                       "123",
                        // AWS endpoint URL
                        endpointUrl );
     }

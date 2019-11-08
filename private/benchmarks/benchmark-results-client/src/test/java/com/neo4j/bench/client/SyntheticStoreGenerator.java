@@ -108,7 +108,18 @@ public class SyntheticStoreGenerator
     private static final Supplier<Double> PERC_99_9_NS = () -> RNG.nextDouble( 970, 1000 );
     private static final Supplier<Double> MAX_NS = () -> RNG.nextDouble( 100, 1050 );
     private static final Supplier<Integer> DURATION_MS = () -> RNG.nextInt( 1000, 4999 );
-    private static final Supplier<Integer> BUILD = new Supplier<>()
+    private static final Supplier<Integer> BATCH_JOB_ID = new Supplier<Integer>()
+    {
+        private int batchJobId;
+
+        @Override
+        public Integer get()
+        {
+            return batchJobId++;
+        }
+    };
+
+    private static final Supplier<Integer> BUILD = new Supplier<Integer>()
     {
         private int build;
 
@@ -118,6 +129,7 @@ public class SyntheticStoreGenerator
             return build++;
         }
     };
+
     private static final Supplier<List<TestRunError>> ERRORS = () -> IntStream
             .range( 0, RNG.nextInt( 0, 3 ) )
             .mapToObj( i -> new TestRunError( "group", "benchmark-" + i, "Error No." + i ) )
@@ -371,7 +383,9 @@ public class SyntheticStoreGenerator
 
                     generationResult.addProject( project );
                     String triggeredBy = randomOwnerFor( project.repository() );
-                    TestRun testRun = new TestRun( DURATION_MS.get(), calendar.getTimeInMillis(), BUILD.get(), BUILD.get(), triggeredBy );
+                    TestRun testRun =
+                            new TestRun( DURATION_MS.get(), calendar.getTimeInMillis(), BUILD.get(), BUILD.get(), triggeredBy );
+                    testRun.setBatchJobId( BATCH_JOB_ID.get().toString() );
                     generationResult.addTestRun( testRun );
 
                     Environment environment = new Environment(
