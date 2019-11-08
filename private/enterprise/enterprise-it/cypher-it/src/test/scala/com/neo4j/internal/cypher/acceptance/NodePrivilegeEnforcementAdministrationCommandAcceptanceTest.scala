@@ -516,51 +516,113 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
       }) should be(2)
   }
 
-  test("should get correct labels from procedure") {
+  test("db.labels should should return empty result without grant") {
     // GIVEN
     setupUserWithCustomRole()
 
-    // Currently you need to have some kind of traverse or read access to be able to call the procedure at all
-    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS ignore TO custom")
-
     selectDatabase(DEFAULT_DATABASE_NAME)
-    execute("CREATE (:A), (:A:B:E), (:B:C), (:C:D)")
-
-    val query = "CALL db.labels() YIELD label, nodeCount as count RETURN label, count ORDER BY label"
+    execute("CREATE (:A)")
 
     // WHEN..THEN
-    val expectedZero = List(("A", 0), ("B", 0), ("C", 0),("D", 0),("E", 0))
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
-      (row.get("label"), row.get("count")) should be(expectedZero(index))
-    }) should be(5)
+    val query = "CALL db.labels() YIELD label RETURN label ORDER BY label"
+    executeOnDefault("joe", "soap", query) should be(0)
+  }
+
+  test("db.labels should should return granted label") {
+    // GIVEN
+    setupUserWithCustomRole()
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:A)")
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT TRAVERSE ON GRAPH * NODES A TO custom")
+    execute("GRANT TRAVERSE ON GRAPH * NODE A TO custom")
 
     // THEN
-    val expected = List(("A", 2), ("B", 1), ("C", 0),("D", 0),("E", 1))
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
-      (row.get("label"), row.get("count")) should be(expected(index))
-    }) should be(5)
+    val query = "CALL db.labels() YIELD label RETURN label ORDER BY label"
+    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+      row.get("label") should be("A")
+    }) should be(1)
+  }
+
+  test("db.labels should return all labels when granted traverse *") {
+    // GIVEN
+    setupUserWithCustomRole()
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:A)")
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("DENY TRAVERSE ON GRAPH * NODES B TO custom")
+    execute("GRANT TRAVERSE ON GRAPH * NODE * TO custom")
 
     // THEN
-    val expectedWithoutB = List(("A", 1), ("C", 0),("D", 0),("E", 0))
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
-      (row.get("label"), row.get("count"))  should be(expectedWithoutB(index))
-    }) should be(4)
+    val query = "CALL db.labels() YIELD label RETURN label ORDER BY label"
+    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+      row.get("label") should be("A")
+    }) should be(1)
+  }
+
+  test("db.labels should not return denied label") {
+    // GIVEN
+    setupUserWithCustomRole()
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:A)")
 
     // WHEN
-    graph.createIndex("B","foo")
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("DENY TRAVERSE ON GRAPH * NODE A TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
-      (row.get("label"), row.get("count"))  should be(expectedWithoutB(index))
-    }) should be(4)
+    val query = "CALL db.labels() YIELD label RETURN label ORDER BY label"
+    executeOnDefault("joe", "soap", query) should be(0)
+  }
+
+  test("db.labels should return granted label even if it cannot be found by match") {
+    // GIVEN
+    setupUserWithCustomRole()
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:A:B)")
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * NODE * TO custom")
+    execute("DENY TRAVERSE ON GRAPH * NODE B TO custom")
+
+    // THEN
+    val query = "CALL db.labels() YIELD label RETURN label ORDER BY label"
+    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+      row.get("label") should be("A")
+    }) should be(1)
+  }
+
+  test("db.labels should not return granted label if it is also denied") {
+    // GIVEN
+    setupUserWithCustomRole()
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:A)")
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * NODE * TO custom")
+    execute("DENY TRAVERSE ON GRAPH * NODE A TO custom")
+
+    // THEN
+    val query = "CALL db.labels() YIELD label RETURN label ORDER BY label"
+    executeOnDefault("joe", "soap", query) should be(0)
+  }
+
+  test("db.labels should not return indexed label without grant") {
+    // GIVEN
+    setupUserWithCustomRole()
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:A {foo: 1})")
+
+    // WHEN
+    graph.createIndex("A","foo")
+
+    // THEN
+    val query = "CALL db.labels()"
+    executeOnDefault("joe", "soap", query) should be(0)
   }
 
   test("should only see properties using properties() function when having read privilege") {

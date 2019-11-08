@@ -305,172 +305,80 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     }) should be(1)
   }
 
-  test("should get correct relationship types and count from procedure") {
+  test("db.relationshipTypes should return empty result without grant") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
     setupUserWithCustomRole()
-    execute("GRANT TRAVERSE ON GRAPH * NODES A TO custom")
-    val query = "CALL db.relationshipTypes YIELD relationshipType as reltype, relationshipCount as count"
-
     selectDatabase(DEFAULT_DATABASE_NAME)
-    graph.withTx( tx => tx.execute("CREATE (a:A), (a)-[:A]->(:A), (a)-[:B]->(:A), (a)-[:B]->(:B)"))
+    execute("CREATE ()-[:REL]->()")
 
-    val expectedZero = List(
-      ("A", 0),
-      ("B", 0)
-    )
-    // WHEN ... THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
-      (row.get("reltype"), row.get("count")) should be(expectedZero(index))
-    }) should be(2)
-
-    // WHEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS A TO custom")
-
-    // THEN
-    val expectedA = List(
-      ("A", 1),
-      ("B", 0)
-    )
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
-      (row.get("reltype"), row.get("count")) should be(expectedA(index))
-    }) should be(2)
-
-    // WHEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS B TO custom")
-
-    val expected1 = List(
-      ("A", 1),
-      ("B", 1)
-    )
-
-    // THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
-      (row.get("reltype"), row.get("count")) should be(expected1(index))
-    }) should be(2)
-
-    // WHEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT TRAVERSE ON GRAPH * NODES B TO custom")
-
-    val expected2 = List(
-      ("A", 1),
-      ("B", 2)
-    )
-
-    // THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
-      (row.get("reltype"), row.get("count")) should be(expected2(index))
-    }) should be(2)
-
-    // WHEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("DENY TRAVERSE ON GRAPH * RELATIONSHIPS A TO custom")
-
-    // THEN
-    val expectedB = List(
-      ("B", 2)
-    )
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
-      (row.get("reltype"), row.get("count")) should be(expectedB(index))
-    }) should be(1)
-
-    // WHEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("DENY TRAVERSE ON GRAPH * RELATIONSHIPS B TO custom")
-
-    // THEN
-    executeOnDefault("joe", "soap", query, resultHandler = (_, _) => {
-      fail("should get no result")
-    }) should be(0)
+    // WHEN..THEN
+    val query = "CALL db.relationshipTypes"
+    executeOnDefault("joe", "soap", query ) should be(0)
   }
 
-  Seq(
-    "CALL db.relationshipTypes",
-    "CALL db.relationshipTypes() YIELD relationshipType, relationshipCount RETURN relationshipType, relationshipCount"
-  ).foreach { query =>
-    test(s"should get correct types from procedure: $query") {
-      // GIVEN
-      setupUserWithCustomRole()
+  test("db.relationshipTypes should return type even if it cannot be found be match") {
+    // GIVEN
+    setupUserWithCustomRole()
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE ()-[:REL]->()")
 
-      // Currently you need to have some kind of traverse or read access to be able to call the procedure at all
-      execute("GRANT TRAVERSE ON GRAPH * NODES ignore TO custom")
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIP REL TO custom")
 
-      selectDatabase(DEFAULT_DATABASE_NAME)
-      execute("CREATE (:A)-[:REL]->(:A:B:E)<-[:ON]-(:B:C)-[:ON]->(:C:D)")
+    // THEN
+    val query = "CALL db.relationshipTypes"
+    executeOnDefault("joe", "soap", query, resultHandler = (row,_) => {
+      row.get("relationshipType") should be("REL")
+    } ) should be(1)
+  }
 
-      // WHEN..THEN
-      val expectedBothButEmpty = Map("ON" -> 0, "REL" -> 0)
-      executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
-        val relType = row.get("relationshipType").toString
-        row.get("relationshipCount") should be(expectedBothButEmpty(relType))
-      }) should be(2)
+  test("db.relationshipTypes should return granted traverse *") {
+    // GIVEN
+    setupUserWithCustomRole()
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE ()-[:REL]->()")
 
-      // WHEN
-      selectDatabase(SYSTEM_DATABASE_NAME)
-      execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS REL TO custom")
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIP * TO custom")
 
-      // Relationships still cannot be counted if their nodes are not also visible
-      executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
-        val relType = row.get("relationshipType").toString
-        row.get("relationshipCount") should be(expectedBothButEmpty(relType))
-      }) should be(2)
+    // THEN
+    val query = "CALL db.relationshipTypes"
+    executeOnDefault("joe", "soap", query, resultHandler = (row,_) => {
+      row.get("relationshipType") should be("REL")
+    } ) should be(1)
+  }
 
-      // WHEN
-      selectDatabase(SYSTEM_DATABASE_NAME)
-      execute("GRANT TRAVERSE ON GRAPH * NODES * TO custom")
+  test("db.relationshipTypes should not return denied type") {
+    // GIVEN
+    setupUserWithCustomRole()
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE ()-[:REL]->()")
 
-      // THEN
-      val expected = Map("ON" -> 0, "REL" -> 1)
-      executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
-        val relType = row.get("relationshipType").toString
-        row.get("relationshipCount") should be(expected(relType))
-      }) should be(2)
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("DENY TRAVERSE ON GRAPH * RELATIONSHIP * TO custom")
 
-      // WHEN
-      selectDatabase(SYSTEM_DATABASE_NAME)
-      execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS `ON` TO custom")
+    // THEN
+    val query = "CALL db.relationshipTypes"
+    executeOnDefault("joe", "soap", query) should be(0)
+  }
 
-      // THEN
-      val expectedBoth = Map("ON" -> 2, "REL" -> 1)
-      executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
-        val relType = row.get("relationshipType").toString
-        row.get("relationshipCount") should be(expectedBoth(relType))
-      }) should be(2)
+  test("db.relationshipTypes should not return granted type if it is also denied") {
+    // GIVEN
+    setupUserWithCustomRole()
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE ()-[:REL]->()")
 
-      // WHEN
-      selectDatabase(SYSTEM_DATABASE_NAME)
-      execute("DENY TRAVERSE ON GRAPH * RELATIONSHIPS `ON` TO custom")
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIP * TO custom")
+    execute("DENY TRAVERSE ON GRAPH * RELATIONSHIP REL TO custom")
 
-      // THEN
-      val expectedRel = Map("REL" -> 1)
-      executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
-        val relType = row.get("relationshipType").toString
-        row.get("relationshipCount") should be(expectedRel(relType))
-      }) should be(1)
-
-      // WHEN
-      selectDatabase(SYSTEM_DATABASE_NAME)
-      execute("REVOKE DENY TRAVERSE ON GRAPH * RELATIONSHIPS `ON` FROM custom")
-      execute("DENY TRAVERSE ON GRAPH * RELATIONSHIPS * TO custom")
-
-      // THEN
-      executeOnDefault("joe", "soap", query, resultHandler = (_, _) => {
-        fail("result should be empty with deny on all relationships")
-      }) should be(0)
-
-      // WHEN
-      selectDatabase(SYSTEM_DATABASE_NAME)
-      execute("REVOKE DENY TRAVERSE ON GRAPH * RELATIONSHIPS * FROM custom")
-
-      // THEN
-      executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
-        val relType = row.get("relationshipType").toString
-        row.get("relationshipCount") should be(expectedBoth(relType))
-      }) should be(2)
-    }
+    // THEN
+    val query = "CALL db.relationshipTypes"
+    executeOnDefault("joe", "soap", query) should be(0)
   }
 
   test("should only see properties using properties() function on relationship with read privilege") {

@@ -15,7 +15,7 @@ import org.neo4j.cypher.internal.v4_0.util.helpers.StringHelper.RichString
 import org.neo4j.cypher.{ExecutionEngineFunSuite, TxCounts}
 import org.neo4j.exceptions.ProfilerStatisticsNotReadyException
 import org.neo4j.graphdb.QueryExecutionException
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithAssertion, Configs, CypherComparisonSupport, Planners, Runtimes, TestConfiguration}
+import org.neo4j.internal.cypher.acceptance.comparisonsupport._
 
 class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFileTestSupport with CypherComparisonSupport {
 
@@ -124,8 +124,8 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     val plan = result.executionPlanDescription()
     plan should includeSomewhere.aPlan("ProcedureCall")
       .withRows(2)
-      .withExactVariables("label", "nodeCount")
-      .containingArgument("db.labels() :: (label :: String, nodeCount :: Integer)")
+      .withExactVariables("label")
+      .containingArgument("db.labels() :: (label :: String)")
     plan.totalDbHits shouldBe TotalHits(0, uncertain = true)
   }
 
