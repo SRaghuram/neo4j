@@ -252,6 +252,7 @@ class RunWorkloadCommandIT
             String toolCommit = "1234abc";
 
             String triggeredBy = "xyz";
+            String jobId = "abc123";
 
             long parentTeamcityBuild = 0;
             long teamcityBuild = 1;

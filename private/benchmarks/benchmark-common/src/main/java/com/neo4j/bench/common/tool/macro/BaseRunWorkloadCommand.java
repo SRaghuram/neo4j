@@ -242,7 +242,7 @@ public abstract class BaseRunWorkloadCommand implements Runnable
         }
         catch ( SecurityException | IOException e )
         {
-            System.out.println( format( "failed to initialize java.util.logging\n %s", e) );
+            System.out.println( format( "failed to initialize java.util.logging\n %s", e ) );
         }
 
         Deployment deployment = Deployment.parse( deploymentMode );

@@ -124,6 +124,7 @@ public class RunWorkloadParams
     public static final String CMD_DB_PATH = "--db-dir";
     public static final String CMD_RESULTS_JSON = "--results";
     public static final String CMD_PROFILER_RECORDINGS_DIR = "--profiler-recordings-dir";
+    public static final String CMD_BATCH_JOB_ID = "--batch-job-id";
 
     public RunWorkloadParams( String workloadName,
                               Edition neo4jEdition,

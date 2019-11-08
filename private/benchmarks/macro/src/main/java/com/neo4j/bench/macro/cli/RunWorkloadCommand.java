@@ -56,6 +56,7 @@ import java.util.Optional;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 
+import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_BATCH_JOB_ID;
 import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_DB_PATH;
 import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_ERROR_POLICY;
 import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_NEO4J_CONFIG;
@@ -110,6 +111,12 @@ public class RunWorkloadCommand extends BaseRunWorkloadCommand
              description = "Specify if execution should terminate on error, or skip and continue",
              title = "Error handling policy" )
     private ErrorReporter.ErrorPolicy errorPolicy = ErrorReporter.ErrorPolicy.SKIP;
+
+    @Option( type = OptionType.COMMAND,
+             name = {CMD_BATCH_JOB_ID},
+             description = "Job ID of the batch infra runner",
+             title = "Batch Job Id" )
+    private String jobId;
 
     protected void doRun( RunWorkloadParams params )
     {
@@ -228,6 +235,10 @@ public class RunWorkloadCommand extends BaseRunWorkloadCommand
                     params.parentBuild(),
                     params.parentBuild(),
                     params.triggeredBy() );
+            if ( jobId != null )
+            {
+                testRun.setJobId( jobId );
+            }
 
             BenchmarkTool tool = new BenchmarkTool( Repository.MACRO_BENCH, params.toolCommit(), params.toolOwner(), params.toolBranch() );
 

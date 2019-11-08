@@ -88,6 +88,7 @@ class ConvenientLocalExecutionIT
             long parentTeamcityBuild = 0;
             long teamcityBuild = 1;
             String triggeredBy = "xyz";
+            String jobId = "abc123";
 
             Path profilerRecordingsDir = RESULT_DIR.resolve( "profiler_recordings-" + WORKLOAD_NAME );
             Files.createDirectories( profilerRecordingsDir );

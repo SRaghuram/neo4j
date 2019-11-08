@@ -4,6 +4,7 @@ DROP CONSTRAINT ON ( benchmarktool:BenchmarkTool ) ASSERT benchmarktool.name IS 
 DROP CONSTRAINT ON ( plantree:PlanTree ) ASSERT plantree.description_hash IS UNIQUE
 DROP CONSTRAINT ON ( testrun:TestRun ) ASSERT testrun.archive IS UNIQUE
 DROP CONSTRAINT ON ( testrun:TestRun ) ASSERT testrun.id IS UNIQUE
+DROP CONSTRAINT ON ( testrun:TestRun ) ASSERT testrun.jobId IS UNIQUE
 // Exists
 DROP CONSTRAINT ON ( annotation:Annotation ) ASSERT exists(annotation.author)
 DROP CONSTRAINT ON ( annotation:Annotation ) ASSERT exists(annotation.comment)

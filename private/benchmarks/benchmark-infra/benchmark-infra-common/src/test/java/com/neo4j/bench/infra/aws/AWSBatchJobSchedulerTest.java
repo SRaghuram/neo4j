@@ -60,7 +60,8 @@ public class AWSBatchJobSchedulerTest
     {
         // given
         AWSBatch awsBatch = mock( AWSBatch.class );
-        when( awsBatch.submitJob( Mockito.any() ) ).thenReturn( new SubmitJobResult().withJobId( "1" ) );
+        String jobId = "1";
+        when( awsBatch.submitJob( Mockito.any() ) ).thenReturn( new SubmitJobResult().withJobId( jobId ) );
         AWSBatchJobScheduler jobScheduler = new AWSBatchJobScheduler( awsBatch, "job-queue", "job-definition" );
 
         Path jvmPath = Paths.get( Jvm.defaultJvmOrFail().launchJava() );
@@ -127,14 +128,14 @@ public class AWSBatchJobSchedulerTest
         expectedParams.put( InfraParams.CMD_ARTIFACT_WORKER_URI, workerArtifactUri.toString() );
 
         // when
-        JobId jobId = jobScheduler.schedule(
+        JobId scheduleJobId = jobScheduler.schedule(
                 workerArtifactUri,
                 baseArtifactUri,
                 infraParams,
                 runWorkloadParams );
 
         // then
-        assertEquals( new JobId( "1" ), jobId, "invalid job id in submit job request response" );
+        assertEquals( new JobId( jobId ), scheduleJobId, "invalid job id in submit job request response" );
 
         ArgumentCaptor<SubmitJobRequest> jobRequestCaptor = ArgumentCaptor.forClass( SubmitJobRequest.class );
         verify( awsBatch ).submitJob( jobRequestCaptor.capture() );
@@ -148,7 +149,7 @@ public class AWSBatchJobSchedulerTest
         MapDifference<String,String> entriesDiffering = Maps.difference(
                 jobRequestParameters,     // left
                 expectedParams            // right
-        );
+                                                                       );
 
         assertThat( mapDifferenceString( entriesDiffering ),
                     entriesDiffering.entriesDiffering(),

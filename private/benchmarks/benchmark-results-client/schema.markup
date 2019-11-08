@@ -6,7 +6,7 @@
   <li class="node" data-node-id="2" data-x="-1821.3401142577036" data-y="-318.21874415370706">
     <span class="caption">:Neo4jConfig</span><dl class="properties"><dt>key_1</dt><dd>.</dd><dt>key_2</dt><dd>.</dd><dt>key_n</dt><dd>.</dd></dl></li>
   <li class="node" data-node-id="3" data-x="-1291.6634578436206" data-y="-637.8824232497676">
-    <span class="caption">:TestRun (UNIQUE-id)</span><dl class="properties"><dt>date</dt><dd>.</dd><dt>id</dt><dd>.</dd><dt>duration</dt><dd>.</dd><dt>archive</dt><dd>.</dd><dt>build</dt><dd>.</dd><dt>parent_build</dt><dd>.</dd><dt>triggered_by</dt><dd>.</dd></dl></li>
+    <span class="caption">:TestRun (UNIQUE-id)</span><dl class="properties"><dt>date</dt><dd>.</dd><dt>id</dt><dd>.</dd><dt>duration</dt><dd>.</dd><dt>archive</dt><dd>.</dd><dt>build</dt><dd>.</dd><dt>parent_build</dt><dd>.</dd><dt>triggered_by</dt><dd>.</dd><dt>batch_job_id</dt><dd>(optional)</dd></dl></li>
   <li class="node" data-node-id="4" data-x="-181.21997261177268" data-y="715.3919714269505">
     <span class="caption">:BenchmarkGroup (UNIQUE-name)</span><dl class="properties"><dt>name</dt><dd>.</dd></dl></li>
   <li class="node" data-node-id="5" data-x="-1291.6634578436206" data-y="715.3919714269505">
