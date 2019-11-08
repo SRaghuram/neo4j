@@ -502,7 +502,7 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
           }
         )
       }
-
+    locals.markModifiedLocalForRefSlot(offset)
     block(prepareOps, cast[Value](load(local)))
   }
 

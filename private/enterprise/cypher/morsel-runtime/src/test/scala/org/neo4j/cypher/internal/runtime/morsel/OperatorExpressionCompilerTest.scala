@@ -555,7 +555,8 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
       oec.setRefInExecutionContext(4, load(refSlotLocal(4))),
       oec.setRefInExecutionContext(5, load(refSlotLocal(5))),
       oec.setRefInExecutionContext(7, load(refSlotLocal(7))),
-      oec.setRefInExecutionContext(8, load(refSlotLocal(8)))
+      oec.setRefInExecutionContext(8, load(refSlotLocal(8))),
+      oec.setRefInExecutionContext(9, load(refSlotLocal(9))),
     )
 
     // When
