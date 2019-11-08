@@ -83,7 +83,8 @@ case class Catalog(entries: Map[CatalogName, Catalog.Entry]) {
     resolve(name, Seq())
 
   def resolve(name: CatalogName, args: Seq[AnyValue]): Catalog.Graph = {
-    entries.get(name) match {
+    val normalizedName = CatalogName(name.parts.map(_.toLowerCase))
+    entries.get(normalizedName) match {
       case None => Errors.entityNotFound("Catalog entry", show(name))
 
       case Some(g: Catalog.Graph) =>

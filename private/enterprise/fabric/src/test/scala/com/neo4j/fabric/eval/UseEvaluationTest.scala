@@ -48,12 +48,22 @@ class UseEvaluationTest extends FabricTest with ProcedureRegistryTestSupport wit
     "USE mega.graph(y)" in { eval("y" -> Values.intValue(1)) shouldEqual RemoteGraph(mega1) }
     "USE mega.source_of_all_truth" in { eval() shouldEqual RemoteGraph(mega0) }
     "USE mega.mega" in { eval() shouldEqual RemoteGraph(mega2) }
+    "USE meGA.Graph(0)" in { eval() shouldEqual RemoteGraph(mega0) }
+    "USE MEGA.GRAPH(1)" in { eval() shouldEqual RemoteGraph(mega1) }
+    "USE Mega.Graph(Const0())" in { eval() shouldEqual RemoteGraph(mega0) }
+    "USE MEGA.GRAPH(CONST1())" in { eval() shouldEqual RemoteGraph(mega1) }
+    "USE mega.Graph(x)" in { eval("x" -> Values.intValue(0)) shouldEqual RemoteGraph(mega0) }
+    "USE mega.GRAPH(y)" in { eval("y" -> Values.intValue(1)) shouldEqual RemoteGraph(mega1) }
+    "USE mega.sOuRce_Of_aLL_tRuTH" in { eval() shouldEqual RemoteGraph(mega0) }
+    "USE Mega.MEGA" in { eval() shouldEqual RemoteGraph(mega2) }
   }
 
   "Fails for:" - {
     "USE mega.graph0" in { the[EntityNotFoundException].thrownBy(eval()).getMessage.should(include("not found: mega.graph0")) }
     "USE mega.graph1" in { the[EntityNotFoundException].thrownBy(eval()).getMessage.should(include("not found: mega.graph1")) }
     "USE mega.graph(10)" in { the[EntityNotFoundException].thrownBy(eval()).getMessage.should(include("not found: 10")) }
+    "USE mega.GRAph0" in { the[EntityNotFoundException].thrownBy(eval()).getMessage.should(include("not found: mega.GRAph0")) }
+    "USE MEGA.graph1" in { the[EntityNotFoundException].thrownBy(eval()).getMessage.should(include("not found: MEGA.graph1")) }
   }
 
   object eval {

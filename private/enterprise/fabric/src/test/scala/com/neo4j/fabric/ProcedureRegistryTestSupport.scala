@@ -28,7 +28,7 @@ trait ProcedureRegistryTestSupport {
         new QualifiedName(name.init.toArray, name.last),
         ListBuffer(args: _*).map(inputField(_, Neo4jTypes.NTAny)).asJava,
         Neo4jTypes.NTAny,
-        null, Array[String](), name.last, false
+        null, Array[String](), name.last, true
       )
     ) {
       override def apply(ctx: Context, input: Array[AnyValue]): AnyValue = body
