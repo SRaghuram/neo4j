@@ -40,9 +40,7 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.ResourceIterator;
-import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.TransactionFailureException;
 import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -337,9 +335,8 @@ public final class CausalClusteringTestHelpers
         {
             return DatabaseAvailability.STOPPED;
         }
-        catch ( TransactionFailureException ignored )
+        catch ( Exception ignored )
         {
-            // This should be transient!
             return DatabaseAvailability.UNDEFINED;
         }
 
