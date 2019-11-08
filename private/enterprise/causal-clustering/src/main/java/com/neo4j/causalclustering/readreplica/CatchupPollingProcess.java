@@ -273,7 +273,7 @@ public class CatchupPollingProcess extends LifecycleAdapter
             transitionToStoreCopy();
             return false;
         default:
-            log.info( "Tx pull request unable to get transactions > %d " + lastQueuedTxId );
+            log.info( "Tx pull request unable to get transactions > %d ", lastQueuedTxId );
             return false;
         }
     }
