@@ -8,10 +8,10 @@ package com.neo4j.fabric.executor;
 import com.neo4j.fabric.config.FabricConfig;
 import com.neo4j.fabric.eval.Catalog;
 import com.neo4j.fabric.eval.UseEvaluation;
-import com.neo4j.fabric.planner.api.Plan;
 import com.neo4j.fabric.planning.FabricPlan;
 import com.neo4j.fabric.planning.FabricPlanner;
 import com.neo4j.fabric.planning.FabricQuery;
+import com.neo4j.fabric.planning.QueryType;
 import com.neo4j.fabric.stream.Record;
 import com.neo4j.fabric.stream.Records;
 import com.neo4j.fabric.stream.Rx2SyncStream;
@@ -214,21 +214,19 @@ public class FabricExecutor
         Flux<Record> runRemoteQuery( FabricQuery.RemoteQuery query, Flux<Record> input )
         {
             String queryString = query.queryString();
-            Plan.QueryTask.QueryMode queryMode = getMode( query );
+            QueryType queryType = query.queryType();
             return input.flatMap( inputRecord ->
             {
                 Map<String,AnyValue> recordValues = recordAsMap( query, inputRecord );
                 FabricConfig.Graph graph = evalUse( query.use(), recordValues );
                 MapValue parameters = addImportParams( recordValues, mapAsJavaMap( query.parameters() ) );
-                return runRemoteQueryAt( graph, queryString, queryMode, parameters );
+                return runRemoteQueryAt( graph, queryString, queryType, parameters );
             } );
         }
 
-        Flux<Record> runRemoteQueryAt( FabricConfig.Graph graph, String queryString,
-                Plan.QueryTask.QueryMode queryMode,
-                MapValue parameters )
+        Flux<Record> runRemoteQueryAt( FabricConfig.Graph graph, String queryString, QueryType queryType, MapValue parameters )
         {
-            StatementResult result = ctx.getRemote().run( graph, queryString, queryMode, parameters ).block();
+            StatementResult result = ctx.getRemote().run( graph, queryString, queryType, parameters ).block();
 
             Rx2SyncStream syncStream = new Rx2SyncStream( result,
                     config.getDataStream().getBufferLowWatermark(),
@@ -304,17 +302,6 @@ public class FabricExecutor
             return new InvalidSemanticsException( msg + ": " + info );
         }
 
-        private Plan.QueryTask.QueryMode getMode( FabricQuery.RemoteQuery query )
-        {
-            if ( query.query().part().containsUpdates() )
-            {
-                return Plan.QueryTask.QueryMode.CAN_READ_WRITE;
-            }
-            else
-            {
-                return Plan.QueryTask.QueryMode.CAN_READ_ONLY;
-            }
-        }
     }
 
     class FabricLoggingStatementExecution extends FabricStatementExecution
@@ -339,13 +326,11 @@ public class FabricExecutor
         }
 
         @Override
-        Flux<Record> runRemoteQueryAt( FabricConfig.Graph graph, String queryString,
-                Plan.QueryTask.QueryMode queryMode,
-                MapValue parameters )
+        Flux<Record> runRemoteQueryAt( FabricConfig.Graph graph, String queryString, QueryType queryType, MapValue parameters )
         {
             String id = executionId();
             trace( id, "remote " + graph.getId(), compact( queryString ) );
-            return traceRecords( id, super.runRemoteQueryAt( graph, queryString, queryMode, parameters ) );
+            return traceRecords( id, super.runRemoteQueryAt( graph, queryString, queryType, parameters ) );
         }
 
         private String compact( String in )

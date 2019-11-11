@@ -6,6 +6,7 @@
 package com.neo4j.fabric.stream.summary;
 
 import com.neo4j.fabric.planning.FabricPlan;
+import com.neo4j.fabric.planning.QueryType;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -94,11 +95,11 @@ public class MergedSummary implements Summary
 
     private QueryExecutionType.QueryType queryType( FabricPlan plan )
     {
-        if ( plan.queryType() == FabricPlan.READ() )
+        if ( plan.queryType() == QueryType.READ() )
         {
             return QueryExecutionType.QueryType.READ_ONLY;
         }
-        else if ( plan.queryType() == FabricPlan.READ_WRITE() )
+        else if ( plan.queryType() == QueryType.WRITE() )
         {
             return QueryExecutionType.QueryType.READ_WRITE;
         }

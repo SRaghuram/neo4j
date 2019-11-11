@@ -9,7 +9,7 @@ import com.neo4j.fabric.driver.FabricDriverTransaction;
 import com.neo4j.fabric.config.FabricConfig;
 import com.neo4j.fabric.driver.DriverPool;
 import com.neo4j.fabric.driver.PooledDriver;
-import com.neo4j.fabric.planner.api.Plan.QueryTask.QueryMode;
+import com.neo4j.fabric.planning.QueryType;
 import com.neo4j.fabric.stream.StatementResult;
 import com.neo4j.fabric.transaction.FabricTransactionInfo;
 import reactor.core.publisher.Mono;
@@ -49,14 +49,14 @@ public class FabricRemoteExecutor
             this.transactionInfo = transactionInfo;
         }
 
-        public Mono<StatementResult> run( FabricConfig.Graph location, String query, QueryMode mode, MapValue params )
+        public Mono<StatementResult> run( FabricConfig.Graph location, String query, QueryType queryType, MapValue params )
         {
             if ( location.equals( writingTo ) )
             {
                 return runInWriteTransaction( query, params );
             }
 
-            var accessMode = getAccessMode( mode );
+            var accessMode = getAccessMode( queryType );
 
             if ( accessMode == AccessMode.READ )
             {
@@ -111,9 +111,9 @@ public class FabricRemoteExecutor
             return writeTransaction.map( rxTransaction -> rxTransaction.run( query, params ) );
         }
 
-        private AccessMode getAccessMode( QueryMode queryMode )
+        private AccessMode getAccessMode( QueryType queryType )
         {
-            if ( transactionInfo.getAccessMode() == AccessMode.READ || queryMode == QueryMode.CAN_READ_ONLY )
+            if ( transactionInfo.getAccessMode() == AccessMode.READ || queryType == QueryType.READ() )
             {
                 return AccessMode.READ;
             }

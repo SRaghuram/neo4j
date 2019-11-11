@@ -34,12 +34,12 @@ trait ProcedureRegistryTestSupport {
       override def apply(ctx: Context, input: Array[AnyValue]): AnyValue = body
     }
 
-  private def procedure(name: Seq[String], args: Seq[String], out: Seq[String])(values: => Seq[Array[AnyValue]]): CallableProcedure =
+  private def procedure(name: Seq[String], args: Seq[String], out: Seq[String], mode: Mode = Mode.DEFAULT)(values: => Seq[Array[AnyValue]]): CallableProcedure =
     new CallableProcedure.BasicProcedure(new ProcedureSignature(
       new QualifiedName(name.init.toArray, name.last),
       ListBuffer(args: _*).map(inputField(_, Neo4jTypes.NTAny)).asJava,
       ListBuffer(out: _*).map(inputField(_, Neo4jTypes.NTAny)).asJava,
-      Mode.DEFAULT, false, null, Array[String](), name.last, null, false, false, false
+      mode, false, null, Array[String](), name.last, null, false, false, false
     )) {
       override def apply(ctx: Context, input: Array[AnyValue], resourceTracker: ResourceTracker): RawIterator[Array[AnyValue], ProcedureException] =
         RawIterator.of(values: _*)
@@ -52,6 +52,8 @@ trait ProcedureRegistryTestSupport {
     reg.register(userFunction(Seq("my", "ns", "const0"), Seq("x"))(Values.intValue(2)))
     reg.register(procedure(Seq("my", "ns", "myProcedure"), Seq(), Seq("a", "b"))(Seq(Array(Values.intValue(1), Values.intValue(10)))))
     reg.register(procedure(Seq("my", "ns", "myProcedure2"), Seq("x"), Seq("a", "b"))(Seq(Array(Values.intValue(1), Values.intValue(10)))))
+    reg.register(procedure(Seq("my", "ns", "read"), Seq(), Seq("a", "b"), Mode.DEFAULT)(Seq(Array(Values.intValue(1), Values.intValue(10)))))
+    reg.register(procedure(Seq("my", "ns", "write"), Seq(), Seq("a", "b"), Mode.WRITE)(Seq(Array(Values.intValue(1), Values.intValue(10)))))
     reg
   }
 }

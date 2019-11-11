@@ -91,8 +91,8 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
       planner.plan(q, params).query.asChainedQuery
         .check(_.queries(0).asDirect.asLocalSingleQuery)
         .check(_.queries(1).asApply.asUnionQuery
-            .check(_.lhs.asDirect.asShardQuery.use.shouldEqual(use(varFor("g"))))
-            .check(_.rhs.asDirect.asShardQuery.use.shouldEqual(use(varFor("h"))))
+          .check(_.lhs.asDirect.asShardQuery.use.shouldEqual(use(varFor("g"))))
+          .check(_.rhs.asDirect.asShardQuery.use.shouldEqual(use(varFor("h"))))
         )
         .check(_.queries(2).asDirect.asLocalSingleQuery)
     }
@@ -543,6 +543,95 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
     }
   }
 
+  "Read/Write" - {
+
+    "read" in {
+      planner.plan("MATCH (x) RETURN *", params).queryType
+        .shouldEqual(QueryType.Read)
+    }
+    "read + known read proc" in {
+      planner.plan("MATCH (x) CALL my.ns.read() YIELD a RETURN *", params).queryType
+        .shouldEqual(QueryType.Read)
+    }
+    "read + known write proc" in {
+      planner.plan("MATCH (x) CALL my.ns.write() YIELD a RETURN *", params).queryType
+        .shouldEqual(QueryType.Write)
+    }
+    "read + unknown proc" in {
+      planner.plan("MATCH (x) CALL my.ns.unknown() YIELD a RETURN *", params).queryType
+        .shouldEqual(QueryType.ReadPlusUnresolved)
+    }
+    "write" in {
+      planner.plan("CREATE (x)", params).queryType
+        .shouldEqual(QueryType.Write)
+    }
+    "write + known read proc" in {
+      planner.plan("CREATE (x) WITH * CALL my.ns.read() YIELD a RETURN *", params).queryType
+        .shouldEqual(QueryType.Write)
+    }
+    "write + known write proc" in {
+      planner.plan("CREATE (x) WITH * CALL my.ns.write() YIELD a RETURN *", params).queryType
+        .shouldEqual(QueryType.Write)
+    }
+    "write + unknown proc" in {
+      planner.plan("CREATE (x) WITH * CALL my.ns.unknown() YIELD a RETURN *", params).queryType
+        .shouldEqual(QueryType.Write)
+    }
+    "per part" in {
+      planner.plan(
+        """UNWIND [] AS x
+          |CALL {
+          |  USE g
+          |  MATCH (n)
+          |  CALL my.ns.unknown() YIELD a
+          |  RETURN a AS a1
+          |}
+          |CALL {
+          |  USE g
+          |  MATCH (n)
+          |  CALL my.ns.read() YIELD a
+          |  RETURN a AS a2
+          |}
+          |CALL {
+          |  USE g
+          |  MATCH (n)
+          |  CALL my.ns.write() YIELD a
+          |  RETURN a AS a3
+          |}
+          |CALL {
+          |  USE g
+          |  CREATE (n) WITH *
+          |  CALL my.ns.unknown() YIELD a
+          |  RETURN a AS a4
+          |}
+          |CALL {
+          |  USE g
+          |  CREATE (n) WITH *
+          |  CALL my.ns.read() YIELD a
+          |  RETURN a AS a5
+          |}
+          |CALL {
+          |  USE g
+          |  CREATE (n) WITH *
+          |  CALL my.ns.write() YIELD a
+          |  RETURN a AS a6
+          |}
+          |RETURN *
+          |""".stripMargin, params)
+        .check(_.query.asChainedQuery
+          .check(_.queries(0).asDirect.asLocalQuery.queryType.shouldEqual(QueryType.Read))
+          .check(_.queries(1).asApply.asDirect.asShardQuery.queryType.shouldEqual(QueryType.ReadPlusUnresolved))
+          .check(_.queries(2).asApply.asDirect.asShardQuery.queryType.shouldEqual(QueryType.Read))
+          .check(_.queries(3).asApply.asDirect.asShardQuery.queryType.shouldEqual(QueryType.Write))
+          .check(_.queries(4).asApply.asDirect.asShardQuery.queryType.shouldEqual(QueryType.Write))
+          .check(_.queries(5).asApply.asDirect.asShardQuery.queryType.shouldEqual(QueryType.Write))
+          .check(_.queries(6).asApply.asDirect.asShardQuery.queryType.shouldEqual(QueryType.Write))
+        )
+        .check(_.queryType.shouldEqual(QueryType.Write))
+    }
+
+  }
+
   "Cache:" - {
 
     "two equal input strings" in {
@@ -872,6 +961,9 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
 
     def asShardQuery: RemoteQuery =
       a.as[RemoteQuery]
+
+    def asLocalQuery: LocalQuery =
+      a.as[LocalQuery]
 
     def asChainedQuery: ChainedQuery =
       a.as[ChainedQuery]

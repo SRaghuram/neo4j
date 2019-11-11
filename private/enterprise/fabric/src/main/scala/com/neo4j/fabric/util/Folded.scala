@@ -9,7 +9,7 @@ import org.neo4j.cypher.internal.v4_0.util.Foldable.FoldableAny
 
 object Folded {
 
-  trait Instruction[R]
+  sealed trait Instruction[R]
 
   case class Stop[R](r: R) extends Instruction[R]
 

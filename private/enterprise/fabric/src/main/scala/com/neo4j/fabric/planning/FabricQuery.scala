@@ -14,17 +14,12 @@ import org.neo4j.cypher.internal.v4_0.ast.{Query, UseGraph}
 
 case class FabricPlan(
   query: FabricQuery,
-  queryType: FabricPlan.QueryType,
+  queryType: QueryType,
   executionType: FabricPlan.ExecutionType,
   debugOptions: DebugOptions,
 )
 
 object FabricPlan {
-  sealed trait QueryType
-  case object Read extends QueryType
-  case object ReadWrite extends QueryType
-  val READ: QueryType = Read
-  val READ_WRITE: QueryType = ReadWrite
 
   sealed trait ExecutionType
   case object Execute extends ExecutionType
@@ -93,11 +88,14 @@ object FabricQuery {
     def children: Seq[FabricQuery] = Seq(query)
   }
 
-  sealed trait LeafQuery extends FabricQuery
+  sealed trait LeafQuery extends FabricQuery {
+    def queryType: QueryType
+  }
 
   case class LocalQuery(
     query: FullyParsedQuery,
     columns: Columns,
+    queryType: QueryType,
   ) extends LeafQuery {
 
     def input: Seq[String] =
@@ -110,6 +108,7 @@ object FabricQuery {
     use: UseGraph,
     query: Query,
     columns: Columns,
+    queryType: QueryType,
   ) extends LeafQuery {
 
     def parameters: Map[String, String] =

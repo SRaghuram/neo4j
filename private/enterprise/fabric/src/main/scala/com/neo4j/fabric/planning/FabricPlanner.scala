@@ -255,23 +255,20 @@ case class FabricPlanner(
       }
     }
 
-    def plan: FabricPlan = FabricPlan(
-      query = fabricQuery,
-      queryType = original match {
-        case d: ast.CatalogDDL => Errors.ddlNotSupported(d)
-        case c: ast.Command    => Errors.notSupported("Commands")
-        case q: ast.Query      => q.part.containsUpdates match {
-          case true  => FabricPlan.ReadWrite
-          case false => FabricPlan.Read
-        }
-      },
-      executionType = options.executionMode match {
-        case CypherExecutionMode.normal  => FabricPlan.Execute
-        case CypherExecutionMode.explain => FabricPlan.Explain
-        case CypherExecutionMode.profile => Errors.notSupported("Query option: 'PROFILE'")
-      },
-      debugOptions = DebugOptions.from(options.debugOptions)
-    )
+    def plan: FabricPlan = {
+      val fQuery = fabricQuery
+
+      FabricPlan(
+        query = fQuery,
+        queryType = QueryType.of(fQuery),
+        executionType = options.executionMode match {
+          case CypherExecutionMode.normal  => FabricPlan.Execute
+          case CypherExecutionMode.explain => FabricPlan.Explain
+          case CypherExecutionMode.profile => Errors.notSupported("Query option: 'PROFILE'")
+        },
+        debugOptions = DebugOptions.from(options.debugOptions)
+      )
+    }
 
     def fabricQuery: FabricQuery =
       fabricQuery(fragment)
@@ -307,13 +304,15 @@ case class FabricPlanner(
       case leaf: Fragment.Leaf =>
         val pos = leaf.clauses.head.position
         val query = ast.Query(None, ast.SingleQuery(leaf.clauses)(pos))(pos)
+        val queryType = QueryType.of(query)
         val base = leaf.use match {
 
           case Some(use) =>
             FabricQuery.RemoteQuery(
               use = use,
               query = query,
-              columns = leaf.columns
+              columns = leaf.columns,
+              queryType = queryType,
             )
 
           case None =>
@@ -329,7 +328,8 @@ case class FabricPlanner(
                   materializedEntitiesMode = true
                 )
               ),
-              columns = leaf.columns
+              columns = leaf.columns,
+              queryType = queryType,
             )
         }
 
