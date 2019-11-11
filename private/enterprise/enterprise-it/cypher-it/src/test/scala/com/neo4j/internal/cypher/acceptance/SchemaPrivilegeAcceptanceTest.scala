@@ -17,22 +17,41 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
-    execute("CREATE DATABASE foo")
-    execute("CREATE DATABASE bar")
-    execute("CREATE DATABASE baz")
 
     // Notice: They are executed in succession so they have to make sense in that order
     assertQueriesAndSubQueryCounts(List(
       "GRANT CREATE INDEX ON DATABASE * TO custom" -> 1,
+      "DENY CREATE INDEX ON DATABASE * TO custom" -> 1,
+      "REVOKE CREATE INDEX ON DATABASE * FROM custom" -> 1,
       "GRANT DROP INDEX ON DATABASE * TO custom" -> 1,
+      "DENY DROP INDEX ON DATABASE * TO custom" -> 1,
+      "REVOKE DROP INDEX ON DATABASE * FROM custom" -> 1,
+      "GRANT INDEX MANAGEMENT ON DATABASES * TO custom" -> 2,
+      "DENY INDEX MANAGEMENT ON DATABASES * TO custom" -> 2,
+      "REVOKE INDEX MANAGEMENT ON DATABASES * FROM custom" -> 2,
+
       "GRANT CREATE CONSTRAINT ON DATABASE * TO custom" -> 1,
+      "DENY CREATE CONSTRAINT ON DATABASE * TO custom" -> 1,
+      "REVOKE CREATE CONSTRAINT ON DATABASE * FROM custom" -> 1,
       "GRANT DROP CONSTRAINT ON DATABASE * TO custom" -> 1,
+      "DENY DROP CONSTRAINT ON DATABASE * TO custom" -> 1,
+      "REVOKE DROP CONSTRAINT ON DATABASE * FROM custom" -> 1,
+      "GRANT CONSTRAINT MANAGEMENT ON DATABASES * TO custom" -> 2,
+      "DENY CONSTRAINT MANAGEMENT ON DATABASES * TO custom" -> 2,
+      "REVOKE CONSTRAINT MANAGEMENT ON DATABASES * FROM custom" -> 2,
+
       "GRANT CREATE NEW LABEL ON DATABASE * TO custom" -> 1,
+      "DENY CREATE NEW LABEL ON DATABASE * TO custom" -> 1,
+      "REVOKE CREATE NEW LABEL ON DATABASE * FROM custom" -> 1,
       "GRANT CREATE NEW TYPE ON DATABASE * TO custom" -> 1,
+      "DENY CREATE NEW TYPE ON DATABASE * TO custom" -> 1,
+      "REVOKE CREATE NEW TYPE ON DATABASE * FROM custom" -> 1,
       "GRANT CREATE NEW NAME ON DATABASE * TO custom" -> 1,
-      "GRANT INDEX MANAGEMENT ON DATABASES foo TO custom" -> 2,
-      "GRANT CONSTRAINT MANAGEMENT ON DATABASES bar TO custom" -> 2,
-      "GRANT NAME MANAGEMENT ON DATABASES baz TO custom" -> 3
+      "DENY CREATE NEW NAME ON DATABASE * TO custom" -> 1,
+      "REVOKE CREATE NEW NAME ON DATABASE * FROM custom" -> 1,
+      "GRANT NAME MANAGEMENT ON DATABASES * TO custom" -> 3,
+      "DENY NAME MANAGEMENT ON DATABASES * TO custom" -> 3,
+      "REVOKE NAME MANAGEMENT ON DATABASES * FROM custom" -> 3
     ))
   }
 
@@ -315,6 +334,91 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
       access().role("custom").map
     ))
+  }
+
+  test("Should revoke both grant, deny, create and drop in one command (index management)") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+
+    // WHEN
+    execute("GRANT CREATE INDEX ON DATABASE * TO custom")
+    execute("DENY CREATE INDEX ON DATABASE * TO custom")
+    execute("GRANT DROP INDEX ON DATABASE * TO custom")
+    execute("DENY DROP INDEX ON DATABASE * TO custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      createIndex().role("custom").map,
+      createIndex("DENIED").role("custom").map,
+      dropIndex().role("custom").map,
+      dropIndex("DENIED").role("custom").map
+    ))
+
+    // WHEN
+    val result = execute("REVOKE INDEX MANAGEMENT ON DATABASE * FROM custom")
+
+    // THEN
+    result.queryStatistics().systemUpdates should be(2)
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
+  }
+
+  test("Should revoke both grant, deny, create and drop in one command (constraint management)") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+
+    // WHEN
+    execute("GRANT CREATE CONSTRAINT ON DATABASE * TO custom")
+    execute("DENY CREATE CONSTRAINT ON DATABASE * TO custom")
+    execute("GRANT DROP CONSTRAINT ON DATABASE * TO custom")
+    execute("DENY DROP CONSTRAINT ON DATABASE * TO custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      createConstraint().role("custom").map,
+      createConstraint("DENIED").role("custom").map,
+      dropConstraint().role("custom").map,
+      dropConstraint("DENIED").role("custom").map
+    ))
+
+    // WHEN
+    val result = execute("REVOKE CONSTRAINT MANAGEMENT ON DATABASE * FROM custom")
+
+    // THEN
+    result.queryStatistics().systemUpdates should be(2)
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
+  }
+
+  test("Should revoke both grant and deny for all create tokens in one command (name management)") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+
+    // WHEN
+    execute("GRANT CREATE NEW LABEL ON DATABASE * TO custom")
+    execute("DENY CREATE NEW LABEL ON DATABASE * TO custom")
+    execute("GRANT CREATE NEW TYPE ON DATABASE * TO custom")
+    execute("DENY CREATE NEW TYPE ON DATABASE * TO custom")
+    execute("GRANT CREATE NEW NAME ON DATABASE * TO custom")
+    execute("DENY CREATE NEW NAME ON DATABASE * TO custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      createNodeLabel().role("custom").map,
+      createNodeLabel("DENIED").role("custom").map,
+      createRelationshipType().role("custom").map,
+      createRelationshipType("DENIED").role("custom").map,
+      createPropertyKey().role("custom").map,
+      createPropertyKey("DENIED").role("custom").map
+    ))
+
+    // WHEN
+    val result = execute("REVOKE NAME MANAGEMENT ON DATABASE * FROM custom")
+
+    // THEN
+    result.queryStatistics().systemUpdates should be(3)
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
   }
 
   // Tests for actual behaviour of authorization rules for restricted users based on privileges

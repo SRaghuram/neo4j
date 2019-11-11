@@ -25,7 +25,6 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
 
     // Notice: They are executed in succession so they have to make sense in that order
     assertQueriesAndSubQueryCounts(List(
-      "GRANT ACCESS ON DATABASE * TO custom" -> 1,
       "GRANT TRAVERSE ON GRAPH * NODES * TO custom" -> 1,
       "REVOKE GRANT TRAVERSE ON GRAPH * NODES * FROM custom" -> 1,
       "DENY TRAVERSE ON GRAPH * NODES * TO custom" -> 1,

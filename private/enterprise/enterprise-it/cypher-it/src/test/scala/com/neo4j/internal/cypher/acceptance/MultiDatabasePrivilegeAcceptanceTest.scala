@@ -13,6 +13,27 @@ import scala.collection.Map
 
 class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
 
+  test("should return empty counts to the outside for commands that update the system graph internally") {
+    //TODO: ADD ANY NEW UPDATING COMMANDS HERE
+
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+
+    // Notice: They are executed in succession so they have to make sense in that order
+    assertQueriesAndSubQueryCounts(List(
+      "GRANT ACCESS ON DATABASE * TO custom" -> 1,
+      "DENY ACCESS ON DATABASE * TO custom" -> 1,
+      "REVOKE ACCESS ON DATABASE * FROM custom" -> 1,
+      "GRANT START ON DATABASE * TO custom" -> 1,
+      "DENY START ON DATABASE * TO custom" -> 1,
+      "REVOKE START ON DATABASE * FROM custom" -> 1,
+      "GRANT STOP ON DATABASE * TO custom" -> 1,
+      "DENY STOP ON DATABASE * TO custom" -> 1,
+      "REVOKE STOP ON DATABASE * FROM custom" -> 1
+    ))
+  }
+
   test("should list start and stop database privileges") {
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
