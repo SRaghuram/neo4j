@@ -17,7 +17,6 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import org.neo4j.cypher.internal.security.SecureHasher;
@@ -45,7 +44,8 @@ import static org.neo4j.server.security.systemgraph.BasicSystemGraphRealm.assert
 
 public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitializer
 {
-    private final SystemGraphImportOptions importOptions;
+    private final RoleRepository migrationRoleRepository;
+    private final UserRepository defaultAdminRepository;
     private Label ROLE_LABEL = Label.label( "Role" );
     private Label PRIVILEGE_LABEL = Label.label( "Privilege" );
 
@@ -70,12 +70,13 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
     private Node adminPriv;
 
     public EnterpriseSecurityGraphInitializer( DatabaseManager<?> databaseManager, SystemGraphInitializer systemGraphInitializer, Log log,
-            SystemGraphImportOptions importOptions, SecureHasher secureHasher )
+                                               UserRepository migrationUserRepository, RoleRepository migrationRoleRepository,
+                                               UserRepository initialUserRepository, UserRepository defaultAdminRepository, SecureHasher secureHasher )
     {
-        super( databaseManager, systemGraphInitializer, log, importOptions.migrationUserRepositorySupplier, importOptions.initialUserRepositorySupplier,
+        super( databaseManager, systemGraphInitializer, log, migrationUserRepository, initialUserRepository,
                 secureHasher );
-
-        this.importOptions = importOptions;
+        this.migrationRoleRepository = migrationRoleRepository;
+        this.defaultAdminRepository = defaultAdminRepository;
     }
 
     @Override
@@ -173,9 +174,9 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
         String newAdmin = null;
 
         // Try to determine who should be admin, by first checking the outcome of the SetDefaultAdmin command
-        if ( importOptions.defaultAdminRepositorySupplier != null )
+        if ( defaultAdminRepository != null ) // TODO should not be able to be null
         {
-            UserRepository defaultAdminRepository = startUserRepository( importOptions.defaultAdminRepositorySupplier );
+            startUserRepository( defaultAdminRepository );
             final int numberOfDefaultAdmins = defaultAdminRepository.numberOfUsers();
             if ( numberOfDefaultAdmins > 1 )
             {
@@ -367,26 +368,24 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
 
     private void migrateFromFlatFileRealm( Transaction tx ) throws Exception
     {
-        UserRepository userRepository = startUserRepository( importOptions.migrationUserRepositorySupplier );
-        RoleRepository roleRepository = startRoleRepository( importOptions.migrationRoleRepositorySupplier );
-        doMigrateUsers( tx, userRepository );
-        boolean migrateOk = doMigrateRoles( tx, userRepository, roleRepository );
+        startUserRepository( migrationUserRepository );
+        startRoleRepository( migrationRoleRepository );
+        doMigrateUsers( tx, migrationUserRepository );
+        boolean migrateOk = doMigrateRoles( tx, migrationUserRepository, migrationRoleRepository );
         if ( !migrateOk )
         {
             throw new InvalidArgumentsException(
                     "Automatic migration of users and roles into system graph failed because repository files are inconsistent. " );
         }
 
-        stopUserRepository( userRepository );
-        stopRoleRepository( roleRepository );
+        stopUserRepository( migrationUserRepository );
+        stopRoleRepository( migrationRoleRepository );
     }
 
-    private RoleRepository startRoleRepository( Supplier<RoleRepository> supplier ) throws Exception
+    private void startRoleRepository( RoleRepository roleRepository ) throws Exception
     {
-        RoleRepository roleRepository = supplier.get();
         roleRepository.init();
         roleRepository.start();
-        return roleRepository;
     }
 
     private void stopRoleRepository( RoleRepository roleRepository ) throws Exception

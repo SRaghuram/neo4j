@@ -7,12 +7,10 @@ package com.neo4j.internal.cypher.acceptance
 
 import java.io.File
 import java.lang.Boolean.TRUE
-import java.util
-import java.util.function.Supplier
 
 import com.neo4j.dbms.EnterpriseSystemGraphInitializer
 import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings
-import com.neo4j.server.security.enterprise.auth.{InMemoryRoleRepository, RoleRecord, RoleRepository}
+import com.neo4j.server.security.enterprise.auth.InMemoryRoleRepository
 import com.neo4j.server.security.enterprise.systemgraph._
 import org.neo4j.configuration.GraphDatabaseSettings.{DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME, default_database}
 import org.neo4j.configuration.{Config, GraphDatabaseSettings}
@@ -25,9 +23,8 @@ import org.neo4j.exceptions.{DatabaseAdministrationException, InvalidArgumentExc
 import org.neo4j.graphdb.DatabaseShutdownException
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.graphdb.security.AuthorizationViolationException
-import org.neo4j.kernel.impl.security.User
 import org.neo4j.logging.Log
-import org.neo4j.server.security.auth.{InMemoryUserRepository, ListSnapshot, UserRepository}
+import org.neo4j.server.security.auth.InMemoryUserRepository
 import org.scalatest.enablers.Messaging.messagingNatureOfThrowable
 
 import scala.collection.Map
@@ -1338,11 +1335,15 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
 
   private def initSystemGraph(config: Config): Unit = {
     val databaseManager = graph.getDependencyResolver.resolveDependency(classOf[DatabaseManager[DatabaseContext]])
-    val userSupplier: Supplier[UserRepository] = () => new InMemoryUserRepository
-    val roleSupplier: Supplier[RoleRepository] = () => new InMemoryRoleRepository
-    val importOptions = new SystemGraphImportOptions(userSupplier, roleSupplier, userSupplier, userSupplier)
     val systemGraphInitializer = new EnterpriseSystemGraphInitializer(databaseManager, config)
-    val securityGraphInitializer = new EnterpriseSecurityGraphInitializer(databaseManager, systemGraphInitializer, mock[Log], importOptions, new SecureHasher)
+    val securityGraphInitializer = new EnterpriseSecurityGraphInitializer(databaseManager,
+      systemGraphInitializer,
+      mock[Log],
+      new InMemoryUserRepository,
+      new InMemoryRoleRepository,
+      new InMemoryUserRepository,
+      new InMemoryUserRepository,
+      new SecureHasher)
     securityGraphInitializer.initializeSecurityGraph()
     selectDatabase(SYSTEM_DATABASE_NAME)
   }

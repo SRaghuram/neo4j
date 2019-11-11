@@ -6,6 +6,7 @@
 package com.neo4j.server.security.enterprise.systemgraph;
 
 import com.neo4j.dbms.EnterpriseSystemGraphInitializer;
+import com.neo4j.server.security.enterprise.auth.InMemoryRoleRepository;
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
@@ -26,6 +27,7 @@ import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.AssertableLogProvider;
+import org.neo4j.server.security.auth.InMemoryUserRepository;
 import org.neo4j.server.security.auth.RateLimitedAuthenticationStrategy;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
@@ -63,9 +65,10 @@ class SystemGraphCachingTest
         SecureHasher secureHasher = new SecureHasher();
 
         EnterpriseSystemGraphInitializer systemGraphInitializer = new EnterpriseSystemGraphInitializer( databaseManager, Config.defaults() );
-        SystemGraphImportOptions importOptions = new ImportOptionsBuilder().build();
         EnterpriseSecurityGraphInitializer securityGraphInitializer =
-                new EnterpriseSecurityGraphInitializer( databaseManager, systemGraphInitializer, securityLog, importOptions, secureHasher );
+                new EnterpriseSecurityGraphInitializer( databaseManager, systemGraphInitializer, securityLog, new InMemoryUserRepository(),
+                                                        new InMemoryRoleRepository(), new InMemoryUserRepository(), new InMemoryUserRepository(),
+                                                        secureHasher );
 
         realm = new TestCachingSystemGraphRealm( securityGraphInitializer, databaseManager, secureHasher,
                 new RateLimitedAuthenticationStrategy( Clock.systemUTC(), Config.defaults() ) );

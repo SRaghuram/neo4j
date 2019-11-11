@@ -24,7 +24,6 @@ import com.neo4j.server.security.enterprise.auth.plugin.spi.AuthorizationPlugin;
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphInitializer;
-import com.neo4j.server.security.enterprise.systemgraph.SystemGraphImportOptions;
 import com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealm;
 import org.apache.shiro.cache.CacheManager;
 import org.apache.shiro.realm.Realm;
@@ -38,7 +37,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import org.neo4j.commandline.admin.security.SetDefaultAdminCommand;
@@ -87,6 +85,7 @@ public class EnterpriseSecurityModule extends SecurityModule
     private SystemGraphInitializer systemGraphInitializer;
     private EnterpriseAuthManager authManager;
     private SecurityConfig securityConfig;
+    private SecureHasher secureHasher;
 
     public EnterpriseSecurityModule( LogProvider logProvider,
             Config config,
@@ -109,6 +108,7 @@ public class EnterpriseSecurityModule extends SecurityModule
     @Override
     public void setup()
     {
+        this.secureHasher = new SecureHasher();
         org.neo4j.collection.Dependencies platformDependencies = (org.neo4j.collection.Dependencies) dependencySatisfier;
         this.databaseManager = platformDependencies.resolveDependency( DatabaseManager.class );
         this.systemGraphInitializer = platformDependencies.resolveDependency( SystemGraphInitializer.class );
@@ -182,11 +182,8 @@ public class EnterpriseSecurityModule extends SecurityModule
 
         return Optional.of( database ->
         {
-            SecureHasher secureHasher = new SecureHasher();
-            SystemGraphImportOptions importOptions = configureImportOptions( config, logProvider, fileSystem );
-            EnterpriseSecurityGraphInitializer initializer =
-                    new EnterpriseSecurityGraphInitializer( databaseManager, systemGraphInitializer, log, importOptions,
-                            secureHasher );
+            Log log = logProvider.getLog( getClass() );
+            SecurityGraphInitializer initializer = createSecurityInitializer( log );
             try
             {
                 initializer.initializeSecurityGraph( database );
@@ -215,7 +212,7 @@ public class EnterpriseSecurityModule extends SecurityModule
         List<Realm> realms = new ArrayList<>( securityConfig.authProviders.size() + 1 );
         SecureHasher secureHasher = new SecureHasher();
 
-        SystemGraphRealm internalRealm = createSystemGraphRealm( config, logProvider, fileSystem, securityLog );
+        SystemGraphRealm internalRealm = createSystemGraphRealm( config, securityLog );
         realms.add( internalRealm );
 
         if ( securityConfig.hasLdapProvider )
@@ -264,13 +261,26 @@ public class EnterpriseSecurityModule extends SecurityModule
         return orderedActiveRealms;
     }
 
-    private SystemGraphRealm createSystemGraphRealm( Config config, LogProvider logProvider, FileSystemAbstraction fileSystem, SecurityLog securityLog )
+    private EnterpriseSecurityGraphInitializer createSecurityInitializer( Log log )
     {
-        SecureHasher secureHasher = new SecureHasher();
+        UserRepository migrationUserRepository = CommunitySecurityModule.getUserRepository( config, logProvider, fileSystem );
+        RoleRepository migrationRoleRepository = EnterpriseSecurityModule.getRoleRepository( config, logProvider, fileSystem );
+        UserRepository initialUserRepository = CommunitySecurityModule.getInitialUserRepository( config, logProvider, fileSystem );
+        UserRepository defaultAdminRepository = getDefaultAdminRepository( config, logProvider, fileSystem );
 
-        SecurityGraphInitializer securityGraphInitializer =
-                isClustered ? SecurityGraphInitializer.NO_OP : new EnterpriseSecurityGraphInitializer( databaseManager, systemGraphInitializer, securityLog,
-                        configureImportOptions( config, logProvider, fileSystem ), secureHasher );
+        return new EnterpriseSecurityGraphInitializer( databaseManager,
+                                                       systemGraphInitializer,
+                                                       log,
+                                                       migrationUserRepository,
+                                                       migrationRoleRepository,
+                                                       initialUserRepository,
+                                                       defaultAdminRepository,
+                                                       secureHasher );
+    }
+
+    private SystemGraphRealm createSystemGraphRealm( Config config, SecurityLog securityLog )
+    {
+        SecurityGraphInitializer securityGraphInitializer = isClustered ? SecurityGraphInitializer.NO_OP : createSecurityInitializer( securityLog );
 
         return new SystemGraphRealm(
                 securityGraphInitializer,
@@ -279,21 +289,6 @@ public class EnterpriseSecurityModule extends SecurityModule
                 CommunitySecurityModule.createAuthenticationStrategy( config ),
                 securityConfig.nativeAuthentication,
                 securityConfig.nativeAuthorization
-        );
-    }
-
-    private static SystemGraphImportOptions configureImportOptions( Config config, LogProvider logProvider, FileSystemAbstraction fileSystem )
-    {
-        Supplier<UserRepository> migrationUserRepositorySupplier = () -> CommunitySecurityModule.getUserRepository( config, logProvider, fileSystem );
-        Supplier<RoleRepository> migrationRoleRepositorySupplier = () -> EnterpriseSecurityModule.getRoleRepository( config, logProvider, fileSystem );
-        Supplier<UserRepository> initialUserRepositorySupplier = () -> CommunitySecurityModule.getInitialUserRepository( config, logProvider, fileSystem );
-        Supplier<UserRepository> defaultAdminRepositorySupplier = () -> getDefaultAdminRepository( config, logProvider, fileSystem );
-
-        return new SystemGraphImportOptions(
-                migrationUserRepositorySupplier,
-                migrationRoleRepositorySupplier,
-                initialUserRepositorySupplier,
-                defaultAdminRepositorySupplier
         );
     }
 
