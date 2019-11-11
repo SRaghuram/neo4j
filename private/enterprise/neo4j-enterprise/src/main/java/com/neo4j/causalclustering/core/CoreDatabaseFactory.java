@@ -9,12 +9,13 @@ import com.neo4j.causalclustering.SessionTracker;
 import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import com.neo4j.causalclustering.catchup.CatchupComponentsProvider;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
+import com.neo4j.causalclustering.common.DatabaseTopologyNotifier;
 import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
 import com.neo4j.causalclustering.core.consensus.LeaderLocator;
 import com.neo4j.causalclustering.core.consensus.RaftGroup;
 import com.neo4j.causalclustering.core.consensus.RaftGroupFactory;
-import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.RaftMessages.RaftMessage;
+import com.neo4j.causalclustering.core.consensus.RaftMessages.ReceivedInstantRaftIdAwareMessage;
 import com.neo4j.causalclustering.core.consensus.log.pruning.PruningScheduler;
 import com.neo4j.causalclustering.core.replication.ProgressTracker;
 import com.neo4j.causalclustering.core.replication.ProgressTrackerImpl;
@@ -25,7 +26,6 @@ import com.neo4j.causalclustering.core.replication.session.GlobalSessionTrackerS
 import com.neo4j.causalclustering.core.replication.session.LocalSessionPool;
 import com.neo4j.causalclustering.core.state.BootstrapContext;
 import com.neo4j.causalclustering.core.state.CommandApplicationProcess;
-import com.neo4j.causalclustering.core.state.CoreDatabaseLife;
 import com.neo4j.causalclustering.core.state.CoreEditionKernelComponents;
 import com.neo4j.causalclustering.core.state.CoreKernelResolvers;
 import com.neo4j.causalclustering.core.state.CoreSnapshotService;
@@ -56,7 +56,6 @@ import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.error_handling.DatabasePanicker;
 import com.neo4j.causalclustering.error_handling.PanicService;
-import com.neo4j.dbms.DatabaseStartAborter;
 import com.neo4j.causalclustering.helper.TemporaryDatabaseFactory;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftBinder;
@@ -75,6 +74,7 @@ import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 import com.neo4j.causalclustering.upstream.strategies.TypicallyConnectToRandomReadReplicaStrategy;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
 import com.neo4j.dbms.ClusterSystemGraphDbmsModel;
+import com.neo4j.dbms.DatabaseStartAborter;
 import com.neo4j.dbms.ReplicatedDatabaseEventService;
 import com.neo4j.dbms.ReplicatedDatabaseEventService.ReplicatedDatabaseEventDispatch;
 import com.neo4j.dbms.database.ClusteredDatabaseContext;
@@ -285,7 +285,7 @@ class CoreDatabaseFactory
                 leaseCoordinator );
     }
 
-    CoreDatabaseLife createDatabase( DatabaseId databaseId, LifeSupport life, Monitors monitors, Dependencies dependencies,
+    CoreDatabase createDatabase( DatabaseId databaseId, LifeSupport clusterComponents, Monitors monitors, Dependencies dependencies,
             StoreDownloadContext downloadContext, Database kernelDatabase, CoreEditionKernelComponents kernelComponents, CoreRaftContext raftContext,
             ClusterInternalDbmsOperator internalOperator, DatabaseStartAborter databaseStartAborter )
     {
@@ -293,19 +293,19 @@ class CoreDatabaseFactory
         RaftGroup raftGroup = raftContext.raftGroup();
         DatabaseLogProvider debugLog = kernelDatabase.getInternalLogProvider();
 
-        SessionTracker sessionTracker = createSessionTracker( databaseId, life, debugLog );
+        SessionTracker sessionTracker = createSessionTracker( databaseId, clusterComponents, debugLog );
 
-        StateStorage<Long> lastFlushedStateStorage = storageFactory.createLastFlushedStorage( databaseId.name(), life, debugLog );
+        StateStorage<Long> lastFlushedStateStorage = storageFactory.createLastFlushedStorage( databaseId.name(), clusterComponents, debugLog );
         CoreState coreState = new CoreState( sessionTracker, lastFlushedStateStorage, kernelComponents.stateMachines() );
 
-        CommandApplicationProcess commandApplicationProcess = createCommandApplicationProcess( raftGroup, panicker, config, life, jobScheduler, dependencies,
-                monitors, raftContext.progressTracker(), sessionTracker, coreState, debugLog );
+        CommandApplicationProcess applicationProcess = createCommandApplicationProcess( raftGroup, panicker, config, clusterComponents, jobScheduler,
+                dependencies, monitors, raftContext.progressTracker(), sessionTracker, coreState, debugLog );
 
-        CoreSnapshotService snapshotService = new CoreSnapshotService( commandApplicationProcess, raftGroup.raftLog(), coreState,
+        CoreSnapshotService snapshotService = new CoreSnapshotService( applicationProcess, raftGroup.raftLog(), coreState,
                 raftGroup.raftMachine(), databaseId );
         dependencies.satisfyDependencies( snapshotService );
 
-        CoreDownloaderService downloadService = createDownloader( catchupComponentsProvider, panicker, jobScheduler, monitors, commandApplicationProcess,
+        CoreDownloaderService downloadService = createDownloader( catchupComponentsProvider, panicker, jobScheduler, monitors, applicationProcess,
                 snapshotService, downloadContext, debugLog );
 
         TypicallyConnectToRandomReadReplicaStrategy defaultStrategy = new TypicallyConnectToRandomReadReplicaStrategy( 2 );
@@ -324,11 +324,18 @@ class CoreDatabaseFactory
         RaftMessageHandlerChainFactory raftMessageHandlerChainFactory = new RaftMessageHandlerChainFactory( jobScheduler, clock, debugLog, monitors, config,
                 raftMessageDispatcher, catchupAddressProvider, panicker );
 
-        LifecycleMessageHandler<RaftMessages.ReceivedInstantRaftIdAwareMessage<?>> messageHandler = raftMessageHandlerChainFactory.createMessageHandlerChain(
-                raftGroup, downloadService, commandApplicationProcess );
+        LifecycleMessageHandler<ReceivedInstantRaftIdAwareMessage<?>> messageHandler = raftMessageHandlerChainFactory.createMessageHandlerChain(
+                raftGroup, downloadService, applicationProcess );
 
-        return new CoreDatabaseLife( raftGroup.raftMachine(), kernelDatabase, raftContext.raftBinder(), commandApplicationProcess, messageHandler,
-                snapshotService, downloadService, recoveryFacade, life, internalOperator, topologyService, panicService, databaseStartAborter );
+        DatabaseTopologyNotifier topologyNotifier = new DatabaseTopologyNotifier( databaseId, topologyService );
+
+        CorePanicHandlers panicHandler = new CorePanicHandlers( raftGroup.raftMachine(), kernelDatabase, applicationProcess, internalOperator, panicService );
+
+        CoreBootstrap bootstrap = new CoreBootstrap( kernelDatabase, raftContext.raftBinder(), messageHandler, snapshotService, downloadService,
+                internalOperator, databaseStartAborter );
+
+        return new CoreDatabase( raftGroup.raftMachine(), kernelDatabase, applicationProcess, messageHandler, downloadService, recoveryFacade,
+                clusterComponents, panicHandler, bootstrap, topologyNotifier );
     }
 
     private RaftBinder createRaftBinder( DatabaseId databaseId, Config config, Monitors monitors, ClusterStateStorageFactory storageFactory,

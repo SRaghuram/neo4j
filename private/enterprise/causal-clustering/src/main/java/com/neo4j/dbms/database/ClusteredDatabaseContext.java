@@ -6,7 +6,7 @@
 package com.neo4j.dbms.database;
 
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository.CatchupComponents;
-import com.neo4j.causalclustering.common.ClusteredDatabaseLife;
+import com.neo4j.causalclustering.common.ClusteredDatabase;
 import com.neo4j.causalclustering.core.consensus.RaftMachine;
 
 import java.io.File;
@@ -79,5 +79,5 @@ public interface ClusteredDatabaseContext extends DatabaseContext
      * clustered database instance, including the {@link RaftMachine} and kernel {@link Database}
      * @return lifecycle controller for this database and its supporting lifecycled components
      */
-    ClusteredDatabaseLife clusteredDatabaseLife();
+    ClusteredDatabase clusteredDatabase();
 }

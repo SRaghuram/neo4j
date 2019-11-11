@@ -55,7 +55,7 @@ public final class CoreDatabaseManager extends ClusteredMultiDatabaseManager
     @Override
     protected ClusteredDatabaseContext createDatabaseContext( DatabaseId databaseId )
     {
-        LifeSupport clusteredComponentsLife = new LifeSupport();
+        LifeSupport clusterComponents = new LifeSupport();
         Dependencies coreDatabaseDependencies = new Dependencies( globalModule.getGlobalDependencies() );
         DatabaseLogService coreDatabaseLogService = new DatabaseLogService( new DatabaseNameLogContext( databaseId ), globalModule.getLogService() );
         Monitors coreDatabaseMonitors = ClusterMonitors.create( globalModule.getGlobalMonitors(), coreDatabaseDependencies );
@@ -65,14 +65,14 @@ public final class CoreDatabaseManager extends ClusteredMultiDatabaseManager
         LogFiles transactionLogs = buildTransactionLogs( databaseLayout );
 
         BootstrapContext bootstrapContext = new BootstrapContext( databaseId, databaseLayout, storeFiles, transactionLogs );
-        CoreRaftContext raftContext = edition.coreDatabaseFactory().createRaftContext( databaseId, clusteredComponentsLife,
+        CoreRaftContext raftContext = edition.coreDatabaseFactory().createRaftContext( databaseId, clusterComponents,
                 coreDatabaseMonitors, coreDatabaseDependencies, bootstrapContext, coreDatabaseLogService, dbmsModel() );
 
         var databaseConfig = new DatabaseConfig( config, databaseId );
         var versionContextSupplier = createVersionContextSupplier( databaseConfig );
         var kernelResolvers = new CoreKernelResolvers();
         var kernelContext = edition.coreDatabaseFactory()
-                .createKernelComponents( databaseId, clusteredComponentsLife, raftContext, kernelResolvers,
+                .createKernelComponents( databaseId, clusterComponents, raftContext, kernelResolvers,
                         coreDatabaseLogService, versionContextSupplier );
 
         var databaseCreationContext = newDatabaseCreationContext( databaseId, coreDatabaseDependencies,
@@ -81,7 +81,7 @@ public final class CoreDatabaseManager extends ClusteredMultiDatabaseManager
 
         var downloadContext = new StoreDownloadContext( kernelDatabase, storeFiles, transactionLogs, internalDbmsOperator() );
 
-        var coreDatabase = edition.coreDatabaseFactory().createDatabase( databaseId, clusteredComponentsLife, coreDatabaseMonitors, coreDatabaseDependencies,
+        var coreDatabase = edition.coreDatabaseFactory().createDatabase( databaseId, clusterComponents, coreDatabaseMonitors, coreDatabaseDependencies,
                 downloadContext, kernelDatabase, kernelContext, raftContext, internalDbmsOperator(), getDatabaseStartAborter() );
 
         var ctx = contextFactory.create( kernelDatabase, kernelDatabase.getDatabaseFacade(), transactionLogs,

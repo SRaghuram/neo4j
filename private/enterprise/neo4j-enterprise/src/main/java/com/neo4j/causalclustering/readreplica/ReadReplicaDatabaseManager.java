@@ -53,8 +53,8 @@ public class ReadReplicaDatabaseManager extends ClusteredMultiDatabaseManager
         ReadReplicaDatabaseContext databaseContext = new ReadReplicaDatabaseContext( kernelDatabase, readReplicaMonitors, readReplicaDependencies, storeFiles,
                 transactionLogs, internalDbmsOperator() );
 
-        ReadReplicaDatabaseLife readReplicaDatabase = edition.readReplicaDatabaseFactory()
-                .createDatabase( databaseContext, internalDbmsOperator(), getDatabaseStartAborter() );
+        ReadReplicaDatabase readReplicaDatabase = edition.readReplicaDatabaseFactory().createDatabase(
+                databaseContext, internalDbmsOperator(), getDatabaseStartAborter() );
 
         return contextFactory.create( kernelDatabase, kernelDatabase.getDatabaseFacade(), transactionLogs, storeFiles, logProvider, catchupComponentsFactory,
                 readReplicaDatabase, readReplicaMonitors );

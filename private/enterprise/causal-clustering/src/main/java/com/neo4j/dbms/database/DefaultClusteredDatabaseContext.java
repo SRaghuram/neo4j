@@ -8,7 +8,7 @@ package com.neo4j.dbms.database;
 import com.neo4j.causalclustering.catchup.CatchupComponentsFactory;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository.CatchupComponents;
 import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
-import com.neo4j.causalclustering.common.ClusteredDatabaseLife;
+import com.neo4j.causalclustering.common.ClusteredDatabase;
 
 import java.io.File;
 import java.io.IOException;
@@ -43,13 +43,13 @@ public class DefaultClusteredDatabaseContext implements ClusteredDatabaseContext
     private final GraphDatabaseFacade facade;
     private volatile Throwable failureCause;
     private final CatchupComponents catchupComponents;
-    private final ClusteredDatabaseLife clusterDatabaseLife;
+    private final ClusteredDatabase clusterDatabase;
     private final Monitors clusterDatabaseMonitors;
 
     private volatile StoreId storeId;
 
     DefaultClusteredDatabaseContext( Database database, GraphDatabaseFacade facade, LogFiles txLogs, StoreFiles storeFiles, LogProvider logProvider,
-            CatchupComponentsFactory catchupComponentsFactory, ClusteredDatabaseLife clusterDatabaseLife, Monitors clusterDatabaseMonitors )
+            CatchupComponentsFactory catchupComponentsFactory, ClusteredDatabase clusterDatabase, Monitors clusterDatabaseMonitors )
     {
         this.database = database;
         this.facade = facade;
@@ -58,7 +58,7 @@ public class DefaultClusteredDatabaseContext implements ClusteredDatabaseContext
         this.txLogs = txLogs;
         this.databaseId = database.getDatabaseId();
         this.log = logProvider.getLog( getClass() );
-        this.clusterDatabaseLife = clusterDatabaseLife;
+        this.clusterDatabase = clusterDatabase;
         this.clusterDatabaseMonitors = clusterDatabaseMonitors;
         this.catchupComponents = catchupComponentsFactory.createDatabaseComponents( this );
     }
@@ -188,8 +188,8 @@ public class DefaultClusteredDatabaseContext implements ClusteredDatabaseContext
     }
 
     @Override
-    public ClusteredDatabaseLife clusteredDatabaseLife()
+    public ClusteredDatabase clusteredDatabase()
     {
-        return clusterDatabaseLife;
+        return clusterDatabase;
     }
 }

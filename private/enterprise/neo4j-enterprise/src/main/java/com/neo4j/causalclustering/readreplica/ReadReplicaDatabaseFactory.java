@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.readreplica;
 import com.neo4j.causalclustering.catchup.CatchupClientFactory;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository;
 import com.neo4j.causalclustering.catchup.CatchupComponentsRepository.CatchupComponents;
+import com.neo4j.causalclustering.common.DatabaseTopologyNotifier;
 import com.neo4j.causalclustering.common.state.ClusterStateStorageFactory;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.consensus.schedule.TimerService;
@@ -33,6 +34,7 @@ import java.util.function.Supplier;
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
+import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.LogProvider;
@@ -77,18 +79,19 @@ class ReadReplicaDatabaseFactory
         this.clusterStateFactory = clusterStateFactory;
     }
 
-    ReadReplicaDatabaseLife createDatabase( ReadReplicaDatabaseContext databaseContext, ClusterInternalDbmsOperator clusterInternalOperator,
+    ReadReplicaDatabase createDatabase( ReadReplicaDatabaseContext databaseContext, ClusterInternalDbmsOperator clusterInternalOperator,
             DatabaseStartAborter databaseStartAborter )
     {
         DatabaseId databaseId = databaseContext.databaseId();
-        DatabaseLogService databaseLogService = databaseContext.database().getLogService();
+        Database kernelDatabase = databaseContext.database();
+        DatabaseLogService databaseLogService = kernelDatabase.getLogService();
         DatabaseLogProvider internalLogProvider = databaseLogService.getInternalLogProvider();
         DatabaseLogProvider userLogProvider = databaseLogService.getUserLogProvider();
 
-        LifeSupport life = new LifeSupport();
+        LifeSupport clusterComponents = new LifeSupport();
         Executor catchupExecutor = jobScheduler.executor( Group.CATCHUP_CLIENT );
         CommandIndexTracker commandIndexTracker = databaseContext.dependencies().satisfyDependency( new CommandIndexTracker() );
-        initialiseStatusDescriptionEndpoint( commandIndexTracker, life, databaseContext.dependencies(), internalLogProvider );
+        initialiseStatusDescriptionEndpoint( commandIndexTracker, clusterComponents, databaseContext.dependencies(), internalLogProvider );
 
         TimerService timerService = new TimerService( jobScheduler, internalLogProvider );
         ConnectToRandomCoreServerStrategy defaultStrategy = new ConnectToRandomCoreServerStrategy();
@@ -98,7 +101,7 @@ class ReadReplicaDatabaseFactory
 
         DatabasePanicker panicker = panicService.panickerFor( databaseId );
         ReplicatedDatabaseEventDispatch databaseEventDispatch = databaseEventService.getDatabaseEventDispatch( databaseId );
-        CatchupProcessManager catchupProcessManager = new CatchupProcessManager( catchupExecutor, catchupComponentsRepository, databaseContext, panicker,
+        CatchupProcessManager catchupProcess = new CatchupProcessManager( catchupExecutor, catchupComponentsRepository, databaseContext, panicker,
                 topologyService, catchupClientFactory, upstreamDatabaseStrategySelector, timerService, commandIndexTracker, internalLogProvider,
                 pageCursorTracerSupplier, config, databaseEventDispatch );
 
@@ -108,8 +111,16 @@ class ReadReplicaDatabaseFactory
         Supplier<CatchupComponents> catchupComponentsSupplier = () -> catchupComponentsRepository.componentsFor( databaseId ).orElseThrow(
                 () -> new IllegalStateException( format( "No per database catchup components exist for database %s.", databaseId.name() ) ) );
 
-        return new ReadReplicaDatabaseLife( databaseContext, catchupProcessManager, upstreamDatabaseStrategySelector, internalLogProvider, userLogProvider,
-                topologyService, catchupComponentsSupplier, life, clusterInternalOperator, raftIdStorage, panicService, databaseStartAborter );
+        ReadReplicaBootstrap bootstrap = new ReadReplicaBootstrap( databaseContext, upstreamDatabaseStrategySelector, internalLogProvider,
+                userLogProvider, topologyService, catchupComponentsSupplier, clusterInternalOperator, databaseStartAborter );
+
+        RaftIdCheck raftIdCheck = new RaftIdCheck( raftIdStorage, databaseId );
+
+        DatabaseTopologyNotifier topologyNotifier = new DatabaseTopologyNotifier( databaseId, topologyService );
+
+        ReadReplicaPanicHandlers panicHandler = new ReadReplicaPanicHandlers( panicService, kernelDatabase, clusterInternalOperator );
+
+        return new ReadReplicaDatabase( catchupProcess, kernelDatabase, clusterComponents, bootstrap, panicHandler, raftIdCheck, topologyNotifier );
     }
 
     private UpstreamDatabaseStrategySelector createUpstreamDatabaseStrategySelector( MemberId myself, Config config, LogProvider logProvider,

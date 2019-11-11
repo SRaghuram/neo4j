@@ -18,10 +18,8 @@ import com.neo4j.causalclustering.error_handling.DatabasePanicker;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 import com.neo4j.dbms.ReplicatedDatabaseEventService.ReplicatedDatabaseEventDispatch;
 
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 
 import org.neo4j.configuration.Config;
@@ -40,7 +38,6 @@ import org.neo4j.util.VisibleForTesting;
 
 import static com.neo4j.causalclustering.core.consensus.schedule.TimeoutFactory.fixedTimeout;
 import static com.neo4j.causalclustering.readreplica.CatchupProcessManager.Timers.TX_PULLER_TIMER;
-import static java.util.concurrent.TimeUnit.MINUTES;
 
 /**
  * This class is responsible for aggregating a number of {@link CatchupPollingProcess} instances and pulling transactions for

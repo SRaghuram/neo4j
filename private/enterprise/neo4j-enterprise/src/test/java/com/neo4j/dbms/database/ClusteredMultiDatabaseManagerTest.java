@@ -5,7 +5,7 @@
  */
 package com.neo4j.dbms.database;
 
-import com.neo4j.causalclustering.common.ClusteredDatabaseLife;
+import com.neo4j.causalclustering.common.ClusteredDatabase;
 import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
@@ -23,19 +23,19 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
+import static org.neo4j.kernel.lifecycle.LifecycleAdapter.simpleLife;
 
 class ClusteredMultiDatabaseManagerTest
 {
-
     @Test
-    void shouldRecreateDatabaseContextOnRestart() throws Exception
+    void shouldRecreateDatabaseContextOnRestart()
     {
         // given
         DatabaseId dbId = TestDatabaseIdRepository.randomDatabaseId();
         StubClusteredMultiDatabaseManager manager = new StubClusteredMultiDatabaseManager();
         ClusteredDatabaseContext ctx = manager.createDatabaseContext( dbId );
 
-        StubClusteredDatabaseLife dbLife = (StubClusteredDatabaseLife) ctx.clusteredDatabaseLife();
+        StubClusteredDatabase dbLife = (StubClusteredDatabase) ctx.clusteredDatabase();
 
         // when
         manager.testStartDatabase( dbId, ctx );
@@ -49,7 +49,7 @@ class ClusteredMultiDatabaseManagerTest
         assertEquals( ctx.databaseId(), dbId, "The new context should have the same database Id" );
     }
 
-    private class StubClusteredMultiDatabaseManager extends ClusteredMultiDatabaseManager
+    private static class StubClusteredMultiDatabaseManager extends ClusteredMultiDatabaseManager
     {
         private ClusteredDatabaseContext context;
 
@@ -59,7 +59,7 @@ class ClusteredMultiDatabaseManagerTest
                     NullLogProvider.getInstance(), Config.defaults(), null );
         }
 
-        void testStartDatabase( DatabaseId databaseId, ClusteredDatabaseContext databaseContext ) throws Exception
+        void testStartDatabase( DatabaseId databaseId, ClusteredDatabaseContext databaseContext )
         {
             super.startDatabase( databaseId, databaseContext );
         }
@@ -75,8 +75,8 @@ class ClusteredMultiDatabaseManagerTest
             var dbCtx = mock( ClusteredDatabaseContext.class );
             when( dbCtx.databaseId() ).thenReturn( databaseId );
             StartStop startStopTracker = mock( StartStop.class );
-            ClusteredDatabaseLife dbLife = new StubClusteredDatabaseLife( startStopTracker );
-            when( dbCtx.clusteredDatabaseLife() ).thenReturn( dbLife );
+            ClusteredDatabase dbLife = new StubClusteredDatabase( startStopTracker );
+            when( dbCtx.clusteredDatabase() ).thenReturn( dbLife );
             context = dbCtx;
             return dbCtx;
         }
@@ -104,25 +104,14 @@ class ClusteredMultiDatabaseManagerTest
         }
     }
 
-    private class StubClusteredDatabaseLife extends ClusteredDatabaseLife
+    private static class StubClusteredDatabase extends ClusteredDatabase
     {
         private final StartStop startStopTracker;
 
-        StubClusteredDatabaseLife( StartStop startStopTracker )
+        StubClusteredDatabase( StartStop startStopTracker )
         {
             this.startStopTracker = startStopTracker;
-        }
-
-        @Override
-        protected void start0()
-        {
-            startStopTracker.start();
-        }
-
-        @Override
-        protected void stop0()
-        {
-            startStopTracker.stop();
+            addComponent( simpleLife( startStopTracker::start, startStopTracker::stop ) );
         }
     }
 

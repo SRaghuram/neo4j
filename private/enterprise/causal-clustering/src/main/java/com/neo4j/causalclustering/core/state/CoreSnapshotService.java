@@ -70,7 +70,7 @@ public class CoreSnapshotService
         notifyAll();
     }
 
-    synchronized void awaitState( DatabaseStartAborter startAborter ) throws InterruptedException, DatabaseStartAbortedException
+    public synchronized void awaitState( DatabaseStartAborter startAborter ) throws InterruptedException, DatabaseStartAbortedException
     {
         while ( raftMachine.state().appendIndex() < 0 )
         {

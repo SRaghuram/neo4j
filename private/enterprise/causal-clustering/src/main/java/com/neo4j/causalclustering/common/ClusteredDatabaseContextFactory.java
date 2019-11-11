@@ -19,5 +19,5 @@ import org.neo4j.monitoring.Monitors;
 public interface ClusteredDatabaseContextFactory
 {
     ClusteredDatabaseContext create( Database database, GraphDatabaseFacade facade, LogFiles txLogs, StoreFiles storeFiles,
-            LogProvider logProvider, CatchupComponentsFactory factory, ClusteredDatabaseLife clusterDatabaseLife, Monitors clusterDatabaseMonitors );
+            LogProvider logProvider, CatchupComponentsFactory factory, ClusteredDatabase clusterDatabase, Monitors clusterDatabaseMonitors );
 }
