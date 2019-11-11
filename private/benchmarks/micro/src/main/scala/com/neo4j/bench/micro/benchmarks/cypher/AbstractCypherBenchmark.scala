@@ -223,7 +223,7 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
 
   private def newQueryContext(tx: InternalTransaction): QueryContext = {
     val searchMonitor: IndexSearchMonitor = kernelMonitors.newMonitor(classOf[IndexSearchMonitor])
-    new TransactionBoundQueryContext(transactionalContextWrapper(txContext(tx)))(searchMonitor)
+    new TransactionBoundQueryContext(transactionalContextWrapper(txContext(tx)), trackResourcesInTransaction = false)(searchMonitor)
   }
 
   private def jobScheduler = dependencyResolver.resolveDependency(classOf[JobScheduler])
