@@ -174,22 +174,19 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
         String newAdmin = null;
 
         // Try to determine who should be admin, by first checking the outcome of the SetDefaultAdmin command
-        if ( defaultAdminRepository != null ) // TODO should not be able to be null
+        startUserRepository( defaultAdminRepository );
+        final int numberOfDefaultAdmins = defaultAdminRepository.numberOfUsers();
+        if ( numberOfDefaultAdmins > 1 )
         {
-            startUserRepository( defaultAdminRepository );
-            final int numberOfDefaultAdmins = defaultAdminRepository.numberOfUsers();
-            if ( numberOfDefaultAdmins > 1 )
-            {
-                throw new InvalidArgumentsException( "No roles defined, and multiple users defined as default admin user. " + "Please use " +
-                        "`neo4j-admin set-default-admin` to select a valid admin." );
-            }
-            else if ( numberOfDefaultAdmins == 1 )
-            {
-                newAdmin = defaultAdminRepository.getAllUsernames().iterator().next();
-            }
-
-            stopUserRepository( defaultAdminRepository );
+            throw new InvalidArgumentsException( "No roles defined, and multiple users defined as default admin user. " + "Please use " +
+                    "`neo4j-admin set-default-admin` to select a valid admin." );
         }
+        else if ( numberOfDefaultAdmins == 1 )
+        {
+            newAdmin = defaultAdminRepository.getAllUsernames().iterator().next();
+        }
+
+        stopUserRepository( defaultAdminRepository );
 
         if ( newAdmin != null )
         {

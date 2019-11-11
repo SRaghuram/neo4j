@@ -193,7 +193,6 @@ class SystemGraphRealmIT
         assertAuthenticationFails( realm, INITIAL_USER_NAME, "bar" );
     }
 
-    // In alignment with InternalFlatFileRealm we prevent this case (the set initial password admin tool currently does not allow it anyways)
     @Test
     void shouldThrowOnBrokenInitialUsersFile() throws Throwable
     {
@@ -201,7 +200,7 @@ class SystemGraphRealmIT
         initialPassword.create( createUser( "jane", "foo", false ) );
 
         // Then
-        SecurityException wrongUsernameException = assertThrows( SecurityException.class, this::startSystemGraphRealm );
+        IllegalStateException wrongUsernameException = assertThrows( IllegalStateException.class, this::startSystemGraphRealm );
         String wrongUsernameErrorMessage = "Invalid `auth.ini` file: the user in the file is not named " + INITIAL_USER_NAME;
         assertThat( wrongUsernameException.getMessage(), equalTo( wrongUsernameErrorMessage ) );
         logProvider.assertAtLeastOnce( inLog( this.getClass() ).error( containsString( wrongUsernameErrorMessage ) ) );
@@ -215,7 +214,7 @@ class SystemGraphRealmIT
         initialPassword.create( createUser( INITIAL_USER_NAME, "foo", false ) );
 
         // Then
-        SecurityException multipleUsersErrorException = assertThrows( SecurityException.class, this::startSystemGraphRealm );
+        IllegalStateException multipleUsersErrorException = assertThrows( IllegalStateException.class, this::startSystemGraphRealm );
         String multipleUsersErrorMessage = "Invalid `auth.ini` file: the file contains more than one user";
         assertThat( multipleUsersErrorException.getMessage(), equalTo(  multipleUsersErrorMessage) );
         logProvider.assertAtLeastOnce( inLog( this.getClass() ).error( containsString( multipleUsersErrorMessage ) ) );
