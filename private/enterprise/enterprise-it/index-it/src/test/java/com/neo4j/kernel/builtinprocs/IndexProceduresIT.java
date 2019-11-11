@@ -29,7 +29,7 @@ import org.neo4j.graphdb.schema.AnalyzerProvider;
 import org.neo4j.graphdb.schema.ConstraintDefinition;
 import org.neo4j.graphdb.schema.ConstraintType;
 import org.neo4j.graphdb.schema.IndexDefinition;
-import org.neo4j.graphdb.schema.IndexSetting;
+import org.neo4j.graphdb.schema.IndexSettingImpl;
 import org.neo4j.graphdb.schema.IndexType;
 import org.neo4j.internal.helpers.Exceptions;
 import org.neo4j.internal.helpers.collection.Iterables;
@@ -155,9 +155,9 @@ class IndexProceduresIT
         assertNoSchemaRules();
 
         // When creating index / constraint with config
-        Map<IndexSetting,Object> expectedIndexConfiguration = new HashMap<>();
-        expectedIndexConfiguration.put( IndexSetting.SPATIAL_WGS84_MAX, new double[]{90.0, 90.0} );
-        expectedIndexConfiguration.put( IndexSetting.SPATIAL_CARTESIAN_MIN, new double[]{-45.0, -45.0} );
+        Map<IndexSettingImpl,Object> expectedIndexConfiguration = new HashMap<>();
+        expectedIndexConfiguration.put( IndexSettingImpl.SPATIAL_WGS84_MAX, new double[]{90.0, 90.0} );
+        expectedIndexConfiguration.put( IndexSettingImpl.SPATIAL_CARTESIAN_MIN, new double[]{-45.0, -45.0} );
         try ( Transaction tx = db.beginTx() )
         {
             String configString = asConfigString( expectedIndexConfiguration );
@@ -175,13 +175,13 @@ class IndexProceduresIT
             assertEquals( "some name", index.getName() );
             assertEquals( label, single( index.getLabels() ) );
             assertEquals( prop, single( index.getPropertyKeys() ) );
-            final Map<IndexSetting,Object> actualIndexConfiguration = index.getIndexConfiguration();
+            final Map<IndexSettingImpl,Object> actualIndexConfiguration = index.getIndexConfiguration();
             assertArrayEquals(
-                    (double[]) expectedIndexConfiguration.get( IndexSetting.SPATIAL_WGS84_MAX ),
-                    (double[]) actualIndexConfiguration.get( IndexSetting.SPATIAL_WGS84_MAX ) );
+                    (double[]) expectedIndexConfiguration.get( IndexSettingImpl.SPATIAL_WGS84_MAX ),
+                    (double[]) actualIndexConfiguration.get( IndexSettingImpl.SPATIAL_WGS84_MAX ) );
             assertArrayEquals(
-                    (double[]) expectedIndexConfiguration.get( IndexSetting.SPATIAL_CARTESIAN_MIN ),
-                    (double[]) actualIndexConfiguration.get( IndexSetting.SPATIAL_CARTESIAN_MIN ) );
+                    (double[]) expectedIndexConfiguration.get( IndexSettingImpl.SPATIAL_CARTESIAN_MIN ),
+                    (double[]) actualIndexConfiguration.get( IndexSettingImpl.SPATIAL_CARTESIAN_MIN ) );
             tx.commit();
         }
     }
@@ -209,8 +209,8 @@ class IndexProceduresIT
     {
         try ( Transaction tx = db.beginTx() )
         {
-            Map<IndexSetting,Object> config = new HashMap<>();
-            config.put( IndexSetting.SPATIAL_WGS84_MAX, "'not_applicable_type'" );
+            Map<IndexSettingImpl,Object> config = new HashMap<>();
+            config.put( IndexSettingImpl.SPATIAL_WGS84_MAX, "'not_applicable_type'" );
             final String configString = asConfigString( config );
             final QueryExecutionException e =
                     assertThrows( QueryExecutionException.class, () -> tx.execute( createSchemaProcedureCall( procedure, "some name", configString ) ) );
@@ -227,8 +227,8 @@ class IndexProceduresIT
     {
         try ( Transaction tx = db.beginTx() )
         {
-            Map<IndexSetting,Object> config = new HashMap<>();
-            config.put( IndexSetting.SPATIAL_WGS84_MAX, null );
+            Map<IndexSettingImpl,Object> config = new HashMap<>();
+            config.put( IndexSettingImpl.SPATIAL_WGS84_MAX, null );
             final String configString = asConfigString( config );
             final QueryExecutionException e =
                     assertThrows( QueryExecutionException.class, () -> tx.execute( createSchemaProcedureCall( procedure, "some name", configString ) ) );
@@ -497,12 +497,12 @@ class IndexProceduresIT
 
     private static void assertEqualConfig( UnboundIndexDefinition expected, UnboundIndexDefinition actual )
     {
-        final Map<IndexSetting,Object> expectedConfig = expected.config;
-        final Map<IndexSetting,Object> actualConfig = actual.config;
+        final Map<IndexSettingImpl,Object> expectedConfig = expected.config;
+        final Map<IndexSettingImpl,Object> actualConfig = actual.config;
         assertEquals( expectedConfig.size(), actualConfig.size() );
-        for ( Map.Entry<IndexSetting,Object> expectedEntry : expectedConfig.entrySet() )
+        for ( Map.Entry<IndexSettingImpl,Object> expectedEntry : expectedConfig.entrySet() )
         {
-            final IndexSetting key = expectedEntry.getKey();
+            final IndexSettingImpl key = expectedEntry.getKey();
             final Object expectedValue = expectedEntry.getValue();
             final Object actualValue = actualConfig.get( key );
             assertNotNull( actualValue );
@@ -527,11 +527,11 @@ class IndexProceduresIT
         return (String) schemaStatementResult.get( "dropStatement" );
     }
 
-    private Map<IndexSetting,Object> randomFulltextSettings()
+    private Map<IndexSettingImpl,Object> randomFulltextSettings()
     {
-        Map<IndexSetting,Object> indexConfiguration = new HashMap<>();
-        indexConfiguration.put( IndexSetting.FULLTEXT_EVENTUALLY_CONSISTENT, random.nextBoolean() );
-        indexConfiguration.put( IndexSetting.FULLTEXT_ANALYZER, randomAnalyzer() );
+        Map<IndexSettingImpl,Object> indexConfiguration = new HashMap<>();
+        indexConfiguration.put( IndexSettingImpl.FULLTEXT_EVENTUALLY_CONSISTENT, random.nextBoolean() );
+        indexConfiguration.put( IndexSettingImpl.FULLTEXT_ANALYZER, randomAnalyzer() );
         return indexConfiguration;
     }
 
@@ -541,10 +541,10 @@ class IndexProceduresIT
         return random.randomValues().among( analyzers ).getName();
     }
 
-    private Map<IndexSetting,Object> randomBtreeSettings()
+    private Map<IndexSettingImpl,Object> randomBtreeSettings()
     {
-        Map<IndexSetting,Object> indexConfiguration = new HashMap<>();
-        for ( IndexSetting indexSetting : IndexSetting.values() )
+        Map<IndexSettingImpl,Object> indexConfiguration = new HashMap<>();
+        for ( IndexSettingImpl indexSetting : IndexSettingImpl.values() )
         {
             if ( indexSetting.getSettingName().startsWith( "spatial" ) )
             {
@@ -554,7 +554,7 @@ class IndexProceduresIT
         return indexConfiguration;
     }
 
-    private double[] randomSpatialValue( IndexSetting indexSetting )
+    private double[] randomSpatialValue( IndexSettingImpl indexSetting )
     {
         switch ( indexSetting )
         {
@@ -661,10 +661,10 @@ class IndexProceduresIT
         }
     }
 
-    private static String asConfigString( Map<IndexSetting,Object> indexConfiguration )
+    private static String asConfigString( Map<IndexSettingImpl,Object> indexConfiguration )
     {
         StringJoiner joiner = new StringJoiner( ", ", "{", "}" );
-        for ( Map.Entry<IndexSetting,Object> entry : indexConfiguration.entrySet() )
+        for ( Map.Entry<IndexSettingImpl,Object> entry : indexConfiguration.entrySet() )
         {
             String valueString;
             final Object value = entry.getValue();
@@ -717,7 +717,7 @@ class IndexProceduresIT
         private final IndexType indexType;
         private final boolean isNodeIndex;
         private final boolean isRelationshipIndex;
-        private final Map<IndexSetting,Object> config;
+        private final Map<IndexSettingImpl,Object> config;
 
         private UnboundIndexDefinition( IndexDefinition indexDefinition )
         {

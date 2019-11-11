@@ -24,7 +24,7 @@ import org.neo4j.graphdb.schema.ConstraintCreator;
 import org.neo4j.graphdb.schema.ConstraintDefinition;
 import org.neo4j.graphdb.schema.ConstraintType;
 import org.neo4j.graphdb.schema.IndexDefinition;
-import org.neo4j.graphdb.schema.IndexSetting;
+import org.neo4j.graphdb.schema.IndexSettingImpl;
 import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.kernel.api.exceptions.schema.AlreadyConstrainedException;
 import org.neo4j.kernel.api.exceptions.schema.AlreadyIndexedException;
@@ -488,21 +488,21 @@ class SchemaAcceptanceEnterpriseTest extends SchemaAcceptanceTestBase
         {
             ConstraintDefinition constraint = tx.schema().constraintFor( label ).withName( "my constraint" ).assertPropertyIsNodeKey( propertyKey )
                     .withIndexConfiguration( Map.of(
-                            IndexSetting.SPATIAL_WGS84_MIN, new double[] {-45, -45},
-                            IndexSetting.SPATIAL_CARTESIAN_MAX, new double[] {200.0, 200.0} ) )
+                            IndexSettingImpl.SPATIAL_WGS84_MIN, new double[] {-45, -45},
+                            IndexSettingImpl.SPATIAL_CARTESIAN_MAX, new double[] {200.0, 200.0} ) )
                     .create();
             IndexDefinition index = tx.schema().getIndexByName( constraint.getName() );
-            Map<IndexSetting,Object> config = index.getIndexConfiguration();
-            assertArrayEquals( new double[] {-45, -45}, (double[]) config.get( IndexSetting.SPATIAL_WGS84_MIN ) );
-            assertArrayEquals( new double[] {200.0, 200.0}, (double[]) config.get( IndexSetting.SPATIAL_CARTESIAN_MAX ) );
+            Map<IndexSettingImpl,Object> config = index.getIndexConfiguration();
+            assertArrayEquals( new double[] {-45, -45}, (double[]) config.get( IndexSettingImpl.SPATIAL_WGS84_MIN ) );
+            assertArrayEquals( new double[] {200.0, 200.0}, (double[]) config.get( IndexSettingImpl.SPATIAL_CARTESIAN_MAX ) );
             tx.commit();
         }
         try ( Transaction tx = db.beginTx() )
         {
             IndexDefinition index = tx.schema().getIndexByName( "my constraint" );
-            Map<IndexSetting,Object> config = index.getIndexConfiguration();
-            assertArrayEquals( new double[] {-45, -45}, (double[]) config.get( IndexSetting.SPATIAL_WGS84_MIN ) );
-            assertArrayEquals( new double[] {200.0, 200.0}, (double[]) config.get( IndexSetting.SPATIAL_CARTESIAN_MAX ) );
+            Map<IndexSettingImpl,Object> config = index.getIndexConfiguration();
+            assertArrayEquals( new double[] {-45, -45}, (double[]) config.get( IndexSettingImpl.SPATIAL_WGS84_MIN ) );
+            assertArrayEquals( new double[] {200.0, 200.0}, (double[]) config.get( IndexSettingImpl.SPATIAL_CARTESIAN_MAX ) );
             tx.commit();
         }
     }
