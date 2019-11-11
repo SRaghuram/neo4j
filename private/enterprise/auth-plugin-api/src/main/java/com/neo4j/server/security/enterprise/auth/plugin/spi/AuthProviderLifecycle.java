@@ -9,7 +9,7 @@ import com.neo4j.server.security.enterprise.auth.plugin.api.AuthProviderOperatio
 
 public interface AuthProviderLifecycle
 {
-    void initialize( AuthProviderOperations authProviderOperations );
+    void initialize( AuthProviderOperations authProviderOperations ) throws Exception;
     void start();
     void stop();
     void shutdown();
