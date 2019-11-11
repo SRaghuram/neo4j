@@ -31,8 +31,8 @@ import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.query.ExecutingQuery;
 import org.neo4j.kernel.api.query.QuerySnapshot;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
-import org.neo4j.kernel.impl.api.LeaseService;
 import org.neo4j.kernel.impl.api.KernelTransactionImplementation;
+import org.neo4j.kernel.impl.api.LeaseService;
 import org.neo4j.kernel.impl.api.TestKernelTransactionHandle;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionExecutionStatistic;
@@ -245,7 +245,7 @@ class TransactionStatusResultTest
                         EmptyVersionContextSupplier.EMPTY, ON_HEAP, new StandardConstraintSemantics(), mock( SchemaState.class),
                         mockedTokenHolders(), mock( IndexingService.class ), mock( LabelScanStore.class ),
                         mock( IndexStatisticsStore.class ), dependencies, new TestDatabaseIdRepository().defaultDatabase(),
-                        LeaseService.NO_LEASES )
+                        LeaseService.NO_LEASES, () -> false )
             {
                 @Override
                 public Statistics getStatistics()
