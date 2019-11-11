@@ -24,6 +24,7 @@ import org.neo4j.graphdb.schema.ConstraintCreator;
 import org.neo4j.graphdb.schema.ConstraintDefinition;
 import org.neo4j.graphdb.schema.ConstraintType;
 import org.neo4j.graphdb.schema.IndexDefinition;
+import org.neo4j.graphdb.schema.IndexSetting;
 import org.neo4j.graphdb.schema.IndexSettingImpl;
 import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.kernel.api.exceptions.schema.AlreadyConstrainedException;
@@ -492,7 +493,7 @@ class SchemaAcceptanceEnterpriseTest extends SchemaAcceptanceTestBase
                             IndexSettingImpl.SPATIAL_CARTESIAN_MAX, new double[] {200.0, 200.0} ) )
                     .create();
             IndexDefinition index = tx.schema().getIndexByName( constraint.getName() );
-            Map<IndexSettingImpl,Object> config = index.getIndexConfiguration();
+            Map<IndexSetting,Object> config = index.getIndexConfiguration();
             assertArrayEquals( new double[] {-45, -45}, (double[]) config.get( IndexSettingImpl.SPATIAL_WGS84_MIN ) );
             assertArrayEquals( new double[] {200.0, 200.0}, (double[]) config.get( IndexSettingImpl.SPATIAL_CARTESIAN_MAX ) );
             tx.commit();
@@ -500,7 +501,7 @@ class SchemaAcceptanceEnterpriseTest extends SchemaAcceptanceTestBase
         try ( Transaction tx = db.beginTx() )
         {
             IndexDefinition index = tx.schema().getIndexByName( "my constraint" );
-            Map<IndexSettingImpl,Object> config = index.getIndexConfiguration();
+            Map<IndexSetting,Object> config = index.getIndexConfiguration();
             assertArrayEquals( new double[] {-45, -45}, (double[]) config.get( IndexSettingImpl.SPATIAL_WGS84_MIN ) );
             assertArrayEquals( new double[] {200.0, 200.0}, (double[]) config.get( IndexSettingImpl.SPATIAL_CARTESIAN_MAX ) );
             tx.commit();
