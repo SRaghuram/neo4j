@@ -14,6 +14,7 @@ import org.scalatest.enablers.Messaging.messagingNatureOfThrowable
 
 import scala.collection.Map
 
+//noinspection RedundantDefaultArgument
 class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
 
   test("should return empty counts to the outside for commands that update the system graph internally") {
@@ -599,6 +600,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     }) should be(1)
 
     execute("MATCH (n) RETURN n.name").toSet should be(Set(Map("n.name" -> "a"), Map("n.name" -> "b")))
+    executeOnDefault("joe", "soap", "MATCH (n:A) RETURN n.name") should be(0)
   }
 
   test("should read you own writes on nodes with WRITE and TRAVERSE privilege") {
@@ -622,6 +624,76 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     }) should be(2)
 
     execute("MATCH (n) RETURN n.name").toSet should be(Set(Map("n.name" -> "a"), Map("n.name" -> "b")))
+    executeOnDefault("joe", "soap", "MATCH (n:A) RETURN n.name AS name", resultHandler = (row, _) => {
+      row.get("name") should be(null)
+    }) should be(2)
+  }
+
+  test("should read you own writes on nodes with WRITE and restricted READ privilege") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT MATCH {name} ON GRAPH * NODES * (*) TO custom")
+
+    // Setup to create tokens
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (n:A {name:'a', age: 21})")
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT WRITE ON GRAPH * ELEMENTS * (*) TO custom")
+
+    // THEN
+    val expected1 = List(("a", null), ("b", 22))
+
+    val query = "CREATE (n:A {name: 'b', age: 22}) WITH n MATCH (m:A) RETURN m.name AS name, m.age AS age ORDER BY name"
+    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+      (row.get("name"), row.get("age")) should be(expected1(index))
+    }) should be(2)
+
+    // THEN
+    execute("MATCH (n) RETURN n.name, n.age").toSet should be(Set(Map("n.name" -> "a", "n.age" -> 21), Map("n.name" -> "b", "n.age" -> 22)))
+
+    val expected2 = List(("a", null), ("b", null))
+    executeOnDefault("joe", "soap", "MATCH (n:A) RETURN n.name AS name, n.age AS age ORDER BY name", resultHandler = (row, index) => {
+      (row.get("name"), row.get("age")) should be(expected2(index))
+    }) should be(2)
+  }
+
+  test("should read you own writes on nodes with WRITE and restricted READ and TRAVERSE privileges") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT TRAVERSE ON GRAPH * NODES A (*) TO custom")
+    execute("GRANT READ {name} ON GRAPH * NODES B (*) TO custom")
+
+    // Setup to create tokens
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (n:A {name:'a'})")
+    execute("CREATE (n:A:B {name:'ab'})")
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT WRITE ON GRAPH * ELEMENTS * (*) TO custom")
+
+    // THEN
+    val expected1 = List("ab", "b")
+
+    val query = "CREATE (n:B {name: 'b'}) WITH n MATCH (m:B) RETURN m.name AS name ORDER BY name"
+    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+      row.get("name") should be(expected1(index))
+    }) should be(2)
+
+    // THEN
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("MATCH (n) RETURN n.name").toSet should be(Set(Map("n.name" -> "a"), Map("n.name" -> "ab"), Map("n.name" -> "b")))
+
+    executeOnDefault("joe", "soap", "MATCH (n:B) RETURN n.name AS name ORDER BY name", resultHandler = (row, _) => {
+      row.get("name") should be("ab")
+    }) should be(1)
+
+    val expected2 = List("ab", null)
+    executeOnDefault("joe", "soap", "MATCH (n:A) RETURN n.name AS name ORDER BY name", resultHandler = (row, index) => {
+      row.get("name") should be(expected2(index))
+    }) should be(2)
   }
 
   test("should read you own writes on relationships when granted ACCESS and WRITE privilege") {

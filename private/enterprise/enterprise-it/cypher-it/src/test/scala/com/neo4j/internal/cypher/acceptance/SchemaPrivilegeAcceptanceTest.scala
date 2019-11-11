@@ -5,7 +5,8 @@
  */
 package com.neo4j.internal.cypher.acceptance
 
-import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
+import org.neo4j.configuration.GraphDatabaseSettings.{DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME}
+import org.neo4j.graphdb.QueryExecutionException
 import org.neo4j.graphdb.security.AuthorizationViolationException
 
 class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
@@ -18,6 +19,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     execute("CREATE ROLE custom")
     execute("CREATE DATABASE foo")
     execute("CREATE DATABASE bar")
+    execute("CREATE DATABASE baz")
 
     // Notice: They are executed in succession so they have to make sense in that order
     assertQueriesAndSubQueryCounts(List(
@@ -25,12 +27,18 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       "GRANT DROP INDEX ON DATABASE * TO custom" -> 1,
       "GRANT CREATE CONSTRAINT ON DATABASE * TO custom" -> 1,
       "GRANT DROP CONSTRAINT ON DATABASE * TO custom" -> 1,
+      "GRANT CREATE NEW LABEL ON DATABASE * TO custom" -> 1,
+      "GRANT CREATE NEW TYPE ON DATABASE * TO custom" -> 1,
+      "GRANT CREATE NEW NAME ON DATABASE * TO custom" -> 1,
       "GRANT INDEX MANAGEMENT ON DATABASES foo TO custom" -> 2,
-      "GRANT CONSTRAINT MANAGEMENT ON DATABASES bar TO custom" -> 2
+      "GRANT CONSTRAINT MANAGEMENT ON DATABASES bar TO custom" -> 2,
+      "GRANT NAME MANAGEMENT ON DATABASES baz TO custom" -> 3
     ))
   }
 
-  test("should list create and drop index privileges") {
+  // Tests for granting, denying and revoking schema privileges
+
+  test("should list different index management privileges") {
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE DATABASE foo")
@@ -74,6 +82,139 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
       createIndex().role("role").map,
       dropIndex().database("foo").role("role").map
+    ))
+
+    // WHEN
+    execute("GRANT INDEX MANAGEMENT ON DATABASE bar TO role")
+
+    // THEN
+    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
+      createIndex().role("role").map,
+      dropIndex().database("foo").role("role").map,
+      createIndex().database("bar").role("role").map,
+      dropIndex().database("bar").role("role").map
+    ))
+  }
+
+  test("should list different constraint management privileges") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE DATABASE foo")
+    execute("CREATE DATABASE bar")
+    execute("CREATE ROLE role")
+
+    // WHEN
+    execute("GRANT CREATE CONSTRAINT ON DATABASE foo TO role")
+    execute("GRANT DROP CONSTRAINT ON DATABASE foo TO role")
+
+    // THEN
+    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
+      createConstraint().database("foo").role("role").map,
+      dropConstraint().database("foo").role("role").map
+    ))
+
+    // WHEN
+    execute("REVOKE CREATE CONSTRAINT ON DATABASE foo FROM role")
+    execute("GRANT CREATE CONSTRAINT ON DATABASE * TO role")
+
+    // THEN
+    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
+      createConstraint().role("role").map,
+      dropConstraint().database("foo").role("role").map
+    ))
+
+    // WHEN
+    execute("DENY CREATE CONSTRAINT ON DATABASE bar TO role")
+
+    // THEN
+    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
+      createConstraint().role("role").map,
+      dropConstraint().database("foo").role("role").map,
+      createConstraint("DENIED").database("bar").role("role").map
+    ))
+
+    // WHEN
+    execute("REVOKE CREATE CONSTRAINT ON DATABASE bar FROM role")
+
+    // THEN
+    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
+      createConstraint().role("role").map,
+      dropConstraint().database("foo").role("role").map
+    ))
+
+    // WHEN
+    execute("GRANT CONSTRAINT MANAGEMENT ON DATABASE bar TO role")
+
+    // THEN
+    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
+      createConstraint().role("role").map,
+      dropConstraint().database("foo").role("role").map,
+      createConstraint().database("bar").role("role").map,
+      dropConstraint().database("bar").role("role").map
+    ))
+  }
+
+  test("should list different name management privileges") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE DATABASE foo")
+    execute("CREATE DATABASE bar")
+    execute("CREATE ROLE role")
+
+    // WHEN
+    execute("GRANT CREATE NEW NODE LABEL ON DATABASE foo TO role")
+    execute("GRANT CREATE NEW TYPE ON DATABASE foo TO role")
+    execute("GRANT CREATE NEW PROPERTY NAME ON DATABASE foo TO role")
+
+    // THEN
+    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
+      createNodeLabel().database("foo").role("role").map,
+      createRelationshipType().database("foo").role("role").map,
+      createPropertyKey().database("foo").role("role").map
+    ))
+
+    // WHEN
+    execute("REVOKE CREATE NEW LABEL ON DATABASE foo FROM role")
+    execute("GRANT CREATE NEW LABEL ON DATABASE * TO role")
+
+    // THEN
+    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
+      createNodeLabel().role("role").map,
+      createRelationshipType().database("foo").role("role").map,
+      createPropertyKey().database("foo").role("role").map
+    ))
+
+    // WHEN
+    execute("DENY CREATE NEW NAME ON DATABASE bar TO role")
+
+    // THEN
+    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
+      createNodeLabel().role("role").map,
+      createRelationshipType().database("foo").role("role").map,
+      createPropertyKey().database("foo").role("role").map,
+      createPropertyKey("DENIED").database("bar").role("role").map
+    ))
+
+    // WHEN
+    execute("REVOKE CREATE NEW RELATIONSHIP TYPE ON DATABASE foo FROM role")
+    execute("REVOKE CREATE NEW PROPERTY NAME ON DATABASE bar FROM role")
+
+    // THEN
+    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
+      createNodeLabel().role("role").map,
+      createPropertyKey().database("foo").role("role").map
+    ))
+
+    // WHEN
+    execute("GRANT NAME MANAGEMENT ON DATABASE bar TO role")
+
+    // THEN
+    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
+      createNodeLabel().role("role").map,
+      createPropertyKey().database("foo").role("role").map,
+      createNodeLabel().database("bar").role("role").map,
+      createRelationshipType().database("bar").role("role").map,
+      createPropertyKey().database("bar").role("role").map
     ))
   }
 
@@ -176,15 +317,35 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     ))
   }
 
-  test("Should not allow index creation for normal user without token create privilege") {
+  // Tests for actual behaviour of authorization rules for restricted users based on privileges
+
+  // Index Management
+  test("Should not allow index creation on non-existing tokens for normal user without token create privilege") {
     setupUserWithCustomRole()
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT CREATE INDEX ON DATABASE * TO custom")
 
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("joe", "soap", "CREATE INDEX ON :User(name)")
+      executeOnDefault("joe", "soap", "CREATE INDEX FOR (u:User) ON (u.name)")
     } should have message "'create_label' operations are not allowed for user 'joe' with roles [custom]."
+
+    // THEN
+    assert(graph.getMaybeIndex("User", Seq("name")).isEmpty)
+  }
+
+  test("Should allow index creation on already existing tokens for normal user without token create privilege") {
+    setupUserWithCustomRole()
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT CREATE INDEX ON DATABASE * TO custom")
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:User {name: 'Me'})")
+
+    // WHEN
+    executeOnDefault("joe", "soap", "CREATE INDEX FOR (u:User) ON (u.name)") should be(0)
+
+    // THEN
+    assert(graph.getMaybeIndex("User", Seq("name")).isDefined)
   }
 
   test("Should not allow index creation for normal user without index create privilege") {
@@ -194,7 +355,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("joe", "soap", "CREATE INDEX ON :User(name)")
+      executeOnDefault("joe", "soap", "CREATE INDEX FOR (u:User) ON (u.name)")
     } should have message "Schema operations are not allowed for user 'joe' with roles [custom]."
   }
 
@@ -207,7 +368,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("joe", "soap", "CREATE INDEX ON :User(name)")
+      executeOnDefault("joe", "soap", "CREATE INDEX FOR (u:User) ON (u.name)")
     } should have message "Schema operation 'create_index' is not allowed for user 'joe' with roles [custom]."
   }
 
@@ -217,7 +378,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT NAME MANAGEMENT ON DATABASE * TO custom")
     execute("GRANT INDEX MANAGEMENT ON DATABASE * TO custom")
-    executeOnDefault("joe", "soap", "CREATE INDEX ON :User(name)") should be(0)
+    executeOnDefault("joe", "soap", "CREATE INDEX my_index FOR (u:User) ON (u.name)") should be(0)
 
     // When
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -225,7 +386,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("joe", "soap", "DROP INDEX ON :User(name)")
+      executeOnDefault("joe", "soap", "DROP INDEX my_index")
     } should have message "Schema operation 'drop_index' is not allowed for user 'joe' with roles [custom]."
   }
 
@@ -245,7 +406,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     ))
 
     // WHEN & THEN
-    executeOnDefault("joe", "soap", "CREATE INDEX ON :User(name)") should be(0)
+    executeOnDefault("joe", "soap", "CREATE INDEX FOR (u:User) ON (u.name)") should be(0)
   }
 
   test("Should allow index creation for normal user with all database privileges") {
@@ -255,7 +416,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     execute("GRANT ALL PRIVILEGES ON DATABASE foo TO custom")
 
     // WHEN & THEN
-    executeOn("foo", "joe", "soap", "CREATE INDEX ON :User(name)") should be(0)
+    executeOn("foo", "joe", "soap", "CREATE INDEX FOR (u:User) ON (u.name)") should be(0)
   }
 
   test("Should not allow index creation for normal user with all database privileges and explicit deny") {
@@ -267,7 +428,330 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOn("foo", "joe", "soap", "CREATE INDEX ON :User(name)")
+      executeOn("foo", "joe", "soap", "CREATE INDEX FOR (u:User) ON (u.name)")
     } should have message "Schema operation 'create_index' is not allowed for user 'joe' with roles [custom]."
+  }
+
+  // Constraint Management
+  test("Should not allow constraint creation on non-existing tokens for normal user without token create privilege") {
+    setupUserWithCustomRole()
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT CREATE CONSTRAINT ON DATABASE * TO custom")
+
+    // WHEN & THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnDefault("joe", "soap", "CREATE CONSTRAINT ON (n:User) ASSERT exists(n.name)")
+    } should have message "'create_label' operations are not allowed for user 'joe' with roles [custom]."
+
+    // THEN
+    assert(graph.getMaybeNodeConstraint("User", Seq("name")).isEmpty)
+  }
+
+  test("Should allow constraint creation on already existing tokens for normal user without token create privilege") {
+    setupUserWithCustomRole()
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT CREATE CONSTRAINT ON DATABASE * TO custom")
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:User {name: 'Me'})")
+
+    // WHEN
+    executeOnDefault("joe", "soap", "CREATE CONSTRAINT ON (n:User) ASSERT exists(n.name)") should be(0)
+
+    // THEN
+    assert(graph.getMaybeNodeConstraint("User", Seq("name")).isDefined)
+  }
+
+  test("Should not allow constraint creation for normal user without constraint create privilege") {
+    setupUserWithCustomRole()
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT NAME MANAGEMENT ON DATABASE * TO custom")
+
+    // WHEN & THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnDefault("joe", "soap", "CREATE CONSTRAINT ON (n:User) ASSERT exists(n.name)")
+    } should have message "Schema operations are not allowed for user 'joe' with roles [custom]."
+  }
+
+  test("Should not allow constraint create for normal user with only constraint drop privilege") {
+    // Given
+    setupUserWithCustomRole()
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT NAME MANAGEMENT ON DATABASE * TO custom")
+    execute("GRANT DROP CONSTRAINT ON DATABASE * TO custom")
+
+    // WHEN & THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnDefault("joe", "soap", "CREATE CONSTRAINT ON (n:User) ASSERT exists(n.name)")
+    } should have message "Schema operation 'create_constraint' is not allowed for user 'joe' with roles [custom]."
+  }
+
+  test("Should not allow constraint drop for normal user with only constraint create privilege") {
+    // Given
+    setupUserWithCustomRole()
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT NAME MANAGEMENT ON DATABASE * TO custom")
+    execute("GRANT CONSTRAINT MANAGEMENT ON DATABASE * TO custom")
+    executeOnDefault("joe", "soap", "CREATE CONSTRAINT my_constraint ON (n:User) ASSERT exists(n.name)") should be(0)
+
+    // When
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("REVOKE GRANT DROP CONSTRAINT ON DATABASE * FROM custom")
+
+    // WHEN & THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnDefault("joe", "soap", "DROP CONSTRAINT my_constraint")
+    } should have message "Schema operation 'drop_constraint' is not allowed for user 'joe' with roles [custom]."
+  }
+
+  test("Should allow constraint creation for normal user with constraint create privilege") {
+    setupUserWithCustomRole()
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT NAME MANAGEMENT ON DATABASE * TO custom")
+    execute("GRANT CREATE CONSTRAINT ON DATABASE * TO custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      access().role("custom").map,
+      createConstraint().role("custom").map,
+      createNodeLabel().role("custom").map,
+      createRelationshipType().role("custom").map,
+      createPropertyKey().role("custom").map
+    ))
+
+    // WHEN & THEN
+    executeOnDefault("joe", "soap", "CREATE CONSTRAINT ON (n:User) ASSERT exists(n.name)") should be(0)
+  }
+
+  test("Should allow constraint creation for normal user with all database privileges") {
+    setupUserWithCustomRole()
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE DATABASE foo")
+    execute("GRANT ALL PRIVILEGES ON DATABASE foo TO custom")
+
+    // WHEN & THEN
+    executeOn("foo", "joe", "soap", "CREATE CONSTRAINT ON (n:User) ASSERT exists(n.name)") should be(0)
+  }
+
+  test("Should not allow constraint creation for normal user with all database privileges and explicit deny") {
+    setupUserWithCustomRole()
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE DATABASE foo")
+    execute("GRANT ALL PRIVILEGES ON DATABASE * TO custom")
+    execute("DENY CREATE CONSTRAINT ON DATABASE foo TO custom")
+
+    // WHEN & THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOn("foo", "joe", "soap", "CREATE CONSTRAINT ON (n:User) ASSERT exists(n.name)")
+    } should have message "Schema operation 'create_constraint' is not allowed for user 'joe' with roles [custom]."
+  }
+
+  // Name Management
+  test("Should allow label creation for normal user with label create privilege") {
+    setupUserWithCustomRole()
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT WRITE ON GRAPH * TO custom")
+    execute("GRANT CREATE NEW LABEL ON DATABASE * TO custom")
+
+    // WHEN & THEN
+    executeOnDefault("joe", "soap", "CREATE (n:User) RETURN n") should be(1)
+
+    // WHEN & THEN
+    executeOnDefault("joe", "soap", "CALL db.createLabel('A')") should be(0)
+  }
+
+  test("Should not allow label creation for normal user without write privilege") {
+    setupUserWithCustomRole()
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT CREATE NEW LABEL ON DATABASE * TO custom")
+
+    // WHEN & THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnDefault("joe", "soap", "CALL db.createLabel('A')")
+    } should have message "Write operations are not allowed for user 'joe' with roles [custom]."
+  }
+
+  test("Should not allow label creation for normal user with explicit deny") {
+    setupUserWithCustomRole()
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT WRITE ON GRAPH * TO custom")
+    execute("GRANT NAME MANAGEMENT ON DATABASE * TO custom")
+    execute("DENY CREATE NEW LABEL ON DATABASE * TO custom")
+
+    // WHEN & THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnDefault("joe", "soap", "CREATE (n:User) RETURN n")
+    } should have message "'create_label' operations are not allowed for user 'joe' with roles [custom]."
+
+    // WHEN & THEN
+    the[QueryExecutionException] thrownBy {
+      executeOnDefault("joe", "soap", "CALL db.createLabel('A')")
+    } should have message "'create_label' operations are not allowed for user 'joe' with roles [custom] restricted to TOKEN_WRITE."
+  }
+
+  test("Should allow type creation for normal user with type create privilege") {
+    setupUserWithCustomRole()
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT WRITE ON GRAPH * TO custom")
+    execute("GRANT CREATE NEW TYPE ON DATABASE * TO custom")
+
+    // WHEN & THEN
+    executeOnDefault("joe", "soap", "CREATE ()-[n:Rel]->() RETURN n") should be(1)
+
+    // WHEN & THEN
+    executeOnDefault("joe", "soap", "CALL db.createRelationshipType('A')") should be(0)
+  }
+
+  test("Should not allow type creation for normal user without write privilege") {
+    setupUserWithCustomRole()
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT CREATE NEW TYPE ON DATABASE * TO custom")
+
+    // WHEN & THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnDefault("joe", "soap", "CALL db.createRelationshipType('A')")
+    } should have message "Write operations are not allowed for user 'joe' with roles [custom]."
+  }
+
+  test("Should not allow type creation for normal user with explicit deny") {
+    setupUserWithCustomRole()
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT WRITE ON GRAPH * TO custom")
+    execute("GRANT NAME MANAGEMENT ON DATABASE * TO custom")
+    execute("DENY CREATE NEW TYPE ON DATABASE * TO custom")
+
+    // WHEN & THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnDefault("joe", "soap", "CREATE ()-[n:Rel]->() RETURN n")
+    } should have message "'create_reltype' operations are not allowed for user 'joe' with roles [custom]."
+
+    // WHEN & THEN
+    the[QueryExecutionException] thrownBy {
+      executeOnDefault("joe", "soap", "CALL db.createRelationshipType('A')")
+    } should have message "'create_reltype' operations are not allowed for user 'joe' with roles [custom] restricted to TOKEN_WRITE."
+  }
+
+  test("Should allow property key creation for normal user with name creation privilege") {
+    setupUserWithCustomRole()
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT WRITE ON GRAPH * TO custom")
+    execute("GRANT CREATE NEW NAME ON DATABASE * TO custom")
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:User)-[:Rel]->()")
+
+    // WHEN & THEN
+    executeOnDefault("joe", "soap", "CREATE (n:User {name: 'Alice'}) RETURN n.name", resultHandler = (row, _) => {
+      row.get("n.name") should be("Alice")
+    }) should be(1)
+
+    // WHEN & THEN
+    executeOnDefault("joe", "soap", "CREATE ()-[r:Rel {prop: 'value'}]->() RETURN r.prop", resultHandler = (row, _) => {
+      row.get("r.prop") should be("value")
+    }) should be(1)
+
+    // WHEN & THEN
+    executeOnDefault("joe", "soap", "CALL db.createProperty('age')") should be(0)
+  }
+
+  test("Should not allow property key creation for normal user without write privilege") {
+    setupUserWithCustomRole()
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT CREATE NEW NAME ON DATABASE * TO custom")
+
+    // WHEN & THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnDefault("joe", "soap", "CALL db.createProperty('age')")
+    } should have message "Write operations are not allowed for user 'joe' with roles [custom]."
+  }
+
+  test("Should not allow property key creation for normal user with explicit deny") {
+    setupUserWithCustomRole()
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT WRITE ON GRAPH * TO custom")
+    execute("GRANT NAME MANAGEMENT ON DATABASE * TO custom")
+    execute("DENY CREATE NEW NAME ON DATABASE * TO custom")
+
+    // WHEN & THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnDefault("joe", "soap", "CREATE (n:User {name: 'Alice'}) RETURN n")
+    } should have message "'create_propertykey' operations are not allowed for user 'joe' with roles [custom]."
+
+    // WHEN & THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnDefault("joe", "soap", "CREATE ()-[n:Rel {prop: 'value'}]->() RETURN n")
+    } should have message "'create_propertykey' operations are not allowed for user 'joe' with roles [custom]."
+
+    // WHEN & THEN
+    the[QueryExecutionException] thrownBy {
+      executeOnDefault("joe", "soap", "CALL db.createProperty('age')")
+    } should have message "'create_propertykey' operations are not allowed for user 'joe' with roles [custom] restricted to TOKEN_WRITE."
+  }
+
+  test("Should not allow property key creation for normal user with only label creation privilege") {
+    setupUserWithCustomRole()
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT WRITE ON GRAPH * TO custom")
+    execute("GRANT CREATE NEW LABEL ON DATABASE * TO custom")
+
+    // WHEN & THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnDefault("joe", "soap", "CREATE (n:User {name: 'Alice'}) RETURN n.name")
+    } should have message "'create_propertykey' operations are not allowed for user 'joe' with roles [custom]."
+  }
+
+  test("Should not allow property key creation for normal user with only type creation privilege") {
+    setupUserWithCustomRole()
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT WRITE ON GRAPH * TO custom")
+    execute("GRANT CREATE NEW TYPE ON DATABASE * TO custom")
+
+    // WHEN & THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnDefault("joe", "soap", "CREATE ()-[r:Rel {prop: 'value'}]->() RETURN r.prop")
+    } should have message "'create_propertykey' operations are not allowed for user 'joe' with roles [custom]."
+  }
+
+  test("Should allow all creation for normal user with name management privilege") {
+    setupUserWithCustomRole()
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT WRITE ON GRAPH * TO custom")
+    execute("GRANT NAME MANAGEMENT ON DATABASE * TO custom")
+
+    // WHEN & THEN
+    executeOnDefault("joe", "soap", "CREATE (n:User {name: 'Alice'})-[:KNOWS {since: 2019}]->(:User {name: 'Bob'}) RETURN n.name", resultHandler = (row, _) => {
+      row.get("n.name") should be("Alice")
+    }) should be(1)
+  }
+
+  test("Should not allow creation for normal user without write privilege") {
+    setupUserWithCustomRole()
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT NAME MANAGEMENT ON DATABASE * TO custom")
+
+    // WHEN & THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnDefault("joe", "soap", "CALL db.createLabel('Label')")
+    } should have message "Write operations are not allowed for user 'joe' with roles [custom]."
+
+    // WHEN & THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnDefault("joe", "soap", "CALL db.createRelationshipType('RelType')")
+    } should have message "Write operations are not allowed for user 'joe' with roles [custom]."
+
+    // WHEN & THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnDefault("joe", "soap", "CALL db.createProperty('prop')")
+    } should have message "Write operations are not allowed for user 'joe' with roles [custom]."
+  }
+
+  test("Should allow all creation for normal user with all database privileges") {
+    setupUserWithCustomRole()
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT WRITE ON GRAPH * TO custom")
+    execute("GRANT ALL ON DATABASE * TO custom")
+
+    // WHEN & THEN
+    executeOnDefault("joe", "soap", "CREATE (n:User {name: 'Alice'})-[:KNOWS {since: 2019}]->(:User {name: 'Bob'}) RETURN n.name", resultHandler = (row, _) => {
+      row.get("n.name") should be("Alice")
+    }) should be(1)
   }
 }
