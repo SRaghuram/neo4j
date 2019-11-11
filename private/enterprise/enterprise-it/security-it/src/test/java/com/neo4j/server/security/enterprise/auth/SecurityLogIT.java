@@ -5,7 +5,7 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
-import com.neo4j.enterprise.edition.EnterpriseEditionModule;
+import com.neo4j.server.security.enterprise.EnterpriseSecurityModule;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import org.junit.Test;
@@ -54,11 +54,11 @@ public class SecurityLogIT
                 } );
 
         // Then
-        assertThat( runtimeException.getMessage(), equalTo( "Failed to load security module.") );
+        assertThat( runtimeException.getMessage(), equalTo( "Unable to create security log." ) );
         assertThat( runtimeException.getCause(), instanceOf( IOException.class ) );
 
-        logProvider.assertAtLeastOnce( inLog( EnterpriseEditionModule.class )
-                .error( containsString( "Failed to load security module." ), isA( IOException.class )  ) );
+        logProvider.assertAtLeastOnce( inLog( EnterpriseSecurityModule.class )
+                .error( containsString( "Unable to create security log." ), isA( IOException.class )  ) );
     }
 
 }

@@ -58,7 +58,6 @@ import org.neo4j.kernel.api.security.SecurityModule;
 import org.neo4j.kernel.internal.event.GlobalTransactionEventListeners;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.logging.internal.LogService;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.server.security.auth.CommunitySecurityModule;
 import org.neo4j.server.security.auth.FileUserRepository;
@@ -124,8 +123,8 @@ public class EnterpriseSecurityModule extends SecurityModule
         catch ( IOException e )
         {
             Log log = logProvider.getLog( getClass() );
-            log.error( e.getMessage() );
-            throw new RuntimeException( e );
+            log.error( e.getMessage(), e );
+            throw new RuntimeException( e.getMessage(), e );
         }
 
         life.add( securityLog );
@@ -168,9 +167,7 @@ public class EnterpriseSecurityModule extends SecurityModule
         }
         catch ( KernelException e )
         {
-            Log log = logProvider.getLog( getClass() );
-            log.error( e.getMessage() );
-            throw new RuntimeException( e );
+            throw logAndWrapProcedureException( e, logProvider.getLog( getClass() ) );
         }
     }
 

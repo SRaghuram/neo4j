@@ -5,8 +5,10 @@
  */
 package com.neo4j.server.security.enterprise;
 
+import com.neo4j.server.security.enterprise.auth.SecurityProcedures;
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
@@ -18,34 +20,48 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
-import org.neo4j.common.DependencySatisfier;
+import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.DatabaseManagementSystemSettings;
+import org.neo4j.exceptions.KernelException;
+import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.internal.event.GlobalTransactionEventListeners;
+import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.JobScheduler;
 
 import static com.neo4j.server.security.enterprise.EnterpriseSecurityModule.mergeAuthenticationAndAuthorization;
+import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsInRelativeOrder;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.core.Is.isA;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.neo4j.logging.AssertableLogProvider.inLog;
 
 class EnterpriseSecurityModuleTest
 {
     private Config config;
     private LogProvider mockLogProvider;
     private FileSystemAbstraction mockFileSystem;
+    private GlobalProcedures mockProcedures;
+    private JobScheduler mockJobScheduler;
+    private GlobalTransactionEventListeners mockEventListeners;
+    private Dependencies mockDependencies;
 
     @BeforeEach
     void setup()
@@ -54,6 +70,10 @@ class EnterpriseSecurityModuleTest
         mockLogProvider = mock( LogProvider.class );
         Log mockLog = mock( Log.class );
         mockFileSystem = mock( FileSystemAbstraction.class );
+        mockProcedures = mock( GlobalProcedures.class );
+        mockJobScheduler = mock( JobScheduler.class );
+        mockEventListeners = mock( GlobalTransactionEventListeners.class );
+        mockDependencies = mock( Dependencies.class );
         when( mockLogProvider.getLog( anyString() ) ).thenReturn( mockLog );
         when( mockLog.isDebugEnabled() ).thenReturn( true );
         when( config.get( SecuritySettings.property_level_authorization_enabled ) ).thenReturn( false );
@@ -66,6 +86,32 @@ class EnterpriseSecurityModuleTest
         when( config.get( GraphDatabaseSettings.auth_store ) ).thenReturn( Path.of( "mock", "dir" ) );
         when( config.get( DatabaseManagementSystemSettings.auth_store_directory ) ).thenReturn( Path.of( "mock", "dir" ) );
         when( mockFileSystem.fileExists( any() ) ).thenReturn( false );
+    }
+
+    @Test
+    void shouldFailDatabaseCreationIfNotAbleToLoadSecurityProcedures() throws KernelException
+    {
+        // Given
+        AssertableLogProvider logProvider = new AssertableLogProvider();
+
+        when( mockDependencies.resolveTypeDependencies( any() ) ).thenReturn( null );
+        when( mockDependencies.satisfyDependency( any() ) ).thenAnswer( i -> i.getArguments()[0] );
+
+        doThrow( new ProcedureException( Status.Procedure.ProcedureRegistrationFailed, "Injected error" ) )
+                .when( mockProcedures ).registerProcedure( SecurityProcedures.class, true );
+
+        var securityModule = createModule( logProvider, Config.defaults() );
+
+        // When
+        RuntimeException runtimeException = Assertions.assertThrows( RuntimeException.class, securityModule::setup );
+
+        // Then
+        String errorMessage = "Failed to register security procedures: Injected error";
+        assertThat( runtimeException.getMessage(), equalTo( errorMessage ) );
+        assertThat( runtimeException.getCause(), instanceOf( KernelException.class ) );
+
+        logProvider.assertAtLeastOnce( inLog( EnterpriseSecurityModule.class )
+                .error( containsString( errorMessage ), isA( KernelException.class )  ) );
     }
 
     @Test
@@ -263,15 +309,19 @@ class EnterpriseSecurityModuleTest
 
     private void assertSuccess()
     {
-        new EnterpriseSecurityModule( mockLogProvider, config, mock( GlobalProcedures.class ), mock( JobScheduler.class ), mockFileSystem,
-                mock( DependencySatisfier.class ), mock( GlobalTransactionEventListeners.class ) ).newAuthManager( mock( SecurityLog.class ) );
+        createModule( mockLogProvider, config ).newAuthManager( mock( SecurityLog.class ) );
     }
 
     private void assertIllegalArgumentException( String errorMsg )
     {
         IllegalArgumentException e = assertThrows( IllegalArgumentException.class,
-                () -> new EnterpriseSecurityModule( mockLogProvider, config, mock( GlobalProcedures.class ), mock( JobScheduler.class ), mockFileSystem,
-                        mock( DependencySatisfier.class ), mock( GlobalTransactionEventListeners.class ) ).newAuthManager( mock( SecurityLog.class ) ) );
+                () -> createModule( mockLogProvider, config ).newAuthManager( mock( SecurityLog.class ) ) );
         assertEquals( e.getMessage(), errorMsg );
+    }
+
+    private EnterpriseSecurityModule createModule( LogProvider logProvider, Config config )
+    {
+        return new EnterpriseSecurityModule( logProvider, config, mockProcedures, mockJobScheduler, mockFileSystem,
+                mockDependencies, mockEventListeners );
     }
 }
