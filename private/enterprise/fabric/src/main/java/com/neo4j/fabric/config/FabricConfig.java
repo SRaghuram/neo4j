@@ -217,7 +217,7 @@ public class FabricConfig
             {
                 var sortedGraphs = graphs.toSortedList( Comparator.comparingLong( Graph::getId ) );
                 var ids = sortedGraphs.collect( Graph::getId ).distinct().makeString( ", " );
-                throw new IllegalArgumentException( "Graphs with ids: " + ids + ", have conflicting names");
+                throw new IllegalArgumentException( "Graphs with ids: " + ids + ", have conflicting names" );
             }
         } );
     }
@@ -312,7 +312,7 @@ public class FabricConfig
         @Override
         public String toString()
         {
-            return String.format( "graph %s named %s", id,  name );
+            return String.format( "graph %s named %s", id, name );
         }
 
         @Override
@@ -533,8 +533,8 @@ public class FabricConfig
                             throw new IllegalArgumentException( "Host name and port must be provided: " + uris );
                         }
                     } )
-                    .map( uri ->  new SocketAddress( uri.getHost(), uri.getPort() ))
-                    .collect( Collectors.toList());
+                    .map( uri -> new SocketAddress( uri.getHost(), uri.getPort() ) )
+                    .collect( Collectors.toList() );
         }
 
         public static RemoteUri create( String uri )

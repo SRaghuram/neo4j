@@ -130,7 +130,7 @@ class FabricConfigTest
         var e = assertThrows( IllegalArgumentException.class,
                 () -> FabricConfig.from( config ) );
 
-        assertEquals( e.getMessage(), "Graphs with ids: 0, 1, 3, have conflicting names");
+        assertEquals( e.getMessage(), "Graphs with ids: 0, 1, 3, have conflicting names" );
     }
 
     @Test
