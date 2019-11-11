@@ -72,6 +72,10 @@ class ConfiguredQueryLogger implements QueryLogger
         String queryText = query.queryText();
 
         StringBuilder result = new StringBuilder();
+        if ( verboseLogging )
+        {
+            result.append( "id:" ).append( query.internalQueryId() ).append( " - " );
+        }
         result.append( TimeUnit.MICROSECONDS.toMillis( query.elapsedTimeMicros() ) ).append( " ms: " );
         if ( logDetailedTime )
         {

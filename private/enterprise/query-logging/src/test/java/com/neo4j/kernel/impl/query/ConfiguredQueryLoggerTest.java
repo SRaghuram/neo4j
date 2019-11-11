@@ -5,6 +5,7 @@
  */
 package com.neo4j.kernel.impl.query;
 
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -37,6 +38,11 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.sameInstance;
 import static org.hamcrest.core.Is.is;
+import static org.neo4j.configuration.GraphDatabaseSettings.LogQueryLevel.INFO;
+import static org.neo4j.configuration.GraphDatabaseSettings.LogQueryLevel.VERBOSE;
+import static org.neo4j.configuration.GraphDatabaseSettings.log_queries;
+import static org.neo4j.configuration.GraphDatabaseSettings.log_queries_parameter_logging_enabled;
+import static org.neo4j.configuration.GraphDatabaseSettings.log_queries_threshold;
 import static org.neo4j.graphdb.QueryExecutionType.QueryType.READ_ONLY;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
 import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId;
@@ -45,6 +51,8 @@ import static org.neo4j.logging.AssertableLogProvider.inLog;
 class ConfiguredQueryLoggerTest
 {
     private static final String LOG_MESSAGE_TEMPLATE = "%d ms: %s - %s - {}";
+    private static final String VERBOSE_LOG_MESSAGE_TEMPLATE = "id:%d - " + LOG_MESSAGE_TEMPLATE;
+    private static final String VERBOSE_START_LOG_MESSAGE_TEMPLATE = "Query started: " + VERBOSE_LOG_MESSAGE_TEMPLATE;
     private static final ClientConnectionInfo SESSION_1 = new BoltConnectionInfo( "bolt-1", "client", ANY, ANY );
     private static final ClientConnectionInfo SESSION_2 = new BoltConnectionInfo( "bolt-2", "client", ANY, ANY );
     private static final ClientConnectionInfo SESSION_3 = new BoltConnectionInfo( "bolt-3", "client", ANY, ANY );
@@ -168,7 +176,7 @@ class ConfiguredQueryLoggerTest
         params.put( "ages", Arrays.asList( 41, 42, 43 ) );
         ExecutingQuery query = query( SESSION_1, defaultDbId, "TestUser", QUERY_4, params, emptyMap() );
         ConfiguredQueryLogger queryLogger = queryLogger( logProvider,
-                Config.defaults( GraphDatabaseSettings.log_queries_parameter_logging_enabled, true ) );
+                Config.defaults( log_queries_parameter_logging_enabled, true ) );
 
         // when
         clock.forward( 11, TimeUnit.MILLISECONDS );
@@ -191,7 +199,7 @@ class ConfiguredQueryLoggerTest
         params.put( "ages", Arrays.asList( 41, 42, 43 ) );
         ExecutingQuery query = query( SESSION_1, defaultDbId, "TestUser", QUERY_4, params, emptyMap() );
         ConfiguredQueryLogger queryLogger = queryLogger( logProvider,
-                Config.defaults( GraphDatabaseSettings.log_queries_parameter_logging_enabled, true ) );
+                Config.defaults( log_queries_parameter_logging_enabled, true ) );
         RuntimeException failure = new RuntimeException();
 
         // when
@@ -410,7 +418,7 @@ class ConfiguredQueryLoggerTest
     {
         logProvider.clear();
         ConfiguredQueryLogger queryLogger = queryLogger( logProvider,
-                Config.defaults( GraphDatabaseSettings.log_queries_parameter_logging_enabled, true ) );
+                Config.defaults( log_queries_parameter_logging_enabled, true ) );
 
         // when
         ExecutingQuery query = query( SESSION_1, defaultDbId, "neo", inputQuery, params, emptyMap() );
@@ -487,7 +495,7 @@ class ConfiguredQueryLoggerTest
         params.put( "ages", Arrays.asList( 41, 42, 43 ) );
         ExecutingQuery query = query( SESSION_1, defaultDbId, "TestUser", QUERY_4, params, emptyMap() );
         Config config = Config.defaults();
-        config.set( GraphDatabaseSettings.log_queries_parameter_logging_enabled, true );
+        config.set( log_queries_parameter_logging_enabled, true );
         config.set( GraphDatabaseSettings.log_queries_runtime_logging_enabled, true );
         QueryLogger queryLogger = queryLogger( logProvider, config );
 
@@ -528,15 +536,71 @@ class ConfiguredQueryLoggerTest
         );
     }
 
+    @Test
+    void shouldIncludeQueryIdInVerboseLogging()
+    {
+        Config config = Config.newBuilder()
+                .set( log_queries, VERBOSE )
+                .set( log_queries_parameter_logging_enabled, false )
+                .set( log_queries_threshold, Duration.ofMillis( thresholdInMillis ) )
+                .build();
+        ConfiguredQueryLogger queryLogger = new ConfiguredQueryLogger( logProvider.getLog( getClass() ), config );
+        ExecutingQuery query = query( SESSION_1, "TestUser", QUERY_1 );
+
+        // when
+        queryLogger.start( query );
+        clock.forward( 11, TimeUnit.MILLISECONDS );
+        queryLogger.success( query );
+
+        // then
+        String expectedSessionString = sessionConnectionDetails( SESSION_1, "TestUser" );
+        logProvider.assertExactly(
+                inLog( getClass() ).info( format( VERBOSE_START_LOG_MESSAGE_TEMPLATE, query.internalQueryId(), 0L, expectedSessionString, QUERY_1 ) ),
+                inLog( getClass() ).info( format( VERBOSE_LOG_MESSAGE_TEMPLATE, query.internalQueryId(), 11L, expectedSessionString, QUERY_1 ) )
+        );
+    }
+
+    @Test
+    void shoulHaveDifferentIdsForDifferentQueries()
+    {
+        Config config = Config.newBuilder()
+                .set( log_queries, VERBOSE )
+                .set( log_queries_parameter_logging_enabled, false )
+                .set( log_queries_threshold, Duration.ofMillis( thresholdInMillis ) )
+                .build();
+        ConfiguredQueryLogger queryLogger = new ConfiguredQueryLogger( logProvider.getLog( getClass() ), config );
+        ExecutingQuery query1 = query( SESSION_1, "TestUser", QUERY_1 );
+        ExecutingQuery query2 = query( SESSION_1, "TestUser", QUERY_1 ); //same query text, distinguishable only by id
+
+        // when
+        queryLogger.start( query1 );
+        clock.forward( 5, TimeUnit.MILLISECONDS );
+        queryLogger.start( query2 );
+        clock.forward( 5, TimeUnit.MILLISECONDS );
+        queryLogger.success( query2 );
+        clock.forward( 5, TimeUnit.MILLISECONDS );
+        queryLogger.success( query1 );
+
+        // then
+        Assertions.assertNotEquals( query1.internalQueryId(), query2.internalQueryId(), "Queries should have different ids");
+        String expectedSessionString = sessionConnectionDetails( SESSION_1, "TestUser" );
+        logProvider.assertExactly(
+                inLog( getClass() ).info( format( VERBOSE_START_LOG_MESSAGE_TEMPLATE, query1.internalQueryId(), 0L, expectedSessionString, QUERY_1 ) ),
+                inLog( getClass() ).info( format( VERBOSE_START_LOG_MESSAGE_TEMPLATE, query2.internalQueryId(), 5L, expectedSessionString, QUERY_1 ) ),
+                inLog( getClass() ).info( format( VERBOSE_LOG_MESSAGE_TEMPLATE, query2.internalQueryId(), 10L, expectedSessionString, QUERY_1 ) ),
+                inLog( getClass() ).info( format( VERBOSE_LOG_MESSAGE_TEMPLATE, query1.internalQueryId(), 15L, expectedSessionString, QUERY_1 ) )
+        );
+    }
+
     private ConfiguredQueryLogger queryLogger( LogProvider logProvider )
     {
-        return queryLogger( logProvider, Config.defaults( GraphDatabaseSettings.log_queries_parameter_logging_enabled, false ) );
+        return queryLogger( logProvider, Config.defaults( log_queries_parameter_logging_enabled, false ) );
     }
 
     private ConfiguredQueryLogger queryLogger( LogProvider logProvider, Config config )
     {
-        config.set( GraphDatabaseSettings.log_queries_threshold, Duration.ofMillis( thresholdInMillis ) );
-        config.set( GraphDatabaseSettings.log_queries, GraphDatabaseSettings.LogQueryLevel.INFO );
+        config.set( log_queries_threshold, Duration.ofMillis( thresholdInMillis ) );
+        config.set( log_queries, INFO );
         return new ConfiguredQueryLogger( logProvider.getLog( getClass() ), config );
     }
 
