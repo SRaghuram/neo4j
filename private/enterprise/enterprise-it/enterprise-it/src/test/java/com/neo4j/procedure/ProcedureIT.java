@@ -307,7 +307,10 @@ public class ProcedureIT
         // When
         try ( Transaction tx = db.beginTx() )
         {
-            QueryExecutionException exception = assertThrows( QueryExecutionException.class, () -> tx.execute( "CALL com.neo4j.procedure.simpleArgument(1, 2)" ) );
+            QueryExecutionException exception = assertThrows(
+                    QueryExecutionException.class,
+                    () -> tx.execute( "CALL com.neo4j.procedure.simpleArgument(1, 2)" )
+            );
             assertThat( exception.getMessage(), containsStringIgnoreNewlines(
                     String.format( "Procedure call provides too many arguments: got 2 expected no more than 1.%n%n" +
                                    "Procedure com.neo4j.procedure.simpleArgument has signature: " +
@@ -340,12 +343,16 @@ public class ProcedureIT
         // When
         try ( Transaction tx = db.beginTx() )
         {
-            QueryExecutionException exception = assertThrows( QueryExecutionException.class, () -> tx.execute( "CALL db.awaitIndex()" ) );
+            QueryExecutionException exception = assertThrows(
+                    QueryExecutionException.class,
+                    () -> tx.execute( "CALL db.awaitIndex()" )
+            );
             assertThat( exception.getMessage(), containsStringIgnoreNewlines( String.format(
-                    "Procedure call does not provide the required number of arguments: got 0 expected at least 1 (total: 2, 1 of which have default values).%n%n" +
-                            "Procedure db.awaitIndex has signature: " +
-                            "db.awaitIndex(indexName :: STRING?, timeOutSeconds  =  300 :: INTEGER?) :: VOID%n" +
-                            "meaning that it expects at least 1 argument of type STRING?" ) ) );
+                    "Procedure call does not provide the required number of arguments: " +
+                    "got 0 expected at least 1 (total: 2, 1 of which have default values).%n%n" +
+                    "Procedure db.awaitIndex has signature: " +
+                    "db.awaitIndex(indexName :: STRING?, timeOutSeconds  =  300 :: INTEGER?) :: VOID%n" +
+                    "meaning that it expects at least 1 argument of type STRING?" ) ) );
         }
     }
 
@@ -372,7 +379,9 @@ public class ProcedureIT
         try ( Transaction tx = db.beginTx() )
         {
             QueryExecutionException exception =
-                    assertThrows( QueryExecutionException.class, () -> tx.execute( "CALL com.neo4j.procedure.nodeWithDescription()" ) );
+                    assertThrows( QueryExecutionException.class, () -> tx.execute(
+                            "CALL com.neo4j.procedure.nodeWithDescription()"
+                    ) );
             assertThat( exception.getMessage(), containsStringIgnoreNewlines(
                     "Procedure call does not provide the required number of arguments: " +
                     "got 0 expected at least 1 (total: 1, 0 of which have default values)." +
