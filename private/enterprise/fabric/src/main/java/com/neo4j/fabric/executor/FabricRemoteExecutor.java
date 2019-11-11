@@ -21,6 +21,7 @@ import java.util.function.Function;
 
 import org.neo4j.bolt.runtime.AccessMode;
 
+import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.values.virtual.MapValue;
 
 public class FabricRemoteExecutor
@@ -56,11 +57,17 @@ public class FabricRemoteExecutor
                 return runInWriteTransaction( query, params );
             }
 
-            var accessMode = getAccessMode( queryType );
+            var requestedMode = transactionInfo.getAccessMode();
+            var effectiveMode = EffectiveQueryType.effectiveAccessMode( requestedMode, queryType );
 
-            if ( accessMode == AccessMode.READ )
+            if ( effectiveMode == AccessMode.READ )
             {
                 return runInAutoCommitReadTransaction( location, query, params );
+            }
+
+            if ( requestedMode == AccessMode.READ && effectiveMode == AccessMode.WRITE )
+            {
+                throw writeInReadError( location );
             }
 
             if ( writingTo != null && !writingTo.equals( location ) )
@@ -111,26 +118,21 @@ public class FabricRemoteExecutor
             return writeTransaction.map( rxTransaction -> rxTransaction.run( query, params ) );
         }
 
-        private AccessMode getAccessMode( QueryType queryType )
-        {
-            if ( transactionInfo.getAccessMode() == AccessMode.READ || queryType == QueryType.READ() )
-            {
-                return AccessMode.READ;
-            }
-
-            return AccessMode.WRITE;
-        }
-
         private PooledDriver getDriver( FabricConfig.Graph location )
         {
             return usedDrivers.computeIfAbsent( location, l -> driverPool.getDriver( location, transactionInfo.getLoginContext().subject() ) );
         }
 
-        private UnsupportedOperationException multipleWriteError( FabricConfig.Graph attempt, FabricConfig.Graph writingTo )
+        private FabricException writeInReadError( FabricConfig.Graph attempt )
         {
-            return new UnsupportedOperationException( String.format( "Multi-shard writes not allowed. Attempted write to %s, currently writing to %s",
-                    attempt,
-                    writingTo ) );
+            return new FabricException( Status.Fabric.AccessMode,
+                                        "Writing in read access mode not allowed. Attempted write to %s", attempt );
+        }
+
+        private FabricException multipleWriteError( FabricConfig.Graph attempt, FabricConfig.Graph writingTo )
+        {
+            return new FabricException( Status.Fabric.AccessMode,
+                                        "Multi-shard writes not allowed. Attempted write to %s, currently writing to %s", attempt, writingTo );
         }
 
         private void releaseTransactionResources()

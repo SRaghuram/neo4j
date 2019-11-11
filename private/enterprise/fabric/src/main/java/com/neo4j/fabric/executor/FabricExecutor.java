@@ -29,6 +29,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import org.neo4j.bolt.runtime.AccessMode;
 import org.neo4j.exceptions.InvalidSemanticsException;
 import org.neo4j.cypher.internal.v4_0.ast.UseGraph;
 import org.neo4j.kernel.api.exceptions.Status;
@@ -71,6 +72,8 @@ public class FabricExecutor
 
         FabricPlan plan = planner.plan( statement, params );
 
+        AccessMode accessMode = fabricTransaction.getTransactionInfo().getAccessMode();
+
         if ( plan.debugOptions().logPlan() )
         {
             log.debug( String.format( "Fabric plan: %s", FabricQuery.pretty().asString( plan.query() ) ) );
@@ -80,11 +83,11 @@ public class FabricExecutor
             FabricStatementExecution execution;
             if ( plan.debugOptions().logRecords() )
             {
-                execution = new FabricLoggingStatementExecution( statement, plan, params, ctx, log, queryMonitor );
+                execution = new FabricLoggingStatementExecution( statement, plan, params, accessMode, ctx, log, queryMonitor );
             }
             else
             {
-                execution = new FabricStatementExecution( statement, plan, params, ctx, queryMonitor );
+                execution = new FabricStatementExecution( statement, plan, params, accessMode, ctx, queryMonitor );
             }
             return execution.run();
         } );
@@ -99,14 +102,15 @@ public class FabricExecutor
         private final MergedSummary mergedSummary;
         private final FabricQueryMonitoring.QueryMonitor queryMonitor;
 
-        FabricStatementExecution( String originalStatement, FabricPlan plan, MapValue params, FabricTransaction.FabricExecutionContext ctx,
-                FabricQueryMonitoring.QueryMonitor queryMonitor )
+        FabricStatementExecution( String originalStatement, FabricPlan plan, MapValue params, AccessMode accessMode,
+                                  FabricTransaction.FabricExecutionContext ctx,
+                                  FabricQueryMonitoring.QueryMonitor queryMonitor )
         {
             this.originalStatement = originalStatement;
             this.plan = plan;
             this.params = params;
             this.ctx = ctx;
-            this.mergedSummary = new MergedSummary( plan );
+            this.mergedSummary = new MergedSummary( plan, accessMode );
             this.queryMonitor = queryMonitor;
         }
 
@@ -309,10 +313,11 @@ public class FabricExecutor
         private final AtomicInteger step;
         private final Log log;
 
-        FabricLoggingStatementExecution( String originalStatement, FabricPlan plan, MapValue params, FabricTransaction.FabricExecutionContext ctx, Log log,
-                FabricQueryMonitoring.QueryMonitor queryMonitor )
+        FabricLoggingStatementExecution( String originalStatement, FabricPlan plan, MapValue params, AccessMode accessMode,
+                                         FabricTransaction.FabricExecutionContext ctx, Log log,
+                                         FabricQueryMonitoring.QueryMonitor queryMonitor )
         {
-            super( originalStatement, plan, params, ctx, queryMonitor );
+            super( originalStatement, plan, params, accessMode, ctx, queryMonitor );
             this.step = new AtomicInteger( 0 );
             this.log = log;
         }

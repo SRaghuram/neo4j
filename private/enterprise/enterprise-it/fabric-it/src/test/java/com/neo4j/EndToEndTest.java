@@ -864,6 +864,31 @@ class EndToEndTest
     }
 
     @Test
+    void testWriteInReadModeShouldFail()
+    {
+        ClientException ex = assertThrows( ClientException.class, () ->
+        {
+            try ( Transaction tx = clientDriver.session( SessionConfig.builder()
+                                                                 .withDefaultAccessMode( AccessMode.READ )
+                                                                 .withDatabase( "mega" ).build() ).beginTransaction() )
+            {
+                var query = joinAsLines(
+                        "CALL {",
+                        "  USE mega.graph(0)",
+                        "  CREATE (n:Test)",
+                        "  RETURN n",
+                        "}",
+                        "RETURN n"
+                );
+                tx.run( query ).list();
+                tx.success();
+            }
+        } );
+
+        assertThat( ex.getMessage(), containsStringIgnoringCase( "Writing in read access mode not allowed" ) );
+    }
+
+    @Test
     void testQuerySummaryCounters()
     {
         ResultSummary r = inMegaTx( tx -> {

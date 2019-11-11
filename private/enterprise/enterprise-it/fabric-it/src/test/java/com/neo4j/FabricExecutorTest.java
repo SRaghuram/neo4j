@@ -36,7 +36,7 @@ import org.neo4j.driver.Record;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.SessionConfig;
 import org.neo4j.driver.Transaction;
-import org.neo4j.driver.exceptions.DatabaseException;
+import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.driver.summary.Notification;
 import org.neo4j.driver.summary.Plan;
 import org.neo4j.driver.summary.ResultSummary;
@@ -216,11 +216,11 @@ class FabricExecutorTest
     {
         doInMegaTx( AccessMode.READ, tx ->
         {
-            tx.run( "USE mega.graph(0) CREATE (n:Foo)" ).consume();
-            tx.run( "USE mega.graph(0) CREATE (n:Foo)" ).consume();
+            assertThrows( ClientException.class, () ->
+                    tx.run( "USE mega.graph(0) CREATE (n:Foo)" ).consume() );
         } );
 
-        verifySessionConfig( 2, org.neo4j.bolt.runtime.AccessMode.READ );
+        verifySessionConfig( 0, org.neo4j.bolt.runtime.AccessMode.READ );
         verifySessionConfig( 0, org.neo4j.bolt.runtime.AccessMode.WRITE );
     }
 
@@ -237,12 +237,14 @@ class FabricExecutorTest
             verifySessionConfig( 1, org.neo4j.bolt.runtime.AccessMode.WRITE );
             verifySessionConfig( 0, org.neo4j.bolt.runtime.AccessMode.READ );
 
-            assertThrows( DatabaseException.class, () -> tx.run( "USE mega.graph(1) CREATE (n:Foo)" ).consume() );
+            assertThrows( ClientException.class, () ->
+                    tx.run( "USE mega.graph(1) CREATE (n:Foo)" ).consume()
+            );
         } );
     }
 
     @Test
-    void testMixedInReadSession()
+    void testMixedInReadSessionGraph0()
     {
         doInMegaTx( AccessMode.READ, tx ->
         {
@@ -250,17 +252,40 @@ class FabricExecutorTest
             tx.run( "USE mega.graph(0) MATCH (n) RETURN n" ).consume();
             tx.run( "USE mega.graph(1) MATCH (n) RETURN n" ).consume();
             tx.run( "USE mega.graph(1) MATCH (n) RETURN n" ).consume();
-            tx.run( "USE mega.graph(0) CREATE (n:Foo)" ).consume();
-            tx.run( "USE mega.graph(0) CREATE (n:Foo)" ).consume();
             tx.run( "USE mega.graph(0) MATCH (n) RETURN n" ).consume();
             tx.run( "USE mega.graph(0) MATCH (n) RETURN n" ).consume();
             tx.run( "USE mega.graph(1) MATCH (n) RETURN n" ).consume();
             tx.run( "USE mega.graph(1) MATCH (n) RETURN n" ).consume();
-            tx.run( "USE mega.graph(1) CREATE (n:Foo)" ).consume();
-            tx.run( "USE mega.graph(1) CREATE (n:Foo)" ).consume();
+
+            assertThrows( ClientException.class, () ->
+                    tx.run( "USE mega.graph(0) CREATE (n:Foo)" ).consume()
+            );
         } );
 
-        verifySessionConfig( 12, org.neo4j.bolt.runtime.AccessMode.READ );
+        verifySessionConfig( 8, org.neo4j.bolt.runtime.AccessMode.READ );
+        verifySessionConfig( 0, org.neo4j.bolt.runtime.AccessMode.WRITE );
+    }
+
+    @Test
+    void testMixedInReadSessionGraph1()
+    {
+        doInMegaTx( AccessMode.READ, tx ->
+        {
+            tx.run( "USE mega.graph(0) MATCH (n) RETURN n" ).consume();
+            tx.run( "USE mega.graph(0) MATCH (n) RETURN n" ).consume();
+            tx.run( "USE mega.graph(1) MATCH (n) RETURN n" ).consume();
+            tx.run( "USE mega.graph(1) MATCH (n) RETURN n" ).consume();
+            tx.run( "USE mega.graph(0) MATCH (n) RETURN n" ).consume();
+            tx.run( "USE mega.graph(0) MATCH (n) RETURN n" ).consume();
+            tx.run( "USE mega.graph(1) MATCH (n) RETURN n" ).consume();
+            tx.run( "USE mega.graph(1) MATCH (n) RETURN n" ).consume();
+
+            assertThrows( ClientException.class, () ->
+                    tx.run( "USE mega.graph(1) CREATE (n:Foo)" ).consume()
+            );
+        } );
+
+        verifySessionConfig( 8, org.neo4j.bolt.runtime.AccessMode.READ );
         verifySessionConfig( 0, org.neo4j.bolt.runtime.AccessMode.WRITE );
     }
 
@@ -281,11 +306,13 @@ class FabricExecutorTest
             tx.run( "USE mega.graph(1) MATCH (n) RETURN n" ).consume();
             tx.run( "USE mega.graph(1) MATCH (n) RETURN n" ).consume();
 
-            verifySessionConfig( 1, org.neo4j.bolt.runtime.AccessMode.WRITE );
-            verifySessionConfig( 6, org.neo4j.bolt.runtime.AccessMode.READ );
-
-            assertThrows( DatabaseException.class, () -> tx.run( "USE mega.graph(1) CREATE (n:Foo)" ).consume() );
+            assertThrows( ClientException.class, () ->
+                    tx.run( "USE mega.graph(1) CREATE (n:Foo)" ).consume()
+            );
         } );
+
+        verifySessionConfig( 1, org.neo4j.bolt.runtime.AccessMode.WRITE );
+        verifySessionConfig( 6, org.neo4j.bolt.runtime.AccessMode.READ );
     }
 
     @Test
@@ -410,7 +437,7 @@ class FabricExecutorTest
                 List.of( NotificationCode.RUNTIME_UNSUPPORTED.notification( new InputPosition( 1, 1, 1 ) ) )
         ) ) );
 
-        doInMegaTx( AccessMode.READ, tx ->
+        doInMegaTx( AccessMode.WRITE, tx ->
         {
             ResultSummary summary =
                     tx.run( joinAsLines(
