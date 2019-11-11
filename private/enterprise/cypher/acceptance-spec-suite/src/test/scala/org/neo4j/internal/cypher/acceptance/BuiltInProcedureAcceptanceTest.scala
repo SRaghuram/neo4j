@@ -10,6 +10,7 @@ import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherCo
 import org.neo4j.internal.helpers.collection.Iterators
 import org.neo4j.internal.schema.SchemaDescriptor
 import org.neo4j.kernel.impl.index.schema.GenericNativeIndexProvider
+import org.scalatest.exceptions.TestFailedException
 
 import scala.collection.JavaConversions._
 
@@ -29,6 +30,25 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
       List(
         Map("label" -> "B"),
         Map("label" -> "C")))
+  }
+
+  test("missing parentheses should result in descriptive error message") {
+    // When
+    val exception = the[TestFailedException] thrownBy{
+      executeWith(Configs.ProcedureCall, "CALL db.labels YIELD label WHERE label <> 'A' RETURN *")
+    }
+    // Then
+    exception.getCause.getMessage should startWith("Procedure call is missing parentheses: db.labels")
+  }
+
+  test("missing argument and parentheses should result in reasonable error message") {
+    // When
+    val exception = the[TestFailedException] thrownBy{
+      executeWith(Configs.ProcedureCall, "CALL db.createLabel RETURN 5 as S")
+    }
+    // Then
+    exception.getCause.getMessage should startWith("Procedure call inside a query does not support passing arguments implicitly. " +
+      "Please pass arguments explicitly in parentheses after procedure name for db.createLabel")
   }
 
   test("should be able to use db.schema.visualization") {
