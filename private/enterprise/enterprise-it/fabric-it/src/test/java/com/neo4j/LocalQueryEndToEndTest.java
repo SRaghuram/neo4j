@@ -5,7 +5,7 @@
  */
 package com.neo4j;
 
-import com.neo4j.utils.CustomFunctions;
+import com.neo4j.utils.ProxyFunctions;
 import com.neo4j.utils.DriverUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -66,7 +66,7 @@ class LocalQueryEndToEndTest
         testServer.start();
 
         testServer.getDependencies().resolveDependency( GlobalProceduresRegistry.class )
-                .registerFunction( CustomFunctions.class );
+                .registerFunction( ProxyFunctions.class );
 
         clientDriver = GraphDatabase.driver(
                 "neo4j://localhost:" + ports.bolt,

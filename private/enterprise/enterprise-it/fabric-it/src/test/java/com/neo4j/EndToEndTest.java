@@ -5,7 +5,8 @@
  */
 package com.neo4j;
 
-import com.neo4j.utils.CustomFunctions;
+import com.neo4j.utils.ProxyFunctions;
+import com.neo4j.utils.ShardFunctions;
 import com.neo4j.utils.DriverUtils;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -26,6 +27,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.driver.AccessMode;
 import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
@@ -47,6 +49,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.containsStringIgnoringCase;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
@@ -70,8 +73,8 @@ class EndToEndTest
     static void beforeAll() throws KernelException
     {
 
-        shard0 = TestNeo4jBuilders.newInProcessBuilder().build();
-        shard1 = TestNeo4jBuilders.newInProcessBuilder().build();
+        shard0 = TestNeo4jBuilders.newInProcessBuilder().withProcedure( ShardFunctions.class ).build();
+        shard1 = TestNeo4jBuilders.newInProcessBuilder().withProcedure( ShardFunctions.class ).build();
 
         PortUtils.Ports ports = PortUtils.findFreePorts();
 
@@ -94,8 +97,11 @@ class EndToEndTest
 
         testServer.start();
 
-        testServer.getDependencies().resolveDependency( GlobalProceduresRegistry.class )
-                .registerFunction( CustomFunctions.class );
+        var globalProceduresRegistry = testServer.getDependencies().resolveDependency( GlobalProceduresRegistry.class );
+        globalProceduresRegistry
+                .registerFunction( ProxyFunctions.class );
+        globalProceduresRegistry
+                .registerProcedure( ProxyFunctions.class );
 
         clientDriver = GraphDatabase.driver(
                 "neo4j://localhost:" + ports.bolt,
@@ -846,19 +852,16 @@ class EndToEndTest
     @Test
     void testPeriodicCommitShouldFail()
     {
-        ClientException ex = assertThrows( ClientException.class, () ->
+        ClientException ex = assertThrows( ClientException.class, () -> doInMegaTx( tx ->
         {
-            try ( Session s = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ) )
-            {
-                var query = joinAsLines(
-                        "CYPHER planner=cost",
-                        "USING PERIODIC COMMIT",
-                        "WHAT EVER"
-                );
+            var query = joinAsLines(
+                    "CYPHER planner=cost",
+                    "USING PERIODIC COMMIT",
+                    "WHAT EVER"
+            );
 
-                s.run( query ).consume();
-            }
-        } );
+            tx.run( query ).consume();
+        } ) );
 
         assertThat( ex.getMessage(), containsStringIgnoringCase( "periodic commit" ) );
     }
@@ -866,26 +869,98 @@ class EndToEndTest
     @Test
     void testWriteInReadModeShouldFail()
     {
-        ClientException ex = assertThrows( ClientException.class, () ->
+        ClientException ex = assertThrows( ClientException.class, () -> doInMegaTx( AccessMode.READ, tx ->
         {
-            try ( Transaction tx = clientDriver.session( SessionConfig.builder()
-                                                                 .withDefaultAccessMode( AccessMode.READ )
-                                                                 .withDatabase( "mega" ).build() ).beginTransaction() )
-            {
-                var query = joinAsLines(
-                        "CALL {",
-                        "  USE mega.graph(0)",
-                        "  CREATE (n:Test)",
-                        "  RETURN n",
-                        "}",
-                        "RETURN n"
-                );
-                tx.run( query ).list();
-                tx.success();
-            }
-        } );
+            var query = joinAsLines(
+                    "CALL {",
+                    "  USE mega.graph(0)",
+                    "  CREATE (n:Test)",
+                    "  RETURN n",
+                    "}",
+                    "RETURN n"
+            );
+            tx.run( query ).list();
+        } ) );
 
         assertThat( ex.getMessage(), containsStringIgnoringCase( "Writing in read access mode not allowed" ) );
+    }
+
+    @Test
+    void testCallReadProcedureOnAllShards()
+    {
+        List<String> result = inMegaTx( AccessMode.READ, tx ->
+        {
+            var query = joinAsLines(
+                    "UNWIND mega.graphIds() AS g",
+                    "CALL {",
+                    "  USE mega.graph(g)",
+                    "  CALL com.neo4j.utils.reader() YIELD foo",
+                    "  RETURN foo",
+                    "}",
+                    "RETURN foo"
+            );
+            return tx.run( query ).stream().map( r -> r.get( "foo" ).asString() ).collect( Collectors.toList() );
+        } );
+
+        assertThat( result.size(), is( 2 ) );
+        assertThat( result, contains( is( "read" ), is( "read" ) ) );
+    }
+
+    @Test
+    void testCallUnknownProcedureOnAllShards()
+    {
+        List<String> result = inMegaTx( AccessMode.READ, tx ->
+        {
+            var query = joinAsLines(
+                    "UNWIND mega.graphIds() AS g",
+                    "CALL {",
+                    "  USE mega.graph(g)",
+                    "  CALL com.neo4j.utils.readerOnShard() YIELD foo",
+                    "  RETURN foo",
+                    "}",
+                    "RETURN foo"
+            );
+            return tx.run( query ).stream().map( r -> r.get( "foo" ).asString() ).collect( Collectors.toList() );
+        } );
+
+        assertThat( result.size(), is( 2 ) );
+        assertThat( result, contains( is( "read" ), is( "read" ) ) );
+    }
+
+    @Test
+    void testCallUnknownProcedureOnAllShardsInWrite()
+    {
+        ClientException ex = assertThrows( ClientException.class, () -> doInMegaTx( AccessMode.WRITE, tx ->
+        {
+            var query = joinAsLines(
+                    "UNWIND mega.graphIds() AS g",
+                    "CALL {",
+                    "  USE mega.graph(g)",
+                    "  CALL com.neo4j.utils.readerOnShard() YIELD foo",
+                    "  RETURN foo",
+                    "}",
+                    "RETURN foo"
+            );
+            tx.run( query ).consume();
+        } ) );
+
+        assertThat( ex.getMessage(), containsString( "Multi-shard writes not allowed" ) );
+    }
+
+    @Test
+    void testCallWriteProcedureOnShardInRead()
+    {
+        ClientException ex = assertThrows( ClientException.class, () -> doInMegaTx( AccessMode.READ, tx ->
+        {
+                var query = joinAsLines(
+                        "USE mega.graph(0)",
+                        "CALL com.neo4j.utils.writer() YIELD foo",
+                        "RETURN foo"
+                );
+                tx.run( query ).consume();
+        } ) );
+
+        assertThat( ex.getMessage(), containsString( "Writing in read access mode not allowed" ) );
     }
 
     @Test
@@ -937,6 +1012,16 @@ class EndToEndTest
     }
 
     private void doInMegaTx( Consumer<Transaction> workload )
+    {
+        DriverUtils.doInMegaTx( clientDriver, workload );
+    }
+
+    private <T> T inMegaTx( AccessMode accessMode, Function<Transaction, T> workload )
+    {
+        return DriverUtils.inMegaTx(clientDriver, workload);
+    }
+
+    private void doInMegaTx( AccessMode accessMode, Consumer<Transaction> workload )
     {
         DriverUtils.doInMegaTx( clientDriver, workload );
     }

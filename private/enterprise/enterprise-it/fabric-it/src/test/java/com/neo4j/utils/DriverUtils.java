@@ -8,6 +8,7 @@ package com.neo4j.utils;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import org.neo4j.driver.AccessMode;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.SessionConfig;
@@ -28,9 +29,26 @@ public final class DriverUtils
         }
     }
 
+    public static <T> T inMegaTx( Driver driver, AccessMode accessMode, Function<Transaction, T> workload )
+    {
+        try ( var session = driver.session( SessionConfig.builder().withDatabase( "mega" ).withDefaultAccessMode( accessMode ).build() ) )
+        {
+            return session.writeTransaction( workload::apply );
+        }
+    }
+
     public static void doInMegaTx( Driver driver, Consumer<Transaction> workload )
     {
         inMegaTx( driver, tx ->
+        {
+            workload.accept( tx );
+            return null;
+        } );
+    }
+
+    public static void doInMegaTx( Driver driver, AccessMode accessMode, Consumer<Transaction> workload )
+    {
+        inMegaTx( driver, accessMode, tx ->
         {
             workload.accept( tx );
             return null;

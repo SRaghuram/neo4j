@@ -5,7 +5,7 @@
  */
 package com.neo4j;
 
-import com.neo4j.utils.CustomFunctions;
+import com.neo4j.utils.ProxyFunctions;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -61,7 +61,7 @@ class PermissionsEndToEndTest
         testServer.start();
 
         testServer.getDependencies().resolveDependency( GlobalProceduresRegistry.class )
-                .registerFunction( CustomFunctions.class );
+                .registerFunction( ProxyFunctions.class );
 
         try ( var initDriver = createDriver( "neo4j", "neo4j", ports.bolt ) )
         {
