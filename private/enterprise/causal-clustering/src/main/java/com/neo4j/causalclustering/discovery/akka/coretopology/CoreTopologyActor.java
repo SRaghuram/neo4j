@@ -15,7 +15,6 @@ import akka.stream.javadsl.SourceQueueWithComplete;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.akka.AbstractActorWithTimersAndLogging;
-import com.neo4j.causalclustering.discovery.akka.common.DatabaseDroppedMessage;
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStartedMessage;
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStoppedMessage;
 import com.neo4j.causalclustering.discovery.akka.monitoring.ClusterSizeMonitor;
@@ -113,7 +112,6 @@ public class CoreTopologyActor extends AbstractActorWithTimersAndLogging
                 .match( RaftIdSetRequest.class,          this::handleRaftIdSetRequest )
                 .match( DatabaseStartedMessage.class,    this::handleDatabaseStartedMessage )
                 .match( DatabaseStoppedMessage.class,    this::handleDatabaseStoppedMessage )
-                .match( DatabaseDroppedMessage.class,    this::handleDatabaseDroppedMessage )
                 .build();
     }
 
@@ -150,15 +148,10 @@ public class CoreTopologyActor extends AbstractActorWithTimersAndLogging
         metadataActor.forward( message, context() );
     }
 
-    private void handleDatabaseDroppedMessage( DatabaseDroppedMessage message )
-    {
-        metadataActor.forward( message, context() );
-    }
-
     private void buildTopologies()
     {
         var receivedDatabaseIds = memberData.getStream()
-                .flatMap( info -> info.coreServerInfo().databaseIds().stream() )
+                .flatMap( info -> info.coreServerInfo().startedDatabaseIds().stream() )
                 .collect( toSet() );
 
         var absentDatabaseIds = knownDatabaseIds.stream()

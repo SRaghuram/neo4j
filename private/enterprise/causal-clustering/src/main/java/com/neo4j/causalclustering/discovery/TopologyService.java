@@ -6,12 +6,10 @@
 package com.neo4j.causalclustering.discovery;
 
 import com.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
-import com.neo4j.causalclustering.discovery.akka.database.state.ReplicatedDatabaseState;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.dbms.DatabaseStateChangedListener;
 
 import java.util.Map;
-import java.util.Optional;
 
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.DatabaseState;
@@ -27,23 +25,23 @@ public interface TopologyService extends Lifecycle, DatabaseStateChangedListener
 
     void onDatabaseStop( DatabaseId databaseId );
 
-    Map<MemberId,CoreServerInfo> allCoreServers();
+    MemberId memberId();
 
-    DatabaseCoreTopology coreTopologyForDatabase( DatabaseId databaseId );
+    Map<MemberId,CoreServerInfo> allCoreServers();
 
     Map<MemberId,ReadReplicaInfo> allReadReplicas();
 
+    DatabaseCoreTopology coreTopologyForDatabase( DatabaseId databaseId );
+
     DatabaseReadReplicaTopology readReplicaTopologyForDatabase( DatabaseId databaseId );
 
-    SocketAddress findCatchupAddress( MemberId upstream ) throws CatchupAddressResolutionException;
+    SocketAddress lookupCatchupAddress( MemberId upstream ) throws CatchupAddressResolutionException;
 
-    RoleInfo role( DatabaseId databaseId, MemberId memberId );
+    RoleInfo lookupRole( DatabaseId databaseId, MemberId memberId );
 
-    MemberId memberId();
+    DatabaseState lookupDatabaseState( DatabaseId databaseId, MemberId memberId );
 
-    DatabaseState stateFor( DatabaseId databaseId, MemberId memberId );
+    Map<MemberId,DatabaseState> allCoreStatesForDatabase( DatabaseId databaseId );
 
-    ReplicatedDatabaseState coreStatesForDatabase( DatabaseId databaseId );
-
-    ReplicatedDatabaseState readReplicaStatesForDatabase( DatabaseId databaseId );
+    Map<MemberId,DatabaseState> allReadReplicaStatesForDatabase( DatabaseId databaseId );
 }

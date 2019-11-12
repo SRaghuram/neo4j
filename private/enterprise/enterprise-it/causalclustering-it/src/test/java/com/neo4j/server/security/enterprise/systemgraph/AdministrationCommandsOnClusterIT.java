@@ -23,7 +23,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
+import java.util.stream.Collectors;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.cypher.internal.DatabaseStatus;
@@ -37,6 +41,9 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.MINUTES;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -44,6 +51,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
+import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @TestInstance( PER_CLASS )
 @ClusterExtension
@@ -1087,8 +1095,8 @@ class AdministrationCommandsOnClusterIT
         followerTx( ( sys, tx ) ->
         {
             var result = tx.execute( "SHOW DATABASES" ).columnAs( "name" );
-            assertEquals( Set.of( DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME ), Set.of( result.next().toString(), result.next().toString() ) );
-            assertFalse( result.hasNext() );
+            var names = result.stream().collect( Collectors.toSet() );
+            assertEquals( Set.of( DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME ), names );
             tx.commit();
         } );
 
@@ -1096,8 +1104,8 @@ class AdministrationCommandsOnClusterIT
         leaderTx( ( sys, tx ) ->
         {
             var result = tx.execute( "SHOW DATABASES" ).columnAs( "name" );
-            assertEquals( Set.of( DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME ), Set.of( result.next().toString(), result.next().toString() ) );
-            assertFalse( result.hasNext() );
+            var names = result.stream().collect( Collectors.toSet() );
+            assertEquals( Set.of( DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME ), names );
             tx.commit();
         } );
     }
@@ -1108,8 +1116,8 @@ class AdministrationCommandsOnClusterIT
         followerTx( ( sys, tx ) ->
         {
             var result = tx.execute( "SHOW DEFAULT DATABASE" ).columnAs( "name" );
-            assertEquals( DEFAULT_DATABASE_NAME, result.next().toString() );
-            assertFalse( result.hasNext() );
+            var names = result.stream().collect( Collectors.toSet() );
+            assertEquals( Set.of( DEFAULT_DATABASE_NAME ), names );
             tx.commit();
         } );
 
@@ -1117,8 +1125,8 @@ class AdministrationCommandsOnClusterIT
         leaderTx( ( sys, tx ) ->
         {
             var result = tx.execute( "SHOW DEFAULT DATABASE" ).columnAs( "name" );
-            assertEquals( DEFAULT_DATABASE_NAME, result.next().toString() );
-            assertFalse( result.hasNext() );
+            var names = result.stream().collect( Collectors.toSet() );
+            assertEquals( Set.of( DEFAULT_DATABASE_NAME ), names );
             tx.commit();
         } );
     }
@@ -1129,8 +1137,8 @@ class AdministrationCommandsOnClusterIT
         followerTx( ( sys, tx ) ->
         {
             var result = tx.execute( "SHOW DATABASE " + DEFAULT_DATABASE_NAME ).columnAs( "name" );
-            assertEquals( DEFAULT_DATABASE_NAME, result.next().toString() );
-            assertFalse( result.hasNext() );
+            var names = result.stream().collect( Collectors.toSet() );
+            assertEquals( Set.of( DEFAULT_DATABASE_NAME ), names );
             tx.commit();
         } );
 
@@ -1138,8 +1146,8 @@ class AdministrationCommandsOnClusterIT
         leaderTx( ( sys, tx ) ->
         {
             var result = tx.execute( "SHOW DATABASE " + DEFAULT_DATABASE_NAME ).columnAs( "name" );
-            assertEquals( DEFAULT_DATABASE_NAME, result.next().toString() );
-            assertFalse( result.hasNext() );
+            var names = result.stream().collect( Collectors.toSet() );
+            assertEquals( Set.of( DEFAULT_DATABASE_NAME ), names );
             tx.commit();
         } );
     }
@@ -1171,13 +1179,12 @@ class AdministrationCommandsOnClusterIT
         leaderTx( ( sys, tx ) ->
         {
             tx.execute( "CREATE DATABASE " + dbName );
-
-            var result = tx.execute( "SHOW DATABASE " + dbName ).columnAs( "name" );
-            assertTrue( result.hasNext() );
-            result.close();
             tx.commit();
         } );
+
         CausalClusteringTestHelpers.assertDatabaseEventuallyStarted( dbName, cluster );
+        assertEventually( "SHOW DATABASES should return a row for the database " + dbName, () -> showDatabaseHasRowsFor( dbName ),
+                is( true ), 10, TimeUnit.SECONDS );
     }
 
     @Test
@@ -1188,16 +1195,18 @@ class AdministrationCommandsOnClusterIT
             tx.execute( "CREATE DATABASE " + dbName + " IF NOT EXISTS" );
             tx.commit();
         } );
+
         CausalClusteringTestHelpers.assertDatabaseEventuallyStarted( dbName, cluster );
+
         leaderTx( ( sys, tx ) ->
         {
             tx.execute( "STOP DATABASE " + dbName );
-
-            var result = tx.execute( "SHOW DATABASE " + dbName ).columnAs( "status" );
-            assertEquals( DatabaseStatus.Offline().stringValue(), result.next() );
-            assertFalse( result.hasNext() );
             tx.commit();
         } );
+
+        CausalClusteringTestHelpers.assertDatabaseEventuallyStopped( dbName, cluster );
+        assertEventually( "SHOW DATABASE should return current status offline for database " + dbName, () -> showDatabaseStatusesFor( dbName ),
+                equalTo( Set.of( DatabaseStatus.Offline().stringValue() ) ), 10, TimeUnit.SECONDS );
 
         followerTx( ( sys, tx ) ->
         {
@@ -1212,25 +1221,16 @@ class AdministrationCommandsOnClusterIT
             }
         } );
 
-        leaderTx( ( sys, tx ) ->
-        {
-            var result = tx.execute( "SHOW DATABASE " + dbName ).columnAs( "status" );
-            assertEquals( DatabaseStatus.Offline().stringValue(), result.next() );
-            assertFalse( result.hasNext() );
-            tx.commit();
-        } );
-
         // But it works on leader
         leaderTx( ( sys, tx ) ->
         {
             // gives no error, does nothing
             tx.execute( "CREATE DATABASE " + dbName + " IF NOT EXISTS" );
-
-            var result = tx.execute( "SHOW DATABASE " + dbName ).columnAs( "status" );
-            assertEquals( DatabaseStatus.Offline().stringValue(), result.next() );
-            assertFalse( result.hasNext() );
             tx.commit();
         } );
+
+        assertThat( "SHOW DATABASES should still return requested status offline for database " + dbName, showDatabaseStatusesFor( dbName, true ),
+                equalTo( Set.of( DatabaseStatus.Offline().stringValue() ) ) );
     }
 
     @Test
@@ -1250,24 +1250,18 @@ class AdministrationCommandsOnClusterIT
             }
         } );
 
-        leaderTx( ( sys, tx ) ->
-        {
-            var result = tx.execute( "SHOW DATABASE " + dbName ).columnAs( "name" );
-            assertFalse( result.hasNext() );
-            tx.commit();
-        } );
+        assertThat( "SHOW DATABASES should not return a row for database " + dbName, showDatabaseHasRowsFor( dbName ), is( false ) );
 
         // But it works on leader
         leaderTx( ( sys, tx ) ->
         {
             tx.execute( "CREATE OR REPLACE DATABASE " + dbName );
-
-            var result = tx.execute( "SHOW DATABASE " + dbName ).columnAs( "name" );
-            assertTrue( result.hasNext() );
-            result.close();
             tx.commit();
         } );
+
         CausalClusteringTestHelpers.assertDatabaseEventuallyStarted( dbName, cluster );
+        assertEventually( "SHOW DATABASES should return a row for the database " + dbName, () -> showDatabaseHasRowsFor( dbName ),
+                is( true ), 10, TimeUnit.SECONDS );
     }
 
     @Test
@@ -1278,7 +1272,10 @@ class AdministrationCommandsOnClusterIT
             tx.execute( "CREATE DATABASE " + dbName );
             tx.commit();
         } );
+
         CausalClusteringTestHelpers.assertDatabaseEventuallyStarted( dbName, cluster );
+        assertEventually( "SHOW DATABASES should return rows for the database " + dbName, () -> showDatabaseHasRowsFor( dbName ),
+                is( true ), 10, TimeUnit.SECONDS );
 
         followerTx( ( sys, tx ) ->
         {
@@ -1293,24 +1290,18 @@ class AdministrationCommandsOnClusterIT
             }
         } );
 
-        leaderTx( ( sys, tx ) ->
-        {
-            var result = tx.execute( "SHOW DATABASE " + dbName ).columnAs( "name" );
-            assertTrue( result.hasNext() );
-            result.close();
-            tx.commit();
-        } );
+        assertThat( "SHOW DATABASES should still have rows for database " + dbName, showDatabaseHasRowsFor( dbName ), is( true ) );
 
         // But it works on leader
         leaderTx( ( sys, tx ) ->
         {
             tx.execute( "DROP DATABASE " + dbName );
-
-            var result = tx.execute( "SHOW DATABASE " + dbName ).columnAs( "name" );
-            assertFalse( result.hasNext() );
             tx.commit();
         } );
+
         CausalClusteringTestHelpers.assertDatabaseEventuallyDoesNotExist( dbName, cluster );
+        assertEventually( "SHOW DATABASES should not return rows for the database " + dbName, () -> showDatabaseHasRowsFor( dbName ),
+                is( false ), 10, TimeUnit.SECONDS );
     }
 
     @Test
@@ -1376,7 +1367,11 @@ class AdministrationCommandsOnClusterIT
             tx.execute( "CREATE DATABASE " + dbName );
             tx.commit();
         } );
+
         CausalClusteringTestHelpers.assertDatabaseEventuallyStarted( dbName, cluster );
+
+        assertEventually( "SHOW DATABASE should return status online for database " + dbName, () -> showDatabaseStatusesFor( dbName ),
+                equalTo( Set.of( DatabaseStatus.Online().stringValue() ) ), 10, TimeUnit.SECONDS );
 
         followerTx( ( sys, tx ) ->
         {
@@ -1391,28 +1386,56 @@ class AdministrationCommandsOnClusterIT
             }
         } );
 
-        leaderTx( ( sys, tx ) ->
-        {
-            var result = tx.execute( "SHOW DATABASE " + dbName ).columnAs( "status" );
-            assertEquals( DatabaseStatus.Online().stringValue(), result.next() );
-            assertFalse( result.hasNext() );
-            tx.commit();
-        } );
+        assertThat( "SHOW DATABASE still returns requested status online for database " + dbName, showDatabaseStatusesFor( dbName, true ),
+                equalTo( Set.of( DatabaseStatus.Online().stringValue() ) ) );
 
         // But it works on leader
         leaderTx( ( sys, tx ) ->
         {
             tx.execute( "STOP DATABASE " + dbName );
-
-            var result = tx.execute( "SHOW DATABASE " + dbName ).columnAs( "status" );
-            assertEquals( DatabaseStatus.Offline().stringValue(), result.next() );
-            assertFalse( result.hasNext() );
             tx.commit();
         } );
         CausalClusteringTestHelpers.assertDatabaseEventuallyStopped( dbName, cluster );
+
+        assertEventually( "SHOW DATABASE should return status offline for database " + dbName, () -> showDatabaseStatusesFor( dbName ),
+                equalTo( Set.of( DatabaseStatus.Offline().stringValue() ) ), 10, TimeUnit.SECONDS );
     }
 
     // Help methods
+    private boolean showDatabaseHasRowsFor( String dbName ) throws Exception
+    {
+        AtomicBoolean hasRows = new AtomicBoolean( false );
+        leaderTx( ( sys, tx ) ->
+        {
+            try ( var result = tx.execute( "SHOW DATABASE " + dbName ) )
+            {
+                hasRows.set( result.hasNext() );
+            }
+            tx.commit();
+        } );
+        return hasRows.get();
+    }
+
+    private Set<String> showDatabaseStatusesFor( String dbName ) throws Exception
+    {
+        return showDatabaseStatusesFor( dbName, false );
+    }
+
+    private Set<String> showDatabaseStatusesFor( String dbName, boolean requested ) throws Exception
+    {
+        var columnName = requested ? "requestedStatus" : "currentStatus";
+        AtomicReference<Set<String>> statuses = new AtomicReference<>( Set.of() );
+        leaderTx( ( sys, tx ) ->
+        {
+            try ( var result = tx.execute( "SHOW DATABASE " + dbName ).columnAs( columnName ) )
+            {
+                var statusResults = result.stream().map( Object::toString ).collect( Collectors.toSet() );
+                statuses.set( statusResults );
+            }
+            tx.commit();
+        } );
+        return statuses.get();
+    }
 
     /**
      * Perform a transaction on system database against the leader of the core cluster, retrying as necessary.

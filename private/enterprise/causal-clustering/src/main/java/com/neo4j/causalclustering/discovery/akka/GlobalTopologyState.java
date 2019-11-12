@@ -14,7 +14,7 @@ import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.discovery.Topology;
 import com.neo4j.causalclustering.discovery.akka.coretopology.BootstrapState;
-import com.neo4j.causalclustering.discovery.akka.database.state.ReplicatedDatabaseState;
+import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.dbms.EnterpriseDatabaseState;
 
@@ -24,16 +24,13 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.DatabaseState;
-import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
-import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
 import static java.lang.String.format;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.unmodifiableMap;
@@ -113,30 +110,20 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
     @Override
     public void onDbStateUpdate( ReplicatedDatabaseState newState )
     {
-        if ( newState.containsCoreStates() )
-        {
-            updateReplicatedState( newState, coreStatesByDatabase, "Core" );
-        }
-        else
-        {
-            updateReplicatedState( newState, readReplicaStatesByDatabase, "Read replica" );
-        }
-    }
+        var role = newState.containsCoreStates() ? "core" : "read_replica";
+        var statesByDatabase = newState.containsCoreStates() ? coreStatesByDatabase : readReplicaStatesByDatabase;
+        var databaseId = newState.databaseId();
+        var previousState = statesByDatabase.put( databaseId, newState );
 
-    private void updateReplicatedState( ReplicatedDatabaseState nextState, Map<DatabaseId,ReplicatedDatabaseState> statesByDatabase, String role )
-    {
-        var databaseId = nextState.databaseId();
-        var previousState = statesByDatabase.put( databaseId, nextState );
-
-        if ( !Objects.equals( previousState, nextState ) )
+        if ( !Objects.equals( previousState, newState ) )
         {
-            log.debug( "The %s replicated states for database %s changed from %s to %s", role, databaseId, previousState, nextState );
+            log.info( "The %s replicated states for database %s changed from %s to %s", role, databaseId, previousState, newState );
         }
 
-        if ( nextState.isEmpty() )
+        if ( newState.isEmpty() )
         {
             // do not store replicated states with no members left, they can represent dropped databases
-            statesByDatabase.remove( databaseId, nextState );
+            statesByDatabase.remove( databaseId, newState );
         }
     }
 

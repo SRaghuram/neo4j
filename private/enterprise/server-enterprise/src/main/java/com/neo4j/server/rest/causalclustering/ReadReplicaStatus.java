@@ -66,7 +66,7 @@ class ReadReplicaStatus extends ClusterMemberStatus
         boolean isHealthy = dbHealth.isHealthy();
         MemberId myId = topologyService.memberId();
         MemberId leaderId = votingMembers.stream()
-                .filter( memberId -> topologyService.role( db.databaseId(), memberId ) == RoleInfo.LEADER )
+                .filter( memberId -> topologyService.lookupRole( db.databaseId(), memberId ) == RoleInfo.LEADER )
                 .findFirst()
                 .orElse( null );
         long lastAppliedRaftIndex = commandIndexTracker.getAppliedCommandIndex();

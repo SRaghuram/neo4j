@@ -90,7 +90,7 @@ class DbmsReconcilerIT
         localOperator.stopDatabase( db.databaseName() );
 
         assertEventually( "Database should be stopped",
-                () -> reconciler.stateOfDatabase( db.databaseId() ), is( STOPPED.description() ), 10, SECONDS );
+                () -> reconciler.stateOfDatabase( db.databaseId() ), is( STOPPED ), 10, SECONDS );
         assertTrue( reconciler.causeOfFailure( db.databaseId() ).isEmpty(), "Database is *not* expected to be failed" );
     }
 

@@ -79,7 +79,7 @@ class CoreRoleProcedureTest
     void shouldThrowWhenRoleIsUnknown()
     {
         when( identityModule.myself() ).thenReturn( memberId );
-        when( topologyService.role( databaseId, memberId ) ).thenReturn( RoleInfo.UNKNOWN );
+        when( topologyService.lookupRole( databaseId, memberId ) ).thenReturn( RoleInfo.UNKNOWN );
 
         var error = assertThrows( ProcedureException.class,
                 () -> procedure.apply( procedureContext, new AnyValue[]{stringValue( databaseId.name() )}, resourceTracker ) );
@@ -102,7 +102,7 @@ class CoreRoleProcedureTest
     private void testProcedureCall( RoleInfo role ) throws Exception
     {
         when( identityModule.myself() ).thenReturn( memberId );
-        when( topologyService.role( databaseId, memberId ) ).thenReturn( role );
+        when( topologyService.lookupRole( databaseId, memberId ) ).thenReturn( role );
 
         var result = procedure.apply( procedureContext, new AnyValue[]{stringValue( databaseId.name() )}, resourceTracker );
         assertTrue( result.hasNext() );

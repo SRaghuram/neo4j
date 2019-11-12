@@ -39,7 +39,7 @@ public class LeaderOnlyStrategy extends UpstreamDatabaseSelectionStrategy
 
         for ( MemberId memberId : coreMemberIds )
         {
-            RoleInfo role = topologyService.role( databaseId, memberId );
+            RoleInfo role = topologyService.lookupRole( databaseId, memberId );
 
             if ( role == RoleInfo.LEADER && !Objects.equals( myself, memberId ) )
             {

@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.discovery.akka.marshal;
 
 import com.neo4j.causalclustering.core.state.storage.SafeChannelMarshal;
-import com.neo4j.causalclustering.discovery.akka.database.state.ReplicatedDatabaseState;
+import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.EndOfStreamException;
 import com.neo4j.causalclustering.messaging.marshalling.BooleanMarshal;

@@ -39,7 +39,7 @@ public class ReadReplicaInfo implements DiscoveryServerInfo
     }
 
     @Override
-    public Set<DatabaseId> databaseIds()
+    public Set<DatabaseId> startedDatabaseIds()
     {
         return databaseIds;
     }
@@ -93,7 +93,7 @@ public class ReadReplicaInfo implements DiscoveryServerInfo
                "catchupServerAddress=" + catchupServerAddress +
                ", clientConnectorAddresses=" + clientConnectorAddresses +
                ", groups=" + groups +
-               ", databaseIds=" + databaseIds +
+               ", startedDatabaseIds=" + databaseIds +
                '}';
     }
 }

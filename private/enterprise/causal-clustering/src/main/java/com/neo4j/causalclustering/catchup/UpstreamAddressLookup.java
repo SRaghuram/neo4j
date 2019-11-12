@@ -29,7 +29,7 @@ public class UpstreamAddressLookup
         try
         {
             MemberId upstreamMember = strategySelector.bestUpstreamMemberForDatabase( databaseId );
-            return topologyService.findCatchupAddress( upstreamMember );
+            return topologyService.lookupCatchupAddress( upstreamMember );
         }
         catch ( UpstreamDatabaseSelectionException e )
         {

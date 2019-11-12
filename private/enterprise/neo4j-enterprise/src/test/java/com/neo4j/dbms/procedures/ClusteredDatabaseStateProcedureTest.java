@@ -11,6 +11,9 @@ import com.neo4j.dbms.EnterpriseDatabaseState;
 import com.neo4j.dbms.EnterpriseOperatorState;
 import org.junit.jupiter.api.Test;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -22,6 +25,7 @@ import org.neo4j.dbms.api.DatabaseManagementException;
 import org.neo4j.internal.helpers.collection.Iterators;
 import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
+import org.neo4j.internal.kernel.api.procs.FieldSignature;
 import org.neo4j.kernel.api.ResourceTracker;
 import org.neo4j.kernel.api.procedure.Context;
 import org.neo4j.kernel.database.DatabaseId;
@@ -31,6 +35,7 @@ import org.neo4j.values.storable.StringValue;
 
 import static com.neo4j.causalclustering.discovery.FakeTopologyService.memberId;
 import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
+import static java.lang.String.format;
 import static java.util.function.Function.identity;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -42,14 +47,8 @@ import static org.neo4j.values.storable.Values.stringValue;
 
 class ClusteredDatabaseStateProcedureTest
 {
-    // Test throw with invalid
-
-    // Test throw when database not found
-
-    // Test return empty error for all databases when no error
-
     @Test
-    void shouldOnlyReturnErrorForFailedMembers() throws ProcedureException
+    void shouldReturnErrorForFailedMembers() throws ProcedureException
     {
         // given
         var idRepository = new TestDatabaseIdRepository();
@@ -72,7 +71,7 @@ class ClusteredDatabaseStateProcedureTest
 
         var procedure = new ClusteredDatabaseStateProcedure( idRepository, topologyService, localStateService );
         // when
-        var result = procedure.apply( mock( Context.class ), new AnyValue[]{stringValue( databaseId.uuid().toString() )}, mock( ResourceTracker.class ) );
+        var result = procedure.apply( mock( Context.class ), new AnyValue[]{stringValue( databaseId.name() )}, mock( ResourceTracker.class ) );
 
         // then
         var resultRows = Iterators.asList( result );
@@ -106,7 +105,7 @@ class ClusteredDatabaseStateProcedureTest
         var procedure = new ClusteredDatabaseStateProcedure( idRepository, topologyService, localStateService );
 
         // when
-        var result = procedure.apply( mock( Context.class ), new AnyValue[]{stringValue( databaseId.uuid().toString() )}, mock( ResourceTracker.class ) );
+        var result = procedure.apply( mock( Context.class ), new AnyValue[]{stringValue( databaseId.name() )}, mock( ResourceTracker.class ) );
 
         // then
         var resultRows = Iterators.asList( result );
@@ -140,14 +139,13 @@ class ClusteredDatabaseStateProcedureTest
         var localStateService = alwaysHealthyLocalStateService();
 
         var localServerInfo = topologyService.allCoreServers().get( memberId( 0 ) );
-        var localConfig = TestTopology.configFor( localServerInfo );
         var procedure = new ClusteredDatabaseStateProcedure( idRepository, topologyService, localStateService );
 
         // when
         var defaultResult = procedure.apply( mock( Context.class ),
-                new AnyValue[]{stringValue( defaultDatabaseId.uuid().toString() )}, mock( ResourceTracker.class ) );
+                new AnyValue[]{stringValue( defaultDatabaseId.name() )}, mock( ResourceTracker.class ) );
         var coreOnlyResult = procedure.apply( mock( Context.class ),
-                new AnyValue[]{stringValue( coreOnlyDatabaseId.uuid().toString() )}, mock( ResourceTracker.class ) );
+                new AnyValue[]{stringValue( coreOnlyDatabaseId.name() )}, mock( ResourceTracker.class ) );
 
         // then
         assertEquals( 2, countReadReplicas( defaultResult ), "Default Database should be hosted on read replicas" );

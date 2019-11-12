@@ -11,5 +11,5 @@ public enum RoleInfo
     LEADER,
     FOLLOWER,
     READ_REPLICA,
-    UNKNOWN;
+    UNKNOWN
 }

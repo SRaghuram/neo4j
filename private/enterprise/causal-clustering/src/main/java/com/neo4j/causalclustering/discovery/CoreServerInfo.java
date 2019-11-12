@@ -45,7 +45,7 @@ public class CoreServerInfo implements DiscoveryServerInfo
     }
 
     @Override
-    public Set<DatabaseId> databaseIds()
+    public Set<DatabaseId> startedDatabaseIds()
     {
         return startedDatabaseIds;
     }

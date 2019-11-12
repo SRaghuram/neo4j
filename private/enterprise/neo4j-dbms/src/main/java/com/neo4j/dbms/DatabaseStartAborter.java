@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.neo4j.dbms.OperatorState;
 import org.neo4j.kernel.availability.AvailabilityGuard;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
@@ -75,7 +76,7 @@ public class DatabaseStartAborter implements DatabaseStartupController
             return cachedState;
         } );
 
-        return cached.state() == OperatorState.STOPPED || cached.state() == OperatorState.DROPPED;
+        return cached.state() == EnterpriseOperatorState.STOPPED || cached.state() == EnterpriseOperatorState.DROPPED;
     }
 
     /**

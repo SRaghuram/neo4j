@@ -55,7 +55,7 @@ abstract class DiscoveryServerInfoMarshal<T extends DiscoveryServerInfo> extends
 
     static void marshalDatabaseIds( DiscoveryServerInfo info, WritableChannel channel ) throws IOException
     {
-        var databaseIds = info.databaseIds();
+        var databaseIds = info.startedDatabaseIds();
         channel.putInt( databaseIds.size() );
         for ( var databaseId : databaseIds )
         {

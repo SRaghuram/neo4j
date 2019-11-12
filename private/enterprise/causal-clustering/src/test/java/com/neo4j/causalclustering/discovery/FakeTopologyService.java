@@ -7,7 +7,6 @@ package com.neo4j.causalclustering.discovery;
 
 import com.neo4j.causalclustering.catchup.CatchupAddressResolutionException;
 import com.neo4j.causalclustering.discovery.akka.database.state.DatabaseToMember;
-import com.neo4j.causalclustering.discovery.akka.database.state.ReplicatedDatabaseState;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.dbms.EnterpriseDatabaseState;
 import com.neo4j.causalclustering.identity.RaftId;
@@ -25,7 +24,6 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.DatabaseState;
@@ -112,11 +110,11 @@ public class FakeTopologyService extends LifecycleAdapter implements TopologySer
     {
         Function<CoreServerInfo,CoreServerInfo> coreInfoTransform = serverInfo ->
                 new CoreServerInfo( serverInfo.getRaftServer(), serverInfo.catchupServer(),
-                        serverInfo.connectors(), groups, serverInfo.databaseIds(), serverInfo.refusesToBeLeader() );
+                        serverInfo.connectors(), groups, serverInfo.startedDatabaseIds(), serverInfo.refusesToBeLeader() );
 
         Function<ReadReplicaInfo,ReadReplicaInfo> replicaInfoTransform = serverInfo ->
                 new ReadReplicaInfo( serverInfo.connectors(),
-                        serverInfo.catchupServer(), groups, serverInfo.databaseIds() );
+                        serverInfo.catchupServer(), groups, serverInfo.startedDatabaseIds() );
 
         updateMembers( members, coreInfoTransform, replicaInfoTransform );
     }
@@ -181,7 +179,7 @@ public class FakeTopologyService extends LifecycleAdapter implements TopologySer
     public DatabaseCoreTopology coreTopologyForDatabase( DatabaseId databaseId )
     {
         var coresWithDatabase = coreMembers.entrySet().stream()
-                .filter( e -> e.getValue().databaseIds().contains( databaseId ) )
+                .filter( e -> e.getValue().startedDatabaseIds().contains( databaseId ) )
                 .collect( Collectors.toMap( Map.Entry::getKey, Map.Entry::getValue ) );
         return new DatabaseCoreTopology( databaseId, RaftId.from( databaseId ), coresWithDatabase );
     }
@@ -196,13 +194,13 @@ public class FakeTopologyService extends LifecycleAdapter implements TopologySer
     public DatabaseReadReplicaTopology readReplicaTopologyForDatabase( DatabaseId databaseId )
     {
         var replicasWithDatabase = replicaMembers.entrySet().stream()
-                .filter( e -> e.getValue().databaseIds().contains( databaseId ) )
+                .filter( e -> e.getValue().startedDatabaseIds().contains( databaseId ) )
                 .collect( Collectors.toMap( Map.Entry::getKey, Map.Entry::getValue ) );
         return new DatabaseReadReplicaTopology( databaseId, replicasWithDatabase );
     }
 
     @Override
-    public SocketAddress findCatchupAddress( MemberId upstream ) throws CatchupAddressResolutionException
+    public SocketAddress lookupCatchupAddress( MemberId upstream ) throws CatchupAddressResolutionException
     {
         return Optional.<DiscoveryServerInfo>ofNullable( coreMembers.get( upstream ) )
                 .or( () -> Optional.ofNullable( replicaMembers.get( upstream ) ) )
@@ -211,12 +209,13 @@ public class FakeTopologyService extends LifecycleAdapter implements TopologySer
     }
 
     @Override
-    public RoleInfo role( DatabaseId ignored, MemberId memberId )
+    public RoleInfo lookupRole( DatabaseId ignored, MemberId memberId )
     {
         var role = coreRoles.get( memberId );
         if ( role == null )
         {
-            return RoleInfo.UNKNOWN;
+            var isReadReplica = replicaMembers.containsKey( memberId );
+            return isReadReplica ? RoleInfo.READ_REPLICA : RoleInfo.UNKNOWN;
         }
         return role;
     }
@@ -228,23 +227,21 @@ public class FakeTopologyService extends LifecycleAdapter implements TopologySer
     }
 
     @Override
-    public DatabaseState stateFor( DatabaseId databaseId, MemberId memberId )
+    public DatabaseState lookupDatabaseState( DatabaseId databaseId, MemberId memberId )
     {
         return databaseStates.get( new DatabaseToMember( databaseId, memberId ) );
     }
 
     @Override
-    public ReplicatedDatabaseState coreStatesForDatabase( final DatabaseId databaseId )
+    public Map<MemberId,DatabaseState> allCoreStatesForDatabase( final DatabaseId databaseId )
     {
-        var memberStates = getMemberStatesForRole( databaseId, allCoreServers().keySet() );
-        return ReplicatedDatabaseState.ofCores( databaseId, memberStates );
+        return getMemberStatesForRole( databaseId, allCoreServers().keySet() );
     }
 
     @Override
-    public ReplicatedDatabaseState readReplicaStatesForDatabase( DatabaseId databaseId )
+    public Map<MemberId,DatabaseState> allReadReplicaStatesForDatabase( DatabaseId databaseId )
     {
-        var memberStates = getMemberStatesForRole( databaseId, allReadReplicas().keySet() );
-        return ReplicatedDatabaseState.ofCores( databaseId, memberStates );
+        return getMemberStatesForRole( databaseId, allReadReplicas().keySet() );
     }
 
     private Map<MemberId,DatabaseState> getMemberStatesForRole( final DatabaseId databaseId, Set<MemberId> membersOfRole )

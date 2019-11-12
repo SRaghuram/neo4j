@@ -54,7 +54,7 @@ public class DatabaseStateMarshal extends SafeChannelMarshal<DatabaseState>
     public void marshal( DatabaseState databaseState, WritableChannel channel ) throws IOException
     {
         DatabaseIdMarshal.INSTANCE.marshal( databaseState.databaseId(), channel );
-        channel.putInt( getOrdinalOfOperatorStateOrUnknown( databaseState.operatorState() ) );
+        channel.putInt( databaseState.operatorState().ordinal() );
         BooleanMarshal.marshal( channel, databaseState.hasFailed() );
         var failure = databaseState.failure();
         if ( failure.isPresent() )
@@ -68,22 +68,6 @@ public class DatabaseStateMarshal extends SafeChannelMarshal<DatabaseState>
     {
         var operatorStates = Arrays.asList( EnterpriseOperatorState.values() );
         return operatorStates.indexOf( UNKNOWN );
-    }
-
-    private int getOrdinalOfOperatorStateOrUnknown( OperatorState operatorState )
-    {
-        var operatorStates = EnterpriseOperatorState.values();
-
-        int index = unknownStateOrdinal;
-        for ( int i = 0; i < operatorStates.length; i++ )
-        {
-            if ( Objects.equals( operatorStates[i], operatorState ) )
-            {
-                index = i;
-                break;
-            }
-        }
-        return index;
     }
 
     private EnterpriseOperatorState getOperatorState( int ordinal )

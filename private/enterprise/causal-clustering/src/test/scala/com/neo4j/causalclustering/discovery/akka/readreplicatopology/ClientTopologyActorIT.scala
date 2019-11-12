@@ -16,10 +16,9 @@ import akka.testkit.TestProbe
 import com.neo4j.causalclustering.core.CausalClusteringSettings
 import com.neo4j.causalclustering.core.consensus.LeaderInfo
 import com.neo4j.causalclustering.discovery.akka.common.{DatabaseStartedMessage, DatabaseStoppedMessage}
-import com.neo4j.causalclustering.discovery.akka.database.state.ReplicatedDatabaseState
 import com.neo4j.causalclustering.discovery.akka.directory.LeaderInfoDirectoryMessage
 import com.neo4j.causalclustering.discovery.akka.{BaseAkkaIT, DatabaseStateUpdateSink, DirectoryUpdateSink, TopologyUpdateSink}
-import com.neo4j.causalclustering.discovery.{DatabaseCoreTopology, DatabaseReadReplicaTopology, TestDiscoveryMember, TestTopology}
+import com.neo4j.causalclustering.discovery.{DatabaseCoreTopology, DatabaseReadReplicaTopology, ReplicatedDatabaseState, TestDiscoveryMember, TestTopology}
 import com.neo4j.causalclustering.identity.{MemberId, RaftId}
 import org.neo4j.configuration.Config
 import org.neo4j.dbms.DatabaseState
@@ -221,7 +220,7 @@ class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {
 
     def isRefreshMsgWithDatabases(msg: Any, databaseIds: Set[DatabaseId]): Boolean = {
       msg match {
-        case refreshMsg: ReadReplicaRefreshMessage => refreshMsg.readReplicaInfo().databaseIds.asScala == databaseIds
+        case refreshMsg: ReadReplicaRefreshMessage => refreshMsg.readReplicaInfo().startedDatabaseIds.asScala == databaseIds
         case _ => false
       }
     }

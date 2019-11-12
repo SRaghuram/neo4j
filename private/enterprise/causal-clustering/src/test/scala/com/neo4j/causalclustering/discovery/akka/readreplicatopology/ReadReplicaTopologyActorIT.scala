@@ -14,8 +14,7 @@ import akka.stream.scaladsl.Sink
 import akka.stream.{ActorMaterializer, OverflowStrategy}
 import akka.testkit.TestProbe
 import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
-import com.neo4j.causalclustering.discovery.akka.database.state.ReplicatedDatabaseState
-import com.neo4j.causalclustering.discovery.{DatabaseReadReplicaTopology, ReadReplicaInfo, TestTopology}
+import com.neo4j.causalclustering.discovery.{DatabaseReadReplicaTopology, ReadReplicaInfo, ReplicatedDatabaseState, TestTopology}
 import com.neo4j.causalclustering.identity.MemberId
 import com.neo4j.dbms.EnterpriseOperatorState.STARTED
 import com.neo4j.dbms.EnterpriseDatabaseState

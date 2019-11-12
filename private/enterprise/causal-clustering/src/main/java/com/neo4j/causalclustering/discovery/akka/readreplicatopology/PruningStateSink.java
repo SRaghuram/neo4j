@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.discovery.akka.readreplicatopology;
 import akka.stream.javadsl.SourceQueueWithComplete;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
-import com.neo4j.causalclustering.discovery.akka.database.state.ReplicatedDatabaseState;
+import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -90,7 +90,7 @@ class PruningStateSink<T>
 
         for ( var databaseId : databaseIdsForStaleState )
         {
-            log.debug( "%s for database %s hasn't been updated for more than %s and will be removed", stateType, databaseId, maxStateLifetime );
+            log.info( "%s for database %s hasn't been updated for more than %s and will be removed", stateType, databaseId, maxStateLifetime );
             var empty = emptyStateFactory.apply( databaseId );
             stateSink.offer( empty );
             lastUpdated.remove( databaseId );

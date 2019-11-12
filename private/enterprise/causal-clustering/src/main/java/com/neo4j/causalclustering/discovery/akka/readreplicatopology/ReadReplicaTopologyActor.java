@@ -15,9 +15,9 @@ import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.akka.database.state.AllReplicatedDatabaseStates;
-import com.neo4j.causalclustering.discovery.akka.database.state.ReplicatedDatabaseState;
+import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState;
 import com.neo4j.causalclustering.discovery.akka.directory.LeaderInfoDirectoryMessage;
-import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaViewActor.PruneReplicaViewMessage;
+import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaViewActor.Tick;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -76,7 +76,7 @@ public class ReadReplicaTopologyActor extends AbstractLoggingActor
                 .match( AllReplicatedDatabaseStates.class,  this::updateCoreDatabaseStates )
                 .match( ClusterClientViewMessage.class,     this::handleClusterClientView )
                 .match( ReadReplicaViewMessage.class,       this::handleReadReplicaView )
-                .match( PruneReplicaViewMessage.class,      this::sendTopologiesToClients )
+                .match( Tick.class,      this::sendTopologiesToClients )
                 .match( DatabaseCoreTopology.class,         this::addCoreTopology )
                 .match( LeaderInfoDirectoryMessage.class,   this::setDatabaseLeaderInfo )
                 .build();
@@ -108,9 +108,14 @@ public class ReadReplicaTopologyActor extends AbstractLoggingActor
                 .flatMap( readReplicaViewMessage::topologyClient );
     }
 
-    private void sendTopologiesToClients( PruneReplicaViewMessage ignored )
+    private void sendTopologiesToClients( Tick ignored )
     {
-        log().debug( "Sending to clients: {}, {}, {}", readReplicaTopologies, coreTopologies, databaseLeaderInfo );
+        log().debug( "Sending core topologies to clients: {}", coreTopologies );
+        log().debug( "Sending read replica topologies to clients: {}", readReplicaTopologies );
+        log().debug( "Sending database leader info to clients: {}", databaseLeaderInfo );
+        log().debug( "Sending cores' database states to clients: {}", coreMemberDbStates );
+        log().debug( "Sending read replicas' database states to clients: {}", rrMemberDbStates );
+
         myTopologyClients().forEach( client -> {
             sendReadReplicaTopologiesTo( client );
             sendCoreTopologiesTo( client );

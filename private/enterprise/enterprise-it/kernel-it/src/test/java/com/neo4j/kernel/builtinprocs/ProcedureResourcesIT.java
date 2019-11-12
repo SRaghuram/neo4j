@@ -39,7 +39,9 @@ import org.neo4j.test.extension.Inject;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.internal.helpers.collection.Iterators.single;
+import static org.neo4j.kernel.database.DatabaseIdRepository.SYSTEM_DATABASE_ID;
 
 @EnterpriseDbmsExtension( configurationCallback = "enableBolt" )
 class ProcedureResourcesIT
@@ -330,6 +332,10 @@ class ProcedureResourcesIT
             break;
         case "db.indexDetails":
             proc.withParam( "\"" + indexName + "\"" );
+            break;
+        case "dbms.database.state":
+            proc.withParam( "\"" + SYSTEM_DATABASE_NAME + "\"" );
+            break;
         default:
         }
         return proc;

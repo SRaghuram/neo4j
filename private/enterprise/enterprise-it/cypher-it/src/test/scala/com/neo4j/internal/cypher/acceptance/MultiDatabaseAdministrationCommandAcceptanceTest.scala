@@ -1315,7 +1315,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
       "requestedStatus" -> status,
       "currentStatus" -> status,
       "error" -> "",
-      "isDefault" -> isDefault)
+      "default" -> isDefault)
 
   private def defaultDb(name: String = DEFAULT_DATABASE_NAME, status: String = onlineStatus) =
     Map("name" -> name,

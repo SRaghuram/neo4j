@@ -48,7 +48,7 @@ class ReadReplicaViewActor extends AbstractActorWithTimersAndLogging
     public void preStart()
     {
         receptionist.registerSubscriber( READ_REPLICA_TOPIC, getSelf() );
-        getTimers().startPeriodicTimer( TICK_KEY, PruneReplicaViewMessage.getInstance(), refresh );
+        getTimers().startPeriodicTimer( TICK_KEY, Tick.getInstance(), refresh );
     }
 
     @Override
@@ -64,7 +64,7 @@ class ReadReplicaViewActor extends AbstractActorWithTimersAndLogging
                 .create()
                 .match( ReadReplicaRefreshMessage.class, this::handleRefreshMessage )
                 .match( ReadReplicaRemovalMessage.class, this::handleRemovalMessage )
-                .match( PruneReplicaViewMessage.class,   this::handleTick )
+                .match( Tick.class,   this::handleTick )
                 .build();
     }
 
@@ -82,7 +82,7 @@ class ReadReplicaViewActor extends AbstractActorWithTimersAndLogging
         sendClusterView();
     }
 
-    private void handleTick( PruneReplicaViewMessage tick )
+    private void handleTick( Tick tick )
     {
         Instant nTicksAgo = Instant.now( clock ).minus( refresh.multipliedBy( TICKS_BEFORE_REMOVE_READ_REPLICA ) );
 
@@ -107,15 +107,15 @@ class ReadReplicaViewActor extends AbstractActorWithTimersAndLogging
         parent.tell( new ReadReplicaViewMessage( clusterClientReadReplicas ), getSelf() );
     }
 
-    static class PruneReplicaViewMessage
+    static class Tick
     {
-        private static PruneReplicaViewMessage instance = new PruneReplicaViewMessage();
+        private static Tick instance = new Tick();
 
-        private PruneReplicaViewMessage()
+        private Tick()
         {
         }
 
-        public static PruneReplicaViewMessage getInstance()
+        public static Tick getInstance()
         {
             return instance;
         }

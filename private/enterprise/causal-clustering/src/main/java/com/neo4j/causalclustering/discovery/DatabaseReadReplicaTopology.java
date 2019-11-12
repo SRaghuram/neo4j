@@ -24,7 +24,7 @@ public class DatabaseReadReplicaTopology implements Topology<ReadReplicaInfo>
     public DatabaseReadReplicaTopology( DatabaseId databaseId, Map<MemberId,ReadReplicaInfo> readReplicaMembers )
     {
         this.databaseId = requireNonNull( databaseId );
-        this.readReplicaMembers = Map.copyOf( readReplicaMembers );
+        this.readReplicaMembers = readReplicaMembers;
     }
 
     public static DatabaseReadReplicaTopology empty( DatabaseId databaseId )

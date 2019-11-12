@@ -18,9 +18,9 @@ import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.time.FakeClock;
 
-import static com.neo4j.dbms.OperatorState.DROPPED;
-import static com.neo4j.dbms.OperatorState.STARTED;
-import static com.neo4j.dbms.OperatorState.STOPPED;
+import static com.neo4j.dbms.EnterpriseOperatorState.DROPPED;
+import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
+import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -94,7 +94,7 @@ class DatabaseStartAborterTest
     void shouldOnlyAbortForStopDrop()
     {
         // given
-        var nonStopDrop = Stream.of( OperatorState.values() )
+        var nonStopDrop = Stream.of( EnterpriseOperatorState.values() )
                 .filter( state -> state != STOPPED && state != DROPPED )
                 .map( Optional::of )
                 .collect( Collectors.toList() );
@@ -128,7 +128,7 @@ class DatabaseStartAborterTest
         assertTrue( aborter.shouldAbort( id2 ), "Database should eventually abort" );
 
         // Each database is tested for each status except one of Stop or Drop, so we expect OperatorState.values().length - 1 invocations
-        verify( dbmsModel, times( OperatorState.values().length - 1 ) ).getStatus( id1 );
-        verify( dbmsModel, times( OperatorState.values().length - 1 ) ).getStatus( id2 );
+        verify( dbmsModel, times( EnterpriseOperatorState.values().length - 1 ) ).getStatus( id1 );
+        verify( dbmsModel, times( EnterpriseOperatorState.values().length - 1 ) ).getStatus( id2 );
     }
 }

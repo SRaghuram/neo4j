@@ -12,6 +12,7 @@ import akka.stream.javadsl.Source
 import akka.stream.scaladsl.Sink
 import akka.stream.{ActorMaterializer, OverflowStrategy}
 import akka.testkit.TestProbe
+import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier
 import com.neo4j.causalclustering.discovery.akka.{BaseAkkaIT, DatabaseStateUpdateSink}
 import com.neo4j.causalclustering.identity.MemberId

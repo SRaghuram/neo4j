@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.discovery.akka.readreplicatopology;
 import akka.actor.ActorRef;
 import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
-import com.neo4j.causalclustering.discovery.akka.database.state.ReplicatedDatabaseState;
+import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState;
 import com.neo4j.causalclustering.identity.MemberId;
 
 import java.util.Collections;
@@ -46,7 +46,7 @@ class ReadReplicaViewMessage
         Map<MemberId,ReadReplicaInfo> knownReadReplicas = clusterClientReadReplicas
                 .values()
                 .stream()
-                .filter( info -> info.readReplicaInfo().databaseIds().contains( databaseId ) )
+                .filter( info -> info.readReplicaInfo().startedDatabaseIds().contains( databaseId ) )
                 .map( info -> Pair.of( info.memberId(), info.readReplicaInfo() ) )
                 .collect( Collectors.toMap( Pair::first, Pair::other ) );
 
@@ -72,7 +72,7 @@ class ReadReplicaViewMessage
     {
         return clusterClientReadReplicas.values().stream()
                 .map( ReadReplicaViewRecord::readReplicaInfo )
-                .flatMap( info -> info.databaseIds().stream() )
+                .flatMap( info -> info.startedDatabaseIds().stream() )
                 .collect( toSet() );
     }
 

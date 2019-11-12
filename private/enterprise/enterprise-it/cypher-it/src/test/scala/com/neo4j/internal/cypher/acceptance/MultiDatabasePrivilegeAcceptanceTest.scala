@@ -460,5 +460,11 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
   private val offlineStatus = DatabaseStatus.Offline.stringValue()
 
   private def db(name: String, status: String = onlineStatus, default: Boolean = false) =
-    Map("name" -> name, "status" -> status, "default" -> default)
+    Map("name" -> name,
+      "address" -> "localhost:7687",
+      "role" -> "standalone",
+      "requestedStatus" -> status,
+      "currentStatus" -> status,
+      "error" -> "",
+      "default" -> default)
 }

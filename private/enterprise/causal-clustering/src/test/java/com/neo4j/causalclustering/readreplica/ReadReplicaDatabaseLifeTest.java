@@ -78,7 +78,7 @@ class ReadReplicaDatabaseLifeTest
         Map<MemberId,CoreServerInfo> members = Map.of( upstreamMember, mock( CoreServerInfo.class ) );
         when( topologyService.allCoreServers() ).thenReturn( members );
         when( topologyService.coreTopologyForDatabase( databaseId ) ).thenReturn( new DatabaseCoreTopology( databaseId, raftId, members ) );
-        when( topologyService.findCatchupAddress( upstreamMember ) ).thenReturn( address );
+        when( topologyService.lookupCatchupAddress( upstreamMember ) ).thenReturn( address );
         return topologyService;
     }
 

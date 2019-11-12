@@ -88,16 +88,16 @@ public class ClusterOverviewProcedure extends CallableProcedure.BasicProcedure
 
     private ResultRow buildResultRowForCore( MemberId memberId, CoreServerInfo coreInfo )
     {
-        var databases = coreInfo.databaseIds()
+        var databases = coreInfo.startedDatabaseIds()
                 .stream()
-                .collect( toMap( identity(), databaseId -> topologyService.role( databaseId, memberId ) ) );
+                .collect( toMap( identity(), databaseId -> topologyService.lookupRole( databaseId, memberId ) ) );
 
         return new ResultRow( memberId.getUuid(), coreInfo.connectors(), databases, coreInfo.groups() );
     }
 
     private static ResultRow buildResultRowForReadReplica( MemberId memberId, ReadReplicaInfo readReplicaInfo )
     {
-        var databases = readReplicaInfo.databaseIds()
+        var databases = readReplicaInfo.startedDatabaseIds()
                 .stream()
                 .collect( toMap( identity(), ignore -> RoleInfo.READ_REPLICA ) );
 

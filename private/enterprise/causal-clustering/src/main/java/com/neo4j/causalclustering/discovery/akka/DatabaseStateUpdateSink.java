@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.discovery.akka;
 
-import com.neo4j.causalclustering.discovery.akka.database.state.ReplicatedDatabaseState;
+import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState;
 
 public interface DatabaseStateUpdateSink
 {

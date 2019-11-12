@@ -13,6 +13,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.neo4j.collection.RawIterator;
@@ -49,21 +50,20 @@ public class ClusteredDatabaseStateProcedure extends DatabaseStateProcedure
         var coreServerInfos = topologyService.allCoreServers();
         var rrServerInfos = topologyService.allReadReplicas();
 
-        var coreStates = topologyService.coreStatesForDatabase( databaseId );
-        var coreResultRows = coreStates.memberStates().entrySet().stream()
-                .flatMap( e -> resultRowsForExistingMembers( coreServerInfos, e, databaseId ) );
+        var coreStates = topologyService.allCoreStatesForDatabase( databaseId );
+        var coreResultRows = coreStates.keySet().stream()
+                .flatMap( member -> resultRowsForExistingMembers( coreServerInfos, member, databaseId ) );
 
-        var rrStates = topologyService.readReplicaStatesForDatabase( databaseId );
-        var rrResultRows = rrStates.memberStates().entrySet().stream()
-                .flatMap( e -> resultRowsForExistingMembers( rrServerInfos, e, databaseId ) );
+        var rrStates = topologyService.allReadReplicaStatesForDatabase( databaseId );
+        var rrResultRows = rrStates.keySet().stream()
+                .flatMap( member -> resultRowsForExistingMembers( rrServerInfos, member, databaseId ) );
 
         return RawIterator.wrap( Stream.concat( coreResultRows, rrResultRows ).iterator() );
     }
 
     private Stream<AnyValue[]> resultRowsForExistingMembers( Map<MemberId,? extends DiscoveryServerInfo> serverInfos,
-            Map.Entry<MemberId,DatabaseState> entry, DatabaseId databaseId )
+            MemberId memberId, DatabaseId databaseId )
     {
-        var memberId = entry.getKey();
         return Stream.ofNullable( serverInfos.get( memberId ) )
                 .map( discoveryInfo -> resultRowFactory( databaseId, topologyService, memberId, discoveryInfo ) );
     }
@@ -71,11 +71,11 @@ public class ClusteredDatabaseStateProcedure extends DatabaseStateProcedure
     private AnyValue[] resultRowFactory( DatabaseId databaseId, TopologyService topologyService, MemberId memberId,
             DiscoveryServerInfo serverInfo )
     {
-        var role = topologyService.role( databaseId, memberId );
+        var role = topologyService.lookupRole( databaseId, memberId );
         var roleString = role.name().toLowerCase();
         var address = serverInfo.boltAddress().toString();
         var isMe = Objects.equals( memberId, myself );
-        var stateService = isMe ? this.stateService : new RemoteDatabaseStateService( id -> topologyService.stateFor( id, memberId ) );
+        var stateService = isMe ? this.stateService : new RemoteDatabaseStateService( id -> topologyService.lookupDatabaseState( id, memberId ) );
 
         return resultRowFactory( databaseId, roleString, address, stateService );
     }

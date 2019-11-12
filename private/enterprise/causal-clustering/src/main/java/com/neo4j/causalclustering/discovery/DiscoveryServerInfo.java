@@ -11,5 +11,5 @@ import org.neo4j.kernel.database.DatabaseId;
 
 public interface DiscoveryServerInfo extends CatchupServerAddress, ClientConnector, GroupedServer
 {
-    Set<DatabaseId> databaseIds();
+    Set<DatabaseId> startedDatabaseIds();
 }

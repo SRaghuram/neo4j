@@ -5,8 +5,6 @@
  */
 package com.neo4j.dbms;
 
-import com.neo4j.causalclustering.common.Cluster;
-import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
 
 import java.util.List;
@@ -69,7 +67,7 @@ public final class ShowDatabasesHelpers
 
         static ShowDatabasesResultRow fromResult( Map<String,Object> result )
         {
-            var columnNames = List.of( "name", "address", "role", "requestedStatus", "currentStatus", "error", "isDefault" );
+            var columnNames = List.of( "name", "address", "role", "requestedStatus", "currentStatus", "error", "default" );
 
             List<String> missingKeys = columnNames.stream().map( col -> Pair.of( col, result.get( col ) ) )
                             .filter( p -> Objects.isNull( p.other() ) )
@@ -91,7 +89,7 @@ public final class ShowDatabasesHelpers
             var requestedStatus = resultStrings.get( "requestedStatus" );
             var currentStatus = resultStrings.get( "currentStatus" );
             var error = resultStrings.get( "error" );
-            boolean isDefault = Boolean.valueOf( resultStrings.get( "isDefault" ) );
+            boolean isDefault = Boolean.valueOf( resultStrings.get( "default" ) );
 
             return new ShowDatabasesResultRow( name, address, role, requestedStatus, currentStatus, error, isDefault );
         }

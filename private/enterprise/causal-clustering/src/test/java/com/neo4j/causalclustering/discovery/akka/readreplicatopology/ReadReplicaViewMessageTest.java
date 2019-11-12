@@ -13,7 +13,7 @@ import co.unruly.matchers.StreamMatchers;
 import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.TestTopology;
-import com.neo4j.causalclustering.discovery.akka.database.state.ReplicatedDatabaseState;
+import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.dbms.EnterpriseDatabaseState;
 import org.junit.jupiter.api.AfterEach;
@@ -81,7 +81,7 @@ class ReadReplicaViewMessageTest extends TestKit
     @Test
     void shouldReturnReadReplicaTopology()
     {
-        DatabaseId databaseId = Iterables.single( readReplicaInfo.databaseIds() );
+        DatabaseId databaseId = Iterables.single( readReplicaInfo.startedDatabaseIds() );
         DatabaseReadReplicaTopology expected = new DatabaseReadReplicaTopology( databaseId, Map.of( memberId, readReplicaInfo ) );
 
         assertThat( readReplicaViewMessage.toReadReplicaTopology( databaseId ), equalTo( expected ) );

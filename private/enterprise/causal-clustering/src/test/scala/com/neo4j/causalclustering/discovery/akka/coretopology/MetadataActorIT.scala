@@ -136,7 +136,7 @@ class MetadataActorIT extends BaseAkkaIT("MetadataActorIT") {
       val infoForMemberId = data.entries(cluster.selfUniqueAddress)
       infoForMemberId.memberId() should equal(discoveryMember.id())
       val serverInfo = infoForMemberId.coreServerInfo()
-      serverInfo.databaseIds should contain theSameElementsAs databaseIds
+      serverInfo.startedDatabaseIds should contain theSameElementsAs databaseIds
     }
   }
 }

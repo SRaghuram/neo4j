@@ -8,7 +8,7 @@ package com.neo4j.causalclustering.discovery.akka.readreplicatopology;
 import akka.stream.javadsl.SourceQueueWithComplete;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
-import com.neo4j.causalclustering.discovery.akka.database.state.ReplicatedDatabaseState;
+import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.dbms.EnterpriseDatabaseState;
@@ -50,8 +50,6 @@ class PruningStateSinkTest
 
     private final PruningStateSink<ReplicatedDatabaseState> pruningStateSink =
             forCoreDatabaseStates( databaseStateSink, maxStateLifetime, clock, nullLogProvider() );
-
-    //TODO: Compress to a parameterised test
 
     @Test
     void shouldOfferCoreTopologyToSink()
@@ -127,6 +125,23 @@ class PruningStateSinkTest
         verify( readReplicaTopologySink ).offer( DatabaseReadReplicaTopology.empty( readReplicaTopology2.databaseId() ) );
         verify( readReplicaTopologySink, never() ).offer( DatabaseReadReplicaTopology.empty( readReplicaTopology3.databaseId() ) );
         verify( readReplicaTopologySink, never() ).offer( DatabaseReadReplicaTopology.empty( readReplicaTopology4.databaseId() ) );
+    }
+
+    @Test
+    void shouldSendEmptyStatesToSinkWhenPruning()
+    {
+        var replicatedDatabaseState1 = randomDatabaseState();
+        var replicatedDatabaseState2 = randomDatabaseState();
+
+        pruningStateSink.offer( replicatedDatabaseState1 );
+        clock.forward( 6, SECONDS );
+        pruningStateSink.offer( replicatedDatabaseState2 );
+        clock.forward( 3, SECONDS );
+
+        pruningStateSink.pruneStaleState();
+
+        verify( databaseStateSink ).offer( ReplicatedDatabaseState.ofCores( replicatedDatabaseState1.databaseId(), Map.of() ) );
+        verify( databaseStateSink, never() ).offer( ReplicatedDatabaseState.ofCores( replicatedDatabaseState2.databaseId(), Map.of() ) );
     }
 
     private static DatabaseCoreTopology randomCoreTopology()

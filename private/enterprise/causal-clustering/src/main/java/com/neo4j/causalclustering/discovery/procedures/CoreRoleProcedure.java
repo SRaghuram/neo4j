@@ -28,6 +28,6 @@ public class CoreRoleProcedure extends RoleProcedure
     RoleInfo role( DatabaseId databaseId )
     {
         var myId = identityModule.myself();
-        return topologyService.role( databaseId, myId );
+        return topologyService.lookupRole( databaseId, myId );
     }
 }

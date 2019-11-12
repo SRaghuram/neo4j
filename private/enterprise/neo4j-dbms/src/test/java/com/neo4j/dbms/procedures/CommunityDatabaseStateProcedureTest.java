@@ -30,7 +30,7 @@ import static org.mockito.Mockito.when;
 import static org.neo4j.values.storable.Values.intValue;
 import static org.neo4j.values.storable.Values.stringValue;
 
-class StandaloneDatabaseStateProcedureTest
+class CommunityDatabaseStateProcedureTest
 {
     private final TestDatabaseIdRepository idRepository = new TestDatabaseIdRepository();
     private final DatabaseStateService stateService = mock( DatabaseStateService.class );
@@ -47,15 +47,6 @@ class StandaloneDatabaseStateProcedureTest
 
         assertThrows( IllegalArgumentException.class,
                 () -> procedure.apply( mock( Context.class ), new AnyValue[]{intValue( 42 ),stringValue( "The answer" )}, mock( ResourceTracker.class ) ) );
-
-        var uuid = UUID.randomUUID().toString();
-        var invalidUUID = uuid + "-extra-stuff";
-
-        assertThrows( IllegalArgumentException.class,
-                () -> procedure.apply( mock( Context.class ), new AnyValue[]{stringValue( invalidUUID )}, mock( ResourceTracker.class ) ) );
-
-        assertThrows( IllegalArgumentException.class,
-                () -> procedure.apply( mock( Context.class ), new AnyValue[]{stringValue( uuid ),intValue( 42 )}, mock( ResourceTracker.class ) ) );
     }
 
     @Test
@@ -65,16 +56,16 @@ class StandaloneDatabaseStateProcedureTest
         when( stateService.stateOfDatabase( any( DatabaseId.class ) ) ).thenReturn( STARTED );
         when( stateService.causeOfFailure( any( DatabaseId.class ) ) ).thenReturn( Optional.empty() );
         var existing = idRepository.getRaw( "existing" );
-        var nonExisting = TestDatabaseIdRepository.randomDatabaseId();
+        var nonExisting = idRepository.getRaw( "nonExisting" );
         idRepository.filter( nonExisting );
 
         // when/then
 
         // Should not throw
-        procedure.apply( mock( Context.class ), new AnyValue[]{stringValue( existing.uuid().toString() )}, mock( ResourceTracker.class ) );
+        procedure.apply( mock( Context.class ), new AnyValue[]{stringValue( existing.name() )}, mock( ResourceTracker.class ) );
         // Should throw
         assertThrows( ProcedureException.class,
-                () -> procedure.apply( mock( Context.class ), new AnyValue[]{stringValue( nonExisting.uuid().toString() )}, mock( ResourceTracker.class ) ) );
+                () -> procedure.apply( mock( Context.class ), new AnyValue[]{stringValue( nonExisting.name() )}, mock( ResourceTracker.class ) ) );
     }
 
     @Test
@@ -86,11 +77,11 @@ class StandaloneDatabaseStateProcedureTest
         var existing = idRepository.getRaw( "existing" );
 
         // when
-        var result = procedure.apply( mock( Context.class ), new AnyValue[]{stringValue( existing.uuid().toString() )}, mock( ResourceTracker.class ) );
+        var result = procedure.apply( mock( Context.class ), new AnyValue[]{stringValue( existing.name() )}, mock( ResourceTracker.class ) );
         var returned = Arrays.asList( result.next() );
 
         // then
-        assertEquals( 4, returned.size(), "Procedure result should have 4 columns: role, address, status and error message" );
+        assertEquals( 4, returned.size(), "Procedure result should have 4 columns: role, address, state and error message" );
 
         var roleColumn = stringValue( "standalone" );
         var addressColumn = stringValue( "localhost:7687" );

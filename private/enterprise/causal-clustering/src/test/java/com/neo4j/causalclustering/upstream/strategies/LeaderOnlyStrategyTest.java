@@ -35,7 +35,7 @@ class LeaderOnlyStrategyTest
         TopologyServiceThatPrioritisesItself topologyServiceNoRetriesStrategy = new TopologyServiceThatPrioritisesItself( myself, groupName )
         {
             @Override
-            public RoleInfo role( DatabaseId databaseId, MemberId memberId )
+            public RoleInfo lookupRole( DatabaseId databaseId, MemberId memberId )
             {
                 return RoleInfo.LEADER;
             }

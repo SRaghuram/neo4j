@@ -294,7 +294,10 @@ public class DbmsReconciler implements DatabaseStateService
         {
             var message = format( "Attempting to reconcile database %s to state '%s' but has previously failed. Manual force is required to retry.",
                     databaseName, desiredState.operatorState().description() );
-            return CompletableFuture.completedFuture( initialResult.withError( new DatabaseManagementException( message ) ) );
+            log.warn( message );
+
+            var previousError = currentState.failure().orElseThrow( IllegalStateException::new );
+            return CompletableFuture.completedFuture( initialResult.withError( DatabaseManagementException.wrap( previousError ) ) );
         }
 
         var backoff = backoffStrategy.newTimeout();

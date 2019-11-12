@@ -218,7 +218,7 @@ class ReadReplicaDatabaseLife extends ClusteredDatabaseLife
             debugLog.info( "Local database is empty, attempting to replace with copy from upstream server %s", source );
 
             debugLog.info( "Finding store ID of upstream server %s", source );
-            SocketAddress fromAddress = topologyService.findCatchupAddress( source );
+            SocketAddress fromAddress = topologyService.lookupCatchupAddress( source );
             StoreId storeId = catchupComponents.remoteStore().getStoreId( fromAddress );
 
             debugLog.info( "Copying store from upstream server %s", source );
@@ -237,7 +237,7 @@ class ReadReplicaDatabaseLife extends ClusteredDatabaseLife
             throws StoreIdDownloadFailedException, TopologyLookupException
     {
         StoreId localStoreId = databaseContext.storeId();
-        SocketAddress advertisedSocketAddress = topologyService.findCatchupAddress( upstream );
+        SocketAddress advertisedSocketAddress = topologyService.lookupCatchupAddress( upstream );
         StoreId remoteStoreId = remoteStore.getStoreId( advertisedSocketAddress );
         if ( !localStoreId.equals( remoteStoreId ) )
         {

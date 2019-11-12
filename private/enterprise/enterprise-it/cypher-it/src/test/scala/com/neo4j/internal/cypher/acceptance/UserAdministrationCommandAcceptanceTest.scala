@@ -1511,7 +1511,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     executeOnSystem("alice", "abc", "SHOW DEFAULT DATABASE",
       resultHandler = (row, _) => {
         row.get("name").equals(DEFAULT_DATABASE_NAME)
-        row.get("status").equals(Online.stringValue())
+        row.get("requestedStatus").equals(Online.stringValue())
       })
   }
 

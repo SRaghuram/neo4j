@@ -505,7 +505,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       UpdatingSystemCommandExecutionPlan("EnsureValidNumberOfDatabases", normalExecutionEngine, query, VirtualValues.EMPTY_MAP,
         QueryHandler.handleResult((_, numberOfDatabases) =>
           if (numberOfDatabases.asInstanceOf[LongValue].longValue() > maxDBLimit) {
-            Some(new DatabaseLimitReachedException(s"Failed to create the specified database '$dbName': "))
+            Some(new DatabaseLimitReachedException(s"Failed to create the specified database '$dbName':"))
           } else {
             None
           }

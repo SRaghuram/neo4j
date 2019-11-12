@@ -20,7 +20,7 @@ import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStartedMessage;
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStoppedMessage;
-import com.neo4j.causalclustering.discovery.akka.database.state.ReplicatedDatabaseState;
+import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState;
 import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ClientTopologyActor;
 import com.neo4j.causalclustering.discovery.akka.system.ActorSystemLifecycle;
 import com.neo4j.causalclustering.discovery.member.DiscoveryMember;
@@ -159,7 +159,7 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
     }
 
     @Override
-    public SocketAddress findCatchupAddress( MemberId upstream ) throws CatchupAddressResolutionException
+    public SocketAddress lookupCatchupAddress( MemberId upstream ) throws CatchupAddressResolutionException
     {
         SocketAddress advertisedSocketAddress = globalTopologyState.retrieveCatchupServerAddress( upstream );
         if ( advertisedSocketAddress == null )
@@ -170,7 +170,7 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
     }
 
     @Override
-    public RoleInfo role( DatabaseId databaseId, MemberId memberId )
+    public RoleInfo lookupRole( DatabaseId databaseId, MemberId memberId )
     {
         return globalTopologyState.role( databaseId, memberId );
     }
@@ -182,21 +182,21 @@ public class AkkaTopologyClient extends SafeLifecycle implements TopologyService
     }
 
     @Override
-    public DatabaseState stateFor( DatabaseId databaseId, MemberId memberId )
+    public DatabaseState lookupDatabaseState( DatabaseId databaseId, MemberId memberId )
     {
         return globalTopologyState.stateFor( memberId, databaseId );
     }
 
     @Override
-    public ReplicatedDatabaseState coreStatesForDatabase( DatabaseId databaseId )
+    public Map<MemberId,DatabaseState> allCoreStatesForDatabase( DatabaseId databaseId )
     {
-        return globalTopologyState.coreStatesForDatabase( databaseId );
+        return Map.copyOf( globalTopologyState.coreStatesForDatabase( databaseId ).memberStates() );
     }
 
     @Override
-    public ReplicatedDatabaseState readReplicaStatesForDatabase( DatabaseId databaseId )
+    public Map<MemberId,DatabaseState> allReadReplicaStatesForDatabase( DatabaseId databaseId )
     {
-        return globalTopologyState.readReplicaStatesForDatabase( databaseId );
+        return Map.copyOf( globalTopologyState.readReplicaStatesForDatabase( databaseId ).memberStates() );
     }
 
     @VisibleForTesting

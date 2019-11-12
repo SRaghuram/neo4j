@@ -9,7 +9,6 @@ import com.neo4j.causalclustering.identity.MemberId;
 
 import java.util.Map;
 
-import org.neo4j.dbms.DatabaseState;
 import org.neo4j.kernel.database.DatabaseId;
 
 public interface Topology<T extends DiscoveryServerInfo>

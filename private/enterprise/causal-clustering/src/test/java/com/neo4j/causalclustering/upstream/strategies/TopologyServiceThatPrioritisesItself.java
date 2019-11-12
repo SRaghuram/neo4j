@@ -12,7 +12,7 @@ import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.discovery.TopologyService;
-import com.neo4j.causalclustering.discovery.akka.database.state.ReplicatedDatabaseState;
+import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.dbms.EnterpriseDatabaseState;
@@ -86,13 +86,13 @@ class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements T
     }
 
     @Override
-    public SocketAddress findCatchupAddress( MemberId upstream )
+    public SocketAddress lookupCatchupAddress( MemberId upstream )
     {
         throw new RuntimeException( "Unimplemented" );
     }
 
     @Override
-    public RoleInfo role( DatabaseId databaseId, MemberId memberId )
+    public RoleInfo lookupRole( DatabaseId databaseId, MemberId memberId )
     {
         return RoleInfo.UNKNOWN;
     }
@@ -104,21 +104,21 @@ class TopologyServiceThatPrioritisesItself extends LifecycleAdapter implements T
     }
 
     @Override
-    public DatabaseState stateFor( DatabaseId databaseId, MemberId memberId )
+    public DatabaseState lookupDatabaseState( DatabaseId databaseId, MemberId memberId )
     {
         return EnterpriseDatabaseState.unknown( databaseId );
     }
 
     @Override
-    public ReplicatedDatabaseState coreStatesForDatabase( DatabaseId databaseId )
+    public Map<MemberId,DatabaseState> allCoreStatesForDatabase( DatabaseId databaseId )
     {
-        return ReplicatedDatabaseState.ofCores( databaseId, Map.of() );
+        return Map.of();
     }
 
     @Override
-    public ReplicatedDatabaseState readReplicaStatesForDatabase( DatabaseId databaseId )
+    public Map<MemberId,DatabaseState> allReadReplicaStatesForDatabase( DatabaseId databaseId )
     {
-        return ReplicatedDatabaseState.ofReadReplicas( databaseId, Map.of() );
+        return Map.of();
     }
 
     private static CoreServerInfo coreServerInfo( String... groupNames )

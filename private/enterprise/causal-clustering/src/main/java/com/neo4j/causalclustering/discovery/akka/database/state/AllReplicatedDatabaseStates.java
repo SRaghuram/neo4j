@@ -5,6 +5,8 @@
  */
 package com.neo4j.causalclustering.discovery.akka.database.state;
 
+import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState;
+
 import java.util.Collection;
 import java.util.Map;
 import java.util.Objects;

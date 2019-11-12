@@ -41,9 +41,9 @@ class UpstreamAddressLookupTest
     @BeforeEach
     void setup() throws CatchupAddressResolutionException
     {
-        when( topologyService.findCatchupAddress( eq( defaultMember ) ) ).thenReturn( defaultAddress );
-        when( topologyService.findCatchupAddress( eq( firstMember ) ) ).thenReturn( firstAddress );
-        when( topologyService.findCatchupAddress( eq( secondMember ) ) ).thenReturn( secondAddress );
+        when( topologyService.lookupCatchupAddress( eq( defaultMember ) ) ).thenReturn( defaultAddress );
+        when( topologyService.lookupCatchupAddress( eq( firstMember ) ) ).thenReturn( firstAddress );
+        when( topologyService.lookupCatchupAddress( eq( secondMember ) ) ).thenReturn( secondAddress );
     }
 
     @Test

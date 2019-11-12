@@ -17,7 +17,7 @@ import akka.pattern._
 import akka.testkit.TestProbe
 import com.neo4j.causalclustering.discovery.TestTopology
 import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
-import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaViewActor.PruneReplicaViewMessage
+import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplicaViewActor.Tick
 import com.neo4j.causalclustering.identity.MemberId
 import org.neo4j.dbms.DatabaseState
 import org.neo4j.kernel.database.DatabaseId
@@ -99,7 +99,7 @@ class ReadReplicaViewActorIT extends BaseAkkaIT("GlobalReadReplica") {
       }
       "send periodic tick to parent" in new Fixture {
         Then("receive tick")
-        parent.expectMsg(waitWithRefresh, PruneReplicaViewMessage.getInstance())
+        parent.expectMsg(waitWithRefresh, Tick.getInstance())
       }
     }
   }
@@ -148,7 +148,7 @@ class ReadReplicaViewActorIT extends BaseAkkaIT("GlobalReadReplica") {
     def fishForParentMessage(expected: Any, wait: FiniteDuration = defaultWaitTime) = {
       parent.fishForMessage(wait) {
         case msg if expected == msg => true
-        case _: PruneReplicaViewMessage => false
+        case _: Tick => false
       }
     }
   }

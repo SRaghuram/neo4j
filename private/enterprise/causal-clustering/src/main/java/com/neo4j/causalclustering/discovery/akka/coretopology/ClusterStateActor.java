@@ -12,7 +12,6 @@ import akka.cluster.ClusterEvent;
 import akka.cluster.Member;
 import akka.japi.pf.ReceiveBuilder;
 import com.neo4j.causalclustering.discovery.akka.AbstractActorWithTimersAndLogging;
-import com.neo4j.causalclustering.discovery.akka.Tick;
 import com.neo4j.causalclustering.discovery.akka.monitoring.ClusterSizeMonitor;
 
 import java.time.Duration;
@@ -65,7 +64,7 @@ public class ClusterStateActor extends AbstractActorWithTimersAndLogging
     public void preStart()
     {
         cluster.subscribe( getSelf(), ClusterEvent.initialStateAsSnapshot(), ClusterEvent.ClusterDomainEvent.class, ClusterEvent.UnreachableMember.class );
-        getTimers().startPeriodicTimer( MONITOR_TICK_KEY, Tick.getInstance(), Duration.ofMinutes( 1 ) );
+        getTimers().startPeriodicTimer( MONITOR_TICK_KEY, ClusterMonitorRefresh.INSTANCE, Duration.ofMinutes( 1 ) );
     }
 
     @Override
@@ -87,7 +86,7 @@ public class ClusterStateActor extends AbstractActorWithTimersAndLogging
                 .match( ClusterEvent.LeaderChanged.class,       this::handleLeaderChanged )
                 .match( ClusterEvent.ClusterDomainEvent.class,  this::handleOtherClusterEvent )
                 .match( StabilityMessage.class,                 this::notifyDowningActor )
-                .match( Tick.class,                             ignored -> updateMonitor() )
+                .match( ClusterMonitorRefresh.class,            ignored -> updateMonitor() )
                 .build();
     }
 
@@ -179,6 +178,15 @@ public class ClusterStateActor extends AbstractActorWithTimersAndLogging
         static final StabilityMessage INSTANCE = new StabilityMessage();
 
         private StabilityMessage()
+        {
+        }
+    }
+
+    static class ClusterMonitorRefresh
+    {
+        static final ClusterMonitorRefresh INSTANCE = new ClusterMonitorRefresh();
+
+        private ClusterMonitorRefresh()
         {
         }
     }

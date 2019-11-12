@@ -21,11 +21,9 @@ import com.neo4j.causalclustering.discovery.CoreTopologyListenerService;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
 import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology;
-import com.neo4j.causalclustering.discovery.DiscoveryTimeoutException;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.RetryStrategy;
 import com.neo4j.causalclustering.discovery.RoleInfo;
-import com.neo4j.causalclustering.discovery.akka.common.DatabaseDroppedMessage;
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStartedMessage;
 import com.neo4j.causalclustering.discovery.akka.common.DatabaseStoppedMessage;
 import com.neo4j.causalclustering.discovery.akka.coretopology.BootstrapState;
@@ -35,7 +33,7 @@ import com.neo4j.causalclustering.discovery.PublishRaftIdOutcome;
 import com.neo4j.causalclustering.discovery.akka.coretopology.RaftIdSetRequest;
 import com.neo4j.causalclustering.discovery.akka.coretopology.RestartNeededListeningActor;
 import com.neo4j.causalclustering.discovery.akka.coretopology.TopologyBuilder;
-import com.neo4j.causalclustering.discovery.akka.database.state.ReplicatedDatabaseState;
+import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState;
 import com.neo4j.causalclustering.discovery.akka.directory.DirectoryActor;
 import com.neo4j.causalclustering.discovery.akka.directory.LeaderInfoSettingMessage;
 import com.neo4j.causalclustering.discovery.akka.monitoring.ClusterSizeMonitor;
@@ -133,7 +131,7 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
         ActorRef rrTopologyActor = readReplicaTopologyActor( rrTopologySink, databaseStateSink );
         coreTopologyActorRef = coreTopologyActor( cluster, replicator, coreTopologySink, bootstrapStateSink, rrTopologyActor );
         directoryActorRef = directoryActor( cluster, replicator, directorySink, rrTopologyActor );
-        databaseStateActorRef = stateActor( cluster, replicator, databaseStateSink, rrTopologyActor );
+        databaseStateActorRef = databaseStateActor( cluster, replicator, databaseStateSink, rrTopologyActor );
         startRestartNeededListeningActor( cluster );
     }
 
@@ -163,10 +161,10 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
         return actorSystemLifecycle.applicationActorOf( directoryProps, DirectoryActor.NAME );
     }
 
-    private ActorRef stateActor( Cluster cluster, ActorRef replicator, SourceQueueWithComplete<ReplicatedDatabaseState> stateSink,
+    private ActorRef databaseStateActor( Cluster cluster, ActorRef replicator, SourceQueueWithComplete<ReplicatedDatabaseState> stateSink,
             ActorRef rrTopologyActor )
     {
-        Props stateProps = DatabaseStateActor.props( cluster, replicator, stateSink, rrTopologyActor, monitor, myself );
+        Props stateProps = DatabaseStateActor.props( cluster, replicator, stateSink, rrTopologyActor, replicatedDataMonitor, myself );
         return actorSystemLifecycle.applicationActorOf( stateProps, DatabaseStateActor.NAME );
     }
 
@@ -361,7 +359,7 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     }
 
     @Override
-    public RoleInfo role( DatabaseId databaseId, MemberId memberId )
+    public RoleInfo lookupRole( DatabaseId databaseId, MemberId memberId )
     {
         var leaderInfo = localLeadersByDatabaseId.get( databaseId );
         if ( leaderInfo != null && Objects.equals( memberId, leaderInfo.memberId() ) )
@@ -396,7 +394,7 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     }
 
     @Override
-    public SocketAddress findCatchupAddress( MemberId upstream ) throws CatchupAddressResolutionException
+    public SocketAddress lookupCatchupAddress( MemberId upstream ) throws CatchupAddressResolutionException
     {
         try
         {
@@ -415,22 +413,21 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     }
 
     @Override
-    public DatabaseState stateFor( DatabaseId databaseId, MemberId memberId )
+    public DatabaseState lookupDatabaseState( DatabaseId databaseId, MemberId memberId )
     {
-        var state = globalTopologyState.stateFor( memberId, databaseId );
-        return state;
+        return globalTopologyState.stateFor( memberId, databaseId );
     }
 
     @Override
-    public ReplicatedDatabaseState coreStatesForDatabase( DatabaseId databaseId )
+    public Map<MemberId,DatabaseState> allCoreStatesForDatabase( DatabaseId databaseId )
     {
-        return globalTopologyState.coreStatesForDatabase( databaseId );
+        return Map.copyOf( globalTopologyState.coreStatesForDatabase( databaseId ).memberStates() );
     }
 
     @Override
-    public ReplicatedDatabaseState readReplicaStatesForDatabase( DatabaseId databaseId )
+    public Map<MemberId,DatabaseState> allReadReplicaStatesForDatabase( DatabaseId databaseId )
     {
-        return globalTopologyState.readReplicaStatesForDatabase( databaseId );
+        return Map.copyOf( globalTopologyState.readReplicaStatesForDatabase( databaseId ).memberStates() );
     }
 
     @VisibleForTesting

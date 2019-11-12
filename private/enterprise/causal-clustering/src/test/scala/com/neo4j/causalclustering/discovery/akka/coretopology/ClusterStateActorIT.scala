@@ -15,9 +15,10 @@ import akka.cluster.ClusterEvent.{ClusterDomainEvent, UnreachableMember}
 import akka.cluster.{Cluster, ClusterEvent, Member, MemberStatus}
 import akka.testkit.TestProbe
 import com.neo4j.causalclustering.core.CausalClusteringSettings.{akka_failure_detector_acceptable_heartbeat_pause, akka_failure_detector_heartbeat_interval}
+import com.neo4j.causalclustering.discovery.akka.coretopology.ClusterStateActor.ClusterMonitorRefresh
 import com.neo4j.causalclustering.discovery.akka.coretopology.ClusterViewMessageTest.createMember
 import com.neo4j.causalclustering.discovery.akka.monitoring.ClusterSizeMonitor
-import com.neo4j.causalclustering.discovery.akka.{BaseAkkaIT, Tick}
+import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
 import org.hamcrest.Matchers.is
 import org.mockito.ArgumentMatchers
 import org.mockito.Mockito.{atLeastOnce, verify}
@@ -185,7 +186,7 @@ class ClusterStateActorIT extends BaseAkkaIT("ClusterStateActorTest") {
       }
       "update monitor" when {
         "tick received" in new Fixture {
-          clusterStateRef ! Tick.getInstance
+          clusterStateRef ! ClusterMonitorRefresh.INSTANCE
 
           assertEventually(monitor.membersSet, is(true), defaultWaitTime.toMillis, TimeUnit.MILLISECONDS )
           assertEventually(monitor.unreachableSet, is(true), defaultWaitTime.toMillis, TimeUnit.MILLISECONDS )
