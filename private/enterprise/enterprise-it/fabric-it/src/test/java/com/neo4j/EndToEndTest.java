@@ -176,10 +176,10 @@ class EndToEndTest
     void testNamedGraphs()
     {
         List<String> result = inMegaTx( tx ->
-            Stream.concat(
-                    tx.run( "USE mega.myGraph0 MATCH (n) RETURN n.name AS name" ).stream(),
-                    tx.run( "USE mega.myGraph1 MATCH (n) RETURN n.name AS name" ).stream()
-            ).map( r -> r.get( "name" ).asString() ).collect( Collectors.toList() )
+                Stream.concat(
+                        tx.run( "USE mega.myGraph0 MATCH (n) RETURN n.name AS name" ).stream(),
+                        tx.run( "USE mega.myGraph1 MATCH (n) RETURN n.name AS name" ).stream()
+                ).map( r -> r.get( "name" ).asString() ).collect( Collectors.toList() )
         );
 
         assertThat( result, containsInAnyOrder( equalTo( "Anna" ), equalTo( "Bob" ), equalTo( "Carrie" ), equalTo( "Dave" ) ) );
@@ -304,11 +304,11 @@ class EndToEndTest
     void testReadUnionAllValues()
     {
         List<Integer> r = inMegaTx( tx ->
-                        tx.run( joinAsLines(
-                                "USE mega.graph(0) MATCH (n) RETURN n.age AS a",
-                                "UNION ALL",
-                                "USE mega.graph(1) MATCH (n) RETURN n.age AS a"
-                        ) ).stream().map( c -> c.get( "a" ).asInt() ).collect( Collectors.toList() )
+                tx.run( joinAsLines(
+                        "USE mega.graph(0) MATCH (n) RETURN n.age AS a",
+                        "UNION ALL",
+                        "USE mega.graph(1) MATCH (n) RETURN n.age AS a"
+                ) ).stream().map( c -> c.get( "a" ).asInt() ).collect( Collectors.toList() )
         );
 
         assertThat( r, containsInAnyOrder( equalTo( 30 ), equalTo( 30 ), equalTo( 40 ), equalTo( 90 ) ) );
@@ -318,11 +318,11 @@ class EndToEndTest
     void testReadUnionDistinctValues()
     {
         List<Integer> r = inMegaTx( tx ->
-                        tx.run( joinAsLines(
-                                "USE mega.graph(0) MATCH (n) RETURN n.age AS a",
-                                "UNION",
-                                "USE mega.graph(1) MATCH (n) RETURN n.age AS a"
-                        ) ).stream().map( c -> c.get( "a" ).asInt() ).collect( Collectors.toList() )
+                tx.run( joinAsLines(
+                        "USE mega.graph(0) MATCH (n) RETURN n.age AS a",
+                        "UNION",
+                        "USE mega.graph(1) MATCH (n) RETURN n.age AS a"
+                ) ).stream().map( c -> c.get( "a" ).asInt() ).collect( Collectors.toList() )
         );
 
         assertThat( r, containsInAnyOrder( equalTo( 30 ), equalTo( 40 ), equalTo( 90 ) ) );
@@ -352,16 +352,16 @@ class EndToEndTest
     {
         List<Record> r = inMegaTx( tx ->
         {
-                var query = joinAsLines(
-                "UNWIND [0, 1] AS x",
-                "CALL {",
-                "  USE mega.graph(x)",
-                "  MATCH (y)",
-                "  RETURN y",
-                "}",
-                "RETURN x AS Sid, y AS Person" );
-                return tx.run( query ).list();
-        });
+            var query = joinAsLines(
+                    "UNWIND [0, 1] AS x",
+                    "CALL {",
+                    "  USE mega.graph(x)",
+                    "  MATCH (y)",
+                    "  RETURN y",
+                    "}",
+                    "RETURN x AS Sid, y AS Person" );
+            return tx.run( query ).list();
+        } );
 
         assertEquals( 4, r.size() );
         var personToSid = r.stream().collect( Collectors.toMap( e -> e.get( "Person" ).asNode().get( "name" ).asString(), e -> e.get( "Sid" ).asInt() ) );
@@ -952,12 +952,12 @@ class EndToEndTest
     {
         ClientException ex = assertThrows( ClientException.class, () -> doInMegaTx( AccessMode.READ, tx ->
         {
-                var query = joinAsLines(
-                        "USE mega.graph(0)",
-                        "CALL com.neo4j.utils.writer() YIELD foo",
-                        "RETURN foo"
-                );
-                tx.run( query ).consume();
+            var query = joinAsLines(
+                    "USE mega.graph(0)",
+                    "CALL com.neo4j.utils.writer() YIELD foo",
+                    "RETURN foo"
+            );
+            tx.run( query ).consume();
         } ) );
 
         assertThat( ex.getMessage(), containsString( "Writing in read access mode not allowed" ) );
@@ -966,7 +966,8 @@ class EndToEndTest
     @Test
     void testQuerySummaryCounters()
     {
-        ResultSummary r = inMegaTx( tx -> {
+        ResultSummary r = inMegaTx( tx ->
+        {
             var query = joinAsLines(
                     "UNWIND [1, 2, 3] AS x",
                     "CALL {",
@@ -1006,9 +1007,9 @@ class EndToEndTest
         assertThat( r.counters().constraintsRemoved(), is( 0 ) );
     }
 
-    private <T> T inMegaTx( Function<Transaction, T> workload )
+    private <T> T inMegaTx( Function<Transaction,T> workload )
     {
-        return DriverUtils.inMegaTx(clientDriver, workload);
+        return DriverUtils.inMegaTx( clientDriver, workload );
     }
 
     private void doInMegaTx( Consumer<Transaction> workload )
@@ -1016,13 +1017,13 @@ class EndToEndTest
         DriverUtils.doInMegaTx( clientDriver, workload );
     }
 
-    private <T> T inMegaTx( AccessMode accessMode, Function<Transaction, T> workload )
+    private <T> T inMegaTx( AccessMode accessMode, Function<Transaction,T> workload )
     {
-        return DriverUtils.inMegaTx(clientDriver, workload);
+        return DriverUtils.inMegaTx( clientDriver, accessMode, workload );
     }
 
     private void doInMegaTx( AccessMode accessMode, Consumer<Transaction> workload )
     {
-        DriverUtils.doInMegaTx( clientDriver, workload );
+        DriverUtils.doInMegaTx( clientDriver, accessMode, workload );
     }
 }

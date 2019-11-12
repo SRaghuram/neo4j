@@ -31,14 +31,14 @@ public class ProxyFunctions
 
     @Procedure
     @Description( "read procedure" )
-    public Stream<Result> reader( )
+    public Stream<Result> reader()
     {
         return Stream.of( new Result( "read" ) );
     }
 
-    @Procedure(mode = Mode.WRITE)
+    @Procedure( mode = Mode.WRITE )
     @Description( "write procedure" )
-    public Stream<Result> writer(  )
+    public Stream<Result> writer()
     {
         return Stream.of( new Result( "write" ) );
     }

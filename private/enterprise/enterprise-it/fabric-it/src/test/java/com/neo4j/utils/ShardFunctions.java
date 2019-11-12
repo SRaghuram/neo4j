@@ -17,28 +17,28 @@ public class ShardFunctions
 {
     @Procedure
     @Description( "read procedure" )
-    public Stream<ProxyFunctions.Result> reader( )
+    public Stream<ProxyFunctions.Result> reader()
     {
         return Stream.of( new ProxyFunctions.Result( "read" ) );
     }
 
-    @Procedure(mode = Mode.WRITE)
+    @Procedure( mode = Mode.WRITE )
     @Description( "write procedure" )
-    public Stream<ProxyFunctions.Result> writer(  )
+    public Stream<ProxyFunctions.Result> writer()
     {
         return Stream.of( new ProxyFunctions.Result( "write" ) );
     }
 
     @Procedure
     @Description( "read procedure on shards only" )
-    public Stream<Result> readerOnShard( )
+    public Stream<Result> readerOnShard()
     {
         return Stream.of( new Result( "read" ) );
     }
 
-    @Procedure(mode = Mode.WRITE)
+    @Procedure( mode = Mode.WRITE )
     @Description( "write procedure on shards only" )
-    public Stream<Result> writerOnShard(  )
+    public Stream<Result> writerOnShard()
     {
         return Stream.of( new Result( "write" ) );
     }
