@@ -17,11 +17,11 @@ import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
 import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.tool.macro.ExecutionMode;
-import com.neo4j.bench.common.tool.macro.RunWorkloadParams;
+import com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams;
 import com.neo4j.bench.common.util.BenchmarkGroupBenchmarkMetricsPrinter;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.common.util.Resources;
-import com.neo4j.bench.macro.cli.RunWorkloadCommand;
+import com.neo4j.bench.macro.cli.RunMacroWorkloadCommand;
 import com.neo4j.bench.macro.execution.Neo4jDeployment;
 import com.neo4j.bench.macro.execution.process.ForkRunner;
 import com.neo4j.bench.macro.workload.Query;
@@ -87,20 +87,19 @@ class ConvenientLocalExecutionIT
             long parentTeamcityBuild = 0;
             long teamcityBuild = 1;
             String triggeredBy = "xyz";
-            String jobId = "abc123";
 
             Path profilerRecordingsDir = RESULT_DIR.resolve( "profiler_recordings-" + WORKLOAD_NAME );
             Files.createDirectories( profilerRecordingsDir );
             Path resultsJson = RESULT_DIR.resolve( "results-summary.json" );
             Path jvmPath = Paths.get( Jvm.defaultJvmOrFail().launchJava() );
 
-            List<String> runWorkloadArgs = RunWorkloadCommand.argsFor(
+            List<String> runWorkloadArgs = RunMacroWorkloadCommand.argsFor(
                     store.topLevelDirectory(),
                     neo4jConfigFile(),
                     RESULT_DIR,
                     resultsJson,
                     profilerRecordingsDir,
-                    new RunWorkloadParams(
+                    new RunMacroWorkloadParams(
                             WORKLOAD_NAME,
                             EDITION,
                             jvmPath,

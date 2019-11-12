@@ -305,7 +305,7 @@ public class JfrProfiler implements InternalProfiler, ExternalProfiler
             // -----------------------------------------------------------------------------------------------
 
             String[] stopJfrCommand = {
-                    "jcmd",
+                    jvm.launchJcmd(),
                     Long.toString( pid.get() ),
                     "JFR.stop",
                     format( "name=%s", recordingDescriptor.sanitizedName() )};

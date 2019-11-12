@@ -71,10 +71,10 @@ public class Workspace
         return Workspace
                 .create( workspacePath )
                 .withArtifact( NEO4J_CONFIG, "neo4j.conf" )
-                .withArtifact( BENCHMARKING_CONFIG, "micro.conf" )
+                .withArtifact( BENCHMARKING_CONFIG, "config" )
                 .withArtifact( WORKER_JAR, "benchmark-infra-worker.jar" )
                 .withArtifact( BENCHMARKING_JAR, "micro/target/micro-benchmarks.jar" )
-                .withArtifact( RUN_SCRIPT, "run-report-benchmarks.sh" )
+                .withArtifact( RUN_SCRIPT, "micro/run-report-benchmarks.sh" )
                 .withArtifact( JOB_PARAMETERS_JSON, JOB_PARAMETERS_JSON )
                 .build();
     }
@@ -89,8 +89,21 @@ public class Workspace
     {
         if ( !newWorkspace.allArtifacts.keySet().equals( original.allArtifacts.keySet() ) )
         {
-            throw new IllegalArgumentException( String.format( "workspace doesn't contain all required paths. Expected: %s But got: %s", original.allArtifacts,
-                                                               newWorkspace.allArtifacts ) );
+            throw new IllegalArgumentException( "workspace doesn't contain all required paths" );
+        }
+    }
+
+    public static void assertMicroWorkspace( Workspace artifactsWorkspace )
+    {
+        Workspace defaultMacroWorkspace = defaultMicroWorkspace( artifactsWorkspace.baseDir );
+
+        if ( !artifactsWorkspace.allArtifacts().containsAll( defaultMacroWorkspace.allArtifacts() ) )
+        {
+            throw new IllegalArgumentException(
+                    "workspace doesn't contain all required paths. Expected: "
+                    + artifactsWorkspace.allArtifacts()
+                    + " But got: " +
+                    defaultMacroWorkspace.allArtifacts() );
         }
     }
 
@@ -120,7 +133,6 @@ public class Workspace
     {
         private final Path baseDir;
         private final Map<String,String> artifacts = new HashMap<>();
-        private FileFilter fileFilter;
 
         private Builder( Path baseDir )
         {
@@ -138,7 +150,6 @@ public class Workspace
         public Builder withFilesRecursively( FileFilter fileFilter )
         {
             Objects.requireNonNull( fileFilter, "file filter cannot be null" );
-            this.fileFilter = fileFilter;
             return this;
         }
 

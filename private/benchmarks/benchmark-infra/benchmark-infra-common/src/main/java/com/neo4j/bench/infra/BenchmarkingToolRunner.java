@@ -5,8 +5,6 @@
  */
 package com.neo4j.bench.infra;
 
-import com.neo4j.bench.infra.aws.AWSS3ArtifactStorage;
-
 import java.net.URI;
 import java.nio.file.Path;
 
@@ -20,7 +18,7 @@ public interface BenchmarkingToolRunner<P>
      * Run benchmarking tool.
      */
     void runTool( P toolParams,
-                  AWSS3ArtifactStorage artifactStorage,
+                  ArtifactStorage artifactStorage,
                   Path workspacePath,
                   Workspace artifactsWorkspace,
                   InfraParams infraParams,

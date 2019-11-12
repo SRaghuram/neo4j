@@ -14,10 +14,7 @@ import org.apache.commons.lang3.builder.HashCodeBuilder;
 import static java.lang.String.format;
 
 /**
- * Type of benchmarking tool (like micro, macro etc.), which
- * is implementation of {@see BenchmarkingToolRunner} interface and its parameters.
- *
- * @param <P>
+ * Holds type and configuration of benchmarking tool (like micro, macro etc.)
  */
 public class BenchmarkingTool<P>
 {
@@ -69,4 +66,3 @@ public class BenchmarkingTool<P>
         return HashCodeBuilder.reflectionHashCode( this );
     }
 }
-

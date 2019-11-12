@@ -30,7 +30,7 @@ import com.neo4j.bench.common.results.BenchmarkDirectory;
 import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
 import com.neo4j.bench.common.tool.macro.BaseRunWorkloadCommand;
 import com.neo4j.bench.common.tool.macro.ExecutionMode;
-import com.neo4j.bench.common.tool.macro.RunWorkloadParams;
+import com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams;
 import com.neo4j.bench.common.util.BenchmarkGroupBenchmarkMetricsPrinter;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.ErrorReporter;
@@ -56,20 +56,20 @@ import java.util.Optional;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 
-import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_BATCH_JOB_ID;
-import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_DB_PATH;
-import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_ERROR_POLICY;
-import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_NEO4J_CONFIG;
-import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_PROFILER_RECORDINGS_DIR;
-import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_RESULTS_JSON;
-import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_WORK_DIR;
+import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_BATCH_JOB_ID;
+import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_DB_PATH;
+import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_ERROR_POLICY;
+import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_NEO4J_CONFIG;
+import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_PROFILER_RECORDINGS_DIR;
+import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_RESULTS_JSON;
+import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_WORK_DIR;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
 import static org.neo4j.configuration.GraphDatabaseSettings.load_csv_file_url_root;
 import static org.neo4j.configuration.SettingValueParsers.TRUE;
 
 @Command( name = "run-workload", description = "runs all queries for a single workload" )
-public class RunWorkloadCommand extends BaseRunWorkloadCommand
+public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
 {
     @Option( type = OptionType.COMMAND,
              name = {CMD_DB_PATH},
@@ -119,7 +119,7 @@ public class RunWorkloadCommand extends BaseRunWorkloadCommand
     private String batchJobId;
 
     @Override
-    protected void doRun( RunWorkloadParams params )
+    protected void doRun( RunMacroWorkloadParams params )
     {
         for ( ProfilerType profiler : params.profilers() )
         {
@@ -211,7 +211,7 @@ public class RunWorkloadCommand extends BaseRunWorkloadCommand
                     }
                     // current policy is to retrieve one/any of the serialized plans,
                     // as they are expected to all be the same and ignore plans that create stack overflows
-                    Optional<Plan> plan = planFiles.stream().findFirst().flatMap( RunWorkloadCommand::readPlan );
+                    Optional<Plan> plan = planFiles.stream().findFirst().flatMap( RunMacroWorkloadCommand::readPlan );
                     plan.ifPresent( realPlan -> resultPlans.add( new BenchmarkPlan( query.benchmarkGroup(), query.benchmark(), realPlan ) ) );
                 }
                 catch ( ForkFailureException e )
@@ -293,7 +293,7 @@ public class RunWorkloadCommand extends BaseRunWorkloadCommand
                                         Path workDir,
                                         Path resultsJson,
                                         Path profilerRecordingsDir,
-                                        RunWorkloadParams params )
+                                        RunMacroWorkloadParams params )
     {
         List<String> args = Lists.newArrayList(
                 "run-workload",

@@ -13,6 +13,7 @@ public class Main
     {
         Cli<Runnable> cli = Cli.<Runnable>builder( "run-bench" )
                 .withCommand( ScheduleMacroCommand.class )
+                .withCommand( ScheduleMicroCommand.class )
                 .build();
         Runnable command = cli.parse( args );
         command.run();

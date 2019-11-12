@@ -18,6 +18,8 @@ import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.common.util.Resources;
 import com.neo4j.harness.junit.extension.EnterpriseNeo4jExtension;
 import io.findify.s3mock.S3Mock;
+import org.apache.commons.io.input.Tailer;
+import org.apache.commons.io.input.TailerListenerAdapter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -25,6 +27,7 @@ import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.ServerSocket;
@@ -34,6 +37,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
@@ -204,11 +209,22 @@ public abstract class BaseEndToEndIT
                     .withFileBackend( s3Path.toString() )
                     .build();
             AmazonS3 client = null;
+            // logs tailer
+            File outputLog = temporaryFolder.file( "endtoend.out.log" );
+            Tailer tailer = Tailer.create( outputLog, new TailerListenerAdapter()
+            {
+                @Override
+                public void handle( String line )
+                {
+                    System.out.println( format( "=> %s", line ) );
+                }
+            } );
+            ExecutorService tailerExecutor = Executors.newSingleThreadExecutor();
             try
             {
                 api.start();
                 // make sure we have a s3 bucket created
-                String endpointUrl = String.format( "http://localhost:%d", s3Port );
+                String endpointUrl = format( "http://localhost:%d", s3Port );
                 EndpointConfiguration endpoint = new EndpointConfiguration( endpointUrl, "eu-north-1" );
                 client = AmazonS3ClientBuilder.standard()
                                               .withPathStyleAccessEnabled( true )
@@ -225,23 +241,32 @@ public abstract class BaseEndToEndIT
                                                                    jvm,
                                                                    new ResultStoreCredentials( boltUri, "neo4j", "neo4j" ) ) )
                         .directory( baseDir.toFile() )
-                        .redirectOutput( ProcessBuilder.Redirect.PIPE )
-                        .redirectError( ProcessBuilder.Redirect.PIPE )
+                        .redirectErrorStream( true )
+                        .redirectOutput( outputLog )
                         .start();
-                BufferedReader reader = new BufferedReader( new InputStreamReader( process.getInputStream() ) );
+                // start watching outputlog
+                tailerExecutor.submit( tailer );
                 int processExitCode = process.waitFor();
-                String line;
-                while ( (line = reader.readLine()) != null )
-                {
-                    System.out.println( line );
-                }
                 assertEquals( 0, processExitCode, scriptName() + " finished with non-zero code" );
                 assertStoreSchema( boltUri );
                 assertRecordingFilesExist( s3Path, profilers, resources );
             }
             finally
             {
-                api.shutdown();
+                try
+                {
+                    tailer.stop();
+                    tailerExecutor.shutdown();
+                    tailerExecutor.awaitTermination( 1, TimeUnit.MINUTES );
+                }
+                catch ( Exception e )
+                {
+                    System.out.println( format( "cannot stop logs tailer\n%s", e ) );
+                }
+                if ( api != null )
+                {
+                    api.shutdown();
+                }
                 if ( client != null )
                 {
                     client.shutdown();

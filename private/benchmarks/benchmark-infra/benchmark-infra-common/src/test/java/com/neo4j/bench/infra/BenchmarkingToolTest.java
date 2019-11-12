@@ -13,11 +13,16 @@ import com.neo4j.bench.common.process.JvmArgs;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.tool.macro.ExecutionMode;
-import com.neo4j.bench.common.tool.macro.RunWorkloadParams;
+import com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams;
+import com.neo4j.bench.common.tool.macro.RunToolMacroWorkloadParams;
+import com.neo4j.bench.common.tool.micro.RunMicroWorkloadParams;
+import com.neo4j.bench.common.util.ErrorReporter;
 import com.neo4j.bench.common.util.JsonUtil;
 import com.neo4j.bench.infra.macro.MacroToolRunner;
+import com.neo4j.bench.infra.micro.MicroToolRunner;
 import org.junit.jupiter.api.Test;
 
+import java.io.File;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -29,36 +34,69 @@ public class BenchmarkingToolTest
 {
 
     @Test
-    public void serializationTest()
+    public void macroParamsSerializationTest()
     {
         BenchmarkingTool benchmarkingTool = new BenchmarkingTool( MacroToolRunner.class,
-                                                                  new RunWorkloadParams( "workloadName",
-                                                                                         Edition.COMMUNITY,
-                                                                                         Paths.get( "java" ).toAbsolutePath(),
-                                                                                         new ArrayList<>( ImmutableList.of( ProfilerType.JFR ) ),
-                                                                                         1,
-                                                                                         1000,
-                                                                                         Duration.ofSeconds( 1 ),
-                                                                                         Duration.ofSeconds( 2 ),
-                                                                                         1,
-                                                                                         TimeUnit.MICROSECONDS,
-                                                                                         Runtime.DEFAULT,
-                                                                                         Planner.DEFAULT,
-                                                                                         ExecutionMode.EXECUTE,
-                                                                                         JvmArgs.empty(),
-                                                                                         false,
-                                                                                         false,
-                                                                                         Deployment.embedded(),
-                                                                                         "neo4jCommit",
-                                                                                         "3.4.1",
-                                                                                         "neo4jBranch",
-                                                                                         "neo4jBranchOwner",
-                                                                                         "toolCommit",
-                                                                                         "toolOwner",
-                                                                                         "toolBranch",
-                                                                                         1L,
-                                                                                         0L,
-                                                                                         "neo4j" ) );
+                                                                  new RunToolMacroWorkloadParams(
+                                                                          new RunMacroWorkloadParams( "workloadName",
+                                                                                                      Edition.COMMUNITY,
+                                                                                                      Paths.get( "java" )
+                                                                                                           .toAbsolutePath(),
+                                                                                                      new ArrayList<>( ImmutableList
+                                                                                                                               .of( ProfilerType.JFR ) ),
+                                                                                                      1,
+                                                                                                      1000,
+                                                                                                      Duration.ofSeconds( 1 ),
+                                                                                                      Duration.ofSeconds( 2 ),
+                                                                                                      1,
+                                                                                                      TimeUnit.MICROSECONDS,
+                                                                                                      Runtime.DEFAULT,
+                                                                                                      Planner.DEFAULT,
+                                                                                                      ExecutionMode.EXECUTE,
+                                                                                                      JvmArgs.empty(),
+                                                                                                      false,
+                                                                                                      false,
+                                                                                                      Deployment.embedded(),
+                                                                                                      "neo4jCommit",
+                                                                                                      "3.4.1",
+                                                                                                      "neo4jBranch",
+                                                                                                      "neo4jBranchOwner",
+                                                                                                      "toolCommit",
+                                                                                                      "toolOwner",
+                                                                                                      "toolBranch",
+                                                                                                      1L,
+                                                                                                      0L,
+                                                                                                      "neo4j" ),
+                                                                          "storeName" ) );
+
+        String json = JsonUtil.serializeJson( benchmarkingTool );
+        BenchmarkingTool actualBenchmarkingTool = JsonUtil.deserializeJson( json, BenchmarkingTool.class );
+        assertEquals( benchmarkingTool, actualBenchmarkingTool );
+    }
+
+    @Test
+    public void microParamsSerializationTest()
+    {
+        BenchmarkingTool benchmarkingTool = new BenchmarkingTool( MicroToolRunner.class,
+                                                                  RunMicroWorkloadParams.create( "neo4jCommit",
+                                                                                                 "3.4.4", // neo4jVersion,
+                                                                                                 Edition.COMMUNITY,
+                                                                                                 "3.4.4", // neo4jBranch
+                                                                                                 "branchOwner",
+                                                                                                 new File( "neo4j.conf" ).getAbsoluteFile(),
+                                                                                                 "toolCommit",
+                                                                                                 "toolBranchOwner",
+                                                                                                 "3.4", // tool branch
+                                                                                                 1L, // teamcity build
+                                                                                                 2L, // parent teamcity build
+                                                                                                 JvmArgs.from( "-Xmx4g" ).toArgsString(),
+                                                                                                 new File( "config" ).getAbsoluteFile(),
+                                                                                                 "", // jmh args,
+                                                                                                 "GC",
+                                                                                                 ErrorReporter.ErrorPolicy.FAIL,
+                                                                                                 Paths.get( "java" ).toAbsolutePath().toFile(),
+                                                                                                 "triggeredBy"
+                                                                  ) );
 
         String json = JsonUtil.serializeJson( benchmarkingTool );
         BenchmarkingTool actualBenchmarkingTool = JsonUtil.deserializeJson( json, BenchmarkingTool.class );

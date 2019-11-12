@@ -13,7 +13,8 @@ import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.results.ErrorReportingPolicy;
 import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.tool.macro.ExecutionMode;
-import com.neo4j.bench.common.tool.macro.RunWorkloadParams;
+import com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams;
+import com.neo4j.bench.common.tool.macro.RunToolMacroWorkloadParams;
 import com.neo4j.bench.common.util.JsonUtil;
 import com.neo4j.bench.infra.macro.MacroToolRunner;
 import org.junit.jupiter.api.Test;
@@ -43,7 +44,6 @@ public class JobParamsTest
                         "awsSecret",
                         "awsKey",
                         "awsRegion",
-                        "storeName",
                         "resultsStoreUsername",
                         "resultsStorePassword",
                         URI.create( "bolt://localhost/" ),
@@ -53,33 +53,35 @@ public class JobParamsTest
                 new BenchmarkingEnvironment(
                         new BenchmarkingTool(
                                 MacroToolRunner.class,
-                                new RunWorkloadParams( "workloadName",
-                                                       Edition.ENTERPRISE,
-                                                       Paths.get( "jvm" ).toAbsolutePath(),
-                                                       Arrays.asList( ProfilerType.GC, ProfilerType.JFR ),
-                                                       1,
-                                                       1,
-                                                       Duration.ofMillis( 1 ),
-                                                       Duration.ofMillis( 2 ),
-                                                       1,
-                                                       TimeUnit.MILLISECONDS,
-                                                       Runtime.DEFAULT,
-                                                       Planner.DEFAULT,
-                                                       ExecutionMode.EXECUTE,
-                                                       JvmArgs.from( "-Xmx4g", "-Xms4g" ),
-                                                       false,
-                                                       false,
-                                                       Deployment.embedded(),
-                                                       "neo4jCommit",
-                                                       "3.4.12",
-                                                       "neo4jBranch",
-                                                       "neo4jBranchOwner",
-                                                       "toolCommit",
-                                                       "toolOwner",
-                                                       "toolBranch",
-                                                       123456L,
-                                                       123455L,
-                                                       "triggeredBy" ) ) ) );
+                                new RunToolMacroWorkloadParams(
+                                        new RunMacroWorkloadParams( "workloadName",
+                                                                    Edition.ENTERPRISE,
+                                                                    Paths.get( "jvm" ).toAbsolutePath(),
+                                                                    Arrays.asList( ProfilerType.GC, ProfilerType.JFR ),
+                                                                    1,
+                                                                    1,
+                                                                    Duration.ofMillis( 1 ),
+                                                                    Duration.ofMillis( 2 ),
+                                                                    1,
+                                                                    TimeUnit.MILLISECONDS,
+                                                                    Runtime.DEFAULT,
+                                                                    Planner.DEFAULT,
+                                                                    ExecutionMode.EXECUTE,
+                                                                    JvmArgs.from( "-Xmx4g", "-Xms4g" ),
+                                                                    false,
+                                                                    false,
+                                                                    Deployment.embedded(),
+                                                                    "neo4jCommit",
+                                                                    "3.4.12",
+                                                                    "neo4jBranch",
+                                                                    "neo4jBranchOwner",
+                                                                    "toolCommit",
+                                                                    "toolOwner",
+                                                                    "toolBranch",
+                                                                    123456L,
+                                                                    123455L,
+                                                                    "triggeredBy" ),
+                                        "storeName" ) ) ) );
         // when
         JobParams actual = JsonUtil.deserializeJson( JsonUtil.serializeJson( jobParams ), JobParams.class );
         // then
@@ -95,7 +97,6 @@ public class JobParamsTest
                         "awsSecret",
                         "awsKey",
                         "awsRegion",
-                        "storeName",
                         "resultsStoreUsername",
                         "resultsStorePassword",
                         URI.create( "bolt://localhost/" ),
@@ -105,7 +106,7 @@ public class JobParamsTest
                 new BenchmarkingEnvironment(
                         new BenchmarkingTool(
                                 MacroToolRunner.class,
-                                new RunWorkloadParams( "workloadName",
+                                new RunMacroWorkloadParams( "workloadName",
                                                        Edition.ENTERPRISE,
                                                        Paths.get( "jvm" ).toAbsolutePath(),
                                                        Arrays.asList( ProfilerType.GC, ProfilerType.JFR ),

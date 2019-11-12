@@ -35,4 +35,4 @@ rm -rf "${worker_artifact}" "${work_dir:?}/*"
 aws --region eu-north-1 s3 cp "${workerArtifactUri}" "${worker_artifact}"
 
 # shellcheck disable=SC2086
-java ${JAVA_OPTS:+"$JAVA_OPTS"} -jar benchmark-worker.jar "${params[@]}" --workspace-dir "${work_dir}" --batch-job-id "${AWS_BATCH_JOB_ID}"
+java ${JAVA_OPTS:+"$JAVA_OPTS"} -cp "${worker_artifact}" com.neo4j.bench.infra.worker.Main "${params[@]}" --workspace-dir "${work_dir}" --batch-job-id "${AWS_BATCH_JOB_ID}"

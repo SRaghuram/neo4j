@@ -8,10 +8,8 @@ package com.neo4j.bench.infra.aws;
 import com.amazonaws.services.batch.AWSBatch;
 import com.amazonaws.services.batch.model.SubmitJobRequest;
 import com.amazonaws.services.batch.model.SubmitJobResult;
-import com.google.common.collect.Sets;
 import com.neo4j.bench.infra.InfraParams;
 import com.neo4j.bench.infra.JobId;
-import com.neo4j.bench.infra.commands.BatchJobCommandParameters;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -19,9 +17,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
 import java.net.URI;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -55,7 +51,7 @@ public class AWSBatchJobSchedulerTest
         JobId scheduleJobId = jobScheduler.schedule(
                 workerArtifactUri,
                 baseArtifactUri,
-                String.format( "%s-%s-%s-%s", "macro", storeName, "3.4.15", "neo4j" ) );
+                String.format( "%s-%s-%s-%s", "macro", storeName, "3_4_15", "neo4j" ) );
 
         // then
         assertEquals( new JobId( jobId ), scheduleJobId, "invalid job id in submit job request response" );
@@ -67,13 +63,7 @@ public class AWSBatchJobSchedulerTest
 
         assertEquals( "job-queue", jobRequest.getJobQueue() );
         assertEquals( "job-definition", jobRequest.getJobDefinition() );
-        assertEquals( "macro-musicbrainz-3_2_1-teamcity", jobRequest.getJobName() );
-
+        assertEquals( "macro-musicbrainz-3_4_15-neo4j", jobRequest.getJobName() );
         assertEquals( expectedParams, jobRequestParameters );
-
-        assertEquals( Collections.emptySet(),
-                      Sets.difference(
-                              new HashSet<>( BatchJobCommandParameters.getBatchJobCommandParameters() ),
-                              jobRequestParameters.keySet() ) );
     }
 }

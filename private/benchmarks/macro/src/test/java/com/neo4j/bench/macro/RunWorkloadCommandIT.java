@@ -17,11 +17,11 @@ import com.neo4j.bench.common.process.JvmArgs;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.tool.macro.ExecutionMode;
-import com.neo4j.bench.common.tool.macro.RunWorkloadParams;
+import com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams;
 import com.neo4j.bench.common.util.JsonUtil;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.common.util.Resources;
-import com.neo4j.bench.macro.cli.RunWorkloadCommand;
+import com.neo4j.bench.macro.cli.RunMacroWorkloadCommand;
 import com.neo4j.bench.macro.workload.Query;
 import com.neo4j.bench.macro.workload.Workload;
 import org.junit.jupiter.api.Disabled;
@@ -263,13 +263,13 @@ class RunWorkloadCommandIT
 
             Path jvmPath = Paths.get( Jvm.defaultJvmOrFail().launchJava() );
 
-            List<String> runWorkloadArgs = RunWorkloadCommand.argsFor(
+            List<String> runWorkloadArgs = RunMacroWorkloadCommand.argsFor(
                     store.topLevelDirectory(),
                     neo4jConfigFile,
                     outputDir,
                     resultsJson,
                     profilerRecordingsDir,
-                    new RunWorkloadParams(
+                    new RunMacroWorkloadParams(
                             workload.name(),
                             Edition.ENTERPRISE,
                             jvmPath,

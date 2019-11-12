@@ -11,8 +11,6 @@ import com.neo4j.bench.common.util.JsonUtil;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 
-import java.nio.file.Path;
-
 public class JobParams
 {
 
@@ -35,11 +33,6 @@ public class JobParams
     public BenchmarkingEnvironment benchmarkingEnvironment()
     {
         return benchmarkingEnvironment;
-    }
-
-    public String toJson()
-    {
-        return JsonUtil.serializeJson( this );
     }
 
     @Override

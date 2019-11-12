@@ -109,6 +109,47 @@
         "ServiceRole": "arn:aws:iam::535893049302:role/service-role/AWSBatchServiceRole"
       }
     },
+    "R5D2XLargeComputeEnvironment": {
+      "Type": "AWS::Batch::ComputeEnvironment",
+      "Properties": {
+        "Type": "MANAGED",
+        "ComputeResources": {
+          "Type": "EC2",
+          "ImageId": {
+            "Ref": "AMIID"
+          },
+          "Ec2KeyPair": "benchmark",
+          "MinvCpus": 0,
+          "DesiredvCpus": 0,
+          "MaxvCpus": 256,
+          "InstanceTypes": [
+            "r5d.2xlarge"
+          ],
+          "Subnets": [
+            "subnet-ff6f40b5",
+            "subnet-3a8c6e53",
+            "subnet-553c312d"
+          ],
+          "SecurityGroupIds": [
+            "sg-bcab66d5"
+          ],
+          "InstanceRole": "arn:aws:iam::535893049302:instance-profile/ecsInstanceRole",
+          "Tags": {
+            "team": "benchmarking",
+            "project": "infrastructure",
+            "neo4jcommit": {
+              "Ref": "NEO4JCOMMIT"
+            },
+            "owner": "benchmarking",
+            "stage": {
+              "Ref": "STAGE"
+            }
+          }
+        },
+        "ServiceRole": "arn:aws:iam::535893049302:role/service-role/AWSBatchServiceRole"
+      }
+    }
+    ,
     "MacroBenchmarkRunQueueXLarge": {
       "Type": "AWS::Batch::JobQueue",
       "Properties": {
@@ -139,6 +180,23 @@
         ],
         "JobQueueName": {
           "Fn::Sub": "M5DLargeJobQueue-${BUILDID}"
+        },
+        "Priority": 1
+      }
+    },
+    "MicroBenchmarkRunQueueLarge": {
+      "Type": "AWS::Batch::JobQueue",
+      "Properties": {
+        "ComputeEnvironmentOrder": [
+          {
+            "Order": 1,
+            "ComputeEnvironment": {
+              "Ref": "R5D2XLargeComputeEnvironment"
+            }
+          }
+        ],
+        "JobQueueName": {
+          "Fn::Sub": "R5D2XLargeJobQueue-${BUILDID}"
         },
         "Priority": 1
       }
@@ -322,6 +380,51 @@
           ]
         }
       }
+    },
+    "MicroBenchmarkRunJobDefintionLargeJDK8": {
+      "Type": "AWS::Batch::JobDefinition",
+      "Properties": {
+        "JobDefinitionName": {
+          "Fn::Sub": "micro-benchmark-job-definition-oracle8-${STAGE}"
+        },
+        "Type": "container",
+        "ContainerProperties": {
+          "Image": { "Ref" :  "ORACLE8WORKERIMAGE" },
+          "Command": [
+            "/work/bootstrap-worker.sh",
+            "--worker-artifact-uri",
+            "Ref::--worker-artifact-uri",
+            "run-worker",
+            "--artifact-base-uri",
+            "Ref::--artifact-base-uri"
+          ],
+          "Volumes": [
+            {
+              "Host": {
+                "SourcePath": "/work"
+              },
+              "Name": "work"
+            }
+          ],
+          "MountPoints": [
+            {
+              "SourceVolume": "work",
+              "ContainerPath": "/work/run",
+              "ReadOnly": false
+            }
+          ],
+          "Privileged": true,
+          "Vcpus": 8,
+          "Memory": 63000,
+          "Ulimits" : [
+            {
+              "Name" : "nofile",
+              "SoftLimit" : 280000,
+              "HardLimit" : 280000
+            }
+          ]
+        }
+      }
     }
   },
   "Outputs": {
@@ -333,6 +436,11 @@
     "M5DLargeJobQueue": {
       "Value": {
         "Fn::Sub": "M5DLargeJobQueue-${BUILDID}"
+      }
+    },
+    "R5D2XLargeJobQueue": {
+      "Value": {
+        "Fn::Sub": "R5D2XLargeJobQueue-${BUILDID}"
       }
     }
   }

@@ -30,7 +30,6 @@ public class InfraParamsTest
         InfraParams infraParams = new InfraParams( "awsSecret",
                                                    "awsKey",
                                                    "awsRegion",
-                                                   "storeName",
                                                    "resultStoreUsername",
                                                    "resultStorePasswordSecretName",
                                                    URI.create( "http://resultStoreUri" ),

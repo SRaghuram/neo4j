@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# this scripts creates workspace needed by schedule-run-benchmark.sh
+# this scripts creates workspace needed by schedule-run-macro-benchmark.sh
 set -eu
 
 workspace_dir=

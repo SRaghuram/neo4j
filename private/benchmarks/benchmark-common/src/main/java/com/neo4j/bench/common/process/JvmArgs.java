@@ -5,6 +5,9 @@
  */
 package com.neo4j.bench.common.process;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonRawValue;
+import com.fasterxml.jackson.annotation.JsonValue;
 import com.neo4j.bench.common.results.ForkDirectory;
 import org.apache.commons.lang3.StringUtils;
 
@@ -55,6 +58,7 @@ public class JvmArgs
         );
     }
 
+    @JsonCreator
     public static JvmArgs parse( String jvmArgs )
     {
         List<String> args = new ArrayList<>();
@@ -175,11 +179,7 @@ public class JvmArgs
         return new ArrayList<>( jvmArgs );
     }
 
-    public String[] asArray()
-    {
-        return toArgs().toArray( new String[]{} );
-    }
-
+    @JsonValue
     public String toArgsString()
     {
         return String.join( " ", jvmArgs );

@@ -21,26 +21,21 @@ public class BenchmarkingEnvironment
     private final BenchmarkingTool benchmarkingTool;
 
     @JsonCreator
-    public BenchmarkingEnvironment(
-            @JsonProperty( "benchmarkingTool" ) BenchmarkingTool benchmarkingTool )
+    public BenchmarkingEnvironment( @JsonProperty( "benchmarkingTool" ) BenchmarkingTool benchmarkingTool )
     {
         Objects.requireNonNull( benchmarkingTool );
         this.benchmarkingTool = benchmarkingTool;
     }
 
-    /**
-     * @return benchmarking tool, which will be run in this benchmarking environment,
-     * like micro or macro benchmarks
-     */
     public BenchmarkingTool benchmarkingTool()
     {
         return benchmarkingTool;
     }
 
     @Override
-    public boolean equals( Object o )
+    public boolean equals( Object that )
     {
-        return EqualsBuilder.reflectionEquals( this, o );
+        return EqualsBuilder.reflectionEquals( this, that );
     }
 
     @Override

@@ -21,33 +21,33 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.LogManager;
 
-import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_EDITION;
-import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_EXECUTION_MODE;
-import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_FORKS;
-import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_JVM_ARGS;
-import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_JVM_PATH;
-import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_MAX_MEASUREMENT_DURATION;
-import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_MEASUREMENT;
-import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_MIN_MEASUREMENT_DURATION;
-import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_NEO4J_BRANCH;
-import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_NEO4J_COMMIT;
-import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_NEO4J_DEPLOYMENT;
-import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_NEO4J_OWNER;
-import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_NEO4J_VERSION;
-import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_PARENT_TEAMCITY_BUILD;
-import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_PLANNER;
-import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_PROFILERS;
-import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_RECREATE_SCHEMA;
-import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_RUNTIME;
-import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_SKIP_FLAMEGRAPHS;
-import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_TEAMCITY_BUILD;
-import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_TIME_UNIT;
-import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_TOOL_BRANCH;
-import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_TOOL_COMMIT;
-import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_TOOL_OWNER;
-import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_TRIGGERED_BY;
-import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_WARMUP;
-import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_WORKLOAD;
+import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_EDITION;
+import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_EXECUTION_MODE;
+import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_FORKS;
+import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_JVM_ARGS;
+import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_JVM_PATH;
+import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_MAX_MEASUREMENT_DURATION;
+import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_MEASUREMENT;
+import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_MIN_MEASUREMENT_DURATION;
+import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_NEO4J_BRANCH;
+import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_NEO4J_COMMIT;
+import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_NEO4J_DEPLOYMENT;
+import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_NEO4J_OWNER;
+import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_NEO4J_VERSION;
+import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_PARENT_TEAMCITY_BUILD;
+import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_PLANNER;
+import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_PROFILERS;
+import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_RECREATE_SCHEMA;
+import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_RUNTIME;
+import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_SKIP_FLAMEGRAPHS;
+import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_TEAMCITY_BUILD;
+import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_TIME_UNIT;
+import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_TOOL_BRANCH;
+import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_TOOL_COMMIT;
+import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_TOOL_OWNER;
+import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_TRIGGERED_BY;
+import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_WARMUP;
+import static com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams.CMD_WORKLOAD;
 import static java.lang.String.format;
 
 public abstract class BaseRunWorkloadCommand implements Runnable
@@ -249,35 +249,36 @@ public abstract class BaseRunWorkloadCommand implements Runnable
         Duration minMeasurementDuration = Duration.ofSeconds( minMeasurementSeconds );
         Duration maxMeasurementDuration = Duration.ofSeconds( maxMeasurementSeconds );
         JvmArgs jvmArgs = JvmArgs.parse( this.jvmArgs );
-        RunWorkloadParams commandParams = new RunWorkloadParams( workloadName,
-                                                                 neo4jEdition,
-                                                                 jvmFile.toPath(),
-                                                                 profilers,
-                                                                 warmupCount,
-                                                                 measurementCount,
-                                                                 minMeasurementDuration,
-                                                                 maxMeasurementDuration,
-                                                                 measurementForkCount,
-                                                                 unit,
-                                                                 runtime,
-                                                                 planner,
-                                                                 executionMode,
-                                                                 jvmArgs,
-                                                                 recreateSchema,
-                                                                 skipFlameGraphs,
-                                                                 deployment,
-                                                                 neo4jCommit,
-                                                                 neo4jVersion,
-                                                                 neo4jBranch,
-                                                                 neo4jBranchOwner,
-                                                                 toolCommit,
-                                                                 toolOwner,
-                                                                 toolBranch,
-                                                                 teamcityBuild,
-                                                                 parentBuild,
-                                                                 triggeredBy );
+        RunMacroWorkloadParams commandParams = new RunMacroWorkloadParams( workloadName,
+                                                                           neo4jEdition,
+                                                                           jvmFile.toPath(),
+                                                                           profilers,
+                                                                           warmupCount,
+                                                                           measurementCount,
+                                                                           minMeasurementDuration,
+                                                                           maxMeasurementDuration,
+                                                                           measurementForkCount,
+                                                                           unit,
+                                                                           runtime,
+                                                                           planner,
+                                                                           executionMode,
+                                                                           jvmArgs,
+                                                                           recreateSchema,
+                                                                           skipFlameGraphs,
+                                                                           deployment,
+                                                                           neo4jCommit,
+                                                                           neo4jVersion,
+                                                                           neo4jBranch,
+                                                                           neo4jBranchOwner,
+                                                                           toolCommit,
+                                                                           toolOwner,
+                                                                           toolBranch,
+                                                                           teamcityBuild,
+                                                                           parentBuild,
+                                                                           triggeredBy );
+
         doRun( commandParams );
     }
 
-    protected abstract void doRun( RunWorkloadParams params );
+    protected abstract void doRun( RunMacroWorkloadParams params );
 }

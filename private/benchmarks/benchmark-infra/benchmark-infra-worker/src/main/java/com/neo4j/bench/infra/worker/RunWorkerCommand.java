@@ -9,7 +9,7 @@ import com.github.rvesse.airline.annotations.Command;
 import com.github.rvesse.airline.annotations.Option;
 import com.github.rvesse.airline.annotations.OptionType;
 import com.github.rvesse.airline.annotations.restrictions.Required;
-import com.neo4j.bench.common.tool.macro.RunWorkloadParams;
+import com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams;
 import com.neo4j.bench.common.util.JsonUtil;
 import com.neo4j.bench.infra.BenchmarkingTool;
 import com.neo4j.bench.infra.BenchmarkingToolRunner;
@@ -48,13 +48,13 @@ public class RunWorkerCommand implements Runnable
     private File workspaceDir;
 
     @Option( type = OptionType.COMMAND,
-             name = RunWorkloadParams.CMD_BATCH_JOB_ID,
+             name = RunMacroWorkloadParams.CMD_BATCH_JOB_ID,
              title = "AWS Batch JOB ID" )
     @Required
     private String batchJobId = "";
 
     @Option( type = OptionType.COMMAND,
-            name = RunWorkloadParams.CMD_JOB_PARAMETERS,
+            name = RunMacroWorkloadParams.CMD_JOB_PARAMETERS,
             title = "Job parameters file" )
     private String jobParameters = Workspace.JOB_PARAMETERS_JSON;
 

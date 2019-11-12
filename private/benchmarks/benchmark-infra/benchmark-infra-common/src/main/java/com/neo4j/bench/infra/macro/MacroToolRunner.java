@@ -8,18 +8,21 @@ package com.neo4j.bench.infra.macro;
 import com.google.common.collect.Lists;
 import com.neo4j.bench.common.options.Version;
 import com.neo4j.bench.common.profiling.ProfilerType;
-import com.neo4j.bench.common.tool.macro.RunWorkloadParams;
+import com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams;
+import com.neo4j.bench.common.tool.macro.RunToolMacroWorkloadParams;
 import com.neo4j.bench.common.util.BenchmarkUtil;
+import com.neo4j.bench.infra.ArtifactStorage;
+import com.neo4j.bench.infra.ArtifactStoreException;
 import com.neo4j.bench.infra.BenchmarkingToolRunner;
 import com.neo4j.bench.infra.Dataset;
 import com.neo4j.bench.infra.Extractor;
 import com.neo4j.bench.infra.InfraParams;
 import com.neo4j.bench.infra.Workspace;
-import com.neo4j.bench.infra.aws.AWSS3ArtifactStorage;
 import org.apache.commons.io.filefilter.TrueFileFilter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -31,29 +34,30 @@ import static com.neo4j.bench.common.tool.macro.DeploymentModes.SERVER;
 import static java.lang.String.format;
 import static java.lang.String.join;
 
-public class MacroToolRunner implements BenchmarkingToolRunner<RunWorkloadParams>
+public class MacroToolRunner implements BenchmarkingToolRunner<RunToolMacroWorkloadParams>
 {
     private static final Logger LOG = LoggerFactory.getLogger( MacroToolRunner.class );
 
     @Override
-    public void runTool( RunWorkloadParams runWorkloadParams,
-                         AWSS3ArtifactStorage artifactStorage,
+    public void runTool( RunToolMacroWorkloadParams runToolMacroWorkloadParams,
+                         ArtifactStorage artifactStorage,
                          Path workspacePath,
                          Workspace artifactsWorkspace,
                          InfraParams infraParams,
                          String resultsStorePassword,
                          String batchJobId,
                          URI artifactBaseUri )
-            throws Exception
+            throws IOException, InterruptedException, ArtifactStoreException
     {
 
-        Workspace.assertMacroWorkspace( artifactsWorkspace, runWorkloadParams.neo4jVersion(), runWorkloadParams.neo4jEdition() );
+        RunMacroWorkloadParams runMacroWorkloadParams = runToolMacroWorkloadParams.runMacroWorkloadParams();
+        Workspace.assertMacroWorkspace( artifactsWorkspace, runMacroWorkloadParams.neo4jVersion(), runMacroWorkloadParams.neo4jEdition() );
 
         Path macroDir = workspacePath.resolve( "macro" );
 
         // download & extract dataset
-        Version neo4jVersion = runWorkloadParams.neo4jVersion();
-        Dataset dataset = artifactStorage.downloadDataset( neo4jVersion.minorVersion(), infraParams.storeName() );
+        Version neo4jVersion = runMacroWorkloadParams.neo4jVersion();
+        Dataset dataset = artifactStorage.downloadDataset( neo4jVersion.minorVersion(), runToolMacroWorkloadParams.storeName() );
         dataset.extractInto( macroDir );
 
         Files.setPosixFilePermissions( artifactsWorkspace.get( Workspace.RUN_SCRIPT ), PosixFilePermissions.fromString( "r-xr-xr-x" ) );
@@ -64,11 +68,11 @@ public class MacroToolRunner implements BenchmarkingToolRunner<RunWorkloadParams
         Path workDir = macroDir.resolve( "execute_work_dir" );
         Files.createDirectories( workDir );
 
-        Path storeDir = macroDir.resolve( infraParams.storeName() );
+        Path storeDir = macroDir.resolve( runToolMacroWorkloadParams.storeName() );
         Path resultsJson = workDir.resolve( "results.json" );
 
         // Unzip the neo4jJar
-        if ( SERVER.equals( runWorkloadParams.deployment().deploymentModes() ) )
+        if ( SERVER.equals( runMacroWorkloadParams.deployment().deploymentModes() ) )
         {
             Path neo4jTar = artifactsWorkspace.get( Workspace.NEO4J_ARCHIVE );
             Extractor.extract( workspacePath.resolve( macroDir ), Files.newInputStream( neo4jTar ) );
@@ -94,7 +98,7 @@ public class MacroToolRunner implements BenchmarkingToolRunner<RunWorkloadParams
         List<String> runReportCommands = new ArrayList<>();
         runReportCommands.add( "./run-report-benchmarks.sh" );
         runReportCommands.addAll(
-                createRunReportArgs( runWorkloadParams, infraParams, workDir, storeDir, neo4jConfigFile, resultsJson, batchJobId, resultsStorePassword ) );
+                createRunReportArgs( runMacroWorkloadParams, infraParams, workDir, storeDir, neo4jConfigFile, resultsJson, batchJobId, resultsStorePassword ) );
 
         LOG.info( "starting run report benchmark process, {}", join( " ", runReportCommands ) );
         Process process = new ProcessBuilder( runReportCommands )
@@ -114,7 +118,7 @@ public class MacroToolRunner implements BenchmarkingToolRunner<RunWorkloadParams
         }
     }
 
-    private static List<String> createRunReportArgs( RunWorkloadParams runWorkloadParams,
+    private static List<String> createRunReportArgs( RunMacroWorkloadParams runMacroWorkloadParams,
                                                      InfraParams infraParams,
                                                      Path workDir,
                                                      Path storeDir,
@@ -123,38 +127,38 @@ public class MacroToolRunner implements BenchmarkingToolRunner<RunWorkloadParams
                                                      String batchJobId,
                                                      String resultsStorePassword )
     {
-        return Lists.newArrayList( runWorkloadParams.workloadName(),
+        return Lists.newArrayList( runMacroWorkloadParams.workloadName(),
                                    storeDir.toAbsolutePath().toString(),
-                                   Integer.toString( runWorkloadParams.warmupCount() ),
-                                   Integer.toString( runWorkloadParams.measurementCount() ),
-                                   runWorkloadParams.neo4jEdition().name(),
-                                   runWorkloadParams.jvm().toAbsolutePath().toString(),
+                                   Integer.toString( runMacroWorkloadParams.warmupCount() ),
+                                   Integer.toString( runMacroWorkloadParams.measurementCount() ),
+                                   runMacroWorkloadParams.neo4jEdition().name(),
+                                   runMacroWorkloadParams.jvm().toAbsolutePath().toString(),
                                    neo4jConfigFile.toAbsolutePath().toString(),
                                    workDir.toAbsolutePath().toString(),
-                                   ProfilerType.serializeProfilers( runWorkloadParams.profilers() ),
-                                   Integer.toString( runWorkloadParams.measurementForkCount() ),
+                                   ProfilerType.serializeProfilers( runMacroWorkloadParams.profilers() ),
+                                   Integer.toString( runMacroWorkloadParams.measurementForkCount() ),
                                    resultsJson.toAbsolutePath().toString(),
-                                   runWorkloadParams.unit().name(),
+                                   runMacroWorkloadParams.unit().name(),
                                    infraParams.resultsStoreUri().toString(),
                                    infraParams.resultsStoreUsername(),
                                    resultsStorePassword,
-                                   runWorkloadParams.neo4jCommit(),
-                                   runWorkloadParams.neo4jVersion().patchVersion(),
-                                   runWorkloadParams.neo4jBranch(),
-                                   runWorkloadParams.neo4jBranchOwner(),
-                                   runWorkloadParams.toolCommit(),
-                                   runWorkloadParams.toolOwner(),
-                                   runWorkloadParams.toolBranch(),
-                                   Long.toString( runWorkloadParams.teamcityBuild() ),
-                                   Long.toString( runWorkloadParams.parentBuild() ),
-                                   runWorkloadParams.executionMode().name(),
-                                   runWorkloadParams.jvmArgs().toArgsString(),
-                                   Boolean.toString( runWorkloadParams.isRecreateSchema() ),
-                                   runWorkloadParams.planner().name(),
-                                   runWorkloadParams.runtime().name(),
-                                   runWorkloadParams.triggeredBy(),
+                                   runMacroWorkloadParams.neo4jCommit(),
+                                   runMacroWorkloadParams.neo4jVersion().patchVersion(),
+                                   runMacroWorkloadParams.neo4jBranch(),
+                                   runMacroWorkloadParams.neo4jBranchOwner(),
+                                   runMacroWorkloadParams.toolCommit(),
+                                   runMacroWorkloadParams.toolOwner(),
+                                   runMacroWorkloadParams.toolBranch(),
+                                   Long.toString( runMacroWorkloadParams.teamcityBuild() ),
+                                   Long.toString( runMacroWorkloadParams.parentBuild() ),
+                                   runMacroWorkloadParams.executionMode().name(),
+                                   runMacroWorkloadParams.jvmArgs().toArgsString(),
+                                   Boolean.toString( runMacroWorkloadParams.isRecreateSchema() ),
+                                   runMacroWorkloadParams.planner().name(),
+                                   runMacroWorkloadParams.runtime().name(),
+                                   runMacroWorkloadParams.triggeredBy(),
                                    infraParams.errorReportingPolicy().name(),
-                                   runWorkloadParams.deployment().parsableValue(),
+                                   runMacroWorkloadParams.deployment().parsableValue(),
                                    batchJobId );
     }
 }

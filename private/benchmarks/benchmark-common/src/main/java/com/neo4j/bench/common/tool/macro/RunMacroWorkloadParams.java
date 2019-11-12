@@ -24,7 +24,7 @@ import java.util.stream.Stream;
 
 import static java.util.stream.Collectors.toList;
 
-public class RunWorkloadParams
+public class RunMacroWorkloadParams
 {
     // -----------------------------------------------------------------------
     // Common: Base Run Workload
@@ -127,44 +127,45 @@ public class RunWorkloadParams
     public static final String CMD_RESULTS_JSON = "--results";
     public static final String CMD_PROFILER_RECORDINGS_DIR = "--profiler-recordings-dir";
     public static final String CMD_BATCH_JOB_ID = "--batch-job-id";
+    public static final String CMD_DB_NAME = "--db-name";
     public static final String CMD_JOB_PARAMETERS = "--job-parameters";
 
     // needed for JSON serialization
-    private RunWorkloadParams()
+    private RunMacroWorkloadParams()
     {
 
     }
 
-    public RunWorkloadParams( String workloadName,
-                              Edition neo4jEdition,
-                              Path jvm,
-                              List<ProfilerType> profilers,
-                              int warmupCount,
-                              int measurementCount,
-                              Duration minMeasurementDuration,
-                              Duration maxMeasurementDuration,
-                              int measurementForkCount,
-                              TimeUnit unit,
-                              Runtime runtime,
-                              Planner planner,
-                              ExecutionMode executionMode,
-                              JvmArgs jvmArgs,
-                              boolean recreateSchema,
-                              boolean skipFlameGraphs,
-                              Deployment deployment,
-                              // -----------------------------------------------------------------------
-                              // Result Client Report Results Args
-                              // -----------------------------------------------------------------------
-                              String neo4jCommit,
-                              String neo4jVersion,
-                              String neo4jBranch,
-                              String neo4jBranchOwner,
-                              String toolCommit,
-                              String toolOwner,
-                              String toolBranch,
-                              Long teamcityBuild,
-                              Long parentBuild,
-                              String triggeredBy )
+    public RunMacroWorkloadParams( String workloadName,
+                                   Edition neo4jEdition,
+                                   Path jvm,
+                                   List<ProfilerType> profilers,
+                                   int warmupCount,
+                                   int measurementCount,
+                                   Duration minMeasurementDuration,
+                                   Duration maxMeasurementDuration,
+                                   int measurementForkCount,
+                                   TimeUnit unit,
+                                   Runtime runtime,
+                                   Planner planner,
+                                   ExecutionMode executionMode,
+                                   JvmArgs jvmArgs,
+                                   boolean recreateSchema,
+                                   boolean skipFlameGraphs,
+                                   Deployment deployment,
+                                   // -----------------------------------------------------------------------
+                                   // Result Client Report Results Args
+                                   // -----------------------------------------------------------------------
+                                   String neo4jCommit,
+                                   String neo4jVersion,
+                                   String neo4jBranch,
+                                   String neo4jBranchOwner,
+                                   String toolCommit,
+                                   String toolOwner,
+                                   String toolBranch,
+                                   Long teamcityBuild,
+                                   Long parentBuild,
+                                   String triggeredBy )
     {
         this.workloadName = workloadName;
         this.neo4jEdition = neo4jEdition;
@@ -418,5 +419,4 @@ public class RunWorkloadParams
     {
         return HashCodeBuilder.reflectionHashCode( this );
     }
-
 }

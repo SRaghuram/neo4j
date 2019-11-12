@@ -6,7 +6,7 @@
 package com.neo4j.bench.infra;
 
 import com.neo4j.bench.common.results.ErrorReportingPolicy;
-import com.neo4j.bench.common.tool.macro.RunWorkloadParams;
+import com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 
@@ -29,9 +29,6 @@ public class InfraParams
     public static final String CMD_AWS_REGION = "--aws-region";
     private String awsRegion;
 
-    public static final String CMD_DB_NAME = "--db-name";
-    private String storeName;
-
     public static final String CMD_ARTIFACT_BASE_URI = "--artifact-base-uri";
     private URI artifactBaseUri;
 
@@ -50,7 +47,7 @@ public class InfraParams
     public static final String CMD_RESULTS_STORE_URI = "--results-store-uri";
     private URI resultsStoreUri;
 
-    public static final String CMD_ERROR_POLICY = RunWorkloadParams.CMD_ERROR_POLICY;
+    public static final String CMD_ERROR_POLICY = RunMacroWorkloadParams.CMD_ERROR_POLICY;
     private ErrorReportingPolicy errorPolicy = ErrorReportingPolicy.REPORT_THEN_FAIL;
 
     // needed for JSON serialization
@@ -61,7 +58,6 @@ public class InfraParams
     public InfraParams( String awsSecret,
                         String awsKey,
                         String awsRegion,
-                        String storeName,
                         String resultsStoreUsername,
                         String resultsStorePasswordSecretName,
                         URI resultsStoreUri,
@@ -72,7 +68,6 @@ public class InfraParams
         this.awsSecret = awsSecret;
         this.awsKey = awsKey;
         this.awsRegion = awsRegion;
-        this.storeName = storeName;
         this.resultsStoreUsername = resultsStoreUsername;
         this.resultsStorePasswordSecretName = resultsStorePasswordSecretName;
         this.resultsStoreUri = resultsStoreUri;
@@ -99,11 +94,6 @@ public class InfraParams
     public String awsRegion()
     {
         return awsRegion;
-    }
-
-    public String storeName()
-    {
-        return storeName;
     }
 
     public String resultsStoreUsername()
@@ -137,17 +127,8 @@ public class InfraParams
     }
 
     @Override
-    public boolean equals( Object o )
+    public boolean equals( Object that )
     {
-        if ( this == o )
-        {
-            return true;
-        }
-        if ( o == null || getClass() != o.getClass() )
-        {
-            return false;
-        }
-        InfraParams that = (InfraParams) o;
         return EqualsBuilder.reflectionEquals( this, that );
     }
 
