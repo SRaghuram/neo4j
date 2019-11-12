@@ -308,7 +308,7 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     executeOnDefault("joe", "soap", query ) should be(0)
   }
 
-  test("db.relationshipTypes should return type even if it cannot be found be match") {
+  test("db.relationshipTypes should return type even if it cannot be found by match") {
     // GIVEN
     setupUserWithCustomRole()
     selectDatabase(DEFAULT_DATABASE_NAME)
@@ -329,39 +329,25 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     // GIVEN
     setupUserWithCustomRole()
     selectDatabase(DEFAULT_DATABASE_NAME)
-    execute("CREATE ()-[:REL]->()")
+    execute("CREATE ()-[:REL]->()-[:B]->()")
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIP * TO custom")
 
     // THEN
-    val query = "CALL db.relationshipTypes"
-    executeOnDefault("joe", "soap", query, resultHandler = (row,_) => {
-      row.get("relationshipType") should be("REL")
-    } ) should be(1)
+    val query = "CALL db.relationshipTypes() YIELD relationshipType RETURN relationshipType ORDER BY relationshipType"
+    val expected = List("B", "REL")
+    executeOnDefault("joe", "soap", query, resultHandler = (row,index) => {
+      row.get("relationshipType") should be(expected(index))
+    } ) should be(2)
   }
 
   test("db.relationshipTypes should not return denied type") {
     // GIVEN
     setupUserWithCustomRole()
     selectDatabase(DEFAULT_DATABASE_NAME)
-    execute("CREATE ()-[:REL]->()")
-
-    // WHEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("DENY TRAVERSE ON GRAPH * RELATIONSHIP * TO custom")
-
-    // THEN
-    val query = "CALL db.relationshipTypes"
-    executeOnDefault("joe", "soap", query) should be(0)
-  }
-
-  test("db.relationshipTypes should not return granted type if it is also denied") {
-    // GIVEN
-    setupUserWithCustomRole()
-    selectDatabase(DEFAULT_DATABASE_NAME)
-    execute("CREATE ()-[:REL]->()")
+    execute("CREATE ()-[:REL]->()-[:B]->()")
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -370,7 +356,9 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
 
     // THEN
     val query = "CALL db.relationshipTypes"
-    executeOnDefault("joe", "soap", query) should be(0)
+    executeOnDefault("joe", "soap", query, resultHandler = (row,_) => {
+      row.get("relationshipType") should be("B")
+    } ) should be(1)
   }
 
   test("should only see properties using properties() function on relationship with read privilege") {

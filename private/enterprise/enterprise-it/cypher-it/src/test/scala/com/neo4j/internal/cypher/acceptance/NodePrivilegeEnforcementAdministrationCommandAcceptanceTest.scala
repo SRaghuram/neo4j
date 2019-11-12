@@ -526,7 +526,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     // GIVEN
     setupUserWithCustomRole()
     selectDatabase(DEFAULT_DATABASE_NAME)
-    execute("CREATE (:A)")
+    execute("CREATE (:A), (:B)")
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -543,32 +543,18 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     // GIVEN
     setupUserWithCustomRole()
     selectDatabase(DEFAULT_DATABASE_NAME)
-    execute("CREATE (:A)")
+    execute("CREATE (:A), (:B)")
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT TRAVERSE ON GRAPH * NODE * TO custom")
 
     // THEN
+    val expected = List( "A", "B" )
     val query = "CALL db.labels() YIELD label RETURN label ORDER BY label"
-    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
-      row.get("label") should be("A")
-    }) should be(1)
-  }
-
-  test("db.labels should not return denied label") {
-    // GIVEN
-    setupUserWithCustomRole()
-    selectDatabase(DEFAULT_DATABASE_NAME)
-    execute("CREATE (:A)")
-
-    // WHEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("DENY TRAVERSE ON GRAPH * NODE A TO custom")
-
-    // THEN
-    val query = "CALL db.labels() YIELD label RETURN label ORDER BY label"
-    executeOnDefault("joe", "soap", query) should be(0)
+    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+      row.get("label") should be(expected(index))
+    }) should be(2)
   }
 
   test("db.labels should return granted label even if it cannot be found by match") {
@@ -589,11 +575,11 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     }) should be(1)
   }
 
-  test("db.labels should not return granted label if it is also denied") {
+  test("db.labels should not return denied label") {
     // GIVEN
     setupUserWithCustomRole()
     selectDatabase(DEFAULT_DATABASE_NAME)
-    execute("CREATE (:A)")
+    execute("CREATE (:A),(:B)")
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -602,7 +588,9 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
 
     // THEN
     val query = "CALL db.labels() YIELD label RETURN label ORDER BY label"
-    executeOnDefault("joe", "soap", query) should be(0)
+    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+      row.get("label") should be("B")
+    }) should be(1)
   }
 
   test("db.labels should not return indexed label without grant") {
