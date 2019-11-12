@@ -22,11 +22,10 @@ public interface JobScheduler
      *
      * @param workerArtifactUri
      * @param baseArtifactUri
-     * @param infraParams
      * @param runWorkloadParams
      * @return ID of scheduled job
      */
-    JobId schedule( URI workerArtifactUri, URI baseArtifactUri, InfraParams infraParams, RunWorkloadParams runWorkloadParams );
+    JobId schedule( URI workerArtifactUri, URI baseArtifactUri, RunWorkloadParams runWorkloadParams );
 
     /**
      * Fetches status of scheduled job

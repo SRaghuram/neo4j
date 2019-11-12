@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.KeyDeserializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.neo4j.bench.common.model.Benchmark;
 import com.neo4j.bench.common.model.BenchmarkGroup;
 
@@ -78,6 +79,7 @@ public class JsonUtil
             .setVisibility( ALL, NONE )
             .setVisibility( FIELD, ANY )
             .registerModule( MODULE )
+            .registerModule( new JavaTimeModule() )
             .enableDefaultTyping();
 
     private static final ObjectMapper OBJECT_MAPPER_HACKATRON = new ObjectMapper()

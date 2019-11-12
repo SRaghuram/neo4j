@@ -12,7 +12,6 @@ import com.neo4j.bench.common.results.ErrorReportingPolicy;
 import com.neo4j.bench.common.tool.macro.BaseRunWorkloadCommand;
 import com.neo4j.bench.common.tool.macro.RunWorkloadParams;
 
-import java.io.File;
 import java.net.URI;
 
 import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_ERROR_POLICY;
@@ -28,11 +27,11 @@ public abstract class BaseInfraCommand extends BaseRunWorkloadCommand
     private String resultsStoreUsername;
 
     @Option( type = OptionType.COMMAND,
-             name = {InfraParams.CMD_RESULTS_STORE_PASSWORD},
-             description = "Password for Neo4j database server that stores benchmarking results",
-             title = "Results Store Password" )
+             name = {InfraParams.CMD_RESULTS_STORE_PASSWORD_SECRET_NAME},
+             description = "Secret name in AWS Secrets Manager with password for Neo4j database server that stores benchmarking results",
+             title = "Results Store Password Secret Name" )
     @Required
-    private String resultsStorePassword;
+    private String resultsStorePasswordSecretName;
 
     @Option( type = OptionType.COMMAND,
              name = {InfraParams.CMD_RESULTS_STORE_URI},
@@ -40,13 +39,6 @@ public abstract class BaseInfraCommand extends BaseRunWorkloadCommand
              title = "Results Store" )
     @Required
     private URI resultsStoreUri;
-
-    @Option( type = OptionType.COMMAND,
-             name = InfraParams.CMD_WORKSPACE_DIR,
-             description = "Local directory containing artifacts to be uploaded to S3, which the worker requires",
-             title = "Local workspace" )
-    @Required
-    private File workspaceDir;
 
     @Option( type = OptionType.COMMAND,
              name = InfraParams.CMD_AWS_SECRET,
@@ -83,34 +75,20 @@ public abstract class BaseInfraCommand extends BaseRunWorkloadCommand
     @Required
     private URI artifactBaseUri;
 
-    @Option( type = OptionType.COMMAND,
-             name = InfraParams.CMD_ARTIFACT_WORKER_URI,
-             description = "Location of worker jar(e.g., s3://benchmarking.neo4j.com/artifacts/<build_id>/) in S3",
-             title = "Location of worker jar" )
-    @Required
-    private URI artifactWorkerUri;
-
     @Override
     protected final void doRun( RunWorkloadParams runWorkloadParams )
     {
-        InfraParams infraParams = new InfraParams( workspaceDir.toPath(),
-                                                   awsSecret,
+        InfraParams infraParams = new InfraParams( awsSecret,
                                                    awsKey,
                                                    awsRegion,
                                                    storeName,
                                                    resultsStoreUsername,
-                                                   resultsStorePassword,
+                                                   resultsStorePasswordSecretName,
                                                    resultsStoreUri,
                                                    artifactBaseUri,
-                                                   artifactWorkerUri,
                                                    errorReportingPolicy );
         doRunInfra( runWorkloadParams, infraParams );
     }
 
     protected abstract void doRunInfra( RunWorkloadParams runWorkloadParams, InfraParams infraParams );
-
-    protected URI artifactBaseUri()
-    {
-        return artifactBaseUri;
-    }
 }

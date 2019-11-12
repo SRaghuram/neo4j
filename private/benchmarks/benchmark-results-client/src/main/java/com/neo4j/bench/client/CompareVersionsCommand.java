@@ -35,7 +35,7 @@ public class CompareVersionsCommand implements Runnable
     static final String LDBC_COMPARISON_FILENAME = "ldbc_comparison.csv";
     static final String MACRO_COMPARISON_FILENAME = "macro_comparison.csv";
 
-    private static final String CMD_RESULTS_STORE_USER = "--results_store_user";
+    private static final String CMD_RESULTS_STORE_USER = "--results-store-user";
     @Option( type = OptionType.COMMAND,
              name = {CMD_RESULTS_STORE_USER},
              description = "Username for Neo4j database server that stores benchmarking results",

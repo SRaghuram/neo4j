@@ -11,12 +11,15 @@ import com.neo4j.bench.common.options.Runtime;
 import com.neo4j.bench.common.options.Version;
 import com.neo4j.bench.common.process.JvmArgs;
 import com.neo4j.bench.common.profiling.ProfilerType;
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
@@ -29,91 +32,91 @@ public class RunWorkloadParams
     // -----------------------------------------------------------------------
 
     public static final String CMD_WORKLOAD = "--workload";
-    private final String workloadName;
+    private String workloadName;
 
     public static final String CMD_EDITION = "--db-edition";
-    private final Edition neo4jEdition;
+    private Edition neo4jEdition;
 
     public static final String CMD_JVM_PATH = "--jvm";
-    private final Path jvm;
+    private Path jvm;
 
     public static final String CMD_PROFILERS = "--profilers";
-    private final List<ProfilerType> profilers;
+    private List<ProfilerType> profilers;
 
     public static final String CMD_WARMUP = "--warmup-count";
-    private final int warmupCount;
+    private int warmupCount;
 
     public static final String CMD_MEASUREMENT = "--measurement-count";
-    private final int measurementCount;
+    private int measurementCount;
 
     public static final String CMD_MIN_MEASUREMENT_DURATION = "--min-measurement-duration";
-    private final Duration minMeasurementDuration;
+    private Duration minMeasurementDuration;
 
     public static final String CMD_MAX_MEASUREMENT_DURATION = "--max-measurement-duration";
-    private final Duration maxMeasurementDuration;
+    private Duration maxMeasurementDuration;
 
     public static final String CMD_FORKS = "--forks";
-    private final int measurementForkCount;
+    private int measurementForkCount;
 
     public static final String CMD_TIME_UNIT = "--time-unit";
-    private final TimeUnit unit;
+    private TimeUnit unit;
 
     public static final String CMD_RUNTIME = "--runtime";
-    private final Runtime runtime;
+    private Runtime runtime;
 
     public static final String CMD_PLANNER = "--planner";
-    private final Planner planner;
+    private Planner planner;
 
     public static final String CMD_EXECUTION_MODE = "--execution-mode";
-    private final ExecutionMode executionMode;
+    private ExecutionMode executionMode;
 
     public static final String CMD_ERROR_POLICY = "--error-policy";
 
     public static final String CMD_JVM_ARGS = "--jvm-args";
-    private final JvmArgs jvmArgs;
+    private JvmArgs jvmArgs;
 
     public static final String CMD_NEO4J_DEPLOYMENT = "--neo4j-deployment";
-    private final Deployment deployment;
+    private Deployment deployment;
 
     public static final String CMD_RECREATE_SCHEMA = "--recreate-schema";
-    private final boolean recreateSchema;
+    private boolean recreateSchema;
 
     public static final String CMD_SKIP_FLAMEGRAPHS = "--skip-flamegraphs";
-    private final boolean skipFlameGraphs;
+    private boolean skipFlameGraphs;
 
     // -----------------------------------------------------------------------
     // Common: Result Client Report Results Args
     // -----------------------------------------------------------------------
 
     public static final String CMD_NEO4J_COMMIT = "--neo4j-commit";
-    private final String neo4jCommit;
+    private String neo4jCommit;
 
     public static final String CMD_NEO4J_VERSION = "--neo4j-version";
-    private final Version neo4jVersion;
+    private Version neo4jVersion;
 
     public static final String CMD_NEO4J_BRANCH = "--neo4j-branch";
-    private final String neo4jBranch;
+    private String neo4jBranch;
 
     public static final String CMD_NEO4J_OWNER = "--neo4j-branch-owner";
-    private final String neo4jBranchOwner;
+    private String neo4jBranchOwner;
 
     public static final String CMD_TOOL_COMMIT = "--tool-commit";
-    private final String toolCommit;
+    private String toolCommit;
 
     public static final String CMD_TOOL_OWNER = "--tool-branch-owner";
-    private final String toolOwner;
+    private String toolOwner;
 
     public static final String CMD_TOOL_BRANCH = "--tool-branch";
-    private final String toolBranch;
+    private String toolBranch;
 
     public static final String CMD_TEAMCITY_BUILD = "--teamcity-build";
-    private final Long teamcityBuild;
+    private Long teamcityBuild;
 
     public static final String CMD_PARENT_TEAMCITY_BUILD = "--parent-teamcity-build";
-    private final Long parentBuild;
+    private Long parentBuild;
 
     public static final String CMD_TRIGGERED_BY = "--triggered-by";
-    private final String triggeredBy;
+    private String triggeredBy;
 
     // ----------------------------------------------------
     // Run Workload Only
@@ -125,6 +128,12 @@ public class RunWorkloadParams
     public static final String CMD_RESULTS_JSON = "--results";
     public static final String CMD_PROFILER_RECORDINGS_DIR = "--profiler-recordings-dir";
     public static final String CMD_BATCH_JOB_ID = "--batch-job-id";
+
+    // needed for JSON serialization
+    private RunWorkloadParams()
+    {
+
+    }
 
     public RunWorkloadParams( String workloadName,
                               Edition neo4jEdition,
@@ -396,5 +405,29 @@ public class RunWorkloadParams
                                          ? Stream.of( entry.getKey() )
                                          : Stream.of( entry.getKey(), entry.getValue() ) )
                       .collect( toList() );
+    }
+
+    @Override
+    public boolean equals( Object o )
+    {
+        if ( this == o )
+        {
+            return true;
+        }
+
+        if ( o == null || getClass() != o.getClass() )
+        {
+            return false;
+        }
+
+        RunWorkloadParams that = (RunWorkloadParams) o;
+
+        return EqualsBuilder.reflectionEquals( this, that );
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return HashCodeBuilder.reflectionHashCode(this );
     }
 }

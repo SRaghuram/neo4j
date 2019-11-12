@@ -183,7 +183,7 @@ ${jvm_path} -cp "${jar_path}" com.neo4j.bench.client.Main add-profiles \
         --ignore_unrecognized_files
 
 ${jvm_path} -cp "${jar_path}" com.neo4j.bench.client.Main report \
-            --results_store_uri "${results_store_uri}" \
-            --results_store_user "${results_store_user}" \
-            --results_store_pass "${results_store_pass}" \
+            --results-store-uri "${results_store_uri}" \
+            --results-store-user "${results_store_user}" \
+            --results-store-pass "${results_store_pass}" \
             --test_run_results "${json_path}"

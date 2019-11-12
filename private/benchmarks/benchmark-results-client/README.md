@@ -10,4 +10,4 @@ Prepare Schema
 Assuming there is a Neo4j server running locally.
 To create constraints and indexes on a store, for use as benchmark results storage database, do:
 
-        java -jar target/benchmark-results-client.jar index --results_store_uri bolt://localhost
+        java -jar target/benchmark-results-client.jar index --results-store-uri bolt://localhost

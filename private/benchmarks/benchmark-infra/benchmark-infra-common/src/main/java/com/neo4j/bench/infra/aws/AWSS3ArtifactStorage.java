@@ -22,7 +22,6 @@ import com.neo4j.bench.infra.ArtifactStorage;
 import com.neo4j.bench.infra.ArtifactStoreException;
 import com.neo4j.bench.infra.Dataset;
 import com.neo4j.bench.infra.Workspace;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -81,7 +80,7 @@ public class AWSS3ArtifactStorage implements ArtifactStorage
     }
 
     @Override
-    public URI uploadBuildArtifacts( URI artifactBaseURI, Workspace workspace ) throws ArtifactStoreException
+    public void uploadBuildArtifacts( URI artifactBaseURI, Workspace workspace ) throws ArtifactStoreException
     {
         LOG.debug( "uploading build {} artifacts from workspace {}", artifactBaseURI, workspace.baseDir() );
         String bucketName = artifactBaseURI.getAuthority();
@@ -104,12 +103,11 @@ public class AWSS3ArtifactStorage implements ArtifactStorage
                 LOG.info( "upload artifact {} to path {}",
                           artifact.toString(),
                           new URI( artifactBaseURI.getScheme(), artifactBaseURI.getHost(), prependIfMissing( s3key, "/" ), null ) );
-                PutObjectResult result = amazonS3.putObject( bucketName,  s3key,
+                PutObjectResult result = amazonS3.putObject( bucketName, s3key,
                                                              Files.newInputStream( artifact ), objectMetadata );
                 // TODO this fails under tests, and works with real implementation
                 // Objects.requireNonNull( result.getExpirationTime(), "build artifacts should have expiration time set" );
             }
-            return artifactBaseURI;
         }
         catch ( IOException | URISyntaxException e )
         {
@@ -118,7 +116,7 @@ public class AWSS3ArtifactStorage implements ArtifactStorage
     }
 
     @Override
-    public void downloadBuildArtifacts( Path baseDir, URI artifactBaseURI ) throws ArtifactStoreException
+    public Workspace downloadBuildArtifacts( Path baseDir, URI artifactBaseURI ) throws ArtifactStoreException
     {
         String bucketName = artifactBaseURI.getAuthority();
         String s3Path = getS3Path( artifactBaseURI.getPath() );
@@ -127,6 +125,7 @@ public class AWSS3ArtifactStorage implements ArtifactStorage
         ObjectListing objectListing = amazonS3.listObjects( bucketName, s3Path );
         try
         {
+            Workspace.Builder builder = Workspace.create( baseDir );
             for ( S3ObjectSummary objectSummary : objectListing.getObjectSummaries() )
             {
                 String key = objectSummary.getKey();
@@ -136,7 +135,9 @@ public class AWSS3ArtifactStorage implements ArtifactStorage
                 Files.createDirectories( absoluteArtifact.getParent() );
                 LOG.info( "copying build artifact {} into {}", key, absoluteArtifact );
                 Files.copy( s3Object.getObjectContent(), absoluteArtifact, StandardCopyOption.REPLACE_EXISTING );
+                builder.withArtifacts( Paths.get( relativeArtifact ) );
             }
+            return builder.build();
         }
         catch ( IOException e )
         {
@@ -155,12 +156,11 @@ public class AWSS3ArtifactStorage implements ArtifactStorage
 
     private static String getS3Path( String fullPath )
     {
-        return appendIfMissing( removeStart( fullPath, "/" ), "/");
+        return appendIfMissing( removeStart( fullPath, "/" ), "/" );
     }
 
     private static String createDatasetKey( String neo4jVersion, String dataset )
     {
         return format( "datasets/macro/%s-enterprise-datasets/%s.tgz", neo4jVersion, dataset );
     }
-
 }

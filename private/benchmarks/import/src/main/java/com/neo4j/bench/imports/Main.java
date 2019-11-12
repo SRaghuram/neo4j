@@ -86,19 +86,19 @@ public class Main
     @Required
     private String workingDirName = "";
     @Option( type = OptionType.COMMAND,
-             name = {"--results_store_user"},
+             name = {"--results-store-user"},
              description = "Username for Neo4j database server that stores benchmarking results",
              title = "Results Store Username" )
     @Required
     private String resultsStoreUsername;
     @Option( type = OptionType.COMMAND,
-             name = {"--results_store_pass"},
+             name = {"--results-store-pass"},
              description = "Password for Neo4j database server that stores benchmarking results",
              title = "Results Store Password" )
     @Required
     private String resultsStorePassword;
     @Option( type = OptionType.COMMAND,
-             name = {"--results_store_uri"},
+             name = {"--results-store-uri"},
              description = "URI to Neo4j database server for storing benchmarking results",
              title = "Results Store" )
     @Required
