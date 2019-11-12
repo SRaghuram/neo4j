@@ -264,6 +264,7 @@ object AggregationMapperOperatorTaskTemplate {
     val newAggregators = aggregators.map {
       case CountStarAggregator => getStatic[Aggregators,Aggregator]("COUNT_STAR")
       case CountAggregator => getStatic[Aggregators,Aggregator]("COUNT")
+      case CountDistinctAggregator => getStatic[Aggregators,Aggregator]("COUNT_DISTINCT")
       case SumAggregator => getStatic[Aggregators,Aggregator]("SUM")
       case AvgAggregator => getStatic[Aggregators,Aggregator]("AVG")
       case MaxAggregator => getStatic[Aggregators,Aggregator]("MAX")

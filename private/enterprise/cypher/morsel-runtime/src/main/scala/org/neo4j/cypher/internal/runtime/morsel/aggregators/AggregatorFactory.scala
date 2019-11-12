@@ -27,6 +27,9 @@ case class AggregatorFactory(physicalPlan: PhysicalPlan) {
       case _: CountStar => (CountStarAggregator, Null.NULL)
       case c: FunctionInvocation =>
         c.function match {
+          case functions.Count if c.distinct =>
+            (CountDistinctAggregator, c.arguments.head)
+
           case _: AggregatingFunction if c.distinct =>
             throw new CantCompileQueryException("Morsel does not yet support Distinct aggregating functions, use another runtime.")
 

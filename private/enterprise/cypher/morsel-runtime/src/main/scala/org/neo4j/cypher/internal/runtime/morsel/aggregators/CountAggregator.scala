@@ -4,6 +4,8 @@
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
 package org.neo4j.cypher.internal.runtime.morsel.aggregators
+import java.util
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 
 import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
@@ -27,6 +29,23 @@ case object CountAggregator extends Aggregator {
   }
 }
 
+/**
+  * Aggregator for count(DISTINCT..).
+  */
+case object CountDistinctAggregator extends Aggregator {
+
+  override def newUpdater: Updater = new CountDistinctUpdater
+  override def newStandardReducer(memoryTracker: QueryMemoryTracker): Reducer = new CountDistinctReducer(new util.HashSet[AnyValue]())
+  override def newConcurrentReducer: Reducer = new CountDistinctReducer(ConcurrentHashMap.newKeySet())
+}
+
+class CountDistinctUpdater() extends Updater {
+  val seen: java.util.Set[AnyValue] = new util.HashSet[AnyValue]()
+  override def update(value: AnyValue): Unit =
+    if (!(value eq Values.NO_VALUE)) {
+      seen.add(value)
+    }
+}
 /**
   * Aggregator for count(*).
   */
@@ -52,6 +71,22 @@ class CountStandardReducer() extends Reducer {
     updater match {
       case u: CountUpdaterBase =>
         count += u.count
+    }
+
+  override def result: AnyValue = Values.longValue(count)
+}
+
+class CountDistinctReducer(seen: java.util.Set[AnyValue]) extends Reducer {
+  private var count = 0L
+
+  override def update(updater: Updater): Unit =
+    updater match {
+      case u: CountDistinctUpdater =>
+        u.seen.forEach(e => {
+          if (seen.add(e)) {
+            count += 1
+          }
+        })
     }
 
   override def result: AnyValue = Values.longValue(count)

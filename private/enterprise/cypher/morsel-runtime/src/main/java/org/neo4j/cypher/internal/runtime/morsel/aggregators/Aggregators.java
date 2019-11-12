@@ -13,6 +13,7 @@ public class Aggregators
 {
     public static final Aggregator COUNT_STAR = CountStarAggregator$.MODULE$;
     public static final Aggregator COUNT = CountAggregator$.MODULE$;
+    public static final Aggregator COUNT_DISTINCT = CountDistinctAggregator$.MODULE$;
     public static final Aggregator SUM = SumAggregator$.MODULE$;
     public static final Aggregator AVG = AvgAggregator$.MODULE$;
     public static final Aggregator MAX = MaxAggregator$.MODULE$;
