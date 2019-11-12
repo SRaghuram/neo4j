@@ -226,7 +226,9 @@ public class NativeAuthIT
                 assertThat( "Should have the right number of underlying privileges", records.size(), equalTo( 8 ) );
                 List<Record> grants = records.stream().filter( r -> {
                     Map<String, Object> m = r.asMap();
-                    return m.get( "grant" ).equals( "DENIED" ) && m.get( "resource" ).equals( "property(name)" ) && m.get( "segment" ).equals( "NODE(Person)" );
+                    return m.get( "access" ).equals( "DENIED" ) &&
+                            m.get( "resource" ).equals( "property(name)" ) &&
+                            m.get( "segment" ).equals( "NODE(Person)" );
                 } ).collect( Collectors.toList() );
                 assertThat( "Should deny read access to ':Person(name)' property", grants.size(), equalTo( 1 ) );
             }
