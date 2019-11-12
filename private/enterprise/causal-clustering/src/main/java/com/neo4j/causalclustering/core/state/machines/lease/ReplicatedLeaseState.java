@@ -66,7 +66,7 @@ public class ReplicatedLeaseState
         {
             return true;
         }
-        if ( !(o instanceof ReplicatedLeaseState) )
+        if ( o == null || getClass() != o.getClass() )
         {
             return false;
         }

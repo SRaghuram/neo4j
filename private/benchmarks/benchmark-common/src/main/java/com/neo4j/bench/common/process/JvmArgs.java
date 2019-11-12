@@ -196,7 +196,7 @@ public class JvmArgs
         {
             return true;
         }
-        if ( !(obj instanceof JvmArgs) )
+        if ( obj == null || getClass() != obj.getClass() )
         {
             return false;
         }

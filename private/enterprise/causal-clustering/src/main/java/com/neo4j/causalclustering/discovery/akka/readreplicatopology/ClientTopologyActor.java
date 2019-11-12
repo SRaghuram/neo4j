@@ -54,7 +54,7 @@ public class ClientTopologyActor extends AbstractActorWithTimers
 
     public static final String NAME = "cc-client-topology-actor";
 
-    private final Duration refresh;
+    private final Duration refreshDuration;
     private final DiscoveryMember myself;
     private final PruningStateSink<DatabaseCoreTopology> coreTopologySink;
     private final PruningStateSink<DatabaseReadReplicaTopology> readreplicaTopologySink;
@@ -73,8 +73,8 @@ public class ClientTopologyActor extends AbstractActorWithTimers
             SourceQueueWithComplete<ReplicatedDatabaseState> stateSink, Config config, LogProvider logProvider, Clock clock, ActorRef clusterClient )
     {
         this.myself = myself;
-        this.refresh = config.get( CausalClusteringSettings.cluster_topology_refresh );
-        var maxTopologyLifetime = refresh.multipliedBy( REFRESHES_BEFORE_REMOVE_TOPOLOGY );
+        this.refreshDuration = config.get( CausalClusteringSettings.cluster_topology_refresh );
+        var maxTopologyLifetime = refreshDuration.multipliedBy( REFRESHES_BEFORE_REMOVE_TOPOLOGY );
         this.coreTopologySink = PruningStateSink.forCoreTopologies( coreTopologySink, maxTopologyLifetime, clock, logProvider );
         this.readreplicaTopologySink = PruningStateSink.forReadReplicaTopologies( rrTopologySink, maxTopologyLifetime, clock, logProvider );
         this.coresDbStateSink = PruningStateSink.forCoreDatabaseStates( stateSink, maxTopologyLifetime, clock, logProvider );
@@ -104,7 +104,7 @@ public class ClientTopologyActor extends AbstractActorWithTimers
     @Override
     public void preStart()
     {
-        getTimers().startPeriodicTimer( REFRESH, TopologiesRefresh.getInstance(), refresh );
+        getTimers().startPeriodicTimer( REFRESH, TopologiesRefresh.getInstance(), refreshDuration );
         startedDatabases.addAll( myself.startedDatabases() );
         sendReadReplicaInfo();
     }

@@ -50,7 +50,7 @@ public class ReplicatedLeaderInfo extends AbstractReplicatedData<ReplicatedLeade
         {
             return true;
         }
-        if ( !(o instanceof ReplicatedLeaderInfo) )
+        if ( o == null || getClass() != o.getClass() )
         {
             return false;
         }

@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -69,6 +70,10 @@ public class Records
             @Override
             public AnyValue next()
             {
+                if ( !hasNext() )
+                {
+                    throw new NoSuchElementException();
+                }
                 return record.getValue( i++ );
             }
         };

@@ -35,7 +35,7 @@ public class CatchupErrorResponse
         {
             return true;
         }
-        if ( !(o instanceof CatchupErrorResponse) )
+        if ( o == null || getClass() != o.getClass() )
         {
             return false;
         }

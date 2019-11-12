@@ -62,20 +62,20 @@ public class ErrorHandler implements AutoCloseable
 
     private void throwIfException()
     {
-        if ( !throwables.isEmpty() )
+        RuntimeException runtimeException = null;
+        for ( Throwable throwable : throwables )
         {
-            RuntimeException runtimeException = null;
-            for ( Throwable throwable : throwables )
+            if ( runtimeException == null )
             {
-                if ( runtimeException == null )
-                {
-                    runtimeException = new RuntimeException( message, throwable );
-                }
-                else
-                {
-                    runtimeException.addSuppressed( throwable );
-                }
+                runtimeException = new RuntimeException( message, throwable );
             }
+            else
+            {
+                runtimeException.addSuppressed( throwable );
+            }
+        }
+        if ( runtimeException != null )
+        {
             throw runtimeException;
         }
     }

@@ -293,7 +293,7 @@ class TransactionStatusResultTest
         }
     }
 
-    private static class CountingCpuClock extends CpuClock
+    private static class CountingCpuClock implements CpuClock
     {
         private long cpuTime;
 

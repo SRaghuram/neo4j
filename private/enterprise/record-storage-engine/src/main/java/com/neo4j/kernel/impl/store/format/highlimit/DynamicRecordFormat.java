@@ -52,7 +52,7 @@ public class DynamicRecordFormat extends BaseOneByteHeaderRecordFormat<DynamicRe
         if ( mode.shouldLoad( inUse ) )
         {
             int length = cursor.getShort() | cursor.getByte() << 16;
-            if ( length > recordSize | length < 0 )
+            if ( length > recordSize || length < 0 )
             {
                 cursor.setCursorException( payloadLengthErrorMessage( record, recordSize, length ) );
                 return;
@@ -68,14 +68,14 @@ public class DynamicRecordFormat extends BaseOneByteHeaderRecordFormat<DynamicRe
         }
     }
 
-    private String payloadLengthErrorMessage( DynamicRecord record, int recordSize, int length )
+    private static String payloadLengthErrorMessage( DynamicRecord record, int recordSize, int length )
     {
         return length < 0 ?
                negativePayloadErrorMessage( record, length ) :
                payloadTooBigErrorMessage( record, recordSize, length );
     }
 
-    private String negativePayloadErrorMessage( DynamicRecord record, int length )
+    private static String negativePayloadErrorMessage( DynamicRecord record, int length )
     {
         return format( "DynamicRecord[%s] claims to have a negative payload of %s bytes.",
                 record.getId(), length );
