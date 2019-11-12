@@ -148,7 +148,19 @@ class SystemGraphRealmIT
 
         assertTrue( dbManager.userHasRole( INITIAL_USER_NAME, PredefinedRoles.ADMIN ) );
         assertAuthenticationFails( realm, INITIAL_USER_NAME, INITIAL_PASSWORD );
-        assertAuthenticationSucceeds( realm, INITIAL_USER_NAME,  "neo4j1"  );
+        assertAuthenticationSucceeds( realm, INITIAL_USER_NAME, "neo4j1" );
+    }
+
+    @Test
+    void shouldSetInitialUserWithPasswordChangeRequired() throws Throwable
+    {
+        initialPassword.create( createUser( INITIAL_USER_NAME, "neo4j1", true ) );
+
+        SystemGraphRealm realm = startSystemGraphRealm();
+
+        assertTrue( dbManager.userHasRole( INITIAL_USER_NAME, PredefinedRoles.ADMIN ) );
+        assertAuthenticationFails( realm, INITIAL_USER_NAME, INITIAL_PASSWORD );
+        assertAuthenticationSucceeds( realm, INITIAL_USER_NAME, "neo4j1", true );
     }
 
     @Test
