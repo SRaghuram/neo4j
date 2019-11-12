@@ -8,6 +8,7 @@ package com.neo4j.bench.infra.aws;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.amazonaws.services.batch.AWSBatch;
 import com.amazonaws.services.batch.AWSBatchClientBuilder;
 import com.amazonaws.services.batch.model.DescribeJobsRequest;
@@ -24,8 +25,6 @@ import com.neo4j.bench.infra.JobScheduler;
 import com.neo4j.bench.infra.JobStatus;
 import com.neo4j.bench.infra.commands.InfraParams;
 import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.net.URI;
 import java.util.HashMap;
@@ -39,8 +38,37 @@ import static java.util.stream.Collectors.toList;
 
 public class AWSBatchJobScheduler implements JobScheduler
 {
-    private static final Logger LOG = LoggerFactory.getLogger( AWSBatchJobScheduler.class );
 
+    /**
+     * Create AWS batch job scheduler using default credentials chain, https://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/credentials.html.
+     *
+     * @param region AWS region
+     * @param jobQueue job queue name in CloudFormation stack
+     * @param jobDefinition job definition name in CloudFormation stack
+     * @param stack CloudFormation stack name
+     * @return AWS job scheduler
+     */
+    public static JobScheduler create(
+            String region,
+            String jobQueue,
+            String jobDefinition,
+            String stack )
+    {
+        AWSCredentialsProvider credentialsProvider = DefaultAWSCredentialsProviderChain.getInstance();
+        return create( credentialsProvider, region, jobQueue, jobDefinition, stack );
+    }
+
+    /**
+     * Create AWS batch job scheduler using provided AWS key and secret.
+     *
+     * @param region AWS region
+     * @param awsKey AWS key
+     * @param awsSecret AWS secret
+     * @param jobQueue job queue name in CloudFormation stack
+     * @param jobDefinition job definition name in CloudFormation stack
+     * @param stack CloudFormation stack name
+     * @return AWS job scheduler
+     */
     public static JobScheduler create(
             String region,
             String awsKey,
@@ -51,7 +79,22 @@ public class AWSBatchJobScheduler implements JobScheduler
     {
         Objects.requireNonNull( awsKey );
         Objects.requireNonNull( awsSecret );
+
         AWSCredentialsProvider credentialsProvider = new AWSStaticCredentialsProvider( new BasicAWSCredentials( awsKey, awsSecret ) );
+        return create( credentialsProvider, region, jobQueue, jobDefinition, stack );
+    }
+
+    private static JobScheduler create( AWSCredentialsProvider credentialsProvider,
+                                        String region,
+                                        String jobQueue,
+                                        String jobDefinition,
+                                        String stack )
+    {
+        Objects.requireNonNull( region );
+        Objects.requireNonNull( jobQueue );
+        Objects.requireNonNull( jobDefinition );
+        Objects.requireNonNull( stack );
+
         return new AWSBatchJobScheduler( AWSBatchClientBuilder.standard()
                                                               .withCredentials( credentialsProvider )
                                                               .withRegion( region )
@@ -63,25 +106,26 @@ public class AWSBatchJobScheduler implements JobScheduler
     private static String getJobQueueCustomName( String jobQueue, AWSCredentialsProvider credentialsProvider, String region, String stack )
     {
         AmazonCloudFormation amazonCloudFormation = AmazonCloudFormationClientBuilder.standard()
-                .withCredentials( credentialsProvider )
-                .withRegion( region )
-                .build();
+                                                                                     .withCredentials( credentialsProvider )
+                                                                                     .withRegion( region )
+                                                                                     .build();
 
         return amazonCloudFormation.describeStacks( new DescribeStacksRequest().withStackName( stack ) )
-                .getStacks()
-                .stream()
-                .flatMap( stacks -> stacks.getOutputs().stream() )
-                .filter( output -> output.getOutputKey().equals( jobQueue ) )
-                .map( Output::getOutputValue )
-                .findFirst()
-                .orElseThrow( () -> new RuntimeException( format( "job queue %s not found in stack %s ", jobQueue, stack ) ) );
+                                   .getStacks()
+                                   .stream()
+                                   .flatMap( stacks -> stacks.getOutputs().stream() )
+                                   .filter( output -> output.getOutputKey().equals( jobQueue ) )
+                                   .map( Output::getOutputValue )
+                                   .findFirst()
+                                   .orElseThrow( () -> new RuntimeException( format( "job queue %s not found in stack %s ", jobQueue, stack ) ) );
     }
 
     private final AWSBatch awsBatch;
     private final String jobDefinition;
     private final String jobQueue;
 
-    public AWSBatchJobScheduler( AWSBatch awsBatch, String jobQueue, String jobDefinition )
+    // package scope for testing only
+    AWSBatchJobScheduler( AWSBatch awsBatch, String jobQueue, String jobDefinition )
     {
         this.awsBatch = awsBatch;
         this.jobQueue = jobQueue;
@@ -89,14 +133,11 @@ public class AWSBatchJobScheduler implements JobScheduler
     }
 
     @Override
-    public JobId schedule( URI workerArtifactUri, URI baseArtifactUri, InfraParams infraParams, RunWorkloadParams runWorkloadParams )
+    public JobId schedule( URI workerArtifactUri, URI baseArtifactUri, RunWorkloadParams runWorkloadParams )
     {
         Map<String,String> paramsMap = new HashMap<>();
-        paramsMap.putAll( infraParams.asMap() );
-        paramsMap.putAll( runWorkloadParams.asMap() );
-        // not a common infra command arg, but required by bootstrap-worker.sh to retrieve jar and launch run-worker command
-        paramsMap.put( InfraParams.CMD_ARTIFACT_BASE_URI, baseArtifactUri.toString() );
         paramsMap.put( InfraParams.CMD_ARTIFACT_WORKER_URI, workerArtifactUri.toString() );
+        paramsMap.put( InfraParams.CMD_ARTIFACT_BASE_URI, baseArtifactUri.toString() );
 
         String jobName = getJobName( "macro", runWorkloadParams.workloadName(), runWorkloadParams.neo4jVersion().toString(), runWorkloadParams.triggeredBy() );
         SubmitJobRequest submitJobRequest = new SubmitJobRequest()
@@ -125,7 +166,7 @@ public class AWSBatchJobScheduler implements JobScheduler
         // job name should follow these restrictions, https://docs.aws.amazon.com/cli/latest/reference/batch/submit-job.html
         // The first character must be alphanumeric, and up to 128 letters (uppercase and lowercase), numbers, hyphens, and underscores are allowed.
         String jobName = format( "%s-%s-%s-%s", tool, benchmark, version, triggered );
-        return StringUtils.substring( jobName.replaceAll( "[^\\p{Alnum}|^_|^-]","_" ), 0, 127 );
+        return StringUtils.substring( jobName.replaceAll( "[^\\p{Alnum}|^_|^-]", "_" ), 0, 127 );
     }
 
     private static JobStatus jobStatus( JobDetail jobDetail )

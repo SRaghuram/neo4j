@@ -6,9 +6,11 @@
 package com.neo4j.bench.common.options;
 
 import com.neo4j.bench.common.util.BenchmarkUtil;
+import com.neo4j.bench.common.util.JsonUtil;
 import org.junit.Test;
 
-import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.Matchers.equalTo;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 
 public class VersionTest
@@ -24,34 +26,28 @@ public class VersionTest
     }
 
     @Test
-    public void shouldNotAllowToLongVersions() throws Exception
+    public void shouldNotAllowToLongVersions()
     {
         BenchmarkUtil.assertException( IllegalArgumentException.class,
-                                       () -> {
-                                           new Version( "3.4.0.0.0" );
-                                       } );
+                                       () -> new Version( "3.4.0.0.0" ) );
     }
 
     @Test
-    public void shouldNotAllowToShortVersions() throws Exception
+    public void shouldNotAllowToShortVersions()
     {
         BenchmarkUtil.assertException( IllegalArgumentException.class,
-                                       () -> {
-                                           new Version( "3.4" );
-                                       } );
+                                       () -> new Version( "3.4" ) );
     }
 
     @Test
     public void shouldNotAllowToVersionsThatHaveNoneNumberVales() throws Exception
     {
         BenchmarkUtil.assertException( IllegalArgumentException.class,
-                                       () -> {
-                                           new Version( "a.0.0" );
-                                       } );
+                                       () -> new Version( "a.0.0" ) );
     }
 
     @Test
-    public void shouldAllowToVersionsThatBetasAndAlphas() throws Exception
+    public void shouldAllowToVersionsThatBetasAndAlphas()
     {
         Version version = new Version( "4.0.0-beta" );
         assertThat( "4", equalTo( version.mainVersion() ) );
@@ -61,11 +57,17 @@ public class VersionTest
     }
 
     @Test
-    public void shouldNotAllowToVersionsThatWrongSeparators() throws Exception
+    public void shouldNotAllowToVersionsThatWrongSeparators()
     {
         BenchmarkUtil.assertException( IllegalArgumentException.class,
-                                       () -> {
-                                           new Version( "0-0.0" );
-                                       } );
+                                       () -> new Version( "0-0.0" ) );
+    }
+
+    @Test
+    public void serializationTest()
+    {
+        Version version = new Version( "3.4.15" );
+        Version actualVersion = JsonUtil.deserializeJson( JsonUtil.serializeJson( version ), Version.class );
+        assertEquals( version, actualVersion );
     }
 }

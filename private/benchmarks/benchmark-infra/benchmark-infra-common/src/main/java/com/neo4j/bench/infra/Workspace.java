@@ -33,7 +33,9 @@ import static java.lang.String.format;
  */
 public class Workspace
 {
-    public static Workspace assertMacroWorkspace( Path workspaceDir, Edition neo4jEdition, Version neo4jVersion )
+    public static final String JOB_PARAMETERS_JSON = "job-parameters.json";
+
+    public static Workspace defaultMacroWorkspace( Path workspaceDir, Version neo4jVersion, Edition neo4jEdition )
     {
         return Workspace
                 .create( workspaceDir.toAbsolutePath() )
@@ -43,8 +45,29 @@ public class Workspace
                         Paths.get( "benchmark-infra-worker.jar" ),
                         Paths.get( format( "neo4j-%s-%s-unix.tar.gz", neo4jEdition.name().toLowerCase(), neo4jVersion.fullVersion() ) ),
                         Paths.get( "macro/target/macro.jar" ),
-                        Paths.get( "macro/run-report-benchmarks.sh" )
+                        Paths.get( "macro/run-report-benchmarks.sh" ),
+                        Paths.get( JOB_PARAMETERS_JSON )
                 ).build();
+    }
+
+    public static void assertMacroWorkspace( Workspace artifactsWorkspace, Version neo4jVersion, Edition neo4jEdition )
+    {
+        Workspace defaultMacroWorkspace = defaultMacroWorkspace( artifactsWorkspace.baseDir, neo4jVersion, neo4jEdition );
+
+        if ( !artifactsWorkspace.allArtifacts.containsAll( defaultMacroWorkspace.allArtifacts ) )
+        {
+            throw new IllegalArgumentException( "workspace doesn't contain all required paths" );
+        }
+    }
+
+    public Path get( String workspacePath )
+    {
+        Path path = baseDir.resolve( Paths.get( workspacePath ) );
+        if ( !allArtifacts.contains( path ) )
+        {
+            throw new RuntimeException( format( "path %s not found in workspace %s", workspacePath, baseDir ) );
+        }
+        return path;
     }
 
     public static class Builder
@@ -169,13 +192,5 @@ public class Workspace
     public List<Path> allArtifacts()
     {
         return allArtifacts;
-    }
-
-    public boolean isValid( Path anotherBaseDir )
-    {
-        return allArtifacts.stream()
-                           .map( baseDir::relativize )
-                           .map( anotherBaseDir::resolve )
-                           .allMatch( Files::isRegularFile );
     }
 }

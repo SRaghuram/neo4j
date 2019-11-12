@@ -9,8 +9,6 @@ import com.amazonaws.services.batch.AWSBatch;
 import com.amazonaws.services.batch.model.SubmitJobRequest;
 import com.amazonaws.services.batch.model.SubmitJobResult;
 import com.google.common.collect.Lists;
-import com.google.common.collect.MapDifference;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.neo4j.bench.common.options.Edition;
 import com.neo4j.bench.common.options.Planner;
@@ -42,9 +40,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import static java.util.Collections.emptyMap;
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -108,7 +103,6 @@ public class AWSBatchJobSchedulerTest
         URI baseArtifactUri = URI.create( "s3://benchmarking.neohq.net/" );
 
         InfraParams infraParams = new InfraParams(
-                workspaceDir,
                 awsSecret,
                 awsKey,
                 awsRegion,
@@ -117,21 +111,16 @@ public class AWSBatchJobSchedulerTest
                 resultsStorePassword,
                 resultsStoreUri,
                 baseArtifactUri,
-                workerArtifactUri,
                 ErrorReportingPolicy.FAIL );
 
         Map<String,String> expectedParams = new HashMap<>();
-        expectedParams.putAll( runWorkloadParams.asMap() );
-        expectedParams.putAll( infraParams.asMap() );
-
-        expectedParams.put( InfraParams.CMD_ARTIFACT_BASE_URI, baseArtifactUri.toString() );
         expectedParams.put( InfraParams.CMD_ARTIFACT_WORKER_URI, workerArtifactUri.toString() );
+        expectedParams.put( InfraParams.CMD_ARTIFACT_BASE_URI, baseArtifactUri.toString() );
 
         // when
         JobId scheduleJobId = jobScheduler.schedule(
                 workerArtifactUri,
                 baseArtifactUri,
-                infraParams,
                 runWorkloadParams );
 
         // then
@@ -146,42 +135,11 @@ public class AWSBatchJobSchedulerTest
         assertEquals( "job-definition", jobRequest.getJobDefinition() );
         assertEquals( "macro-musicbrainz-3_2_1-teamcity", jobRequest.getJobName() );
 
-        MapDifference<String,String> entriesDiffering = Maps.difference(
-                jobRequestParameters,     // left
-                expectedParams            // right
-                                                                       );
-
-        assertThat( mapDifferenceString( entriesDiffering ),
-                    entriesDiffering.entriesDiffering(),
-                    equalTo( emptyMap() ) );
-        assertThat( mapDifferenceString( entriesDiffering ),
-                    entriesDiffering.entriesOnlyOnRight(),
-                    equalTo( emptyMap() ) );
-        assertThat( mapDifferenceString( entriesDiffering ),
-                    entriesDiffering.entriesOnlyOnLeft(),
-                    equalTo( emptyMap() ) );
+        assertEquals( expectedParams, jobRequestParameters );
 
         assertEquals( Collections.emptySet(),
                       Sets.difference(
                               new HashSet<>( BatchJobCommandParameters.getBatchJobCommandParameters() ),
                               jobRequestParameters.keySet() ) );
-    }
-
-    private String mapDifferenceString( MapDifference<String,String> entriesDiffering )
-    {
-        return (entriesDiffering.entriesDiffering().isEmpty()
-                ? ""
-                : "\nDiffering:\n" +
-                  BenchmarkUtil.prettyPrint( entriesDiffering.entriesDiffering() ) + "\n") +
-
-               (entriesDiffering.entriesOnlyOnLeft().isEmpty()
-                ? "" :
-                "Left Only:\n" +
-                BenchmarkUtil.prettyPrint( entriesDiffering.entriesOnlyOnLeft() ) + "\n") +
-
-               (entriesDiffering.entriesOnlyOnRight().isEmpty()
-                ? ""
-                : "Right Only:\n" +
-                  BenchmarkUtil.prettyPrint( entriesDiffering.entriesOnlyOnRight() ));
     }
 }

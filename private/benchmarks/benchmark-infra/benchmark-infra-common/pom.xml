@@ -19,34 +19,39 @@
             <artifactId>benchmark-common</artifactId>
             <version>${project.version}</version>
         </dependency>
-        <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>aws-java-sdk-batch</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>aws-java-sdk-s3</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.github.rvesse</groupId>
-            <artifactId>airline</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-compress</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>aws-java-sdk-cloudformation</artifactId>
-        </dependency>
+    		<dependency>
+    			<groupId>com.amazonaws</groupId>
+    			<artifactId>aws-java-sdk-batch</artifactId>
+    		</dependency>
+    		<dependency>
+    			<groupId>com.amazonaws</groupId>
+    			<artifactId>aws-java-sdk-cloudformation</artifactId>
+    		</dependency>
+    		<dependency>
+    			<groupId>com.amazonaws</groupId>
+    			<artifactId>aws-java-sdk-s3</artifactId>
+    		</dependency>
+    		<dependency>
+    			<groupId>com.amazonaws</groupId>
+    			<artifactId>aws-java-sdk-secretsmanager</artifactId>
+    		</dependency>
+    		<dependency>
+    			<groupId>com.google.guava</groupId>
+    			<artifactId>guava</artifactId>
+    		</dependency>
+    		<dependency>
+    			<groupId>com.github.rvesse</groupId>
+    			<artifactId>airline</artifactId>
+    		</dependency>
+    		<dependency>
+    			<groupId>org.slf4j</groupId>
+    			<artifactId>slf4j-api</artifactId>
+    		</dependency>
+    		<dependency>
+    			<groupId>org.apache.commons</groupId>
+    			<artifactId>commons-compress</artifactId>
+    		</dependency>
+
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-migrationsupport</artifactId>
@@ -63,13 +68,19 @@
             <artifactId>hamcrest</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.mockito</groupId>
-            <artifactId>mockito-core</artifactId>
+            <groupId>io.findify</groupId>
+            <artifactId>s3mock_${scala.binary.version}</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>io.findify</groupId>
-            <artifactId>s3mock_${scala.binary.version}</artifactId>
+            <groupId>com.jayway.jsonpath</groupId>
+            <artifactId>json-path</artifactId>
+            <version>2.4.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -83,5 +94,11 @@
             <version>2.4.0</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
+
 </project>

@@ -25,7 +25,7 @@ import static java.util.stream.Collectors.joining;
 @Command( name = "report" )
 public class ReportCommand implements Runnable
 {
-    public static final String CMD_RESULTS_STORE_USER = "--results_store_user";
+    public static final String CMD_RESULTS_STORE_USER = "--results-store-user";
     @Option( type = OptionType.COMMAND,
             name = {CMD_RESULTS_STORE_USER},
             description = "Username for Neo4j database server that stores benchmarking results",
@@ -33,7 +33,7 @@ public class ReportCommand implements Runnable
     @Required
     private String resultsStoreUsername;
 
-    public static final String CMD_RESULTS_STORE_PASSWORD = "--results_store_pass";
+    public static final String CMD_RESULTS_STORE_PASSWORD = "--results-store-pass";
     @Option( type = OptionType.COMMAND,
             name = {CMD_RESULTS_STORE_PASSWORD},
             description = "Password for Neo4j database server that stores benchmarking results",
@@ -41,7 +41,7 @@ public class ReportCommand implements Runnable
     @Required
     private String resultsStorePassword;
 
-    public static final String CMD_RESULTS_STORE_URI = "--results_store_uri";
+    public static final String CMD_RESULTS_STORE_URI = "--results-store-uri";
     @Option( type = OptionType.COMMAND,
             name = {CMD_RESULTS_STORE_URI},
             description = "URI to Neo4j database server for storing benchmarking results",

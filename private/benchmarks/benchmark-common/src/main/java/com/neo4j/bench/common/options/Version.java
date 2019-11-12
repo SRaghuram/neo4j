@@ -5,6 +5,11 @@
  */
 package com.neo4j.bench.common.options;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
+
 public class Version
 {
     private String mainVersion;
@@ -12,6 +17,7 @@ public class Version
     private String patchVersion;
     private String preReleaseBranch;
 
+    @JsonCreator
     public Version( String versionString )
     {
         String[] split = versionString.split( "\\." );
@@ -60,6 +66,7 @@ public class Version
         return String.format( "%s.%s.%s", mainVersion, minorVersion, patchVersion );
     }
 
+    @JsonValue
     public String fullVersion()
     {
         if ( preReleaseBranch == null )
@@ -78,5 +85,29 @@ public class Version
     public String toString()
     {
         return fullVersion();
+    }
+
+    @Override
+    public boolean equals( Object o )
+    {
+        if ( this == o )
+        {
+            return true;
+        }
+
+        if ( o == null || getClass() != o.getClass() )
+        {
+            return false;
+        }
+
+        Version that = (Version) o;
+
+        return EqualsBuilder.reflectionEquals( this, that );
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return HashCodeBuilder.reflectionHashCode( this );
     }
 }

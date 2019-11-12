@@ -6,6 +6,8 @@
 package com.neo4j.bench.common.tool.macro;
 
 import com.neo4j.bench.common.util.BenchmarkUtil;
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -69,6 +71,31 @@ public abstract class Deployment implements DeploymentMode
         {
             return NAME;
         }
+
+        @Override
+        public int hashCode()
+        {
+            return new HashCodeBuilder().append( name() ).toHashCode();
+        }
+
+        @Override
+        public boolean equals( Object obj )
+        {
+            if ( obj == null )
+            {
+                return false;
+            }
+            if ( obj == this )
+            {
+                return true;
+            }
+            if ( obj.getClass() != getClass() )
+            {
+                return false;
+            }
+            Embedded that = (Embedded) obj;
+            return new EqualsBuilder().append( name(), that.name() ).isEquals();
+        }
     }
 
     public static class Server extends Deployment
@@ -98,6 +125,37 @@ public abstract class Deployment implements DeploymentMode
         public String parsableValue()
         {
             return VALUE_PREFIX + path.toAbsolutePath();
+        }
+
+        @Override
+        public int hashCode()
+        {
+            return new HashCodeBuilder()
+                    .append( name() )
+                    .append( path )
+                    .toHashCode();
+        }
+
+        @Override
+        public boolean equals( Object obj )
+        {
+            if ( obj == null )
+            {
+                return false;
+            }
+            if ( obj == this )
+            {
+                return true;
+            }
+            if ( obj.getClass() != getClass() )
+            {
+                return false;
+            }
+            Server that = (Server) obj;
+            return new EqualsBuilder()
+                    .append( name(), that.name() )
+                    .append( path(), that.path() )
+                    .isEquals();
         }
     }
 }

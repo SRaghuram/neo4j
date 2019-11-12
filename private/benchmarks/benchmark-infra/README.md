@@ -25,20 +25,19 @@
     * `src/main/ami/benchmark-run-batch-worker/template.json`, Packer template which creates new AMI instance
     * `src/main/stack/aws-batch-formation.json`, CloudFormation stack which creates necessary components in AWS
     * `src/main/infra-build/Dockerfile`, docker image used to run infra builds
-    * `benchmark-infra-worker/src/main/docker/`, docker images in which workers are run
+    * `src/main/worker/Dockerfiler`, docker images in which workers are run
 
 # Development guidelines
 
-## Building Docker image
+## Building worker Docker image
 
 This is a docker image which contains profilers, plus small worker bootstrap
 script. This is used in AWS batch job definition in CloudFormation stack down
 below.
 
-You can buid it in two simple steps.
-
-	docker build benchmark-infra-worker -t 065531048259.dkr.ecr.eu-west-1.amazonaws.com/benchmarks-worker:latest
-	docker push 065531048259.dkr.ecr.eu-west-1.amazonaws.com/benchmarks-worker:latest
+You can build by simply calling `src/main/build-worker-docker.sh`. This script has two optional arguments:
+* `--push` which triggers push to ECR repository after successful build
+* `--tag-suffix [suffix]` which appends suffix to docker image tag, it is helpful during testing,
 
 ## Building AWS Batch AMI
 
@@ -64,6 +63,17 @@ AWS Batch is deployed using CloudFormation. Here is easy one liner to deploy/upd
 
 	aws --region eu-north-1 cloudformation deploy --stack-name benchmarking --template-file src/main/stack/aws-batch-formation.json
 
+## Your own private infrastructure
+
+If you want to play, test or experiment with infrastructure and don't touch (unstabilize) production environment,
+you can use `src/main/deploy-infra.sh` to deploy your private infrastructure. This script requires two arguments:
+* `--env`, which is name of your environment,
+* `--results-db-password`, because we don't want to hard code it,
+
+Once you are done with your experiments, please be so kind and clean up infrastructure with simple call to AWS Batch"
+
+    aws --region eu-north-1 cloudformation delete-stack --stack-name [env]
+
 ## Get logs of batch job
 
 Scheduler will output log stream name when job is scheduled, later on you can use it
@@ -83,7 +93,7 @@ The best way to develop and debug worker is to do it through docker container
     s3://benchmarking.neo4j.com/artifacts/benchmark-infra-worker.jar \
 
     run-worker,
-    
+
     # *** Run Workload ***    
     --workload \
     accesscontrol \
@@ -113,7 +123,7 @@ The best way to develop and debug worker is to do it through docker container
     -Xmx4g \
     --neo4j-deployment \
     embedded \
-    
+
     # *** Project Version ***
     --neo4j-commit \
     f3fb07ec92527f740e527e4d128c5c1faf12b8a9 \
@@ -149,17 +159,17 @@ The best way to develop and debug worker is to do it through docker container
     accesscontrol \
 
     # *** Benchmark Results Store ***
-    --results_store_user \
+    --results-store-user \
     client \
-    --results_store_pass \
+    --results-store-pass \
     [result store password] \
-    --results_store_uri \
+    --results-store-uri \
     bolt+routing://e605d648.databases.neo4j.io:7687
 
 # Costs
 
 Are you curious how much our usage of AWS Batch is costing?
 
-All the instances are tagged with `owner:benchmarking`. So you can easily find this info in the AWS user inteface. 
-Go to the cost explorer and filter by tag, `benchmarking`. 
+All the instances are tagged with `owner:benchmarking`. So you can easily find this info in the AWS user inteface.
+Go to the cost explorer and filter by tag, `benchmarking`.
 [Or click on this](https://console.aws.amazon.com/cost-reports/home?region=eu-north-1#/custom?groupBy=None&hasBlended=false&hasAmortized=false&excludeDiscounts=true&excludeTaggedResources=false&timeRangeOption=Last7Days&granularity=Daily&reportName=&reportType=CostUsage&isTemplate=true&filter=%5B%7B%22dimension%22:%22TagKeyValue%22,%22values%22:null,%22include%22:true,%22children%22:%5B%7B%22dimension%22:%22owner%22,%22values%22:%5B%22benchmarking%22%5D,%22include%22:true,%22children%22:null%7D%5D%7D%5D&chartStyle=Group&forecastTimeRangeOption=None&usageAs=usageQuantity)

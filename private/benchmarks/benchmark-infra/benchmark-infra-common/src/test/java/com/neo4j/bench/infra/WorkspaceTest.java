@@ -18,6 +18,7 @@ import java.nio.file.Paths;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -38,6 +39,7 @@ public class WorkspaceTest
         Files.createDirectories( workspaceBaseDir.resolve( "macro/target" ) );
         Files.createFile( workspaceBaseDir.resolve( "macro/target/macro.jar" ) );
         Files.createFile( workspaceBaseDir.resolve( "macro/run-report-benchmark.sh" ) );
+        // when
         Workspace workspace = Workspace.create( workspaceBaseDir )
                                        .withArtifacts(
                                                Paths.get( "benchmark-infra-scheduler.jar" ),
@@ -45,8 +47,11 @@ public class WorkspaceTest
                                                Paths.get( "macro/target/macro.jar" ),
                                                Paths.get( "macro/run-report-benchmark.sh" )
                                        ).build();
-
+        // then
         assertNotNull( workspace );
+        // when
+        Path path = workspace.get( "benchmark-infra-scheduler.jar" );
+        assertTrue( Files.isRegularFile( path ) );
     }
 
     @Test
@@ -84,8 +89,23 @@ public class WorkspaceTest
                 workspaceBaseDir.resolve( "a/a.txt" ),
                 workspaceBaseDir.resolve( "a/b/b.txt" ) ) );
         // when
-        workspace = Workspace.create( workspaceBaseDir ).withFilesRecursively(  new NameFileFilter( "b.txt" ) ).build();
+        workspace = Workspace.create( workspaceBaseDir ).withFilesRecursively( new NameFileFilter( "b.txt" ) ).build();
         // then
         assertThat( workspace.allArtifacts(), contains( workspaceBaseDir.resolve( "a/b/b.txt" ) ) );
+    }
+
+    @Test( expected = RuntimeException.class )
+    public void throwErrorOnNonExistingWorkspacePath() throws Exception
+    {
+        // given
+        Path workspaceBaseDir = temporaryFolder.newFolder().toPath();
+        // macro workspace structure
+        Files.createFile( workspaceBaseDir.resolve( "benchmark-infra-scheduler.jar" ) );
+        Workspace workspace = Workspace.create( workspaceBaseDir )
+                                       .withArtifacts(
+                                               Paths.get( "benchmark-infra-scheduler.jar" )
+                                       ).build();
+        // when
+        Path path = workspace.get( "artifact.jar" );
     }
 }
