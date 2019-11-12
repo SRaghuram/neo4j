@@ -407,26 +407,14 @@ public class RunWorkloadParams
     }
 
     @Override
-    public boolean equals( Object o )
+    public boolean equals( Object that )
     {
-        if ( this == o )
-        {
-            return true;
-        }
-
-        if ( o == null || getClass() != o.getClass() )
-        {
-            return false;
-        }
-
-        RunWorkloadParams that = (RunWorkloadParams) o;
-
         return EqualsBuilder.reflectionEquals( this, that );
     }
 
     @Override
     public int hashCode()
     {
-        return HashCodeBuilder.reflectionHashCode(this );
+        return HashCodeBuilder.reflectionHashCode( this );
     }
 }

@@ -22,7 +22,7 @@ import com.neo4j.bench.common.tool.macro.RunWorkloadParams;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.infra.JobId;
 import com.neo4j.bench.infra.commands.BatchJobCommandParameters;
-import com.neo4j.bench.infra.commands.InfraParams;
+import com.neo4j.bench.infra.InfraParams;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;

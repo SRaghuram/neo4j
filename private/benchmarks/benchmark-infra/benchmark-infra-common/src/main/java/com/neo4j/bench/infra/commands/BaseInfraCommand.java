@@ -11,6 +11,7 @@ import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.neo4j.bench.common.results.ErrorReportingPolicy;
 import com.neo4j.bench.common.tool.macro.BaseRunWorkloadCommand;
 import com.neo4j.bench.common.tool.macro.RunWorkloadParams;
+import com.neo4j.bench.infra.InfraParams;
 
 import java.net.URI;
 

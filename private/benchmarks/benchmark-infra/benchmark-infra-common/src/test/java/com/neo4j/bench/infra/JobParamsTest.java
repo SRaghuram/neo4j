@@ -15,23 +15,22 @@ import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.tool.macro.ExecutionMode;
 import com.neo4j.bench.common.tool.macro.RunWorkloadParams;
 import com.neo4j.bench.common.util.JsonUtil;
-import com.neo4j.bench.infra.commands.InfraParams;
-import org.junit.Test;
+import com.neo4j.bench.infra.macro.MacroToolRunner;
+import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class JobParamsTest
 {
 
     @Test
-    public void serializeAndDeserialize() throws IOException
+    public void serializeAndDeserialize()
     {
         // given
         JobParams jobParams = new JobParams(
@@ -45,36 +44,38 @@ public class JobParamsTest
                         URI.create( "bolt://localhost/" ),
                         URI.create( "s3://benchmarking.com/123456" ),
                         ErrorReportingPolicy.REPORT_THEN_FAIL ),
-                new RunWorkloadParams( "workloadName",
-                                       Edition.ENTERPRISE,
-                                       Paths.get( "jvm" ).toAbsolutePath(),
-                                       Arrays.asList( ProfilerType.GC, ProfilerType.JFR ),
-                                       1,
-                                       1,
-                                       Duration.ofMillis( 1 ),
-                                       Duration.ofMillis( 2 ),
-                                       1,
-                                       TimeUnit.MILLISECONDS,
-                                       Runtime.DEFAULT,
-                                       Planner.DEFAULT,
-                                       ExecutionMode.EXECUTE,
-                                       JvmArgs.from( "-Xmx4g", "-Xms4g" ),
-                                       false,
-                                       false,
-                                       Deployment.embedded(),
-                                       "neo4jCommit",
-                                       "3.4.12",
-                                       "neo4jBranch",
-                                       "neo4jBranchOwner",
-                                       "toolCommit",
-                                       "toolOwner",
-                                       "toolBranch",
-                                       123456L,
-                                       123455L,
-                                       "triggeredBy" ) );
+                new BenchmarkingEnvironment(
+                        new BenchmarkingTool(
+                                MacroToolRunner.class,
+                                new RunWorkloadParams( "workloadName",
+                                                       Edition.ENTERPRISE,
+                                                       Paths.get( "jvm" ).toAbsolutePath(),
+                                                       Arrays.asList( ProfilerType.GC, ProfilerType.JFR ),
+                                                       1,
+                                                       1,
+                                                       Duration.ofMillis( 1 ),
+                                                       Duration.ofMillis( 2 ),
+                                                       1,
+                                                       TimeUnit.MILLISECONDS,
+                                                       Runtime.DEFAULT,
+                                                       Planner.DEFAULT,
+                                                       ExecutionMode.EXECUTE,
+                                                       JvmArgs.from( "-Xmx4g", "-Xms4g" ),
+                                                       false,
+                                                       false,
+                                                       Deployment.embedded(),
+                                                       "neo4jCommit",
+                                                       "3.4.12",
+                                                       "neo4jBranch",
+                                                       "neo4jBranchOwner",
+                                                       "toolCommit",
+                                                       "toolOwner",
+                                                       "toolBranch",
+                                                       123456L,
+                                                       123455L,
+                                                       "triggeredBy" ) ) ) );
         // when
-
-        JobParams actual = JobParams.fromJson( JsonUtil.serializeJson( jobParams ) );
+        JobParams actual = JsonUtil.deserializeJson( JsonUtil.serializeJson( jobParams ), JobParams.class );
         // then
         assertEquals( jobParams, actual );
     }

@@ -13,6 +13,9 @@ import com.neo4j.bench.common.results.ErrorReportingPolicy;
 import com.neo4j.bench.common.tool.macro.BaseRunWorkloadCommand;
 import com.neo4j.bench.common.tool.macro.RunWorkloadParams;
 import com.neo4j.bench.infra.ArtifactStoreException;
+import com.neo4j.bench.infra.BenchmarkingEnvironment;
+import com.neo4j.bench.infra.BenchmarkingTool;
+import com.neo4j.bench.infra.InfraParams;
 import com.neo4j.bench.infra.JobId;
 import com.neo4j.bench.infra.JobParams;
 import com.neo4j.bench.infra.JobScheduler;
@@ -20,7 +23,7 @@ import com.neo4j.bench.infra.JobStatus;
 import com.neo4j.bench.infra.Workspace;
 import com.neo4j.bench.infra.aws.AWSBatchJobScheduler;
 import com.neo4j.bench.infra.aws.AWSS3ArtifactStorage;
-import com.neo4j.bench.infra.commands.InfraParams;
+import com.neo4j.bench.infra.macro.MacroToolRunner;
 import net.jodah.failsafe.Failsafe;
 import net.jodah.failsafe.RetryPolicy;
 import org.slf4j.Logger;
@@ -33,7 +36,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
-import java.util.Collections;
 import java.util.List;
 
 import static com.neo4j.bench.common.tool.macro.RunWorkloadParams.CMD_ERROR_POLICY;
@@ -124,50 +126,6 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
     @Required
     private URI artifactBaseUri;
 
-    private static JobScheduler getJobScheduler( InfraParams infraParams, String jobQueue, String jobDefinition, String batchStack )
-    {
-        if ( infraParams.hasAwsCredentials() )
-        {
-            return AWSBatchJobScheduler.create( infraParams.awsRegion(),
-                                                infraParams.awsKey(),
-                                                infraParams.awsSecret(),
-                                                jobQueue,
-                                                jobDefinition,
-                                                batchStack );
-        }
-        else
-        {
-            return AWSBatchJobScheduler.create( infraParams.awsRegion(),
-                                                jobQueue,
-                                                jobDefinition,
-                                                batchStack );
-        }
-    }
-
-    private static AWSS3ArtifactStorage getAWSS3ArtifactStorage( InfraParams infraParams )
-    {
-        if ( infraParams.hasAwsCredentials() )
-        {
-            return AWSS3ArtifactStorage.create( infraParams.awsRegion(),
-                                                infraParams.awsKey(),
-                                                infraParams.awsSecret() );
-        }
-        else
-        {
-            return AWSS3ArtifactStorage.create( infraParams.awsRegion() );
-        }
-    }
-
-    private List<JobStatus> jobStatuses( JobScheduler jobScheduler, InfraParams infraParams, JobId jobId )
-    {
-        List<JobStatus> jobStatuses =
-                jobScheduler.jobsStatuses( Collections.singletonList( jobId ) );
-        LOG.info( "current jobs statuses:\n{}",
-                  jobStatuses.stream()
-                             .map( status -> status.toStatusLine( infraParams.awsRegion() ) ).collect( joining( "\n" ) ) );
-        return jobStatuses;
-    }
-
     @Override
     protected final void doRun( RunWorkloadParams runWorkloadParams )
     {
@@ -184,7 +142,9 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
         {
 
             // first store job params as JSON
-            JobParams jobParams = new JobParams( infraParams, runWorkloadParams );
+            JobParams jobParams = new JobParams( infraParams,
+                                                 new BenchmarkingEnvironment(
+                                                         new BenchmarkingTool( MacroToolRunner.class, runWorkloadParams ) ) );
             Path workspacePath = workspaceDir.toPath();
             Files.write( workspacePath.resolve( Workspace.JOB_PARAMETERS_JSON ), jobParams.toJson().getBytes( StandardCharsets.UTF_8 ) );
 
@@ -193,13 +153,13 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
                                                                    runWorkloadParams.neo4jEdition()
             );
 
-            AWSS3ArtifactStorage artifactStorage = getAWSS3ArtifactStorage( infraParams );
+            AWSS3ArtifactStorage artifactStorage = AWSS3ArtifactStorage.getAWSS3ArtifactStorage( infraParams );
 
             URI artifactBaseURI = infraParams.artifactBaseUri();
             artifactStorage.uploadBuildArtifacts( artifactBaseURI, workspace );
             LOG.info( "upload build artifacts into {}", artifactBaseURI );
 
-            JobScheduler jobScheduler = getJobScheduler( infraParams, jobQueue, jobDefinition, batchStack );
+            JobScheduler jobScheduler = AWSBatchJobScheduler.getJobScheduler( infraParams, jobQueue, jobDefinition, batchStack );
 
             JobId jobId = jobScheduler.schedule( artifactWorkerUri, artifactBaseURI, runWorkloadParams );
             LOG.info( "job scheduled, with id {}", jobId.id() );
@@ -210,7 +170,7 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
                     .withDelay( Duration.ofMinutes( 5 ) )
                     .withMaxAttempts( -1 );
 
-            List<JobStatus> jobsStatuses = Failsafe.with( retries ).get( () -> jobStatuses( jobScheduler, infraParams, jobId ) );
+            List<JobStatus> jobsStatuses = Failsafe.with( retries ).get( () -> AWSBatchJobScheduler.jobStatuses( jobScheduler, infraParams, jobId ) );
             LOG.info( "jobs are done with following statuses\n{}", jobsStatuses.stream().map( Object::toString ).collect( joining( "\n" ) ) );
 
             // if any of the jobs failed, fail whole run
