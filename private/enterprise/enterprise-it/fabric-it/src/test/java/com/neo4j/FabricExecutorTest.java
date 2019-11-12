@@ -14,6 +14,7 @@ import com.neo4j.fabric.executor.FabricExecutor;
 import com.neo4j.fabric.stream.Records;
 import com.neo4j.fabric.stream.StatementResult;
 import com.neo4j.fabric.stream.summary.PartialSummary;
+import com.neo4j.utils.DriverUtils;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -214,12 +215,11 @@ class FabricExecutorTest
     @Test
     void testWriteInReadSession()
     {
-        doInMegaTx( AccessMode.READ, tx ->
-        {
-            assertThrows( ClientException.class, () ->
-                    tx.run( "USE mega.graph(0) CREATE (n:Foo)" ).consume() );
-        } );
+        var ex = assertThrows( ClientException.class, () -> doInMegaTx( AccessMode.READ, tx ->
+                tx.run( "USE mega.graph(0) CREATE (n:Foo)" ).consume() )
+        );
 
+        assertThat( ex.getMessage(), containsString( "Writing in read access mode not allowed" ) );
         verifySessionConfig( 0, org.neo4j.bolt.runtime.AccessMode.READ );
         verifySessionConfig( 0, org.neo4j.bolt.runtime.AccessMode.WRITE );
     }
@@ -246,8 +246,10 @@ class FabricExecutorTest
     @Test
     void testMixedInReadSessionGraph0()
     {
-        doInMegaTx( AccessMode.READ, tx ->
+        doInMegaSession( AccessMode.READ, session ->
         {
+            var tx = session.beginTransaction();
+
             tx.run( "USE mega.graph(0) MATCH (n) RETURN n" ).consume();
             tx.run( "USE mega.graph(0) MATCH (n) RETURN n" ).consume();
             tx.run( "USE mega.graph(1) MATCH (n) RETURN n" ).consume();
@@ -269,8 +271,10 @@ class FabricExecutorTest
     @Test
     void testMixedInReadSessionGraph1()
     {
-        doInMegaTx( AccessMode.READ, tx ->
+        doInMegaSession( AccessMode.READ, session ->
         {
+            var tx = session.beginTransaction();
+
             tx.run( "USE mega.graph(0) MATCH (n) RETURN n" ).consume();
             tx.run( "USE mega.graph(0) MATCH (n) RETURN n" ).consume();
             tx.run( "USE mega.graph(1) MATCH (n) RETURN n" ).consume();
@@ -292,7 +296,8 @@ class FabricExecutorTest
     @Test
     void testMixedInWriteSession()
     {
-        doInMegaSession( AccessMode.WRITE, session -> {
+        doInMegaSession( AccessMode.WRITE, session ->
+        {
             var tx = session.beginTransaction();
 
             tx.run( "USE mega.graph(0) MATCH (n) RETURN n" ).consume();
@@ -329,7 +334,8 @@ class FabricExecutorTest
     @Test
     void testLocalFlatCompositeQuery()
     {
-        doInMegaTx(  AccessMode.READ, tx -> {
+        doInMegaTx( AccessMode.READ, tx ->
+        {
             List<Record> list = tx.run( joinAsLines(
                     "UNWIND [1, 2] AS x",
                     "CALL { RETURN 'y' AS y }",
@@ -663,21 +669,11 @@ class FabricExecutorTest
 
     private void doInMegaTx( AccessMode mode, Consumer<Transaction> workload )
     {
-        try ( var session = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).withDefaultAccessMode( mode ).build() ) )
-        {
-            try ( Transaction tx = session.beginTransaction() )
-            {
-                workload.accept( tx );
-                tx.commit();
-            }
-        }
+        DriverUtils.doInMegaTx( clientDriver, mode, workload );
     }
 
     private void doInMegaSession( AccessMode mode, Consumer<Session> workload )
     {
-        try ( var session = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).withDefaultAccessMode( mode ).build() ) )
-        {
-            workload.accept( session );
-        }
+        DriverUtils.doInMegaSession( clientDriver, mode, workload );
     }
 }

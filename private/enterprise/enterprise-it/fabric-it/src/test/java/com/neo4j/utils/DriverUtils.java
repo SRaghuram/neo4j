@@ -21,7 +21,7 @@ public final class DriverUtils
 
     }
 
-    public static <T> T inMegaTx( Driver driver, Function<Transaction, T> workload )
+    public static <T> T inMegaTx( Driver driver, Function<Transaction,T> workload )
     {
         try ( var session = driver.session( SessionConfig.builder().withDatabase( "mega" ).build() ) )
         {
@@ -29,11 +29,14 @@ public final class DriverUtils
         }
     }
 
-    public static <T> T inMegaTx( Driver driver, AccessMode accessMode, Function<Transaction, T> workload )
+    public static <T> T inMegaTx( Driver driver, AccessMode accessMode, Function<Transaction,T> workload )
     {
-        try ( var session = driver.session( SessionConfig.builder().withDatabase( "mega" ).withDefaultAccessMode( accessMode ).build() ) )
+        try ( var session = driver.session( SessionConfig.builder().withDatabase( "mega" ).withDefaultAccessMode( accessMode ).build() );
+                var tx = session.beginTransaction() )
         {
-            return session.writeTransaction( workload::apply );
+            T value = workload.apply( tx );
+            tx.commit();
+            return value;
         }
     }
 
@@ -55,7 +58,7 @@ public final class DriverUtils
         } );
     }
 
-    public static <T> T inMegaSession( Driver driver, Function<Session, T> workload )
+    public static <T> T inMegaSession( Driver driver, Function<Session,T> workload )
     {
         try ( var session = driver.session( SessionConfig.builder().withDatabase( "mega" ).build() ) )
         {
@@ -66,6 +69,14 @@ public final class DriverUtils
     public static void doInMegaSession( Driver driver, Consumer<Session> workload )
     {
         try ( var session = driver.session( SessionConfig.builder().withDatabase( "mega" ).build() ) )
+        {
+            workload.accept( session );
+        }
+    }
+
+    public static void doInMegaSession( Driver driver, AccessMode accessMode, Consumer<Session> workload )
+    {
+        try ( var session = driver.session( SessionConfig.builder().withDatabase( "mega" ).withDefaultAccessMode( accessMode ).build() ) )
         {
             workload.accept( session );
         }
