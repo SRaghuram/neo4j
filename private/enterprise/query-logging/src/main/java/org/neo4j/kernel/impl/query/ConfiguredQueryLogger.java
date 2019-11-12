@@ -24,6 +24,7 @@ class ConfiguredQueryLogger implements QueryLogger
     private final boolean logAllocatedBytes;
     private final boolean logPageDetails;
     private final boolean logRuntime;
+    private final boolean verboseLogging;
 
     ConfiguredQueryLogger( Log log, Config config )
     {
@@ -34,6 +35,16 @@ class ConfiguredQueryLogger implements QueryLogger
         this.logAllocatedBytes = config.get( GraphDatabaseSettings.log_queries_allocation_logging_enabled );
         this.logPageDetails = config.get( GraphDatabaseSettings.log_queries_page_detail_logging_enabled );
         this.logRuntime = config.get( GraphDatabaseSettings.log_queries_runtime_logging_enabled );
+        this.verboseLogging = config.get( GraphDatabaseSettings.log_queries_verbose );
+    }
+
+    @Override
+    public void start( ExecutingQuery query )
+    {
+        if ( verboseLogging )
+        {
+            log.info( "Query started: " + logEntry( query.snapshot() ) );
+        }
     }
 
     @Override
@@ -45,7 +56,7 @@ class ConfiguredQueryLogger implements QueryLogger
     @Override
     public void success( ExecutingQuery query )
     {
-        if ( NANOSECONDS.toMillis( query.elapsedNanos() ) >= thresholdMillis )
+        if ( NANOSECONDS.toMillis( query.elapsedNanos() ) >= thresholdMillis || verboseLogging )
         {
             QuerySnapshot snapshot = query.snapshot();
             log.info( logEntry( snapshot ) );
@@ -58,6 +69,10 @@ class ConfiguredQueryLogger implements QueryLogger
         String queryText = query.queryText();
 
         StringBuilder result = new StringBuilder();
+        if ( verboseLogging )
+        {
+            result.append( "id:" ).append( query.internalQueryId() ).append( " - " );
+        }
         result.append( TimeUnit.MICROSECONDS.toMillis( query.elapsedTimeMicros() ) ).append( " ms: " );
         if ( logDetailedTime )
         {

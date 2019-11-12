@@ -36,11 +36,17 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.sameInstance;
 import static org.hamcrest.core.Is.is;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.neo4j.helpers.collection.MapUtil.map;
+import static org.neo4j.kernel.configuration.Settings.FALSE;
+import static org.neo4j.kernel.configuration.Settings.TRUE;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
 
 public class ConfiguredQueryLoggerTest
 {
+    private static final String LOG_MESSAGE_TEMPLATE = "%d ms: %s - %s - {}";
+    private static final String VERBOSE_LOG_MESSAGE_TEMPLATE = "id:%d - " + LOG_MESSAGE_TEMPLATE;
+    private static final String VERBOSE_START_LOG_MESSAGE_TEMPLATE = "Query started: " + VERBOSE_LOG_MESSAGE_TEMPLATE;
     private static final SocketAddress DUMMY_ADDRESS = new SocketAddress()
     {
     };
@@ -75,7 +81,7 @@ public class ConfiguredQueryLoggerTest
         // then
         String expectedSessionString = sessionConnectionDetails( SESSION_1, "TestUser" );
         logProvider.assertExactly(
-            inLog( getClass() ).info( format( "%d ms: %s - %s - {}", 11L, expectedSessionString, QUERY_1 ) )
+            inLog( getClass() ).info( format( LOG_MESSAGE_TEMPLATE, 11L, expectedSessionString, QUERY_1 ) )
         );
     }
 
@@ -104,7 +110,7 @@ public class ConfiguredQueryLoggerTest
         // then
         String expectedSessionString = sessionConnectionDetails( SESSION_2, "TestUser2" );
         logProvider.assertExactly(
-                inLog( getClass() ).info( format( "%d ms: %s - %s - {}", 9L, expectedSessionString, QUERY_2 ) )
+                inLog( getClass() ).info( format( LOG_MESSAGE_TEMPLATE, 9L, expectedSessionString, QUERY_2 ) )
         );
     }
 
@@ -135,8 +141,8 @@ public class ConfiguredQueryLoggerTest
         String expectedSession1String = sessionConnectionDetails( SESSION_1, "TestUser1" );
         String expectedSession2String = sessionConnectionDetails( SESSION_2, "TestUser2" );
         logProvider.assertExactly(
-                inLog( getClass() ).info( format( "%d ms: %s - %s - {}", 17L, expectedSession2String, QUERY_2 ) ),
-                inLog( getClass() ).info( format( "%d ms: %s - %s - {}", 25L, expectedSession1String, QUERY_1 ) )
+                inLog( getClass() ).info( format( LOG_MESSAGE_TEMPLATE, 17L, expectedSession2String, QUERY_2 ) ),
+                inLog( getClass() ).info( format( LOG_MESSAGE_TEMPLATE, 25L, expectedSession1String, QUERY_1 ) )
         );
     }
 
@@ -229,9 +235,9 @@ public class ConfiguredQueryLoggerTest
 
         // then
         logProvider.assertExactly(
-                inLog( getClass() ).info( format( "%d ms: %s - %s - {}", 10L,
+                inLog( getClass() ).info( format( LOG_MESSAGE_TEMPLATE, 10L,
                         sessionConnectionDetails( SESSION_1, "TestUser" ), QUERY_1 ) ),
-                inLog( getClass() ).info( format( "%d ms: %s - %s - {}", 10L,
+                inLog( getClass() ).info( format( LOG_MESSAGE_TEMPLATE, 10L,
                         sessionConnectionDetails( SESSION_1, "AnotherUser" ), QUERY_1 ) )
         );
     }
@@ -519,6 +525,60 @@ public class ConfiguredQueryLoggerTest
         logProvider.assertExactly(
                 inLog( getClass() ).info( format( "%d ms: %s - %s - %s - {}", 11L, expectedSessionString, QUERY_4,
                         "{ages: [41, 42, 43]} - runtime=quantum" ) )
+        );
+    }
+
+    @Test
+    public void shouldIncludeQueryIdInVerboseLogging()
+    {
+        AssertableLogProvider logProvider = new AssertableLogProvider();
+        Config config = Config.defaults();
+        config.augment( GraphDatabaseSettings.log_queries_parameter_logging_enabled, FALSE );
+        config.augment( GraphDatabaseSettings.log_queries_verbose, TRUE );
+        ConfiguredQueryLogger queryLogger = queryLogger( logProvider, config );
+        ExecutingQuery query = query( SESSION_1, "TestUser", QUERY_1 );
+
+        // when
+        queryLogger.start( query );
+        clock.forward( 11, TimeUnit.MILLISECONDS );
+        queryLogger.success( query );
+
+        // then
+        String expectedSessionString = sessionConnectionDetails( SESSION_1, "TestUser" );
+        logProvider.assertExactly(
+                inLog( getClass() ).info( format( VERBOSE_START_LOG_MESSAGE_TEMPLATE, query.internalQueryId(), 0L, expectedSessionString, QUERY_1 ) ),
+                inLog( getClass() ).info( format( VERBOSE_LOG_MESSAGE_TEMPLATE, query.internalQueryId(), 11L, expectedSessionString, QUERY_1 ) )
+        );
+    }
+
+    @Test
+    public void shoulHaveDifferentIdsForDifferentQueries()
+    {
+        AssertableLogProvider logProvider = new AssertableLogProvider();
+        Config config = Config.defaults();
+        config.augment( GraphDatabaseSettings.log_queries_parameter_logging_enabled, FALSE );
+        config.augment( GraphDatabaseSettings.log_queries_verbose, TRUE );
+        ConfiguredQueryLogger queryLogger = queryLogger( logProvider, config );
+        ExecutingQuery query1 = query( SESSION_1, "TestUser", QUERY_1 );
+        ExecutingQuery query2 = query( SESSION_1, "TestUser", QUERY_1 ); //same query text, distinguishable only by id
+
+        // when
+        queryLogger.start( query1 );
+        clock.forward( 5, TimeUnit.MILLISECONDS );
+        queryLogger.start( query2 );
+        clock.forward( 5, TimeUnit.MILLISECONDS );
+        queryLogger.success( query2 );
+        clock.forward( 5, TimeUnit.MILLISECONDS );
+        queryLogger.success( query1 );
+
+        // then
+        assertNotEquals( query1.internalQueryId(), query2.internalQueryId(), "Queries should have different ids");
+        String expectedSessionString = sessionConnectionDetails( SESSION_1, "TestUser" );
+        logProvider.assertExactly(
+                inLog( getClass() ).info( format( VERBOSE_START_LOG_MESSAGE_TEMPLATE, query1.internalQueryId(), 0L, expectedSessionString, QUERY_1 ) ),
+                inLog( getClass() ).info( format( VERBOSE_START_LOG_MESSAGE_TEMPLATE, query2.internalQueryId(), 5L, expectedSessionString, QUERY_1 ) ),
+                inLog( getClass() ).info( format( VERBOSE_LOG_MESSAGE_TEMPLATE, query2.internalQueryId(), 10L, expectedSessionString, QUERY_1 ) ),
+                inLog( getClass() ).info( format( VERBOSE_LOG_MESSAGE_TEMPLATE, query1.internalQueryId(), 15L, expectedSessionString, QUERY_1 ) )
         );
     }
 

@@ -18,6 +18,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -52,6 +53,7 @@ import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 import org.neo4j.values.virtual.VirtualValues;
 
+import static java.util.Collections.emptyMap;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.endsWith;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
@@ -64,12 +66,16 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.log_queries;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.log_queries_max_archives;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.log_queries_rotation_threshold;
+import static org.neo4j.graphdb.factory.GraphDatabaseSettings.log_queries_verbose;
 import static org.neo4j.graphdb.factory.GraphDatabaseSettings.logs_directory;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
 import static org.neo4j.internal.kernel.api.security.AuthSubject.AUTH_DISABLED;
+import static org.neo4j.kernel.configuration.Settings.FALSE;
+import static org.neo4j.kernel.configuration.Settings.TRUE;
 import static org.neo4j.server.security.auth.BasicAuthManagerTest.password;
 
 public class QueryLoggerIT
@@ -123,7 +129,7 @@ public class QueryLoggerIT
         // turn on query logging
         final Map<String, String> config = stringMap(
             logs_directory.name(), logsDirectory.getPath(),
-            log_queries.name(), Settings.TRUE );
+            log_queries.name(), TRUE );
         db = new EmbeddedInteraction( databaseBuilder, config );
 
         // create users
@@ -164,7 +170,7 @@ public class QueryLoggerIT
     {
         // turn on query logging
         databaseBuilder.setConfig( logs_directory, logsDirectory.getPath() );
-        databaseBuilder.setConfig( log_queries, Settings.TRUE );
+        databaseBuilder.setConfig( log_queries, TRUE );
         db = new EmbeddedInteraction( databaseBuilder, Collections.emptyMap() );
         GraphDatabaseFacade graph = db.getLocalGraph();
 
@@ -217,9 +223,9 @@ public class QueryLoggerIT
     @Test
     public void shouldLogQuerySlowerThanThreshold() throws Exception
     {
-        database = databaseBuilder.setConfig( log_queries, Settings.TRUE )
+        database = databaseBuilder.setConfig( log_queries, TRUE )
                 .setConfig( logs_directory, logsDirectory.getPath() )
-                .setConfig( GraphDatabaseSettings.log_queries_parameter_logging_enabled, Settings.FALSE )
+                .setConfig( GraphDatabaseSettings.log_queries_parameter_logging_enabled, FALSE )
                 .newGraphDatabase();
 
         executeQueryAndShutdown( database );
@@ -233,9 +239,9 @@ public class QueryLoggerIT
     @Test
     public void shouldLogParametersWhenNestedMap() throws Exception
     {
-        database = databaseBuilder.setConfig( log_queries, Settings.TRUE )
+        database = databaseBuilder.setConfig( log_queries, TRUE )
                 .setConfig( logs_directory, logsDirectory.getPath() )
-                .setConfig( GraphDatabaseSettings.log_queries_parameter_logging_enabled, Settings.TRUE )
+                .setConfig( GraphDatabaseSettings.log_queries_parameter_logging_enabled, TRUE )
                 .newGraphDatabase();
 
         Map<String,Object> props = new LinkedHashMap<>(); // to be sure about ordering in the last assertion
@@ -262,9 +268,9 @@ public class QueryLoggerIT
     @Test
     public void shouldLogRuntime() throws Exception
     {
-        database = databaseBuilder.setConfig( GraphDatabaseSettings.log_queries, Settings.TRUE )
+        database = databaseBuilder.setConfig( GraphDatabaseSettings.log_queries, TRUE )
                 .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.getPath() )
-                .setConfig( GraphDatabaseSettings.log_queries_runtime_logging_enabled, Settings.TRUE )
+                .setConfig( GraphDatabaseSettings.log_queries_runtime_logging_enabled, TRUE )
                 .newGraphDatabase();
 
         String query = "RETURN 42";
@@ -281,7 +287,7 @@ public class QueryLoggerIT
     @Test
     public void shouldLogParametersWhenList() throws Exception
     {
-        database = databaseBuilder.setConfig( log_queries, Settings.TRUE )
+        database = databaseBuilder.setConfig( log_queries, TRUE )
                 .setConfig( logs_directory, logsDirectory.getPath() )
                 .newGraphDatabase();
 
@@ -300,7 +306,7 @@ public class QueryLoggerIT
     @Test
     public void disabledQueryLogging()
     {
-        database = databaseBuilder.setConfig( log_queries, Settings.FALSE )
+        database = databaseBuilder.setConfig( log_queries, FALSE )
                 .setConfig( GraphDatabaseSettings.log_queries_filename, logFilename.getPath() )
                 .newGraphDatabase();
 
@@ -315,7 +321,7 @@ public class QueryLoggerIT
         final File logsDirectory = new File( testDirectory.storeDir(), "logs" );
         final File logFilename = new File( logsDirectory, "query.log" );
         final File shiftedLogFilename1 = new File( logsDirectory, "query.log.1" );
-        database = databaseBuilder.setConfig( log_queries, Settings.TRUE )
+        database = databaseBuilder.setConfig( log_queries, TRUE )
                 .setConfig( logs_directory, logsDirectory.getPath() )
                 .setConfig( log_queries_rotation_threshold, "0" )
                 .newGraphDatabase();
@@ -339,7 +345,7 @@ public class QueryLoggerIT
     public void queryLogRotation()
     {
         final File logsDirectory = new File( testDirectory.storeDir(), "logs" );
-        databaseBuilder.setConfig( log_queries, Settings.TRUE )
+        databaseBuilder.setConfig( log_queries, TRUE )
                 .setConfig( logs_directory, logsDirectory.getPath() )
                 .setConfig( log_queries_max_archives, "100" )
                 .setConfig( log_queries_rotation_threshold, "1" );
@@ -389,9 +395,9 @@ public class QueryLoggerIT
     public void shouldNotLogPassword() throws Exception
     {
         database = databaseBuilder
-                .setConfig( log_queries, Settings.TRUE )
+                .setConfig( log_queries, TRUE )
                 .setConfig( logs_directory, logsDirectory.getPath() )
-                .setConfig( GraphDatabaseSettings.auth_enabled, Settings.TRUE )
+                .setConfig( GraphDatabaseSettings.auth_enabled, TRUE )
                 .newGraphDatabase();
         GraphDatabaseFacade facade = (GraphDatabaseFacade) this.database;
 
@@ -424,7 +430,7 @@ public class QueryLoggerIT
     @Test
     public void canBeEnabledAndDisabledAtRuntime() throws Exception
     {
-        database = databaseBuilder.setConfig( log_queries, Settings.FALSE ).setConfig( GraphDatabaseSettings.log_queries_filename,
+        database = databaseBuilder.setConfig( log_queries, FALSE ).setConfig( GraphDatabaseSettings.log_queries_filename,
                 logFilename.getPath() ).newGraphDatabase();
         List<String> strings;
 
@@ -475,9 +481,59 @@ public class QueryLoggerIT
         }
     }
 
+    @Test
+    public void shouldLogQueryStart() throws Exception
+    {
+        database = databaseBuilder.setConfig( log_queries, TRUE )
+                .setConfig( log_queries_verbose, TRUE )
+                .setConfig( GraphDatabaseSettings.log_queries_filename, logFilename.getPath() )
+                .setConfig( GraphDatabaseSettings.log_queries_parameter_logging_enabled, FALSE )
+                .newGraphDatabase();
+
+        executeQueryAndShutdown( database );
+
+        List<String> logLines = readAllLines( logFilename );
+        assertEquals( 2, logLines.size() );
+        assertThat( logLines.get( 0 ), containsString( "Query started:" ) );
+    }
+
+    @Test
+    public void shouldIgnoreThreshold() throws Exception
+    {
+        database = databaseBuilder.setConfig( log_queries, TRUE )
+                .setConfig( log_queries_verbose, TRUE )
+                .setConfig(  GraphDatabaseSettings.log_queries_filename, logFilename.getPath() )
+                .setConfig( GraphDatabaseSettings.log_queries_parameter_logging_enabled, FALSE )
+                .setConfig( GraphDatabaseSettings.log_queries_threshold, "6s" )
+                .newGraphDatabase();
+
+        executeQueryAndShutdown( database );
+
+        List<String> logLines = readAllLines( logFilename );
+        assertEquals( 2, logLines.size() );
+        assertThat( logLines.get( 0 ), containsString( "Query started:" ) );
+    }
+
+    @Test
+    public void shouldObeyLevelChangeDuringRuntime() throws Exception
+    {
+        database = databaseBuilder.setConfig( log_queries, TRUE )
+                .setConfig( log_queries_verbose, FALSE )
+                .setConfig(  GraphDatabaseSettings.log_queries_filename, logFilename.getPath() )
+                .setConfig( GraphDatabaseSettings.log_queries_parameter_logging_enabled, FALSE )
+                .newGraphDatabase();
+
+        database.execute( QUERY ).close();
+        database.execute("call dbms.setConfigValue('" + GraphDatabaseSettings.log_queries_verbose.name() + "', 'true')", emptyMap() ).close();
+        executeQueryAndShutdown( database );
+
+        List<String> logLines = readAllLines( logFilename );
+        assertEquals( 1, logLines.stream().filter( line -> line.contains( "Query started:" ) ).count() );
+    }
+
     private void executeSingleQueryWithTimeZoneLog()
     {
-        database = databaseBuilder.setConfig( log_queries, Settings.TRUE )
+        database = databaseBuilder.setConfig( log_queries, TRUE )
                 .setConfig( GraphDatabaseSettings.db_timezone, LogTimeZone.SYSTEM.name() )
                 .setConfig( logs_directory, logsDirectory.getPath() )
                 .newGraphDatabase();

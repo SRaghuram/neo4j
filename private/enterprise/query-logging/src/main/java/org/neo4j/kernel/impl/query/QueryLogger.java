@@ -12,6 +12,11 @@ public interface QueryLogger
     QueryLogger NO_LOG = new QueryLogger()
     {
         @Override
+        public void start( ExecutingQuery query )
+        {
+        }
+
+        @Override
         public void success( ExecutingQuery query )
         {
         }
@@ -22,6 +27,7 @@ public interface QueryLogger
         }
     };
 
+    void start( ExecutingQuery query );
     void success( ExecutingQuery query );
     void failure( ExecutingQuery query, Throwable throwable );
 }
