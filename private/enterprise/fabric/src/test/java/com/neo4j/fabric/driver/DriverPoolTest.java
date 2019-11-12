@@ -47,8 +47,10 @@ class DriverPoolTest
     private final FabricConfig fabricConfig = mock( FabricConfig.class );
     private final Config config = mock( Config.class );
 
-    private final FabricConfig.Graph s1 = new FabricConfig.Graph( 1, FabricConfig.RemoteUri.create(shard0.boltURI()), "db1", new NormalizedGraphName( "shard-0" ), null );
-    private final FabricConfig.Graph s2 = new FabricConfig.Graph( 2, FabricConfig.RemoteUri.create(shard1.boltURI()), "db1", new NormalizedGraphName( "shard-1" ), null );
+    private final FabricConfig.Graph s1 =
+            new FabricConfig.Graph( 1, FabricConfig.RemoteUri.create( shard0.boltURI() ), "db1", new NormalizedGraphName( "shard-0" ), null );
+    private final FabricConfig.Graph s2 =
+            new FabricConfig.Graph( 2, FabricConfig.RemoteUri.create( shard1.boltURI() ), "db1", new NormalizedGraphName( "shard-1" ), null );
 
     private final CredentialsProvider credentialsProvider = Mockito.mock( CredentialsProvider.class );
     private final AuthSubject as1 = mock( AuthSubject.class );
@@ -114,7 +116,7 @@ class DriverPoolTest
         driverPool.start();
 
         ArgumentCaptor<Runnable> argumentCaptor = ArgumentCaptor.forClass( Runnable.class );
-        verify( jobScheduler).schedule( any(), argumentCaptor.capture(), anyLong(), any() );
+        verify( jobScheduler ).schedule( any(), argumentCaptor.capture(), anyLong(), any() );
 
         Runnable idleDriverCheck = argumentCaptor.getValue();
 

@@ -47,7 +47,8 @@ class FabricConfigTest
         assertEquals( "mega", database.getName().name() );
         assertEquals( Set.of(
                 new FabricConfig.Graph( 0L, FabricConfig.RemoteUri.create( "bolt://mega:1111" ), null, null, emptyDriverConfig() ),
-                new FabricConfig.Graph( 1L, FabricConfig.RemoteUri.create( "bolt://mega:2222" ), "db0", new NormalizedGraphName( "source-of-all-wisdom" ), emptyDriverConfig() )
+                new FabricConfig.Graph( 1L, FabricConfig.RemoteUri.create( "bolt://mega:2222" ), "db0", new NormalizedGraphName( "source-of-all-wisdom" ),
+                        emptyDriverConfig() )
         ), database.getGraphs() );
     }
 
@@ -104,7 +105,7 @@ class FabricConfigTest
         var e = assertThrows( IllegalArgumentException.class,
                 () -> FabricConfig.from( config ) );
 
-        assertEquals( e.getMessage(), "Graphs with ids: 0, 1, have conflicting names");
+        assertEquals( e.getMessage(), "Graphs with ids: 0, 1, have conflicting names" );
     }
 
     @Test
@@ -157,9 +158,9 @@ class FabricConfigTest
         );
 
         assertThrows( IllegalArgumentException.class,
-                      () -> Config.newBuilder()
-                              .setRaw( properties )
-                              .build()
+                () -> Config.newBuilder()
+                        .setRaw( properties )
+                        .build()
         );
     }
 
