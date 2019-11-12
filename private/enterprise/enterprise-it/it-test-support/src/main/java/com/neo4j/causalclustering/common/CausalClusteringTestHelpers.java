@@ -277,13 +277,13 @@ public final class CausalClusteringTestHelpers
     public static void assertUserDoesNotExist( String userName, Cluster cluster ) throws InterruptedException
     {
         assertEventually( ignore -> "User is not absent on all members: " + memberUserStates( cluster ),
-                () -> noMembersHaveUser( cluster, userName ), is( true ), 1, MINUTES);
+                () -> noMembersHaveUserAndNoErrors( cluster, userName ), is( true ), 1, MINUTES);
     }
 
     public static void assertRoleDoesNotExist( String roleName, Cluster cluster ) throws InterruptedException
     {
         assertEventually( ignore -> "Role is not absent on all members: " + memberRoleStates( cluster ),
-                () -> noMembersHaveRole( cluster, roleName ), is( true ), 1, MINUTES);
+                () -> noMembersHaveRoleAndNoErrors( cluster, roleName ), is( true ), 1, MINUTES);
     }
 
     private static boolean allMembersHaveDatabaseState( DatabaseAvailability expected, Cluster cluster, String databaseName )
@@ -348,10 +348,17 @@ public final class CausalClusteringTestHelpers
         return cluster.allMembers().stream().collect( toMap( identity(), CausalClusteringTestHelpers::getMemberUsers ) );
     }
 
-    private static boolean noMembersHaveUser( Cluster cluster, String userName )
+    private static boolean noMembersHaveUserAndNoErrors( Cluster cluster, String userName )
     {
-        Set<String> users = cluster.allMembers().stream().flatMap( m -> getMemberUsers( m ).stream() ).collect( Collectors.toSet() );
-        return !users.contains( userName );
+        try
+        {
+            Set<String> users = cluster.allMembers().stream().flatMap( m -> getMemberUsers( m ).stream() ).collect( Collectors.toSet() );
+            return !users.contains( userName );
+        }
+        catch ( Exception ignore )
+        {
+            return false;
+        }
     }
 
     private static Set<String> getMemberUsers( ClusterMember member )
@@ -364,10 +371,17 @@ public final class CausalClusteringTestHelpers
         return cluster.allMembers().stream().collect( toMap( identity(), CausalClusteringTestHelpers::getMemberRoles ) );
     }
 
-    private static boolean noMembersHaveRole( Cluster cluster, String roleName )
+    private static boolean noMembersHaveRoleAndNoErrors( Cluster cluster, String roleName )
     {
-        Set<String> roles = cluster.allMembers().stream().flatMap( m -> getMemberRoles( m ).stream() ).collect( Collectors.toSet() );
-        return !roles.contains( roleName );
+        try
+        {
+            Set<String> roles = cluster.allMembers().stream().flatMap( m -> getMemberRoles( m ).stream() ).collect( Collectors.toSet() );
+            return !roles.contains( roleName );
+        }
+        catch ( Exception ignore )
+        {
+            return false;
+        }
     }
 
     private static Set<String> getMemberRoles( ClusterMember member )
