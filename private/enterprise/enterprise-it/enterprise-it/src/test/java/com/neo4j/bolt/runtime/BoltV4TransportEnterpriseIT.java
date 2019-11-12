@@ -180,32 +180,32 @@ public class BoltV4TransportEnterpriseIT
         // request 5 records but do not provide qid
         connection.send( util.chunk( new PullMessage( asMapValue( map( "n", 5L ) ) ) ) );
         assertThat( connection, util.eventuallyReceives(
-                msgRecord( eqRecord( equalTo( stringValue( "L30" ) ), equalTo( longValue( 1 ) ) ) ),
-                msgRecord( eqRecord( equalTo( stringValue( "L31" ) ), equalTo( longValue( 1 ) ) ) ),
-                msgRecord( eqRecord( equalTo( stringValue( "L32" ) ), equalTo( longValue( 1 ) ) ) ),
-                msgRecord( eqRecord( equalTo( stringValue( "L33" ) ), equalTo( longValue( 1 ) ) ) ),
-                msgRecord( eqRecord( equalTo( stringValue( "L34" ) ), equalTo( longValue( 1 ) ) ) ),
+                msgRecord( eqRecord( equalTo( stringValue( "L30" ) ) ) ),
+                msgRecord( eqRecord( equalTo( stringValue( "L31" ) ) ) ),
+                msgRecord( eqRecord( equalTo( stringValue( "L32" ) ) ) ),
+                msgRecord( eqRecord( equalTo( stringValue( "L33" ) ) ) ),
+                msgRecord( eqRecord( equalTo( stringValue( "L34" ) ) ) ),
                 msgSuccess( singletonMap( "has_more", true ) ) ) );
 
         // request 2 more records but do not provide qid
         connection.send( util.chunk( new PullMessage( asMapValue( map( "n", 2L ) ) ) ) );
         assertThat( connection, util.eventuallyReceives(
-                msgRecord( eqRecord( equalTo( stringValue( "L35" ) ), equalTo( longValue( 1 ) ) ) ),
-                msgRecord( eqRecord( equalTo( stringValue( "L36" ) ), equalTo( longValue( 1 ) ) ) ),
+                msgRecord( eqRecord( equalTo( stringValue( "L35" ) ) ) ),
+                msgRecord( eqRecord( equalTo( stringValue( "L36" ) ) ) ),
                 msgSuccess( singletonMap( "has_more", true ) ) ) );
 
         // request 3 more records and provide qid
         connection.send( util.chunk( new PullMessage( asMapValue( map( "n", 3L, "qid", 0L ) ) ) ) );
         assertThat( connection, util.eventuallyReceives(
-                msgRecord( eqRecord( equalTo( stringValue( "L37" ) ), equalTo( longValue( 1 ) ) ) ),
-                msgRecord( eqRecord( equalTo( stringValue( "L38" ) ), equalTo( longValue( 1 ) ) ) ),
-                msgRecord( eqRecord( equalTo( stringValue( "L39" ) ), equalTo( longValue( 1 ) ) ) ),
+                msgRecord( eqRecord( equalTo( stringValue( "L37" ) ) ) ),
+                msgRecord( eqRecord( equalTo( stringValue( "L38" ) ) ) ),
+                msgRecord( eqRecord( equalTo( stringValue( "L39" ) ) ) ),
                 msgSuccess( singletonMap( "has_more", true ) ) ) );
 
         // request 10 more records but do not provide qid, only 1 more record is available
         connection.send( util.chunk( new PullMessage( asMapValue( map( "n", 10L ) ) ) ) );
         assertThat( connection, util.eventuallyReceives(
-                msgRecord( eqRecord( equalTo( stringValue( "L40" ) ), equalTo( longValue( 1 ) ) ) ),
+                msgRecord( eqRecord( equalTo( stringValue( "L40" ) ) ) ),
                 msgSuccess( allOf( not( hasKey( "has_more" ) ), hasKey( "t_last" ) ) ) ) );
 
         // rollback the transaction

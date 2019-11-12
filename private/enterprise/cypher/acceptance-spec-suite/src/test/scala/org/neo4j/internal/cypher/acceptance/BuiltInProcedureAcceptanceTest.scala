@@ -250,8 +250,8 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
       """
         |CREATE ()-[:C]->()
         |WITH 1 as single
-        |CALL db.relationshipTypes() YIELD relationshipType, relationshipCount
-        |RETURN relationshipType, relationshipCount
+        |CALL db.relationshipTypes() YIELD relationshipType
+        |RETURN relationshipType
       """.stripMargin)
 
     // Then
@@ -275,8 +275,8 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
         |MATCH ()-[c:C]->()
         |DELETE c
         |WITH count(c) as single
-        |CALL db.relationshipTypes() YIELD relationshipType, relationshipCount
-        |RETURN relationshipType, relationshipCount
+        |CALL db.relationshipTypes() YIELD relationshipType
+        |RETURN relationshipType
       """.stripMargin)
 
     // Then
