@@ -34,7 +34,7 @@ import static org.junit.Assert.fail;
 
 class DriverAuthHelper
 {
-    private static final Config config = Config.build()
+    private static final Config config = Config.builder()
             .withLogging( Logging.none() )
             .withoutEncryption()
             .withConnectionTimeout( 10, TimeUnit.SECONDS )
@@ -133,7 +133,7 @@ class DriverAuthHelper
         try ( Session session = driver.session() )
         {
             StatementResult result = session.run( "CREATE ()" );
-            assertThat( result.summary().counters().nodesCreated(), CoreMatchers.equalTo( 1 ) );
+            assertThat( result.consume().counters().nodesCreated(), CoreMatchers.equalTo( 1 ) );
         }
     }
 

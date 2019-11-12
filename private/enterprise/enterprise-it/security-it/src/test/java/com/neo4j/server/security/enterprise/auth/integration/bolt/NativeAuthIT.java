@@ -42,7 +42,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel.DISABLED;
-import static org.neo4j.driver.internal.SessionConfig.forDatabase;
+import static org.neo4j.driver.SessionConfig.forDatabase;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
 
 public class NativeAuthIT
@@ -259,7 +259,7 @@ public class NativeAuthIT
                             }
                         }
                     }
-                    tx.success();
+                    tx.commit();
                 }
             }
         }

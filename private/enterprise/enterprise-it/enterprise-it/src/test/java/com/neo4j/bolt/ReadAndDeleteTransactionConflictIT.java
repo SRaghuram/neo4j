@@ -124,7 +124,7 @@ public class ReadAndDeleteTransactionConflictIT
                     readResult = reader.run( "match (:L4)-[r]->() return 1 as whatever, r" );
                     StatementResult deleteResult = deleter.run( "match (n:L4) detach delete n" );
                     deleteResult.consume();
-                    deleter.success();
+                    deleter.commit();
                 }
 
                 while ( readResult.hasNext() )
@@ -164,7 +164,7 @@ public class ReadAndDeleteTransactionConflictIT
                     readResult = reader.run( "match (:L5)-[r]->() return 1 as whatever, r" );
                     StatementResult deleteResult = deleter.run( "match (n:L5) detach delete n" );
                     deleteResult.consume();
-                    deleter.success();
+                    deleter.commit();
                 }
 
                 while ( readResult.hasNext() )
@@ -204,7 +204,7 @@ public class ReadAndDeleteTransactionConflictIT
                     readResult = reader.run( "match (n:L6) return 1 as whatever, n" );
                     StatementResult deleteResult = deleter.run( "match (n:L6) delete n" );
                     deleteResult.consume();
-                    deleter.success();
+                    deleter.commit();
                 }
 
                 while ( readResult.hasNext() )
@@ -244,7 +244,7 @@ public class ReadAndDeleteTransactionConflictIT
                     readResult = reader.run( "match (n:L7) return 1 as whatever, n" );
                     StatementResult deleteResult = deleter.run( "match (n:L7) delete n" );
                     deleteResult.consume();
-                    deleter.success();
+                    deleter.commit();
                 }
 
                 while ( readResult.hasNext() )

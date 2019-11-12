@@ -62,7 +62,7 @@ class FabricDriverAsyncTransaction implements FabricDriverTransaction
         StatementResultImpl( Mono<StatementResultCursor> statementResultCursor, long sourceTag )
         {
             super( statementResultCursor.map( StatementResultCursor::keys ).flatMapMany( Flux::fromIterable ),
-                    statementResultCursor.map( StatementResultCursor::summaryAsync ).flatMap( Mono::fromCompletionStage ), sourceTag );
+                    statementResultCursor.map( StatementResultCursor::consumeAsync ).flatMap( Mono::fromCompletionStage ), sourceTag );
             this.statementResultCursor = statementResultCursor;
             this.recordConverter = new RecordConverter( sourceTag );
         }

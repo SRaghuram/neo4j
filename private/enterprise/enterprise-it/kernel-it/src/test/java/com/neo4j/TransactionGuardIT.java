@@ -39,6 +39,7 @@ import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Logging;
 import org.neo4j.driver.Session;
+import org.neo4j.driver.exceptions.Neo4jException;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.TransactionTerminatedException;
@@ -308,10 +309,10 @@ class TransactionGuardIT
         {
             org.neo4j.driver.Transaction transaction = session.beginTransaction();
             transaction.run( "create (n)" ).consume();
-            transaction.success();
             fakeClock.forward( 3, TimeUnit.SECONDS );
             timeoutMonitor.run();
-            assertThrows( Exception.class, transaction.run( "create (n)" )::consume );
+            Neo4jException e = assertThrows( Neo4jException.class, transaction.run( "create (n)" )::consume );
+            assertEquals( Status.Transaction.TransactionTimedOut.code().serialize(), e.code() );
         }
         assertDatabaseDoesNotHaveNodes( database );
     }
@@ -426,7 +427,7 @@ class TransactionGuardIT
         return org.neo4j.driver.Config.builder()
                 .withoutEncryption()
                 .withLogging( Logging.none() )
-                .toConfig();
+                .build();
     }
 
     private EnterpriseNeoServer startNeoServer( DatabaseManagementService databaseManagementService ) throws IOException

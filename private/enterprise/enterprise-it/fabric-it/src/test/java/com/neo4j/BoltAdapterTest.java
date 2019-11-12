@@ -37,19 +37,19 @@ import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Config;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
-import org.neo4j.driver.Session;
-import org.neo4j.driver.Transaction;
 import org.neo4j.driver.exceptions.DatabaseException;
-import org.neo4j.driver.internal.SessionConfig;
 import org.neo4j.kernel.availability.UnavailableException;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.Values;
 
+import static com.neo4j.utils.DriverUtils.doInMegaSession;
+import static com.neo4j.utils.DriverUtils.doInMegaTx;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
@@ -73,7 +73,6 @@ class BoltAdapterTest
     private final CountDownLatch transactionLatch = new CountDownLatch( 1 );
     private final FabricTransaction fabricTransaction = mock( FabricTransaction.class );
     private final ExecutorService executorService = Executors.newSingleThreadExecutor();
-    private final SessionConfig sessionConfig = SessionConfig.builder().withDatabase( "mega" ).build();
 
     @BeforeAll
     static void setUpServer() throws UnavailableException
@@ -142,20 +141,13 @@ class BoltAdapterTest
         mockConfig( 1, 1000, 1 );
 
         CountDownLatch latch = new CountDownLatch( 1 );
-        executorService.submit( () ->
+        executorService.submit( () -> doInMegaTx( driver, tx ->
         {
-            try ( Session session = driver.session( sessionConfig ) )
-            {
-                try ( Transaction transaction = session.beginTransaction() )
-                {
-                    var result = transaction.run( "Some Cypher query" );
-                    verifyDefaultResult( result );
-                    transaction.success();
-                }
-            }
+            var result =  tx.run( "Some Cypher query" );
+            verifyDefaultResult( result );
 
             latch.countDown();
-        } );
+        }) );
 
         publishDefaultResult();
         assertTrue( latch.await( 1, TimeUnit.SECONDS ) );
@@ -172,16 +164,13 @@ class BoltAdapterTest
         mockConfig( 1, 1000, 1 );
 
         CountDownLatch latch = new CountDownLatch( 1 );
-        executorService.submit( () ->
+        executorService.submit( () -> doInMegaSession( driver, session ->
         {
-            try ( Session session = driver.session( sessionConfig ) )
-            {
-                var result = session.run( "Some Cypher query" );
-                verifyDefaultResult( result );
-            }
+            var result =  session.run( "Some Cypher query" );
+            verifyDefaultResult( result );
 
             latch.countDown();
-        } );
+        }) );
 
         publishDefaultResult();
         assertTrue( latch.await( 5, TimeUnit.SECONDS ) );
@@ -198,20 +187,13 @@ class BoltAdapterTest
         mockConfig( 1, 1000, 1 );
 
         CountDownLatch latch = new CountDownLatch( 1 );
-        executorService.submit( () ->
+        executorService.submit( () -> doInMegaTx( driver, tx ->
         {
-            try ( Session session = driver.session( sessionConfig ) )
-            {
-                try ( Transaction transaction = session.beginTransaction() )
-                {
-                    var result = transaction.run( "Some Cypher query" );
-                    verifyDefaultResult( result );
-                    transaction.failure();
-                }
-            }
-
+            var result = tx.run( "Some Cypher query" );
+            verifyDefaultResult( result );
+            tx.rollback();
             latch.countDown();
-        } );
+        } ) );
 
         publishDefaultResult();
         assertTrue( latch.await( 5, TimeUnit.SECONDS ) );
@@ -232,20 +214,13 @@ class BoltAdapterTest
         CountDownLatch latch = new CountDownLatch( 1 );
         executorService.submit( () ->
         {
-            try ( Session session = driver.session( sessionConfig ) )
+            var e = assertThrows( DatabaseException.class, () -> doInMegaTx( driver, tx ->
             {
-                try ( Transaction transaction = session.beginTransaction() )
-                {
-                    var result = transaction.run( "Some Cypher query" );
-                    verifyDefaultResult( result );
-                    fail( "exception expected" );
-                }
-            }
-            catch ( DatabaseException e )
-            {
+                var result = tx.run( "Some Cypher query" );
+                verifyDefaultResult( result );
+            } ) );
 
-                assertThat( e.getMessage(), containsString( "Something went wrong" ) );
-            }
+            assertThat( e.getMessage(), containsString( "Something went wrong" ) );
 
             latch.countDown();
         } );
@@ -268,17 +243,13 @@ class BoltAdapterTest
         CountDownLatch latch = new CountDownLatch( 1 );
         executorService.submit( () ->
         {
-            try ( Session session = driver.session( sessionConfig ) )
+            var e = assertThrows( DatabaseException.class, () -> doInMegaSession( driver, session ->
             {
                 var result = session.run( "Some Cypher query" );
                 verifyDefaultResult( result );
-                fail( "exception expected" );
-            }
-            catch ( DatabaseException e )
-            {
+            } ) );
 
-                assertThat( e.getMessage(), containsString( "Something went wrong" ) );
-            }
+            assertThat( e.getMessage(), containsString( "Something went wrong" ) );
 
             latch.countDown();
         } );
@@ -299,20 +270,13 @@ class BoltAdapterTest
         CountDownLatch latch = new CountDownLatch( 1 );
         executorService.submit( () ->
         {
-            try ( Session session = driver.session( sessionConfig ) )
+            var e = assertThrows( DatabaseException.class, () -> doInMegaTx( driver, tx ->
             {
-                try ( Transaction transaction = session.beginTransaction() )
-                {
-                    var result = transaction.run( "Some Cypher query" );
-                    verifyDefaultResult( result );
-                    fail( "exception expected" );
-                }
-            }
-            catch ( DatabaseException e )
-            {
+                var result = tx.run( "Some Cypher query" );
+                verifyDefaultResult( result );
+            } ) );
 
-                assertThat( e.getMessage(), containsString( "Something went wrong" ) );
-            }
+            assertThat( e.getMessage(), containsString( "Something went wrong" ) );
 
             latch.countDown();
         } );
@@ -337,17 +301,13 @@ class BoltAdapterTest
         CountDownLatch latch = new CountDownLatch( 1 );
         executorService.submit( () ->
         {
-            try ( Session session = driver.session( sessionConfig ) )
+            var e = assertThrows( DatabaseException.class, () -> doInMegaSession( driver, session ->
             {
                 var result = session.run( "Some Cypher query" );
                 verifyDefaultResult( result );
-                fail( "exception expected" );
-            }
-            catch ( DatabaseException e )
-            {
+            } ) );
 
-                assertThat( e.getMessage(), containsString( "Something went wrong" ) );
-            }
+            assertThat( e.getMessage(), containsString( "Something went wrong" ) );
 
             latch.countDown();
         } );

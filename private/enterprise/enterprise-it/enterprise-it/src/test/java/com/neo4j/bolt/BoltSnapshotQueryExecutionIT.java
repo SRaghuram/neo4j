@@ -92,12 +92,18 @@ class BoltSnapshotQueryExecutionIT
     {
         try ( Session session = driver.session() )
         {
-            StatementResult result = session.readTransaction( tx -> tx.run( "MATCH (n) RETURN n.c" ) );
-            assertEquals( 1, testCursorContext.getAdditionalAttempts() );
-            while ( result.hasNext() )
+            session.readTransaction( tx ->
             {
-                assertEquals( "d", result.next().get( "n.c" ).asString() );
-            }
+                StatementResult result =  tx.run( "MATCH (n) RETURN n.c" );
+                while ( result.hasNext() )
+                {
+                    assertEquals( "d", result.next().get( "n.c" ).asString() );
+                }
+
+                return null;
+            } );
+
+            assertEquals( 1, testCursorContext.getAdditionalAttempts() );
         }
     }
 

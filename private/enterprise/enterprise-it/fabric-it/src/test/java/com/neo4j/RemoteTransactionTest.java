@@ -13,6 +13,7 @@ import com.neo4j.fabric.driver.PooledDriver;
 import com.neo4j.fabric.localdb.FabricDatabaseManager;
 import com.neo4j.fabric.stream.StatementResult;
 import com.neo4j.fabric.stream.summary.EmptySummary;
+import com.neo4j.utils.DriverUtils;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,6 +30,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.stream.IntStream;
 
 import org.neo4j.common.DependencyResolver;
@@ -38,10 +40,10 @@ import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Session;
+import org.neo4j.driver.SessionConfig;
 import org.neo4j.driver.Transaction;
 import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.driver.exceptions.DatabaseException;
-import org.neo4j.driver.internal.SessionConfig;
 import org.neo4j.kernel.GraphDatabaseQueryService;
 import org.neo4j.kernel.availability.UnavailableException;
 import org.neo4j.kernel.database.DatabaseId;
@@ -54,6 +56,7 @@ import org.neo4j.scheduler.JobScheduler;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
@@ -225,15 +228,11 @@ class RemoteTransactionTest
     @Test
     void testCommit()
     {
-        try ( var session = openSession() )
+        doInMegaTx( tx ->
         {
-            try ( Transaction tx = session.beginTransaction() )
-            {
-                writeToShard1( tx );
-                readFromShard2( tx );
-                tx.success();
-            }
-        }
+            writeToShard1( tx );
+            readFromShard2( tx );
+        } );
 
         waitForDriverRelease( 2 );
         verifyCommitted( tx1 );
@@ -243,15 +242,12 @@ class RemoteTransactionTest
     @Test
     void testRollback()
     {
-        try ( var session = openSession() )
+        doInMegaTx( tx ->
         {
-            try ( Transaction tx = session.beginTransaction() )
-            {
-                writeToShard1( tx );
-                readFromShard2( tx );
-                tx.failure();
-            }
-        }
+            writeToShard1( tx );
+            readFromShard2( tx );
+            tx.rollback();
+        } );
 
         waitForDriverRelease( 2 );
         verifyRolledBack( tx1 );
@@ -264,25 +260,15 @@ class RemoteTransactionTest
 
         mockShardDriver( shard1Driver, Mono.error( new IllegalStateException( "Begin failed on shard 1" ) ) );
 
-        try ( Session session = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ) )
+        var e = assertThrows( DatabaseException.class, () -> doInMegaTx( tx ->
         {
-            try ( Transaction tx = session.beginTransaction() )
-            {
-                readFromShard2( tx );
-                readFromShard3( tx );
-                writeToShard1( tx );
-                fail( "Exception expected" );
-            }
-        }
-        catch ( DatabaseException e )
-        {
-            assertEquals( "Neo.DatabaseError.Statement.ExecutionFailed", e.code() );
-            assertThat( e.getMessage(), containsString( "Begin failed on shard 1" ) );
-        }
-        catch ( Exception e )
-        {
-            fail( "Unexpected exception", e );
-        }
+            readFromShard2( tx );
+            readFromShard3( tx );
+            writeToShard1( tx );
+        } ) );
+
+        assertEquals( "Neo.DatabaseError.Statement.ExecutionFailed", e.code() );
+        assertThat( e.getMessage(), containsString( "Begin failed on shard 1" ) );
 
         waitForDriverRelease( 3 );
         verifyDriverReturned( shard1Driver, shard2Driver, shard3Driver );
@@ -293,26 +279,15 @@ class RemoteTransactionTest
     {
         when( tx1.commit() ).thenReturn( Mono.error( new IllegalStateException( "Commit failed on shard 1" ) ) );
 
-        try ( var session = openSession() )
+        var e = assertThrows( DatabaseException.class, () -> doInMegaTx( tx ->
         {
-            try ( Transaction tx = session.beginTransaction() )
-            {
-                writeToShard1( tx );
-                readFromShard2( tx );
-                readFromShard3( tx );
-                tx.success();
-            }
-            fail( "Exception expected" );
-        }
-        catch ( DatabaseException e )
-        {
-            assertEquals( "Neo.DatabaseError.Transaction.TransactionCommitFailed", e.code() );
-            assertThat( e.getMessage(), containsString( "Failed to commit remote transaction" ) );
-        }
-        catch ( Exception e )
-        {
-            fail( "Unexpected exception", e );
-        }
+            writeToShard1( tx );
+            readFromShard2( tx );
+            readFromShard3( tx );
+        } ) );
+
+        assertEquals( "Neo.DatabaseError.Transaction.TransactionCommitFailed", e.code() );
+        assertThat( e.getMessage(), containsString( "Failed to commit remote transaction" ) );
 
         waitForDriverRelease( 3 );
         verifyCommitted( tx1 );
@@ -324,26 +299,16 @@ class RemoteTransactionTest
     {
         when( tx1.rollback() ).thenReturn( Mono.error( new IllegalStateException( "Rollback failed on shard 1" ) ) );
 
-        try ( var session = openSession() )
+        var e = assertThrows( DatabaseException.class, () -> doInMegaTx( tx ->
         {
-            try ( Transaction tx = session.beginTransaction() )
-            {
-                writeToShard1( tx );
-                readFromShard2( tx );
-                readFromShard3( tx );
-                tx.failure();
-            }
-            fail( "Exception expected" );
-        }
-        catch ( DatabaseException e )
-        {
-            assertEquals( "Neo.DatabaseError.Transaction.TransactionRollbackFailed", e.code() );
-            assertThat( e.getMessage(), containsString( "Failed to rollback remote transaction" ) );
-        }
-        catch ( Exception e )
-        {
-            fail( "Unexpected exception", e );
-        }
+            writeToShard1( tx );
+            readFromShard2( tx );
+            readFromShard3( tx );
+            tx.rollback();
+        } ) );
+
+        assertEquals( "Neo.DatabaseError.Transaction.TransactionRollbackFailed", e.code() );
+        assertThat( e.getMessage(), containsString( "Failed to rollback remote transaction" ) );
 
         waitForDriverRelease( 3 );
         verifyRolledBack( tx1 );
@@ -355,29 +320,16 @@ class RemoteTransactionTest
     {
         when( shard3Driver.run( any(), any(), any(), any(), any(), any() ) ).thenThrow( new IllegalStateException( "Query on shard 3 failed" ) );
 
-        try ( var session = openSession() )
-        {
-            try ( Transaction tx = session.beginTransaction() )
-            {
+        var e = assertThrows( DatabaseException.class, () -> {
+            doInMegaTx( tx -> {
                 writeToShard1( tx );
                 readFromShard2( tx );
-                try
-                {
-                    readFromShard3( tx );
-                    fail( "Exception expected" );
-                }
-                catch ( DatabaseException e )
-                {
-                    assertEquals( "Neo.DatabaseError.Statement.ExecutionFailed", e.code() );
-                    assertThat( e.getMessage(), containsString( "Query on shard 3 failed" ) );
-                }
-                catch ( Exception e )
-                {
-                    fail( "Unexpected exception", e );
-                }
-                tx.success();
-            }
-        }
+                readFromShard3( tx );
+            } );
+        } );
+
+        assertEquals( "Neo.DatabaseError.Statement.ExecutionFailed", e.code() );
+        assertThat( e.getMessage(), containsString( "Query on shard 3 failed" ) );
 
         waitForDriverRelease( 3 );
         verifyRolledBack( tx1 );
@@ -393,29 +345,14 @@ class RemoteTransactionTest
 
         when( shard3Driver.run( any(), any(), any(), any(), any(), any() ) ).thenReturn( result );
 
-        try ( var session = openSession() )
-        {
-            try ( Transaction tx = session.beginTransaction() )
-            {
-                writeToShard1( tx );
-                readFromShard2( tx );
-                try
-                {
-                    readFromShard3( tx );
-                    fail( "Exception expected" );
-                }
-                catch ( DatabaseException e )
-                {
-                    assertEquals( "Neo.DatabaseError.Statement.ExecutionFailed", e.code() );
-                    assertThat( e.getMessage(), containsString( "Result stream from shard 3 failed" ) );
-                }
-                catch ( Exception e )
-                {
-                    fail( "Unexpected exception", e );
-                }
-                tx.success();
-            }
-        }
+        var e = assertThrows( DatabaseException.class, () -> doInMegaTx( tx -> {
+            writeToShard1( tx );
+            readFromShard2( tx );
+            readFromShard3( tx );
+        } ) );
+
+        assertEquals( "Neo.DatabaseError.Statement.ExecutionFailed", e.code() );
+        assertThat( e.getMessage(), containsString( "Result stream from shard 3 failed" ) );
 
         waitForDriverRelease( 3 );
         verifyRolledBack( tx1 );
@@ -445,29 +382,18 @@ class RemoteTransactionTest
         ArgumentCaptor<Runnable> timeoutCallback = ArgumentCaptor.forClass( Runnable.class );
         when( jobScheduler.schedule( any(), timeoutCallback.capture(), anyLong(), any() ) ).thenReturn( mock( JobHandle.class ) );
 
-        try ( var session = openSession() )
+        var e = assertThrows( ClientException.class, () -> doInMegaTx( tx ->
         {
-            try ( Transaction tx = session.beginTransaction() )
-            {
-                writeToShard1( tx );
-                readFromShard2( tx );
+            writeToShard1( tx );
+            readFromShard2( tx );
 
-                timeoutCallback.getValue().run();
+            timeoutCallback.getValue().run();
 
-                tx.run( "USE mega.shard1 MATCH (n) RETURN n" ).consume();
+            tx.run( "USE mega.shard1 MATCH (n) RETURN n" ).consume();
+        } ) );
 
-                fail( "Exception expected" );
-            }
-        }
-        catch ( ClientException e )
-        {
-            assertEquals( "Neo.ClientError.Transaction.TransactionTimedOut", e.code() );
-            assertThat( e.getMessage(), containsString( "Trying to execute query in a terminated transaction" ) );
-        }
-        catch ( Exception e )
-        {
-            fail( "Unexpected exception", e );
-        }
+        assertEquals( "Neo.ClientError.Transaction.TransactionTimedOut", e.code() );
+        assertThat( e.getMessage(), containsString( "Trying to execute query in a terminated transaction" ) );
 
         verifyRolledBack( tx1 );
         verifyDriverReturned( shard1Driver, shard2Driver );
@@ -526,5 +452,10 @@ class RemoteTransactionTest
     private Session openSession()
     {
         return clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() );
+    }
+
+    private void doInMegaTx( Consumer<Transaction> workload )
+    {
+        DriverUtils.doInMegaTx( clientDriver, workload );
     }
 }

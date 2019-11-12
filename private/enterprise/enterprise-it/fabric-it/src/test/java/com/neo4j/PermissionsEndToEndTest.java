@@ -16,10 +16,10 @@ import org.neo4j.configuration.Config;
 import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
+import org.neo4j.driver.SessionConfig;
 import org.neo4j.driver.Transaction;
 import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.driver.exceptions.DatabaseException;
-import org.neo4j.driver.internal.SessionConfig;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.harness.internal.InProcessNeo4j;
 import org.neo4j.harness.internal.TestNeo4jBuilders;
@@ -68,7 +68,7 @@ class PermissionsEndToEndTest
             try ( var tx = begin( initDriver, "system" ) )
             {
                 tx.run( "ALTER CURRENT USER SET PASSWORD FROM 'neo4j' TO '1234'" ).list();
-                tx.success();
+                tx.commit();
             }
         }
 
@@ -82,7 +82,7 @@ class PermissionsEndToEndTest
             tx.run( "GRANT ROLE access TO userWithAccessPermission" ).consume();
 
             tx.run( "CREATE USER userWithNoPermission SET PASSWORD '1234' CHANGE NOT REQUIRED" ).consume();
-            tx.success();
+            tx.commit();
         }
 
         accessDriver = createDriver( "userWithAccessPermission", "1234", ports.bolt );
@@ -217,7 +217,6 @@ class PermissionsEndToEndTest
         assertEquals( "Write operations are not allowed for user 'userWithAccessPermission' with roles [access] restricted to ACCESS.", e.getMessage() );
     }
 
-    // TODO: This should fail on permissions instead of on evaluation
     @Test
     void testAdminCannotAccessDataInUse()
     {

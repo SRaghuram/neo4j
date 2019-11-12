@@ -12,14 +12,15 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
+import org.neo4j.driver.SessionConfig;
 import org.neo4j.driver.Transaction;
-import org.neo4j.driver.internal.SessionConfig;
 import org.neo4j.driver.internal.shaded.reactor.core.publisher.Flux;
 import org.neo4j.driver.internal.shaded.reactor.core.publisher.Mono;
 import org.neo4j.driver.reactive.RxStatementResult;
@@ -76,14 +77,11 @@ class BoltLocalResultStreamTest
     @Test
     void testBasicResultStream()
     {
-        List<String> result;
-        try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
-        {
-            result = tx.run( "UNWIND range(0, 4) AS i RETURN 'r' + i as A" ).stream()
-                    .map( r -> r.get( "A" ).asString() )
-                    .collect( Collectors.toList() );
-            tx.success();
-        }
+        List<String> result = inMegaTx( tx ->
+                tx.run( "UNWIND range(0, 4) AS i RETURN 'r' + i as A" ).stream()
+                        .map( r -> r.get( "A" ).asString() )
+                        .collect( Collectors.toList() )
+        );
 
         assertThat( result, equalTo( List.of( "r0", "r1", "r2", "r3", "r4" ) ) );
     }
@@ -91,51 +89,66 @@ class BoltLocalResultStreamTest
     @Test
     void testRxResultStream()
     {
-        RxTransaction tx = Mono.from( clientDriver.rxSession( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() ).block();
-
-        try
+        List<String> result = inMegaRxTx( tx ->
         {
             RxStatementResult statementResult = tx.run( "UNWIND range(0, 4) AS i RETURN 'r' + i as A" );
+            return Flux.from( statementResult.records() )
+                    .limitRate( 1 )
+                    .collectList()
+                    .block()
+                    .stream()
+                    .map( r -> r.get( "A" ).asString() )
+                    .collect( Collectors.toList() );
+        } );
 
-            List<String> result =
-                    Flux.from( statementResult.records() )
-                            .limitRate( 1 )
-                            .collectList()
-                            .block()
-                            .stream()
-                            .map( r -> r.get( "A" ).asString() )
-                            .collect( Collectors.toList() );
-
-            assertThat( result, equalTo( List.of( "r0", "r1", "r2", "r3", "r4" ) ) );
-        }
-        finally
-        {
-            Mono.from( tx.rollback() ).block();
-        }
+        assertThat( result, equalTo( List.of( "r0", "r1", "r2", "r3", "r4" ) ) );
     }
 
     @Test
     void testPartialStream()
     {
-        RxTransaction tx = Mono.from( clientDriver.rxSession( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() ).block();
-
-        try
+        List<String> result  = inMegaRxTx( tx ->
         {
             RxStatementResult statementResult = tx.run( "UNWIND range(0, 4) AS i RETURN 'r' + i as A" );
 
-            List<String> result = Flux.from( statementResult.records() )
+            return Flux.from( statementResult.records() )
                     .limitRequest( 2 )
                     .collectList()
                     .block()
                     .stream()
                     .map( r -> r.get( "A" ).asString() )
                     .collect( Collectors.toList() );
+        } );
 
-            assertThat( result, equalTo( List.of( "r0", "r1" ) ) );
+        assertThat( result, equalTo( List.of( "r0", "r1" ) ) );
+    }
+
+    private <T> T inMegaTx( Function<Transaction,T> workload )
+    {
+        try ( var session = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ) )
+        {
+            return session.writeTransaction( workload::apply );
+        }
+    }
+
+    private <T> T inMegaRxTx( Function<RxTransaction,T> workload )
+    {
+        var session = clientDriver.rxSession( SessionConfig.builder().withDatabase( "mega" ).build() );
+        try
+        {
+            RxTransaction tx = Mono.from( session.beginTransaction() ).block();
+            try
+            {
+                return workload.apply( tx );
+            }
+            finally
+            {
+                Mono.from( tx.rollback() ).block();
+            }
         }
         finally
         {
-            Mono.from( tx.rollback() ).block();
+            Mono.from( session.close() ).block();
         }
     }
 }

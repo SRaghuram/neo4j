@@ -234,7 +234,7 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
                 {
                     tx.run( "CALL dbms.security.clearAuthCache()" );
                     assertThat( tx.run( "MATCH (n) RETURN count(n)" ).single().get( 0 ).asInt(), greaterThanOrEqualTo( 0 ) );
-                    tx.success();
+                    tx.commit();
                 }
             }
         }
@@ -275,7 +275,7 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
                     latch.startAndWaitForAllToStart();
                     latch.finishAndWaitForAllToFinish();
                     assertion.accept( tx );
-                    tx.success();
+                    tx.commit();
                 }
             }
             catch ( Throwable t )

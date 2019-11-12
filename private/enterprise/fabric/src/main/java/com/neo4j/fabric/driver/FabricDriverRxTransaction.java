@@ -57,7 +57,7 @@ class FabricDriverRxTransaction implements FabricDriverTransaction
 
         StatementResultImpl( RxStatementResult rxStatementResult, long sourceTag )
         {
-            super( Flux.from( rxStatementResult.keys() ), Mono.from( rxStatementResult.summary() ), sourceTag );
+            super( Mono.from( rxStatementResult.keys() ).flatMapMany(Flux::fromIterable), Mono.from( rxStatementResult.consume() ), sourceTag );
             this.rxStatementResult = rxStatementResult;
         }
 

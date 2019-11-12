@@ -236,7 +236,7 @@ public class SessionResetIT
             try ( Transaction tx = session.beginTransaction() )
             {
                 tx.run( query );
-                tx.success();
+                tx.commit();
             }
         }
     }

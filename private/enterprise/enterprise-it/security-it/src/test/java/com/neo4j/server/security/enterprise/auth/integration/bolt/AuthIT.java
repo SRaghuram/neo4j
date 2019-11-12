@@ -60,7 +60,7 @@ import static org.junit.Assume.assumeTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static org.neo4j.configuration.SettingValueParsers.TRUE;
-import static org.neo4j.driver.internal.SessionConfig.forDatabase;
+import static org.neo4j.driver.SessionConfig.forDatabase;
 
 @SuppressWarnings( "deprecation" )
 @RunWith( Parameterized.class )

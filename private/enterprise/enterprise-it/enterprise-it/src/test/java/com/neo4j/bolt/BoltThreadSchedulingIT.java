@@ -108,8 +108,7 @@ public class BoltThreadSchedulingIT
                     {
                         throw new RuntimeException( e );
                     }
-                    tx.success();
-                    tx.close();
+                    tx.commit();
                 }
             } );
             futures[i] = future;

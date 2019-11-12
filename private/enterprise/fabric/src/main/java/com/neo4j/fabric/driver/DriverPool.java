@@ -146,7 +146,13 @@ public class DriverPool extends LifecycleAdapter
         var driverFactory = new DriverFactory();
 
         var driverUri = constructDriverUri( location.getUri() );
-        var databaseDriver = driverFactory.newInstance( driverUri, token, RoutingSettings.DEFAULT, RetrySettings.DEFAULT, config, eventLoopGroup );
+        var databaseDriver = driverFactory.newInstance( driverUri,
+                token,
+                RoutingSettings.DEFAULT,
+                RetrySettings.DEFAULT,
+                config,
+                eventLoopGroup,
+                null );
 
         var driverApi = driverConfigFactory.getProperty( location, FabricConfig.DriverConfig::getDriverApi );
         switch ( driverApi )

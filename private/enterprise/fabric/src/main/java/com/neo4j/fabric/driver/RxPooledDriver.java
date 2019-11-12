@@ -75,7 +75,10 @@ class RxPooledDriver extends PooledDriver
 
         StatementResultImpl( RxSession session, RxStatementResult rxStatementResult, long sourceTag )
         {
-            super( Flux.from( rxStatementResult.keys() ), Mono.from( rxStatementResult.summary() ), sourceTag, session::close );
+            super( Mono.from( rxStatementResult.keys() ).flatMapMany( Flux::fromIterable ),
+                    Mono.from( rxStatementResult.consume() ),
+                    sourceTag, session::close
+            );
             this.session = session;
             this.rxStatementResult = rxStatementResult;
         }
@@ -83,7 +86,7 @@ class RxPooledDriver extends PooledDriver
         @Override
         public String getBookmark()
         {
-            return session.lastBookmark();
+            return DriverBookmarkFormat.serialize( session.lastBookmark() );
         }
 
         @Override

@@ -30,8 +30,8 @@ import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Record;
+import org.neo4j.driver.SessionConfig;
 import org.neo4j.driver.Transaction;
-import org.neo4j.driver.internal.SessionConfig;
 import org.neo4j.driver.internal.shaded.reactor.core.publisher.Mono;
 import org.neo4j.driver.reactive.RxTransaction;
 import org.neo4j.exceptions.KernelException;
@@ -127,12 +127,12 @@ class TransactionIntegrationTest
         try ( Transaction tx = shard0Driver.session().beginTransaction() )
         {
             tx.run( "MATCH (n) DETACH DELETE n" );
-            tx.success();
+            tx.commit();
         }
         try ( Transaction tx = shard1Driver.session().beginTransaction() )
         {
             tx.run( "MATCH (n) DETACH DELETE n" ).consume();
-            tx.success();
+            tx.commit();
         }
 
         remote0.databaseManagementService().registerTransactionEventListener( "neo4j", remote0Listener );

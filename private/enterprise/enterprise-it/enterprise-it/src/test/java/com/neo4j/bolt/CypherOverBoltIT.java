@@ -22,6 +22,7 @@ import org.neo4j.driver.Driver;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.StatementResult;
 import org.neo4j.driver.exceptions.ClientException;
+import org.neo4j.driver.exceptions.ResultConsumedException;
 import org.neo4j.driver.summary.ResultSummary;
 import org.neo4j.driver.types.Node;
 import org.neo4j.harness.junit.rule.Neo4jRule;
@@ -29,7 +30,8 @@ import org.neo4j.io.fs.FileUtils;
 import org.neo4j.test.rule.SuppressOutput;
 
 import static com.neo4j.bolt.BoltDriverHelper.graphDatabaseDriver;
-import static java.util.Collections.emptyList;
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -104,7 +106,7 @@ public class CypherOverBoltIT
                                                                  StatementResult result =
                                                                          tx.run( "EXPLAIN USING PERIODIC COMMIT " +
                                                                                  "100 LOAD CSV FROM $file AS row CREATE (n:Row) SET n.row = row" );
-                                                                 return result.summary();
+                                                                 return result.consume();
                                                              } );
             assertTrue( summary.hasPlan() );
         }
@@ -297,21 +299,25 @@ public class CypherOverBoltIT
             String query = "UNWIND [1, 2, 3, 4, 0] AS x RETURN 10 / x";
             StatementResult result = session.run( query );
 
-           try
-           {
-               result.consume();
-               fail();
-           }
-           catch ( ClientException e )
-           {
-               assertTrue( e.code().contains( "ArithmeticError" ) );
+            try
+            {
+                result.consume();
+                fail();
+            }
+            catch ( ClientException e )
+            {
+                assertThat( e.code(), containsString( "ArithmeticError" ) );
+            }
 
-               assertFalse( result.hasNext() );
-               assertEquals( emptyList(), result.list() );
-
-               ResultSummary summary = result.summary();
-               assertEquals( query, summary.statement().text() );
-           }
+            try
+            {
+                assertFalse( result.hasNext() );
+                fail();
+            }
+            catch ( ResultConsumedException e )
+            {
+                // ignored
+            }
         }
     }
 

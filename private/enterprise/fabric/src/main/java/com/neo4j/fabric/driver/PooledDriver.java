@@ -17,8 +17,8 @@ import java.util.function.Consumer;
 
 import org.neo4j.bolt.runtime.AccessMode;
 import org.neo4j.driver.Driver;
+import org.neo4j.driver.SessionConfig;
 import org.neo4j.driver.TransactionConfig;
-import org.neo4j.driver.internal.SessionConfig;
 import org.neo4j.values.virtual.MapValue;
 
 public abstract class PooledDriver

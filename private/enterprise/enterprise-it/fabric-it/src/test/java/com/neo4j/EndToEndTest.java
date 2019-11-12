@@ -6,6 +6,7 @@
 package com.neo4j;
 
 import com.neo4j.utils.CustomFunctions;
+import com.neo4j.utils.DriverUtils;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,11 +20,12 @@ import java.time.OffsetTime;
 import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.driver.AccessMode;
 import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
@@ -32,7 +34,7 @@ import org.neo4j.driver.Session;
 import org.neo4j.driver.Transaction;
 import org.neo4j.driver.Values;
 import org.neo4j.driver.exceptions.ClientException;
-import org.neo4j.driver.internal.SessionConfig;
+import org.neo4j.driver.SessionConfig;
 import org.neo4j.driver.summary.ResultSummary;
 import org.neo4j.driver.summary.StatementType;
 import org.neo4j.driver.types.Node;
@@ -127,14 +129,14 @@ class EndToEndTest
             tx.run( "MATCH (n) DETACH DELETE n" );
             tx.run( "CREATE (:Person {name: 'Anna', uid: 0, age: 30})" ).consume();
             tx.run( "CREATE (:Person {name: 'Bob',  uid: 1, age: 40})" ).consume();
-            tx.success();
+            tx.commit();
         }
         try ( Transaction tx = shard1Driver.session().beginTransaction() )
         {
             tx.run( "MATCH (n) DETACH DELETE n" ).consume();
             tx.run( "CREATE (:Person {name: 'Carrie', uid: 100, age: 30})" ).consume();
             tx.run( "CREATE (:Person {name: 'Dave'  , uid: 101, age: 90})" ).consume();
-            tx.success();
+            tx.commit();
         }
     }
 
@@ -154,15 +156,12 @@ class EndToEndTest
     @Test
     void testReadStrings()
     {
-        List<String> result;
-        try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
-        {
-            result = Stream.concat(
-                    tx.run( "USE mega.graph(0) MATCH (n) RETURN n.name AS name" ).stream(),
-                    tx.run( "USE mega.graph(1) MATCH (n) RETURN n.name AS name" ).stream()
-            ).map( r -> r.get( "name" ).asString() ).collect( Collectors.toList() );
-            tx.success();
-        }
+        List<String> result = inMegaTx( tx ->
+                Stream.concat(
+                        tx.run( "USE mega.graph(0) MATCH (n) RETURN n.name AS name" ).stream(),
+                        tx.run( "USE mega.graph(1) MATCH (n) RETURN n.name AS name" ).stream()
+                ).map( r -> r.get( "name" ).asString() ).collect( Collectors.toList() )
+        );
 
         assertThat( result, containsInAnyOrder( equalTo( "Anna" ), equalTo( "Bob" ), equalTo( "Carrie" ), equalTo( "Dave" ) ) );
     }
@@ -170,15 +169,12 @@ class EndToEndTest
     @Test
     void testNamedGraphs()
     {
-        List<String> result;
-        try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
-        {
-            result = Stream.concat(
+        List<String> result = inMegaTx( tx ->
+            Stream.concat(
                     tx.run( "USE mega.myGraph0 MATCH (n) RETURN n.name AS name" ).stream(),
                     tx.run( "USE mega.myGraph1 MATCH (n) RETURN n.name AS name" ).stream()
-            ).map( r -> r.get( "name" ).asString() ).collect( Collectors.toList() );
-            tx.success();
-        }
+            ).map( r -> r.get( "name" ).asString() ).collect( Collectors.toList() )
+        );
 
         assertThat( result, containsInAnyOrder( equalTo( "Anna" ), equalTo( "Bob" ), equalTo( "Carrie" ), equalTo( "Dave" ) ) );
     }
@@ -186,19 +182,16 @@ class EndToEndTest
     @Test
     void testReadStringsFromView()
     {
-        List<String> result;
-
-        try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
+        List<String> result = inMegaTx( tx ->
         {
             Map<String,Object> sid0 = Map.of( "sid", 0 );
             Map<String,Object> sid1 = Map.of( "sid", 1 );
 
-            result = Stream.concat(
+            return Stream.concat(
                     tx.run( "USE mega.graph($sid) MATCH (n) RETURN n.name AS name", sid0 ).stream(),
                     tx.run( "USE mega.graph($sid) MATCH (n) RETURN n.name AS name", sid1 ).stream()
             ).map( r -> r.get( "name" ).asString() ).collect( Collectors.toList() );
-            tx.success();
-        }
+        } );
 
         assertThat( result, containsInAnyOrder( equalTo( "Anna" ), equalTo( "Bob" ), equalTo( "Carrie" ), equalTo( "Dave" ) ) );
     }
@@ -206,16 +199,12 @@ class EndToEndTest
     @Test
     void testReadNodes()
     {
-        List<Node> r;
-
-        try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
-        {
-            r = Stream.concat(
-                    tx.run( "USE mega.graph(0) MATCH (n) RETURN n" ).stream(),
-                    tx.run( "USE mega.graph(1) MATCH (n) RETURN n" ).stream()
-            ).map( c -> c.get( "n" ).asNode() ).collect( Collectors.toList() );
-            tx.success();
-        }
+        List<Node> r = inMegaTx( tx ->
+                Stream.concat(
+                        tx.run( "USE mega.graph(0) MATCH (n) RETURN n" ).stream(),
+                        tx.run( "USE mega.graph(1) MATCH (n) RETURN n" ).stream()
+                ).map( c -> c.get( "n" ).asNode() ).collect( Collectors.toList() )
+        );
 
         var labels = r.stream().map( Node::labels ).collect( Collectors.toList() );
         assertThat( labels, containsInAnyOrder( contains( "Person" ), contains( "Person" ), contains( "Person" ), contains( "Person" ) ) );
@@ -227,28 +216,21 @@ class EndToEndTest
     @Test
     void testWriteNodes()
     {
-
-        try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDefaultAccessMode( AccessMode.WRITE ).withDatabase( "mega" ).build() )
-                .beginTransaction() )
+        doInMegaTx( tx ->
         {
             tx.run( "USE mega.graph(0) CREATE (:Cat {name: 'Whiskers'})" );
             tx.run( "USE mega.graph(0) CREATE (:Cat {name: 'Charlie'})" );
-            tx.success();
-        }
+        } );
 
-        List<Node> r;
-
-        try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDefaultAccessMode( AccessMode.WRITE ).withDatabase( "mega" ).build() )
-                .beginTransaction() )
+        List<Node> r = inMegaTx( tx ->
         {
             tx.run( "USE mega.graph(1) CREATE (:Cat {name: 'Misty'})" );
             tx.run( "USE mega.graph(1) CREATE (:Cat {name: 'Cupcake'})" );
-            r = Stream.concat(
+            return Stream.concat(
                     tx.run( "USE mega.graph(0) MATCH (c:Cat) RETURN c" ).stream(),
                     tx.run( "USE mega.graph(1) MATCH (c:Cat) RETURN c" ).stream()
             ).map( c -> c.get( "c" ).asNode() ).collect( Collectors.toList() );
-            tx.success();
-        }
+        } );
 
         var labels = r.stream().map( Node::labels ).collect( Collectors.toList() );
         assertThat( labels, containsInAnyOrder( contains( "Cat" ), contains( "Cat" ), contains( "Cat" ), contains( "Cat" ) ) );
@@ -259,18 +241,15 @@ class EndToEndTest
     @Test
     void testCustomShardKeyMapping()
     {
-        List<Node> r;
-
-        try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
+        List<Node> r = inMegaTx( tx ->
         {
             Map<String,Object> uid = Map.of( "uid", 100 );
-            r = tx.run( joinAsLines(
+            return tx.run( joinAsLines(
                     "USE mega.graph(com.neo4j.utils.personShard($uid))",
                     "MATCH (n {uid: $uid})",
                     "RETURN n"
             ), uid ).stream().map( c -> c.get( "n" ).asNode() ).collect( Collectors.toList() );
-            tx.success();
-        }
+        } );
 
         assertThat( r.size(), equalTo( 1 ) );
         assertThat( r.get( 0 ).labels(), contains( equalTo( "Person" ) ) );
@@ -281,17 +260,13 @@ class EndToEndTest
     @Test
     void testReadUnionAll()
     {
-        List<Node> r;
-
-        try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
-        {
-            r = tx.run( joinAsLines(
-                    "USE mega.graph(0) MATCH (n) RETURN n",
-                    "UNION ALL",
-                    "USE mega.graph(1) MATCH (n) RETURN n"
-            ) ).stream().map( c -> c.get( "n" ).asNode() ).collect( Collectors.toList() );
-            tx.success();
-        }
+        List<Node> r = inMegaTx( tx ->
+                tx.run( joinAsLines(
+                        "USE mega.graph(0) MATCH (n) RETURN n",
+                        "UNION ALL",
+                        "USE mega.graph(1) MATCH (n) RETURN n"
+                ) ).stream().map( c -> c.get( "n" ).asNode() ).collect( Collectors.toList() )
+        );
 
         assertThat( r.size(), equalTo( 4 ) );
         var labels = r.stream().map( Node::labels ).collect( Collectors.toList() );
@@ -304,17 +279,13 @@ class EndToEndTest
     @Test
     void testReadUnionDistinct()
     {
-        List<Node> r;
-
-        try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
-        {
-            r = tx.run( joinAsLines(
-                    "USE mega.graph(0) MATCH (n) RETURN n",
-                    "UNION",
-                    "USE mega.graph(1) MATCH (n) RETURN n"
-            ) ).stream().map( c -> c.get( "n" ).asNode() ).collect( Collectors.toList() );
-            tx.success();
-        }
+        List<Node> r = inMegaTx( tx ->
+                tx.run( joinAsLines(
+                        "USE mega.graph(0) MATCH (n) RETURN n",
+                        "UNION",
+                        "USE mega.graph(1) MATCH (n) RETURN n"
+                ) ).stream().map( c -> c.get( "n" ).asNode() ).collect( Collectors.toList() )
+        );
 
         assertThat( r.size(), equalTo( 4 ) );
         var labels = r.stream().map( Node::labels ).collect( Collectors.toList() );
@@ -326,17 +297,13 @@ class EndToEndTest
     @Test
     void testReadUnionAllValues()
     {
-        List<Integer> r;
-
-        try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
-        {
-            r = tx.run( joinAsLines(
-                    "USE mega.graph(0) MATCH (n) RETURN n.age AS a",
-                    "UNION ALL",
-                    "USE mega.graph(1) MATCH (n) RETURN n.age AS a"
-            ) ).stream().map( c -> c.get( "a" ).asInt() ).collect( Collectors.toList() );
-            tx.success();
-        }
+        List<Integer> r = inMegaTx( tx ->
+                        tx.run( joinAsLines(
+                                "USE mega.graph(0) MATCH (n) RETURN n.age AS a",
+                                "UNION ALL",
+                                "USE mega.graph(1) MATCH (n) RETURN n.age AS a"
+                        ) ).stream().map( c -> c.get( "a" ).asInt() ).collect( Collectors.toList() )
+        );
 
         assertThat( r, containsInAnyOrder( equalTo( 30 ), equalTo( 30 ), equalTo( 40 ), equalTo( 90 ) ) );
     }
@@ -344,17 +311,13 @@ class EndToEndTest
     @Test
     void testReadUnionDistinctValues()
     {
-        List<Integer> r;
-
-        try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
-        {
-            r = tx.run( joinAsLines(
-                    "USE mega.graph(0) MATCH (n) RETURN n.age AS a",
-                    "UNION",
-                    "USE mega.graph(1) MATCH (n) RETURN n.age AS a"
-            ) ).stream().map( c -> c.get( "a" ).asInt() ).collect( Collectors.toList() );
-            tx.success();
-        }
+        List<Integer> r = inMegaTx( tx ->
+                        tx.run( joinAsLines(
+                                "USE mega.graph(0) MATCH (n) RETURN n.age AS a",
+                                "UNION",
+                                "USE mega.graph(1) MATCH (n) RETURN n.age AS a"
+                        ) ).stream().map( c -> c.get( "a" ).asInt() ).collect( Collectors.toList() )
+        );
 
         assertThat( r, containsInAnyOrder( equalTo( 30 ), equalTo( 40 ), equalTo( 90 ) ) );
     }
@@ -362,31 +325,17 @@ class EndToEndTest
     @Test
     void testOptionalValue()
     {
-        try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDefaultAccessMode( AccessMode.WRITE ).withDatabase( "mega" ).build() )
-                .beginTransaction() )
-        {
-            tx.run( "USE mega.graph(0) CREATE (:User {id:1}) - [:FRIEND] -> (:User)" );
-            tx.success();
-        }
-
-        try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDefaultAccessMode( AccessMode.READ ).withDatabase( "mega" ).build() )
-                .beginTransaction() )
-        {
-            tx.run( "USE mega.graph(0) MATCH (n:User{id:1})-[:FRIEND]->(x:User) OPTIONAL MATCH (x)-[:FRIEND]->(y:User) RETURN x, y" ).consume();
-            tx.success();
-        }
+        doInMegaTx( tx -> tx.run( "USE mega.graph(0) CREATE (:User {id:1}) - [:FRIEND] -> (:User)" ) );
+        doInMegaTx( tx ->
+                tx.run( "USE mega.graph(0) MATCH (n:User{id:1})-[:FRIEND]->(x:User) OPTIONAL MATCH (x)-[:FRIEND]->(y:User) RETURN x, y" )
+                        .consume()
+        );
     }
 
     @Test
     void testLocalSingleReturn()
     {
-        List<Record> r;
-
-        try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
-        {
-            r = tx.run( "RETURN 1+2 AS a, 'foo' AS f" ).list();
-            tx.success();
-        }
+        List<Record> r = inMegaTx( tx -> tx.run( "RETURN 1+2 AS a, 'foo' AS f" ).list() );
 
         assertThat( r.get( 0 ).get( "a" ).asInt(), equalTo( 3 ) );
         assertThat( r.get( 0 ).get( "f" ).asString(), equalTo( "foo" ) );
@@ -395,21 +344,18 @@ class EndToEndTest
     @Test
     void testReadFromShardWithProxyAliasing()
     {
-        List<Record> r;
-
-        try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
+        List<Record> r = inMegaTx( tx ->
         {
-            var query = joinAsLines(
-                    "UNWIND [0, 1] AS x",
-                    "CALL {",
-                    "  USE mega.graph(x)",
-                    "  MATCH (y)",
-                    "  RETURN y",
-                    "}",
-                    "RETURN x AS Sid, y AS Person" );
-            r = tx.run( query ).list();
-            tx.success();
-        }
+                var query = joinAsLines(
+                "UNWIND [0, 1] AS x",
+                "CALL {",
+                "  USE mega.graph(x)",
+                "  MATCH (y)",
+                "  RETURN y",
+                "}",
+                "RETURN x AS Sid, y AS Person" );
+                return tx.run( query ).list();
+        });
 
         assertEquals( 4, r.size() );
         var personToSid = r.stream().collect( Collectors.toMap( e -> e.get( "Person" ).asNode().get( "name" ).asString(), e -> e.get( "Sid" ).asInt() ) );
@@ -419,8 +365,7 @@ class EndToEndTest
     @Test
     void testAllGraphsRead()
     {
-        List<Record> r;
-        try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
+        List<Record> r = inMegaTx( tx ->
         {
             var query = joinAsLines(
                     "UNWIND mega.graphIds() AS gid",
@@ -431,9 +376,8 @@ class EndToEndTest
                     "}",
                     "RETURN gid, y AS person",
                     "  ORDER BY person.uid" );
-            r = tx.run( query ).list();
-            tx.success();
-        }
+            return tx.run( query ).list();
+        } );
 
         var graphIds = r.stream()
                 .map( c -> c.get( "gid" ).asInt() )
@@ -461,8 +405,7 @@ class EndToEndTest
     @Test
     void testIdTagging()
     {
-        List<Record> r;
-        try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
+        List<Record> r = inMegaTx( tx ->
         {
             var query = joinAsLines(
                     "UNWIND mega.graphIds() AS gid",
@@ -472,9 +415,9 @@ class EndToEndTest
                     "  RETURN p, id(p) AS local_id",
                     "}",
                     "RETURN gid, local_id, id(p) as tagged_id" );
-            r = tx.run( query ).list();
-            tx.success();
-        }
+            return tx.run( query ).list();
+        } );
+
         var gids = r.stream().map( c -> c.get( "gid" ).asLong() ).distinct().count();
         var local = r.stream().map( c -> c.get( "local_id" ).asLong() ).distinct().count();
         var tagged = r.stream().map( c -> c.get( "tagged_id" ).asLong() ).distinct().count();
@@ -487,9 +430,7 @@ class EndToEndTest
     @Test
     void testReadFromShardWithProxyOrdering()
     {
-        List<String> r;
-
-        try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
+        List<String> r = inMegaTx( tx ->
         {
             var query = joinAsLines(
                     "UNWIND [0, 1] AS x",
@@ -502,11 +443,10 @@ class EndToEndTest
                     "ORDER BY name DESC" );
 
             List<Record> records = tx.run( query ).list();
-            r = records.stream()
+            return records.stream()
                     .map( c -> c.get( "name" ).asString() )
                     .collect( Collectors.toList() );
-            tx.success();
-        }
+        } );
 
         assertThat( r, equalTo( List.of( "Dave", "Carrie", "Bob", "Anna" ) ) );
     }
@@ -514,9 +454,7 @@ class EndToEndTest
     @Test
     void testReadFromShardWithProxyAggregation()
     {
-        List<Record> records;
-
-        try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
+        List<Record> records = inMegaTx( tx ->
         {
             var query = joinAsLines(
                     "UNWIND [0, 1] AS x",
@@ -528,9 +466,8 @@ class EndToEndTest
                     "RETURN age, collect(name) AS names",
                     "ORDER BY age DESC" );
 
-            records = tx.run( query ).list();
-            tx.success();
-        }
+            return tx.run( query ).list();
+        } );
 
         assertThat( records.size(), is( 3 ) );
         assertThat( records.get( 0 ).keys(), contains( "age", "names" ) );
@@ -547,9 +484,7 @@ class EndToEndTest
     @Test
     void testColumnJuggling()
     {
-        List<Record> r;
-
-        try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
+        List<Record> r = inMegaTx( tx ->
         {
             var query = joinAsLines(
                     "WITH 1 AS x",
@@ -570,9 +505,8 @@ class EndToEndTest
                     "RETURN z, w, y, x"
             );
 
-            r = tx.run( query ).list();
-            tx.success();
-        }
+            return tx.run( query ).list();
+        } );
 
         assertThat( r.size(), equalTo( 1 ) );
         assertThat( r.get( 0 ).keys(), contains( "z", "w", "y", "x" ) );
@@ -582,30 +516,26 @@ class EndToEndTest
     @Test
     void testDisallowRemoteSubqueryInRemoteSubquery()
     {
-        ClientException ex = assertThrows( ClientException.class, () ->
+        ClientException ex = assertThrows( ClientException.class, () -> doInMegaTx( tx ->
         {
-            try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
-            {
-                var query = joinAsLines(
-                        "UNWIND [1, 2, 3] AS x",
-                        "CALL {",
-                        "  USE mega.graph(0)",
-                        "  WITH x",
-                        "  WITH x*10 AS y",
-                        "  CALL {",
-                        "    WITH y",
-                        "    WITH y*10 AS z",
-                        "    RETURN z",
-                        "  }",
-                        "  RETURN y, z, z*10 AS w",
-                        "}",
-                        "RETURN x, y, z, w"
-                );
+            var query = joinAsLines(
+                    "UNWIND [1, 2, 3] AS x",
+                    "CALL {",
+                    "  USE mega.graph(0)",
+                    "  WITH x",
+                    "  WITH x*10 AS y",
+                    "  CALL {",
+                    "    WITH y",
+                    "    WITH y*10 AS z",
+                    "    RETURN z",
+                    "  }",
+                    "  RETURN y, z, z*10 AS w",
+                    "}",
+                    "RETURN x, y, z, w"
+            );
 
-                tx.run( query ).consume();
-                tx.success();
-            }
-        } );
+            tx.run( query ).consume();
+        } ) );
 
         assertThat( ex.getMessage(), containsStringIgnoringCase( "Nested subqueries in remote query-parts is not supported" ) );
     }
@@ -613,9 +543,7 @@ class EndToEndTest
     @Test
     void testSubqueryWithCreate()
     {
-        List<Record> r;
-
-        try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
+        List<Record> r = inMegaTx( tx ->
         {
             var query = joinAsLines(
                     "WITH 1 AS x",
@@ -627,9 +555,8 @@ class EndToEndTest
                     "RETURN x, y"
             );
 
-            r = tx.run( query ).list();
-            tx.success();
-        }
+            return tx.run( query ).list();
+        } );
 
         assertThat( r.size(), equalTo( 1 ) );
         assertThat( r.get( 0 ).get( "x" ).asLong(), is( 1L ) );
@@ -640,9 +567,7 @@ class EndToEndTest
     @Test
     void testSubqueryWithSet()
     {
-        List<Record> r;
-
-        try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
+        List<Record> r = inMegaTx( tx ->
         {
             var query = joinAsLines(
                     "WITH 1 AS x",
@@ -655,9 +580,8 @@ class EndToEndTest
                     "RETURN y"
             );
 
-            r = tx.run( query ).list();
-            tx.success();
-        }
+            return tx.run( query ).list();
+        } );
 
         assertThat( r.size(), is( 1 ) );
         assertThat( r.get( 0 ).get( "y" ).asNode().get( "age" ).asLong(), is( 100L ) );
@@ -666,9 +590,7 @@ class EndToEndTest
     @Test
     void testSubqueryWithNamespacerRenamedVariables()
     {
-        List<Record> r;
-
-        try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
+        List<Record> r = inMegaTx( tx ->
         {
             // Namespacer will rename variables in the first local query
             var query = joinAsLines(
@@ -683,9 +605,8 @@ class EndToEndTest
                     "RETURN x, y, z"
             );
 
-            r = tx.run( query ).list();
-            tx.success();
-        }
+            return tx.run( query ).list();
+        } );
 
         assertThat( r.size(), is( 1 ) );
         assertThat( r.get( 0 ).get( "x" ).asLong(), is( 1L ) );
@@ -696,9 +617,7 @@ class EndToEndTest
     @Test
     void testSubqueryWithCreateAndReturn()
     {
-        List<Record> r;
-
-        try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
+        List<Record> r = inMegaTx( tx ->
         {
             var query = joinAsLines(
                     "WITH 1 AS x",
@@ -710,9 +629,8 @@ class EndToEndTest
                     "RETURN x, name"
             );
 
-            r = tx.run( query ).list();
-            tx.success();
-        }
+            return tx.run( query ).list();
+        } );
 
         assertThat( r.size(), equalTo( 1 ) );
         assertThat( r.get( 0 ).keys(), contains( "x", "name" ) );
@@ -722,15 +640,12 @@ class EndToEndTest
     @Test
     void testNameNormalization()
     {
-        List<Record> r;
-
-        try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "MeGa" ).build() ).beginTransaction() )
+        List<Record> r = inMegaTx( tx ->
         {
             var query = "USE mega.graph(0) RETURN 1 AS x";
 
-            r = tx.run( query ).list();
-            tx.success();
-        }
+            return tx.run( query ).list();
+        } );
 
         assertThat( r.size(), equalTo( 1 ) );
         assertThat( r.get( 0 ).keys(), contains( "x" ) );
@@ -740,9 +655,7 @@ class EndToEndTest
     @Test
     void testCorrelatedRemoteSubquery()
     {
-        List<Record> r;
-
-        try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
+        List<Record> r = inMegaTx( tx ->
         {
             var query = joinAsLines(
                     "UNWIND [10, 20] AS x",
@@ -754,9 +667,8 @@ class EndToEndTest
                     "RETURN x, y"
             );
 
-            r = tx.run( query ).list();
-            tx.success();
-        }
+            return tx.run( query ).list();
+        } );
 
         assertThat( r.size(), equalTo( 2 ) );
         assertThat( r.get( 0 ).keys(), contains( "x", "y" ) );
@@ -768,9 +680,7 @@ class EndToEndTest
     @Test
     void testCorrelatedRemoteSubquerySupportedTypes()
     {
-        List<Record> r;
-
-        try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
+        List<Record> r = inMegaTx( tx ->
         {
             var query = joinAsLines(
                     "WITH",
@@ -838,9 +748,8 @@ class EndToEndTest
                     "  duration_2"
             );
 
-            r = tx.run( query ).list();
-            tx.success();
-        }
+            return tx.run( query ).list();
+        } );
 
         assertThat( r.size(), equalTo( 1 ) );
         assertThat( r.get( 0 ).get( "nothing_2" ), is( Values.NULL ) );
@@ -862,27 +771,23 @@ class EndToEndTest
     @Test
     void testCorrelatedRemoteSubqueryNodeType()
     {
-        ClientException ex = assertThrows( ClientException.class, () ->
+        ClientException ex = assertThrows( ClientException.class, () -> doInMegaTx( tx ->
         {
-            try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
-            {
-                var query = joinAsLines(
-                        "CALL {",
-                        "  USE mega.graph(0)",
-                        "  CREATE (n:Test)",
-                        "  RETURN n",
-                        "}",
-                        "CALL {",
-                        "  USE mega.graph(0)",
-                        "  WITH n",
-                        "  RETURN 1 AS x",
-                        "}",
-                        "RETURN n, x"
-                );
-                tx.run( query ).list();
-                tx.success();
-            }
-        } );
+            var query = joinAsLines(
+                    "CALL {",
+                    "  USE mega.graph(0)",
+                    "  CREATE (n:Test)",
+                    "  RETURN n",
+                    "}",
+                    "CALL {",
+                    "  USE mega.graph(0)",
+                    "  WITH n",
+                    "  RETURN 1 AS x",
+                    "}",
+                    "RETURN n, x"
+            );
+            tx.run( query ).list();
+        } ) );
 
         assertThat( ex.getMessage(), containsStringIgnoringCase( "node values" ) );
         assertThat( ex.getMessage(), containsStringIgnoringCase( "not supported" ) );
@@ -891,27 +796,23 @@ class EndToEndTest
     @Test
     void testCorrelatedRemoteSubqueryRelType()
     {
-        ClientException ex = assertThrows( ClientException.class, () ->
+        ClientException ex = assertThrows( ClientException.class, () -> doInMegaTx( tx ->
         {
-            try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
-            {
-                var query = joinAsLines(
-                        "CALL {",
-                        "  USE mega.graph(0)",
-                        "  CREATE (:Test)-[r:Rel]->(:Test)",
-                        "  RETURN r",
-                        "}",
-                        "CALL {",
-                        "  USE mega.graph(0)",
-                        "  WITH r",
-                        "  RETURN 1 AS x",
-                        "}",
-                        "RETURN r, x"
-                );
-                tx.run( query ).list();
-                tx.success();
-            }
-        } );
+            var query = joinAsLines(
+                    "CALL {",
+                    "  USE mega.graph(0)",
+                    "  CREATE (:Test)-[r:Rel]->(:Test)",
+                    "  RETURN r",
+                    "}",
+                    "CALL {",
+                    "  USE mega.graph(0)",
+                    "  WITH r",
+                    "  RETURN 1 AS x",
+                    "}",
+                    "RETURN r, x"
+            );
+            tx.run( query ).list();
+        } ) );
 
         assertThat( ex.getMessage(), containsStringIgnoringCase( "relationship values" ) );
         assertThat( ex.getMessage(), containsStringIgnoringCase( "not supported" ) );
@@ -920,27 +821,23 @@ class EndToEndTest
     @Test
     void testCorrelatedRemoteSubqueryPathType()
     {
-        ClientException ex = assertThrows( ClientException.class, () ->
+        ClientException ex = assertThrows( ClientException.class, () -> doInMegaTx( tx ->
         {
-            try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
-            {
-                var query = joinAsLines(
-                        "CALL {",
-                        "  USE mega.graph(0)",
-                        "  CREATE p = (:T)-[:R]->(:T)",
-                        "  RETURN p",
-                        "}",
-                        "CALL {",
-                        "  USE mega.graph(0)",
-                        "  WITH p",
-                        "  RETURN 1 AS x",
-                        "}",
-                        "RETURN p, x"
-                );
-                tx.run( query ).list();
-                tx.success();
-            }
-        } );
+            var query = joinAsLines(
+                    "CALL {",
+                    "  USE mega.graph(0)",
+                    "  CREATE p = (:T)-[:R]->(:T)",
+                    "  RETURN p",
+                    "}",
+                    "CALL {",
+                    "  USE mega.graph(0)",
+                    "  WITH p",
+                    "  RETURN 1 AS x",
+                    "}",
+                    "RETURN p, x"
+            );
+            tx.run( query ).list();
+        } ) );
 
         assertThat( ex.getMessage(), containsStringIgnoringCase( "path values" ) );
         assertThat( ex.getMessage(), containsStringIgnoringCase( "not supported" ) );
@@ -969,10 +866,7 @@ class EndToEndTest
     @Test
     void testQuerySummaryCounters()
     {
-        ResultSummary r;
-
-        try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
-        {
+        ResultSummary r = inMegaTx( tx -> {
             var query = joinAsLines(
                     "UNWIND [1, 2, 3] AS x",
                     "CALL {",
@@ -994,9 +888,8 @@ class EndToEndTest
                     "RETURN x"
             );
 
-            r = tx.run( query ).summary();
-            tx.success();
-        }
+            return tx.run( query ).consume();
+        } );
 
         assertThat( r.statementType(), is( StatementType.READ_WRITE ) );
         assertThat( r.counters().containsUpdates(), is( true ) );
@@ -1011,5 +904,15 @@ class EndToEndTest
         assertThat( r.counters().indexesRemoved(), is( 0 ) );
         assertThat( r.counters().constraintsAdded(), is( 0 ) );
         assertThat( r.counters().constraintsRemoved(), is( 0 ) );
+    }
+
+    private <T> T inMegaTx( Function<Transaction, T> workload )
+    {
+        return DriverUtils.inMegaTx(clientDriver, workload);
+    }
+
+    private void doInMegaTx( Consumer<Transaction> workload )
+    {
+        DriverUtils.doInMegaTx( clientDriver, workload );
     }
 }

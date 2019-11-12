@@ -8,7 +8,6 @@ package com.neo4j;
 import com.neo4j.utils.CustomFunctions;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -22,12 +21,12 @@ import org.neo4j.configuration.Config;
 import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
-import org.neo4j.driver.Transaction;
+import org.neo4j.driver.Record;
 import org.neo4j.driver.Value;
-import org.neo4j.driver.internal.SessionConfig;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.procedure.impl.GlobalProceduresRegistry;
 
+import static com.neo4j.utils.DriverUtils.inMegaTx;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -80,20 +79,18 @@ class RoutingTableTest
     @Test
     void testGettingRoutingTable()
     {
-
-        try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
+        List<Record> records = inMegaTx( clientDriver, tx ->
         {
             var params = Map.of( "context", Map.of(), "database", "mega" );
-            var records = tx.run( "CALL dbms.cluster.routing.getRoutingTable($context , $database)", params ).list();
-            assertEquals( 1, records.size() );
+            return tx.run( "CALL dbms.cluster.routing.getRoutingTable($context , $database)", params ).list();
+        } );
 
-            var record1 = records.get( 0 );
-            assertEquals( 1234, record1.get( 0 ).asLong() );
-            Value serverList = record1.get( 1 );
-            verifyRole( serverList, "ROUTE", "localhost:" + ports.bolt, "host1:1001", "host2:1002", "host3:1003" );
+        assertEquals( 1, records.size() );
 
-            tx.success();
-        }
+        var record1 = records.get( 0 );
+        assertEquals( 1234, record1.get( 0 ).asLong() );
+        Value serverList = record1.get( 1 );
+        verifyRole( serverList, "ROUTE", "localhost:" + ports.bolt, "host1:1001", "host2:1002", "host3:1003" );
     }
 
     private void verifyRole( Value serverList, String role, String... servers )

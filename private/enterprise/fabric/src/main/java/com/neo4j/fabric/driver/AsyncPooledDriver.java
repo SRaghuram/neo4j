@@ -78,7 +78,7 @@ public class AsyncPooledDriver extends PooledDriver
         StatementResultImpl( AsyncSession session, Mono<StatementResultCursor> statementResultCursor, long sourceTag )
         {
             super( statementResultCursor.map( StatementResultCursor::keys ).flatMapMany( Flux::fromIterable ),
-                    statementResultCursor.map( StatementResultCursor::summaryAsync ).flatMap( Mono::fromCompletionStage ),
+                    statementResultCursor.map( StatementResultCursor::consumeAsync ).flatMap( Mono::fromCompletionStage ),
                     sourceTag, session::closeAsync );
             this.session = session;
             this.statementResultCursor = statementResultCursor;
@@ -94,7 +94,7 @@ public class AsyncPooledDriver extends PooledDriver
         @Override
         public String getBookmark()
         {
-            return session.lastBookmark();
+            return DriverBookmarkFormat.serialize( session.lastBookmark() );
         }
     }
 }

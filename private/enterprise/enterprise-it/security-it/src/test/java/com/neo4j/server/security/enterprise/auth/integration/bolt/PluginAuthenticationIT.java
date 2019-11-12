@@ -258,7 +258,7 @@ public class PluginAuthenticationIT
             {
                 tx.run( "CALL dbms.security.clearAuthCache()" );
                 assertThat( tx.run( "MATCH (n) RETURN count(n)" ).single().get( 0 ).asInt(), greaterThanOrEqualTo( 0 ) );
-                tx.success();
+                tx.commit();
             }
         }
     }

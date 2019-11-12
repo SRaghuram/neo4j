@@ -20,9 +20,9 @@ import java.util.stream.Collectors;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.Session;
+import org.neo4j.driver.SessionConfig;
 import org.neo4j.driver.Transaction;
 import org.neo4j.driver.exceptions.ClientException;
-import org.neo4j.driver.internal.SessionConfig;
 import org.neo4j.harness.junit.rule.Neo4jRule;
 
 import static com.neo4j.bolt.BoltDriverHelper.graphDatabaseDriver;
@@ -49,7 +49,7 @@ public class DeleteUserStressIT
               Transaction tx = session.beginTransaction() )
         {
             tx.run( "ALTER CURRENT USER SET PASSWORD FROM 'neo4j' TO 'abc'" ).consume();
-            tx.success();
+            tx.commit();
         }
         adminDriver.close();
         adminDriver = graphDatabaseDriver( db.boltURI(), basic( "neo4j", "abc" ) );
@@ -83,7 +83,7 @@ public class DeleteUserStressIT
                       Transaction tx = session.beginTransaction() )
                 {
                     tx.run( "UNWIND range(1, 100000) AS n RETURN n" ).consume();
-                    tx.success();
+                    tx.commit();
                 }
             }
             catch ( ClientException e )
@@ -106,7 +106,7 @@ public class DeleteUserStressIT
                   Transaction tx = session.beginTransaction() )
             {
                 tx.run( "DROP USER pontus" ).consume();
-                tx.success();
+                tx.commit();
             }
             catch ( ClientException e )
             {
@@ -127,7 +127,7 @@ public class DeleteUserStressIT
                   Transaction tx = session.beginTransaction() )
             {
                 tx.run( "CREATE USER pontus SET PASSWORD 'sutnop' CHANGE NOT REQUIRED" ).consume();
-                tx.success();
+                tx.commit();
             }
             catch ( ClientException e )
             {

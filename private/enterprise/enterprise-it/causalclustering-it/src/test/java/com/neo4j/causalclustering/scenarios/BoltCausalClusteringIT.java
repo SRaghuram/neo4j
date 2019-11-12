@@ -33,6 +33,7 @@ import java.util.function.Function;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.driver.AuthTokens;
+import org.neo4j.driver.Bookmark;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Session;
@@ -64,7 +65,7 @@ import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static org.neo4j.driver.AccessMode.READ;
 import static org.neo4j.driver.AccessMode.WRITE;
 import static org.neo4j.driver.Values.parameters;
-import static org.neo4j.driver.internal.SessionConfig.builder;
+import static org.neo4j.driver.SessionConfig.builder;
 import static org.neo4j.internal.helpers.collection.MapUtil.stringMap;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
@@ -341,7 +342,7 @@ class BoltCausalClusteringIT
                 try ( Session session = driver.session( builder().withDefaultAccessMode( WRITE ).build() ) )
                 {
                     StatementResult result = session.run( "CREATE (p:Person)" );
-                    ServerInfo server = result.summary().server();
+                    ServerInfo server = result.consume().server();
                     seenAddresses.add( server.address());
                     success = seenAddresses.size() >= 2;
                 }
@@ -430,12 +431,12 @@ class BoltCausalClusteringIT
 
         try ( Driver driver = makeDriver( leader.directURI() ) )
         {
-            String bookmark = inExpirableSession( driver, Driver::session, session ->
+            Bookmark bookmark = inExpirableSession( driver, Driver::session, session ->
             {
                 try ( Transaction tx = session.beginTransaction() )
                 {
                     tx.run( "CREATE (p:Person {name: $name })", parameters( "name", "Alistair" ) );
-                    tx.success();
+                    tx.commit();
                 }
 
                 return session.lastBookmark();
@@ -448,7 +449,7 @@ class BoltCausalClusteringIT
             {
                 Record record = tx.run( "MATCH (n:Person) RETURN COUNT(*) AS count" ).next();
                 assertEquals( 1, record.get( "count" ).asInt() );
-                tx.success();
+                tx.commit();
             }
         }
     }
@@ -467,13 +468,13 @@ class BoltCausalClusteringIT
                 return null;
             } );
 
-            String bookmark;
+            Bookmark bookmark;
             try ( Session session = driver.session( builder().withDefaultAccessMode( READ ).build() ) )
             {
                 try ( Transaction tx = session.beginTransaction() )
                 {
                     tx.run( "MATCH (n:Person) RETURN COUNT(*) AS count" ).next();
-                    tx.success();
+                    tx.commit();
                 }
 
                 bookmark = session.lastBookmark();
@@ -486,7 +487,7 @@ class BoltCausalClusteringIT
                 try ( Transaction tx = session.beginTransaction() )
                 {
                     tx.run( "CREATE (p:Person {name: $name })", parameters( "name", "Alistair" ) );
-                    tx.success();
+                    tx.commit();
                 }
 
                 return null;
@@ -513,7 +514,7 @@ class BoltCausalClusteringIT
         try ( Driver driver1 = makeDriver( leader.directURI() ) )
         {
 
-            String bookmark = inExpirableSession( driver1, d -> d.session( builder().withDefaultAccessMode( WRITE ).build() ), session ->
+            Bookmark bookmark = inExpirableSession( driver1, d -> d.session( builder().withDefaultAccessMode( WRITE ).build() ), session ->
             {
                 try ( Transaction tx = session.beginTransaction() )
                 {
@@ -521,7 +522,7 @@ class BoltCausalClusteringIT
                     tx.run( "CREATE (p:Person {name: $name })", parameters( "name", "Alistair" ) );
                     tx.run( "CREATE (p:Person {name: $name })", parameters( "name", "Mark" ) );
                     tx.run( "CREATE (p:Person {name: $name })", parameters( "name", "Chris" ) );
-                    tx.success();
+                    tx.commit();
                 }
 
                 return session.lastBookmark();
@@ -538,7 +539,7 @@ class BoltCausalClusteringIT
                     try ( Transaction tx = session.beginTransaction() )
                     {
                         Record record = tx.run( "MATCH (n:Person) RETURN COUNT(*) AS count" ).next();
-                        tx.success();
+                        tx.commit();
                         assertEquals( 4, record.get( "count" ).asInt() );
                     }
                 }
@@ -554,12 +555,12 @@ class BoltCausalClusteringIT
         try ( Driver driver = makeDriver( leader.routingURI() ) )
         {
 
-            String bookmark = inExpirableSession( driver, d -> d.session( builder().withDefaultAccessMode( WRITE ).build() ), session ->
+            Bookmark bookmark = inExpirableSession( driver, d -> d.session( builder().withDefaultAccessMode( WRITE ).build() ), session ->
             {
                 try ( Transaction tx = session.beginTransaction() )
                 {
                     tx.run( "CREATE (p:Person {name: $name })", parameters( "name", "Jim" ) );
-                    tx.success();
+                    tx.commit();
                 }
 
                 return session.lastBookmark();
@@ -594,7 +595,7 @@ class BoltCausalClusteringIT
 
                             assertEquals( 1, result.next().get( "count" ).asInt() );
 
-                            readReplicas.remove( result.summary().server().address() );
+                            readReplicas.remove( result.consume().server().address() );
 
                             return null;
                         } );
@@ -626,7 +627,7 @@ class BoltCausalClusteringIT
                     switchLeader( leader );
 
                     tx.run( "CREATE (person:Person {name: $name, title: $title})", parameters( "name", "Webber", "title", "Mr" ) );
-                    tx.success();
+                    tx.commit();
                 }
                 catch ( SessionExpiredException ignored )
                 {
@@ -634,12 +635,12 @@ class BoltCausalClusteringIT
                 }
             }
 
-            String bookmark = inExpirableSession( driver, Driver::session, s ->
+            Bookmark bookmark = inExpirableSession( driver, Driver::session, s ->
             {
                 try ( Transaction tx = s.beginTransaction() )
                 {
                     tx.run( "CREATE (person:Person {name: $name, title: $title})", parameters( "name", "Webber", "title", "Mr" ) );
-                    tx.success();
+                    tx.commit();
                 }
                 return s.lastBookmark();
             } );
@@ -650,7 +651,7 @@ class BoltCausalClusteringIT
                 try ( Transaction tx = session.beginTransaction() )
                 {
                     Record record = tx.run( "MATCH (n:Person) RETURN COUNT(*) AS count" ).next();
-                    tx.success();
+                    tx.commit();
                     assertEquals( 1, record.get( "count" ).asInt() );
                 }
             }
@@ -689,7 +690,7 @@ class BoltCausalClusteringIT
 
             pollingClient.stop();
 
-            String lastBookmark = null;
+            Bookmark lastBookmark = null;
             int iterations = 5;
             final int nodesToCreate = 20000;
             for ( int i = 0; i < iterations; i++ )
@@ -714,7 +715,7 @@ class BoltCausalClusteringIT
 
             happyCount = 0;
             numberOfRequests = 1_000;
-            String bookmark = lastBookmark;
+            Bookmark bookmark = lastBookmark;
             for ( int i = 0; i < numberOfRequests; i++ ) // don't care about cores
             {
                 try ( Session session = driver.session( builder().withBookmarks( bookmark ).build() ) )

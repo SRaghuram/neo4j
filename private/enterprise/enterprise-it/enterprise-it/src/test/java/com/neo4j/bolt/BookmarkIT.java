@@ -29,15 +29,18 @@ import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.api.DatabaseManagementService;
+import org.neo4j.driver.Bookmark;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.Session;
+import org.neo4j.driver.SessionConfig;
 import org.neo4j.driver.Transaction;
 import org.neo4j.driver.exceptions.TransientException;
-import org.neo4j.driver.internal.SessionConfig;
+import org.neo4j.driver.internal.InternalBookmark;
 import org.neo4j.graphdb.facade.DatabaseManagementServiceFactory;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
+import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.io.IOUtils;
 import org.neo4j.kernel.database.Database;
@@ -111,18 +114,18 @@ class BookmarkIT
         db = createDbms( commitBlocker );
         driver = graphDatabaseDriver( boltAddress( db ) );
 
-        String firstBookmark = createNode( driver );
+        Bookmark firstBookmark = createNode( driver );
 
         // make next transaction append to the log and then pause before applying to the store
         // this makes it allocate a transaction ID but wait before acknowledging the commit operation
         commitBlocker.blockNextTransaction();
-        CompletableFuture<String> secondBookmarkFuture = CompletableFuture.supplyAsync( () -> createNode( driver ) );
+        CompletableFuture<Bookmark> secondBookmarkFuture = CompletableFuture.supplyAsync( () -> createNode( driver ) );
         assertEventually( "Transaction did not block as expected", commitBlocker::hasBlockedTransaction, is( true ), 1, MINUTES );
 
-        Set<String> otherBookmarks = Stream.generate( () -> createNode( driver ) ).limit( 10 ).collect( toSet() );
+        Set<Bookmark> otherBookmarks = Stream.generate( () -> createNode( driver ) ).limit( 10 ).collect( toSet() );
 
         commitBlocker.unblock();
-        String lastBookmark = secondBookmarkFuture.get();
+        Bookmark lastBookmark = secondBookmarkFuture.get();
 
         // first and last bookmarks should not be null and should be different
         assertNotNull( firstBookmark );
@@ -139,8 +142,10 @@ class BookmarkIT
         db = createDbms();
         driver = graphDatabaseDriver( boltAddress( db ) );
 
-        var bookmark = createNode( driver );
-        var split = bookmark.split( ":" );
+        var bookmark = (InternalBookmark) createNode( driver );
+        var bookmarkStr = Iterables.first( bookmark.values() );
+
+        var split = bookmarkStr.split( ":" );
         assertThat( split, arrayWithSize( 2 ) );
     }
 
@@ -226,11 +231,11 @@ class BookmarkIT
         return db.getDependencyResolver().resolveDependency( TransactionIdStore.class ).getLastCommittedTransactionId();
     }
 
-    private String systemDatabaseBookmark( long txId )
+    private Bookmark systemDatabaseBookmark( long txId )
     {
         var db = (GraphDatabaseAPI) managementService.database( SYSTEM_DATABASE_NAME );
         var databaseId = db.getDependencyResolver().resolveDependency( Database.class ).getDatabaseId();
-        return new BookmarkWithDatabaseId( txId, databaseId ).toString();
+        return InternalBookmark.parse( new BookmarkWithDatabaseId( txId, databaseId ).toString() );
     }
 
     private void createDatabase( String databaseName )
@@ -238,7 +243,7 @@ class BookmarkIT
         createDatabase( databaseName, null );
     }
 
-    private void createDatabase( String databaseName, String systemDatabaseBookmark )
+    private void createDatabase( String databaseName, Bookmark systemDatabaseBookmark )
     {
         var sessionConfig = SessionConfig.builder()
                 .withDatabase( SYSTEM_DATABASE_NAME )
@@ -251,14 +256,14 @@ class BookmarkIT
         }
     }
 
-    private static String createNode( Driver driver )
+    private static Bookmark createNode( Driver driver )
     {
         try ( Session session = driver.session() )
         {
             try ( Transaction tx = session.beginTransaction() )
             {
                 tx.run( "CREATE ()" );
-                tx.success();
+                tx.commit();
             }
             return session.lastBookmark();
         }

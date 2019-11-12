@@ -296,12 +296,6 @@ class AsyncPooledDriverTest
         }
 
         @Override
-        public CompletionStage<ResultSummary> summaryAsync()
-        {
-            return notImplemented();
-        }
-
-        @Override
         public CompletionStage<Record> singleAsync()
         {
             return notImplemented();

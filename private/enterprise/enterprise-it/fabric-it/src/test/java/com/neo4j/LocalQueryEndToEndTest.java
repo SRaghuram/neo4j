@@ -6,12 +6,14 @@
 package com.neo4j;
 
 import com.neo4j.utils.CustomFunctions;
+import com.neo4j.utils.DriverUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.neo4j.configuration.Config;
@@ -20,7 +22,6 @@ import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Transaction;
-import org.neo4j.driver.internal.SessionConfig;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.harness.internal.InProcessNeo4j;
 import org.neo4j.harness.internal.TestNeo4jBuilders;
@@ -87,9 +88,7 @@ class LocalQueryEndToEndTest
     @Test
     void testPropertyAccess()
     {
-        List<String> r;
-
-        try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
+        List<String> r = inMegaTx( tx ->
         {
             var query = joinAsLines(
                     "CALL {",
@@ -102,11 +101,10 @@ class LocalQueryEndToEndTest
                     "RETURN c.name AS name" );
 
             List<Record> records = tx.run( query ).list();
-            r = records.stream()
+            return records.stream()
                     .map( c -> c.get( "name" ).asString() )
                     .collect( Collectors.toList() );
-            tx.success();
-        }
+        } );
 
         assertThat( r, equalTo( List.of( "Dave" ) ) );
     }
@@ -115,9 +113,7 @@ class LocalQueryEndToEndTest
     @Test
     void testPropertyAndedInequalities()
     {
-        List<String> r;
-
-        try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
+        List<String> r = inMegaTx( tx ->
         {
             var query = joinAsLines(
                     "CALL {",
@@ -130,11 +126,10 @@ class LocalQueryEndToEndTest
                     "RETURN c.name AS name" );
 
             List<Record> records = tx.run( query ).list();
-            r = records.stream()
+            return records.stream()
                     .map( c -> c.get( "name" ).asString() )
                     .collect( Collectors.toList() );
-            tx.success();
-        }
+        } );
 
         assertThat( r, equalTo( List.of( "Dave" ) ) );
     }
@@ -142,9 +137,7 @@ class LocalQueryEndToEndTest
     @Test
     void testCachedPropertyAccess()
     {
-        List<String> r;
-
-        try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
+        List<String> r = inMegaTx( tx ->
         {
             var query = joinAsLines(
                     "CALL {",
@@ -157,11 +150,10 @@ class LocalQueryEndToEndTest
                     "RETURN e.name AS name, r.since AS since" );
 
             List<Record> records = tx.run( query ).list();
-            r = records.stream()
+            return records.stream()
                     .map( c -> c.get( "name" ).asString() )
                     .collect( Collectors.toList() );
-            tx.success();
-        }
+        } );
 
         assertThat( r, equalTo( List.of( "Bob" ) ) );
     }
@@ -169,9 +161,7 @@ class LocalQueryEndToEndTest
     @Test
     void testLabel()
     {
-        List<String> r;
-
-        try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
+        List<String> r = inMegaTx( tx ->
         {
             var query = joinAsLines(
                     "CALL {",
@@ -185,11 +175,10 @@ class LocalQueryEndToEndTest
                     "ORDER BY name" );
 
             List<Record> records = tx.run( query ).list();
-            r = records.stream()
+            return records.stream()
                     .map( c -> c.get( "name" ).asString() )
                     .collect( Collectors.toList() );
-            tx.success();
-        }
+        } );
 
         assertThat( r, equalTo( List.of( "Bob", "Carrie" ) ) );
     }
@@ -197,9 +186,7 @@ class LocalQueryEndToEndTest
     @Test
     void testNodePropertyExists()
     {
-        List<String> r;
-
-        try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
+        List<String> r = inMegaTx( tx ->
         {
             var query = joinAsLines(
                     "CALL {",
@@ -212,11 +199,10 @@ class LocalQueryEndToEndTest
                     "RETURN n.name AS name" );
 
             List<Record> records = tx.run( query ).list();
-            r = records.stream()
+            return records.stream()
                     .map( c -> c.get( "name" ).asString() )
                     .collect( Collectors.toList() );
-            tx.success();
-        }
+        } );
 
         assertThat( r, equalTo( List.of( "Dave" ) ) );
     }
@@ -224,9 +210,7 @@ class LocalQueryEndToEndTest
     @Test
     void testRelationshipPropertyExists()
     {
-        List<String> r;
-
-        try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
+        List<String> r = inMegaTx( tx ->
         {
             var query = joinAsLines(
                     "CALL {",
@@ -239,11 +223,10 @@ class LocalQueryEndToEndTest
                     "RETURN n.name AS name" );
 
             List<Record> records = tx.run( query ).list();
-            r = records.stream()
+            return records.stream()
                     .map( c -> c.get( "name" ).asString() )
                     .collect( Collectors.toList() );
-            tx.success();
-        }
+        } );
 
         assertThat( r, equalTo( List.of( "Carrie" ) ) );
     }
@@ -251,9 +234,7 @@ class LocalQueryEndToEndTest
     @Test
     void testNodeKeys()
     {
-        List<String> r;
-
-        try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
+        List<String> r = inMegaTx( tx ->
         {
             var query = joinAsLines(
                     "CALL {",
@@ -265,14 +246,13 @@ class LocalQueryEndToEndTest
                     "RETURN keys(c) AS keys" );
 
             List<Record> records = tx.run( query ).list();
-            r = records.stream()
+            return records.stream()
                     .flatMap( c -> c.get( "keys" ).asList().stream() )
                     .map( o -> (String) o )
                     .distinct()
                     .sorted()
                     .collect( Collectors.toList() );
-            tx.success();
-        }
+        } );
 
         assertThat( r, equalTo( List.of( "age", "name", "uid" ) ) );
     }
@@ -280,10 +260,7 @@ class LocalQueryEndToEndTest
     @Test
     void testRelationshipKeys()
     {
-        List<String> r;
-
-        try ( Transaction tx = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).build() ).beginTransaction() )
-        {
+        List<String> r = inMegaTx( tx -> {
             var query = joinAsLines(
                     "CALL {",
                     "  USE mega.graph(0)",
@@ -294,15 +271,19 @@ class LocalQueryEndToEndTest
                     "RETURN keys(r) AS keys" );
 
             List<Record> records = tx.run( query ).list();
-            r = records.stream()
+            return records.stream()
                     .flatMap( c -> c.get( "keys" ).asList().stream() )
                     .map( o -> (String) o )
                     .distinct()
                     .sorted()
                     .collect( Collectors.toList() );
-            tx.success();
-        }
+        } );
 
         assertThat( r, equalTo( List.of( "dummyMarker", "since" ) ) );
+    }
+
+    private <T> T inMegaTx( Function<Transaction, T> workload )
+    {
+        return DriverUtils.inMegaTx( clientDriver, workload );
     }
 }

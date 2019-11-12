@@ -24,6 +24,7 @@ import reactor.core.publisher.Mono;
 
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import org.neo4j.configuration.Config;
@@ -32,9 +33,10 @@ import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Record;
+import org.neo4j.driver.Session;
+import org.neo4j.driver.SessionConfig;
 import org.neo4j.driver.Transaction;
 import org.neo4j.driver.exceptions.DatabaseException;
-import org.neo4j.driver.internal.SessionConfig;
 import org.neo4j.driver.summary.Notification;
 import org.neo4j.driver.summary.Plan;
 import org.neo4j.driver.summary.ResultSummary;
@@ -182,13 +184,13 @@ class FabricExecutorTest
     @Test
     void testReadInReadSession()
     {
-        try ( var tx = transaction( "mega", AccessMode.READ ) )
+        doInMegaTx( AccessMode.READ, tx ->
         {
             tx.run( "USE mega.graph(0) MATCH (n) RETURN n" ).consume();
             tx.run( "USE mega.graph(0) MATCH (n) RETURN n" ).consume();
             tx.run( "USE mega.graph(1) MATCH (n) RETURN n" ).consume();
             tx.run( "USE mega.graph(1) MATCH (n) RETURN n" ).consume();
-        }
+        } );
 
         verifySessionConfig( 4, org.neo4j.bolt.runtime.AccessMode.READ );
         verifySessionConfig( 0, org.neo4j.bolt.runtime.AccessMode.WRITE );
@@ -197,13 +199,13 @@ class FabricExecutorTest
     @Test
     void testReadInWriteSession()
     {
-        try ( var tx = transaction( "mega", AccessMode.WRITE ) )
+        doInMegaTx( AccessMode.WRITE, tx ->
         {
             tx.run( "USE mega.graph(0) MATCH (n) RETURN n" ).consume();
             tx.run( "USE mega.graph(0) MATCH (n) RETURN n" ).consume();
             tx.run( "USE mega.graph(1) MATCH (n) RETURN n" ).consume();
             tx.run( "USE mega.graph(1) MATCH (n) RETURN n" ).consume();
-        }
+        } );
 
         verifySessionConfig( 4, org.neo4j.bolt.runtime.AccessMode.READ );
         verifySessionConfig( 0, org.neo4j.bolt.runtime.AccessMode.WRITE );
@@ -212,11 +214,11 @@ class FabricExecutorTest
     @Test
     void testWriteInReadSession()
     {
-        try ( var tx = transaction( "mega", AccessMode.READ ) )
+        doInMegaTx( AccessMode.READ, tx ->
         {
             tx.run( "USE mega.graph(0) CREATE (n:Foo)" ).consume();
             tx.run( "USE mega.graph(0) CREATE (n:Foo)" ).consume();
-        }
+        } );
 
         verifySessionConfig( 2, org.neo4j.bolt.runtime.AccessMode.READ );
         verifySessionConfig( 0, org.neo4j.bolt.runtime.AccessMode.WRITE );
@@ -225,8 +227,10 @@ class FabricExecutorTest
     @Test
     void testWriteInWriteSession()
     {
-        try ( var tx = transaction( "mega", AccessMode.WRITE ) )
+        doInMegaSession( AccessMode.WRITE, session ->
         {
+            var tx = session.beginTransaction();
+
             tx.run( "USE mega.graph(0) CREATE (n:Foo)" ).consume();
             tx.run( "USE mega.graph(0) CREATE (n:Foo)" ).consume();
 
@@ -234,13 +238,13 @@ class FabricExecutorTest
             verifySessionConfig( 0, org.neo4j.bolt.runtime.AccessMode.READ );
 
             assertThrows( DatabaseException.class, () -> tx.run( "USE mega.graph(1) CREATE (n:Foo)" ).consume() );
-        }
+        } );
     }
 
     @Test
     void testMixedInReadSession()
     {
-        try ( var tx = transaction( "mega", AccessMode.READ ) )
+        doInMegaTx( AccessMode.READ, tx ->
         {
             tx.run( "USE mega.graph(0) MATCH (n) RETURN n" ).consume();
             tx.run( "USE mega.graph(0) MATCH (n) RETURN n" ).consume();
@@ -254,7 +258,7 @@ class FabricExecutorTest
             tx.run( "USE mega.graph(1) MATCH (n) RETURN n" ).consume();
             tx.run( "USE mega.graph(1) CREATE (n:Foo)" ).consume();
             tx.run( "USE mega.graph(1) CREATE (n:Foo)" ).consume();
-        }
+        } );
 
         verifySessionConfig( 12, org.neo4j.bolt.runtime.AccessMode.READ );
         verifySessionConfig( 0, org.neo4j.bolt.runtime.AccessMode.WRITE );
@@ -263,8 +267,9 @@ class FabricExecutorTest
     @Test
     void testMixedInWriteSession()
     {
-        try ( var tx = transaction( "mega", AccessMode.WRITE ) )
-        {
+        doInMegaSession( AccessMode.WRITE, session -> {
+            var tx = session.beginTransaction();
+
             tx.run( "USE mega.graph(0) MATCH (n) RETURN n" ).consume();
             tx.run( "USE mega.graph(0) MATCH (n) RETURN n" ).consume();
             tx.run( "USE mega.graph(1) MATCH (n) RETURN n" ).consume();
@@ -280,32 +285,30 @@ class FabricExecutorTest
             verifySessionConfig( 6, org.neo4j.bolt.runtime.AccessMode.READ );
 
             assertThrows( DatabaseException.class, () -> tx.run( "USE mega.graph(1) CREATE (n:Foo)" ).consume() );
-        }
+        } );
     }
 
     @Test
     void testLocalReturnQuery()
     {
-        try ( var tx = transaction( "mega", AccessMode.READ ) )
+        doInMegaTx( AccessMode.READ, tx ->
         {
             List<Record> list = tx.run( joinAsLines( "RETURN 1 AS x" ) ).list();
 
             assertEquals( list.get( 0 ).get( "x" ).asLong(), 1 );
-        }
+        } );
     }
 
     @Test
     void testLocalFlatCompositeQuery()
     {
-        try ( var tx = transaction( "mega", AccessMode.READ ) )
-        {
+        doInMegaTx(  AccessMode.READ, tx -> {
             List<Record> list = tx.run( joinAsLines(
                     "UNWIND [1, 2] AS x",
                     "CALL { RETURN 'y' AS y }",
                     "CALL { UNWIND [8, 9] AS z RETURN z }",
                     "RETURN x, y, z ORDER BY x, y, z"
             ) ).list();
-            tx.success();
 
             assertEquals( list.get( 0 ).get( "x" ).asLong(), 1 );
             assertEquals( list.get( 0 ).get( "y" ).asString(), "y" );
@@ -322,7 +325,7 @@ class FabricExecutorTest
             assertEquals( list.get( 3 ).get( "x" ).asLong(), 2 );
             assertEquals( list.get( 3 ).get( "y" ).asString(), "y" );
             assertEquals( list.get( 3 ).get( "z" ).asLong(), 9 );
-        }
+        } );
     }
 
     @Test
@@ -336,7 +339,7 @@ class FabricExecutorTest
                 recs( rec( Values.stringValue( "k" ) ), rec( Values.stringValue( "l" ) ) )
         );
 
-        try ( var tx = transaction( "mega", AccessMode.READ ) )
+        doInMegaTx( AccessMode.READ, tx ->
         {
             List<Record> list = tx.run( joinAsLines(
                     "UNWIND [0, 1] AS s",
@@ -355,7 +358,7 @@ class FabricExecutorTest
 
             assertEquals( list.get( 3 ).get( "s" ).asLong(), 1 );
             assertEquals( list.get( 3 ).get( "y" ).asString(), "l" );
-        }
+        } );
     }
 
     @Test
@@ -407,15 +410,14 @@ class FabricExecutorTest
                 List.of( NotificationCode.RUNTIME_UNSUPPORTED.notification( new InputPosition( 1, 1, 1 ) ) )
         ) ) );
 
-        try ( var tx = transaction( "mega", AccessMode.READ ) )
+        doInMegaTx( AccessMode.READ, tx ->
         {
             ResultSummary summary =
                     tx.run( joinAsLines(
                             "CALL { USE mega.graph(0) RETURN 1 AS x }",
                             "CALL { USE mega.graph(1) CREATE () RETURN 1 AS y }",
                             "RETURN 1"
-                    ) ).summary();
-            tx.success();
+                    ) ).consume();
 
             assertThat( summary.statementType(), is( StatementType.READ_WRITE ) );
 
@@ -437,7 +439,7 @@ class FabricExecutorTest
 
             var codes = summary.notifications().stream().map( Notification::code ).collect( Collectors.toList() );
             assertThat( codes, containsInAnyOrder( codeOf( NotificationCode.DEPRECATED_PROCEDURE ), codeOf( NotificationCode.RUNTIME_UNSUPPORTED ) ) );
-        }
+        } );
     }
 
     @Test
@@ -450,7 +452,7 @@ class FabricExecutorTest
         when( graph1Result.summary() ).thenReturn( null );
         when( graph1Result.records() ).thenReturn( null );
 
-        try ( var tx = transaction( "mega", AccessMode.READ ) )
+        doInMegaTx( AccessMode.READ, tx ->
         {
             ResultSummary summary =
                     tx.run( joinAsLines(
@@ -458,8 +460,7 @@ class FabricExecutorTest
                             "CALL { USE mega.graph(0) RETURN 1 AS x }",
                             "CALL { USE mega.graph(1) CREATE () RETURN 1 AS y }",
                             "RETURN y, x"
-                    ) ).summary();
-            tx.success();
+                    ) ).consume();
 
             assertThat( summary.statementType(), is( StatementType.READ_WRITE ) );
 
@@ -497,20 +498,16 @@ class FabricExecutorTest
             Plan c2c0 = c2.children().get( 0 );
             assertThat( c2c0.operatorType(), is( "LocalQuery" ) );
             assertThat( c2c0.identifiers(), containsInAnyOrder( "x", "y" ) );
-        }
+        } );
     }
 
     @Test
     void testPlanLogging()
     {
-        try ( Transaction tx = transaction( "mega", AccessMode.READ ) )
-        {
-            tx.run( joinAsLines(
-                    "CYPHER debug=fabriclogplan",
-                    "RETURN 1"
-            ) ).consume();
-            tx.success();
-        }
+        doInMegaTx( AccessMode.READ, tx -> tx.run( joinAsLines(
+                "CYPHER debug=fabriclogplan",
+                "RETURN 1"
+        ) ).consume() );
 
         internalLogProvider.assertAtLeastOnce(
                 inLog( FabricExecutor.class ).debug( containsString( "Fabric plan:" ) )
@@ -528,16 +525,12 @@ class FabricExecutorTest
                 recs( rec( Values.stringValue( "k" ) ), rec( Values.stringValue( "l" ) ) )
         );
 
-        try ( Transaction tx = transaction( "mega", AccessMode.READ ) )
-        {
-            tx.run( joinAsLines(
-                    "CYPHER debug=fabriclogrecords",
-                    "UNWIND [0, 1] AS s",
-                    "CALL { USE mega.graph(s) RETURN 2 AS y }",
-                    "RETURN s, y ORDER BY s, y"
-            ) ).consume();
-            tx.success();
-        }
+        doInMegaTx( AccessMode.READ, tx -> tx.run( joinAsLines(
+                "CYPHER debug=fabriclogrecords",
+                "UNWIND [0, 1] AS s",
+                "CALL { USE mega.graph(s) RETURN 2 AS y }",
+                "RETURN s, y ORDER BY s, y"
+        ) ).consume() );
 
         internalLogProvider.assertAtLeastOnce(
                 inLog( FabricExecutor.class ).debug( allOf( containsString( "local" ), containsString( "UNWIND [0, 1] AS s" ) ) )
@@ -570,11 +563,8 @@ class FabricExecutorTest
                 "CALL { USE mega.graph(s) RETURN 2 AS y }",
                 "RETURN s, y ORDER BY s, y"
         );
-        try ( Transaction tx = transaction( "mega", AccessMode.READ ) )
-        {
-            tx.run( query ).consume();
-            tx.success();
-        }
+
+        doInMegaTx( AccessMode.READ, tx -> tx.run( query ).consume() );
 
         assertThat( queryExecutionMonitor.events, containsInRelativeOrder(
                 start()
@@ -606,14 +596,7 @@ class FabricExecutorTest
                 "CALL { USE mega.graph(s) RETURN 2 AS y }",
                 "RETURN s, y ORDER BY s, y"
         );
-        assertThrows( Throwable.class, () ->
-        {
-            try ( Transaction tx = transaction( "mega", AccessMode.READ ) )
-            {
-                tx.run( query ).consume();
-                tx.success();
-            }
-        } );
+        assertThrows( Throwable.class, () -> doInMegaTx( AccessMode.READ, tx -> tx.run( query ).consume() ) );
 
         assertThat( queryExecutionMonitor.events, containsInRelativeOrder(
                 start()
@@ -649,5 +632,25 @@ class FabricExecutorTest
     {
         var allValues = accessModeArgument.getAllValues();
         assertEquals( times, allValues.stream().filter( ac -> ac.equals( accessMode ) ).count() );
+    }
+
+    private void doInMegaTx( AccessMode mode, Consumer<Transaction> workload )
+    {
+        try ( var session = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).withDefaultAccessMode( mode ).build() ) )
+        {
+            try ( Transaction tx = session.beginTransaction() )
+            {
+                workload.accept( tx );
+                tx.commit();
+            }
+        }
+    }
+
+    private void doInMegaSession( AccessMode mode, Consumer<Session> workload )
+    {
+        try ( var session = clientDriver.session( SessionConfig.builder().withDatabase( "mega" ).withDefaultAccessMode( mode ).build() ) )
+        {
+            workload.accept( session );
+        }
     }
 }

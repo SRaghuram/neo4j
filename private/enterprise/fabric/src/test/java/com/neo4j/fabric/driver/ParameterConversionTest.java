@@ -10,6 +10,7 @@ import com.neo4j.fabric.transaction.FabricTransactionInfo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.time.LocalDate;
@@ -24,8 +25,6 @@ import java.util.Map;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.Value;
 import org.neo4j.driver.Values;
-import org.neo4j.driver.internal.shaded.reactor.core.publisher.Flux;
-import org.neo4j.driver.internal.shaded.reactor.core.publisher.Mono;
 import org.neo4j.driver.reactive.RxSession;
 import org.neo4j.driver.reactive.RxStatementResult;
 import org.neo4j.driver.reactive.RxTransaction;
@@ -57,9 +56,9 @@ class ParameterConversionTest
         RxSession mockDriverSession = mock( RxSession.class );
         RxTransaction tx = mock( RxTransaction.class );
         RxStatementResult mockDriverResult = mock( RxStatementResult.class);
-        when(mockDriverResult.keys()).thenReturn( Flux.fromIterable( Arrays.asList("a", "b" )));
+        when(mockDriverResult.keys()).thenReturn( Mono.just( Arrays.asList("a", "b" )));
         when( mockDriverResult.records() ).thenReturn( Mono.empty() );
-        when( mockDriverResult.summary() ).thenReturn( Mono.empty() );
+        when( mockDriverResult.consume() ).thenReturn( Mono.empty() );
 
         when( tx.run( any(), parameterCaptor.capture() ) ).thenReturn( mockDriverResult );
         when( tx.commit() ).thenReturn( Mono.empty() );
