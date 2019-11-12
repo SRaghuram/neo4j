@@ -197,15 +197,7 @@ public class SecurityLog extends LifecycleAdapter implements Log
     public static SecurityLog create( Config config, FileSystemAbstraction fileSystem,
             JobScheduler jobScheduler ) throws IOException
     {
-        try
-        {
-            return new SecurityLog( config, fileSystem,
-                    jobScheduler.executor( Group.LOG_ROTATION ) );
-        }
-        catch ( SecurityException | IOException e )
-        {
-            throw new IOException( "Unable to create security log.", e );
-        }
+        return new SecurityLog( config, fileSystem, jobScheduler.executor( Group.LOG_ROTATION ) );
     }
 
     @Override

@@ -48,7 +48,6 @@ import org.neo4j.cypher.internal.security.SecureHasher;
 import org.neo4j.dbms.DatabaseManagementSystemSettings;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.SystemGraphInitializer;
-import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.factory.module.DatabaseInitializer;
 import org.neo4j.internal.kernel.api.security.SecurityContext;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -77,11 +76,12 @@ public class EnterpriseSecurityModule extends SecurityModule
 
     private DatabaseManager<?> databaseManager;
     private boolean isClustered;
-    private Config config;
+    private final Config config;
     private final GlobalProcedures globalProcedures;
     private final JobScheduler scheduler;
-    private LogProvider logProvider;
-    private FileSystemAbstraction fileSystem;
+    private final LogProvider logProvider;
+    private final Log log;
+    private final FileSystemAbstraction fileSystem;
     private final DependencySatisfier dependencySatisfier;
     private final GlobalTransactionEventListeners transactionEventListeners;
     private SystemGraphInitializer systemGraphInitializer;
@@ -103,6 +103,7 @@ public class EnterpriseSecurityModule extends SecurityModule
         this.fileSystem = fileSystem;
         this.dependencySatisfier = dependencySatisfier;
         this.transactionEventListeners = transactionEventListeners;
+        this.log = logProvider.getLog( getClass() );
     }
 
     @Override
@@ -115,18 +116,7 @@ public class EnterpriseSecurityModule extends SecurityModule
         isClustered = config.get( EnterpriseEditionSettings.mode ) == EnterpriseEditionSettings.Mode.CORE ||
                       config.get( EnterpriseEditionSettings.mode ) == EnterpriseEditionSettings.Mode.READ_REPLICA;
 
-        SecurityLog securityLog;
-        try
-        {
-            securityLog = SecurityLog.create( config, fileSystem, scheduler );
-        }
-        catch ( IOException e )
-        {
-            Log log = logProvider.getLog( getClass() );
-            log.error( e.getMessage(), e );
-            throw new RuntimeException( e.getMessage(), e );
-        }
-
+        SecurityLog securityLog = createSecurityLog();
         life.add( securityLog );
 
         authManager = newAuthManager( securityLog );
@@ -149,25 +139,31 @@ public class EnterpriseSecurityModule extends SecurityModule
         globalProcedures.registerComponent( EnterpriseAuthManager.class, ctx -> authManager, false );
         globalProcedures.registerComponent( EnterpriseSecurityContext.class, ctx -> asEnterpriseEdition( ctx.securityContext() ), true );
 
+        if ( securityConfig.nativeAuthEnabled )
+        {
+            if ( config.get( SecuritySettings.authentication_providers ).size() > 1 || config.get( SecuritySettings.authorization_providers ).size() > 1 )
+            {
+                registerProcedure( globalProcedures, log, UserManagementProcedures.class, "%s only applies to native users." );
+            }
+            else
+            {
+                registerProcedure( globalProcedures, log, UserManagementProcedures.class, null );
+            }
+        }
+        registerProcedure( globalProcedures, log, SecurityProcedures.class, null );
+    }
+
+    private SecurityLog createSecurityLog()
+    {
         try
         {
-            if ( securityConfig.nativeAuthEnabled )
-            {
-                if ( config.get( SecuritySettings.authentication_providers ).size() > 1 || config.get( SecuritySettings.authorization_providers ).size() > 1 )
-                {
-                    globalProcedures.registerProcedure( UserManagementProcedures.class, true, "%s only applies to native users." );
-                }
-                else
-                {
-                    globalProcedures.registerProcedure( UserManagementProcedures.class, true );
-                }
-            }
-
-            globalProcedures.registerProcedure( SecurityProcedures.class, true );
+            return SecurityLog.create( config, fileSystem, scheduler );
         }
-        catch ( KernelException e )
+        catch ( SecurityException | IOException e )
         {
-            throw logAndWrapProcedureException( e, logProvider.getLog( getClass() ) );
+            String message = "Unable to create security log.";
+            log.error( message, e );
+            throw new RuntimeException( message, e );
         }
     }
 
@@ -188,7 +184,6 @@ public class EnterpriseSecurityModule extends SecurityModule
         {
             SecureHasher secureHasher = new SecureHasher();
             SystemGraphImportOptions importOptions = configureImportOptions( config, logProvider, fileSystem );
-            Log log = logProvider.getLog( getClass() );
             EnterpriseSecurityGraphInitializer initializer =
                     new EnterpriseSecurityGraphInitializer( databaseManager, systemGraphInitializer, log, importOptions,
                             secureHasher );

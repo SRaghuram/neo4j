@@ -98,7 +98,7 @@ class EnterpriseSecurityModuleTest
         when( mockDependencies.satisfyDependency( any() ) ).thenAnswer( i -> i.getArguments()[0] );
 
         doThrow( new ProcedureException( Status.Procedure.ProcedureRegistrationFailed, "Injected error" ) )
-                .when( mockProcedures ).registerProcedure( SecurityProcedures.class, true );
+                .when( mockProcedures ).registerProcedure( SecurityProcedures.class, true, null );
 
         var securityModule = createModule( logProvider, Config.defaults() );
 

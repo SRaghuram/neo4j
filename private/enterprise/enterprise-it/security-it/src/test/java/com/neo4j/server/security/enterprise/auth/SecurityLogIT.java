@@ -23,8 +23,8 @@ import org.neo4j.logging.AssertableLogProvider;
 
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.anyOf;
 import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.core.Is.isA;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
@@ -55,10 +55,10 @@ public class SecurityLogIT
 
         // Then
         assertThat( runtimeException.getMessage(), equalTo( "Unable to create security log." ) );
-        assertThat( runtimeException.getCause(), instanceOf( IOException.class ) );
+        assertThat( runtimeException.getCause(), anyOf( isA( IOException.class ), isA( SecurityException.class ) ) );
 
-        logProvider.assertAtLeastOnce( inLog( EnterpriseSecurityModule.class )
-                .error( containsString( "Unable to create security log." ), isA( IOException.class )  ) );
+        logProvider.assertAtLeastOnce( inLog( EnterpriseSecurityModule.class ).error( containsString( "Unable to create security log." ),
+                                                                                      anyOf( isA( IOException.class ), isA( SecurityException.class ) ) ) );
     }
 
 }
