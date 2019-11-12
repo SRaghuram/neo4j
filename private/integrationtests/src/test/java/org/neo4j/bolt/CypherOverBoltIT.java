@@ -50,6 +50,21 @@ public class CypherOverBoltIT
     }
 
     @Test
+    public void shouldAlwaysWarnAboutCartesianProduct() throws InterruptedException
+    {
+        try ( Driver driver = GraphDatabase.driver( graphDb.boltURI(), configuration() ); Session session = driver.session() )
+        {
+            session.run( "UNWIND RANGE(1,5) AS x CREATE()" ).consume();
+            StatementResult result1 = session.run( "explain match (a), (b) return *" );
+            assertEquals( "This query builds a cartesian product between disconnected patterns.", result1.consume().notifications().get( 0 ).title() );
+            session.run( "MATCH (n) DETACH DELETE n" ).consume();
+            Thread.sleep( 10000 ); // This was needed to trigger the bug in the first place so we are keeping it
+            StatementResult result2 = session.run( "explain match (a), (b) return *" );
+            assertEquals( "This query builds a cartesian product between disconnected patterns.", result2.consume().notifications().get( 0 ).title() );
+        }
+    }
+
+    @Test
     public void mixingPeriodicCommitAndLoadCSVShouldWork()
     {
 
