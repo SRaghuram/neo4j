@@ -481,6 +481,20 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
     result.toList should not be empty // Slotted used to crash here
   }
 
+  test("should handle seek for multiple boolean properties") {
+    graph.createIndex("RULE", "disabled")
+    (1 to 100).foreach(_ => createLabeledNode(Map("disabled" -> false), "RULE"))
+    (1 to 100).foreach(_ => createLabeledNode(Map("disabled" -> true), "RULE"))
+    (1 to 100).foreach(_ => createLabeledNode("RULE"))
+
+    val c = "MATCH (entity:RULE) WHERE ( entity.disabled = true OR entity.disabled = false) RETURN entity"
+
+    val result = executeWith(Configs.All, c)
+
+    result should have size 200
+
+  }
+
   private def setUpDatabaseForTests() {
     executeWith(Configs.InterpretedAndSlotted,
       """CREATE (architect:Matrix { name:'The Architect' }),
