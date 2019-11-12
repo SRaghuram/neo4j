@@ -66,6 +66,7 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.procedure.StringMatcherIgnoresNewlines.containsStringIgnoreNewlines;
 import static java.util.Arrays.asList;
+import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.CoreMatchers.containsString;
@@ -453,16 +454,26 @@ public class ProcedureIT
     }
 
     @Test
-    void shouldCallProcedureWithMapArgumentDefaultingToNull()
+    void shouldAcceptSubtypesInDefault()
     {
         // Given
         try ( Transaction tx = db.beginTx() )
         {
             // When
-            Result res = tx.execute( "CALL com.neo4j.procedure.mapWithNullDefault()" );
+            Result res = tx.execute( "CALL com.neo4j.procedure.procedureWithSubtypeDefaults()" );
 
             // Then
-            assertThat( res.next(), equalTo( map( "map", null ) ) );
+            assertThat( res.next(), equalTo( map( "map", map(
+                    "defaultMap", emptyMap(),
+                    "defaultList", emptyList(),
+                    "defaultBoolean", true,
+                    "defaultInteger", 42L,
+                    "defaultFloat", 3.14,
+                    "defaultString", "foo",
+                    "defaultNullObject", null,
+                    "defaultNullMap", null,
+                    "defaultNullList", null
+            ) ) ) );
             assertFalse( res.hasNext() );
         }
     }
@@ -1966,12 +1977,6 @@ public class ProcedureIT
         }
 
         @Procedure
-        public Stream<MapOutput> mapWithNullDefault( @Name( value = "map", defaultValue = "null" ) Map<String,Object> map )
-        {
-            return Stream.of( new MapOutput( map ) );
-        }
-
-        @Procedure
         public Stream<MapOutput> mapWithOtherDefault( @Name( value = "map", defaultValue = "{default: true}" ) Map<String,Object> map )
         {
             return Stream.of( new MapOutput( map ) );
@@ -1987,6 +1992,31 @@ public class ProcedureIT
         public Stream<ListOutput> genericListWithDefault( @Name( value = "list", defaultValue = "[[42, 1337]]" ) List<List<Long>> list )
         {
             return Stream.of( new ListOutput( list == null ? null : list.get( 0 ) ) );
+        }
+
+        @Procedure
+        public Stream<MapOutput> procedureWithSubtypeDefaults(
+                @Name( value = "a", defaultValue = "{}" ) Object defaultMap,
+                @Name( value = "b", defaultValue = "[]" ) Object defaultList,
+                @Name( value = "c", defaultValue = "true" ) Object defaultBoolean,
+                @Name( value = "d", defaultValue = "42" ) Object defaultInteger,
+                @Name( value = "e", defaultValue = "3.14" ) Object defaultFloat,
+                @Name( value = "f", defaultValue = "foo" ) Object defaultString,
+                @Name( value = "g", defaultValue = "null" ) Object defaultNullObject,
+                @Name( value = "h", defaultValue = "null" ) Map<String,Object> defaultNullMap,
+                @Name( value = "i", defaultValue = "null" ) List<Object> defaultNullList )
+        {
+            return Stream.of( new MapOutput( map(
+                    "defaultMap", defaultMap,
+                    "defaultList", defaultList,
+                    "defaultBoolean", defaultBoolean,
+                    "defaultInteger", defaultInteger,
+                    "defaultFloat", defaultFloat,
+                    "defaultString", defaultString,
+                    "defaultNullObject", defaultNullObject,
+                    "defaultNullMap", defaultNullMap,
+                    "defaultNullList", defaultNullList
+            ) ) );
         }
 
         @Procedure
