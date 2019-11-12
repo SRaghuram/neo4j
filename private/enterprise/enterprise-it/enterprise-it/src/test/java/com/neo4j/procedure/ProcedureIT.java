@@ -470,6 +470,8 @@ public class ProcedureIT
                     "defaultInteger", 42L,
                     "defaultFloat", 3.14,
                     "defaultString", "foo",
+                    "defaultNumberInteger", 42L,
+                    "defaultNumberFloat", 3.14,
                     "defaultNullObject", null,
                     "defaultNullMap", null,
                     "defaultNullList", null
@@ -2002,9 +2004,11 @@ public class ProcedureIT
                 @Name( value = "d", defaultValue = "42" ) Object defaultInteger,
                 @Name( value = "e", defaultValue = "3.14" ) Object defaultFloat,
                 @Name( value = "f", defaultValue = "foo" ) Object defaultString,
-                @Name( value = "g", defaultValue = "null" ) Object defaultNullObject,
-                @Name( value = "h", defaultValue = "null" ) Map<String,Object> defaultNullMap,
-                @Name( value = "i", defaultValue = "null" ) List<Object> defaultNullList )
+                @Name( value = "g", defaultValue = "42" ) Number defaultNumberInteger,
+                @Name( value = "h", defaultValue = "3.14" ) Number defaultNumberFloat,
+                @Name( value = "i", defaultValue = "null" ) Object defaultNullObject,
+                @Name( value = "j", defaultValue = "null" ) Map<String,Object> defaultNullMap,
+                @Name( value = "l", defaultValue = "null" ) List<Object> defaultNullList )
         {
             return Stream.of( new MapOutput( map(
                     "defaultMap", defaultMap,
@@ -2013,6 +2017,8 @@ public class ProcedureIT
                     "defaultInteger", defaultInteger,
                     "defaultFloat", defaultFloat,
                     "defaultString", defaultString,
+                    "defaultNumberInteger", defaultNumberInteger,
+                    "defaultNumberFloat", defaultNumberFloat,
                     "defaultNullObject", defaultNullObject,
                     "defaultNullMap", defaultNullMap,
                     "defaultNullList", defaultNullList
