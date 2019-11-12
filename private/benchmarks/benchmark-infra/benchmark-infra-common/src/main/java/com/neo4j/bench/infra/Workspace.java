@@ -50,6 +50,20 @@ public class Workspace
                 ).build();
     }
 
+    public static Workspace defaultMicroWorkspace( Path workspacePath )
+    {
+        return Workspace.create( workspacePath )
+                        .withArtifacts(
+                                // required artifacts
+                                Paths.get( "neo4j.conf" ),
+                                Paths.get( "benchmark-infra-worker.jar" ),
+                                Paths.get( "micro/target/micro-benchmarks.jar" ),
+                                Paths.get( "run-report-benchmarks.sh" ),
+                                Paths.get( "micro.config" ),
+                                Paths.get( JOB_PARAMETERS_JSON ) )
+                        .build();
+    }
+
     public static void assertMacroWorkspace( Workspace artifactsWorkspace, Version neo4jVersion, Edition neo4jEdition )
     {
         Workspace defaultMacroWorkspace = defaultMacroWorkspace( artifactsWorkspace.baseDir, neo4jVersion, neo4jEdition );

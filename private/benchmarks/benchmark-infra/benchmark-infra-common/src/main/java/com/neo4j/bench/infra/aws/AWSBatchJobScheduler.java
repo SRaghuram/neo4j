@@ -20,13 +20,16 @@ import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
 import com.amazonaws.services.cloudformation.model.DescribeStacksRequest;
 import com.amazonaws.services.cloudformation.model.Output;
 import com.neo4j.bench.common.tool.macro.RunWorkloadParams;
+import com.neo4j.bench.infra.InfraParams;
 import com.neo4j.bench.infra.JobId;
 import com.neo4j.bench.infra.JobScheduler;
 import com.neo4j.bench.infra.JobStatus;
-import com.neo4j.bench.infra.commands.InfraParams;
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.URI;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,10 +37,13 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
+import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 
 public class AWSBatchJobScheduler implements JobScheduler
 {
+
+    private static final Logger LOG = LoggerFactory.getLogger( AWSBatchJobScheduler.class );
 
     /**
      * Create AWS batch job scheduler using default credentials chain, https://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/credentials.html.
@@ -82,6 +88,36 @@ public class AWSBatchJobScheduler implements JobScheduler
 
         AWSCredentialsProvider credentialsProvider = new AWSStaticCredentialsProvider( new BasicAWSCredentials( awsKey, awsSecret ) );
         return create( credentialsProvider, region, jobQueue, jobDefinition, stack );
+    }
+
+    public static JobScheduler getJobScheduler( InfraParams infraParams, String jobQueue, String jobDefinition, String batchStack )
+    {
+        if ( infraParams.hasAwsCredentials() )
+        {
+            return create( infraParams.awsRegion(),
+                           infraParams.awsKey(),
+                           infraParams.awsSecret(),
+                           jobQueue,
+                           jobDefinition,
+                           batchStack );
+        }
+        else
+        {
+            return create( infraParams.awsRegion(),
+                           jobQueue,
+                           jobDefinition,
+                           batchStack );
+        }
+    }
+
+    public static List<JobStatus> jobStatuses( JobScheduler jobScheduler, InfraParams infraParams, JobId jobId )
+    {
+        List<JobStatus> jobStatuses =
+                jobScheduler.jobsStatuses( Collections.singletonList( jobId ) );
+        LOG.info( "current jobs statuses:\n{}",
+                  jobStatuses.stream()
+                             .map( status -> status.toStatusLine( infraParams.awsRegion() ) ).collect( joining( "\n" ) ) );
+        return jobStatuses;
     }
 
     private static JobScheduler create( AWSCredentialsProvider credentialsProvider,

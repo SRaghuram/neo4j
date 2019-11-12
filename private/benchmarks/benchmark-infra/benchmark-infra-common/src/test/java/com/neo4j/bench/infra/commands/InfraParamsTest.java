@@ -7,11 +7,12 @@ package com.neo4j.bench.infra.commands;
 
 import com.neo4j.bench.common.results.ErrorReportingPolicy;
 import com.neo4j.bench.common.util.JsonUtil;
-import org.junit.Test;
+import com.neo4j.bench.infra.InfraParams;
+import org.junit.jupiter.api.Test;
 
 import java.net.URI;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class InfraParamsTest
 {

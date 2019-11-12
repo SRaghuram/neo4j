@@ -5,32 +5,26 @@
  */
 package com.neo4j.bench.infra;
 
-import com.neo4j.bench.common.tool.macro.RunWorkloadParams;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.neo4j.bench.common.util.JsonUtil;
-import com.neo4j.bench.infra.commands.InfraParams;
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 
-import java.util.Objects;
+import java.nio.file.Path;
 
 public class JobParams
 {
 
-    public static JobParams fromJson( String json )
-    {
-        return JsonUtil.deserializeJson( json, JobParams.class );
-    }
+    private final InfraParams infraParams;
+    private final BenchmarkingEnvironment benchmarkingEnvironment;
 
-    private InfraParams infraParams;
-    private RunWorkloadParams runWorkloadParams;
-
-    // needed for JSON serialization
-    private JobParams()
-    {
-    }
-
-    public JobParams( InfraParams infraParams, RunWorkloadParams runWorkloadParams )
+    @JsonCreator
+    public JobParams( @JsonProperty( "infraParams" ) InfraParams infraParams,
+                      @JsonProperty( "benchmarkingEnvironment" ) BenchmarkingEnvironment benchmarkingEnvironment )
     {
         this.infraParams = infraParams;
-        this.runWorkloadParams = runWorkloadParams;
+        this.benchmarkingEnvironment = benchmarkingEnvironment;
     }
 
     public InfraParams infraParams()
@@ -38,9 +32,9 @@ public class JobParams
         return infraParams;
     }
 
-    public RunWorkloadParams runWorkloadParams()
+    public BenchmarkingEnvironment benchmarkingEnvironment()
     {
-        return runWorkloadParams;
+        return benchmarkingEnvironment;
     }
 
     public String toJson()
@@ -51,22 +45,12 @@ public class JobParams
     @Override
     public boolean equals( Object o )
     {
-        if ( this == o )
-        {
-            return true;
-        }
-        if ( o == null || getClass() != o.getClass() )
-        {
-            return false;
-        }
-        JobParams jobParams = (JobParams) o;
-        return Objects.equals( infraParams, jobParams.infraParams ) &&
-               Objects.equals( runWorkloadParams, jobParams.runWorkloadParams );
+        return EqualsBuilder.reflectionEquals( this, o );
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash( infraParams, runWorkloadParams );
+        return HashCodeBuilder.reflectionHashCode( this );
     }
 }

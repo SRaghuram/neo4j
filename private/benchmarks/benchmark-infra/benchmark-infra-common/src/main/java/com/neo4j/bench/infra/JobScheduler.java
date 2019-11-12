@@ -6,7 +6,6 @@
 package com.neo4j.bench.infra;
 
 import com.neo4j.bench.common.tool.macro.RunWorkloadParams;
-import com.neo4j.bench.infra.commands.InfraParams;
 
 import java.net.URI;
 import java.util.List;

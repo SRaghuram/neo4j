@@ -21,6 +21,7 @@ import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.neo4j.bench.infra.ArtifactStorage;
 import com.neo4j.bench.infra.ArtifactStoreException;
 import com.neo4j.bench.infra.Dataset;
+import com.neo4j.bench.infra.InfraParams;
 import com.neo4j.bench.infra.Workspace;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -62,6 +63,20 @@ public class AWSS3ArtifactStorage implements ArtifactStorage
     {
         AWSCredentialsProvider credentialsProvider = DefaultAWSCredentialsProviderChain.getInstance();
         return new AWSS3ArtifactStorage( s3ClientBuilder( credentialsProvider ).withRegion( awsRegion ).build() );
+    }
+
+    public static AWSS3ArtifactStorage getAWSS3ArtifactStorage( InfraParams infraParams )
+    {
+        if ( infraParams.hasAwsCredentials() )
+        {
+            return create( infraParams.awsRegion(),
+                           infraParams.awsKey(),
+                           infraParams.awsSecret() );
+        }
+        else
+        {
+            return create( infraParams.awsRegion() );
+        }
     }
 
     private static AmazonS3ClientBuilder s3ClientBuilder( AWSCredentialsProvider credentialsProvider )
