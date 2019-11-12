@@ -688,10 +688,9 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
   }
 
   private def makeRevokeExecutionPlan(actionName: String, resource: ast.ActionResource, database: ast.GraphScope, qualifier: ast.PrivilegeQualifier,
-                                      roleName: String, revokeType: ast.RevokeType, source: Option[ExecutionPlan], startOfErrorMessage: String) = {
+                                      roleName: String, revokeType: String, source: Option[ExecutionPlan], startOfErrorMessage: String) = {
     val action = Values.stringValue(actionName)
     val role = Values.stringValue(roleName)
-    val relType = if (revokeType.relType.nonEmpty) ":" + revokeType.relType else ""
 
     val (property: Value, resourceType: Value, resourceMatch: String) = getResourcePart(resource, startOfErrorMessage, "revoke", "MATCH")
     val (label: Value, qualifierMatch: String) = getQualifierPart(qualifier, startOfErrorMessage, "revoke", "MATCH")
@@ -715,7 +714,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
          |// Find the privilege assignment connecting the role to the action
          |OPTIONAL MATCH (r:Role {name: $$role})
          |WITH p, r, d, q
-         |OPTIONAL MATCH (r)-[g$relType]->(p)
+         |OPTIONAL MATCH (r)-[g$revokeType]->(p)
          |
          |// Remove the assignment
          |DELETE g
