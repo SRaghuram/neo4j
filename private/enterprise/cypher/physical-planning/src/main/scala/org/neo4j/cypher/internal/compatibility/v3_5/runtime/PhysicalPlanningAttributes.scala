@@ -11,4 +11,5 @@ import org.neo4j.cypher.internal.v3_5.util.attribution.Attribute
 object PhysicalPlanningAttributes {
   class SlotConfigurations extends Attribute[SlotConfiguration]
   class ArgumentSizes extends Attribute[Size]
+  class NestedPlanArgumentConfigurations extends Attribute[SlotConfiguration]
 }

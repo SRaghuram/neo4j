@@ -858,22 +858,62 @@ class SlotAllocationTest extends CypherFunSuite with LogicalPlanningTestSupport2
 
   test("should handle nested plan expression") {
     val nestedPlan = AllNodesScan(x, Set.empty)
-    val nestedProjection = Expression
     val argument = Argument()
-    val plan = Projection(argument, Map("z" -> NestedPlanExpression(nestedPlan, StringLiteral("foo")(pos))(pos)))
+    val projection1 = Projection(argument, Map("y" -> NestedPlanExpression(nestedPlan, StringLiteral("foo")(pos))(pos)))
+    // The next projection allocates an extra slot which should not be an argument to the nested plan, even if its in the same pipeline as the outer plan
+    val projection2 = Projection(projection1, Map("z" -> SignedDecimalIntegerLiteral("5")(pos)))
 
     // when
-    val physicalPlan = SlotAllocation.allocateSlots(plan, semanticTable)
+    val physicalPlan = SlotAllocation.allocateSlots(projection2, semanticTable)
     val allocations = physicalPlan.slotConfigurations
 
     // then
-    allocations should have size 3
-    allocations(plan.id) should equal(
-      SlotConfiguration(Map("z" -> RefSlot(0, nullable = true, CTAny)), 0, 1)
+    allocations should have size 4
+    allocations(projection2.id) should equal(
+      SlotConfiguration(Map("y" -> RefSlot(0, nullable = true, CTAny), "z" -> RefSlot(1, nullable = true, CTAny)), 0, 2)
     )
-    allocations(argument.id) should equal(allocations(plan.id))
+    allocations(projection1.id) should equal(allocations(projection2.id))
+    allocations(argument.id) should equal(allocations(projection2.id))
     allocations(nestedPlan.id) should equal(
       SlotConfiguration(Map("x" -> LongSlot(0, nullable = false, CTNode)), 1, 0)
+    )
+
+    physicalPlan.nestedPlanArgumentConfigurations(nestedPlan.id) should equal(
+      SlotConfiguration(Map(), 0, 0)
+    )
+  }
+
+  test("should handle nested plan expression with argument") {
+    val nestedPlan = AllNodesScan(x, Set("w"))
+    val allNodesScan = AllNodesScan("w", Set.empty)
+    val projection1 = Projection(allNodesScan, Map("y" -> NestedPlanExpression(nestedPlan, StringLiteral("foo")(pos))(pos)))
+    // The next projection allocates an extra slot which should not be an argument to the nested plan, even if its in the same pipeline as the outer plan
+    val projection2 = Projection(projection1, Map("z" -> SignedDecimalIntegerLiteral("5")(pos)))
+
+    // when
+    val physicalPlan = SlotAllocation.allocateSlots(projection2, semanticTable)
+    val allocations = physicalPlan.slotConfigurations
+
+    // then
+    allocations should have size 4
+    allocations(projection2.id) should equal(
+      SlotConfiguration(Map(
+        "w" -> LongSlot(0, nullable = false, CTNode),
+        "y" -> RefSlot(0, nullable = true, CTAny),
+        "z" -> RefSlot(1, nullable = true, CTAny)
+      ), 1, 2)
+    )
+    allocations(projection1.id) should equal(allocations(projection2.id))
+    allocations(allNodesScan.id) should equal(allocations(projection2.id))
+    allocations(nestedPlan.id) should equal(
+      SlotConfiguration(Map(
+        "w" -> LongSlot(0, nullable = false, CTNode),
+        "x" -> LongSlot(1, nullable = false, CTNode)
+      ), 2, 0)
+    )
+
+    physicalPlan.nestedPlanArgumentConfigurations(nestedPlan.id) should equal(
+      SlotConfiguration(Map("w" -> LongSlot(0, nullable = false, CTNode)), 1, 0)
     )
   }
 
