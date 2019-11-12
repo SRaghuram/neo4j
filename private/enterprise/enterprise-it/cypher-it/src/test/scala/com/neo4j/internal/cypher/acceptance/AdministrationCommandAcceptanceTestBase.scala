@@ -120,7 +120,7 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
     def property(property: String) = PrivilegeMapBuilder(map + ("resource" -> s"property($property)"))
   }
 
-  def baseMap(grant: String = "GRANTED"): Map[String, String] = Map("grant" -> grant, "graph" -> "*", "segment" -> "database")
+  def baseMap(grant: String = "GRANTED"): Map[String, String] = Map("access" -> grant, "graph" -> "*", "segment" -> "database")
 
   def startDatabase(grant: String = "GRANTED"): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "database")).action("start_database")
   def stopDatabase(grant: String = "GRANTED"): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "database")).action("stop_database")

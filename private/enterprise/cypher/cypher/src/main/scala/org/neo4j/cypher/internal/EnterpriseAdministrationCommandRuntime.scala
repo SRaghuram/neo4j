@@ -385,7 +385,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         """.stripMargin
       val returnColumns =
         s"""
-          |RETURN type(g) AS grant, p.action AS action, $resourceColumn AS resource,
+          |RETURN type(g) AS access, p.action AS action, $resourceColumn AS resource,
           |coalesce(d.name, '*') AS graph, segment, r.name AS role
         """.stripMargin
       val orderBy =
