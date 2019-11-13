@@ -8,18 +8,25 @@ package org.neo4j.internal.cypher.acceptance
 import java.net.URL
 
 import org.neo4j.common.DependencyResolver
+import org.neo4j.configuration.GraphDatabaseSettings
+import org.neo4j.cypher.GraphDatabaseTestSupport
 import org.neo4j.cypher.internal.runtime.ResourceMonitor
 import org.neo4j.cypher.internal.runtime.interpreted.CSVResource
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 import org.neo4j.graphdb.GraphDatabaseService
+import org.neo4j.graphdb.config.Setting
 import org.neo4j.internal.kernel.api.AutoCloseablePlus
 import org.neo4j.kernel.GraphDatabaseQueryService
 import org.neo4j.kernel.internal.GraphDatabaseAPI
 import org.neo4j.monitoring.Monitors
 
-trait ResourceTracking extends CypherFunSuite {
+import scala.collection.Map
+
+trait ResourceTracking extends CypherFunSuite with GraphDatabaseTestSupport {
 
   var resourceMonitor: TrackingResourceMonitor = _
+
+  override def databaseConfig(): Map[Setting[_], Object] = super.databaseConfig() ++ Map(GraphDatabaseSettings.cypher_enable_runtime_monitors -> java.lang.Boolean.TRUE)
 
   def trackResources(graph: GraphDatabaseService): Unit = trackResources(graph.asInstanceOf[GraphDatabaseAPI].getDependencyResolver)
 

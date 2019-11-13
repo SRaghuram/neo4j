@@ -30,7 +30,8 @@ object ContextHelper extends MockitoSugar {
     morselSizeBig = GraphDatabaseSettings.cypher_morsel_size_big.defaultValue(),
     schedulerTracing = NoSchedulerTracing,
     lenientCreateRelationship = false,
-    memoryTrackingController = new ConfigMemoryTrackingController(Config.defaults())
+    memoryTrackingController = new ConfigMemoryTrackingController(Config.defaults()),
+    enableMonitors = false
   )
 
   def create(exceptionCreator: (String, InputPosition) => CypherException = (_, _) => null,

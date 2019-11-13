@@ -5,10 +5,14 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
+import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext.IndexSearchMonitor
+import org.neo4j.graphdb.config.Setting
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithAssertion, Configs, CypherComparisonSupport}
 import org.neo4j.internal.schema.IndexDescriptor
+
+import scala.collection.Map
 
 class UniqueIndexUsageAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
 
@@ -180,6 +184,9 @@ class UniqueIndexUsageAcceptanceTest extends ExecutionEngineFunSuite with Cypher
 
     for (i <- 1 to 10) createLabeledNode(Map("name" -> ("Smith" + i)), "Matrix")
   }
+
+  override def databaseConfig(): Map[Setting[_], Object] =
+    super.databaseConfig() ++ Map(GraphDatabaseSettings.cypher_enable_runtime_monitors -> java.lang.Boolean.TRUE)
 
   private def assertNoLockingHappened(): Unit = {
     withClue("Should not lock indexes: ") { lockingIndexSearchCalled should equal(false) }
