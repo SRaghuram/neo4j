@@ -23,11 +23,25 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     // Notice: They are executed in succession so they have to make sense in that order
     assertQueriesAndSubQueryCounts(List(
       "GRANT ACCESS ON DATABASE * TO custom" -> 1,
+      "REVOKE GRANT ACCESS ON DATABASE * FROM custom" -> 1,
+      "DENY ACCESS ON DATABASE * TO custom" -> 1,
+      "REVOKE DENY ACCESS ON DATABASE * FROM custom" -> 1,
+      "GRANT ACCESS ON DATABASE * TO custom" -> 1,
       "DENY ACCESS ON DATABASE * TO custom" -> 1,
       "REVOKE ACCESS ON DATABASE * FROM custom" -> 1,
+
+      "GRANT START ON DATABASE * TO custom" -> 1,
+      "REVOKE GRANT START ON DATABASE * FROM custom" -> 1,
+      "DENY START ON DATABASE * TO custom" -> 1,
+      "REVOKE DENY START ON DATABASE * FROM custom" -> 1,
       "GRANT START ON DATABASE * TO custom" -> 1,
       "DENY START ON DATABASE * TO custom" -> 1,
       "REVOKE START ON DATABASE * FROM custom" -> 1,
+
+      "GRANT STOP ON DATABASE * TO custom" -> 1,
+      "REVOKE GRANT STOP ON DATABASE * FROM custom" -> 1,
+      "DENY STOP ON DATABASE * TO custom" -> 1,
+      "REVOKE DENY STOP ON DATABASE * FROM custom" -> 1,
       "GRANT STOP ON DATABASE * TO custom" -> 1,
       "DENY STOP ON DATABASE * TO custom" -> 1,
       "REVOKE STOP ON DATABASE * FROM custom" -> 1
