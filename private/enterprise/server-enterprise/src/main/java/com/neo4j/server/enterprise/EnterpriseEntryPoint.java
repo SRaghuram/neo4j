@@ -9,6 +9,8 @@ import org.neo4j.server.BlockingBootstrapper;
 import org.neo4j.server.Bootstrapper;
 import org.neo4j.server.ServerBootstrapper;
 
+import static org.neo4j.internal.unsafe.UnsafeUtil.disableIllegalAccessLogger;
+
 public class EnterpriseEntryPoint
 {
     private static Bootstrapper bootstrapper;
@@ -19,6 +21,7 @@ public class EnterpriseEntryPoint
 
     public static void main( String[] args )
     {
+        disableIllegalAccessLogger();
         int status = ServerBootstrapper.start( new EnterpriseBootstrapper(), args );
         if ( status != 0 )
         {
