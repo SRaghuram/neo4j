@@ -7,37 +7,107 @@ package com.neo4j.internal.cypher.acceptance
 
 import java.util
 
-import org.neo4j.configuration.GraphDatabaseSettings
-import org.neo4j.graphdb.Relationship
+import org.neo4j.configuration.GraphDatabaseSettings.{DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME}
+import org.neo4j.graphdb.{Node, Relationship}
+
+import scala.collection.JavaConverters._
 
 class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
-
-  /*
-    Please note: Since we have other (better) tests, that tests the correctness of these procedures,
-                 the tests in this class will not look at the return values and check on that but just the number of returned rows
-   */
 
   /*
     ------------ db.relationshipTypes ------------
   */
 
-  test("db.relationshipTypes should return empty result for user without any whitelisted type") {
+  test("db.relationshipTypes should return empty result without grants") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("ALTER USER neo4j SET PASSWORD 'neo' CHANGE NOT REQUIRED")
-    executeOnDefault("neo4j", "neo", "CALL db.createRelationshipType('A')")
     setupUserWithCustomRole()
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE ()-[:A]->()")
 
     // WHEN & THEN
-    executeOnDefault("joe", "soap", "CALL db.relationshipTypes()") shouldBe 0
+    val query = "CALL db.relationshipTypes"
+    executeOnDefault("joe", "soap", query ) should be(0)
+  }
+
+  test("db.relationshipTypes should return type when granted traverse") {
+    // GIVEN
+    setupUserWithCustomRole()
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE ()-[:A]->()-[:B]->()")
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * NODES * TO custom")
+    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIP A TO custom")
+
+    // THEN
+    val query = "CALL db.relationshipTypes"
+    executeOnDefault("joe", "soap", query, resultHandler = (row,_) => {
+      row.get("relationshipType") should be("A")
+    } ) should be(1)
+  }
+
+  test("db.relationshipTypes should return type even if it cannot be found by match") {
+    // GIVEN
+    setupUserWithCustomRole()
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE ()-[:A]->()")
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIP A TO custom")
+
+    // THEN
+    val query = "CALL db.relationshipTypes"
+    executeOnDefault("joe", "soap", query, resultHandler = (row,_) => {
+      row.get("relationshipType") should be("A")
+    } ) should be(1)
+  }
+
+  test("db.relationshipTypes should return granted traverse *") {
+    // GIVEN
+    setupUserWithCustomRole()
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE ()-[:A]->()-[:B]->()")
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIP * TO custom")
+
+    // THEN
+    val query = "CALL db.relationshipTypes() YIELD relationshipType RETURN relationshipType ORDER BY relationshipType"
+    val expected = List("A", "B")
+    executeOnDefault("joe", "soap", query, resultHandler = (row,index) => {
+      row.get("relationshipType") should be(expected(index))
+    } ) should be(2)
+  }
+
+  test("db.relationshipTypes should not return denied type") {
+    // GIVEN
+    setupUserWithCustomRole()
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE ()-[:A]->()-[:B]->()")
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIP * TO custom")
+    execute("DENY TRAVERSE ON GRAPH * RELATIONSHIP A TO custom")
+
+    // THEN
+    val query = "CALL db.relationshipTypes"
+    executeOnDefault("joe", "soap", query, resultHandler = (row,_) => {
+      row.get("relationshipType") should be("B")
+    } ) should be(1)
   }
 
   test("db.relationshipTypes should return empty result for user with only read but not traverse") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("ALTER USER neo4j SET PASSWORD 'neo' CHANGE NOT REQUIRED")
-    executeOnDefault("neo4j", "neo", "CALL db.createRelationshipType('A')")
     setupUserWithCustomRole()
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE ()-[:A]->()-[:B]->()")
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT READ {prop} ON GRAPH * RELATIONSHIPS A (*) TO custom")
 
     // WHEN & THEN
@@ -46,23 +116,44 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
 
   test("db.relationshipTypes should return empty result for user with only denied read") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("ALTER USER neo4j SET PASSWORD 'neo' CHANGE NOT REQUIRED")
-    executeOnDefault("neo4j", "neo", "CALL db.createRelationshipType('A')")
     setupUserWithCustomRole()
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE ()-[:A]->()-[:B]->()")
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("DENY READ {prop} ON GRAPH * RELATIONSHIPS A (*) TO custom")
 
     // WHEN & THEN
     executeOnDefault("joe", "soap", "CALL db.relationshipTypes()") shouldBe 0
   }
 
+  test("db.relationshipTypes should return type with grant traverse and deny read") {
+    // GIVEN
+    setupUserWithCustomRole()
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE ()-[:A]->()-[:B]->()")
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS A (*) TO custom")
+    execute("DENY READ {prop} ON GRAPH * RELATIONSHIPS A (*) TO custom")
+
+    // WHEN & THEN
+    executeOnDefault("joe", "soap", "CALL db.relationshipTypes()", resultHandler = (row,_) => {
+      row.get("relationshipType") should be("A")
+    }) shouldBe 1
+  }
+
   test("db.relationshipTypes should return empty result for user with only write") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("ALTER USER neo4j SET PASSWORD 'neo' CHANGE NOT REQUIRED")
-    executeOnDefault("neo4j", "neo", "CALL db.createRelationshipType('A')")
     setupUserWithCustomRole()
-    execute("GRANT WRITE {*} ON GRAPH * TO custom")
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE ()-[:A]->()-[:B]->()")
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT WRITE ON GRAPH * TO custom")
 
     // WHEN & THEN
     executeOnDefault("joe", "soap", "CALL db.relationshipTypes()") shouldBe 0
@@ -70,119 +161,185 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
 
   test("db.relationshipTypes should return empty result for user with denied write") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("ALTER USER neo4j SET PASSWORD 'neo' CHANGE NOT REQUIRED")
-    executeOnDefault("neo4j", "neo", "CALL db.createRelationshipType('A')")
     setupUserWithCustomRole()
-    execute("DENY WRITE {*} ON GRAPH * TO custom")
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE ()-[:A]->()-[:B]->()")
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("DENY WRITE ON GRAPH * TO custom")
 
     // WHEN & THEN
     executeOnDefault("joe", "soap", "CALL db.relationshipTypes()") shouldBe 0
-  }
-
-  test("db.relationshipTypes should return correct result for user with whitelisted type") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("ALTER USER neo4j SET PASSWORD 'neo' CHANGE NOT REQUIRED")
-    executeOnDefault("neo4j", "neo", "CALL db.createRelationshipType('A')")
-    setupUserWithCustomRole()
-    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS A (*) TO custom")
-
-    // WHEN & THEN
-    executeOnDefault("joe", "soap", "CALL db.relationshipTypes()") shouldBe 1
-  }
-
-  test("db.relationshipTypes should return empty result for user with denied traverse") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("ALTER USER neo4j SET PASSWORD 'neo' CHANGE NOT REQUIRED")
-    executeOnDefault("neo4j", "neo", "CALL db.createRelationshipType('A')")
-    setupUserWithCustomRole()
-    execute("DENY TRAVERSE ON GRAPH * RELATIONSHIPS A (*) TO custom")
-
-    // WHEN & THEN
-    executeOnDefault("joe", "soap", "CALL db.relationshipTypes()") shouldBe 0
-  }
-
-  test("db.relationshipTypes should return correct results for user with whitelisted type") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("ALTER USER neo4j SET PASSWORD 'neo' CHANGE NOT REQUIRED")
-    executeOnDefault("neo4j", "neo", "CALL db.createRelationshipType('A')")
-    executeOnDefault("neo4j", "neo", "CALL db.createRelationshipType('B')")
-    setupUserWithCustomRole()
-    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS A (*) TO custom")
-
-    // WHEN & THEN
-    executeOnDefault("neo4j", "neo", "CALL db.relationshipTypes()") shouldBe 2
-
-    // WHEN & THEN
-    executeOnDefault("joe", "soap", "CALL db.relationshipTypes()") shouldBe 1
-  }
-
-  test("db.relationshipTypes should return correct results for user with all whitelisted types and denied ones") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("ALTER USER neo4j SET PASSWORD 'neo' CHANGE NOT REQUIRED")
-    executeOnDefault("neo4j", "neo", "CALL db.createRelationshipType('A')")
-    executeOnDefault("neo4j", "neo", "CALL db.createRelationshipType('B')")
-    setupUserWithCustomRole()
-    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS * (*) TO custom")
-    execute("DENY TRAVERSE ON GRAPH * RELATIONSHIPS A (*) TO custom")
-
-    // WHEN & THEN
-    executeOnDefault("neo4j", "neo", "CALL db.relationshipTypes()") shouldBe 2
-
-    // WHEN & THEN
-    executeOnDefault("joe", "soap", "CALL db.relationshipTypes()") shouldBe 1
   }
 
   /*
     ------------ db.labels ------------
   */
 
-  test("db.labels should return empty result for user without any whitelisted label") {
+  test("db.labels should return empty result for user without any traverse") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("ALTER USER neo4j SET PASSWORD 'neo' CHANGE NOT REQUIRED")
-    executeOnDefault("neo4j", "neo", "CALL db.createLabel('A')")
     setupUserWithCustomRole()
 
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:A)")
+
     // WHEN & THEN
-    executeOnDefault("joe", "soap", "CALL db.labels()") shouldBe 0
+    val query = "CALL db.labels() YIELD label RETURN label ORDER BY label"
+    executeOnDefault("joe", "soap", query) should be(0)
+  }
+
+  test("db.labels should return correct result for user with traverse") {
+    // GIVEN
+    setupUserWithCustomRole()
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:A), (:B)")
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * NODE A TO custom")
+
+    // THEN
+    val query = "CALL db.labels() YIELD label RETURN label ORDER BY label"
+    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+      row.get("label") should be("A")
+    }) should be(1)
+  }
+
+  test("db.labels should return all labels for user with traverse *") {
+    // GIVEN
+    setupUserWithCustomRole()
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:A), (:B)")
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * NODE * TO custom")
+
+    // THEN
+    val expected = List( "A", "B" )
+    val query = "CALL db.labels() YIELD label RETURN label ORDER BY label"
+    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+      row.get("label") should be(expected(index))
+    }) should be(2)
+  }
+
+  test("db.labels should return granted label even if it cannot be found by match") {
+    // GIVEN
+    setupUserWithCustomRole()
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:A:B)")
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * NODE * TO custom")
+    execute("DENY TRAVERSE ON GRAPH * NODE B TO custom")
+
+    // THEN
+    val query = "CALL db.labels() YIELD label RETURN label ORDER BY label"
+    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+      row.get("label") should be("A")
+    }) should be(1)
+  }
+
+  test("db.labels should not return denied label") {
+    // GIVEN
+    setupUserWithCustomRole()
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:A),(:B)")
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * NODE * TO custom")
+    execute("DENY TRAVERSE ON GRAPH * NODE A TO custom")
+
+    // THEN
+    val query = "CALL db.labels() YIELD label RETURN label ORDER BY label"
+    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+      row.get("label") should be("B")
+    }) should be(1)
+  }
+
+  test("db.labels should return empty result for indexed label without traverse") {
+    // GIVEN
+    setupUserWithCustomRole()
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    graph.createIndex("A","foo")
+
+    // WHEN & THEN
+    val query = "CALL db.labels()"
+    executeOnDefault("joe", "soap", query) should be(0)
+  }
+
+  test("db.labels should return indexed label with traverse") {
+    // GIVEN
+    setupUserWithCustomRole()
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    graph.createIndex("A","foo")
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * NODE A TO custom")
+
+    // THEN
+    val query = "CALL db.labels()"
+    executeOnDefault("joe", "soap", query) should be(1)
   }
 
   test("db.labels should return empty result for user with only read but not traverse") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("ALTER USER neo4j SET PASSWORD 'neo' CHANGE NOT REQUIRED")
-    executeOnDefault("neo4j", "neo", "CALL db.createLabel('A')")
     setupUserWithCustomRole()
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:A)")
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT READ {prop} ON GRAPH * NODES A (*) TO custom")
 
-    // WHEN & THEN
+    // THEN
     executeOnDefault("joe", "soap", "CALL db.labels()") shouldBe 0
   }
 
   test("db.labels should return empty result for user with only denied read") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("ALTER USER neo4j SET PASSWORD 'neo' CHANGE NOT REQUIRED")
-    executeOnDefault("neo4j", "neo", "CALL db.createLabel('A')")
     setupUserWithCustomRole()
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:A)")
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("DENY READ {prop} ON GRAPH * NODES A (*) TO custom")
 
-    // WHEN & THEN
+    // THEN
     executeOnDefault("joe", "soap", "CALL db.labels()") shouldBe 0
+  }
+
+  test("db.labels should return label with grant traverse and deny read") {
+    // GIVEN
+    setupUserWithCustomRole()
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:A)")
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * NODES A (*) TO custom")
+    execute("DENY READ {prop} ON GRAPH * NODES A (*) TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", "CALL db.labels()", resultHandler = (row,_) => {
+      row.get("label") should be("A")
+    }) shouldBe 1
   }
 
   test("db.labels should return empty result for user with only write") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("ALTER USER neo4j SET PASSWORD 'neo' CHANGE NOT REQUIRED")
-    executeOnDefault("neo4j", "neo", "CALL db.createLabel('A')")
     setupUserWithCustomRole()
-    execute("GRANT WRITE {*} ON GRAPH * TO custom")
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:A)")
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT WRITE ON GRAPH * TO custom")
 
     // WHEN & THEN
     executeOnDefault("joe", "soap", "CALL db.labels()") shouldBe 0
@@ -190,72 +347,16 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
 
   test("db.labels should return empty result for user with only denied write") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("ALTER USER neo4j SET PASSWORD 'neo' CHANGE NOT REQUIRED")
-    executeOnDefault("neo4j", "neo", "CALL db.createLabel('A')")
     setupUserWithCustomRole()
-    execute("DENY WRITE {*} ON GRAPH * TO custom")
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:A)")
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("DENY WRITE ON GRAPH * TO custom")
 
     // WHEN & THEN
     executeOnDefault("joe", "soap", "CALL db.labels()") shouldBe 0
-  }
-
-  test("db.labels should return correct result for user with whitelisted label") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("ALTER USER neo4j SET PASSWORD 'neo' CHANGE NOT REQUIRED")
-    executeOnDefault("neo4j", "neo", "CALL db.createLabel('A')")
-    setupUserWithCustomRole()
-    execute("GRANT TRAVERSE ON GRAPH * NODES A (*) TO custom")
-
-    // WHEN & THEN
-    executeOnDefault("joe", "soap", "CALL db.labels()") shouldBe 1
-  }
-
-  test("db.labels should return empty result for user with denied traverse") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("ALTER USER neo4j SET PASSWORD 'neo' CHANGE NOT REQUIRED")
-    executeOnDefault("neo4j", "neo", "CALL db.createLabel('A')")
-    setupUserWithCustomRole()
-    execute("DENY TRAVERSE ON GRAPH * NODES A (*) TO custom")
-
-    // WHEN & THEN
-    executeOnDefault("joe", "soap", "CALL db.labels()") shouldBe 0
-  }
-
-
-  test("db.labels should return correct results for user with whitelisted label") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("ALTER USER neo4j SET PASSWORD 'neo' CHANGE NOT REQUIRED")
-    executeOnDefault("neo4j", "neo", "CALL db.createLabel('A')")
-    executeOnDefault("neo4j", "neo", "CALL db.createLabel('B')")
-    setupUserWithCustomRole()
-    execute("GRANT TRAVERSE ON GRAPH * NODES A (*) TO custom")
-
-    // WHEN & THEN
-    executeOnDefault("neo4j", "neo", "CALL db.labels()") shouldBe 2
-
-    // WHEN & THEN
-    executeOnDefault("joe", "soap", "CALL db.labels()") shouldBe 1
-  }
-
-  test("db.labels should return correct results for userwith all whitelisted labels and denied ones") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("ALTER USER neo4j SET PASSWORD 'neo' CHANGE NOT REQUIRED")
-    executeOnDefault("neo4j", "neo", "CALL db.createLabel('A')")
-    executeOnDefault("neo4j", "neo", "CALL db.createLabel('B')")
-    setupUserWithCustomRole()
-    execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
-    execute("DENY TRAVERSE ON GRAPH * NODES A (*) TO custom")
-
-    // WHEN & THEN
-    executeOnDefault("neo4j", "neo", "CALL db.labels()") shouldBe 2
-
-    // WHEN & THEN
-    executeOnDefault("joe", "soap", "CALL db.labels()") shouldBe 1
   }
 
   /*
@@ -264,10 +365,9 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
 
   test("db.propertyKeys should return empty result for user without any grants") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("ALTER USER neo4j SET PASSWORD 'neo' CHANGE NOT REQUIRED")
-    executeOnDefault("neo4j", "neo", "CREATE ({a:1})")
     setupUserWithCustomRole()
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE ({a:1})")
 
     // WHEN & THEN
     executeOnDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 0
@@ -275,71 +375,83 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
 
   test("db.propertyKeys should return empty result for user with only write") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("ALTER USER neo4j SET PASSWORD 'neo' CHANGE NOT REQUIRED")
-    executeOnDefault("neo4j", "neo", "CREATE ({a:1})")
     setupUserWithCustomRole()
-    execute("GRANT WRITE {*} ON GRAPH * TO custom")
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE ({a:1})")
 
-    // WHEN & THEN
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT WRITE ON GRAPH * TO custom")
+
+    // THEN
     executeOnDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 0
   }
 
   test("db.propertyKeys should return empty result for user with only denied write") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("ALTER USER neo4j SET PASSWORD 'neo' CHANGE NOT REQUIRED")
-    executeOnDefault("neo4j", "neo", "CREATE ({a:1})")
     setupUserWithCustomRole()
-    execute("DENY WRITE {*} ON GRAPH * TO custom")
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE ({a:1})")
 
-    // WHEN & THEN
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("DENY WRITE ON GRAPH * TO custom")
+
+    // THEN
     executeOnDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 0
   }
 
   test("db.propertyKeys should return empty result for user with only traverse grant") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("ALTER USER neo4j SET PASSWORD 'neo' CHANGE NOT REQUIRED")
-    executeOnDefault("neo4j", "neo", "CREATE (:A{a:1})")
     setupUserWithCustomRole()
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:A {a:1})")
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT TRAVERSE ON GRAPH * NODES A (*) TO custom")
 
-    // WHEN & THEN
+    // THEN
     executeOnDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 0
   }
 
   test("db.propertyKeys should return empty result for user with denied traverse") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("ALTER USER neo4j SET PASSWORD 'neo' CHANGE NOT REQUIRED")
-    executeOnDefault("neo4j", "neo", "CREATE (:A{a:1})")
     setupUserWithCustomRole()
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:A {a:1})")
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("DENY TRAVERSE ON GRAPH * NODES A (*) TO custom")
 
-    // WHEN & THEN
+    // THEN
     executeOnDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 0
   }
 
   test("db.propertyKeys should return correct result for user with only read grant") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("ALTER USER neo4j SET PASSWORD 'neo' CHANGE NOT REQUIRED")
-    executeOnDefault("neo4j", "neo", "CREATE (:A{a:1})")
     setupUserWithCustomRole()
-    execute("GRANT READ{a} ON GRAPH * NODES A (*) TO custom")
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:A {a:1})")
 
-    // WHEN & THEN
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT READ {a} ON GRAPH * NODES A (*) TO custom")
+
+    // THEN
     executeOnDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 1
   }
 
   test("db.propertyKeys should return empty result for user with denied read") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("ALTER USER neo4j SET PASSWORD 'neo' CHANGE NOT REQUIRED")
-    executeOnDefault("neo4j", "neo", "CREATE (:A{a:1})")
     setupUserWithCustomRole()
-    execute("DENY READ{a} ON GRAPH * NODES A (*) TO custom")
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:A {a:1})")
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("DENY READ {a} ON GRAPH * NODES A (*) TO custom")
 
     // WHEN & THEN
     executeOnDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 0
@@ -347,87 +459,105 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
 
   test("db.propertyKeys should return correct result for user with match on any label as long as that propertyKey is part of the grant") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("ALTER USER neo4j SET PASSWORD 'neo' CHANGE NOT REQUIRED")
-    executeOnDefault("neo4j", "neo", "CREATE (:A{x:1})")
     setupUserWithCustomRole()
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:A {x:1})")
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT MATCH {x} ON GRAPH * NODES A (*) TO custom")
 
-    // WHEN & THEN
+    // THEN
     executeOnDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 1
 
-    // GIVEN
-    executeOnSystem("neo4j", "neo","REVOKE GRANT READ {x} ON GRAPH * NODES A (*) FROM custom")
-    executeOnSystem("neo4j", "neo","REVOKE GRANT TRAVERSE ON GRAPH * NODES A (*) FROM custom")
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("REVOKE GRANT READ {x} ON GRAPH * NODES A (*) FROM custom")
+    execute("REVOKE GRANT TRAVERSE ON GRAPH * NODES A (*) FROM custom")
+    execute("GRANT MATCH {x} ON GRAPH * NODES B (*) TO custom")
 
-    // GRANT on Label B, but same propKey should still work
-    executeOnSystem("neo4j", "neo","GRANT MATCH {x} ON GRAPH * NODES B (*) TO custom")
-
-    // WHEN & THEN
+    // THEN
     executeOnDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 1
 
-    // GIVEN
-    executeOnSystem("neo4j", "neo","REVOKE GRANT READ {x} ON GRAPH * NODES B (*) FROM custom")
-    executeOnSystem("neo4j", "neo","REVOKE GRANT TRAVERSE ON GRAPH * NODES B (*) FROM custom")
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("REVOKE GRANT READ {x} ON GRAPH * NODES B (*) FROM custom")
+    execute("REVOKE GRANT TRAVERSE ON GRAPH * NODES B (*) FROM custom")
+    execute("GRANT MATCH {x} ON GRAPH * NODES * (*) TO custom")
 
-    // GRANT on all Labels, but same propKey should still work
-    executeOnSystem("neo4j", "neo","GRANT MATCH {x} ON GRAPH * NODES * (*) TO custom")
-
-    // WHEN & THEN
+    // THEN
     executeOnDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 1
   }
 
   test("db.propertyKeys should return correct result for user with match on any label but deny on one") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("ALTER USER neo4j SET PASSWORD 'neo' CHANGE NOT REQUIRED")
-    executeOnDefault("neo4j", "neo", "CREATE (:A{x:1})")
     setupUserWithCustomRole()
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:A {x:1})")
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT MATCH {x, y} ON GRAPH * NODES * (*) TO custom")
     execute("DENY MATCH {x} ON GRAPH * NODES A (*) TO custom")
 
-    // WHEN & THEN
+    // THEN
     executeOnDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 2
 
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("DENY MATCH {x} ON GRAPH * NODES * (*) TO custom")
-    // WHEN & THEN
+
+    // THEN
     executeOnDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 1
 
-    // GIVEN
-    executeOnSystem("neo4j", "neo","REVOKE GRANT READ {x} ON GRAPH * NODES * (*) FROM custom")
-    executeOnSystem("neo4j", "neo","REVOKE GRANT TRAVERSE ON GRAPH * NODES * (*) FROM custom")
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("REVOKE GRANT READ {x} ON GRAPH * NODES * (*) FROM custom")
+    execute("REVOKE GRANT TRAVERSE ON GRAPH * NODES * (*) FROM custom")
 
-    // WHEN & THEN
+    // THEN
     executeOnDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 1
   }
 
   test("db.propertyKeys should return correct result for user with match on any label and type as long as that propertyKey is part of the grant") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("ALTER USER neo4j SET PASSWORD 'neo' CHANGE NOT REQUIRED")
-    executeOnDefault("neo4j", "neo", "CREATE (:A{a:1, c:3})-[:REL{b:2, c:3}]->()")
     setupUserWithCustomRole()
-    execute("GRANT MATCH {b} ON GRAPH * RELATIONSHIPS REL (*) TO custom")
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:A{a:1, c:3})-[:A{b:2, c:3}]->()")
 
-    // WHEN & THEN
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT MATCH {b} ON GRAPH * RELATIONSHIPS A (*) TO custom")
+
+    // THEN
     executeOnDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 1
 
-    executeOnSystem("neo4j", "neo","GRANT MATCH {a} ON GRAPH * NODES A (*) TO custom")
-    // WHEN & THEN
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT MATCH {a} ON GRAPH * NODES A (*) TO custom")
+
+    // THEN
     executeOnDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 2
 
-    executeOnSystem("neo4j", "neo","GRANT READ {c} ON GRAPH * ELEMENTS * (*) TO custom")
-    // WHEN & THEN
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT READ {c} ON GRAPH * ELEMENTS * (*) TO custom")
+
+    // THEN
     executeOnDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 3
 
-    executeOnSystem("neo4j", "neo","DENY READ {c} ON GRAPH * ELEMENTS * (*) TO custom")
-    // WHEN & THEN
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("DENY READ {c} ON GRAPH * ELEMENTS * (*) TO custom")
+
+    // THEN
     executeOnDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 2
 
-    executeOnSystem("neo4j", "neo","DENY READ {*} ON GRAPH * ELEMENTS * (*) TO custom")
-     // WHEN & THEN
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("DENY READ {*} ON GRAPH * ELEMENTS * (*) TO custom")
+
+    // THEN
     executeOnDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 0
   }
 
@@ -437,49 +567,97 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
 
   test("make sure that db.schema.nodeTypeProperties does not leak for user without grants") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("ALTER USER neo4j SET PASSWORD 'neo' CHANGE NOT REQUIRED")
-    executeOnDefault("neo4j", "neo", "CREATE ({a:1})")
     setupUserWithCustomRole()
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:A {a:1})")
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
 
     // WHEN & THEN
     executeOnDefault("joe", "soap", "CALL db.schema.nodeTypeProperties()") shouldBe 0
+  }
 
-    // WHEN & THEN
-    executeOnDefault("neo4j", "neo", "CALL db.schema.nodeTypeProperties()") shouldBe 1
+  test("make sure that db.schema.nodeTypeProperties return correct result with grants") {
+    // GIVEN
+    setupUserWithCustomRole()
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:A {a:1, b:2}), (:B {a:1, b:2})")
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT MATCH {a} ON GRAPH * NODES A TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", "CALL db.schema.nodeTypeProperties()", resultHandler = (row,_) => {
+      row.get("propertyName") should be("a")
+      row.get("nodeLabels") should equal(List("A").asJava)
+    }) shouldBe 1
   }
 
   test("make sure that db.schema.relTypeProperties does not leak for user without grants") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("ALTER USER neo4j SET PASSWORD 'neo' CHANGE NOT REQUIRED")
-    executeOnDefault("neo4j", "neo", "CREATE ()-[:REL{a:1}]->()")
     setupUserWithCustomRole()
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE ()-[:A {a:1, b:2}]->()")
 
     // WHEN & THEN
     executeOnDefault("joe", "soap", "CALL db.schema.relTypeProperties()") shouldBe 0
+  }
 
-    // WHEN & THEN
-    executeOnDefault("neo4j", "neo", "CALL db.schema.relTypeProperties()") shouldBe 1
+  test("make sure that db.schema.relTypeProperties return correct result with grants") {
+    // GIVEN
+    setupUserWithCustomRole()
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE ()-[:A {a:1, b:2}]->()")
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * NODES * TO custom")
+    execute("GRANT MATCH {a} ON GRAPH * RELATIONSHIPS A TO custom")
+
+    // THEN
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    executeOnDefault("joe", "soap", "CALL db.schema.relTypeProperties()", resultHandler = (row, _) => {
+      row.get("relType") should be(":`A`")
+      row.get("propertyName") should be("a")
+    }) shouldBe 1
   }
 
   test("make sure that db.schema.visualization does not leak for user without grants") {
     // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("ALTER USER neo4j SET PASSWORD 'neo' CHANGE NOT REQUIRED")
-    executeOnDefault("neo4j", "neo", "CREATE (:A)-[:REL]->(:B)")
     setupUserWithCustomRole()
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:A {a:1})-[:A {a:1}]->(:B {a:1})")
 
     // WHEN & THEN
     executeOnDefault("joe", "soap", "CALL db.schema.visualization()", resultHandler = (row, _) => {
       row.get("relationships") should equal(util.Collections.EMPTY_LIST)
       row.get("nodes") should equal(util.Collections.EMPTY_LIST)
     }) shouldBe 1
+  }
+
+  test("db.schema.visualization with grants") {
+    // GIVEN
+    setupUserWithCustomRole()
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:B)-[:B]->(:A)-[:A]->(:A)-[:A]->(:C)")
 
     // WHEN & THEN
-    executeOnDefault("neo4j", "neo", "CALL db.schema.visualization()", resultHandler = (row, _) => {
-      row.get("relationships").asInstanceOf[util.ArrayList[Relationship]].size() shouldBe 1
-      row.get("nodes").asInstanceOf[util.ArrayList[Relationship]].size() shouldBe 2
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * NODES A,B TO custom")
+    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS A TO custom")
+
+    executeOnDefault("joe", "soap", "CALL db.schema.visualization()", resultHandler = (row, _) => {
+      // check the relationship type and the start and end node labels
+      val relationships = row.get("relationships").asInstanceOf[util.ArrayList[Relationship]].asScala
+      relationships.map(rel => (rel.getStartNode.getAllProperties.get("name"), rel.getType.name(), rel.getEndNode.getAllProperties.get("name"))) should be(Seq(
+        ("A", "A", "A")
+      ))
+
+      // check the node label
+      val nodes = row.get("nodes").asInstanceOf[util.ArrayList[Node]].asScala
+      nodes.map(_.getAllProperties.get("name")) should equal(Seq("A", "B"))
     }) shouldBe 1
   }
 }
