@@ -28,7 +28,11 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
       "GRANT WRITE ON GRAPH * ELEMENTS * (*) TO custom" -> 2,
       "REVOKE WRITE ON GRAPH * ELEMENTS * (*) FROM custom" -> 2,
       "DENY WRITE ON GRAPH * ELEMENTS * (*) TO custom" -> 2,
-      "REVOKE DENY WRITE ON GRAPH * ELEMENTS * (*) FROM custom" -> 2
+      "REVOKE DENY WRITE ON GRAPH * ELEMENTS * (*) FROM custom" -> 2,
+
+      "GRANT WRITE ON GRAPH * ELEMENTS * (*) TO custom" -> 2,
+      "DENY WRITE ON GRAPH * ELEMENTS * (*) TO custom" -> 2,
+      "REVOKE WRITE ON GRAPH * ELEMENTS * (*) FROM custom" -> 4,
     ))
   }
 
