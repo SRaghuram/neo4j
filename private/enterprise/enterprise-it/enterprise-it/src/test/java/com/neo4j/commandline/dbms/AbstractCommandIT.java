@@ -51,7 +51,7 @@ abstract class AbstractCommandIT
         Files.write( configDir.resolve( DEFAULT_CONFIG_FILE_NAME ), singletonList( formatProperty( databases_root_path, dataDir.toPath() ) ) );
     }
 
-    private static String formatProperty( Setting setting, Path path )
+    private static String formatProperty( Setting<?> setting, Path path )
     {
         return format( "%s=%s", setting.name(), path.toString().replace( '\\', '/' ) );
     }
