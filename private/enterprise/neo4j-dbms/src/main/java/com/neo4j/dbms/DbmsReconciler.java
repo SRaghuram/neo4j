@@ -262,7 +262,7 @@ public class DbmsReconciler implements DatabaseStateService
         {
             return CompletableFuture.completedFuture( initialResult );
         }
-        log.info( "Database %s is requested to transaction from %s to %s", databaseName, currentState, desiredState );
+        log.info( "Database %s is requested to transition from %s to %s", databaseName, currentState, desiredState );
 
         if ( currentState.hasFailed() && !request.forceReconciliation() )
         {
