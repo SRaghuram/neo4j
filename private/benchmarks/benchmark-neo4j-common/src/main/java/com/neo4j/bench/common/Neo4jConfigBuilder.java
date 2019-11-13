@@ -26,6 +26,7 @@ import org.neo4j.server.configuration.ServerSettings;
 import static org.neo4j.configuration.GraphDatabaseSettings.dense_node_threshold;
 import static org.neo4j.configuration.GraphDatabaseSettings.tx_state_memory_allocation;
 import static org.neo4j.configuration.SettingValueParsers.FALSE;
+import static org.neo4j.configuration.SettingValueParsers.TRUE;
 
 public class Neo4jConfigBuilder
 {
@@ -41,7 +42,8 @@ public class Neo4jConfigBuilder
                 .withSetting( HttpConnector.enabled, FALSE )
                 .withSetting( OnlineBackupSettings.online_backup_enabled, FALSE )
                 .withSetting( GraphDatabaseSettings.log_queries, FALSE )
-                .withSetting( ServerSettings.http_logging_enabled, FALSE );
+                .withSetting( ServerSettings.http_logging_enabled, FALSE )
+                .withSetting( GraphDatabaseSettings.strict_config_validation, TRUE );
     }
 
     public static Neo4jConfigBuilder empty()
