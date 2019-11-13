@@ -100,7 +100,8 @@ public abstract class EnterpriseLdapAuthTestBase extends AbstractLdapTestUnit
             return true;
         }
         catch ( final IOException e )
-        { /* Ignore, Port not reachable */
+        {
+            // Ignore, Port not reachable
         }
         return false;
     }
