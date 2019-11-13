@@ -399,17 +399,7 @@ public final class CausalClusteringTestHelpers
             while ( nodes.hasNext() )
             {
                 var node = nodes.next();
-                if ( node == null )
-                {
-                    throw new IllegalStateException( "null " + label + " found" );
-                }
-
                 var name = node.getProperty( "name" );
-                if ( name == null )
-                {
-                    throw new IllegalStateException( label + " without a name found" );
-                }
-
                 nodeNames.add( name.toString() );
             }
             tx.commit();
