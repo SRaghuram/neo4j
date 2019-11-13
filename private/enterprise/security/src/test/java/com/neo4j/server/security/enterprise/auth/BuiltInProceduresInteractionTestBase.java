@@ -31,6 +31,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -38,9 +39,12 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.graphdb.event.TransactionData;
+import org.neo4j.graphdb.event.TransactionEventListenerAdapter;
 import org.neo4j.internal.helpers.collection.Iterators;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
@@ -164,6 +168,60 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
 
         latch.finishAndWaitForAllToFinish();
         tx.closeAndAssertSuccess();
+    }
+
+    @Test
+    void listTransactionIncludeClosing() throws Throwable
+    {
+        String listTransactionsQuery = "CALL dbms.listTransactions()";
+        String createQuery = "CREATE (n)";
+        OffsetDateTime startTime = getStartTime();
+        CountDownLatch committing = new CountDownLatch( 1 );
+        CountDownLatch commit = new CountDownLatch( 1 );
+        BlockingCommitTxListener txListener = new BlockingCommitTxListener( committing, commit );
+        String databaseName = neo.getLocalGraph().databaseName();
+        neo.registerTransactionEventListener( databaseName, txListener );
+
+        DoubleLatch latch = new DoubleLatch( 2 );
+        ThreadedTransaction<S> tx = new ThreadedTransaction<>( neo, latch );
+        tx.execute( threading, writeSubject, createQuery );
+        latch.startAndWaitForAllToStart();
+        latch.finishAndWaitForAllToFinish();
+
+        committing.await();
+
+        assertSuccess( adminSubject, listTransactionsQuery, r ->
+        {
+            commit.countDown();
+            List<Map<String,Object>> maps = collectResults( r );
+            Matcher<Map<String,Object>> thisTransaction = listedTransactionOfInteractionLevel( startTime, "adminSubject", listTransactionsQuery );
+            Matcher<Map<String,Object>> closingQueryMatcher = allOf( hasStartTimeAfter( startTime ), hasUsername( "writeSubject" ), hasStatus( "Closing" ) );
+
+            assertThat( maps, matchesOneToOneInAnyOrder( thisTransaction, closingQueryMatcher ) );
+        } );
+
+        tx.closeAndAssertSuccess();
+        neo.unregisterTransactionEventListener( databaseName, txListener );
+    }
+
+    private static class BlockingCommitTxListener extends TransactionEventListenerAdapter<Object>
+    {
+        private final CountDownLatch committing;
+        private final CountDownLatch commit;
+
+        private BlockingCommitTxListener( CountDownLatch committing, CountDownLatch commit )
+        {
+            this.committing = committing;
+            this.commit = commit;
+        }
+
+        @Override
+        public Object beforeCommit( TransactionData data, Transaction transaction, GraphDatabaseService databaseService ) throws Exception
+        {
+            committing.countDown();
+            commit.await();
+            return null;
+        }
     }
 
     @Test

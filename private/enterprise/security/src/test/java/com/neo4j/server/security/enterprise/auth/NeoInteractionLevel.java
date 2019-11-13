@@ -9,7 +9,7 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 import org.neo4j.graphdb.ResourceIterator;
-import org.neo4j.internal.helpers.HostnamePort;
+import org.neo4j.graphdb.event.TransactionEventListener;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
@@ -51,5 +51,7 @@ public interface NeoInteractionLevel<S>
 
     String getConnectionProtocol();
 
-    HostnamePort lookupConnector( String connectorKey );
+    void registerTransactionEventListener( String databaseName, TransactionEventListener<?> listener );
+
+    void unregisterTransactionEventListener( String databaseName, TransactionEventListener<?> listener );
 }

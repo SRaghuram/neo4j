@@ -32,7 +32,7 @@ import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.config.Setting;
-import org.neo4j.internal.helpers.HostnamePort;
+import org.neo4j.graphdb.event.TransactionEventListener;
 import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -47,7 +47,6 @@ import org.neo4j.server.rest.security.CommunityServerTestBase;
 import org.neo4j.test.server.HTTP;
 
 import static io.netty.channel.local.LocalAddress.ANY;
-import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertThat;
@@ -225,9 +224,15 @@ abstract class AbstractRESTInteraction extends CommunityServerTestBase implement
     }
 
     @Override
-    public HostnamePort lookupConnector( String connectorKey )
+    public void registerTransactionEventListener( String databaseName, TransactionEventListener<?> listener )
     {
-        return connectorPortRegister.getLocalAddress( connectorKey );
+        server.getDatabaseService().getDatabaseManagementService().registerTransactionEventListener( databaseName, listener );
+    }
+
+    @Override
+    public void unregisterTransactionEventListener( String databaseName, TransactionEventListener<?> listener )
+    {
+        server.getDatabaseService().getDatabaseManagementService().unregisterTransactionEventListener( databaseName, listener );
     }
 
     private static String parseErrorMessage( HTTP.Response response )

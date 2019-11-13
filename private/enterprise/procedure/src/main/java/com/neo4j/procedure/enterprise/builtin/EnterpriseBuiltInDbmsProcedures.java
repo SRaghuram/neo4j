@@ -12,26 +12,23 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BooleanSupplier;
-import java.util.function.Function;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.SettingImpl;
-import org.neo4j.function.UncaughtCheckedException;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.security.AuthorizationViolationException;
 import org.neo4j.internal.helpers.TimeUtil;
-import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.internal.kernel.api.procs.ProcedureSignature;
 import org.neo4j.internal.kernel.api.procs.UserFunctionSignature;
 import org.neo4j.internal.kernel.api.security.SecurityContext;
@@ -68,10 +65,7 @@ import static java.util.Objects.requireNonNull;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
-import static java.util.stream.Collectors.toSet;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
-import static org.neo4j.function.ThrowingFunction.catchThrown;
-import static org.neo4j.function.ThrowingFunction.throwIfPresent;
 import static org.neo4j.graphdb.security.AuthorizationViolationException.PERMISSION_DENIED;
 import static org.neo4j.procedure.Mode.DBMS;
 
@@ -163,7 +157,6 @@ public class EnterpriseBuiltInDbmsProcedures
     public Stream<FunctionResult> listFunctions()
     {
         securityContext.assertCredentialsNotExpired();
-        DependencyResolver resolver = graph.getDependencyResolver();
         QueryExecutionEngine queryExecutionEngine = resolver.resolveDependency( QueryExecutionEngine.class );
         List<FunctionInformation> providedLanguageFunctions = queryExecutionEngine.getProvidedLanguageFunctions();
 
@@ -217,7 +210,7 @@ public class EnterpriseBuiltInDbmsProcedures
     public Stream<ProcedureResult> listProcedures()
     {
         securityContext.assertCredentialsNotExpired();
-        GlobalProcedures globalProcedures = graph.getDependencyResolver().resolveDependency( GlobalProcedures.class );
+        GlobalProcedures globalProcedures = resolver.resolveDependency( GlobalProcedures.class );
         return globalProcedures.getAllProcedures().stream()
                 .sorted( Comparator.comparing( a -> a.name().toString() ) )
                 .map( ProcedureResult::new );
@@ -315,19 +308,19 @@ public class EnterpriseBuiltInDbmsProcedures
         securityContext.assertCredentialsNotExpired();
 
         ZoneId zoneId = getConfiguredTimeZone();
-        try
+        List<QueryStatusResult> result = new ArrayList<>();
+        for ( KernelTransactionHandle tx : getExecutingTransactions() )
         {
-            return getKernelTransactions().activeTransactions().stream()
-                .flatMap( k -> k.executingQuery().stream() )
-                    .filter( query -> isAdminOrSelf( query.username() ) )
-                    .map( catchThrown( InvalidArgumentsException.class,
-                            query -> new QueryStatusResult( query, (InternalTransaction) transaction, zoneId ) ) );
+            if ( tx.executingQuery().isPresent() )
+            {
+                ExecutingQuery query = tx.executingQuery().get();
+                if ( isAdminOrSelf( query.username() ) )
+                {
+                    result.add( new QueryStatusResult( query, (InternalTransaction) transaction, zoneId ) );
+                }
+            }
         }
-        catch ( UncaughtCheckedException uncaught )
-        {
-            throwIfPresent( uncaught.getCauseIfOfType( InvalidArgumentsException.class ) );
-            throw uncaught;
-        }
+        return result.stream();
     }
 
     @SystemProcedure
@@ -336,30 +329,25 @@ public class EnterpriseBuiltInDbmsProcedures
     public Stream<TransactionStatusResult> listTransactions() throws InvalidArgumentsException
     {
         securityContext.assertCredentialsNotExpired();
-        try
+
+        ZoneId zoneId = getConfiguredTimeZone();
+        List<TransactionStatusResult> result = new ArrayList<>();
+
+        Map<KernelTransactionHandle,Optional<QuerySnapshot>> handleQuerySnapshotsMap = new HashMap<>();
+        for ( KernelTransactionHandle tx : getExecutingTransactions() )
         {
-            Set<KernelTransactionHandle> handles = getKernelTransactions().activeTransactions().stream()
-                    .filter( transaction -> isAdminOrSelf( transaction.subject().username() ) )
-                    .collect( toSet() );
-
-            Map<KernelTransactionHandle,Optional<QuerySnapshot>> handleQuerySnapshotsMap = handles.stream()
-                    .collect( toMap( identity(), getTransactionQueries() ) );
-
-            TransactionDependenciesResolver transactionBlockerResolvers =
-                    new TransactionDependenciesResolver( handleQuerySnapshotsMap );
-
-            ZoneId zoneId = getConfiguredTimeZone();
-
-            return handles.stream()
-                    .map( catchThrown( InvalidArgumentsException.class,
-                            tx -> new TransactionStatusResult( tx, transactionBlockerResolvers,
-                                    handleQuerySnapshotsMap, zoneId ) ) );
+            if ( isAdminOrSelf( tx.subject().username() ) )
+            {
+                handleQuerySnapshotsMap.put( tx, tx.executingQuery().map( ExecutingQuery::snapshot ) );
+            }
         }
-        catch ( UncaughtCheckedException uncaught )
+        TransactionDependenciesResolver transactionBlockerResolvers = new TransactionDependenciesResolver( handleQuerySnapshotsMap );
+
+        for ( KernelTransactionHandle tx : handleQuerySnapshotsMap.keySet() )
         {
-            throwIfPresent( uncaught.getCauseIfOfType( InvalidArgumentsException.class ) );
-            throw uncaught;
+            result.add( new TransactionStatusResult( tx, transactionBlockerResolvers, handleQuerySnapshotsMap, zoneId ) );
         }
+        return result.stream();
     }
 
     @SystemProcedure
@@ -379,7 +367,7 @@ public class EnterpriseBuiltInDbmsProcedures
         requireNonNull( transactionIds );
         securityContext.assertCredentialsNotExpired();
         log.warn( "User %s trying to kill transactions: %s.", securityContext.subject().username(), transactionIds.toString() );
-        Map<String,KernelTransactionHandle> handles = getKernelTransactions().activeTransactions().stream()
+        Map<String,KernelTransactionHandle> handles = getExecutingTransactions().stream()
                         .filter( transaction -> isAdminOrSelf( transaction.subject().username() ) )
                         .filter( transaction -> transactionIds.contains( transaction.getUserTransactionName() ) )
                         .collect( toMap( KernelTransactionHandle::getUserTransactionName, identity() ) );
@@ -394,14 +382,13 @@ public class EnterpriseBuiltInDbmsProcedures
         {
             return new TransactionMarkForTerminationFailedResult( transactionId, currentUser );
         }
+        if ( handle.isClosing() )
+        {
+            return new TransactionMarkForTerminationFailedResult( transactionId, currentUser, "Unable to kill closing transactions." );
+        }
         log.debug( "User %s terminated transaction %d.", currentUser, transactionId );
         handle.markForTermination( Status.Transaction.Terminated );
         return new TransactionMarkForTerminationResult( transactionId, handle.subject().username() );
-    }
-
-    private static Function<KernelTransactionHandle,Optional<QuerySnapshot>> getTransactionQueries()
-    {
-        return transactionHandle -> transactionHandle.executingQuery().map( ExecutingQuery::snapshot );
     }
 
     @SystemProcedure
@@ -411,17 +398,27 @@ public class EnterpriseBuiltInDbmsProcedures
             throws InvalidArgumentsException
     {
         securityContext.assertCredentialsNotExpired();
-        try
+
+        long id = QueryId.fromExternalString( queryId ).kernelQueryId();
+        for ( KernelTransactionHandle tx : getExecutingTransactions() )
         {
-            long id = QueryId.fromExternalString( queryId ).kernelQueryId();
-            return getActiveTransactions( tx -> executingQueriesWithId( id, tx ) )
-                    .flatMap( this::getActiveLocksForQuery );
+            if ( tx.executingQuery().isPresent() )
+            {
+                ExecutingQuery query = tx.executingQuery().get();
+                if ( query.internalQueryId() == id )
+                {
+                    if ( isAdminOrSelf( query.username() ) )
+                    {
+                        return tx.activeLocks().map( ActiveLocksResult::new );
+                    }
+                    else
+                    {
+                        throw new AuthorizationViolationException( PERMISSION_DENIED );
+                    }
+                }
+            }
         }
-        catch ( UncaughtCheckedException uncaught )
-        {
-            throwIfPresent( uncaught.getCauseIfOfType( InvalidArgumentsException.class ) );
-            throw uncaught;
-        }
+        return Stream.empty();
     }
 
     @SystemProcedure
@@ -429,25 +426,7 @@ public class EnterpriseBuiltInDbmsProcedures
     @Procedure( name = "dbms.killQuery", mode = DBMS )
     public Stream<QueryTerminationResult> killQuery( @Name( "id" ) String idText ) throws InvalidArgumentsException
     {
-        securityContext.assertCredentialsNotExpired();
-        try
-        {
-            long queryId = QueryId.fromExternalString( idText ).kernelQueryId();
-
-            Set<Pair<KernelTransactionHandle,Optional<ExecutingQuery>>> querys =
-                    getActiveTransactions( tx -> executingQueriesWithId( queryId, tx ) ).collect( toSet() );
-            boolean killQueryVerbose = resolver.resolveDependency( Config.class ).get( GraphDatabaseSettings.kill_query_verbose );
-            if ( killQueryVerbose && querys.isEmpty() )
-            {
-                return Stream.<QueryTerminationResult>builder().add( new QueryFailedTerminationResult( QueryId.fromExternalString( idText ) ) ).build();
-            }
-            return querys.stream().map( catchThrown( InvalidArgumentsException.class, this::killQueryTransaction ) );
-        }
-        catch ( UncaughtCheckedException uncaught )
-        {
-            throwIfPresent( uncaught.getCauseIfOfType( InvalidArgumentsException.class ) );
-            throw uncaught;
-        }
+        return killQueries( singletonList( idText ) );
     }
 
     @SystemProcedure
@@ -456,32 +435,31 @@ public class EnterpriseBuiltInDbmsProcedures
     public Stream<QueryTerminationResult> killQueries( @Name( "ids" ) List<String> idTexts ) throws InvalidArgumentsException
     {
         securityContext.assertCredentialsNotExpired();
-        try
+
+        Set<Long> queryIds = new HashSet<>( idTexts.size() );
+        for ( String idText : idTexts )
         {
+            queryIds.add( QueryId.fromExternalString( idText ).kernelQueryId() );
+        }
 
-            Set<Long> queryIds = idTexts.stream().map( catchThrown( InvalidArgumentsException.class, QueryId::fromExternalString ) ).map(
-                    catchThrown( InvalidArgumentsException.class, QueryId::kernelQueryId ) ).collect( toSet() );
-
-            Set<QueryTerminationResult> terminatedQuerys = getActiveTransactions( tx -> executingQueriesWithIds( queryIds, tx ) ).map(
-                    catchThrown( InvalidArgumentsException.class, this::killQueryTransaction ) ).collect( toSet() );
-            boolean killQueryVerbose = resolver.resolveDependency( Config.class ).get( GraphDatabaseSettings.kill_query_verbose );
-            if ( killQueryVerbose && terminatedQuerys.size() != idTexts.size() )
+        // Kill the ones we find
+        List<QueryTerminationResult> result = new ArrayList<>( queryIds.size() );
+        for ( KernelTransactionHandle tx : getExecutingTransactions() )
+        {
+            Long internalQueryId = tx.executingQuery().map( ExecutingQuery::internalQueryId ).orElse( -1L );
+            if ( queryIds.remove( internalQueryId ) )
             {
-                for ( String id : idTexts )
-                {
-                    if ( terminatedQuerys.stream().noneMatch( query -> query.queryId.equals( id ) ) )
-                    {
-                        terminatedQuerys.add( new QueryFailedTerminationResult( QueryId.fromExternalString( id ) ) );
-                    }
-                }
+                result.add( killQueryTransaction( tx ) );
             }
-            return terminatedQuerys.stream();
         }
-        catch ( UncaughtCheckedException uncaught )
+
+        // Add error about the rest
+        for ( Long queryId : queryIds )
         {
-            throwIfPresent( uncaught.getCauseIfOfType( InvalidArgumentsException.class ) );
-            throw uncaught;
+            result.add( new QueryFailedTerminationResult( QueryId.ofInternalId( queryId ), "n/a", "No Query found with this id" ) );
         }
+
+        return result.stream();
     }
 
     @Admin
@@ -578,34 +556,25 @@ public class EnterpriseBuiltInDbmsProcedures
         }
     }
 
-    private <T> Stream<Pair<KernelTransactionHandle, Optional<ExecutingQuery>>> getActiveTransactions( Predicate<KernelTransactionHandle> predicate
-    )
+    private Set<KernelTransactionHandle> getExecutingTransactions()
     {
-        return getActiveTransactions( graph.getDependencyResolver() )
-            .stream()
-            .filter( predicate )
-            .map( tx -> Pair.of( tx, tx.executingQuery() ) );
+        return resolver.resolveDependency( KernelTransactions.class ).executingTransactions();
     }
 
-    private static boolean executingQueriesWithIds( Set<Long> ids, KernelTransactionHandle txHandle )
-    {
-        return txHandle.executingQuery().map( q -> ids.contains( q.internalQueryId() ) ).orElse( false );
-    }
-
-    private static boolean executingQueriesWithId( long id, KernelTransactionHandle txHandle )
-    {
-        return txHandle.executingQuery().map( q -> q.internalQueryId() == id ).orElse( false );
-    }
-
-    private QueryTerminationResult killQueryTransaction( Pair<KernelTransactionHandle, Optional<ExecutingQuery>> pair )
+    private QueryTerminationResult killQueryTransaction( KernelTransactionHandle handle )
             throws InvalidArgumentsException
     {
-        Optional<ExecutingQuery> query = pair.other();
+        Optional<ExecutingQuery> query = handle.executingQuery();
         ExecutingQuery executingQuery = query.orElseThrow( () -> new IllegalStateException( "Query should exist since we filtered based on query ids" ) );
         if ( isAdminOrSelf( executingQuery.username() ) )
         {
-            pair.first().markForTermination( Status.Transaction.Terminated );
-            return new QueryTerminationResult( QueryId.ofInternalId( executingQuery.internalQueryId() ), executingQuery.username() );
+            if ( handle.isClosing() )
+            {
+                return new QueryFailedTerminationResult( QueryId.ofInternalId( executingQuery.internalQueryId() ), executingQuery.username(),
+                        "Unable to kill queries when underlying transaction is closing." );
+            }
+            handle.markForTermination( Status.Transaction.Terminated );
+            return new QueryTerminationResult( QueryId.ofInternalId( executingQuery.internalQueryId() ), executingQuery.username(), "Query found" );
         }
         else
         {
@@ -613,56 +582,7 @@ public class EnterpriseBuiltInDbmsProcedures
         }
     }
 
-    private Stream<ActiveLocksResult> getActiveLocksForQuery( Pair<KernelTransactionHandle, Optional<ExecutingQuery>> pair )
-    {
-        Optional<ExecutingQuery> query = pair.other();
-        return query.map( q ->
-        {
-            if ( isAdminOrSelf( q.username() ) )
-            {
-                return pair.first().activeLocks().map( ActiveLocksResult::new );
-            }
-            else
-            {
-                throw new AuthorizationViolationException( PERMISSION_DENIED );
-            }
-        } ).orElse( Stream.empty() );
-    }
-
-    private KernelTransactions getKernelTransactions()
-    {
-        return resolver.resolveDependency( KernelTransactions.class );
-    }
-
     // ----------------- helpers ---------------------
-
-    public static Stream<TransactionTerminationResult> terminateTransactionsForValidUser(
-            DependencyResolver dependencyResolver, String username, KernelTransaction currentTx )
-    {
-        long terminatedCount = getActiveTransactions( dependencyResolver )
-            .stream()
-            .filter( tx -> tx.subject().hasUsername( username ) &&
-                            !tx.isUnderlyingTransaction( currentTx ) )
-            .map( tx -> tx.markForTermination( Status.Transaction.Terminated ) )
-            .filter( marked -> marked )
-            .count();
-        return Stream.of( new TransactionTerminationResult( username, terminatedCount ) );
-    }
-
-    public static Set<KernelTransactionHandle> getActiveTransactions( DependencyResolver dependencyResolver )
-    {
-        return dependencyResolver.resolveDependency( KernelTransactions.class ).activeTransactions();
-    }
-
-    public static Stream<TransactionResult> countTransactionByUsername( Stream<String> usernames )
-    {
-        return usernames
-            .collect( Collectors.groupingBy( identity(), Collectors.counting() ) )
-            .entrySet()
-            .stream()
-            .map( entry -> new TransactionResult( entry.getKey(), entry.getValue() )
-        );
-    }
 
     private ZoneId getConfiguredTimeZone()
     {
@@ -679,21 +599,21 @@ public class EnterpriseBuiltInDbmsProcedures
     {
         public final String queryId;
         public final String username;
-        public String message = "Query found";
+        public final String message;
 
-        public QueryTerminationResult( QueryId queryId, String username )
+        public QueryTerminationResult( QueryId queryId, String username, String message )
         {
             this.queryId = queryId.toString();
             this.username = username;
+            this.message = message;
         }
     }
 
     public static class QueryFailedTerminationResult extends QueryTerminationResult
     {
-        public QueryFailedTerminationResult( QueryId queryId )
+        public QueryFailedTerminationResult( QueryId queryId, String username, String message )
         {
-            super( queryId, "n/a" );
-            super.message = "No Query found with this id";
+            super( queryId, username, message );
         }
     }
 

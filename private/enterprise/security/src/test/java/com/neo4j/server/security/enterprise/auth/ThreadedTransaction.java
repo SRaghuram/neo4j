@@ -56,16 +56,11 @@ class ThreadedTransaction<S>
         return doExecute( threading, subject, txType, true, query )[0];
     }
 
-    String[] executeEarly( ThreadingRule threading, S subject, KernelTransaction.Type txType, String... queries )
-    {
-        return doExecute( threading, subject, txType, true, queries );
-    }
-
     private String[] doExecute(
         ThreadingRule threading, S subject, KernelTransaction.Type txType, boolean startEarly, String... queries )
     {
         NamedFunction<S, Throwable> startTransaction =
-                new NamedFunction<S, Throwable>( "threaded-transaction-" + Arrays.hashCode( queries ) )
+                new NamedFunction<>( "threaded-transaction-" + Arrays.hashCode( queries ) )
                 {
                     @Override
                     public Throwable apply( S subject )

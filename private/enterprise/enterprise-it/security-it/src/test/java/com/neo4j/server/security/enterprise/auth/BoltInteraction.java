@@ -30,7 +30,7 @@ import org.neo4j.configuration.SettingImpl;
 import org.neo4j.function.Factory;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.config.Setting;
-import org.neo4j.internal.helpers.HostnamePort;
+import org.neo4j.graphdb.event.TransactionEventListener;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
 import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.io.fs.EphemeralFileSystemAbstraction;
@@ -224,9 +224,15 @@ class BoltInteraction implements NeoInteractionLevel<BoltInteraction.BoltSubject
     }
 
     @Override
-    public HostnamePort lookupConnector( String connectorKey )
+    public void registerTransactionEventListener( String databaseName, TransactionEventListener<?> listener )
     {
-        return server.lookupConnector( connectorKey );
+        server.getManagementService().registerTransactionEventListener( databaseName, listener );
+    }
+
+    @Override
+    public void unregisterTransactionEventListener( String databaseName, TransactionEventListener<?> listener )
+    {
+        server.getManagementService().unregisterTransactionEventListener( databaseName, listener );
     }
 
     private BoltResult collectResults( TransportConnection client ) throws Exception

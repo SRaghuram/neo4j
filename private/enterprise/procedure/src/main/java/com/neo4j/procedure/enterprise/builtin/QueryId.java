@@ -12,12 +12,12 @@ public final class QueryId
     public static final String QUERY_ID_PREFIX = "query-";
     private final long kernelQueryId;
 
-    public static QueryId ofInternalId( long queryId ) throws InvalidArgumentsException
+    static QueryId ofInternalId( long queryId ) throws InvalidArgumentsException
     {
         return new QueryId( queryId );
     }
 
-    public static QueryId fromExternalString( String queryIdText ) throws InvalidArgumentsException
+    static QueryId fromExternalString( String queryIdText ) throws InvalidArgumentsException
     {
         try
         {
@@ -43,7 +43,7 @@ public final class QueryId
         this.kernelQueryId = kernelQueryId;
     }
 
-    public long kernelQueryId()
+    long kernelQueryId()
     {
         return kernelQueryId;
     }

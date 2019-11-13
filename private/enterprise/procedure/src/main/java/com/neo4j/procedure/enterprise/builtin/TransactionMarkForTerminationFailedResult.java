@@ -13,4 +13,9 @@ class TransactionMarkForTerminationFailedResult extends TransactionMarkForTermin
     {
         super( transactionId, userName, FAILURE_MESSAGE );
     }
+
+    TransactionMarkForTerminationFailedResult( String transactionId, String userName, String message )
+    {
+        super( transactionId, userName, message );
+    }
 }

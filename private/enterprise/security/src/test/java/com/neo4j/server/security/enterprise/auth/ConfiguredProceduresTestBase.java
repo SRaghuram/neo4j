@@ -26,10 +26,8 @@ import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.core.Is.is;
 import static org.mockito.internal.util.collections.Sets.newSet;
 import static org.neo4j.configuration.SettingValueParsers.FALSE;
-import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.internal.helpers.collection.MapUtil.genericMap;
 
 public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteractionTestBase<S>
@@ -191,8 +189,7 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
     @Test
     void shouldGiveNiceMessageAtFailWhenTryingToKill() throws Throwable
     {
-        configuredSetup( Map.of( GraphDatabaseSettings.kill_query_verbose, TRUE ) );
-
+        configuredSetup( defaultConfiguration() );
         String query = "CALL dbms.killQuery('query-9999999999')";
         Map<String,Object> expected = new HashMap<>();
         expected.put( "queryId", valueOf( "query-9999999999" ) );
@@ -202,20 +199,10 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
     }
 
     @Test
-    void shouldNotGiveNiceMessageAtFailWhenTryingToKillWhenConfigured() throws Throwable
-    {
-        configuredSetup( Map.of( GraphDatabaseSettings.kill_query_verbose, FALSE ) );
-        String query = "CALL dbms.killQuery('query-9999999999')";
-        assertSuccess( adminSubject, query, r ->
-
-                assertThat( r.hasNext(), is( false ) ) );
-    }
-
-    @Test
     void shouldGiveNiceMessageAtFailWhenTryingToKillMoreThenOne() throws Throwable
     {
         //Given
-        configuredSetup( Map.of( GraphDatabaseSettings.kill_query_verbose, TRUE ) );
+        configuredSetup( defaultConfiguration() );
         String query = "CALL dbms.killQueries(['query-9999999999', 'query-9999999989'])";
 
         //Expect

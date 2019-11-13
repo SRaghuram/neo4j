@@ -14,7 +14,6 @@ import java.util.Optional;
 import org.neo4j.internal.kernel.api.connectioninfo.ClientConnectionInfo;
 import org.neo4j.kernel.api.KernelTransactionHandle;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
-import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.api.query.QuerySnapshot;
 import org.neo4j.kernel.impl.api.TransactionExecutionStatistic;
 
@@ -24,6 +23,8 @@ import static java.lang.String.format;
 public class TransactionStatusResult
 {
     private static final String RUNNING_STATE = "Running";
+    private static final String CLOSING_STATE = "Closing";
+    private static final String BLOCKED_STATE = "Blocked by: ";
     private static final String TERMINATED_STATE = "Terminated with reason: %s";
 
     public final String transactionId;
@@ -60,7 +61,6 @@ public class TransactionStatusResult
         this.transactionId = transaction.getUserTransactionName();
         this.username = transaction.subject().username();
         this.startTime = ProceduresTimeFormatHelper.formatTime( transaction.startTime(), zoneId );
-        Optional<Status> terminationReason = transaction.terminationReason();
         this.activeLockCount = transaction.activeLocks().count();
         Optional<QuerySnapshot> querySnapshot = handleSnapshotsMap.get( transaction );
         TransactionExecutionStatistic statistic = transaction.transactionStatistic();
@@ -90,21 +90,27 @@ public class TransactionStatusResult
         this.requestUri = clientInfo.requestURI();
         this.connectionId = clientInfo.connectionId();
         this.resourceInformation = transactionDependenciesResolver.describeBlockingLocks( transaction );
-        this.status = getStatus( transaction, terminationReason, transactionDependenciesResolver );
+        this.status = getStatus( transaction, transactionDependenciesResolver );
         this.metaData = transaction.getMetaData();
         this.initializationStackTrace = transaction.transactionInitialisationTrace().getTrace();
     }
 
-    private static String getStatus( KernelTransactionHandle handle, Optional<Status> terminationReason,
-            TransactionDependenciesResolver transactionDependenciesResolver )
+    private static String getStatus( KernelTransactionHandle handle, TransactionDependenciesResolver transactionDependenciesResolver )
     {
-        return terminationReason.map( reason -> format( TERMINATED_STATE, reason.code() ) )
+        return handle.terminationReason().map( reason -> format( TERMINATED_STATE, reason.code() ) )
                 .orElseGet( () -> getExecutingStatus( handle, transactionDependenciesResolver ) );
     }
 
     private static String getExecutingStatus( KernelTransactionHandle handle, TransactionDependenciesResolver transactionDependenciesResolver )
     {
-        return transactionDependenciesResolver.isBlocked( handle ) ? "Blocked by: " +
-                transactionDependenciesResolver.describeBlockingTransactions( handle ) : RUNNING_STATE;
+        if ( transactionDependenciesResolver.isBlocked( handle ) )
+        {
+            return BLOCKED_STATE + transactionDependenciesResolver.describeBlockingTransactions( handle );
+        }
+        else if ( handle.isClosing() )
+        {
+            return CLOSING_STATE;
+        }
+        return RUNNING_STATE;
     }
 }

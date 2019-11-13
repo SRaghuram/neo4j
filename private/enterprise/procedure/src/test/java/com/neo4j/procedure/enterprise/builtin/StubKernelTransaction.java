@@ -154,6 +154,12 @@ class StubKernelTransaction implements KernelTransaction
     }
 
     @Override
+    public boolean isClosing()
+    {
+        return false;
+    }
+
+    @Override
     public SecurityContext securityContext()
     {
         SecurityContext securityContext = mock( SecurityContext.class, Answers.RETURNS_DEEP_STUBS );

@@ -22,7 +22,7 @@ import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.config.Setting;
-import org.neo4j.internal.helpers.HostnamePort;
+import org.neo4j.graphdb.event.TransactionEventListener;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.KernelTransaction;
@@ -170,8 +170,14 @@ public class EmbeddedInteraction implements NeoInteractionLevel<EnterpriseLoginC
     }
 
     @Override
-    public HostnamePort lookupConnector( String connectorKey )
+    public void registerTransactionEventListener( String databaseName, TransactionEventListener<?> listener )
     {
-        return connectorRegister.getLocalAddress( connectorKey );
+        managementService.registerTransactionEventListener( databaseName, listener );
+    }
+
+    @Override
+    public void unregisterTransactionEventListener( String databaseName, TransactionEventListener<?> listener )
+    {
+        managementService.unregisterTransactionEventListener( databaseName, listener );
     }
 }
