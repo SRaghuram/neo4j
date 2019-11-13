@@ -22,6 +22,7 @@ import org.neo4j.consistency.checking.InconsistentStoreException;
 import org.neo4j.consistency.checking.full.ConsistencyCheckIncompleteException;
 import org.neo4j.consistency.checking.full.ConsistencyFlags;
 import org.neo4j.consistency.checking.full.FullCheck;
+import org.neo4j.consistency.newchecker.NodeBasedMemoryLimiter;
 import org.neo4j.consistency.report.ConsistencySummaryStatistics;
 import org.neo4j.consistency.statistics.Statistics;
 import org.neo4j.consistency.store.DirectStoreAccess;
@@ -265,8 +266,9 @@ class RebuildFromLogs
             RecordStorageEngine storageEngine = graphdb.getDependencyResolver().resolveDependency( RecordStorageEngine.class );
             StoreAccess nativeStores = new StoreAccess( storageEngine.testAccessNeoStores() ).initialize();
             DirectStoreAccess stores = new DirectStoreAccess( nativeStores, labelScanStore, indexes, tokenHolders, indexStatisticsStore, idGeneratorFactory );
-            FullCheck fullCheck = new FullCheck( ConsistencyFlags.DEFAULT, tuningConfiguration, ProgressMonitorFactory.textual( System.err ),
-                    Statistics.NONE, ConsistencyCheckService.defaultConsistencyCheckThreadsNumber() );
+            FullCheck fullCheck = new FullCheck( ProgressMonitorFactory.textual( System.err ), Statistics.NONE,
+                    ConsistencyCheckService.defaultConsistencyCheckThreadsNumber(), ConsistencyFlags.DEFAULT, tuningConfiguration, false,
+                    NodeBasedMemoryLimiter.DEFAULT );
 
             ConsistencySummaryStatistics summaryStatistics =
                     fullCheck.execute( pageCache, stores, () -> (CountsStore) storageEngine.countsAccessor(), FormattedLog.toOutputStream( System.err ) );
