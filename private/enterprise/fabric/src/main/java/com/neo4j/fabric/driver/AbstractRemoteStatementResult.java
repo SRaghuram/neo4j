@@ -96,7 +96,7 @@ abstract class AbstractRemoteStatementResult implements StatementResult
                 return genericRemoteFailure( driverException );
             }
 
-            return new FabricException( serverCode.get(), driverException.getMessage() );
+            return new FabricException( serverCode.get(), driverException.getMessage(), driverException );
         }
 
         return genericRemoteFailure( driverException );
@@ -105,6 +105,7 @@ abstract class AbstractRemoteStatementResult implements StatementResult
     private FabricException genericRemoteFailure( Neo4jException driverException )
     {
         throw new FabricException( Status.Fabric.RemoteExecutionFailed,
-                "Remote execution failed with code %s and message '%s'", driverException.code(), driverException.getMessage() );
+                String.format( "Remote execution failed with code %s and message '%s'", driverException.code(), driverException.getMessage() ),
+                driverException );
     }
 }

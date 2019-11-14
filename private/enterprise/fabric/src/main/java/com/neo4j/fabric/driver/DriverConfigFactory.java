@@ -7,13 +7,23 @@ package com.neo4j.fabric.driver;
 
 import com.neo4j.fabric.config.FabricConfig;
 
+import java.io.IOException;
+import java.security.GeneralSecurityException;
+import java.security.KeyStore;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+
+import org.neo4j.configuration.ssl.SslPolicyScope;
 import org.neo4j.driver.Config;
 import org.neo4j.driver.Logging;
+import org.neo4j.driver.internal.security.SecurityPlan;
 import org.neo4j.driver.net.ServerAddress;
 import org.neo4j.logging.Level;
+import org.neo4j.ssl.SslPolicy;
+import org.neo4j.ssl.config.SslPolicyLoader;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.logging.Level.FINE;
@@ -26,12 +36,25 @@ class DriverConfigFactory
 {
     private final FabricConfig fabricConfig;
     private final Level serverLogLevel;
+    private final SSLContext sslContext;
+    private final SslPolicy sslPolicy;
 
-    DriverConfigFactory( FabricConfig fabricConfig, org.neo4j.configuration.Config serverConfig )
+    DriverConfigFactory( FabricConfig fabricConfig, org.neo4j.configuration.Config serverConfig, SslPolicyLoader sslPolicyLoader )
     {
         this.fabricConfig = fabricConfig;
 
         serverLogLevel = serverConfig.get( store_internal_log_level );
+
+        if ( sslPolicyLoader.hasPolicyForSource( SslPolicyScope.FABRIC ) )
+        {
+            sslPolicy = sslPolicyLoader.getPolicy( SslPolicyScope.FABRIC );
+            sslContext = createSslContext( sslPolicy );
+        }
+        else
+        {
+            sslPolicy = null;
+            sslContext = null;
+        }
     }
 
     Config createConfig( FabricConfig.Graph graph )
@@ -42,25 +65,6 @@ class DriverConfigFactory
         if ( logLeakedSessions )
         {
             builder.withLeakedSessionsLogging();
-        }
-
-        var encrypted = getProperty( graph, FabricConfig.DriverConfig::getEncrypted );
-        if ( encrypted != null )
-        {
-            if ( encrypted )
-            {
-                builder.withEncryption();
-            }
-            else
-            {
-                builder.withoutEncryption();
-            }
-        }
-
-        var trustStrategy = getTrustStrategy( graph );
-        if ( trustStrategy != null )
-        {
-            builder.withTrustStrategy( trustStrategy );
         }
 
         var idleTimeBeforeConnectionTest = getProperty( graph, FabricConfig.DriverConfig::getIdleTimeBeforeConnectionTest );
@@ -106,6 +110,16 @@ class DriverConfigFactory
                 .withLogging( Logging.javaUtilLogging( getLoggingLevel( graph ) ) ).build();
     }
 
+    SecurityPlan createSecurityPlan( FabricConfig.Graph graph )
+    {
+        if ( sslPolicy == null || !graph.getDriverConfig().isSslEnabled() )
+        {
+            return new SecurityPlanImpl( false, null, false );
+        }
+
+        return new SecurityPlanImpl( true, sslContext, sslPolicy.isVerifyHostname() );
+    }
+
     <T> T getProperty( FabricConfig.Graph graph, Function<FabricConfig.DriverConfig,T> extractor )
     {
         var graphDriverConfig = graph.getDriverConfig();
@@ -149,23 +163,70 @@ class DriverConfigFactory
         }
     }
 
-    private Config.TrustStrategy getTrustStrategy( FabricConfig.Graph graph )
+    private SSLContext createSslContext( SslPolicy sslPolicy )
     {
-        var trustStrategy = getProperty( graph, FabricConfig.DriverConfig::getTrustStrategy );
-
-        if ( trustStrategy == null )
+        try
         {
-            return null;
+            KeyManagerFactory keyManagerFactory = null;
+            if ( sslPolicy.privateKey() != null && sslPolicy.certificateChain() != null )
+            {
+                KeyStore ks = KeyStore.getInstance( KeyStore.getDefaultType() );
+                ks.load( null, null );
+                // 'client-private-key' is an alias for the private key in the trust store.
+                // Since there will be only one key in this truststore, it does not matter how we call it
+                ks.setKeyEntry( "client-private-key", sslPolicy.privateKey(), null, sslPolicy.certificateChain() );
+                keyManagerFactory = KeyManagerFactory.getInstance( KeyManagerFactory.getDefaultAlgorithm() );
+                keyManagerFactory.init( ks, null );
+            }
+
+            var trustManagerFactory = sslPolicy.getTrustManagerFactory();
+
+            // 'TLS' means any supported version of TLS as opposed to requesting a concrete TLS version
+            SSLContext ctx = SSLContext.getInstance( "TLS" );
+
+            var keyManagers = keyManagerFactory == null ? null : keyManagerFactory.getKeyManagers();
+            var trustManagers = trustManagerFactory == null ? null : trustManagerFactory.getTrustManagers();
+
+            ctx.init( keyManagers, trustManagers, null );
+
+            return ctx;
+        }
+        catch ( GeneralSecurityException | IOException e )
+        {
+            throw new IllegalArgumentException( "Failed to build SSL context", e );
+        }
+    }
+
+    private final class SecurityPlanImpl implements SecurityPlan
+    {
+
+        private final boolean requiresEncryption;
+        private final SSLContext sslContext;
+        private final boolean requiresHostnameVerification;
+
+        SecurityPlanImpl( boolean requiresEncryption, SSLContext sslContext, boolean requiresHostnameVerification )
+        {
+            this.requiresEncryption = requiresEncryption;
+            this.sslContext = sslContext;
+            this.requiresHostnameVerification = requiresHostnameVerification;
         }
 
-        switch ( trustStrategy )
+        @Override
+        public boolean requiresEncryption()
         {
-        case TRUST_SYSTEM_CA_SIGNED_CERTIFICATES:
-            return Config.TrustStrategy.trustSystemCertificates();
-        case TRUST_ALL_CERTIFICATES:
-            return Config.TrustStrategy.trustAllCertificates();
-        default:
-            throw new IllegalArgumentException( "Unexpected trust strategy: " + trustStrategy );
+            return requiresEncryption;
+        }
+
+        @Override
+        public SSLContext sslContext()
+        {
+            return sslContext;
+        }
+
+        @Override
+        public boolean requiresHostnameVerification()
+        {
+            return requiresHostnameVerification;
         }
     }
 }

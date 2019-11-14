@@ -38,9 +38,7 @@ public class FabricSettings implements SettingsDeclaration
     private static final String DRIVER_IDLE_TIME_BEFORE_CONNECTION_TEST = "driver.connection.pool.idle_test";
     private static final String DRIVER_CONNECTION_ACQUISITION_TIMEOUT = "driver.connection.pool.acquisition_timeout";
     private static final String DRIVER_MAX_CONNECTION_LIFETIME = "driver.connection.max_lifetime";
-    private static final String DRIVER_ENCRYPTED = "driver.connection.encrypted";
     private static final String DRIVER_CONNECT_TIMEOUT = "driver.connection.connect_timeout";
-    private static final String DRIVER_TRUST_STRATEGY = "driver.trust_strategy";
     private static final String DRIVER_API = "driver.api";
 
     @Description( "A comma-separated list of Fabric instances that form a routing group. " +
@@ -134,18 +132,6 @@ public class FabricSettings implements SettingsDeclaration
     @Description( "Determines which driver API will be used. ASYNC must be used when the remote instance is 3.5" )
     static Setting<DriverApi> driverApi = newBuilder( "fabric." + DRIVER_API, ofEnum(DriverApi.class), DriverApi.RX ).build();
 
-    @Description( "Setting for connection encryption." +
-            "'true' will instruct the driver to use encryption. 'false' means that the communication will be in plaintext" )
-    static Setting<Boolean> driverEncrypted = newBuilder( "fabric." + DRIVER_ENCRYPTED, BOOL, false ).build();
-    @Description( "Setting for certificate trust strategy. The supported values are 'TRUST_SYSTEM_CA_SIGNED_CERTIFICATES' and 'TRUST_ALL_CERTIFICATES'.\n" +
-            "'TRUST_SYSTEM_CA_SIGNED_CERTIFICATES' means that the driver will trust certificates signed by CAs trusted by the JVM. There is currently" +
-            "no option to provide a list of trusted certificates or CAs on top of the ones trusted by the JVM" +
-            "'TRUST_SYSTEM_CA_SIGNED_CERTIFICATES' is the default. 'TRUST_ALL_CERTIFICATES' can be used for trusting self-signed certificates" +
-            "in development environments. 'TRUST_ALL_CERTIFICATES' should never be used in production" )
-    static Setting<DriverTrustStrategy> driverTrustStrategy =
-            newBuilder( "fabric." + DRIVER_TRUST_STRATEGY, ofEnum( DriverTrustStrategy.class ), DriverTrustStrategy.TRUST_SYSTEM_CA_SIGNED_CERTIFICATES )
-                    .build();
-
     @ServiceProvider
     public static class GraphSetting extends GroupSetting
     {
@@ -169,10 +155,13 @@ public class FabricSettings implements SettingsDeclaration
         public final Setting<Duration> driverIdleTimeBeforeConnectionTest = getBuilder( DRIVER_IDLE_TIME_BEFORE_CONNECTION_TEST, DURATION, null ).build();
         public final Setting<Duration> driverMaxConnectionLifetime = getBuilder( DRIVER_MAX_CONNECTION_LIFETIME, DURATION, null ).build();
         public final Setting<Duration> driverConnectionAcquisitionTimeout = getBuilder( DRIVER_CONNECTION_ACQUISITION_TIMEOUT, DURATION, null ).build();
-        public final Setting<Boolean> driverEncrypted = getBuilder( DRIVER_ENCRYPTED, BOOL, null ).build();
-        public final Setting<DriverTrustStrategy> driverTrustStrategy = getBuilder( DRIVER_TRUST_STRATEGY, ofEnum( DriverTrustStrategy.class ), null ).build();
         public final Setting<Duration> driverConnectTimeout = getBuilder( DRIVER_CONNECT_TIMEOUT, DURATION, null ).build();
-        public final Setting<DriverApi> driverApi = getBuilder( DRIVER_API, ofEnum(DriverApi.class), null ).build();
+        public final Setting<DriverApi> driverApi = getBuilder( DRIVER_API, ofEnum( DriverApi.class ), null ).build();
+
+        @Description( "SSL for Fabric drivers is configured using 'fabric' SSL policy." +
+                "This setting can be used to instruct the driver not to use SSL even though 'fabric' SSL policy is configured." +
+                "The driver will use SSL if 'fabric' SSL policy is configured and this setting is set to 'true'" )
+        public final Setting<Boolean> sslEnabled = getBuilder( "driver.ssl_enabled", BOOL, true ).build();
 
         protected GraphSetting( String name )
         {
@@ -189,12 +178,6 @@ public class FabricSettings implements SettingsDeclaration
         {
             return "fabric.graph";
         }
-    }
-
-    public enum DriverTrustStrategy
-    {
-        TRUST_SYSTEM_CA_SIGNED_CERTIFICATES,
-        TRUST_ALL_CERTIFICATES
     }
 
     public enum DriverApi

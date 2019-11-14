@@ -33,6 +33,7 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.ssl.config.SslPolicyLoader;
 
 public class FabricServicesBootstrap
 {
@@ -59,8 +60,11 @@ public class FabricServicesBootstrap
 
             var credentialsProvider = serviceBootstrapper
                     .registerService( new CredentialsProvider(), CredentialsProvider.class );
+
+            var sslPolicyLoader = dependencies.resolveDependency( SslPolicyLoader.class );
             var driverPool = serviceBootstrapper
-                    .registerService( new DriverPool( jobScheduler, fabricConfig, config, Clock.systemUTC(), credentialsProvider ), DriverPool.class );
+                    .registerService( new DriverPool( jobScheduler, fabricConfig, config, Clock.systemUTC(), credentialsProvider, sslPolicyLoader ),
+                            DriverPool.class );
             serviceBootstrapper
                     .registerService( new FabricRemoteExecutor( driverPool ), FabricRemoteExecutor.class );
             serviceBootstrapper

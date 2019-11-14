@@ -444,9 +444,9 @@ class RemoteTransactionTest
         }
     }
 
-    private static FabricConfig.DriverConfig emptyDriverConfig()
+    private static FabricConfig.GraphDriverConfig emptyDriverConfig()
     {
-        return new FabricConfig.DriverConfig( null, null, null, null, null, null, null, null, null, null );
+        return new FabricConfig.GraphDriverConfig( null, null, null, null, null, null, null, null, true );
     }
 
     private Session openSession()

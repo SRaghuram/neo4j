@@ -19,7 +19,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
@@ -148,7 +147,6 @@ public class FabricConfig
         var driverConfig = new DriverConfig( config.get( FabricSettings.driverLoggingLevel ), config.get( FabricSettings.driverLogLeakedSessions ),
                 config.get( FabricSettings.driverMaxConnectionPoolSize ), config.get( FabricSettings.driverIdleTimeBeforeConnectionTest ),
                 config.get( FabricSettings.driverMaxConnectionLifetime ), config.get( FabricSettings.driverConnectionAcquisitionTimeout ),
-                config.get( FabricSettings.driverEncrypted ), config.get( FabricSettings.driverTrustStrategy ),
                 config.get( FabricSettings.driverConnectTimeout ),
                 config.get( FabricSettings.driverApi ) );
 
@@ -177,11 +175,10 @@ public class FabricConfig
         {
             var graphId = parseGraphId( entry.getKey() );
             var graphSetting = entry.getValue();
-            var driverConfig = new DriverConfig( config.get( graphSetting.driverLoggingLevel ), config.get( graphSetting.driverLogLeakedSessions ),
+            var driverConfig = new GraphDriverConfig( config.get( graphSetting.driverLoggingLevel ), config.get( graphSetting.driverLogLeakedSessions ),
                     config.get( graphSetting.driverMaxConnectionPoolSize ), config.get( graphSetting.driverIdleTimeBeforeConnectionTest ),
                     config.get( graphSetting.driverMaxConnectionLifetime ), config.get( graphSetting.driverConnectionAcquisitionTimeout ),
-                    config.get( graphSetting.driverEncrypted ), config.get( graphSetting.driverTrustStrategy ), config.get( graphSetting.driverConnectTimeout ),
-                    config.get( graphSetting.driverApi ) );
+                    config.get( graphSetting.driverConnectTimeout ), config.get( graphSetting.driverApi ), config.get( graphSetting.sslEnabled ) );
 
             var remoteUri = new RemoteUri( config.get( graphSetting.uris ) );
             return new Graph( graphId, remoteUri, config.get( graphSetting.database ), config.get( graphSetting.name ), driverConfig );
@@ -268,9 +265,9 @@ public class FabricConfig
         private final RemoteUri uri;
         private final String database;
         private final NormalizedGraphName name;
-        private final DriverConfig driverConfig;
+        private final GraphDriverConfig driverConfig;
 
-        public Graph( long id, RemoteUri uri, String database, NormalizedGraphName name, DriverConfig driverConfig )
+        public Graph( long id, RemoteUri uri, String database, NormalizedGraphName name, GraphDriverConfig driverConfig )
         {
             if ( uri == null )
             {
@@ -304,7 +301,7 @@ public class FabricConfig
             return name;
         }
 
-        public DriverConfig getDriverConfig()
+        public GraphDriverConfig getDriverConfig()
         {
             return driverConfig;
         }
@@ -337,14 +334,12 @@ public class FabricConfig
         private final Duration idleTimeBeforeConnectionTest;
         private final Duration maxConnectionLifetime;
         private final Duration connectionAcquisitionTimeout;
-        private final Boolean encrypted;
-        private final FabricSettings.DriverTrustStrategy trustStrategy;
         private final Duration connectTimeout;
         private final FabricSettings.DriverApi driverApi;
 
         public DriverConfig( Level loggingLevel, Boolean logLeakedSessions, Integer maxConnectionPoolSize, Duration idleTimeBeforeConnectionTest,
-                Duration maxConnectionLifetime, Duration connectionAcquisitionTimeout, Boolean encrypted, FabricSettings.DriverTrustStrategy trustStrategy,
-                Duration connectTimeout, FabricSettings.DriverApi driverApi )
+                Duration maxConnectionLifetime, Duration connectionAcquisitionTimeout, Duration connectTimeout,
+                FabricSettings.DriverApi driverApi )
         {
             this.loggingLevel = loggingLevel;
             this.logLeakedSessions = logLeakedSessions;
@@ -352,8 +347,6 @@ public class FabricConfig
             this.idleTimeBeforeConnectionTest = idleTimeBeforeConnectionTest;
             this.maxConnectionLifetime = maxConnectionLifetime;
             this.connectionAcquisitionTimeout = connectionAcquisitionTimeout;
-            this.encrypted = encrypted;
-            this.trustStrategy = trustStrategy;
             this.connectTimeout = connectTimeout;
             this.driverApi = driverApi;
         }
@@ -388,16 +381,6 @@ public class FabricConfig
             return connectionAcquisitionTimeout;
         }
 
-        public Boolean getEncrypted()
-        {
-            return encrypted;
-        }
-
-        public FabricSettings.DriverTrustStrategy getTrustStrategy()
-        {
-            return trustStrategy;
-        }
-
         public Duration getConnectTimeout()
         {
             return connectTimeout;
@@ -418,6 +401,26 @@ public class FabricConfig
         public int hashCode()
         {
             return HashCodeBuilder.reflectionHashCode( this );
+        }
+    }
+
+    public static class GraphDriverConfig extends DriverConfig
+    {
+        private final boolean sslEnabled;
+
+        public GraphDriverConfig( Level loggingLevel, Boolean logLeakedSessions, Integer maxConnectionPoolSize, Duration idleTimeBeforeConnectionTest,
+                Duration maxConnectionLifetime, Duration connectionAcquisitionTimeout, Duration connectTimeout,
+                FabricSettings.DriverApi driverApi, boolean sslEnabled )
+        {
+            super( loggingLevel, logLeakedSessions, maxConnectionPoolSize, idleTimeBeforeConnectionTest, maxConnectionLifetime, connectionAcquisitionTimeout,
+                    connectTimeout, driverApi );
+
+            this.sslEnabled = sslEnabled;
+        }
+
+        public boolean isSslEnabled()
+        {
+            return sslEnabled;
         }
     }
 

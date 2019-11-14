@@ -13,6 +13,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.ssl.config.SslPolicyLoader;
 import org.neo4j.driver.net.ServerAddress;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -20,8 +21,7 @@ import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.neo4j.driver.Config.TrustStrategy.Strategy.TRUST_ALL_CERTIFICATES;
-import static org.neo4j.driver.Config.TrustStrategy.Strategy.TRUST_SYSTEM_CA_SIGNED_CERTIFICATES;
+import static org.mockito.Mockito.mock;
 
 class DriverConfigFactoryTest
 {
@@ -39,7 +39,6 @@ class DriverConfigFactoryTest
         properties.put( "fabric.driver.connection.pool.idle_test", "19s" );
         properties.put( "fabric.driver.connection.max_lifetime", "39m" );
         properties.put( "fabric.driver.connection.connect_timeout", "3s" );
-        properties.put( "fabric.driver.connection.encrypted", "true" );
 
         properties.put( "fabric.driver.trust_strategy", "TRUST_SYSTEM_CA_SIGNED_CERTIFICATES" );
 
@@ -53,8 +52,6 @@ class DriverConfigFactoryTest
         properties.put( "fabric.graph.0.driver.connection.pool.idle_test", "27s" );
         properties.put( "fabric.graph.0.driver.connection.max_lifetime", "29m" );
         properties.put( "fabric.graph.0.driver.connection.connect_timeout", "9s" );
-        properties.put( "fabric.graph.0.driver.connection.encrypted", "false" );
-        properties.put( "fabric.graph.0.driver.trust_strategy", "TRUST_ALL_CERTIFICATES" );
 
         // graph driver with nothing overloaded
         properties.put( "fabric.graph.1.uri", "bolt://mega:2222" );
@@ -68,7 +65,7 @@ class DriverConfigFactoryTest
                 .build();
 
         var fabricConfig = FabricConfig.from( config );
-        var driverConfigFactory = new DriverConfigFactory( fabricConfig, config );
+        var driverConfigFactory = new DriverConfigFactory( fabricConfig, config, mock( SslPolicyLoader.class ) );
 
         var graph0DriverConfig = driverConfigFactory.createConfig( getGraph( fabricConfig, 0 ) );
 
@@ -78,8 +75,6 @@ class DriverConfigFactoryTest
         assertEquals( Duration.ofSeconds( 27 ).toMillis(), graph0DriverConfig.idleTimeBeforeConnectionTest() );
         assertEquals( Duration.ofMinutes( 29 ).toMillis(), graph0DriverConfig.maxConnectionLifetimeMillis() );
         assertEquals( Duration.ofSeconds( 17 ).toMillis(), graph0DriverConfig.connectionAcquisitionTimeoutMillis() );
-        assertFalse( graph0DriverConfig.encrypted() );
-        assertEquals( TRUST_ALL_CERTIFICATES, graph0DriverConfig.trustStrategy().strategy() );
         assertEquals( Duration.ofSeconds( 9 ).toMillis(), graph0DriverConfig.connectionTimeoutMillis() );
 
         var graph1DriverConfig = driverConfigFactory.createConfig( getGraph( fabricConfig, 1 ) );
@@ -90,8 +85,6 @@ class DriverConfigFactoryTest
         assertEquals( Duration.ofSeconds( 19 ).toMillis(), graph1DriverConfig.idleTimeBeforeConnectionTest() );
         assertEquals( Duration.ofMinutes( 39 ).toMillis(), graph1DriverConfig.maxConnectionLifetimeMillis() );
         assertEquals( Duration.ofSeconds( 7 ).toMillis(), graph1DriverConfig.connectionAcquisitionTimeoutMillis() );
-        assertTrue( graph1DriverConfig.encrypted() );
-        assertEquals( TRUST_SYSTEM_CA_SIGNED_CERTIFICATES, graph1DriverConfig.trustStrategy().strategy() );
         assertEquals( Duration.ofSeconds( 3 ).toMillis(), graph1DriverConfig.connectionTimeoutMillis() );
 
         var graph2DriverConfig = driverConfigFactory.createConfig( getGraph( fabricConfig, 2 ) );
@@ -111,7 +104,7 @@ class DriverConfigFactoryTest
                 .build();
 
         var fabricConfig = FabricConfig.from( config );
-        var driverConfigFactory = new DriverConfigFactory( fabricConfig, config );
+        var driverConfigFactory = new DriverConfigFactory( fabricConfig, config, mock( SslPolicyLoader.class ) );
 
         var graph0DriverConfig = driverConfigFactory.createConfig( getGraph( fabricConfig, 0 ) );
 
@@ -121,8 +114,6 @@ class DriverConfigFactoryTest
         assertTrue( graph0DriverConfig.idleTimeBeforeConnectionTest() < 0);
         assertEquals( Duration.ofHours( 1 ).toMillis(), graph0DriverConfig.maxConnectionLifetimeMillis() );
         assertEquals( Duration.ofMinutes( 1 ).toMillis(), graph0DriverConfig.connectionAcquisitionTimeoutMillis() );
-        assertFalse( graph0DriverConfig.encrypted() );
-        assertEquals( TRUST_SYSTEM_CA_SIGNED_CERTIFICATES, graph0DriverConfig.trustStrategy().strategy() );
         assertEquals( Duration.ofSeconds( 5 ).toMillis(), graph0DriverConfig.connectionTimeoutMillis() );
     }
 
@@ -138,7 +129,7 @@ class DriverConfigFactoryTest
                 .build();
 
         var fabricConfig = FabricConfig.from( config );
-        var driverConfigFactory = new DriverConfigFactory( fabricConfig, config );
+        var driverConfigFactory = new DriverConfigFactory( fabricConfig, config, mock( SslPolicyLoader.class ) );
 
         var graph0DriverConfig = driverConfigFactory.createConfig( getGraph( fabricConfig, 0 ) );
 

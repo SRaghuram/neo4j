@@ -27,6 +27,7 @@ import org.neo4j.harness.internal.TestNeo4jBuilders;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.logging.Level;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.ssl.config.SslPolicyLoader;
 
 import static java.time.Duration.ofMinutes;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -90,7 +91,7 @@ class DriverPoolTest
         when( credentialsProvider.credentialsFor( as1 ) ).thenReturn( at1 );
         when( credentialsProvider.credentialsFor( as2 ) ).thenReturn( at2 );
 
-        driverPool = new DriverPool( jobScheduler, fabricConfig, config, Clock.systemUTC(), credentialsProvider );
+        driverPool = new DriverPool( jobScheduler, fabricConfig, config, Clock.systemUTC(), credentialsProvider, mock(SslPolicyLoader.class ) );
     }
 
     @Test

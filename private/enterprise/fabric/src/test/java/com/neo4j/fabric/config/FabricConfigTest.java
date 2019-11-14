@@ -244,8 +244,8 @@ class FabricConfigTest
         return FabricConfig.from( config );
     }
 
-    private FabricConfig.DriverConfig emptyDriverConfig()
+    private FabricConfig.GraphDriverConfig emptyDriverConfig()
     {
-        return new FabricConfig.DriverConfig( null, null, null, null, null, null, null, null, null, null );
+        return new FabricConfig.GraphDriverConfig( null, null, null, null, null, null, null, null, true );
     }
 }

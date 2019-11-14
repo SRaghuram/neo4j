@@ -16,7 +16,9 @@ import  org.neo4j.driver.Logger;
 import org.neo4j.configuration.Config;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.server.logging.JULBridge;
+import org.neo4j.ssl.config.SslPolicyLoader;
 
+import static org.mockito.Mockito.mock;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
 
 class DriverLoggingTest
@@ -88,7 +90,7 @@ class DriverLoggingTest
         setUpLogging();
 
         var fabricConfig = FabricConfig.from( config );
-        var driverConfigFactory = new DriverConfigFactory( fabricConfig, config );
+        var driverConfigFactory = new DriverConfigFactory( fabricConfig, config, mock( SslPolicyLoader.class ) );
         var graph0DriverConfig = driverConfigFactory.createConfig( getGraph( fabricConfig, 0 ) );
 
         var logger = graph0DriverConfig.logging().getLog( LOG_NAME );

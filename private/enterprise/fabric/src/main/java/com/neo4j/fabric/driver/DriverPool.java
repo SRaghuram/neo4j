@@ -30,6 +30,7 @@ import org.neo4j.driver.internal.shaded.io.netty.channel.EventLoopGroup;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.ssl.config.SslPolicyLoader;
 
 import static org.neo4j.scheduler.Group.TRANSACTION_TIMEOUT_MONITOR;
 
@@ -48,14 +49,15 @@ public class DriverPool extends LifecycleAdapter
             FabricConfig fabricConfig,
             org.neo4j.configuration.Config serverConfig,
             Clock clock,
-            CredentialsProvider credentialsProvider )
+            CredentialsProvider credentialsProvider,
+            SslPolicyLoader sslPolicyLoader )
     {
         this.jobScheduler = jobScheduler;
         this.fabricConfig = fabricConfig;
         this.clock = clock;
         this.credentialsProvider = credentialsProvider;
 
-        driverConfigFactory = new DriverConfigFactory( fabricConfig, serverConfig );
+        driverConfigFactory = new DriverConfigFactory( fabricConfig, serverConfig, sslPolicyLoader );
 
         var eventLoopCount = fabricConfig.getGlobalDriverConfig().getEventLoopCount();
         eventLoopGroup = EventLoopGroupFactory.newEventLoopGroup( eventLoopCount );
@@ -142,6 +144,7 @@ public class DriverPool extends LifecycleAdapter
     private PooledDriver createDriver( Key key, FabricConfig.Graph location, AuthToken token )
     {
         var config = driverConfigFactory.createConfig( location );
+        var securityPlan = driverConfigFactory.createSecurityPlan( location );
 
         var driverFactory = new DriverFactory();
 
@@ -152,7 +155,7 @@ public class DriverPool extends LifecycleAdapter
                 RetrySettings.DEFAULT,
                 config,
                 eventLoopGroup,
-                null );
+                securityPlan );
 
         var driverApi = driverConfigFactory.getProperty( location, FabricConfig.DriverConfig::getDriverApi );
         switch ( driverApi )
