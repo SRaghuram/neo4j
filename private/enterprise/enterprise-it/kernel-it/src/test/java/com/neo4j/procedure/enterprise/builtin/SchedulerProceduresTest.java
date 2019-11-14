@@ -47,7 +47,7 @@ class SchedulerProceduresTest
         try ( Transaction tx = db.beginTx() )
         {
             String result = tx.execute( "CALL dbms.scheduler.profile('sample', 'CypherWorker', '5s')" ).resultAsString();
-            assertThat( result, containsString( "morsel.Worker.run" ) );
+            assertThat( result, containsString( "pipelined.Worker.run" ) );
             tx.commit();
         }
     }
