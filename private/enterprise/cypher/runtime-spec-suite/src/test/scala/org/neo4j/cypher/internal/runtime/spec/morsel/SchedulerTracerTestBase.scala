@@ -12,7 +12,7 @@ import java.nio.file.{Files, Path}
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.internal.runtime.spec._
 import org.neo4j.cypher.internal.runtime.spec.morsel.SchedulerTracerTestBase._
-import org.neo4j.cypher.internal.{CypherRuntime, EnterpriseRuntimeContext, MorselRuntime}
+import org.neo4j.cypher.internal.{CypherRuntime, EnterpriseRuntimeContext, PipelinedRuntime}
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
@@ -94,7 +94,7 @@ abstract class SchedulerTracerTestBase(runtime: CypherRuntime[EnterpriseRuntimeC
     queryIds.size should be(1)
     schedulingThreadIds.size should be <= (WORKER_COUNT + 1)
     executionThreadIds.size should be <= WORKER_COUNT
-    if (!isWindows && runtime == MorselRuntime.PARALLEL) { // Scheduling on windows sometimes keeps this work on only one worker. We therefore
+    if (!isWindows && runtime == PipelinedRuntime.PARALLEL) { // Scheduling on windows sometimes keeps this work on only one worker. We therefore
                       // omit this assumption to avoid getting a flaky test.
       executionThreadIds.size should be > 1
     }

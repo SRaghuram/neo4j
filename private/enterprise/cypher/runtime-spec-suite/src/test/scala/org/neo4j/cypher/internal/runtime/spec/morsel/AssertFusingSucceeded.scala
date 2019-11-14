@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.spec.morsel
 import org.hamcrest.CoreMatchers.any
 import org.hamcrest.Matcher
 import org.hamcrest.Matchers.{containsString, instanceOf}
-import org.neo4j.cypher.internal.MorselRuntime
+import org.neo4j.cypher.internal.PipelinedRuntime
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 import org.neo4j.exceptions.CantCompileQueryException
 import org.neo4j.logging.AssertableLogProvider
@@ -28,7 +28,7 @@ trait AssertFusingSucceeded extends TestSuiteMixin {
 
     try {
       logProvider.assertNone(inLog(any(classOf[String])).debug(
-        containsString(MorselRuntime.CODE_GEN_FAILED_MESSAGE),
+        containsString(PipelinedRuntime.CODE_GEN_FAILED_MESSAGE),
         instanceOf(classOf[Exception]): Matcher[Throwable] /*Type annotation is a compiler help to choose the right overloaded method - do not remove!*/))
       result
     } catch {

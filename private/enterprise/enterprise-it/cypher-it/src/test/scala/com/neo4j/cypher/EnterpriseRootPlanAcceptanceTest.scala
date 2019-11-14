@@ -31,9 +31,9 @@ class EnterpriseRootPlanAcceptanceTest extends ExecutionEngineFunSuite with Ente
   test("query that should go through the morsel runtime") {
     given("MATCH (a)-->(b) RETURN a")
       .withCypherVersion(CypherVersion.v4_0)
-      .withRuntime(MorselRuntimeName)
+      .withRuntime(PipelinedRuntimeName)
       .shouldHaveCypherVersion(CypherVersion.v4_0)
-      .shouldHaveRuntime(MorselRuntimeName)
+      .shouldHaveRuntime(PipelinedRuntimeName)
       .shouldHavePlanner(CostBasedPlannerName.default)
   }
 
@@ -50,12 +50,12 @@ class EnterpriseRootPlanAcceptanceTest extends ExecutionEngineFunSuite with Ente
   // re-enable on morsel PROFILE rows
   ignore("Rows should be properly formatted in morsel runtime") {
     given("match (n) return n")
-      .withRuntime(MorselRuntimeName)
+      .withRuntime(PipelinedRuntimeName)
       .planDescription.getArguments.get("Rows") should equal(0)
   }
 
   for(planner <- Seq(IDPPlannerName, DPPlannerName);
-      runtime <- Seq(MorselRuntimeName, InterpretedRuntimeName)) {
+      runtime <- Seq(PipelinedRuntimeName, InterpretedRuntimeName)) {
 
     test(s"Should report correct planner and runtime used $planner + $runtime") {
       given("match (n) return n")

@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.spec.morsel
 
 import org.neo4j.cypher.internal.EnterpriseRuntimeContext
-import org.neo4j.cypher.internal.MorselRuntime.MORSEL
+import org.neo4j.cypher.internal.PipelinedRuntime.PIPELINED
 import org.neo4j.cypher.internal.logical.plans.Ascending
 import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE.{FUSING, NO_FUSING}
 import org.neo4j.cypher.internal.runtime.spec.morsel.MorselSpecSuite.SIZE_HINT
@@ -26,189 +26,189 @@ trait MorselSpecSuite extends AssertFusingSucceeded {
 }
 
 // INPUT
-class MorselInputTest extends InputTestBase(FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
+class MorselInputTest extends InputTestBase(FUSING, PIPELINED, SIZE_HINT) with MorselSpecSuite
 
 // ALL NODE SCAN
-class MorselAllNodeScanTest extends AllNodeScanTestBase(FUSING, MORSEL, SIZE_HINT)
+class MorselAllNodeScanTest extends AllNodeScanTestBase(FUSING, PIPELINED, SIZE_HINT)
                             with AllNodeScanWithOtherOperatorsTestBase[EnterpriseRuntimeContext]
                             with MorselSpecSuite
-class MorselAllNodeScanNoFusingTest extends AllNodeScanTestBase(NO_FUSING, MORSEL, SIZE_HINT)
+class MorselAllNodeScanNoFusingTest extends AllNodeScanTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
                                     with AllNodeScanWithOtherOperatorsTestBase[EnterpriseRuntimeContext]
                                     with MorselSpecSuite
 
 // NODE BY ID SEEK
-class MorselNodeByIdSeekTest extends NodeByIdSeekTestBase(FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
-class MorselNodeByIdSeekNoFusingTest extends NodeByIdSeekTestBase(NO_FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
+class MorselNodeByIdSeekTest extends NodeByIdSeekTestBase(FUSING, PIPELINED, SIZE_HINT) with MorselSpecSuite
+class MorselNodeByIdSeekNoFusingTest extends NodeByIdSeekTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with MorselSpecSuite
 
 // RELATIONSHIP BY ID SEEK
-class MorselDirectedRelationshipByIdSeekTest extends DirectedRelationshipByIdSeekTestBase(FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
-class MorselDirectedRelationshipByIdSeekNoFusingTest extends DirectedRelationshipByIdSeekTestBase(NO_FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
+class MorselDirectedRelationshipByIdSeekTest extends DirectedRelationshipByIdSeekTestBase(FUSING, PIPELINED, SIZE_HINT) with MorselSpecSuite
+class MorselDirectedRelationshipByIdSeekNoFusingTest extends DirectedRelationshipByIdSeekTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with MorselSpecSuite
 
 // UNDIRECTED RELATIONSHIP BY ID SEEK
-class MorselUndirectedRelationshipByIdSeekTest extends UndirectedRelationshipByIdSeekTestBase(FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
-class MorselUndirectedRelationshipByIdSeekNoFusingTest extends UndirectedRelationshipByIdSeekTestBase(NO_FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
+class MorselUndirectedRelationshipByIdSeekTest extends UndirectedRelationshipByIdSeekTestBase(FUSING, PIPELINED, SIZE_HINT) with MorselSpecSuite
+class MorselUndirectedRelationshipByIdSeekNoFusingTest extends UndirectedRelationshipByIdSeekTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with MorselSpecSuite
 
 // NODE COUNT FROM COUNT STORE
-class MorselNodeCountFromCountStoreTest extends NodeCountFromCountStoreTestBase(FUSING, MORSEL) with MorselSpecSuite
-class MorselNodeCountFromCountStoreNoFusingTest extends NodeCountFromCountStoreTestBase(NO_FUSING, MORSEL) with MorselSpecSuite
+class MorselNodeCountFromCountStoreTest extends NodeCountFromCountStoreTestBase(FUSING, PIPELINED) with MorselSpecSuite
+class MorselNodeCountFromCountStoreNoFusingTest extends NodeCountFromCountStoreTestBase(NO_FUSING, PIPELINED) with MorselSpecSuite
 
 // RELATIONSHIP COUNT FROM COUNT STORE
-class MorselRelationshipCountFromCountStoreTest extends RelationshipCountFromCountStoreTestBase(FUSING, MORSEL) with MorselSpecSuite
-class MorselRelationshipCountFromCountStoreNoFusingTest extends RelationshipCountFromCountStoreTestBase(NO_FUSING, MORSEL) with MorselSpecSuite
+class MorselRelationshipCountFromCountStoreTest extends RelationshipCountFromCountStoreTestBase(FUSING, PIPELINED) with MorselSpecSuite
+class MorselRelationshipCountFromCountStoreNoFusingTest extends RelationshipCountFromCountStoreTestBase(NO_FUSING, PIPELINED) with MorselSpecSuite
 
 // LABEL SCAN
-class MorselLabelScanTest extends LabelScanTestBase(FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
-class MorselLabelScanNoFusingTest extends LabelScanTestBase(NO_FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
+class MorselLabelScanTest extends LabelScanTestBase(FUSING, PIPELINED, SIZE_HINT) with MorselSpecSuite
+class MorselLabelScanNoFusingTest extends LabelScanTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with MorselSpecSuite
 
 // INDEX SEEK
-class MorselNodeIndexSeekTest extends NodeIndexSeekTestBase(FUSING, MORSEL, SIZE_HINT)
+class MorselNodeIndexSeekTest extends NodeIndexSeekTestBase(FUSING, PIPELINED, SIZE_HINT)
                               with NodeIndexSeekRangeAndCompositeTestBase[EnterpriseRuntimeContext]
                               with ArrayIndexSupport[EnterpriseRuntimeContext]
                               with MorselSpecSuite
 
-class MorselNodeIndexSeekNoFusingTest extends NodeIndexSeekTestBase(NO_FUSING, MORSEL, SIZE_HINT)
+class MorselNodeIndexSeekNoFusingTest extends NodeIndexSeekTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
                                       with NodeIndexSeekRangeAndCompositeTestBase[EnterpriseRuntimeContext]
                                       with ArrayIndexSupport[EnterpriseRuntimeContext]
                                       with MorselSpecSuite
 
 // INDEX SCAN
-class MorselNodeIndexScanTest extends NodeIndexScanTestBase(FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
-class MorselNodeIndexScanNoFusingTest extends NodeIndexScanTestBase(NO_FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
+class MorselNodeIndexScanTest extends NodeIndexScanTestBase(FUSING, PIPELINED, SIZE_HINT) with MorselSpecSuite
+class MorselNodeIndexScanNoFusingTest extends NodeIndexScanTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with MorselSpecSuite
 
 // INDEX CONTAINS SCAN
-class MorselNodeIndexContainsScanTest extends NodeIndexContainsScanTestBase(FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
-class MorselNodeIndexContainsScanNoFusingTest extends NodeIndexContainsScanTestBase(NO_FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
+class MorselNodeIndexContainsScanTest extends NodeIndexContainsScanTestBase(FUSING, PIPELINED, SIZE_HINT) with MorselSpecSuite
+class MorselNodeIndexContainsScanNoFusingTest extends NodeIndexContainsScanTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with MorselSpecSuite
 
 // INDEX ENDS WITH SCAN
-class MorselNodeIndexEndsWithScanTest extends NodeIndexEndsWithScanTestBase(FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
-class MorselNodeIndexEndsWithScanNoFusingTest extends NodeIndexEndsWithScanTestBase(NO_FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
+class MorselNodeIndexEndsWithScanTest extends NodeIndexEndsWithScanTestBase(FUSING, PIPELINED, SIZE_HINT) with MorselSpecSuite
+class MorselNodeIndexEndsWithScanNoFusingTest extends NodeIndexEndsWithScanTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with MorselSpecSuite
 
 // ARGUMENT
-class MorselArgumentTest extends ArgumentTestBase(FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
-class MorselArgumentNoFusingTest extends ArgumentTestBase(NO_FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
+class MorselArgumentTest extends ArgumentTestBase(FUSING, PIPELINED, SIZE_HINT) with MorselSpecSuite
+class MorselArgumentNoFusingTest extends ArgumentTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with MorselSpecSuite
 
 // EXPAND ALL
-class MorselExpandAllTest extends ExpandAllTestBase(FUSING, MORSEL, SIZE_HINT)
+class MorselExpandAllTest extends ExpandAllTestBase(FUSING, PIPELINED, SIZE_HINT)
                           with ExpandAllWithOtherOperatorsTestBase[EnterpriseRuntimeContext]
                           with MorselSpecSuite
-class MorselExpandAllTestNoFusing extends ExpandAllTestBase(NO_FUSING, MORSEL, SIZE_HINT)
+class MorselExpandAllTestNoFusing extends ExpandAllTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
                                   with ExpandAllWithOtherOperatorsTestBase[EnterpriseRuntimeContext]
                                   with MorselSpecSuite
 
 // EXPAND INTO
-class MorselExpandIntoTest extends ExpandIntoTestBase(FUSING, MORSEL, SIZE_HINT)
+class MorselExpandIntoTest extends ExpandIntoTestBase(FUSING, PIPELINED, SIZE_HINT)
                            with ExpandIntoWithOtherOperatorsTestBase[EnterpriseRuntimeContext]
                            with MorselSpecSuite
-class MorselExpandIntoTestNoFusing extends ExpandIntoTestBase(NO_FUSING, MORSEL, SIZE_HINT)
+class MorselExpandIntoTestNoFusing extends ExpandIntoTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
                                    with ExpandIntoWithOtherOperatorsTestBase[EnterpriseRuntimeContext]
                                    with MorselSpecSuite
 
 // OPTIONAL EXPAND ALL
-class MorselOptionalExpandAllTest extends OptionalExpandAllTestBase(FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
-class MorselOptionalExpandAllTestNoFusing extends OptionalExpandAllTestBase(NO_FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
+class MorselOptionalExpandAllTest extends OptionalExpandAllTestBase(FUSING, PIPELINED, SIZE_HINT) with MorselSpecSuite
+class MorselOptionalExpandAllTestNoFusing extends OptionalExpandAllTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with MorselSpecSuite
 
 // OPTIONAL EXPAND INTO
-class MorselOptionalExpandIntoTest extends OptionalExpandIntoTestBase(FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
-class MorselOptionalExpandIntoTestNoFusing extends OptionalExpandIntoTestBase(NO_FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
+class MorselOptionalExpandIntoTest extends OptionalExpandIntoTestBase(FUSING, PIPELINED, SIZE_HINT) with MorselSpecSuite
+class MorselOptionalExpandIntoTestNoFusing extends OptionalExpandIntoTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with MorselSpecSuite
 
 // VAR EXPAND
-class MorselVarLengthExpandTest extends VarLengthExpandTestBase(FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
-class MorselNoFusingVarLengthExpandTest extends VarLengthExpandTestBase(NO_FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
+class MorselVarLengthExpandTest extends VarLengthExpandTestBase(FUSING, PIPELINED, SIZE_HINT) with MorselSpecSuite
+class MorselNoFusingVarLengthExpandTest extends VarLengthExpandTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with MorselSpecSuite
 
 // PROJECT ENDPOINTS
-class MorselProjectEndpointsTest extends ProjectEndpointsTestBase(FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
-class MorselProjectEndpointsTestNoFusing extends ProjectEndpointsTestBase(NO_FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
+class MorselProjectEndpointsTest extends ProjectEndpointsTestBase(FUSING, PIPELINED, SIZE_HINT) with MorselSpecSuite
+class MorselProjectEndpointsTestNoFusing extends ProjectEndpointsTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with MorselSpecSuite
 
 // PROJECTION
-class MorselProjectionTest extends ProjectionTestBase(FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
-class MorselProjectionNoFusingTest extends ProjectionTestBase(NO_FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
-class MorselCachePropertiesTest extends CachePropertiesTestBase(FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
-class MorselCachePropertiesNoFusingTest extends CachePropertiesTestBase(NO_FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
+class MorselProjectionTest extends ProjectionTestBase(FUSING, PIPELINED, SIZE_HINT) with MorselSpecSuite
+class MorselProjectionNoFusingTest extends ProjectionTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with MorselSpecSuite
+class MorselCachePropertiesTest extends CachePropertiesTestBase(FUSING, PIPELINED, SIZE_HINT) with MorselSpecSuite
+class MorselCachePropertiesNoFusingTest extends CachePropertiesTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with MorselSpecSuite
 
 // FILTER
-class MorselFilterTest extends FilterTestBase(FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
-class MorselFilterNoFusingTest extends FilterTestBase(NO_FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
+class MorselFilterTest extends FilterTestBase(FUSING, PIPELINED, SIZE_HINT) with MorselSpecSuite
+class MorselFilterNoFusingTest extends FilterTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with MorselSpecSuite
 
 // LIMIT
-class MorselLimitTest extends LimitTestBase(FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
-class MorselLimitNoFusingTest extends LimitTestBase(NO_FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
+class MorselLimitTest extends LimitTestBase(FUSING, PIPELINED, SIZE_HINT) with MorselSpecSuite
+class MorselLimitNoFusingTest extends LimitTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with MorselSpecSuite
 
 // DISTINCT
-class MorselDistinctTest extends DistinctTestBase(FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
-class MorselDistinctNoFusingTest extends DistinctTestBase(NO_FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
+class MorselDistinctTest extends DistinctTestBase(FUSING, PIPELINED, SIZE_HINT) with MorselSpecSuite
+class MorselDistinctNoFusingTest extends DistinctTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with MorselSpecSuite
 
 // UNWIND
-class MorselUnwindTest extends UnwindTestBase(FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
-class MorselUnwindNoFusingTest extends UnwindTestBase(NO_FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
+class MorselUnwindTest extends UnwindTestBase(FUSING, PIPELINED, SIZE_HINT) with MorselSpecSuite
+class MorselUnwindNoFusingTest extends UnwindTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with MorselSpecSuite
 
 // SORT
-class MorselSortTest extends SortTestBase(FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
-class MorselSortNoFusingTest extends SortTestBase(NO_FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
+class MorselSortTest extends SortTestBase(FUSING, PIPELINED, SIZE_HINT) with MorselSpecSuite
+class MorselSortNoFusingTest extends SortTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with MorselSpecSuite
 
 // TOP
-class MorselTopTest extends TopTestBase(FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
-class MorselTopNoFusingTest extends TopTestBase(NO_FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
+class MorselTopTest extends TopTestBase(FUSING, PIPELINED, SIZE_HINT) with MorselSpecSuite
+class MorselTopNoFusingTest extends TopTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with MorselSpecSuite
 
 // AGGREGATION
-class MorselAggregationTest extends AggregationTestBase(FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
-class MorselAggregationNoFusingTest extends AggregationTestBase(NO_FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
+class MorselAggregationTest extends AggregationTestBase(FUSING, PIPELINED, SIZE_HINT) with MorselSpecSuite
+class MorselAggregationNoFusingTest extends AggregationTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with MorselSpecSuite
 
 // NODE HASH JOIN
-class MorselNodeHashJoinTest extends NodeHashJoinTestBase(FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
-class MorselNodeHashJoinNoFusingTest extends NodeHashJoinTestBase(NO_FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
+class MorselNodeHashJoinTest extends NodeHashJoinTestBase(FUSING, PIPELINED, SIZE_HINT) with MorselSpecSuite
+class MorselNodeHashJoinNoFusingTest extends NodeHashJoinTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with MorselSpecSuite
 
 // PROVIDED ORDER
-class MorselProvidedOrderTest extends ProvidedOrderTestBase(FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
-class MorselNoFusingProvidedOrderTest extends ProvidedOrderTestBase(NO_FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
+class MorselProvidedOrderTest extends ProvidedOrderTestBase(FUSING, PIPELINED, SIZE_HINT) with MorselSpecSuite
+class MorselNoFusingProvidedOrderTest extends ProvidedOrderTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with MorselSpecSuite
 
 // REACTIVE
-class MorselReactiveResultsTest extends ReactiveResultTestBase(FUSING, MORSEL) with MorselSpecSuite
-class MorselReactiveResultsNoFusingTest extends ReactiveResultTestBase(NO_FUSING, MORSEL) with MorselSpecSuite
+class MorselReactiveResultsTest extends ReactiveResultTestBase(FUSING, PIPELINED) with MorselSpecSuite
+class MorselReactiveResultsNoFusingTest extends ReactiveResultTestBase(NO_FUSING, PIPELINED) with MorselSpecSuite
 class MorselReactiveResultsStressTest
-  extends ReactiveResultStressTestBase(FUSING, MORSEL,
+  extends ReactiveResultStressTestBase(FUSING, PIPELINED,
                                        ReactiveResultStressTestBase.MORSEL_SIZE + 1) with MorselSpecSuite
 class MorselReactiveResultsNoFusingStressTest
-  extends ReactiveResultStressTestBase(NO_FUSING, MORSEL,
+  extends ReactiveResultStressTestBase(NO_FUSING, PIPELINED,
                                        ReactiveResultStressTestBase.MORSEL_SIZE + 1) with MorselSpecSuite
 
 // OPTIONAL
-class MorselOptionalTest extends OptionalTestBase(FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
-class MorselOptionalNoFusingTest extends OptionalTestBase(NO_FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
+class MorselOptionalTest extends OptionalTestBase(FUSING, PIPELINED, SIZE_HINT) with MorselSpecSuite
+class MorselOptionalNoFusingTest extends OptionalTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with MorselSpecSuite
 
 // CARTESIAN PRODUCT
-class MorselCartesianProductTest extends CartesianProductTestBase(FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
-class MorselCartesianProductNoFusingTest extends CartesianProductTestBase(NO_FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
+class MorselCartesianProductTest extends CartesianProductTestBase(FUSING, PIPELINED, SIZE_HINT) with MorselSpecSuite
+class MorselCartesianProductNoFusingTest extends CartesianProductTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with MorselSpecSuite
 
 // GENERAL
-class MorselMiscTest extends MiscTestBase(FUSING, MORSEL) with MorselSpecSuite
-class MorselMiscNoFusingTest extends MiscTestBase(NO_FUSING, MORSEL) with MorselSpecSuite
-class MorselExpressionTest extends ExpressionTestBase(FUSING, MORSEL)
+class MorselMiscTest extends MiscTestBase(FUSING, PIPELINED) with MorselSpecSuite
+class MorselMiscNoFusingTest extends MiscTestBase(NO_FUSING, PIPELINED) with MorselSpecSuite
+class MorselExpressionTest extends ExpressionTestBase(FUSING, PIPELINED)
                            with ExpressionWithTxStateChangesTests[EnterpriseRuntimeContext]
-class MorselExpressionNoFusingTest extends ExpressionTestBase(NO_FUSING, MORSEL)
+class MorselExpressionNoFusingTest extends ExpressionTestBase(NO_FUSING, PIPELINED)
                                    with ExpressionWithTxStateChangesTests[EnterpriseRuntimeContext]
-class MorselFusingNotificationTest extends MorselFusingNotificationTestBase(FUSING, MORSEL) // not MorselSpecSuite, since we expect fusing to fail
-class MorselSchedulerTracerTest extends SchedulerTracerTestBase(MORSEL) with MorselSpecSuite
-class MorselMemoryManagementTest extends MemoryManagementTestBase(FUSING, MORSEL)
+class MorselFusingNotificationTest extends MorselFusingNotificationTestBase(FUSING, PIPELINED) // not MorselSpecSuite, since we expect fusing to fail
+class MorselSchedulerTracerTest extends SchedulerTracerTestBase(PIPELINED) with MorselSpecSuite
+class MorselMemoryManagementTest extends MemoryManagementTestBase(FUSING, PIPELINED)
                                  with WithSlotsMemoryManagementTestBase
                                  with MorselSpecSuite
-class MorselMemoryManagementNoFusingTest extends MemoryManagementTestBase(NO_FUSING, MORSEL)
+class MorselMemoryManagementNoFusingTest extends MemoryManagementTestBase(NO_FUSING, PIPELINED)
                                          with WithSlotsMemoryManagementTestBase
                                          with MorselSpecSuite
-class MorselMemoryManagementDisabledTest extends MemoryManagementDisabledTestBase(FUSING, MORSEL) with MorselSpecSuite
-class MorselSubscriberErrorTest extends SubscriberErrorTestBase(FUSING, MORSEL) with MorselSpecSuite
+class MorselMemoryManagementDisabledTest extends MemoryManagementDisabledTestBase(FUSING, PIPELINED) with MorselSpecSuite
+class MorselSubscriberErrorTest extends SubscriberErrorTestBase(FUSING, PIPELINED) with MorselSpecSuite
 
 // SLOTTED PIPE FALLBACK OPERATOR
-class MorselSlottedPipeFallbackTest extends SlottedPipeFallbackTestBase(FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
+class MorselSlottedPipeFallbackTest extends SlottedPipeFallbackTestBase(FUSING, PIPELINED, SIZE_HINT) with MorselSpecSuite
 
 // WORKLOAD with MorselSpecSuite
-class MorselWorkloadTest extends WorkloadTestBase(FUSING, MORSEL, SIZE_HINT)
-class MorselNoFusingWorkloadTest extends WorkloadTestBase(NO_FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
+class MorselWorkloadTest extends WorkloadTestBase(FUSING, PIPELINED, SIZE_HINT)
+class MorselNoFusingWorkloadTest extends WorkloadTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with MorselSpecSuite
 
 // PROFILE
-class MorselProfileNoFusingRowsTest extends ProfileRowsTestBase(NO_FUSING, MORSEL, SIZE_HINT, ENTERPRISE.MORSEL_SIZE) with MorselSpecSuite
-class MorselProfileRowsTest extends ProfileRowsTestBase(FUSING, MORSEL, SIZE_HINT, ENTERPRISE.MORSEL_SIZE) with MorselSpecSuite
-class MorselProfileNoFusingTimeTest extends ProfileTimeTestBase(NO_FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite
-class MorselProfileNoTimeTest extends ProfileNoTimeTestBase(FUSING, MORSEL, SIZE_HINT) with MorselSpecSuite {
+class MorselProfileNoFusingRowsTest extends ProfileRowsTestBase(NO_FUSING, PIPELINED, SIZE_HINT, ENTERPRISE.MORSEL_SIZE) with MorselSpecSuite
+class MorselProfileRowsTest extends ProfileRowsTestBase(FUSING, PIPELINED, SIZE_HINT, ENTERPRISE.MORSEL_SIZE) with MorselSpecSuite
+class MorselProfileNoFusingTimeTest extends ProfileTimeTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with MorselSpecSuite
+class MorselProfileNoTimeTest extends ProfileNoTimeTestBase(FUSING, PIPELINED, SIZE_HINT) with MorselSpecSuite {
   //this test differs in Morsel and Parallel since we fuse differently
   test("should partially profile time if fused pipelines and non-fused pipelines co-exist") {
     given { circleGraph(SIZE_HINT, "X") }
@@ -238,9 +238,9 @@ class MorselProfileNoTimeTest extends ProfileNoTimeTestBase(FUSING, MORSEL, SIZE
     queryProfile.operatorProfile(Id.INVALID_ID.x) should be(NO_PROFILE)
   }
 }
-class MorselProfileNoFusingDbHitsTest extends MorselDbHitsTestBase(NO_FUSING, MORSEL, SIZE_HINT)
+class MorselProfileNoFusingDbHitsTest extends MorselDbHitsTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
                                       with ProcedureCallDbHitsTestBase[EnterpriseRuntimeContext]
                                       with MorselSpecSuite
-class MorselProfileDbHitsTest extends MorselDbHitsTestBase(FUSING, MORSEL, SIZE_HINT)
+class MorselProfileDbHitsTest extends MorselDbHitsTestBase(FUSING, PIPELINED, SIZE_HINT)
                               with ProcedureCallDbHitsTestBase[EnterpriseRuntimeContext]
                               with MorselSpecSuite

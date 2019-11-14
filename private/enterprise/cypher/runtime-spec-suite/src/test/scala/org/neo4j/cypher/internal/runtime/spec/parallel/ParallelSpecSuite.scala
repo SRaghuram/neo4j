@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.spec.parallel
 
 import org.neo4j.cypher.internal.EnterpriseRuntimeContext
-import org.neo4j.cypher.internal.MorselRuntime.PARALLEL
+import org.neo4j.cypher.internal.PipelinedRuntime.PARALLEL
 import org.neo4j.cypher.internal.logical.plans.Ascending
 import org.neo4j.cypher.internal.runtime.spec._
 import org.neo4j.cypher.internal.runtime.spec.morsel._

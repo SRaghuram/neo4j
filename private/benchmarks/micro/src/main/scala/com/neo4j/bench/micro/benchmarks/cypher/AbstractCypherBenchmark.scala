@@ -168,7 +168,8 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
         case Slotted => CypherRuntimeOption.slotted
         case CompiledByteCode => CypherRuntimeOption.compiled
         case CompiledSourceCode => CypherRuntimeOption.compiled
-        case Morsel => CypherRuntimeOption.morsel
+        //TODO rename Morsel here as well, but not now since that could disrupt release
+        case Morsel => CypherRuntimeOption.pipelined
         case Parallel => CypherRuntimeOption.parallel
         case _ => throw new IllegalArgumentException(s"Invalid runtime: $cypherRuntime")
       }

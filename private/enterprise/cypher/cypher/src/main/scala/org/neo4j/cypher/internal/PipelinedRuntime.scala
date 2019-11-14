@@ -9,7 +9,7 @@ import java.lang
 import java.util.Optional
 
 import org.neo4j.codegen.api.CodeGeneration
-import org.neo4j.cypher.internal.MorselRuntime.CODE_GEN_FAILED_MESSAGE
+import org.neo4j.cypher.internal.PipelinedRuntime.CODE_GEN_FAILED_MESSAGE
 import org.neo4j.cypher.internal.compiler.{CodeGenerationFailedNotification, ExperimentalFeatureNotification}
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.physicalplanning._
@@ -35,15 +35,15 @@ import org.neo4j.kernel.impl.query.{QuerySubscriber, QuerySubscription}
 import org.neo4j.values.AnyValue
 import org.neo4j.values.virtual.MapValue
 
-object MorselRuntime {
-  val MORSEL = new MorselRuntime(false, "morsel")
-  val PARALLEL = new MorselRuntime(true, "parallel")
+object PipelinedRuntime {
+  val PIPELINED = new PipelinedRuntime(false, "pipelined")
+  val PARALLEL = new PipelinedRuntime(true, "parallel")
 
   val CODE_GEN_FAILED_MESSAGE = "Code generation failed. Retrying physical planning."
 }
 
-class MorselRuntime private(parallelExecution: Boolean,
-                            override val name: String) extends CypherRuntime[EnterpriseRuntimeContext] with DebugPrettyPrinter {
+class PipelinedRuntime private(parallelExecution: Boolean,
+                               override val name: String) extends CypherRuntime[EnterpriseRuntimeContext] with DebugPrettyPrinter {
 
   private val runtimeName = RuntimeName(name)
 
@@ -61,7 +61,7 @@ class MorselRuntime private(parallelExecution: Boolean,
   override val PRINT_FAILURE_STACK_TRACE = true
 
   override def compileToExecutable(query: LogicalQuery, context: EnterpriseRuntimeContext, securityContext: SecurityContext): ExecutionPlan = {
-    DebugLog.log("MorselRuntime.compileToExecutable()")
+    DebugLog.log("PipelinedRuntime.compileToExecutable()")
 
     if (ENABLE_DEBUG_PRINTS && PRINT_PLAN_INFO_EARLY) {
       printPlanInfo(query)
@@ -69,7 +69,7 @@ class MorselRuntime private(parallelExecution: Boolean,
 
     try {
       if (query.periodicCommitInfo.isDefined)
-        throw new CantCompileQueryException("Periodic commit is not supported by Morsel runtime")
+        throw new CantCompileQueryException("Periodic commit is not supported by Pipelined runtime")
 
       val shouldFuseOperators = context.operatorEngine == CypherOperatorEngineOption.compiled
       val operatorFusionPolicy = OperatorFusionPolicy(shouldFuseOperators, fusionOverPipelinesEnabled = !parallelExecution)
@@ -89,11 +89,11 @@ class MorselRuntime private(parallelExecution: Boolean,
     }
   }
 
-  private def selectMorselSize(query: LogicalQuery,
+  private def selectBatchSize(query: LogicalQuery,
                                context: EnterpriseRuntimeContext): Int = {
     val maxCardinality = query.logicalPlan.flatten.map(plan => query.cardinalities.get(plan.id)).max
-    val morselSize = if (maxCardinality.amount.toLong > context.config.morselSizeBig) context.config.morselSizeBig else context.config.morselSizeSmall
-    morselSize
+    val batchSize = if (maxCardinality.amount.toLong > context.config.morselSizeBig) context.config.morselSizeBig else context.config.morselSizeSmall
+    batchSize
   }
 
   /**
@@ -103,7 +103,7 @@ class MorselRuntime private(parallelExecution: Boolean,
                           query: LogicalQuery,
                           context: EnterpriseRuntimeContext,
                           queryIndexRegistrator: QueryIndexRegistrator,
-                          warnings: Set[InternalNotification]): MorselExecutionPlan = {
+                          warnings: Set[InternalNotification]): PipelinedExecutionPlan = {
     val interpretedPipesFallbackPolicy = InterpretedPipesFallbackPolicy(context.interpretedPipesFallback, parallelExecution)
     val breakingPolicy = MorselPipelineBreakingPolicy(operatorFusionPolicy, interpretedPipesFallbackPolicy)
 
@@ -174,7 +174,7 @@ class MorselRuntime private(parallelExecution: Boolean,
 
       val executor = context.runtimeEnvironment.getQueryExecutor(parallelExecution)
 
-      val morselSize = selectMorselSize(query, context)
+      val morselSize = selectBatchSize(query, context)
 
       val maybeThreadSafeExecutionResources =
         if (parallelExecution) {
@@ -196,21 +196,21 @@ class MorselRuntime private(parallelExecution: Boolean,
         printPipe(physicalPlan.slotConfigurations)
       }
 
-      new MorselExecutionPlan(executablePipelines,
-                              executionGraphDefinition,
-                              queryIndexRegistrator.result(),
-                              physicalPlan.nExpressionSlots,
-                              physicalPlan.logicalPlan,
-                              physicalPlan.parameterMapping,
-                              query.resultColumns,
-                              executor,
-                              context.runtimeEnvironment.tracer,
-                              morselSize,
-                              context.config.memoryTrackingController,
-                              maybeThreadSafeExecutionResources,
-                              metadata,
-                              warnings,
-                              executionGraphSchedulingPolicy)
+      new PipelinedExecutionPlan(executablePipelines,
+                                 executionGraphDefinition,
+                                 queryIndexRegistrator.result(),
+                                 physicalPlan.nExpressionSlots,
+                                 physicalPlan.logicalPlan,
+                                 physicalPlan.parameterMapping,
+                                 query.resultColumns,
+                                 executor,
+                                 context.runtimeEnvironment.tracer,
+                                 morselSize,
+                                 context.config.memoryTrackingController,
+                                 maybeThreadSafeExecutionResources,
+                                 metadata,
+                                 warnings,
+                                 executionGraphSchedulingPolicy)
     } catch {
       case e:Exception if operatorFusionPolicy.fusionEnabled =>
         // We failed to compile all the pipelines. Retry physical planning with fusing disabled.
@@ -231,21 +231,21 @@ class MorselRuntime private(parallelExecution: Boolean,
     }
   }
 
-  class MorselExecutionPlan(executablePipelines: IndexedSeq[ExecutablePipeline],
-                            executionGraphDefinition: ExecutionGraphDefinition,
-                            queryIndexes: QueryIndexes,
-                            nExpressionSlots: Int,
-                            logicalPlan: LogicalPlan,
-                            parameterMapping: ParameterMapping,
-                            fieldNames: Array[String],
-                            queryExecutor: QueryExecutor,
-                            schedulerTracer: SchedulerTracer,
-                            morselSize: Int,
-                            memoryTrackingController: MemoryTrackingController,
-                            maybeThreadSafeExecutionResources: Option[(CursorFactory, ResourceManagerFactory)],
-                            override val metadata: Seq[Argument],
-                            warnings: Set[InternalNotification],
-                            executionGraphSchedulingPolicy: ExecutionGraphSchedulingPolicy) extends ExecutionPlan {
+  class PipelinedExecutionPlan(executablePipelines: IndexedSeq[ExecutablePipeline],
+                               executionGraphDefinition: ExecutionGraphDefinition,
+                               queryIndexes: QueryIndexes,
+                               nExpressionSlots: Int,
+                               logicalPlan: LogicalPlan,
+                               parameterMapping: ParameterMapping,
+                               fieldNames: Array[String],
+                               queryExecutor: QueryExecutor,
+                               schedulerTracer: SchedulerTracer,
+                               batchSize: Int,
+                               memoryTrackingController: MemoryTrackingController,
+                               maybeThreadSafeExecutionResources: Option[(CursorFactory, ResourceManagerFactory)],
+                               override val metadata: Seq[Argument],
+                               warnings: Set[InternalNotification],
+                               executionGraphSchedulingPolicy: ExecutionGraphSchedulingPolicy) extends ExecutionPlan {
 
     override def run(queryContext: QueryContext,
                      executionMode: ExecutionMode,
@@ -254,26 +254,26 @@ class MorselRuntime private(parallelExecution: Boolean,
                      inputDataStream: InputDataStream,
                      subscriber: QuerySubscriber): RuntimeResult = {
 
-      new MorselRuntimeResult(executablePipelines,
-                              executionGraphDefinition,
-                              queryIndexes.initiateLabelAndSchemaIndexes(queryContext),
-                              nExpressionSlots,
-                              prePopulateResults,
-                              inputDataStream,
-                              logicalPlan,
-                              queryContext,
-                              createParameterArray(params, parameterMapping),
-                              fieldNames,
-                              queryExecutor,
-                              schedulerTracer,
-                              subscriber,
-                              executionMode == ProfileMode,
-                              morselSize,
-                              memoryTrackingController.memoryTracking,
-                              executionGraphSchedulingPolicy)
+      new PipelinedRuntimeResult(executablePipelines,
+                                 executionGraphDefinition,
+                                 queryIndexes.initiateLabelAndSchemaIndexes(queryContext),
+                                 nExpressionSlots,
+                                 prePopulateResults,
+                                 inputDataStream,
+                                 logicalPlan,
+                                 queryContext,
+                                 createParameterArray(params, parameterMapping),
+                                 fieldNames,
+                                 queryExecutor,
+                                 schedulerTracer,
+                                 subscriber,
+                                 executionMode == ProfileMode,
+                                 batchSize,
+                                 memoryTrackingController.memoryTracking,
+                                 executionGraphSchedulingPolicy)
     }
 
-    override def runtimeName: RuntimeName = MorselRuntime.this.runtimeName
+    override def runtimeName: RuntimeName = PipelinedRuntime.this.runtimeName
 
     override def notifications: Set[InternalNotification] =
       if (parallelExecution)
@@ -284,23 +284,23 @@ class MorselRuntime private(parallelExecution: Boolean,
     override def threadSafeExecutionResources(): Option[(CursorFactory, ResourceManagerFactory)] = maybeThreadSafeExecutionResources
   }
 
-  class MorselRuntimeResult(executablePipelines: IndexedSeq[ExecutablePipeline],
-                            executionGraphDefinition: ExecutionGraphDefinition,
-                            queryIndexes: Array[IndexReadSession],
-                            nExpressionSlots: Int,
-                            prePopulateResults: Boolean,
-                            inputDataStream: InputDataStream,
-                            logicalPlan: LogicalPlan,
-                            queryContext: QueryContext,
-                            params: Array[AnyValue],
-                            override val fieldNames: Array[String],
-                            queryExecutor: QueryExecutor,
-                            schedulerTracer: SchedulerTracer,
-                            subscriber: QuerySubscriber,
-                            doProfile: Boolean,
-                            morselSize: Int,
-                            memoryTracking: MemoryTracking,
-                            executionGraphSchedulingPolicy: ExecutionGraphSchedulingPolicy) extends RuntimeResult {
+  class PipelinedRuntimeResult(executablePipelines: IndexedSeq[ExecutablePipeline],
+                               executionGraphDefinition: ExecutionGraphDefinition,
+                               queryIndexes: Array[IndexReadSession],
+                               nExpressionSlots: Int,
+                               prePopulateResults: Boolean,
+                               inputDataStream: InputDataStream,
+                               logicalPlan: LogicalPlan,
+                               queryContext: QueryContext,
+                               params: Array[AnyValue],
+                               override val fieldNames: Array[String],
+                               queryExecutor: QueryExecutor,
+                               schedulerTracer: SchedulerTracer,
+                               subscriber: QuerySubscriber,
+                               doProfile: Boolean,
+                               batchSize: Int,
+                               memoryTracking: MemoryTracking,
+                               executionGraphSchedulingPolicy: ExecutionGraphSchedulingPolicy) extends RuntimeResult {
 
     private var querySubscription: QuerySubscription = _
     private var _queryProfile: QueryProfile = _
@@ -355,7 +355,7 @@ class MorselRuntime private(parallelExecution: Boolean,
           prePopulateResults,
           subscriber,
           doProfile,
-          morselSize,
+          batchSize,
           memoryTracking,
           executionGraphSchedulingPolicy)
 

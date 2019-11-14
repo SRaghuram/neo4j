@@ -25,13 +25,13 @@ object RuntimeEnvironment {
          workerManager: WorkerManagement): RuntimeEnvironment = {
 
     new RuntimeEnvironment(config,
-      createMorselQueryExecutor(cursors),
+      createPipelinedQueryExecutor(cursors),
       createParallelQueryExecutor(cursors, lifeSupport, workerManager),
       createTracer(config, jobScheduler, lifeSupport),
       cursors)
   }
 
-  private def createMorselQueryExecutor(cursors: CursorFactory) = {
+  private def createPipelinedQueryExecutor(cursors: CursorFactory) = {
     new CallingThreadQueryExecutor(cursors)
   }
 
@@ -69,12 +69,12 @@ object RuntimeEnvironment {
 }
 
 class RuntimeEnvironment(config: CypherRuntimeConfiguration,
-                         morselQueryExecutor: QueryExecutor,
+                         pipelinedQueryExecutor: QueryExecutor,
                          parallelQueryExecutor: QueryExecutor,
                          val tracer: SchedulerTracer,
                          val cursors: CursorFactory) {
 
   def getQueryExecutor(parallelExecution: Boolean): QueryExecutor =
-    if (parallelExecution) parallelQueryExecutor else morselQueryExecutor
+    if (parallelExecution) parallelQueryExecutor else pipelinedQueryExecutor
 
 }

@@ -26,9 +26,9 @@ class EnterpriseCompilerFactory(graph: GraphDatabaseQueryService,
                                 runtimeConfig: CypherRuntimeConfiguration
                                ) extends CompilerFactory {
   /*
-  One compiler is created for every Planner:Runtime:Version combination, e.g., Cost-Morsel-3.5 & Cost-Morsel-4.0.
-  Each compiler contains a runtime instance, and each morsel runtime instance requires a dispatcher instance.
-  This ensures only one (shared) dispatcher/tracer instance is created, even when there are multiple morsel runtime instances.
+  One compiler is created for every Planner:Runtime:Version combination, e.g., Cost-Pipelined-3.5 & Cost-Pipelined-4.0.
+  Each compiler contains a runtime instance, and each pipelined runtime instance requires a dispatcher instance.
+  This ensures only one (shared) dispatcher/tracer instance is created, even when there are multiple pipelined runtime instances.
    */
   private val runtimeEnvironment: RuntimeEnvironment = {
     val resolver = graph.getDependencyResolver
