@@ -7,8 +7,7 @@ package org.neo4j.cypher.internal.physicalplanning
 
 import org.neo4j.cypher.internal.logical.plans.{LogicalPlan, ProduceResult}
 import org.neo4j.cypher.internal.physicalplanning
-import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition.NO_ARGUMENT_STATE_MAPS
-import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition.NO_BUFFERS
+import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition.{NO_ARGUMENT_STATE_MAPS, NO_BUFFERS}
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.scalatest.matchers.{MatchResult, Matcher}
 import org.scalatest.words.MatcherWords
@@ -75,8 +74,8 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
   private def out(outputDefinition: OutputDefinition): MatchableOutputDefinition = {
     outputDefinition match {
       case physicalplanning.ProduceResultOutput(_) => ProduceResultOutput
-      case physicalplanning.PipelinedBufferOutput(id, _) => MorselBufferOutput(id)
-      case physicalplanning.PipelinedArgumentStateBufferOutput(id, argumentSlotOffset, _) => MorselArgumentStateBufferOutput(id, argumentSlotOffset)
+      case physicalplanning.MorselBufferOutput(id, _) => MorselBufferOutput(id)
+      case physicalplanning.MorselArgumentStateBufferOutput(id, argumentSlotOffset, _) => MorselArgumentStateBufferOutput(id, argumentSlotOffset)
       case physicalplanning.ReduceOutput(bufferId, _) => ReduceOutput(bufferId)
       case physicalplanning.NoOutput => NoOutput
     }

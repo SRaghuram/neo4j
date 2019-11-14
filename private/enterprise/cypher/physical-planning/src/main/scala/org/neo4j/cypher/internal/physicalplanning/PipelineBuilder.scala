@@ -58,10 +58,10 @@ object PipelineBuilder {
       case b: ArgumentStateBufferDefinitionBuild =>
         ArgumentStateBufferVariant(b.argumentStateMapId)
 
-      case b: PipelinedBufferDefinitionBuild =>
+      case b: MorselBufferDefinitionBuild =>
         RegularBufferVariant
 
-      case b: OptionalPipelinedBufferDefinitionBuild =>
+      case b: OptionalMorselBufferDefinitionBuild =>
         OptionalBufferVariant(b.argumentStateMapId)
 
       case b: DelegateBufferDefinitionBuild =>
