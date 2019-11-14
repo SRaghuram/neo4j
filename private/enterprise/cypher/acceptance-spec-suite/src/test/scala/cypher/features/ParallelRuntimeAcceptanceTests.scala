@@ -27,7 +27,7 @@ class ParallelRuntimeAcceptanceTests extends EnterpriseBaseAcceptanceTest {
   }
 
   @Disabled
-  def generateBlacklistCostMorsel(): Unit = {
+  def generateBlacklistCostParallel(): Unit = {
     printComputedBlacklist(scenarios, ParallelTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder())
     fail("Do not forget to add @Disabled to this method")
   }

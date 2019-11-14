@@ -12,18 +12,18 @@ import cypher.features.ScenarioTestHelper.{createTests, printComputedBlacklist}
 import org.junit.jupiter.api.Assertions.fail
 import org.junit.jupiter.api.{Disabled, DynamicTest, TestFactory}
 
-class MorselTCKTests extends EnterpriseBaseTCKTests {
+class PipelinedTCKTests extends EnterpriseBaseTCKTests {
 
   // If you want to only run a specific feature or scenario, go to the EnterpriseBaseTCKTests
 
   @TestFactory
-  def runMorsel(): util.Collection[DynamicTest] = {
-    createTests(scenarios, MorselTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder())
+  def runPipelined(): util.Collection[DynamicTest] = {
+    createTests(scenarios, PipelinedTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder())
   }
 
   @Disabled
-  def generateBlacklistMorsel(): Unit = {
-    printComputedBlacklist(scenarios, MorselTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder())
+  def generateBlacklistPipelined(): Unit = {
+    printComputedBlacklist(scenarios, PipelinedTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder())
     fail("Do not forget to add @Disabled to this method")
   }
 }
