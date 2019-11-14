@@ -12,7 +12,7 @@ import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyLabel
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.pipelined.execution.{PipelinedExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
@@ -42,7 +42,7 @@ class NodeCountFromCountStoreOperator(val workIdentity: WorkIdentity,
   }
 
 
-  class NodeFromCountStoreTask(val inputMorsel: MorselExecutionContext) extends InputLoopTask {
+  class NodeFromCountStoreTask(val inputMorsel: PipelinedExecutionContext) extends InputLoopTask {
 
     override def toString: String = "NodeFromCountStoreTask"
 
@@ -59,7 +59,7 @@ class NodeCountFromCountStoreOperator(val workIdentity: WorkIdentity,
 
     override def workIdentity: WorkIdentity = NodeCountFromCountStoreOperator.this.workIdentity
 
-    override protected def innerLoop(outputRow: MorselExecutionContext, context: QueryContext, state: QueryState): Unit = {
+    override protected def innerLoop(outputRow: PipelinedExecutionContext, context: QueryContext, state: QueryState): Unit = {
       if (hasNext) {
         var count = 1L
 

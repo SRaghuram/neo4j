@@ -25,7 +25,7 @@ object WorkersQueryProfiler {
 /**
   * @param numberOfWorkers number of worker that can execute this query
   * @param applyRhsPlans maps all apply ids to their corresponding rhs operator id. This is needed because the apply
-  *                      operator is not an executable operator in morsel, and thus there is no place to inject code
+  *                      operator is not an executable operator in pipelined, and thus there is no place to inject code
   *                      for counting apply rows. Instead we return the rhs operator rows, as these are guaranteed to
   *                      be identical.
   */

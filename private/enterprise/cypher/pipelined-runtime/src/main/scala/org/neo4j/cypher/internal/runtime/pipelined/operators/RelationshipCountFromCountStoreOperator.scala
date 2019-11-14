@@ -12,7 +12,7 @@ import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{LazyLabel, RelationshipTypes}
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.pipelined.execution.{PipelinedExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
@@ -51,7 +51,7 @@ class RelationshipCountFromCountStoreOperator(val workIdentity: WorkIdentity,
 
   case class Known(override val id: Int) extends RelId
 
-  class RelationshipFromCountStoreTask(val inputMorsel: MorselExecutionContext) extends InputLoopTask {
+  class RelationshipFromCountStoreTask(val inputMorsel: PipelinedExecutionContext) extends InputLoopTask {
 
     override def toString: String = "RelationshipFromCountStoreTask"
 
@@ -68,7 +68,7 @@ class RelationshipCountFromCountStoreOperator(val workIdentity: WorkIdentity,
       true
     }
 
-    override protected def innerLoop(outputRow: MorselExecutionContext, context: QueryContext, state: QueryState): Unit = {
+    override protected def innerLoop(outputRow: PipelinedExecutionContext, context: QueryContext, state: QueryState): Unit = {
       if (hasNext) {
         val startLabelId = getLabelId(startLabel, context)
         val endLabelId = getLabelId(endLabel, context)

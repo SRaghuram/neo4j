@@ -75,8 +75,8 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
   private def out(outputDefinition: OutputDefinition): MatchableOutputDefinition = {
     outputDefinition match {
       case physicalplanning.ProduceResultOutput(_) => ProduceResultOutput
-      case physicalplanning.MorselBufferOutput(id, _) => MorselBufferOutput(id)
-      case physicalplanning.MorselArgumentStateBufferOutput(id, argumentSlotOffset, _) => MorselArgumentStateBufferOutput(id, argumentSlotOffset)
+      case physicalplanning.PipelinedBufferOutput(id, _) => MorselBufferOutput(id)
+      case physicalplanning.PipelinedArgumentStateBufferOutput(id, argumentSlotOffset, _) => MorselArgumentStateBufferOutput(id, argumentSlotOffset)
       case physicalplanning.ReduceOutput(bufferId, _) => ReduceOutput(bufferId)
       case physicalplanning.NoOutput => NoOutput
     }

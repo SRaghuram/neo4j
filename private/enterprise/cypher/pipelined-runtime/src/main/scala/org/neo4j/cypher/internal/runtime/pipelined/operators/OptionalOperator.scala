@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.operators
 import org.neo4j.cypher.internal.physicalplanning._
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.pipelined.execution.{PipelinedExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers._
@@ -69,11 +69,11 @@ class OptionalOperator(val workIdentity: WorkIdentity,
     private val morselIterator = morselData.morsels.iterator
     // To remember whether we already processed the ArgumentStream, which can lead to a null row.
     private var consumedArgumentStream = false
-    private var currentMorsel: MorselExecutionContext = _
+    private var currentMorsel: PipelinedExecutionContext = _
 
     override def workIdentity: WorkIdentity = OptionalOperator.this.workIdentity
 
-    override def operate(output: MorselExecutionContext, context: QueryContext, state: QueryState, resources: QueryResources): Unit = {
+    override def operate(output: PipelinedExecutionContext, context: QueryContext, state: QueryState, resources: QueryResources): Unit = {
       while (output.isValidRow && canContinue) {
         if (currentMorsel == null || !currentMorsel.isValidRow) {
           if (morselIterator.hasNext) {

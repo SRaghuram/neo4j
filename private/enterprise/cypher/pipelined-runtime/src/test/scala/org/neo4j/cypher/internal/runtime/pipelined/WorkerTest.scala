@@ -54,7 +54,7 @@ class WorkerTest extends CypherFunSuite {
 
   test("should handle scheduling error which occurred before getting morsel from parallelizer") {
     val cause = new Exception
-    val originalMorsel = mock[MorselExecutionContext]
+    val originalMorsel = mock[PipelinedExecutionContext]
     val input = mock[MorselParallelizer]
     val pipeline = mock[ExecutablePipeline]
     when(input.originalForClosing).thenReturn(originalMorsel)
@@ -80,7 +80,7 @@ class WorkerTest extends CypherFunSuite {
 
   test("should handle scheduling error which occurred after getting morsel from parallelizer") {
     val cause = new Exception
-    val originalMorsel = mock[MorselExecutionContext]
+    val originalMorsel = mock[PipelinedExecutionContext]
     val input = mock[MorselParallelizer]
     when(input.originalForClosing).thenReturn(originalMorsel)
     val pipeline = mock[ExecutablePipeline]

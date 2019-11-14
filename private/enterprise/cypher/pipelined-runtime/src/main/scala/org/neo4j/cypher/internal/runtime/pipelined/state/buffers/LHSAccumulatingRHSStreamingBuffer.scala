@@ -7,8 +7,8 @@ package org.neo4j.cypher.internal.runtime.pipelined.state.buffers
 
 import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, PipelineId}
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
-import org.neo4j.cypher.internal.runtime.pipelined.MorselDebugSupport
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.PipelinedDebugSupport
+import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedExecutionContext
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.{ArgumentStateMaps, MorselAccumulator, PerArgument}
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.{AccumulatingBuffer, AccumulatorAndMorsel, DataHolder, SinkByOrigin}
 import org.neo4j.cypher.internal.runtime.pipelined.state.{ArgumentCountUpdater, ArgumentStateMap, QueryCompletionTracker, StateFactory}
@@ -102,7 +102,7 @@ class LHSAccumulatingRHSStreamingBuffer[DATA <: AnyRef,
         val rhsMorsel = rhsBuffer.take()
         if (rhsMorsel != null) {
           if (DebugSupport.BUFFERS.enabled) {
-            DebugSupport.BUFFERS.log(s"[take] $this -> $lhsAcc & ${MorselDebugSupport.prettyMorselWithHeader("", rhsMorsel).reduce(_ + _)}")
+            DebugSupport.BUFFERS.log(s"[take] $this -> $lhsAcc & ${PipelinedDebugSupport.prettyMorselWithHeader("", rhsMorsel).reduce(_ + _)}")
           }
           return AccumulatorAndMorsel(lhsAcc, rhsMorsel)
         }
@@ -119,7 +119,7 @@ class LHSAccumulatingRHSStreamingBuffer[DATA <: AnyRef,
     * @param accumulator the accumulator
     * @return `true` iff both the morsel and the accumulator are cancelled
     */
-  def filterCancelledArguments(accumulator: MorselAccumulator[_], rhsMorsel: MorselExecutionContext): Boolean = {
+  def filterCancelledArguments(accumulator: MorselAccumulator[_], rhsMorsel: PipelinedExecutionContext): Boolean = {
     // TODO
     false
   }
@@ -138,9 +138,9 @@ class LHSAccumulatingRHSStreamingBuffer[DATA <: AnyRef,
     })
   }
 
-  def close(accumulator: MorselAccumulator[_], rhsMorsel: MorselExecutionContext): Unit = {
+  def close(accumulator: MorselAccumulator[_], rhsMorsel: PipelinedExecutionContext): Unit = {
     if (DebugSupport.BUFFERS.enabled) {
-      DebugSupport.BUFFERS.log(s"[close] $this -X- $accumulator & ${MorselDebugSupport.prettyMorselWithHeader("", rhsMorsel).reduce(_ + _)}")
+      DebugSupport.BUFFERS.log(s"[close] $this -X- $accumulator & ${PipelinedDebugSupport.prettyMorselWithHeader("", rhsMorsel).reduce(_ + _)}")
     }
     // Check if the argument count is zero -- in the case of the RHS, that means that no more data will ever arrive
     if (rhsArgumentStateMap.hasCompleted(accumulator.argumentRowId)) {
@@ -175,7 +175,7 @@ class LHSAccumulatingRHSStreamingBuffer[DATA <: AnyRef,
 
     override def canPut: Boolean = true
 
-    override def initiate(argumentRowId: Long, argumentMorsel: MorselExecutionContext): Unit = {
+    override def initiate(argumentRowId: Long, argumentMorsel: PipelinedExecutionContext): Unit = {
       if (DebugSupport.BUFFERS.enabled) {
         DebugSupport.BUFFERS.log(s"[init]  $this <- argumentRowId=$argumentRowId from $argumentMorsel")
       }
@@ -195,10 +195,10 @@ class LHSAccumulatingRHSStreamingBuffer[DATA <: AnyRef,
   // We need to reference count both tasks and argument IDs on the RHS.
   // Tasks need to be tracked since the RHS accumulator's Buffer is used multiple times
   // to spawn tasks, unlike in the MorselArgumentStateBuffer where you only take the accumulator once.
-  object RHSSink extends Sink[IndexedSeq[PerArgument[MorselExecutionContext]]] with AccumulatingBuffer {
+  object RHSSink extends Sink[IndexedSeq[PerArgument[PipelinedExecutionContext]]] with AccumulatingBuffer {
     override val argumentSlotOffset: Int = rhsArgumentStateMap.argumentSlotOffset
 
-    override def put(data: IndexedSeq[PerArgument[MorselExecutionContext]]): Unit = {
+    override def put(data: IndexedSeq[PerArgument[PipelinedExecutionContext]]): Unit = {
       if (DebugSupport.BUFFERS.enabled) {
         DebugSupport.BUFFERS.log(s"[put]   $this <- ${data.mkString(", ")}")
       }
@@ -218,7 +218,7 @@ class LHSAccumulatingRHSStreamingBuffer[DATA <: AnyRef,
 
     override def canPut: Boolean = true
 
-    override def initiate(argumentRowId: Long, argumentMorsel: MorselExecutionContext): Unit = {
+    override def initiate(argumentRowId: Long, argumentMorsel: PipelinedExecutionContext): Unit = {
       if (DebugSupport.BUFFERS.enabled) {
         DebugSupport.BUFFERS.log(s"[init]  $this <- argumentRowId=$argumentRowId from $argumentMorsel")
       }

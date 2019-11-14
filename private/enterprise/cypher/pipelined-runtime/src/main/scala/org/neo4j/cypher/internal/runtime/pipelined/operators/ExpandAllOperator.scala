@@ -13,7 +13,7 @@ import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.compiled.expressions.{CompiledHelpers, IntermediateExpression}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.RelationshipTypes
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{CursorPools, MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.pipelined.execution.{CursorPools, PipelinedExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
@@ -52,7 +52,7 @@ class ExpandAllOperator(val workIdentity: WorkIdentity,
                                    argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorsel] =
     IndexedSeq(new OTask(inputMorsel.nextCopy))
 
-  class OTask(val inputMorsel: MorselExecutionContext) extends InputLoopTask {
+  class OTask(val inputMorsel: PipelinedExecutionContext) extends InputLoopTask {
 
     override def workIdentity: WorkIdentity = ExpandAllOperator.this.workIdentity
 
@@ -83,9 +83,9 @@ class ExpandAllOperator(val workIdentity: WorkIdentity,
       }
     }
 
-    override protected def innerLoop(outputRow: MorselExecutionContext,
-                           context: QueryContext,
-                           state: QueryState): Unit = {
+    override protected def innerLoop(outputRow: PipelinedExecutionContext,
+                                     context: QueryContext,
+                                     state: QueryState): Unit = {
 
       while (outputRow.isValidRow && relationships.next()) {
         val relId = relationships.relationshipReference()

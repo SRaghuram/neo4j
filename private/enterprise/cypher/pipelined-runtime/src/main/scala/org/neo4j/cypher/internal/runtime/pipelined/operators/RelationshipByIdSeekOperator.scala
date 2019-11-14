@@ -17,7 +17,7 @@ import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpres
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.NumericHelper
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.SeekArgs
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.pipelined.execution.{PipelinedExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.pipelined.operators.RelationshipByIdSeekOperator.asIdMethod
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
@@ -41,7 +41,7 @@ abstract class RelationshipByIdSeekOperator(val workIdentity: WorkIdentity,
 
 
 
-  abstract class RelationshipByIdTask(val inputMorsel: MorselExecutionContext) extends InputLoopTask {
+  abstract class RelationshipByIdTask(val inputMorsel: PipelinedExecutionContext) extends InputLoopTask {
 
 
     protected var ids: java.util.Iterator[AnyValue] = _
@@ -167,7 +167,7 @@ class DirectedRelationshipByIdSeekOperator(workIdentity: WorkIdentity,
                                    argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
 
     IndexedSeq(new RelationshipByIdTask(inputMorsel.nextCopy) {
-      override protected def innerLoop(outputRow: MorselExecutionContext, context: QueryContext, state: QueryState): Unit = {
+      override protected def innerLoop(outputRow: PipelinedExecutionContext, context: QueryContext, state: QueryState): Unit = {
         while (outputRow.isValidRow && ids.hasNext) {
           val nextId = NumericHelper.asLongEntityIdPrimitive(ids.next())
           val read = context.transactionalContext.dataRead
@@ -212,7 +212,7 @@ class UndirectedRelationshipByIdSeekOperator(workIdentity: WorkIdentity,
                                    argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
 
     IndexedSeq(new RelationshipByIdTask(inputMorsel.nextCopy) {
-      override protected def innerLoop(outputRow: MorselExecutionContext, context: QueryContext, state: QueryState): Unit = {
+      override protected def innerLoop(outputRow: PipelinedExecutionContext, context: QueryContext, state: QueryState): Unit = {
         while (outputRow.isValidRow && (!forwardDirection || ids.hasNext)) {
           if (forwardDirection) {
             val nextId = NumericHelper.asLongEntityIdPrimitive(ids.next())

@@ -15,7 +15,7 @@ import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpres
 import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators._
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.pipelined.execution.{PipelinedExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.{ArgumentStateFactory, MorselAccumulator, PerArgument}
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Sink
 import org.neo4j.cypher.internal.runtime.pipelined.state.{ArgumentStateMap, StateFactory}
@@ -79,7 +79,7 @@ case class AggregationOperator(workIdentity: WorkIdentity,
 
       override def workIdentity: WorkIdentity = AggregationOperator.this.workIdentity
 
-      override def prepareOutput(morsel: MorselExecutionContext,
+      override def prepareOutput(morsel: PipelinedExecutionContext,
                                  context: QueryContext,
                                  state: QueryState,
                                  resources: QueryResources,
@@ -102,7 +102,7 @@ case class AggregationOperator(workIdentity: WorkIdentity,
       }
 
       private def preAggregate(queryState: OldQueryState)
-                              (morsel: MorselExecutionContext): AggPreMap = {
+                              (morsel: PipelinedExecutionContext): AggPreMap = {
 
         val result = new AggPreMap()
 
@@ -191,10 +191,10 @@ case class AggregationOperator(workIdentity: WorkIdentity,
   object AggregatingAccumulator {
 
     class Factory(aggregators: Array[Aggregator], memoryTracker: QueryMemoryTracker) extends ArgumentStateFactory[AggregatingAccumulator] {
-      override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): AggregatingAccumulator =
+      override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: PipelinedExecutionContext, argumentRowIdsForReducers: Array[Long]): AggregatingAccumulator =
         new StandardAggregatingAccumulator(argumentRowId, aggregators, argumentRowIdsForReducers, memoryTracker)
 
-      override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): AggregatingAccumulator =
+      override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: PipelinedExecutionContext, argumentRowIdsForReducers: Array[Long]): AggregatingAccumulator =
         new ConcurrentAggregatingAccumulator(argumentRowId, aggregators, argumentRowIdsForReducers)
     }
   }
@@ -233,7 +233,7 @@ case class AggregationOperator(workIdentity: WorkIdentity,
 
       private val resultIterator = accumulator.result()
 
-      override def operate(outputRow: MorselExecutionContext,
+      override def operate(outputRow: PipelinedExecutionContext,
                            context: QueryContext,
                            state: QueryState,
                            resources: QueryResources): Unit = {

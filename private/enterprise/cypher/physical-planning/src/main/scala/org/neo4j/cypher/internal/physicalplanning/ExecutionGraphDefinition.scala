@@ -63,7 +63,7 @@ case class ArgumentStateDefinition(id: ArgumentStateMapId,
 // -- BUFFERS
 
 /**
-  * A buffer between two pipelines, or a delegate after an ApplyBuffer. Maps to a MorselBuffer.
+  * A buffer between two pipelines, or a delegate after an ApplyBuffer. Maps to a PipelinedBuffer.
   */
 case class BufferDefinition(id: BufferId,
                             // We need multiple reducers because a buffer might need to
@@ -104,12 +104,12 @@ case class BufferDefinition(id: BufferId,
 sealed trait BufferVariant
 
 /**
-  * Regular morsel buffer.
+  * Regular pipelined buffer.
   */
 case object RegularBufferVariant extends BufferVariant
 
 /**
-  * A buffer between two pipelines before an Optional operator, or a delegate after an ApplyBuffer. Maps to an OptionalMorselBuffer.
+  * A buffer between two pipelines before an Optional operator, or a delegate after an ApplyBuffer. Maps to an OptionalPipelinedBuffer.
   */
 case class OptionalBufferVariant(argumentStateMapId: ArgumentStateMapId) extends BufferVariant
 
@@ -151,7 +151,7 @@ case class AttachBufferVariant(applyBuffer: BufferDefinition,
 
 /**
   * This buffer groups data by argument row and sits between a pre-reduce and a reduce operator.
-  * Maps to a MorselArgumentStateBuffer.
+  * Maps to a PipelinedArgumentStateBuffer.
   */
 case class ArgumentStateBufferVariant(argumentStateMapId: ArgumentStateMapId) extends BufferVariant
 
@@ -166,8 +166,8 @@ case class LHSAccumulatingRHSStreamingBufferVariant(lhsPipelineId: PipelineId,
 // -- OUTPUT
 sealed trait OutputDefinition
 case class ProduceResultOutput(plan: ProduceResult) extends OutputDefinition
-case class MorselBufferOutput(id: BufferId, nextPipelineHeadPlanId: Id) extends OutputDefinition
-case class MorselArgumentStateBufferOutput(id: BufferId, argumentSlotOffset: Int, nextPipelineHeadPlanId: Id) extends OutputDefinition
+case class PipelinedBufferOutput(id: BufferId, nextPipelineHeadPlanId: Id) extends OutputDefinition
+case class PipelinedArgumentStateBufferOutput(id: BufferId, argumentSlotOffset: Int, nextPipelineHeadPlanId: Id) extends OutputDefinition
 case class ReduceOutput(bufferId: BufferId, plan: LogicalPlan) extends OutputDefinition
 case object NoOutput extends OutputDefinition
 

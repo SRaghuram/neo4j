@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.operators
 import org.neo4j.cypher.internal.physicalplanning.{BufferId, PipelineId}
 import org.neo4j.cypher.internal.profiling.{OperatorProfileEvent, QueryProfiler}
 import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.pipelined.execution.{PipelinedExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.PerArgument
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Sink
@@ -34,7 +34,7 @@ trait OutputOperator extends HasWorkIdentity {
 
 trait OutputOperatorState extends HasWorkIdentity {
 
-  def prepareOutputWithProfile(output: MorselExecutionContext,
+  def prepareOutputWithProfile(output: PipelinedExecutionContext,
                                context: QueryContext,
                                state: QueryState,
                                resources: QueryResources,
@@ -50,7 +50,7 @@ trait OutputOperatorState extends HasWorkIdentity {
     }
   }
 
-  protected def prepareOutput(outputMorsel: MorselExecutionContext,
+  protected def prepareOutput(outputMorsel: PipelinedExecutionContext,
                               context: QueryContext,
                               state: QueryState,
                               resources: QueryResources,
@@ -68,7 +68,7 @@ trait PreparedOutput {
 case object NoOutputOperator extends OutputOperator with OutputOperatorState with PreparedOutput {
   override def outputBuffer: Option[BufferId] = None
   override def createState(executionState: ExecutionState, pipelineId: PipelineId): OutputOperatorState = this
-  override def prepareOutput(outputMorsel: MorselExecutionContext,
+  override def prepareOutput(outputMorsel: PipelinedExecutionContext,
                              context: QueryContext,
                              state: QueryState,
                              resources: QueryResources,
@@ -92,7 +92,7 @@ case class MorselBufferOutputState(override val workIdentity: WorkIdentity,
                                    bufferId: BufferId,
                                    executionState: ExecutionState,
                                    pipelineId: PipelineId) extends OutputOperatorState {
-  override def prepareOutput(outputMorsel: MorselExecutionContext,
+  override def prepareOutput(outputMorsel: PipelinedExecutionContext,
                              context: QueryContext,
                              state: QueryState,
                              resources: QueryResources,
@@ -102,7 +102,7 @@ case class MorselBufferOutputState(override val workIdentity: WorkIdentity,
 case class MorselBufferPreparedOutput(bufferId: BufferId,
                                       executionState: ExecutionState,
                                       pipelineId: PipelineId,
-                                      outputMorsel: MorselExecutionContext) extends PreparedOutput {
+                                      outputMorsel: PipelinedExecutionContext) extends PreparedOutput {
   override def produce(): Unit =
     executionState.putMorsel(pipelineId, bufferId, outputMorsel)
 }
@@ -116,13 +116,13 @@ case class MorselArgumentStateBufferOutputOperator(bufferId: BufferId, argumentS
   override val workIdentity: WorkIdentity = WorkIdentityImpl(nextPipelineHeadPlanId, s"Output morsel grouped by argumentSlot $argumentSlotOffset to $bufferId")
   override def createState(executionState: ExecutionState, pipelineId: PipelineId): OutputOperatorState =
     MorselArgumentStateBufferOutputState(workIdentity,
-                                         executionState.getSink[IndexedSeq[PerArgument[MorselExecutionContext]]](pipelineId, bufferId),
+                                         executionState.getSink[IndexedSeq[PerArgument[PipelinedExecutionContext]]](pipelineId, bufferId),
                                          argumentSlotOffset)
 }
 case class MorselArgumentStateBufferOutputState(override val workIdentity: WorkIdentity,
-                                                sink: Sink[IndexedSeq[PerArgument[MorselExecutionContext]]],
+                                                sink: Sink[IndexedSeq[PerArgument[PipelinedExecutionContext]]],
                                                 argumentSlotOffset: Int) extends OutputOperatorState {
-  override def prepareOutput(outputMorsel: MorselExecutionContext,
+  override def prepareOutput(outputMorsel: PipelinedExecutionContext,
                              context: QueryContext,
                              state: QueryState,
                              resources: QueryResources,
@@ -131,7 +131,7 @@ case class MorselArgumentStateBufferOutputState(override val workIdentity: WorkI
     MorselArgumentStateBufferPreparedOutput(sink, viewsPerArgument)
   }
 }
-case class MorselArgumentStateBufferPreparedOutput(sink: Sink[IndexedSeq[PerArgument[MorselExecutionContext]]],
-                                                   data: IndexedSeq[PerArgument[MorselExecutionContext]]) extends PreparedOutput {
+case class MorselArgumentStateBufferPreparedOutput(sink: Sink[IndexedSeq[PerArgument[PipelinedExecutionContext]]],
+                                                   data: IndexedSeq[PerArgument[PipelinedExecutionContext]]) extends PreparedOutput {
   override def produce(): Unit = sink.put(data)
 }

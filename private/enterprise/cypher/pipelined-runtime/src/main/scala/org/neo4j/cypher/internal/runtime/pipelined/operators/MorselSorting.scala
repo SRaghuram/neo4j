@@ -8,18 +8,18 @@ package org.neo4j.cypher.internal.runtime.pipelined.operators
 import java.util.Comparator
 
 import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot}
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{Morsel, MorselExecutionContext}
+import org.neo4j.cypher.internal.runtime.pipelined.execution.{Morsel, PipelinedExecutionContext}
 import org.neo4j.cypher.internal.runtime.slotted.ColumnOrder
 import org.neo4j.values.AnyValue
 
 object MorselSorting {
 
-  def createComparator(orderBy: Seq[ColumnOrder]): Comparator[MorselExecutionContext] =
+  def createComparator(orderBy: Seq[ColumnOrder]): Comparator[PipelinedExecutionContext] =
     orderBy
       .map(MorselSorting.createMorselComparator)
-      .reduce((a: Comparator[MorselExecutionContext], b: Comparator[MorselExecutionContext]) => a.thenComparing(b))
+      .reduce((a: Comparator[PipelinedExecutionContext], b: Comparator[PipelinedExecutionContext]) => a.thenComparing(b))
 
-  def compareMorselIndexesByColumnOrder(row: MorselExecutionContext)(order: ColumnOrder): Comparator[Integer] = order.slot match {
+  def compareMorselIndexesByColumnOrder(row: PipelinedExecutionContext)(order: ColumnOrder): Comparator[Integer] = order.slot match {
     case LongSlot(offset, true, _) =>
       (idx1: Integer, idx2: Integer) => {
         row.setCurrentRow(idx1)
@@ -48,7 +48,7 @@ object MorselSorting {
       }
   }
 
-  def createMorselIndexesArray(row: MorselExecutionContext): Array[Integer] = {
+  def createMorselIndexesArray(row: PipelinedExecutionContext): Array[Integer] = {
     val currentRow = row.getCurrentRow
     val rows = row.getValidRows
     val indexes = new Array[Integer](rows)
@@ -71,13 +71,13 @@ object MorselSorting {
     *
     * Does this by sorting into a temp morsel first and then copying back the sorted data.
     */
-  def createSortedMorselData(inputRow: MorselExecutionContext, outputToInputIndexes: Array[Integer]): Unit = {
+  def createSortedMorselData(inputRow: PipelinedExecutionContext, outputToInputIndexes: Array[Integer]): Unit = {
     val numInputRows = inputRow.getValidRows
     // Create a temporary morsel
     // TODO: Do this without creating extra arrays
     val tempMorsel = new Morsel(new Array[Long](numInputRows * inputRow.getLongsPerRow),
                                 new Array[AnyValue](numInputRows * inputRow.getRefsPerRow))
-    val outputRow = MorselExecutionContext(tempMorsel, inputRow.slots, numInputRows)
+    val outputRow = PipelinedExecutionContext(tempMorsel, inputRow.slots, numInputRows)
 
     while (outputRow.isValidRow) {
       val fromIndex = outputToInputIndexes(outputRow.getCurrentRow)
@@ -91,21 +91,21 @@ object MorselSorting {
     inputRow.copyRowsFrom(outputRow, numInputRows)
   }
 
-  def createMorselComparator(order: ColumnOrder): Comparator[MorselExecutionContext] = order.slot match {
+  def createMorselComparator(order: ColumnOrder): Comparator[PipelinedExecutionContext] = order.slot match {
     case LongSlot(offset, true, _) =>
-      (m1: MorselExecutionContext, m2: MorselExecutionContext) => {
+      (m1: PipelinedExecutionContext, m2: PipelinedExecutionContext) => {
         val aVal = m1.getLongAt(offset)
         val bVal = m2.getLongAt(offset)
         order.compareNullableLongs(aVal, bVal)
       }
     case LongSlot(offset, false, _) =>
-      (m1: MorselExecutionContext, m2: MorselExecutionContext) => {
+      (m1: PipelinedExecutionContext, m2: PipelinedExecutionContext) => {
         val aVal = m1.getLongAt(offset)
         val bVal = m2.getLongAt(offset)
         order.compareLongs(aVal, bVal)
       }
     case RefSlot(offset, _, _) =>
-      (m1: MorselExecutionContext, m2: MorselExecutionContext) => {
+      (m1: PipelinedExecutionContext, m2: PipelinedExecutionContext) => {
         val aVal = m1.getRefAt(offset)
         val bVal = m2.getRefAt(offset)
         order.compareValues(aVal, bVal)

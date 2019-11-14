@@ -11,7 +11,7 @@ import org.neo4j.cypher.internal.physicalplanning.{SlotConfiguration, SlottedInd
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.pipelined.execution.{PipelinedExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
@@ -41,7 +41,7 @@ class NodeIndexScanOperator(val workIdentity: WorkIdentity,
     IndexedSeq(new OTask(inputMorsel.nextCopy, indexSession))
   }
 
-  class OTask(val inputMorsel: MorselExecutionContext, index: IndexReadSession) extends InputLoopTask {
+  class OTask(val inputMorsel: PipelinedExecutionContext, index: IndexReadSession) extends InputLoopTask {
 
     override def workIdentity: WorkIdentity = NodeIndexScanOperator.this.workIdentity
 
@@ -58,7 +58,7 @@ class NodeIndexScanOperator(val workIdentity: WorkIdentity,
       true
     }
 
-    override protected def innerLoop(outputRow: MorselExecutionContext, context: QueryContext, state: QueryState): Unit = {
+    override protected def innerLoop(outputRow: PipelinedExecutionContext, context: QueryContext, state: QueryState): Unit = {
       iterate(inputMorsel, outputRow, cursor, argumentSize)
     }
 

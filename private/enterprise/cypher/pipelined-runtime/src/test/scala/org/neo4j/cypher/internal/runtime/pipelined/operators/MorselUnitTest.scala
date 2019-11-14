@@ -88,20 +88,20 @@ abstract class MorselUnitTest extends CypherFunSuite {
       this
     }
 
-    def build() : MorselExecutionContext = {
+    def build() : PipelinedExecutionContext = {
       val morsel = new Morsel(longs, refs)
       val slots = SlotConfiguration(Map.empty, longSlots, refSlots)
-      val context = MorselExecutionContext(morsel, slots, rows)
+      val context = PipelinedExecutionContext(morsel, slots, rows)
       context
     }
   }
 
   class FilteringInput extends Input {
-    override def build(): FilteringMorselExecutionContext = {
+    override def build(): FilteringPipelinedExecutionContext = {
       val morsel = new Morsel(longs, refs)
       val slots = SlotConfiguration(Map.empty, longSlots, refSlots)
-      val context = MorselExecutionContext(morsel, slots, rows)
-      val filteringContext = FilteringMorselExecutionContext(context)
+      val context = PipelinedExecutionContext(morsel, slots, rows)
+      val filteringContext = FilteringPipelinedExecutionContext(context)
       filteringContext
     }
   }
@@ -165,7 +165,7 @@ abstract class MorselUnitTest extends CypherFunSuite {
   def gtePredicate(n: Long): Long => Boolean = _ >= n
   def eqPredicate(n: Long): Long => Boolean = _ == n
 
-  def buildSequentialInput(numberOfRows: Int): FilteringMorselExecutionContext = {
+  def buildSequentialInput(numberOfRows: Int): FilteringPipelinedExecutionContext = {
     var rb = new FilteringInput()
     (0 until numberOfRows).foreach { i =>
       rb = rb.addRow(Longs(i, i*2), Refs(Values.stringValue(i.toString), Values.stringValue((i*2).toString)))
@@ -173,7 +173,7 @@ abstract class MorselUnitTest extends CypherFunSuite {
     rb.build()
   }
 
-  def validateRows(row: FilteringMorselExecutionContext, numberOfRows: Int, predicate: Long => Boolean): Unit = {
+  def validateRows(row: FilteringPipelinedExecutionContext, numberOfRows: Int, predicate: Long => Boolean): Unit = {
     val rawRow = row.shallowCopy()
 
     val expectedValidRows = (0 until numberOfRows).foldLeft(0)((count, i) => if (predicate(i)) count + 1 else count)
@@ -209,7 +209,7 @@ abstract class MorselUnitTest extends CypherFunSuite {
     rawRow.isValidRawRow shouldEqual false
   }
 
-  def validateRowDataContent(row: MorselExecutionContext, i: Int): Unit = {
+  def validateRowDataContent(row: PipelinedExecutionContext, i: Int): Unit = {
     row.getLongAt(0) shouldEqual i
     row.getLongAt(1) shouldEqual i*2
     row.getRefAt(0) shouldEqual Values.stringValue(i.toString)
@@ -225,7 +225,7 @@ abstract class MorselUnitTest extends CypherFunSuite {
     }
   }
 
-  class ThenOutput(outputRow: MorselExecutionContext, longSlots: Int, refSlots: Int) {
+  class ThenOutput(outputRow: PipelinedExecutionContext, longSlots: Int, refSlots: Int) {
     private var rowCount = 0
     private val currentRow = outputRow.shallowCopy()
     currentRow.resetToFirstRow()
@@ -280,7 +280,7 @@ abstract class MorselUnitTest extends CypherFunSuite {
   }
 
   class ThenContinuableOutput(task: ContinuableOperatorTask,
-                              outputRow: MorselExecutionContext,
+                              outputRow: PipelinedExecutionContext,
                               longSlots: Int,
                               refSlots: Int) extends ThenOutput(outputRow, longSlots, refSlots) {
 

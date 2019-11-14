@@ -12,7 +12,7 @@ import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.pipelined.execution.{PipelinedExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
@@ -32,13 +32,13 @@ class ArgumentOperator(val workIdentity: WorkIdentity,
                                    argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorsel] =
     IndexedSeq(new OTask(inputMorsel.nextCopy))
 
-  class OTask(val inputMorsel: MorselExecutionContext) extends ContinuableOperatorTaskWithMorsel {
+  class OTask(val inputMorsel: PipelinedExecutionContext) extends ContinuableOperatorTaskWithMorsel {
 
     override def workIdentity: WorkIdentity = ArgumentOperator.this.workIdentity
 
     override def toString: String = "ArgumentTask"
 
-    override def operate(outputRow: MorselExecutionContext,
+    override def operate(outputRow: PipelinedExecutionContext,
                          context: QueryContext,
                          state: QueryState,
                          resources: QueryResources): Unit = {

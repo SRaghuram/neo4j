@@ -189,7 +189,7 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
     compiled.start.asInstanceOf[SlottedPipeHeadOperator].pipe.asInstanceOf[DropResultPipe].source.asInstanceOf[DropResultPipe]
       .source shouldBe a[NonFilteringOptionalExpandAllPipe]
     compiled.start.asInstanceOf[SlottedPipeHeadOperator].pipe.asInstanceOf[DropResultPipe].source.asInstanceOf[DropResultPipe]
-      .source.asInstanceOf[NonFilteringOptionalExpandAllPipe].source shouldBe a[MorselFeedPipe]
+      .source.asInstanceOf[NonFilteringOptionalExpandAllPipe].source shouldBe a[PipelinedFeedPipe]
   }
 
   test("should fully chain fallback pipes, ending in produce results") {
@@ -270,13 +270,13 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
     compiled.middleOperators(1).asInstanceOf[SlottedPipeMiddleOperator].pipe shouldBe a[DropResultPipe]
     compiled.middleOperators(1).asInstanceOf[SlottedPipeMiddleOperator].pipe.asInstanceOf[DropResultPipe].source shouldBe a[DropResultPipe]
     compiled.middleOperators(1).asInstanceOf[SlottedPipeMiddleOperator].pipe.asInstanceOf[DropResultPipe].source.asInstanceOf[DropResultPipe]
-      .source shouldBe a[MorselFeedPipe]
+      .source shouldBe a[PipelinedFeedPipe]
     compiled.middleOperators(2) shouldBe a[DummyMiddleOperator]
     compiled.middleOperators(3) shouldBe a[SlottedPipeMiddleOperator]
     compiled.middleOperators(3).asInstanceOf[SlottedPipeMiddleOperator].pipe shouldBe a[DropResultPipe]
     compiled.middleOperators(3).asInstanceOf[SlottedPipeMiddleOperator].pipe.asInstanceOf[DropResultPipe].source shouldBe a[DropResultPipe]
     compiled.middleOperators(3).asInstanceOf[SlottedPipeMiddleOperator].pipe.asInstanceOf[DropResultPipe].source.asInstanceOf[DropResultPipe]
-      .source shouldBe a[MorselFeedPipe]
+      .source shouldBe a[PipelinedFeedPipe]
   }
 
   test("should fuse partial pipelines, add middle, chain fallback pipes with interruption, no output") {
@@ -295,13 +295,13 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
     compiled.middleOperators(1).asInstanceOf[SlottedPipeMiddleOperator].pipe shouldBe a[DropResultPipe]
     compiled.middleOperators(1).asInstanceOf[SlottedPipeMiddleOperator].pipe.asInstanceOf[DropResultPipe].source shouldBe a[DropResultPipe]
     compiled.middleOperators(1).asInstanceOf[SlottedPipeMiddleOperator].pipe.asInstanceOf[DropResultPipe].source.asInstanceOf[DropResultPipe]
-      .source shouldBe a[MorselFeedPipe]
+      .source shouldBe a[PipelinedFeedPipe]
     compiled.middleOperators(2) shouldBe a[DummyMiddleOperator]
     compiled.middleOperators(3) shouldBe a[SlottedPipeMiddleOperator]
     compiled.middleOperators(3).asInstanceOf[SlottedPipeMiddleOperator].pipe shouldBe a[DropResultPipe]
     compiled.middleOperators(3).asInstanceOf[SlottedPipeMiddleOperator].pipe.asInstanceOf[DropResultPipe].source shouldBe a[DropResultPipe]
     compiled.middleOperators(3).asInstanceOf[SlottedPipeMiddleOperator].pipe.asInstanceOf[DropResultPipe].source.asInstanceOf[DropResultPipe]
-      .source shouldBe a[MorselFeedPipe]
+      .source shouldBe a[PipelinedFeedPipe]
   }
 
   def notSupported = new PipelineBuilder(dummyLeaf)
@@ -489,7 +489,7 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
 
         // Example of fallback plan that needs to be head
         case _: OptionalExpand if slottedPipeBuilder.isDefined =>
-          throw new CantCompileQueryException(s"Morsel does not yet support using `$plan` as a fallback middle plan, use another runtime.")
+          throw new CantCompileQueryException(s"Pipelined does not yet support using `$plan` as a fallback middle plan, use another runtime.")
 
         case _ =>
           Some(new DummyMiddleOperator)

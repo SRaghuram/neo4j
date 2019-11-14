@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.state
 
 import org.neo4j.cypher.internal.physicalplanning.TopLevelArgument
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedExecutionContext
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.{ArgumentState, ArgumentStateWithCompleted}
 
 /**
@@ -37,7 +37,7 @@ abstract class AbstractSingletonArgumentStateMap[STATE <: ArgumentState, CONTROL
   /**
     * Create a new state controller
     */
-  protected def newStateController(argument: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): CONTROLLER
+  protected def newStateController(argument: Long, argumentMorsel: PipelinedExecutionContext, argumentRowIdsForReducers: Array[Long]): CONTROLLER
 
   // ARGUMENT STATE MAP FUNCTIONALITY
 
@@ -54,9 +54,9 @@ abstract class AbstractSingletonArgumentStateMap[STATE <: ArgumentState, CONTROL
     }
   }
 
-  override def filter[U](morsel: MorselExecutionContext,
+  override def filter[U](morsel: PipelinedExecutionContext,
                          onArgument: (STATE, Long) => U,
-                         onRow: (U, MorselExecutionContext) => Boolean): Unit = {
+                         onRow: (U, PipelinedExecutionContext) => Boolean): Unit = {
     val filterState = onArgument(controller.state, morsel.getValidRows)
     ArgumentStateMap.filter(morsel,
                             row => onRow(filterState, row))
@@ -122,7 +122,7 @@ abstract class AbstractSingletonArgumentStateMap[STATE <: ArgumentState, CONTROL
     }
   }
 
-  override def initiate(argument: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): Unit = {
+  override def initiate(argument: Long, argumentMorsel: PipelinedExecutionContext, argumentRowIdsForReducers: Array[Long]): Unit = {
     TopLevelArgument.assertTopLevelArgument(argument)
     DebugSupport.ASM.log("ASM %s init %03d", argumentStateMapId, argument)
     controller = newStateController(argument, argumentMorsel, argumentRowIdsForReducers)

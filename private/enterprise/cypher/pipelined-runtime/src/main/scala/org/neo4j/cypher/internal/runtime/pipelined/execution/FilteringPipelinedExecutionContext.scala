@@ -10,20 +10,20 @@ import org.neo4j.cypher.internal.runtime.pipelined.tracing.WorkUnitEvent
 
 import scala.collection.mutable
 
-object FilteringMorselExecutionContext {
-  def apply(source: MorselExecutionContext) =
-    new FilteringMorselExecutionContext(source.morsel, source.slots, source.maxNumberOfRows, source.currentRow, source.startRow, source.endRow, source.producingWorkUnitEvent)
+object FilteringPipelinedExecutionContext {
+  def apply(source: PipelinedExecutionContext) =
+    new FilteringPipelinedExecutionContext(source.morsel, source.slots, source.maxNumberOfRows, source.currentRow, source.startRow, source.endRow, source.producingWorkUnitEvent)
 }
 
-class FilteringMorselExecutionContext(morsel: Morsel,
-                                      slots: SlotConfiguration,
-                                      maxNumberOfRows: Int,
-                                      initialCurrentRow: Int,
-                                      initialStartRow: Int,
-                                      initialEndRow: Int,
-                                      producingWorkUnitEvent: WorkUnitEvent = null,
-                                      initialCancelledRows: java.util.BitSet = null)
-  extends MorselExecutionContext(morsel, slots, maxNumberOfRows, initialCurrentRow, initialStartRow, initialEndRow, producingWorkUnitEvent) {
+class FilteringPipelinedExecutionContext(morsel: Morsel,
+                                         slots: SlotConfiguration,
+                                         maxNumberOfRows: Int,
+                                         initialCurrentRow: Int,
+                                         initialStartRow: Int,
+                                         initialEndRow: Int,
+                                         producingWorkUnitEvent: WorkUnitEvent = null,
+                                         initialCancelledRows: java.util.BitSet = null)
+  extends PipelinedExecutionContext(morsel, slots, maxNumberOfRows, initialCurrentRow, initialStartRow, initialEndRow, producingWorkUnitEvent) {
 
   // ROW CANCELLATION
 
@@ -68,8 +68,8 @@ class FilteringMorselExecutionContext(morsel: Morsel,
 
   // ARGUMENT COLUMNS
 
-  override def shallowCopy(): FilteringMorselExecutionContext =
-    new FilteringMorselExecutionContext(morsel, slots, maxNumberOfRows, currentRow, startRow, endRow, producingWorkUnitEvent = null, cancelledRows)
+  override def shallowCopy(): FilteringPipelinedExecutionContext =
+    new FilteringPipelinedExecutionContext(morsel, slots, maxNumberOfRows, currentRow, startRow, endRow, producingWorkUnitEvent = null, cancelledRows)
 
   override def moveToNextRow(): Unit = {
     do {
@@ -117,7 +117,7 @@ class FilteringMorselExecutionContext(morsel: Morsel,
    * @param end first index after the view (exclusive end)
    * @return a shallow copy that is configured to only see the configured view.
    */
-  override def view(start: Int, end: Int): MorselExecutionContext = {
+  override def view(start: Int, end: Int): PipelinedExecutionContext = {
     val view = shallowCopy()
     view.startRow = start
     view.currentRow = start

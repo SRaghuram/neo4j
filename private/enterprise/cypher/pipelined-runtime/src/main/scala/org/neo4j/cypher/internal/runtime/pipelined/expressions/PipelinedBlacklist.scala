@@ -12,7 +12,7 @@ import org.neo4j.cypher.internal.v4_0.expressions.FunctionInvocation
 import org.neo4j.cypher.internal.v4_0.expressions.functions.{File, Linenumber, Type}
 import org.neo4j.exceptions.CantCompileQueryException
 
-object MorselBlacklist {
+object PipelinedBlacklist {
 
   def throwOnUnsupportedPlan(logicalPlan: LogicalPlan, parallelExecution: Boolean, providedOrders: ProvidedOrders): Unit = {
     val unsupport =
@@ -35,7 +35,7 @@ object MorselBlacklist {
           _ + "CartesianProduct if the LHS has a provided order"
       }
     if (unsupport.nonEmpty) {
-      throw new CantCompileQueryException(s"Morsel does not yet support ${unsupport.mkString("`", "`, `", "`")}, use another runtime.")
+      throw new CantCompileQueryException(s"Pipelined does not yet support ${unsupport.mkString("`", "`, `", "`")}, use another runtime.")
     }
   }
 }

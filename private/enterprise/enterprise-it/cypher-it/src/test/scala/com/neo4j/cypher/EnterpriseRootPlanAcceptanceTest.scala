@@ -13,14 +13,14 @@ import org.neo4j.graphdb.ExecutionPlanDescription
 
 class EnterpriseRootPlanAcceptanceTest extends ExecutionEngineFunSuite with EnterpriseGraphDatabaseTestSupport {
 
-  test("query that does not go through the morsel runtime") {
+  test("query that does not go through the pipelined runtime") {
     given("MATCH (n) RETURN n, count(*) SKIP 2")
       .withCypherVersion(CypherVersion.v4_0)
       .shouldHaveCypherVersion(CypherVersion.v4_0)
       .shouldHaveRuntime(SlottedRuntimeName)
   }
 
-  test("query that lacks support from the morsel runtime") {
+  test("query that lacks support from the pipelined runtime") {
     given("CREATE ()")
       .withCypherVersion(CypherVersion.v4_0)
       .withRuntime(CompiledRuntimeName)
@@ -28,7 +28,7 @@ class EnterpriseRootPlanAcceptanceTest extends ExecutionEngineFunSuite with Ente
       .shouldHaveRuntime(SlottedRuntimeName)
   }
 
-  test("query that should go through the morsel runtime") {
+  test("query that should go through the pipelined runtime") {
     given("MATCH (a)-->(b) RETURN a")
       .withCypherVersion(CypherVersion.v4_0)
       .withRuntime(PipelinedRuntimeName)
@@ -47,8 +47,8 @@ class EnterpriseRootPlanAcceptanceTest extends ExecutionEngineFunSuite with Ente
     children.get(0).getArguments.get("DbHits") should equal(1) // AllNodesScan has 1 hit
   }
 
-  // re-enable on morsel PROFILE rows
-  ignore("Rows should be properly formatted in morsel runtime") {
+  // re-enable on pipelined PROFILE rows
+  ignore("Rows should be properly formatted in pipelined runtime") {
     given("match (n) return n")
       .withRuntime(PipelinedRuntimeName)
       .planDescription.getArguments.get("Rows") should equal(0)
@@ -77,20 +77,20 @@ class EnterpriseRootPlanAcceptanceTest extends ExecutionEngineFunSuite with Ente
     }
   }
 
-  test("should show_java_source for morsel fused operators") {
+  test("should show_java_source for pipelined fused operators") {
     graph.withTx { tx =>
       val res = executeOfficial( tx,
-        """CYPHER runtime=morsel operatorEngine=compiled debug=generate_java_source debug=show_java_source
+        """CYPHER runtime=pipelined operatorEngine=compiled debug=generate_java_source debug=show_java_source
           |MATCH (n) RETURN n""".stripMargin)
       res.resultAsString()
       shouldContainSourceCode(res.getExecutionPlanDescription)
     }
   }
 
-  test("should show_java_source for morsel compiled expressions") {
+  test("should show_java_source for pipelined compiled expressions") {
     graph.withTx { tx =>
       val res = executeOfficial( tx,
-        """CYPHER runtime=morsel operatorEngine=interpreted expressionEngine=compiled debug=generate_java_source debug=show_java_source
+        """CYPHER runtime=pipelined operatorEngine=interpreted expressionEngine=compiled debug=generate_java_source debug=show_java_source
           |MATCH (n) WHERE n.prop / 2 = 0 RETURN n""".stripMargin)
       res.resultAsString()
       shouldContainSourceCode(res.getExecutionPlanDescription)
@@ -118,20 +118,20 @@ class EnterpriseRootPlanAcceptanceTest extends ExecutionEngineFunSuite with Ente
     }
   }
 
-  test("should show_bytecode for morsel fused operators") {
+  test("should show_bytecode for pipelined fused operators") {
     graph.withTx { tx =>
       val res = executeOfficial( tx,
-        """CYPHER runtime=morsel operatorEngine=compiled debug=show_bytecode
+        """CYPHER runtime=pipelined operatorEngine=compiled debug=show_bytecode
           |MATCH (n) RETURN n""".stripMargin)
       res.resultAsString()
       shouldContainByteCode(res.getExecutionPlanDescription)
     }
   }
 
-  test("should show_bytecode for morsel compiled expressions") {
+  test("should show_bytecode for pipelined compiled expressions") {
     graph.withTx { tx =>
       val res = executeOfficial( tx,
-        """CYPHER runtime=morsel operatorEngine=interpreted expressionEngine=compiled debug=show_bytecode
+        """CYPHER runtime=pipelined operatorEngine=interpreted expressionEngine=compiled debug=show_bytecode
           |MATCH (n) WHERE n.prop / 2 = 0 RETURN n""".stripMargin)
       res.resultAsString()
       shouldContainByteCode(res.getExecutionPlanDescription)
@@ -161,20 +161,20 @@ class EnterpriseRootPlanAcceptanceTest extends ExecutionEngineFunSuite with Ente
     }
   }
 
-  test("should show_java_source and show_bytecode for morsel fused operators") {
+  test("should show_java_source and show_bytecode for pipelined fused operators") {
     graph.withTx { tx =>
       val res = executeOfficial( tx,
-        """CYPHER runtime=morsel operatorEngine=compiled debug=generate_java_source debug=show_java_source debug=show_bytecode
+        """CYPHER runtime=pipelined operatorEngine=compiled debug=generate_java_source debug=show_java_source debug=show_bytecode
           |MATCH (n) RETURN n""".stripMargin)
       res.resultAsString()
       shouldContainByteCode(res.getExecutionPlanDescription)
     }
   }
 
-  test("should show_java_source and show_bytecode for morsel compiled expressions") {
+  test("should show_java_source and show_bytecode for pipelined compiled expressions") {
     graph.withTx { tx =>
       val res = executeOfficial( tx,
-        """CYPHER runtime=morsel operatorEngine=interpreted expressionEngine=compiled debug=generate_java_source debug=show_java_source debug=show_bytecode
+        """CYPHER runtime=pipelined operatorEngine=interpreted expressionEngine=compiled debug=generate_java_source debug=show_java_source debug=show_bytecode
           |MATCH (n) WHERE n.prop / 2 = 0 RETURN n""".stripMargin)
       res.resultAsString()
       shouldContainByteCode(res.getExecutionPlanDescription)

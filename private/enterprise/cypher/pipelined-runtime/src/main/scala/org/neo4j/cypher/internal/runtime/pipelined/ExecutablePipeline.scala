@@ -129,14 +129,14 @@ class PipelineState(val pipeline: ExecutablePipeline,
     SchedulingResult(task, someTaskWasFilteredOut)
   }
 
-  def allocateMorsel(producingWorkUnitEvent: WorkUnitEvent, state: QueryState): MorselExecutionContext = {
+  def allocateMorsel(producingWorkUnitEvent: WorkUnitEvent, state: QueryState): PipelinedExecutionContext = {
       // TODO: Change pipeline.needsMorsel and needsFilteringMorsel into an Option[MorselFactory]
       //       The MorselFactory should probably originate from the MorselBuffer to play well with reuse/pooling
       if (pipeline.needsMorsel) {
         val slots = pipeline.slots
         val morsel = Morsel.create(slots, state.morselSize)
         if (pipeline.needsFilteringMorsel) {
-          new FilteringMorselExecutionContext(
+          new FilteringPipelinedExecutionContext(
             morsel,
             slots,
             state.morselSize,
@@ -145,7 +145,7 @@ class PipelineState(val pipeline: ExecutablePipeline,
             state.morselSize,
             producingWorkUnitEvent)
         } else {
-          new MorselExecutionContext(
+          new PipelinedExecutionContext(
             morsel,
             slots,
             state.morselSize,
@@ -154,7 +154,7 @@ class PipelineState(val pipeline: ExecutablePipeline,
             endRow = state.morselSize,
             producingWorkUnitEvent)
         }
-      } else MorselExecutionContext.empty
+      } else PipelinedExecutionContext.empty
   }
 
   private def innerNextTask(context: QueryContext,
@@ -226,7 +226,7 @@ class PipelineState(val pipeline: ExecutablePipeline,
 
   /* OperatorCloser */
 
-  override def closeMorsel(morsel: MorselExecutionContext): Unit = {
+  override def closeMorsel(morsel: PipelinedExecutionContext): Unit = {
     executionState.closeMorselTask(pipeline, morsel)
   }
 
@@ -238,11 +238,11 @@ class PipelineState(val pipeline: ExecutablePipeline,
     executionState.closeAccumulatorTask(pipeline, accumulator)
   }
 
-  override def closeMorselAndAccumulatorTask(morsel: MorselExecutionContext, accumulator: MorselAccumulator[_]): Unit = {
+  override def closeMorselAndAccumulatorTask(morsel: PipelinedExecutionContext, accumulator: MorselAccumulator[_]): Unit = {
     executionState.closeMorselAndAccumulatorTask(pipeline, morsel, accumulator)
   }
 
-  override def filterCancelledArguments(morsel: MorselExecutionContext): Boolean = {
+  override def filterCancelledArguments(morsel: PipelinedExecutionContext): Boolean = {
     executionState.filterCancelledArguments(pipeline, morsel)
   }
 
@@ -250,7 +250,7 @@ class PipelineState(val pipeline: ExecutablePipeline,
     executionState.filterCancelledArguments(pipeline, accumulator)
   }
 
-  override def filterCancelledArguments(morsel: MorselExecutionContext, accumulator: MorselAccumulator[_]): Boolean = {
+  override def filterCancelledArguments(morsel: PipelinedExecutionContext, accumulator: MorselAccumulator[_]): Boolean = {
     executionState.filterCancelledArguments(pipeline, morsel, accumulator)
   }
 }

@@ -12,7 +12,7 @@ import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.pipelined.execution.{PipelinedExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
@@ -40,7 +40,7 @@ class UnwindOperator(val workIdentity: WorkIdentity,
     IndexedSeq(new OTask(inputMorsel.nextCopy))
   }
 
-  class OTask(val inputMorsel: MorselExecutionContext) extends InputLoopTask {
+  class OTask(val inputMorsel: PipelinedExecutionContext) extends InputLoopTask {
 
     override def workIdentity: WorkIdentity = UnwindOperator.this.workIdentity
 
@@ -66,7 +66,7 @@ class UnwindOperator(val workIdentity: WorkIdentity,
       true
     }
 
-    override protected def innerLoop(outputRow: MorselExecutionContext,
+    override protected def innerLoop(outputRow: PipelinedExecutionContext,
                                      context: QueryContext,
                                      state: QueryState): Unit = {
       while (unwoundValues.hasNext && outputRow.isValidRow) {

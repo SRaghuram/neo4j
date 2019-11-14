@@ -11,7 +11,7 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.pipelined.execution.{PipelinedExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
@@ -54,7 +54,7 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
     *
     * @param inputMorsel the input row, pointing to the beginning of the input morsel
     */
-  class SingleThreadedScanTask(val inputMorsel: MorselExecutionContext) extends InputLoopTask {
+  class SingleThreadedScanTask(val inputMorsel: PipelinedExecutionContext) extends InputLoopTask {
 
     override def workIdentity: WorkIdentity = AllNodeScanOperator.this.workIdentity
 
@@ -71,7 +71,7 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
       true
     }
 
-    override protected def innerLoop(outputRow: MorselExecutionContext, context: QueryContext, state: QueryState): Unit = {
+    override protected def innerLoop(outputRow: PipelinedExecutionContext, context: QueryContext, state: QueryState): Unit = {
       while (outputRow.isValidRow && cursor.next()) {
         outputRow.copyFrom(inputMorsel, argumentSize.nLongs, argumentSize.nReferences)
         outputRow.setLongAt(offset, cursor.nodeReference())
@@ -97,7 +97,7 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
     *
     * For each batch, it process all the nodes and combines them with each input row.
     */
-  class ParallelScanTask(val inputMorsel: MorselExecutionContext,
+  class ParallelScanTask(val inputMorsel: PipelinedExecutionContext,
                          scan: Scan[NodeCursor],
                          var cursor: NodeCursor,
                          val batchSizeHint: Int) extends ContinuableOperatorTaskWithMorsel {
@@ -115,7 +115,7 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
     scan.reserveBatch(cursor, batchSizeHint)
     inputMorsel.setToAfterLastRow()
 
-    override def operate(outputRow: MorselExecutionContext,
+    override def operate(outputRow: PipelinedExecutionContext,
                          context: QueryContext,
                          queryState: QueryState,
                          resources: QueryResources): Unit = {

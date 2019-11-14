@@ -23,30 +23,30 @@ import org.neo4j.values.virtual.{VirtualNodeValue, VirtualRelationshipValue}
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
-object MorselExecutionContext {
+object PipelinedExecutionContext {
   def apply(morsel: Morsel, slots: SlotConfiguration, maxNumberOfRows: Int) =
-    new MorselExecutionContext(morsel, slots, maxNumberOfRows, 0, 0, maxNumberOfRows)
+    new PipelinedExecutionContext(morsel, slots, maxNumberOfRows, 0, 0, maxNumberOfRows)
 
-  val empty: MorselExecutionContext = new MorselExecutionContext(new Morsel(Array.empty, Array.empty), SlotConfiguration.empty, 0)
+  val empty: PipelinedExecutionContext = new PipelinedExecutionContext(new Morsel(Array.empty, Array.empty), SlotConfiguration.empty, 0)
 
-  def createInitialRow(): FilteringMorselExecutionContext =
-    new FilteringMorselExecutionContext(
+  def createInitialRow(): FilteringPipelinedExecutionContext =
+    new FilteringPipelinedExecutionContext(
       Morsel.create(INITIAL_SLOT_CONFIGURATION, 1),
       INITIAL_SLOT_CONFIGURATION, 1, 0, 0, 1) {
 
       //it is ok to asked for a cached value even though nothing is allocated for it
       override def getCachedPropertyAt(offset: Int): Value = null
-      override def shallowCopy(): FilteringMorselExecutionContext = createInitialRow()
+      override def shallowCopy(): FilteringPipelinedExecutionContext = createInitialRow()
     }
 }
 
-class MorselExecutionContext(private[execution] final val morsel: Morsel,
-                             final val slots: SlotConfiguration,
-                             final val maxNumberOfRows: Int,
-                             private[execution] var currentRow: Int = 0,
-                             private[execution] var startRow: Int = 0,
-                             private[execution] var endRow: Int = 0,
-                             final val producingWorkUnitEvent: WorkUnitEvent = null) extends ExecutionContext with SlottedCompatible {
+class PipelinedExecutionContext(private[execution] final val morsel: Morsel,
+                                final val slots: SlotConfiguration,
+                                final val maxNumberOfRows: Int,
+                                private[execution] var currentRow: Int = 0,
+                                private[execution] var startRow: Int = 0,
+                                private[execution] var endRow: Int = 0,
+                                final val producingWorkUnitEvent: WorkUnitEvent = null) extends ExecutionContext with SlottedCompatible {
   protected final val longsPerRow: Int = slots.numberOfLongs
   protected final val refsPerRow: Int = slots.numberOfReferences
 
@@ -59,9 +59,9 @@ class MorselExecutionContext(private[execution] final val morsel: Morsel,
   // so designs using this functionality must ensure that no other usage can occur
   // between the intended attach and detach.
 
-  private var attachedMorsel: MorselExecutionContext = _
+  private var attachedMorsel: PipelinedExecutionContext = _
 
-  def attach(morsel: MorselExecutionContext): Unit = {
+  def attach(morsel: PipelinedExecutionContext): Unit = {
     Preconditions.checkState(
       attachedMorsel == null,
       "Cannot override existing MorselExecutionContext.attachment.")
@@ -69,7 +69,7 @@ class MorselExecutionContext(private[execution] final val morsel: Morsel,
     attachedMorsel = morsel
   }
 
-  def detach(): MorselExecutionContext = {
+  def detach(): PipelinedExecutionContext = {
     Preconditions.checkState(
       attachedMorsel != null,
       "Cannot detach if no attachment available.")
@@ -81,7 +81,7 @@ class MorselExecutionContext(private[execution] final val morsel: Morsel,
 
   // ====================
 
-  def shallowCopy(): MorselExecutionContext = new MorselExecutionContext(morsel, slots, maxNumberOfRows, currentRow, startRow, endRow)
+  def shallowCopy(): PipelinedExecutionContext = new PipelinedExecutionContext(morsel, slots, maxNumberOfRows, currentRow, startRow, endRow)
 
   @inline def numberOfRows: Int = endRow - startRow
 
@@ -130,7 +130,7 @@ class MorselExecutionContext(private[execution] final val morsel: Morsel,
   /**
     * Set the valid rows of the morsel to the current position of another morsel
     */
-  def finishedWritingUsing(otherContext: MorselExecutionContext): Unit = {
+  def finishedWritingUsing(otherContext: PipelinedExecutionContext): Unit = {
     if (this.startRow != otherContext.startRow) {
       throw new IllegalStateException("Cannot write to a context from a context with a different first row.")
     }
@@ -142,7 +142,7 @@ class MorselExecutionContext(private[execution] final val morsel: Morsel,
     * @param end first index after the view (exclusive end)
     * @return a shallow copy that is configured to only see the configured view.
     */
-  def view(start: Int, end: Int): MorselExecutionContext = {
+  def view(start: Int, end: Int): PipelinedExecutionContext = {
     val view = shallowCopy()
     view.startRow = start
     view.currentRow = start
@@ -150,7 +150,7 @@ class MorselExecutionContext(private[execution] final val morsel: Morsel,
     view
   }
 
-  def copyRowsFrom(input: MorselExecutionContext, nInputRows: Int): Unit = {
+  def copyRowsFrom(input: PipelinedExecutionContext, nInputRows: Int): Unit = {
     if (longsPerRow > 0)
       System.arraycopy(input.morsel.longs, 0, morsel.longs, startRow * longsPerRow, nInputRows * longsPerRow)
     if (refsPerRow > 0)
@@ -159,7 +159,7 @@ class MorselExecutionContext(private[execution] final val morsel: Morsel,
 
   override def copyTo(target: ExecutionContext, sourceLongOffset: Int = 0, sourceRefOffset: Int = 0, targetLongOffset: Int = 0, targetRefOffset: Int = 0): Unit =
     target match {
-      case other: MorselExecutionContext =>
+      case other: PipelinedExecutionContext =>
         System.arraycopy(morsel.longs, longsAtCurrentRow + sourceLongOffset, other.morsel.longs, other.longsAtCurrentRow + targetLongOffset, longsPerRow - sourceLongOffset)
         System.arraycopy(morsel.refs, refsAtCurrentRow + sourceRefOffset, other.morsel.refs, other.refsAtCurrentRow + targetRefOffset, refsPerRow - sourceRefOffset)
 
@@ -169,7 +169,7 @@ class MorselExecutionContext(private[execution] final val morsel: Morsel,
     }
 
   override def copyFrom(input: ExecutionContext, nLongs: Int, nRefs: Int): Unit = input match {
-    case other:MorselExecutionContext =>
+    case other:PipelinedExecutionContext =>
       if (nLongs > longsPerRow || nRefs > refsPerRow)
         throw new InternalException("A bug has occurred in the morsel runtime: The target morsel execution context cannot hold the data to copy.")
       else {
@@ -251,7 +251,7 @@ class MorselExecutionContext(private[execution] final val morsel: Morsel,
   /**
     * Copies the whole row from input to this.
     */
-  def copyFrom(input: MorselExecutionContext): Unit = copyFrom(input, input.longsPerRow, input.refsPerRow)
+  def copyFrom(input: PipelinedExecutionContext): Unit = copyFrom(input, input.longsPerRow, input.refsPerRow)
 
   override def setLongAt(offset: Int, value: Long): Unit = morsel.longs(currentRow * longsPerRow + offset) = value
 

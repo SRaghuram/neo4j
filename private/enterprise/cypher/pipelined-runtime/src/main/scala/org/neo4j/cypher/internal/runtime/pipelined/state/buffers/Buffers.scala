@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.state.buffers
 import org.neo4j.cypher.internal.RuntimeResourceLeakException
 import org.neo4j.cypher.internal.physicalplanning._
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedExecutionContext
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.{ArgumentStateMaps, MorselAccumulator}
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.{AccumulatingBuffer, DataHolder, SinkByOrigin}
 import org.neo4j.cypher.internal.runtime.pipelined.state.{ArgumentStateMap, QueryCompletionTracker, StateFactory}
@@ -131,7 +131,7 @@ class Buffers(numBuffers: Int,
                                    x.argumentStateMapId)
 
         case RegularBufferVariant =>
-          new MorselBuffer(bufferDefinition.id, tracker, reducers, workCancellers, argumentStateMaps, stateFactory.newBuffer[MorselExecutionContext]())
+          new MorselBuffer(bufferDefinition.id, tracker, reducers, workCancellers, argumentStateMaps, stateFactory.newBuffer[PipelinedExecutionContext]())
       }
   }
 
@@ -300,7 +300,7 @@ object Buffers {
       * If the accumulator is already initiated, this will increment the count.
       * Will be called when upstream apply buffers receive new morsels.
       */
-    def initiate(argumentRowId: Long, argumentMorsel: MorselExecutionContext): Unit
+    def initiate(argumentRowId: Long, argumentMorsel: PipelinedExecutionContext): Unit
 
     /**
       * Increment counts for the accumulator relevant to the given argument ID.
@@ -318,5 +318,5 @@ object Buffers {
   /**
     * Output of lhsAccumulatingRhsStreamingBuffers.
     */
-  case class AccumulatorAndMorsel[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]](acc: ACC, morsel: MorselExecutionContext)
+  case class AccumulatorAndMorsel[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]](acc: ACC, morsel: PipelinedExecutionContext)
 }

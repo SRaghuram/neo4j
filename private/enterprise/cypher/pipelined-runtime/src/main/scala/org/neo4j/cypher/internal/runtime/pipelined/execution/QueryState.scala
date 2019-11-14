@@ -11,7 +11,7 @@ import org.neo4j.kernel.impl.query.QuerySubscriber
 import org.neo4j.values.AnyValue
 
 /**
-  * The query state of the morsel runtime
+  * The query state of the pipelined runtime
   */
 case class QueryState(params: Array[AnyValue],
                       subscriber: QuerySubscriber,

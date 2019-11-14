@@ -10,7 +10,7 @@ import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable}
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.pipelined.execution.{PipelinedExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profileRow
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
@@ -23,7 +23,7 @@ import org.neo4j.internal.kernel.api.IndexReadSession
 class CachePropertiesOperator(val workIdentity: WorkIdentity,
                               val properties: Array[commands.expressions.Expression]) extends StatelessOperator {
 
-  override def operate(currentRow: MorselExecutionContext,
+  override def operate(currentRow: PipelinedExecutionContext,
                        context: QueryContext,
                        state: QueryState,
                        resources: QueryResources): Unit = {

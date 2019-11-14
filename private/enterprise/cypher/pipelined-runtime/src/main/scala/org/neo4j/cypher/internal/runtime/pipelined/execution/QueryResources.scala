@@ -11,7 +11,7 @@ import org.neo4j.io.IOUtils
 import org.neo4j.values.AnyValue
 
 /**
-  * Resources used by the morsel runtime for query execution.
+  * Resources used by the pipelined runtime for query execution.
   * Each worker has its own resources and they are valid for multiple queries.
   */
 class QueryResources(cursorFactory: CursorFactory) extends AutoCloseable {

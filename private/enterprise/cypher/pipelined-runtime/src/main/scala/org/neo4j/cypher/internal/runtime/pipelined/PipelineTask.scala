@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.pipelined
 
 import org.neo4j.cypher.internal.profiling.QueryProfiler
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.pipelined.execution.{PipelinedExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.pipelined.operators.{ContinuableOperatorTask, OperatorTask, OutputOperatorState, PreparedOutput}
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.WorkUnitEvent
 import org.neo4j.cypher.internal.runtime.{QueryContext, WithHeapUsageEstimation}
@@ -38,7 +38,7 @@ case class PipelineTask(startTask: ContinuableOperatorTask,
     * in order to retain the produced row order. Also we can never cancel a task with
     * unprocessed _output.
     */
-  private var _output: MorselExecutionContext = _
+  private var _output: PipelinedExecutionContext = _
 
   override def executeWorkUnit(resources: QueryResources,
                                      workUnitEvent: WorkUnitEvent,
@@ -48,20 +48,20 @@ case class PipelineTask(startTask: ContinuableOperatorTask,
       executeOperators(resources, queryProfiler)
     }
     val output = executeOutputOperator(resources, queryProfiler)
-    DebugSupport.logPipelines(MorselDebugSupport.prettyWorkDone)
+    DebugSupport.logPipelines(PipelinedDebugSupport.prettyWorkDone)
     output
   }
 
   private def executeOperators(resources: QueryResources,
                                queryProfiler: QueryProfiler): Unit = {
-    DebugSupport.logPipelines(MorselDebugSupport.prettyStartTask(startTask, pipelineState.pipeline.start.workIdentity))
+    DebugSupport.logPipelines(PipelinedDebugSupport.prettyStartTask(startTask, pipelineState.pipeline.start.workIdentity))
     startTask.operateWithProfile(_output, queryContext, state, resources, queryProfiler)
     _output.resetToFirstRow()
-    DebugSupport.logPipelines(MorselDebugSupport.prettyPostStartTask(startTask))
+    DebugSupport.logPipelines(PipelinedDebugSupport.prettyPostStartTask(startTask))
     var i = 0
     while (i < middleTasks.length) {
       val op = middleTasks(i)
-      DebugSupport.logPipelines(MorselDebugSupport.prettyWork(_output, pipelineState.pipeline.middleOperators(i).workIdentity))
+      DebugSupport.logPipelines(PipelinedDebugSupport.prettyWork(_output, pipelineState.pipeline.middleOperators(i).workIdentity))
       op.operateWithProfile(_output, queryContext, state, resources, queryProfiler)
       _output.resetToFirstRow()
       i += 1
@@ -70,7 +70,7 @@ case class PipelineTask(startTask: ContinuableOperatorTask,
 
   private def executeOutputOperator(resources: QueryResources,
                                     queryProfiler: QueryProfiler): PreparedOutput = {
-    DebugSupport.logPipelines(MorselDebugSupport.prettyWork(_output, pipelineState.pipeline.outputOperator.workIdentity))
+    DebugSupport.logPipelines(PipelinedDebugSupport.prettyWork(_output, pipelineState.pipeline.outputOperator.workIdentity))
     val preparedOutput = outputOperatorState.prepareOutputWithProfile(_output, queryContext, state, resources, queryProfiler)
     if (!outputOperatorState.canContinueOutput) {
       // There is no continuation on the output operator,

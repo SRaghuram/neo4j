@@ -45,7 +45,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
   private val aggregatorFactory = AggregatorFactory(physicalPlan)
 
   // When determining if an interpreted pipe fallback operator can be used as a middle operator we need breakOn() to answer with fusion disabled
-  private val breakingPolicyForInterpretedPipesFallback = MorselPipelineBreakingPolicy(OPERATOR_FUSION_DISABLED, interpretedPipesFallbackPolicy)
+  private val breakingPolicyForInterpretedPipesFallback = PipelinedPipelineBreakingPolicy(OPERATOR_FUSION_DISABLED, interpretedPipesFallbackPolicy)
 
   def create(plan: LogicalPlan, inputBuffer: BufferDefinition): Operator = {
     val id = plan.id
@@ -77,7 +77,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         val argumentSize = physicalPlan.argumentSizes(id)
         val indexSeekMode = IndexSeekModeFactory(unique = false, readOnly = readOnly).fromQueryExpression(valueExpr)
         if (indexSeekMode == LockingUniqueIndexSeek) {
-          throw new CantCompileQueryException("Morsel does not yet support the plans including `NodeUniqueIndexSeek(Locking)`, use another runtime.")
+          throw new CantCompileQueryException("Pipelined does not yet support the plans including `NodeUniqueIndexSeek(Locking)`, use another runtime.")
         }
 
         new NodeIndexSeekOperator(WorkIdentity.fromPlan(plan),
@@ -354,7 +354,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         createSlottedPipeHeadOperator(plan)
 
       case _ =>
-        throw new CantCompileQueryException(s"Morsel does not yet support the plans including `$plan`, use another runtime.")
+        throw new CantCompileQueryException(s"Pipelined does not yet support the plans including `$plan`, use another runtime.")
     }
   }
 
@@ -439,12 +439,12 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         interpretedPipesFallbackPolicy.breakOn(plan)
         if (breakingPolicyForInterpretedPipesFallback.breakOn(plan)) {
           // Plan is supported, but only as a head plan
-          throw new CantCompileQueryException(s"Morsel does not yet support using `$plan` as a fallback middle plan, use another runtime.")
+          throw new CantCompileQueryException(s"Pipelined does not yet support using `$plan` as a fallback middle plan, use another runtime.")
         }
         createSlottedPipeMiddleOperator(plan, maybeSlottedPipeOperatorToChainOnTo)
 
       case _ =>
-        throw new CantCompileQueryException(s"Morsel does not yet support using `$plan` as a middle plan, use another runtime.")
+        throw new CantCompileQueryException(s"Pipelined does not yet support using `$plan` as a middle plan, use another runtime.")
     }
   }
 
@@ -460,8 +460,8 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
 
     outputDefinition match {
       case NoOutput => NoOutputOperator
-      case MorselBufferOutput(bufferId, planId) => MorselBufferOutputOperator(bufferId, planId)
-      case MorselArgumentStateBufferOutput(bufferId, argumentSlotOffset, planId) => MorselArgumentStateBufferOutputOperator(bufferId, argumentSlotOffset, planId)
+      case PipelinedBufferOutput(bufferId, planId) => MorselBufferOutputOperator(bufferId, planId)
+      case PipelinedArgumentStateBufferOutput(bufferId, argumentSlotOffset, planId) => MorselArgumentStateBufferOutputOperator(bufferId, argumentSlotOffset, planId)
       case ProduceResultOutput(p) => createProduceResults(p)
       case ReduceOutput(bufferId, plan) =>
         val id = plan.id
@@ -541,7 +541,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
   }
 
   protected def createSlottedPipeHeadOperator(plan: LogicalPlan): Operator = {
-    val feedPipe = MorselFeedPipe()(Id.INVALID_ID)
+    val feedPipe = PipelinedFeedPipe()(Id.INVALID_ID)
     val pipe = slottedPipeBuilder.get.onOneChildPlan(plan, feedPipe)
     val workIdentity = workIdentityFromSlottedPipePlan("SlottedPipeHead", plan, pipe)
     new SlottedPipeHeadOperator(workIdentity, pipe)
@@ -558,7 +558,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         None
 
       case None =>
-        val feedPipe = MorselFeedPipe()(Id.INVALID_ID)
+        val feedPipe = PipelinedFeedPipe()(Id.INVALID_ID)
         val pipe = slottedPipeBuilder.get.onOneChildPlan(plan, feedPipe)
         val workIdentity = workIdentityFromSlottedPipePlan("SlottedPipeMiddle", plan, pipe)
         Some(new SlottedPipeMiddleOperator(workIdentity, pipe))

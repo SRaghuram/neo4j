@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.state.buffers
 
 import org.neo4j.cypher.internal.physicalplanning.{BufferId, PipelineId, SlotConfiguration}
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{FilteringMorselExecutionContext, Morsel, MorselExecutionContext}
+import org.neo4j.cypher.internal.runtime.pipelined.execution.{FilteringPipelinedExecutionContext, Morsel, PipelinedExecutionContext}
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.SinkByOrigin
 
@@ -33,18 +33,18 @@ class MorselAttachBuffer(id: BufferId,
                          argumentNumLongs: Int,
                          argumentNumRefs: Int
                        ) extends SinkByOrigin
-                            with Sink[MorselExecutionContext] {
+                            with Sink[PipelinedExecutionContext] {
 
   override def sinkFor[T <: AnyRef](fromPipeline: PipelineId): Sink[T] = this.asInstanceOf[Sink[T]]
 
-  def put(morsel: MorselExecutionContext): Unit = {
+  def put(morsel: PipelinedExecutionContext): Unit = {
     if (DebugSupport.BUFFERS.enabled) {
       DebugSupport.BUFFERS.log(s"[put]   $this <- $morsel")
     }
 
     if (morsel.hasData) {
       ArgumentStateMap.foreach(argumentSlotOffset, morsel, (_, view) => {
-        val outputMorsel = new FilteringMorselExecutionContext(Morsel.create(outputSlots, 1), outputSlots, 1, 0, 0, 1, morsel.producingWorkUnitEvent)
+        val outputMorsel = new FilteringPipelinedExecutionContext(Morsel.create(outputSlots, 1), outputSlots, 1, 0, 0, 1, morsel.producingWorkUnitEvent)
         outputMorsel.copyFrom(view, argumentNumLongs, argumentNumRefs)
         outputMorsel.attach(view)
 

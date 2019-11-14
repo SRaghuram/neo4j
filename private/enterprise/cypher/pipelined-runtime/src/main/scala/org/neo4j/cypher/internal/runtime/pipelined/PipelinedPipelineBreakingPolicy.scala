@@ -10,7 +10,7 @@ import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.physicalplanning.{OperatorFusionPolicy, PipelineBreakingPolicy}
 import org.neo4j.exceptions.CantCompileQueryException
 
-case class MorselPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy, interpretedPipesPolicy: InterpretedPipesFallbackPolicy) extends PipelineBreakingPolicy {
+case class PipelinedPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy, interpretedPipesPolicy: InterpretedPipesFallbackPolicy) extends PipelineBreakingPolicy {
 
   override def breakOn(lp: LogicalPlan): Boolean = {
 
@@ -66,7 +66,7 @@ case class MorselPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy, inte
   override def onNestedPlanBreak(): Unit = throw unsupported("NestedPlanExpression")
 
   private def unsupported(thing: String): CantCompileQueryException =
-    new CantCompileQueryException(s"Morsel does not yet support the plans including `$thing`, use another runtime.")
+    new CantCompileQueryException(s"Pipelined does not yet support the plans including `$thing`, use another runtime.")
 
   /**
     * Checks if the current one-child operator can be fused.
@@ -226,5 +226,5 @@ object InterpretedPipesFallbackPolicy {
   }
 
   private def unsupported(thing: String): CantCompileQueryException =
-    new CantCompileQueryException(s"Morsel does not yet support the plans including `$thing`, use another runtime.")
+    new CantCompileQueryException(s"Pipelined does not yet support the plans including `$thing`, use another runtime.")
 }

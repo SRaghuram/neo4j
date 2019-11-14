@@ -10,7 +10,7 @@ import java.util.{Comparator, PriorityQueue}
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.pipelined.execution.{PipelinedExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.ArgumentStateBuffer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
@@ -27,17 +27,17 @@ class SortMergeOperator(val argumentStateMapId: ArgumentStateMapId,
                         orderBy: Seq[ColumnOrder],
                         argumentSlotOffset: Int)
   extends Operator
-     with ReduceOperatorState[MorselExecutionContext, ArgumentStateBuffer] {
+     with ReduceOperatorState[PipelinedExecutionContext, ArgumentStateBuffer] {
 
   override def toString: String = "SortMerge"
 
-  private val comparator: Comparator[MorselExecutionContext] = MorselSorting.createComparator(orderBy)
+  private val comparator: Comparator[PipelinedExecutionContext] = MorselSorting.createComparator(orderBy)
 
   override def createState(argumentStateCreator: ArgumentStateMapCreator,
                            stateFactory: StateFactory,
                            queryContext: QueryContext,
                            state: QueryState,
-                           resources: QueryResources): ReduceOperatorState[MorselExecutionContext, ArgumentStateBuffer] = {
+                           resources: QueryResources): ReduceOperatorState[PipelinedExecutionContext, ArgumentStateBuffer] = {
     argumentStateCreator.createArgumentStateMap(argumentStateMapId, new ArgumentStateBuffer.Factory(stateFactory))
     this
   }
@@ -46,7 +46,7 @@ class SortMergeOperator(val argumentStateMapId: ArgumentStateMapId,
                          state: QueryState,
                          input: ArgumentStateBuffer,
                          resources: QueryResources
-                        ): IndexedSeq[ContinuableOperatorTaskWithAccumulator[MorselExecutionContext, ArgumentStateBuffer]] = {
+                        ): IndexedSeq[ContinuableOperatorTaskWithAccumulator[PipelinedExecutionContext, ArgumentStateBuffer]] = {
     Array(new OTask(input))
   }
 
@@ -55,20 +55,20 @@ class SortMergeOperator(val argumentStateMapId: ArgumentStateMapId,
   produced, we remove the first morsel and consume the current row. If there is more data left, we re-insert
   the morsel, now pointing to the next row.
    */
-  class OTask(override val accumulator: ArgumentStateBuffer) extends ContinuableOperatorTaskWithAccumulator[MorselExecutionContext, ArgumentStateBuffer] {
+  class OTask(override val accumulator: ArgumentStateBuffer) extends ContinuableOperatorTaskWithAccumulator[PipelinedExecutionContext, ArgumentStateBuffer] {
 
     override def workIdentity: WorkIdentity = SortMergeOperator.this.workIdentity
 
     override def toString: String = "SortMergeTask"
 
-    var sortedInputPerArgument: PriorityQueue[MorselExecutionContext] = _
+    var sortedInputPerArgument: PriorityQueue[PipelinedExecutionContext] = _
 
-    override def operate(outputRow: MorselExecutionContext,
+    override def operate(outputRow: PipelinedExecutionContext,
                          context: QueryContext,
                          state: QueryState,
                          resources: QueryResources): Unit = {
       if (sortedInputPerArgument == null) {
-        sortedInputPerArgument = new PriorityQueue[MorselExecutionContext](comparator)
+        sortedInputPerArgument = new PriorityQueue[PipelinedExecutionContext](comparator)
         accumulator.foreach { morsel =>
           if (morsel.hasData) {
             sortedInputPerArgument.add(morsel)
@@ -77,7 +77,7 @@ class SortMergeOperator(val argumentStateMapId: ArgumentStateMapId,
       }
 
       while (outputRow.isValidRow && canContinue) {
-        val nextRow: MorselExecutionContext = sortedInputPerArgument.poll()
+        val nextRow: PipelinedExecutionContext = sortedInputPerArgument.poll()
         outputRow.copyFrom(nextRow)
         nextRow.moveToNextRow()
         outputRow.moveToNextRow()

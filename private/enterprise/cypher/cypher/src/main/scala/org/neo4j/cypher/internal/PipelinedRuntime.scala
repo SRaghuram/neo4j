@@ -20,7 +20,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.InterpretedPipeMapper
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{CommunityExpressionConverter, ExpressionConverters}
 import org.neo4j.cypher.internal.runtime.pipelined.{ExecutablePipeline, _}
 import org.neo4j.cypher.internal.runtime.pipelined.execution.{ExecutionGraphSchedulingPolicy, LazyScheduling, ProfiledQuerySubscription, QueryExecutor}
-import org.neo4j.cypher.internal.runtime.pipelined.expressions.MorselBlacklist
+import org.neo4j.cypher.internal.runtime.pipelined.expressions.PipelinedBlacklist
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.SchedulerTracer
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper
 import org.neo4j.cypher.internal.runtime.slotted.expressions.{CompiledExpressionConverter, SlottedExpressionConverters}
@@ -92,7 +92,7 @@ class PipelinedRuntime private(parallelExecution: Boolean,
   private def selectBatchSize(query: LogicalQuery,
                                context: EnterpriseRuntimeContext): Int = {
     val maxCardinality = query.logicalPlan.flatten.map(plan => query.cardinalities.get(plan.id)).max
-    val batchSize = if (maxCardinality.amount.toLong > context.config.morselSizeBig) context.config.morselSizeBig else context.config.morselSizeSmall
+    val batchSize = if (maxCardinality.amount.toLong > context.config.pipelinedBatchSizeBig) context.config.pipelinedBatchSizeBig else context.config.pipelinedBatchSizeSmall
     batchSize
   }
 
@@ -105,7 +105,7 @@ class PipelinedRuntime private(parallelExecution: Boolean,
                           queryIndexRegistrator: QueryIndexRegistrator,
                           warnings: Set[InternalNotification]): PipelinedExecutionPlan = {
     val interpretedPipesFallbackPolicy = InterpretedPipesFallbackPolicy(context.interpretedPipesFallback, parallelExecution)
-    val breakingPolicy = MorselPipelineBreakingPolicy(operatorFusionPolicy, interpretedPipesFallbackPolicy)
+    val breakingPolicy = PipelinedPipelineBreakingPolicy(operatorFusionPolicy, interpretedPipesFallbackPolicy)
 
     val physicalPlan = PhysicalPlanner.plan(context.tokenContext,
                                             query.logicalPlan,
@@ -130,7 +130,7 @@ class PipelinedRuntime private(parallelExecution: Boolean,
         CommunityExpressionConverter(context.tokenContext))
     }
 
-    MorselBlacklist.throwOnUnsupportedPlan(query.logicalPlan, parallelExecution, query.providedOrders)
+    PipelinedBlacklist.throwOnUnsupportedPlan(query.logicalPlan, parallelExecution, query.providedOrders)
 
     //=======================================================
     val slottedPipeBuilder =
@@ -174,7 +174,7 @@ class PipelinedRuntime private(parallelExecution: Boolean,
 
       val executor = context.runtimeEnvironment.getQueryExecutor(parallelExecution)
 
-      val morselSize = selectBatchSize(query, context)
+      val batchSize = selectBatchSize(query, context)
 
       val maybeThreadSafeExecutionResources =
         if (parallelExecution) {
@@ -205,7 +205,7 @@ class PipelinedRuntime private(parallelExecution: Boolean,
                                  query.resultColumns,
                                  executor,
                                  context.runtimeEnvironment.tracer,
-                                 morselSize,
+                                 batchSize,
                                  context.config.memoryTrackingController,
                                  maybeThreadSafeExecutionResources,
                                  metadata,

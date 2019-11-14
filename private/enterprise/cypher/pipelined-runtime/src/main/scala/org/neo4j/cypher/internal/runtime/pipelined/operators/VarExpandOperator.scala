@@ -18,7 +18,7 @@ import org.neo4j.cypher.internal.runtime.compiled.expressions.{CompiledHelpers, 
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{RelationshipTypes, VarLengthExpandPipe}
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{CursorPools, MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.pipelined.execution.{CursorPools, PipelinedExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
@@ -75,7 +75,7 @@ class VarExpandOperator(val workIdentity: WorkIdentity,
                          argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorsel] =
     IndexedSeq(new OTask(inputMorsel.nextCopy))
 
-  class OTask(val inputMorsel: MorselExecutionContext) extends InputLoopTask {
+  class OTask(val inputMorsel: PipelinedExecutionContext) extends InputLoopTask {
 
     override def workIdentity: WorkIdentity = VarExpandOperator.this.workIdentity
 
@@ -156,9 +156,9 @@ class VarExpandOperator(val workIdentity: WorkIdentity,
       }
     }
 
-    override protected def innerLoop(outputRow: MorselExecutionContext,
-                           context: QueryContext,
-                           state: QueryState): Unit = {
+    override protected def innerLoop(outputRow: PipelinedExecutionContext,
+                                     context: QueryContext,
+                                     state: QueryState): Unit = {
 
       while (outputRow.isValidRow && varExpandCursor.next()) {
         outputRow.copyFrom(inputMorsel)

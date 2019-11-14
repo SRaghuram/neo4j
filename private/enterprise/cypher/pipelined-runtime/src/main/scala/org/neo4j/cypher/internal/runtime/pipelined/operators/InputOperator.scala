@@ -9,7 +9,7 @@ import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable}
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.pipelined.execution.{PipelinedExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.pipelined.operators.InputOperator.{nodeOrNoValue, relationshipOrNoValue}
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
@@ -44,11 +44,11 @@ class InputOperator(val workIdentity: WorkIdentity,
   /**
     * A [[InputTask]] reserves new batches from the InputStream, until there are no more batches.
     */
-  class InputTask(input: MutatingInputCursor, val inputMorsel: MorselExecutionContext) extends ContinuableOperatorTaskWithMorsel {
+  class InputTask(input: MutatingInputCursor, val inputMorsel: PipelinedExecutionContext) extends ContinuableOperatorTaskWithMorsel {
 
     override def workIdentity: WorkIdentity = InputOperator.this.workIdentity
 
-    override def operate(outputRow: MorselExecutionContext,
+    override def operate(outputRow: PipelinedExecutionContext,
                          context: QueryContext,
                          queryState: QueryState,
                          resources: QueryResources): Unit = {
