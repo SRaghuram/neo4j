@@ -91,12 +91,11 @@ class ChannelPoolServiceIT
         for ( int i = 0; i < 2; i++ )
         {
             pooledChannel = pool.acquire( to1 ).get( DEFAULT_TIME_OUT, DEFAULT_TIME_UNIT );
-
             pooledChannel.release().get( DEFAULT_TIME_OUT, DEFAULT_TIME_UNIT );
         }
 
         assertEquals( 1, poolEventsMonitor.created() );
-        assertEquals( 1, poolEventsMonitor.acquired() );
+        assertEquals( 2, poolEventsMonitor.acquired() );
         assertEquals( 2, poolEventsMonitor.released() );
     }
 
@@ -110,14 +109,13 @@ class ChannelPoolServiceIT
         for ( int i = 0; i < 2; i++ )
         {
             pooledChannel = pool.acquire( to1 ).get( DEFAULT_TIME_OUT, DEFAULT_TIME_UNIT );
-
             pooledChannel.release().get( DEFAULT_TIME_OUT, DEFAULT_TIME_UNIT );
         }
 
         notReleased.release().get( DEFAULT_TIME_OUT, DEFAULT_TIME_UNIT );
 
         assertEquals( 2, poolEventsMonitor.created() );
-        assertEquals( 1, poolEventsMonitor.acquired() );
+        assertEquals( 3, poolEventsMonitor.acquired() );
         assertEquals( 3, poolEventsMonitor.released() );
     }
 
