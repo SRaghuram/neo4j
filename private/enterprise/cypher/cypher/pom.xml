@@ -105,7 +105,7 @@
         </dependency>
         <dependency>
             <groupId>com.neo4j</groupId>
-            <artifactId>neo4j-cypher-morsel-runtime</artifactId>
+            <artifactId>neo4j-cypher-pipelined-runtime</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
