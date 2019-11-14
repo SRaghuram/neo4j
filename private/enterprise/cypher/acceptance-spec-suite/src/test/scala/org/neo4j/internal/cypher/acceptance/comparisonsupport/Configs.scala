@@ -69,6 +69,7 @@ object Configs {
   val ShortestPathExpr      : TestConfiguration = InterpretedRuntime + SlottedRuntime + Morsel
   val OptionalExpand        : TestConfiguration = InterpretedRuntime + SlottedRuntime + Morsel
   val Optional              : TestConfiguration = InterpretedRuntime + SlottedRuntime + Morsel
+  val CountDistinct         : TestConfiguration = InterpretedRuntime + SlottedRuntime + Morsel
   val RollUpApply           : TestConfiguration = InterpretedRuntime + SlottedRuntime
   val VarExpand             : TestConfiguration = InterpretedRuntime + SlottedRuntime + Morsel
   val ExpandInto            : TestConfiguration = InterpretedRuntime + SlottedRuntime + Compiled + Morsel

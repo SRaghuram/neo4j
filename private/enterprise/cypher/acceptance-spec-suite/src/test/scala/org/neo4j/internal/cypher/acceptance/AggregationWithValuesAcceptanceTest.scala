@@ -46,7 +46,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
            (6, "percentileDisc", "n.prop1, 0.25", "n.prop1", false, false, true),
            (7, "percentileCont", "n.prop1, 0.75", "n.prop1", false, false, true),
            (8, "count", "n.prop1", "n.prop1", true, true, true),
-           (9, "count", "DISTINCT n.prop2", "n.prop2", true, false, false)
+           (9, "count", "DISTINCT n.prop2", "n.prop2", true, true, true)
          )
   ) {
     // Simple aggregation functions implicitly gives exists

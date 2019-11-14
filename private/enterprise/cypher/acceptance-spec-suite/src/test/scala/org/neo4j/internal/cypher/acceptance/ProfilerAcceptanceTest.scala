@@ -601,7 +601,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     relate(b2, b3, "T1")
     relate(b2, b4, "T1")
 
-    profile(Configs.InterpretedAndSlotted,
+    profile(Configs.CountDistinct,
       "PROFILE MATCH (b:Start)-[*3]->(d) RETURN count(distinct d)",
       _ should includeSomewhere.aPlan("VarLengthExpand(Pruning)").withRows(2).withDBHits(7))
   }

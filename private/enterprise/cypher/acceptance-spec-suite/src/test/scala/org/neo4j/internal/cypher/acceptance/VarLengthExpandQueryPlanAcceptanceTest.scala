@@ -50,7 +50,7 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
 
   test("query with distinct aggregation") {
     val query = "MATCH (from)-[*1..3]->(to) RETURN count(DISTINCT to)"
-    executeWith(Configs.InterpretedAndSlotted, query, planComparisonStrategy =
+    executeWith(Configs.CountDistinct, query, planComparisonStrategy =
       ComparePlansWithAssertion( plan => {
         plan should includeSomewhere.aPlan("VarLengthExpand(Pruning)")
       }))

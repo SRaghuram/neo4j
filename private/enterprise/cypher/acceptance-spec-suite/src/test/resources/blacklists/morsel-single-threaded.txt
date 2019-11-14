@@ -1,4 +1,3 @@
-Feature "AggregationAcceptance": Scenario "Multiple aggregations should work"
 Feature "AggregationAcceptance": Scenario "Using a optional match after aggregation and before an aggregation"
 Feature "AggregationAcceptance": Scenario "percentileDisc on empty data should return null"
 Feature "CaseExpression": Scenario "Returning a CASE expression into integer"
