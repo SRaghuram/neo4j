@@ -39,7 +39,7 @@ class StartsWithImplementationAcceptanceTest extends ExecutionEngineFunSuite wit
     createLabeledNode(Map("prop" -> "www123"), "Address")
     createLabeledNode(Map("prop" -> "www"), "Address")
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (a:Address) WHERE a.prop STARTS WITH 'www' RETURN a")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (a:Address) WHERE a.prop STARTS WITH 'www' RETURN a")
 
     result.executionPlanDescription() should not(includeSomewhere.aPlan(IndexSeekByRange.name))
   }

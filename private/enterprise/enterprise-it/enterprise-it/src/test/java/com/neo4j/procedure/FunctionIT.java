@@ -885,7 +885,7 @@ class FunctionIT
     }
 
     @Test
-    void shouldNotSupportMorselRuntime()
+    void shouldNotSupportPipelinedRuntime()
     {
         // Given
         try ( Transaction tx = db.beginTx() )

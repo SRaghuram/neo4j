@@ -35,7 +35,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
       """)
   }
 
-  for ((i, func, funcBody, property, supportsCompiled, supportsMorsel, correctResultFromMorselSingle) <-
+  for ((i, func, funcBody, property, supportsCompiled, supportsPipelined, correctResultFromPipelinedSingle) <-
          List(
            (0, "min", "n.prop3", "n.prop3", false, true, true),
            (1, "max", "n.prop3", "n.prop3", false, true, true),
@@ -51,11 +51,11 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
   ) {
     // Simple aggregation functions implicitly gives exists
 
-    val configsWithWrongResult = if (correctResultFromMorselSingle) Configs.Empty else Configs.Morsel
+    val configsWithWrongResult = if (correctResultFromPipelinedSingle) Configs.Empty else Configs.Pipelined
 
     test(s"$i-$func: should use index provided values") {
       val config =
-        if (supportsMorsel) Configs.CachedProperty
+        if (supportsPipelined) Configs.CachedProperty
         else Configs.InterpretedAndSlotted
 
       val query = s"MATCH (n:Awesome) RETURN $func($funcBody) as aggregation"
@@ -72,9 +72,9 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     // Combination of aggregation and grouping expression does not implicitly give exist
     test(s"$i-$func: cannot use index provided values with grouping expression without exists") {
       val config =
-        if (supportsCompiled && supportsMorsel) Configs.CachedProperty + Configs.Compiled
-        else if (supportsCompiled) Configs.All - Configs.Morsel
-        else if (supportsMorsel) Configs.CachedProperty
+        if (supportsCompiled && supportsPipelined) Configs.CachedProperty + Configs.Compiled
+        else if (supportsCompiled) Configs.All - Configs.Pipelined
+        else if (supportsPipelined) Configs.CachedProperty
         else Configs.InterpretedAndSlotted
 
       val query = s"MATCH (n:Awesome) RETURN $property as res1, $func($funcBody) as res2"
@@ -100,7 +100,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
 
     test(s"$i-$func: should use index provided values with grouping expression with exists") {
       //Compiled does not support exists
-      val config = if(supportsMorsel) Configs.CachedProperty else Configs.InterpretedAndSlotted
+      val config = if(supportsPipelined) Configs.CachedProperty else Configs.InterpretedAndSlotted
       val query = s"MATCH (n:Awesome) WHERE exists($property) RETURN $property as res1, $func($funcBody) as res2"
       val result = executeWith(config, query, executeBefore = createSomeNodes, expectedDifferentResults = configsWithWrongResult)
 
@@ -227,7 +227,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
 
   test("should handle aggregation with node projection without renaming") {
     val query = "MATCH (n: Awesome) WITH n LIMIT 1 RETURN count(n)"
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query, executeBefore = createSomeNodes)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
       includeSomewhere.aPlan("NodeByLabelScan").withExactVariables("n")
@@ -252,7 +252,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     resampleIndexes()
 
     val query = "MATCH (n: Label) RETURN min(n.prop1)"
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query, executeBefore = createSomeNodes)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query, executeBefore = createSomeNodes)
 
     /*
      * Even if range scans for composite indexes become supported,
@@ -272,7 +272,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     resampleIndexes()
 
     val query = "MATCH (n: Awesome) RETURN count(n.prop3), count(n.prop4)"
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query, executeBefore = createSomeNodes)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query, executeBefore = createSomeNodes)
 
     /*
      * Even if range scans for composite indexes become supported,
@@ -378,7 +378,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
     graph.createIndex("LabelN", "prop2")
 
     val query = "MATCH (n:LabelN)-[]->(m:Label) RETURN count(n.prop2) AS count, avg(m.prop1) AS avg"
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query, executeBefore = createSomeNodes)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
       includeSomewhere.aPlan("NodeByLabelScan").withExactVariables("n")
@@ -440,7 +440,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
 
   test("should use index provided values for DISTINCT before aggregation") {
     val query = "MATCH (n: Awesome) WITH DISTINCT n.prop2 as prop RETURN count(prop)"
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query, executeBefore = createSomeNodes)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
       includeSomewhere.aPlan("NodeIndexScan").containingArgumentRegex(".*cache\\[n.prop2\\]".r)
@@ -511,7 +511,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
 
   test("should handle aggregation with label not in the semantic table") {
     val query = "MATCH (n: NotExistingLabel) RETURN min(n.prop1)"
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query, executeBefore = createSomeNodes)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query, executeBefore = createSomeNodes)
 
     result.executionPlanDescription() should
       includeSomewhere.aPlan("NodeByLabelScan").withExactVariables("n")

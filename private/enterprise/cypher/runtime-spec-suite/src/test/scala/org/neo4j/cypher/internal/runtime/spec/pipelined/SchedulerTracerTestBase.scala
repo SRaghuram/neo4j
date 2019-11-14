@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package org.neo4j.cypher.internal.runtime.spec.morsel
+package org.neo4j.cypher.internal.runtime.spec.pipelined
 
 import java.lang.Boolean.TRUE
 import java.lang.management.ManagementFactory
@@ -11,7 +11,7 @@ import java.nio.file.{Files, Path}
 
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.internal.runtime.spec._
-import org.neo4j.cypher.internal.runtime.spec.morsel.SchedulerTracerTestBase._
+import org.neo4j.cypher.internal.runtime.spec.pipelined.SchedulerTracerTestBase._
 import org.neo4j.cypher.internal.{CypherRuntime, EnterpriseRuntimeContext, PipelinedRuntime}
 
 import scala.collection.mutable

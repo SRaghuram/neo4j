@@ -110,8 +110,8 @@ class NodeIndexEndsWithScanAcceptanceTest extends ExecutionEngineFunSuite with C
 
     val query = "MATCH (l:Location) WHERE l.name ENDS WITH 'ondon' AND l.country = 'UK' RETURN l"
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query,
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexSeek")))
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
+                             planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexSeek")))
 
     result.toList should equal(List(Map("l" -> london)))
   }

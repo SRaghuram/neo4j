@@ -21,14 +21,14 @@ class MiscAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
       WHERE i <> j
       RETURN i, j"""
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
     result.toList should equal(List(Map("j" -> 1, "i" -> 0), Map("j" -> 0, "i" -> 1)))
   }
 
   test("should be able to compare booleans") {
     val query = "WITH true AS t, false AS f RETURN t<f, t>f"
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
     result.toList should equal(List(Map("t<f" -> false, "t>f" -> true)))
   }
 
@@ -197,7 +197,7 @@ class MiscAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
   test("should get degree of node from a parameter") {
     val node = createLabeledNode("Item")
     relate(createNode(), node, "CONTAINS")
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "UNWIND $param as p MATCH (p:Item) RETURN size((p)<-[:CONTAINS]-()) as total", params = Map("param" -> List(node)))
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "UNWIND $param as p MATCH (p:Item) RETURN size((p)<-[:CONTAINS]-()) as total", params = Map("param" -> List(node)))
     result.toList should equal(List(Map("total" -> 1)))
   }
 

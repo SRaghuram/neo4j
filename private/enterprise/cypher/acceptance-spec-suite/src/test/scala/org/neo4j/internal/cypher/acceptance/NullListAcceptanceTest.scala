@@ -84,7 +84,7 @@ class NullListAcceptanceTest extends ExecutionEngineFunSuite with CypherComparis
   test("IN should return true if match despite nulls") {
     val query = "WITH 3 AS l1, [1, null, 3] AS l2 RETURN l1 IN l2 AS res"
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     result.toList should equal(List(Map("res" -> true)))
   }
@@ -92,7 +92,7 @@ class NullListAcceptanceTest extends ExecutionEngineFunSuite with CypherComparis
   test("IN should return null if comparison with null is required") {
     val query = "WITH 4 AS l1, [1, null, 3] AS l2 RETURN l1 IN l2 AS res"
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     result.toList should equal(List(Map("res" -> null)))
   }
@@ -102,7 +102,7 @@ class NullListAcceptanceTest extends ExecutionEngineFunSuite with CypherComparis
   test("IN should return true if correct list found despite other lists having nulls") {
     val query = "WITH [1, 2] AS l1, [[null, 'foo'], [1, 2]] AS l2 RETURN l1 IN l2 AS res"
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     result.toList should equal(List(Map("res" -> true)))
   }
@@ -110,7 +110,7 @@ class NullListAcceptanceTest extends ExecutionEngineFunSuite with CypherComparis
   test("IN should return false if no match can be found, despite nulls") {
     val query = "WITH [1,2] AS l1, [[null, 'foo', 'bar']] AS l2 RETURN l1 IN l2 as res"
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     result.toList should equal(List(Map("res" -> false)))
   }
@@ -118,7 +118,7 @@ class NullListAcceptanceTest extends ExecutionEngineFunSuite with CypherComparis
   test("IN should return null if comparison with null is required, list version") {
     val query = "WITH [1,2] AS l1, [[null, 2]] AS l2 RETURN l1 IN l2 as res"
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     result.toList should equal(List(Map("res" -> null)))
   }
@@ -126,7 +126,7 @@ class NullListAcceptanceTest extends ExecutionEngineFunSuite with CypherComparis
   test("IN should return true with previous null match, list version") {
     val query = "WITH [1,2] AS l1, [[null, 2], [1, 2]] AS l2 RETURN l1 IN l2 as res"
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     result.toList should equal(List(Map("res" -> true)))
   }
@@ -134,7 +134,7 @@ class NullListAcceptanceTest extends ExecutionEngineFunSuite with CypherComparis
   test("IN should return null if comparison with null is required, list version 2") {
     val query = "WITH [1,2] AS l1, [[null, 2], [1, 3]] AS l2 RETURN l1 IN l2 as res"
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     result.toList should equal(List(Map("res" -> null)))
   }

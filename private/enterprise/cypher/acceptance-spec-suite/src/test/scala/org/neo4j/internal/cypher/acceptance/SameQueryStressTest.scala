@@ -18,7 +18,7 @@ class SameQueryStressTest extends ExecutionEngineFunSuite {
                           """.stripMargin
 
   for {
-    runtime <- List("interpreted", "slotted", "legacy_compiled", "morsel")
+    runtime <- List("interpreted", "slotted", "legacy_compiled", "pipelined")
   } testRuntime(runtime)
 
   private def testRuntime(runtime: String): Unit = {

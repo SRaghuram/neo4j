@@ -85,8 +85,8 @@ class HintAcceptanceTest
          |    RETURN r
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query,
-      planComparisonStrategy = ComparePlansWithAssertion(_  should includeSomewhere.aPlan("NodeHashJoin")))
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
+                             planComparisonStrategy = ComparePlansWithAssertion(_  should includeSomewhere.aPlan("NodeHashJoin")))
 
     result.toList should be(List(Map("r" -> rel)))
   }

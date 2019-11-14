@@ -451,7 +451,7 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
              |WHERE n.prop1 >= 42 AND exists(n.prop2)
              |RETURN n.prop1, n.prop2
              |ORDER BY $orderByString""".stripMargin
-        // For 'n.prop1 ASC' do morsel give different order on n.prop2
+        // For 'n.prop1 ASC' do pipelined give different order on n.prop2
         val result = executeWith(configs, query, executeExpectedFailures = false)
 
         // Then

@@ -85,7 +85,7 @@ class StringMatchingAcceptanceTest extends ExecutionEngineFunSuite with QuerySta
   test("should allow newline in label") {
     executeSingle(s"CREATE (:`Label with $newline in it`)")
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel , s"MATCH (n:`Label with $newline in it`) RETURN labels(n) as labels")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, s"MATCH (n:`Label with $newline in it`) RETURN labels(n) as labels")
     result.toList should be(List(Map("labels" -> List(s"Label with $newline in it"))))
   }
 
@@ -99,7 +99,7 @@ class StringMatchingAcceptanceTest extends ExecutionEngineFunSuite with QuerySta
   test("should allow newline in property key") {
     executeSingle(s"CREATE ({`prop name with $newline in it`: 1})")
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, s"MATCH (n {`prop name with $newline in it`: 1}) RETURN keys(n) as keys")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, s"MATCH (n {`prop name with $newline in it`: 1}) RETURN keys(n) as keys")
     result.toList should be(List(Map("keys" -> List(s"prop name with $newline in it"))))
   }
 

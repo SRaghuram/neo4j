@@ -165,9 +165,9 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
   }
 
   test("should plan projection and index seek with DoNotGetValue when the property is only used in ORDER BY") {
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "PROFILE MATCH (n:Awesome) WHERE n.prop1 > 41 RETURN n.prop2 ORDER BY n.prop1",
-      executeBefore = createSomeNodes,
-      planComparisonStrategy = ComparePlansWithAssertion(
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "PROFILE MATCH (n:Awesome) WHERE n.prop1 > 41 RETURN n.prop2 ORDER BY n.prop1",
+                             executeBefore = createSomeNodes,
+                             planComparisonStrategy = ComparePlansWithAssertion(
         _ should (includeSomewhere.aPlan("Projection")
           .containingArgument("{n.prop2 : n.prop2}")
           // just for n.prop2, not for n.prop1
@@ -175,7 +175,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
           .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("n"))
                    and not(includeSomewhere.aPlan("Sort")))
       )
-    )
+                             )
 
     result.toList should equal(List(
       Map("n.prop2" -> 3), Map("n.prop2" -> 3),
@@ -187,16 +187,16 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
     graph.withTx(tx => createMoreNodes(tx))
     graph.createIndexWithName("my_index", "Label", "prop")
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "PROFILE MATCH (n:Label) WHERE n.prop > 41 RETURN 1 AS ignore ORDER BY n.prop",
-      executeBefore = createMoreNodes,
-      planComparisonStrategy = ComparePlansWithAssertion(
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "PROFILE MATCH (n:Label) WHERE n.prop > 41 RETURN 1 AS ignore ORDER BY n.prop",
+                             executeBefore = createMoreNodes,
+                             planComparisonStrategy = ComparePlansWithAssertion(
         _ should (includeSomewhere.aPlan("Projection")
           .containingArgumentRegex(".*\\{ignore : .*\\}.*".r)
           .withDBHits(0) // nothing for prop
           .onTopOf(aPlan("NodeIndexSeekByRange").withExactVariables("n"))
                    and not(includeSomewhere.aPlan("Sort")))
       )
-    )
+                             )
 
     result.toList should equal(List(
       Map("ignore" -> 1), Map("ignore" -> 1),
@@ -279,8 +279,8 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
   }
 
   test("should pass cached property through distinct when it's not part of a distinct column - node and property") {
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "PROFILE MATCH (n:Awesome {prop1: 40}) WITH DISTINCT n, n.prop2 as b MATCH (n)-[:R]->() RETURN n.prop1", executeBefore = createSomeNodes,
-      planComparisonStrategy = ComparePlansWithAssertion(_ should (
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "PROFILE MATCH (n:Awesome {prop1: 40}) WITH DISTINCT n, n.prop2 as b MATCH (n)-[:R]->() RETURN n.prop1", executeBefore = createSomeNodes,
+                             planComparisonStrategy = ComparePlansWithAssertion(_ should (
         not(includeSomewhere.aPlan("Projection")
           .withDBHits()) and includeSomewhere.aPlan("NodeIndexSeek")
           .withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop1\\]".r))))
@@ -289,8 +289,8 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
   }
 
   test("should pass cached property through distinct when it's not part of a distinct column - single node") {
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "PROFILE MATCH (n:Awesome {prop1: 40}) WITH DISTINCT n MATCH (n)-[:R]->() RETURN n.prop1", executeBefore = createSomeNodes,
-      planComparisonStrategy = ComparePlansWithAssertion(_ should (
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "PROFILE MATCH (n:Awesome {prop1: 40}) WITH DISTINCT n MATCH (n)-[:R]->() RETURN n.prop1", executeBefore = createSomeNodes,
+                             planComparisonStrategy = ComparePlansWithAssertion(_ should (
         not(includeSomewhere.aPlan("Projection")
           .withDBHits()) and includeSomewhere.aPlan("NodeIndexSeek")
           .withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop1\\]".r))))
@@ -301,10 +301,10 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
   test("should pass cached property through distinct when it's not part of a distinct column - multiple nodes") {
     execute("MATCH (n:Awesome {prop1: 40})-[:R]-(b) MERGE (b)-[:R2]->()")
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
-      "PROFILE MATCH (n:Awesome {prop1: 40})-[:R]-(b) WITH DISTINCT n, b MATCH (b)-[:R2]->() RETURN n.prop1",
-      executeBefore = createSomeNodes,
-      planComparisonStrategy = ComparePlansWithAssertion(_ should (
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
+                             "PROFILE MATCH (n:Awesome {prop1: 40})-[:R]-(b) WITH DISTINCT n, b MATCH (b)-[:R2]->() RETURN n.prop1",
+                             executeBefore = createSomeNodes,
+                             planComparisonStrategy = ComparePlansWithAssertion(_ should (
         not(includeSomewhere.aPlan("Projection")
           .withDBHits()) and includeSomewhere.aPlan("NodeIndexSeek")
           .withExactVariables("n").containingArgumentRegex(".*cache\\[n\\.prop1\\]".r))))
@@ -348,8 +348,8 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
         |WITH DISTINCT a as n, n as m
         |RETURN n.prop1, m.prop1
       """.stripMargin
-    val result = executeWith(Configs.All - Configs.Morsel, query, executeBefore = createSomeNodes,
-      planComparisonStrategy = ComparePlansWithAssertion(_ should
+    val result = executeWith(Configs.All - Configs.Pipelined, query, executeBefore = createSomeNodes,
+                             planComparisonStrategy = ComparePlansWithAssertion(_ should
         includeSomewhere.aPlan("Projection")
           .withDBHits(0)
           .containingArgument("{n.prop1 : cache[n.prop1], m.prop1 : cache[m.prop1]}"),
@@ -645,7 +645,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
   test("index-backed property values should be updated on procedure property write") {
     registerTestProcedures()
     val query = "MATCH (n:Awesome) WHERE n.prop1 = 42 CALL org.neo4j.setProperty(n, 'prop1', 'newValue') YIELD node RETURN n.prop1"
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
     assertIndexSeek(result)
     result.toList should equal(List(Map("n.prop1" -> "newValue")))
   }
@@ -653,7 +653,7 @@ class IndexWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QuerySt
   test("index-backed property values should be updated on procedure property remove") {
     registerTestProcedures()
     val query = "MATCH (n:Awesome) WHERE n.prop1 = 42 CALL org.neo4j.setProperty(n, 'prop1', null) YIELD node RETURN n.prop1"
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
     assertIndexSeek(result)
     result.toList should equal(List(Map("n.prop1" -> null)))
   }

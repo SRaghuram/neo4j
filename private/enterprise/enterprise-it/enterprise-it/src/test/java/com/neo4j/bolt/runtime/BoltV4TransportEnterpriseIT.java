@@ -400,7 +400,7 @@ public class BoltV4TransportEnterpriseIT
     }
 
     private static final String[] RUNTIMES = new String[]{ "interpreted", "slotted", "legacy_compiled" };
-    private static final String[] READ_RUNTIMES = new String[]{ "interpreted", "slotted", "legacy_compiled", "morsel" };
+    private static final String[] READ_RUNTIMES = new String[]{ "interpreted", "slotted", "legacy_compiled", "pipelined" };
 
     private static MapValue paramWithRange( int from, int to )
     {

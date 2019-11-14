@@ -30,8 +30,8 @@ class NodeIndexContainsScanAcceptanceTest extends ExecutionEngineFunSuite with C
 
     val query = "MATCH (l:Location) WHERE l.name CONTAINS 'ondo' AND l.country = 'UK' RETURN l"
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query,
-    planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexContainsScan")))
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
+                             planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexContainsScan")))
 
     result.toList should equal(List(Map("l" -> london)))
   }
@@ -51,8 +51,8 @@ class NodeIndexContainsScanAcceptanceTest extends ExecutionEngineFunSuite with C
 
     val query = "MATCH (l:Location) WHERE l.name CONTAINS 'ondo' AND l.country = 'UK' RETURN l"
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query,
-    planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexContainsScan")))
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
+                             planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexContainsScan")))
 
     result.toList should equal(List(Map("l" -> london)))
   }
@@ -72,8 +72,8 @@ class NodeIndexContainsScanAcceptanceTest extends ExecutionEngineFunSuite with C
 
     val query = "MATCH (l:Location) WHERE l.name CONTAINS 'ondo' AND l.country = 'UK' RETURN l"
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query,
-    planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexSeek")))
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
+                             planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexSeek")))
 
     result.toList should equal(List(Map("l" -> london)))
   }
@@ -93,7 +93,7 @@ class NodeIndexContainsScanAcceptanceTest extends ExecutionEngineFunSuite with C
 
     val query = "MATCH (l:Location) USING INDEX l:Location(name) WHERE l.name CONTAINS 'ondo' AND l.country = 'UK' RETURN l"
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     result.toList should equal(List(Map("l" -> london)))
   }
@@ -112,9 +112,9 @@ class NodeIndexContainsScanAcceptanceTest extends ExecutionEngineFunSuite with C
 
     val query = "MATCH (l:Location) WHERE l.name CONTAINS $param RETURN l"
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query,
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexContainsScan")),
-      params = Map("param" -> null))
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
+                             planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexContainsScan")),
+                             params = Map("param" -> null))
 
     result.toList should equal(List.empty)
   }
@@ -133,8 +133,8 @@ class NodeIndexContainsScanAcceptanceTest extends ExecutionEngineFunSuite with C
 
     val query = "MATCH (l:Location) WHERE l.name CONTAINS $param RETURN l"
 
-    failWithError(Configs.InterpretedAndSlottedAndMorsel,
-      query, message = List("Expected a string value, but got 42","Expected a string value, but got Int(42)","Expected two strings, but got London and 42"),
-      params = Map("param" -> 42))
+    failWithError(Configs.InterpretedAndSlottedAndPipelined,
+                  query, message = List("Expected a string value, but got 42","Expected a string value, but got Int(42)","Expected two strings, but got London and 42"),
+                  params = Map("param" -> 42))
   }
 }

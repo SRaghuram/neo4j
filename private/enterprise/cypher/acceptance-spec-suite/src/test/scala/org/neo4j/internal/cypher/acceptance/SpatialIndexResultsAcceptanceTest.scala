@@ -674,11 +674,11 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
 
     val result =
       executeWith(
-        Configs.InterpretedAndSlottedAndMorsel,
+        Configs.InterpretedAndSlottedAndPipelined,
         query,
         planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexSeekByRange")
           .containingArgument(s":$LABEL($PROPERTY) > point({x: min.x, y: min.y}) AND :$LABEL($PROPERTY) < max"))
-      )
+        )
     val nodes = result.columnAs[Node]("p").toSet
     expected.foreach(p => assert(nodes.contains(p)))
     nodes.size should be(expected.size)

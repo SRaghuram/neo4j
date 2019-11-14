@@ -923,8 +923,8 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
           |WHERE a.prop = 'foo' and b.prop = 'bar'
           |RETURN b.prop AS res""".stripMargin
 
-    val result = executeWith(Configs.All - Configs.Morsel, query,
-      planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
+    val result = executeWith(Configs.All - Configs.Pipelined, query,
+                             planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
         planDescription should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek").containingVariables("a"))
         planDescription should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek").containingVariables("b"))
       }))
@@ -942,7 +942,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
         | WHERE f.bar=5 and f.baz=3
         | RETURN f
       """.stripMargin
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
                              planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
         planDescription should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek(equality,equality)").containingVariables("f"))
       }))
@@ -960,7 +960,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
         | WHERE f.bar=5 and f.baz=3
         | RETURN f
       """.stripMargin
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
                              planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
         planDescription should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek(equality,equality)")
           .containingVariables("f").containingArgument(":Foo(bar,baz)"))
@@ -1000,7 +1000,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
          |USING JOIN ON b
          |RETURN count(*) as c""".stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query, planComparisonStrategy = ComparePlansWithAssertion({ plan =>
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query, planComparisonStrategy = ComparePlansWithAssertion({ plan =>
       plan should includeSomewhere.nTimes(1, aPlan("NodeHashJoin"))
     }))
 

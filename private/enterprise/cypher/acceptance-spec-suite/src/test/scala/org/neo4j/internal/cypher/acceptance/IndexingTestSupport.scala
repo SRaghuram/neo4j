@@ -76,7 +76,7 @@ trait IndexingTestSupport extends ExecutionEngineFunSuite with CypherComparisonS
   }
 
   private def testRead(query: String, params: Map[String, AnyRef], wantedOperator: String, expected: Seq[Node],
-                       config: TestConfiguration = Configs.InterpretedAndSlottedAndMorsel): Unit = {
+                       config: TestConfiguration = Configs.InterpretedAndSlottedAndPipelined): Unit = {
     if (cypherComparisonSupport) {
       val result =
         executeWith(

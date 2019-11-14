@@ -25,7 +25,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
     graph.createIndex("Person", "age")
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
                              "MATCH (p:Person) USING INDEX p:Person(age) WHERE p.age > 5987523281782486378 RETURN p",
                              planComparisonStrategy = ComparePlansWithAssertion(plan => {
                                //THEN
@@ -44,7 +44,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
     graph.createIndex("Person", "age")
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
                              "MATCH (p:Person) USING INDEX p:Person(age) WHERE p.age > 5987523281782486379 RETURN p",
                              planComparisonStrategy = ComparePlansWithAssertion(plan => {
                                //THEN
@@ -69,7 +69,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
 
     val query = "MATCH (l:Location) WHERE l.name STARTS WITH 'Lon' RETURN l"
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
                              planComparisonStrategy = ComparePlansWithAssertion(plan => {
                                //THEN
                                plan should includeSomewhere.aPlan(IndexSeekByRange.name)
@@ -112,7 +112,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
 
     val query = "MATCH (l:Location) WHERE l.name STARTS WITH 'Lon' RETURN l"
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
                              planComparisonStrategy = ComparePlansWithAssertion(plan => {
                                //THEN
                                plan should includeSomewhere.aPlan(IndexSeekByRange.name)
@@ -164,7 +164,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
 
     graph.createIndex("Address", "prop")
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (a:Address) WHERE a.prop STARTS WITH 'www' RETURN a",
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (a:Address) WHERE a.prop STARTS WITH 'www' RETURN a",
                              planComparisonStrategy = ComparePlansWithAssertion(plan => {
                                //THEN
                                plan should includeSomewhere.aPlan(IndexSeekByRange.name)
@@ -187,7 +187,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
 
     graph.createUniqueConstraint("Address", "prop")
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (a:Address) WHERE a.prop STARTS WITH 'www' RETURN a",
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (a:Address) WHERE a.prop STARTS WITH 'www' RETURN a",
                              planComparisonStrategy = ComparePlansWithAssertion(plan => {
                                //THEN
                                plan should includeSomewhere.aPlan(UniqueIndexSeekByRange.name)
@@ -1208,7 +1208,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
 
     // When
     val query = "WITH 200 AS x MATCH (b:Label) WHERE b.prop > x RETURN count(b) as c"
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     // Then
     result.executionPlanDescription() should includeSomewhere.aPlan(IndexSeekByRange.name)
@@ -1253,7 +1253,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
 
     // When
     val query = s"MATCH (a)-->(b:Label) WHERE ${size / 2} < b.prop RETURN count(a) as c"
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
                              planComparisonStrategy = ComparePlansWithAssertion(plan => {
                                //THEN
                                plan should includeSomewhere.aPlan(IndexSeekByRange.name)
@@ -1270,7 +1270,7 @@ class NodeIndexSeekByRangeAcceptanceTest extends ExecutionEngineFunSuite with Cy
 
     // When
     val query = s"MATCH (a)-->(b:Label) WHERE 10 < b.prop <= ${size - 10} RETURN count(a) as c"
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query,
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
                              planComparisonStrategy = ComparePlansWithAssertion(plan => {
                                //THEN
                                plan should includeSomewhere.aPlan(IndexSeekByRange.name)

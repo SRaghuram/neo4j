@@ -29,8 +29,8 @@ class AggregationAcceptanceTest extends ExecutionEngineFunSuite with CypherCompa
                    |RETURN id(selectedFriendship) AS friendshipId, selectedFriendship.propFive AS propertyValue""".stripMargin
     val params = Map("param" -> 3)
 
-    val result1 = executeWith(Configs.InterpretedAndSlottedAndMorsel, query1, params = params).toList
-    val result2 = executeWith(Configs.InterpretedAndSlottedAndMorsel, query2, params = params).toList
+    val result1 = executeWith(Configs.InterpretedAndSlottedAndPipelined, query1, params = params).toList
+    val result2 = executeWith(Configs.InterpretedAndSlottedAndPipelined, query2, params = params).toList
 
     result1.size should equal(result2.size)
   }
@@ -126,7 +126,7 @@ class AggregationAcceptanceTest extends ExecutionEngineFunSuite with CypherCompa
     val node2 = createNode(Map("prop" -> 2))
     val query = "MATCH (a) RETURN DISTINCT a ORDER BY a.prop SKIP 1 LIMIT 1"
 
-    val result = executeWith(Configs.All - Configs.Morsel, query)
+    val result = executeWith(Configs.All - Configs.Pipelined, query)
 
     result.toList should equal(List(Map("a" -> node2)))
   }
@@ -136,7 +136,7 @@ class AggregationAcceptanceTest extends ExecutionEngineFunSuite with CypherCompa
     createNode(Map("prop" -> 2))
     val query = "MATCH (a) RETURN DISTINCT a.prop ORDER BY a.prop SKIP 1 LIMIT 1"
 
-    val result = executeWith(Configs.All - Configs.Morsel, query)
+    val result = executeWith(Configs.All - Configs.Pipelined, query)
 
     result.toList should equal(List(Map("a.prop" -> 2)))
   }
@@ -146,7 +146,7 @@ class AggregationAcceptanceTest extends ExecutionEngineFunSuite with CypherCompa
     createNode(Map("prop" -> 2))
     val query = "MATCH (a) RETURN DISTINCT a.prop ORDER BY a.prop SKIP 1"
 
-    val result = executeWith(Configs.All - Configs.Morsel, query)
+    val result = executeWith(Configs.All - Configs.Pipelined, query)
 
     result.toList should equal(List(Map("a.prop" -> 2)))
   }
@@ -221,7 +221,7 @@ class AggregationAcceptanceTest extends ExecutionEngineFunSuite with CypherCompa
     createNode(Map("d" -> DurationValue.duration(0,0,30,500000000)))
 
     val query = "MATCH (n) RETURN sum(n.d) AS length"
-    executeWith(Configs.InterpretedAndSlottedAndMorsel, query).toList should equal(List(Map("length" -> DurationValue.duration(0,1,40,500000000))))
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, query).toList should equal(List(Map("length" -> DurationValue.duration(0, 1, 40, 500000000))))
   }
 
   test("Should not sum durations and numbers together") {
@@ -240,7 +240,7 @@ class AggregationAcceptanceTest extends ExecutionEngineFunSuite with CypherCompa
     createNode(Map("d" -> DurationValue.duration(0,0,20,600000000)))
 
     val query = "MATCH (n) RETURN avg(n.d) AS length"
-    executeWith(Configs.InterpretedAndSlottedAndMorsel, query).toList should equal(List(Map("length" -> DurationValue.duration(0,1,10,200000000))))
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, query).toList should equal(List(Map("length" -> DurationValue.duration(0, 1, 10, 200000000))))
   }
 
   test("Should not avg durations and numbers together") {

@@ -10,7 +10,7 @@ case class Runtimes(runtimes: Runtime*)
 object Runtimes {
   implicit def runtimeToRuntimes(runtime: Runtime): Runtimes = Runtimes(runtime)
 
-  val all = Runtimes(CompiledBytecode, CompiledSource, SlottedWithInterpretedExpressions, SlottedWithCompiledExpressions, Interpreted, Parallel, MorselFused, MorselNonFused)
+  val all = Runtimes(CompiledBytecode, CompiledSource, SlottedWithInterpretedExpressions, SlottedWithCompiledExpressions, Interpreted, Parallel, PipelinedFused, PipelinedNonFused)
 
   def definedBy(preParserArgs: Array[String]): Runtimes = {
     val runtimes = all.runtimes.filter(_.isDefinedBy(preParserArgs))
@@ -29,11 +29,11 @@ object Runtimes {
 
   object Parallel extends Runtime(Set("PARALLEL"), "runtime=parallel")
 
-  object MorselFused extends Runtime(Set("PIPELINED", "SCHEMA"), "runtime=morsel operatorEngine=compiled")
+  object PipelinedFused extends Runtime(Set("PIPELINED", "SCHEMA"), "runtime=pipelined operatorEngine=compiled")
 
-  object MorselNonFused extends Runtime(Set("PIPELINED", "SCHEMA"), "runtime=morsel operatorEngine=interpreted")
+  object PipelinedNonFused extends Runtime(Set("PIPELINED", "SCHEMA"), "runtime=pipelined operatorEngine=interpreted")
 
-  object MorselFull extends Runtime(Set("PIPELINED", "SCHEMA"), "runtime=morsel interpretedPipesFallback=all")
+  object PipelinedFull extends Runtime(Set("PIPELINED", "SCHEMA"), "runtime=pipelined interpretedPipesFallback=all")
 }
 
 case class Runtime(acceptedRuntimeNames: Set[String], preparserOption: String) {

@@ -50,15 +50,15 @@ public class EnterpriseSanityCheckTest
     }
 
     @Test
-    public void shouldUseMorsel() throws Exception
+    public void shouldUsePipelined() throws Exception
     {
-        shouldUseRuntime( Optional.of( "morsel" ), "morsel" );
+        shouldUseRuntime( Optional.of( "pipelined" ), "pipelined" );
     }
 
     @Test
-    public void shouldDefaultToMorsel() throws Exception
+    public void shouldDefaultToPipelined() throws Exception
     {
-        shouldUseRuntime( Optional.empty(), "morsel" );
+        shouldUseRuntime( Optional.empty(), "pipelined" );
     }
 
     private void shouldUseRuntime( Optional<String> maybeRequestedRuntime, String expectedRuntime ) throws Exception

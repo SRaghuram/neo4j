@@ -6,7 +6,7 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher._
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport, TestConfiguration}
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
 
 class SetAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport {
 
@@ -59,7 +59,7 @@ class SetAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTest
     node should haveProperty("property")
 
     // and
-    val result2 = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n) WHERE n.property = ['foo','bar'] RETURN count(*)")
+    val result2 = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n) WHERE n.property = ['foo','bar'] RETURN count(*)")
     result2.columnAs("count(*)").toList should be(List(1))
   }
 

@@ -50,8 +50,8 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     createLabeledNode(Map("name" -> "Jake", "surname" -> "Soap"), "User")
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n:User) WHERE n.surname = 'Soap' AND n.name = 'Joe' RETURN n",
-      planComparisonStrategy = ComparePlansWithAssertion(plan => {
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n:User) WHERE n.surname = 'Soap' AND n.name = 'Joe' RETURN n",
+                             planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
         plan should includeSomewhere.aPlan("NodeIndexSeek(equality,equality)")
       }))
@@ -68,8 +68,8 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     createLabeledNode(Map("name" -> "Jake", "surname" -> "Soap"), "User")
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n:User) WHERE n.surname = 'Soap' AND n.name = 'Joe' RETURN n",
-      planComparisonStrategy = ComparePlansWithAssertion(plan => {
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n:User) WHERE n.surname = 'Soap' AND n.name = 'Joe' RETURN n",
+                             planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
         plan should includeSomewhere.aPlan("NodeIndexSeek(equality,equality)").containingArgument(":User(name,surname)")
       }))
@@ -118,8 +118,8 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     resampleIndexes()
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n:User) WHERE n.surname = 'Soap' AND n.name = 'Joe' RETURN n",
-      planComparisonStrategy = ComparePlansWithAssertion(plan => {
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n:User) WHERE n.surname = 'Soap' AND n.name = 'Joe' RETURN n",
+                             planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
         plan should includeSomewhere.aPlan("NodeIndexSeek(equality,equality)").containingArgument(":User(name,surname)")
         plan should not(includeSomewhere.aPlan("NodeIndexSeek").containingArgument(":User(name)"))
@@ -146,8 +146,8 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     resampleIndexes()
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n:User) WHERE n.surname = 'Soap' AND n.name = 'Joe' RETURN n",
-      planComparisonStrategy = ComparePlansWithAssertion(plan => {
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n:User) WHERE n.surname = 'Soap' AND n.name = 'Joe' RETURN n",
+                             planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
         plan should includeSomewhere.aPlan("NodeIndexSeek(equality,equality)").containingArgument(":User(name,surname)")
         plan should not(includeSomewhere.aPlan("NodeIndexSeek").containingArgument(":User(name)"))
@@ -207,7 +207,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
       case (predicates, seekString, useScan, shouldFilter, filterArgument, resultSet) =>
         val query = s"MATCH (n:User) WHERE $predicates RETURN n"
 
-        val config = if (filterArgument.isEmpty) Configs.InterpretedAndSlottedAndMorsel else Configs.CachedProperty
+        val config = if (filterArgument.isEmpty) Configs.InterpretedAndSlottedAndPipelined else Configs.CachedProperty
         val result = executeWith(config, query,
           planComparisonStrategy = ComparePlansWithAssertion(plan => {
             if (shouldFilter)
@@ -519,8 +519,8 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val nodes = setUpMultipleIndexesAndSmallGraph()
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n:User) WHERE exists(n.surname) AND n.name = 'Jake' RETURN n",
-      planComparisonStrategy = ComparePlansWithAssertion(plan => {
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n:User) WHERE exists(n.surname) AND n.name = 'Jake' RETURN n",
+                             planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
         plan should includeSomewhere.aPlan("NodeIndexSeek(equality,exists)").containingArgument(":User(name,surname)")
         plan should not(includeSomewhere.aPlan("NodeIndexSeek").containingArgument(":User(name)"))
@@ -536,8 +536,8 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val nodes = setUpMultipleNamedIndexesAndSmallGraph()
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n:User) WHERE exists(n.surname) AND n.name = 'Jake' RETURN n",
-      planComparisonStrategy = ComparePlansWithAssertion(plan => {
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n:User) WHERE exists(n.surname) AND n.name = 'Jake' RETURN n",
+                             planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
         plan should includeSomewhere.aPlan("NodeIndexSeek(equality,exists)").containingArgument(":User(name,surname)")
         plan should not(includeSomewhere.aPlan("NodeIndexSeek").containingArgument(":User(name)"))
@@ -553,8 +553,8 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val nodes = setUpMultipleIndexesAndSmallGraph()
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n:User) WHERE exists(n.surname) AND exists(n.name) RETURN n",
-      planComparisonStrategy = ComparePlansWithAssertion(plan => {
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n:User) WHERE exists(n.surname) AND exists(n.name) RETURN n",
+                             planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
         plan should includeSomewhere.aPlan("NodeIndexScan").containingArgument(":User(name,surname)")
         plan should not(includeSomewhere.aPlan("NodeIndexScan").containingArgument(":User(name)"))
@@ -570,8 +570,8 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val nodes = setUpMultipleNamedIndexesAndSmallGraph()
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n:User) WHERE exists(n.surname) AND exists(n.name) RETURN n",
-      planComparisonStrategy = ComparePlansWithAssertion(plan => {
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n:User) WHERE exists(n.surname) AND exists(n.name) RETURN n",
+                             planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
         plan should includeSomewhere.aPlan("NodeIndexScan").containingArgument(":User(name,surname)")
         plan should not(includeSomewhere.aPlan("NodeIndexScan").containingArgument(":User(name)"))
@@ -589,8 +589,8 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
       n = tx.execute("CREATE (n:Person {name:'Joe', surname:'Soap'}) RETURN n").columnAs("n").next().asInstanceOf[Node]
       tx.execute("MATCH (n:Person) SET n.surname = 'Bloggs'")
     })
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n:Person) where n.name = 'Joe' and n.surname = 'Bloggs' RETURN n",
-      planComparisonStrategy = ComparePlansWithAssertion(plan => {
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n:Person) where n.name = 'Joe' and n.surname = 'Bloggs' RETURN n",
+                             planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
         plan should includeSomewhere.aPlan("NodeIndexSeek(equality,equality)")
       }))
@@ -602,8 +602,8 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     executeWith(Configs.InterpretedAndSlotted, "CREATE (n:Person {name:'Joe', surname:'Soap'})")
     graph.createIndex("Person", "name")
     graph.createIndex("Person", "name", "surname")
-    executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n:Person) WHERE n.name = 'Joe' AND n.surname = 'Soap' RETURN n",
-      planComparisonStrategy = ComparePlansWithAssertion(plan => {
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n:Person) WHERE n.name = 'Joe' AND n.surname = 'Soap' RETURN n",
+                planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
         plan should includeSomewhere.aPlan("NodeIndexSeek(equality,equality)").containingArgument(":Person(name,surname)")
       }))
@@ -620,13 +620,13 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     }
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
-      """MATCH (n:Foo)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
+                             """MATCH (n:Foo)
         |WHERE n.bar IN [0,1,2,3,4,5,6,7,8,9]
         |  AND n.baz IN [0,1,2,3,4,5,6,7,8,9]
         |RETURN n.idx as x
         |ORDER BY x""".stripMargin,
-      planComparisonStrategy = ComparePlansWithAssertion(plan => {
+                             planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
         plan should includeSomewhere.aPlan("NodeIndexSeek(equality,equality)").containingArgument(":Foo(bar,baz)")
       }))
@@ -693,8 +693,8 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
     // Then
     graph should haveIndexes(":L(foo,bar,baz)")
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n:L {foo: 42, bar: 1337, baz: 1980}) RETURN count(n)",
-      planComparisonStrategy = ComparePlansWithAssertion(plan => {
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n:L {foo: 42, bar: 1337, baz: 1980}) RETURN count(n)",
+                             planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
         plan should includeSomewhere.aPlan("NodeIndexSeek(equality,equality,equality)").containingArgument(":L(foo,bar,baz)")
       }))
@@ -711,8 +711,8 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
     // Then
     graph should haveIndexes(":L(foo,bar,baz)")
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n:L {foo: 42, bar: 1337, baz: 1980}) RETURN count(n)",
-      planComparisonStrategy = ComparePlansWithAssertion(plan => {
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n:L {foo: 42, bar: 1337, baz: 1980}) RETURN count(n)",
+                             planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
         plan should includeSomewhere.aPlan("NodeIndexSeek(equality,equality,equality)").containingArgument(":L(foo,bar,baz)")
       }))
@@ -778,8 +778,8 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val n = createLabeledNode(Map("p1" -> 1, "p2" -> 1), "X")
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "match (n:X) where n.p1 = 1 AND n.p2 > 0 return n;",
-      planComparisonStrategy = ComparePlansWithAssertion(plan => {
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "match (n:X) where n.p1 = 1 AND n.p2 > 0 return n;",
+                             planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
         plan should includeSomewhere.aPlan("NodeIndexSeek(equality,range)").containingArgument(":X(p1,p2)")
       }))
@@ -794,8 +794,8 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val n = createLabeledNode(Map("p1" -> 1, "p2" -> 1), "X")
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "match (n:X) where n.p1 = 1 AND n.p2 > 0 return n;",
-      planComparisonStrategy = ComparePlansWithAssertion(plan => {
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "match (n:X) where n.p1 = 1 AND n.p2 > 0 return n;",
+                             planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
         plan should includeSomewhere.aPlan("NodeIndexSeek(equality,range)").containingArgument(":X(p1,p2)")
       }))
@@ -876,7 +876,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
       case (predicates, indexOn, seekString, resultSet, shouldFilter, filterArgument) =>
         // When
         val query = s"MATCH (n:User) WHERE $predicates RETURN n"
-        val config = if (filterArgument.isEmpty) Configs.InterpretedAndSlottedAndMorsel else Configs.CachedProperty
+        val config = if (filterArgument.isEmpty) Configs.InterpretedAndSlottedAndPipelined else Configs.CachedProperty
         val result = executeWith(config, query,
                                  planComparisonStrategy = ComparePlansWithAssertion(plan => {
             if (shouldFilter)
@@ -927,7 +927,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
         // When
         val query = s"MATCH (n:User) WHERE $predicates RETURN n"
-        val config = if (filterStrings.isEmpty) Configs.InterpretedAndSlottedAndMorsel else Configs.CachedProperty
+        val config = if (filterStrings.isEmpty) Configs.InterpretedAndSlottedAndPipelined else Configs.CachedProperty
         val result = try {
           executeWith(config, query,
             planComparisonStrategy = ComparePlansWithAssertion(plan => {
@@ -989,8 +989,8 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     resampleIndexes()
 
     // When
-    val res = executeWith(Configs.InterpretedAndSlottedAndMorsel, query,
-      planComparisonStrategy = ComparePlansWithAssertion(plan => {
+    val res = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
+                          planComparisonStrategy = ComparePlansWithAssertion(plan => {
         // Then
         plan should includeSomewhere.aPlan(s"NodeIndexSeek(range,exists)")
           .containingArgumentRegex(":Person\\(highScore,name\\).*".r).withRows(4)
@@ -1113,13 +1113,13 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     // When
     val query = "MATCH (n:User) WHERE n.name = 'Joe' AND n.city = point({x: 1.2, y: 5.6}) RETURN n"
 
-    val resultNoIndex = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
+    val resultNoIndex = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     graph.createIndex("User", "name", "city")
     resampleIndexes()
 
-    val resultIndex = executeWith(Configs.InterpretedAndSlottedAndMorsel, query,
-      planComparisonStrategy = ComparePlansWithAssertion(plan => {
+    val resultIndex = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
+                                  planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
         plan should includeSomewhere.aPlan("NodeIndexSeek(equality,equality)")
       }))
@@ -1141,7 +1141,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
         |RETURN n
         |""".stripMargin
 
-    val resultNoIndex = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
+    val resultNoIndex = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     graph.createIndex("User", "name", "city", "age")
     resampleIndexes()
@@ -1756,10 +1756,10 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
       createLabeledNode(Map("prop1" -> 45, "prop2" -> "foo"), "Awesome")
     )
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
-      "MATCH (n:Awesome) WHERE n.prop1 > 44 AND exists(n.prop2) RETURN COUNT(n) as c",
-      executeBefore = createMe,
-      planComparisonStrategy = ComparePlansWithAssertion(plan => {
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
+                             "MATCH (n:Awesome) WHERE n.prop1 > 44 AND exists(n.prop2) RETURN COUNT(n) as c",
+                             executeBefore = createMe,
+                             planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
         plan should includeSomewhere.aPlan("NodeIndexSeek(range,exists)")
           .containingArgument(":Awesome(prop1,prop2)")
@@ -1784,10 +1784,10 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
       createLabeledNode(Map("prop1" -> 45, "prop2" -> "foo"), "Awesome")
     )
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
-      "MATCH (n:Awesome) WHERE n.prop1 = 45 AND n.prop2 STARTS WITH 'h' RETURN COUNT(n) as c",
-      executeBefore = createMe,
-      planComparisonStrategy = ComparePlansWithAssertion(plan => {
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
+                             "MATCH (n:Awesome) WHERE n.prop1 = 45 AND n.prop2 STARTS WITH 'h' RETURN COUNT(n) as c",
+                             executeBefore = createMe,
+                             planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
         plan should includeSomewhere.aPlan("NodeIndexSeek(equality,range)")
           .containingArgument(":Awesome(prop1,prop2)")

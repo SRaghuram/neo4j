@@ -312,7 +312,7 @@ object LdbcQueries {
       Map("personId" -> 2, "messageId" -> 13, "personLastName" -> "last2-ᚠさ丵פش",
         "messageContent" -> "[f2Comment1] content", "messageDate" -> 2, "personFirstName" -> "f2"))
 
-    override def expectedToSucceedIn: TestConfiguration = Configs.InterpretedAndSlottedAndMorsel
+    override def expectedToSucceedIn: TestConfiguration = Configs.InterpretedAndSlottedAndPipelined
 
   }
 
@@ -465,7 +465,7 @@ object LdbcQueries {
       Map("friendLastName" -> "last2-ᚠさ丵פش", "friendId" -> 2, "friendFirstName" -> "f2", "yCount" -> 1, "xyCount" -> 2, "xCount" -> 1),
       Map("friendLastName" -> "last6-ᚠさ丵פش", "friendId" -> 6, "friendFirstName" -> "ff6", "yCount" -> 1, "xyCount" -> 2, "xCount" -> 1))
 
-    override def expectedToSucceedIn: TestConfiguration = Configs.InterpretedAndSlottedAndMorsel
+    override def expectedToSucceedIn: TestConfiguration = Configs.InterpretedAndSlottedAndPipelined
 
   }
 
@@ -563,7 +563,7 @@ object LdbcQueries {
       Map("tagName" -> "tag3-ᚠさ丵פش", "postCount" -> 2),
       Map("tagName" -> "tag5-ᚠさ丵פش", "postCount" -> 1))
 
-    override def expectedToSucceedIn: TestConfiguration = Configs.InterpretedAndSlottedAndMorsel
+    override def expectedToSucceedIn: TestConfiguration = Configs.InterpretedAndSlottedAndPipelined
 
   }
 
@@ -669,7 +669,7 @@ object LdbcQueries {
 
     def expectedResult = List(Map("forumName" -> "forum1-ᚠさ丵פش", "postCount" -> 1), Map("forumName" -> "forum3-ᚠさ丵פش", "postCount" -> 1), Map("forumName" -> "forum1-ᚠさ丵פش", "postCount" -> 0))
 
-    override def expectedToSucceedIn: TestConfiguration = Configs.InterpretedAndSlottedAndMorsel
+    override def expectedToSucceedIn: TestConfiguration = Configs.InterpretedAndSlottedAndPipelined
 
   }
 
@@ -979,7 +979,7 @@ object LdbcQueries {
       Map("personId" -> 3, "commentContent" -> "C01", "commentId" -> 10, "personLastName" -> "three-ᚠさ丵פش", "commentCreationDate" -> 1, "personFirstName" -> "friend"),
       Map("personId" -> 3, "commentContent" -> "C11", "commentId" -> 11, "personLastName" -> "three-ᚠさ丵פش", "commentCreationDate" -> 1, "personFirstName" -> "friend"))
 
-    override def expectedToSucceedIn: TestConfiguration = Configs.InterpretedAndSlottedAndMorsel + Configs.Compiled
+    override def expectedToSucceedIn: TestConfiguration = Configs.InterpretedAndSlottedAndPipelined + Configs.Compiled
 
   }
 
@@ -1087,7 +1087,7 @@ object LdbcQueries {
       Map("personId" -> 2, "messageId" -> 311,
         "personLastName" -> "two-ᚠさ丵פش", "messageContent" -> "C311", "personFirstName" -> "friend", "messageCreationDate" -> 4))
 
-    override def expectedToSucceedIn: TestConfiguration = Configs.InterpretedAndSlottedAndMorsel
+    override def expectedToSucceedIn: TestConfiguration = Configs.InterpretedAndSlottedAndPipelined
 
   }
 
@@ -1302,7 +1302,7 @@ object LdbcQueries {
       Map("friendLastName" -> "one one-ᚠさ丵פش", "friendId" -> 11, "companyName" -> "company zero",
         "friendFirstName" -> "friend friend", "workFromYear" -> 3))
 
-    override def expectedToSucceedIn: TestConfiguration = Configs.InterpretedAndSlottedAndMorsel
+    override def expectedToSucceedIn: TestConfiguration = Configs.InterpretedAndSlottedAndPipelined
 
   }
 
@@ -1495,7 +1495,7 @@ object LdbcQueries {
 
     def expectedResult = List(Map("pathLength" -> 5))
 
-    override def expectedToSucceedIn: TestConfiguration = Configs.InterpretedAndSlottedAndMorsel
+    override def expectedToSucceedIn: TestConfiguration = Configs.InterpretedAndSlottedAndPipelined
 
   }
 

@@ -56,9 +56,9 @@ class ExecutionEngineTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     val n1 = createNode(Map("name" -> "Andres"))
     createNode(Map("name" -> "Jim"))
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
-      s"match(node) where node.name =~ 'And.*' return node"
-    )
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
+                             s"match(node) where node.name =~ 'And.*' return node"
+                             )
     result.columnAs[Node]("node").toList should equal(List(n1))
   }
 
@@ -83,7 +83,7 @@ class ExecutionEngineTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     val node1: Node = createNode()
     val node2: Node = createNode()
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, s"match (node) where id(node) in [${node1.getId}, ${node2.getId}] return node")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, s"match (node) where id(node) in [${node1.getId}, ${node2.getId}] return node")
 
     result.columnAs[Node]("node").toList should equal(List(node1, node2))
   }
@@ -133,9 +133,9 @@ class ExecutionEngineTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     val n1 = createNode(Map("name" -> "boy"))
     val n2 = createNode(Map("name" -> "girl"))
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
-      s"match (n) where id(n) in [${n1.getId}, ${n2.getId}] and (n.name = 'boy' OR n.name = 'girl') return n"
-    )
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
+                             s"match (n) where id(n) in [${n1.getId}, ${n2.getId}] and (n.name = 'boy' OR n.name = 'girl') return n"
+                             )
 
     result.columnAs[Node]("n").toList should equal(List(n1, n2))
   }
@@ -248,7 +248,7 @@ class ExecutionEngineTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     createNodes("A")
 
     val query = "match (pA) where id(pA) IN $a return pA"
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query, params = Map("a" -> Seq[Long](0)))
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query, params = Map("a" -> Seq[Long](0)))
 
     graph.withTx( tx => result.toList should equal(List(Map("pA" -> node(tx, "A")))))
   }
@@ -316,7 +316,7 @@ return a""")
     val a = createNode("COL1" -> "A", "COL2" -> "A", "num" -> 1).getId
     val b = createNode("COL1" -> "B", "COL2" -> "B", "num" -> 2).getId
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,"""
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, """
 match (a)
 where id(a) IN [%d, %d]
 return a.COL1, a.COL2, avg(a.num)
@@ -410,7 +410,7 @@ order by a.COL1""".format(a, b))
     createNode("foo" -> 49)
 
     val q = "match (x) where id(x) in [0,1] with x WHERE x.foo = 42 return x"
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, q)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, q)
 
     result.toList should equal(List(Map("x" -> a)))
   }
@@ -619,7 +619,7 @@ order by a.COL1""".format(a, b))
     val c = createNode()
 
     // WHEN
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n) WHERE id(n) in [%d, %d, %d] AND n:foo RETURN n".format(a.getId, b.getId, c.getId))
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n) WHERE id(n) in [%d, %d, %d] AND n:foo RETURN n".format(a.getId, b.getId, c.getId))
 
     // THEN
     result.toList should equal(List(Map("n" -> a), Map("n" -> b)))
@@ -632,7 +632,7 @@ order by a.COL1""".format(a, b))
     val c = createNode()
 
     // WHEN
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n) WHERE id(n) in [0, 1, 2] AND not(n:foo) RETURN n")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n) WHERE id(n) in [0, 1, 2] AND not(n:foo) RETURN n")
 
     // THEN
     result.toList should equal(List(Map("n" -> c)))
@@ -645,7 +645,7 @@ order by a.COL1""".format(a, b))
     val c = createNode()
 
     // WHEN
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (n) WHERE id(n) in [%d, %d, %d] AND n:foo:bar RETURN n"
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n) WHERE id(n) in [%d, %d, %d] AND n:foo:bar RETURN n"
         .format(a.getId, b.getId, c.getId))
 
     // THEN
@@ -771,7 +771,7 @@ order by a.COL1""".format(a, b))
     val n = createNode("n")
     val m = createNode("m")
     relate(n,m,"link")
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "match (n) where id(n) = 0 with coalesce(n,n) as n match (n)--() return n")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "match (n) where id(n) = 0 with coalesce(n,n) as n match (n)--() return n")
 
     result.toList should equal(List(Map("n" -> n)))
   }
@@ -799,7 +799,7 @@ order by a.COL1""".format(a, b))
     val nodeIds = s"[${nodes.map(_.getId).mkString(",")}]"
 
     // when
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, s"MATCH (src)-[r:EDGE]-(dst) WHERE id(src) IN $nodeIds AND id(dst) IN $nodeIds RETURN r")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, s"MATCH (src)-[r:EDGE]-(dst) WHERE id(src) IN $nodeIds AND id(dst) IN $nodeIds RETURN r")
 
     // then
     val relationships: List[Relationship] = result.columnAs[Relationship]("r").toList
@@ -823,7 +823,7 @@ order by a.COL1""".format(a, b))
     // given
 
     // when
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "return 1 > null as A, 1 < null as B, 1 <= null as C, 1 >= null as D, null <= null as E, null >= null as F")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "return 1 > null as A, 1 < null as B, 1 <= null as C, 1 >= null as D, null <= null as E, null >= null as F")
 
     // then
     result.toList should equal(List(Map("A" -> null, "B" -> null, "C" -> null, "D" -> null, "E" -> null, "F" -> null)))
@@ -844,7 +844,7 @@ order by a.COL1""".format(a, b))
   test("should be able to coerce literal collections to predicates") {
     val n = createLabeledNode(Map("coll" -> Array(1, 2, 3), "bool" -> true), "LABEL")
 
-    val foundNode = executeWith(Configs.InterpretedAndSlottedAndMorsel, "match (n:LABEL) where [1,2,3] and n.bool return n").columnAs[Node]("n").next()
+    val foundNode = executeWith(Configs.InterpretedAndSlottedAndPipelined, "match (n:LABEL) where [1,2,3] and n.bool return n").columnAs[Node]("n").next()
 
     foundNode should equal(n)
   }

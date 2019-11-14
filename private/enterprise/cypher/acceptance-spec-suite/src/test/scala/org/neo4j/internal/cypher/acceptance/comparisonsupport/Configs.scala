@@ -5,16 +5,16 @@
  */
 package org.neo4j.internal.cypher.acceptance.comparisonsupport
 
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.Runtimes.{CompiledBytecode, CompiledSource, Interpreted, SlottedWithInterpretedExpressions, SlottedWithCompiledExpressions}
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Runtimes.{CompiledBytecode, CompiledSource, Interpreted, SlottedWithCompiledExpressions, SlottedWithInterpretedExpressions}
 
 object Configs {
 
   // Configurations with runtimes
   def Compiled: TestConfiguration = TestConfiguration(Planners.all, Runtimes(CompiledSource, CompiledBytecode))
 
-  def MorselSingleThreaded: TestConfiguration = TestConfiguration(Planners.all, Runtimes(Runtimes.MorselFused, Runtimes.MorselNonFused))
+  def PipelinedSingleThreaded: TestConfiguration = TestConfiguration(Planners.all, Runtimes(Runtimes.PipelinedFused, Runtimes.PipelinedNonFused))
 
-  def Morsel: TestConfiguration = TestConfiguration(Planners.all, Runtimes(Runtimes.Parallel, Runtimes.MorselFused, Runtimes.MorselNonFused))
+  def Pipelined: TestConfiguration = TestConfiguration(Planners.all, Runtimes(Runtimes.Parallel, Runtimes.PipelinedFused, Runtimes.PipelinedNonFused))
 
   def Parallel: TestConfiguration = TestConfiguration(Planners.all, Runtimes(Runtimes.Parallel))
 
@@ -24,9 +24,9 @@ object Configs {
 
   def InterpretedAndSlotted: TestConfiguration = InterpretedRuntime + SlottedRuntime
 
-  def InterpretedAndSlottedAndMorsel: TestConfiguration = InterpretedRuntime + SlottedRuntime + Morsel
+  def InterpretedAndSlottedAndPipelined: TestConfiguration = InterpretedRuntime + SlottedRuntime + Pipelined
 
-  def MorselSingleThreadedFull: TestConfiguration = TestConfiguration(Planners.all, Runtimes(Runtimes.MorselFull))
+  def PipelinedSingleThreadedFull: TestConfiguration = TestConfiguration(Planners.all, Runtimes(Runtimes.PipelinedFull))
 
   /**
     * These are all configurations that will be executed even if not explicitly expected to succeed or fail.
@@ -46,7 +46,7 @@ object Configs {
     * These experimental configurations will only be executed if you explicitly specify them in the test expectation.
     * I.e. there will be no check to see if they unexpectedly succeed on tests where they were not explicitly requested.
     */
-  def Experimental: TestConfiguration = MorselSingleThreadedFull
+  def Experimental: TestConfiguration = PipelinedSingleThreadedFull
 
   def Empty: TestConfiguration = TestConfiguration.empty
 
@@ -58,26 +58,26 @@ object Configs {
   assert((All /\ Experimental) == Empty, s"No experimental scenario should exist in any other test configuration, but these are: ${All /\ Experimental}")
 
   // The below test-configurations map to operators and constructs that stopped test
-  // from being supported in morsel. When adding support for one of the below in morsel,
+  // from being supported in pipelined. When adding support for one of the below in morsel,
   // adding it here should be a fast way to correct many tests, although some might still
   // fail for lack of some other operator or construct.
-  val NodeById              : TestConfiguration = InterpretedRuntime + SlottedRuntime + Compiled + Morsel
-  val RelationshipById      : TestConfiguration = InterpretedRuntime + SlottedRuntime + Morsel
-  val NodeIndexEndsWithScan : TestConfiguration = InterpretedRuntime + SlottedRuntime + Morsel
-  val CartesianProduct      : TestConfiguration = InterpretedRuntime + SlottedRuntime + Compiled + Morsel
-  val ShortestPath          : TestConfiguration = InterpretedRuntime + SlottedRuntime + Morsel
-  val ShortestPathExpr      : TestConfiguration = InterpretedRuntime + SlottedRuntime + Morsel
-  val OptionalExpand        : TestConfiguration = InterpretedRuntime + SlottedRuntime + Morsel
-  val Optional              : TestConfiguration = InterpretedRuntime + SlottedRuntime + Morsel
-  val CountDistinct         : TestConfiguration = InterpretedRuntime + SlottedRuntime + Morsel
+  val NodeById              : TestConfiguration = InterpretedRuntime + SlottedRuntime + Compiled + Pipelined
+  val RelationshipById      : TestConfiguration = InterpretedRuntime + SlottedRuntime + Pipelined
+  val NodeIndexEndsWithScan : TestConfiguration = InterpretedRuntime + SlottedRuntime + Pipelined
+  val CartesianProduct      : TestConfiguration = InterpretedRuntime + SlottedRuntime + Compiled + Pipelined
+  val ShortestPath          : TestConfiguration = InterpretedRuntime + SlottedRuntime + Pipelined
+  val ShortestPathExpr      : TestConfiguration = InterpretedRuntime + SlottedRuntime + Pipelined
+  val OptionalExpand        : TestConfiguration = InterpretedRuntime + SlottedRuntime + Pipelined
+  val Optional              : TestConfiguration = InterpretedRuntime + SlottedRuntime + Pipelined
+  val CountDistinct         : TestConfiguration = InterpretedRuntime + SlottedRuntime + Pipelined
   val RollUpApply           : TestConfiguration = InterpretedRuntime + SlottedRuntime
-  val VarExpand             : TestConfiguration = InterpretedRuntime + SlottedRuntime + Morsel
-  val ExpandInto            : TestConfiguration = InterpretedRuntime + SlottedRuntime + Compiled + Morsel
+  val VarExpand             : TestConfiguration = InterpretedRuntime + SlottedRuntime + Pipelined
+  val ExpandInto            : TestConfiguration = InterpretedRuntime + SlottedRuntime + Compiled + Pipelined
   val DropResult            : TestConfiguration = InterpretedRuntime + SlottedRuntime
-  val FromCountStore        : TestConfiguration = InterpretedRuntime + SlottedRuntime + Compiled + Morsel
-  val UDF                   : TestConfiguration = InterpretedRuntime + SlottedRuntime + MorselSingleThreaded
-  val CachedProperty        : TestConfiguration = InterpretedRuntime + SlottedRuntime + Morsel
+  val FromCountStore        : TestConfiguration = InterpretedRuntime + SlottedRuntime + Compiled + Pipelined
+  val UDF                   : TestConfiguration = InterpretedRuntime + SlottedRuntime + PipelinedSingleThreaded
+  val CachedProperty        : TestConfiguration = InterpretedRuntime + SlottedRuntime + Pipelined
   val NestedPlan            : TestConfiguration = InterpretedRuntime + SlottedRuntime
   val Create                : TestConfiguration = InterpretedRuntime + SlottedRuntime
-  val ProcedureCall         : TestConfiguration = InterpretedRuntime + SlottedRuntime + MorselSingleThreaded
+  val ProcedureCall         : TestConfiguration = InterpretedRuntime + SlottedRuntime + PipelinedSingleThreaded
 }

@@ -19,9 +19,9 @@ import org.neo4j.internal.cypher.acceptance.comparisonsupport._
 
 class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFileTestSupport with CypherComparisonSupport {
 
-  test("morsel profile should include expected profiling data with fused operators") {
+  test("pipelined profile should include expected profiling data with fused operators") {
     createNode()
-    val result = profileSingle("CYPHER runtime=morsel MATCH (n) RETURN n")
+    val result = profileSingle("CYPHER runtime=pipelined MATCH (n) RETURN n")
     val planString = result.executionPlanDescription().toString
     planString should include("Estimated Rows")
     planString should include("Rows")
@@ -34,9 +34,9 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     planString.toLowerCase should not include "page cache"
   }
 
-  test("morsel profile should include expected profiling data with some fused operators") {
+  test("pipelined profile should include expected profiling data with some fused operators") {
     createNode()
-    val result = profileSingle("CYPHER runtime=morsel MATCH (n) RETURN count(*), n")
+    val result = profileSingle("CYPHER runtime=pipelined MATCH (n) RETURN count(*), n")
     val planString = result.executionPlanDescription().toString
     planString should include("Estimated Rows")
     planString should include("Rows")
@@ -49,11 +49,11 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     planString.toLowerCase should not include "page cache"
   }
 
-  test("morsel profile should include expected profiling data with non-fused operators") {
+  test("pipelined profile should include expected profiling data with non-fused operators") {
     restartWithConfig(Map(GraphDatabaseSettings.cypher_operator_engine -> GraphDatabaseSettings.CypherOperatorEngine.INTERPRETED))
 
     createNode()
-    val result = profileSingle("CYPHER runtime=morsel MATCH (n) RETURN n")
+    val result = profileSingle("CYPHER runtime=pipelined MATCH (n) RETURN n")
     val planString = result.executionPlanDescription().toString
     planString should include("Estimated Rows")
     planString should include("Rows")
@@ -112,7 +112,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
                   includeSomewhere.aPlan("AllNodesScan").withTime()
                 )
             ),
-        expectPlansToFail = Configs.InterpretedAndSlotted + TestConfiguration(Planners.all, Runtimes.MorselFused))
+        expectPlansToFail = Configs.InterpretedAndSlotted + TestConfiguration(Planners.all, Runtimes.PipelinedFused))
     )
   }
 
@@ -133,8 +133,8 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     createLabeledNode("Person")
     createLabeledNode("Animal")
 
-    profile(Configs.InterpretedAndSlottedAndMorsel,
-      "MATCH (n:Person) CALL db.labels() YIELD label RETURN *",
+    profile(Configs.InterpretedAndSlottedAndPipelined,
+            "MATCH (n:Person) CALL db.labels() YIELD label RETURN *",
       plan => {
         plan should includeSomewhere.aPlan("ProcedureCall")
           .withRows(2)
@@ -143,7 +143,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
             .onTopOf(aPlan("NodeByLabelScan").withRows(1).withDBHits(2))
         plan.totalDbHits shouldBe TotalHits(2, uncertain = true)
       }
-    )
+            )
   }
 
   test("MATCH (n) WHERE (n)-[:FOO]->() RETURN *") {
@@ -151,9 +151,9 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     relate(createNode(), createNode(), "FOO")
 
     //WHEN
-    profile(Configs.InterpretedAndSlottedAndMorsel,
-      "MATCH (n) WHERE (n)-[:FOO]->() RETURN *",
-      _ should (
+    profile(Configs.InterpretedAndSlottedAndPipelined,
+            "MATCH (n) WHERE (n)-[:FOO]->() RETURN *",
+            _ should (
         includeSomewhere.aPlan("Filter").withRows(1).withDBHitsBetween(2, 4) and
           includeSomewhere.aPlan("AllNodesScan").withRows(2).withDBHits(3)
         ))
@@ -179,9 +179,9 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     relate(createNode(), createNode(), "FOO")
 
     //WHEN
-    profile(Configs.InterpretedAndSlottedAndMorsel,
-      "MATCH (n) WHERE NOT (n)-[:FOO]->() RETURN *",
-      _ should (
+    profile(Configs.InterpretedAndSlottedAndPipelined,
+            "MATCH (n) WHERE NOT (n)-[:FOO]->() RETURN *",
+            _ should (
         includeSomewhere.aPlan("Filter").withRows(1).withDBHitsBetween(2, 4) and
           includeSomewhere.aPlan("AllNodesScan").withRows(2).withDBHits(3)
         ))
@@ -351,9 +351,9 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
   }
 
   test("should not have a problem profiling empty results") {
-    profile(Configs.InterpretedAndSlottedAndMorsel,
-      "MATCH (n) WHERE (n)-->() RETURN n",
-      _ should includeSomewhere.aPlan("AllNodesScan"))
+    profile(Configs.InterpretedAndSlottedAndPipelined,
+            "MATCH (n) WHERE (n)-->() RETURN n",
+            _ should includeSomewhere.aPlan("AllNodesScan"))
   }
 
   test("reports COST planner when showing plan description") {

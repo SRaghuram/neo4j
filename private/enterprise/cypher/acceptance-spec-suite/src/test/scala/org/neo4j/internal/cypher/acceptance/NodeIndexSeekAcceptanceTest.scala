@@ -266,8 +266,8 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
         |RETURN m""".stripMargin
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query,
-      planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
+                             planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
         planDescription.toString shouldNot include("index")
       }))
 
@@ -439,8 +439,8 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
     resampleIndexes()
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query,
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexSeek")))
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
+                             planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexSeek")))
 
     // Then
     result.toList should equal(List(Map("n" -> node1), Map("n" -> node2)))
@@ -465,8 +465,8 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
     resampleIndexes()
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query,
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexSeekByRange").containingArgument(":L1(prop3) < m.prop4")))
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
+                             planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexSeekByRange").containingArgument(":L1(prop3) < m.prop4")))
 
     // Then
     result.toList should equal(List(Map("n" -> node1), Map("n" -> node2)))

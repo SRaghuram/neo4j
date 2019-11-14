@@ -58,9 +58,9 @@ class NodeIndexScanAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
     graph.createIndex("Person", "name")
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
-      "MATCH (p:Person) WHERE exists(p.name) RETURN p",
-      planComparisonStrategy = ComparePlansWithAssertion( plan => {
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
+                             "MATCH (p:Person) WHERE exists(p.name) RETURN p",
+                             planComparisonStrategy = ComparePlansWithAssertion( plan => {
         //THEN
         plan should includeSomewhere.aPlan("NodeIndexScan")
       }))

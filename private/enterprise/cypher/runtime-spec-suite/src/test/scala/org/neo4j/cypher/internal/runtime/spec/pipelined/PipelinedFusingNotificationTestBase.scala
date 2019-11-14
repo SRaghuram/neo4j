@@ -3,14 +3,14 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package org.neo4j.cypher.internal.runtime.spec.morsel
+package org.neo4j.cypher.internal.runtime.spec.pipelined
 
 import org.neo4j.cypher.internal.compiler.CodeGenerationFailedNotification
 import org.neo4j.cypher.internal.runtime.spec._
 import org.neo4j.cypher.internal.{CypherRuntime, RuntimeContext}
 
-abstract class MorselFusingNotificationTestBase[CONTEXT <: RuntimeContext](edition: Edition[CONTEXT],
-                                                                           runtime: CypherRuntime[CONTEXT]) extends RuntimeTestSuite(edition, runtime) {
+abstract class PipelinedFusingNotificationTestBase[CONTEXT <: RuntimeContext](edition: Edition[CONTEXT],
+                                                                              runtime: CypherRuntime[CONTEXT]) extends RuntimeTestSuite(edition, runtime) {
 
   test("should generate notification if fusing fails") {
     given { nodeGraph(1) }

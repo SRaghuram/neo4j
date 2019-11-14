@@ -13,104 +13,104 @@ import org.neo4j.values.storable.{CoordinateReferenceSystem, Values}
 class SpatialFunctionsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
 
   test("toString on points") {
-    executeWith(Configs.InterpretedAndSlottedAndMorsel, "RETURN toString(point({x:1, y:2})) AS s").toList should equal(List(Map("s" -> "point({x: 1.0, y: 2.0, crs: 'cartesian'})")))
-    executeWith(Configs.InterpretedAndSlottedAndMorsel, "RETURN toString(point({longitude:1, latitude:2, height:3})) AS s").toList should equal(List(Map("s" -> "point({x: 1.0, y: 2.0, z: 3.0, crs: 'wgs-84-3d'})")))
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, "RETURN toString(point({x:1, y:2})) AS s").toList should equal(List(Map("s" -> "point({x: 1.0, y: 2.0, crs: 'cartesian'})")))
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, "RETURN toString(point({longitude:1, latitude:2, height:3})) AS s").toList should equal(List(Map("s" -> "point({x: 1.0, y: 2.0, z: 3.0, crs: 'wgs-84-3d'})")))
   }
 
   test("2D geometric points should validate and possibly wrap coordinates") {
-    executeWith(Configs.InterpretedAndSlottedAndMorsel, "RETURN toString(point({longitude: 180, latitude: 0})) AS s").toList should
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, "RETURN toString(point({longitude: 180, latitude: 0})) AS s").toList should
       equal(List(Map("s" -> "point({x: 180.0, y: 0.0, crs: 'wgs-84'})")))
-    executeWith(Configs.InterpretedAndSlottedAndMorsel, "RETURN toString(point({longitude: -180, latitude: 0})) AS s").toList should
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, "RETURN toString(point({longitude: -180, latitude: 0})) AS s").toList should
       equal(List(Map("s" -> "point({x: -180.0, y: 0.0, crs: 'wgs-84'})")))
-    executeWith(Configs.InterpretedAndSlottedAndMorsel, "RETURN toString(point({longitude: 190, latitude: 0})) AS s").toList should
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, "RETURN toString(point({longitude: 190, latitude: 0})) AS s").toList should
       equal(List(Map("s" -> "point({x: -170.0, y: 0.0, crs: 'wgs-84'})")))
-    executeWith(Configs.InterpretedAndSlottedAndMorsel, "RETURN toString(point({longitude: -190, latitude: 0})) AS s").toList should
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, "RETURN toString(point({longitude: -190, latitude: 0})) AS s").toList should
       equal(List(Map("s" -> "point({x: 170.0, y: 0.0, crs: 'wgs-84'})")))
-    executeWith(Configs.InterpretedAndSlottedAndMorsel, "RETURN toString(point({longitude: 360, latitude: 0})) AS s").toList should
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, "RETURN toString(point({longitude: 360, latitude: 0})) AS s").toList should
       equal(List(Map("s" -> "point({x: 0.0, y: 0.0, crs: 'wgs-84'})")))
-    executeWith(Configs.InterpretedAndSlottedAndMorsel, "RETURN toString(point({longitude: -360, latitude: 0})) AS s").toList should
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, "RETURN toString(point({longitude: -360, latitude: 0})) AS s").toList should
       equal(List(Map("s" -> "point({x: 0.0, y: 0.0, crs: 'wgs-84'})")))
-    executeWith(Configs.InterpretedAndSlottedAndMorsel, "RETURN toString(point({longitude: 540, latitude: 0})) AS s").toList should
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, "RETURN toString(point({longitude: 540, latitude: 0})) AS s").toList should
       equal(List(Map("s" -> "point({x: 180.0, y: 0.0, crs: 'wgs-84'})")))
-    executeWith(Configs.InterpretedAndSlottedAndMorsel, "RETURN toString(point({longitude: -540, latitude: 0})) AS s").toList should
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, "RETURN toString(point({longitude: -540, latitude: 0})) AS s").toList should
       equal(List(Map("s" -> "point({x: -180.0, y: 0.0, crs: 'wgs-84'})")))
-    executeWith(Configs.InterpretedAndSlottedAndMorsel, "RETURN toString(point({longitude: 0, latitude: 90})) AS s").toList should
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, "RETURN toString(point({longitude: 0, latitude: 90})) AS s").toList should
       equal(List(Map("s" -> "point({x: 0.0, y: 90.0, crs: 'wgs-84'})")))
-    executeWith(Configs.InterpretedAndSlottedAndMorsel, "RETURN toString(point({longitude: 0, latitude: -90})) AS s").toList should
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, "RETURN toString(point({longitude: 0, latitude: -90})) AS s").toList should
       equal(List(Map("s" -> "point({x: 0.0, y: -90.0, crs: 'wgs-84'})")))
 
     // no wrapping for y coordinates
-    failWithError(Configs.InterpretedAndSlottedAndMorsel, "RETURN toString(point({longitude: 0, latitude: 91})) AS s", errorType = Seq("InvalidArgumentException"),
-      message = Seq("Cannot create WGS84 point with invalid coordinate: [0.0, 91.0]. Valid range for Y coordinate is [-90, 90]."))
-    failWithError(Configs.InterpretedAndSlottedAndMorsel, "RETURN toString(point({longitude: 0, latitude: -91})) AS s", errorType = Seq("InvalidArgumentException"),
-      message = Seq("Cannot create WGS84 point with invalid coordinate: [0.0, -91.0]. Valid range for Y coordinate is [-90, 90]."))
+    failWithError(Configs.InterpretedAndSlottedAndPipelined, "RETURN toString(point({longitude: 0, latitude: 91})) AS s", errorType = Seq("InvalidArgumentException"),
+                  message = Seq("Cannot create WGS84 point with invalid coordinate: [0.0, 91.0]. Valid range for Y coordinate is [-90, 90]."))
+    failWithError(Configs.InterpretedAndSlottedAndPipelined, "RETURN toString(point({longitude: 0, latitude: -91})) AS s", errorType = Seq("InvalidArgumentException"),
+                  message = Seq("Cannot create WGS84 point with invalid coordinate: [0.0, -91.0]. Valid range for Y coordinate is [-90, 90]."))
   }
 
   test("3D geometric points should validate and possibly wrap coordinates") {
-    executeWith(Configs.InterpretedAndSlottedAndMorsel, "RETURN toString(point({longitude: 180, latitude: 0, height: 9999})) AS s").toList should
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, "RETURN toString(point({longitude: 180, latitude: 0, height: 9999})) AS s").toList should
       equal(List(Map("s" -> "point({x: 180.0, y: 0.0, z: 9999.0, crs: 'wgs-84-3d'})")))
-    executeWith(Configs.InterpretedAndSlottedAndMorsel, "RETURN toString(point({longitude: -180, latitude: 0, height: 9999})) AS s").toList should
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, "RETURN toString(point({longitude: -180, latitude: 0, height: 9999})) AS s").toList should
       equal(List(Map("s" -> "point({x: -180.0, y: 0.0, z: 9999.0, crs: 'wgs-84-3d'})")))
-    executeWith(Configs.InterpretedAndSlottedAndMorsel, "RETURN toString(point({longitude: 190, latitude: 0, height: 9999})) AS s").toList should
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, "RETURN toString(point({longitude: 190, latitude: 0, height: 9999})) AS s").toList should
       equal(List(Map("s" -> "point({x: -170.0, y: 0.0, z: 9999.0, crs: 'wgs-84-3d'})")))
-    executeWith(Configs.InterpretedAndSlottedAndMorsel, "RETURN toString(point({longitude: -190, latitude: 0, height: 9999})) AS s").toList should
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, "RETURN toString(point({longitude: -190, latitude: 0, height: 9999})) AS s").toList should
       equal(List(Map("s" -> "point({x: 170.0, y: 0.0, z: 9999.0, crs: 'wgs-84-3d'})")))
-    executeWith(Configs.InterpretedAndSlottedAndMorsel, "RETURN toString(point({longitude: 360, latitude: 0, height: 9999})) AS s").toList should
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, "RETURN toString(point({longitude: 360, latitude: 0, height: 9999})) AS s").toList should
       equal(List(Map("s" -> "point({x: 0.0, y: 0.0, z: 9999.0, crs: 'wgs-84-3d'})")))
-    executeWith(Configs.InterpretedAndSlottedAndMorsel, "RETURN toString(point({longitude: -360, latitude: 0, height: 9999})) AS s").toList should
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, "RETURN toString(point({longitude: -360, latitude: 0, height: 9999})) AS s").toList should
       equal(List(Map("s" -> "point({x: 0.0, y: 0.0, z: 9999.0, crs: 'wgs-84-3d'})")))
-    executeWith(Configs.InterpretedAndSlottedAndMorsel, "RETURN toString(point({longitude: 540, latitude: 0, height: 9999})) AS s").toList should
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, "RETURN toString(point({longitude: 540, latitude: 0, height: 9999})) AS s").toList should
       equal(List(Map("s" -> "point({x: 180.0, y: 0.0, z: 9999.0, crs: 'wgs-84-3d'})")))
-    executeWith(Configs.InterpretedAndSlottedAndMorsel, "RETURN toString(point({longitude: -540, latitude: 0, height: 9999})) AS s").toList should
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, "RETURN toString(point({longitude: -540, latitude: 0, height: 9999})) AS s").toList should
       equal(List(Map("s" -> "point({x: -180.0, y: 0.0, z: 9999.0, crs: 'wgs-84-3d'})")))
-    executeWith(Configs.InterpretedAndSlottedAndMorsel, "RETURN toString(point({longitude: 0, latitude: 90, height: 9999})) AS s").toList should
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, "RETURN toString(point({longitude: 0, latitude: 90, height: 9999})) AS s").toList should
       equal(List(Map("s" -> "point({x: 0.0, y: 90.0, z: 9999.0, crs: 'wgs-84-3d'})")))
-    executeWith(Configs.InterpretedAndSlottedAndMorsel, "RETURN toString(point({longitude: 0, latitude: -90, height: 9999})) AS s").toList should
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, "RETURN toString(point({longitude: 0, latitude: -90, height: 9999})) AS s").toList should
       equal(List(Map("s" -> "point({x: 0.0, y: -90.0, z: 9999.0, crs: 'wgs-84-3d'})")))
 
     // no wrapping for y coordinates
-    failWithError(Configs.InterpretedAndSlottedAndMorsel,
-      query = "RETURN toString(point({longitude: 0, latitude: 91, height: 9999})) AS s",
-      errorType = Seq("InvalidArgumentException"),
-      message = Seq("Cannot create WGS84 point with invalid coordinate: [0.0, 91.0, 9999.0]. Valid range for Y coordinate is [-90, 90]."))
-    failWithError(Configs.InterpretedAndSlottedAndMorsel,
-      query = "RETURN toString(point({longitude: 0, latitude: -91, height: 9999})) AS s",
-      errorType = Seq("InvalidArgumentException"),
-      message = Seq("Cannot create WGS84 point with invalid coordinate: [0.0, -91.0, 9999.0]. Valid range for Y coordinate is [-90, 90]."))
+    failWithError(Configs.InterpretedAndSlottedAndPipelined,
+                  query = "RETURN toString(point({longitude: 0, latitude: 91, height: 9999})) AS s",
+                  errorType = Seq("InvalidArgumentException"),
+                  message = Seq("Cannot create WGS84 point with invalid coordinate: [0.0, 91.0, 9999.0]. Valid range for Y coordinate is [-90, 90]."))
+    failWithError(Configs.InterpretedAndSlottedAndPipelined,
+                  query = "RETURN toString(point({longitude: 0, latitude: -91, height: 9999})) AS s",
+                  errorType = Seq("InvalidArgumentException"),
+                  message = Seq("Cannot create WGS84 point with invalid coordinate: [0.0, -91.0, 9999.0]. Valid range for Y coordinate is [-90, 90]."))
   }
 
   test("point function should work with literal map") {
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "RETURN point({latitude: 12.78, longitude: 56.7}) as point",
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)))
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "RETURN point({latitude: 12.78, longitude: 56.7}) as point",
+                             planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)))
 
     result.toList should equal(List(Map("point" -> Values.pointValue(CoordinateReferenceSystem.WGS84, 56.7, 12.78))))
   }
 
   test("point function should work with literal map and cartesian coordinates") {
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "RETURN point({x: 2.3, y: 4.5, crs: 'cartesian'}) as point",
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)))
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "RETURN point({x: 2.3, y: 4.5, crs: 'cartesian'}) as point",
+                             planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)))
 
     result.toList should equal(List(Map("point" -> Values.pointValue(CoordinateReferenceSystem.Cartesian, 2.3, 4.5))))
   }
 
   test("point function should work with literal map and 3D cartesian coordinates") {
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel,
-      "RETURN point({x: 2.3, y: 4.5, z: 6.7, crs: 'cartesian-3D'}) as point",
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)))
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
+                             "RETURN point({x: 2.3, y: 4.5, z: 6.7, crs: 'cartesian-3D'}) as point",
+                             planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)))
 
     result.toList should equal(List(Map("point" -> Values.pointValue(CoordinateReferenceSystem.Cartesian_3D, 2.3, 4.5, 6.7))))
   }
 
   test("point function should work with literal map and srid") {
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "RETURN point({x: 2.3, y: 4.5, srid: 4326}) as point",
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)))
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "RETURN point({x: 2.3, y: 4.5, srid: 4326}) as point",
+                             planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)))
 
     result.toList should equal(List(Map("point" -> Values.pointValue(CoordinateReferenceSystem.WGS84, 2.3, 4.5))))
   }
 
   test("point function should work with literal map and geographic coordinates") {
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "RETURN point({longitude: 2.3, latitude: 4.5, crs: 'WGS-84'}) as point",
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)))
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "RETURN point({longitude: 2.3, latitude: 4.5, crs: 'WGS-84'}) as point",
+                             planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)))
 
     result.toList should equal(List(Map("point" -> Values.pointValue(CoordinateReferenceSystem.WGS84, 2.3, 4.5))))
   }
@@ -131,125 +131,125 @@ class SpatialFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cypher
 
   test("point function should not work with NaN or infinity") {
     for(invalidDouble <- Seq(Double.NaN, Double.PositiveInfinity, Double.NegativeInfinity)) {
-      failWithError(Configs.InterpretedAndSlottedAndMorsel,
-        "RETURN point({x: 2.3, y: $v}) as point", List("Cannot create a point with non-finite coordinate values"), params = Map(("v", invalidDouble)))
+      failWithError(Configs.InterpretedAndSlottedAndPipelined,
+                    "RETURN point({x: 2.3, y: $v}) as point", List("Cannot create a point with non-finite coordinate values"), params = Map(("v", invalidDouble)))
     }
   }
 
   test("point function should not work with literal map and incorrect cartesian CRS") {
-    failWithError(Configs.InterpretedAndSlottedAndMorsel,
-      "RETURN point({x: 2.3, y: 4.5, crs: 'cart'}) as point", List("'cart' is not a supported coordinate reference system for points",
+    failWithError(Configs.InterpretedAndSlottedAndPipelined,
+                  "RETURN point({x: 2.3, y: 4.5, crs: 'cart'}) as point", List("'cart' is not a supported coordinate reference system for points",
       "Unknown coordinate reference system: cart"))
   }
 
   test("point function should not work with literal map of 2 coordinates and incorrect cartesian-3D crs") {
-    failWithError(Configs.InterpretedAndSlottedAndMorsel, "RETURN point({x: 2.3, y: 4.5, crs: 'cartesian-3D'}) as point", List(
+    failWithError(Configs.InterpretedAndSlottedAndPipelined, "RETURN point({x: 2.3, y: 4.5, crs: 'cartesian-3D'}) as point", List(
       "'cartesian-3D' is not a supported coordinate reference system for points",
       "Cannot create point with 3D coordinate reference system and 2 coordinates. Please consider using equivalent 2D coordinate reference system"))
   }
 
   test("point function should not work with literal map of 3 coordinates and incorrect cartesian crs") {
-    failWithError(Configs.InterpretedAndSlottedAndMorsel,
-      "RETURN point({x: 2.3, y: 4.5, z: 6.7, crs: 'cartesian'}) as point",
-      List("Cannot create point with 2D coordinate reference system and 3 coordinates. Please consider using equivalent 3D coordinate reference system"))
+    failWithError(Configs.InterpretedAndSlottedAndPipelined,
+                  "RETURN point({x: 2.3, y: 4.5, z: 6.7, crs: 'cartesian'}) as point",
+                  List("Cannot create point with 2D coordinate reference system and 3 coordinates. Please consider using equivalent 3D coordinate reference system"))
   }
 
   test("point function should not work with literal map and incorrect geographic CRS") {
-    failWithError(Configs.InterpretedAndSlottedAndMorsel, "RETURN point({x: 2.3, y: 4.5, crs: 'WGS84'}) as point",
-      List("'WGS84' is not a supported coordinate reference system for points", "Unknown coordinate reference system: WGS84"))
+    failWithError(Configs.InterpretedAndSlottedAndPipelined, "RETURN point({x: 2.3, y: 4.5, crs: 'WGS84'}) as point",
+                  List("'WGS84' is not a supported coordinate reference system for points", "Unknown coordinate reference system: WGS84"))
   }
 
   test("point function should not work with literal map of 2 coordinates and incorrect WGS84-3D crs") {
-    failWithError(Configs.InterpretedAndSlottedAndMorsel, "RETURN point({x: 2.3, y: 4.5, crs: 'WGS-84-3D'}) as point", List(
+    failWithError(Configs.InterpretedAndSlottedAndPipelined, "RETURN point({x: 2.3, y: 4.5, crs: 'WGS-84-3D'}) as point", List(
       "'WGS-84-3D' is not a supported coordinate reference system for points",
       "Cannot create point with 3D coordinate reference system and 2 coordinates. Please consider using equivalent 2D coordinate reference system"))
   }
 
   test("point function should not work with literal map of 3 coordinates and incorrect WGS84 crs") {
-    failWithError(Configs.InterpretedAndSlottedAndMorsel,
-      "RETURN point({x: 2.3, y: 4.5, z: 6.7, crs: 'wgs-84'}) as point", List(
+    failWithError(Configs.InterpretedAndSlottedAndPipelined,
+                  "RETURN point({x: 2.3, y: 4.5, z: 6.7, crs: 'wgs-84'}) as point", List(
       "Cannot create point with 2D coordinate reference system and 3 coordinates. Please consider using equivalent 3D coordinate reference system"))
   }
 
   test("point function should work with integer arguments") {
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "RETURN point({x: 2, y: 4}) as point",
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)))
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "RETURN point({x: 2, y: 4}) as point",
+                             planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)))
 
     result.toList should equal(List(Map("point" -> Values.pointValue(CoordinateReferenceSystem.Cartesian, 2, 4))))
   }
 
   // We can un-ignore this if/when we re-enable strict map checks in PointFunction.scala
   ignore("point function should throw on unrecognized map entry") {
-    failWithError(Configs.InterpretedAndSlottedAndMorsel, "RETURN point({x: 2, y:3, a: 4}) as point", Seq("Unknown key 'a' for creating new point"))
+    failWithError(Configs.InterpretedAndSlottedAndPipelined, "RETURN point({x: 2, y:3, a: 4}) as point", Seq("Unknown key 'a' for creating new point"))
   }
 
   test("should fail properly if missing cartesian coordinates") {
-    failWithError(Configs.InterpretedAndSlottedAndMorsel, "RETURN point($params) as point",
-      List("A cartesian point must contain 'x' and 'y'",
+    failWithError(Configs.InterpretedAndSlottedAndPipelined, "RETURN point($params) as point",
+                  List("A cartesian point must contain 'x' and 'y'",
            "A point must contain either 'x' and 'y' or 'latitude' and 'longitude'" /* in version < 3.4 */),
-      params = Map("params" -> Map("y" -> 1.0, "crs" -> "cartesian")))
+                  params = Map("params" -> Map("y" -> 1.0, "crs" -> "cartesian")))
   }
 
   test("should fail properly if missing geographic longitude") {
-    failWithError(Configs.InterpretedAndSlottedAndMorsel, "RETURN point($params) as point",
-      List("A wgs-84 point must contain 'latitude' and 'longitude'",
+    failWithError(Configs.InterpretedAndSlottedAndPipelined, "RETURN point($params) as point",
+                  List("A wgs-84 point must contain 'latitude' and 'longitude'",
            "A point must contain either 'x' and 'y' or 'latitude' and 'longitude'" /* in version < 3.4 */),
-      params = Map("params" -> Map("latitude" -> 1.0, "crs" -> "WGS-84")))
+                  params = Map("params" -> Map("latitude" -> 1.0, "crs" -> "WGS-84")))
   }
 
   test("should fail properly if missing geographic latitude") {
-    failWithError(Configs.InterpretedAndSlottedAndMorsel, "RETURN point($params) as point",
-      List("A wgs-84 point must contain 'latitude' and 'longitude'",
+    failWithError(Configs.InterpretedAndSlottedAndPipelined, "RETURN point($params) as point",
+                  List("A wgs-84 point must contain 'latitude' and 'longitude'",
            "A point must contain either 'x' and 'y' or 'latitude' and 'longitude'" /* in version < 3.4 */),
-      params = Map("params" -> Map("longitude" -> 1.0, "crs" -> "WGS-84")))
+                  params = Map("params" -> Map("longitude" -> 1.0, "crs" -> "WGS-84")))
   }
 
   test("should fail properly if unknown coordinate system") {
-    failWithError(Configs.InterpretedAndSlottedAndMorsel, "RETURN point($params) as point", List("'WGS-1337' is not a supported coordinate reference system for points",
-      "Unknown coordinate reference system: WGS-1337"),
-      params = Map("params" -> Map("x" -> 1, "y" -> 2, "crs" -> "WGS-1337")))
+    failWithError(Configs.InterpretedAndSlottedAndPipelined, "RETURN point($params) as point", List("'WGS-1337' is not a supported coordinate reference system for points",
+                                                                                                    "Unknown coordinate reference system: WGS-1337"),
+                  params = Map("params" -> Map("x" -> 1, "y" -> 2, "crs" -> "WGS-1337")))
   }
 
   test("should default to Cartesian if missing cartesian CRS") {
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "RETURN point({x: 2.3, y: 4.5}) as point",
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)))
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "RETURN point({x: 2.3, y: 4.5}) as point",
+                             planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)))
 
     result.toList should equal(List(Map("point" -> Values.pointValue(CoordinateReferenceSystem.Cartesian, 2.3, 4.5))))
   }
 
   test("point function with invalid coordinate types should give reasonable error") {
-    failWithError(Configs.InterpretedAndSlottedAndMorsel,
-      "return point({x: 'apa', y: 0, crs: 'cartesian'})", List("String is not a valid coordinate type.", "Cannot assign"))
+    failWithError(Configs.InterpretedAndSlottedAndPipelined,
+                  "return point({x: 'apa', y: 0, crs: 'cartesian'})", List("String is not a valid coordinate type.", "Cannot assign"))
   }
 
   test("point function with invalid crs types should give reasonable error") {
-    failWithError(Configs.InterpretedAndSlottedAndMorsel,
-      "return point({x: 0, y: 0, crs: 5})", List("java.lang.Long cannot be cast to", "java.lang.Long incompatible with", "Cannot assign"))
+    failWithError(Configs.InterpretedAndSlottedAndPipelined,
+                  "return point({x: 0, y: 0, crs: 5})", List("java.lang.Long cannot be cast to", "java.lang.Long incompatible with", "Cannot assign"))
   }
 
   test("should default to WGS84 if missing geographic CRS") {
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "RETURN point({longitude: 2.3, latitude: 4.5}) as point",
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)))
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "RETURN point({longitude: 2.3, latitude: 4.5}) as point",
+                             planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)))
 
     result.toList should equal(List(Map("point" -> Values.pointValue(CoordinateReferenceSystem.WGS84, 2.3, 4.5))))
   }
 
   test("should allow Geographic CRS with x/y coordinates") {
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "RETURN point({x: 2.3, y: 4.5, crs: 'WGS-84'}) as point",
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)))
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "RETURN point({x: 2.3, y: 4.5, crs: 'WGS-84'}) as point",
+                             planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)))
 
     result.toList should equal(List(Map("point" -> Values.pointValue(CoordinateReferenceSystem.WGS84, 2.3, 4.5))))
   }
 
   test("should not allow Cartesian CRS with latitude/longitude coordinates") {
-    failWithError(Configs.InterpretedAndSlottedAndMorsel, "RETURN point({longitude: 2.3, latitude: 4.5, crs: 'cartesian'}) as point",
-      List("'cartesian' is not a supported coordinate reference system for geographic points",
+    failWithError(Configs.InterpretedAndSlottedAndPipelined, "RETURN point({longitude: 2.3, latitude: 4.5, crs: 'cartesian'}) as point",
+                  List("'cartesian' is not a supported coordinate reference system for geographic points",
         "Geographic points does not support coordinate reference system: cartesian"))
   }
 
   test("point function should work with previous map") {
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "WITH {latitude: 12.78, longitude: 56.7} as data RETURN point(data) as point",
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)))
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "WITH {latitude: 12.78, longitude: 56.7} as data RETURN point(data) as point",
+                             planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)))
 
     result.toList should equal(List(Map("point" -> Values.pointValue(CoordinateReferenceSystem.WGS84, 56.7, 12.78))))
   }
@@ -259,8 +259,8 @@ class SpatialFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cypher
     createLabeledNode(Map("latitude" -> 12.78, "longitude" -> 56.7), "Place")
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (p:Place) RETURN point({latitude: p.latitude, longitude: p.longitude}) as point",
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)))
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (p:Place) RETURN point({latitude: p.latitude, longitude: p.longitude}) as point",
+                             planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)))
 
     // Then
     result.toList should equal(List(Map("point" -> Values.pointValue(CoordinateReferenceSystem.WGS84, 56.7, 12.78))))
@@ -271,8 +271,8 @@ class SpatialFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cypher
     relate(createNode(), createNode(), "PASS_THROUGH", Map("latitude" -> 12.78, "longitude" -> 56.7))
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH ()-[r:PASS_THROUGH]->() RETURN point({latitude: r.latitude, longitude: r.longitude}) as point",
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)))
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH ()-[r:PASS_THROUGH]->() RETURN point({latitude: r.latitude, longitude: r.longitude}) as point",
+                             planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)))
 
     // Then
     result.toList should equal(List(Map("point" -> Values.pointValue(CoordinateReferenceSystem.WGS84, 56.7, 12.78))))
@@ -283,29 +283,29 @@ class SpatialFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cypher
     createLabeledNode(Map("latitude" -> 12.78, "longitude" -> 56.7), "Place")
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "MATCH (p:Place) RETURN point(p) as point",
-      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)))
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (p:Place) RETURN point(p) as point",
+                             planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)))
 
     // Then
     result.toList should equal(List(Map("point" -> Values.pointValue(CoordinateReferenceSystem.WGS84, 56.7, 12.78))))
   }
 
   test("point function should work with null input") {
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "RETURN point(null) as p")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "RETURN point(null) as p")
     result.toList should equal(List(Map("p" -> null)))
   }
 
   test("point function should return null if the map that backs it up contains a null") {
-    var result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "RETURN point({latitude:null, longitude:3}) as pt;")
+    var result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "RETURN point({latitude:null, longitude:3}) as pt;")
     result.toList should equal(List(Map("pt" -> null)))
 
-    result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "RETURN point({latitude:3, longitude:null}) as pt;")
+    result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "RETURN point({latitude:3, longitude:null}) as pt;")
     result.toList should equal(List(Map("pt" -> null)))
 
-    result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "RETURN point({x:null, y:3}) as pt;")
+    result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "RETURN point({x:null, y:3}) as pt;")
     result.toList should equal(List(Map("pt" -> null)))
 
-    result = executeWith(Configs.InterpretedAndSlottedAndMorsel, "RETURN point({x:3, y:null}) as pt;")
+    result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "RETURN point({x:3, y:null}) as pt;")
     result.toList should equal(List(Map("pt" -> null)))
   }
 
@@ -477,7 +477,7 @@ class SpatialFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cypher
          |RETURN a > b, a < b, a >= b, a <= b
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query).toList
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query).toList
     withClue(s"Comparing '$a' to '$b'") {
       result should equal(List(Map("a > b" -> a_GT_b, "a < b" -> a_LT_b, "a >= b" -> a_GTEQ_b, "a <= b" -> a_LTEQ_b)))
     }

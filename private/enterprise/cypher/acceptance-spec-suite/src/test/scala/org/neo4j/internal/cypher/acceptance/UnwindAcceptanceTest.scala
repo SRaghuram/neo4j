@@ -16,21 +16,21 @@ class UnwindAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
 
   test("should unwind scalar integer") {
     val query = "UNWIND 7 AS x RETURN x"
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     result.toList should equal(List(Map("x" -> 7)))
   }
 
   test("should unwind scalar string") {
     val query = "UNWIND 'this string' AS x RETURN x"
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     result.toList should equal(List(Map("x" -> "this string")))
   }
 
   test("should unwind scalar boolean") {
     val query = "UNWIND false AS x RETURN x"
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     result.toList should equal(List(Map("x" -> false)))
   }
@@ -83,7 +83,7 @@ class UnwindAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         | RETURN x
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
     result.toList should equal(List(Map("x" -> n)))
   }
 
@@ -124,7 +124,7 @@ class UnwindAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
         | RETURN x
       """.stripMargin
 
-    val result = executeWith(Configs.InterpretedAndSlottedAndMorsel, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
     result.toList should equal(List(Map("x" -> r)))
   }
 }
