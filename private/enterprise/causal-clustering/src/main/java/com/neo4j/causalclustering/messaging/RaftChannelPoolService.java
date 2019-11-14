@@ -23,7 +23,7 @@ public class RaftChannelPoolService extends ChannelPoolService
             ClientChannelInitializer channelInitializer )
     {
         super( bootstrapConfiguration, scheduler, Group.RAFT_CLIENT,
-                new PipelineInstaller( logProvider.getLog( RaftChannelPoolService.class ), channelInitializer ) );
+                new PipelineInstaller( logProvider.getLog( RaftChannelPoolService.class ), channelInitializer ), OneMultiplexedChannel::new );
     }
 
     private static class PipelineInstaller extends AbstractChannelPoolHandler

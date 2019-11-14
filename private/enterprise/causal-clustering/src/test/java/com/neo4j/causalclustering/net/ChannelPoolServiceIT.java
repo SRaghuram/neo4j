@@ -17,6 +17,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.pool.ChannelPoolHandler;
+import io.netty.channel.pool.SimpleChannelPool;
 import io.netty.channel.socket.ServerSocketChannel;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
@@ -70,7 +71,7 @@ class ChannelPoolServiceIT
         poolEventsMonitor = new PoolEventsMonitor();
         poolScheduler = new ThreadPoolJobScheduler();
         pool = new ChannelPoolService( BootstrapConfiguration.clientConfig( Config.defaults() ), poolScheduler, Group.RAFT_CLIENT,
-                poolEventsMonitor );
+                poolEventsMonitor, SimpleChannelPool::new );
 
         startServers();
 

@@ -11,7 +11,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.channel.pool.ChannelPoolHandler;
-import io.netty.channel.pool.SimpleChannelPool;
 import io.netty.channel.socket.SocketChannel;
 
 import java.util.concurrent.CompletableFuture;
@@ -43,16 +42,18 @@ public class ChannelPoolService implements Lifecycle
     private final ReentrantReadWriteLock.ReadLock sharedService = lock.readLock();
     private CompletableFuture<PooledChannel> endOfLife;
 
-    private SimpleChannelPoolMap poolMap; // used as "is stopped" flag, stopped when null
+    private TrackingChannelPoolMap poolMap; // used as "is stopped" flag, stopped when null
+    private ChannelPoolFactory poolFactory;
     private EventLoopGroup eventLoopGroup;
 
     public ChannelPoolService( BootstrapConfiguration<? extends SocketChannel> bootstrapConfiguration, JobScheduler scheduler, Group group,
-            ChannelPoolHandler channelPoolHandler )
+            ChannelPoolHandler channelPoolHandler, ChannelPoolFactory poolFactory )
     {
         this.bootstrapConfiguration = bootstrapConfiguration;
         this.scheduler = scheduler;
         this.group = group;
         this.poolHandler = channelPoolHandler;
+        this.poolFactory = poolFactory;
     }
 
     public CompletableFuture<PooledChannel> acquire( SocketAddress address )
@@ -65,7 +66,7 @@ public class ChannelPoolService implements Lifecycle
                 return failedFuture( new IllegalStateException( "Channel pool service is not in a started state." ) );
             }
 
-            SimpleChannelPool pool = poolMap.get( address );
+            ChannelPool pool = poolMap.get( address );
             return toCompletableFuture( pool.acquire() )
                     .thenCompose( channel -> createPooledChannel( channel, pool ) )
                     .applyToEither( endOfLife, Function.identity() );
@@ -91,7 +92,7 @@ public class ChannelPoolService implements Lifecycle
             endOfLife = new CompletableFuture<>();
             eventLoopGroup = bootstrapConfiguration.eventLoopGroup( scheduler.executor( group ) );
             Bootstrap baseBootstrap = new Bootstrap().group( eventLoopGroup ).channel( bootstrapConfiguration.channelClass() );
-            poolMap = new SimpleChannelPoolMap( baseBootstrap, poolHandler );
+            poolMap = new TrackingChannelPoolMap( baseBootstrap, poolHandler, poolFactory );
         }
         finally
         {

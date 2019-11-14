@@ -10,6 +10,7 @@ import com.neo4j.causalclustering.net.ChannelPoolService;
 import com.neo4j.causalclustering.protocol.init.ClientChannelInitializer;
 import io.netty.channel.Channel;
 import io.netty.channel.pool.AbstractChannelPoolHandler;
+import io.netty.channel.pool.SimpleChannelPool;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.util.AttributeKey;
 
@@ -26,7 +27,8 @@ class CatchupChannelPoolService extends ChannelPoolService
     CatchupChannelPoolService( BootstrapConfiguration<? extends SocketChannel> bootstrapConfiguration, JobScheduler jobScheduler, Clock clock,
             Function<CatchupResponseHandler,ClientChannelInitializer> initializerFactory )
     {
-        super( bootstrapConfiguration, jobScheduler, Group.CATCHUP_CLIENT, new TrackingResponsePoolHandler( initializerFactory, clock ) );
+        super( bootstrapConfiguration, jobScheduler, Group.CATCHUP_CLIENT, new TrackingResponsePoolHandler( initializerFactory, clock ),
+                SimpleChannelPool::new );
     }
 
     private static class TrackingResponsePoolHandler extends AbstractChannelPoolHandler

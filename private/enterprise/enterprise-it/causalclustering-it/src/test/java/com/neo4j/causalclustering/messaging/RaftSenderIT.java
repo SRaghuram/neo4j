@@ -13,6 +13,7 @@ import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.RaftIdFactory;
 import com.neo4j.causalclustering.net.BootstrapConfiguration;
+import com.neo4j.causalclustering.net.PooledChannel;
 import com.neo4j.causalclustering.net.Server;
 import com.neo4j.causalclustering.protocol.ModifierProtocolInstaller;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
@@ -29,11 +30,13 @@ import com.neo4j.causalclustering.protocol.handshake.ModifierSupportedProtocols;
 import com.neo4j.causalclustering.protocol.init.ClientChannelInitializer;
 import com.neo4j.causalclustering.protocol.init.ServerChannelInitializer;
 import com.neo4j.causalclustering.protocol.modifier.ModifierProtocols;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
@@ -42,27 +45,39 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeoutException;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.LifeExtension;
 import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocolCategory.RAFT;
 import static java.util.Collections.emptyList;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toList;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.function.ThrowingAction.executeAll;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 
+@ExtendWith( LifeExtension.class )
 class RaftSenderIT
 {
+    @Inject
+    private LifeSupport life;
+
     private final LogProvider logProvider = NullLogProvider.getInstance();
 
     private final ApplicationSupportedProtocols supportedApplicationProtocol = new ApplicationSupportedProtocols( RAFT,
@@ -110,6 +125,39 @@ class RaftSenderIT
         shouldSendAndReceive( clientProtocol, false );
     }
 
+    @ParameterizedTest
+    @EnumSource( value = ApplicationProtocols.class, mode = EnumSource.Mode.MATCH_ALL, names = "RAFT_.+" )
+    void shouldReturnSameChannelForMultipleRequests( ApplicationProtocols clientProtocol ) throws InterruptedException, ExecutionException, TimeoutException
+    {
+        Server server = life.add( raftServer( new ChannelInboundHandlerAdapter() ) );
+        RaftChannelPoolService clientPool = life.add( raftPoolService( clientProtocol ) );
+
+        Channel channelA = clientPool.acquire( server.address() ).get( 10, SECONDS ).channel();
+        Channel channelB = clientPool.acquire( server.address() ).get( 10, SECONDS ).channel();
+        assertEquals( channelA, channelB );
+
+        Channel channelC = clientPool.acquire( server.address() ).get( 10, SECONDS ).channel();
+        assertEquals( channelB, channelC );
+    }
+
+    @ParameterizedTest
+    @EnumSource( value = ApplicationProtocols.class, mode = EnumSource.Mode.MATCH_ALL, names = "RAFT_.+" )
+    void shouldReturnNewChannelAfterClose( ApplicationProtocols clientProtocol ) throws InterruptedException, ExecutionException, TimeoutException
+    {
+        Server server = life.add( raftServer( new ChannelInboundHandlerAdapter() ) );
+        RaftChannelPoolService clientPool = life.add( raftPoolService( clientProtocol ) );
+
+        Channel channelA = clientPool.acquire( server.address() ).get( 10, SECONDS ).channel();
+        channelA.close().sync();
+
+        Channel channelB = clientPool.acquire( server.address() ).get( 10, SECONDS ).channel();
+        assertNotEquals( channelA, channelB );
+        channelB.close().sync();
+
+        Channel channelC = clientPool.acquire( server.address() ).get( 10, SECONDS ).channel();
+        assertNotEquals( channelB, channelC );
+    }
+
     private void shouldSendAndReceive( ApplicationProtocols clientProtocol, boolean blocking ) throws Throwable
     {
         // given: raft server handler
@@ -122,12 +170,10 @@ class RaftSenderIT
                 messageReceived.release();
             }
         };
-        Server raftServer = raftServer( nettyHandler );
-        raftServer.start();
+        Server raftServer = life.add( raftServer( nettyHandler ) );
 
         // given: raft messaging service
-        RaftChannelPoolService raftPoolService = raftPoolService( clientProtocol );
-        raftPoolService.start();
+        RaftChannelPoolService raftPoolService = life.add( raftPoolService( clientProtocol ) );
 
         RaftSender sender = new RaftSender( logProvider, raftPoolService );
 
@@ -143,10 +189,6 @@ class RaftSenderIT
 
         // then
         assertTrue( messageReceived.tryAcquire( 15, SECONDS ) );
-
-        // cleanup
-        raftPoolService.stop();
-        raftServer.stop();
     }
 
     private Server raftServer( ChannelInboundHandler nettyHandler )
