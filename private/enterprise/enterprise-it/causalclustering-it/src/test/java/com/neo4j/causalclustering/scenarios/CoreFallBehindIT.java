@@ -55,7 +55,6 @@ class CoreFallBehindIT
     private final ClusterConfig clusterConfig = ClusterConfig
             .clusterConfig()
             .withNumberOfCoreMembers( 3 )
-            .withSharedCoreParam( minimum_core_cluster_size_at_formation, "2" )
             .withSharedCoreParam( minimum_core_cluster_size_at_runtime, "2" )
             .withSharedCoreParam( state_machine_flush_window_size, "1" )
             .withSharedCoreParam( raft_log_pruning_strategy, "keep_none" )
@@ -97,6 +96,7 @@ class CoreFallBehindIT
     @Test
     void shouldReconcileCopiedStore() throws Exception
     {
+        assertDatabaseEventuallyStarted( SYSTEM_DATABASE_NAME, cluster );
         // given a follower that soon will be made to fall behind
         CoreClusterMember staleFollower = cluster.getMemberWithAnyRole( SYSTEM_DATABASE_NAME, Role.FOLLOWER );
 
