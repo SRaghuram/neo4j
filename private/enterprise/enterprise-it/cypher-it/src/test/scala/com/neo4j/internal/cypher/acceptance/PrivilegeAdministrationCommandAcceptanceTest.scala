@@ -35,6 +35,9 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
       "DENY TRAVERSE ON GRAPH * NODES * TO custom" -> 1,
       "REVOKE TRAVERSE ON GRAPH * NODES * FROM custom" -> 2,
 
+      "GRANT TRAVERSE ON GRAPH * NODES * TO custom" -> 1,
+      "REVOKE TRAVERSE ON GRAPH * NODES * FROM custom" -> 1,
+
       "GRANT READ {prop} ON GRAPH * NODES * TO custom" -> 1,
       "REVOKE GRANT READ {prop} ON GRAPH * NODES * FROM custom" -> 1,
       "DENY READ {prop} ON GRAPH * NODES * TO custom" -> 1,
@@ -43,6 +46,9 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
       "GRANT READ {prop} ON GRAPH * NODES * TO custom" -> 1,
       "DENY READ {prop} ON GRAPH * NODES * TO custom" -> 1,
       "REVOKE READ {prop} ON GRAPH * NODES * FROM custom" -> 2,
+
+      "DENY READ {prop} ON GRAPH * NODES * TO custom" -> 1,
+      "REVOKE READ {prop} ON GRAPH * NODES * FROM custom" -> 1,
 
       "GRANT MATCH {prop} ON GRAPH * NODES * TO custom" -> 2,
 //      "REVOKE GRANT MATCH {prop} ON GRAPH * NODES * FROM custom" -> 1, TODO: enable once REVOKE MATCH exists again
