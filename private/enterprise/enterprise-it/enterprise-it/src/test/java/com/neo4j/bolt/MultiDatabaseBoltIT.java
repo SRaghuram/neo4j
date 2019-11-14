@@ -7,6 +7,7 @@ package com.neo4j.bolt;
 
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -15,6 +16,8 @@ import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.api.DatabaseManagementService;
+import org.neo4j.dbms.api.DatabaseNotFoundException;
+import org.neo4j.driver.exceptions.DatabaseException;
 import org.neo4j.driver.exceptions.TransientException;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
@@ -48,15 +51,18 @@ class MultiDatabaseBoltIT
         }
     }
 
+    @BeforeEach
+    void setup()
+    {
+        managementService = createManagementService();
+    }
+
     @Test
     void failToStartQueryExecutionOnFailedDatabase() throws IOException
     {
         String databaseName = "testDatabase";
-        DatabaseLayout testDatabaseLayout = prepareEmptyDatabase( databaseName );
+        prepareEmptyDatabase( databaseName );
 
-        fileSystem.deleteRecursively( testDatabaseLayout.getTransactionLogsDirectory() );
-
-        managementService = createManagementService();
         TransientException transientException = assertThrows( TransientException.class, () ->
         {
             try ( var driver = graphDatabaseDriver( boltAddress() );
@@ -68,14 +74,84 @@ class MultiDatabaseBoltIT
         assertThat( transientException.getMessage(), equalTo( "Database `testDatabase` is unavailable." ) );
     }
 
-    private DatabaseLayout prepareEmptyDatabase( String databaseName )
+    @Test
+    void shouldBeAbleToCreateMultipleDatabasesUsingCypher()
     {
-        managementService = createManagementService();
+        assertDatabasesNotFound( "foo", "bar" );
+        try ( var driver = graphDatabaseDriver( boltAddress() ); var system = driver.session( forDatabase( SYSTEM_DATABASE_NAME ) ) )
+        {
+            system.run( "CREATE DATABASE foo" ).consume();
+            assertDatabasesFound( "foo" );
+            assertDatabasesNotFound( "bar" );
+            system.run( "CREATE DATABASE bar" ).consume();
+            assertDatabasesFound( "foo", "bar" );
+        }
+    }
+
+    @Test
+    void shouldFailToCreateExistingDatabaseWithCypher()
+    {
+        assertDatabasesNotFound( "foo" );
+        try ( var driver = graphDatabaseDriver( boltAddress() ); var system = driver.session( forDatabase( SYSTEM_DATABASE_NAME ) ) )
+        {
+            system.run( "CREATE DATABASE foo" ).consume();
+            assertDatabasesFound( "foo" );
+            DatabaseException exception = assertThrows( DatabaseException.class, () ->
+            {
+                system.run( "CREATE DATABASE foo" ).consume();
+            } );
+            assertThat( exception.getMessage(), equalTo( "Failed to create the specified database 'foo': Database already exists." ) );
+            assertDatabasesFound( "foo" );
+        }
+    }
+
+    @Test
+    void shouldBeAbleToCreateDatabaseIfNotExists()
+    {
+        assertDatabasesNotFound( "foo", "bar" );
+        try ( var driver = graphDatabaseDriver( boltAddress() ); var system = driver.session( forDatabase( SYSTEM_DATABASE_NAME ) ) )
+        {
+            system.run( "CREATE DATABASE foo IF NOT EXISTS" ).consume();
+            assertDatabasesFound( "foo" );
+            assertDatabasesNotFound( "bar" );
+            system.run( "CREATE DATABASE foo IF NOT EXISTS" ).consume();
+            assertDatabasesFound( "foo" );
+            assertDatabasesNotFound( "bar" );
+            system.run( "CREATE DATABASE bar IF NOT EXISTS" ).consume();
+            assertDatabasesFound( "foo", "bar" );
+            system.run( "CREATE DATABASE bar IF NOT EXISTS" ).consume();
+            assertDatabasesFound( "foo", "bar" );
+        }
+    }
+
+    private void assertDatabasesFound( String... names )
+    {
+        for ( String name : names )
+        {
+            managementService.database( name );
+        }
+    }
+
+    private void assertDatabasesNotFound( String... names )
+    {
+        for ( String name : names )
+        {
+            DatabaseNotFoundException exception = assertThrows( DatabaseNotFoundException.class, () ->
+            {
+                managementService.database( name );
+            } );
+            assertThat( exception.getMessage(), equalTo( name ) );
+        }
+    }
+
+    private void prepareEmptyDatabase( String databaseName ) throws IOException
+    {
         managementService.createDatabase( databaseName );
         var databaseApi = (GraphDatabaseAPI) managementService.database( databaseName );
         DatabaseLayout testDatabaseLayout = databaseApi.databaseLayout();
-        managementService.shutdown();
-        return testDatabaseLayout;
+        tearDown();
+        fileSystem.deleteRecursively( testDatabaseLayout.getTransactionLogsDirectory() );
+        setup();
     }
 
     private String boltAddress()
