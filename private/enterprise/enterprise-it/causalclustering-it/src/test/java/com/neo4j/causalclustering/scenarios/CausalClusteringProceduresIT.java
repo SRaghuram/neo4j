@@ -186,7 +186,7 @@ class CausalClusteringProceduresIT
         stopDatabase( databaseName, cluster );
         assertDatabaseEventuallyStopped( databaseName, cluster );
 
-        assertRoleProcedureThrowsOnAllMembers( databaseName, Status.General.DatabaseUnavailable );
+        assertRoleProcedureThrowsOnAllMembers( databaseName, Status.Database.DatabaseUnavailable );
 
         startDatabase( databaseName, cluster );
         assertDatabaseEventuallyStarted( databaseName, cluster );

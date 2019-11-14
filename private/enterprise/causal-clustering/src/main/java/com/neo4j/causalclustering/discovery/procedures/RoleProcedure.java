@@ -23,7 +23,7 @@ import org.neo4j.values.storable.TextValue;
 
 import static org.neo4j.internal.kernel.api.procs.ProcedureSignature.procedureSignature;
 import static org.neo4j.kernel.api.exceptions.Status.Database.DatabaseNotFound;
-import static org.neo4j.kernel.api.exceptions.Status.General.DatabaseUnavailable;
+import static org.neo4j.kernel.api.exceptions.Status.Database.DatabaseUnavailable;
 import static org.neo4j.values.storable.Values.stringValue;
 
 abstract class RoleProcedure extends CallableProcedure.BasicProcedure

@@ -22,7 +22,7 @@ import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
-import static org.neo4j.kernel.api.exceptions.Status.General.DatabaseUnavailable;
+import static org.neo4j.kernel.api.exceptions.Status.Database.DatabaseUnavailable;
 import static org.neo4j.kernel.api.exceptions.Status.statusCodeOf;
 
 @ClusterExtension

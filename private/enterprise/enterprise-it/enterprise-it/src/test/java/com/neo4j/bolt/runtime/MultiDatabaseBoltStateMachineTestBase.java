@@ -118,7 +118,7 @@ abstract class MultiDatabaseBoltStateMachineTestBase
         managementService.shutdownDatabase( defaultDatabaseName() );
 
         var machine = newStateMachineInReadyState();
-        runWithFailure( "RETURN 1", machine, Status.General.DatabaseUnavailable );
+        runWithFailure( "RETURN 1", machine, Status.Database.DatabaseUnavailable );
     }
 
     @Test

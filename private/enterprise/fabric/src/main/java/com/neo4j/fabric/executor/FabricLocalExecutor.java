@@ -124,7 +124,7 @@ public class FabricLocalExecutor
             }
             catch ( UnavailableException e )
             {
-                throw new FabricException( Status.General.DatabaseUnavailable, e );
+                throw new FabricException( Status.Database.DatabaseUnavailable, e );
             }
 
             var dependencyResolver = databaseFacade.getDependencyResolver();

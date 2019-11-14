@@ -42,7 +42,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.internal.helpers.NamedThreadFactory.daemon;
 import static org.neo4j.kernel.api.exceptions.Status.Database.DatabaseNotFound;
-import static org.neo4j.kernel.api.exceptions.Status.General.DatabaseUnavailable;
+import static org.neo4j.kernel.api.exceptions.Status.Database.DatabaseUnavailable;
 import static org.neo4j.kernel.api.exceptions.Status.Transaction.BookmarkTimeout;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 

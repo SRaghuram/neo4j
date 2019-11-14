@@ -64,7 +64,7 @@ class MultiDatabaseHttpIT
 
         enterpriseNeoServer = createService();
         HTTP.Response response = POST( txCommitUri( databaseName, httpPort() ), quotedJson( "{ 'statements': [ { 'statement': 'RETURN 1' } ] }" ) );
-        assertThat( response, hasErrors( Status.General.DatabaseUnavailable ) );
+        assertThat( response, hasErrors( Status.Database.DatabaseUnavailable ) );
     }
 
     private DatabaseLayout prepareEmptyDatabase( String databaseName )
