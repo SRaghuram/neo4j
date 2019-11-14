@@ -9,7 +9,7 @@ import java.lang.Boolean.TRUE
 
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder
 import org.neo4j.configuration.GraphDatabaseSettings
-import org.neo4j.cypher.internal.runtime.morsel.WorkerManagement
+import org.neo4j.cypher.internal.runtime.pipelined.WorkerManagement
 import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
 import org.neo4j.cypher.internal.{EnterpriseRuntimeContext, RuntimeEnvironment}
 import org.neo4j.kernel.api.Kernel

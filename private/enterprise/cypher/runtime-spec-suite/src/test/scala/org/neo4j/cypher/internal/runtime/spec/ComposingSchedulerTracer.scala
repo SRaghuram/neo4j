@@ -5,8 +5,8 @@
  */
 package org.neo4j.cypher.internal.runtime.spec
 
+import org.neo4j.cypher.internal.runtime.pipelined.tracing.{QueryExecutionTracer, ScheduledWorkUnitEvent, SchedulerTracer, WorkUnitEvent}
 import org.neo4j.cypher.internal.runtime.scheduling._
-import org.neo4j.cypher.internal.runtime.morsel.tracing.{QueryExecutionTracer, ScheduledWorkUnitEvent, SchedulerTracer, WorkUnitEvent}
 
 class ComposingSchedulerTracer(val inners: SchedulerTracer*) extends SchedulerTracer {
   override def traceQuery(): QueryExecutionTracer = {

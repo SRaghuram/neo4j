@@ -40,7 +40,7 @@
                 <module>compatibility-spec-suite</module>
                 <module>physical-planning</module>
                 <module>slotted-runtime</module>
-                <module>morsel-runtime</module>
+                <module>pipelined-runtime</module>
                 <module>compiled-expressions</module>
                 <module>cypher</module>
                 <module>runtime-spec-suite</module>

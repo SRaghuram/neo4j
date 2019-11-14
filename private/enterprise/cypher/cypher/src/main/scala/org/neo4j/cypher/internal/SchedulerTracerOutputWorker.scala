@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal
 
 import java.util.concurrent.{ThreadFactory, TimeUnit}
 
-import org.neo4j.cypher.internal.runtime.morsel.tracing.{DataPointFlusher, SingleConsumerDataBuffers}
+import org.neo4j.cypher.internal.runtime.pipelined.tracing.{DataPointFlusher, SingleConsumerDataBuffers}
 import org.neo4j.kernel.lifecycle.LifecycleAdapter
 
 import scala.concurrent.duration.Duration

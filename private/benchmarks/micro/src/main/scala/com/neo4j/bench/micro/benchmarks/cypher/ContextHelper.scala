@@ -7,15 +7,15 @@ package com.neo4j.bench.micro.benchmarks.cypher
 
 import java.time.Clock
 
-import org.neo4j.cypher.internal._
 import org.neo4j.configuration.{Config, GraphDatabaseSettings}
-import org.neo4j.cypher.{CypherInterpretedPipesFallbackOption, CypherOperatorEngineOption}
+import org.neo4j.cypher.internal._
 import org.neo4j.cypher.internal.executionplan.GeneratedQuery
 import org.neo4j.cypher.internal.planner.spi.PlanContext
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.CodeStructure
-import org.neo4j.cypher.internal.runtime.morsel.WorkerManagement
+import org.neo4j.cypher.internal.runtime.pipelined.WorkerManagement
 import org.neo4j.cypher.internal.v4_0.frontend.phases.{CompilationPhaseTracer, InternalNotificationLogger, devNullLogger}
 import org.neo4j.cypher.internal.v4_0.util.{CypherException, InputPosition}
+import org.neo4j.cypher.{CypherInterpretedPipesFallbackOption, CypherOperatorEngineOption}
 import org.neo4j.internal.kernel.api.{CursorFactory, SchemaRead}
 import org.neo4j.kernel.lifecycle.LifeSupport
 import org.neo4j.logging.NullLog

@@ -10,7 +10,7 @@ import com.neo4j.causalclustering.readreplica.ReadReplicaEditionModule;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.cypher.internal.runtime.morsel.WorkerManager;
+import org.neo4j.cypher.internal.runtime.pipelined.WorkerManager;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.scheduler.Group;
 

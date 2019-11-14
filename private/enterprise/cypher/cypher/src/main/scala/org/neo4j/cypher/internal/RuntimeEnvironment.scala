@@ -5,9 +5,9 @@
  */
 package org.neo4j.cypher.internal
 
-import org.neo4j.cypher.internal.runtime.morsel.execution._
-import org.neo4j.cypher.internal.runtime.morsel.tracing._
-import org.neo4j.cypher.internal.runtime.morsel.{WorkerManagement, WorkerResourceProvider}
+import org.neo4j.cypher.internal.runtime.pipelined.execution._
+import org.neo4j.cypher.internal.runtime.pipelined.tracing._
+import org.neo4j.cypher.internal.runtime.pipelined.{WorkerManagement, WorkerResourceProvider}
 import org.neo4j.exceptions.InternalException
 import org.neo4j.internal.kernel.api.CursorFactory
 import org.neo4j.kernel.lifecycle.LifeSupport
