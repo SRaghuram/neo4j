@@ -35,8 +35,8 @@ case object CountAggregator extends Aggregator {
 case object CountDistinctAggregator extends Aggregator {
 
   override def newUpdater: Updater = new CountDistinctUpdater
-  override def newStandardReducer(memoryTracker: QueryMemoryTracker): Reducer = new CountDistinctReducer(new util.HashSet[AnyValue]())
-  override def newConcurrentReducer: Reducer = new CountDistinctReducer(ConcurrentHashMap.newKeySet())
+  override def newStandardReducer(memoryTracker: QueryMemoryTracker): Reducer = new CountDistinctStandardReducer()
+  override def newConcurrentReducer: Reducer = new CountDistinctConcurrentReducer()
 }
 
 class CountDistinctUpdater() extends Updater {
@@ -76,7 +76,20 @@ class CountStandardReducer() extends Reducer {
   override def result: AnyValue = Values.longValue(count)
 }
 
-class CountDistinctReducer(seen: java.util.Set[AnyValue]) extends Reducer {
+class CountConcurrentReducer() extends Reducer {
+  private val count = new AtomicLong(0L)
+
+  override def update(updater: Updater): Unit =
+    updater match {
+      case u: CountUpdaterBase =>
+        count.addAndGet(u.count)
+    }
+
+  override def result: AnyValue = Values.longValue(count.get)
+}
+
+class CountDistinctStandardReducer() extends Reducer {
+  private val seen: java.util.Set[AnyValue] = new util.HashSet[AnyValue]()
   private var count = 0L
 
   override def update(updater: Updater): Unit =
@@ -92,14 +105,20 @@ class CountDistinctReducer(seen: java.util.Set[AnyValue]) extends Reducer {
   override def result: AnyValue = Values.longValue(count)
 }
 
-class CountConcurrentReducer() extends Reducer {
+class CountDistinctConcurrentReducer() extends Reducer {
+  private val seen: java.util.Set[AnyValue] = ConcurrentHashMap.newKeySet()
   private val count = new AtomicLong(0L)
+
 
   override def update(updater: Updater): Unit =
     updater match {
-      case u: CountUpdaterBase =>
-        count.addAndGet(u.count)
+      case u: CountDistinctUpdater =>
+        u.seen.forEach(e => {
+          if (seen.add(e)) {
+            count.incrementAndGet()
+          }
+        })
     }
 
-  override def result: AnyValue = Values.longValue(count.get)
+  override def result: AnyValue = Values.longValue(count.get())
 }
