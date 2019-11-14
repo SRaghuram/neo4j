@@ -130,7 +130,7 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
             Collections.shuffle( otherRouters );
         }
 
-        return Stream.concat( preferredRouters.stream(), otherRouters.stream() )
+        return Stream.concat( preferredRoutersList.stream(), otherRouters.stream() )
                 .map( r -> Endpoint.route( r.boltAddress() ) ).collect( Collectors.toList() );
     }
 
