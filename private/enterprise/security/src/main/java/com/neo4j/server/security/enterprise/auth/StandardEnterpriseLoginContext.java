@@ -284,7 +284,7 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
         }
 
         @Override
-        public boolean allowsTraverseLabel( long label )
+        public boolean allowsTraverseAllNodesWithLabel( long label )
         {
             // Note: we do not check blacklistTraverseLabels.contains(label) because this should be a first check
             // to be followed by the explicit blacklist check in disallowsTraverseLabel
@@ -296,7 +296,7 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
         }
 
         @Override
-        public boolean allowsLabel( long label )
+        public boolean allowsSeeLabelToken( long label )
         {
             if ( disallowsTraverseAllLabels || blacklistTraverseLabels.contains( (int) label ) )
             {
@@ -312,13 +312,7 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
         }
 
         @Override
-        public boolean disallowsTraverseType( long type )
-        {
-            return disallowsTraverseAllRelTypes || blacklistTraverseRelTypes.contains( (int) type );
-        }
-
-        @Override
-        public boolean allowsTraverseNodeLabels( long... labels )
+        public boolean allowsTraverseNode( long... labels )
         {
             if ( allowsTraverseAllLabels() )
             {
@@ -475,17 +469,27 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
         }
 
         @Override
-        public boolean allowsPropertyReads( int propertyKey )
+        public boolean allowsSeePropertyKeyToken( int propertyKey )
         {
-            boolean disabledForNodes = disallowsReadAllPropertiesAllLabels || blacklistedNodeProperties.contains( propertyKey ) ||
-                    !(allowsReadAllPropertiesAllLabels || whitelistedNodePropertiesForAllLabels.contains( propertyKey ) ||
-                            whitelistedNodePropertiesForSomeLabel.contains( propertyKey ) || whitelistedLabelsForAllProperties.notEmpty() );
+            boolean disabledForNodes =
+                    disallowsReadAllPropertiesAllLabels || blacklistedNodeProperties.contains( propertyKey ) || !allowPropertyReadOnSomeNode( propertyKey );
 
             boolean disabledForRels = disallowsReadAllPropertiesAllRelTypes || blacklistedRelationshipProperties.contains( propertyKey ) ||
-                    !(allowsReadAllPropertiesAllRelTypes || whitelistedRelationshipPropertiesForAllTypes.contains( propertyKey ) ||
-                            whitelistedRelationshipPropertiesForSomeType.contains( propertyKey ) || whitelistedRelTypesForAllProperties.notEmpty() );
+                    !allowsPropertyReadOnSomeRelType( propertyKey );
 
             return !(disabledForNodes && disabledForRels);
+        }
+
+        private boolean allowPropertyReadOnSomeNode( int propertyKey )
+        {
+            return allowsReadAllPropertiesAllLabels || whitelistedNodePropertiesForAllLabels.contains( propertyKey ) ||
+                    whitelistedNodePropertiesForSomeLabel.contains( propertyKey ) || whitelistedLabelsForAllProperties.notEmpty();
+        }
+
+        private boolean allowsPropertyReadOnSomeRelType( int propertyKey )
+        {
+            return allowsReadAllPropertiesAllRelTypes || whitelistedRelationshipPropertiesForAllTypes.contains( propertyKey ) ||
+                    whitelistedRelationshipPropertiesForSomeType.contains( propertyKey ) || whitelistedRelTypesForAllProperties.notEmpty();
         }
 
         @Override
