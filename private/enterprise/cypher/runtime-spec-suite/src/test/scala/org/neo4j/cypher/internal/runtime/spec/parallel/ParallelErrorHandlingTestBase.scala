@@ -21,8 +21,8 @@ object ParallelErrorHandlingTestBase {
 
 abstract class ParallelErrorHandlingTestBase(runtime: CypherRuntime[EnterpriseRuntimeContext])
   extends RuntimeTestSuite(ENTERPRISE.NO_FUSING.copyWith(
-    GraphDatabaseSettings.cypher_morsel_size_small -> Integer.valueOf(MORSEL_SIZE),
-    GraphDatabaseSettings.cypher_morsel_size_big -> Integer.valueOf(MORSEL_SIZE),
+    GraphDatabaseSettings.cypher_pipelined_batch_size_small -> Integer.valueOf(MORSEL_SIZE),
+    GraphDatabaseSettings.cypher_pipelined_batch_size_big -> Integer.valueOf(MORSEL_SIZE),
     GraphDatabaseSettings.cypher_worker_count -> Integer.valueOf(WORKERS)), runtime) {
 
   test("should complete query with concurrent errors and close cursors") {

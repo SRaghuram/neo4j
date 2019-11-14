@@ -116,7 +116,7 @@ class ExecutionResultTest
         createNode();
 
         // When
-        for ( String runtime : asList( "INTERPRETED", "SLOTTED", "LEGACY_COMPILED" ) )//TODO MORSEL leaves cursors open
+        for ( String runtime : asList( "INTERPRETED", "SLOTTED", "LEGACY_COMPILED" ) )//TODO PIPELINED leaves cursors open
         {
             try ( Transaction transaction = db.beginTx() )
             {
@@ -178,7 +178,7 @@ class ExecutionResultTest
         createNode();
 
         // When
-        for ( String runtime : asList( "INTERPRETED", "SLOTTED", "LEGACY_COMPILED" ) )//TODO MORSEL leaves cursors open
+        for ( String runtime : asList( "INTERPRETED", "SLOTTED", "LEGACY_COMPILED" ) )//TODO PIPELINED leaves cursors open
         {
             try ( Transaction transaction = db.beginTx() )
             {
@@ -341,8 +341,8 @@ class ExecutionResultTest
             assertThat( arguments.get( "version" ), equalTo( CURRENT_VERSION ) );
             assertThat( arguments.get( "planner" ), equalTo( "COST" ) );
             assertThat( arguments.get( "planner-impl" ), equalTo( "IDP" ) );
-            assertThat( arguments.get( "runtime" ), equalTo( "MORSEL" ) );
-            assertThat( arguments.get( "runtime-impl" ), equalTo( "MORSEL" ) );
+            assertThat( arguments.get( "runtime" ), equalTo( "PIPELINED" ) );
+            assertThat( arguments.get( "runtime-impl" ), equalTo( "PIPELINED" ) );
             transaction.commit();
         }
     }
@@ -363,8 +363,8 @@ class ExecutionResultTest
             assertThat( arguments.get( "version" ), equalTo( CURRENT_VERSION ) );
             assertThat( arguments.get( "planner" ), equalTo( "COST" ) );
             assertThat( arguments.get( "planner-impl" ), equalTo( "IDP" ) );
-            assertThat( arguments.get( "runtime" ), equalTo( "MORSEL" ) );
-            assertThat( arguments.get( "runtime-impl" ), equalTo( "MORSEL" ) );
+            assertThat( arguments.get( "runtime" ), equalTo( "PIPELINED" ) );
+            assertThat( arguments.get( "runtime-impl" ), equalTo( "PIPELINED" ) );
             transaction.commit();
         }
     }

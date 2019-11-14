@@ -61,10 +61,10 @@ trait CypherComparisonSupport extends AbstractCypherComparisonSupport {
 
   override def databaseConfig(): collection.Map[Setting[_], Object] = {
     Map(GraphDatabaseSettings.cypher_hints_error -> TRUE,
-        GraphDatabaseSettings.cypher_morsel_size_small -> Integer.valueOf(4),
-        GraphDatabaseSettings.cypher_morsel_size_big -> Integer.valueOf(4),
+        GraphDatabaseSettings.cypher_pipelined_batch_size_small -> Integer.valueOf(4),
+        GraphDatabaseSettings.cypher_pipelined_batch_size_big -> Integer.valueOf(4),
         GraphDatabaseSettings.cypher_worker_count -> Integer.valueOf(0)
-    )
+        )
   }
 }
 

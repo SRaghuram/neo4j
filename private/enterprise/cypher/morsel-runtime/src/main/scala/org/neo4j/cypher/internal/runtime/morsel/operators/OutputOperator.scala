@@ -78,7 +78,7 @@ case object NoOutputOperator extends OutputOperator with OutputOperatorState wit
   override def workIdentity: WorkIdentity = WorkIdentityImpl(Id.INVALID_ID, "Perform no output")
 }
 
-// MORSEL BUFFER OUTPUT
+// PIPELINED BUFFER OUTPUT
 
 // we need the the id of the head plan of the next pipeline because that is where er attribute time spent
 // during prepare output in profiling.
@@ -107,7 +107,7 @@ case class MorselBufferPreparedOutput(bufferId: BufferId,
     executionState.putMorsel(pipelineId, bufferId, outputMorsel)
 }
 
-// MORSEL ARGUMENT STATE BUFFER OUTPUT
+// PIPELINED ARGUMENT STATE BUFFER OUTPUT
 
 // we need the the id of the head plan of the next pipeline because that is where er attribute time spent
 // during prepare output in profiling.

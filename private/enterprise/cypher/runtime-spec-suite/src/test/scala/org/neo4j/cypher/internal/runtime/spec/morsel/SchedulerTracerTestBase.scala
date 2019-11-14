@@ -27,12 +27,12 @@ object SchedulerTracerTestBase {
 
 abstract class SchedulerTracerTestBase(runtime: CypherRuntime[EnterpriseRuntimeContext], tempCSVPath: Path = SchedulerTracerTestBase.newTempCSVPath())
   extends RuntimeTestSuite[EnterpriseRuntimeContext](ENTERPRISE.NO_FUSING.copyWith(
-    GraphDatabaseSettings.cypher_morsel_size_small -> Integer.valueOf(MORSEL_SIZE),
-    GraphDatabaseSettings.cypher_morsel_size_big -> Integer.valueOf(MORSEL_SIZE),
+    GraphDatabaseSettings.cypher_pipelined_batch_size_small -> Integer.valueOf(MORSEL_SIZE),
+    GraphDatabaseSettings.cypher_pipelined_batch_size_big -> Integer.valueOf(MORSEL_SIZE),
     GraphDatabaseSettings.cypher_worker_count -> Integer.valueOf(WORKER_COUNT),
-    GraphDatabaseSettings.enable_morsel_runtime_trace -> TRUE,
-    GraphDatabaseSettings.morsel_scheduler_trace_filename -> tempCSVPath.toAbsolutePath
-  ), runtime) {
+    GraphDatabaseSettings.enable_pipelined_runtime_trace -> TRUE,
+    GraphDatabaseSettings.pipelined_scheduler_trace_filename -> tempCSVPath.toAbsolutePath
+    ), runtime) {
 
   override def afterTest(): Unit = {
     Files.delete(tempCSVPath)

@@ -26,8 +26,8 @@ object ContextHelper extends MockitoSugar {
 
   private val runtimeConfig = CypherRuntimeConfiguration(
     workers = Runtime.getRuntime.availableProcessors(),
-    morselSizeSmall = GraphDatabaseSettings.cypher_morsel_size_small.defaultValue(),
-    morselSizeBig = GraphDatabaseSettings.cypher_morsel_size_big.defaultValue(),
+    pipelinedBatchSizeSmall = GraphDatabaseSettings.cypher_pipelined_batch_size_small.defaultValue(),
+    pipelinedBatchSizeBig = GraphDatabaseSettings.cypher_pipelined_batch_size_big.defaultValue(),
     schedulerTracing = NoSchedulerTracing,
     lenientCreateRelationship = false,
     memoryTrackingController = new ConfigMemoryTrackingController(Config.defaults()),
@@ -60,7 +60,7 @@ object ContextHelper extends MockitoSugar {
       compileExpressions = useCompiledExpressions,
       materializedEntitiesMode = materializedEntitiesMode,
       operatorEngine = CypherOperatorEngineOption.compiled,
-      interpretedPipesFallback = CypherInterpretedPipesFallbackOption(GraphDatabaseSettings.cypher_morsel_interpreted_pipes_fallback.defaultValue().toString),
-    )
+      interpretedPipesFallback = CypherInterpretedPipesFallbackOption(GraphDatabaseSettings.cypher_pipelined_interpreted_pipes_fallback.defaultValue().toString),
+      )
   }
 }

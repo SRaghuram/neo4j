@@ -29,11 +29,11 @@ object Runtimes {
 
   object Parallel extends Runtime(Set("PARALLEL"), "runtime=parallel")
 
-  object MorselFused extends Runtime(Set("MORSEL", "SCHEMA"), "runtime=morsel operatorEngine=compiled")
+  object MorselFused extends Runtime(Set("PIPELINED", "SCHEMA"), "runtime=morsel operatorEngine=compiled")
 
-  object MorselNonFused extends Runtime(Set("MORSEL", "SCHEMA"), "runtime=morsel operatorEngine=interpreted")
+  object MorselNonFused extends Runtime(Set("PIPELINED", "SCHEMA"), "runtime=morsel operatorEngine=interpreted")
 
-  object MorselFull extends Runtime(Set("MORSEL", "SCHEMA"), "runtime=morsel interpretedPipesFallback=all")
+  object MorselFull extends Runtime(Set("PIPELINED", "SCHEMA"), "runtime=morsel interpretedPipesFallback=all")
 }
 
 case class Runtime(acceptedRuntimeNames: Set[String], preparserOption: String) {

@@ -891,12 +891,12 @@ class FunctionIT
         try ( Transaction tx = db.beginTx() )
         {
             // When
-            Result res = tx.execute( "CYPHER runtime=MORSEL RETURN com.neo4j.procedure.squareLong(2) AS someVal" );
+            Result res = tx.execute( "CYPHER runtime=PIPELINED RETURN com.neo4j.procedure.squareLong(2) AS someVal" );
 
             // Then
             assertThat( res.next(), equalTo( map( "someVal", 4L ) ) );
             assertFalse( res.hasNext() );
-            assertThat( res.getExecutionPlanDescription().getArguments().get( "runtime" ), not( equalTo( "MORSEL" ) ) );
+            assertThat( res.getExecutionPlanDescription().getArguments().get( "runtime" ), not( equalTo( "PIPELINED" ) ) );
         }
     }
 

@@ -51,7 +51,7 @@ class MorselExecutionContext(private[execution] final val morsel: Morsel,
   protected final val refsPerRow: Int = slots.numberOfReferences
 
   // ====================
-  // MORSEL ATTACHMENT
+  // PIPELINED ATTACHMENT
 
   // A morsel attachment is a limited life-span attachment to a morsel, which can be
   // used to pass arbitrary data which related to a particular morsel through the

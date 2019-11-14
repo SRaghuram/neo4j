@@ -66,12 +66,12 @@ class PreParsingAcceptanceTest extends ExecutionEngineFunSuite with EnterpriseGr
 
   test("runtime=morsel is default") {
     val query = "RETURN 1"
-    execute(query).executionPlanDescription() should haveRuntime("MORSEL")
+    execute(query).executionPlanDescription() should haveRuntime("PIPELINED")
   }
 
   test("should fallback if morsel doesn't support query") {
     val query = "MATCH (n)-[*]->(m) RETURN n SKIP 1"
-    execute(query).executionPlanDescription() should not equal "MORSEL"
+    execute(query).executionPlanDescription() should not equal "PIPELINED"
   }
 
   for (runtime <- Seq("interpreted", "slotted", "morsel", "legacy_compiled", "parallel")) {
