@@ -14,7 +14,6 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 import org.neo4j.internal.kernel.api.connectioninfo.ClientConnectionInfo;
-import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.KernelTransactionHandle;
 import org.neo4j.kernel.api.query.ExecutingQuery;
@@ -151,7 +150,7 @@ class TransactionDependenciesResolverTest
     private static ExecutingQuery createExecutingQuery( long queryId )
     {
         return new ExecutingQuery( queryId, ClientConnectionInfo.EMBEDDED_CONNECTION, new TestDatabaseIdRepository().defaultDatabase(), "test", "testQuey",
-                VirtualValues.EMPTY_MAP, Collections.emptyMap(), () -> 1L, PageCursorTracer.NULL,
+                VirtualValues.EMPTY_MAP, Collections.emptyMap(), () -> 1L, 1, 2,
                 Thread.currentThread().getId(), Thread.currentThread().getName(),
                 Clocks.nanoClock(), CpuClock.NOT_AVAILABLE );
     }

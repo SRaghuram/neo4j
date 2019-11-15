@@ -34,7 +34,6 @@ import org.neo4j.graphdb.Label
 import org.neo4j.internal.kernel.api.connectioninfo.ClientConnectionInfo
 import org.neo4j.internal.kernel.api.security.{LoginContext, SecurityContext}
 import org.neo4j.internal.kernel.api.{CursorFactory, SchemaRead}
-import org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracer
 import org.neo4j.kernel.api.Kernel
 import org.neo4j.kernel.api.KernelTransaction.Type
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
@@ -271,7 +270,7 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
                          queryParameters,
                          metaData,
                          activeLockCount,
-                         new DefaultPageCursorTracer(),
+                         0, 0,
                          threadExecutingTheQuery.getId,
                          threadExecutingTheQuery.getName,
                          Clocks.nanoClock(),

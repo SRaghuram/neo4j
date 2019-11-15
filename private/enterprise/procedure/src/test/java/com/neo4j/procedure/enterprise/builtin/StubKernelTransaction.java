@@ -30,6 +30,7 @@ import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.internal.kernel.api.security.SecurityContext;
 import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.internal.schema.IndexPrototype;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.Statement;
 import org.neo4j.kernel.api.exceptions.Status;
@@ -309,5 +310,11 @@ class StubKernelTransaction implements KernelTransaction
     public boolean isSchemaTransaction()
     {
         return false;
+    }
+
+    @Override
+    public PageCursorTracer pageCursorTracer()
+    {
+        return null;
     }
 }

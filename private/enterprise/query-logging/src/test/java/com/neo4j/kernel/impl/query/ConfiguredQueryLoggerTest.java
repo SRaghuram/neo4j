@@ -18,7 +18,6 @@ import java.util.concurrent.TimeUnit;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.internal.kernel.api.connectioninfo.ClientConnectionInfo;
-import org.neo4j.io.pagecache.tracing.cursor.PageCursorCounters;
 import org.neo4j.kernel.api.query.CompilerInfo;
 import org.neo4j.kernel.api.query.ExecutingQuery;
 import org.neo4j.kernel.database.NamedDatabaseId;
@@ -644,69 +643,7 @@ class ConfiguredQueryLoggerTest
                 sessionInfo, namedDatabaseId, username, queryText,
                 ValueUtils.asMapValue( params ),
                 metaData,
-                () -> 0,
-                new PageCursorCounters()
-                {
-                    @Override
-                    public long faults()
-                    {
-                        return pageFaults;
-                    }
-
-                    @Override
-                    public long hits()
-                    {
-                        return pageHits;
-                    }
-
-                    @Override
-                    public long pins()
-                    {
-                        return 0;
-                    }
-
-                    @Override
-                    public long unpins()
-                    {
-                        return 0;
-                    }
-
-                    @Override
-                    public long bytesRead()
-                    {
-                        return 0;
-                    }
-
-                    @Override
-                    public long evictions()
-                    {
-                        return 0;
-                    }
-
-                    @Override
-                    public long evictionExceptions()
-                    {
-                        return 0;
-                    }
-
-                    @Override
-                    public long bytesWritten()
-                    {
-                        return 0;
-                    }
-
-                    @Override
-                    public long flushes()
-                    {
-                        return 0;
-                    }
-
-                    @Override
-                    public double hitRatio()
-                    {
-                        return 0d;
-                    }
-                },
+                () -> 0, pageHits, pageFaults,
                 thread.getId(),
                 thread.getName(),
                 clock,
