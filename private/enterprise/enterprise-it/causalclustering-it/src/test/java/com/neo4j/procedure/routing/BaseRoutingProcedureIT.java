@@ -21,6 +21,7 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.QueryExecutionException;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.helpers.collection.Iterators;
+import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.procedure.builtin.routing.Role;
 import org.neo4j.procedure.builtin.routing.RoutingResult;
 
@@ -41,6 +42,7 @@ import static org.neo4j.driver.AccessMode.READ;
 import static org.neo4j.driver.AccessMode.WRITE;
 import static org.neo4j.driver.SessionConfig.builder;
 import static org.neo4j.kernel.api.exceptions.Status.Database.DatabaseNotFound;
+import static org.neo4j.kernel.api.exceptions.Status.Database.DatabaseUnavailable;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 abstract class BaseRoutingProcedureIT
@@ -110,11 +112,21 @@ abstract class BaseRoutingProcedureIT
 
     static void assertRoutingProceduresFailForUnknownDatabase( String databaseName, GraphDatabaseService db )
     {
+        assertRoutingProceduresFail( databaseName, db, DatabaseNotFound );
+    }
+
+    static void assertRoutingProceduresFailForStoppedDatabase( String databaseName, GraphDatabaseService db )
+    {
+        assertRoutingProceduresFail( databaseName, db, DatabaseUnavailable );
+    }
+
+    private static void assertRoutingProceduresFail( String databaseName, GraphDatabaseService db, Status failureStatus )
+    {
         Map<String,Object> params = paramsWithContextAndDatabase( Map.of(), databaseName );
 
         assertAll(
-                () -> assertRoutingProcedureFailsForUnknownDatabase( CALL_NEW_PROCEDURE_WITH_CONTEXT_AND_DATABASE, params, db ),
-                () -> assertRoutingProcedureFailsForUnknownDatabase( CALL_OLD_PROCEDURE_WITH_CONTEXT_AND_DATABASE, params, db )
+                () -> assertRoutingProcedureFails( CALL_NEW_PROCEDURE_WITH_CONTEXT_AND_DATABASE, params, db, failureStatus ),
+                () -> assertRoutingProcedureFails( CALL_OLD_PROCEDURE_WITH_CONTEXT_AND_DATABASE, params, db, failureStatus )
         );
     }
 
@@ -147,12 +159,12 @@ abstract class BaseRoutingProcedureIT
         assertEventually( () -> invokeRoutingProcedure( query, params, db ), new RoutingResultMatcher( expectedResult ), 2, MINUTES );
     }
 
-    private static void assertRoutingProcedureFailsForUnknownDatabase( String query, Map<String,Object> params, GraphDatabaseService db )
+    private static void assertRoutingProcedureFails( String query, Map<String,Object> params, GraphDatabaseService db, Status failureStatus )
     {
         try ( Transaction tx = db.beginTx() )
         {
             QueryExecutionException error = assertThrows( QueryExecutionException.class, () -> tx.execute( query, params ) );
-            assertEquals( DatabaseNotFound.code().serialize(), error.getStatusCode() );
+            assertEquals( failureStatus.code().serialize(), error.getStatusCode() );
         }
     }
 

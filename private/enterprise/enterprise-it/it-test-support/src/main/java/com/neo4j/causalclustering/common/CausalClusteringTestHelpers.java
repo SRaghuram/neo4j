@@ -210,7 +210,7 @@ public final class CausalClusteringTestHelpers
     {
         cluster.systemTx( ( sys, tx ) ->
         {
-            tx.execute( "CREATE DATABASE " + databaseName );
+            tx.execute( String.format( "CREATE DATABASE `%s`", databaseName ) );
             tx.commit();
         } );
     }
@@ -219,7 +219,7 @@ public final class CausalClusteringTestHelpers
     {
         cluster.systemTx( ( sys, tx ) ->
         {
-            tx.execute( "START DATABASE " + databaseName );
+            tx.execute( String.format( "START DATABASE `%s`", databaseName ) );
             tx.commit();
         } );
     }
@@ -228,7 +228,7 @@ public final class CausalClusteringTestHelpers
     {
         cluster.systemTx( ( sys, tx ) ->
         {
-            tx.execute( "STOP DATABASE " + databaseName );
+            tx.execute( String.format( "STOP DATABASE `%s`", databaseName ) );
             tx.commit();
         } );
     }
@@ -237,7 +237,7 @@ public final class CausalClusteringTestHelpers
     {
         cluster.systemTx( ( sys, tx ) ->
         {
-            tx.execute( "DROP DATABASE " + databaseName );
+            tx.execute( String.format( "DROP DATABASE `%s`", databaseName ) );
             tx.commit();
         } );
     }

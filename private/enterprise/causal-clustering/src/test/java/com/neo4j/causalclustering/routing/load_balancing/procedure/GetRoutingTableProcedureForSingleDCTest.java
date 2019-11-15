@@ -47,6 +47,7 @@ import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.internal.kernel.api.procs.QualifiedName;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.api.procedure.CallableProcedure;
+import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.NullLogProvider;
@@ -92,6 +93,7 @@ class GetRoutingTableProcedureForSingleDCTest
     private DatabaseManager<?> databaseManager;
     private DatabaseId databaseId;
     private RaftId raftId;
+    private DatabaseAvailabilityGuard availabilityGuard;
 
     @Target( ElementType.METHOD )
     @Retention( RetentionPolicy.RUNTIME )
@@ -115,7 +117,9 @@ class GetRoutingTableProcedureForSingleDCTest
         var databaseManager = new StubClusteredDatabaseManager();
         this.databaseId = databaseManager.databaseIdRepository().getByName( "my_test_database" ).get();
         this.raftId = RaftId.from( databaseId );
-        databaseManager.givenDatabaseWithConfig().withDatabaseId( databaseId ).register();
+        this.availabilityGuard = mock( DatabaseAvailabilityGuard.class );
+        when( availabilityGuard.isAvailable() ).thenReturn( true );
+        databaseManager.givenDatabaseWithConfig().withDatabaseId( databaseId ).withDatabaseAvailabilityGuard( availabilityGuard ).register();
         this.databaseManager = databaseManager;
     }
 
@@ -449,7 +453,7 @@ class GetRoutingTableProcedureForSingleDCTest
         var proc = newProcedure( topologyService, leaderService, databaseManager );
 
         var error = assertThrows( ProcedureException.class, () -> run( proc, databaseId, Config.defaults() ) );
-        assertEquals( Status.Database.DatabaseNotFound, error.status() );
+        assertEquals( Status.Database.DatabaseUnavailable, error.status() );
     }
 
     @Test

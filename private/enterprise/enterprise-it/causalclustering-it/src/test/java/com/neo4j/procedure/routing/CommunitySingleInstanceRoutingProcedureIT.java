@@ -48,7 +48,7 @@ class CommunitySingleInstanceRoutingProcedureIT extends BaseRoutingProcedureIT
     @AfterEach
     void tearDown()
     {
-        if ( db != null )
+        if ( managementService != null )
         {
             managementService.shutdown();
         }
@@ -88,7 +88,7 @@ class CommunitySingleInstanceRoutingProcedureIT extends BaseRoutingProcedureIT
     @Test
     void shouldCallRoutingProcedureWithInvalidDatabaseName()
     {
-        String unknownDatabaseName = "non_existing_database";
+        String unknownDatabaseName = "non-existing-database";
         db = startDb();
 
         assertRoutingProceduresFailForUnknownDatabase( unknownDatabaseName, db );
@@ -114,7 +114,11 @@ class CommunitySingleInstanceRoutingProcedureIT extends BaseRoutingProcedureIT
 
     private GraphDatabaseAPI startDb( SocketAddress advertisedBoltAddress )
     {
+        return (GraphDatabaseAPI) startDbms( advertisedBoltAddress ).database( DEFAULT_DATABASE_NAME );
+    }
 
+    DatabaseManagementService startDbms( SocketAddress advertisedBoltAddress )
+    {
         DatabaseManagementServiceBuilder builder = newGraphDatabaseFactory( testDirectory.homeDir() );
         builder.setConfig( auth_enabled, false );
         builder.setConfig( BoltConnector.enabled, true );
@@ -128,7 +132,7 @@ class CommunitySingleInstanceRoutingProcedureIT extends BaseRoutingProcedureIT
             builder.setConfig( BoltConnector.advertised_address, new SocketAddress( 0 ) );
         }
         managementService = builder.build();
-        return (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
+        return managementService;
     }
 
     private static RoutingResult newRoutingResult( SocketAddress advertisedBoltAddress )

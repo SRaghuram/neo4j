@@ -18,6 +18,7 @@ import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.internal.kernel.api.procs.QualifiedName;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.api.procedure.CallableProcedure;
+import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.impl.util.ValueUtils;
 import org.neo4j.procedure.builtin.routing.RoutingResult;
 import org.neo4j.values.AnyValue;
@@ -66,8 +67,10 @@ class GetRoutingTableProcedureForMultiDCTest
     {
         // given
         var databaseManager = new StubClusteredDatabaseManager();
-        var databaseId = databaseManager.databaseIdRepository().getByName( "my_database" ).get();
-        databaseManager.givenDatabaseWithConfig().withDatabaseId( databaseId ).register();
+        var databaseId = databaseManager.databaseIdRepository().getByName( "my-database" ).get();
+        var availabilityGuard = mock( DatabaseAvailabilityGuard.class );
+        when( availabilityGuard.isAvailable() ).thenReturn( true );
+        databaseManager.givenDatabaseWithConfig().withDatabaseId( databaseId ).withDatabaseAvailabilityGuard( availabilityGuard ).register();
 
         var plugin = mock( LoadBalancingPlugin.class );
         var addresses = List.of( new SocketAddress( "localhost", 12345 ) );
@@ -116,13 +119,15 @@ class GetRoutingTableProcedureForMultiDCTest
     {
         var databaseId = randomDatabaseId();
         var databaseManager = new StubClusteredDatabaseManager();
-        databaseManager.givenDatabaseWithConfig().withDatabaseId( databaseId ).withStoppedDatabase().register();
+        var availabilityGuard = mock( DatabaseAvailabilityGuard.class );
+        when( availabilityGuard.isAvailable() ).thenReturn( false );
+        databaseManager.givenDatabaseWithConfig().withDatabaseId( databaseId ).withDatabaseAvailabilityGuard( availabilityGuard ).register();
 
         var plugin = mock( LoadBalancingPlugin.class );
         var proc = newProcedure( plugin, databaseManager );
 
         var error = assertThrows( ProcedureException.class, () -> proc.apply( null, new AnyValue[]{MapValue.EMPTY, stringValue( databaseId.name() )}, null ) );
-        assertEquals( Status.Database.DatabaseNotFound, error.status() );
+        assertEquals( Status.Database.DatabaseUnavailable, error.status() );
     }
 
     @Test
@@ -130,14 +135,16 @@ class GetRoutingTableProcedureForMultiDCTest
     {
         var databaseManager = new StubClusteredDatabaseManager();
         var databaseId = databaseManager.databaseIdRepository().getByName( "customers" ).get();
-        databaseManager.givenDatabaseWithConfig().withDatabaseId( databaseId ).register();
+        var availabilityGuard = mock( DatabaseAvailabilityGuard.class );
+        when( availabilityGuard.isAvailable() ).thenReturn( true );
+        databaseManager.givenDatabaseWithConfig().withDatabaseId( databaseId ).withDatabaseAvailabilityGuard( availabilityGuard ).register();
 
         var plugin = mock( LoadBalancingPlugin.class );
         when( plugin.run( any(), any() ) ).thenReturn( new RoutingResult( emptyList(), emptyList(), emptyList(), 42 ) );
         var proc = newProcedure( plugin, databaseManager );
 
         var error = assertThrows( ProcedureException.class, () -> proc.apply( null, new AnyValue[]{MapValue.EMPTY, stringValue( databaseId.name() )}, null ) );
-        assertEquals( Status.Database.DatabaseNotFound, error.status() );
+        assertEquals( Status.Procedure.ProcedureCallFailed, error.status() );
         verify( plugin ).run( databaseId, MapValue.EMPTY );
     }
 

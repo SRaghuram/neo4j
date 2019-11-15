@@ -25,6 +25,10 @@ import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.procedure.builtin.routing.RoutingResult;
 import org.neo4j.test.extension.Inject;
 
+import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.assertDatabaseEventuallyStarted;
+import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.assertDatabaseEventuallyStopped;
+import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.createDatabase;
+import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.stopDatabase;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
@@ -79,7 +83,7 @@ class ClusterRoutingProcedureIT extends BaseRoutingProcedureIT
     @Test
     void shouldCallRoutingProcedureWithNonExistingDatabaseNameOnCores()
     {
-        String unknownDatabaseName = "non_existing_core_database";
+        String unknownDatabaseName = "non-existing-core-database";
 
         assertAll( cluster.coreMembers().stream().map( core ->
                 () -> assertRoutingProceduresFailForUnknownDatabase( unknownDatabaseName, core.defaultDatabase() ) ) );
@@ -88,16 +92,30 @@ class ClusterRoutingProcedureIT extends BaseRoutingProcedureIT
     @Test
     void shouldCallRoutingProcedureWithNonExistingDatabaseNameOnReadReplicas()
     {
-        String unknownDatabaseName = "non_existing_replica_database";
+        String unknownDatabaseName = "non-existing-replica-database";
 
         assertAll( cluster.readReplicas().stream().map( readReplica ->
                 () -> assertRoutingProceduresFailForUnknownDatabase( unknownDatabaseName, readReplica.defaultDatabase() ) ) );
     }
 
     @Test
+    void shouldCallRoutingProcedureForStoppedDatabase() throws Exception
+    {
+        String databaseName = "stopped-database";
+
+        createDatabase( databaseName, cluster );
+        assertDatabaseEventuallyStarted( databaseName, cluster );
+        stopDatabase( databaseName, cluster );
+        assertDatabaseEventuallyStopped( databaseName, cluster );
+
+        assertAll( cluster.allMembers().stream().map( member ->
+                () -> assertRoutingProceduresFailForStoppedDatabase( databaseName, member.systemDatabase() ) ) );
+    }
+
+    @Test
     void shouldNotAllowDriverToUseNonExistingDatabaseOnCores()
     {
-        String unknownDatabaseName = "non_existing_core_database";
+        String unknownDatabaseName = "non-existing-core-database";
 
         assertAll( cluster.coreMembers().stream().map( core ->
                 () -> assertRoutingDriverFailsForUnknownDatabase( core.boltAdvertisedAddress(), unknownDatabaseName ) ) );
@@ -106,7 +124,7 @@ class ClusterRoutingProcedureIT extends BaseRoutingProcedureIT
     @Test
     void shouldNotAllowDriverToUseNonExistingDatabaseOnReadReplicas()
     {
-        String unknownDatabaseName = "non_existing_replica_database";
+        String unknownDatabaseName = "non-existing-replica-database";
 
         assertAll( cluster.readReplicas().stream().map( readReplica ->
                 () -> assertRoutingDriverFailsForUnknownDatabase( readReplica.boltAdvertisedAddress(), unknownDatabaseName ) ) );
