@@ -9,7 +9,6 @@ import com.neo4j.causalclustering.discovery.RoleInfo;
 
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
-import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.DatabaseId;
 
 public class ReadReplicaRoleProcedure extends RoleProcedure
@@ -24,7 +23,7 @@ public class ReadReplicaRoleProcedure extends RoleProcedure
     {
         return databaseManager.getDatabaseContext( databaseId )
                 .map( DatabaseContext::database )
-                .filter( Database::isStarted )
+                .filter( db -> db.getDatabaseAvailabilityGuard().isAvailable() )
                 .map( ctx -> RoleInfo.READ_REPLICA )
                 .orElse( RoleInfo.UNKNOWN );
     }
