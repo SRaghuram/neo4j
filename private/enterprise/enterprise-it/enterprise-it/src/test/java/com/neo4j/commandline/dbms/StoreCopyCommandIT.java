@@ -54,6 +54,7 @@ class StoreCopyCommandIT extends AbstractCommandIT
     private static final Label NUMBER_LABEL = Label.label( "Number" );
     private static final Label CHARACTER_LABEL = Label.label( "Character" );
     private static final Label ERROR_LABEL = Label.label( "Error" );
+    private static final RelationshipType KNOWS_RELATIONSHIP_TYPE = RelationshipType.withName( "KNOWS" );
 
     @Test
     void cantCopyFromRunningDatabase()
@@ -267,7 +268,20 @@ class StoreCopyCommandIT extends AbstractCommandIT
     {
         try ( Transaction tx = databaseAPI.beginTx() )
         {
-            tx.createNode( NUMBER_LABEL, ERROR_LABEL );
+            Node a = tx.createNode( NUMBER_LABEL, ERROR_LABEL );
+            a.setProperty( "name", "Anna" );
+            Node b = tx.createNode( NUMBER_LABEL, ERROR_LABEL );
+            b.setProperty( "name", "Bob" );
+            Node c = tx.createNode( NUMBER_LABEL, ERROR_LABEL );
+            c.setProperty( "name", "Carrie" );
+            a.createRelationshipTo( b, KNOWS_RELATIONSHIP_TYPE );
+            b.createRelationshipTo( c, KNOWS_RELATIONSHIP_TYPE );
+            tx.commit();
+        }
+        try ( Transaction tx = databaseAPI.beginTx() )
+        {
+            tx.getRelationshipById( 1 ).delete();
+            tx.getNodeById( 2 ).delete();
             tx.commit();
         }
         String databaseName = databaseAPI.databaseName();
@@ -294,6 +308,27 @@ class StoreCopyCommandIT extends AbstractCommandIT
         assertRecordFormat( standardCopyName, StandardFormatFamily.INSTANCE );
         assertRecordFormat( standardSameCopyName, StandardFormatFamily.INSTANCE );
         assertRecordFormat( highLimitSameCopyName, HighLimitFormatFamily.INSTANCE );
+
+        validateCopyContents( highLimitCopyName );
+        validateCopyContents( standardCopyName );
+        validateCopyContents( standardSameCopyName );
+        validateCopyContents( highLimitSameCopyName );
+    }
+
+    private void validateCopyContents( String dbName )
+    {
+        managementService.createDatabase( dbName );
+        GraphDatabaseService copyDb = managementService.database( dbName );
+        try ( Transaction tx = copyDb.beginTx() )
+        {
+            assertEquals( "Anna", tx.getNodeById( 0 ).getProperty( "name" ) );
+            assertEquals( "Bob", tx.getNodeById( 1 ).getProperty( "name" ) );
+            assertEquals( KNOWS_RELATIONSHIP_TYPE, tx.getNodeById( 0 ).getRelationships().iterator().next().getType() );
+            assertThrows( NotFoundException.class, () -> tx.getNodeById( 2 ) );
+            assertThrows( NotFoundException.class, () -> tx.getRelationshipById( 1 ) );
+            tx.commit();
+        }
+        managementService.dropDatabase( dbName );
     }
 
     @Test
