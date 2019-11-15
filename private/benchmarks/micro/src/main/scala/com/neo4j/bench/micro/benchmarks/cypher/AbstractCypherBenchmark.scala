@@ -255,7 +255,7 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
     val databaseId = db.asInstanceOf[GraphDatabaseAPI].databaseId()
     val initialStatement: KernelStatement = tx.kernelTransaction().acquireStatement().asInstanceOf[KernelStatement]
     val threadExecutingTheQuery = Thread.currentThread()
-    val activeLockCount: LongSupplier = new LongSupplier {
+    val emptySupplier: LongSupplier = new LongSupplier {
       override def getAsLong = 0
     }
     new Neo4jTransactionalContext(
@@ -269,8 +269,9 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
                          "query text",
                          queryParameters,
                          metaData,
-                         activeLockCount,
-                         0, 0,
+                         emptySupplier,
+                         emptySupplier,
+                         emptySupplier,
                          threadExecutingTheQuery.getId,
                          threadExecutingTheQuery.getName,
                          Clocks.nanoClock(),

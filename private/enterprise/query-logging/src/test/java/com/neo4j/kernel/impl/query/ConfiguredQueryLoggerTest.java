@@ -643,7 +643,7 @@ class ConfiguredQueryLoggerTest
                 sessionInfo, namedDatabaseId, username, queryText,
                 ValueUtils.asMapValue( params ),
                 metaData,
-                () -> 0, pageHits, pageFaults,
+                () -> 0, () -> pageHits, () -> pageFaults,
                 thread.getId(),
                 thread.getName(),
                 clock,

@@ -150,7 +150,7 @@ class TransactionDependenciesResolverTest
     private static ExecutingQuery createExecutingQuery( long queryId )
     {
         return new ExecutingQuery( queryId, ClientConnectionInfo.EMBEDDED_CONNECTION, new TestDatabaseIdRepository().defaultDatabase(), "test", "testQuey",
-                VirtualValues.EMPTY_MAP, Collections.emptyMap(), () -> 1L, 1, 2,
+                VirtualValues.EMPTY_MAP, Collections.emptyMap(), () -> 1L, () -> 1, () -> 2,
                 Thread.currentThread().getId(), Thread.currentThread().getName(),
                 Clocks.nanoClock(), CpuClock.NOT_AVAILABLE );
     }
