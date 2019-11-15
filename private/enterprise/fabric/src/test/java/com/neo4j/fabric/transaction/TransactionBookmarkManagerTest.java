@@ -110,9 +110,9 @@ class TransactionBookmarkManagerTest
         assertThat( bookmarkManager.getBookmarksForGraph( graph1 ), containsInAnyOrder( "BB-1" ) );
     }
 
-    private static FabricConfig.DriverConfig emptyDriverConfig()
+    private static FabricConfig.GraphDriverConfig emptyDriverConfig()
     {
-        return new FabricConfig.DriverConfig( null, null, null, null, null, null, null, null, null, null );
+        return new FabricConfig.GraphDriverConfig( null, null, null, null, null, null, null, null, false );
     }
 
     private FabricBookmark.GraphState getGraphState( FabricBookmark fabricBookmark, FabricConfig.Graph graph )
