@@ -158,15 +158,15 @@ public final class CausalClusteringTestHelpers
 
     public static void forceReelection( Cluster cluster, String databaseName ) throws Exception
     {
-        runWithLeaderDisabled( cluster, databaseName, ( ig, nore ) -> null );
+        runWithLeaderDisabled( cluster, databaseName, ( leader, others ) -> null );
     }
 
-    public static <T> T runWithLeaderDisabled( Cluster cluster, DisabledRaftRunner<T> disabledMemberConsumer ) throws Exception
+    public static <T> T runWithLeaderDisabled( Cluster cluster, DisabledRaftAction<T> disabledMemberAction ) throws Exception
     {
-        return runWithLeaderDisabled( cluster, DEFAULT_DATABASE_NAME, disabledMemberConsumer );
+        return runWithLeaderDisabled( cluster, DEFAULT_DATABASE_NAME, disabledMemberAction );
     }
 
-    public static <T> T runWithLeaderDisabled( Cluster cluster, String databaseName, DisabledRaftRunner<T> disabledMemberConsumer ) throws Exception
+    public static <T> T runWithLeaderDisabled( Cluster cluster, String databaseName, DisabledRaftAction<T> disabledMemberAction ) throws Exception
     {
         CoreClusterMember leader = cluster.awaitLeader( databaseName );
         Server raftServer = raftServer( leader );
@@ -179,17 +179,12 @@ public final class CausalClusteringTestHelpers
             var follower = randomClusterMember( cluster, leader );
             follower.resolveDependency( databaseName, RaftMachine.class ).triggerElection();
             assertEventually( "Leader re-election did not happen", cluster::awaitLeader, not( equalTo( leader ) ), 2, MINUTES );
-            return disabledMemberConsumer.execute( leader, otherMembers );
+            return disabledMemberAction.execute( leader, otherMembers );
         }
         finally
         {
             raftServer.start();
         }
-    }
-
-    public interface DisabledRaftRunner<T>
-    {
-        T execute( CoreClusterMember oldLeader, List<CoreClusterMember> otherMembers ) throws Exception;
     }
 
     public static void removeCheckPointFromDefaultDatabaseTxLog( ClusterMember member ) throws IOException
@@ -499,6 +494,11 @@ public final class CausalClusteringTestHelpers
     private static Server raftServer( CoreClusterMember member )
     {
         return member.defaultDatabase().getDependencyResolver().resolveDependency( Server.class, new RaftServerSelectionStrategy() );
+    }
+
+    public interface DisabledRaftAction<T>
+    {
+        T execute( CoreClusterMember oldLeader, List<CoreClusterMember> otherMembers ) throws Exception;
     }
 
     private static class RaftServerSelectionStrategy implements DependencyResolver.SelectionStrategy

@@ -14,7 +14,6 @@ import com.neo4j.causalclustering.readreplica.CatchupPollingProcess;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -60,7 +59,6 @@ import static org.neo4j.driver.AccessMode.READ;
 import static org.neo4j.driver.AccessMode.WRITE;
 import static org.neo4j.driver.SessionConfig.builder;
 import static org.neo4j.driver.Values.parameters;
-import static org.neo4j.internal.helpers.collection.MapUtil.stringMap;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 class BoltCausalClusteringIT
@@ -84,19 +82,13 @@ class BoltCausalClusteringIT
             cluster.start();
         }
 
-        @AfterAll
-        void shutdownCluster()
-        {
-            cluster.shutdown();
-        }
-
         @BeforeEach
         void removePersons() throws TimeoutException
         {
             try ( Driver driver = makeDriver( cluster ) )
             {
                 // when
-                inExpirableSession( driver, d -> d.session( builder().withDefaultAccessMode( WRITE ).build() ),
+                inExpirableSession( driver, Driver::session,
                         session -> session.run( "MATCH (n:Person) DELETE n" ).consume() );
             }
         }
@@ -154,9 +146,9 @@ class BoltCausalClusteringIT
             assertEventually( "Failed to execute write query on read server", () ->
             {
                 forceReelection( cluster, DEFAULT_DATABASE_NAME );
-                CoreClusterMember leader = cluster.awaitLeader();
 
-                try ( Driver driver = makeDriver( cluster ); Session session = driver.session( builder().withDefaultAccessMode( READ ).build() ) )
+                try ( Driver driver = makeDriver( cluster );
+                      Session session = driver.session( builder().withDefaultAccessMode( READ ).build() ) )
                 {
                     // when
                     session.run( "CREATE (n:Person {name: 'Jim'})" ).consume();
@@ -173,20 +165,17 @@ class BoltCausalClusteringIT
         @Test
         void shouldPickANewServerToWriteToOnLeaderSwitch() throws Throwable
         {
-            // given
-            CoreClusterMember leader = cluster.awaitLeader();
-
             String firstAddress;
             try ( Driver driver = makeDriver( cluster ) )
             {
-                firstAddress = inExpirableSession( driver, driver1 -> driver1.session( builder().withDefaultAccessMode( WRITE ).build() ), session ->
+                firstAddress = inExpirableSession( driver, Driver::session, session ->
                 {
                     StatementResult result = session.run( "CREATE (p:Person)" );
                     return result.consume().server().address();
                 } );
 
-                var secondAddress = runWithLeaderDisabled( cluster, ( oldLeader, currentMembers ) -> inExpirableSession( driver,
-                        driver1 -> driver1.session( builder().withDefaultAccessMode( WRITE ).build() ), session ->
+                var secondAddress = runWithLeaderDisabled( cluster, ( oldLeader, currentMembers ) -> inExpirableSession( driver, Driver::session,
+                        session ->
                         {
                             StatementResult result = session.run( "CREATE (p:Person)" );
                             return result.consume().server().address();
@@ -198,10 +187,8 @@ class BoltCausalClusteringIT
         @Test
         void sessionShouldExpireOnLeaderSwitch() throws Exception
         {
-            // given
-            CoreClusterMember leader = cluster.awaitLeader();
-
-            try ( Driver driver = makeDriver( cluster ); Session session = driver.session() )
+            try ( Driver driver = makeDriver( cluster );
+                  Session session = driver.session() )
             {
                 session.run( "CREATE (n:Person {name: 'Jim'})" ).consume();
 
@@ -220,11 +207,10 @@ class BoltCausalClusteringIT
         void shouldBeAbleToGetClusterOverview() throws Exception
         {
             // given
-            CoreClusterMember leader = cluster.awaitLeader();
+            int clusterSize = cluster.allMembers().size();
 
-            int clusterSize = cluster.readReplicas().size() + cluster.coreMembers().size();
-
-            try ( Driver driver = makeDriver( cluster ); Session session = driver.session() )
+            try ( Driver driver = makeDriver( cluster );
+                  Session session = driver.session() )
             {
                 assertEventually( () -> session.run( "CALL dbms.cluster.overview" ).list(), hasSize( clusterSize ), 60, SECONDS );
             }
@@ -240,9 +226,6 @@ class BoltCausalClusteringIT
         @Test
         void shouldReadAndWriteToANewSessionCreatedAfterALeaderSwitch() throws Exception
         {
-            // given
-            CoreClusterMember leader = cluster.awaitLeader();
-
             try ( Driver driver = makeDriver( cluster ) )
             {
                 inExpirableSession( driver, Driver::session, session ->
@@ -292,9 +275,6 @@ class BoltCausalClusteringIT
         @Test
         void bookmarksShouldWorkWithDriverPinnedToSingleServer() throws Exception
         {
-            // given
-            CoreClusterMember leader = cluster.awaitLeader();
-
             try ( Driver driver = makeDriver( cluster ) )
             {
                 Bookmark bookmark = inExpirableSession( driver, Driver::session, session ->
@@ -322,12 +302,9 @@ class BoltCausalClusteringIT
         @Test
         void shouldUseBookmarkFromAReadSessionInAWriteSession() throws Exception
         {
-            // given
-            CoreClusterMember leader = cluster.awaitLeader();
-
             try ( Driver driver = makeDriver( cluster ) )
             {
-                inExpirableSession( driver, d -> d.session( builder().withDefaultAccessMode( WRITE ).build() ), session ->
+                inExpirableSession( driver, Driver::session, session ->
                 {
                     session.run( "CREATE (p:Person {name: $name })", parameters( "name", "Jim" ) );
                     return null;
@@ -370,7 +347,6 @@ class BoltCausalClusteringIT
         void shouldUseBookmarkFromAWriteSessionInAReadSession() throws Throwable
         {
             // given
-            CoreClusterMember leader = cluster.awaitLeader();
             ReadReplica readReplica = cluster.getReadReplicaById( 0 );
 
             CatchupPollingProcess catchupPollingProcess = readReplica.resolveDependency( DEFAULT_DATABASE_NAME, CatchupPollingProcess.class );
@@ -378,8 +354,7 @@ class BoltCausalClusteringIT
 
             try ( Driver driver1 = makeDriver( cluster ) )
             {
-
-                Bookmark bookmark = inExpirableSession( driver1, d -> d.session( builder().withDefaultAccessMode( WRITE ).build() ), session ->
+                Bookmark bookmark = inExpirableSession( driver1, Driver::session, session ->
                 {
                     try ( Transaction tx = session.beginTransaction() )
                     {
@@ -398,14 +373,13 @@ class BoltCausalClusteringIT
 
                 try ( Driver driver2 = makeDriver( readReplica.directURI() ) )
                 {
-
                     try ( Session session = driver2.session( builder().withDefaultAccessMode( READ ).withBookmarks( bookmark ).build() ) )
                     {
                         try ( Transaction tx = session.beginTransaction() )
                         {
                             Record record = tx.run( "MATCH (n:Person) RETURN COUNT(*) AS count" ).next();
-                            tx.commit();
                             assertEquals( 4, record.get( "count" ).asInt() );
+                            tx.commit();
                         }
                     }
                 }
@@ -449,8 +423,8 @@ class BoltCausalClusteringIT
                     try ( Transaction tx = session.beginTransaction() )
                     {
                         Record record = tx.run( "MATCH (n:Person) RETURN COUNT(*) AS count" ).next();
-                        tx.commit();
                         assertEquals( 1, record.get( "count" ).asInt() );
+                        tx.commit();
                     }
                 }
             }
@@ -474,13 +448,13 @@ class BoltCausalClusteringIT
                     .clusterConfig()
                     .withNumberOfCoreMembers( 3 )
                     .withNumberOfReadReplicas( 1 )
-                    .withSharedCoreParams( stringMap( GraphDatabaseSettings.routing_ttl.name(), "1s" ) ) );
+                    .withSharedCoreParams( Map.of( GraphDatabaseSettings.routing_ttl.name(), "1s" ) ) );
             cluster.start();
-            var leader = cluster.awaitLeader();
+
             try ( Driver driver = makeDriver( cluster ) )
             {
 
-                Bookmark bookmark = inExpirableSession( driver, d -> d.session( builder().withDefaultAccessMode( WRITE ).build() ), session ->
+                Bookmark bookmark = inExpirableSession( driver, Driver::session, session ->
                 {
                     try ( Transaction tx = session.beginTransaction() )
                     {
@@ -540,10 +514,11 @@ class BoltCausalClusteringIT
         void transactionsShouldNotAppearOnTheReadReplicaWhilePollingIsPaused() throws Throwable
         {
             // given
-            Map<String,String> params =
-                    stringMap( GraphDatabaseSettings.keep_logical_logs.name(), "keep_none", GraphDatabaseSettings.logical_log_rotation_threshold.name(), "1M",
-                            GraphDatabaseSettings.check_point_interval_time.name(), "100ms", CausalClusteringSettings.cluster_allow_reads_on_followers.name(),
-                            FALSE );
+            Map<String,String> params = Map.of(
+                    GraphDatabaseSettings.keep_logical_logs.name(), "keep_none",
+                    GraphDatabaseSettings.logical_log_rotation_threshold.name(), "1M",
+                    GraphDatabaseSettings.check_point_interval_time.name(), "100ms",
+                    CausalClusteringSettings.cluster_allow_reads_on_followers.name(), FALSE );
 
             Cluster cluster = clusterFactory.createCluster( ClusterConfig.clusterConfig().withSharedCoreParams( params ).withNumberOfReadReplicas( 1 ) );
             cluster.start();
@@ -617,7 +592,7 @@ class BoltCausalClusteringIT
         try ( Driver driver = makeDriver( core.routingURI() ) )
         {
 
-            return inExpirableSession( driver, d -> d.session( builder().withDefaultAccessMode( WRITE ).build() ), session ->
+            return inExpirableSession( driver, Driver::session, session ->
             {
                 // when
                 session.run( "MERGE (n:Person {name: 'Jim'})" ).consume();
