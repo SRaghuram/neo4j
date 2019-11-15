@@ -315,7 +315,7 @@ public class StoreCopy
 
     private LenientInputChunkIterator relationshipIterator()
     {
-        return new LenientInputChunkIterator( propertyStore )
+        return new LenientInputChunkIterator( relationshipStore )
         {
             @Override
             public InputChunk newChunk()
