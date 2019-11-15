@@ -71,18 +71,18 @@ public class RaftMachine implements LeaderLocator, CoreMetaData, DatabasePanicEv
      * this instance cannot become a leader (the timers are disabled) and entries will not be cached
      * in the in-flight map, because the application process is not running and ready to consume them.
      */
-    public synchronized void postRecoveryActions()
+    public void postRecoveryActions()
     {
         leaderAvailabilityTimers.start( this::electionTimeout, () -> handle( new RaftMessages.Timeout.Heartbeat( myself ) ) );
         inFlightCache.enable();
     }
 
-    public synchronized void stopTimers()
+    public void stopTimers()
     {
         leaderAvailabilityTimers.stop();
     }
 
-    private synchronized void electionTimeout() throws IOException
+    private void electionTimeout() throws IOException
     {
         if ( leaderAvailabilityTimers.isElectionTimedOut() )
         {

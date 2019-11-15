@@ -19,63 +19,63 @@ import org.neo4j.scheduler.Group;
 
 import static com.neo4j.causalclustering.core.consensus.schedule.TimeoutFactory.fixedTimeout;
 import static com.neo4j.causalclustering.core.consensus.schedule.TimeoutFactory.uniformRandomTimeout;
-import static com.neo4j.causalclustering.core.consensus.schedule.Timer.CancelMode.ASYNC;
+import static com.neo4j.causalclustering.core.consensus.schedule.Timer.CancelMode.SYNC_WAIT;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 class LeaderAvailabilityTimers
 {
-    private final long electionTimeout;
-    private final long heartbeatInterval;
+    private final long electionIntervalMillis;
+    private final long heartbeatIntervalMillis;
     private final Clock clock;
     private final TimerService timerService;
     private final Log log;
 
     private volatile long lastElectionRenewalMillis;
 
-    private Timer heartbeatTimer;
-    private Timer electionTimer;
+    private volatile Timer heartbeatTimer;
+    private volatile Timer electionTimer;
 
     LeaderAvailabilityTimers( Duration electionTimeout, Duration heartbeatInterval, Clock clock, TimerService timerService,
             LogProvider logProvider )
     {
-        this.electionTimeout = electionTimeout.toMillis();
-        this.heartbeatInterval = heartbeatInterval.toMillis();
+        this.electionIntervalMillis = electionTimeout.toMillis();
+        this.heartbeatIntervalMillis = heartbeatInterval.toMillis();
         this.clock = clock;
         this.timerService = timerService;
         this.log = logProvider.getLog( getClass() );
 
-        if ( this.electionTimeout < this.heartbeatInterval )
+        if ( this.electionIntervalMillis < heartbeatIntervalMillis )
         {
-            throw new IllegalArgumentException( String.format(
-                            "Election timeout %s should not be shorter than heartbeat interval %s", this.electionTimeout, this.heartbeatInterval
+            throw new IllegalArgumentException(
+                    String.format( "Election timeout %s should not be shorter than heartbeat interval %s", this.electionIntervalMillis, heartbeatIntervalMillis
             ) );
         }
     }
 
-    synchronized void start( ThrowingAction<Exception> electionAction, ThrowingAction<Exception> heartbeatAction )
+    void start( ThrowingAction<Exception> electionAction, ThrowingAction<Exception> heartbeatAction )
     {
-        this.electionTimer = timerService.create( RaftMachine.Timeouts.ELECTION, Group.RAFT_TIMER, renewing( electionAction) );
-        this.electionTimer.set( uniformRandomTimeout( electionTimeout, electionTimeout * 2, MILLISECONDS ) );
+        this.electionTimer = timerService.create( RaftMachine.Timeouts.ELECTION, Group.RAFT_TIMER, renewing( electionAction ) );
+        this.electionTimer.set( uniformRandomTimeout( electionIntervalMillis, electionIntervalMillis * 2, MILLISECONDS ) );
 
         this.heartbeatTimer = timerService.create( RaftMachine.Timeouts.HEARTBEAT, Group.RAFT_TIMER, renewing( heartbeatAction ) );
-        this.heartbeatTimer.set( fixedTimeout( heartbeatInterval, MILLISECONDS ) );
+        this.heartbeatTimer.set( fixedTimeout( heartbeatIntervalMillis, MILLISECONDS ) );
 
         lastElectionRenewalMillis = clock.millis();
     }
 
-    synchronized void stop()
+    void stop()
     {
         if ( electionTimer != null )
         {
-            electionTimer.cancel( ASYNC );
+            electionTimer.kill( SYNC_WAIT );
         }
         if ( heartbeatTimer != null )
         {
-            heartbeatTimer.cancel( ASYNC );
+            heartbeatTimer.kill( SYNC_WAIT );
         }
     }
 
-    synchronized void renewElection()
+    void renewElection()
     {
         lastElectionRenewalMillis = clock.millis();
         if ( electionTimer != null )
@@ -84,15 +84,15 @@ class LeaderAvailabilityTimers
         }
     }
 
-    synchronized boolean isElectionTimedOut()
+    boolean isElectionTimedOut()
     {
-        return clock.millis() - lastElectionRenewalMillis >= electionTimeout;
+        return clock.millis() - lastElectionRenewalMillis >= electionIntervalMillis;
     }
 
     // Getters for immutable values
-    long getElectionTimeout()
+    long getElectionTimeoutMillis()
     {
-        return electionTimeout;
+        return electionIntervalMillis;
     }
 
     private TimeoutHandler renewing( ThrowingAction<Exception> action )

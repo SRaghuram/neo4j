@@ -88,16 +88,17 @@ public class RaftGroup
         Integer minimumConsensusGroupSize = config.get( CausalClusteringSettings.minimum_core_cluster_size_at_runtime );
         MemberIdSetBuilder memberSetBuilder = new MemberIdSetBuilder();
         raftMembershipManager = new RaftMembershipManager( leaderOnlyReplicator, myself, memberSetBuilder, raftLog, logProvider, minimumConsensusGroupSize,
-                leaderAvailabilityTimers.getElectionTimeout(), systemClock(), config.get( join_catch_up_timeout ).toMillis(), raftMembershipStorage );
+                leaderAvailabilityTimers.getElectionTimeoutMillis(), systemClock(), config.get( join_catch_up_timeout ).toMillis(), raftMembershipStorage );
 
         dependencies.satisfyDependency( raftMembershipManager );
         life.add( raftMembershipManager );
 
         // TODO: In-flight cache should support sharing between multiple databases.
         inFlightCache = InFlightCacheFactory.create( config, monitors );
-        RaftLogShippingManager logShipping = new RaftLogShippingManager( outbound, logProvider, raftLog, timerService, systemClock(), myself,
-                raftMembershipManager, leaderAvailabilityTimers.getElectionTimeout(), config.get( catchup_batch_size ), config.get( log_shipping_max_lag ),
-                inFlightCache );
+        RaftLogShippingManager logShipping =
+                new RaftLogShippingManager( outbound, logProvider, raftLog, timerService, systemClock(), myself, raftMembershipManager,
+                        leaderAvailabilityTimers.getElectionTimeoutMillis(), config.get( catchup_batch_size ), config.get( log_shipping_max_lag ),
+                        inFlightCache );
 
         boolean supportsPreVoting = config.get( CausalClusteringSettings.enable_pre_voting );
 
