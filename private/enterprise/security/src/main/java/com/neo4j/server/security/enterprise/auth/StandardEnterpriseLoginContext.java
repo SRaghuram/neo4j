@@ -27,7 +27,6 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.security.AuthorizationViolationException;
 import org.neo4j.internal.kernel.api.LabelSet;
 import org.neo4j.internal.kernel.api.security.AccessMode;
@@ -43,6 +42,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ADMIN;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.SCHEMA;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.TOKEN;
+import static org.neo4j.token.api.TokenConstants.NO_TOKEN;
 
 public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
 {
@@ -63,7 +63,7 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
         return neoShiroSubject;
     }
 
-    private StandardAccessMode mode( IdLookup resolver, String dbName ) throws KernelException
+    private StandardAccessMode mode( IdLookup resolver, String dbName )
     {
         boolean isAuthenticated = shiroSubject.isAuthenticated();
         boolean passwordChangeRequired = shiroSubject.getAuthenticationResult() == AuthenticationResult.PASSWORD_CHANGE_REQUIRED;
@@ -94,7 +94,7 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
     }
 
     @Override
-    public EnterpriseSecurityContext authorize( IdLookup idLookup, String dbName ) throws KernelException
+    public EnterpriseSecurityContext authorize( IdLookup idLookup, String dbName )
     {
         if ( !shiroSubject.isAuthenticated() )
         {
@@ -623,7 +623,7 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
                 anyAccess.put( GRANT, true );
             }
 
-            void addPrivilege( ResourcePrivilege privilege ) throws KernelException
+            void addPrivilege( ResourcePrivilege privilege )
             {
                 Resource resource = privilege.getResource();
                 Segment segment = privilege.getSegment();
@@ -640,26 +640,24 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
                     anyRead.put( privilegeType, true );
                     if ( segment instanceof LabelSegment )
                     {
-                        LabelSegment labelSegment = (LabelSegment) segment;
-                        if ( labelSegment.equals( LabelSegment.ALL ) )
+                        if ( segment.equals( LabelSegment.ALL ) )
                         {
                             traverseAllLabels.put( privilegeType, true );
                         }
                         else
                         {
-                            addLabel( traverseLabels.get( privilegeType ), labelSegment );
+                            addLabel( traverseLabels.get( privilegeType ), (LabelSegment) segment );
                         }
                     }
                     else if ( segment instanceof RelTypeSegment )
                     {
-                        RelTypeSegment relTypeSegment = (RelTypeSegment) segment;
-                        if ( relTypeSegment.equals( RelTypeSegment.ALL ) )
+                        if ( segment.equals( RelTypeSegment.ALL ) )
                         {
                             traverseAllRelTypes.put( privilegeType, true );
                         }
                         else
                         {
-                            addRelType( traverseRelTypes.get( privilegeType ), relTypeSegment );
+                            addRelType( traverseRelTypes.get( privilegeType ), (RelTypeSegment) segment );
                         }
                     }
                     else
@@ -678,6 +676,11 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
                         break;
                     case PROPERTY:
                         int propertyId = resolvePropertyId( resource.getArg1() );
+                        if ( propertyId == NO_TOKEN )
+                        {
+                            // there exists no property with this name at the start of this transaction
+                            break;
+                        }
                         if ( segment instanceof LabelSegment )
                         {
                             if ( segment.equals( LabelSegment.ALL ) )
@@ -686,8 +689,7 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
                             }
                             else
                             {
-                                int labelId = resolveLabelId( ((LabelSegment) segment).getLabel() );
-                                addLabelPropertyCombination( nodeSegmentForProperty.get( privilegeType ), labelId, propertyId );
+                                addLabel( nodeSegmentForProperty.get( privilegeType ), (LabelSegment) segment, propertyId );
                             }
                         }
                         else if ( segment instanceof RelTypeSegment )
@@ -698,8 +700,7 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
                             }
                             else
                             {
-                                int relTypeId = resolveRelTypeId( ((RelTypeSegment) segment).getRelType() );
-                                addLabelPropertyCombination( relationshipSegmentForProperty.get( privilegeType ), relTypeId, propertyId );
+                                addRelType( relationshipSegmentForProperty.get( privilegeType ), (RelTypeSegment) segment, propertyId );
                             }
                         }
                         else
@@ -716,19 +717,18 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
                             }
                             else
                             {
-                                addLabel( nodeSegmentForAllProperties.get( privilegeType ), segment );
+                                addLabel( nodeSegmentForAllProperties.get( privilegeType ), (LabelSegment) segment );
                             }
                         }
                         else if ( segment instanceof RelTypeSegment )
                         {
-                            RelTypeSegment relTypeSegment = (RelTypeSegment) segment;
-                            if ( relTypeSegment.equals( RelTypeSegment.ALL ) )
+                            if ( segment.equals( RelTypeSegment.ALL ) )
                             {
                                 readAllPropertiesAllRelTypes.put( privilegeType, true );
                             }
                             else
                             {
-                                addRelType( relationshipSegmentForAllProperties.get( privilegeType ), relTypeSegment );
+                                addRelType( relationshipSegmentForAllProperties.get( privilegeType ), (RelTypeSegment) segment );
                             }
                         }
                         else
@@ -747,16 +747,6 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
                     case PROPERTY:
                     case ALL_PROPERTIES:
                         anyWrite.put( privilegeType, true );
-                        break;
-                    default:
-                    }
-                    break;
-
-                case EXECUTE:
-                    switch ( resource.type() )
-                    {
-                    case PROCEDURE:
-                        // implement when porting procedure execute privileges to system graph
                         break;
                     default:
                     }
@@ -795,40 +785,54 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
                 }
             }
 
-            private int resolveLabelId( String label ) throws KernelException
+            private int resolveLabelId( String label )
             {
                 assert !label.isEmpty();
-                return resolver.getOrCreateLabelId( label );
+                return resolver.getLabelId( label );
             }
 
-            private int resolveRelTypeId( String relType ) throws KernelException
+            private int resolveRelTypeId( String relType )
             {
                 assert !relType.isEmpty();
-                return resolver.getOrCreateRelTypeId( relType );
+                return resolver.getRelTypeId( relType );
             }
 
-            private int resolvePropertyId( String property ) throws KernelException
+            private int resolvePropertyId( String property )
             {
                 assert !property.isEmpty();
-                return resolver.getOrCreatePropertyKeyId( property );
+                return resolver.getPropertyKeyId( property );
             }
 
-            private void addLabel( MutableIntSet whiteOrBlacklist, Segment segment ) throws KernelException
+            private void addLabel( MutableIntObjectMap<IntSet> map, LabelSegment segment, int propertyId )
             {
-                int labelId = resolveLabelId( ((LabelSegment) segment).getLabel() );
-                whiteOrBlacklist.add( labelId );
+                // propertyId has already been checked that it is not NO_TOKEN
+                MutableIntSet setForProperty = (MutableIntSet) map.getIfAbsentPut( propertyId, IntSets.mutable.empty() );
+                addLabel( setForProperty, segment );
             }
 
-            private void addRelType( MutableIntSet whiteOrBlacklist, RelTypeSegment segment ) throws KernelException
+            private void addLabel( MutableIntSet whiteOrBlacklist, LabelSegment segment )
             {
-                whiteOrBlacklist.add( resolveRelTypeId( segment.getRelType() ) );
+                int labelId = resolveLabelId( segment.getLabel() );
+                if ( labelId != NO_TOKEN )
+                {
+                    whiteOrBlacklist.add( labelId );
+                }
             }
 
-            private void addLabelPropertyCombination( MutableIntObjectMap<IntSet> map, int labelId, int propertyId )
+            private void addRelType( MutableIntObjectMap<IntSet> map, RelTypeSegment segment, int propertyId )
             {
-                MutableIntSet setForProperty = (MutableIntSet) map
-                        .getIfAbsentPut( propertyId, IntSets.mutable.empty() );
-                setForProperty.add( labelId );
+                // propertyId has already been checked that it is not NO_TOKEN
+                MutableIntSet setForProperty = (MutableIntSet) map.getIfAbsentPut( propertyId, IntSets.mutable.empty() );
+                addRelType( setForProperty, segment );
+            }
+
+            private void addRelType( MutableIntSet whiteOrBlacklist, RelTypeSegment segment )
+            {
+                int relTypeId = resolveRelTypeId( segment.getRelType() );
+                if ( relTypeId != NO_TOKEN )
+                {
+                    whiteOrBlacklist.add( relTypeId );
+                }
             }
         }
     }

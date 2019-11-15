@@ -23,7 +23,6 @@ import java.util.concurrent.TimeUnit;
 
 import org.neo4j.cypher.internal.FullyParsedQuery;
 import org.neo4j.cypher.internal.javacompat.ExecutionEngine;
-import org.neo4j.exceptions.KernelException;
 import org.neo4j.internal.kernel.api.security.AccessMode;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.kernel.GraphDatabaseQueryService;
@@ -185,7 +184,7 @@ public class FabricLocalExecutor
         }
 
         @Override
-        public EnterpriseSecurityContext authorize( IdLookup idLookup, String dbName ) throws KernelException
+        public EnterpriseSecurityContext authorize( IdLookup idLookup, String dbName )
         {
             var originalSecurityContext = inner.authorize( idLookup, dbName );
             var restrictedAccessMode = new RestrictedAccessMode( originalSecurityContext.mode(), AccessMode.Static.ACCESS );

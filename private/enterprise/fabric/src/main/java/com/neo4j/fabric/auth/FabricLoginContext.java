@@ -10,7 +10,6 @@ import com.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
 
 import java.util.Set;
 
-import org.neo4j.exceptions.KernelException;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
 
 public class FabricLoginContext implements EnterpriseLoginContext
@@ -38,7 +37,7 @@ public class FabricLoginContext implements EnterpriseLoginContext
     }
 
     @Override
-    public EnterpriseSecurityContext authorize( IdLookup idLookup, String dbName ) throws KernelException
+    public EnterpriseSecurityContext authorize( IdLookup idLookup, String dbName )
     {
         return wrappedLoginContext.authorize( idLookup, dbName );
     }

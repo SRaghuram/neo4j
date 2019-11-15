@@ -242,6 +242,27 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
     }) should be(1)
   }
 
+  test("db.labels should not return not granted label even if it can be found by match") {
+    // GIVEN
+    setupUserWithCustomRole()
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:A:B)")
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * NODE A TO custom")
+
+    // THEN
+    val query = "CALL db.labels() YIELD label RETURN label ORDER BY label"
+    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+      row.get("label") should be("A")
+    }) should be(1)
+
+    executeOnDefault("joe", "soap", "MATCH (n:A) RETURN labels(n) as labels", resultHandler = (row, _) => {
+      row.get("labels") should be(List("A", "B").asJava)
+    }) should be(1)
+  }
+
   test("db.labels should not return denied label") {
     // GIVEN
     setupUserWithCustomRole()
@@ -477,6 +498,15 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
     execute("GRANT MATCH {x} ON GRAPH * NODES B (*) TO custom")
 
     // THEN
+    // When the transaction is started, there exists no label B,
+    // thus the privilege concerning B is not added to the access mode
+    executeOnDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 0
+
+    // WHEN
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CALL db.createLabel('B')")
+
+    // THEN
     executeOnDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 1
 
     // WHEN
@@ -497,18 +527,19 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
+    // y should never show up, since it hasn't been added as a token
     execute("GRANT MATCH {x, y} ON GRAPH * NODES * (*) TO custom")
     execute("DENY MATCH {x} ON GRAPH * NODES A (*) TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 2
+    executeOnDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 1
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("DENY MATCH {x} ON GRAPH * NODES * (*) TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 1
+    executeOnDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 0
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -516,7 +547,7 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
     execute("REVOKE GRANT TRAVERSE ON GRAPH * NODES * (*) FROM custom")
 
     // THEN
-    executeOnDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 1
+    executeOnDefault("joe", "soap", "CALL db.propertyKeys()") shouldBe 0
   }
 
   test("db.propertyKeys should return correct result for user with match on any label and type as long as that propertyKey is part of the grant") {
