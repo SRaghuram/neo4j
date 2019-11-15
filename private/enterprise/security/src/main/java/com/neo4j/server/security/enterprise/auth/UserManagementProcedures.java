@@ -69,7 +69,7 @@ public class UserManagementProcedures extends AuthProceduresBase
     {
         var query = String.format( "ALTER USER %s SET PASSWORD '%s' %s", escapeParameter( username ), newPassword == null ? "" : newPassword,
                 requirePasswordChange ? "CHANGE REQUIRED" : "CHANGE NOT REQUIRED" );
-        runSystemCommand( query, "dbms.security.createUser" );
+        runSystemCommand( query, "dbms.security.changeUserPassword" );
     }
 
     @Admin
@@ -110,7 +110,7 @@ public class UserManagementProcedures extends AuthProceduresBase
     @Deprecated
     @Description( "Suspend the specified user." )
     @Procedure( name = "dbms.security.suspendUser", mode = DBMS, deprecatedBy = "Administration command: ALTER USER" )
-    public void suspendUser( @Name( "username" ) String username ) throws ProcedureException, InvalidArgumentsException
+    public void suspendUser( @Name( "username" ) String username ) throws ProcedureException
     {
         var query = String.format( "ALTER USER %s SET STATUS SUSPENDED", escapeParameter( username ) );
         runSystemCommand( query, "dbms.security.suspendUser" );
@@ -123,7 +123,7 @@ public class UserManagementProcedures extends AuthProceduresBase
     @Procedure( name = "dbms.security.activateUser", mode = DBMS, deprecatedBy = "Administration command: ALTER USER" )
     public void activateUser( @Name( "username" ) String username,
             @Name( value = "requirePasswordChange", defaultValue = "true" ) boolean requirePasswordChange )
-            throws ProcedureException, InvalidArgumentsException
+            throws ProcedureException
     {
         var query = String.format( "ALTER USER %s %sSET STATUS ACTIVE", escapeParameter( username ),
                 requirePasswordChange ? "SET PASSWORD CHANGE REQUIRED " : "" );
@@ -136,6 +136,11 @@ public class UserManagementProcedures extends AuthProceduresBase
     @Description( "List all native users." )
     @Procedure( name = "dbms.security.listUsers", mode = DBMS, deprecatedBy = "Administration command: SHOW USERS" )
     public Stream<UserResult> listUsers() throws ProcedureException
+    {
+        return listUsers( "dbms.security.listUsers" );
+    }
+
+    private Stream<UserResult> listUsers( String callingProcedure ) throws ProcedureException
     {
         var result = new ArrayList<UserResult>();
         var query = "SHOW USERS";
@@ -155,7 +160,7 @@ public class UserManagementProcedures extends AuthProceduresBase
         }
         catch ( Exception e )
         {
-            translateException( e, "dbms.security.listUsers" );
+            translateException( e, callingProcedure );
         }
 
         if ( result.isEmpty() )
@@ -188,7 +193,7 @@ public class UserManagementProcedures extends AuthProceduresBase
                 return true;
             }
         };
-        queryForRoles( visitor, "dbms.security.listUsers" );
+        queryForRoles( visitor, "dbms.security.listRoles" );
         return result.entrySet().stream().map( e -> new RoleResult( e.getKey(), e.getValue() ) );
     }
 
@@ -198,8 +203,9 @@ public class UserManagementProcedures extends AuthProceduresBase
     @Procedure( name = "dbms.security.listRolesForUser", mode = DBMS, deprecatedBy = "Administration command: SHOW USERS" )
     public Stream<StringResult> listRolesForUser( @Name( "username" ) String username ) throws ProcedureException, InvalidArgumentsException
     {
+        String procedureName = "dbms.security.listRolesForUser";
         var result = new HashSet<StringResult>();
-        var userExists = listUsers().anyMatch( res -> res.username.equals( username ) );
+        var userExists = listUsers( procedureName ).anyMatch( res -> res.username.equals( username ) );
         if ( !userExists )
         {
             throw new InvalidArgumentsException( String.format( "User '%s' does not exist.", username ) );
@@ -219,7 +225,7 @@ public class UserManagementProcedures extends AuthProceduresBase
                 return true;
             }
         };
-        queryForRoles( visitor, "dbms.security.listRolesForUser" );
+        queryForRoles( visitor, procedureName );
 
         return result.stream();
     }

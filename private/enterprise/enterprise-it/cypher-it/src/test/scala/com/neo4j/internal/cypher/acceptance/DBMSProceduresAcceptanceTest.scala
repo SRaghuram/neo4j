@@ -122,4 +122,32 @@ class DBMSProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBa
     }
     exception.getMessage should include("There is no procedure with the name `dbms.something.something.profit` registered for this database instance.")
   }
+
+  Seq(
+    ("CALL dbms.security.createUser('Alice', 'foo')", "dbms.security.createUser"),
+    ("CALL dbms.security.changeUserPassword('Alice', 'foo')", "dbms.security.changeUserPassword"),
+    ("CALL dbms.security.addRoleToUser('Role', 'Alice')", "dbms.security.addRoleToUser"),
+    ("CALL dbms.security.removeRoleFromUser('Role', 'Alice')", "dbms.security.removeRoleFromUser"),
+    ("CALL dbms.security.deleteUser('Alice')", "dbms.security.deleteUser"),
+    ("CALL dbms.security.suspendUser('Alice')", "dbms.security.suspendUser"),
+    ("CALL dbms.security.activateUser('Alice')", "dbms.security.activateUser"),
+    ("CALL dbms.security.listUsers()", "dbms.security.listUsers"),
+    ("CALL dbms.security.listRoles()", "dbms.security.listRoles"),
+    ("CALL dbms.security.listRolesForUser('Alice')", "dbms.security.listRolesForUser"),
+    ("CALL dbms.security.listUsersForRole('role')", "dbms.security.listUsersForRole"),
+    ("CALL dbms.security.createRole('role')", "dbms.security.createRole"),
+    ("CALL dbms.security.deleteRole('role')", "dbms.security.deleteRole")
+  ).foreach {
+    case (query, name) =>
+      test(s"should fail using $name on default database") {
+        // GIVEN
+        selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+        execute("ALTER USER neo4j SET PASSWORD 'neo' CHANGE NOT REQUIRED")
+
+        // WHEN
+        the[RuntimeException] thrownBy {
+          executeOnDefault("neo4j", "neo", query)
+        } should have message s"This is an administration command and it should be executed against the system database: $name"
+      }
+  }
 }
