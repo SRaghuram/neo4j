@@ -86,15 +86,15 @@ public class FabricQueryMonitoring
         NamedDatabaseId namedDatabaseId = getDatabaseIdRepository().getByName( transactionInfo.getDatabaseName() ).get();
         String username = transactionInfo.getLoginContext().subject().username();
         Map<String,Object> annotationData = Map.of();
-        LongSupplier lockCount = () -> 0L;
+        LongSupplier emptySupplier = () -> 0L;
         PageCursorTracer cursorCounters = PageCursorTracer.NULL;
         long threadId = thread.getId();
         String threadName = thread.getName();
         SystemNanoClock systemClock = Clocks.nanoClock();
         CpuClock cpuClock = CpuClock.NOT_AVAILABLE;
 
-        return new ExecutingQuery( queryId, connectionInfo, namedDatabaseId, username, statement, params, annotationData, lockCount, cursorCounters,
-                threadId, threadName, systemClock, cpuClock );
+        return new ExecutingQuery( queryId, connectionInfo, namedDatabaseId, username, statement, params, annotationData, emptySupplier, emptySupplier,
+                emptySupplier, threadId, threadName, systemClock, cpuClock );
     }
 
     private DatabaseIdRepository getDatabaseIdRepository()
