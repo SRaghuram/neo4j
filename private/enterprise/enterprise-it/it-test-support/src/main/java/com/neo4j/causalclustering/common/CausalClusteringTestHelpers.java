@@ -25,8 +25,9 @@ import java.io.Reader;
 import java.nio.CharBuffer;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
-import java.util.List;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
@@ -80,6 +81,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.keep_logical_logs;
 import static org.neo4j.test.assertion.Assert.assertEventually;
@@ -156,19 +158,38 @@ public final class CausalClusteringTestHelpers
 
     public static void forceReelection( Cluster cluster, String databaseName ) throws Exception
     {
-        CoreClusterMember leader = cluster.awaitLeader();
-        CoreClusterMember follower = randomClusterMember( cluster, leader );
+        runWithLeaderDisabled( cluster, databaseName, ( ig, nore ) -> null );
+    }
 
-        // make the current leader unresponsive
+    public static <T> T runWithLeaderDisabled( Cluster cluster, DisabledRaftRunner<T> disabledMemberConsumer ) throws Exception
+    {
+        return runWithLeaderDisabled( cluster, DEFAULT_DATABASE_NAME, disabledMemberConsumer );
+    }
+
+    public static <T> T runWithLeaderDisabled( Cluster cluster, String databaseName, DisabledRaftRunner<T> disabledMemberConsumer ) throws Exception
+    {
+        CoreClusterMember leader = cluster.awaitLeader( databaseName );
         Server raftServer = raftServer( leader );
         raftServer.stop();
+        try
+        {
+            var otherMembers = new ArrayList<>( cluster.coreMembers() );
+            otherMembers.remove( leader );
+            // trigger an election and await until a new leader is elected
+            var follower = randomClusterMember( cluster, leader );
+            follower.resolveDependency( databaseName, RaftMachine.class ).triggerElection();
+            assertEventually( "Leader re-election did not happen", cluster::awaitLeader, not( equalTo( leader ) ), 2, MINUTES );
+            return disabledMemberConsumer.execute( leader, otherMembers );
+        }
+        finally
+        {
+            raftServer.start();
+        }
+    }
 
-        // trigger an election and await until a new leader is elected
-        follower.resolveDependency( databaseName, RaftMachine.class ).triggerElection();
-        assertEventually( "Leader re-election did not happen", cluster::awaitLeader, not( equalTo( leader ) ), 2, MINUTES );
-
-        // make the previous leader responsive again
-        raftServer.start();
+    public interface DisabledRaftRunner<T>
+    {
+        T execute( CoreClusterMember oldLeader, List<CoreClusterMember> otherMembers ) throws Exception;
     }
 
     public static void removeCheckPointFromDefaultDatabaseTxLog( ClusterMember member ) throws IOException
