@@ -2103,6 +2103,12 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
 
   protected def getProperty(key: String, container: IntermediateRepresentation): IntermediateRepresentation
 
+  /**
+    * Gives the cursor that currently is used for the given variable name or `None`
+    * @param name the variable name of the node or relationship the cursor is used for
+    */
+  protected def cursorFor(name: String): Option[CursorRepresentation] = None
+
   def getArgumentAt(offset: Int): IntermediateRepresentation =
     if (offset == TopLevelArgument.SLOT_OFFSET) {
       constant(0L)
@@ -3033,4 +3039,9 @@ class DefaultExpressionCompiler(slots: SlotConfiguration, readOnly: Boolean, cod
       NODE_CURSOR,
       RELATIONSHIP_CURSOR,
       PROPERTY_CURSOR)
+}
+
+trait CursorRepresentation {
+  def reference: IntermediateRepresentation
+  def relationshipType: IntermediateRepresentation
 }

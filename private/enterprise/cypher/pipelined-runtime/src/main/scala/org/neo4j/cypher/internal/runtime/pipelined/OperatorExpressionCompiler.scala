@@ -11,16 +11,18 @@ import org.neo4j.codegen.api.IntermediateRepresentation._
 import org.neo4j.codegen.api.{CodeGeneration, Field, IntermediateRepresentation, LocalVariable}
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.ast.SlottedCachedProperty
-import org.neo4j.cypher.internal.runtime.{DbAccess, ExecutionContext}
 import org.neo4j.cypher.internal.runtime.compiled.expressions._
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler.{LocalsForSlots, ScopeContinuationState, ScopeLocalsState}
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.{INPUT_MORSEL, OUTPUT_ROW, UNINITIALIZED_LONG_SLOT_VALUE, UNINITIALIZED_REF_SLOT_VALUE}
+import org.neo4j.cypher.internal.runtime.{DbAccess, ExecutionContext}
 import org.neo4j.cypher.operations.CursorUtils
+import org.neo4j.internal.kernel.api.helpers.RelationshipSelectionCursor
 import org.neo4j.internal.kernel.api.{NodeCursor, PropertyCursor, Read, RelationshipScanCursor}
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Value
 
+import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
 object OperatorExpressionCompiler {
@@ -382,6 +384,27 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
   private var nRefSlotsToCopyFromInput: Int = 0
 
   /**
+    * Used for giving direct access to cursors from expressions.
+    *
+    * For example for a query `MATCH (a)` you can register the cursor used for
+    * traversing for a so that following expressions such as `hasLabel` etc
+    * can use the cursor directly instead of using a separate cursor an postion it
+    * on the correct node.
+    */
+  private val cursors = mutable.Map.empty[String, CursorRepresentation]
+
+  /**
+    * Registers a cursor that points at the entity with the given name
+    * @param name the name of the variable that the cursor is traversing
+    * @param cursor the representation for accessing the cursor
+    */
+  def registerCursor(name: String, cursor: CursorRepresentation): Unit = {
+    cursors.update(name, cursor)
+  }
+
+  override protected def cursorFor(name: String): Option[CursorRepresentation] = cursors.get(name)
+
+  /**
    * Uses a local slot variable if one is already defined, otherwise declares and assigns a new local slot variable
    */
   override final def getLongAt(offset: Int): IntermediateRepresentation = {
@@ -689,3 +712,26 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
     all
   }
 }
+
+abstract class BaseCursorRepresentation extends CursorRepresentation {
+  override def reference: IntermediateRepresentation = fail()
+  override def relationshipType: IntermediateRepresentation = fail()
+  private def fail() = throw new IllegalStateException(s"illegal usage of cursor: $this")
+}
+
+case class NodeCursorRepresentation(target: IntermediateRepresentation) extends BaseCursorRepresentation {
+  override def reference: IntermediateRepresentation = {
+    invoke(target, method[NodeCursor, Long]("nodeReference"))
+  }
+}
+
+case class RelationshipCursorRepresentation(target: IntermediateRepresentation) extends BaseCursorRepresentation {
+  override def reference: IntermediateRepresentation = {
+    invoke(target, method[RelationshipSelectionCursor, Long]("relationshipReference"))
+  }
+  override def relationshipType: IntermediateRepresentation = {
+    invoke(target, method[RelationshipSelectionCursor, Int]("type"))
+  }
+}
+
+
