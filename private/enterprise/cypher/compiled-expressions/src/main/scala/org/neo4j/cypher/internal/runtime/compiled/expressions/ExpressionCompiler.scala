@@ -1565,9 +1565,18 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
       val nameOfSlot = slots.nameOfLongSlot(offset)
       val nullCheck = nameOfSlot.filter(n => slots(n).nullable).map(_ => equal(getLongAt(offset), constant(-1L))).toSet
 
-      val value = invoke(DB_ACCESS, method[DbAccess, TextValue, Long, RelationshipScanCursor]("getTypeForRelationship"), getLongAt(offset), RELATIONSHIP_CURSOR)
-
-      Some(IntermediateExpression(value, Seq.empty, Seq(vRELATIONSHIP_CURSOR), nullCheck))
+      nameOfSlot.flatMap(cursorFor) match {
+        case Some(cursor) =>
+          val value = invokeStatic(method[Values, TextValue, String]("stringValue"),
+          invoke(DB_ACCESS, method[DbAccess, String, Int]("relationshipTypeName"),
+           cursor.relationshipType))
+          Some(IntermediateExpression(value, Seq.empty, Seq.empty, nullCheck))
+        case None =>
+          val value = invoke(DB_ACCESS,
+                             method[DbAccess, TextValue, Long, RelationshipScanCursor]("getTypeForRelationship"),
+                             getLongAt(offset), RELATIONSHIP_CURSOR)
+          Some(IntermediateExpression(value, Seq.empty, Seq(vRELATIONSHIP_CURSOR), nullCheck))
+      }
 
     case PrimitiveEquals(lhs, rhs) =>
       for {l <- intermediateCompileExpression(lhs)

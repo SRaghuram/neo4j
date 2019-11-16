@@ -12,10 +12,10 @@ import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot, Slot}
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.compiled.expressions.{CompiledHelpers, IntermediateExpression}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.RelationshipTypes
-import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.{CursorPools, MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
+import org.neo4j.cypher.internal.runtime.pipelined.{NodeCursorRepresentation, OperatorExpressionCompiler, RelationshipCursorRepresentation}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
 import org.neo4j.cypher.internal.runtime.{DbAccess, ExecutionContext, QueryContext}
@@ -168,7 +168,9 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
                                     id: Id,
                                     innermost: DelegateOperatorTaskTemplate,
                                     isHead: Boolean,
+                                    fromName: String,
                                     fromSlot: Slot,
+                                    relName: String,
                                     relOffset: Int,
                                     toOffset: Int,
                                     dir: SemanticDirection,
@@ -178,15 +180,18 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
   import OperatorCodeGenHelperTemplates._
 
   private val nodeCursorField = field[NodeCursor](codeGen.namer.nextVariableName() + "nodeCursor")
-  private val groupCursorField = field[RelationshipGroupCursor](codeGen.namer.nextVariableName() + "relationships")
-  private val traversalCursorField = field[RelationshipTraversalCursor](codeGen.namer.nextVariableName() + "group")
-  private val relationshipsField = field[RelationshipSelectionCursor](codeGen.namer.nextVariableName() + "traversal")
+  private val groupCursorField = field[RelationshipGroupCursor](codeGen.namer.nextVariableName() + "group")
+  private val traversalCursorField = field[RelationshipTraversalCursor](codeGen.namer.nextVariableName() + "traversal")
+  private val relationshipsField = field[RelationshipSelectionCursor](codeGen.namer.nextVariableName() + "relationships")
   private val typeField = field[Array[Int]](codeGen.namer.nextVariableName() + "type",
                                             if (types.isEmpty && missingTypes.isEmpty) constant(null)
                                             else arrayOf[Int](types.map(constant):_*)
   )
   private val missingTypeField = field[Array[String]](codeGen.namer.nextVariableName() + "missingType",
                                                       arrayOf[String](missingTypes.map(constant):_*))
+
+  codeGen.registerCursor(fromName, NodeCursorRepresentation(loadField(nodeCursorField)))
+  codeGen.registerCursor(relName, RelationshipCursorRepresentation(loadField(relationshipsField)))
 
   override final def scopeId: String = "expandAll" + id.x
 

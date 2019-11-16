@@ -243,6 +243,8 @@ object StaticEvaluation {
 
     override def relationshipType(name: String): Int = notAvailable()
 
+    override def relationshipTypeName(typ: Int): String = notAvailable()
+
     override def getTypeForRelationship(id: Long, relationshipCursor: RelationshipScanCursor): TextValue = notAvailable()
 
     override def nodeHasProperty(node: Long, property: Int, nodeCursor: NodeCursor, propertyCursor: PropertyCursor): Boolean = notAvailable()
