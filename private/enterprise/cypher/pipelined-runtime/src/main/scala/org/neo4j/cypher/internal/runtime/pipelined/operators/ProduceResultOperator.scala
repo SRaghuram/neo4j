@@ -10,7 +10,7 @@ import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot, Slot, Slot
 import org.neo4j.cypher.internal.profiling.{OperatorProfileEvent, QueryProfiler}
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{PipelinedExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.pipelined.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.pipelined.{ExecutionState, OperatorExpressionCompiler}
@@ -51,14 +51,14 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
                                    argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorsel] =
     Array(new InputOTask(inputMorsel.nextCopy))
 
-  class InputOTask(val inputMorsel: PipelinedExecutionContext) extends ContinuableOperatorTaskWithMorsel {
+  class InputOTask(val inputMorsel: MorselExecutionContext) extends ContinuableOperatorTaskWithMorsel {
 
     override def workIdentity: WorkIdentity = ProduceResultOperator.this.workIdentity
 
     override def toString: String = "ProduceResultInputTask"
     override def canContinue: Boolean = inputMorsel.isValidRow
 
-    override def operateWithProfile(outputIgnore: PipelinedExecutionContext,
+    override def operateWithProfile(outputIgnore: MorselExecutionContext,
                                     context: QueryContext,
                                     state: QueryState,
                                     resources: QueryResources,
@@ -73,7 +73,7 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
       }
     }
 
-    override def operate(output: PipelinedExecutionContext,
+    override def operate(output: MorselExecutionContext,
                          context: QueryContext,
                          state: QueryState,
                          resources: QueryResources): Unit = throw new UnsupportedOperationException("ProduceResults should be called via operateWithProfile")
@@ -96,7 +96,7 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
 
     override def workIdentity: WorkIdentity = ProduceResultOperator.this.workIdentity
 
-    override def prepareOutput(outputMorsel: PipelinedExecutionContext,
+    override def prepareOutput(outputMorsel: MorselExecutionContext,
                                context: QueryContext,
                                state: QueryState,
                                resources: QueryResources,
@@ -114,7 +114,7 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
 
   //==========================================================================
 
-  protected def produceOutputWithProfile(output: PipelinedExecutionContext,
+  protected def produceOutputWithProfile(output: MorselExecutionContext,
                                          context: QueryContext,
                                          state: QueryState,
                                          resources: QueryResources,
@@ -123,7 +123,7 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
     operatorExecutionEvent.rows(numberOfOutputedRows)
   }
 
-  protected def produceOutput(output: PipelinedExecutionContext,
+  protected def produceOutput(output: MorselExecutionContext,
                               context: QueryContext,
                               state: QueryState,
                               resources: QueryResources): Int = {

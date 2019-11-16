@@ -11,7 +11,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.tracing.WorkUnitEvent
 import scala.collection.mutable
 
 object FilteringPipelinedExecutionContext {
-  def apply(source: PipelinedExecutionContext) =
+  def apply(source: MorselExecutionContext) =
     new FilteringPipelinedExecutionContext(source.morsel, source.slots, source.maxNumberOfRows, source.currentRow, source.startRow, source.endRow, source.producingWorkUnitEvent)
 }
 
@@ -23,7 +23,7 @@ class FilteringPipelinedExecutionContext(morsel: Morsel,
                                          initialEndRow: Int,
                                          producingWorkUnitEvent: WorkUnitEvent = null,
                                          initialCancelledRows: java.util.BitSet = null)
-  extends PipelinedExecutionContext(morsel, slots, maxNumberOfRows, initialCurrentRow, initialStartRow, initialEndRow, producingWorkUnitEvent) {
+  extends MorselExecutionContext(morsel, slots, maxNumberOfRows, initialCurrentRow, initialStartRow, initialEndRow, producingWorkUnitEvent) {
 
   // ROW CANCELLATION
 
@@ -117,7 +117,7 @@ class FilteringPipelinedExecutionContext(morsel: Morsel,
    * @param end first index after the view (exclusive end)
    * @return a shallow copy that is configured to only see the configured view.
    */
-  override def view(start: Int, end: Int): PipelinedExecutionContext = {
+  override def view(start: Int, end: Int): MorselExecutionContext = {
     val view = shallowCopy()
     view.startRow = start
     view.currentRow = start

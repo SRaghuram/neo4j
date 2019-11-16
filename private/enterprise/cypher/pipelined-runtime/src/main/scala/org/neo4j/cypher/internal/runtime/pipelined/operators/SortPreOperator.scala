@@ -11,7 +11,7 @@ import org.neo4j.cypher.internal.physicalplanning.{BufferId, PipelineId}
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.pipelined.ExecutionState
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{PipelinedExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.pipelined.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.PerArgument
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Sink
@@ -28,13 +28,13 @@ class SortPreOperator(val workIdentity: WorkIdentity,
 
   override def createState(executionState: ExecutionState,
                            pipelineId: PipelineId): OutputOperatorState =
-    new State(executionState.getSink[IndexedSeq[PerArgument[PipelinedExecutionContext]]](pipelineId, outputBufferId))
+    new State(executionState.getSink[IndexedSeq[PerArgument[MorselExecutionContext]]](pipelineId, outputBufferId))
 
-  class State(sink: Sink[IndexedSeq[PerArgument[PipelinedExecutionContext]]]) extends OutputOperatorState {
+  class State(sink: Sink[IndexedSeq[PerArgument[MorselExecutionContext]]]) extends OutputOperatorState {
 
     override def workIdentity: WorkIdentity = SortPreOperator.this.workIdentity
 
-    override def prepareOutput(morsel: PipelinedExecutionContext,
+    override def prepareOutput(morsel: MorselExecutionContext,
                                context: QueryContext,
                                state: QueryState,
                                resources: QueryResources,
@@ -52,7 +52,7 @@ class SortPreOperator(val workIdentity: WorkIdentity,
       new PreSortedOutput(preSorted, sink)
     }
 
-    private def sortInPlace(morsel: PipelinedExecutionContext, comparator: Comparator[Integer]): PipelinedExecutionContext = {
+    private def sortInPlace(morsel: MorselExecutionContext, comparator: Comparator[Integer]): MorselExecutionContext = {
       // First we create an array of the same size as the rows in the morsel that we'll sort.
       // This array contains only the pointers to the morsel rows
       val outputToInputIndexes: Array[Integer] = MorselSorting.createMorselIndexesArray(morsel)
@@ -67,8 +67,8 @@ class SortPreOperator(val workIdentity: WorkIdentity,
     }
   }
 
-  class PreSortedOutput(preSorted: IndexedSeq[PerArgument[PipelinedExecutionContext]],
-                        sink: Sink[IndexedSeq[PerArgument[PipelinedExecutionContext]]]) extends PreparedOutput {
+  class PreSortedOutput(preSorted: IndexedSeq[PerArgument[MorselExecutionContext]],
+                        sink: Sink[IndexedSeq[PerArgument[MorselExecutionContext]]]) extends PreparedOutput {
     override def produce(): Unit = sink.put(preSorted)
   }
 }

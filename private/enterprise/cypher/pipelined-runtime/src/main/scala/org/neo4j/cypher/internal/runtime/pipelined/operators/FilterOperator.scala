@@ -11,7 +11,7 @@ import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{PipelinedExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.pipelined.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates._
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
@@ -26,7 +26,7 @@ import org.neo4j.values.storable.Values
 class FilterOperator(val workIdentity: WorkIdentity,
                      predicate: Expression) extends StatelessOperator {
 
-  override def operate(readingRow: PipelinedExecutionContext,
+  override def operate(readingRow: MorselExecutionContext,
                        context: QueryContext,
                        state: QueryState,
                        resources: QueryResources): Unit = {

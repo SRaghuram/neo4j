@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.pipelined
 
 import org.neo4j.cypher.internal.profiling.QueryProfiler
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{PipelinedExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.pipelined.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.pipelined.operators.{ContinuableOperatorTask, OperatorTask, OutputOperatorState, PreparedOutput}
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.WorkUnitEvent
 import org.neo4j.cypher.internal.runtime.{QueryContext, WithHeapUsageEstimation}
@@ -38,7 +38,7 @@ case class PipelineTask(startTask: ContinuableOperatorTask,
     * in order to retain the produced row order. Also we can never cancel a task with
     * unprocessed _output.
     */
-  private var _output: PipelinedExecutionContext = _
+  private var _output: MorselExecutionContext = _
 
   override def executeWorkUnit(resources: QueryResources,
                                      workUnitEvent: WorkUnitEvent,

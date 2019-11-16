@@ -15,7 +15,7 @@ import org.neo4j.codegen.api._
 import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, BufferId, PipelineId}
 import org.neo4j.cypher.internal.profiling.{OperatorProfileEvent, QueryProfiler}
 import org.neo4j.cypher.internal.runtime.compiled.expressions.{ExpressionCompiler, IntermediateExpression}
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{PipelinedExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.pipelined.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates._
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory, ArgumentStateMaps}
 import org.neo4j.cypher.internal.runtime.pipelined.state.{ArgumentStateMap, MorselParallelizer, StateFactory}
@@ -45,7 +45,7 @@ trait CompiledStreamingOperator extends StreamingOperator {
   }
 
   protected def compiledNextTask(dataRead: Read,
-                                 inputMorsel: PipelinedExecutionContext,
+                                 inputMorsel: MorselExecutionContext,
                                  argumentStateMaps: ArgumentStateMaps): ContinuableOperatorTaskWithMorsel
 }
 
@@ -94,11 +94,11 @@ object CompiledStreamingOperator {
         MethodDeclaration("compiledNextTask",
                           returnType = typeRefOf[ContinuableOperatorTaskWithMorsel],
                           parameters = Seq(param[Read]("dataRead"),
-                                           param[PipelinedExecutionContext]("inputMorsel"),
+                                           param[MorselExecutionContext]("inputMorsel"),
                                            param[ArgumentStateMaps]("argumentStateMaps")),
                           body = newInstance(Constructor(TypeReference.typeReference(taskClazz),
                                                          Seq(TypeReference.typeReference(classOf[Read]),
-                                                             TypeReference.typeReference(classOf[PipelinedExecutionContext]),
+                                                             TypeReference.typeReference(classOf[MorselExecutionContext]),
                                                              TypeReference.typeReference(classOf[ArgumentStateMaps]))),
                                              load("dataRead"),
                                              load("inputMorsel"),
@@ -151,7 +151,7 @@ trait CompiledTask extends ContinuableOperatorTaskWithMorsel
                    with OutputOperatorState
                    with PreparedOutput
 {
-  override def operateWithProfile(output: PipelinedExecutionContext,
+  override def operateWithProfile(output: MorselExecutionContext,
                                   context: QueryContext,
                                   state: QueryState,
                                   resources: QueryResources,
@@ -184,7 +184,7 @@ trait CompiledTask extends ContinuableOperatorTaskWithMorsel
   /**
    * Method of [[OutputOperatorState]] trait. Override to prevent creation of profiler event, which is not necessary when output operator is fused.
    */
-  override final def prepareOutputWithProfile(output: PipelinedExecutionContext,
+  override final def prepareOutputWithProfile(output: MorselExecutionContext,
                                               context: QueryContext,
                                               state: QueryState,
                                               resources: QueryResources,
@@ -193,7 +193,7 @@ trait CompiledTask extends ContinuableOperatorTaskWithMorsel
   /**
     * Method of [[OutputOperatorState]] trait. Implementing this allows the same [[CompiledTask]] instance to also act as a [[PreparedOutput]].
     */
-  override protected final def prepareOutput(outputMorsel: PipelinedExecutionContext,
+  override protected final def prepareOutput(outputMorsel: MorselExecutionContext,
                                              context: QueryContext,
                                              state: QueryState,
                                              resources: QueryResources,
@@ -214,7 +214,7 @@ trait CompiledTask extends ContinuableOperatorTaskWithMorsel
     * Generated code that executes the operator.
     */
   @throws[Exception]
-  def compiledOperate(context: PipelinedExecutionContext,
+  def compiledOperate(context: MorselExecutionContext,
                       dbAccess: QueryContext,
                       state: QueryState,
                       resources: QueryResources,
@@ -249,7 +249,7 @@ trait CompiledTask extends ContinuableOperatorTaskWithMorsel
 
   override def setExecutionEvent(event: OperatorProfileEvent): Unit = throw new IllegalStateException("Fused operators should be called via operateWithProfile.")
 
-  override def operate(output: PipelinedExecutionContext,
+  override def operate(output: MorselExecutionContext,
                        context: QueryContext,
                        state: QueryState,
                        resources: QueryResources): Unit = throw new IllegalStateException("Fused operators should be called via operateWithProfile.")
@@ -490,7 +490,7 @@ trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
         ),
         MethodDeclaration("compiledOperate",
                           returnType = typeRefOf[Unit],
-                          Seq(param[PipelinedExecutionContext]("context"),
+                          Seq(param[MorselExecutionContext]("context"),
                               param[QueryContext]("dbAccess"),
                               param[QueryState]("state"),
                               param[QueryResources]("resources"),
@@ -567,7 +567,7 @@ trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
         ),
         // This is only needed because we extend an abstract scala class containing `val inputMorsel`
         MethodDeclaration("inputMorsel",
-                          returnType = typeRefOf[PipelinedExecutionContext],
+                          returnType = typeRefOf[MorselExecutionContext],
                           parameters = Seq.empty,
                           body = loadField(INPUT_MORSEL)
                           )

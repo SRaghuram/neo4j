@@ -16,7 +16,7 @@ import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpres
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.NumericHelper
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.SeekArgs
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{PipelinedExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.pipelined.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeByIdSeekOperator.{asIdMethod, isValidNode}
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.DATA_READ
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
@@ -48,7 +48,7 @@ class NodeByIdSeekOperator(val workIdentity: WorkIdentity,
   }
 
 
-  class NodeByIdTask(val inputMorsel: PipelinedExecutionContext) extends InputLoopTask {
+  class NodeByIdTask(val inputMorsel: MorselExecutionContext) extends InputLoopTask {
 
     override def toString: String = "NodeByIdTask"
 
@@ -79,7 +79,7 @@ class NodeByIdSeekOperator(val workIdentity: WorkIdentity,
 
     override def workIdentity: WorkIdentity = NodeByIdSeekOperator.this.workIdentity
 
-    override protected def innerLoop(outputRow: PipelinedExecutionContext, context: QueryContext, state: QueryState): Unit = {
+    override protected def innerLoop(outputRow: MorselExecutionContext, context: QueryContext, state: QueryState): Unit = {
 
       while (outputRow.isValidRow && ids.hasNext) {
         val nextId = NumericHelper.asLongEntityIdPrimitive(ids.next())

@@ -9,7 +9,7 @@ import java.util
 
 import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, BufferId, PipelineId}
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{FilteringPipelinedExecutionContext, PipelinedExecutionContext}
+import org.neo4j.cypher.internal.runtime.pipelined.execution.{FilteringPipelinedExecutionContext, MorselExecutionContext}
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.{ArgumentStateMaps, WorkCanceller}
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.{AccumulatingBuffer, DataHolder, SinkByOrigin}
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.MorselBuffer._
@@ -33,9 +33,9 @@ class MorselBuffer(id: BufferId,
                    downstreamArgumentReducers: IndexedSeq[AccumulatingBuffer],
                    workCancellers: IndexedSeq[ArgumentStateMapId],
                    override val argumentStateMaps: ArgumentStateMaps,
-                   inner: Buffer[PipelinedExecutionContext]
+                   inner: Buffer[MorselExecutionContext]
                   ) extends ArgumentCountUpdater
-                    with Sink[PipelinedExecutionContext]
+                    with Sink[MorselExecutionContext]
                     with Source[MorselParallelizer]
                     with SinkByOrigin
                     with DataHolder {
@@ -52,7 +52,7 @@ class MorselBuffer(id: BufferId,
 
   override def sinkFor[T <: AnyRef](fromPipeline: PipelineId): Sink[T] = this.asInstanceOf[Sink[T]]
 
-  override def put(morsel: PipelinedExecutionContext): Unit = {
+  override def put(morsel: MorselExecutionContext): Unit = {
     if (DebugSupport.BUFFERS.enabled) {
       DebugSupport.BUFFERS.log(s"[put]   $this <- $morsel")
     }
@@ -71,7 +71,7 @@ class MorselBuffer(id: BufferId,
     * The reason is that if this is one of the delegates of a [[MorselApplyBuffer]], that
     * buffer took care of incrementing the right ones already.
     */
-  def putInDelegate(morsel: PipelinedExecutionContext): Unit = {
+  def putInDelegate(morsel: MorselExecutionContext): Unit = {
     if (DebugSupport.BUFFERS.enabled) {
       DebugSupport.BUFFERS.log(s"[putInDelegate] $this <- $morsel")
     }
@@ -110,7 +110,7 @@ class MorselBuffer(id: BufferId,
    * @param morsel the input morsel
    * @return `true` iff the morsel is cancelled
    */
-  def filterCancelledArguments(morsel: PipelinedExecutionContext): Boolean = {
+  def filterCancelledArguments(morsel: MorselExecutionContext): Boolean = {
     if (workCancellers.nonEmpty) {
       val currentRow = morsel.getCurrentRow // Save current row
 
@@ -220,7 +220,7 @@ class MorselBuffer(id: BufferId,
   /**
     * Decrement reference counters attached to `morsel`.
     */
-  def close(morsel: PipelinedExecutionContext): Unit = {
+  def close(morsel: MorselExecutionContext): Unit = {
     if (DebugSupport.BUFFERS.enabled) {
       DebugSupport.BUFFERS.log(s"[close] $this -X- $morsel")
     }
@@ -233,12 +233,12 @@ class MorselBuffer(id: BufferId,
   /**
     * Implementation of [[MorselParallelizer]] that ensures correct reference counting.
     */
-  class Parallelizer(original: PipelinedExecutionContext) extends MorselParallelizer {
+  class Parallelizer(original: MorselExecutionContext) extends MorselParallelizer {
     private var usedOriginal = false
 
-    override def originalForClosing: PipelinedExecutionContext = original
+    override def originalForClosing: MorselExecutionContext = original
 
-    override def nextCopy: PipelinedExecutionContext = {
+    override def nextCopy: MorselExecutionContext = {
       if (!usedOriginal) {
         usedOriginal = true
         original

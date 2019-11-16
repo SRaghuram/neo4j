@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.pipelined
 
 import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, BufferId, PipelineId}
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{PipelinedExecutionContext, QueryResources}
+import org.neo4j.cypher.internal.runtime.pipelined.execution.{MorselExecutionContext, QueryResources}
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory, ArgumentStateMaps, MorselAccumulator}
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatorAndMorsel
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.{LHSAccumulatingRHSStreamingBuffer, OptionalMorselBuffer, Sink}
@@ -45,7 +45,7 @@ trait ExecutionState extends ArgumentStateMapCreator {
   /**
     * Put a morsel into the buffer with id `bufferId`.
     */
-  def putMorsel(fromPipeline: PipelineId, bufferId: BufferId, morsel: PipelinedExecutionContext): Unit
+  def putMorsel(fromPipeline: PipelineId, bufferId: BufferId, morsel: MorselExecutionContext): Unit
 
   /**
     * Take a morsel from the buffer with id `bufferId`.
@@ -81,7 +81,7 @@ trait ExecutionState extends ArgumentStateMapCreator {
     * @param pipeline the executing pipeline
     * @param inputMorsel the input morsel
     */
-  def closeMorselTask(pipeline: ExecutablePipeline, inputMorsel: PipelinedExecutionContext): Unit
+  def closeMorselTask(pipeline: ExecutablePipeline, inputMorsel: MorselExecutionContext): Unit
 
   /**
     * Close a pipeline task which was executing over some data from an [[OptionalMorselBuffer]].
@@ -117,7 +117,7 @@ trait ExecutionState extends ArgumentStateMapCreator {
     * @param accumulator the input morsel accumulator
     */
   def closeMorselAndAccumulatorTask(pipeline: ExecutablePipeline,
-                                    inputMorsel: PipelinedExecutionContext,
+                                    inputMorsel: MorselExecutionContext,
                                     accumulator: MorselAccumulator[_]): Unit
 
   /**
@@ -127,7 +127,7 @@ trait ExecutionState extends ArgumentStateMapCreator {
     * @param inputMorsel the input morsel
     * @return `true` iff the morsel is cancelled
     */
-  def filterCancelledArguments(pipeline: ExecutablePipeline, inputMorsel: PipelinedExecutionContext): Boolean
+  def filterCancelledArguments(pipeline: ExecutablePipeline, inputMorsel: MorselExecutionContext): Boolean
 
   /**
     * Remove the state of the accumulator, if it is related to a cancelled argumentRowId.
@@ -149,7 +149,7 @@ trait ExecutionState extends ArgumentStateMapCreator {
     * @return `true` iff both the morsel and the accumulator are cancelled
     */
   def filterCancelledArguments(pipeline: ExecutablePipeline,
-                               inputMorsel: PipelinedExecutionContext,
+                               inputMorsel: MorselExecutionContext,
                                accumulator: MorselAccumulator[_]): Boolean
 
 

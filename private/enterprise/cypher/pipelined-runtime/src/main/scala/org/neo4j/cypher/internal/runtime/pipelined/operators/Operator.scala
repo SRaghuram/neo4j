@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.operators
 
 import org.neo4j.cypher.internal.NonFatalCypherError
 import org.neo4j.cypher.internal.profiling.{OperatorProfileEvent, QueryProfiler}
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{PipelinedExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.pipelined.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.{ArgumentStateMaps, MorselAccumulator}
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatorAndMorsel
 import org.neo4j.cypher.internal.runtime.pipelined.state.{MorselParallelizer, StateFactory}
@@ -58,7 +58,7 @@ trait OperatorCloser {
   /**
     * Close input morsel.
     */
-  def closeMorsel(morsel: PipelinedExecutionContext): Unit
+  def closeMorsel(morsel: MorselExecutionContext): Unit
 
   /**
     * Close input data.
@@ -70,14 +70,14 @@ trait OperatorCloser {
     */
   def closeAccumulator(accumulator: MorselAccumulator[_]): Unit
 
-  def closeMorselAndAccumulatorTask(morsel: PipelinedExecutionContext, accumulator: MorselAccumulator[_]): Unit
+  def closeMorselAndAccumulatorTask(morsel: MorselExecutionContext, accumulator: MorselAccumulator[_]): Unit
 
   /**
     * Remove all rows related to cancelled argumentRowIds from `morsel`.
     *
     * @return `true` if the morsel is completely empty after cancellations
     */
-  def filterCancelledArguments(morsel: PipelinedExecutionContext): Boolean
+  def filterCancelledArguments(morsel: MorselExecutionContext): Boolean
 
   /**
     * Remove the state of the accumulator, if it is related to a cancelled argumentRowId.
@@ -94,7 +94,7 @@ trait OperatorCloser {
     * @param accumulator the accumulator
     * @return `true` iff both the morsel and the accumulator are cancelled
     */
-  def filterCancelledArguments(morsel: PipelinedExecutionContext, accumulator: MorselAccumulator[_]): Boolean
+  def filterCancelledArguments(morsel: MorselExecutionContext, accumulator: MorselAccumulator[_]): Boolean
 }
 
 /**
@@ -238,7 +238,7 @@ trait StatelessOperator extends MiddleOperator with OperatorTask {
   */
 trait OperatorTask extends HasWorkIdentity {
 
-  def operateWithProfile(output: PipelinedExecutionContext,
+  def operateWithProfile(output: MorselExecutionContext,
                          context: QueryContext,
                          state: QueryState,
                          resources: QueryResources,
@@ -259,7 +259,7 @@ trait OperatorTask extends HasWorkIdentity {
 
   def setExecutionEvent(event: OperatorProfileEvent): Unit
 
-  def operate(output: PipelinedExecutionContext,
+  def operate(output: MorselExecutionContext,
               context: QueryContext,
               state: QueryState,
               resources: QueryResources): Unit
@@ -289,7 +289,7 @@ trait ContinuableOperatorTask extends OperatorTask with WithHeapUsageEstimation 
 }
 
 trait ContinuableOperatorTaskWithMorsel extends ContinuableOperatorTask {
-  val inputMorsel: PipelinedExecutionContext
+  val inputMorsel: MorselExecutionContext
 
   override protected def closeInput(operatorCloser: OperatorCloser): Unit = {
     operatorCloser.closeMorsel(inputMorsel)

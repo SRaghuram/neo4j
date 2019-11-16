@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.state
 import java.util
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
-import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatingBuffer
 
@@ -23,7 +23,7 @@ abstract class ArgumentCountUpdater {
   def argumentStateMaps: ArgumentStateMaps
 
   private def morselLoop(downstreamAccumulatingBuffers: IndexedSeq[AccumulatingBuffer],
-                         morsel: PipelinedExecutionContext,
+                         morsel: MorselExecutionContext,
                          operation: (AccumulatingBuffer, Long) => Unit): Unit = {
     val originalRow = morsel.getCurrentRow
 
@@ -50,7 +50,7 @@ abstract class ArgumentCountUpdater {
   }
 
   private def downstreamLoop[T](downstreamAccumulatingBuffers: IndexedSeq[T],
-                                morsel: PipelinedExecutionContext,
+                                morsel: MorselExecutionContext,
                                 operation: T => Unit): Unit = {
     var i = 0
     while (i < downstreamAccumulatingBuffers.length) {
@@ -86,7 +86,7 @@ abstract class ArgumentCountUpdater {
     */
   protected def initiateArgumentStatesHere(argumentStates: IndexedSeq[ArgumentStateMapId],
                                            argumentRowId: Long,
-                                           morsel: PipelinedExecutionContext): Unit = {
+                                           morsel: MorselExecutionContext): Unit = {
     downstreamLoop[ArgumentStateMapId](argumentStates, morsel, id => argumentStateMaps(id).initiate(argumentRowId, morsel, null))
   }
 
@@ -99,7 +99,7 @@ abstract class ArgumentCountUpdater {
     */
   protected def initiateArgumentReducersHere(accumulatingBuffers: IndexedSeq[AccumulatingBuffer],
                                              argumentRowId: Long,
-                                             morsel: PipelinedExecutionContext): Unit = {
+                                             morsel: MorselExecutionContext): Unit = {
     downstreamLoop[AccumulatingBuffer](accumulatingBuffers, morsel, _.initiate(argumentRowId, morsel))
   }
 
@@ -112,7 +112,7 @@ abstract class ArgumentCountUpdater {
     * @return array of argument row ids
     */
   protected def forAllArgumentReducersAndGetArgumentRowIds(accumulatingBuffers: IndexedSeq[AccumulatingBuffer],
-                                                           morsel: PipelinedExecutionContext,
+                                                           morsel: MorselExecutionContext,
                                                            fun: (AccumulatingBuffer, Long) => Unit): Array[Long] = {
     val argumentRowIdsForReducers: Array[Long] = new Array[Long](accumulatingBuffers.size)
     var i = 0
@@ -150,7 +150,7 @@ abstract class ArgumentCountUpdater {
     * Increment each accumulating buffer for all argument row id in the given morsel.
     */
   protected def incrementArgumentCounts(accumulatingBuffers: IndexedSeq[AccumulatingBuffer],
-                                        morsel: PipelinedExecutionContext): Unit = {
+                                        morsel: MorselExecutionContext): Unit = {
     morselLoop(accumulatingBuffers, morsel, _.increment(_))
   }
 
@@ -158,7 +158,7 @@ abstract class ArgumentCountUpdater {
     * Decrement each accumulating buffer for all argument row id in the given morsel.
     */
   protected def decrementArgumentCounts(accumulatingBuffers: IndexedSeq[AccumulatingBuffer],
-                                        morsel: PipelinedExecutionContext): Unit = {
+                                        morsel: MorselExecutionContext): Unit = {
     morselLoop(accumulatingBuffers, morsel, _.decrement(_))
   }
 

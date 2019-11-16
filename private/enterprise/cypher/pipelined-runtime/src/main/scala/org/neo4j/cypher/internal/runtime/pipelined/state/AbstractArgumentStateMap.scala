@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.pipelined.state
 
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
-import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.{ArgumentState, ArgumentStateWithCompleted}
 import org.neo4j.util.Preconditions
 
@@ -32,7 +32,7 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
   /**
     * Create a new state controller
     */
-  protected def newStateController(argument: Long, argumentMorsel: PipelinedExecutionContext, argumentRowIdsForReducers: Array[Long]): CONTROLLER
+  protected def newStateController(argument: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): CONTROLLER
 
   override def update(argumentRowId: Long, onState: STATE => Unit): Unit = {
     onState(controllers.get(argumentRowId).state)
@@ -48,9 +48,9 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
     })
   }
 
-  override def filter[U](readingRow: PipelinedExecutionContext,
+  override def filter[U](readingRow: MorselExecutionContext,
                          onArgument: (STATE, Long) => U,
-                         onRow: (U, PipelinedExecutionContext) => Boolean): Unit = {
+                         onRow: (U, MorselExecutionContext) => Boolean): Unit = {
     ArgumentStateMap.filter(
       argumentSlotOffset,
       readingRow,
@@ -131,7 +131,7 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
     controllers.remove(argument) != null
   }
 
-  override def initiate(argument: Long, argumentMorsel: PipelinedExecutionContext, argumentRowIdsForReducers: Array[Long]): Unit = {
+  override def initiate(argument: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): Unit = {
     DebugSupport.ASM.log("ASM %s init %03d", argumentStateMapId, argument)
     val newController = newStateController(argument, argumentMorsel, argumentRowIdsForReducers)
     val previousValue = controllers.put(argument, newController)

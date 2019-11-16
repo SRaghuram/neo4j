@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.state.buffers
 
 import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, BufferId, PipelineId}
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
-import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.{AccumulatingBuffer, SinkByOrigin}
 import org.neo4j.cypher.internal.runtime.pipelined.state.{ArgumentCountUpdater, IdAllocator}
@@ -35,11 +35,11 @@ class MorselApplyBuffer(id: BufferId,
                         delegates: IndexedSeq[MorselBuffer]
                        ) extends ArgumentCountUpdater
                          with SinkByOrigin
-                         with Sink[PipelinedExecutionContext] {
+                         with Sink[MorselExecutionContext] {
 
   override def sinkFor[T <: AnyRef](fromPipeline: PipelineId): Sink[T] = this.asInstanceOf[Sink[T]]
 
-  def put(morsel: PipelinedExecutionContext): Unit = {
+  def put(morsel: MorselExecutionContext): Unit = {
     if (DebugSupport.BUFFERS.enabled) {
       DebugSupport.BUFFERS.log(s"[put]   $this <- $morsel")
     }

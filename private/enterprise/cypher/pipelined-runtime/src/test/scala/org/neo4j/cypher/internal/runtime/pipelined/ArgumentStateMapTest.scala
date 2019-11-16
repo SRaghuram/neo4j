@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined
 
-import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.pipelined.operators.MorselUnitTest
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 
@@ -107,7 +107,7 @@ class ArgumentStateMapTest extends MorselUnitTest {
 
   //-------------------
   // Creates a predicate for ArgumentStateMaps.filter(morsel: MorselExecutionContext, predicate: MorselExecutionContext => Boolean)
-  def morselFilterPredicate(predicate: Long => Boolean): PipelinedExecutionContext => Boolean = {
+  def morselFilterPredicate(predicate: Long => Boolean): MorselExecutionContext => Boolean = {
     m => predicate(m.getLongAt(0))
   }
 
@@ -125,7 +125,7 @@ class ArgumentStateMapTest extends MorselUnitTest {
       else
         -1L
 
-  val onRowFilterPredicate: (FILTER_STATE, PipelinedExecutionContext) => Boolean =
+  val onRowFilterPredicate: (FILTER_STATE, MorselExecutionContext) => Boolean =
     (state, row) =>
       row.getLongAt(0) == state
 

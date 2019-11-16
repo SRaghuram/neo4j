@@ -88,10 +88,10 @@ abstract class MorselUnitTest extends CypherFunSuite {
       this
     }
 
-    def build() : PipelinedExecutionContext = {
+    def build() : MorselExecutionContext = {
       val morsel = new Morsel(longs, refs)
       val slots = SlotConfiguration(Map.empty, longSlots, refSlots)
-      val context = PipelinedExecutionContext(morsel, slots, rows)
+      val context = MorselExecutionContext(morsel, slots, rows)
       context
     }
   }
@@ -100,7 +100,7 @@ abstract class MorselUnitTest extends CypherFunSuite {
     override def build(): FilteringPipelinedExecutionContext = {
       val morsel = new Morsel(longs, refs)
       val slots = SlotConfiguration(Map.empty, longSlots, refSlots)
-      val context = PipelinedExecutionContext(morsel, slots, rows)
+      val context = MorselExecutionContext(morsel, slots, rows)
       val filteringContext = FilteringPipelinedExecutionContext(context)
       filteringContext
     }
@@ -209,7 +209,7 @@ abstract class MorselUnitTest extends CypherFunSuite {
     rawRow.isValidRawRow shouldEqual false
   }
 
-  def validateRowDataContent(row: PipelinedExecutionContext, i: Int): Unit = {
+  def validateRowDataContent(row: MorselExecutionContext, i: Int): Unit = {
     row.getLongAt(0) shouldEqual i
     row.getLongAt(1) shouldEqual i*2
     row.getRefAt(0) shouldEqual Values.stringValue(i.toString)
@@ -225,7 +225,7 @@ abstract class MorselUnitTest extends CypherFunSuite {
     }
   }
 
-  class ThenOutput(outputRow: PipelinedExecutionContext, longSlots: Int, refSlots: Int) {
+  class ThenOutput(outputRow: MorselExecutionContext, longSlots: Int, refSlots: Int) {
     private var rowCount = 0
     private val currentRow = outputRow.shallowCopy()
     currentRow.resetToFirstRow()
@@ -280,7 +280,7 @@ abstract class MorselUnitTest extends CypherFunSuite {
   }
 
   class ThenContinuableOutput(task: ContinuableOperatorTask,
-                              outputRow: PipelinedExecutionContext,
+                              outputRow: MorselExecutionContext,
                               longSlots: Int,
                               refSlots: Int) extends ThenOutput(outputRow, longSlots, refSlots) {
 

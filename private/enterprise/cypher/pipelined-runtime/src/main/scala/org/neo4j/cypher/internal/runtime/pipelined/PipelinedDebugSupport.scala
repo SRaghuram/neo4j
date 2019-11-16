@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined
 
-import org.neo4j.cypher.internal.runtime.pipelined.execution.PipelinedExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.pipelined.operators._
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.{EndOfEmptyStream, EndOfNonEmptyStream, MorselData, NotTheEnd}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
@@ -44,7 +44,7 @@ object PipelinedDebugSupport {
     }
   }
 
-  def prettyWork(morsel: PipelinedExecutionContext, workIdentity: WorkIdentity): Seq[String] = {
+  def prettyWork(morsel: MorselExecutionContext, workIdentity: WorkIdentity): Seq[String] = {
     prettyMorselWithHeader("OUTPUT:", morsel) ++
       Array(
         workIdentity.toString,
@@ -52,7 +52,7 @@ object PipelinedDebugSupport {
       )
   }
 
-  def prettyMorselWithHeader(header: String, morsel: PipelinedExecutionContext): Seq[String] = {
+  def prettyMorselWithHeader(header: String, morsel: MorselExecutionContext): Seq[String] = {
     (
       Array(header) ++
       morsel.prettyString

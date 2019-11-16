@@ -13,7 +13,7 @@ import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpres
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyLabel
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyLabel.UNKNOWN
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{PipelinedExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.pipelined.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
@@ -43,7 +43,7 @@ class LabelScanOperator(val workIdentity: WorkIdentity,
     *
     * @param inputMorsel the input row, pointing to the beginning of the input morsel
     */
-  class SingleThreadedScanTask(val inputMorsel: PipelinedExecutionContext) extends InputLoopTask {
+  class SingleThreadedScanTask(val inputMorsel: MorselExecutionContext) extends InputLoopTask {
 
     override def workIdentity: WorkIdentity = LabelScanOperator.this.workIdentity
 
@@ -65,7 +65,7 @@ class LabelScanOperator(val workIdentity: WorkIdentity,
       }
     }
 
-    override protected def innerLoop(outputRow: PipelinedExecutionContext, context: QueryContext, state: QueryState): Unit = {
+    override protected def innerLoop(outputRow: MorselExecutionContext, context: QueryContext, state: QueryState): Unit = {
       while (outputRow.isValidRow && cursor.next()) {
         outputRow.copyFrom(inputMorsel, argumentSize.nLongs, argumentSize.nReferences)
         outputRow.setLongAt(offset, cursor.nodeReference())

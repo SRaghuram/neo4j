@@ -100,7 +100,7 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
 
   override def initializeState(): Unit = {
     // Assumption: Buffer with ID 0 is the initial buffer
-    putMorsel(NO_PIPELINE, BufferId(0), PipelinedExecutionContext.createInitialRow())
+    putMorsel(NO_PIPELINE, BufferId(0), MorselExecutionContext.createInitialRow())
   }
 
   // Methods
@@ -112,9 +112,9 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
 
   override def putMorsel(fromPipeline: PipelineId,
                          bufferId: BufferId,
-                         output: PipelinedExecutionContext): Unit = {
+                         output: MorselExecutionContext): Unit = {
     if (!queryStatus.cancelled) {
-      buffers.sink[PipelinedExecutionContext](fromPipeline, bufferId).put(output)
+      buffers.sink[MorselExecutionContext](fromPipeline, bufferId).put(output)
       workerWaker.wakeOne()
     } else {
       DebugSupport.ERROR_HANDLING.log("Dropped morsel %s because of query cancellation", output)
@@ -143,7 +143,7 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
     }
   }
 
-  override def closeMorselTask(pipeline: ExecutablePipeline, inputMorsel: PipelinedExecutionContext): Unit = {
+  override def closeMorselTask(pipeline: ExecutablePipeline, inputMorsel: MorselExecutionContext): Unit = {
     closeWorkUnit(pipeline)
     buffers.morselBuffer(pipeline.inputBuffer.id).close(inputMorsel)
   }
@@ -159,7 +159,7 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
   }
 
   override def closeMorselAndAccumulatorTask(pipeline: ExecutablePipeline,
-                                             inputMorsel: PipelinedExecutionContext,
+                                             inputMorsel: MorselExecutionContext,
                                              accumulator: MorselAccumulator[_]): Unit = {
     closeWorkUnit(pipeline)
     val buffer = buffers.lhsAccumulatingRhsStreamingBuffer(pipeline.inputBuffer.id)
@@ -167,7 +167,7 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
   }
 
   override def filterCancelledArguments(pipeline: ExecutablePipeline,
-                                        inputMorsel: PipelinedExecutionContext): Boolean = {
+                                        inputMorsel: MorselExecutionContext): Boolean = {
     buffers.morselBuffer(pipeline.inputBuffer.id).filterCancelledArguments(inputMorsel)
   }
 
@@ -177,7 +177,7 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
   }
 
   override def filterCancelledArguments(pipeline: ExecutablePipeline,
-                                        inputMorsel: PipelinedExecutionContext,
+                                        inputMorsel: MorselExecutionContext,
                                         accumulator: MorselAccumulator[_]): Boolean = {
     val buffer = buffers.lhsAccumulatingRhsStreamingBuffer(pipeline.inputBuffer.id)
     buffer.filterCancelledArguments(accumulator, inputMorsel)

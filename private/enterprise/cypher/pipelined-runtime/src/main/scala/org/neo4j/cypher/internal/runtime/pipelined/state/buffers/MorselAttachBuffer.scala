@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.state.buffers
 
 import org.neo4j.cypher.internal.physicalplanning.{BufferId, PipelineId, SlotConfiguration}
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{FilteringPipelinedExecutionContext, Morsel, PipelinedExecutionContext}
+import org.neo4j.cypher.internal.runtime.pipelined.execution.{FilteringPipelinedExecutionContext, Morsel, MorselExecutionContext}
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.SinkByOrigin
 
@@ -33,11 +33,11 @@ class MorselAttachBuffer(id: BufferId,
                          argumentNumLongs: Int,
                          argumentNumRefs: Int
                        ) extends SinkByOrigin
-                            with Sink[PipelinedExecutionContext] {
+                            with Sink[MorselExecutionContext] {
 
   override def sinkFor[T <: AnyRef](fromPipeline: PipelineId): Sink[T] = this.asInstanceOf[Sink[T]]
 
-  def put(morsel: PipelinedExecutionContext): Unit = {
+  def put(morsel: MorselExecutionContext): Unit = {
     if (DebugSupport.BUFFERS.enabled) {
       DebugSupport.BUFFERS.log(s"[put]   $this <- $morsel")
     }

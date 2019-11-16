@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.pipelined.state.buffers
 
 import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, BufferId, SlotConfiguration}
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{FilteringPipelinedExecutionContext, Morsel, PipelinedExecutionContext}
+import org.neo4j.cypher.internal.runtime.pipelined.execution.{FilteringPipelinedExecutionContext, Morsel, MorselExecutionContext}
 import org.neo4j.cypher.internal.runtime.pipelined.operators.MorselUnitTest
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.WorkCanceller
 import org.neo4j.cypher.internal.runtime.pipelined.state.{ArgumentStateMap, QueryCompletionTracker, StandardArgumentStateMap}
@@ -416,7 +416,7 @@ class MorselBufferTest extends MorselUnitTest {
 
   // HELPERS
 
-  private def longMorsel(longsPerRow: Int)(values: Long*): PipelinedExecutionContext = {
+  private def longMorsel(longsPerRow: Int)(values: Long*): MorselExecutionContext = {
     val nRows = values.size / longsPerRow
     var slots =
       (0 until longsPerRow)
@@ -456,7 +456,7 @@ class MorselBufferTest extends MorselUnitTest {
       decrements.clear()
     }
 
-    override def initiate(argumentRowId: Long, argumentMorsel: PipelinedExecutionContext): Unit =
+    override def initiate(argumentRowId: Long, argumentMorsel: MorselExecutionContext): Unit =
       initiates(argumentRowId) = initiates.getOrElseUpdate(argumentRowId, 0) + 1
 
     override def increment(argumentRowId: Long): Unit =
@@ -472,12 +472,12 @@ class MorselBufferTest extends MorselUnitTest {
 
   case class CancellerFactory(predicate: Long => Boolean) extends ArgumentStateMap.ArgumentStateFactory[StaticCanceller] {
     override def newStandardArgumentState(argumentRowId: Long,
-                                          argumentMorsel: PipelinedExecutionContext,
+                                          argumentMorsel: MorselExecutionContext,
                                           argumentRowIdsForReducers: Array[Long]): StaticCanceller =
       new StaticCanceller(predicate(argumentRowId), argumentRowId)
 
     override def newConcurrentArgumentState(argumentRowId: Long,
-                                            argumentMorsel: PipelinedExecutionContext,
+                                            argumentMorsel: MorselExecutionContext,
                                             argumentRowIdsForReducers: Array[Long]): StaticCanceller = ???
   }
 

@@ -21,7 +21,7 @@ class PipelinedExecutionContextTest extends CypherFunSuite {
 
     // WHEN
     val morsel = Morsel.create(slots, morselSize)
-    val ctx = new PipelinedExecutionContext(morsel, slots, morselSize)
+    val ctx = new MorselExecutionContext(morsel, slots, morselSize)
 
     // THEN
     val expectedSizeOfLongs = morselSize * 8L

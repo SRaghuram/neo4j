@@ -541,7 +541,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
   }
 
   protected def createSlottedPipeHeadOperator(plan: LogicalPlan): Operator = {
-    val feedPipe = PipelinedFeedPipe()(Id.INVALID_ID)
+    val feedPipe = MorselFeedPipe()(Id.INVALID_ID)
     val pipe = slottedPipeBuilder.get.onOneChildPlan(plan, feedPipe)
     val workIdentity = workIdentityFromSlottedPipePlan("SlottedPipeHead", plan, pipe)
     new SlottedPipeHeadOperator(workIdentity, pipe)
@@ -558,7 +558,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         None
 
       case None =>
-        val feedPipe = PipelinedFeedPipe()(Id.INVALID_ID)
+        val feedPipe = MorselFeedPipe()(Id.INVALID_ID)
         val pipe = slottedPipeBuilder.get.onOneChildPlan(plan, feedPipe)
         val workIdentity = workIdentityFromSlottedPipePlan("SlottedPipeMiddle", plan, pipe)
         Some(new SlottedPipeMiddleOperator(workIdentity, pipe))

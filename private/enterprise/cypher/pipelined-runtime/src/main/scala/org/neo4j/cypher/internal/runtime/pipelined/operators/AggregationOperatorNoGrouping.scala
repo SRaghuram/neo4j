@@ -11,7 +11,7 @@ import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.{AggregatingAccumulator, Aggregator, Updater}
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{PipelinedExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.pipelined.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.PerArgument
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Sink
 import org.neo4j.cypher.internal.runtime.pipelined.state.{ArgumentStateMap, StateFactory}
@@ -68,7 +68,7 @@ case class AggregationOperatorNoGrouping(workIdentity: WorkIdentity,
 
       override def workIdentity: WorkIdentity = AggregationMapperOperatorNoGrouping.this.workIdentity
 
-      override def prepareOutput(morsel: PipelinedExecutionContext,
+      override def prepareOutput(morsel: MorselExecutionContext,
                                  context: QueryContext,
                                  state: QueryState,
                                  resources: QueryResources,
@@ -90,7 +90,7 @@ case class AggregationOperatorNoGrouping(workIdentity: WorkIdentity,
         new PreAggregatedOutput(preAggregated, sink)
       }
 
-      private def preAggregate(queryState: OldQueryState)(morsel: PipelinedExecutionContext): Array[Updater] = {
+      private def preAggregate(queryState: OldQueryState)(morsel: MorselExecutionContext): Array[Updater] = {
         val updaters = aggregations.map(_.newUpdater)
         //loop over the entire morsel view and apply the aggregation
         while (morsel.isValidRow) {
@@ -145,7 +145,7 @@ case class AggregationOperatorNoGrouping(workIdentity: WorkIdentity,
 
       override def workIdentity: WorkIdentity = AggregationReduceOperatorNoGrouping.this.workIdentity
 
-      override def operate(outputRow: PipelinedExecutionContext,
+      override def operate(outputRow: MorselExecutionContext,
                            context: QueryContext,
                            state: QueryState,
                            resources: QueryResources): Unit = {
