@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.pipelined.state
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{FilteringPipelinedExecutionContext, MorselExecutionContext}
+import org.neo4j.cypher.internal.runtime.pipelined.execution.{FilteringMorselExecutionContext, MorselExecutionContext}
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.{ArgumentState, ArgumentStateWithCompleted}
 
 import scala.collection.mutable.ArrayBuffer
@@ -228,7 +228,7 @@ object ArgumentStateMap {
   def filter(morsel: MorselExecutionContext,
              predicate: MorselExecutionContext => Boolean): Unit = {
     val currentRow = morsel.getCurrentRow // Save current row
-    val filteringMorsel = morsel.asInstanceOf[FilteringPipelinedExecutionContext]
+    val filteringMorsel = morsel.asInstanceOf[FilteringMorselExecutionContext]
 
     if (filteringMorsel.hasCancelledRows) {
       filterLoop(filteringMorsel, predicate)
@@ -238,7 +238,7 @@ object ArgumentStateMap {
     filteringMorsel.moveToRawRow(currentRow) // Restore current row exactly (so may point at a cancelled row)
   }
 
-  private def filterLoop(filteringMorsel: FilteringPipelinedExecutionContext,
+  private def filterLoop(filteringMorsel: FilteringMorselExecutionContext,
                          predicate: MorselExecutionContext => Boolean): Unit = {
     filteringMorsel.resetToFirstRow()
     while (filteringMorsel.isValidRow) {
@@ -249,7 +249,7 @@ object ArgumentStateMap {
     }
   }
 
-  private def filterLoopRaw(filteringMorsel: FilteringPipelinedExecutionContext,
+  private def filterLoopRaw(filteringMorsel: FilteringMorselExecutionContext,
                             predicate: MorselExecutionContext => Boolean): Unit = {
     filteringMorsel.resetToFirstRawRow()
     while (filteringMorsel.isValidRawRow) {
@@ -276,7 +276,7 @@ object ArgumentStateMap {
                            onRow: (FILTER_STATE, MorselExecutionContext) => Boolean): Unit = {
     val currentRow = morsel.getCurrentRow // Save current row
 
-    val filteringMorsel = morsel.asInstanceOf[FilteringPipelinedExecutionContext]
+    val filteringMorsel = morsel.asInstanceOf[FilteringMorselExecutionContext]
 
     if (filteringMorsel.hasCancelledRows) {
       filterLoop(argumentSlotOffset, filteringMorsel, onArgument, onRow)
@@ -288,7 +288,7 @@ object ArgumentStateMap {
   }
 
   private def filterLoop[FILTER_STATE](argumentSlotOffset: Int,
-                                       filteringMorsel: FilteringPipelinedExecutionContext,
+                                       filteringMorsel: FilteringMorselExecutionContext,
                                        onArgument: (Long, Long) => FILTER_STATE,
                                        onRow: (FILTER_STATE, MorselExecutionContext) => Boolean): Unit = {
     filteringMorsel.resetToFirstRow()
@@ -313,7 +313,7 @@ object ArgumentStateMap {
   }
 
   private def filterLoopRaw[FILTER_STATE](argumentSlotOffset: Int,
-                                          filteringMorsel: FilteringPipelinedExecutionContext,
+                                          filteringMorsel: FilteringMorselExecutionContext,
                                           onArgument: (Long, Long) => FILTER_STATE,
                                           onRow: (FILTER_STATE, MorselExecutionContext) => Boolean): Unit = {
     filteringMorsel.resetToFirstRawRow()

@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.pipelined.state.buffers
 
 import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, BufferId, SlotConfiguration}
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{FilteringPipelinedExecutionContext, Morsel, MorselExecutionContext}
+import org.neo4j.cypher.internal.runtime.pipelined.execution.{FilteringMorselExecutionContext, Morsel, MorselExecutionContext}
 import org.neo4j.cypher.internal.runtime.pipelined.operators.MorselUnitTest
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.WorkCanceller
 import org.neo4j.cypher.internal.runtime.pipelined.state.{ArgumentStateMap, QueryCompletionTracker, StandardArgumentStateMap}
@@ -422,7 +422,7 @@ class MorselBufferTest extends MorselUnitTest {
       (0 until longsPerRow)
         .foldLeft(SlotConfiguration.empty)( (slots, i) => slots.newLong(s"v$i", nullable = false, symbols.CTAny) )
 
-    new FilteringPipelinedExecutionContext(new Morsel(values.toArray, Array.empty), slots, nRows, 0, 0, nRows)
+    new FilteringMorselExecutionContext(new Morsel(values.toArray, Array.empty), slots, nRows, 0, 0, nRows)
   }
 
   private def initiate(asm: ArgumentStateMap[_], argumentRowIds: Range): Unit = {

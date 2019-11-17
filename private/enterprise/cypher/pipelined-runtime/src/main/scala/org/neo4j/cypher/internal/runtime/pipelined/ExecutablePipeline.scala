@@ -136,7 +136,7 @@ class PipelineState(val pipeline: ExecutablePipeline,
         val slots = pipeline.slots
         val morsel = Morsel.create(slots, state.morselSize)
         if (pipeline.needsFilteringMorsel) {
-          new FilteringPipelinedExecutionContext(
+          new FilteringMorselExecutionContext(
             morsel,
             slots,
             state.morselSize,

@@ -9,7 +9,7 @@ import java.util
 
 import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, BufferId, PipelineId}
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{FilteringPipelinedExecutionContext, MorselExecutionContext}
+import org.neo4j.cypher.internal.runtime.pipelined.execution.{FilteringMorselExecutionContext, MorselExecutionContext}
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.{ArgumentStateMaps, WorkCanceller}
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.{AccumulatingBuffer, DataHolder, SinkByOrigin}
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.MorselBuffer._
@@ -114,10 +114,10 @@ class MorselBuffer(id: BufferId,
     if (workCancellers.nonEmpty) {
       val currentRow = morsel.getCurrentRow // Save current row
 
-      Preconditions.checkArgument(morsel.isInstanceOf[FilteringPipelinedExecutionContext],
+      Preconditions.checkArgument(morsel.isInstanceOf[FilteringMorselExecutionContext],
                                   s"Expected filtering morsel for filterCancelledArguments in buffer $id, but got ${morsel.getClass}")
 
-      val filteringMorsel = morsel.asInstanceOf[FilteringPipelinedExecutionContext]
+      val filteringMorsel = morsel.asInstanceOf[FilteringMorselExecutionContext]
       filteringMorsel.resetToFirstRow()
 
       val rowsToCancel = determineCancelledRows(filteringMorsel)
@@ -134,7 +134,7 @@ class MorselBuffer(id: BufferId,
     morsel.isEmpty
   }
 
-  private def decrementReducers(filteringMorsel: FilteringPipelinedExecutionContext, rowsToCancel: util.BitSet): Unit = {
+  private def decrementReducers(filteringMorsel: FilteringMorselExecutionContext, rowsToCancel: util.BitSet): Unit = {
     filteringMorsel.resetToFirstRow()
 
     val reducerArgumentRowIds = new Array[Long](downstreamArgumentReducers.size)
@@ -184,7 +184,7 @@ class MorselBuffer(id: BufferId,
     }
   }
 
-  private def determineCancelledRows(filteringMorsel: FilteringPipelinedExecutionContext): java.util.BitSet = {
+  private def determineCancelledRows(filteringMorsel: FilteringMorselExecutionContext): java.util.BitSet = {
     val rowsToCancel =  new java.util.BitSet(filteringMorsel.maxNumberOfRows)
     while (filteringMorsel.isValidRow) {
       var i = 0

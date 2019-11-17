@@ -29,14 +29,14 @@ object MorselExecutionContext {
 
   val empty: MorselExecutionContext = new MorselExecutionContext(new Morsel(Array.empty, Array.empty), SlotConfiguration.empty, 0)
 
-  def createInitialRow(): FilteringPipelinedExecutionContext =
-    new FilteringPipelinedExecutionContext(
+  def createInitialRow(): FilteringMorselExecutionContext =
+    new FilteringMorselExecutionContext(
       Morsel.create(INITIAL_SLOT_CONFIGURATION, 1),
       INITIAL_SLOT_CONFIGURATION, 1, 0, 0, 1) {
 
       //it is ok to asked for a cached value even though nothing is allocated for it
       override def getCachedPropertyAt(offset: Int): Value = null
-      override def shallowCopy(): FilteringPipelinedExecutionContext = createInitialRow()
+      override def shallowCopy(): FilteringMorselExecutionContext = createInitialRow()
     }
 }
 

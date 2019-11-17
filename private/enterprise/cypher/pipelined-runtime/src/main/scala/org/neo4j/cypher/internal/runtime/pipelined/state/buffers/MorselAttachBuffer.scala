@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.state.buffers
 
 import org.neo4j.cypher.internal.physicalplanning.{BufferId, PipelineId, SlotConfiguration}
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{FilteringPipelinedExecutionContext, Morsel, MorselExecutionContext}
+import org.neo4j.cypher.internal.runtime.pipelined.execution.{FilteringMorselExecutionContext, Morsel, MorselExecutionContext}
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.SinkByOrigin
 
@@ -44,7 +44,7 @@ class MorselAttachBuffer(id: BufferId,
 
     if (morsel.hasData) {
       ArgumentStateMap.foreach(argumentSlotOffset, morsel, (_, view) => {
-        val outputMorsel = new FilteringPipelinedExecutionContext(Morsel.create(outputSlots, 1), outputSlots, 1, 0, 0, 1, morsel.producingWorkUnitEvent)
+        val outputMorsel = new FilteringMorselExecutionContext(Morsel.create(outputSlots, 1), outputSlots, 1, 0, 0, 1, morsel.producingWorkUnitEvent)
         outputMorsel.copyFrom(view, argumentNumLongs, argumentNumRefs)
         outputMorsel.attach(view)
 

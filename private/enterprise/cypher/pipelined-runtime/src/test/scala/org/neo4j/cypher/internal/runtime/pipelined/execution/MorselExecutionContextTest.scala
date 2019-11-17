@@ -9,7 +9,7 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.v4_0.util.symbols.{CTAny, CTNode}
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
 
-class PipelinedExecutionContextTest extends CypherFunSuite {
+class MorselExecutionContextTest extends CypherFunSuite {
 
   test("should ignore null refs on estimateHeapUsage") {
     // GIVEN
