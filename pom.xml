@@ -64,7 +64,7 @@
                         <groups>
                             <group>
                                 <title>Graph database</title>
-                                <packages>org.neo4j.graphdb:org.neo4j.dbms.api</packages>
+                                <packages>org.neo4j.graphdb:org.neo4j.dbms.api:com.neo4j.dbms.api</packages>
                             </group>
                             <group>
                                 <title>Graph algorithms</title>
@@ -79,16 +79,8 @@
                                 <packages>com.neo4j.backup</packages>
                             </group>
                             <group>
-                                <title>Import</title>
-                                <packages>org.neo4j.batchinsert</packages>
-                            </group>
-                            <group>
                                 <title>Procedures</title>
                                 <packages>org.neo4j.procedure</packages>
-                            </group>
-                            <group>
-                                <title>Server Plugin API</title>
-                                <packages>org.neo4j.server:org.neo4j.server.*</packages>
                             </group>
                             <group>
                                 <title>Test Harness</title>
@@ -98,7 +90,7 @@
 
                         <!-- Include the following packages... (yes, has to be one line) -->
                         <subpackages>
-                            com.neo4j.backup:org.neo4j.graphalgo:org.neo4j.graphdb:org.neo4j.dbms.api:org.neo4j.index:org.neo4j.server.helpers:org.neo4j.server.rest.repr:org.neo4j.server.rest.web:org.neo4j.batchinsert:org.neo4j.logging:org.neo4j.procedure:org.neo4j.harness.junit:com.neo4j.harness.junit:org.neo4j.configuration
+                            com.neo4j.backup:org.neo4j.graphalgo:org.neo4j.graphdb:org.neo4j.dbms.api:org.neo4j.index:org.neo4j.server.helpers:org.neo4j.server.rest.repr:org.neo4j.server.rest.web:org.neo4j.batchinsert:org.neo4j.logging:org.neo4j.procedure:org.neo4j.harness.junit:com.neo4j.harness.junit:org.neo4j.configuration:com.neo4j.dbms.api
                         </subpackages>
                         <!-- ...unless the package contains -->
                         <excludePackageNames>
