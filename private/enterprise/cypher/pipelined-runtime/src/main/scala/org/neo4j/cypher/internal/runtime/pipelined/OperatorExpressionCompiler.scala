@@ -402,7 +402,7 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
     cursors.update(name, cursor)
   }
 
-  override protected def cursorFor(name: String): Option[CursorRepresentation] = cursors.get(name)
+  override def cursorFor(name: String): Option[CursorRepresentation] = cursors.get(name)
 
   /**
    * Uses a local slot variable if one is already defined, otherwise declares and assigns a new local slot variable
@@ -755,6 +755,10 @@ case class NodeCursorRepresentation(target: IntermediateRepresentation) extends 
       invoke(ExpressionCompiler.PROPERTY_CURSOR, method[PropertyCursor, Boolean, Int]("seekProperty"), propertyToken)
       )
   }
+
+  def isDense: IntermediateRepresentation =
+    invoke(target, method[NodeCursor, Boolean]("isDense"))
+
 }
 
 case class NodeLabelCursorRepresentation(target: IntermediateRepresentation) extends BaseCursorRepresentation {

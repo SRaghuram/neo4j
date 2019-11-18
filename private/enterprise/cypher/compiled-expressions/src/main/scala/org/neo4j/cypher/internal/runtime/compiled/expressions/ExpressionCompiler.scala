@@ -2111,7 +2111,7 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
     * Gives the cursor that currently is used for the given variable name or `None`
     * @param name the variable name of the node or relationship the cursor is used for
     */
-  protected def cursorFor(name: String): Option[CursorRepresentation] = None
+  def cursorFor(name: String): Option[CursorRepresentation] = None
 
   def getArgumentAt(offset: Int): IntermediateRepresentation =
     if (offset == TopLevelArgument.SLOT_OFFSET) {
