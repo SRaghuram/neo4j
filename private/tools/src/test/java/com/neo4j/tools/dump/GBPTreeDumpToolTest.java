@@ -10,8 +10,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 
+import org.neo4j.index.internal.gbptree.GBPTree;
 import org.neo4j.index.internal.gbptree.GBPTreeBuilder;
 import org.neo4j.internal.index.label.LabelScanLayout;
+import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
@@ -38,7 +40,10 @@ class GBPTreeDumpToolTest
     {
         // Given a tree
         File file = dir.file( "index" );
-        new GBPTreeBuilder<>( pageCache, file, new LabelScanLayout() ).build().close();
+        try ( GBPTree<?,?> tree = new GBPTreeBuilder<>( pageCache, file, new LabelScanLayout() ).build() )
+        {
+            tree.checkpoint( IOLimiter.UNLIMITED );
+        }
 
         // When dumping
         GBPTreeDumpTool dumpTool = new GBPTreeDumpTool();
