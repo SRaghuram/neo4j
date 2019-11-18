@@ -108,7 +108,7 @@ class SystemGraphRealmUpgradeIT
         {
             List<UserResult> users = new ArrayList<>();
             Result result = tx.execute( "SHOW USERS" );
-            while( result.hasNext() )
+            while ( result.hasNext() )
             {
                 Map<String,Object> user = result.next();
                 users.add( new UserResult( (String) user.get( "user" ), (List<String>) user.get( "roles" ) ) );
@@ -133,12 +133,25 @@ class SystemGraphRealmUpgradeIT
     }
 
     @Test
+    void shouldFailUpgradeWithNonExistentDefaultAdmin()
+    {
+        createCommunityWithUsers( "Alice", "Bob" );
+
+        setDefaultAdmin( "Charlie" );
+
+        // WHEN
+        Throwable exception = assertThrows( RuntimeException.class, this::getEnterpriseManagementService );
+        assertThat( exception.getCause().getMessage(), containsString(
+                "No roles defined, and default admin user '" + "Charlie" + "' does not exist. " + "Please use " +
+                "`neo4j-admin set-default-admin` to select a valid admin." ) );
+    }
+
+    @Test
     void shouldUpgradeUsersWithSetDefaultAdminCommand()
     {
         // GIVEN
         createCommunityWithUsers( "Alice", "Bob" );
 
-        // TODO this fails since set-default-admin only reads users from flatfile
         setDefaultAdmin( "Alice" );
 
         // WHEN
@@ -150,7 +163,7 @@ class SystemGraphRealmUpgradeIT
         {
             List<UserResult> users = new ArrayList<>();
             Result result = tx.execute( "SHOW USERS" );
-            while( result.hasNext() )
+            while ( result.hasNext() )
             {
                 Map<String,Object> user = result.next();
                 users.add( new UserResult( (String) user.get( "user" ), (List<String>) user.get( "roles" ) ) );
@@ -162,7 +175,6 @@ class SystemGraphRealmUpgradeIT
         }
     }
 
-
     private static class UserResult
     {
         private final String user;
@@ -172,6 +184,12 @@ class SystemGraphRealmUpgradeIT
         {
             this.user = user;
             this.roles = roles;
+        }
+
+        @Override
+        public int hashCode()
+        {
+            return roles.hashCode() + 31 * user.hashCode();
         }
 
         @Override
