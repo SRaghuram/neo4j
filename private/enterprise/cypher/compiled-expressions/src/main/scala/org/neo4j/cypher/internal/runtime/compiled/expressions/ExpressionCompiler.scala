@@ -1376,10 +1376,8 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
     case NodePropertyExists(offset, token, _) =>
       Some(
         IntermediateExpression(
-          ternary(
-          invoke(DB_ACCESS, method[DbAccess, Boolean, Long, Int, NodeCursor, PropertyCursor]("nodeHasProperty"),
-                 getLongAt(offset), constant(token), NODE_CURSOR, PROPERTY_CURSOR),
-            trueValue, falseValue), Seq.empty, Seq(vNODE_CURSOR, vPROPERTY_CURSOR), Set.empty))
+          ternary(hasNodeProperty(constant(token), offset), trueValue, falseValue),
+          Seq.empty, Seq(vNODE_CURSOR, vPROPERTY_CURSOR), Set.empty))
 
     case NodePropertyExistsLate(offset, key, _) =>
       val f = field[Int](namer.nextVariableName(), constant(-1))
@@ -1387,10 +1385,8 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
         block(
           condition(equal(loadField(f), constant(-1)))(
             setField(f, invoke(DB_ACCESS, method[DbAccess, Int, String]("propertyKey"), constant(key)))),
-        ternary(
-        invoke(DB_ACCESS, method[DbAccess, Boolean, Long, Int, NodeCursor, PropertyCursor]("nodeHasProperty"),
-               getLongAt(offset), loadField(f), NODE_CURSOR, PROPERTY_CURSOR),
-          trueValue, falseValue)), Seq(f), Seq(vNODE_CURSOR, vPROPERTY_CURSOR), Set.empty))
+        ternary(hasNodeProperty(loadField(f), offset), trueValue, falseValue)),
+        Seq(f), Seq(vNODE_CURSOR, vPROPERTY_CURSOR), Set.empty))
 
     case RelationshipProperty(offset, token, _) =>
       val variableName = namer.nextVariableName()
@@ -1417,10 +1413,8 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
     case RelationshipPropertyExists(offset, token, _) =>
       Some(IntermediateExpression(
         ternary(
-          invoke(DB_ACCESS, method[DbAccess, Boolean, Long, Int, RelationshipScanCursor, PropertyCursor]("relationshipHasProperty"),
-                 getLongAt(offset), constant(token), RELATIONSHIP_CURSOR, PROPERTY_CURSOR),
-          trueValue,
-          falseValue), Seq.empty, Seq(vRELATIONSHIP_CURSOR, vPROPERTY_CURSOR), Set.empty)
+          hasRelationshipProperty(constant(token), offset), trueValue, falseValue),
+        Seq.empty, Seq(vRELATIONSHIP_CURSOR, vPROPERTY_CURSOR), Set.empty)
       )
 
     case RelationshipPropertyExistsLate(offset, key, _) =>
@@ -1430,10 +1424,8 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
           condition(equal(loadField(f), constant(-1)))(
             setField(f, invoke(DB_ACCESS, method[DbAccess, Int, String]("propertyKey"), constant(key)))),
         ternary(
-        invoke(DB_ACCESS, method[DbAccess, Boolean, Long, Int, RelationshipScanCursor, PropertyCursor]("relationshipHasProperty"),
-               getLongAt(offset), loadField(f), RELATIONSHIP_CURSOR, PROPERTY_CURSOR),
-        trueValue,
-        falseValue)), Seq(f), Seq(vRELATIONSHIP_CURSOR, vPROPERTY_CURSOR), Set.empty))
+          hasRelationshipProperty(loadField(f), offset), trueValue, falseValue)),
+        Seq(f), Seq(vRELATIONSHIP_CURSOR, vPROPERTY_CURSOR), Set.empty))
 
     case HasLabelsFromSlot(offset, resolvedLabelTokens, lateLabels) if resolvedLabelTokens.nonEmpty || lateLabels.nonEmpty =>
       val (tokenFields, inits) = tokenFieldsForLabels(lateLabels)
@@ -2107,7 +2099,11 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
 
   protected def getNodeProperty(propertyToken: IntermediateRepresentation, offset: Int): IntermediateRepresentation
 
+  protected def hasNodeProperty(propertyToken: IntermediateRepresentation, offset: Int): IntermediateRepresentation
+
   protected def getRelationshipProperty(propertyToken: IntermediateRepresentation, offset: Int): IntermediateRepresentation
+
+  protected def hasRelationshipProperty(propertyToken: IntermediateRepresentation, offset: Int): IntermediateRepresentation
 
   protected def getProperty(key: String, container: IntermediateRepresentation): IntermediateRepresentation
 
@@ -3034,9 +3030,17 @@ class DefaultExpressionCompiler(slots: SlotConfiguration, readOnly: Boolean, cod
     invoke(DB_ACCESS, NODE_PROPERTY,
            getLongAt(offset), propertyToken, NODE_CURSOR, PROPERTY_CURSOR, constant(true))
 
+  override protected def hasNodeProperty(propertyToken: IntermediateRepresentation, offset: Int): IntermediateRepresentation =
+    invoke(DB_ACCESS, method[DbAccess, Boolean, Long, Int, NodeCursor, PropertyCursor]("nodeHasProperty"),
+           getLongAt(offset), propertyToken, NODE_CURSOR, PROPERTY_CURSOR)
+
   override protected def getRelationshipProperty(propertyToken: IntermediateRepresentation, offset: Int): IntermediateRepresentation =
     invoke(DB_ACCESS, RELATIONSHIP_PROPERTY,
            getLongAt(offset), propertyToken, RELATIONSHIP_CURSOR, PROPERTY_CURSOR, constant(true))
+
+  override protected def hasRelationshipProperty(propertyToken: IntermediateRepresentation, offset: Int): IntermediateRepresentation =
+    invoke(DB_ACCESS, method[DbAccess, Boolean, Long, Int, RelationshipScanCursor, PropertyCursor]("relationshipHasProperty"),
+           getLongAt(offset), propertyToken, RELATIONSHIP_CURSOR, PROPERTY_CURSOR)
 
   override protected def getProperty(key: String, container: IntermediateRepresentation): IntermediateRepresentation =
     invokeStatic(
@@ -3052,6 +3056,7 @@ class DefaultExpressionCompiler(slots: SlotConfiguration, readOnly: Boolean, cod
 trait CursorRepresentation {
   def hasLabel(labelToken: IntermediateRepresentation): IntermediateRepresentation
   def getProperty(propertyToken: IntermediateRepresentation): IntermediateRepresentation
+  def hasProperty(propertyToken: IntermediateRepresentation): IntermediateRepresentation
   def reference: IntermediateRepresentation
   def relationshipType: IntermediateRepresentation
 }

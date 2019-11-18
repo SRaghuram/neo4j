@@ -182,9 +182,27 @@ object OperatorCodeGenHelperTemplates {
       ExpressionCompiler.PROPERTY_CURSOR,
       propertyToken)
 
+  def nodeHasProperty(node: IntermediateRepresentation, propertyToken: IntermediateRepresentation): IntermediateRepresentation =
+    invokeStatic(
+      method[CursorUtils, Boolean, Read, NodeCursor, Long, PropertyCursor, Int]("nodeHasProperty"),
+      loadField(DATA_READ),
+      ExpressionCompiler.NODE_CURSOR,
+      node,
+      ExpressionCompiler.PROPERTY_CURSOR,
+      propertyToken)
+
   def relationshipGetProperty(relationship: IntermediateRepresentation, propertyToken: IntermediateRepresentation): IntermediateRepresentation =
     invokeStatic(
       method[CursorUtils, Value, Read, RelationshipScanCursor, Long, PropertyCursor, Int]("relationshipGetProperty"),
+      loadField(DATA_READ),
+      ExpressionCompiler.RELATIONSHIP_CURSOR,
+      relationship,
+      ExpressionCompiler.PROPERTY_CURSOR,
+      propertyToken)
+
+  def relationshipHasProperty(relationship: IntermediateRepresentation, propertyToken: IntermediateRepresentation): IntermediateRepresentation =
+    invokeStatic(
+      method[CursorUtils, Boolean, Read, RelationshipScanCursor, Long, PropertyCursor, Int]("relationshipHasProperty"),
       loadField(DATA_READ),
       ExpressionCompiler.RELATIONSHIP_CURSOR,
       relationship,

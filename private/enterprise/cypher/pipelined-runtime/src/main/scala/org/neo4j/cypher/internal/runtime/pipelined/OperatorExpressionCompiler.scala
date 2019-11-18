@@ -555,10 +555,24 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
     }
   }
 
+  override protected def hasNodeProperty(propertyToken: IntermediateRepresentation, offset: Int): IntermediateRepresentation = {
+    slots.nameOfLongSlot(offset).flatMap(cursorFor) match {
+      case Some(cursor) => cursor.hasProperty(propertyToken)
+      case None => nodeHasProperty(getLongAt(offset), propertyToken)
+    }
+  }
+
   override protected def getRelationshipProperty(propertyToken: IntermediateRepresentation, offset: Int): IntermediateRepresentation = {
     slots.nameOfLongSlot(offset).flatMap(cursorFor) match {
       case Some(cursor) => cursor.getProperty(propertyToken)
       case None => relationshipGetProperty(getLongAt(offset), propertyToken)
+    }
+  }
+
+  override protected def hasRelationshipProperty(propertyToken: IntermediateRepresentation, offset: Int): IntermediateRepresentation = {
+    slots.nameOfLongSlot(offset).flatMap(cursorFor) match {
+      case Some(cursor) => cursor.hasProperty(propertyToken)
+      case None => relationshipHasProperty(getLongAt(offset), propertyToken)
     }
   }
 
@@ -714,6 +728,7 @@ abstract class BaseCursorRepresentation extends CursorRepresentation {
   override def hasLabel(labelToken: IntermediateRepresentation): IntermediateRepresentation = fail()
   override def relationshipType: IntermediateRepresentation = fail()
   override def getProperty(propertyToken: IntermediateRepresentation): IntermediateRepresentation = fail()
+  override def hasProperty(propertyToken: IntermediateRepresentation): IntermediateRepresentation = fail()
   private def fail() = throw new IllegalStateException(s"illegal usage of cursor: $this")
 }
 
@@ -733,6 +748,13 @@ case class NodeCursorRepresentation(target: IntermediateRepresentation) extends 
               noValue)
       )
   }
+
+  override def hasProperty(propertyToken: IntermediateRepresentation): IntermediateRepresentation = {
+    block(
+      invokeSideEffect(target, method[NodeCursor, Unit, PropertyCursor]("properties"), ExpressionCompiler.PROPERTY_CURSOR),
+      invoke(ExpressionCompiler.PROPERTY_CURSOR, method[PropertyCursor, Boolean, Int]("seekProperty"), propertyToken)
+      )
+  }
 }
 
 case class NodeLabelCursorRepresentation(target: IntermediateRepresentation) extends BaseCursorRepresentation {
@@ -746,6 +768,9 @@ case class NodeLabelCursorRepresentation(target: IntermediateRepresentation) ext
 
   override def getProperty(propertyToken: IntermediateRepresentation): IntermediateRepresentation =
     OperatorCodeGenHelperTemplates.nodeGetProperty(reference, propertyToken)
+
+  override def hasProperty(propertyToken: IntermediateRepresentation): IntermediateRepresentation =
+    OperatorCodeGenHelperTemplates.nodeHasProperty(reference, propertyToken)
 }
 
 case class NodeIndexCursorRepresentation(target: IntermediateRepresentation) extends BaseCursorRepresentation {
@@ -759,6 +784,9 @@ case class NodeIndexCursorRepresentation(target: IntermediateRepresentation) ext
 
   override def getProperty(propertyToken: IntermediateRepresentation): IntermediateRepresentation =
     OperatorCodeGenHelperTemplates.nodeGetProperty(reference, propertyToken)
+
+  override def hasProperty(propertyToken: IntermediateRepresentation): IntermediateRepresentation =
+    OperatorCodeGenHelperTemplates.nodeHasProperty(reference, propertyToken)
 }
 
 case class RelationshipCursorRepresentation(target: IntermediateRepresentation) extends BaseCursorRepresentation {
@@ -778,6 +806,14 @@ case class RelationshipCursorRepresentation(target: IntermediateRepresentation) 
       ternary(invoke(ExpressionCompiler.PROPERTY_CURSOR, method[PropertyCursor, Boolean, Int]("seekProperty"), propertyToken),
               invoke( ExpressionCompiler.PROPERTY_CURSOR, method[PropertyCursor, Value]("propertyValue")),
               noValue)
+      )
+  }
+
+  override def hasProperty(propertyToken: IntermediateRepresentation): IntermediateRepresentation = {
+    block(
+      invokeSideEffect(target, method[RelationshipSelectionCursor, Unit, PropertyCursor]("properties"),
+                       ExpressionCompiler.PROPERTY_CURSOR),
+      invoke(ExpressionCompiler.PROPERTY_CURSOR, method[PropertyCursor, Boolean, Int]("seekProperty"), propertyToken)
       )
   }
 }
