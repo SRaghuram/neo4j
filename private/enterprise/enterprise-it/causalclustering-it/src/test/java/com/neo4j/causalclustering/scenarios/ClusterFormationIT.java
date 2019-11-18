@@ -12,7 +12,6 @@ import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.parallel.Execution;
 
 import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
@@ -28,15 +27,13 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.internal.helpers.NamedThreadFactory.daemon;
 import static org.neo4j.internal.helpers.collection.Iterables.last;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @ClusterExtension
-@Execution( CONCURRENT )
-public class ClusterFormationIT
+class ClusterFormationIT
 {
     private static final ExecutorService executor = Executors.newCachedThreadPool( daemon( "thread-" + ClusterFormationIT.class.getSimpleName() ) );
 
