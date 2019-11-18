@@ -1399,6 +1399,56 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
 
   }
 
+  test("should get correct relationships from RelationshipByIdSeek") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT TRAVERSE ON GRAPH * ELEMENTS A TO custom")
+    execute("GRANT READ {*} ON GRAPH * ELEMENTS * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    for ( _ <- 0 until 100 ) {
+      val node1 = createLabeledNode("A")
+      val node2 = createLabeledNode("A")
+      val node3 = createLabeledNode("B")
+
+      relate(node1, node2, "A", Map("prop" -> "visible"))
+      relate(node1, node2, "B", Map("prop" -> "secret"))
+      relate(node1, node3, "A", Map("prop" -> "secret"))
+    }
+
+    // WHEN
+    val queryDirected = "MATCH ()-[r]->() WHERE id(r) IN [0, 1, 2, 1337] RETURN r.prop ORDER BY r.prop"
+    val queryUndirected = "MATCH ()-[r]-() WHERE id(r) IN [0, 1, 2, 1337] RETURN r.prop ORDER BY r.prop"
+
+    // THEN
+    executeOnDefault("joe", "soap", queryDirected,
+      resultHandler = (row, _) => {
+        row.get("r.prop") should be("visible")
+      }, mustHaveOperator = Some("DirectedRelationshipByIdSeek")) should be(1)
+
+    executeOnDefault("joe", "soap", queryUndirected,
+      resultHandler = (row, _) => {
+        row.get("r.prop") should be("visible")
+      }, mustHaveOperator = Some("UndirectedRelationshipByIdSeek")) should be(2)
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("ALTER USER neo4j SET PASSWORD CHANGE NOT REQUIRED")
+
+    // THEN
+    val expectedDirected = List("secret", "secret", "visible")
+    executeOnDefault("neo4j", "neo4j", queryDirected,
+      resultHandler = (row, index) => {
+        row.get("r.prop") should be(expectedDirected(index))
+      }, mustHaveOperator = Some("DirectedRelationshipByIdSeek")) should be(3)
+
+    val expectedUndirected = List("secret", "secret", "secret", "secret", "visible", "visible")
+    executeOnDefault("neo4j", "neo4j", queryUndirected,
+      resultHandler = (row, index) => {
+        row.get("r.prop") should be(expectedUndirected(index))
+      }, mustHaveOperator = Some("UndirectedRelationshipByIdSeek")) should be(6)
+  }
+
   // Index tests
 
   test("should see properties and relationships depending on granted MATCH privileges for role fulltext index") {
