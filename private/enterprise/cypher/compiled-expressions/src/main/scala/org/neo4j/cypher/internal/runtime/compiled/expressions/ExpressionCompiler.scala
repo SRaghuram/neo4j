@@ -3051,6 +3051,7 @@ class DefaultExpressionCompiler(slots: SlotConfiguration, readOnly: Boolean, cod
 
 trait CursorRepresentation {
   def hasLabel(labelToken: IntermediateRepresentation): IntermediateRepresentation
+  def getProperty(propertyToken: IntermediateRepresentation): IntermediateRepresentation
   def reference: IntermediateRepresentation
   def relationshipType: IntermediateRepresentation
 }

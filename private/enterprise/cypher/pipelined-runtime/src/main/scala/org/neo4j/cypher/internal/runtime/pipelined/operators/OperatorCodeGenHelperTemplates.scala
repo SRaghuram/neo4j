@@ -172,6 +172,25 @@ object OperatorCodeGenHelperTemplates {
       node,
       labelToken)
   }
+
+  def nodeGetProperty(node: IntermediateRepresentation, propertyToken: IntermediateRepresentation): IntermediateRepresentation =
+    invokeStatic(
+      method[CursorUtils, Value, Read, NodeCursor, Long, PropertyCursor, Int]("nodeGetProperty"),
+      loadField(DATA_READ),
+      ExpressionCompiler.NODE_CURSOR,
+      node,
+      ExpressionCompiler.PROPERTY_CURSOR,
+      propertyToken)
+
+  def relationshipGetProperty(relationship: IntermediateRepresentation, propertyToken: IntermediateRepresentation): IntermediateRepresentation =
+    invokeStatic(
+      method[CursorUtils, Value, Read, RelationshipScanCursor, Long, PropertyCursor, Int]("relationshipGetProperty"),
+      loadField(DATA_READ),
+      ExpressionCompiler.RELATIONSHIP_CURSOR,
+      relationship,
+      ExpressionCompiler.PROPERTY_CURSOR,
+      propertyToken)
+
   def nodeIndexScan(indexReadSession: IntermediateRepresentation,
                     cursor: IntermediateRepresentation,
                     order: IndexOrder,

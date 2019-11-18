@@ -13,6 +13,7 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.ast.SlottedCachedProperty
 import org.neo4j.cypher.internal.runtime.compiled.expressions._
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler.{LocalsForSlots, ScopeContinuationState, ScopeLocalsState}
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates._
 import org.neo4j.cypher.internal.runtime.{DbAccess, ExecutionContext}
 import org.neo4j.cypher.operations.CursorUtils
@@ -547,23 +548,19 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
     }
   }
 
-  override protected def getNodeProperty(propertyToken: IntermediateRepresentation, offset: Int): IntermediateRepresentation =
-    invokeStatic(
-      method[CursorUtils, Value, Read, NodeCursor, Long, PropertyCursor, Int]("nodeGetProperty"),
-      loadField(DATA_READ),
-      ExpressionCompiler.NODE_CURSOR,
-      getLongAt(offset),
-      ExpressionCompiler.PROPERTY_CURSOR,
-      propertyToken)
+  override protected def getNodeProperty(propertyToken: IntermediateRepresentation, offset: Int): IntermediateRepresentation = {
+    slots.nameOfLongSlot(offset).flatMap(cursorFor) match {
+      case Some(cursor) => cursor.getProperty(propertyToken)
+      case None => nodeGetProperty(getLongAt(offset), propertyToken)
+    }
+  }
 
-  override protected def getRelationshipProperty(propertyToken: IntermediateRepresentation, offset: Int): IntermediateRepresentation =
-    invokeStatic(
-      method[CursorUtils, Value, Read, RelationshipScanCursor, Long, PropertyCursor, Int]("relationshipGetProperty"),
-      loadField(DATA_READ),
-      ExpressionCompiler.RELATIONSHIP_CURSOR,
-      getLongAt(offset),
-      ExpressionCompiler.PROPERTY_CURSOR,
-      propertyToken)
+  override protected def getRelationshipProperty(propertyToken: IntermediateRepresentation, offset: Int): IntermediateRepresentation = {
+    slots.nameOfLongSlot(offset).flatMap(cursorFor) match {
+      case Some(cursor) => cursor.getProperty(propertyToken)
+      case None => relationshipGetProperty(getLongAt(offset), propertyToken)
+    }
+  }
 
   override protected def getProperty(key: String,
                                      container: IntermediateRepresentation): IntermediateRepresentation =
@@ -716,6 +713,7 @@ abstract class BaseCursorRepresentation extends CursorRepresentation {
   override def reference: IntermediateRepresentation = fail()
   override def hasLabel(labelToken: IntermediateRepresentation): IntermediateRepresentation = fail()
   override def relationshipType: IntermediateRepresentation = fail()
+  override def getProperty(propertyToken: IntermediateRepresentation): IntermediateRepresentation = fail()
   private def fail() = throw new IllegalStateException(s"illegal usage of cursor: $this")
 }
 
@@ -726,6 +724,15 @@ case class NodeCursorRepresentation(target: IntermediateRepresentation) extends 
 
   override def hasLabel(labelToken: IntermediateRepresentation): IntermediateRepresentation =
     invoke(target, method[NodeCursor, Boolean, Int]("hasLabel"), labelToken)
+
+  override def getProperty(propertyToken: IntermediateRepresentation): IntermediateRepresentation = {
+    block(
+      invokeSideEffect(target, method[NodeCursor, Unit, PropertyCursor]("properties"), ExpressionCompiler.PROPERTY_CURSOR),
+      ternary(invoke(ExpressionCompiler.PROPERTY_CURSOR, method[PropertyCursor, Boolean, Int]("seekProperty"), propertyToken),
+              invoke( ExpressionCompiler.PROPERTY_CURSOR, method[PropertyCursor, Value]("propertyValue")),
+              noValue)
+      )
+  }
 }
 
 case class NodeLabelCursorRepresentation(target: IntermediateRepresentation) extends BaseCursorRepresentation {
@@ -734,8 +741,11 @@ case class NodeLabelCursorRepresentation(target: IntermediateRepresentation) ext
   }
 
   override def hasLabel(labelToken: IntermediateRepresentation): IntermediateRepresentation = {
-      invoke(target, method[NodeLabelIndexCursor, Boolean, Int]("hasLabel"), labelToken)
+    nodeHasLabel(reference, labelToken)
   }
+
+  override def getProperty(propertyToken: IntermediateRepresentation): IntermediateRepresentation =
+    OperatorCodeGenHelperTemplates.nodeGetProperty(reference, propertyToken)
 }
 
 case class NodeIndexCursorRepresentation(target: IntermediateRepresentation) extends BaseCursorRepresentation {
@@ -746,14 +756,29 @@ case class NodeIndexCursorRepresentation(target: IntermediateRepresentation) ext
   override def hasLabel(labelToken: IntermediateRepresentation): IntermediateRepresentation = {
       nodeHasLabel(reference, labelToken)
   }
+
+  override def getProperty(propertyToken: IntermediateRepresentation): IntermediateRepresentation =
+    OperatorCodeGenHelperTemplates.nodeGetProperty(reference, propertyToken)
 }
 
 case class RelationshipCursorRepresentation(target: IntermediateRepresentation) extends BaseCursorRepresentation {
+
   override def reference: IntermediateRepresentation = {
     invoke(target, method[RelationshipSelectionCursor, Long]("relationshipReference"))
   }
+
   override def relationshipType: IntermediateRepresentation = {
     invoke(target, method[RelationshipSelectionCursor, Int]("type"))
+  }
+
+  override def getProperty(propertyToken: IntermediateRepresentation): IntermediateRepresentation = {
+    block(
+      invokeSideEffect(target, method[RelationshipSelectionCursor, Unit, PropertyCursor]("properties"),
+                       ExpressionCompiler.PROPERTY_CURSOR),
+      ternary(invoke(ExpressionCompiler.PROPERTY_CURSOR, method[PropertyCursor, Boolean, Int]("seekProperty"), propertyToken),
+              invoke( ExpressionCompiler.PROPERTY_CURSOR, method[PropertyCursor, Value]("propertyValue")),
+              noValue)
+      )
   }
 }
 

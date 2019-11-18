@@ -97,14 +97,7 @@ public class EnterpriseConstraintSemantics extends StandardConstraintSemantics
 
     private boolean hasProperty( PropertyCursor propertyCursor, int property )
     {
-        while ( propertyCursor.next() )
-        {
-            if ( propertyCursor.propertyKey() == property )
-            {
-                return true;
-            }
-        }
-        return false;
+       return propertyCursor.seekProperty( property );
     }
 
     @Override
