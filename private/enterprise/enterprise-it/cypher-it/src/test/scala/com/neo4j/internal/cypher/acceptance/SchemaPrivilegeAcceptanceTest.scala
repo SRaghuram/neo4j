@@ -27,7 +27,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
       "GRANT DROP INDEX ON DATABASE * TO custom" -> 1,
       "DENY DROP INDEX ON DATABASE * TO custom" -> 1,
-      "REVOKE DROP INDEX ON DATABASE * FROM custom" -> 1,
+      "REVOKE DROP INDEX ON DATABASE * FROM custom" -> 2,
 
       "GRANT INDEX MANAGEMENT ON DATABASES * TO custom" -> 2,
       "REVOKE GRANT INDEX MANAGEMENT ON DATABASES * FROM custom" -> 2,
@@ -35,12 +35,12 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       "REVOKE DENY INDEX MANAGEMENT ON DATABASES * FROM custom" -> 2,
       "GRANT INDEX MANAGEMENT ON DATABASES * TO custom" -> 2,
       "DENY INDEX MANAGEMENT ON DATABASES * TO custom" -> 2,
-      "REVOKE INDEX MANAGEMENT ON DATABASES * FROM custom" -> 2,
+      "REVOKE INDEX MANAGEMENT ON DATABASES * FROM custom" -> 4,
 
 
       "GRANT CREATE CONSTRAINT ON DATABASE * TO custom" -> 1,
       "DENY CREATE CONSTRAINT ON DATABASE * TO custom" -> 1,
-      "REVOKE CREATE CONSTRAINT ON DATABASE * FROM custom" -> 1,
+      "REVOKE CREATE CONSTRAINT ON DATABASE * FROM custom" -> 2,
 
       "GRANT DROP CONSTRAINT ON DATABASE * TO custom" -> 1,
       "REVOKE GRANT DROP CONSTRAINT ON DATABASE * FROM custom" -> 1,
@@ -53,7 +53,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       "REVOKE CONSTRAINT MANAGEMENT ON DATABASES * FROM custom" -> 2,
       "GRANT CONSTRAINT MANAGEMENT ON DATABASES * TO custom" -> 2,
       "DENY CONSTRAINT MANAGEMENT ON DATABASES * TO custom" -> 2,
-      "REVOKE CONSTRAINT MANAGEMENT ON DATABASES * FROM custom" -> 2,
+      "REVOKE CONSTRAINT MANAGEMENT ON DATABASES * FROM custom" -> 4,
 
 
       "GRANT CREATE NEW LABEL ON DATABASE * TO custom" -> 1,
@@ -68,7 +68,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
       "GRANT CREATE NEW NAME ON DATABASE * TO custom" -> 1,
       "DENY CREATE NEW NAME ON DATABASE * TO custom" -> 1,
-      "REVOKE CREATE NEW NAME ON DATABASE * FROM custom" -> 1,
+      "REVOKE CREATE NEW NAME ON DATABASE * FROM custom" -> 2,
 
       "GRANT NAME MANAGEMENT ON DATABASES * TO custom" -> 3,
       "REVOKE GRANT NAME MANAGEMENT ON DATABASES * FROM custom" -> 3,
@@ -76,7 +76,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       "REVOKE DENY NAME MANAGEMENT ON DATABASES * FROM custom" -> 3,
       "GRANT NAME MANAGEMENT ON DATABASES * TO custom" -> 3,
       "DENY NAME MANAGEMENT ON DATABASES * TO custom" -> 3,
-      "REVOKE NAME MANAGEMENT ON DATABASES * FROM custom" -> 3
+      "REVOKE NAME MANAGEMENT ON DATABASES * FROM custom" -> 6
     ))
   }
 
@@ -384,7 +384,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     val result = execute("REVOKE INDEX MANAGEMENT ON DATABASE * FROM custom")
 
     // THEN
-    result.queryStatistics().systemUpdates should be(2)
+    result.queryStatistics().systemUpdates should be(4)
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
   }
 
@@ -411,7 +411,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     val result = execute("REVOKE CONSTRAINT MANAGEMENT ON DATABASE * FROM custom")
 
     // THEN
-    result.queryStatistics().systemUpdates should be(2)
+    result.queryStatistics().systemUpdates should be(4)
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
   }
 
@@ -442,7 +442,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     val result = execute("REVOKE NAME MANAGEMENT ON DATABASE * FROM custom")
 
     // THEN
-    result.queryStatistics().systemUpdates should be(3)
+    result.queryStatistics().systemUpdates should be(6)
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
   }
 
