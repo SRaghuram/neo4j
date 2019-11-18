@@ -12,10 +12,10 @@ import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyLabel
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyLabel.UNKNOWN
-import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
+import org.neo4j.cypher.internal.runtime.pipelined.{NodeLabelCursorRepresentation, OperatorExpressionCompiler}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
@@ -101,6 +101,8 @@ class SingleThreadedLabelScanTaskTemplate(inner: OperatorTaskTemplate,
 
   private val nodeLabelCursorField = field[NodeLabelIndexCursor](codeGen.namer.nextVariableName())
   private val labelField = field[Int](codeGen.namer.nextVariableName(), NO_TOKEN)
+
+  codeGen.registerCursor(nodeVarName, NodeLabelCursorRepresentation(loadField(nodeLabelCursorField)))
 
   override final def scopeId: String = "labelScan" + id.x
 

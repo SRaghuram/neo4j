@@ -1568,8 +1568,7 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
       nameOfSlot.flatMap(cursorFor) match {
         case Some(cursor) =>
           val value = invokeStatic(method[Values, TextValue, String]("stringValue"),
-          invoke(DB_ACCESS, method[DbAccess, String, Int]("relationshipTypeName"),
-           cursor.relationshipType))
+          invoke(DB_ACCESS, method[DbAccess, String, Int]("relationshipTypeName"), cursor.relationshipType))
           Some(IntermediateExpression(value, Seq.empty, Seq.empty, nullCheck))
         case None =>
           val value = invoke(DB_ACCESS,
@@ -3051,6 +3050,7 @@ class DefaultExpressionCompiler(slots: SlotConfiguration, readOnly: Boolean, cod
 }
 
 trait CursorRepresentation {
+  def hasLabel(labelToken: IntermediateRepresentation): IntermediateRepresentation
   def reference: IntermediateRepresentation
   def relationshipType: IntermediateRepresentation
 }

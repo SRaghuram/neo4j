@@ -10,10 +10,10 @@ import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable}
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
-import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
+import org.neo4j.cypher.internal.runtime.pipelined.{NodeCursorRepresentation, OperatorExpressionCompiler}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
@@ -182,6 +182,8 @@ class SingleThreadedAllNodeScanTaskTemplate(inner: OperatorTaskTemplate,
   import OperatorCodeGenHelperTemplates._
 
   private val nodeCursorField = field[NodeCursor](codeGen.namer.nextVariableName())
+
+  codeGen.registerCursor(nodeVarName, NodeCursorRepresentation(loadField(nodeCursorField)))
 
   override final def scopeId: String = "allNodesScan" + id.x
 

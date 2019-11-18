@@ -13,12 +13,11 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.ast.SlottedCachedProperty
 import org.neo4j.cypher.internal.runtime.compiled.expressions._
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler.{LocalsForSlots, ScopeContinuationState, ScopeLocalsState}
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.{INPUT_MORSEL, OUTPUT_ROW, UNINITIALIZED_LONG_SLOT_VALUE, UNINITIALIZED_REF_SLOT_VALUE}
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates._
 import org.neo4j.cypher.internal.runtime.{DbAccess, ExecutionContext}
 import org.neo4j.cypher.operations.CursorUtils
+import org.neo4j.internal.kernel.api._
 import org.neo4j.internal.kernel.api.helpers.RelationshipSelectionCursor
-import org.neo4j.internal.kernel.api.{NodeCursor, PropertyCursor, Read, RelationshipScanCursor}
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Value
 
@@ -540,18 +539,18 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
     assign(local, value)
   }
 
-  override protected def isLabelSetOnNode(labelToken: IntermediateRepresentation, offset: Int): IntermediateRepresentation =
-    invokeStatic(
-      method[CursorUtils, Boolean, Read, NodeCursor, Long, Int]("nodeHasLabel"),
-      loadField(OperatorCodeGenHelperTemplates.DATA_READ),
-      ExpressionCompiler.NODE_CURSOR,
-      getLongAt(offset),
-      labelToken)
+  override protected def isLabelSetOnNode(labelToken: IntermediateRepresentation,
+                                          offset: Int): IntermediateRepresentation = {
+    slots.nameOfLongSlot(offset).flatMap(cursorFor) match {
+      case Some(cursor) => cursor.hasLabel(labelToken)
+      case None => nodeHasLabel(getLongAt(offset), labelToken)
+    }
+  }
 
   override protected def getNodeProperty(propertyToken: IntermediateRepresentation, offset: Int): IntermediateRepresentation =
     invokeStatic(
       method[CursorUtils, Value, Read, NodeCursor, Long, PropertyCursor, Int]("nodeGetProperty"),
-      loadField(OperatorCodeGenHelperTemplates.DATA_READ),
+      loadField(DATA_READ),
       ExpressionCompiler.NODE_CURSOR,
       getLongAt(offset),
       ExpressionCompiler.PROPERTY_CURSOR,
@@ -560,7 +559,7 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
   override protected def getRelationshipProperty(propertyToken: IntermediateRepresentation, offset: Int): IntermediateRepresentation =
     invokeStatic(
       method[CursorUtils, Value, Read, RelationshipScanCursor, Long, PropertyCursor, Int]("relationshipGetProperty"),
-      loadField(OperatorCodeGenHelperTemplates.DATA_READ),
+      loadField(DATA_READ),
       ExpressionCompiler.RELATIONSHIP_CURSOR,
       getLongAt(offset),
       ExpressionCompiler.PROPERTY_CURSOR,
@@ -572,7 +571,7 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
       method[CursorUtils, AnyValue, String, AnyValue, Read, DbAccess, NodeCursor, RelationshipScanCursor, PropertyCursor]("propertyGet"),
       constant(key),
       container,
-      loadField(OperatorCodeGenHelperTemplates.DATA_READ),
+      loadField(DATA_READ),
       ExpressionCompiler.DB_ACCESS,
       ExpressionCompiler.NODE_CURSOR,
       ExpressionCompiler.RELATIONSHIP_CURSOR,
@@ -715,6 +714,7 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
 
 abstract class BaseCursorRepresentation extends CursorRepresentation {
   override def reference: IntermediateRepresentation = fail()
+  override def hasLabel(labelToken: IntermediateRepresentation): IntermediateRepresentation = fail()
   override def relationshipType: IntermediateRepresentation = fail()
   private def fail() = throw new IllegalStateException(s"illegal usage of cursor: $this")
 }
@@ -722,6 +722,29 @@ abstract class BaseCursorRepresentation extends CursorRepresentation {
 case class NodeCursorRepresentation(target: IntermediateRepresentation) extends BaseCursorRepresentation {
   override def reference: IntermediateRepresentation = {
     invoke(target, method[NodeCursor, Long]("nodeReference"))
+  }
+
+  override def hasLabel(labelToken: IntermediateRepresentation): IntermediateRepresentation =
+    invoke(target, method[NodeCursor, Boolean, Int]("hasLabel"), labelToken)
+}
+
+case class NodeLabelCursorRepresentation(target: IntermediateRepresentation) extends BaseCursorRepresentation {
+  override def reference: IntermediateRepresentation = {
+    invoke(target, method[NodeLabelIndexCursor, Long]("nodeReference"))
+  }
+
+  override def hasLabel(labelToken: IntermediateRepresentation): IntermediateRepresentation = {
+      invoke(target, method[NodeLabelIndexCursor, Boolean, Int]("hasLabel"), labelToken)
+  }
+}
+
+case class NodeIndexCursorRepresentation(target: IntermediateRepresentation) extends BaseCursorRepresentation {
+  override def reference: IntermediateRepresentation = {
+    invoke(target, method[NodeValueIndexCursor, Long]("nodeReference"))
+  }
+
+  override def hasLabel(labelToken: IntermediateRepresentation): IntermediateRepresentation = {
+      nodeHasLabel(reference, labelToken)
   }
 }
 

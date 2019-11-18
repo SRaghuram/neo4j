@@ -9,10 +9,11 @@ import org.neo4j.codegen.api.IntermediateRepresentation._
 import org.neo4j.codegen.api._
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.DbAccess
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution._
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
-import org.neo4j.cypher.operations.{CypherCoercions, CypherFunctions}
+import org.neo4j.cypher.operations.{CursorUtils, CypherCoercions, CypherFunctions}
 import org.neo4j.internal.kernel.api.IndexQuery.{ExactPredicate, RangePredicate, StringContainsPredicate, StringSuffixPredicate}
 import org.neo4j.internal.kernel.api._
 import org.neo4j.internal.schema.IndexOrder
@@ -163,6 +164,14 @@ object OperatorCodeGenHelperTemplates {
     invokeSideEffect(loadField(DATA_READ), method[Read, Unit, Int, NodeLabelIndexCursor]("nodeLabelScan"), label,
                      cursor)
 
+  def nodeHasLabel(node: IntermediateRepresentation, labelToken: IntermediateRepresentation): IntermediateRepresentation = {
+    invokeStatic(
+      method[CursorUtils, Boolean, Read, NodeCursor, Long, Int]("nodeHasLabel"),
+      loadField(OperatorCodeGenHelperTemplates.DATA_READ),
+      ExpressionCompiler.NODE_CURSOR,
+      node,
+      labelToken)
+  }
   def nodeIndexScan(indexReadSession: IntermediateRepresentation,
                     cursor: IntermediateRepresentation,
                     order: IndexOrder,

@@ -10,10 +10,10 @@ import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable}
 import org.neo4j.cypher.internal.physicalplanning.{SlotConfiguration, SlottedIndexedProperty}
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
-import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
+import org.neo4j.cypher.internal.runtime.pipelined.{NodeIndexCursorRepresentation, OperatorExpressionCompiler}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
@@ -78,6 +78,7 @@ class NodeIndexScanOperator(val workIdentity: WorkIdentity,
 class NodeIndexScanTaskTemplate(inner: OperatorTaskTemplate,
                                 id: Id,
                                 innermost: DelegateOperatorTaskTemplate,
+                                nodeVarName: String,
                                 offset: Int,
                                 properties: Array[SlottedIndexedProperty],
                                 queryIndexId: Int,
@@ -90,6 +91,8 @@ class NodeIndexScanTaskTemplate(inner: OperatorTaskTemplate,
 
   private val nodeIndexCursorField = field[NodeValueIndexCursor](codeGen.namer.nextVariableName())
   private val needsValues = properties.exists(_.getValueFromIndex)
+
+  codeGen.registerCursor(nodeVarName, NodeIndexCursorRepresentation(loadField(nodeIndexCursorField)))
 
   override def genMoreFields: Seq[Field] = Seq(nodeIndexCursorField)
 

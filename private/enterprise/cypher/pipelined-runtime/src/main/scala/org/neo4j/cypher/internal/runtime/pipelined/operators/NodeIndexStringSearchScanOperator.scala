@@ -12,11 +12,11 @@ import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
-import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeIndexStringSearchScanOperator.isValidOrThrowMethod
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
+import org.neo4j.cypher.internal.runtime.pipelined.{NodeIndexCursorRepresentation, OperatorExpressionCompiler}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, IsNoValue, NoMemoryTracker, QueryContext}
@@ -155,6 +155,7 @@ class NodeIndexEndsWithScanOperator(workIdentity: WorkIdentity,
 class NodeIndexStringSearchScanTaskTemplate(inner: OperatorTaskTemplate,
                                             id: Id,
                                             innermost: DelegateOperatorTaskTemplate,
+                                            nodeVarName: String,
                                             offset: Int,
                                             property: SlottedIndexedProperty,
                                             queryIndexId: Int,
@@ -171,6 +172,8 @@ class NodeIndexStringSearchScanTaskTemplate(inner: OperatorTaskTemplate,
   private val needsValues = property.getValueFromIndex
   private var seekExpression: IntermediateExpression = _
   private val seekVariable = variable[Value](codeGen.namer.nextVariableName(), constant(null))
+
+  codeGen.registerCursor(nodeVarName, NodeIndexCursorRepresentation(loadField(nodeIndexCursorField)))
 
   override def genMoreFields: Seq[Field] = Seq(nodeIndexCursorField)
 

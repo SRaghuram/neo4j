@@ -17,12 +17,12 @@ import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler
 import org.neo4j.cypher.internal.runtime.compiled.expressions.{CompiledHelpers, IntermediateExpression}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes._
-import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ManyQueriesExactNodeIndexSeekTaskTemplate.{nextMethod, queryIteratorMethod}
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates._
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
+import org.neo4j.cypher.internal.runtime.pipelined.{NodeIndexCursorRepresentation, OperatorExpressionCompiler}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, NoMemoryTracker, QueryContext, makeValueNeoSafe}
@@ -172,6 +172,7 @@ abstract class SingleQueryNodeIndexSeekTaskTemplate(
                                                      override val inner: OperatorTaskTemplate,
                                                      id: Id,
                                                      innermost: DelegateOperatorTaskTemplate,
+                                                     nodeVarName: String,
                                                      offset: Int,
                                                      property: SlottedIndexedProperty,
                                                      order: IndexOrder,
@@ -183,6 +184,8 @@ abstract class SingleQueryNodeIndexSeekTaskTemplate(
 
   import OperatorCodeGenHelperTemplates._
   protected val nodeIndexCursorField: InstanceField = field[NodeValueIndexCursor](codeGen.namer.nextVariableName())
+
+  codeGen.registerCursor(nodeVarName, NodeIndexCursorRepresentation(loadField(nodeIndexCursorField)))
 
   /**
     * Return the value of the property if we need to cache it.
@@ -299,13 +302,14 @@ abstract class SingleQueryNodeIndexSeekTaskTemplate(
 class SingleExactSeekQueryNodeIndexSeekTaskTemplate(inner: OperatorTaskTemplate,
                                                     id: Id,
                                                     innermost: DelegateOperatorTaskTemplate,
+                                                    nodeVarName: String,
                                                     offset: Int,
                                                     property: SlottedIndexedProperty,
                                                     generateSeekValue: () => IntermediateExpression,
                                                     queryIndexId: Int,
                                                     argumentSize: SlotConfiguration.Size)
                                                    (codeGen: OperatorExpressionCompiler) extends
-  SingleQueryNodeIndexSeekTaskTemplate(inner, id, innermost, offset, property, IndexOrder.NONE, false, queryIndexId,
+  SingleQueryNodeIndexSeekTaskTemplate(inner, id, innermost, nodeVarName, offset, property, IndexOrder.NONE, false, queryIndexId,
                                        argumentSize, codeGen) {
 
   private var seekValue: IntermediateExpression = _
@@ -335,6 +339,7 @@ class SingleExactSeekQueryNodeIndexSeekTaskTemplate(inner: OperatorTaskTemplate,
 class SingleRangeSeekQueryNodeIndexSeekTaskTemplate(inner: OperatorTaskTemplate,
                                                     id: Id,
                                                     innermost: DelegateOperatorTaskTemplate,
+                                                    nodeVarName: String,
                                                     offset: Int,
                                                     property: SlottedIndexedProperty,
                                                     generateSeekValues: Seq[() => IntermediateExpression],
@@ -343,7 +348,7 @@ class SingleRangeSeekQueryNodeIndexSeekTaskTemplate(inner: OperatorTaskTemplate,
                                                     order: IndexOrder,
                                                     argumentSize: SlotConfiguration.Size)
                                                    (codeGen: OperatorExpressionCompiler) extends
-  SingleQueryNodeIndexSeekTaskTemplate(inner, id, innermost, offset, property, order, property.getValueFromIndex, queryIndexId,
+  SingleQueryNodeIndexSeekTaskTemplate(inner, id, innermost, nodeVarName, offset, property, order, property.getValueFromIndex, queryIndexId,
                                        argumentSize, codeGen) {
   private var seekValues: Seq[IntermediateExpression] = _
   private val predicateVar = variable[IndexQuery](codeGen.namer.nextVariableName(), constant(null))
