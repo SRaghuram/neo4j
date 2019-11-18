@@ -24,10 +24,15 @@ import org.scalatest.mock.MockitoSugar
 
 object ContextHelper extends MockitoSugar {
 
+  // Always use the big morsel size here, since the generated plans do not have cardinality information
+  // and we would otherwise end up using the small morsel size even though the micro benchmarks
+  // typically have lots of result rows.
+  private val morselSize = GraphDatabaseSettings.cypher_pipelined_batch_size_big.defaultValue()
+
   private val runtimeConfig = CypherRuntimeConfiguration(
     workers = Runtime.getRuntime.availableProcessors(),
-    pipelinedBatchSizeSmall = GraphDatabaseSettings.cypher_pipelined_batch_size_small.defaultValue(),
-    pipelinedBatchSizeBig = GraphDatabaseSettings.cypher_pipelined_batch_size_big.defaultValue(),
+    pipelinedBatchSizeSmall = morselSize,
+    pipelinedBatchSizeBig = morselSize,
     schedulerTracing = NoSchedulerTracing,
     lenientCreateRelationship = false,
     memoryTrackingController = new ConfigMemoryTrackingController(Config.defaults()),
