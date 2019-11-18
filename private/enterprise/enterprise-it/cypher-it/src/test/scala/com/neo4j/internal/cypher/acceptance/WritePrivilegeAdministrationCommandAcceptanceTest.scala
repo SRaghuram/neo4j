@@ -38,8 +38,8 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
   }
 
   Seq(
-    ("grant", "GRANT", "GRANTED" ),
-    ("deny", "DENY", "DENIED" ),
+    ("grant", "GRANT", "GRANTED"),
+    ("deny", "DENY", "DENIED"),
   ).foreach {
     case (grantOrDeny, grantOrDenyCommand, grantOrDenyRelType) =>
 
@@ -55,8 +55,8 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-         write(grantOrDenyRelType).role("custom").node("*").map,
-         write(grantOrDenyRelType).role("custom").relationship("*").map
+          write(grantOrDenyRelType).role("custom").node("*").map,
+          write(grantOrDenyRelType).role("custom").relationship("*").map
         ))
       }
 
@@ -540,8 +540,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     execute("MATCH (n) RETURN n.name").toSet should be(Set(Map("n.name" -> "a"), Map("n.name" -> "b")))
   }
 
-  test("should not be able to create node when denied WRITE privilege to custom role for all databases")
-  {
+  test("should not be able to create node when denied WRITE privilege to custom role for all databases") {
     // GIVEN
     setupUserWithCustomRole()
     selectDatabase(DEFAULT_DATABASE_NAME)
@@ -582,164 +581,290 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
   }
 
-  test("should read you own writes on nodes with WRITE and ACCESS privilege") {
-    // GIVEN
-    setupUserWithCustomRole()
+  Seq("interpreted", "slotted").foreach { runtime =>
+    test(s"should read you own writes on nodes with WRITE and ACCESS privilege with $runtime") {
+      // GIVEN
+      setupUserWithCustomRole()
 
-    // Setup to create tokens
-    selectDatabase(DEFAULT_DATABASE_NAME)
-    execute("CREATE (n:A {name:'a'})")
+      // Setup to create tokens
+      selectDatabase(DEFAULT_DATABASE_NAME)
+      execute("CREATE (n:A {name:'a'})")
 
-    // WHEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT WRITE ON GRAPH * ELEMENTS * (*) TO custom")
+      // WHEN
+      selectDatabase(SYSTEM_DATABASE_NAME)
+      execute("GRANT WRITE ON GRAPH * ELEMENTS * (*) TO custom")
 
-    // THEN
-    executeOnDefault("joe", "soap", "CREATE (n:A {name: 'b'}) WITH n MATCH (m:A) RETURN m.name AS name ORDER BY name", resultHandler = (row, _) => {
-      row.get("name") should be("b")
-    }) should be(1)
-
-    execute("MATCH (n) RETURN n.name").toSet should be(Set(Map("n.name" -> "a"), Map("n.name" -> "b")))
-    executeOnDefault("joe", "soap", "MATCH (n:A) RETURN n.name") should be(0)
-  }
-
-  test("should read you own writes on nodes with WRITE and TRAVERSE privilege") {
-    // GIVEN
-    setupUserWithCustomRole()
-    execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
-
-    // Setup to create tokens
-    selectDatabase(DEFAULT_DATABASE_NAME)
-    execute("CREATE (n:A {name:'a'})")
-
-    // WHEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT WRITE ON GRAPH * ELEMENTS * (*) TO custom")
-
-    // THEN
-    val expected = List("b", null)
-
-    executeOnDefault("joe", "soap", "CREATE (n:A {name: 'b'}) WITH n MATCH (m:A) RETURN m.name AS name ORDER BY name", resultHandler = (row, index) => {
-      row.get("name") should be(expected(index))
-    }) should be(2)
-
-    execute("MATCH (n) RETURN n.name").toSet should be(Set(Map("n.name" -> "a"), Map("n.name" -> "b")))
-    executeOnDefault("joe", "soap", "MATCH (n:A) RETURN n.name AS name", resultHandler = (row, _) => {
-      row.get("name") should be(null)
-    }) should be(2)
-  }
-
-  test("should read you own writes on nodes with WRITE and restricted READ privilege") {
-    // GIVEN
-    setupUserWithCustomRole()
-    execute("GRANT MATCH {name} ON GRAPH * NODES * (*) TO custom")
-
-    // Setup to create tokens
-    selectDatabase(DEFAULT_DATABASE_NAME)
-    execute("CREATE (n:A {name:'a', age: 21})")
-
-    // WHEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT WRITE ON GRAPH * ELEMENTS * (*) TO custom")
-
-    // THEN
-    val expected1 = List(("a", null), ("b", 22))
-
-    val query = "CREATE (n:A {name: 'b', age: 22}) WITH n MATCH (m:A) RETURN m.name AS name, m.age AS age ORDER BY name"
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
-      (row.get("name"), row.get("age")) should be(expected1(index))
-    }) should be(2)
-
-    // THEN
-    execute("MATCH (n) RETURN n.name, n.age").toSet should be(Set(Map("n.name" -> "a", "n.age" -> 21), Map("n.name" -> "b", "n.age" -> 22)))
-
-    val expected2 = List(("a", null), ("b", null))
-    executeOnDefault("joe", "soap", "MATCH (n:A) RETURN n.name AS name, n.age AS age ORDER BY name", resultHandler = (row, index) => {
-      (row.get("name"), row.get("age")) should be(expected2(index))
-    }) should be(2)
-  }
-
-  test("should read you own writes on nodes with WRITE and restricted READ and TRAVERSE privileges") {
-    // GIVEN
-    setupUserWithCustomRole()
-    execute("GRANT TRAVERSE ON GRAPH * NODES A (*) TO custom")
-    execute("GRANT READ {name} ON GRAPH * NODES B (*) TO custom")
-
-    // Setup to create tokens
-    selectDatabase(DEFAULT_DATABASE_NAME)
-    execute("CREATE (n:A {name:'a'})")
-    execute("CREATE (n:A:B {name:'ab'})")
-
-    // WHEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT WRITE ON GRAPH * ELEMENTS * (*) TO custom")
-
-    // THEN
-    val expected1 = List("ab", "b")
-
-    val query = "CREATE (n:B {name: 'b'}) WITH n MATCH (m:B) RETURN m.name AS name ORDER BY name"
-    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
-      row.get("name") should be(expected1(index))
-    }) should be(2)
-
-    // THEN
-    selectDatabase(DEFAULT_DATABASE_NAME)
-    execute("MATCH (n) RETURN n.name").toSet should be(Set(Map("n.name" -> "a"), Map("n.name" -> "ab"), Map("n.name" -> "b")))
-
-    executeOnDefault("joe", "soap", "MATCH (n:B) RETURN n.name AS name ORDER BY name", resultHandler = (row, _) => {
-      row.get("name") should be("ab")
-    }) should be(1)
-
-    val expected2 = List("ab", null)
-    executeOnDefault("joe", "soap", "MATCH (n:A) RETURN n.name AS name ORDER BY name", resultHandler = (row, index) => {
-      row.get("name") should be(expected2(index))
-    }) should be(2)
-  }
-
-  test("should read you own writes on relationships when granted ACCESS and WRITE privilege") {
-    // GIVEN
-    setupUserWithCustomRole()
-
-    // Setup to create tokens
-    selectDatabase(DEFAULT_DATABASE_NAME)
-    execute("CREATE (n:A)-[:REL {name:'a'}]->()")
-
-    // WHEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT WRITE ON GRAPH * ELEMENTS * (*) TO custom")
-
-    // THEN
-    executeOnDefault("joe", "soap", "CREATE (n:A)-[:REL {name:'b'}]->() WITH n MATCH (A)-[r:REL]->() RETURN r.name AS name ORDER BY name",
-      resultHandler = (row, _) => {
+      // THEN
+      val query = s"CYPHER runtime=$runtime CREATE (n:A {name: 'b'}) WITH 1 AS ignore MATCH (m:A) RETURN m.name AS name ORDER BY name"
+      executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
         row.get("name") should be("b")
       }) should be(1)
 
-    execute("MATCH (A)-[r:REL]->() RETURN r.name").toSet should be(Set(Map("r.name" -> "a"), Map("r.name" -> "b")))
-  }
+      execute("MATCH (n) RETURN n.name").toSet should be(Set(Map("n.name" -> "a"), Map("n.name" -> "b")))
+      executeOnDefault("joe", "soap", s"CYPHER runtime=$runtime MATCH (n:A) RETURN n.name") should be(0)
+    }
 
-  test("should read you own writes on relationships when granted TRAVERSE and WRITE privilege") {
-    // GIVEN
-    setupUserWithCustomRole()
-    execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
-    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS * (*) TO custom")
+    test(s"should read you own writes on nodes with WRITE and TRAVERSE privilege with $runtime") {
+      // GIVEN
+      setupUserWithCustomRole()
+      execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
 
-    // Setup to create tokens
-    selectDatabase(DEFAULT_DATABASE_NAME)
-    execute("CREATE (n:A)-[:REL {name:'a'}]->()")
+      // Setup to create tokens
+      selectDatabase(DEFAULT_DATABASE_NAME)
+      execute("CREATE (n:A {name:'a'})")
 
-    // WHEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT WRITE ON GRAPH * ELEMENTS * (*) TO custom")
+      // WHEN
+      selectDatabase(SYSTEM_DATABASE_NAME)
+      execute("GRANT WRITE ON GRAPH * ELEMENTS * (*) TO custom")
 
-    // THEN
-    val expected = List("b", null)
+      // THEN
+      val expected = List("b", null)
 
-    executeOnDefault("joe", "soap", "CREATE (n:A)-[:REL {name:'b'}]->() WITH n MATCH (A)-[r:REL]->() RETURN r.name AS name ORDER BY name",
-      resultHandler = (row, index) => {
+      val query = s"CYPHER runtime=$runtime CREATE (n:A {name: 'b'}) WITH 1 AS ignore MATCH (m:A) RETURN m.name AS name ORDER BY name"
+      executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
         row.get("name") should be(expected(index))
       }) should be(2)
 
-    execute("MATCH (A)-[r:REL]->() RETURN r.name").toSet should be(Set(Map("r.name" -> "a"), Map("r.name" -> "b")))
+      execute("MATCH (n) RETURN n.name").toSet should be(Set(Map("n.name" -> "a"), Map("n.name" -> "b")))
+      executeOnDefault("joe", "soap", s"CYPHER runtime=$runtime MATCH (n:A) RETURN n.name AS name", resultHandler = (row, _) => {
+        row.get("name") should be(null)
+      }) should be(2)
+    }
+
+    test(s"should read you own writes on nodes with WRITE and restricted READ privilege with $runtime") {
+      // GIVEN
+      setupUserWithCustomRole()
+      execute("GRANT MATCH {name} ON GRAPH * NODES * (*) TO custom")
+
+      // Setup to create tokens
+      selectDatabase(DEFAULT_DATABASE_NAME)
+      execute("CREATE (n:A {name:'a', age: 21})")
+
+      // WHEN
+      selectDatabase(SYSTEM_DATABASE_NAME)
+      execute("GRANT WRITE ON GRAPH * ELEMENTS * (*) TO custom")
+
+      // THEN
+      val expected1 = List(("a", null), ("b", 22))
+
+      val query = s"CYPHER runtime=$runtime CREATE (n:A {name: 'b', age: 22}) WITH 1 AS ignore MATCH (m:A) RETURN m.name AS name, m.age AS age ORDER BY name"
+      executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+        (row.get("name"), row.get("age")) should be(expected1(index))
+      }) should be(2)
+
+      // THEN
+      execute(s"CYPHER runtime=$runtime MATCH (n) RETURN n.name, n.age").toSet should be(Set(Map("n.name" -> "a", "n.age" -> 21), Map("n.name" -> "b", "n.age" -> 22)))
+
+      val expected2 = List(("a", null), ("b", null))
+      executeOnDefault("joe", "soap", s"CYPHER runtime=$runtime MATCH (n:A) RETURN n.name AS name, n.age AS age ORDER BY name", resultHandler = (row, index) => {
+        (row.get("name"), row.get("age")) should be(expected2(index))
+      }) should be(2)
+    }
+
+    test(s"should read you own writes on nodes with WRITE and restricted READ and TRAVERSE privileges with $runtime") {
+      // GIVEN
+      setupUserWithCustomRole()
+      execute("GRANT TRAVERSE ON GRAPH * NODES A (*) TO custom")
+      execute("GRANT READ {name} ON GRAPH * NODES B (*) TO custom")
+
+      // Setup to create tokens
+      selectDatabase(DEFAULT_DATABASE_NAME)
+      execute("CREATE (n:A {name:'a'})")
+      execute("CREATE (n:A:B {name:'ab'})")
+
+      // WHEN
+      selectDatabase(SYSTEM_DATABASE_NAME)
+      execute("GRANT WRITE ON GRAPH * ELEMENTS * (*) TO custom")
+
+      // THEN
+      val expected1 = List("ab", "b")
+
+      val query = s"CYPHER runtime=$runtime CREATE (n:B {name: 'b'}) WITH 1 AS ignore MATCH (m:B) RETURN m.name AS name ORDER BY name"
+      executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+        row.get("name") should be(expected1(index))
+      }) should be(2)
+
+      // THEN
+      selectDatabase(DEFAULT_DATABASE_NAME)
+      execute(s"CYPHER runtime=$runtime MATCH (n) RETURN n.name").toSet should be(Set(Map("n.name" -> "a"), Map("n.name" -> "ab"), Map("n.name" -> "b")))
+
+      executeOnDefault("joe", "soap", s"CYPHER runtime=$runtime MATCH (n:B) RETURN n.name AS name ORDER BY name", resultHandler = (row, _) => {
+        row.get("name") should be("ab")
+      }) should be(1)
+
+      val expected2 = List("ab", null)
+      executeOnDefault("joe", "soap", s"CYPHER runtime=$runtime MATCH (n:A) RETURN n.name AS name ORDER BY name", resultHandler = (row, index) => {
+        row.get("name") should be(expected2(index))
+      }) should be(2)
+    }
+
+    test(s"should not see property after setting denied label with $runtime") {
+      // GIVEN
+      setupUserWithCustomRole()
+      execute("GRANT MATCH {name} ON GRAPH * NODES A (*) TO custom")
+      execute("DENY TRAVERSE ON GRAPH * NODES B (*) TO custom")
+
+      // Setup to create tokens
+      selectDatabase(DEFAULT_DATABASE_NAME)
+      execute("CREATE (n:A {name:'a'})")
+      execute("CREATE (n:B {name:'b'})")
+
+      // WHEN
+      selectDatabase(SYSTEM_DATABASE_NAME)
+      execute("DENY READ {name} ON GRAPH * NODES B (*) TO custom")
+      execute("GRANT WRITE ON GRAPH * ELEMENTS * (*) TO custom")
+
+      // THEN
+      val query =
+        s"""CYPHER runtime=$runtime
+           |MATCH (a:A)
+           |SET a:B
+           |RETURN a.name AS name""".stripMargin
+
+      executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+        row.get("name") should be(null)
+      }) should be(1)
+    }
+
+    test(s"should not find node in new MATCH after setting a denied label with $runtime") {
+      // GIVEN
+      setupUserWithCustomRole()
+      execute("GRANT MATCH {name} ON GRAPH * NODES A (*) TO custom")
+      execute("DENY TRAVERSE ON GRAPH * NODES B (*) TO custom")
+
+      // Setup to create tokens
+      selectDatabase(DEFAULT_DATABASE_NAME)
+      execute("CREATE (n:A {name:'a'})")
+      execute("CREATE (n:B {name:'b'})")
+
+      // WHEN
+      selectDatabase(SYSTEM_DATABASE_NAME)
+      execute("DENY READ {name} ON GRAPH * NODES B (*) TO custom")
+      execute("GRANT WRITE ON GRAPH * ELEMENTS * (*) TO custom")
+
+      // THEN
+      val query =
+        s"""CYPHER runtime=$runtime
+           |MATCH (a:A)
+           |WHERE a.name = 'a'
+           |SET a:B
+           |WITH 1 AS ignore
+           |MATCH (a:A)
+           |RETURN a.name AS name""".stripMargin
+
+      executeOnDefault("joe", "soap", query) should be(0)
+    }
+
+    test(s"should read you own writes on relationships when granted ACCESS and WRITE privilege with $runtime") {
+      // GIVEN
+      setupUserWithCustomRole()
+
+      // Setup to create tokens
+      selectDatabase(DEFAULT_DATABASE_NAME)
+      execute("CREATE (:A)-[:REL {name:'a'}]->()")
+
+      // WHEN
+      selectDatabase(SYSTEM_DATABASE_NAME)
+      execute("GRANT WRITE ON GRAPH * ELEMENTS * (*) TO custom")
+
+      // THEN
+      val query = s"CYPHER runtime=$runtime CREATE (:A)-[:REL {name:'b'}]->() WITH 1 AS ignore MATCH (:A)-[r:REL]->() RETURN r.name AS name"
+      executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+        row.get("name") should be("b")
+      }) should be(1)
+
+      execute("MATCH (:A)-[r:REL]->() RETURN r.name").toSet should be(Set(Map("r.name" -> "a"), Map("r.name" -> "b")))
+
+      executeOnDefault("joe", "soap", "MATCH (:A)-[r:REL]->() RETURN r.name AS name") should be(0)
+    }
+
+    test(s"should read you own writes on relationships when granted TRAVERSE and WRITE privilege with $runtime") {
+      // GIVEN
+      setupUserWithCustomRole()
+      execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
+      execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS * (*) TO custom")
+
+      // Setup to create tokens
+      selectDatabase(DEFAULT_DATABASE_NAME)
+      execute("CREATE (:A)-[:REL {name:'a'}]->()")
+
+      // WHEN
+      selectDatabase(SYSTEM_DATABASE_NAME)
+      execute("GRANT WRITE ON GRAPH * ELEMENTS * (*) TO custom")
+
+      // THEN
+      val expected = List("b", null)
+
+      val query = s"CYPHER runtime=$runtime CREATE (:A)-[:REL {name:'b'}]->() WITH 1 AS ignore MATCH (:A)-[r:REL]->() RETURN r.name AS name ORDER BY name"
+      executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+        row.get("name") should be(expected(index))
+      }) should be(2)
+
+      execute("MATCH (:A)-[r:REL]->() RETURN r.name").toSet should be(Set(Map("r.name" -> "a"), Map("r.name" -> "b")))
+
+      executeOnDefault("joe", "soap", "MATCH (:A)-[r:REL]->() RETURN r.name AS name", resultHandler = (row, _) => {
+        row.get("name") should be(null)
+      }) should be(2)
+    }
+
+    test(s"should read you own writes on relationships with WRITE and restricted TRAVERSE privilege with $runtime") {
+      // GIVEN
+      setupUserWithCustomRole()
+      execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
+      execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS * (*) TO custom")
+
+      // Setup to create tokens
+      selectDatabase(DEFAULT_DATABASE_NAME)
+      execute("CREATE (n:A)-[:REL {name:'a'}]->()")
+
+      // WHEN
+      selectDatabase(SYSTEM_DATABASE_NAME)
+      execute("DENY TRAVERSE ON GRAPH * RELATIONSHIPS REL (*) TO custom")
+      execute("GRANT WRITE ON GRAPH * ELEMENTS * (*) TO custom")
+
+      // THEN
+      val query = s"CYPHER runtime=$runtime CREATE (:A)-[:REL {name:'b'}]->() WITH 1 AS ignore MATCH (:A)-[r:REL]->() RETURN r.name AS name"
+      executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+        row.get("name") should be("b")
+      }) should be(1)
+
+      // THEN
+      execute(s"CYPHER runtime=$runtime MATCH (:A)-[r:REL]->() RETURN r.name AS name").toSet should be(Set(Map("name" -> "a"), Map("name" -> "b")))
+
+      executeOnDefault("joe", "soap", s"CYPHER runtime=$runtime MATCH (:A)-[r:REL]->() RETURN r.name AS name") should be(0)
+    }
+
+    test(s"should read you own writes on relationships with WRITE and restricted READ privilege with $runtime") {
+      // GIVEN
+      setupUserWithCustomRole()
+      execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
+      execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS * (*) TO custom")
+
+      // Setup to create tokens
+      selectDatabase(DEFAULT_DATABASE_NAME)
+      execute("CREATE (:A)-[:REL {name:'a', age: 21}]->()")
+
+      // WHEN
+      selectDatabase(SYSTEM_DATABASE_NAME)
+      execute("GRANT READ {name} ON GRAPH * RELATIONSHIPS * (*) TO custom")
+      execute("GRANT WRITE ON GRAPH * ELEMENTS * (*) TO custom")
+
+      // THEN
+      val expected1 = List(("a", null), ("b", 22))
+
+      val query = s"CYPHER runtime=$runtime CREATE (:A)-[:REL {name:'b', age: 22}]->() WITH 1 AS ignore MATCH (:A)-[r:REL]->() RETURN r.name AS name, r.age AS age ORDER BY name"
+      executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+        (row.get("name"), row.get("age")) should be(expected1(index))
+      }) should be(2)
+
+      // THEN
+      execute(s"CYPHER runtime=$runtime MATCH (:A)-[r:REL]->() RETURN r.name AS name, r.age AS age").toSet should be(Set(Map("name" -> "a", "age" -> 21), Map("name" -> "b", "age" -> 22)))
+
+      val expected2 = List(("a", null), ("b", null))
+      executeOnDefault("joe", "soap", s"CYPHER runtime=$runtime MATCH (:A)-[r:REL]->() RETURN r.name AS name, r.age AS age ORDER BY name", resultHandler = (row, index) => {
+        (row.get("name"), row.get("age")) should be(expected2(index))
+      }) should be(2)
+    }
   }
 
   test("should delete node when granted WRITE privilege to custom role for all databases and all labels") {
