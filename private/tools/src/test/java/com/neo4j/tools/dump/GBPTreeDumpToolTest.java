@@ -12,7 +12,6 @@ import java.io.File;
 
 import org.neo4j.index.internal.gbptree.GBPTreeBuilder;
 import org.neo4j.internal.index.label.LabelScanLayout;
-import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
@@ -20,7 +19,8 @@ import org.neo4j.test.extension.pagecache.PageCacheExtension;
 import org.neo4j.test.rule.SuppressOutput;
 import org.neo4j.test.rule.TestDirectory;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 
 @ExtendWith( SuppressOutputExtension.class )
 @PageCacheExtension
@@ -30,8 +30,6 @@ class GBPTreeDumpToolTest
     SuppressOutput suppressOutput;
     @Inject
     TestDirectory dir;
-    @Inject
-    FileSystemAbstraction fs;
     @Inject
     PageCache pageCache;
 
@@ -47,8 +45,8 @@ class GBPTreeDumpToolTest
         dumpTool.run( file );
 
         // Then should print stuff
-        SuppressOutput.Voice outputVoice = suppressOutput.getOutputVoice();
-        assertTrue( outputVoice.containsMessage( "Dump tree " + file.getAbsolutePath() ) );
-        assertTrue( outputVoice.containsMessage( "Level 0" ) );
+        String output = suppressOutput.getOutputVoice().toString();
+        assertThat( output, containsString( "Dump tree " + file.getAbsolutePath() ) );
+        assertThat( output, containsString( "Level 0" ) );
     }
 }
