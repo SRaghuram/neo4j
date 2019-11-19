@@ -259,16 +259,29 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         val cachedPropertiesToCopy = copyCachedPropertiesFromRHS.result()
 
         val buffer = inputBuffer.variant.asInstanceOf[LHSAccumulatingRHSStreamingBufferVariant]
-        new NodeHashJoinOperator(
-          WorkIdentity.fromPlan(plan),
-          buffer.lhsArgumentStateMapId,
-          buffer.rhsArgumentStateMapId,
-          lhsOffsets,
-          rhsOffsets,
-          slots,
-          longsToCopy,
-          refsToCopy,
-          cachedPropertiesToCopy)
+        if (lhsOffsets.length == 1) {
+          new NodeHashJoinSingleNodeOperator(
+            WorkIdentity.fromPlan(plan),
+            buffer.lhsArgumentStateMapId,
+            buffer.rhsArgumentStateMapId,
+            lhsOffsets(0),
+            rhsOffsets(0),
+            slots,
+            longsToCopy,
+            refsToCopy,
+            cachedPropertiesToCopy)
+        } else {
+          new NodeHashJoinOperator(
+            WorkIdentity.fromPlan(plan),
+            buffer.lhsArgumentStateMapId,
+            buffer.rhsArgumentStateMapId,
+            lhsOffsets,
+            rhsOffsets,
+            slots,
+            longsToCopy,
+            refsToCopy,
+            cachedPropertiesToCopy)
+        }
 
       case _: plans.CartesianProduct =>
         val buffer = inputBuffer.variant.asInstanceOf[LHSAccumulatingRHSStreamingBufferVariant]
