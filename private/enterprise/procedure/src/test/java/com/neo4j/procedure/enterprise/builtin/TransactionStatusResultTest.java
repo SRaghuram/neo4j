@@ -80,9 +80,9 @@ class TransactionStatusResultTest
     {
         snapshotsMap.put( transactionHandle, Optional.of( createQuerySnapshot( 7L ) ) );
         TransactionStatusResult statusResult =
-                new TransactionStatusResult( transactionHandle, blockerResolver, snapshotsMap, ZoneId.of( "UTC" ) );
+                new TransactionStatusResult( "my-database", transactionHandle, blockerResolver, snapshotsMap, ZoneId.of( "UTC" ) );
 
-        checkTransactionStatus( statusResult, "testQuery", "query-7", "1970-01-01T00:00:01.984Z" );
+        checkTransactionStatus( statusResult, "testQuery", "my-database-query-7", "1970-01-01T00:00:01.984Z" );
     }
 
     @Test
@@ -90,7 +90,7 @@ class TransactionStatusResultTest
     {
         snapshotsMap.put( transactionHandle, Optional.empty() );
         TransactionStatusResult statusResult =
-                new TransactionStatusResult( transactionHandle, blockerResolver, snapshotsMap, ZoneId.of( "UTC" ) );
+                new TransactionStatusResult( "neo4j", transactionHandle, blockerResolver, snapshotsMap, ZoneId.of( "UTC" ) );
 
         checkTransactionStatusWithoutQueries( statusResult );
     }
@@ -100,16 +100,16 @@ class TransactionStatusResultTest
     {
         snapshotsMap.put( transactionHandle, Optional.of( createQuerySnapshot( 7L ) ) );
         TransactionStatusResult statusResult =
-                new TransactionStatusResult( transactionHandle, blockerResolver, snapshotsMap, ZoneId.of( "UTC+1" ) );
+                new TransactionStatusResult( "my-database", transactionHandle, blockerResolver, snapshotsMap, ZoneId.of( "UTC+1" ) );
 
-        checkTransactionStatus( statusResult, "testQuery", "query-7", "1970-01-01T01:00:01.984+01:00" );
+        checkTransactionStatus( statusResult, "testQuery", "my-database-query-7", "1970-01-01T01:00:01.984+01:00" );
     }
 
     @Test
     void emptyInitialisationStacktraceWhenTraceNotAvailable() throws InvalidArgumentsException
     {
         snapshotsMap.put( transactionHandle, Optional.empty() );
-        TransactionStatusResult statusResult = new TransactionStatusResult( transactionHandle, blockerResolver, snapshotsMap, ZoneId.of( "UTC" ) );
+        TransactionStatusResult statusResult = new TransactionStatusResult( "neo4j", transactionHandle, blockerResolver, snapshotsMap, ZoneId.of( "UTC" ) );
         assertEquals( EMPTY, statusResult.initializationStackTrace );
     }
 
@@ -118,13 +118,13 @@ class TransactionStatusResultTest
     {
         transactionHandle = new TransactionHandleWithLocks( new StubKernelTransaction(), true );
         snapshotsMap.put( transactionHandle, Optional.empty() );
-        TransactionStatusResult statusResult = new TransactionStatusResult( transactionHandle, blockerResolver, snapshotsMap, ZoneId.of( "UTC" ) );
+        TransactionStatusResult statusResult = new TransactionStatusResult( "neo4j", transactionHandle, blockerResolver, snapshotsMap, ZoneId.of( "UTC" ) );
         assertThat( statusResult.initializationStackTrace, containsString( "Transaction initialization stacktrace." ) );
     }
 
     private static void checkTransactionStatusWithoutQueries( TransactionStatusResult statusResult )
     {
-        assertEquals( "transaction-8", statusResult.transactionId );
+        assertEquals( "neo4j-transaction-8", statusResult.transactionId );
         assertEquals( "testUser", statusResult.username );
         assertEquals( stringObjectEmptyMap(), statusResult.metaData );
         assertEquals( "1970-01-01T00:00:01.984Z", statusResult.startTime );
@@ -145,11 +145,12 @@ class TransactionStatusResultTest
         assertEquals( Long.valueOf( 0 ), statusResult.allocatedDirectBytes );
         assertEquals( 0L, statusResult.pageHits );
         assertEquals( 0L, statusResult.pageFaults );
+        assertEquals( "neo4j", statusResult.database );
     }
 
     private static void checkTransactionStatus( TransactionStatusResult statusResult, String currentQuery, String currentQueryId, String startTime )
     {
-        assertEquals( "transaction-8", statusResult.transactionId );
+        assertEquals( "my-database-transaction-8", statusResult.transactionId );
         assertEquals( "testUser", statusResult.username );
         assertEquals( stringObjectEmptyMap(), statusResult.metaData );
         assertEquals( startTime, statusResult.startTime );
@@ -170,6 +171,7 @@ class TransactionStatusResultTest
         assertEquals( Long.valueOf( 0 ), statusResult.allocatedDirectBytes );
         assertEquals( 0, statusResult.pageHits );
         assertEquals( 0, statusResult.pageFaults );
+        assertEquals( "my-database", statusResult.database );
     }
 
     private static Map<String,Object> stringObjectEmptyMap()

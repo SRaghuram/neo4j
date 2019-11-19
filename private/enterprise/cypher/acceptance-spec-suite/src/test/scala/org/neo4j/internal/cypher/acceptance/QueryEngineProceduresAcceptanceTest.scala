@@ -14,7 +14,7 @@ import org.neo4j.logging.AssertableLogProvider
 class QueryEngineProceduresAcceptanceTest extends ExecutionEngineFunSuite {
 
   test("Clearing the query caches should work with empty caches") {
-    val query = "CALL dbms.clearQueryCaches()"
+    val query = "CALL db.clearQueryCaches()"
     graph.withTx( tx => {
       val result = tx.execute(query)
 
@@ -36,7 +36,7 @@ class QueryEngineProceduresAcceptanceTest extends ExecutionEngineFunSuite {
     })
 
     graph.withTx( tx => {
-      val query = "CALL dbms.clearQueryCaches()"
+      val query = "CALL db.clearQueryCaches()"
       val result = tx.execute(query)
 
       result.next().toString should equal ("{value=Query caches successfully cleared of 3 queries.}")
@@ -50,7 +50,7 @@ class QueryEngineProceduresAcceptanceTest extends ExecutionEngineFunSuite {
     graph.withTx( tx => tx.execute(q1).close())
 
     graph.withTx( tx => {
-      val query = "CALL dbms.clearQueryCaches()"
+      val query = "CALL db.clearQueryCaches()"
       val result = tx.execute(query)
 
       result.next().toString should equal ("{value=Query caches successfully cleared of 1 queries.}")
@@ -73,11 +73,11 @@ class QueryEngineProceduresAcceptanceTest extends ExecutionEngineFunSuite {
       transaction.commit()
 
       val tx = graphDatabaseService.beginTx()
-      val query = "CALL dbms.clearQueryCaches()"
+      val query = "CALL db.clearQueryCaches()"
       tx.execute(query).close()
       tx.commit()
 
-      logProvider.rawMessageMatcher().assertContains("Called dbms.clearQueryCaches(): Query caches successfully cleared of 1 queries.")
+      logProvider.rawMessageMatcher().assertContains("Called db.clearQueryCaches(): Query caches successfully cleared of 1 queries.")
     }
     finally {
       managementService.shutdown()

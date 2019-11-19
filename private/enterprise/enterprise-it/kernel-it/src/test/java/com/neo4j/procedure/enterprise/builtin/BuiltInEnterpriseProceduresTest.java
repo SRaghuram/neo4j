@@ -28,18 +28,18 @@ class BuiltInEnterpriseProceduresTest extends SystemBuiltInEnterpriseProceduresT
     }
 
     @Test
-    public void checkThatEnterpriseAndCommunityHaveSameResultColumsForListProcedures()
+    void checkThatEnterpriseAndCommunityHaveSameResultColumsForListProcedures()
     {
         checkClassesHaveSameFinalFields( BuiltInDbmsProcedures.ProcedureResult.class, EnterpriseBuiltInDbmsProcedures.ProcedureResult.class );
     }
 
     @Test
-    public void checkThatEnterpriseAndCommunityHaveSameResultColumsForListFunctions()
+    void checkThatEnterpriseAndCommunityHaveSameResultColumsForListFunctions()
     {
         checkClassesHaveSameFinalFields( BuiltInDbmsProcedures.FunctionResult.class, EnterpriseBuiltInDbmsProcedures.FunctionResult.class );
     }
 
-    private void checkClassesHaveSameFinalFields( Class community, Class enterprise )
+    private static void checkClassesHaveSameFinalFields( Class<?> community, Class<?> enterprise )
     {
         Field[] communityFields = community.getFields();
         Field[] enterpriseFields = enterprise.getFields();

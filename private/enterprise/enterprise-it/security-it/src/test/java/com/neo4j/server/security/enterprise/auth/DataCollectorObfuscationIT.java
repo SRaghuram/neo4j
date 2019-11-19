@@ -65,8 +65,8 @@ public class DataCollectorObfuscationIT extends ProcedureInteractionTestBase<Ent
         assertSystemCommandSuccess( adminSubject, "CALL dbms.security.suspendUser('userB')" );
         assertSystemCommandSuccess( adminSubject, "call dbms.security.listRoles()", ResourceIterator::close );
         assertSystemCommandSuccess( adminSubject, "CALL dbms.security.createRole('monkey')" );
-        assertSuccess( adminSubject, "CALL dbms.killQuery('query-1234')", ResourceIterator::close );
-        assertEmpty( adminSubject, "CALL dbms.setTXMetaData({prop: 'itsAProp'})" );
+        assertSuccess( adminSubject, "CALL dbms.killQuery('database-query-1234')", ResourceIterator::close );
+        assertEmpty( adminSubject, "CALL tx.setMetaData({prop: 'itsAProp'})" );
         assertSystemCommandFail( adminSubject, format( "CALL dbms.security.changeUserPassword(null, '%s')", secret ), "" );
         assertSystemCommandFail( adminSubject, format( "CALL dbms.security.changeUserPassword('malformedUser, '%s')", secret ), "" );
         assertSystemCommandSuccess( adminSubject, format( "EXPLAIN CALL dbms.security.changePassword('%s')", secret ) );
@@ -84,8 +84,8 @@ public class DataCollectorObfuscationIT extends ProcedureInteractionTestBase<Ent
                        itr -> {
                            List<String> queryTexts = itr.stream()
                                    .filter( s -> s.get("section").equals( "QUERIES" ) )
-                                   .map( s -> (Map) s.get( "data" ) )
-                                   .map( dataMap -> (String) dataMap.get( "query" ) )
+                                   .map( s -> (Map<String,String>) s.get( "data" ) )
+                                   .map( dataMap -> dataMap.get( "query" ) )
                                    .filter( s -> s.toLowerCase().contains( "dbms" ))
                                    .collect( Collectors.toList() );
 

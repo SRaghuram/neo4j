@@ -90,6 +90,7 @@ public class ListQueriesProcedureTest
             Map<String,Object> row = result.next();
             assertFalse( result.hasNext() );
             assertEquals( query, row.get( "query" ) );
+            assertEquals( db.databaseName(), row.get( "database" ) );
             transaction.commit();
         }
     }

@@ -5,7 +5,7 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
-import com.neo4j.procedure.enterprise.builtin.QueryId;
+import com.neo4j.procedure.enterprise.builtin.DbmsQueryId;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.eclipse.jetty.server.Request;
@@ -16,7 +16,6 @@ import org.hamcrest.BaseMatcher;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledOnOs;
 import org.junit.jupiter.api.condition.OS;
@@ -83,13 +82,12 @@ import static org.neo4j.internal.helpers.collection.Iterables.single;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 import static org.neo4j.test.matchers.CommonMatchers.matchesOneToOneInAnyOrder;
-import static org.neo4j.util.concurrent.Runnables.EMPTY_RUNNABLE;
 
 public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureInteractionTestBase<S>
 {
-    private String ROLE = "role1";
-    private String SUBJECT = "role1Subject";
-    private String PASSWORD = "abc";
+    private final String ROLE = "role1";
+    private final String SUBJECT = "role1Subject";
+    private final String PASSWORD = "abc";
 
     //---------- list running transactions -----------
 
@@ -143,7 +141,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     @Test
     void listTransactionWithMetadata() throws Throwable
     {
-        String setMetaDataQuery = "CALL dbms.setTXMetaData( { realUser: 'MyMan' } )";
+        String setMetaDataQuery = "CALL tx.setMetaData( { realUser: 'MyMan' } )";
         String matchQuery = "MATCH (n) RETURN n";
         String listTransactionsQuery = "CALL dbms.listTransactions()";
 
@@ -232,27 +230,27 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         // null as value
         try ( Transaction tx = graph.beginTx() )
         {
-            tx.execute( "CALL dbms.setTXMetaData( { realUser: null })" );
+            tx.execute( "CALL tx.setMetaData( { realUser: null })" );
             assertNull( getResultRowForMetadataQuery( tx ).get( "realUser" ) );
         }
         // null as key
         try ( Transaction tx = graph.beginTx() )
         {
-            tx.execute( "CALL dbms.setTXMetaData( { null: 'success' } )" );
+            tx.execute( "CALL tx.setMetaData( { null: 'success' } )" );
             assertEquals( "success", getResultRowForMetadataQuery( tx ).get( "null" ) );
         }
 
         // nesting map with null as value
         try ( Transaction tx = graph.beginTx() )
         {
-            tx.execute( "CALL dbms.setTXMetaData( { nesting: { inner: null } } )" );
+            tx.execute( "CALL tx.setMetaData( { nesting: { inner: null } } )" );
             assertNull( ((Map<String,Object>) getResultRowForMetadataQuery( tx ).get( "nesting" )).get( "inner" ) );
         }
 
         // nesting map with null as key
         try ( Transaction tx = graph.beginTx() )
         {
-            tx.execute( "CALL dbms.setTXMetaData( { nesting: { null: 'success' } } )" );
+            tx.execute( "CALL tx.setMetaData( { nesting: { null: 'success' } } )" );
             assertEquals( "success", ((Map<String,Object>) getResultRowForMetadataQuery( tx ).get( "nesting" )).get( "null" ) );
         }
     }
@@ -541,13 +539,13 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     @Test
     void killNotExistingTransaction()
     {
-        String query = "CALL dbms.killTransaction('17')";
+        String query = "CALL dbms.killTransaction('neo4j-transaction-17')";
         assertSuccess( readSubject, query, r ->
         {
             List<Map<String,Object>> result = collectResults( r );
             assertThat( result, matchesOneToOneInAnyOrder( hasUsername( "readSubject" ) ) );
             assertThat( result, matchesOneToOneInAnyOrder( hasResultEntry( "message", "Transaction not found." ) ) );
-            assertThat( result, matchesOneToOneInAnyOrder( hasResultEntry( "transactionId", "17" ) ) );
+            assertThat( result, matchesOneToOneInAnyOrder( hasResultEntry( "transactionId", "neo4j-transaction-17" ) ) );
         } );
     }
 
@@ -556,7 +554,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     @Test
     void shouldListAllQueryIncludingMetaData() throws Throwable
     {
-        String setMetaDataQuery = "CALL dbms.setTXMetaData( { realUser: 'MyMan' } )";
+        String setMetaDataQuery = "CALL tx.setMetaData( { realUser: 'MyMan' } )";
         String matchQuery = "MATCH (n) RETURN n";
         String listQueriesQuery = "CALL dbms.listQueries()";
 
@@ -1062,7 +1060,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     @Test
     void shouldHaveSetTXMetaDataProcedure()
     {
-        assertEmpty( writeSubject, "CALL dbms.setTXMetaData( { aKey: 'aValue' } )" );
+        assertEmpty( writeSubject, "CALL tx.setMetaData( { aKey: 'aValue' } )" );
     }
 
     @Test
@@ -1074,9 +1072,9 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         try ( InternalTransaction transaction = neo
                 .beginLocalTransactionAsUser( writeSubject, KernelTransaction.Type.explicit ) )
         {
-            transaction.execute( "CALL dbms.setTXMetaData({" + testKey + ":'" + testValue + "'})" );
+            transaction.execute( "CALL tx.setMetaData({" + testKey + ":'" + testValue + "'})" );
             Map<String,Object> metadata =
-                    (Map<String,Object>) transaction.execute( "CALL dbms.getTXMetaData " ).next().get( "metadata" );
+                    (Map<String,Object>) transaction.execute( "CALL tx.getMetaData " ).next().get( "metadata" );
             assertEquals( testValue, metadata.get( testKey ) );
         }
     }
@@ -1087,8 +1085,8 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         String testValue = "testValue";
         String testKey = "test";
 
-        assertEmpty( writeSubject, "CALL dbms.setTXMetaData({" + testKey + ":'" + testValue + "'})" );
-        assertSuccess( writeSubject, "CALL dbms.getTXMetaData", mapResourceIterator ->
+        assertEmpty( writeSubject, "CALL tx.setMetaData({" + testKey + ":'" + testValue + "'})" );
+        assertSuccess( writeSubject, "CALL tx.getMetaData", mapResourceIterator ->
         {
             Map<String,Object> metadata = mapResourceIterator.next();
             assertNull( metadata.get( testKey ) );
@@ -1305,16 +1303,16 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     @Test
     void shouldNotClearQueryCachesIfNotAdmin()
     {
-        assertFail( noneSubject, "CALL dbms.clearQueryCaches()", ACCESS_DENIED );
-        assertFail( readSubject, "CALL dbms.clearQueryCaches()", PERMISSION_DENIED );
-        assertFail( writeSubject, "CALL dbms.clearQueryCaches()", PERMISSION_DENIED );
-        assertFail( schemaSubject, "CALL dbms.clearQueryCaches()", PERMISSION_DENIED );
+        assertFail( noneSubject, "CALL db.clearQueryCaches()", ACCESS_DENIED );
+        assertFail( readSubject, "CALL db.clearQueryCaches()", PERMISSION_DENIED );
+        assertFail( writeSubject, "CALL db.clearQueryCaches()", PERMISSION_DENIED );
+        assertFail( schemaSubject, "CALL db.clearQueryCaches()", PERMISSION_DENIED );
     }
 
     @Test
     void shouldClearQueryCachesIfAdmin()
     {
-        assertSuccess( adminSubject,"CALL dbms.clearQueryCaches()", ResourceIterator::close );
+        assertSuccess( adminSubject,"CALL db.clearQueryCaches()", ResourceIterator::close );
         // any answer is okay, as long as it isn't denied. That is why we don't care about the actual result here
     }
 
@@ -1322,180 +1320,6 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     {
         assertDDLCommandSuccess( adminSubject, String.format( "CREATE USER %s SET PASSWORD '%s' CHANGE NOT REQUIRED", SUBJECT, PASSWORD  ));
         createRoleWithAccess( ROLE, SUBJECT );
-    }
-
-    /*
-    This surface is hidden in 3.1, to possibly be completely removed or reworked later
-    ==================================================================================
-     */
-
-    //---------- terminate transactions for user -----------
-
-    @Disabled
-    void shouldTerminateTransactionForUser() throws Throwable
-    {
-        DoubleLatch latch = new DoubleLatch( 2 );
-        ThreadedTransaction<S> write = new ThreadedTransaction<>( neo, latch );
-        write.executeCreateNode( threading, writeSubject );
-        latch.startAndWaitForAllToStart();
-
-        assertSuccess( adminSubject, "CALL dbms.terminateTransactionsForUser( 'writeSubject' )",
-                r -> assertKeyIsMap( r, "username", "transactionsTerminated", map( "writeSubject", "1" ) ) );
-
-        assertSuccess( adminSubject, "CALL dbms.listTransactions()",
-                r -> assertKeyIsMap( r, "username", "activeTransactions", map( "adminSubject", "1" ) ) );
-
-        latch.finishAndWaitForAllToFinish();
-
-        write.closeAndAssertExplicitTermination();
-
-        assertEmpty( adminSubject, "MATCH (n:Test) RETURN n.name AS name" );
-    }
-
-    @Disabled
-    void shouldTerminateOnlyGivenUsersTransaction() throws Throwable
-    {
-        DoubleLatch latch = new DoubleLatch( 3 );
-        ThreadedTransaction<S> schema = new ThreadedTransaction<>( neo, latch );
-        ThreadedTransaction<S> write = new ThreadedTransaction<>( neo, latch );
-
-        schema.executeCreateNode( threading, schemaSubject );
-        write.executeCreateNode( threading, writeSubject );
-        latch.startAndWaitForAllToStart();
-
-        assertSuccess( adminSubject, "CALL dbms.terminateTransactionsForUser( 'schemaSubject' )",
-                r -> assertKeyIsMap( r, "username", "transactionsTerminated", map( "schemaSubject", "1" ) ) );
-
-        assertSuccess( adminSubject, "CALL dbms.listTransactions()",
-                r -> assertKeyIsMap( r, "username", "activeTransactions",
-                        map( "adminSubject", "1", "writeSubject", "1" ) ) );
-
-        latch.finishAndWaitForAllToFinish();
-
-        schema.closeAndAssertExplicitTermination();
-        write.closeAndAssertSuccess();
-
-        assertSuccess( adminSubject, "MATCH (n:Test) RETURN n.name AS name",
-                r -> assertKeyIs( r, "name", "writeSubject-node" ) );
-    }
-
-    @Disabled
-    void shouldTerminateAllTransactionsForGivenUser() throws Throwable
-    {
-        DoubleLatch latch = new DoubleLatch( 3 );
-        ThreadedTransaction<S> schema1 = new ThreadedTransaction<>( neo, latch );
-        ThreadedTransaction<S> schema2 = new ThreadedTransaction<>( neo, latch );
-
-        schema1.executeCreateNode( threading, schemaSubject );
-        schema2.executeCreateNode( threading, schemaSubject );
-        latch.startAndWaitForAllToStart();
-
-        assertSuccess( adminSubject, "CALL dbms.terminateTransactionsForUser( 'schemaSubject' )",
-                r -> assertKeyIsMap( r, "username", "transactionsTerminated", map( "schemaSubject", "2" ) ) );
-
-        assertSuccess( adminSubject, "CALL dbms.listTransactions()",
-                r -> assertKeyIsMap( r, "username", "activeTransactions", map( "adminSubject", "1" ) ) );
-
-        latch.finishAndWaitForAllToFinish();
-
-        schema1.closeAndAssertExplicitTermination();
-        schema2.closeAndAssertExplicitTermination();
-
-        assertEmpty( adminSubject, "MATCH (n:Test) RETURN n.name AS name" );
-    }
-
-    @Disabled
-    void shouldNotTerminateTerminationTransaction()
-    {
-        assertSuccess( adminSubject, "CALL dbms.terminateTransactionsForUser( 'adminSubject' )",
-                r -> assertKeyIsMap( r, "username", "transactionsTerminated", map( "adminSubject", "0" ) ) );
-        assertSuccess( readSubject, "CALL dbms.terminateTransactionsForUser( 'readSubject' )",
-                r -> assertKeyIsMap( r, "username", "transactionsTerminated", map( "readSubject", "0" ) ) );
-    }
-
-    @Disabled
-    void shouldTerminateSelfTransactionsExceptTerminationTransactionIfAdmin() throws Throwable
-    {
-        shouldTerminateSelfTransactionsExceptTerminationTransaction( adminSubject );
-    }
-
-    @Disabled
-    void shouldTerminateSelfTransactionsExceptTerminationTransactionIfNotAdmin() throws Throwable
-    {
-        shouldTerminateSelfTransactionsExceptTerminationTransaction( writeSubject );
-    }
-
-    private void shouldTerminateSelfTransactionsExceptTerminationTransaction( S subject ) throws Throwable
-    {
-        DoubleLatch latch = new DoubleLatch( 2 );
-        ThreadedTransaction<S> create = new ThreadedTransaction<>( neo, latch );
-        create.executeCreateNode( threading, subject );
-
-        latch.startAndWaitForAllToStart();
-
-        String subjectName = neo.nameOf( subject );
-        assertSuccess( subject, "CALL dbms.terminateTransactionsForUser( '" + subjectName + "' )",
-                r -> assertKeyIsMap( r, "username", "transactionsTerminated", map( subjectName, "1" ) ) );
-
-        latch.finishAndWaitForAllToFinish();
-
-        create.closeAndAssertExplicitTermination();
-
-        assertEmpty( adminSubject, "MATCH (n:Test) RETURN n.name AS name" );
-    }
-
-    @Disabled
-    void shouldNotTerminateTransactionsIfNonExistentUser()
-    {
-        assertFail( adminSubject, "CALL dbms.terminateTransactionsForUser( 'Petra' )", "User 'Petra' does not exist" );
-        assertFail( adminSubject, "CALL dbms.terminateTransactionsForUser( '' )", "User '' does not exist" );
-    }
-
-    @Disabled
-    void shouldNotTerminateTransactionsIfNotAdmin() throws Throwable
-    {
-        DoubleLatch latch = new DoubleLatch( 2 );
-        ThreadedTransaction<S> write = new ThreadedTransaction<>( neo, latch );
-        write.executeCreateNode( threading, writeSubject );
-        latch.startAndWaitForAllToStart();
-
-        assertFail( noneSubject, "CALL dbms.terminateTransactionsForUser( 'writeSubject' )", PERMISSION_DENIED );
-        assertFail( pwdSubject, "CALL dbms.terminateTransactionsForUser( 'writeSubject' )", CHANGE_PWD_ERR_MSG );
-        assertFail( readSubject, "CALL dbms.terminateTransactionsForUser( 'writeSubject' )", PERMISSION_DENIED );
-        assertFail( schemaSubject, "CALL dbms.terminateTransactionsForUser( 'writeSubject' )", PERMISSION_DENIED );
-
-        assertSuccess( adminSubject, "CALL dbms.listTransactions()",
-                r -> assertKeyIs( r, "username", "adminSubject", "writeSubject" ) );
-
-        latch.finishAndWaitForAllToFinish();
-
-        write.closeAndAssertSuccess();
-
-        assertSuccess( adminSubject, "MATCH (n:Test) RETURN n.name AS name",
-                r -> assertKeyIs( r, "name", "writeSubject-node" ) );
-    }
-
-    @Disabled
-    void shouldTerminateRestrictedTransaction()
-    {
-        final DoubleLatch doubleLatch = new DoubleLatch( 2 );
-
-        ClassWithProcedures.setTestLatch(
-                new ClassWithProcedures.LatchedRunnables( doubleLatch, EMPTY_RUNNABLE, EMPTY_RUNNABLE ) );
-
-        new Thread( () -> assertFail( writeSubject, "CALL test.waitForLatch()", "Explicitly terminated by the user." ) )
-                .start();
-
-        doubleLatch.startAndWaitForAllToStart();
-        try
-        {
-            assertSuccess( adminSubject, "CALL dbms.terminateTransactionsForUser( 'writeSubject' )",
-                    r -> assertKeyIsMap( r, "username", "transactionsTerminated", map( "writeSubject", "1" ) ) );
-        }
-        finally
-        {
-            doubleLatch.finishAndWaitForAllToFinish();
-        }
     }
 
     private void assertQueryIsRunning( String query ) throws InterruptedException
@@ -1520,7 +1344,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
 
     private static Map<String,Object> getResultRowForMetadataQuery( Transaction tx )
     {
-        Result result = tx.execute( "call dbms.getTXMetaData() yield metadata return metadata" );
+        Result result = tx.execute( "call tx.getMetaData() yield metadata return metadata" );
         Map<String,Object> row = (Map<String,Object>) result.next().get( "metadata" );
         assertFalse( result.hasNext() );
         return row;
@@ -1641,7 +1465,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     {
         Matcher<String> queryId = equalTo( "queryId" );
         Matcher valueMatcher =
-                allOf( isA( String.class ), containsString( QueryId.QUERY_ID_PREFIX ) );
+                allOf( isA( String.class ), containsString( DbmsQueryId.QUERY_ID_SEPARATOR ) );
         return hasEntry( queryId, valueMatcher );
     }
 
@@ -1649,7 +1473,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     {
         Matcher<String> transactionId = equalTo( "transactionId" );
         Matcher valueMatcher =
-                allOf( isA( String.class ), containsString( "transaction-" ) );
+                allOf( isA( String.class ), containsString( "-transaction-" ) );
         return hasEntry( transactionId, valueMatcher );
     }
 

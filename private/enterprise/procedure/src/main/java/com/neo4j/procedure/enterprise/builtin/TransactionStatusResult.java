@@ -53,12 +53,15 @@ public class TransactionStatusResult
     /** @since Neo4j 3.5 */
     public final String connectionId;
     public final String initializationStackTrace;
+    /** @since Neo4j 4.0 */
+    public final String database;
 
-    public TransactionStatusResult( KernelTransactionHandle transaction,
+    public TransactionStatusResult( String database, KernelTransactionHandle transaction,
             TransactionDependenciesResolver transactionDependenciesResolver,
             Map<KernelTransactionHandle,Optional<QuerySnapshot>> handleSnapshotsMap, ZoneId zoneId ) throws InvalidArgumentsException
     {
-        this.transactionId = transaction.getUserTransactionName();
+        this.database = database;
+        this.transactionId = new DbmsTransactionId( database, transaction.getUserTransactionId() ).toString();
         this.username = transaction.subject().username();
         this.startTime = ProceduresTimeFormatHelper.formatTime( transaction.startTime(), zoneId );
         this.activeLockCount = transaction.activeLocks().count();
@@ -76,7 +79,7 @@ public class TransactionStatusResult
         if ( querySnapshot.isPresent() )
         {
             QuerySnapshot snapshot = querySnapshot.get();
-            this.currentQueryId = QueryId.ofInternalId( snapshot.internalQueryId() ).toString();
+            this.currentQueryId = new DbmsQueryId( database, snapshot.internalQueryId() ).toString();
             this.currentQuery = snapshot.queryText();
         }
         else

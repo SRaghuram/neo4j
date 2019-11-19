@@ -135,7 +135,7 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
                 "dbms.security.showCurrentUser", newSet( READER, EDITOR, PUBLISHER, ARCHITECT, ADMIN ),
                 "dbms.showCurrentUser", newSet( READER, EDITOR, PUBLISHER, ARCHITECT, ADMIN ),
                 "dbms.security.suspendUser", newSet( ADMIN ),
-                "dbms.setTXMetaData", newSet( READER, EDITOR, PUBLISHER, ARCHITECT, ADMIN ) );
+                "tx.setMetaData", newSet( READER, EDITOR, PUBLISHER, ARCHITECT, ADMIN ) );
 
         assertListProceduresHasRoles( readSubject, expected, "CALL dbms.procedures" );
     }
@@ -190,9 +190,9 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
     void shouldGiveNiceMessageAtFailWhenTryingToKill() throws Throwable
     {
         configuredSetup( defaultConfiguration() );
-        String query = "CALL dbms.killQuery('query-9999999999')";
+        String query = "CALL dbms.killQuery('my-database-query-9999999999')";
         Map<String,Object> expected = new HashMap<>();
-        expected.put( "queryId", valueOf( "query-9999999999" ) );
+        expected.put( "queryId", valueOf( "my-database-query-9999999999" ) );
         expected.put( "username", valueOf( "n/a" ) );
         expected.put( "message", valueOf( "No Query found with this id" ) );
         assertSuccess( adminSubject, query, r -> assertThat( r.next(), equalTo( expected ) ) );
@@ -203,16 +203,16 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
     {
         //Given
         configuredSetup( defaultConfiguration() );
-        String query = "CALL dbms.killQueries(['query-9999999999', 'query-9999999989'])";
+        String query = "CALL dbms.killQueries(['my-database-query-9999999999', 'my-other-database-query-9999999989'])";
 
         //Expect
         Set<Map<String,Object>> expected = new HashSet<>();
         Map<String,Object> firstResultExpected = new HashMap<>();
-        firstResultExpected.put( "queryId", valueOf( "query-9999999989" ) );
+        firstResultExpected.put( "queryId", valueOf( "my-database-query-9999999999" ) );
         firstResultExpected.put( "username", valueOf( "n/a" ) );
         firstResultExpected.put( "message", valueOf( "No Query found with this id" ) );
         Map<String,Object> secondResultExpected = new HashMap<>();
-        secondResultExpected.put( "queryId", valueOf( "query-9999999999" ) );
+        secondResultExpected.put( "queryId", valueOf( "my-other-database-query-9999999989" ) );
         secondResultExpected.put( "username", valueOf( "n/a" ) );
         secondResultExpected.put( "message", valueOf( "No Query found with this id" ) );
         expected.add( firstResultExpected );

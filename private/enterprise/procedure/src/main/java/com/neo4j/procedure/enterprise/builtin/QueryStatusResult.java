@@ -69,17 +69,20 @@ public class QueryStatusResult
     public final long pageFaults;
     /** @since Neo4j 3.5 */
     public final String connectionId;
+    /** @since Neo4j 4.0 */
+    public final String database;
 
-    QueryStatusResult( ExecutingQuery query, TransactionalEntityFactory manager, ZoneId zoneId ) throws InvalidArgumentsException
+    QueryStatusResult( ExecutingQuery query, TransactionalEntityFactory manager, ZoneId zoneId, String database ) throws InvalidArgumentsException
     {
-        this( query.snapshot(), manager, zoneId );
+        this( query.snapshot(), manager, zoneId, database );
     }
 
-    private QueryStatusResult( QuerySnapshot query, TransactionalEntityFactory manager, ZoneId zoneId ) throws InvalidArgumentsException
+    private QueryStatusResult( QuerySnapshot query, TransactionalEntityFactory manager, ZoneId zoneId, String database ) throws InvalidArgumentsException
     {
-        this.queryId = QueryId.ofInternalId( query.internalQueryId() ).toString();
+        this.queryId = new DbmsQueryId( database,query.internalQueryId() ).toString();
         this.username = query.username();
         this.query = query.queryText();
+        this.database = database;
         this.parameters = asRawMap( query.queryParameters(), new ParameterWriter( manager ) );
         this.startTime = ProceduresTimeFormatHelper.formatTime( query.startTimestampMillis(), zoneId );
         this.elapsedTimeMillis = asMillis( query.elapsedTimeMicros() );
