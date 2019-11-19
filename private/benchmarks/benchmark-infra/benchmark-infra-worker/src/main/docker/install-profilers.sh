@@ -38,6 +38,7 @@ cp -R "$INSTALL_TEMP_DIR"/FlameGraph/* "$FLAMEGRAPH_DIR"
 
 
 echo "trying to installing jfr-flame-graph"
+mkdir -p "$JFR_FLAMEGRAPH_DIR"
 if [[ $JAVA_HOME = *8* ]]
 then
 	INSTALL_TEMP_DIR=$(mktemp -d)
@@ -48,7 +49,6 @@ then
 		git reset --hard "$JFR_FLAMEGRAPH_DIR_SHA"
 		./gradlew installDist
 	)
-	mkdir -p "$JFR_FLAMEGRAPH_DIR"
 	cp -R "$INSTALL_TEMP_DIR"/jfr-flame-graph/build/install/jfr-flame-graph/* "$JFR_FLAMEGRAPH_DIR"
 else
 	echo "Will not install jfr-flame-graph. You are not using Java 8"
