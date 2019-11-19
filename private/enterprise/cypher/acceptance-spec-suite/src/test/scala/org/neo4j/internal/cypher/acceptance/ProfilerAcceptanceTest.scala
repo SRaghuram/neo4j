@@ -90,7 +90,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
       "MATCH (n) RETURN (n:Foo)",
       _ should (
         includeSomewhere.aPlan("ProduceResults").withRows(3).withDBHits(0) and
-          includeSomewhere.aPlan("Projection").withDBHitsBetween(3, 6) and
+          includeSomewhere.aPlan("Projection").withDBHitsBetween(0, 6) and
           includeSomewhere.aPlan("AllNodesScan").withRows(3).withDBHits(4)
         ))
   }
@@ -418,7 +418,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     // then
     profile(Configs.All,
       "MATCH (n)-->(x) RETURN x",
-      _ should includeSomewhere.aPlan("Expand(All)").withRows(1).withDBHitsBetween(3, 4))
+      _ should includeSomewhere.aPlan("Expand(All)").withRows(1).withDBHitsBetween(2, 4))
   }
 
   test("should report correct dbhits and rows for literal addition") {
