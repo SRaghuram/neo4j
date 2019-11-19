@@ -243,4 +243,7 @@ class PipelinedProfileNoFusingDbHitsTest extends PipelinedDbHitsTestBase(NO_FUSI
                                       with PipelinedSpecSuite
 class PipelinedProfileDbHitsTest extends PipelinedDbHitsTestBase(FUSING, PIPELINED, SIZE_HINT)
                               with ProcedureCallDbHitsTestBase[EnterpriseRuntimeContext]
-                              with PipelinedSpecSuite
+                              with PipelinedSpecSuite {
+
+  override protected def canFuseOverPipelines: Boolean = true
+}
