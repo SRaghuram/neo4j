@@ -12,6 +12,8 @@ import io.netty.channel.pool.SimpleChannelPool;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 
+import static com.neo4j.causalclustering.net.NettyUtil.chain;
+
 /**
  * Returns the same channel to every client, without requiring the previous client to have released it.
  */
@@ -28,33 +30,39 @@ public class OneMultiplexedChannel extends SimpleChannelPool
     public Future<Channel> acquire( Promise<Channel> promise )
     {
         Future<Channel> fChannelAlias = fChannel;
-        if ( fChannelAlias != null && (!fChannelAlias.isDone() || fChannelAlias.getNow().isOpen()) )
+        if ( fChannelAlias != null && fChannelAlias.isSuccess() )
         {
-            // fast path to return a possibly still good channel
-            return fChannelAlias;
+            Channel channel = fChannelAlias.getNow();
+            if ( channel != null && channel.isActive() )
+            {
+                promise.trySuccess( channel );
+                return promise;
+            }
         }
 
-        synchronized ( this )
-        {
-            if ( fChannel == null )
-            {
-                return fChannel = super.acquire( promise );
-            }
-            else if ( !fChannel.isDone() )
-            {
-                return fChannel;
-            }
+        return acquireSync( promise );
+    }
 
-            Channel channel = fChannel.getNow();
-            if ( channel.isOpen() )
-            {
-                return fChannel;
-            }
-            else
-            {
-                channel.close();
-                return fChannel = super.acquire( promise );
-            }
+    private synchronized Future<Channel> acquireSync( Promise<Channel> promise )
+    {
+        if ( fChannel == null )
+        {
+            return fChannel = super.acquire( promise );
+        }
+        else if ( !fChannel.isDone() )
+        {
+            return chain( fChannel, promise );
+        }
+
+        Channel channel = fChannel.getNow();
+        if ( channel == null || !channel.isActive() )
+        {
+            return fChannel = super.acquire( promise );
+        }
+        else
+        {
+            promise.trySuccess( channel );
+            return promise;
         }
     }
 
@@ -63,5 +71,30 @@ public class OneMultiplexedChannel extends SimpleChannelPool
     {
         promise.trySuccess( null );
         return promise;
+    }
+
+    @Override
+    public void close()
+    {
+        super.close(); // expected to do nothing, since we never release to it
+        closeAwait( fChannel );
+    }
+
+    private static void closeAwait( Future<Channel> fChannel )
+    {
+        if ( fChannel == null )
+        {
+            return;
+        }
+
+        fChannel.awaitUninterruptibly();
+
+        Channel channel = fChannel.getNow();
+        if ( channel == null )
+        {
+            return;
+        }
+
+        channel.close().awaitUninterruptibly();
     }
 }

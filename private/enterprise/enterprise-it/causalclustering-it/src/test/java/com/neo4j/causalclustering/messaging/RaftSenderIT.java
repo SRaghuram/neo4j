@@ -50,7 +50,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
-import java.util.concurrent.TimeoutException;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
@@ -67,7 +66,9 @@ import static java.util.Collections.emptyList;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.function.ThrowingAction.executeAll;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
@@ -113,21 +114,21 @@ class RaftSenderIT
 
     @ParameterizedTest
     @EnumSource( value = ApplicationProtocols.class, mode = EnumSource.Mode.MATCH_ALL, names = "RAFT_.+" )
-    void shouldSendAndReceiveBlocking( ApplicationProtocols clientProtocol ) throws Throwable
+    void shouldSendAndReceiveBlocking( ApplicationProtocols clientProtocol ) throws Exception
     {
         shouldSendAndReceive( clientProtocol, true );
     }
 
     @ParameterizedTest
     @EnumSource( value = ApplicationProtocols.class, mode = EnumSource.Mode.MATCH_ALL, names = "RAFT_.+" )
-    void shouldSendAndReceiveNonBlocking( ApplicationProtocols clientProtocol ) throws Throwable
+    void shouldSendAndReceiveNonBlocking( ApplicationProtocols clientProtocol ) throws Exception
     {
         shouldSendAndReceive( clientProtocol, false );
     }
 
     @ParameterizedTest
     @EnumSource( value = ApplicationProtocols.class, mode = EnumSource.Mode.MATCH_ALL, names = "RAFT_.+" )
-    void shouldReturnSameChannelForMultipleRequests( ApplicationProtocols clientProtocol ) throws InterruptedException, ExecutionException, TimeoutException
+    void shouldReturnSameChannelForMultipleRequests( ApplicationProtocols clientProtocol ) throws Exception
     {
         Server server = life.add( raftServer( new ChannelInboundHandlerAdapter() ) );
         RaftChannelPoolService clientPool = life.add( raftPoolService( clientProtocol ) );
@@ -142,7 +143,7 @@ class RaftSenderIT
 
     @ParameterizedTest
     @EnumSource( value = ApplicationProtocols.class, mode = EnumSource.Mode.MATCH_ALL, names = "RAFT_.+" )
-    void shouldReturnNewChannelAfterClose( ApplicationProtocols clientProtocol ) throws InterruptedException, ExecutionException, TimeoutException
+    void shouldReturnNewChannelAfterClose( ApplicationProtocols clientProtocol ) throws Exception
     {
         Server server = life.add( raftServer( new ChannelInboundHandlerAdapter() ) );
         RaftChannelPoolService clientPool = life.add( raftPoolService( clientProtocol ) );
@@ -158,7 +159,75 @@ class RaftSenderIT
         assertNotEquals( channelB, channelC );
     }
 
-    private void shouldSendAndReceive( ApplicationProtocols clientProtocol, boolean blocking ) throws Throwable
+    @ParameterizedTest
+    @EnumSource( value = ApplicationProtocols.class, mode = EnumSource.Mode.MATCH_ALL, names = "RAFT_.+" )
+    void shouldCloseChannelOnCloseOfPool( ApplicationProtocols clientProtocol ) throws Exception
+    {
+        Server server = life.add( raftServer( new ChannelInboundHandlerAdapter() ) );
+        RaftChannelPoolService clientPool = life.add( raftPoolService( clientProtocol ) );
+
+        Channel channelA = clientPool.acquire( server.address() ).get( 10, SECONDS ).channel();
+        channelA.close().sync();
+
+        Channel channelB = clientPool.acquire( server.address() ).get( 10, SECONDS ).channel();
+        Channel channelC = clientPool.acquire( server.address() ).get( 10, SECONDS ).channel();
+
+        clientPool.stop();
+        clientPool.shutdown();
+
+        assertFalse( channelA.isOpen() );
+        assertFalse( channelB.isOpen() );
+        assertFalse( channelC.isOpen() );
+    }
+
+    @ParameterizedTest
+    @EnumSource( value = ApplicationProtocols.class, mode = EnumSource.Mode.MATCH_ALL, names = "RAFT_.+" )
+    void shouldReacquireAfterInitialFailure( ApplicationProtocols clientProtocol ) throws Exception
+    {
+        Server server = life.add( raftServer( new ChannelInboundHandlerAdapter() ) );
+        RaftChannelPoolService clientPool = life.add( raftPoolService( clientProtocol ) );
+
+        server.stop();
+        assertThrows( ExecutionException.class, () -> clientPool.acquire( server.address() ).get() );
+
+        server.start();
+        Channel channelB = clientPool.acquire( server.address() ).get( 10, SECONDS ).channel();
+
+        assertTrue( channelB.isOpen() );
+    }
+
+    @ParameterizedTest
+    @EnumSource( value = ApplicationProtocols.class, mode = EnumSource.Mode.MATCH_ALL, names = "RAFT_.+" )
+    void shouldAcquireInQuickSuccession( ApplicationProtocols clientProtocol ) throws Exception
+    {
+        Server server = life.add( raftServer( new ChannelInboundHandlerAdapter() ) );
+        RaftChannelPoolService clientPool = life.add( raftPoolService( clientProtocol ) );
+
+        // this tries to be a bit racy, acquiring several times before the connection is fully up
+        CompletableFuture<PooledChannel> fChannelA = clientPool.acquire( server.address() );
+        CompletableFuture<PooledChannel> fChannelB = clientPool.acquire( server.address() );
+        CompletableFuture<PooledChannel> fChannelC = clientPool.acquire( server.address() );
+
+        Channel channelA = fChannelA.get( 10, SECONDS ).channel();
+        Channel channelB = fChannelB.get( 10, SECONDS ).channel();
+        Channel channelC = fChannelC.get( 10, SECONDS ).channel();
+
+        assertTrue( channelA.isOpen() );
+        assertTrue( channelB.isOpen() );
+        assertTrue( channelC.isOpen() );
+
+        assertEquals( channelA, channelB );
+        assertEquals( channelB, channelC );
+    }
+
+    @ParameterizedTest
+    @EnumSource( value = ApplicationProtocols.class, mode = EnumSource.Mode.MATCH_ALL, names = "RAFT_.+" )
+    void shouldStartStopWithoutAcquiringAnything( ApplicationProtocols clientProtocol )
+    {
+        life.add( raftPoolService( clientProtocol ) );
+    }
+
+    private void shouldSendAndReceive( ApplicationProtocols clientProtocol, boolean blocking ) throws Exception
     {
         // given: raft server handler
         Semaphore messageReceived = new Semaphore( 0 );

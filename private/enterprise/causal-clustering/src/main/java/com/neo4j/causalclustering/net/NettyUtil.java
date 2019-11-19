@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.net;
 
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
+import io.netty.util.concurrent.Promise;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -27,5 +28,21 @@ public class NettyUtil
             }
         } );
         return javaFuture;
+    }
+
+    public static <T> Future<T> chain( Future<T> future, Promise<T> promise )
+    {
+        future.addListener( f ->
+        {
+            if ( f.isSuccess() )
+            {
+                promise.trySuccess( future.get() );
+            }
+            else
+            {
+                promise.tryFailure( future.cause() );
+            }
+        } );
+        return promise;
     }
 }
