@@ -14,9 +14,9 @@ import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
-import org.neo4j.cypher.internal.plandescription.PlanDescriptionImpl
+import org.neo4j.cypher.internal.plandescription.{InternalPlanDescription, PlanDescriptionImpl}
 import org.neo4j.cypher.{ExecutionEngineFunSuite, ExecutionEngineHelper}
-import org.neo4j.graphdb.Result
+import org.neo4j.graphdb.{ExecutionPlanDescription, Result}
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.internal.kernel.api.security.AuthenticationResult
 import org.neo4j.kernel.api.KernelTransaction.Type
@@ -170,8 +170,8 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
                        params: util.Map[String, Object] = Collections.emptyMap(),
                        resultHandler: (Result.ResultRow, Int) => Unit = (_, _) => {},
                        executeBefore: InternalTransaction => Unit = _ => (),
-                       mustHaveOperator: Option[String] = None): Int = {
-    executeOn(GraphDatabaseSettings.DEFAULT_DATABASE_NAME, username, password, query, params, resultHandler, executeBefore, mustHaveOperator)
+                       requiredOperator: Option[String] = None): Int = {
+    executeOn(GraphDatabaseSettings.DEFAULT_DATABASE_NAME, username, password, query, params, resultHandler, executeBefore, requiredOperator)
   }
 
   def executeOnSystem(username: String, password: String, query: String,
@@ -185,7 +185,7 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
                 params: util.Map[String, Object] = Collections.emptyMap(),
                 resultHandler: (Result.ResultRow, Int) => Unit = (_, _) => {},
                 executeBefore: InternalTransaction => Unit = _ => (),
-                mustHaveOperator: Option[String] = None): Int = {
+                requiredOperator: Option[String] = None): Int = {
     selectDatabase(database)
     val login = authManager.login(SecurityTestUtils.authToken(username, password))
     val tx = graph.beginTransaction(Type.explicit, login)
@@ -198,11 +198,7 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
         count = count + 1
         true
       })
-      mustHaveOperator.foreach{ operator =>
-        withClue(s"The plan did not contain any $operator : ") {
-          result.getExecutionPlanDescription.asInstanceOf[PlanDescriptionImpl].find(operator).nonEmpty should be(true)
-        }
-      }
+      requiredOperator.foreach { operator => mustHaveOperator(result.getExecutionPlanDescription, operator) }
       tx.commit()
       count
     } finally {
@@ -210,4 +206,9 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
     }
   }
 
+  def mustHaveOperator(plan: ExecutionPlanDescription, operator: String): Unit = {
+      withClue(s"The plan did not contain any $operator : ") {
+        plan.asInstanceOf[PlanDescriptionImpl].find(operator).nonEmpty should be(true)
+      }
+  }
 }

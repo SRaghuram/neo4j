@@ -1421,32 +1421,35 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     val queryUndirected = "MATCH ()-[r]-() WHERE id(r) IN [0, 1, 2, 1337] RETURN r.prop ORDER BY r.prop"
 
     // THEN
+
+    // Restricted user, directed relationship
     executeOnDefault("joe", "soap", queryDirected,
       resultHandler = (row, _) => {
         row.get("r.prop") should be("visible")
-      }, mustHaveOperator = Some("DirectedRelationshipByIdSeek")) should be(1)
+      }, requiredOperator = Some("DirectedRelationshipByIdSeek")) should be(1)
 
+    // Restricted user, undirected relationship
     executeOnDefault("joe", "soap", queryUndirected,
       resultHandler = (row, _) => {
         row.get("r.prop") should be("visible")
-      }, mustHaveOperator = Some("UndirectedRelationshipByIdSeek")) should be(2)
+      }, requiredOperator = Some("UndirectedRelationshipByIdSeek")) should be(2)
 
-    // WHEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("ALTER USER neo4j SET PASSWORD CHANGE NOT REQUIRED")
+    // Unresticted user, directed relationship
+    val resultDirected = execute(queryDirected)
+    resultDirected.toList should be(List(Map("r.prop" -> "secret"), Map("r.prop" -> "secret"), Map("r.prop" -> "visible")))
+    mustHaveOperator(resultDirected.executionPlanDescription(), "DirectedRelationshipByIdSeek")
 
-    // THEN
-    val expectedDirected = List("secret", "secret", "visible")
-    executeOnDefault("neo4j", "neo4j", queryDirected,
-      resultHandler = (row, index) => {
-        row.get("r.prop") should be(expectedDirected(index))
-      }, mustHaveOperator = Some("DirectedRelationshipByIdSeek")) should be(3)
-
-    val expectedUndirected = List("secret", "secret", "secret", "secret", "visible", "visible")
-    executeOnDefault("neo4j", "neo4j", queryUndirected,
-      resultHandler = (row, index) => {
-        row.get("r.prop") should be(expectedUndirected(index))
-      }, mustHaveOperator = Some("UndirectedRelationshipByIdSeek")) should be(6)
+    // Unrestricted user, undirected relationship
+    val resultUndirected = execute(queryUndirected)
+    resultUndirected.toList should be(
+      List(
+        Map("r.prop" -> "secret"),
+        Map("r.prop" -> "secret"),
+        Map("r.prop" -> "secret"),
+        Map("r.prop" -> "secret"),
+        Map("r.prop" -> "visible"),
+        Map("r.prop" -> "visible")))
+    mustHaveOperator(resultUndirected.executionPlanDescription(), "UndirectedRelationshipByIdSeek")
   }
 
   // Index tests

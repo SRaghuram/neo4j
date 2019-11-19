@@ -1655,22 +1655,17 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     val query = "MATCH (n) WHERE id(n) IN [0, 1, 2, 1337] RETURN n.prop ORDER BY n.prop"
 
     // THEN
+
+    // Restricted user
     executeOnDefault("joe", "soap", query,
       resultHandler = (row, _) => {
        row.get("n.prop") should be("visible")
-      }, mustHaveOperator = Some("NodeByIdSeek")) should be(2)
+      }, requiredOperator = Some("NodeByIdSeek")) should be(2)
 
-    // WHEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("ALTER USER neo4j SET PASSWORD CHANGE NOT REQUIRED")
-
-    // THEN
-    val expected = List("secret", "visible", "visible")
-
-    executeOnDefault("neo4j", "neo4j", query,
-      resultHandler = (row, index) => {
-        row.get("n.prop") should be(expected(index))
-      }, mustHaveOperator = Some("NodeByIdSeek")) should be(3)
+    // Unrestricted user
+    val result = execute(query)
+    result.toList should be(List(Map("n.prop" -> "secret"), Map("n.prop" -> "visible"), Map("n.prop" -> "visible")))
+    mustHaveOperator(result.executionPlanDescription(), "NodeByIdSeek")
   }
 
   // Index tests
