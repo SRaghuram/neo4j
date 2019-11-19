@@ -6,11 +6,13 @@
 package com.neo4j.tools.dump;
 
 import java.io.File;
+import java.io.PrintStream;
 import java.util.List;
 import java.util.StringJoiner;
 
 import org.neo4j.index.internal.gbptree.GBPTree;
 import org.neo4j.index.internal.gbptree.GBPTreeBootstrapper;
+import org.neo4j.index.internal.gbptree.PrintingGBPTreeVisitor;
 import org.neo4j.internal.helpers.Args;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.impl.index.schema.SchemaLayouts;
@@ -31,12 +33,12 @@ public class GBPTreeDumpTool
             return;
         }
         File file = new File( arguments.orphans().get( 0 ) );
-        new GBPTreeDumpTool().run( file );
+        new GBPTreeDumpTool().run( file, System.out );
     }
 
-    void run( File file ) throws Exception
+    void run( File file, PrintStream out ) throws Exception
     {
-        System.out.println( "Dump tree " + file.getAbsolutePath() );
+        out.println( "Dump tree " + file.getAbsolutePath() );
         try ( JobScheduler jobScheduler = createInitialisedScheduler();
               PageCache pageCache = GBPTreeBootstrapper.pageCache( jobScheduler ) )
         {
@@ -45,7 +47,7 @@ public class GBPTreeDumpTool
 
             try ( GBPTree<?,?> tree = bootstrap.getTree() )
             {
-                tree.printTree();
+                tree.visit( new PrintingGBPTreeVisitor<>( out, false, false, false, true, false ) );
             }
         }
     }
