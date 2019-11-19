@@ -183,8 +183,10 @@ class PipelinedCartesianProductNoFusingTest extends CartesianProductTestBase(NO_
 class PipelinedMiscTest extends MiscTestBase(FUSING, PIPELINED) with PipelinedSpecSuite
 class PipelinedMiscNoFusingTest extends MiscTestBase(NO_FUSING, PIPELINED) with PipelinedSpecSuite
 class PipelinedExpressionTest extends ExpressionTestBase(FUSING, PIPELINED)
+                           with ThreadUnsafeExpressionTests[EnterpriseRuntimeContext]
                            with ExpressionWithTxStateChangesTests[EnterpriseRuntimeContext]
 class PipelinedExpressionNoFusingTest extends ExpressionTestBase(NO_FUSING, PIPELINED)
+                                   with ThreadUnsafeExpressionTests[EnterpriseRuntimeContext]
                                    with ExpressionWithTxStateChangesTests[EnterpriseRuntimeContext]
 class PipelinedFusingNotificationTest extends PipelinedFusingNotificationTestBase(FUSING, PIPELINED) // not PipelinedSpecSuite, since we expect fusing to fail
 class PipelinedSchedulerTracerTest extends SchedulerTracerTestBase(PIPELINED) with PipelinedSpecSuite
