@@ -593,6 +593,27 @@ class EndToEndTest
     }
 
     @Test
+    void testReturnDistinct()
+    {
+        List<Long> r = inMegaTx( tx ->
+        {
+            var query = joinAsLines(
+                    "CALL {",
+                    "  USE mega.graph(0)",
+                    "  MATCH (y:Person)",
+                    "  RETURN y.age AS age",
+                    "}",
+                    "RETURN DISTINCT age"
+            );
+
+            return tx.run( query ).stream().map( rec -> rec.get( "age" ).asLong() ).collect( Collectors.toList() );
+        } );
+
+        assertThat( r, containsInAnyOrder( 30L, 40L ) );
+
+    }
+
+    @Test
     void testSubqueryWithNamespacerRenamedVariables()
     {
         List<Record> r = inMegaTx( tx ->
