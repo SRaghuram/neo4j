@@ -22,6 +22,8 @@ import java.util.Map;
 
 import org.neo4j.graphdb.ExecutionPlanDescription;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Result;
+import org.neo4j.graphdb.Transaction;
 
 import static com.neo4j.bench.common.tool.macro.ExecutionMode.PLAN;
 import static com.neo4j.bench.common.tool.macro.ExecutionMode.PROFILE;
@@ -98,11 +100,13 @@ public class PlanCreator
                                                                    QueryString queryString,
                                                                    Map<String,Object> queryParameters )
     {
-        return db.executeTransactionally( queryString.value(), queryParameters, result ->
+        try ( Transaction tx = db.beginTx() )
         {
             CountingResultVisitor resultVisitor = new CountingResultVisitor();
+            Result result = tx.execute( queryString.value(), queryParameters );
             result.accept( resultVisitor );
+            tx.rollback();
             return result.getExecutionPlanDescription();
-        } );
+        }
     }
 }
