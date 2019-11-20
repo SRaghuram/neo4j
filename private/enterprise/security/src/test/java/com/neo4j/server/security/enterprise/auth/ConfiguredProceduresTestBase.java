@@ -233,12 +233,12 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
             List<String> failures = itr.stream().filter( record ->
             {
                 String name = toRawValue( record.get( "name" ) ).toString();
-                List<?> roles = (List<?>) toRawValue( record.get( "roles" ) );
+                List<?> roles = (List<?>) toRawValue( record.get( "defaultBuiltInRoles" ) );
                 return expected.containsKey( name ) && !expected.get( name ).equals( new HashSet<>( roles ) );
             } ).map( record ->
             {
                 String name = toRawValue( record.get( "name" ) ).toString();
-                return name + ": expected '" + expected.get( name ) + "' but was '" + record.get( "roles" ) + "'";
+                return name + ": expected '" + expected.get( name ) + "' but was '" + record.get( "defaultBuiltInRoles" ) + "'";
             } ).collect( toList() );
 
             assertThat( "Expectations violated: " + failures.toString(), failures.isEmpty() );
