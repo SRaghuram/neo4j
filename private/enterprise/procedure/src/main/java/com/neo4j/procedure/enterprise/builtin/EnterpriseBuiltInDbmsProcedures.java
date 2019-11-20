@@ -175,15 +175,15 @@ public class EnterpriseBuiltInDbmsProcedures
         public final String signature;
         public final String description;
         public final boolean aggregating;
-        public final List<String> roles;
+        public final List<String> defaultBuiltInRoles;
 
         private FunctionResult( UserFunctionSignature signature, boolean isAggregation )
         {
             this.name = signature.name().toString();
             this.signature = signature.toString();
             this.description = signature.description().orElse( "" );
-            roles = Stream.of( "admin", "reader", "editor", "publisher", "architect" ).collect( toList() );
-            roles.addAll( Arrays.asList( signature.allowed() ) );
+            defaultBuiltInRoles = Stream.of( "admin", "reader", "editor", "publisher", "architect" ).collect( toList() );
+            defaultBuiltInRoles.addAll( Arrays.asList( signature.allowed() ) );
             this.aggregating = isAggregation;
         }
 
@@ -193,7 +193,7 @@ public class EnterpriseBuiltInDbmsProcedures
             this.signature = info.getSignature();
             this.description = info.getDescription();
             this.aggregating = info.isAggregationFunction();
-            roles = Stream.of( "admin", "reader", "editor", "publisher", "architect" ).collect( toList() );
+            defaultBuiltInRoles = Stream.of( "admin", "reader", "editor", "publisher", "architect" ).collect( toList() );
         }
     }
 
@@ -221,7 +221,7 @@ public class EnterpriseBuiltInDbmsProcedures
         public final String signature;
         public final String description;
         public final String mode;
-        public final List<String> roles;
+        public final List<String> defaultBuiltInRoles;
         public final boolean worksOnSystem;
 
         public ProcedureResult( ProcedureSignature signature )
@@ -231,35 +231,35 @@ public class EnterpriseBuiltInDbmsProcedures
             this.description = signature.description().orElse( "" );
             this.mode = signature.mode().toString();
             this.worksOnSystem = signature.systemProcedure();
-            roles = new ArrayList<>();
+            defaultBuiltInRoles = new ArrayList<>();
             switch ( signature.mode() )
             {
             case DBMS:
                 if ( signature.admin() || isAdminProcedure( signature.name().name() ) )
                 {
-                    roles.add( "admin" );
+                    defaultBuiltInRoles.add( "admin" );
                 }
                 else
                 {
-                    roles.add( "reader" );
-                    roles.add( "editor" );
-                    roles.add( "publisher" );
-                    roles.add( "architect" );
-                    roles.add( "admin" );
-                    roles.addAll( Arrays.asList( signature.allowed() ) );
+                    defaultBuiltInRoles.add( "reader" );
+                    defaultBuiltInRoles.add( "editor" );
+                    defaultBuiltInRoles.add( "publisher" );
+                    defaultBuiltInRoles.add( "architect" );
+                    defaultBuiltInRoles.add( "admin" );
+                    defaultBuiltInRoles.addAll( Arrays.asList( signature.allowed() ) );
                 }
                 break;
             case DEFAULT:
             case READ:
-                roles.add( "reader" );
+                defaultBuiltInRoles.add( "reader" );
             case WRITE:
-                roles.add( "editor" );
-                roles.add( "publisher" );
+                defaultBuiltInRoles.add( "editor" );
+                defaultBuiltInRoles.add( "publisher" );
             case SCHEMA:
-                roles.add( "architect" );
+                defaultBuiltInRoles.add( "architect" );
             default:
-                roles.add( "admin" );
-                roles.addAll( Arrays.asList( signature.allowed() ) );
+                defaultBuiltInRoles.add( "admin" );
+                defaultBuiltInRoles.addAll( Arrays.asList( signature.allowed() ) );
             }
         }
 
