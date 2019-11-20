@@ -167,7 +167,7 @@ public class ForkRunner
     }
 
     private static void runPlanExportFork( Query query,
-                                           Store store,
+                                           Store originalStore,
                                            Edition edition,
                                            Path neo4jConfigFile,
                                            ForkDirectory forkDirectory,
@@ -176,27 +176,32 @@ public class ForkRunner
                                            JvmArgs jvmArgs,
                                            boolean doFork )
     {
-        List<String> commandArgs = ExportPlanCommand.argsFor( query, store, edition, neo4jConfigFile, forkDirectory, resources.workDir() );
+        try ( Store store = (query.isMutating())
+                            ? originalStore.makeTemporaryCopy()
+                            : originalStore )
+        {
+            List<String> commandArgs = ExportPlanCommand.argsFor( query, store, edition, neo4jConfigFile, forkDirectory, resources.workDir() );
 
-        if ( doFork )
-        {
-            JvmProcessArgs jvmProcessArgs = JvmProcessArgs.argsForJvmProcess( Collections.emptyList(),
-                                                                              jvm,
-                                                                              jvmArgs,
-                                                                              commandArgs,
-                                                                              Main.class );
-            // inherit output
-            ProcessBuilder.Redirect outputRedirect = ProcessBuilder.Redirect.INHERIT;
-            // redirect error to file
-            ProcessBuilder.Redirect errorRedirect = ProcessBuilder.Redirect.to( forkDirectory.newErrorLog().toFile() );
-            JvmProcess.start( jvmProcessArgs,
-                              outputRedirect,
-                              errorRedirect,
-                              Arrays.asList( new JpsPid(), new PgrepAndPsPid() ) ).waitFor();
-        }
-        else
-        {
-            Main.main( commandArgs.toArray( new String[0] ) );
+            if ( doFork )
+            {
+                JvmProcessArgs jvmProcessArgs = JvmProcessArgs.argsForJvmProcess( Collections.emptyList(),
+                                                                                  jvm,
+                                                                                  jvmArgs,
+                                                                                  commandArgs,
+                                                                                  Main.class );
+                // inherit output
+                ProcessBuilder.Redirect outputRedirect = ProcessBuilder.Redirect.INHERIT;
+                // redirect error to file
+                ProcessBuilder.Redirect errorRedirect = ProcessBuilder.Redirect.to( forkDirectory.newErrorLog().toFile() );
+                JvmProcess.start( jvmProcessArgs,
+                                  outputRedirect,
+                                  errorRedirect,
+                                  Arrays.asList( new JpsPid(), new PgrepAndPsPid() ) ).waitFor();
+            }
+            else
+            {
+                Main.main( commandArgs.toArray( new String[0] ) );
+            }
         }
     }
 }
