@@ -698,6 +698,50 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
       }) should be(2)
     }
 
+    test(s"should read you own writes on nodes with WRITE and denied READ and TRAVERSE privileges with $runtime") {
+      // GIVEN
+      setupUserWithCustomRole()
+      execute("GRANT MATCH {name} ON GRAPH * NODES * (*) TO custom")
+
+      // Setup to create tokens
+      selectDatabase(DEFAULT_DATABASE_NAME)
+      execute("CREATE (n:A:B {name:'ab'})")
+
+      // WHEN
+      selectDatabase(SYSTEM_DATABASE_NAME)
+      execute("DENY READ {name} ON GRAPH * NODES B (*) TO custom")
+      execute("GRANT WRITE ON GRAPH * ELEMENTS * (*) TO custom")
+
+      // THEN
+      val expected = Seq("b1", null)
+      val query1 = s"CYPHER runtime=$runtime CREATE (n:B {name: 'b1'}) WITH 1 AS ignore MATCH (m:B) RETURN m.name AS name ORDER BY name"
+      executeOnDefault("joe", "soap", query1, resultHandler = (row, index) => {
+        row.get("name") should be(expected(index))
+      }) should be(2)
+
+      // THEN
+      executeOnDefault("joe", "soap", s"CYPHER runtime=$runtime MATCH (n:B) RETURN n.name AS name ORDER BY name", resultHandler = (row, index) => {
+        row.get("name") should be(null)
+      }) should be(2)
+
+      execute(s"CYPHER runtime=$runtime MATCH (n) RETURN n.name").toSet should be(Set(Map("n.name" -> "ab"), Map("n.name" -> "b1")))
+
+      // WHEN
+      selectDatabase(SYSTEM_DATABASE_NAME)
+      execute("DENY TRAVERSE ON GRAPH * NODES B (*) TO custom")
+
+      // THEN
+      val query2 = s"CYPHER runtime=$runtime CREATE (n:B {name: 'b2'}) WITH 1 AS ignore MATCH (m:B) RETURN m.name AS name ORDER BY name"
+      executeOnDefault("joe", "soap", query2, resultHandler = (row, _) => {
+        row.get("name") should be("b2")
+      }) should be(1)
+
+      // THEN
+      executeOnDefault("joe", "soap", s"CYPHER runtime=$runtime MATCH (n:B) RETURN n.name AS name ORDER BY name") should be(0)
+
+      execute(s"CYPHER runtime=$runtime MATCH (n) RETURN n.name").toSet should be(Set(Map("n.name" -> "ab"), Map("n.name" -> "b1"), Map("n.name" -> "b2")))
+    }
+
     test(s"should not see property after setting denied label with $runtime") {
       // GIVEN
       setupUserWithCustomRole()
@@ -842,27 +886,28 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
       // Setup to create tokens
       selectDatabase(DEFAULT_DATABASE_NAME)
-      execute("CREATE (:A)-[:REL {name:'a', age: 21}]->()")
+      execute("CREATE (:A)-[:REL {name:'a', age: 21, pets: true}]->()")
 
       // WHEN
       selectDatabase(SYSTEM_DATABASE_NAME)
       execute("GRANT READ {name} ON GRAPH * RELATIONSHIPS * (*) TO custom")
+      execute("DENY READ {pets} ON GRAPH * RELATIONSHIPS * (*) TO custom")
       execute("GRANT WRITE ON GRAPH * ELEMENTS * (*) TO custom")
 
       // THEN
-      val expected1 = List(("a", null), ("b", 22))
+      val expected1 = List(("a", null, null), ("b", 22, false))
 
-      val query = s"CYPHER runtime=$runtime CREATE (:A)-[:REL {name:'b', age: 22}]->() WITH 1 AS ignore MATCH (:A)-[r:REL]->() RETURN r.name AS name, r.age AS age ORDER BY name"
+      val query = s"CYPHER runtime=$runtime CREATE (:A)-[:REL {name:'b', age: 22, pets: false}]->() WITH 1 AS ignore MATCH (:A)-[r:REL]->() RETURN r.name AS name, r.age AS age, r.pets AS pets ORDER BY name"
       executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
-        (row.get("name"), row.get("age")) should be(expected1(index))
+        (row.get("name"), row.get("age"), row.get("pets")) should be(expected1(index))
       }) should be(2)
 
       // THEN
-      execute(s"CYPHER runtime=$runtime MATCH (:A)-[r:REL]->() RETURN r.name AS name, r.age AS age").toSet should be(Set(Map("name" -> "a", "age" -> 21), Map("name" -> "b", "age" -> 22)))
+      execute(s"CYPHER runtime=$runtime MATCH (:A)-[r:REL]->() RETURN r.name AS name, r.age AS age, r.pets AS pets").toSet should be(Set(Map("name" -> "a", "age" -> 21, "pets" -> true), Map("name" -> "b", "age" -> 22, "pets" -> false)))
 
-      val expected2 = List(("a", null), ("b", null))
-      executeOnDefault("joe", "soap", s"CYPHER runtime=$runtime MATCH (:A)-[r:REL]->() RETURN r.name AS name, r.age AS age ORDER BY name", resultHandler = (row, index) => {
-        (row.get("name"), row.get("age")) should be(expected2(index))
+      val expected2 = List(("a", null, null), ("b", null, null))
+      executeOnDefault("joe", "soap", s"CYPHER runtime=$runtime MATCH (:A)-[r:REL]->() RETURN r.name AS name, r.age AS age, r.pets AS pets ORDER BY name", resultHandler = (row, index) => {
+        (row.get("name"), row.get("age"), row.get("pets")) should be(expected2(index))
       }) should be(2)
     }
   }
