@@ -105,8 +105,6 @@ public class AWSBatchJobScheduler implements JobScheduler
                 .withJobName( jobName )
                 .withParameters( paramsMap );
 
-        System.out.println( submitJobRequest );
-        System.out.println( submitJobRequest.getParameters() );
 
         SubmitJobResult submitJobResult = awsBatch.submitJob( submitJobRequest );
         return new JobId( submitJobResult.getJobId() );
