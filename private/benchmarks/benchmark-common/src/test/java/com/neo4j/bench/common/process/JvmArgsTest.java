@@ -7,13 +7,12 @@ package com.neo4j.bench.common.process;
 
 import org.junit.Test;
 
+import static java.util.Arrays.asList;
+import static java.util.Collections.emptyList;
 import static org.hamcrest.Matchers.contains;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
-
-import static java.util.Arrays.asList;
-import static java.util.Collections.emptyList;
 
 public class JvmArgsTest
 {
@@ -106,8 +105,8 @@ public class JvmArgsTest
     {
         JvmArgs jvmArgs = JvmArgs.parse( "-XX:OnOutMemoryError=\"kill -9 %p\" -Xms4g -Xmx4g" );
         assertArrayEquals(
-                new String[] {"-XX:OnOutMemoryError=kill -9 %p","-Xms4g","-Xmx4g"},
-                jvmArgs.toArgs().toArray( new String[] {} ) );
+                new String[]{"-XX:OnOutMemoryError=kill -9 %p", "-Xms4g", "-Xmx4g"},
+                jvmArgs.toArgs().toArray( new String[]{} ) );
     }
 
     @Test
@@ -115,8 +114,8 @@ public class JvmArgsTest
     {
         JvmArgs jvmArgs = JvmArgs.parse( "-Xms4g -Xmx4g" );
         assertArrayEquals(
-                new String[] {"-Xms4g","-Xmx4g"},
-                jvmArgs.toArgs().toArray( new String[] {} ) );
+                new String[]{"-Xms4g", "-Xmx4g"},
+                jvmArgs.toArgs().toArray( new String[]{} ) );
     }
 
     @Test
@@ -124,8 +123,8 @@ public class JvmArgsTest
     {
         JvmArgs jvmArgs = JvmArgs.parse( "  -Xms4g   -Xmx4g  " );
         assertArrayEquals(
-                new String[] {"-Xms4g","-Xmx4g"},
-                jvmArgs.toArgs().toArray( new String[] {} ) );
+                new String[]{"-Xms4g", "-Xmx4g"},
+                jvmArgs.toArgs().toArray( new String[]{} ) );
     }
 
     @Test
@@ -133,8 +132,8 @@ public class JvmArgsTest
     {
         JvmArgs jvmArgs = JvmArgs.parse( "  -XX:OnOutMemoryError=\" kill -9 %p \"  " );
         assertArrayEquals(
-                new String[] {"-XX:OnOutMemoryError= kill -9 %p "},
-                jvmArgs.toArgs().toArray( new String[] {} ) );
+                new String[]{"-XX:OnOutMemoryError= kill -9 %p "},
+                jvmArgs.toArgs().toArray( new String[]{} ) );
     }
 
     @Test
@@ -143,5 +142,15 @@ public class JvmArgsTest
         JvmArgs jvmArgs0 = JvmArgs.from( "-Xmx4g" );
         JvmArgs jvmargs1 = jvmArgs0.addAll( asList( "-Xms4g", "-XX:-PrintFlagsFinal" ) );
         assertEquals( asList( "-Xmx4g", "-Xms4g", "-XX:-PrintFlagsFinal" ), jvmargs1.toArgs() );
+    }
+
+    @Test
+    public void handleAgentLibArgument()
+    {
+        JvmArgs jvmArgs = JvmArgs.parse( "-Xms4g -Xmx4g -agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:5005" );
+        jvmArgs = jvmArgs.set( "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:6006" );
+        assertEquals(
+                "-Xms4g -Xmx4g -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:6006",
+                jvmArgs.toArgsString() );
     }
 }

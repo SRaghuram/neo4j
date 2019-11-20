@@ -32,9 +32,10 @@ public class JvmArgs
     private static final Pattern BOOLEAN_ARGUMENT = Pattern.compile( "-XX:(\\+|-)(?<argname>[^=]+)" );
     private static final Pattern VALUE_ARGUMENT = Pattern.compile( "-XX:(?<argname>[^=]+)=.*" );
     private static final Pattern PROPERTY = Pattern.compile( "-D(?<argname>[^=]+)(=.+)?" );
+    private static final Pattern AGENTLIB = Pattern.compile( "-(?<argname>agentlib):.*" );
 
     private static final List<Pattern> PATTERNS =
-            asList( MEMORY_SETTING, JVM_SETTING, BOOLEAN_ARGUMENT, VALUE_ARGUMENT, PROPERTY );
+            asList( MEMORY_SETTING, JVM_SETTING, BOOLEAN_ARGUMENT, VALUE_ARGUMENT, PROPERTY, AGENTLIB );
 
     public static JvmArgs standardArgs( ForkDirectory forkDirectory )
     {
@@ -49,15 +50,15 @@ public class JvmArgs
         //      -XX:+PrintClassHistogramAfterFullGC  : Prints class histogram after full GC
         //      -XX:+PrintGCTimeStamps               : Print timestamps for each GC event (seconds count from start of JVM)  <-- use PrintGCDateStamps instead
         return from(
-                    "-XX:+HeapDumpOnOutOfMemoryError",                   // Creates heap dump in out-of-memory condition
-                    "-XX:HeapDumpPath=" + forkDirectory.toAbsolutePath() // Specifies path to save heap dumps
-                );
+                "-XX:+HeapDumpOnOutOfMemoryError",                   // Creates heap dump in out-of-memory condition
+                "-XX:HeapDumpPath=" + forkDirectory.toAbsolutePath() // Specifies path to save heap dumps
+        );
     }
 
     public static JvmArgs parse( String jvmArgs )
     {
         List<String> args = new ArrayList<>();
-        CharacterIterator characters = new StringCharacterIterator(  jvmArgs.trim() );
+        CharacterIterator characters = new StringCharacterIterator( jvmArgs.trim() );
         StringBuilder builder = new StringBuilder();
         boolean quoted = false;
 
@@ -137,6 +138,7 @@ public class JvmArgs
      * it does so by first finding argument name.
      * If yes replaces old value and sets new value in the same position. If not, appends
      * new JVM argument at the end of list.
+     *
      * @param jvmArg
      * @return new instance of JvmArgs
      */
@@ -175,7 +177,7 @@ public class JvmArgs
 
     public String[] asArray()
     {
-        return toArgs().toArray( new String[] {} );
+        return toArgs().toArray( new String[]{} );
     }
 
     public String toArgsString()
@@ -220,7 +222,8 @@ public class JvmArgs
     private static Function<String,String> mapArg( String newJvmArg )
     {
         String newArgName = extractArgName( newJvmArg );
-        return oldJvmArg -> {
+        return oldJvmArg ->
+        {
             String oldArgName = extractArgName( oldJvmArg );
             if ( oldArgName.equals( newArgName ) )
             {
@@ -242,11 +245,10 @@ public class JvmArgs
     private static String extractArgName( String jvmArg )
     {
         return PATTERNS.stream()
-                .map( p -> p.matcher( jvmArg ) )
-                .filter( Matcher::matches )
-                .map( m -> m.group( ARGNAME_CAPTURING_GROUP) )
-                .findFirst()
-                .orElseThrow( () -> new IllegalArgumentException( format( "Don't know how to handle JVM argument: '%s'", jvmArg ) ) );
+                       .map( p -> p.matcher( jvmArg ) )
+                       .filter( Matcher::matches )
+                       .map( m -> m.group( ARGNAME_CAPTURING_GROUP ) )
+                       .findFirst()
+                       .orElseThrow( () -> new IllegalArgumentException( format( "Don't know how to handle JVM argument: '%s'", jvmArg ) ) );
     }
-
 }
