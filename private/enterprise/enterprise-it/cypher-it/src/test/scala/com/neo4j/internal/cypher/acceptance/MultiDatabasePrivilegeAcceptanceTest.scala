@@ -460,8 +460,11 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
   test("should be able to access database with grant privilege") {
     // GIVEN
     setupUserWithCustomRole(access = false)
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE ()")
 
     // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
     execute(s"GRANT ACCESS ON DATABASE $DEFAULT_DATABASE_NAME TO custom")
 
     // THEN
@@ -477,7 +480,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
     // THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("joe", "soap", "MATCH (n) RETURN n") should be(0)
+      executeOnDefault("joe", "soap", "MATCH (n) RETURN n")
     } should have message "Database access is not allowed for user 'joe' with roles [custom]."
   }
 
@@ -487,8 +490,162 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
     // THEN
     the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("joe", "soap", "MATCH (n) RETURN n") should be(0)
+      executeOnDefault("joe", "soap", "MATCH (n) RETURN n")
     } should have message "Database access is not allowed for user 'joe' with roles [custom]."
+  }
+
+  // REDUCED ADMIN
+
+  Seq(
+    ("only base privileges", testAdminWithoutBasePrivileges _),
+    ("only user, role, database and access control privileges", testAdminWithoutAllRemovablePrivileges _)
+  ).foreach {
+    case (partialName, testMethod) =>
+      test(s"Test role copied from admin with $partialName") {
+        // WHEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom AS COPY OF admin")
+        execute("CREATE USER Alice SET PASSWORD 'oldSecret' CHANGE NOT REQUIRED")
+        execute("GRANT ROLE custom TO Alice")
+
+        // THEN
+        testMethod("custom", 3)
+      }
+
+      test(s"Test admin with $partialName") {
+        // WHEN
+        selectDatabase(SYSTEM_DATABASE_NAME)
+        execute("CREATE USER Alice SET PASSWORD 'oldSecret' CHANGE NOT REQUIRED")
+        execute("GRANT ROLE admin TO Alice")
+
+        // THEN
+        testMethod("admin", 2)
+      }
+  }
+
+  private def testAdminWithoutAllRemovablePrivileges(role: String, populatedRoles: Int): Unit = {
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE DATABASE foo")
+    execute(s"REVOKE TRAVERSE ON GRAPH * FROM $role")
+    execute(s"REVOKE READ {*} ON GRAPH * FROM $role")
+    execute(s"REVOKE WRITE ON GRAPH * FROM $role")
+    execute(s"DENY ALL ON DATABASE * TO $role") // have to deny since we can't revoke compound privileges
+    execute(s"REVOKE DENY ACCESS ON DATABASE * FROM $role") // keep grant access privilege but don't have deny
+
+    // THEN
+    alwaysAllowedForAdmin(populatedRoles)
+
+    // create tokens
+    the[AuthorizationViolationException] thrownBy {
+      executeOnDefault("Alice", "secret", "CALL db.createLabel('Label')")
+    } should have message s"Write operations are not allowed for user 'Alice' with roles [$role]."
+
+    // index management
+    execute("CALL db.createLabel('Label')")
+    execute("CALL db.createProperty('prop')")
+    the[AuthorizationViolationException] thrownBy {
+      executeOnDefault("Alice", "secret", "CREATE INDEX FOR (n:Label) ON (n.prop)")
+    } should have message s"Schema operation 'create_index' is not allowed for user 'Alice' with roles [$role]."
+
+    // constraint management
+    execute("CREATE CONSTRAINT my_constraint ON (n:Label) ASSERT exists(n.prop)")
+    the[AuthorizationViolationException] thrownBy {
+      executeOnDefault("Alice", "secret", "DROP CONSTRAINT my_constraint")
+    } should have message s"Schema operation 'drop_constraint' is not allowed for user 'Alice' with roles [$role]."
+
+    // write
+    the[AuthorizationViolationException] thrownBy {
+      executeOnDefault("Alice", "secret", "CREATE (n:Label {prop: 'value'})")
+    } should have message s"Write operations are not allowed for user 'Alice' with roles [$role]."
+
+    // read/traverse
+    execute("CREATE (n:Label {prop: 'value'})")
+    executeOnDefault("Alice", "secret", "MATCH (n:Label) RETURN n.prop") should be(0)
+
+    // stop database
+    the[AuthorizationViolationException] thrownBy {
+      executeOnSystem("Alice", "secret", "STOP DATABASE foo")
+    } should have message "Permission denied."
+
+    // start database
+    execute("STOP DATABASE foo")
+    the[AuthorizationViolationException] thrownBy {
+      executeOnSystem("Alice", "secret", "START DATABASE foo")
+    } should have message "Permission denied."
+  }
+
+  private def testAdminWithoutBasePrivileges(role: String, populatedRoles: Int): Unit = {
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE DATABASE foo")
+    execute(s"REVOKE TRAVERSE ON GRAPH * FROM $role")
+    execute(s"REVOKE READ {*} ON GRAPH * FROM $role")
+    execute(s"REVOKE WRITE ON GRAPH * FROM $role")
+
+    // THEN
+    alwaysAllowedForAdmin(populatedRoles)
+
+    // create tokens (still needs write as well for this)
+    the[AuthorizationViolationException] thrownBy {
+      executeOnDefault("Alice", "secret", "CALL db.createLabel('Label')")
+    } should have message s"Write operations are not allowed for user 'Alice' with roles [$role]."
+
+    // index management
+    executeOnDefault("Alice", "secret", "CREATE INDEX FOR (n:Label) ON (n.prop)") should be(0)
+    graph.getMaybeIndex("Label", Seq("prop")).isDefined should be(true)
+
+    // constraint management
+    execute("CREATE CONSTRAINT my_constraint ON (n:Label) ASSERT exists(n.prop)")
+    executeOnDefault("Alice", "secret", "DROP CONSTRAINT my_constraint") should be(0)
+    graph.getMaybeNodeConstraint("Label", Seq("prop")).isEmpty should be(true)
+
+    // write
+    the[AuthorizationViolationException] thrownBy {
+      executeOnDefault("Alice", "secret", "CREATE (n:Label {prop: 'value'})")
+    } should have message s"Write operations are not allowed for user 'Alice' with roles [$role]."
+
+    // read/traverse
+    execute("CREATE (n:Label {prop: 'value'})")
+    executeOnDefault("Alice", "secret", "MATCH (n:Label) RETURN n.prop") should be(0)
+
+    // stop database
+    executeOnSystem("Alice", "secret", "STOP DATABASE foo") should be(0)
+    execute("SHOW DATABASE foo").toList should be(Seq(db("foo", offlineStatus)))
+
+    // start database
+    executeOnSystem("Alice", "secret", "START DATABASE foo") should be(0)
+    execute("SHOW DATABASE foo").toList should be(Seq(db("foo", onlineStatus)))
+  }
+
+  private def alwaysAllowedForAdmin(populatedRoles: Int): Unit = {
+    // create and alter users
+    executeOnSystem("Alice", "oldSecret", "ALTER CURRENT USER SET PASSWORD FROM 'oldSecret' TO 'secret'")
+    executeOnSystem("Alice", "secret", "CREATE USER Bob SET PASSWORD 'notSecret'")
+    executeOnSystem("Alice", "secret", "ALTER USER Bob SET PASSWORD 'newSecret'")
+    executeOnSystem("Alice", "secret", "SHOW USERS") should be(3)
+
+    // create and granting roles
+    executeOnSystem("Alice", "secret", "CREATE ROLE mine")
+    executeOnSystem("Alice", "secret", "GRANT ROLE mine TO Bob")
+    executeOnSystem("Alice", "secret", "SHOW POPULATED ROLES") should be(populatedRoles)
+
+    // create dbs
+    executeOnSystem("Alice", "secret", "CREATE DATABASE bar")
+    executeOnSystem("Alice", "secret", "SHOW DATABASES") should be(4)
+
+    // granting/denying/revoking privileges
+    executeOnSystem("Alice", "secret", "GRANT ACCESS ON DATABASE bar TO mine")
+    executeOnSystem("Alice", "secret", "DENY TRAVERSE ON GRAPH bar RELATIONSHIPS * TO mine")
+    executeOnSystem("Alice", "secret", "SHOW ROLE mine PRIVILEGES") should be(2)
+    executeOnSystem("Alice", "secret", "REVOKE GRANT ACCESS ON DATABASE bar FROM mine")
+    executeOnSystem("Alice", "secret", "REVOKE TRAVERSE ON GRAPH bar FROM mine")
+
+    // Revoking roles, dropping users/roles/dbs
+    executeOnSystem("Alice", "secret", "REVOKE ROLE mine FROM Bob")
+    executeOnSystem("Alice", "secret", "DROP ROLE mine")
+    executeOnSystem("Alice", "secret", "DROP USER Bob")
+    executeOnSystem("Alice", "secret", "DROP DATABASE bar")
   }
 
   private val onlineStatus = DatabaseStatus.Online.stringValue()
