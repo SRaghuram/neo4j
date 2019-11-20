@@ -697,6 +697,11 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     the[AuthorizationViolationException] thrownBy {
       executeOnDefault("joe", "soap", "CALL db.createLabel('A')")
     } should have message "Write operations are not allowed for user 'joe' with roles [custom]."
+
+    // WHEN & THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnDefault("joe", "soap", "CREATE (n:A) RETURN n")
+    } should have message "Write operations are not allowed for user 'joe' with roles [custom]."
   }
 
   test("Should not allow label creation for normal user with explicit deny") {
@@ -738,6 +743,11 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnDefault("joe", "soap", "CALL db.createRelationshipType('A')")
+    } should have message "Write operations are not allowed for user 'joe' with roles [custom]."
+
+    // WHEN & THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnDefault("joe", "soap", "CREATE ()-[n:Rel]->() RETURN n")
     } should have message "Write operations are not allowed for user 'joe' with roles [custom]."
   }
 
@@ -789,6 +799,11 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnDefault("joe", "soap", "CALL db.createProperty('age')")
+    } should have message "Write operations are not allowed for user 'joe' with roles [custom]."
+
+    // WHEN & THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnDefault("joe", "soap", "CREATE (n {age: 5}) RETURN n.age")
     } should have message "Write operations are not allowed for user 'joe' with roles [custom]."
   }
 
