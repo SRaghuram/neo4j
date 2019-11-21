@@ -47,9 +47,20 @@ class RaftMonitorTest
     void shouldNotDuplicateToAnyLog()
     {
         var raftId = RaftId.from( namedDatabaseId.databaseId() );
-        raftBinderMonitor.boundToRaft( namedDatabaseId, raftId );
+        raftBinderMonitor.boundToRaftThroughTopology( namedDatabaseId, raftId );
 
         var expected = equalToIgnoringCase( format( "Bound database '%s' to raft with id '%s'.", namedDatabaseId.name(), raftId.uuid() ) );
+        user.rawMessageMatcher().assertContainsSingle( expected );
+        debug.rawMessageMatcher().assertContainsSingle( expected );
+    }
+
+    @Test
+    void shouldLogWhenRaftIdReadFromDisk()
+    {
+        var raftId = RaftId.from( namedDatabaseId.databaseId() );
+        raftBinderMonitor.boundToRaftFromDisk( namedDatabaseId, raftId );
+
+        var expected = equalToIgnoringCase( format( "Bound database '%s' to raft with id '%s', found on disk.", namedDatabaseId.name(), raftId.uuid() ) );
         user.rawMessageMatcher().assertContainsSingle( expected );
         debug.rawMessageMatcher().assertContainsSingle( expected );
     }

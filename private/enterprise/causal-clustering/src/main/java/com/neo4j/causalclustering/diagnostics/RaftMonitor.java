@@ -7,10 +7,12 @@ package com.neo4j.causalclustering.diagnostics;
 
 import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.causalclustering.core.state.snapshot.PersistentSnapshotDownloader;
+import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftBinder;
 import com.neo4j.causalclustering.identity.RaftId;
 
 import java.time.Clock;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.kernel.database.NamedDatabaseId;
@@ -18,6 +20,7 @@ import org.neo4j.logging.Log;
 import org.neo4j.logging.internal.CappedLogger;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.monitoring.Monitors;
+import org.neo4j.storageengine.api.StoreId;
 
 import static java.lang.String.format;
 
@@ -39,6 +42,9 @@ public class RaftMonitor implements RaftBinder.Monitor, PersistentSnapshotDownlo
 
     private final CappedLogger coreMemberWaitLog;
     private final CappedLogger bootstrapWaitLog;
+    private final CappedLogger publishRaftIdLog;
+    private final CappedLogger discoveryServiceAttemptLog;
+    private final CappedLogger initialMembersAttempLog;
 
     public static void register( LogService logService, Monitors monitors, Clock clock )
     {
@@ -52,6 +58,10 @@ public class RaftMonitor implements RaftBinder.Monitor, PersistentSnapshotDownlo
         this.user = logService.getUserLogProvider().getLog( getClass() );
         coreMemberWaitLog = new CappedLogger( user ).setTimeLimit( 10, TimeUnit.SECONDS, clock );
         bootstrapWaitLog = new CappedLogger( user ).setTimeLimit( 10, TimeUnit.SECONDS, clock );
+
+        publishRaftIdLog = new CappedLogger( debug ).setTimeLimit( 5, TimeUnit.SECONDS, clock );
+        discoveryServiceAttemptLog = new CappedLogger( debug ).setTimeLimit( 10, TimeUnit.SECONDS, clock );
+        initialMembersAttempLog = new CappedLogger( debug ).setTimeLimit( 10, TimeUnit.SECONDS, clock );
     }
 
     @Override
@@ -74,7 +84,13 @@ public class RaftMonitor implements RaftBinder.Monitor, PersistentSnapshotDownlo
     }
 
     @Override
-    public void boundToRaft( NamedDatabaseId namedDatabaseId, RaftId raftId )
+    public void boundToRaftFromDisk( NamedDatabaseId namedDatabaseId, RaftId raftId )
+    {
+        user.info( format( "Bound database '%s' to raft with id '%s', found on disk.", namedDatabaseId.name(), raftId.uuid() ) );
+    }
+
+    @Override
+    public void boundToRaftThroughTopology( NamedDatabaseId namedDatabaseId, RaftId raftId )
     {
         user.info( format( "Bound database '%s' to raft with id '%s'.", namedDatabaseId.name(), raftId.uuid() ) );
     }
@@ -89,5 +105,29 @@ public class RaftMonitor implements RaftBinder.Monitor, PersistentSnapshotDownlo
     public void downloadSnapshotComplete( NamedDatabaseId namedDatabaseId )
     {
         user.info( "Download of snapshot for database '%s' complete.", namedDatabaseId.name() );
+    }
+
+    @Override
+    public void retryPublishRaftId( NamedDatabaseId namedDatabaseId, RaftId raftId )
+    {
+        publishRaftIdLog.info( "Failed to publish RaftId %s for database %s. Retrying", raftId, namedDatabaseId.name() );
+    }
+
+    @Override
+    public void logRemoveSystemDatabase()
+    {
+        debug.info( "Removing system database to force store copy" );
+    }
+
+    @Override
+    public void logBootstrapAttemptWithDiscoveryService()
+    {
+        discoveryServiceAttemptLog.info( "Trying bootstrap using discovery service method" );
+    }
+
+    @Override
+    public void logBootstrapWithInitialMembersAndStoreID( Set<MemberId> initialMembers, StoreId storeId )
+    {
+        initialMembersAttempLog.info( "Trying bootstrap using initial members %s and store ID %s", initialMembers, storeId );
     }
 }

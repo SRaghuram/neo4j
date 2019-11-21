@@ -63,7 +63,6 @@ import static org.mockito.Mockito.when;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId;
-import static org.neo4j.logging.internal.DatabaseLogProvider.nullDatabaseLogProvider;
 
 class RaftBinderTest
 {
@@ -104,14 +103,14 @@ class RaftBinderTest
         ClusterSystemGraphDbmsModel systemGraph = systemGraphFor( SOME_NAMED_DATABASE_ID, emptySet() );
         return new RaftBinder( SOME_NAMED_DATABASE_ID, myIdentity, raftIdStorage, topologyService, systemGraph, clock,
                 () -> clock.forward( 1, TimeUnit.SECONDS ),
-                Duration.ofSeconds( 10 ), raftBootstrapper, minCoreHosts, new Monitors(), nullDatabaseLogProvider() );
+                Duration.ofSeconds( 10 ), raftBootstrapper, minCoreHosts, new Monitors() );
     }
 
     private RaftBinder raftBinder( SimpleStorage<RaftId> raftIdStorage, CoreTopologyService topologyService, NamedDatabaseId namedDatabaseId,
             ClusterSystemGraphDbmsModel systemGraph )
     {
         return new RaftBinder( namedDatabaseId, myIdentity, raftIdStorage, topologyService, systemGraph, clock, () -> clock.forward( 1, TimeUnit.SECONDS ),
-                Duration.ofSeconds( 10 ), raftBootstrapper, minCoreHosts, new Monitors(), nullDatabaseLogProvider() );
+                Duration.ofSeconds( 10 ), raftBootstrapper, minCoreHosts, new Monitors() );
     }
 
     @Test
@@ -176,9 +175,10 @@ class RaftBinderTest
         RaftBinder binder = raftBinder( new InMemorySimpleStorage<>(), topologyService, SOME_NAMED_DATABASE_ID, systemGraph );
 
         // when
-        binder.bindToRaft( neverAbort() );
+        var boundState = binder.bindToRaft( neverAbort() );
 
         // then
+        assertNoSnapshot( boundState );
         Optional<RaftId> raftId = binder.get();
         assertTrue( raftId.isPresent() );
         assertEquals( publishedRaftId, raftId.get() );
@@ -201,9 +201,10 @@ class RaftBinderTest
         RaftBinder binder = raftBinder( raftIdStorage, topologyService );
 
         // when
-        binder.bindToRaft( neverAbort() );
+        var boundState = binder.bindToRaft( neverAbort() );
 
         // then
+        assertNoSnapshot( boundState );
         verify( topologyService ).publishRaftId( previouslyBoundRaftId );
         Optional<RaftId> raftId = binder.get();
         assertTrue( raftId.isPresent() );
@@ -227,9 +228,10 @@ class RaftBinderTest
         RaftBinder binder = raftBinder( raftIdStorage, topologyService );
 
         // when
-        binder.bindToRaft( neverAbort() );
+        var boundState = binder.bindToRaft( neverAbort() );
 
         // then
+        assertNoSnapshot( boundState );
         verify( topologyService, atLeast( 2 ) ).publishRaftId( previouslyBoundRaftId );
     }
 
@@ -249,9 +251,10 @@ class RaftBinderTest
         RaftBinder binder = raftBinder( raftIdStorage, topologyService );
 
         // when
-        binder.bindToRaft( neverAbort() );
+        var boundState = binder.bindToRaft( neverAbort() );
 
         // then
+        assertNoSnapshot( boundState );
         verify( topologyService, times( 1 ) ).publishRaftId( previouslyBoundRaftId );
     }
 
@@ -352,8 +355,13 @@ class RaftBinderTest
         assertTrue( raftId.isPresent() );
         assertEquals( raftId.get().uuid(), namedDatabaseId.databaseId().uuid() );
         verify( topologyService ).publishRaftId( raftId.get() );
-        assertTrue( boundState.snapshot().isPresent() );
+        assertHasSnapshot( boundState );
         assertEquals( snapshot, boundState.snapshot().get() );
+    }
+
+    private void assertHasSnapshot( BoundState boundState )
+    {
+        assertTrue( boundState.snapshot().isPresent() );
     }
 
     @Test
@@ -388,7 +396,7 @@ class RaftBinderTest
         assertTrue( raftId.isPresent() );
         assertEquals( raftId.get().uuid(), SOME_NAMED_DATABASE_ID.databaseId().uuid() );
         verify( topologyService ).publishRaftId( raftId.get() );
-        assertTrue( boundState.snapshot().isPresent() );
+        assertHasSnapshot( boundState );
         assertEquals( snapshot, boundState.snapshot().get() );
     }
 
@@ -406,7 +414,7 @@ class RaftBinderTest
         RaftBinder binder = raftBinder( new InMemorySimpleStorage<>(), topologyService, SOME_NAMED_DATABASE_ID, systemGraph );
 
         // when
-        binder.bindToRaft( neverAbort() );
+        var boundState = binder.bindToRaft( neverAbort() );
 
         // then
         verify( topologyService ).coreTopologyForDatabase( SOME_NAMED_DATABASE_ID );
@@ -414,6 +422,7 @@ class RaftBinderTest
 
         Optional<RaftId> raftId = binder.get();
         assertEquals( Optional.of( publishedRaftId ), raftId );
+        assertNoSnapshot( boundState );
     }
 
     @Test
@@ -430,7 +439,7 @@ class RaftBinderTest
         RaftBinder binder = raftBinder( new InMemorySimpleStorage<>(), topologyService, NAMED_SYSTEM_DATABASE_ID, systemGraph );
 
         // when
-        binder.bindToRaft( neverAbort() );
+        var boundState = binder.bindToRaft( neverAbort() );
 
         // then
         verify( topologyService ).coreTopologyForDatabase( NAMED_SYSTEM_DATABASE_ID );
@@ -438,6 +447,12 @@ class RaftBinderTest
         verifyNoMoreInteractions( raftBootstrapper );
 
         Optional<RaftId> raftId = binder.get();
+        assertNoSnapshot( boundState );
         assertEquals( Optional.of( publishedRaftId ), raftId );
+    }
+
+    private void assertNoSnapshot( BoundState boundState )
+    {
+        assertTrue( boundState.snapshot().isEmpty() );
     }
 }
