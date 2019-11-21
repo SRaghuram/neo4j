@@ -7,8 +7,10 @@ package com.neo4j.causalclustering.core;
 
 import com.neo4j.causalclustering.core.state.CoreSnapshotService;
 import com.neo4j.causalclustering.core.state.snapshot.CoreDownloaderService;
+import com.neo4j.causalclustering.core.state.storage.SimpleStorage;
 import com.neo4j.causalclustering.identity.BoundState;
 import com.neo4j.causalclustering.identity.RaftBinder;
+import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
 import com.neo4j.dbms.DatabaseStartAborter;
@@ -28,9 +30,11 @@ class CoreBootstrap
     private final CoreDownloaderService downloadService;
     private final ClusterInternalDbmsOperator clusterInternalOperator;
     private final DatabaseStartAborter databaseStartAborter;
+    private final SimpleStorage<RaftId> raftIdStorage;
 
     CoreBootstrap( Database kernelDatabase, RaftBinder raftBinder, LifecycleMessageHandler<?> raftMessageHandler, CoreSnapshotService snapshotService,
-            CoreDownloaderService downloadService, ClusterInternalDbmsOperator clusterInternalOperator, DatabaseStartAborter databaseStartAborter )
+            CoreDownloaderService downloadService, ClusterInternalDbmsOperator clusterInternalOperator, DatabaseStartAborter databaseStartAborter,
+            SimpleStorage<RaftId> raftIdStorage )
     {
         this.kernelDatabase = kernelDatabase;
         this.raftBinder = raftBinder;
@@ -39,6 +43,7 @@ class CoreBootstrap
         this.downloadService = downloadService;
         this.clusterInternalOperator = clusterInternalOperator;
         this.databaseStartAborter = databaseStartAborter;
+        this.raftIdStorage = raftIdStorage;
     }
 
     public void perform() throws Exception
@@ -77,6 +82,7 @@ class CoreBootstrap
                 raftMessageHandler.stop();
                 throw e;
             }
+            raftIdStorage.writeState( boundState.raftId() );
         }
     }
 

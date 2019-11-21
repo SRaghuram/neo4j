@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.core;
 
 import com.neo4j.causalclustering.core.state.CoreSnapshotService;
 import com.neo4j.causalclustering.core.state.snapshot.CoreDownloaderService;
+import com.neo4j.causalclustering.core.state.storage.InMemorySimpleStorage;
 import com.neo4j.causalclustering.identity.BoundState;
 import com.neo4j.causalclustering.identity.RaftBinder;
 import com.neo4j.causalclustering.identity.RaftId;
@@ -43,6 +44,7 @@ class CoreBootstrapTest
 
     private final NamedDatabaseId databaseId = databaseIdRepository.getRaw( "foo" );
     private final RaftId raftId = RaftIdFactory.random();
+    private InMemorySimpleStorage raftIdStorage = mock(InMemorySimpleStorage.class);
 
     @BeforeEach
     void setup()
@@ -63,9 +65,10 @@ class CoreBootstrapTest
         bootstrap.perform();
 
         // then
-        var inOrder = inOrder( databaseStartAborter, messageHandler, internalOperator, bootstrapHandle );
+        var inOrder = inOrder( databaseStartAborter, messageHandler, internalOperator, bootstrapHandle, raftIdStorage );
         inOrder.verify( internalOperator ).bootstrap( databaseId );
         inOrder.verify( messageHandler ).start( raftId );
+        inOrder.verify( raftIdStorage ).writeState( raftId );
         inOrder.verify( bootstrapHandle ).release();
         inOrder.verify( databaseStartAborter ).started( databaseId );
         inOrder.verifyNoMoreInteractions();
@@ -83,7 +86,7 @@ class CoreBootstrapTest
         assertThrows( RuntimeException.class, bootstrap::perform );
 
         // then
-        var inOrder = inOrder( databaseStartAborter, messageHandler, internalOperator, bootstrapHandle );
+        var inOrder = inOrder( databaseStartAborter, messageHandler, internalOperator, bootstrapHandle, raftIdStorage );
         inOrder.verify( internalOperator ).bootstrap( databaseId );
         inOrder.verify( bootstrapHandle ).release();
         inOrder.verify( databaseStartAborter ).started( databaseId );
@@ -103,7 +106,7 @@ class CoreBootstrapTest
         assertThrows( DatabaseStartAbortedException.class, bootstrap::perform );
 
         // then
-        var inOrder = inOrder( databaseStartAborter, messageHandler, internalOperator, bootstrapHandle );
+        var inOrder = inOrder( databaseStartAborter, messageHandler, internalOperator, bootstrapHandle, raftIdStorage );
         inOrder.verify( internalOperator ).bootstrap( databaseId );
         inOrder.verify( messageHandler ).start( raftId );
         inOrder.verify( messageHandler ).stop();
@@ -114,6 +117,7 @@ class CoreBootstrapTest
 
     private CoreBootstrap createBootstrap()
     {
-        return new CoreBootstrap( database, raftBinder, messageHandler, snapshotService, downloaderService, internalOperator, databaseStartAborter );
+        return new CoreBootstrap( database, raftBinder, messageHandler, snapshotService, downloaderService, internalOperator, databaseStartAborter,
+                raftIdStorage );
     }
 }

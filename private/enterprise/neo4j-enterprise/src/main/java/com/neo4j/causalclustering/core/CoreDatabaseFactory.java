@@ -206,7 +206,9 @@ class CoreDatabaseFactory
         DatabaseLogProvider debugLog = logService.getInternalLogProvider();
 
         DatabaseInitializer databaseInitializer = databaseInitializers.getOrDefault( namedDatabaseId, NO_INITIALIZATION );
-        RaftBinder raftBinder = createRaftBinder( namedDatabaseId, config, monitors, storageFactory, bootstrapContext,
+
+        SimpleStorage<RaftId> raftIdStorage = storageFactory.createRaftIdStorage( namedDatabaseId.name(), debugLog );
+        RaftBinder raftBinder = createRaftBinder( namedDatabaseId, config, monitors, raftIdStorage, bootstrapContext,
                 temporaryDatabaseFactory, databaseInitializer, debugLog, systemGraph );
 
         CommandIndexTracker commandIndexTracker = dependencies.satisfyDependency( new CommandIndexTracker() );
@@ -227,7 +229,7 @@ class CoreDatabaseFactory
         RaftReplicator replicator =
                 createReplicator( namedDatabaseId, raftGroup.raftMachine(), sessionPool, progressTracker, monitors, raftOutbound, debugLog );
 
-        return new CoreRaftContext( raftGroup, replicator, commandIndexTracker, progressTracker, raftBinder );
+        return new CoreRaftContext( raftGroup, replicator, commandIndexTracker, progressTracker, raftBinder, raftIdStorage );
     }
 
     CoreEditionKernelComponents createKernelComponents( NamedDatabaseId namedDatabaseId, LifeSupport life, CoreRaftContext raftContext,
@@ -333,13 +335,13 @@ class CoreDatabaseFactory
         CorePanicHandlers panicHandler = new CorePanicHandlers( raftGroup.raftMachine(), kernelDatabase, applicationProcess, internalOperator, panicService );
 
         CoreBootstrap bootstrap = new CoreBootstrap( kernelDatabase, raftContext.raftBinder(), messageHandler, snapshotService, downloadService,
-                internalOperator, databaseStartAborter );
+                internalOperator, databaseStartAborter, raftContext.raftIdStorage() );
 
         return new CoreDatabase( raftGroup.raftMachine(), kernelDatabase, applicationProcess, messageHandler, downloadService, recoveryFacade,
                 clusterComponents, panicHandler, bootstrap, topologyNotifier );
     }
 
-    private RaftBinder createRaftBinder( NamedDatabaseId namedDatabaseId, Config config, Monitors monitors, ClusterStateStorageFactory storageFactory,
+    private RaftBinder createRaftBinder( NamedDatabaseId namedDatabaseId, Config config, Monitors monitors, SimpleStorage<RaftId> raftIdStorage,
             BootstrapContext bootstrapContext, TemporaryDatabaseFactory temporaryDatabaseFactory, DatabaseInitializer databaseInitializer,
             DatabaseLogProvider debugLog, ClusterSystemGraphDbmsModel systemGraph )
     {
@@ -347,11 +349,10 @@ class CoreDatabaseFactory
         var raftBootstrapper = new RaftBootstrapper( bootstrapContext, temporaryDatabaseFactory, databaseInitializer, pageCache, fileSystem, debugLog,
                 storageEngineFactory, config );
 
-        SimpleStorage<RaftId> raftIdStorage = storageFactory.createRaftIdStorage( namedDatabaseId.name(), debugLog );
         int minimumCoreHosts = config.get( CausalClusteringSettings.minimum_core_cluster_size_at_formation );
         Duration clusterBindingTimeout = config.get( CausalClusteringSettings.cluster_binding_timeout );
         return new RaftBinder( namedDatabaseId, myIdentity, raftIdStorage, topologyService, systemGraph, Clocks.systemClock(), () -> sleep( 100 ),
-                clusterBindingTimeout, raftBootstrapper, minimumCoreHosts, monitors, debugLog );
+                clusterBindingTimeout, raftBootstrapper, minimumCoreHosts, monitors );
     }
 
     private UpstreamDatabaseStrategySelector createUpstreamDatabaseStrategySelector( MemberId myself, Config config, LogProvider logProvider,
