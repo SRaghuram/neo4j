@@ -129,10 +129,9 @@ class FilteringMorselExecutionContext(morsel: Morsel,
 
   override def compactRowsFrom(input: MorselExecutionContext): Unit = {
     super.compactRowsFrom(input)
-    assert(!input.isInstanceOf[FilteringMorselExecutionContext])
     if (cancelledRows != null) {
-      startRow = input.startRow
-      endRow = input.endRow
+      //we may have to compensate if rows have been filtered out
+      endRow -= numberOfRows - input.numberOfRows
       cancelledRows = null
     }
   }

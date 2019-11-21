@@ -154,6 +154,8 @@ class MorselExecutionContext(private[execution] final val morsel: Morsel,
     * Copies from input to the beginning of this morsel. Input is assumed not to contain any cancelledRows
     */
   def compactRowsFrom(input: MorselExecutionContext): Unit = {
+    assert(!input.isInstanceOf[FilteringMorselExecutionContext] && numberOfRows >= input.numberOfRows)
+
     if (longsPerRow > 0) {
       System.arraycopy(input.morsel.longs,
                        input.startRow * input.longsPerRow,
