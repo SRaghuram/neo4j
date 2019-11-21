@@ -13,15 +13,6 @@ import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 import org.scalatest.enablers.Messaging.messagingNatureOfThrowable
 
 class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
-  private val defaultRoles = Set(
-    Map("role" -> PredefinedRoles.ADMIN, "isBuiltIn" -> true),
-    Map("role" -> PredefinedRoles.ARCHITECT, "isBuiltIn" -> true),
-    Map("role" -> PredefinedRoles.PUBLISHER, "isBuiltIn" -> true),
-    Map("role" -> PredefinedRoles.EDITOR, "isBuiltIn" -> true),
-    Map("role" -> PredefinedRoles.READER, "isBuiltIn" -> true)
-  )
-  private val foo = Map("role" -> "foo", "isBuiltIn" -> false)
-  private val bar = Map("role" -> "bar", "isBuiltIn" -> false)
 
   test("should return empty counts to the outside for commands that update the system graph internally") {
     //TODO: ADD ANY NEW UPDATING COMMANDS HERE
@@ -71,7 +62,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     val result = execute("SHOW POPULATED ROLES")
 
     // THEN
-    result.toSet should be(Set(Map("role" -> PredefinedRoles.ADMIN, "isBuiltIn" -> true)))
+    result.toSet should be(Set(role(PredefinedRoles.ADMIN).builtIn().map))
   }
 
   test("should create and show roles") {
@@ -83,7 +74,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     val result = execute("SHOW ROLES")
 
     // THEN
-    result.toSet should be(defaultRoles ++ Set(foo))
+    result.toSet should be(defaultRoles ++ Set(role("foo").map))
   }
 
   test("should show populated roles") {
@@ -99,7 +90,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     val result = execute("SHOW POPULATED ROLES")
 
     // THEN
-    result.toSet should be(Set(Map("role" -> PredefinedRoles.ADMIN, "isBuiltIn" -> true), foo))
+    result.toSet should be(Set(role(PredefinedRoles.ADMIN).builtIn().map, role("foo").map))
   }
 
   test("should show default roles with users") {
@@ -133,7 +124,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     val result = execute("SHOW POPULATED ROLES WITH USERS")
 
     // THEN
-    result.toSet should be(Set(Map("role" -> PredefinedRoles.ADMIN, "isBuiltIn" -> true, "member" -> "neo4j")))
+    result.toSet should be(Set(role(PredefinedRoles.ADMIN).builtIn().member("neo4j").map))
   }
 
   test("should show populated roles with several users") {
@@ -150,9 +141,9 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
     // THEN
     result.toSet should be(Set(
-      Map("role" -> PredefinedRoles.ADMIN, "isBuiltIn" -> true, "member" -> "neo4j"),
-      foo ++ Map("member" -> "Bar"),
-      foo ++ Map("member" -> "Baz")
+      role(PredefinedRoles.ADMIN).builtIn().member("neo4j").map,
+      role("foo").member("Bar").map,
+      role("foo").member("Baz").map
     ))
   }
 
@@ -174,7 +165,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     // WHEN
     execute("CREATE ROLE foo")
 
-    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo))
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map))
   }
 
   test("should create role using if not exists") {
@@ -184,14 +175,14 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     // WHEN
     execute("CREATE ROLE foo IF NOT EXISTS")
 
-    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo))
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map))
   }
 
   test("should fail when creating already existing role") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE foo")
-    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo))
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map))
 
     the[InvalidArgumentsException] thrownBy {
       // WHEN
@@ -199,20 +190,20 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       // THEN
     } should have message "Failed to create the specified role 'foo': Role already exists."
 
-    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo))
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map))
   }
 
   test("should do nothing when creating already existing role using if not exists") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE foo")
-    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo))
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map))
 
     // WHEN
     execute("CREATE ROLE foo IF NOT EXISTS")
 
     // THEN
-    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo))
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map))
   }
 
   test("should replace already existing role") {
@@ -225,13 +216,13 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("GRANT ROLE foo TO neo4j")
 
     // THEN
-    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers ++ Set(Map("role" -> "foo", "isBuiltIn" -> false, "member" -> "neo4j")))
+    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers ++ Set(role("foo").member("neo4j").map))
 
     // WHEN: replacing
     execute("CREATE OR REPLACE ROLE foo")
 
     // THEN
-    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers ++ Set(Map("role" -> "foo", "isBuiltIn" -> false, "member" -> null)))
+    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers ++ Set(role("foo").noMember().map))
   }
 
   test("should fail when creating role with invalid name") {
@@ -259,12 +250,12 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE foo")
-    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo))
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map))
 
     // WHEN
     execute("CREATE ROLE bar AS COPY OF foo")
 
-    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo, bar))
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map, role("bar").map))
     execute("SHOW ROLE bar PRIVILEGES").toSet should be(Set.empty)
   }
 
@@ -272,12 +263,12 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE foo")
-    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo))
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map))
 
     // WHEN
     execute("CREATE ROLE bar IF NOT EXISTS AS COPY OF foo")
 
-    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo, bar))
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map, role("bar").map))
     execute("SHOW ROLE bar PRIVILEGES").toSet should be(Set.empty)
   }
 
@@ -285,7 +276,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE foo")
-    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo))
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map))
     execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO foo")
     execute("GRANT READ {a,b,c} ON GRAPH * NODES A (*) TO foo")
     val expected = Set(traverse().node("*").map,
@@ -300,7 +291,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("CREATE ROLE bar AS COPY OF foo")
 
     // THEN
-    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo, bar))
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map, role("bar").map))
     execute("SHOW ROLE foo PRIVILEGES").toSet should be(expectedFoo)
     execute("SHOW ROLE bar PRIVILEGES").toSet should be(expectedBar)
   }
@@ -319,14 +310,14 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("CREATE OR REPLACE ROLE bar AS COPY OF base1")
 
     // THEN
-    execute("SHOW ROLES").toSet should be(defaultRoles ++ baseRoles ++ Set(bar))
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ baseRoles ++ Set(role("bar").map))
     execute("SHOW ROLE bar PRIVILEGES").toSet should be(Set(traverse().role("bar").node("A").map))
 
     // WHEN: replacing
     execute("CREATE OR REPLACE ROLE bar AS COPY OF base2")
 
     // THEN
-    execute("SHOW ROLES").toSet should be(defaultRoles ++ baseRoles ++ Set(bar))
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ baseRoles ++ Set(role("bar").map))
     execute("SHOW ROLE bar PRIVILEGES").toSet should be(Set(traverse().role("bar").node("B").map))
   }
 
@@ -367,7 +358,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE foo")
-    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo))
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map))
 
     the[InvalidArgumentException] thrownBy {
       // WHEN
@@ -383,7 +374,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       """Role name 'my%role' contains illegal characters.
         |Use simple ascii characters, numbers and underscores.""".stripMargin
 
-    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo))
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map))
   }
 
   test("should fail when creating already existing role from other role") {
@@ -391,7 +382,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE foo")
     execute("CREATE ROLE bar")
-    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo, bar))
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map, role("bar").map))
 
     the[InvalidArgumentsException] thrownBy {
       // WHEN
@@ -399,7 +390,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       // THEN
     } should have message "Failed to create the specified role 'bar': Role already exists."
 
-    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo, bar))
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map, role("bar").map))
   }
 
   test("should do nothing when creating already existing role from other role using if not exists") {
@@ -408,7 +399,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("CREATE ROLE foo")
     execute("GRANT TRAVERSE ON GRAPH * NODES * TO foo")
     execute("CREATE ROLE bar")
-    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo, bar))
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map, role("bar").map))
     execute("SHOW ROLE foo PRIVILEGES").toSet should be(Set(traverse().role("foo").node("*").map))
     execute("SHOW ROLE bar PRIVILEGES").toSet should be(Set.empty)
 
@@ -416,7 +407,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("CREATE ROLE bar IF NOT EXISTS AS COPY OF foo")
 
     // THEN
-    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo, bar))
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map, role("bar").map))
     execute("SHOW ROLE foo PRIVILEGES").toSet should be(Set(traverse().role("foo").node("*").map))
     execute("SHOW ROLE bar PRIVILEGES").toSet should be(Set.empty)
   }
@@ -425,7 +416,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE bar")
-    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(bar))
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("bar").map))
 
     the[InvalidArgumentsException] thrownBy {
       // WHEN
@@ -433,7 +424,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       // THEN
     } should have message "Failed to create a role as copy of 'foo': Role does not exist."
 
-    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(bar))
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("bar").map))
   }
 
   test("should do nothing when creating existing role from non-existing role using if exists") {
@@ -441,14 +432,13 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE bar")
     execute("GRANT ROLE bar TO neo4j")
-    val barWithUser = bar ++ Map("member" -> "neo4j")
-    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers ++ Set(barWithUser))
+    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers ++ Set(role("bar").member("neo4j").map))
 
     // WHEN
     execute("CREATE ROLE bar IF NOT EXISTS AS COPY OF foo")
 
     // THEN
-    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers ++ Set(barWithUser))
+    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers ++ Set(role("bar").member("neo4j").map))
   }
 
   test("should get syntax exception when using both replace and if not exists") {
@@ -487,7 +477,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE foo")
-    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo))
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map))
 
     // WHEN
     execute("DROP ROLE foo")
@@ -499,7 +489,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE foo")
-    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(foo))
+    execute("SHOW ROLES").toSet should be(defaultRoles ++ Set(role("foo").map))
 
     // WHEN
     execute("DROP ROLE foo IF EXISTS")
@@ -517,7 +507,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute(s"DROP ROLE ${PredefinedRoles.READER}")
 
     // THEN
-    execute("SHOW ROLES").toSet should be(defaultRoles -- Set(Map("role" -> PredefinedRoles.READER, "isBuiltIn" -> true)))
+    execute("SHOW ROLES").toSet should be(defaultRoles -- Set(role(PredefinedRoles.READER).builtIn().map))
   }
 
   test("should not drop admin role") {
@@ -899,16 +889,14 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("CREATE USER Baz SET PASSWORD 'NEO'")
     execute("CREATE ROLE foo")
     execute("CREATE ROLE fum")
-    val admin = Map("role" -> PredefinedRoles.ADMIN, "isBuiltIn" -> true, "member" -> "neo4j")
-
-    def role(r: String, u: String) = Map("role" -> r, "member" -> u, "isBuiltIn" -> false)
+    val admin = role(PredefinedRoles.ADMIN).builtIn().member("neo4j").map
 
     // WHEN using single user and role version of GRANT
     execute("GRANT ROLE foo TO Bar")
     execute("GRANT ROLE foo TO Baz")
 
     // THEN
-    execute("SHOW POPULATED ROLES WITH USERS").toSet should be(Set(admin, role("foo", "Bar"), role("foo", "Baz")))
+    execute("SHOW POPULATED ROLES WITH USERS").toSet should be(Set(admin, role("foo").member("Bar").map, role("foo").member("Baz").map))
 
     // WHEN using single user and role version of REVOKE
     execute("REVOKE ROLE foo FROM Bar")
@@ -921,13 +909,13 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("GRANT ROLE foo, fum TO Bar, Baz")
 
     // THEN
-    execute("SHOW POPULATED ROLES WITH USERS").toSet should be(Set(admin, role("foo", "Bar"), role("foo", "Baz"), role("fum", "Bar"), role("fum", "Baz")))
+    execute("SHOW POPULATED ROLES WITH USERS").toSet should be(Set(admin, role("foo").member("Bar").map, role("foo").member("Baz").map, role("fum").member("Bar").map, role("fum").member("Baz").map))
 
     // WHEN revoking only one of many
     execute("REVOKE ROLE foo FROM Bar")
 
     // THEN
-    execute("SHOW POPULATED ROLES WITH USERS").toSet should be(Set(admin, role("foo", "Baz"), role("fum", "Bar"), role("fum", "Baz")))
+    execute("SHOW POPULATED ROLES WITH USERS").toSet should be(Set(admin, role("foo").member("Baz").map, role("fum").member("Bar").map, role("fum").member("Baz").map))
 
     // WHEN revoking with multiple users and roles version
     execute("REVOKE ROLE foo, fum FROM Bar, Baz")
