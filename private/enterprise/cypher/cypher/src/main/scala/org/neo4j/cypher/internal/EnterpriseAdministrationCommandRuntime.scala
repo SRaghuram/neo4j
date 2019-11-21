@@ -302,6 +302,22 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
       )
 
+      // GRANT/DENY/REVOKE action ON DBMS TO role
+    case GrantDbmsAction(source, action, roleName) => (context, parameterMapping, securityContext) =>
+      val dbmsAction = AdminActionMapper.asKernelAction(action).toString
+      makeGrantOrDenyExecutionPlan(dbmsAction, ast.DatabaseResource()(InputPosition.NONE), ast.AllGraphsScope()(InputPosition.NONE), ast.AllQualifier()(InputPosition.NONE), roleName,
+        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), GRANT, s"Failed to grant dbms privilege to role '$roleName'")
+
+    case DenyDbmsAction(source, action, roleName) => (context, parameterMapping, securityContext) =>
+      val dbmsAction = AdminActionMapper.asKernelAction(action).toString
+      makeGrantOrDenyExecutionPlan(dbmsAction, ast.DatabaseResource()(InputPosition.NONE), ast.AllGraphsScope()(InputPosition.NONE), ast.AllQualifier()(InputPosition.NONE), roleName,
+        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), DENY, s"Failed to deny dbms privilege to role '$roleName'")
+
+    case RevokeDbmsAction(source, action, roleName, revokeType) => (context, parameterMapping, securityContext) =>
+      val dbmsAction = AdminActionMapper.asKernelAction(action).toString
+      makeRevokeExecutionPlan(dbmsAction, ast.DatabaseResource()(InputPosition.NONE), ast.AllGraphsScope()(InputPosition.NONE), ast.AllQualifier()(InputPosition.NONE), roleName, revokeType,
+        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), s"Failed to revoke dbms privilege from role '$roleName'")
+
     // GRANT/DENY/REVOKE ACCESS ON DATABASE foo TO role
     case GrantDatabaseAction(source, action, database, roleName) => (context, parameterMapping, securityContext) =>
       val databaseAction = AdminActionMapper.asKernelAction(action).toString

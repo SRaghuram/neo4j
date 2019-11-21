@@ -141,6 +141,8 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
 
   def baseMap(grant: String = "GRANTED"): Map[String, String] = Map("access" -> grant, "graph" -> "*", "segment" -> "database")
 
+  def adminAction(action: String, grant: String = "GRANTED"): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ( "resource" -> "database" )).action(action)
+
   def startDatabase(grant: String = "GRANTED"): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "database")).action("start_database")
   def stopDatabase(grant: String = "GRANTED"): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "database")).action("stop_database")
 
