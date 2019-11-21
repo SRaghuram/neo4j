@@ -150,11 +150,24 @@ class MorselExecutionContext(private[execution] final val morsel: Morsel,
     view
   }
 
-  def copyRowsFrom(input: MorselExecutionContext, nInputRows: Int): Unit = {
-    if (longsPerRow > 0)
-      System.arraycopy(input.morsel.longs, 0, morsel.longs, startRow * longsPerRow, nInputRows * longsPerRow)
-    if (refsPerRow > 0)
-      System.arraycopy(input.morsel.refs, 0, morsel.refs, startRow * refsPerRow, nInputRows * refsPerRow)
+  /**
+    * Copies from input to the beginning of this morsel. Input is assumed not to contain any cancelledRows
+    */
+  def compactRowsFrom(input: MorselExecutionContext): Unit = {
+    if (longsPerRow > 0) {
+      System.arraycopy(input.morsel.longs,
+                       input.startRow * input.longsPerRow,
+                       morsel.longs,
+                       startRow * longsPerRow,
+                       input.numberOfRows * longsPerRow)
+    }
+    if (refsPerRow > 0) {
+      System.arraycopy(input.morsel.refs,
+                       input.startRow * input.refsPerRow,
+                       morsel.refs,
+                       startRow * refsPerRow,
+                       input.numberOfRows * refsPerRow)
+    }
   }
 
   override def copyTo(target: ExecutionContext, sourceLongOffset: Int = 0, sourceRefOffset: Int = 0, targetLongOffset: Int = 0, targetRefOffset: Int = 0): Unit =

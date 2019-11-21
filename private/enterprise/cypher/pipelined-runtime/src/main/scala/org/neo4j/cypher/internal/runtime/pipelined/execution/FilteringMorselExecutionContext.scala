@@ -126,6 +126,17 @@ class FilteringMorselExecutionContext(morsel: Morsel,
     view
   }
 
+
+  override def compactRowsFrom(input: MorselExecutionContext): Unit = {
+    super.compactRowsFrom(input)
+    assert(!input.isInstanceOf[FilteringMorselExecutionContext])
+    if (cancelledRows != null) {
+      startRow = input.startRow
+      endRow = input.endRow
+      cancelledRows = null
+    }
+  }
+
   override def toString: String = {
     s"FilteringMorselExecutionContext[0x${System.identityHashCode(this).toHexString}](longsPerRow=$longsPerRow, refsPerRow=$refsPerRow, maxRows=$maxNumberOfRows, currentRow=$currentRow startRow=$startRow endRow=$endRow $prettyCurrentRow)"
   }

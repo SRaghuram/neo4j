@@ -88,7 +88,7 @@ object MorselSorting {
     }
 
     // Copy from output morsel back to input morsel
-    inputRow.copyRowsFrom(outputRow, numInputRows)
+    inputRow.compactRowsFrom(outputRow)
   }
 
   def createMorselComparator(order: ColumnOrder): Comparator[MorselExecutionContext] = order.slot match {
