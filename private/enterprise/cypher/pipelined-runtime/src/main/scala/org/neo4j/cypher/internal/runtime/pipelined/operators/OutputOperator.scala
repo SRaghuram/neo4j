@@ -45,8 +45,10 @@ trait OutputOperatorState extends HasWorkIdentity {
     try {
       prepareOutput(output, context, state, resources, operatorExecutionEvent)
     } finally {
-      resources.setKernelTracer(KernelReadTracer.NONE)
-      operatorExecutionEvent.close()
+      resources.setKernelTracer(null)
+      if (operatorExecutionEvent != null) {
+        operatorExecutionEvent.close()
+      }
     }
   }
 

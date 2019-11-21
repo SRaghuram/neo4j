@@ -143,11 +143,11 @@ object OperatorCodeGenHelperTemplates {
   val NO_TOKEN: GetStatic = getStatic[TokenConstants, Int]("NO_TOKEN")
 
   val SET_TRACER: Method = method[Cursor, Unit, KernelReadTracer]("setTracer")
-  val NO_KERNEL_TRACER: GetStatic = getStatic[KernelReadTracer, KernelReadTracer]("NONE")
-  val NO_OPERATOR_PROFILE_EVENT: GetStatic = getStatic[OperatorProfileEvent, OperatorProfileEvent]("NONE")
-  val TRACE_ON_NODE: Method = method[KernelReadTracer, Unit, Long]("onNode")
-  val TRACE_DB_HIT: Method = method[OperatorProfileEvent, Unit]("dbHit")
-  val TRACE_DB_HITS: Method = method[OperatorProfileEvent, Unit, Int]("dbHits")
+  val NO_KERNEL_TRACER: IntermediateRepresentation = constant(null)
+  val NO_OPERATOR_PROFILE_EVENT: IntermediateRepresentation = constant(null)
+  private val TRACE_ON_NODE: Method = method[KernelReadTracer, Unit, Long]("onNode")
+  private val TRACE_DB_HIT: Method = method[OperatorProfileEvent, Unit]("dbHit")
+  private val TRACE_DB_HITS: Method = method[OperatorProfileEvent, Unit, Int]("dbHits")
   val CALL_CAN_CONTINUE: IntermediateRepresentation = invoke(self(), method[ContinuableOperatorTask, Boolean]("canContinue"))
 
 
@@ -236,6 +236,7 @@ object OperatorCodeGenHelperTemplates {
 
   // Profiling
 
+  private def event(id: Id) = loadField(field[OperatorProfileEvent]("operatorExecutionEvent_" + id.x))
   def profilingCursorNext[CURSOR](cursor: IntermediateRepresentation, id: Id)(implicit out: Manifest[CURSOR]): IntermediateRepresentation = {
     /**
       * {{{
@@ -247,29 +248,36 @@ object OperatorCodeGenHelperTemplates {
     val hasNext = "tmp_" + id.x
     block(
       declareAndAssign(typeRefOf[Boolean], hasNext, invoke(cursor, method[CURSOR, Boolean]("next"))),
-      invokeSideEffect(loadField(field[OperatorProfileEvent]("operatorExecutionEvent_" + id.x)),
-                       method[OperatorProfileEvent, Unit, Boolean]("row"), load(hasNext)),
+      condition(isNotNull(event(id))) {
+        invokeSideEffect(event(id),
+                         method[OperatorProfileEvent, Unit, Boolean]("row"), load(hasNext))
+      },
       load(hasNext)
       )
   }
   def profileRow(id: Id): IntermediateRepresentation = {
-    invokeSideEffect(loadField(field[OperatorProfileEvent]("operatorExecutionEvent_" + id.x)), method[OperatorProfileEvent, Unit]("row"))
+    condition(isNotNull(event(id)))(invokeSideEffect(event(id), method[OperatorProfileEvent, Unit]("row")))
   }
 
   def profileRow(id: Id, hasRow: IntermediateRepresentation): IntermediateRepresentation = {
-    invokeSideEffect(loadField(field[OperatorProfileEvent]("operatorExecutionEvent_" + id.x)), method[OperatorProfileEvent, Unit, Boolean]("row"), hasRow)
+    condition(isNotNull(event(id)))(invokeSideEffect(event(id), method[OperatorProfileEvent, Unit, Boolean]("row"), hasRow))
   }
 
   def profileRows(id: Id, nRows: Int): IntermediateRepresentation = {
-    invokeSideEffect(loadField(field[OperatorProfileEvent]("operatorExecutionEvent_" + id.x)), method[OperatorProfileEvent, Unit, Int]("rows"),
-      constant(nRows))
+    condition(isNotNull(event(id)))(invokeSideEffect(event(id), method[OperatorProfileEvent, Unit, Int]("rows"),
+      constant(nRows)))
   }
 
   def profileRows(id: Id, nRows: IntermediateRepresentation): IntermediateRepresentation = {
-    invokeSideEffect(loadField(field[OperatorProfileEvent]("operatorExecutionEvent_" + id.x)), method[OperatorProfileEvent, Unit, Int]("rows"),
-      nRows)
+    condition(isNotNull(event(id)))(invokeSideEffect(event(id), method[OperatorProfileEvent, Unit, Int]("rows"),
+      nRows))
   }
+  def closeEvent(id: Id): IntermediateRepresentation =
+    condition(isNotNull(event(id)))(invokeSideEffect(event(id), method[OperatorProfileEvent, Unit]("close")))
 
+  def dbHit(event: IntermediateRepresentation): IntermediateRepresentation = condition(isNotNull(event))(invoke(event, TRACE_DB_HIT))
+  def dbHits(event: IntermediateRepresentation, nHits: IntermediateRepresentation): IntermediateRepresentation = condition(isNotNull(event))(invoke(event, TRACE_DB_HITS, nHits))
+  def onNode(event: IntermediateRepresentation, node: IntermediateRepresentation): IntermediateRepresentation = condition(isNotNull(event))(invoke(event, TRACE_ON_NODE, node))
   def indexReadSession(offset: Int): IntermediateRepresentation =
     arrayLoad(invoke(QUERY_STATE, method[QueryState, Array[IndexReadSession]]("queryIndexes")), offset)
 

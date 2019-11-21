@@ -69,7 +69,9 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
       try {
         produceOutputWithProfile(inputMorsel, context, state, resources, operatorExecutionEvent)
       } finally {
-        operatorExecutionEvent.close()
+        if (operatorExecutionEvent != null) {
+          operatorExecutionEvent.close()
+        }
       }
     }
 
@@ -120,7 +122,9 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
                                          resources: QueryResources,
                                          operatorExecutionEvent: OperatorProfileEvent): Unit = {
     val numberOfOutputedRows = produceOutput(output, context, state, resources)
-    operatorExecutionEvent.rows(numberOfOutputedRows)
+    if (operatorExecutionEvent != null) {
+      operatorExecutionEvent.rows(numberOfOutputedRows)
+    }
   }
 
   protected def produceOutput(output: MorselExecutionContext,

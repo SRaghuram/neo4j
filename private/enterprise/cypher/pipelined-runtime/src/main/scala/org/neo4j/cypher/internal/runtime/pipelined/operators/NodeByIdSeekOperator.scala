@@ -53,7 +53,7 @@ class NodeByIdSeekOperator(val workIdentity: WorkIdentity,
     override def toString: String = "NodeByIdTask"
 
     private var ids: java.util.Iterator[AnyValue] = _
-    private var tracer: KernelReadTracer = KernelReadTracer.NONE
+    private var tracer: KernelReadTracer = _
 
     /**
       * Initialize the inner loop for the current input row.
@@ -83,7 +83,9 @@ class NodeByIdSeekOperator(val workIdentity: WorkIdentity,
 
       while (outputRow.isValidRow && ids.hasNext) {
         val nextId = NumericHelper.asLongEntityIdPrimitive(ids.next())
-        tracer.onNode(nextId)
+        if (tracer != null) {
+          tracer.onNode(nextId)
+        }
         if (nextId >= 0L && context.transactionalContext.dataRead.nodeExists(nextId)) {
           outputRow.copyFrom(inputMorsel, argumentSize.nLongs, argumentSize.nReferences)
           outputRow.setLongAt(offset, nextId)
@@ -148,7 +150,7 @@ class SingleNodeByIdSeekTaskTemplate(inner: OperatorTaskTemplate,
     block(
       assign(idVariable, invokeStatic(asIdMethod, nullCheckIfRequired(nodeId))),
       setField(canContinue, isValidNode(load(idVariable.name))),
-      invoke(loadField(executionEventField), TRACE_ON_NODE, load(idVariable)),
+      onNode(loadField(executionEventField), load(idVariable)),
       constant(true))
   }
 
@@ -239,7 +241,7 @@ class ManyNodeByIdsSeekTaskTemplate(inner: OperatorTaskTemplate,
                          invokeStatic(asIdMethod,
                            invoke(loadField(idCursor),
                                   method[IteratorCursor, AnyValue]("value")))),
-        invoke(loadField(executionEventField), TRACE_ON_NODE, load(idVariable)),
+        onNode(loadField(executionEventField), load(idVariable)),
         condition(isValidNode(load(idVariable)))(
           block(
             codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),

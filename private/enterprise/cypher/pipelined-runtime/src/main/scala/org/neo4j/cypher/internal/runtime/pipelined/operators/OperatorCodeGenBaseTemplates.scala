@@ -314,7 +314,7 @@ trait OperatorTaskTemplate {
     block(
       genSetExecutionEvent(NO_OPERATOR_PROFILE_EVENT),
       invokeSideEffect(QUERY_RESOURCES, method[QueryResources, Unit, KernelReadTracer]("setKernelTracer"), NO_KERNEL_TRACER),
-      invokeSideEffect(loadField(field[OperatorProfileEvent]("operatorExecutionEvent_" + id.x)), method[OperatorProfileEvent, Unit]("close")),
+      closeEvent(id),
       inner.genCloseProfileEvents
     )
   }
