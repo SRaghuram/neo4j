@@ -497,11 +497,11 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
   // REDUCED ADMIN
 
   Seq(
-    ("only base privileges", testAdminWithoutBasePrivileges _),
-    ("only user, role, database and access control privileges", testAdminWithoutAllRemovablePrivileges _)
+    ("without traverse, read and write privileges", testAdminWithoutBasePrivileges _),
+    ("with only user, role, database and access control privileges", testAdminWithoutAllRemovablePrivileges _)
   ).foreach {
     case (partialName, testMethod) =>
-      test(s"Test role copied from admin with $partialName") {
+      test(s"Test role copied from admin $partialName") {
         // WHEN
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE ROLE custom AS COPY OF admin")
@@ -512,7 +512,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
         testMethod("custom", 3)
       }
 
-      test(s"Test admin with $partialName") {
+      test(s"Test admin $partialName") {
         // WHEN
         selectDatabase(SYSTEM_DATABASE_NAME)
         execute("CREATE USER Alice SET PASSWORD 'oldSecret' CHANGE NOT REQUIRED")
@@ -531,10 +531,10 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     execute(s"REVOKE READ {*} ON GRAPH * FROM $role")
     execute(s"REVOKE WRITE ON GRAPH * FROM $role")
     execute(s"DENY ALL ON DATABASE * TO $role") // have to deny since we can't revoke compound privileges
-    execute(s"REVOKE DENY ACCESS ON DATABASE * FROM $role") // keep grant access privilege but don't have deny
+    execute(s"REVOKE DENY ACCESS ON DATABASE * FROM $role") // undo the deny from the line above
 
     // THEN
-    alwaysAllowedForAdmin(populatedRoles)
+    testAlwaysAllowedForAdmin(populatedRoles)
 
     // create tokens
     the[AuthorizationViolationException] thrownBy {
@@ -584,7 +584,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     execute(s"REVOKE WRITE ON GRAPH * FROM $role")
 
     // THEN
-    alwaysAllowedForAdmin(populatedRoles)
+    testAlwaysAllowedForAdmin(populatedRoles)
 
     // create tokens (still needs write as well for this)
     the[AuthorizationViolationException] thrownBy {
@@ -618,7 +618,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     execute("SHOW DATABASE foo").toList should be(Seq(db("foo", onlineStatus)))
   }
 
-  private def alwaysAllowedForAdmin(populatedRoles: Int): Unit = {
+  private def testAlwaysAllowedForAdmin(populatedRoles: Int): Unit = {
     // create and alter users
     executeOnSystem("Alice", "oldSecret", "ALTER CURRENT USER SET PASSWORD FROM 'oldSecret' TO 'secret'")
     executeOnSystem("Alice", "secret", "CREATE USER Bob SET PASSWORD 'notSecret'")
