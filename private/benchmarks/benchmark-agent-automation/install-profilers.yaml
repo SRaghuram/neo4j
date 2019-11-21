@@ -50,3 +50,33 @@
       - name: copy jfr-flame-graph to final destination
         shell: cp -R --remove-destination /tmp/jfr-flame-graph/build/install/jfr-flame-graph/* /opt/profiling/jfr-flame-graph
         become: yes
+      - name: check async-profiler directory exists
+        stat:
+          path: /opt/profiling/async-profiler
+        register: asyncdir
+        become: yes
+        tags:
+          - async_profiler
+      - name: remove async-profiler directory if exists
+        file:
+          path: /opt/profiling/async-profiler
+          state: absent
+        when: asyncdir.stat.exists
+        become: yes
+        tags:
+          - async_profiler
+      - name: create directory for async profiler
+        file:
+          path: /opt/profiling/async-profiler
+          state: directory
+        become: yes
+        tags:
+          - async_profiler
+      - name: install async profiler
+        unarchive:
+          src: https://github.com/jvm-profiling-tools/async-profiler/releases/download/v1.6/async-profiler-1.6-linux-x64.tar.gz
+          dest: "/opt/profiling/async-profiler"
+          remote_src: yes
+        become: yes
+        tags:
+          - async_profiler

@@ -22,7 +22,6 @@ RUN \
   apt-get --quiet --quiet update && \
   apt-get --quiet --quiet --no-install-recommends install \
     git \
-    build-essential \
     curl \
     ca-certificates && \
   chmod +x /tmp/benchmarks-build/install-profilers.sh && \
