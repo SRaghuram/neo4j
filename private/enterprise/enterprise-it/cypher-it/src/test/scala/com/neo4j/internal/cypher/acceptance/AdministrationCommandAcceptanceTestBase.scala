@@ -29,12 +29,20 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
   val neo4jUser: Map[String, Any] = user("neo4j", Seq(PredefinedRoles.ADMIN))
   val neo4jUserActive: Map[String, Any] = user("neo4j", Seq(PredefinedRoles.ADMIN), passwordChangeRequired = false)
 
+  val defaultRoles: Set[Map[String, Any]] = Set(
+    role(PredefinedRoles.ADMIN).builtIn().map,
+    role(PredefinedRoles.ARCHITECT).builtIn().map,
+    role(PredefinedRoles.PUBLISHER).builtIn().map,
+    role(PredefinedRoles.EDITOR).builtIn().map,
+    role(PredefinedRoles.READER).builtIn().map
+  )
+
   val defaultRolesWithUsers: Set[Map[String, Any]] = Set(
-    Map("role" -> PredefinedRoles.ADMIN, "isBuiltIn" -> true, "member" -> "neo4j"),
-    Map("role" -> PredefinedRoles.ARCHITECT, "isBuiltIn" -> true, "member" -> null),
-    Map("role" -> PredefinedRoles.PUBLISHER, "isBuiltIn" -> true, "member" -> null),
-    Map("role" -> PredefinedRoles.EDITOR, "isBuiltIn" -> true, "member" -> null),
-    Map("role" -> PredefinedRoles.READER, "isBuiltIn" -> true, "member" -> null)
+    role(PredefinedRoles.ADMIN).builtIn().member("neo4j").map,
+    role(PredefinedRoles.ARCHITECT).builtIn().noMember().map,
+    role(PredefinedRoles.PUBLISHER).builtIn().noMember().map,
+    role(PredefinedRoles.EDITOR).builtIn().noMember().map,
+    role(PredefinedRoles.READER).builtIn().noMember().map
   )
 
   lazy val defaultRolePrivileges: Set[Map[String, AnyRef]] = Set(
@@ -104,6 +112,16 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
     execute(s"GRANT ROLE $rolename TO $username")
     if (access) execute(s"GRANT ACCESS ON DATABASE * TO $rolename")
   }
+
+  case class RoleMapBuilder(map: Map[String, Any]) {
+    def member(user: String) = RoleMapBuilder(map + ("member" -> user))
+
+    def noMember() = RoleMapBuilder(map + ("member" -> null))
+
+    def builtIn() = RoleMapBuilder(map + ("isBuiltIn" -> true))
+  }
+
+  def role(roleName: String): RoleMapBuilder = RoleMapBuilder(Map("role" -> roleName, "isBuiltIn" -> false))
 
   case class PrivilegeMapBuilder(map: Map[String, AnyRef]) {
     def action(action: String) = PrivilegeMapBuilder(map + ("action" -> action))
