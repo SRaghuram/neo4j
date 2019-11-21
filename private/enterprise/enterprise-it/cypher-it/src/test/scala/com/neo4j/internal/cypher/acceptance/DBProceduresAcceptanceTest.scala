@@ -673,10 +673,14 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
     setupUserWithCustomRole()
     selectDatabase(DEFAULT_DATABASE_NAME)
     execute("CREATE (:B)-[:B]->(:A)-[:A]->(:A)-[:A]->(:C)")
+    graph.createIndex("A", "prop1")
+    graph.createIndex("C", "prop2")
+    graph.createUniqueConstraint("B", "prop3")
 
     // WHEN & THEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT TRAVERSE ON GRAPH * NODES A,B TO custom")
+    execute("DENY READ {prop1} ON GRAPH * NODES A TO custom")
     execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS A TO custom")
 
     executeOnDefault("joe", "soap", "CALL db.schema.visualization()", resultHandler = (row, _) => {
@@ -689,6 +693,13 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
       // check the node label
       val nodes = row.get("nodes").asInstanceOf[util.ArrayList[Node]].asScala
       nodes.map(_.getAllProperties.get("name")) should equal(Seq("A", "B"))
+
+      // users will see all indexes and constraints for the labels which they are allowed to traverse, regardless of read and schema privileges
+      nodes.map(_.getAllProperties.get("indexes").asInstanceOf[util.ArrayList[String]].asScala) should equal(List(List("prop1"), List.empty))
+      nodes.map(_.getAllProperties.get("constraints").asInstanceOf[util.ArrayList[String]].asScala) should equal(
+        List(List.empty, List("CONSTRAINT ON ( b:B ) ASSERT (b.prop3) IS UNIQUE"))
+      )
+
     }) shouldBe 1
   }
 }

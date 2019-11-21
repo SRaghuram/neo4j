@@ -59,6 +59,9 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     val e1 = createLabeledNode("Employee")
     relate(e1, d1, "WORKS_AT", "Hallo")
     relate(d1, neo, "PART_OF", "Hallo")
+    graph.createIndex("Neo", "prop1", "prop2")
+    graph.createIndex("Neo", "prop3")
+    graph.createUniqueConstraint("Department", "prop")
 
     // When
     val result = executeWith(Configs.ProcedureCall, "CALL db.schema.visualization()", expectedDifferentResults = Configs.All).toList
@@ -73,11 +76,17 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
       nodes.map(n => (n.getLabels.toList, n.getAllProperties.toMap)).toSet
 
     val empty = new java.util.ArrayList()
+    val indexList = new java.util.ArrayList[String]()
+    indexList.add("prop1,prop2")
+    indexList.add("prop3")
+    val constraintList = new java.util.ArrayList[String]()
+    constraintList.add("CONSTRAINT ON ( department:Department ) ASSERT (department.prop) IS UNIQUE")
+
     nodeState should equal(
       Set(
-        (List(Label.label("Neo")),        Map("indexes" -> empty, "constraints" -> empty, "name" -> "Neo")),
-        (List(Label.label("Department")), Map("indexes" -> empty, "constraints" -> empty, "name" -> "Department")),
-        (List(Label.label("Employee")),   Map("indexes" -> empty, "constraints" -> empty, "name" -> "Employee"))
+        (List(Label.label("Neo")),        Map("indexes" -> indexList, "constraints" -> empty,          "name" -> "Neo")),
+        (List(Label.label("Department")), Map("indexes" -> empty,     "constraints" -> constraintList, "name" -> "Department")),
+        (List(Label.label("Employee")),   Map("indexes" -> empty,     "constraints" -> empty,          "name" -> "Employee"))
       ))
 
     // And then relationships
