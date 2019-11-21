@@ -249,11 +249,15 @@ trait OperatorTask extends HasWorkIdentity {
     setExecutionEvent(operatorExecutionEvent)
     try {
       operate(output, context, state, resources)
-      operatorExecutionEvent.rows(output.getValidRows)
+      if (operatorExecutionEvent != null) {
+        operatorExecutionEvent.rows(output.getValidRows)
+      }
     } finally {
-      setExecutionEvent(OperatorProfileEvent.NONE)
-      resources.setKernelTracer(KernelReadTracer.NONE)
-      operatorExecutionEvent.close()
+      setExecutionEvent(null)
+      resources.setKernelTracer(null)
+      if (operatorExecutionEvent != null) {
+        operatorExecutionEvent.close()
+      }
     }
   }
 

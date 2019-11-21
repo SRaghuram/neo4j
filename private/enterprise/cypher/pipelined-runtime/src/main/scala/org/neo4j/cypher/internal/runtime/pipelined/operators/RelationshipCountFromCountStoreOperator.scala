@@ -56,7 +56,7 @@ class RelationshipCountFromCountStoreOperator(val workIdentity: WorkIdentity,
     override def toString: String = "RelationshipFromCountStoreTask"
 
     private var hasNext = false
-    private var executionEvent: OperatorProfileEvent = OperatorProfileEvent.NONE
+    private var executionEvent: OperatorProfileEvent =_
 
     override def workIdentity: WorkIdentity = RelationshipCountFromCountStoreOperator.this.workIdentity
 
@@ -98,13 +98,17 @@ class RelationshipCountFromCountStoreOperator(val workIdentity: WorkIdentity,
     private def countOneDirection(context: QueryContext, startLabelId: Int, endLabelId: Int): Long = {
       val relationshipTypeIds: Array[Int] = relationshipTypes.types(context)
       if (relationshipTypeIds == null) {
-        executionEvent.dbHit()
+        if (executionEvent != null) {
+          executionEvent.dbHit()
+        }
         context.relationshipCountByCountStore(startLabelId, NameId.WILDCARD, endLabelId)
       } else {
         var i = 0
         var count = 0L
         while (i < relationshipTypeIds.length) {
-          executionEvent.dbHit()
+          if (executionEvent != null) {
+            executionEvent.dbHit()
+          }
           count += context.relationshipCountByCountStore(startLabelId, relationshipTypeIds(i), endLabelId)
           i += 1
         }
@@ -223,14 +227,14 @@ class RelationshipCountFromCountStoreOperatorTemplate(override val inner: Operat
       case _ => ops => ops
     }
 
-    val dbHits =
-      if (relationshipTypes.size <= 1) invoke(loadField(executionEventField), TRACE_DB_HIT)
-      else invoke(loadField(executionEventField), TRACE_DB_HITS, constant(relationshipTypes.size))
+    val dbHitsRepresentation =
+      if (relationshipTypes.size <= 1) dbHit(loadField(executionEventField))
+      else dbHits(loadField(executionEventField), constant(relationshipTypes.size))
 
     block(
       codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),
       codeGen.setRefAt(offset, invokeStatic(method[Values, LongValue, Long]("longValue"), condition(countOps))),
-      dbHits,
+      dbHitsRepresentation,
       profileRow(id),
       inner.genOperateWithExpressions,
       setField(canContinue, constant(false))

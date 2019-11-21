@@ -47,7 +47,7 @@ class NodeCountFromCountStoreOperator(val workIdentity: WorkIdentity,
     override def toString: String = "NodeFromCountStoreTask"
 
     private var hasNext = false
-    private var executionEvent: OperatorProfileEvent = OperatorProfileEvent.NONE
+    private var executionEvent: OperatorProfileEvent = _
 
     override protected def initializeInnerLoop(context: QueryContext,
                                                state: QueryState,
@@ -69,7 +69,9 @@ class NodeCountFromCountStoreOperator(val workIdentity: WorkIdentity,
           if (idOfLabel == LazyLabel.UNKNOWN) {
             count = 0
           } else {
-            executionEvent.dbHit()
+            if (executionEvent != null) {
+              executionEvent.dbHit()
+            }
             count = count * context.nodeCountByCountStore(idOfLabel)
           }
           i += 1
@@ -77,7 +79,9 @@ class NodeCountFromCountStoreOperator(val workIdentity: WorkIdentity,
         if (wildCards > 0) {
           i = 0
           val wildCardCount = context.nodeCountByCountStore(NameId.WILDCARD)
-          executionEvent.dbHit()
+          if (executionEvent != null) {
+            executionEvent.dbHit()
+          }
           while (i < wildCards) {
             count *= wildCardCount
             i += 1
@@ -179,14 +183,14 @@ class NodeCountFromCountStoreOperatorTemplate(override val inner: OperatorTaskTe
       }{
         block(
           assign(countVar, multiply(load(countVar), invoke(DB_ACCESS, method[DbAccess, Long, Int]("nodeCountByCountStore"), loadField(field)))),
-          invoke(loadField(executionEventField), TRACE_DB_HIT))
+          dbHit(loadField(executionEventField)))
       }
     }):_*)
 
     //takes care of the labels we do know at compile time
     val knownLabelOps = block(knownLabels.map(token =>
         assign(countVar, multiply(load(countVar), invoke(DB_ACCESS, method[DbAccess, Long, Int]("nodeCountByCountStore"), constant(token))))) :+
-        invoke(loadField(executionEventField), TRACE_DB_HITS, constant(knownLabels.size)) :_*)
+        dbHits(loadField(executionEventField), constant(knownLabels.size)) :_*)
 
     //take care of all wildcard labels
     val wildCardOps = if (wildCards > 0) {
@@ -194,7 +198,7 @@ class NodeCountFromCountStoreOperatorTemplate(override val inner: OperatorTaskTe
       val ops = block((1 to wildCards).map(_ => assign(countVar, multiply(load(countVar), load(wildCardCount)))) :_*)
       block(
         declareAndAssign(typeRefOf[Long], wildCardCount, invoke(DB_ACCESS, method[DbAccess, Long, Int]("nodeCountByCountStore"), constant(NameId.WILDCARD))),
-        invoke(loadField(executionEventField), TRACE_DB_HIT),
+        dbHit(loadField(executionEventField)),
         ops
       )
     } else noop()

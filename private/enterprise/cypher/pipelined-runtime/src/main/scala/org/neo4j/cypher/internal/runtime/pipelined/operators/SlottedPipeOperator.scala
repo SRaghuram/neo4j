@@ -49,10 +49,14 @@ trait OperatorWithInterpretedDBHitsProfiling extends OperatorTask {
     setExecutionEvent(operatorExecutionEvent)
     try {
       operate(output, context, state, resources)
-      operatorExecutionEvent.rows(output.getValidRows)
+      if (operatorExecutionEvent != null) {
+        operatorExecutionEvent.rows(output.getValidRows)
+      }
     } finally {
-      setExecutionEvent(OperatorProfileEvent.NONE)
-      operatorExecutionEvent.close()
+      setExecutionEvent(null)
+      if (operatorExecutionEvent != null) {
+        operatorExecutionEvent.close()
+      }
     }
   }
 }
@@ -218,8 +222,10 @@ object SlottedPipeOperator {
   }
 
   def updateProfileEvent(profileEvent: OperatorProfileEvent, profileInformation: InterpretedProfileInformation): Unit = {
-    val dbHits = profileInformation.dbHitsMap.values.map(_.count).sum
-    profileEvent.dbHits(dbHits.toInt)
+    if (profileEvent != null) {
+      val dbHits = profileInformation.dbHitsMap.values.map(_.count).sum
+      profileEvent.dbHits(dbHits.toInt)
+    }
   }
 }
 

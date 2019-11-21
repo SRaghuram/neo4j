@@ -220,9 +220,11 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
   override def returnSuccessfully() {
     //close all outstanding events
     for (event <- events) {
-      generator.expression(
-        invoke(generator.load(event),
-               method[OperatorProfileEvent, Unit]("close")))
+      using(generator.ifStatement(Expression.notNull(generator.load(event)))) { inner =>
+        inner.expression(
+          invoke(inner.load(event),
+                 method[OperatorProfileEvent, Unit]("close")))
+      }
     }
     //close all cursors
     generator.expression(invoke(generator.self(), methodReference(generator.owner(), TypeReference.VOID,
@@ -338,8 +340,10 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
         // NOTE: we are in this if-block if the visitor decided to terminate early (by returning false)
         //close all outstanding events
         for (event <- events) {
-          body.expression(invoke(generator.load(event),
+          using(body.ifStatement(Expression.notNull(body.load(event)))){ inner =>
+            inner.expression(invoke(inner.load(event),
                                  method[OperatorProfileEvent, Unit]("close")))
+          }
         }
       body.expression(invoke(body.self(), methodReference(body.owner(), TypeReference.VOID,
                                                                     "closeCursors")))
@@ -348,9 +352,11 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
     }
   }(exception = param[Throwable]("e")) { onError =>
     for (event <- events) {
-      onError.expression(
-        invoke(onError.load(event),
-               method[OperatorProfileEvent, Unit]("close")))
+      using(onError.ifStatement(Expression.notNull(onError.load(event)))) { inner =>
+        inner.expression(
+          invoke(inner.load(event),
+                 method[OperatorProfileEvent, Unit]("close")))
+      }
     }
     onError.throwException(onError.load("e"))
   }
@@ -413,7 +419,9 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
     val eventName = s"event_$planStepId$suffix"
     generator.assign(typeRef[OperatorProfileEvent], eventName, traceEvent(planStepId))
     val result = block(copy(events = eventName :: events, generator = generator))
-    generator.expression(invoke(generator.load(eventName), method[OperatorProfileEvent, Unit]("close")))
+    using(generator.ifStatement(Expression.notNull(generator.load(eventName)))) { inner =>
+      inner.expression(invoke(inner.load(eventName), method[OperatorProfileEvent, Unit]("close")))
+    }
     result
   }
 
@@ -421,9 +429,13 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
     invoke(tracer, executeOperator,
            getStatic(FieldReference.staticField(generator.owner(), typeRef[Id], planStepId)))
 
-  override def incrementDbHits() = if (tracing) generator.expression(invoke(loadEvent, Methods.dbHit))
+  override def incrementDbHits() = if (tracing) {
+    using(generator.ifStatement(Expression.notNull(loadEvent)))(inner => inner.expression(invoke(loadEvent, Methods.dbHit)))
+  }
 
-  override def incrementRows() = if (tracing) generator.expression(invoke(loadEvent, Methods.row))
+  override def incrementRows() = if (tracing) {
+    using(generator.ifStatement(Expression.notNull(loadEvent)))(inner => inner.expression(invoke(loadEvent, Methods.row)))
+  }
 
   private def loadEvent = generator
     .load(events.headOption.getOrElse(throw new IllegalStateException("no current trace event")))

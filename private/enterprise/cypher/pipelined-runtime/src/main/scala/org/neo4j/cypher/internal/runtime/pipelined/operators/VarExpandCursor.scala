@@ -37,7 +37,7 @@ abstract class VarExpandCursor(val fromNode: Long,
 
   private var expandStatus: ExpandStatus = NOT_STARTED
   private var pathLength: Int = 0
-  private var event: OperatorProfileEvent = OperatorProfileEvent.NONE
+  private var event: OperatorProfileEvent = _
 
   private val relTraCursors: GrowingArray[RelationshipTraversalCursor] = new GrowingArray[RelationshipTraversalCursor]()
   private val relGroupCursors: GrowingArray[RelationshipGroupCursor] = new GrowingArray[RelationshipGroupCursor]()
