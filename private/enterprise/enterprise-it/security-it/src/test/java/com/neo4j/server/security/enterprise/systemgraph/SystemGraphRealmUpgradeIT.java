@@ -7,7 +7,10 @@ package com.neo4j.server.security.enterprise.systemgraph;
 
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import picocli.CommandLine;
 
 import java.io.File;
@@ -27,15 +30,15 @@ import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
 import org.neo4j.internal.kernel.api.security.LoginContext;
+import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.UncloseableDelegatingFileSystemAbstraction;
 import org.neo4j.kernel.api.security.AuthManager;
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.server.security.auth.SecurityTestUtils;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
+import org.neo4j.test.extension.EphemeralFileSystemExtension;
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
-import org.neo4j.test.rule.TestDirectory;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -47,13 +50,38 @@ import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import static org.neo4j.kernel.api.security.AuthManager.INITIAL_PASSWORD;
 import static org.neo4j.kernel.api.security.AuthManager.INITIAL_USER_NAME;
 
-@TestDirectoryExtension
+@ExtendWith( EphemeralFileSystemExtension.class )
 class SystemGraphRealmUpgradeIT
 {
     private static final String DEFAULT_PASSWORD = "bar";
 
     @Inject
-    private TestDirectory testDirectory;
+    private FileSystemAbstraction fileSystem;
+    private File confDir;
+    private File homeDir;
+    private PrintStream out;
+    private PrintStream err;
+    private DatabaseManagementService enterpriseDbms;
+
+    @BeforeEach
+    void setup()
+    {
+        File graphDir = new File( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
+        confDir = new File( graphDir, "conf" );
+        homeDir = new File( graphDir, "home" );
+        out = mock( PrintStream.class );
+        err = mock( PrintStream.class );
+    }
+
+    @AfterEach
+    void tearDown() throws Exception
+    {
+        if ( enterpriseDbms != null )
+        {
+            enterpriseDbms.shutdown();
+        }
+        fileSystem.close();
+    }
 
     @Test
     void shouldUpgradeWithDefaultUser()
@@ -62,7 +90,7 @@ class SystemGraphRealmUpgradeIT
         createCommunityWithUsers( INITIAL_USER_NAME );
 
         // WHEN
-        DatabaseManagementService enterpriseDbms = getEnterpriseManagementService();
+        enterpriseDbms = getEnterpriseManagementService();
 
         // THEN
         GraphDatabaseService database = enterpriseDbms.database( SYSTEM_DATABASE_NAME );
@@ -77,7 +105,7 @@ class SystemGraphRealmUpgradeIT
         createCommunityWithUsers( "Alice" );
 
         // WHEN
-        DatabaseManagementService enterpriseDbms = getEnterpriseManagementService();
+        enterpriseDbms = getEnterpriseManagementService();
 
         // THEN
         GraphDatabaseService database = enterpriseDbms.database( SYSTEM_DATABASE_NAME );
@@ -92,7 +120,7 @@ class SystemGraphRealmUpgradeIT
         createCommunityWithUsers( INITIAL_USER_NAME, "Alice" );
 
         // WHEN
-        DatabaseManagementService enterpriseDbms = getEnterpriseManagementService();
+        enterpriseDbms = getEnterpriseManagementService();
 
         // THEN
         GraphDatabaseService database = enterpriseDbms.database( SYSTEM_DATABASE_NAME );
@@ -110,7 +138,7 @@ class SystemGraphRealmUpgradeIT
 
         // WHEN
         setInitialPassword( "abc123" );
-        DatabaseManagementService enterpriseDbms = getEnterpriseManagementService();
+        enterpriseDbms = getEnterpriseManagementService();
 
         // THEN
         GraphDatabaseService database = enterpriseDbms.database( SYSTEM_DATABASE_NAME );
@@ -154,7 +182,7 @@ class SystemGraphRealmUpgradeIT
         setDefaultAdmin( "Alice" );
 
         // WHEN
-        DatabaseManagementService enterpriseDbms = getEnterpriseManagementService();
+        enterpriseDbms = getEnterpriseManagementService();
 
         // THEN
         GraphDatabaseService database = enterpriseDbms.database( SYSTEM_DATABASE_NAME );
@@ -173,7 +201,7 @@ class SystemGraphRealmUpgradeIT
 
         // WHEN
         setDefaultAdmin( "Alice" );
-        DatabaseManagementService enterpriseDbms = getEnterpriseManagementService();
+        enterpriseDbms = getEnterpriseManagementService();
 
         // THEN
         GraphDatabaseService database = enterpriseDbms.database( SYSTEM_DATABASE_NAME );
@@ -192,7 +220,7 @@ class SystemGraphRealmUpgradeIT
 
         // WHEN
         setDefaultAdmin( INITIAL_USER_NAME );
-        DatabaseManagementService enterpriseDbms = getEnterpriseManagementService();
+       enterpriseDbms = getEnterpriseManagementService();
 
         // THEN
         GraphDatabaseService database = enterpriseDbms.database( SYSTEM_DATABASE_NAME );
@@ -212,7 +240,7 @@ class SystemGraphRealmUpgradeIT
         // WHEN
         setDefaultAdmin( "Alice" );
         setInitialPassword( "foo" );
-        DatabaseManagementService enterpriseDbms = getEnterpriseManagementService();
+        enterpriseDbms = getEnterpriseManagementService();
 
         // THEN
         GraphDatabaseAPI database = (GraphDatabaseAPI) enterpriseDbms.database( SYSTEM_DATABASE_NAME );
@@ -279,16 +307,21 @@ class SystemGraphRealmUpgradeIT
 
     private DatabaseManagementService getEnterpriseManagementService()
     {
-        return new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() )
-                .setFileSystem( new UncloseableDelegatingFileSystemAbstraction( testDirectory.getFileSystem() ) )
+        return new TestEnterpriseDatabaseManagementServiceBuilder( homeDir )
+                .setFileSystem( new UncloseableDelegatingFileSystemAbstraction( fileSystem ) )
+                .setConfig( GraphDatabaseSettings.auth_enabled, true ).build();
+    }
+
+    private DatabaseManagementService getCommunityManagementService()
+    {
+        return new TestDatabaseManagementServiceBuilder( homeDir )
+                .setFileSystem( new UncloseableDelegatingFileSystemAbstraction( fileSystem ) )
                 .setConfig( GraphDatabaseSettings.auth_enabled, true ).build();
     }
 
     private void createCommunityWithUsers( String... users )
     {
-        DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder( testDirectory.homeDir() )
-                .setFileSystem( new UncloseableDelegatingFileSystemAbstraction( testDirectory.getFileSystem() ) )
-                .setConfig( GraphDatabaseSettings.auth_enabled, true ).build();
+        DatabaseManagementService managementService = getCommunityManagementService();
 
         GraphDatabaseService database = managementService.database( SYSTEM_DATABASE_NAME );
         try ( Transaction tx = database.beginTx() )
@@ -316,24 +349,16 @@ class SystemGraphRealmUpgradeIT
 
     private void setDefaultAdmin( String username )
     {
-        final var command = new SetDefaultAdminCommand(
-                new ExecutionContext( testDirectory.homeDir().toPath(),
-                                      new File( testDirectory.homeDir(), "conf" ).toPath(),
-                                      mock( PrintStream.class ),
-                                      mock( PrintStream.class ),
-                                      testDirectory.getFileSystem() ) );
+        final var ctx = new ExecutionContext( homeDir.toPath(), confDir.toPath(), out, err, fileSystem );
+        final var command = new SetDefaultAdminCommand( ctx );
         CommandLine.populateCommand( command, username );
         command.execute();
     }
 
     private void setInitialPassword( String password )
     {
-        final var command = new SetInitialPasswordCommand(
-                new ExecutionContext( testDirectory.homeDir().toPath(),
-                                      new File( testDirectory.homeDir(), "conf" ).toPath(),
-                                      mock( PrintStream.class ),
-                                      mock( PrintStream.class ),
-                                      testDirectory.getFileSystem() ) );
+        final var ctx = new ExecutionContext( homeDir.toPath(), confDir.toPath(), out, err, fileSystem );
+        final var command = new SetInitialPasswordCommand( ctx );
         CommandLine.populateCommand( command, password );
         command.execute();
     }
