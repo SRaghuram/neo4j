@@ -5,9 +5,13 @@
  */
 package com.neo4j.causalclustering.discovery;
 
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
+
+import org.neo4j.internal.helpers.ConstantTimeTimeoutStrategy;
+import org.neo4j.internal.helpers.TimeoutStrategy;
 
 /**
  * Repeats the retriable supplier until the correct result has been retrieved or the limit of retries has been
@@ -15,7 +19,7 @@ import java.util.function.Supplier;
  **/
 public class RetryStrategy
 {
-    private final long delayInMillis;
+    private final TimeoutStrategy timeoutStrategy;
     private final long retries;
 
     /**
@@ -24,7 +28,16 @@ public class RetryStrategy
      */
     public RetryStrategy( long delayInMillis, long retries )
     {
-        this.delayInMillis = delayInMillis;
+        this( new ConstantTimeTimeoutStrategy( delayInMillis, TimeUnit.MILLISECONDS ), retries );
+    }
+
+    /**
+     * @param timeoutStrategy calculates the timeout between each attempt at getting the desired result
+     * @param retries the number of attempts to perform before giving up
+     */
+    public RetryStrategy( TimeoutStrategy timeoutStrategy, long retries )
+    {
+        this.timeoutStrategy = timeoutStrategy;
         this.retries = retries;
     }
 
@@ -40,6 +53,7 @@ public class RetryStrategy
      */
     public <T> T apply( Supplier<T> action, Predicate<T> validator ) throws TimeoutException
     {
+        TimeoutStrategy.Timeout timeout = timeoutStrategy.newTimeout();
         T result = action.get();
         int currentIteration = 0;
         while ( !validator.test( result ) )
@@ -50,7 +64,7 @@ public class RetryStrategy
             }
             try
             {
-                Thread.sleep( delayInMillis );
+                Thread.sleep( timeout.getAndIncrement() );
             }
             catch ( InterruptedException e )
             {

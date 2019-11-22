@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.discovery;
 
+import com.neo4j.causalclustering.core.state.snapshot.NoPauseTimeoutStrategy;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.TimeoutException;
@@ -18,20 +19,6 @@ class RetryStrategyTest
 {
     private static final Predicate<Integer> ALWAYS_VALID = i -> true;
     private static final Predicate<Integer> NEVER_VALID = i -> false;
-    private static final Predicate<Integer> VALID_ON_SECOND_TIME = new Predicate<Integer>()
-    {
-        private boolean nextSuccessful;
-        @Override
-        public boolean test( Integer integer )
-        {
-            if ( !nextSuccessful )
-            {
-                nextSuccessful = true;
-                return false;
-            }
-            return true;
-        }
-    };
 
     @Test
     void successOnRetryCausesNoDelay() throws TimeoutException
@@ -65,6 +52,22 @@ class RetryStrategyTest
     }
 
     @Test
+    void numberOfTimeoutIncrementsShouldBeOneLessThanRetries() throws TimeoutException
+    {
+        // given
+        CountingSupplier countingSupplier = new CountingSupplier();
+        int retries = 5;
+        NoPauseTimeoutStrategy timeoutStrategy = new NoPauseTimeoutStrategy();
+        RetryStrategy subject = new RetryStrategy( timeoutStrategy, retries );
+
+        // when
+        subject.apply( countingSupplier, new ValidOnSecondTime() );
+
+        // then
+        assertEquals( 1, timeoutStrategy.invocationCount() );
+    }
+
+    @Test
     void successfulRetriesBreakTheRetryLoop() throws TimeoutException
     {
         CountingSupplier countingSupplier = new CountingSupplier();
@@ -72,10 +75,25 @@ class RetryStrategyTest
         RetryStrategy subject = new RetryStrategy( 0, retries );
 
         // when
-        subject.apply( countingSupplier, VALID_ON_SECOND_TIME );
+        subject.apply( countingSupplier, new ValidOnSecondTime() );
 
         // then
         assertEquals( 2, countingSupplier.invocationCount() );
+    }
+
+    private static class ValidOnSecondTime implements Predicate<Integer>
+    {
+        private boolean nextSuccessful;
+        @Override
+        public boolean test( Integer integer )
+        {
+            if ( !nextSuccessful )
+            {
+                nextSuccessful = true;
+                return false;
+            }
+            return true;
+        }
     }
 
     public static class CountingSupplier implements Supplier<Integer>
