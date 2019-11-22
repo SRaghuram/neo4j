@@ -33,6 +33,7 @@ Apache Software License, Version 2.0
   Jackson-annotations
   Jackson-core
   jackson-databind
+  Java Concurrency Tools Core Library
   Jetty :: Asynchronous HTTP Client
   Jetty :: Http Utility
   Jetty :: IO Utility
