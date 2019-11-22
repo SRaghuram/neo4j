@@ -14,9 +14,11 @@ import reactor.core.publisher.Mono;
 import java.util.Map;
 
 import org.neo4j.driver.reactive.RxSession;
-import org.neo4j.driver.reactive.RxStatementResult;
+import org.neo4j.driver.reactive.RxResult;
 import org.neo4j.driver.reactive.RxTransaction;
 import org.neo4j.values.virtual.MapValue;
+
+import static com.neo4j.fabric.driver.Utils.convertBookmark;
 
 class FabricDriverRxTransaction implements FabricDriverTransaction
 {
@@ -33,10 +35,10 @@ class FabricDriverRxTransaction implements FabricDriverTransaction
         this.location = location;
     }
 
-    public Mono<String> commit()
+    public Mono<RemoteBookmark> commit()
     {
         return Mono.from( rxTransaction.commit() )
-                .then( Mono.fromSupplier( () -> DriverBookmarkFormat.serialize( rxSession.lastBookmark() ) ) )
+                .then( Mono.fromSupplier( () -> convertBookmark( rxSession.lastBookmark() ) ) )
                 .doFinally( s -> rxSession.close() );
     }
 
@@ -55,9 +57,9 @@ class FabricDriverRxTransaction implements FabricDriverTransaction
     private static class StatementResultImpl extends AbstractRemoteStatementResult
     {
 
-        private final RxStatementResult rxStatementResult;
+        private final RxResult rxStatementResult;
 
-        StatementResultImpl( RxStatementResult rxStatementResult, long sourceTag )
+        StatementResultImpl( RxResult rxStatementResult, long sourceTag )
         {
             super( Mono.from( rxStatementResult.keys() ).flatMapMany(Flux::fromIterable), Mono.from( rxStatementResult.consume() ), sourceTag );
             this.rxStatementResult = rxStatementResult;

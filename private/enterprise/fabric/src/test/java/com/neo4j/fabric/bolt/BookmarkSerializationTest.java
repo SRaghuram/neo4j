@@ -5,9 +5,11 @@
  */
 package com.neo4j.fabric.bolt;
 
+import com.neo4j.fabric.driver.RemoteBookmark;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -25,8 +27,8 @@ class BookmarkSerializationAndParsingTest
     @Test
     void testBasicBookmarkSerialization()
     {
-        var b1 = bookmark( remote( 1, "b1" ) );
-        var b2 = bookmark( remote( 2, "b2" ), remote( 3, "b3", "b4" ) );
+        var b1 = bookmark( remoteState( 1, remote( "b1", "b1-p2" ) ) );
+        var b2 = bookmark( remoteState( 2, remote( "b2" ) ), remoteState( 3, remote( "b3" ), remote( "b4", "b4-p2" ) ) );
 
         doTest( b1, b2 );
     }
@@ -40,7 +42,7 @@ class BookmarkSerializationAndParsingTest
     @Test
     void testRemoteBookmarkWithSpecialCharacters()
     {
-        doTest( bookmark( remote( 1, "-,:" ) ) );
+        doTest( bookmark( remoteState( 1, remote( "-,:|"  )) ) );
     }
 
     @Test
@@ -100,8 +102,13 @@ class BookmarkSerializationAndParsingTest
         return new FabricBookmark( Arrays.asList( graphStates ) );
     }
 
-    private FabricBookmark.GraphState remote( long graphId, String... bookmarks )
+    private FabricBookmark.GraphState remoteState( long graphId, RemoteBookmark... bookmarks )
     {
         return new FabricBookmark.GraphState( graphId, Arrays.asList( bookmarks ) );
+    }
+
+    private RemoteBookmark remote( String... parts )
+    {
+        return new RemoteBookmark( new HashSet<>( Arrays.asList( parts ) ) );
     }
 }

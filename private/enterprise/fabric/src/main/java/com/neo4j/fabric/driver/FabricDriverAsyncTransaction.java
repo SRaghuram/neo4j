@@ -15,8 +15,10 @@ import java.util.Map;
 
 import org.neo4j.driver.async.AsyncSession;
 import org.neo4j.driver.async.AsyncTransaction;
-import org.neo4j.driver.async.StatementResultCursor;
+import org.neo4j.driver.async.ResultCursor;
 import org.neo4j.values.virtual.MapValue;
+
+import static com.neo4j.fabric.driver.Utils.convertBookmark;
 
 class FabricDriverAsyncTransaction implements FabricDriverTransaction
 {
@@ -34,10 +36,10 @@ class FabricDriverAsyncTransaction implements FabricDriverTransaction
     }
 
     @Override
-    public Mono<String> commit()
+    public Mono<RemoteBookmark> commit()
     {
         return Mono.fromFuture( asyncTransaction.commitAsync().toCompletableFuture())
-                .then( Mono.fromSupplier( () -> DriverBookmarkFormat.serialize( asyncSession.lastBookmark() ) ) )
+                .then( Mono.fromSupplier( () -> convertBookmark( asyncSession.lastBookmark() ) ) )
                 .doFinally( s -> asyncSession.closeAsync() );
     }
 
@@ -58,13 +60,13 @@ class FabricDriverAsyncTransaction implements FabricDriverTransaction
     private static class StatementResultImpl extends AbstractRemoteStatementResult
     {
 
-        private final Mono<StatementResultCursor> statementResultCursor;
+        private final Mono<ResultCursor> statementResultCursor;
         private final RecordConverter recordConverter;
 
-        StatementResultImpl( Mono<StatementResultCursor> statementResultCursor, long sourceTag )
+        StatementResultImpl( Mono<ResultCursor> statementResultCursor, long sourceTag )
         {
-            super( statementResultCursor.map( StatementResultCursor::keys ).flatMapMany( Flux::fromIterable ),
-                    statementResultCursor.map( StatementResultCursor::consumeAsync ).flatMap( Mono::fromCompletionStage ), sourceTag );
+            super( statementResultCursor.map( ResultCursor::keys ).flatMapMany( Flux::fromIterable ),
+                    statementResultCursor.map( ResultCursor::consumeAsync ).flatMap( Mono::fromCompletionStage ), sourceTag );
             this.statementResultCursor = statementResultCursor;
             this.recordConverter = new RecordConverter( sourceTag );
         }

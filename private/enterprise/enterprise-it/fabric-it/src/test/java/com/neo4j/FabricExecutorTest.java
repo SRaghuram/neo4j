@@ -9,6 +9,7 @@ import com.neo4j.fabric.driver.AutoCommitStatementResult;
 import com.neo4j.fabric.driver.DriverPool;
 import com.neo4j.fabric.driver.FabricDriverTransaction;
 import com.neo4j.fabric.driver.PooledDriver;
+import com.neo4j.fabric.driver.RemoteBookmark;
 import com.neo4j.fabric.executor.FabricException;
 import com.neo4j.fabric.executor.FabricExecutor;
 import com.neo4j.fabric.stream.Records;
@@ -24,6 +25,7 @@ import reactor.core.publisher.Mono;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -40,7 +42,7 @@ import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.driver.summary.Notification;
 import org.neo4j.driver.summary.Plan;
 import org.neo4j.driver.summary.ResultSummary;
-import org.neo4j.driver.summary.StatementType;
+import org.neo4j.driver.summary.QueryType;
 import org.neo4j.graphdb.InputPosition;
 import org.neo4j.graphdb.QueryStatistics;
 import org.neo4j.graphdb.impl.notification.NotificationCode;
@@ -151,7 +153,7 @@ class FabricExecutorTest
         when( statementResult.columns() ).thenReturn( Flux.fromIterable( List.of( "a", "b" ) ) );
         when( statementResult.records() ).thenReturn( Flux.empty() );
         when( statementResult.summary() ).thenReturn( Mono.empty() );
-        when( statementResult.getBookmark() ).thenReturn( Mono.just( "BB" ) );
+        when( statementResult.getBookmark() ).thenReturn( Mono.just( new RemoteBookmark( Set.of( "BB" ) ) ) );
     }
 
     private void mockDriverPool( PooledDriver graph0, PooledDriver graph1 )
@@ -452,7 +454,7 @@ class FabricExecutorTest
                             "RETURN 1"
                     ) ).consume();
 
-            assertThat( summary.statementType(), is( StatementType.READ_WRITE ) );
+            assertThat( summary.queryType(), is( QueryType.READ_WRITE ) );
 
             assertThat( summary.hasPlan(), is( false ) );
             assertThat( summary.hasProfile(), is( false ) );
@@ -495,7 +497,7 @@ class FabricExecutorTest
                             "RETURN y, x"
                     ) ).consume();
 
-            assertThat( summary.statementType(), is( StatementType.READ_WRITE ) );
+            assertThat( summary.queryType(), is( QueryType.READ_WRITE ) );
 
             assertThat( summary.hasPlan(), is( true ) );
             Plan plan = summary.plan();

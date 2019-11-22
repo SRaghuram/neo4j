@@ -19,8 +19,8 @@ import java.util.List;
 import java.util.Map;
 
 import org.neo4j.driver.Driver;
+import org.neo4j.driver.Result;
 import org.neo4j.driver.Session;
-import org.neo4j.driver.StatementResult;
 import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.driver.exceptions.ResultConsumedException;
 import org.neo4j.driver.summary.ResultSummary;
@@ -61,11 +61,11 @@ public class CypherOverBoltIT
                 Session session = driver.session() )
         {
             session.run( "UNWIND RANGE(1,5) AS x CREATE()" ).consume();
-            StatementResult result1 = session.run( "explain match (a), (b) return *" );
+            Result result1 = session.run( "explain match (a), (b) return *" );
             assertEquals( "This query builds a cartesian product between disconnected patterns.", result1.consume().notifications().get( 0 ).title() );
             session.run( "MATCH (n) DETACH DELETE n" ).consume();
             Thread.sleep( 10000 ); // This was needed to trigger the bug in the first place so we are keeping it
-            StatementResult result2 = session.run( "explain match (a), (b) return *" );
+            Result result2 = session.run( "explain match (a), (b) return *" );
             assertEquals( "This query builds a cartesian product between disconnected patterns.", result2.consume().notifications().get( 0 ).title() );
         }
     }
@@ -79,7 +79,7 @@ public class CypherOverBoltIT
             try ( Driver driver = graphDatabaseDriver( graphDb.boltURI() );
                     Session session = driver.session() )
             {
-                StatementResult result = session.run( "USING PERIODIC COMMIT " + i + "\n" + "LOAD CSV FROM \"" + url + "\" as row fieldterminator \" \"\n" +
+                Result result = session.run( "USING PERIODIC COMMIT " + i + "\n" + "LOAD CSV FROM \"" + url + "\" as row fieldterminator \" \"\n" +
                         "MERGE (currentnode:Label1 {uuid:row[0]})\n" + "RETURN currentnode;" );
                 int countOfNodes = 0;
                 while ( result.hasNext() )
@@ -103,7 +103,7 @@ public class CypherOverBoltIT
         {
             ResultSummary summary = session.readTransaction( tx ->
                                                              {
-                                                                 StatementResult result =
+                                                                 Result result =
                                                                          tx.run( "EXPLAIN USING PERIODIC COMMIT " +
                                                                                  "100 LOAD CSV FROM $file AS row CREATE (n:Row) SET n.row = row" );
                                                                  return result.consume();
@@ -118,7 +118,7 @@ public class CypherOverBoltIT
         try ( Driver driver = graphDatabaseDriver( graphDb.boltURI() );
                 Session session = driver.session() )
         {
-            StatementResult result = session.run(
+            Result result = session.run(
                     "USING PERIODIC COMMIT " + (lineCountInCSV + 1) + "\n" + "LOAD CSV FROM \"" + url + "\" as row fieldterminator \" \"\n" +
                             "MERGE (currentnode:Label1 {uuid:row[0]})\n" + "RETURN currentnode;" );
             int countOfNodes = 0;
@@ -139,7 +139,7 @@ public class CypherOverBoltIT
         try ( Driver driver = graphDatabaseDriver( graphDb.boltURI() );
                 Session session = driver.session() )
         {
-            StatementResult result = session.run(
+            Result result = session.run(
                     "USING PERIODIC COMMIT " + lineCountInCSV + "\n" + "LOAD CSV FROM \"" + url + "\" as row fieldterminator \" \"\n" +
                             "MERGE (currentnode:Label1 {uuid:row[0]})\n" + "RETURN currentnode;" );
             int countOfNodes = 0;
@@ -160,7 +160,7 @@ public class CypherOverBoltIT
         try ( Driver driver = graphDatabaseDriver( graphDb.boltURI() );
                 Session session = driver.session() )
         {
-            StatementResult result = session.run(
+            Result result = session.run(
                     "USING PERIODIC COMMIT " + (lineCountInCSV - 1) + "\n" + "LOAD CSV FROM \"" + url + "\" as row fieldterminator \" \"\n" +
                             "MERGE (currentnode:Label2 {uuid:row[0]})\n" + "RETURN [currentnode];" );
             int countOfNodes = 0;
@@ -185,7 +185,7 @@ public class CypherOverBoltIT
         try ( Driver driver = graphDatabaseDriver( graphDb.boltURI() );
                 Session session = driver.session() )
         {
-            StatementResult result = session.run(
+            Result result = session.run(
                     "USING PERIODIC COMMIT " + (lineCountInCSV - 1) + "\n" + "LOAD CSV FROM \"" + url + "\" as row fieldterminator \" \"\n" +
                             "MERGE (currentnode:Label3 {uuid:row[0]})\n" + "RETURN [[currentnode]];" );
             int countOfNodes = 0;
@@ -212,7 +212,7 @@ public class CypherOverBoltIT
         try ( Driver driver = graphDatabaseDriver( graphDb.boltURI() );
                 Session session = driver.session() )
         {
-            StatementResult result = session.run(
+            Result result = session.run(
                     "USING PERIODIC COMMIT " + (lineCountInCSV - 1) + "\n" + "LOAD CSV FROM \"" + url + "\" as row fieldterminator \" \"\n" +
                             "MERGE (currentnode:Label4 {uuid:row[0]})\n" + "RETURN {node:currentnode};" );
             int countOfNodes = 0;
@@ -239,7 +239,7 @@ public class CypherOverBoltIT
         try ( Driver driver = graphDatabaseDriver( graphDb.boltURI() );
                 Session session = driver.session() )
         {
-            StatementResult result = session.run(
+            Result result = session.run(
                     "USING PERIODIC COMMIT " + (lineCountInCSV - 1) + "\n" + "LOAD CSV FROM \"" + url + "\" as row fieldterminator \" \"\n" +
                             "MERGE (currentnode:Label5 {uuid:row[0]})\n" + "RETURN {outer:{node:currentnode}};" );
             int countOfNodes = 0;
@@ -269,7 +269,7 @@ public class CypherOverBoltIT
         try ( Driver driver = graphDatabaseDriver( graphDb.boltURI() );
                 Session session = driver.session() )
         {
-            StatementResult result = session.run(
+            Result result = session.run(
                     "USING PERIODIC COMMIT " + (lineCountInCSV - 1) + "\n" + "LOAD CSV FROM \"" + url + "\" as row fieldterminator \" \"\n" +
                             "MERGE (currentnode:Label6 {uuid:row[0]})\n" + "RETURN {outer:[currentnode]};" );
             int countOfNodes = 0;
@@ -297,7 +297,7 @@ public class CypherOverBoltIT
               Session session = driver.session() )
         {
             String query = "UNWIND [1, 2, 3, 4, 0] AS x RETURN 10 / x";
-            StatementResult result = session.run( query );
+            Result result = session.run( query );
 
             try
             {
@@ -328,7 +328,7 @@ public class CypherOverBoltIT
               Session session = driver.session() )
         {
             String query = "UNWIND range(1, 2000) AS i CREATE (n) RETURN n";
-            StatementResult result = session.run( query );
+            Result result = session.run( query );
 
             result.consume(); // Without getting the result
         }
@@ -337,7 +337,7 @@ public class CypherOverBoltIT
               Session session = driver.session() )
         {
             String query = "MATCH (n) RETURN count(n) AS c";
-            StatementResult result = session.run( query );
+            Result result = session.run( query );
 
             assertEquals( 2000, result.single().get( "c" ).asInt() );
         }
@@ -350,7 +350,7 @@ public class CypherOverBoltIT
               Session session = driver.session() )
         {
             String query = "UNWIND range(1, 2000) AS i CREATE (n)";
-            StatementResult result = session.run( query );
+            Result result = session.run( query );
 
             result.consume(); // Without getting the result
         }
@@ -359,7 +359,7 @@ public class CypherOverBoltIT
               Session session = driver.session() )
         {
             String query = "MATCH (n) RETURN count(n) AS c";
-            StatementResult result = session.run( query );
+            Result result = session.run( query );
 
             assertEquals( 2000, result.single().get( "c" ).asInt() );
         }

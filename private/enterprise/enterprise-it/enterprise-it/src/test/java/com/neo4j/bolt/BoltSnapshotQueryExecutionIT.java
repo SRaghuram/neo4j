@@ -21,8 +21,8 @@ import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.driver.Driver;
+import org.neo4j.driver.Result;
 import org.neo4j.driver.Session;
-import org.neo4j.driver.StatementResult;
 import org.neo4j.driver.exceptions.TransientException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
@@ -94,7 +94,7 @@ class BoltSnapshotQueryExecutionIT
         {
             session.readTransaction( tx ->
             {
-                StatementResult result =  tx.run( "MATCH (n) RETURN n.c" );
+                Result result =  tx.run( "MATCH (n) RETURN n.c" );
                 while ( result.hasNext() )
                 {
                     assertEquals( "d", result.next().get( "n.c" ).asString() );

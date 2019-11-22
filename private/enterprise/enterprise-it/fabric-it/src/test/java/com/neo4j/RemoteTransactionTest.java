@@ -10,6 +10,7 @@ import com.neo4j.fabric.driver.AutoCommitStatementResult;
 import com.neo4j.fabric.driver.DriverPool;
 import com.neo4j.fabric.driver.FabricDriverTransaction;
 import com.neo4j.fabric.driver.PooledDriver;
+import com.neo4j.fabric.driver.RemoteBookmark;
 import com.neo4j.fabric.localdb.FabricDatabaseManager;
 import com.neo4j.fabric.stream.StatementResult;
 import com.neo4j.fabric.stream.summary.EmptySummary;
@@ -28,6 +29,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -200,7 +202,7 @@ class RemoteTransactionTest
         when( result.columns() ).thenReturn( Flux.fromIterable( List.of( "a", "b" ) ) );
         when( result.records() ).thenReturn( Flux.empty() );
         when( result.summary() ).thenReturn( Mono.just( new EmptySummary() ) );
-        when( result.getBookmark() ).thenReturn( Mono.just( "BB" ) );
+        when( result.getBookmark() ).thenReturn( Mono.just( new RemoteBookmark( Set.of("BB") ) ) );
 
         when( shardDriver.run( any(), any(), any(), any(), any(), any() ) ).thenReturn( result );
 

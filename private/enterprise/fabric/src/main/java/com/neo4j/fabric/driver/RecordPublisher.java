@@ -15,18 +15,18 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
-import org.neo4j.driver.async.StatementResultCursor;
+import org.neo4j.driver.async.ResultCursor;
 import org.neo4j.driver.internal.util.Futures;
 
 class RecordPublisher implements Publisher<Record>
 {
-    private final StatementResultCursor statementResultCursor;
+    private final ResultCursor statementResultCursor;
     private final RecordConverter recordConverter;
     private Subscriber<? super Record> subscriber;
     private AtomicBoolean producing = new AtomicBoolean( false );
     private AtomicLong pendingRequests = new AtomicLong();
 
-    RecordPublisher( StatementResultCursor statementResultCursor, RecordConverter recordConverter )
+    RecordPublisher( ResultCursor statementResultCursor, RecordConverter recordConverter )
     {
         this.statementResultCursor = statementResultCursor;
         this.recordConverter = recordConverter;

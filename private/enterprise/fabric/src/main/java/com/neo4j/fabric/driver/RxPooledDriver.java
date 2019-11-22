@@ -18,10 +18,12 @@ import java.util.function.Consumer;
 
 import org.neo4j.bolt.runtime.AccessMode;
 import org.neo4j.driver.Driver;
+import org.neo4j.driver.reactive.RxResult;
 import org.neo4j.driver.reactive.RxSession;
-import org.neo4j.driver.reactive.RxStatementResult;
 import org.neo4j.driver.reactive.RxTransaction;
 import org.neo4j.values.virtual.MapValue;
+
+import static com.neo4j.fabric.driver.Utils.convertBookmark;
 
 class RxPooledDriver extends PooledDriver
 {
@@ -36,7 +38,7 @@ class RxPooledDriver extends PooledDriver
 
     @Override
     public AutoCommitStatementResult run( String query, MapValue params, FabricConfig.Graph location, AccessMode accessMode,
-            FabricTransactionInfo transactionInfo, List<String> bookmarks )
+            FabricTransactionInfo transactionInfo, List<RemoteBookmark> bookmarks )
     {
         var sessionConfig = createSessionConfig( location, accessMode, bookmarks );
         var session = driver.rxSession( sessionConfig );
@@ -45,14 +47,14 @@ class RxPooledDriver extends PooledDriver
         var paramMap = (Map<String,Object>) parameterConverter.convertValue( params );
 
         var transactionConfig = getTransactionConfig( transactionInfo );
-        var rxStatementResult = session.run( query, paramMap, transactionConfig );
+        var rxResult = session.run( query, paramMap, transactionConfig );
 
-        return new StatementResultImpl( session, rxStatementResult, location.getId() );
+        return new StatementResultImpl( session, rxResult, location.getId() );
     }
 
     @Override
     public Mono<FabricDriverTransaction> beginTransaction( FabricConfig.Graph location, AccessMode accessMode, FabricTransactionInfo transactionInfo,
-            List<String> bookmarks )
+            List<RemoteBookmark> bookmarks )
     {
         var sessionConfig = createSessionConfig( location, accessMode, bookmarks );
         var session = driver.rxSession( sessionConfig );
@@ -72,21 +74,21 @@ class RxPooledDriver extends PooledDriver
     {
 
         private final RxSession session;
-        private final RxStatementResult rxStatementResult;
-        private final CompletableFuture<String> bookmarkFuture = new CompletableFuture<>();
+        private final RxResult rxResult;
+        private final CompletableFuture<RemoteBookmark> bookmarkFuture = new CompletableFuture<>();
 
-        StatementResultImpl( RxSession session, RxStatementResult rxStatementResult, long sourceTag )
+        StatementResultImpl( RxSession session, RxResult rxResult, long sourceTag )
         {
-            super( Mono.from( rxStatementResult.keys() ).flatMapMany( Flux::fromIterable ),
-                    Mono.from( rxStatementResult.consume() ),
+            super( Mono.from( rxResult.keys() ).flatMapMany( Flux::fromIterable ),
+                    Mono.from( rxResult.consume() ),
                     sourceTag, session::close
             );
             this.session = session;
-            this.rxStatementResult = rxStatementResult;
+            this.rxResult = rxResult;
         }
 
         @Override
-        public  Mono<String> getBookmark()
+        public  Mono<RemoteBookmark> getBookmark()
         {
             return Mono.fromFuture( bookmarkFuture );
         }
@@ -94,8 +96,12 @@ class RxPooledDriver extends PooledDriver
         @Override
         protected Flux<Record> doGetRecords()
         {
-            return convertRxRecords( Flux.from( rxStatementResult.records() ) )
-                    .doOnComplete( () -> bookmarkFuture.complete( DriverBookmarkFormat.serialize( session.lastBookmark() ) ) );
+            return convertRxRecords( Flux.from( rxResult.records() ) )
+                    .doOnComplete( () ->
+                    {
+                        var bookmark = convertBookmark( session.lastBookmark() );
+                        bookmarkFuture.complete( bookmark );
+                    });
         }
     }
 }

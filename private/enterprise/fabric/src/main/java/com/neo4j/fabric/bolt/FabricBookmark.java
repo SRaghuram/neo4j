@@ -5,6 +5,8 @@
  */
 package com.neo4j.fabric.bolt;
 
+import com.neo4j.fabric.driver.RemoteBookmark;
+
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.List;
@@ -95,9 +97,9 @@ public class FabricBookmark extends BookmarkMetadata implements Bookmark
     public static class GraphState
     {
         private final long remoteGraphId;
-        private final List<String> bookmarks;
+        private final List<RemoteBookmark> bookmarks;
 
-        public GraphState( long remoteGraphId, List<String> bookmarks )
+        public GraphState( long remoteGraphId, List<RemoteBookmark> bookmarks )
         {
             this.remoteGraphId = remoteGraphId;
             this.bookmarks = bookmarks;
@@ -108,7 +110,7 @@ public class FabricBookmark extends BookmarkMetadata implements Bookmark
             return remoteGraphId;
         }
 
-        public List<String> getBookmarks()
+        public List<RemoteBookmark> getBookmarks()
         {
             return bookmarks;
         }
@@ -122,8 +124,15 @@ public class FabricBookmark extends BookmarkMetadata implements Bookmark
         private String serialize()
         {
             return bookmarks.stream()
-                    .map( bookmark -> Base64.getEncoder().encodeToString( bookmark.getBytes( StandardCharsets.UTF_8 ) ) )
+                    .map( this::serialize )
                     .collect( Collectors.joining( ",", remoteGraphId + ":", "" ) );
+        }
+
+        private String serialize( RemoteBookmark remoteBookmark )
+        {
+            return remoteBookmark.getSerialisedState().stream()
+                    .map( bookmarkPart -> Base64.getEncoder().encodeToString( bookmarkPart.getBytes( StandardCharsets.UTF_8 ) ) )
+                    .collect( Collectors.joining( "|" ) );
         }
 
         @Override
