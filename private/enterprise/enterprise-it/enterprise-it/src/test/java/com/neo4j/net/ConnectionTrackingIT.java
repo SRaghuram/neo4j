@@ -44,7 +44,7 @@ import org.neo4j.graphdb.Lock;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.harness.InProcessNeo4j;
+import org.neo4j.harness.internal.InProcessNeo4j;
 import org.neo4j.internal.helpers.HostnamePort;
 import org.neo4j.io.IOUtils;
 import org.neo4j.kernel.api.net.NetworkConnectionTracker;
@@ -119,7 +119,7 @@ class ConnectionTrackingIT
     @BeforeAll
     void beforeAll()
     {
-        neo4j = new EnterpriseInProcessNeo4jBuilder( dir.homeDir() )
+        neo4j = (InProcessNeo4j) new EnterpriseInProcessNeo4jBuilder( dir.homeDir() )
                 .withConfig( neo4j_home, dir.homeDir().toPath().toAbsolutePath() )
                 .withConfig( auth_enabled, true )
                 .withConfig( HttpConnector.enabled, true )

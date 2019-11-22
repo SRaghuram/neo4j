@@ -38,7 +38,7 @@ import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.event.TransactionData;
 import org.neo4j.graphdb.event.TransactionEventListenerAdapter;
-import org.neo4j.harness.InProcessNeo4j;
+import org.neo4j.harness.Neo4j;
 import org.neo4j.harness.Neo4jBuilders;
 import org.neo4j.kernel.impl.api.KernelTransactions;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -55,8 +55,8 @@ class TransactionIntegrationTest
 {
     private static Driver clientDriver;
     private static TestServer testServer;
-    private static InProcessNeo4j remote0;
-    private static InProcessNeo4j remote1;
+    private static Neo4j remote0;
+    private static Neo4j remote1;
     private static Driver shard0Driver;
     private static Driver shard1Driver;
 
@@ -434,7 +434,7 @@ class TransactionIntegrationTest
         return testServer.getDependencies().resolveDependency( DatabaseManagementService.class );
     }
 
-    private void verifyNoRemoteTransactions( InProcessNeo4j remote )
+    private void verifyNoRemoteTransactions( Neo4j remote )
     {
         var db = (GraphDatabaseAPI) remote.defaultDatabaseService();
         verifyNoTransactions( db );

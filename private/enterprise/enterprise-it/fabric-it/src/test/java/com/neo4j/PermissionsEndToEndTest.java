@@ -21,7 +21,7 @@ import org.neo4j.driver.Transaction;
 import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.driver.exceptions.DatabaseException;
 import org.neo4j.exceptions.KernelException;
-import org.neo4j.harness.InProcessNeo4j;
+import org.neo4j.harness.Neo4j;
 import org.neo4j.harness.Neo4jBuilders;
 import org.neo4j.procedure.impl.GlobalProceduresRegistry;
 
@@ -38,7 +38,7 @@ class PermissionsEndToEndTest
     private static Driver accessDriver;
     private static Driver noPermissionDriver;
     private static TestServer testServer;
-    private static InProcessNeo4j remote;
+    private static Neo4j remote;
 
     @BeforeAll
     static void setUp() throws KernelException

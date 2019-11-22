@@ -26,7 +26,7 @@ import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.StatementResult;
 import org.neo4j.driver.Value;
-import org.neo4j.harness.InProcessNeo4j;
+import org.neo4j.harness.Neo4j;
 import org.neo4j.harness.Neo4jBuilders;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.BooleanValue;
@@ -58,7 +58,7 @@ import static org.neo4j.values.storable.Values.NO_VALUE;
 class RecordConverterTest
 {
 
-    private static InProcessNeo4j testServer;
+    private static Neo4j testServer;
     private static Driver driver;
 
     private final RecordConverter converter = new RecordConverter();

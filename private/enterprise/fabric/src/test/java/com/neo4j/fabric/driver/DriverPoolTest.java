@@ -22,7 +22,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.NormalizedGraphName;
 import org.neo4j.driver.AuthToken;
 import org.neo4j.driver.AuthTokens;
-import org.neo4j.harness.InProcessNeo4j;
+import org.neo4j.harness.Neo4j;
 import org.neo4j.harness.Neo4jBuilders;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.logging.Level;
@@ -41,8 +41,8 @@ import static org.mockito.Mockito.when;
 
 class DriverPoolTest
 {
-    private static InProcessNeo4j shard0;
-    private static InProcessNeo4j shard1;
+    private static Neo4j shard0;
+    private static Neo4j shard1;
 
     private final JobScheduler jobScheduler = mock( JobScheduler.class );
     private final FabricConfig fabricConfig = mock( FabricConfig.class );

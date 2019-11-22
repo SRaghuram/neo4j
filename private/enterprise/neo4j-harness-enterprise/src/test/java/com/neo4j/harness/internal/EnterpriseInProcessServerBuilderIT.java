@@ -15,7 +15,7 @@ import org.junit.jupiter.api.parallel.Resources;
 import java.io.File;
 import java.util.Arrays;
 
-import org.neo4j.harness.InProcessNeo4j;
+import org.neo4j.harness.Neo4j;
 import org.neo4j.harness.Neo4jBuilder;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
@@ -41,7 +41,7 @@ class EnterpriseInProcessServerBuilderIT
         File workDir = testDir.directory("specific" );
 
         // When
-        try ( InProcessNeo4j server = getTestServerBuilder( workDir ).build() )
+        try ( Neo4j server = getTestServerBuilder( workDir ).build() )
         {
             // Then
             assertThat( HTTP.GET( server.httpURI().toString() ).status(), equalTo( 200 ) );

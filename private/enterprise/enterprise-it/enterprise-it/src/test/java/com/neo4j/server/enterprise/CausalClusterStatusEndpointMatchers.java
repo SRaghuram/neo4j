@@ -19,7 +19,7 @@ import java.util.function.Function;
 import org.neo4j.function.ThrowingSupplier;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.harness.junit.extension.Neo4j;
+import org.neo4j.harness.Neo4j;
 
 import static com.neo4j.server.enterprise.CausalClusterRestEndpointHelpers.queryStatusEndpoint;
 import static java.lang.String.format;

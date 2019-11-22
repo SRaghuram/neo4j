@@ -45,7 +45,7 @@ import org.neo4j.driver.summary.ResultSummary;
 import org.neo4j.driver.summary.StatementType;
 import org.neo4j.driver.types.Node;
 import org.neo4j.exceptions.KernelException;
-import org.neo4j.harness.InProcessNeo4j;
+import org.neo4j.harness.Neo4j;
 import org.neo4j.harness.Neo4jBuilders;
 import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.procedure.impl.GlobalProceduresRegistry;
@@ -70,8 +70,8 @@ class EndToEndTest
 
     private static Driver clientDriver;
     private static TestServer testServer;
-    private static InProcessNeo4j shard0;
-    private static InProcessNeo4j shard1;
+    private static Neo4j shard0;
+    private static Neo4j shard1;
     private static Driver shard0Driver;
     private static Driver shard1Driver;
 

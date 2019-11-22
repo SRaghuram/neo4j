@@ -23,7 +23,7 @@ import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Transaction;
 import org.neo4j.exceptions.KernelException;
-import org.neo4j.harness.InProcessNeo4j;
+import org.neo4j.harness.Neo4j;
 import org.neo4j.harness.Neo4jBuilders;
 import org.neo4j.procedure.impl.GlobalProceduresRegistry;
 
@@ -35,7 +35,7 @@ class LocalQueryEndToEndTest
 {
     private Driver clientDriver;
     private TestServer testServer;
-    private InProcessNeo4j shard0;
+    private Neo4j shard0;
 
     @BeforeEach
     void setUp() throws KernelException
