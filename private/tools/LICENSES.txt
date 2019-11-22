@@ -41,6 +41,7 @@ Apache Software License, Version 2.0
   Jackson-annotations
   Jackson-core
   jackson-databind
+  Java Concurrency Tools Core Library
   javax.inject
   Jetty :: Asynchronous HTTP Client
   Jetty :: Http Utility
