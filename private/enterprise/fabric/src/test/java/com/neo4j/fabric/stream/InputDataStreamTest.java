@@ -31,7 +31,6 @@ class InputDataStreamTest
     void testInputDataStream()
     {
         Rx2SyncStream recordStream = mock( Rx2SyncStream.class );
-        when( recordStream.getColumns() ).thenReturn( List.of( "c1", "c2", "c3" ) );
         Record r1 = record( "v1", "v2", "v3" );
         Record r2 = record( "v4", "v5", "v6" );
         Record r3 = record( "v7", "v8", "v9" );

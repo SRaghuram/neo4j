@@ -7,9 +7,11 @@ package com.neo4j.fabric.executor;
 
 import com.neo4j.fabric.config.FabricConfig;
 import com.neo4j.fabric.stream.InputDataStreamImpl;
+import com.neo4j.fabric.stream.Record;
 import com.neo4j.fabric.stream.Rx2SyncStream;
 import com.neo4j.fabric.stream.StatementResult;
 import com.neo4j.fabric.stream.StatementResults;
+import reactor.core.publisher.Flux;
 
 import org.neo4j.cypher.internal.FullyParsedQuery;
 import org.neo4j.cypher.internal.javacompat.ExecutionEngine;
@@ -44,7 +46,7 @@ public class SingleStatementKernelTransaction
         this.config = config;
     }
 
-    public StatementResult run( FullyParsedQuery query, MapValue params, StatementResult input )
+    public StatementResult run( FullyParsedQuery query, MapValue params, Flux<Record> input )
     {
         if ( executionContext != null )
         {
@@ -76,14 +78,9 @@ public class SingleStatementKernelTransaction
         }
     }
 
-    private InputDataStream convert( StatementResult input )
+    private InputDataStream convert( Flux<Record> input )
     {
-        return new InputDataStreamImpl(
-                new Rx2SyncStream(
-                        input,
-                        config.getDataStream().getBufferLowWatermark(),
-                        config.getDataStream().getBufferSize(),
-                        config.getDataStream().getSyncBatchSize() )
+        return new InputDataStreamImpl( new Rx2SyncStream( input, config.getDataStream().getBatchSize() )
         );
     }
 

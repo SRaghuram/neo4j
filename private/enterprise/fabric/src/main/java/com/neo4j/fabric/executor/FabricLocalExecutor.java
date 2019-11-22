@@ -71,7 +71,7 @@ public class FabricLocalExecutor
             this.transactionInfo = transactionInfo;
         }
 
-        public StatementResult run( FullyParsedQuery query, MapValue params, StatementResult input )
+        public StatementResult run( FullyParsedQuery query, MapValue params, Flux<Record> input )
         {
             var kernelTransaction = beginKernelTransaction();
             kernelTransactions.add( kernelTransaction );

@@ -114,9 +114,11 @@ public class FabricSettings implements SettingsDeclaration
             "operating system level." )
     static Setting<Duration> driverConnectTimeout = newBuilder( "fabric." + DRIVER_CONNECT_TIMEOUT, DURATION, ofSeconds( 5 ) ).build();
 
-    @Description( "Maximal size of a buffer used for prefetching result records of remote queries.\n" +
+    @Description( "Maximal size of a buffer used for pre-fetching result records of remote queries.\n" +
             "For performance reasons, Fabric execution engine does not request a remote record only when it is immediately needed by the local executions, " +
-            "because that would be very inefficient especially when there is high latency between a fabric and a remote database.\n" )
+            "because that would be very inefficient especially when there is high latency between a fabric and a remote database.\n" +
+            "This limit is enforced per fabric query. If a fabric query uses multiple remote stream at the same time, this setting represents" +
+            "the maximal number of pre-fetched records counted together for all such remote streams" )
     static Setting<Integer> bufferSizeSetting = newBuilder( "fabric.stream.buffer.size", INT, 1000 ).build();
 
     @Description( "Number of records in prefetching buffer that will trigger prefetching again. This is strongly related to fabric.stream.buffer.size" )
@@ -127,7 +129,13 @@ public class FabricSettings implements SettingsDeclaration
 
     @Description( "Batch size used when requesting records from local Cypher engine." )
     @Internal
-    static Setting<Integer> syncBatchSizeSetting = newBuilder( "fabric.stream.sync_batch_size", INT, 50 ).build();
+    static Setting<Integer> batchSizeSetting = newBuilder( "fabric.stream.batch_size", INT, 50 ).build();
+
+    @Description( "Maximal concurrency for a single fabric query. A fabric query typically has naturally concurrent parts such" +
+            "as concurrently fetching data from multiple remote graphs. Since each concurrent part of a query consumes resources suc has memory" +
+            "or network connections, it is a good idea to cap the concurrency level, so queries with many concurrent parts don't consume too many resources." )
+    @DocumentedDefaultValue( "The number of remote graphs" )
+    static Setting<Integer> concurrency = newBuilder( "fabric.stream.concurrency", INT, null ).build();
 
     @Description( "Determines which driver API will be used. ASYNC must be used when the remote instance is 3.5" )
     static Setting<DriverApi> driverApi = newBuilder( "fabric." + DRIVER_API, ofEnum(DriverApi.class), DriverApi.RX ).build();

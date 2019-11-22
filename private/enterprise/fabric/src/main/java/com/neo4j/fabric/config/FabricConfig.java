@@ -154,9 +154,14 @@ public class FabricConfig
 
         var bufferLowWatermark = config.get( FabricSettings.bufferLowWatermarkSetting );
         var bufferSize = config.get( FabricSettings.bufferSizeSetting );
-        var syncBatchSize = config.get( FabricSettings.syncBatchSizeSetting );
+        var syncBatchSize = config.get( FabricSettings.batchSizeSetting );
+        var concurrency = config.get( FabricSettings.concurrency );
+        if ( concurrency == null )
+        {
+            concurrency = database.get().graphs.size();
+        }
 
-        var dataStream = new DataStream( bufferLowWatermark, bufferSize, syncBatchSize );
+        var dataStream = new DataStream( bufferLowWatermark, bufferSize, syncBatchSize, concurrency );
 
         return new FabricConfig( true, database.get(), serverAddresses, routingTtl, transactionTimeout, remoteGraphDriver, dataStream );
     }
@@ -464,13 +469,15 @@ public class FabricConfig
     {
         private final int bufferLowWatermark;
         private final int bufferSize;
-        private final int syncBatchSize;
+        private final int batchSize;
+        private final int concurrency;
 
-        public DataStream( int bufferLowWatermark, int bufferSize, int syncBatchSize )
+        public DataStream( int bufferLowWatermark, int bufferSize, int batchSize, int concurrency )
         {
             this.bufferLowWatermark = bufferLowWatermark;
             this.bufferSize = bufferSize;
-            this.syncBatchSize = syncBatchSize;
+            this.batchSize = batchSize;
+            this.concurrency = concurrency;
         }
 
         public int getBufferLowWatermark()
@@ -483,9 +490,14 @@ public class FabricConfig
             return bufferSize;
         }
 
-        public int getSyncBatchSize()
+        public int getBatchSize()
         {
-            return syncBatchSize;
+            return batchSize;
+        }
+
+        public int getConcurrency()
+        {
+            return concurrency;
         }
     }
 

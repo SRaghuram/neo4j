@@ -677,7 +677,7 @@ class EndToEndTest
                     "  WITH x",
                     "  RETURN 1 + x AS y",
                     "}",
-                    "RETURN x, y"
+                    "RETURN x, y ORDER BY x"
             );
 
             return tx.run( query ).list();
