@@ -146,7 +146,7 @@ class BoltAdapterTest
     @Test
     void testSimpleStatementWithExplicitTransaction() throws InterruptedException
     {
-        mockConfig( 1, 1000, 1 );
+        mockConfig();
 
         CountDownLatch latch = new CountDownLatch( 1 );
         executorService.submit( () -> doInMegaTx( driver, tx ->
@@ -169,7 +169,7 @@ class BoltAdapterTest
     @Test
     void testSimpleStatementWithImplicitTransaction() throws InterruptedException
     {
-        mockConfig( 1, 1000, 1 );
+        mockConfig();
 
         CountDownLatch latch = new CountDownLatch( 1 );
         executorService.submit( () -> doInMegaSession( driver, session ->
@@ -192,7 +192,7 @@ class BoltAdapterTest
     @Test
     void testRollback() throws InterruptedException
     {
-        mockConfig( 1, 1000, 1 );
+        mockConfig();
 
         CountDownLatch latch = new CountDownLatch( 1 );
         executorService.submit( () -> doInMegaTx( driver, tx ->
@@ -215,7 +215,7 @@ class BoltAdapterTest
     @Test
     void testErrorWhenExecutingStatementInExplicitTransaction() throws InterruptedException
     {
-        mockConfig( 1, 1000, 1 );
+        mockConfig();
 
         when( fabricExecutor.run( any(), any(), any() ) ).thenThrow( new IllegalStateException( "Something went wrong" ) );
 
@@ -244,7 +244,7 @@ class BoltAdapterTest
     @Test
     void testErrorWhenExecutingStatementInImplicitTransaction() throws InterruptedException
     {
-        mockConfig( 1, 1000, 1 );
+        mockConfig();
 
         when( fabricExecutor.run( any(), any(), any() ) ).thenThrow( new IllegalStateException( "Something went wrong" ) );
 
@@ -273,7 +273,7 @@ class BoltAdapterTest
     @Test
     void testErrorWhenStreamingResultInExplicitTransaction() throws InterruptedException
     {
-        mockConfig( 1, 1000, 1 );
+        mockConfig();
 
         CountDownLatch latch = new CountDownLatch( 1 );
         executorService.submit( () ->
@@ -304,7 +304,7 @@ class BoltAdapterTest
     @Test
     void testErrorWhenStreamingResultInImplicitTransaction() throws InterruptedException
     {
-        mockConfig( 1, 1000, 1 );
+        mockConfig();
 
         CountDownLatch latch = new CountDownLatch( 1 );
         executorService.submit( () ->
@@ -332,9 +332,9 @@ class BoltAdapterTest
         verify( fabricTransaction ).rollback();
     }
 
-    private void mockConfig( int bufferLowWatermark, int bufferSize, int syncBatchSize )
+    private void mockConfig()
     {
-        var streamConfig = new FabricConfig.DataStream( bufferLowWatermark, bufferSize, syncBatchSize );
+        var streamConfig = new FabricConfig.DataStream( 1, 1000, 1000, 10 );
         when( fabricConfig.getDataStream() ).thenReturn( streamConfig );
     }
 

@@ -6,11 +6,10 @@
 package com.neo4j.fabric.stream;
 
 import com.neo4j.fabric.executor.Exceptions;
-import com.neo4j.fabric.stream.summary.Summary;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+import reactor.core.publisher.Flux;
 
-import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.atomic.AtomicLong;
@@ -19,40 +18,21 @@ import org.neo4j.kernel.api.exceptions.Status;
 
 public class Rx2SyncStream
 {
-
     private static final RecordOrError END = new RecordOrError( null, null );
-    private final StatementResult statementResult;
     private final RecordSubscriber recordSubscriber;
-    private final int bufferLowWatermark;
-    private final int bufferSize;
     private final BlockingQueue<RecordOrError> buffer;
-    private final int syncBatchSize;
-    private volatile Mode mode = Mode.UNDECIDED;
-    private volatile Thread readerThread;
+    private final int batchSize;
 
-    public Rx2SyncStream( StatementResult statementResult, int bufferLowWatermark, int bufferSize, int syncBatchSize )
+    public Rx2SyncStream( Flux<Record> records, int batchSize )
     {
-        this.statementResult = statementResult;
-        this.bufferLowWatermark = bufferLowWatermark;
-        this.bufferSize = bufferSize;
-        buffer = new ArrayBlockingQueue<>( bufferSize + 1 );
+        this.batchSize = batchSize;
+        buffer = new ArrayBlockingQueue<>( batchSize + 1 );
         this.recordSubscriber = new RecordSubscriber();
-        this.statementResult.records().subscribeWith( recordSubscriber );
-        this.syncBatchSize = syncBatchSize;
-    }
-
-    public List<String> getColumns()
-    {
-        return statementResult.columns().collectList().block();
+        records.subscribeWith( recordSubscriber );
     }
 
     public Record readRecord()
     {
-        if ( mode == Mode.UNDECIDED )
-        {
-            initReading();
-        }
-
         maybeRequest();
 
         RecordOrError recordOrError;
@@ -78,61 +58,18 @@ public class Rx2SyncStream
         return recordOrError.record;
     }
 
-    public Summary summary()
-    {
-        return statementResult.summary().block();
-    }
-
     public void close()
     {
         recordSubscriber.close();
-    }
-
-    private void initReading()
-    {
-        readerThread = Thread.currentThread();
-
-        recordSubscriber.request( syncBatchSize );
-
-        // if the reader thread exits the Rx 'request' method and the mode is still undecided,
-        // it means that it is not the reader thread that is producing records
-        if ( mode == Mode.UNDECIDED )
-        {
-            mode = Mode.ASYNC;
-        }
-    }
-
-    private void decideModeOnRecord()
-    {
-        if ( Thread.currentThread() == readerThread )
-        {
-            // this means it is the reader thread producing the result in 'request' method
-            mode = Mode.SYNC;
-        }
-        else
-        {
-            mode = Mode.ASYNC;
-        }
     }
 
     private void maybeRequest()
     {
         int buffered = buffer.size();
         long pendingRequested = recordSubscriber.pendingRequested.get();
-
-        if ( mode == Mode.SYNC )
+        if ( pendingRequested + buffered == 0 )
         {
-            if ( pendingRequested + buffered == 0 )
-            {
-                recordSubscriber.request( syncBatchSize );
-            }
-        }
-        else
-        {
-            if ( buffered + pendingRequested <= bufferLowWatermark )
-            {
-                recordSubscriber.request( bufferSize - buffered - pendingRequested );
-            }
+            recordSubscriber.request( batchSize );
         }
     }
 
@@ -151,11 +88,6 @@ public class Rx2SyncStream
         @Override
         public void onNext( Record record )
         {
-            if ( mode == Mode.UNDECIDED )
-            {
-                decideModeOnRecord();
-            }
-
             pendingRequested.decrementAndGet();
             buffer.add( new RecordOrError( record, null ) );
         }
@@ -194,23 +126,5 @@ public class Rx2SyncStream
             this.record = record;
             this.error = error;
         }
-    }
-
-    /**
-     * This stream can operate in 2 modes depending on the behaviour of the stream from which it requests records.
-     * The stream, from which this stream requests records can behave synchronously or asynchronously.
-     * <p>
-     * If it behaves synchronously, it means that it produces records in the 'request' method using the caller thread.
-     * For instance, stream that represents the output of Cypher runtime behaves like this.
-     * <p>
-     * On the other hand, if it behaves asynchronously, the 'request' method returns immediately
-     * and the records are produced later by another thread.
-     * For instance, stream that represents a result coming from a driver behaves like this.
-     */
-    private enum Mode
-    {
-        SYNC,
-        ASYNC,
-        UNDECIDED
     }
 }

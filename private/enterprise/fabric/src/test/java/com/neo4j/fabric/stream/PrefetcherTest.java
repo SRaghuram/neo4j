@@ -6,6 +6,7 @@
 
 package com.neo4j.fabric.stream;
 
+import com.neo4j.fabric.config.FabricConfig;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Subscriber;
@@ -21,6 +22,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.neo4j.values.AnyValue;
@@ -31,7 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-class AsyncRx2SyncStreamTest
+class PrefetcherTest
 {
     private final ExecutorService executorService = Executors.newSingleThreadExecutor();
 
@@ -45,10 +47,11 @@ class AsyncRx2SyncStreamTest
     void testPositive() throws InterruptedException
     {
         RecordPublisher publisher = new RecordPublisher();
-        StatementResult statementResult = mockStatementResult( publisher, List.of( "a", "b", "c" ) );
-        Rx2SyncStream stream = new Rx2SyncStream( statementResult, 2, 100, 1 );
 
-        Reader reader = new Reader( stream, 3 );
+        Prefetcher prefetcher = new Prefetcher( new FabricConfig.DataStream(  1, 100, 2, 10 ) );
+        var stream = prefetcher.addPrefetch( Flux.from( publisher ) );
+
+        Reader reader = new Reader( stream );
 
         reader.rowLatch = new CountDownLatch( 2 );
         produce( publisher, "1st batch", 2, 3 );
@@ -81,10 +84,10 @@ class AsyncRx2SyncStreamTest
     void testError() throws InterruptedException
     {
         RecordPublisher publisher = new RecordPublisher();
-        StatementResult statementResult = mockStatementResult( publisher, List.of( "a", "b", "c" ) );
-        Rx2SyncStream stream = new Rx2SyncStream( statementResult, 2, 100, 1 );
+        Prefetcher prefetcher = new Prefetcher( new FabricConfig.DataStream(  1, 100, 2, 10 ) );
+        var stream = prefetcher.addPrefetch( Flux.from( publisher ) );
 
-        Reader reader = new Reader( stream, 3 );
+        Reader reader = new Reader( stream );
 
         reader.rowLatch = new CountDownLatch( 2 );
         produce( publisher, "1st batch", 2, 2 );
@@ -111,6 +114,7 @@ class AsyncRx2SyncStreamTest
         IntStream.range( 0, rowCount ).forEach( i ->
         {
             Record record = mock( Record.class );
+            when( record.size() ).thenReturn( columnCount );
             IntStream.range( 0, columnCount ).forEach( j -> when( record.getValue( j ) ).thenReturn( Values.stringValue( valuePrefix + "-" + i + "-" + j ) ) );
 
             publisher.publish( record );
@@ -121,15 +125,6 @@ class AsyncRx2SyncStreamTest
     {
         AnyValue value = reader.data.get( rowIdx ).get( columnIdx );
         assertEquals( org.neo4j.values.storable.Values.stringValue( expectedValue ), value );
-    }
-
-    private StatementResult mockStatementResult( RecordPublisher publisher, List<String> columns )
-    {
-        StatementResult statementResult = mock( StatementResult.class );
-        when( statementResult.columns() ).thenReturn( Flux.fromIterable( columns ) );
-        when( statementResult.records() ).thenReturn( Flux.from( publisher ) );
-
-        return statementResult;
     }
 
     private static class RecordPublisher implements org.reactivestreams.Publisher<Record>
@@ -216,16 +211,14 @@ class AsyncRx2SyncStreamTest
     private static class Reader implements Runnable
     {
 
-        private final Rx2SyncStream rx2SyncStream;
+        private final Flux<Record> recordStream;
         private final List<List<AnyValue>> data = new ArrayList<>();
         private final CountDownLatch endLatch = new CountDownLatch( 1 );
-        private final int columnCount;
         private volatile CountDownLatch rowLatch = new CountDownLatch( 1 );
 
-        Reader( Rx2SyncStream rx2SyncStream, int columnCount )
+        Reader( Flux<Record> recordStream )
         {
-            this.rx2SyncStream = rx2SyncStream;
-            this.columnCount = columnCount;
+            this.recordStream = recordStream;
         }
 
         @Override
@@ -233,29 +226,14 @@ class AsyncRx2SyncStreamTest
         {
             try
             {
-                while ( true )
+                recordStream.doOnNext( record ->
                 {
-                    Record record = rx2SyncStream.readRecord();
-
-                    if ( record == null )
-                    {
-                        endLatch.countDown();
-                        return;
-                    }
-
-                    List<AnyValue> row = new ArrayList<>();
+                    var row = IntStream.range( 0, record.size() ).mapToObj( record::getValue ).collect( Collectors.toList() );
                     data.add( row );
-
-                    for ( int i = 0; i < columnCount; i++ )
-                    {
-                        AnyValue value = record.getValue( i );
-                        row.add( value );
-                    }
-
                     rowLatch.countDown();
-                }
+                } ).collectList().block();
             }
-            catch ( Exception e )
+            finally
             {
                 endLatch.countDown();
             }

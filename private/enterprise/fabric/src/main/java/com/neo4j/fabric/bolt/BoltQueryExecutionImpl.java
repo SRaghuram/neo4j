@@ -11,8 +11,12 @@ import com.neo4j.fabric.stream.Record;
 import com.neo4j.fabric.stream.Rx2SyncStream;
 import com.neo4j.fabric.stream.StatementResult;
 import com.neo4j.fabric.stream.summary.Summary;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 
 import org.neo4j.bolt.dbapi.BoltQueryExecution;
 import org.neo4j.graphdb.ExecutionPlanDescription;
@@ -31,8 +35,8 @@ public class BoltQueryExecutionImpl implements BoltQueryExecution
     public BoltQueryExecutionImpl( StatementResult statementResult, QuerySubscriber subscriber, FabricConfig fabricConfig )
     {
         var config = fabricConfig.getDataStream();
-        var rx2SyncStream = new Rx2SyncStream( statementResult, config.getBufferLowWatermark(), config.getBufferSize(), config.getSyncBatchSize() );
-        queryExecution = new QueryExecutionImpl( rx2SyncStream, subscriber );
+        var rx2SyncStream = new Rx2SyncStream( statementResult.records(), config.getBatchSize() );
+        queryExecution = new QueryExecutionImpl( rx2SyncStream, subscriber, statementResult.columns(), statementResult.summary() );
     }
 
     @Override
@@ -58,25 +62,32 @@ public class BoltQueryExecutionImpl implements BoltQueryExecution
 
         private final Rx2SyncStream rx2SyncStream;
         private final QuerySubscriber subscriber;
-        private final List<String> columns;
         private boolean hasMore = true;
         private boolean initialised;
-        private Summary summary;
+        private final Mono<Summary> summary;
+        private final Supplier<List<String>> columns;
 
-        private QueryExecutionImpl( Rx2SyncStream rx2SyncStream, QuerySubscriber subscriber )
+        private QueryExecutionImpl( Rx2SyncStream rx2SyncStream, QuerySubscriber subscriber, Flux<String> columns, Mono<Summary> summary )
         {
             this.rx2SyncStream = rx2SyncStream;
             this.subscriber = subscriber;
-            columns = rx2SyncStream.getColumns();
+            this.summary = summary;
+
+            AtomicReference<List<String>> columnsStore = new AtomicReference<>();
+            this.columns = () ->
+            {
+                if ( columnsStore.get() == null )
+                {
+                    columnsStore.compareAndSet( null, columns.collectList().block() );
+                }
+
+                return columnsStore.get();
+            };
         }
 
         private Summary getSummary()
         {
-            if ( summary == null )
-            {
-                summary = rx2SyncStream.summary();
-            }
-            return summary;
+            return summary.block();
         }
 
         @Override
@@ -100,7 +111,7 @@ public class BoltQueryExecutionImpl implements BoltQueryExecution
         @Override
         public String[] fieldNames()
         {
-            return columns.toArray( new String[0] );
+            return columns.get().toArray( new String[0] );
         }
 
         @Override
@@ -114,7 +125,7 @@ public class BoltQueryExecutionImpl implements BoltQueryExecution
             if ( !initialised )
             {
                 initialised = true;
-                subscriber.onResult( rx2SyncStream.getColumns().size() );
+                subscriber.onResult( columns.get().size() );
             }
 
             try
@@ -143,7 +154,7 @@ public class BoltQueryExecutionImpl implements BoltQueryExecution
 
         private void publishFields( Record record ) throws Exception
         {
-            for ( int i = 0; i < columns.size(); i++ )
+            for ( int i = 0; i < columns.get().size(); i++ )
             {
                 subscriber.onField( record.getValue( i ) );
             }

@@ -12,12 +12,11 @@ import com.neo4j.fabric.planning.FabricPlan;
 import com.neo4j.fabric.planning.FabricPlanner;
 import com.neo4j.fabric.planning.FabricQuery;
 import com.neo4j.fabric.planning.QueryType;
+import com.neo4j.fabric.stream.Prefetcher;
 import com.neo4j.fabric.stream.Record;
 import com.neo4j.fabric.stream.Records;
-import com.neo4j.fabric.stream.Rx2SyncStream;
 import com.neo4j.fabric.stream.StatementResult;
 import com.neo4j.fabric.stream.StatementResults;
-import com.neo4j.fabric.stream.SyncPublisher;
 import com.neo4j.fabric.stream.summary.MergedSummary;
 import com.neo4j.fabric.stream.summary.Summary;
 import com.neo4j.fabric.transaction.FabricTransaction;
@@ -48,7 +47,7 @@ import static scala.collection.JavaConverters.seqAsJavaList;
 
 public class FabricExecutor
 {
-    private final FabricConfig config;
+    private final FabricConfig.DataStream dataStreamConfig;
     private final FabricPlanner planner;
     private final UseEvaluation useEvaluation;
     private final Log log;
@@ -57,7 +56,7 @@ public class FabricExecutor
     public FabricExecutor( FabricConfig config, FabricPlanner planner, UseEvaluation useEvaluation, LogProvider internalLog,
             FabricQueryMonitoring queryMonitoring )
     {
-        this.config = config;
+        this.dataStreamConfig = config.getDataStream();
         this.planner = planner;
         this.useEvaluation = useEvaluation;
         this.log = internalLog.getLog( getClass() );
@@ -83,11 +82,11 @@ public class FabricExecutor
             FabricStatementExecution execution;
             if ( plan.debugOptions().logRecords() )
             {
-                execution = new FabricLoggingStatementExecution( statement, plan, params, accessMode, ctx, log, queryMonitor );
+                execution = new FabricLoggingStatementExecution( statement, plan, params, accessMode, ctx, log, queryMonitor, dataStreamConfig );
             }
             else
             {
-                execution = new FabricStatementExecution( statement, plan, params, accessMode, ctx, queryMonitor );
+                execution = new FabricStatementExecution( statement, plan, params, accessMode, ctx, queryMonitor, dataStreamConfig );
             }
             return execution.run();
         } );
@@ -101,10 +100,11 @@ public class FabricExecutor
         private final FabricTransaction.FabricExecutionContext ctx;
         private final MergedSummary mergedSummary;
         private final FabricQueryMonitoring.QueryMonitor queryMonitor;
+        private final Prefetcher prefetcher;
 
         FabricStatementExecution( String originalStatement, FabricPlan plan, MapValue params, AccessMode accessMode,
                                   FabricTransaction.FabricExecutionContext ctx,
-                                  FabricQueryMonitoring.QueryMonitor queryMonitor )
+                                  FabricQueryMonitoring.QueryMonitor queryMonitor, FabricConfig.DataStream dataStreamConfig )
         {
             this.originalStatement = originalStatement;
             this.plan = plan;
@@ -112,6 +112,7 @@ public class FabricExecutor
             this.ctx = ctx;
             this.mergedSummary = new MergedSummary( plan, accessMode );
             this.queryMonitor = queryMonitor;
+            this.prefetcher = new Prefetcher( dataStreamConfig );
         }
 
         StatementResult run()
@@ -201,18 +202,15 @@ public class FabricExecutor
 
         Flux<Record> runApplyQuery( FabricQuery.Apply query, Flux<Record> input )
         {
-            return input.flatMap( inputRecord ->
-                    run( query.query(), Flux.just( inputRecord ) )
-                            .map( outputRecord ->
-                                    Records.join( inputRecord, outputRecord ) ) );
+            return input.flatMap(
+                    inputRecord -> run( query.query(), Flux.just( inputRecord ) ).map( outputRecord -> Records.join( inputRecord, outputRecord ) ),
+                    dataStreamConfig.getConcurrency(), 1
+            );
         }
 
         Flux<Record> runLocalQuery( FabricQuery.LocalQuery query, Flux<Record> input )
         {
-            // Wrap in StatementResult, REMOVE?
-            Flux<String> inputCols = Flux.fromIterable( asJavaIterable( query.columns().local() ) );
-            StatementResult inputStream = StatementResults.create( inputCols, input, Mono.empty() );
-            return ctx.getLocal().run( query.query(), params, inputStream ).records();
+            return ctx.getLocal().run( query.query(), params, input ).records();
         }
 
         Flux<Record> runRemoteQuery( FabricQuery.RemoteQuery query, Flux<Record> input )
@@ -225,20 +223,15 @@ public class FabricExecutor
                 FabricConfig.Graph graph = evalUse( query.use(), recordValues );
                 MapValue parameters = addImportParams( recordValues, mapAsJavaMap( query.parameters() ) );
                 return runRemoteQueryAt( graph, queryString, queryType, parameters );
-            } );
+            }, dataStreamConfig.getConcurrency(), 1 );
         }
 
         Flux<Record> runRemoteQueryAt( FabricConfig.Graph graph, String queryString, QueryType queryType, MapValue parameters )
         {
-            StatementResult result = ctx.getRemote().run( graph, queryString, queryType, parameters ).block();
-
-            Rx2SyncStream syncStream = new Rx2SyncStream( result,
-                    config.getDataStream().getBufferLowWatermark(),
-                    config.getDataStream().getBufferSize(),
-                    config.getDataStream().getSyncBatchSize() );
-
-            return Flux.from( new SyncPublisher( syncStream ) )
-                    .doOnComplete( () -> updateSummary( syncStream.summary() ) );
+            Flux<Record> records =  ctx.getRemote().run( graph, queryString, queryType, parameters )
+                    .flatMapMany( statementResult -> statementResult.records()
+                            .doOnComplete( () -> statementResult.summary().subscribe( this::updateSummary ) ) );
+            return prefetcher.addPrefetch( records );
         }
 
         private Map<String,AnyValue> recordAsMap( FabricQuery.RemoteQuery query, Record inputRecord )
@@ -315,9 +308,9 @@ public class FabricExecutor
 
         FabricLoggingStatementExecution( String originalStatement, FabricPlan plan, MapValue params, AccessMode accessMode,
                                          FabricTransaction.FabricExecutionContext ctx, Log log,
-                                         FabricQueryMonitoring.QueryMonitor queryMonitor )
+                                         FabricQueryMonitoring.QueryMonitor queryMonitor, FabricConfig.DataStream dataStreamConfig )
         {
-            super( originalStatement, plan, params, accessMode, ctx, queryMonitor );
+            super( originalStatement, plan, params, accessMode, ctx, queryMonitor, dataStreamConfig );
             this.step = new AtomicInteger( 0 );
             this.log = log;
         }

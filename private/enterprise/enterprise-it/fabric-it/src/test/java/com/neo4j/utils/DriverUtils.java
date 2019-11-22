@@ -5,6 +5,8 @@
  */
 package com.neo4j.utils;
 
+import reactor.core.publisher.Mono;
+
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -13,6 +15,7 @@ import org.neo4j.driver.Driver;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.SessionConfig;
 import org.neo4j.driver.Transaction;
+import org.neo4j.driver.reactive.RxTransaction;
 
 public final class DriverUtils
 {
@@ -79,6 +82,27 @@ public final class DriverUtils
         try ( var session = driver.session( SessionConfig.builder().withDatabase( "mega" ).withDefaultAccessMode( accessMode ).build() ) )
         {
             workload.accept( session );
+        }
+    }
+
+    public static <T> T inMegaRxTx( Driver driver, Function<RxTransaction,T> workload )
+    {
+        var session = driver.rxSession( SessionConfig.builder().withDatabase( "mega" ).build());
+        try
+        {
+            var tx = Mono.from( session.beginTransaction() ).block();
+            try
+            {
+                return workload.apply( tx );
+            }
+            finally
+            {
+                Mono.from( tx.commit() ).block();
+            }
+        }
+        finally
+        {
+            session.close();
         }
     }
 }
