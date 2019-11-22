@@ -22,6 +22,8 @@ import java.util.Optional;
 import java.util.concurrent.Executor;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.internal.helpers.ExponentialBackoffStrategy;
+import org.neo4j.internal.helpers.TimeoutStrategy;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.Group;
@@ -29,11 +31,13 @@ import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.ssl.SslPolicy;
 import org.neo4j.ssl.config.SslPolicyLoader;
 
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.neo4j.configuration.ssl.SslPolicyScope.CLUSTER;
 
 public class AkkaDiscoveryServiceFactory implements DiscoveryServiceFactory
 {
     private static final long RESTART_RETRY_DELAY_MS = 1000L;
+    private static final long RESTART_RETRY_DELAY_MAX_MS = 60 * 1000L;
     private static final long RESTART_RETRIES = 10L;
 
     @Override
@@ -42,7 +46,8 @@ public class AkkaDiscoveryServiceFactory implements DiscoveryServiceFactory
             SslPolicyLoader sslPolicyLoader, DiscoveryMemberFactory discoveryMemberFactory, Monitors monitors, Clock clock )
     {
         Executor executor = executorService( config, jobScheduler );
-        RetryStrategy restartRetryStrategy = new RetryStrategy( RESTART_RETRY_DELAY_MS, RESTART_RETRIES );
+        TimeoutStrategy timeoutStrategy = new ExponentialBackoffStrategy( RESTART_RETRY_DELAY_MS, RESTART_RETRY_DELAY_MAX_MS, MILLISECONDS );
+        RetryStrategy restartRetryStrategy = new RetryStrategy( timeoutStrategy, RESTART_RETRIES );
 
         return new AkkaCoreTopologyService(
                 config,

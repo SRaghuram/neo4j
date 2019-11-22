@@ -9,7 +9,7 @@ import org.neo4j.internal.helpers.TimeoutStrategy;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-class NoPauseTimeoutStrategy implements TimeoutStrategy
+public class NoPauseTimeoutStrategy implements TimeoutStrategy
 {
     private AtomicInteger invocationCount = new AtomicInteger();
 
@@ -28,7 +28,7 @@ class NoPauseTimeoutStrategy implements TimeoutStrategy
         }
     }
 
-    int invocationCount()
+    public int invocationCount()
     {
         return invocationCount.get();
     }
