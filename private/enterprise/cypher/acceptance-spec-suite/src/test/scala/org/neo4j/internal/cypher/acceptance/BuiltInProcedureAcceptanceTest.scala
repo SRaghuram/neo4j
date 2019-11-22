@@ -72,21 +72,21 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     // And then nodes
     val nodes = result.head("nodes").asInstanceOf[Seq[Node]]
 
-    val nodeState: Set[(List[Label], Map[String,AnyRef])] =
-      nodes.map(n => (n.getLabels.toList, n.getAllProperties.toMap)).toSet
+    val labels = nodes.map( n => n.getLabels.toList).toSet
+    labels should equal(Set(List(Label.label("Neo")), List(Label.label("Department")), List(Label.label("Employee"))))
 
-    val empty = new java.util.ArrayList()
-    val indexList = new java.util.ArrayList[String]()
-    indexList.add("prop1,prop2")
-    indexList.add("prop3")
-    val constraintList = new java.util.ArrayList[String]()
-    constraintList.add("CONSTRAINT ON ( department:Department ) ASSERT (department.prop) IS UNIQUE")
+    val nodeState: Set[(String, Set[String], Set[String])] =
+      nodes.map(n => (
+        n.getAllProperties.get("name").asInstanceOf[String],
+        n.getAllProperties.get("indexes").asInstanceOf[java.util.ArrayList[String]].toSet,
+        n.getAllProperties.get("constraints").asInstanceOf[java.util.ArrayList[String]].toSet
+      )).toSet
 
     nodeState should equal(
       Set(
-        (List(Label.label("Neo")),        Map("indexes" -> indexList, "constraints" -> empty,          "name" -> "Neo")),
-        (List(Label.label("Department")), Map("indexes" -> empty,     "constraints" -> constraintList, "name" -> "Department")),
-        (List(Label.label("Employee")),   Map("indexes" -> empty,     "constraints" -> empty,          "name" -> "Employee"))
+        ("Neo",        Set("prop1,prop2", "prop3"), Set()),
+        ("Department", Set(),                       Set("CONSTRAINT ON ( department:Department ) ASSERT (department.prop) IS UNIQUE")),
+        ("Employee",   Set(),                       Set())
       ))
 
     // And then relationships
