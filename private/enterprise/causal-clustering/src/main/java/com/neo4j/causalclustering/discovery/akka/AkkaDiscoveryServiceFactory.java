@@ -38,7 +38,7 @@ public class AkkaDiscoveryServiceFactory implements DiscoveryServiceFactory
 {
     private static final long RESTART_RETRY_DELAY_MS = 1000L;
     private static final long RESTART_RETRY_DELAY_MAX_MS = 60 * 1000L;
-    private static final long RESTART_RETRIES = 10L;
+    private static final long RESTART_RETRIES = 0L;
 
     @Override
     public final AkkaCoreTopologyService coreTopologyService( Config config, MemberId myself, JobScheduler jobScheduler, LogProvider logProvider,

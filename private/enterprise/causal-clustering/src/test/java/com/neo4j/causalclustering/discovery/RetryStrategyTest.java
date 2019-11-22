@@ -81,6 +81,18 @@ class RetryStrategyTest
         assertEquals( 2, countingSupplier.invocationCount() );
     }
 
+    @Test
+    void nonPositiveRetryNumberRetriesUntilSuccess() throws TimeoutException
+    {
+        RetryStrategy subject = new RetryStrategy( 0, 0 );
+
+        // when
+        Integer result = subject.apply( () -> 0, new ValidOnSecondTime() );
+
+        // then no TimeoutException
+        assertEquals( 0, result.intValue() );
+    }
+
     private static class ValidOnSecondTime implements Predicate<Integer>
     {
         private boolean nextSuccessful;
