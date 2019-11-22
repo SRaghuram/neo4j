@@ -13,7 +13,6 @@ import io.netty.channel.ChannelFutureListener;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
 
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.logging.Log;
@@ -33,7 +32,7 @@ public class RaftSender implements Outbound<SocketAddress,Message>
     @Override
     public void send( SocketAddress to, Message message, boolean block )
     {
-        Future<Void> fOperation = channels.acquire( to )
+        CompletableFuture<Void> fOperation = channels.acquire( to )
                 .thenCompose( pooledChannel -> sendMessage( pooledChannel, message ) );
 
         if ( block )
@@ -51,6 +50,16 @@ public class RaftSender implements Outbound<SocketAddress,Message>
                 fOperation.cancel( true );
                 log.info( "Interrupted while sending", e );
             }
+        }
+        else
+        {
+            fOperation.whenComplete( ( ignore, throwable ) ->
+            {
+                if ( throwable != null )
+                {
+                    log.error( "Raft sender failed exceptionally sending to [%s]", to, throwable );
+                }
+            } );
         }
     }
 
