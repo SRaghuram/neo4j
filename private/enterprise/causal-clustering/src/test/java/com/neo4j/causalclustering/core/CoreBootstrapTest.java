@@ -9,77 +9,111 @@ import com.neo4j.causalclustering.core.state.CoreSnapshotService;
 import com.neo4j.causalclustering.core.state.snapshot.CoreDownloaderService;
 import com.neo4j.causalclustering.identity.BoundState;
 import com.neo4j.causalclustering.identity.RaftBinder;
+import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.RaftIdFactory;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
+import com.neo4j.dbms.ClusterInternalDbmsOperator.BootstrappingHandle;
 import com.neo4j.dbms.DatabaseStartAborter;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import org.neo4j.dbms.database.DatabaseStartAbortedException;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class CoreBootstrapTest
 {
     private final TestDatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
+    private final LifecycleMessageHandler messageHandler = mock( LifecycleMessageHandler.class );
+    private final Database database = mock( Database.class );
+    private final CoreSnapshotService snapshotService = mock( CoreSnapshotService.class );
+    private final CoreDownloaderService downloaderService = mock( CoreDownloaderService.class );
+    private final ClusterInternalDbmsOperator internalOperator = mock( ClusterInternalDbmsOperator.class );
+    private final RaftBinder raftBinder = mock( RaftBinder.class );
+    private final DatabaseStartAborter databaseStartAborter = mock( DatabaseStartAborter.class );
+    private final BootstrappingHandle bootstrapHandle = mock( BootstrappingHandle.class );
+
+    private final NamedDatabaseId databaseId = databaseIdRepository.getRaw( "foo" );
+    private final RaftId raftId = RaftIdFactory.random();
+
+    @BeforeEach
+    void setup()
+    {
+        when( database.getNamedDatabaseId() ).thenReturn( databaseId );
+        when( internalOperator.bootstrap( databaseId ) ).thenReturn( bootstrapHandle );
+    }
 
     @Test
-    void shouldClearAborterCacheOnStart() throws Exception
+    void successfulStart() throws Exception
     {
         // given
-        var databaseStartAborter = mock( DatabaseStartAborter.class );
-        when( databaseStartAborter.shouldAbort( any( NamedDatabaseId.class ) ) ).thenReturn( false );
+        when( raftBinder.bindToRaft( databaseStartAborter ) ).thenReturn( new BoundState( raftId ) );
 
-        var databaseId = databaseIdRepository.getRaw( "products" );
-
-        var raftBinder = mock( RaftBinder.class );
-        when( raftBinder.bindToRaft( databaseStartAborter ) ).thenReturn( new BoundState( RaftIdFactory.random() ) );
-
-        var bootstrap = createBootstrap( databaseId, databaseStartAborter, raftBinder );
+        var bootstrap = createBootstrap();
 
         // when
         bootstrap.perform();
 
         // then
-        var inOrder = inOrder( databaseStartAborter );
+        var inOrder = inOrder( databaseStartAborter, messageHandler, internalOperator, bootstrapHandle );
+        inOrder.verify( internalOperator ).bootstrap( databaseId );
+        inOrder.verify( messageHandler ).start( raftId );
+        inOrder.verify( bootstrapHandle ).release();
         inOrder.verify( databaseStartAborter ).started( databaseId );
+        inOrder.verifyNoMoreInteractions();
     }
 
     @Test
-    void shouldClearAborterCacheOnFailedStart() throws Exception
+    void failBinding() throws Exception
     {
         // given
-        var databaseStartAborter = mock( DatabaseStartAborter.class );
-        when( databaseStartAborter.shouldAbort( any( NamedDatabaseId.class ) ) ).thenReturn( false );
-
-        var databaseId = databaseIdRepository.getRaw( "products" );
-        var raftBinder = mock( RaftBinder.class );
         when( raftBinder.bindToRaft( databaseStartAborter ) ).thenThrow( new RuntimeException() );
 
-        var bootstrap = createBootstrap( databaseId, databaseStartAborter, raftBinder );
+        var bootstrap = createBootstrap();
 
-        // when / then
+        // when
         assertThrows( RuntimeException.class, bootstrap::perform );
-        verify( databaseStartAborter ).started( databaseId );
+
+        // then
+        var inOrder = inOrder( databaseStartAborter, messageHandler, internalOperator, bootstrapHandle );
+        inOrder.verify( internalOperator ).bootstrap( databaseId );
+        inOrder.verify( bootstrapHandle ).release();
+        inOrder.verify( databaseStartAborter ).started( databaseId );
+        inOrder.verifyNoMoreInteractions();
     }
 
-    private static CoreBootstrap createBootstrap( NamedDatabaseId namedDatabaseId, DatabaseStartAborter databaseStartAborter, RaftBinder raftBinder )
+    @Test
+    void failAwaitState() throws Exception
     {
-        var database = mock( Database.class );
-        when( database.getNamedDatabaseId() ).thenReturn( namedDatabaseId );
+        // given
+        when( raftBinder.bindToRaft( databaseStartAborter ) ).thenReturn( new BoundState( raftId ) );
+        doThrow( new DatabaseStartAbortedException( databaseId ) ).when( snapshotService ).awaitState( databaseStartAborter );
 
-        var messageHandler = mock( LifecycleMessageHandler.class );
-        var snapshotService = mock( CoreSnapshotService.class );
-        var downloaderService = mock( CoreDownloaderService.class );
-        var internalOperator = new ClusterInternalDbmsOperator();
+        var bootstrap = createBootstrap();
 
+        // when
+        assertThrows( DatabaseStartAbortedException.class, bootstrap::perform );
+
+        // then
+        var inOrder = inOrder( databaseStartAborter, messageHandler, internalOperator, bootstrapHandle );
+        inOrder.verify( internalOperator ).bootstrap( databaseId );
+        inOrder.verify( messageHandler ).start( raftId );
+        inOrder.verify( messageHandler ).stop();
+        inOrder.verify( bootstrapHandle ).release();
+        inOrder.verify( databaseStartAborter ).started( databaseId );
+        inOrder.verifyNoMoreInteractions();
+    }
+
+    private CoreBootstrap createBootstrap()
+    {
         return new CoreBootstrap( database, raftBinder, messageHandler, snapshotService, downloaderService, internalOperator, databaseStartAborter );
     }
 }

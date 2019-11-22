@@ -45,7 +45,7 @@ import static com.neo4j.dbms.EnterpriseOperatorState.STORE_COPYING;
  * databases back to their original state when they are done: marking databases as successfully
  * boostrapped, or as ready for restarting after a store copy.
  */
-public final class ClusterInternalDbmsOperator extends DbmsOperator
+public class ClusterInternalDbmsOperator extends DbmsOperator
 {
     private final List<StoreCopyHandle> storeCopying = new CopyOnWriteArrayList<>();
     private final Set<NamedDatabaseId> bootstrapping = ConcurrentHashMap.newKeySet();
@@ -110,12 +110,18 @@ public final class ClusterInternalDbmsOperator extends DbmsOperator
     }
 
     /**
-     * Note that unlike {@link ClusterInternalDbmsOperator#stopForStoreCopy(NamedDatabaseId)} this operation does not trigger
-     * the reconciler, and is not blocking. Instead it simply serves as a marker for any other operators which
-     * make trigger the reconciler in parallel, signalling that this database is bootstrapping.
+     * Prevents state transitions to the STORE_COPYING state while startup is on-going, because the reconciler
+     * is already in the process of reconciling to the STARTED state and the {@link PersistentSnapshotDownloader}
+     * which is a component used both during startup and while the database is up and running will ask for a
+     * transition to STORE_COPYING. Trying to "switch" the reconciler to STORE_COPYING would currently deadlock it.
+     * This is a cooperative design between the reconciler and the startup code, which might seem a bit awkward.
+     *
+     * Note that unlike {@link ClusterInternalDbmsOperator#stopForStoreCopy(NamedDatabaseId)} this operation does not
+     * trigger the reconciler, and is not blocking. Instead it simply serves as a marker for any other operators which
+     * may trigger the reconciler in parallel, signalling that this database is bootstrapping.
      *
      * @param namedDatabaseId the id of the database being bootstrapped
-     * @return a handle which can be used to signal bootstrap completion
+     * @return a handle that must be released when bootstrapping is done.
      */
     public BootstrappingHandle bootstrap( NamedDatabaseId namedDatabaseId )
     {
@@ -188,7 +194,7 @@ public final class ClusterInternalDbmsOperator extends DbmsOperator
             this.namedDatabaseId = namedDatabaseId;
         }
 
-        public void bootstrapped()
+        public void release()
         {
             if ( !operator.bootstrapping.remove( namedDatabaseId ) )
             {

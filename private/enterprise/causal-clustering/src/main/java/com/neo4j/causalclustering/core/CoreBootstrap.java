@@ -43,31 +43,50 @@ class CoreBootstrap
 
     public void perform() throws Exception
     {
-        var signal = clusterInternalOperator.bootstrap( kernelDatabase.getNamedDatabaseId() );
+        var bootstrapHandle = clusterInternalOperator.bootstrap( kernelDatabase.getNamedDatabaseId() );
         try
         {
-            BoundState boundState = raftBinder.bindToRaft( databaseStartAborter );
-            raftMessageHandler.start( boundState.raftId() );
-
-            if ( boundState.snapshot().isPresent() )
-            {
-                // this means that we bootstrapped the cluster
-                snapshotService.installSnapshot( boundState.snapshot().get() );
-            }
-            else
-            {
-                snapshotService.awaitState( databaseStartAborter );
-                Optional<JobHandle> downloadJob = downloadService.downloadJob();
-                if ( downloadJob.isPresent() )
-                {
-                    downloadJob.get().waitTermination();
-                }
-            }
+            bindAndStartMessageHandler();
         }
         finally
         {
+            bootstrapHandle.release();
             databaseStartAborter.started( kernelDatabase.getNamedDatabaseId() );
-            signal.bootstrapped();
+        }
+    }
+
+    private void bindAndStartMessageHandler() throws Exception
+    {
+        BoundState boundState = raftBinder.bindToRaft( databaseStartAborter );
+
+        if ( boundState.snapshot().isPresent() )
+        {
+            // this means that we bootstrapped the cluster
+            snapshotService.installSnapshot( boundState.snapshot().get() );
+            raftMessageHandler.start( boundState.raftId() );
+        }
+        else
+        {
+            raftMessageHandler.start( boundState.raftId() );
+            try
+            {
+                awaitState();
+            }
+            catch ( Exception e )
+            {
+                raftMessageHandler.stop();
+                throw e;
+            }
+        }
+    }
+
+    private void awaitState() throws Exception
+    {
+        snapshotService.awaitState( databaseStartAborter );
+        Optional<JobHandle> downloadJob = downloadService.downloadJob();
+        if ( downloadJob.isPresent() )
+        {
+            downloadJob.get().waitTermination();
         }
     }
 }

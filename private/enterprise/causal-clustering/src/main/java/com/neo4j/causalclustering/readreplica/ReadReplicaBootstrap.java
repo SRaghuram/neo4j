@@ -62,7 +62,7 @@ class ReadReplicaBootstrap
 
     public void perform() throws Exception
     {
-        var signal = internalOperator.bootstrap( databaseContext.databaseId() );
+        var bootstrapHandle = internalOperator.bootstrap( databaseContext.databaseId() );
         boolean shouldAbort = false;
         try
         {
@@ -101,7 +101,7 @@ class ReadReplicaBootstrap
         finally
         {
             databaseStartAborter.started( databaseContext.databaseId() );
-            signal.bootstrapped();
+            bootstrapHandle.release();
         }
 
         if ( shouldAbort )

@@ -145,7 +145,7 @@ class ClusterInternalDbmsOperatorTest
     {
         // given
         var someDb = randomNamedDatabaseId();
-        var bootstrapping = operator.bootstrap( someDb );
+        var bootstrapHandle = operator.bootstrap( someDb );
 
         // when
         var storeCopying = operator.stopForStoreCopy( someDb );
@@ -154,7 +154,7 @@ class ClusterInternalDbmsOperatorTest
         assertNotEquals( STORE_COPYING, operatorState( someDb ) );
 
         // when
-        bootstrapping.bootstrapped();
+        bootstrapHandle.release();
 
         // then
         assertEquals( STORE_COPYING, operatorState( someDb ) );
