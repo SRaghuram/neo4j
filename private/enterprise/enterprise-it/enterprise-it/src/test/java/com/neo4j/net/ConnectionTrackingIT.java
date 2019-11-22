@@ -44,7 +44,7 @@ import org.neo4j.graphdb.Lock;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.harness.internal.InProcessNeo4j;
+import org.neo4j.harness.InProcessNeo4j;
 import org.neo4j.internal.helpers.HostnamePort;
 import org.neo4j.io.IOUtils;
 import org.neo4j.kernel.api.net.NetworkConnectionTracker;

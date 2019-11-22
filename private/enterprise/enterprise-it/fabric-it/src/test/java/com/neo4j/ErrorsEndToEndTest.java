@@ -17,8 +17,8 @@ import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.exceptions.ClientException;
-import org.neo4j.harness.internal.InProcessNeo4j;
-import org.neo4j.harness.internal.TestNeo4jBuilders;
+import org.neo4j.harness.InProcessNeo4j;
+import org.neo4j.harness.Neo4jBuilders;
 import org.neo4j.kernel.impl.api.KernelTransactions;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 
@@ -47,7 +47,7 @@ class ErrorsEndToEndTest
     static void setUp()
     {
 
-        remote = TestNeo4jBuilders.newInProcessBuilder()
+        remote = Neo4jBuilders.newInProcessBuilder()
                 .withFixture( "CREATE (:Person:Customer {name: 'Anna', uid: 0, age: 30})" )
                 .withFixture( "CREATE (:Person:Employee {name: 'Bob',  uid: 1, age: 40})" )
                 .withFixture( "CREATE (:Person:Employee {name: 'Carrie', uid: 2, age: 30})" )

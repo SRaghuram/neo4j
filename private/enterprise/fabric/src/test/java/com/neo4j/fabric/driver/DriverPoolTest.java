@@ -22,8 +22,8 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.NormalizedGraphName;
 import org.neo4j.driver.AuthToken;
 import org.neo4j.driver.AuthTokens;
-import org.neo4j.harness.internal.InProcessNeo4j;
-import org.neo4j.harness.internal.TestNeo4jBuilders;
+import org.neo4j.harness.InProcessNeo4j;
+import org.neo4j.harness.Neo4jBuilders;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.logging.Level;
 import org.neo4j.scheduler.JobScheduler;
@@ -67,8 +67,8 @@ class DriverPoolTest
     @BeforeAll
     static void beforeAll()
     {
-        shard0 = TestNeo4jBuilders.newInProcessBuilder().build();
-        shard1 = TestNeo4jBuilders.newInProcessBuilder().build();
+        shard0 = Neo4jBuilders.newInProcessBuilder().build();
+        shard1 = Neo4jBuilders.newInProcessBuilder().build();
     }
 
     @AfterAll

@@ -3,16 +3,18 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.harness.internal;
+package com.neo4j.harness;
+
+import com.neo4j.harness.internal.EnterpriseInProcessNeo4jBuilder;
 
 import java.io.File;
 
-import org.neo4j.harness.internal.Neo4jBuilder;
+import org.neo4j.harness.Neo4jBuilder;
 
 /**
  * Factories for creating {@link Neo4jBuilder} instances.
  */
-public final class EnterpriseTestNeo4jBuilders
+public final class EnterpriseNeo4jBuilders
 {
     /**
      * Create a builder capable of starting an in-process Neo4j instance. This builder will use the standard java temp
@@ -31,5 +33,5 @@ public final class EnterpriseTestNeo4jBuilders
         return new EnterpriseInProcessNeo4jBuilder( workingDirectory );
     }
 
-    private EnterpriseTestNeo4jBuilders(){}
+    private EnterpriseNeo4jBuilders(){}
 }

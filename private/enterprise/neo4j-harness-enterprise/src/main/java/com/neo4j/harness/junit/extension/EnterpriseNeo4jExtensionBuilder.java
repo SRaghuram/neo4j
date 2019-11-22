@@ -7,7 +7,7 @@ package com.neo4j.harness.junit.extension;
 
 import org.neo4j.harness.junit.extension.Neo4jExtensionBuilder;
 
-import static com.neo4j.harness.internal.EnterpriseTestNeo4jBuilders.newInProcessBuilder;
+import static com.neo4j.harness.EnterpriseNeo4jBuilders.newInProcessBuilder;
 
 /**
  * {@link EnterpriseNeo4jExtension} extension builder.

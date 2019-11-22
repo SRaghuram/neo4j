@@ -21,8 +21,8 @@ import org.neo4j.driver.Transaction;
 import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.driver.exceptions.DatabaseException;
 import org.neo4j.exceptions.KernelException;
-import org.neo4j.harness.internal.InProcessNeo4j;
-import org.neo4j.harness.internal.TestNeo4jBuilders;
+import org.neo4j.harness.InProcessNeo4j;
+import org.neo4j.harness.Neo4jBuilders;
 import org.neo4j.procedure.impl.GlobalProceduresRegistry;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -44,7 +44,7 @@ class PermissionsEndToEndTest
     static void setUp() throws KernelException
     {
 
-        remote = TestNeo4jBuilders.newInProcessBuilder()
+        remote = Neo4jBuilders.newInProcessBuilder()
                 .build();
         var ports = PortUtils.findFreePorts();
         var configProperties = Map.of(

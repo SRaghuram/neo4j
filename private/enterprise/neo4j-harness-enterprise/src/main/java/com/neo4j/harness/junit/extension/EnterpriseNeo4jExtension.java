@@ -13,7 +13,7 @@ import org.neo4j.harness.junit.extension.Neo4j;
 import org.neo4j.harness.junit.extension.Neo4jExtension;
 import org.neo4j.harness.junit.extension.Neo4jExtensionBuilder;
 
-import static com.neo4j.harness.internal.EnterpriseTestNeo4jBuilders.newInProcessBuilder;
+import static com.neo4j.harness.EnterpriseNeo4jBuilders.newInProcessBuilder;
 
 /**
  * Enterprise Neo4j JUnit 5 Extension.

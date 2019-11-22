@@ -5,11 +5,11 @@
  */
 package com.neo4j;
 
-import com.neo4j.utils.ProxyFunctions;
-import com.neo4j.utils.ShardFunctions;
 import com.neo4j.fabric.bolt.FabricBookmark;
 import com.neo4j.fabric.bolt.FabricBookmarkParser;
 import com.neo4j.utils.DriverUtils;
+import com.neo4j.utils.ProxyFunctions;
+import com.neo4j.utils.ShardFunctions;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,17 +36,17 @@ import org.neo4j.driver.Bookmark;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Record;
+import org.neo4j.driver.SessionConfig;
 import org.neo4j.driver.Transaction;
 import org.neo4j.driver.Values;
 import org.neo4j.driver.exceptions.ClientException;
-import org.neo4j.driver.SessionConfig;
 import org.neo4j.driver.internal.InternalBookmark;
 import org.neo4j.driver.summary.ResultSummary;
 import org.neo4j.driver.summary.StatementType;
 import org.neo4j.driver.types.Node;
 import org.neo4j.exceptions.KernelException;
-import org.neo4j.harness.internal.InProcessNeo4j;
-import org.neo4j.harness.internal.TestNeo4jBuilders;
+import org.neo4j.harness.InProcessNeo4j;
+import org.neo4j.harness.Neo4jBuilders;
 import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.procedure.impl.GlobalProceduresRegistry;
 
@@ -79,8 +79,8 @@ class EndToEndTest
     static void beforeAll() throws KernelException
     {
 
-        shard0 = TestNeo4jBuilders.newInProcessBuilder().withProcedure( ShardFunctions.class ).build();
-        shard1 = TestNeo4jBuilders.newInProcessBuilder().withProcedure( ShardFunctions.class ).build();
+        shard0 = Neo4jBuilders.newInProcessBuilder().withProcedure( ShardFunctions.class ).build();
+        shard1 = Neo4jBuilders.newInProcessBuilder().withProcedure( ShardFunctions.class ).build();
 
         PortUtils.Ports ports = PortUtils.findFreePorts();
 

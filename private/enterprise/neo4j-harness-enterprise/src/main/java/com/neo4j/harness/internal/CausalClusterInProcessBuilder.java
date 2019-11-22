@@ -27,8 +27,8 @@ import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.HttpConnector;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.graphdb.config.Setting;
-import org.neo4j.harness.internal.InProcessNeo4j;
-import org.neo4j.harness.internal.Neo4jBuilder;
+import org.neo4j.harness.InProcessNeo4j;
+import org.neo4j.harness.Neo4jBuilder;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 

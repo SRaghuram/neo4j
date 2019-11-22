@@ -5,6 +5,7 @@
  */
 package com.neo4j.harness.internal;
 
+import com.neo4j.harness.EnterpriseNeo4jBuilders;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -14,8 +15,8 @@ import org.junit.jupiter.api.parallel.Resources;
 import java.io.File;
 import java.util.Arrays;
 
-import org.neo4j.harness.internal.InProcessNeo4j;
-import org.neo4j.harness.internal.Neo4jBuilder;
+import org.neo4j.harness.InProcessNeo4j;
+import org.neo4j.harness.Neo4jBuilder;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
@@ -53,7 +54,7 @@ class EnterpriseInProcessServerBuilderIT
 
     private Neo4jBuilder getTestServerBuilder( File workDir )
     {
-        return EnterpriseTestNeo4jBuilders.newInProcessBuilder( workDir )
+        return EnterpriseNeo4jBuilders.newInProcessBuilder( workDir )
                                           .withConfig( OnlineBackupSettings.online_backup_enabled, false );
     }
 }

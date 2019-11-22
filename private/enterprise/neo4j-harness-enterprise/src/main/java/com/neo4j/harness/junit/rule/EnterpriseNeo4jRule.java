@@ -5,7 +5,7 @@
  */
 package com.neo4j.harness.junit.rule;
 
-import com.neo4j.harness.internal.EnterpriseTestNeo4jBuilders;
+import com.neo4j.harness.EnterpriseNeo4jBuilders;
 
 import java.io.File;
 
@@ -26,11 +26,11 @@ public class EnterpriseNeo4jRule extends Neo4jRule
 {
     public EnterpriseNeo4jRule()
     {
-        super( EnterpriseTestNeo4jBuilders.newInProcessBuilder() );
+        super( EnterpriseNeo4jBuilders.newInProcessBuilder() );
     }
 
     public EnterpriseNeo4jRule( File workingDirectory )
     {
-        super( EnterpriseTestNeo4jBuilders.newInProcessBuilder( workingDirectory ) );
+        super( EnterpriseNeo4jBuilders.newInProcessBuilder( workingDirectory ) );
     }
 }

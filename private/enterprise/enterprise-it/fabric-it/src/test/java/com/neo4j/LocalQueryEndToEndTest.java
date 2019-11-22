@@ -5,8 +5,8 @@
  */
 package com.neo4j;
 
-import com.neo4j.utils.ProxyFunctions;
 import com.neo4j.utils.DriverUtils;
+import com.neo4j.utils.ProxyFunctions;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,8 +23,8 @@ import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Transaction;
 import org.neo4j.exceptions.KernelException;
-import org.neo4j.harness.internal.InProcessNeo4j;
-import org.neo4j.harness.internal.TestNeo4jBuilders;
+import org.neo4j.harness.InProcessNeo4j;
+import org.neo4j.harness.Neo4jBuilders;
 import org.neo4j.procedure.impl.GlobalProceduresRegistry;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -41,7 +41,7 @@ class LocalQueryEndToEndTest
     void setUp() throws KernelException
     {
 
-        shard0 = TestNeo4jBuilders.newInProcessBuilder()
+        shard0 = Neo4jBuilders.newInProcessBuilder()
                 .withFixture( "CREATE (:Person:Customer {name: 'Anna', uid: 0, age: 30})" )
                 .withFixture( "CREATE (:Person:Employee {name: 'Bob',  uid: 1, age: 40})" )
                 .withFixture( "CREATE (:Person:Employee {name: 'Carrie', uid: 2, age: 30})" )

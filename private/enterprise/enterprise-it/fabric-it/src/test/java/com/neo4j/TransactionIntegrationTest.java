@@ -38,8 +38,8 @@ import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.event.TransactionData;
 import org.neo4j.graphdb.event.TransactionEventListenerAdapter;
-import org.neo4j.harness.internal.InProcessNeo4j;
-import org.neo4j.harness.internal.TestNeo4jBuilders;
+import org.neo4j.harness.InProcessNeo4j;
+import org.neo4j.harness.Neo4jBuilders;
 import org.neo4j.kernel.impl.api.KernelTransactions;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.procedure.impl.GlobalProceduresRegistry;
@@ -69,8 +69,8 @@ class TransactionIntegrationTest
     static void beforeAll() throws KernelException
     {
 
-        remote0 = TestNeo4jBuilders.newInProcessBuilder().build();
-        remote1 = TestNeo4jBuilders.newInProcessBuilder().build();
+        remote0 = Neo4jBuilders.newInProcessBuilder().build();
+        remote1 = Neo4jBuilders.newInProcessBuilder().build();
 
         PortUtils.Ports ports = PortUtils.findFreePorts();
 

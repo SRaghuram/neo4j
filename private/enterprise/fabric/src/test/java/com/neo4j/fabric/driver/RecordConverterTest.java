@@ -26,8 +26,8 @@ import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.StatementResult;
 import org.neo4j.driver.Value;
-import org.neo4j.harness.internal.InProcessNeo4j;
-import org.neo4j.harness.internal.TestNeo4jBuilders;
+import org.neo4j.harness.InProcessNeo4j;
+import org.neo4j.harness.Neo4jBuilders;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.BooleanValue;
 import org.neo4j.values.storable.ByteArray;
@@ -66,7 +66,7 @@ class RecordConverterTest
     @BeforeAll
     static void setUp()
     {
-        testServer = TestNeo4jBuilders.newInProcessBuilder().withFixture( "CREATE (:Person {name: 'Anna'})" ).build();
+        testServer = Neo4jBuilders.newInProcessBuilder().withFixture( "CREATE (:Person {name: 'Anna'})" ).build();
         String serverUri = testServer.boltURI().toString();
         driver = GraphDatabase.driver( serverUri, AuthTokens.none(), Config.builder().withoutEncryption().build() );
     }
