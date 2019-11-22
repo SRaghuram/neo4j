@@ -17,6 +17,7 @@ import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Queue;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Consumer;
@@ -29,7 +30,7 @@ import org.neo4j.driver.Record;
 import org.neo4j.driver.Values;
 import org.neo4j.driver.async.AsyncSession;
 import org.neo4j.driver.async.AsyncTransaction;
-import org.neo4j.driver.async.StatementResultCursor;
+import org.neo4j.driver.async.ResultCursor;
 import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.driver.exceptions.DatabaseException;
 import org.neo4j.driver.internal.InternalBookmark;
@@ -88,7 +89,7 @@ class AsyncPooledDriverTest
         assertEquals( List.of( createFabricRecord( "a1", "b1" ) ), records );
 
         var bookmark = fabricTransaction.commit().block();
-        assertEquals( "BB", bookmark );
+        assertEquals( Set.of( "BB" ), bookmark.getSerialisedState() );
 
         verify( asyncTransaction ).commitAsync();
         verify( session ).closeAsync();
@@ -261,7 +262,7 @@ class AsyncPooledDriverTest
         return Records.of( convertedValues );
     }
 
-    private static class TestStatementResultCursor implements StatementResultCursor
+    private static class TestStatementResultCursor implements ResultCursor
     {
 
         private final Queue<CompletionStage<Record>> records = new ArrayDeque<>();

@@ -10,5 +10,5 @@ import reactor.core.publisher.Mono;
 
 public interface AutoCommitStatementResult extends StatementResult
 {
-    Mono<String> getBookmark();
+    Mono<RemoteBookmark> getBookmark();
 }

@@ -20,8 +20,8 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.Record;
+import org.neo4j.driver.Result;
 import org.neo4j.driver.Session;
-import org.neo4j.driver.StatementResult;
 import org.neo4j.harness.junit.rule.Neo4jRule;
 
 import static com.neo4j.bolt.BoltDriverHelper.graphDatabaseDriver;
@@ -85,7 +85,7 @@ public class BoltDriverLargePropertiesIT
     {
         try ( Session session = driver.session() )
         {
-            StatementResult result = session.run( "RETURN $value", parameters( "value", value ) );
+            Result result = session.run( "RETURN $value", parameters( "value", value ) );
             Record record = result.single();
             return record.get( 0 ).asObject();
         }

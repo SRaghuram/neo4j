@@ -21,8 +21,10 @@ import org.neo4j.bolt.runtime.AccessMode;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.async.AsyncSession;
 import org.neo4j.driver.async.AsyncTransaction;
-import org.neo4j.driver.async.StatementResultCursor;
+import org.neo4j.driver.async.ResultCursor;
 import org.neo4j.values.virtual.MapValue;
+
+import static com.neo4j.fabric.driver.Utils.convertBookmark;
 
 public class AsyncPooledDriver extends PooledDriver
 {
@@ -37,7 +39,7 @@ public class AsyncPooledDriver extends PooledDriver
 
     @Override
     public AutoCommitStatementResult run( String query, MapValue params, FabricConfig.Graph location, AccessMode accessMode,
-            FabricTransactionInfo transactionInfo, List<String> bookmarks )
+            FabricTransactionInfo transactionInfo, List<RemoteBookmark> bookmarks )
     {
         var sessionConfig = createSessionConfig( location, accessMode, bookmarks );
         var session = driver.asyncSession( sessionConfig );
@@ -47,13 +49,13 @@ public class AsyncPooledDriver extends PooledDriver
 
         var transactionConfig = getTransactionConfig( transactionInfo );
 
-        var statementCursor = Mono.fromFuture( session.runAsync( query, paramMap, transactionConfig ).toCompletableFuture() );
-        return new StatementResultImpl( session, statementCursor, location.getId() );
+        var resultCursor = Mono.fromFuture( session.runAsync( query, paramMap, transactionConfig ).toCompletableFuture() );
+        return new StatementResultImpl( session, resultCursor, location.getId() );
     }
 
     @Override
     public Mono<FabricDriverTransaction> beginTransaction( FabricConfig.Graph location, AccessMode accessMode, FabricTransactionInfo transactionInfo,
-            List<String> bookmarks )
+            List<RemoteBookmark> bookmarks )
     {
         var sessionConfig = createSessionConfig( location, accessMode, bookmarks );
         var session = driver.asyncSession( sessionConfig );
@@ -73,14 +75,14 @@ public class AsyncPooledDriver extends PooledDriver
     {
 
         private final AsyncSession session;
-        private final Mono<StatementResultCursor> statementResultCursor;
+        private final Mono<ResultCursor> statementResultCursor;
         private final RecordConverter recordConverter;
-        private final CompletableFuture<String> bookmarkFuture = new CompletableFuture<>();
+        private final CompletableFuture<RemoteBookmark> bookmarkFuture = new CompletableFuture<>();
 
-        StatementResultImpl( AsyncSession session, Mono<StatementResultCursor> statementResultCursor, long sourceTag )
+        StatementResultImpl( AsyncSession session, Mono<ResultCursor> statementResultCursor, long sourceTag )
         {
-            super( statementResultCursor.map( StatementResultCursor::keys ).flatMapMany( Flux::fromIterable ),
-                    statementResultCursor.map( StatementResultCursor::consumeAsync ).flatMap( Mono::fromCompletionStage ),
+            super( statementResultCursor.map( ResultCursor::keys ).flatMapMany( Flux::fromIterable ),
+                    statementResultCursor.map(ResultCursor::consumeAsync ).flatMap( Mono::fromCompletionStage ),
                     sourceTag, session::closeAsync );
             this.session = session;
             this.statementResultCursor = statementResultCursor;
@@ -91,11 +93,15 @@ public class AsyncPooledDriver extends PooledDriver
         protected Flux<Record> doGetRecords()
         {
             return statementResultCursor.flatMapMany( cursor -> Flux.from( new RecordPublisher( cursor, recordConverter ) ) )
-                    .doOnComplete( () -> bookmarkFuture.complete( DriverBookmarkFormat.serialize( session.lastBookmark() ) ) );
+                    .doOnComplete( () ->
+                    {
+                        var bookmark = convertBookmark( session.lastBookmark() );
+                        bookmarkFuture.complete( bookmark );
+                    });
         }
 
         @Override
-        public Mono<String> getBookmark()
+        public Mono<RemoteBookmark> getBookmark()
         {
             return Mono.fromFuture( bookmarkFuture );
         }

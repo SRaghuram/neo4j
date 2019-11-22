@@ -19,8 +19,8 @@ import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Logging;
 import org.neo4j.driver.Record;
+import org.neo4j.driver.Result;
 import org.neo4j.driver.Session;
-import org.neo4j.driver.StatementResult;
 import org.neo4j.driver.Value;
 import org.neo4j.driver.exceptions.AuthenticationException;
 import org.neo4j.driver.exceptions.ClientException;
@@ -132,7 +132,7 @@ class DriverAuthHelper
     {
         try ( Session session = driver.session() )
         {
-            StatementResult result = session.run( "CREATE ()" );
+            Result result = session.run( "CREATE ()" );
             assertThat( result.consume().counters().nodesCreated(), CoreMatchers.equalTo( 1 ) );
         }
     }

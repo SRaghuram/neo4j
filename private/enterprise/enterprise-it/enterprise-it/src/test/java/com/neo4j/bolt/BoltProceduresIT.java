@@ -24,7 +24,6 @@ import java.util.stream.Stream;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Session;
-import org.neo4j.driver.StatementResult;
 import org.neo4j.driver.Values;
 import org.neo4j.driver.exceptions.TransientException;
 import org.neo4j.driver.internal.value.NullValue;
@@ -91,7 +90,7 @@ public class BoltProceduresIT
             params.put( "name2", randomLongString() );
             session.run( "CREATE (n1 :Person {name: $name1}), (n2 :Person {name: $name2}) RETURN n1, n2", params ).consume();
 
-            StatementResult result = session.run( "CALL test.readNodesReturnThemAndTerminateTheTransaction() YIELD node" );
+            var result = session.run( "CALL test.readNodesReturnThemAndTerminateTheTransaction() YIELD node" );
             //we cannot know for sure when the error occurs since it depends on whether the result is being materialized
             //or not in the runtime
             try

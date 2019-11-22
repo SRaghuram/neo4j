@@ -5,11 +5,12 @@
  */
 package com.neo4j;
 
+import com.neo4j.fabric.driver.RemoteBookmark;
+import com.neo4j.utils.ProxyFunctions;
+import com.neo4j.utils.ShardFunctions;
 import com.neo4j.fabric.bolt.FabricBookmark;
 import com.neo4j.fabric.bolt.FabricBookmarkParser;
 import com.neo4j.utils.DriverUtils;
-import com.neo4j.utils.ProxyFunctions;
-import com.neo4j.utils.ShardFunctions;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -42,7 +43,7 @@ import org.neo4j.driver.Values;
 import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.driver.internal.InternalBookmark;
 import org.neo4j.driver.summary.ResultSummary;
-import org.neo4j.driver.summary.StatementType;
+import org.neo4j.driver.summary.QueryType;
 import org.neo4j.driver.types.Node;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.harness.Neo4j;
@@ -998,7 +999,7 @@ class EndToEndTest
             return tx.run( query ).consume();
         } );
 
-        assertThat( r.statementType(), is( StatementType.READ_WRITE ) );
+        assertThat( r.queryType(), is( QueryType.READ_WRITE ) );
         assertThat( r.counters().containsUpdates(), is( true ) );
         assertThat( r.counters().nodesCreated(), is( 4 ) );
         assertThat( r.counters().nodesDeleted(), is( 1 ) );
@@ -1048,24 +1049,29 @@ class EndToEndTest
         assertEquals(graphIds.length, graphStates.size());
         var idsFromBookmark = graphStates.stream().map( FabricBookmark.GraphState::getRemoteGraphId ).collect( Collectors.toList());
         assertThat(idsFromBookmark, containsInAnyOrder( Arrays.stream( graphIds ).toArray(Long[]::new)));
-        assertTrue( graphStates.stream().flatMap( gs -> gs.getBookmarks().stream() ).noneMatch( String::isEmpty ) );
+        assertTrue( graphStates.stream()
+                .flatMap( gs -> gs.getBookmarks().stream() )
+                .flatMap( b -> b.getSerialisedState().stream() ).noneMatch( String::isEmpty ) );
     }
 
     private void verifyBookmarkComposition( Bookmark compositeBookmark, Bookmark... bookmarks )
     {
-        var internalBookmark = (InternalBookmark) compositeBookmark;
+        var remoteBookmarksFromComposite = parseBookmark( compositeBookmark );
+
+        Arrays.stream( bookmarks )
+                .flatMap( b -> parseBookmark( b ).stream() )
+                .forEach( remoteBookmark -> assertTrue(remoteBookmarksFromComposite.contains( remoteBookmark )) );
+    }
+
+    private List<RemoteBookmark> parseBookmark( Bookmark bookmark )
+    {
+        var internalBookmark = (InternalBookmark) bookmark;
         var parser = new FabricBookmarkParser();
-        var remoteBookmarksFromComposite = parser.parse( Iterables.asList(internalBookmark.values()) ).stream()
+        return parser.parse( Iterables.asList(internalBookmark.values()) ).stream()
                 .map( b -> (FabricBookmark) b )
                 .flatMap( b -> b.getGraphStates().stream() )
                 .flatMap( gs -> gs.getBookmarks().stream() )
                 .collect( Collectors.toList() );
-
-        parser.parse( Iterables.asList(internalBookmark.values()) ).stream()
-                .map( b -> (FabricBookmark) b )
-                .flatMap( b -> b.getGraphStates().stream() )
-                .flatMap( gs -> gs.getBookmarks().stream() )
-                .forEach( remoteBookmark -> assertTrue(remoteBookmarksFromComposite.contains( remoteBookmark )) );
     }
 
     private Bookmark runQuery( String statement, List<Bookmark> bookmarks )

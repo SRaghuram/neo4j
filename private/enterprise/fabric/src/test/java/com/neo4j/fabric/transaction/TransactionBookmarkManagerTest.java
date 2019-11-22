@@ -7,6 +7,7 @@ package com.neo4j.fabric.transaction;
 
 import com.neo4j.fabric.bolt.FabricBookmark;
 import com.neo4j.fabric.config.FabricConfig;
+import com.neo4j.fabric.driver.RemoteBookmark;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -50,15 +51,15 @@ class TransactionBookmarkManagerTest
     @Test
     void testBasicRemoteBookmarkHandling()
     {
-        bookmarkManager.recordBookmarkReceivedFromGraph( graph1, "BB-1" );
-        bookmarkManager.recordBookmarkReceivedFromGraph( graph2, "BB-2" );
-        bookmarkManager.recordBookmarkReceivedFromGraph( graph1, "BB-3" );
+        bookmarkManager.recordBookmarkReceivedFromGraph( graph1, bookmark( "BB-1" ));
+        bookmarkManager.recordBookmarkReceivedFromGraph( graph2, bookmark( "BB-2" ));
+        bookmarkManager.recordBookmarkReceivedFromGraph( graph1, bookmark( "BB-3" ));
 
         var bookmark = bookmarkManager.constructFinalBookmark();
         var graph1State = getGraphState( bookmark, graph1 );
-        assertThat( graph1State.getBookmarks() ).contains( "BB-3" );
+        assertThat( graph1State ).contains( "BB-3" );
         var graph2State = getGraphState( bookmark, graph2 );
-        assertThat( graph2State.getBookmarks() ).contains( "BB-2" );
+        assertThat( graph2State ).contains( "BB-2" );
     }
 
     @Test
@@ -68,20 +69,20 @@ class TransactionBookmarkManagerTest
         var b2 = bookmark( graphState( 1, "BB-5" ) );
         bookmarkManager.processSubmittedByClient( List.of( b1, b2 ) );
 
-        assertThat( bookmarkManager.getBookmarksForGraph( graph1 ) ).contains( "BB-1", "BB-2", "BB-5" );
-        assertThat( bookmarkManager.getBookmarksForGraph( graph2 ) ).contains( "BB-3", "BB-4" );
+        assertThat( getBookmarksForGraph( graph1 ) ).contains( "BB-1", "BB-2", "BB-5" );
+        assertThat( getBookmarksForGraph( graph2 ) ).contains( "BB-3", "BB-4" );
 
-        bookmarkManager.recordBookmarkReceivedFromGraph( graph1, "BB-6" );
-        bookmarkManager.recordBookmarkReceivedFromGraph( graph2, "BB-7" );
+        bookmarkManager.recordBookmarkReceivedFromGraph( graph1, bookmark( "BB-6" ));
+        bookmarkManager.recordBookmarkReceivedFromGraph( graph2, bookmark("BB-7" ));
 
-        assertThat( bookmarkManager.getBookmarksForGraph( graph1 ) ).contains( "BB-1", "BB-2", "BB-5" );
-        assertThat( bookmarkManager.getBookmarksForGraph( graph2 ) ).contains( "BB-3", "BB-4" );
+        assertThat( getBookmarksForGraph( graph1 ) ).contains( "BB-1", "BB-2", "BB-5" );
+        assertThat( getBookmarksForGraph( graph2 ) ).contains( "BB-3", "BB-4" );
 
         var bookmark = bookmarkManager.constructFinalBookmark();
         var graph1State = getGraphState( bookmark, graph1 );
-        assertThat( graph1State.getBookmarks() ).contains( "BB-6" );
+        assertThat( graph1State ).contains( "BB-6" );
         var graph2State = getGraphState( bookmark, graph2 );
-        assertThat( graph2State.getBookmarks() ).contains( "BB-7" );
+        assertThat( graph2State ).contains( "BB-7" );
     }
 
     @Test
@@ -93,7 +94,7 @@ class TransactionBookmarkManagerTest
 
         var bookmark = bookmarkManager.constructFinalBookmark();
         var graph1State = getGraphState( bookmark, graph1 );
-        assertThat( graph1State.getBookmarks() ).contains( "BB-1", "BB-2", "BB-3" );
+        assertThat( graph1State ).contains( "BB-1", "BB-2", "BB-3" );
     }
 
     @Test
@@ -105,7 +106,12 @@ class TransactionBookmarkManagerTest
 
         verify( transactionIdTracker ).awaitUpToDate( NAMED_SYSTEM_DATABASE_ID, 1234, Duration.ofSeconds( 123 ) );
 
-        assertThat( bookmarkManager.getBookmarksForGraph( graph1 ) ).contains( "BB-1" );
+        assertThat( getBookmarksForGraph( graph1 ) ).contains( "BB-1" );
+    }
+
+    private List<String> getBookmarksForGraph( FabricConfig.Graph graph )
+    {
+        return bookmarkManager.getBookmarksForGraph( graph ).stream().flatMap( rb -> rb.getSerialisedState().stream() ).collect( Collectors.toList());
     }
 
     private static FabricConfig.GraphDriverConfig emptyDriverConfig()
@@ -113,18 +119,25 @@ class TransactionBookmarkManagerTest
         return new FabricConfig.GraphDriverConfig( null, null, null, null, null, null, null, null, false );
     }
 
-    private FabricBookmark.GraphState getGraphState( FabricBookmark fabricBookmark, FabricConfig.Graph graph )
+    private List<String> getGraphState( FabricBookmark fabricBookmark, FabricConfig.Graph graph )
     {
         List<FabricBookmark.GraphState> graphStates = fabricBookmark.getGraphStates().stream()
                 .filter( gs -> gs.getRemoteGraphId() == graph.getId() )
                 .collect( Collectors.toList());
         assertEquals(1, graphStates.size());
-        return graphStates.get( 0 );
+        return graphStates.get( 0 ).getBookmarks().stream()
+                .flatMap( b -> b.getSerialisedState().stream() )
+                .collect( Collectors.toList());
     }
 
     private FabricBookmark.GraphState graphState( long graphId, String... bookmarks )
     {
-        return new FabricBookmark.GraphState( graphId, Arrays.asList( bookmarks ) );
+        return new FabricBookmark.GraphState( graphId, Arrays.stream( bookmarks ).map( this::bookmark ).collect( Collectors.toList()) );
+    }
+
+    private RemoteBookmark bookmark( String state )
+    {
+        return new RemoteBookmark( Set.of(state) );
     }
 
     private FabricBookmark bookmark( FabricBookmark.GraphState... states )

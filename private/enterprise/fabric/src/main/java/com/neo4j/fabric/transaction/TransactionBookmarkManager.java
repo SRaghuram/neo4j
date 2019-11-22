@@ -7,6 +7,7 @@ package com.neo4j.fabric.transaction;
 
 import com.neo4j.fabric.bolt.FabricBookmark;
 import com.neo4j.fabric.config.FabricConfig;
+import com.neo4j.fabric.driver.RemoteBookmark;
 import com.neo4j.fabric.executor.FabricException;
 
 import java.time.Duration;
@@ -50,7 +51,7 @@ public class TransactionBookmarkManager
         processFabricBookmarks( bookmarksByType );
     }
 
-    public List<String> getBookmarksForGraph( FabricConfig.Graph graph )
+    public List<RemoteBookmark> getBookmarksForGraph( FabricConfig.Graph graph )
     {
         var bookmarkData = graphBookmarkData.get( graph );
 
@@ -62,7 +63,7 @@ public class TransactionBookmarkManager
         return List.of();
     }
 
-    public void recordBookmarkReceivedFromGraph( FabricConfig.Graph graph, String bookmark )
+    public void recordBookmarkReceivedFromGraph( FabricConfig.Graph graph, RemoteBookmark bookmark )
     {
         var bookmarkData = graphBookmarkData.computeIfAbsent( graph, g -> new GraphBookmarkData() );
         bookmarkData.bookmarkReceivedFromGraph = bookmark;
@@ -73,7 +74,7 @@ public class TransactionBookmarkManager
         var remoteStates = graphBookmarkData.entrySet().stream().map( entry -> {
 
             var bookmarkData = entry.getValue();
-            List<String> graphBookmarks;
+            List<RemoteBookmark> graphBookmarks;
             if ( bookmarkData.bookmarkReceivedFromGraph != null )
             {
                 graphBookmarks = List.of( bookmarkData.bookmarkReceivedFromGraph );
@@ -163,7 +164,7 @@ public class TransactionBookmarkManager
 
     private static class GraphBookmarkData
     {
-        private final List<String> bookmarksSubmittedByClient = new ArrayList<>();
-        private String bookmarkReceivedFromGraph;
+        private final List<RemoteBookmark> bookmarksSubmittedByClient = new ArrayList<>();
+        private RemoteBookmark bookmarkReceivedFromGraph;
     }
 }

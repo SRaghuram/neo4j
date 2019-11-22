@@ -15,8 +15,8 @@ import java.util.Map;
 
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.Record;
+import org.neo4j.driver.Result;
 import org.neo4j.driver.Session;
-import org.neo4j.driver.StatementResult;
 import org.neo4j.driver.Transaction;
 import org.neo4j.driver.Value;
 import org.neo4j.driver.Values;
@@ -78,7 +78,7 @@ public class ReadAndDeleteTransactionConflictIT
         try ( Session session = driver.session() )
         {
             Value nodeId = session.run( "create (n:L2)-[:REL]->(m) return id(n)" ).single().get( 0 );
-            StatementResult result = session.run( "match (n:L2)-[r]->(m) where id(n) = $nodeId delete n, m, r return r",
+            Result result = session.run( "match (n:L2)-[r]->(m) where id(n) = $nodeId delete n, m, r return r",
                     Values.parameters( "nodeId", nodeId ) );
             Record record = result.single();
             Map<String,Object> map = record.get( 0 ).asMap();
@@ -92,7 +92,7 @@ public class ReadAndDeleteTransactionConflictIT
         try ( Session session = driver.session() )
         {
             Value nodeId = session.run( "create (n:L3)-[:REL {a: 1}]->(m) return id(n)" ).single().get( 0 );
-            StatementResult result = session.run( "" +
+            Result result = session.run( "" +
                     "match (n:L3)-[r]->(m) " +
                     "where id(n) = $nodeId " +
                     "with n, m, r, properties(r) as props " +
@@ -109,7 +109,7 @@ public class ReadAndDeleteTransactionConflictIT
         try ( Session readSession = driver.session();
               Session writeSession = driver.session() )
         {
-            StatementResult result = writeSession.run(
+            Result result = writeSession.run(
                     "create (n:L4) with n unwind range(1, 1000) as x create (n)-[:REL]->(n)" );
             SummaryCounters counters = result.consume().counters();
             assertThat( counters.nodesCreated(), is( 1 ) );
@@ -118,11 +118,11 @@ public class ReadAndDeleteTransactionConflictIT
             int relCounter = 0;
             try ( Transaction reader = readSession.beginTransaction() )
             {
-                StatementResult readResult;
+                Result readResult;
                 try ( Transaction deleter = writeSession.beginTransaction() )
                 {
                     readResult = reader.run( "match (:L4)-[r]->() return 1 as whatever, r" );
-                    StatementResult deleteResult = deleter.run( "match (n:L4) detach delete n" );
+                    Result deleteResult = deleter.run( "match (n:L4) detach delete n" );
                     deleteResult.consume();
                     deleter.commit();
                 }
@@ -149,7 +149,7 @@ public class ReadAndDeleteTransactionConflictIT
         try ( Session readSession = driver.session();
               Session writeSession = driver.session() )
         {
-            StatementResult result = writeSession.run(
+            Result result = writeSession.run(
                     "create (n:L5) with n unwind range(1, 1000) as x create (n)-[:REL {a: 1}]->(n)" );
             SummaryCounters counters = result.consume().counters();
             assertThat( counters.nodesCreated(), is( 1 ) );
@@ -158,11 +158,11 @@ public class ReadAndDeleteTransactionConflictIT
             int relCounter = 0;
             try ( Transaction reader = readSession.beginTransaction() )
             {
-                StatementResult readResult;
+                Result readResult;
                 try ( Transaction deleter = writeSession.beginTransaction() )
                 {
                     readResult = reader.run( "match (:L5)-[r]->() return 1 as whatever, r" );
-                    StatementResult deleteResult = deleter.run( "match (n:L5) detach delete n" );
+                    Result deleteResult = deleter.run( "match (n:L5) detach delete n" );
                     deleteResult.consume();
                     deleter.commit();
                 }
@@ -189,7 +189,7 @@ public class ReadAndDeleteTransactionConflictIT
         try ( Session readSession = driver.session();
               Session writeSession = driver.session() )
         {
-            StatementResult result = writeSession.run(
+            Result result = writeSession.run(
                     "unwind range(1, 1000) as x create (n:L6:A:B:C:D:E:F:G:H:I:J:K:L:O:P:Q)" );
             SummaryCounters counters = result.consume().counters();
             assertThat( counters.nodesCreated(), is( 1000 ) );
@@ -198,11 +198,11 @@ public class ReadAndDeleteTransactionConflictIT
             int nodeCounter = 0;
             try ( Transaction reader = readSession.beginTransaction() )
             {
-                StatementResult readResult;
+                Result readResult;
                 try ( Transaction deleter = writeSession.beginTransaction() )
                 {
                     readResult = reader.run( "match (n:L6) return 1 as whatever, n" );
-                    StatementResult deleteResult = deleter.run( "match (n:L6) delete n" );
+                    Result deleteResult = deleter.run( "match (n:L6) delete n" );
                     deleteResult.consume();
                     deleter.commit();
                 }
@@ -229,7 +229,7 @@ public class ReadAndDeleteTransactionConflictIT
         try ( Session readSession = driver.session();
               Session writeSession = driver.session() )
         {
-            StatementResult result = writeSession.run(
+            Result result = writeSession.run(
                     "unwind range(1, 1000) as x create (n:L7 {a: 1})" );
             SummaryCounters counters = result.consume().counters();
             assertThat( counters.nodesCreated(), is( 1000 ) );
@@ -238,11 +238,11 @@ public class ReadAndDeleteTransactionConflictIT
             int nodeCounter = 0;
             try ( Transaction reader = readSession.beginTransaction() )
             {
-                StatementResult readResult;
+                Result readResult;
                 try ( Transaction deleter = writeSession.beginTransaction() )
                 {
                     readResult = reader.run( "match (n:L7) return 1 as whatever, n" );
-                    StatementResult deleteResult = deleter.run( "match (n:L7) delete n" );
+                    Result deleteResult = deleter.run( "match (n:L7) delete n" );
                     deleteResult.consume();
                     deleter.commit();
                 }

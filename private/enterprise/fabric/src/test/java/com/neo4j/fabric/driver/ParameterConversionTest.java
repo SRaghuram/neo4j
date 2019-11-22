@@ -25,8 +25,8 @@ import java.util.Map;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.Value;
 import org.neo4j.driver.Values;
+import org.neo4j.driver.reactive.RxResult;
 import org.neo4j.driver.reactive.RxSession;
-import org.neo4j.driver.reactive.RxStatementResult;
 import org.neo4j.driver.reactive.RxTransaction;
 import org.neo4j.values.storable.CoordinateReferenceSystem;
 import org.neo4j.values.virtual.MapValue;
@@ -55,7 +55,7 @@ class ParameterConversionTest
 
         RxSession mockDriverSession = mock( RxSession.class );
         RxTransaction tx = mock( RxTransaction.class );
-        RxStatementResult mockDriverResult = mock( RxStatementResult.class);
+        RxResult mockDriverResult = mock( RxResult.class);
         when(mockDriverResult.keys()).thenReturn( Mono.just( Arrays.asList("a", "b" )));
         when( mockDriverResult.records() ).thenReturn( Mono.empty() );
         when( mockDriverResult.consume() ).thenReturn( Mono.empty() );

@@ -23,7 +23,7 @@ import org.neo4j.driver.SessionConfig;
 import org.neo4j.driver.Transaction;
 import org.neo4j.driver.internal.shaded.reactor.core.publisher.Flux;
 import org.neo4j.driver.internal.shaded.reactor.core.publisher.Mono;
-import org.neo4j.driver.reactive.RxStatementResult;
+import org.neo4j.driver.reactive.RxResult;
 import org.neo4j.driver.reactive.RxTransaction;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.procedure.impl.GlobalProceduresRegistry;
@@ -91,7 +91,7 @@ class BoltLocalResultStreamTest
     {
         List<String> result = inMegaRxTx( tx ->
         {
-            RxStatementResult statementResult = tx.run( "UNWIND range(0, 4) AS i RETURN 'r' + i as A" );
+            RxResult statementResult = tx.run( "UNWIND range(0, 4) AS i RETURN 'r' + i as A" );
             return Flux.from( statementResult.records() )
                     .limitRate( 1 )
                     .collectList()
@@ -109,7 +109,7 @@ class BoltLocalResultStreamTest
     {
         List<String> result  = inMegaRxTx( tx ->
         {
-            RxStatementResult statementResult = tx.run( "UNWIND range(0, 4) AS i RETURN 'r' + i as A" );
+            RxResult statementResult = tx.run( "UNWIND range(0, 4) AS i RETURN 'r' + i as A" );
 
             return Flux.from( statementResult.records() )
                     .limitRequest( 2 )

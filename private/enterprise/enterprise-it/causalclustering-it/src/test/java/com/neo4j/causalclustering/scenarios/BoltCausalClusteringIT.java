@@ -31,8 +31,8 @@ import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Bookmark;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.Record;
+import org.neo4j.driver.Result;
 import org.neo4j.driver.Session;
-import org.neo4j.driver.StatementResult;
 import org.neo4j.driver.Transaction;
 import org.neo4j.driver.TransactionWork;
 import org.neo4j.driver.exceptions.ClientException;
@@ -170,14 +170,14 @@ class BoltCausalClusteringIT
             {
                 firstAddress = inExpirableSession( driver, Driver::session, session ->
                 {
-                    StatementResult result = session.run( "CREATE (p:Person)" );
+                    Result result = session.run( "CREATE (p:Person)" );
                     return result.consume().server().address();
                 } );
 
                 var secondAddress = runWithLeaderDisabled( cluster, ( oldLeader, currentMembers ) -> inExpirableSession( driver, Driver::session,
                         session ->
                         {
-                            StatementResult result = session.run( "CREATE (p:Person)" );
+                            Result result = session.run( "CREATE (p:Person)" );
                             return result.consume().server().address();
                         }, 60_000 ) );
                 assertNotEquals( secondAddress, firstAddress );
@@ -491,7 +491,7 @@ class BoltCausalClusteringIT
 
                             session.readTransaction( (TransactionWork<Void>) tx ->
                             {
-                                StatementResult result = tx.run( "MATCH (n:Person) RETURN COUNT(*) AS count" );
+                                Result result = tx.run( "MATCH (n:Person) RETURN COUNT(*) AS count" );
 
                                 assertEquals( 1, result.next().get( "count" ).asInt() );
 

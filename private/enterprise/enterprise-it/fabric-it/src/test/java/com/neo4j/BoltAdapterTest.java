@@ -42,6 +42,7 @@ import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Config;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
+import org.neo4j.driver.Result;
 import org.neo4j.driver.exceptions.DatabaseException;
 import org.neo4j.kernel.availability.UnavailableException;
 import org.neo4j.kernel.database.DatabaseIdFactory;
@@ -382,7 +383,7 @@ class BoltAdapterTest
         publisher.complete();
     }
 
-    private void verifyDefaultResult( org.neo4j.driver.StatementResult result )
+    private void verifyDefaultResult( Result result )
     {
         var records = result.list();
         assertEquals( 2, records.size() );

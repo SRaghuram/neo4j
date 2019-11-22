@@ -5,6 +5,8 @@
  */
 package com.neo4j.fabric.bolt;
 
+import com.neo4j.fabric.driver.RemoteBookmark;
+
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Base64;
@@ -75,9 +77,12 @@ public class FabricBookmarkParser implements CustomBookmarkFormatParser
         return new FabricBookmark.GraphState( graphId, remoteBookmarks );
     }
 
-    private String decodeRemoteBookmark( String encodedBookmark )
+    private RemoteBookmark decodeRemoteBookmark( String encodedBookmark )
     {
-        var decoded = Base64.getDecoder().decode( encodedBookmark );
-        return new String( decoded, StandardCharsets.UTF_8 );
+        var decodedBookmarkState = Arrays.stream( encodedBookmark.split( "\\|" ) )
+                .map( bookmarkPart -> Base64.getDecoder().decode( bookmarkPart ) )
+                .map( decodedPart -> new String( decodedPart, StandardCharsets.UTF_8 ) )
+                .collect( Collectors.toSet());
+        return new RemoteBookmark( decodedBookmarkState );
     }
 }

@@ -23,8 +23,8 @@ import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Config;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
+import org.neo4j.driver.Result;
 import org.neo4j.driver.Session;
-import org.neo4j.driver.StatementResult;
 import org.neo4j.driver.Value;
 import org.neo4j.harness.Neo4j;
 import org.neo4j.harness.Neo4jBuilders;
@@ -389,7 +389,7 @@ class RecordConverterTest
     {
         try ( Session session = driver.session() )
         {
-            StatementResult result = session.run( query, params );
+            Result result = session.run( query, params );
             return result.list().get( 0 ).get( 0 );
         }
     }
