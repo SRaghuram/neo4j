@@ -8,6 +8,7 @@ package com.neo4j.bench.ldbc.interactive.integration;
 import com.ldbc.driver.control.DriverConfiguration;
 import com.ldbc.driver.control.DriverConfigurationException;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcSnbInteractiveWorkloadConfiguration;
+import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
 import com.neo4j.bench.ldbc.Neo4jDb;
@@ -17,6 +18,8 @@ import com.neo4j.bench.ldbc.connection.Neo4jSchema;
 import com.neo4j.bench.ldbc.importer.Scenario;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Path;
 
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -58,15 +61,25 @@ public class RemoteCypherSnbInteractiveExecutionTest extends SnbInteractiveExecu
     {
         int port = PortAuthority.allocatePort();
         String boltAddressWithoutPort = "localhost";
-        DatabaseManagementService managementService = Neo4jDb.newDbBuilderForBolt(
-                homeDir,
-                getResource( "/neo4j/neo4j_sf001.conf" ),
-                boltAddressWithoutPort,
-                port
-        ).build();
-        GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
-        String url = "bolt://" + boltAddressWithoutPort + ":" + port;
-        return new DatabaseAndUrl( managementService, url );
+        try
+        {
+            Path tempConfigPath = File.createTempFile( "temp_neo4j_sf001", "conf" ).toPath();
+            Neo4jConfigBuilder.withDefaults()
+                              .mergeWith( Neo4jConfigBuilder.fromFile( getResource( "/neo4j/neo4j_sf001.conf" ) ).build() )
+                              .writeToFile( tempConfigPath );
+            DatabaseManagementService managementService = Neo4jDb.newDbBuilderForBolt( homeDir,
+                                                                                       tempConfigPath.toFile(),
+                                                                                       boltAddressWithoutPort,
+                                                                                       port )
+                                                                 .build();
+            GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
+            String url = "bolt://" + boltAddressWithoutPort + ":" + port;
+            return new DatabaseAndUrl( managementService, url );
+        }
+        catch ( IOException e )
+        {
+            throw new RuntimeException( e );
+        }
     }
 }
 
