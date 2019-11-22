@@ -12,6 +12,7 @@ import io.netty.channel.ChannelFutureListener;
 
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 
 import org.neo4j.configuration.helpers.SocketAddress;
@@ -57,7 +58,7 @@ public class RaftSender implements Outbound<SocketAddress,Message>
             {
                 if ( throwable != null )
                 {
-                    log.error( "Raft sender failed exceptionally sending to [%s]", to, throwable );
+                    log.warn( "Raft sender failed exceptionally [Address: " + to + "]", throwable );
                 }
             } );
         }
@@ -83,7 +84,7 @@ public class RaftSender implements Outbound<SocketAddress,Message>
                 if ( !writeComplete.isSuccess() )
                 {
                     pooledChannel.dispose();
-                    fOperation.completeExceptionally( writeComplete.cause() );
+                    fOperation.completeExceptionally( wrapCause( pooledChannel, writeComplete.cause() ) );
                     return;
                 }
 
@@ -100,9 +101,14 @@ public class RaftSender implements Outbound<SocketAddress,Message>
         catch ( Throwable e )
         {
             pooledChannel.dispose();
-            throw e;
+            throw wrapCause( pooledChannel, e );
         }
 
         return fOperation;
+    }
+
+    private CompletionException wrapCause( PooledChannel pooledChannel, Throwable e )
+    {
+        return new CompletionException( "[ChannelId: " + pooledChannel.channel().id() + "]", e );
     }
 }
