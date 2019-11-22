@@ -24,7 +24,7 @@ public class RetryStrategy
 
     /**
      * @param delayInMillis number of milliseconds between each attempt at getting the desired result
-     * @param retries the number of attempts to perform before giving up
+     * @param retries the number of attempts to perform before giving up. If not positive, retry indefinitely.
      */
     public RetryStrategy( long delayInMillis, long retries )
     {
@@ -33,7 +33,7 @@ public class RetryStrategy
 
     /**
      * @param timeoutStrategy calculates the timeout between each attempt at getting the desired result
-     * @param retries the number of attempts to perform before giving up
+     * @param retries the number of attempts to perform before giving up. If not positive, retry indefinitely
      */
     public RetryStrategy( TimeoutStrategy timeoutStrategy, long retries )
     {
@@ -58,7 +58,7 @@ public class RetryStrategy
         int currentIteration = 0;
         while ( !validator.test( result ) )
         {
-            if ( currentIteration++ == retries )
+            if ( retries > 0 && currentIteration++ == retries )
             {
                 throw new TimeoutException( "Unable to fulfill predicate within " + retries + " retries" );
             }
