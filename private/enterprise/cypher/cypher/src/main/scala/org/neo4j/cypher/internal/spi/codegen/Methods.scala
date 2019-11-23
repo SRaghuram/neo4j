@@ -16,6 +16,7 @@ import org.neo4j.cypher.internal.javacompat.ResultRecord
 import org.neo4j.cypher.internal.profiling.{OperatorProfileEvent, QueryProfiler}
 import org.neo4j.cypher.internal.runtime.RelationshipIterator
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.cypher.operations.ExpandIntoCursors
 import org.neo4j.cypher.result.QueryResult.{QueryResultVisitor, Record}
 import org.neo4j.graphdb.{Direction, Node, Relationship}
 import org.neo4j.internal.helpers.collection.MapUtil
@@ -47,21 +48,21 @@ object Methods {
   val startNode: MethodReference = method[RelationshipDataExtractor, Long]("startNode")
   val endNode: MethodReference = method[RelationshipDataExtractor, Long]("endNode")
   val typeOf: MethodReference = method[RelationshipDataExtractor, Int]("type")
-  val allConnectingRelationships: MethodReference = method[CompiledExpandUtils, RelationshipSelectionCursor]("connectingRelationships",
-                                                                                                             typeRef[Read],
-                                                                                                             typeRef[CursorFactory],
-                                                                                                             typeRef[NodeCursor],
-                                                                                                             typeRef[Long],
-                                                                                                             typeRef[Direction],
-                                                                                                             typeRef[Long])
-  val connectingRelationships: MethodReference = method[CompiledExpandUtils, RelationshipSelectionCursor]("connectingRelationships",
-                                                                                                          typeRef[Read],
-                                                                                                          typeRef[CursorFactory],
-                                                                                                          typeRef[NodeCursor],
-                                                                                                          typeRef[Long],
-                                                                                                          typeRef[Direction],
-                                                                                                          typeRef[Long],
-                                                                                                          typeRef[Array[Int]])
+  val allConnectingRelationships: MethodReference = method[ExpandIntoCursors, RelationshipSelectionCursor]("connectingRelationships",
+                                                                                                           typeRef[Read],
+                                                                                                           typeRef[CursorFactory],
+                                                                                                           typeRef[NodeCursor],
+                                                                                                           typeRef[Long],
+                                                                                                           typeRef[Direction],
+                                                                                                           typeRef[Long])
+  val connectingRelationships: MethodReference = method[ExpandIntoCursors, RelationshipSelectionCursor]("connectingRelationships",
+                                                                                                        typeRef[Read],
+                                                                                                        typeRef[CursorFactory],
+                                                                                                        typeRef[NodeCursor],
+                                                                                                        typeRef[Long],
+                                                                                                        typeRef[Direction],
+                                                                                                        typeRef[Long],
+                                                                                                        typeRef[Array[Int]])
 
   val mathAdd: MethodReference = method[CompiledMathHelper, Object]("add", typeRef[Object], typeRef[Object])
   val mathSub: MethodReference = method[CompiledMathHelper, Object]("subtract", typeRef[Object], typeRef[Object])
