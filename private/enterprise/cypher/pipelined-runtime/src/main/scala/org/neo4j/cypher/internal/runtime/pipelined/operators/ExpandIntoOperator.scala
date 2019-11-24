@@ -5,21 +5,33 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.operators
 
-import org.neo4j.cypher.internal.physicalplanning.Slot
+import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable, Method}
+import org.neo4j.codegen.api.IntermediateRepresentation._
+import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot, Slot}
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeGetPrimitiveNodeFromSlotFunctionFor
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
+import org.neo4j.cypher.internal.runtime.compiled.expressions.{CompiledHelpers, IntermediateExpression}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.RelationshipTypes
+import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.{CursorPools, MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandAllOperatorTaskTemplate.loadTypes
+import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandIntoOperatorTaskTemplate.CONNECTING_RELATIONSHIPS
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
-import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
+import org.neo4j.cypher.internal.runtime.{DbAccess, ExecutionContext, QueryContext}
 import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection
+import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection.{BOTH, INCOMING, OUTGOING}
+import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.operations.ExpandIntoCursors
+import org.neo4j.exceptions.InternalException
 import org.neo4j.graphdb.Direction
 import org.neo4j.internal.kernel.api._
-import org.neo4j.internal.kernel.api.helpers.RelationshipSelectionCursor
+import org.neo4j.internal.kernel.api.helpers.{RelationshipSelectionCursor, RelationshipSelections}
+import org.neo4j.values.AnyValue
+
+import scala.collection.mutable.ArrayBuffer
 
 class ExpandIntoOperator(val workIdentity: WorkIdentity,
                         fromSlot: Slot,
@@ -115,6 +127,192 @@ class ExpandIntoOperator(val workIdentity: WorkIdentity,
       relationships = null
     }
   }
+}
+
+class ExpandIntoOperatorTaskTemplate(inner: OperatorTaskTemplate,
+                                    id: Id,
+                                    innermost: DelegateOperatorTaskTemplate,
+                                    isHead: Boolean,
+                                    fromSlot: Slot,
+                                    relOffset: Int,
+                                    toSlot: Slot,
+                                    dir: SemanticDirection,
+                                    types: Array[Int],
+                                    missingTypes: Array[String])
+                                   (codeGen: OperatorExpressionCompiler) extends InputLoopTaskTemplate(inner, id, innermost, codeGen, isHead) {
+  import OperatorCodeGenHelperTemplates._
+
+  private val nodeCursorField = field[NodeCursor](codeGen.namer.nextVariableName() + "nodeCursor")
+  private val groupCursorField = field[RelationshipGroupCursor](codeGen.namer.nextVariableName() + "group")
+  private val traversalCursorField = field[RelationshipTraversalCursor](codeGen.namer.nextVariableName() + "traversal")
+  private val relationshipsField = field[RelationshipSelectionCursor](codeGen.namer.nextVariableName() + "relationships")
+  private val typeField = field[Array[Int]](codeGen.namer.nextVariableName() + "type",
+                                            if (types.isEmpty && missingTypes.isEmpty) constant(null)
+                                            else arrayOf[Int](types.map(constant):_*)
+                                            )
+  private val missingTypeField = field[Array[String]](codeGen.namer.nextVariableName() + "missingType",
+                                                      arrayOf[String](missingTypes.map(constant):_*))
+
+  override final def scopeId: String = "expandInto" + id.x
+
+  override def genMoreFields: Seq[Field] = {
+    val localFields =
+      ArrayBuffer(nodeCursorField, groupCursorField, traversalCursorField, relationshipsField, typeField)
+    if (missingTypes.nonEmpty) {
+      localFields += missingTypeField
+    }
+
+    localFields
+  }
+
+  override def genLocalVariables: Seq[LocalVariable] = Seq(CURSOR_POOL_V)
+
+  override def genExpressions: Seq[IntermediateExpression] = Seq.empty
+
+  /**
+    * {{{
+    *    val fromNode = inputMorsel.getLongAt(fromOffset)
+    *    val toNode = inputMorsel.getLongAt(toOffset)
+    *    var innerLoop = false
+    *    if (fromNode != -1L && toNode != ) ) {
+    *      nodeCursor = resources.cursorPools.nodeCursorPool.allocate()
+    *      groupCursor = resources.cursorPools.relationshipGroupCursorPool.allocate()
+    *      traversalCursor = resources.cursorPools.relationshipTraversalCursorPool.allocate()
+    *      read.singleNode(node, nodeCursor)
+    *      relationships = ExpandIntoCursors(read, nodeCursor, groupCursor, traversalCursor, fromNode, toNode, types)
+    *      this.canContinue = relationships.next()
+    *      true
+    *    }
+    * }}}
+    *
+    */
+  override protected def genInitializeInnerLoop: IntermediateRepresentation = {
+
+    val resultBoolean = codeGen.namer.nextVariableName()
+    val fromNode = codeGen.namer.nextVariableName() + "fromNode"
+    val toNode = codeGen.namer.nextVariableName() + "toNode"
+
+    block(
+      declareAndAssign(typeRefOf[Boolean], resultBoolean, constant(false)),
+      setField(canContinue, constant(false)),
+      declareAndAssign(typeRefOf[Long], fromNode, getNodeIdFromSlot(fromSlot)),
+      declareAndAssign(typeRefOf[Long], toNode, getNodeIdFromSlot(toSlot)),
+      condition(and(notEqual(load(fromNode), constant(-1L)), notEqual(load(toNode), constant(-1L)))){
+        block(
+          loadTypes(types, missingTypes, typeField, missingTypeField),
+          allocateAndTraceCursor(nodeCursorField, executionEventField, ALLOCATE_NODE_CURSOR),
+          allocateAndTraceCursor(groupCursorField, executionEventField, ALLOCATE_GROUP_CURSOR),
+          allocateAndTraceCursor(traversalCursorField, executionEventField, ALLOCATE_TRAVERSAL_CURSOR),
+          setField(relationshipsField, invokeStatic(CONNECTING_RELATIONSHIPS,
+                                                    loadField(DATA_READ),
+                                                    loadField(nodeCursorField),
+                                                    loadField(groupCursorField),
+                                                    loadField(traversalCursorField),
+                                                    load(fromNode),
+                                                    directionRepresentation(dir),
+                                                    load(toNode),
+                                                    loadField(typeField))),
+          invokeSideEffect(loadField(relationshipsField), method[RelationshipSelectionCursor, Unit, KernelReadTracer]("setTracer"), loadField(executionEventField)),
+          assign(resultBoolean, constant(true)),
+          setField(canContinue, profilingCursorNext[RelationshipSelectionCursor](loadField(relationshipsField), id)),
+          )
+      },
+      load(resultBoolean)
+      )
+  }
+
+  /**
+    * {{{
+    *     while (hasDemand && this.canContinue) {
+    *       val relId = relationships.relationshipReference()
+    *       outputRow.copyFrom(inputMorsel)
+    *       outputRow.setLongAt(relOffset, relId)
+    *       <<< inner.genOperate() >>>
+    *       val tmp = relationship.next()
+    *       profileRow(tmp)
+    *       this.canContinue = tmp
+    *       }
+    *     }
+    * }}}
+    */
+  override protected def genInnerLoop: IntermediateRepresentation = {
+    loop(and(innermost.predicate, loadField(canContinue)))(
+      block(
+        codeGen.copyFromInput(Math.min(codeGen.inputSlotConfiguration.numberOfLongs, codeGen.slots.numberOfLongs),
+                              Math.min(codeGen.inputSlotConfiguration.numberOfReferences, codeGen.slots.numberOfReferences)),
+        codeGen.setLongAt(relOffset, invoke(loadField(relationshipsField),
+                                            method[RelationshipSelectionCursor, Long]("relationshipReference"))),
+        inner.genOperateWithExpressions,
+        doIfInnerCantContinue(setField(canContinue, profilingCursorNext[RelationshipSelectionCursor](loadField(relationshipsField), id))),
+        endInnerLoop
+        )
+      )
+  }
+
+  /**
+    * {{{
+    *     val pools = resources.cursorPools
+    *     pools.nodeCursorPool.free(nodeCursor)
+    *     pools.relationshipGroupCursorPool.free(groupCursor)
+    *     pools.relationshipTraversalCursorPool.free(traversalCursor)
+    *     nodeCursor = null
+    *     groupCursor = null
+    *     traversalCursor = null
+    *     relationships = null
+    * }}}
+    */
+  override protected def genCloseInnerLoop: IntermediateRepresentation = {
+    block(
+      freeCursor[NodeCursor](loadField(nodeCursorField), NodeCursorPool),
+      freeCursor[RelationshipGroupCursor](loadField(groupCursorField), GroupCursorPool),
+      freeCursor[RelationshipTraversalCursor](loadField(traversalCursorField), TraversalCursorPool),
+      setField(nodeCursorField, constant(null)),
+      setField(groupCursorField, constant(null)),
+      setField(traversalCursorField, constant(null)),
+      setField(relationshipsField, constant(null))
+      )
+  }
+
+  override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = {
+    block(
+      condition(isNotNull(loadField(relationshipsField)))(
+        block(
+          invokeSideEffect(loadField(nodeCursorField), method[NodeCursor, Unit, KernelReadTracer]("setTracer"), loadField(executionEventField)),
+          invokeSideEffect(loadField(relationshipsField), method[RelationshipSelectionCursor, Unit, KernelReadTracer]("setTracer"), loadField(executionEventField)),
+          )
+        ),
+      inner.genSetExecutionEvent(event)
+      )
+  }
+
+  private def getNodeIdFromSlot(slot: Slot): IntermediateRepresentation = slot match {
+    // NOTE: We do not save the local slot variable, since we are only using it with our own local variable within a local scope
+    case LongSlot(offset, _, _) =>
+      codeGen.getLongAt(offset)
+    case RefSlot(offset, false, _) =>
+      invokeStatic(method[CompiledHelpers, Long, AnyValue]("nodeFromAnyValue"), codeGen.getRefAt(offset))
+    case RefSlot(offset, true, _) =>
+      ternary(
+        equal(codeGen.getRefAt(offset), noValue),
+        constant(-1L),
+        invokeStatic(method[CompiledHelpers, Long, AnyValue]("nodeFromAnyValue"), codeGen.getRefAt(offset))
+        )
+    case _ =>
+      throw new InternalException(s"Do not know how to get a node id for slot $slot")
+  }
+}
+
+object ExpandIntoOperatorTaskTemplate {
+  val CONNECTING_RELATIONSHIPS: Method = method[ExpandIntoCursors,
+      RelationshipSelectionCursor,
+      Read,
+      NodeCursor,
+      RelationshipGroupCursor,
+      RelationshipTraversalCursor,
+      Long,
+      Direction,
+      Long,
+      Array[Int]]("connectingRelationships")
 }
 
 

@@ -12,8 +12,11 @@ import org.neo4j.cypher.internal.runtime.DbAccess
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution._
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
+import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection
+import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection.{BOTH, INCOMING, OUTGOING}
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.operations.{CursorUtils, CypherCoercions, CypherFunctions}
+import org.neo4j.graphdb.Direction
 import org.neo4j.internal.kernel.api.IndexQuery.{ExactPredicate, RangePredicate, StringContainsPredicate, StringSuffixPredicate}
 import org.neo4j.internal.kernel.api._
 import org.neo4j.internal.schema.IndexOrder
@@ -329,4 +332,10 @@ object OperatorCodeGenHelperTemplates {
 
   def asStorableValue(in: IntermediateRepresentation): IntermediateRepresentation = invokeStatic(method[CypherCoercions, Value, AnyValue]("asStorableValue"), in)
   def asListValue(in: IntermediateRepresentation): IntermediateRepresentation = invokeStatic(method[CypherFunctions, ListValue, AnyValue]("asList"), in)
+
+  def directionRepresentation(dir: SemanticDirection): IntermediateRepresentation = dir match {
+    case OUTGOING => getStatic[Direction, Direction]("OUTGOING")
+    case INCOMING => getStatic[Direction, Direction]("INCOMING")
+    case BOTH => getStatic[Direction, Direction]("BOTH")
+  }
 }

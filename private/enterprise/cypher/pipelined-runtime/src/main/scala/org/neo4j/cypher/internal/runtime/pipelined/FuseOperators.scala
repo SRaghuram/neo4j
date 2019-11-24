@@ -478,10 +478,10 @@ class FuseOperators(operatorFactory: OperatorFactory,
               template = newTemplate,
               fusedPlans = nextPlan :: acc.fusedPlans)
 
-          case plan@plans.Expand(_, fromName, dir, types, to, relName, ExpandAll) =>
+          case plan@plans.Expand(_, fromName, dir, types, to, relName, mode) =>
             val fromSlot = slots(fromName)
             val relOffset = slots.getLongOffsetFor(relName)
-            val toOffset = slots.getLongOffsetFor(to)
+            val toSlot = slots(to)
             val tokensOrNames = types.map(r => tokenContext.getOptRelTypeId(r.name) match {
                 case Some(token) => Left(token)
                 case None => Right(r.name)
@@ -495,18 +495,34 @@ class FuseOperators(operatorFactory: OperatorFactory,
               case Right(name: String) => name
             }
 
-            val newTemplate = new ExpandAllOperatorTaskTemplate(acc.template,
-                                                                plan.id,
-                                                                innermostTemplate,
-                                                                plan eq headPlan,
-                                                                fromName,
-                                                                fromSlot,
-                                                                relName,
-                                                                relOffset,
-                                                                toOffset,
-                                                                dir,
-                                                                typeTokens.toArray,
-                                                                missingTypes.toArray)(expressionCompiler)
+            val newTemplate = mode match {
+              case ExpandAll =>
+                new ExpandAllOperatorTaskTemplate(acc.template,
+                                                  plan.id,
+                                                  innermostTemplate,
+                                                  plan eq headPlan,
+                                                  fromName,
+                                                  fromSlot,
+                                                  relName,
+                                                  relOffset,
+                                                  toSlot.offset,
+                                                  dir,
+                                                  typeTokens.toArray,
+                                                  missingTypes.toArray)(expressionCompiler)
+              case ExpandInto =>
+                new ExpandIntoOperatorTaskTemplate(acc.template,
+                                                  plan.id,
+                                                  innermostTemplate,
+                                                  plan eq headPlan,
+                                                  fromSlot,
+                                                  relOffset,
+                                                  toSlot,
+                                                  dir,
+                                                  typeTokens.toArray,
+                                                  missingTypes.toArray)(expressionCompiler)
+            }
+
+
             acc.copy(
               template = newTemplate,
               fusedPlans = nextPlan :: acc.fusedPlans)

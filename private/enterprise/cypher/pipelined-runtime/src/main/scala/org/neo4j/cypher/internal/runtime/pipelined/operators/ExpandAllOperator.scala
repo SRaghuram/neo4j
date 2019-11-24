@@ -13,6 +13,8 @@ import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.compiled.expressions.{CompiledHelpers, IntermediateExpression}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.RelationshipTypes
 import org.neo4j.cypher.internal.runtime.pipelined.execution.{CursorPools, MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandAllOperatorTaskTemplate.loadTypes
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.DB_ACCESS
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.pipelined.{NodeCursorRepresentation, OperatorExpressionCompiler, RelationshipCursorRepresentation}
@@ -186,7 +188,7 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
   private val typeField = field[Array[Int]](codeGen.namer.nextVariableName() + "type",
                                             if (types.isEmpty && missingTypes.isEmpty) constant(null)
                                             else arrayOf[Int](types.map(constant):_*)
-  )
+                                                                                        )
   private val missingTypeField = field[Array[String]](codeGen.namer.nextVariableName() + "missingType",
                                                       arrayOf[String](missingTypes.map(constant):_*))
 
@@ -257,7 +259,7 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
       declareAndAssign(typeRefOf[Long], fromNode, getNodeIdFromSlot(fromSlot)),
       condition(notEqual(load(fromNode), constant(-1L))){
        block(
-         loadTypes,
+        loadTypes(types, missingTypes, typeField, missingTypeField),
          //specialize if we have an external NodeCursor already pointing at the correct offset
          externalCursor.map{c =>
            ifElse(c.isDense)(
@@ -304,22 +306,11 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
          invokeSideEffect(loadField(relationshipsField), method[RelationshipSelectionCursor, Unit, KernelReadTracer]("setTracer"), loadField(executionEventField)),
          assign(resultBoolean, constant(true)),
          setField(canContinue, profilingCursorNext[RelationshipSelectionCursor](loadField(relationshipsField), id)),
-       )
+         )
       },
 
       load(resultBoolean)
     )
-  }
-
-  private def loadTypes = {
-    if (missingTypes.isEmpty) noop()
-    else {
-      condition(notEqual(arrayLength(loadField(typeField)), constant(types.length + missingTypes.length))){
-        setField(typeField,
-                 invokeStatic(method[ExpandAllOperatorTaskTemplate, Array[Int], Array[Int], Array[String], DbAccess]("computeTypes"),
-                              loadField(typeField), loadField(missingTypeField), DB_ACCESS))
-      }
-    }
   }
 
   /**
@@ -423,5 +414,16 @@ object ExpandAllOperatorTaskTemplate {
       }
     })
     newTokens.toArray
+  }
+
+   def loadTypes( types: Array[Int], missingTypes: Array[String], typeField: Field, missingTypeField: Field ): IntermediateRepresentation = {
+    if (missingTypes.isEmpty) noop()
+    else {
+      condition(notEqual(arrayLength(loadField(typeField)), constant(types.length + missingTypes.length))){
+        setField(typeField,
+                 invokeStatic(method[ExpandAllOperatorTaskTemplate, Array[Int], Array[Int], Array[String], DbAccess]("computeTypes"),
+                              loadField(typeField), loadField(missingTypeField), DB_ACCESS))
+      }
+    }
   }
 }
