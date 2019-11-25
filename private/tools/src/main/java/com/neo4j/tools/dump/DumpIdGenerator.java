@@ -33,8 +33,7 @@ public class DumpIdGenerator
 
         File file = new File( args[0] );
         FileSystemAbstraction fs = new DefaultFileSystemAbstraction();
-        SingleFilePageSwapperFactory swapper = new SingleFilePageSwapperFactory();
-        swapper.open( fs );
+        SingleFilePageSwapperFactory swapper = new SingleFilePageSwapperFactory( fs );
         LifeSupport life = new LifeSupport();
         JobScheduler scheduler = life.add( JobSchedulerFactory.createScheduler() );
         life.start();
