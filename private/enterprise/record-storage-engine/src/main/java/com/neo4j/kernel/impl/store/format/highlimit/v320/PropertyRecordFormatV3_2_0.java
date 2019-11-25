@@ -74,7 +74,7 @@ class PropertyRecordFormatV3_2_0 extends BaseOneByteHeaderRecordFormat<PropertyR
     }
 
     @Override
-    public void read( PropertyRecord record, PageCursor cursor, RecordLoad mode, int recordSize )
+    public void read( PropertyRecord record, PageCursor cursor, RecordLoad mode, int recordSize, int recordsPerPage )
     {
         int offset = cursor.getOffset();
         byte headerByte = cursor.getByte();
@@ -110,7 +110,7 @@ class PropertyRecordFormatV3_2_0 extends BaseOneByteHeaderRecordFormat<PropertyR
     }
 
     @Override
-    public void write( PropertyRecord record, PageCursor cursor, int recordSize )
+    public void write( PropertyRecord record, PageCursor cursor, int recordSize, int recordsPerPage )
     {
         if ( record.inUse() )
         {

@@ -52,7 +52,7 @@ import static org.neo4j.kernel.impl.store.RecordPageLocationCalculator.pageIdFor
  * handles the transition seamlessly.
  *
  * Assigning secondary record unit IDs is done outside of this format implementation, it is just assumed
- * that records that gets {@link RecordFormat#write(AbstractBaseRecord, PageCursor, int) written} have already
+ * that records that gets {@link RecordFormat#write(AbstractBaseRecord, PageCursor, int, int) written} have already
  * been assigned all required such data.
  *
  * Usually each records are written and read atomically, so this format requires additional logic to be able to
@@ -80,7 +80,7 @@ abstract class BaseHighLimitRecordFormatV3_0_6<RECORD extends AbstractBaseRecord
     }
 
     @Override
-    public void read( RECORD record, PageCursor primaryCursor, RecordLoad mode, int recordSize )
+    public void read( RECORD record, PageCursor primaryCursor, RecordLoad mode, int recordSize, int recordsPerPage )
             throws IOException
     {
         int primaryStartOffset = primaryCursor.getOffset();
@@ -106,7 +106,7 @@ abstract class BaseHighLimitRecordFormatV3_0_6<RECORD extends AbstractBaseRecord
             // data structures here. For the time being this means instantiating one object,
             // but the trade-off is a great reduction in complexity.
             long secondaryId = Reference.decode( primaryCursor );
-            long pageId = pageIdForRecord( secondaryId, primaryCursor.getCurrentPageSize(), recordSize );
+            long pageId = pageIdForRecord( secondaryId, recordsPerPage );
             int offset = offsetForId( secondaryId, primaryCursor.getCurrentPageSize(), recordSize );
             PageCursor secondaryCursor = primaryCursor.openLinkedCursor( pageId );
             if ( (!secondaryCursor.next()) | offset < 0 )
@@ -152,7 +152,7 @@ abstract class BaseHighLimitRecordFormatV3_0_6<RECORD extends AbstractBaseRecord
             RECORD record, PageCursor cursor, int recordSize, long inUseByte, boolean inUse );
 
     @Override
-    public void write( RECORD record, PageCursor primaryCursor, int recordSize )
+    public void write( RECORD record, PageCursor primaryCursor, int recordSize, int recordsPerPage )
             throws IOException
     {
         if ( record.inUse() )
@@ -178,7 +178,7 @@ abstract class BaseHighLimitRecordFormatV3_0_6<RECORD extends AbstractBaseRecord
                 // Write using the normal adapter since the first reference we write cannot really overflow
                 // into the secondary record
                 long secondaryUnitId = record.getSecondaryUnitId();
-                long pageId = pageIdForRecord( secondaryUnitId, primaryCursor.getCurrentPageSize(), recordSize );
+                long pageId = pageIdForRecord( secondaryUnitId, recordsPerPage );
                 int offset = offsetForId( secondaryUnitId, primaryCursor.getCurrentPageSize(), recordSize );
                 PageCursor secondaryCursor = primaryCursor.openLinkedCursor( pageId );
                 if ( !secondaryCursor.next() )
@@ -203,7 +203,7 @@ abstract class BaseHighLimitRecordFormatV3_0_6<RECORD extends AbstractBaseRecord
         }
         else
         {
-            markAsUnused( primaryCursor, record, recordSize );
+            markAsUnused( primaryCursor, record, recordSize, recordsPerPage );
         }
     }
 
@@ -211,14 +211,14 @@ abstract class BaseHighLimitRecordFormatV3_0_6<RECORD extends AbstractBaseRecord
      * Use this instead of {@link #markFirstByteAsUnused(PageCursor)} to mark both record units,
      * if record has a reference to a secondary unit.
      */
-    protected void markAsUnused( PageCursor cursor, RECORD record, int recordSize )
+    protected void markAsUnused( PageCursor cursor, RECORD record, int recordSize, int recordsPerPage )
             throws IOException
     {
         markAsUnused( cursor );
         if ( record.hasSecondaryUnitId() )
         {
             long secondaryUnitId = record.getSecondaryUnitId();
-            long pageIdForSecondaryRecord = pageIdForRecord( secondaryUnitId, cursor.getCurrentPageSize(), recordSize );
+            long pageIdForSecondaryRecord = pageIdForRecord( secondaryUnitId, recordsPerPage );
             int offsetForSecondaryId = offsetForId( secondaryUnitId, cursor.getCurrentPageSize(), recordSize );
             if ( !cursor.next( pageIdForSecondaryRecord ) )
             {

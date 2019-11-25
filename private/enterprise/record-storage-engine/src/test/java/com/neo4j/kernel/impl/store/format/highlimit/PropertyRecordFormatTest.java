@@ -19,6 +19,7 @@ import org.neo4j.kernel.impl.store.record.PropertyRecord;
 import org.neo4j.kernel.impl.store.record.Record;
 import org.neo4j.kernel.impl.store.record.RecordLoad;
 
+import static com.neo4j.kernel.impl.store.format.highlimit.PropertyRecordFormat.RECORD_SIZE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -55,12 +56,12 @@ class PropertyRecordFormatTest
         int recordOffset = pageCursor.getOffset();
 
         PropertyRecord record = createRecord( recordFormat, recordId );
-        recordFormat.write( record, pageCursor, recordSize );
+        recordFormat.write( record, pageCursor, recordSize, pageCursor.getCurrentPageSize() / recordSize );
 
         PropertyRecord recordFromStore = recordFormat.newRecord();
         recordFromStore.setId( recordId  );
         resetCursor( pageCursor, recordOffset );
-        recordFormat.read( recordFromStore, pageCursor, RecordLoad.NORMAL, recordSize );
+        recordFormat.read( recordFromStore, pageCursor, RecordLoad.NORMAL, recordSize, pageCursor.getCurrentPageSize() / recordSize );
 
         // records should be the same
         assertEquals( record.getNextProp(), recordFromStore.getNextProp() );
@@ -70,7 +71,7 @@ class PropertyRecordFormatTest
         resetCursor( pageCursor, recordOffset );
         PropertyRecord recordWithOtherId = recordFormat.newRecord();
         recordWithOtherId.setId( 1L  );
-        recordFormat.read( recordWithOtherId, pageCursor, RecordLoad.NORMAL, recordSize );
+        recordFormat.read( recordWithOtherId, pageCursor, RecordLoad.NORMAL, recordSize, pageCursor.getCurrentPageSize() / recordSize );
 
         verifyDifferentReferences(record, recordWithOtherId);
     }
@@ -178,7 +179,7 @@ class PropertyRecordFormatTest
         assertFalse( oldFormatRecord.hasSecondaryUnitId(), "This should be single unit record." );
         assertTrue( oldFormatRecord.isUseFixedReferences(), "Old format is aware about fixed references." );
 
-        recordFormat.read( newFormatRecord, pageCursor, RecordLoad.NORMAL, PropertyRecordFormat.RECORD_SIZE );
+        recordFormat.read( newFormatRecord, pageCursor, RecordLoad.NORMAL, RECORD_SIZE, pageCursor.getCurrentPageSize() / RECORD_SIZE );
         verifySameReferences( oldFormatRecord, newFormatRecord );
     }
 
@@ -187,7 +188,7 @@ class PropertyRecordFormatTest
         int oldRecordSize = PropertyRecordFormatV3_4_0.RECORD_SIZE;
         PropertyRecordFormatV3_4_0 recordFormatV30 = new PropertyRecordFormatV3_4_0();
         recordFormatV30.prepare( oldFormatRecord, oldRecordSize, idSequence );
-        recordFormatV30.write( oldFormatRecord, pageCursor, oldRecordSize );
+        recordFormatV30.write( oldFormatRecord, pageCursor, oldRecordSize, pageCursor.getCurrentPageSize() / oldRecordSize );
         pageCursor.setOffset( 0 );
     }
 
@@ -205,15 +206,15 @@ class PropertyRecordFormatTest
 
     private void writeReadRecord( PropertyRecord source, PropertyRecord target )
     {
-        writeReadRecord( source, target, PropertyRecordFormat.RECORD_SIZE );
+        writeReadRecord( source, target, RECORD_SIZE );
     }
 
     private void writeReadRecord( PropertyRecord source, PropertyRecord target, int recordSize )
     {
         recordFormat.prepare( source, recordSize, idSequence );
-        recordFormat.write( source, pageCursor, recordSize );
+        recordFormat.write( source, pageCursor, recordSize, pageCursor.getCurrentPageSize() / recordSize );
         pageCursor.setOffset( 0 );
-        recordFormat.read( target, pageCursor, RecordLoad.NORMAL, recordSize );
+        recordFormat.read( target, pageCursor, RecordLoad.NORMAL, recordSize, pageCursor.getCurrentPageSize() / recordSize );
     }
 
     private static long randomFixedReference()

@@ -23,12 +23,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BaseHighLimitRecordFormatTest
 {
+    private static final int RECORD_SIZE = 4;
+
     @Test
     void mustNotCheckForOutOfBoundsWhenReadingSingleRecord() throws Exception
     {
         MyRecordFormat format = new MyRecordFormat();
         StubPageCursor cursor = new StubPageCursor( 0, 3 );
-        format.read( new MyRecord( 0 ), cursor, RecordLoad.NORMAL, 4 );
+        format.read( new MyRecord( 0 ), cursor, RecordLoad.NORMAL, RECORD_SIZE, cursor.getCurrentPageSize() / RECORD_SIZE );
         assertFalse( cursor.checkAndClearBoundsFlag() );
     }
 
@@ -47,7 +49,7 @@ class BaseHighLimitRecordFormatTest
             }
         };
         format.shortsPerRecord.add( 2 );
-        format.read( new MyRecord( 0 ), cursor, RecordLoad.NORMAL, 4 );
+        format.read( new MyRecord( 0 ), cursor, RecordLoad.NORMAL, RECORD_SIZE, cursor.getCurrentPageSize() / RECORD_SIZE );
         assertTrue( cursor.checkAndClearBoundsFlag() );
     }
 
@@ -58,7 +60,7 @@ class BaseHighLimitRecordFormatTest
         StubPageCursor cursor = new StubPageCursor( 0, 3 );
         MyRecord record = new MyRecord( 0 );
         record.setInUse( true );
-        format.write( record, cursor, 4 );
+        format.write( record, cursor, RECORD_SIZE, cursor.getCurrentPageSize() / RECORD_SIZE );
         assertFalse( cursor.checkAndClearBoundsFlag() );
     }
 
@@ -72,7 +74,7 @@ class BaseHighLimitRecordFormatTest
         record.setSecondaryUnitIdOnCreate( 42 );
         record.setInUse( true );
         format.shortsPerRecord.add( 3 ); // make the write go out of bounds
-        format.write( record, cursor, 4 );
+        format.write( record, cursor, RECORD_SIZE, cursor.getCurrentPageSize() / RECORD_SIZE );
         assertTrue( cursor.checkAndClearBoundsFlag() );
     }
 

@@ -166,9 +166,9 @@ class RelationshipGroupRecordFormatTest
             throws IOException
     {
         recordFormat.prepare( source, recordSize, idSequence );
-        recordFormat.write( source, pageCursor, recordSize );
+        recordFormat.write( source, pageCursor, recordSize, pageCursor.getCurrentPageSize() / recordSize );
         pageCursor.setOffset( 0 );
-        recordFormat.read( target, pageCursor, RecordLoad.NORMAL, recordSize );
+        recordFormat.read( target, pageCursor, RecordLoad.NORMAL, recordSize, pageCursor.getCurrentPageSize() / recordSize );
     }
 
     private static int randomType()

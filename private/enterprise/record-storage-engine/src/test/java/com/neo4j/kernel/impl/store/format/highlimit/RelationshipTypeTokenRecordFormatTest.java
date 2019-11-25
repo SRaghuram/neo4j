@@ -36,13 +36,13 @@ class RelationshipTypeTokenRecordFormatTest
 
         // when
         format.prepare( record, recordSize, doubleUnits );
-        format.write( record, cursor, recordSize );
+        format.write( record, cursor, recordSize, cursor.getCurrentPageSize() / recordSize );
         verifyNoMoreInteractions( doubleUnits );
 
         // then
         cursor.setOffset( 0 );
         RelationshipTypeTokenRecord read = new RelationshipTypeTokenRecord( typeId );
-        format.read( read, cursor, NORMAL, recordSize );
+        format.read( read, cursor, NORMAL, recordSize, cursor.getCurrentPageSize() / recordSize );
         assertEquals( record, read );
     }
 
