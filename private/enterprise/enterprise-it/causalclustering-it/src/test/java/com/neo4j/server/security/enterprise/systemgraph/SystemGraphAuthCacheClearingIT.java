@@ -163,7 +163,7 @@ class SystemGraphAuthCacheClearingIT
             .withSharedCoreParams( getConfig() )
             .withNumberOfCoreMembers( 3 );
 
-        var cluster = clusterFactory.createCluster( clusterConfig );
+        cluster = clusterFactory.createCluster( clusterConfig );
         cluster.start();
         var clusterSystemDbs = clusterSystemDbs( cluster );
 
@@ -185,7 +185,7 @@ class SystemGraphAuthCacheClearingIT
 
         // Then the auth cache should be cleared and login with new password is required
         assertEventually( () -> allCanAuth( clusterSystemDbs, "foo", "f00" ), is( false ), 30, SECONDS );
-        assertTrue( () -> allCanAuth( clusterSystemDbs, "foo", "b4r" ) );
+        assertEventually( () -> allCanAuth( clusterSystemDbs, "foo", "b4r" ), is( true ), 30, SECONDS );
     }
 
     @Test
