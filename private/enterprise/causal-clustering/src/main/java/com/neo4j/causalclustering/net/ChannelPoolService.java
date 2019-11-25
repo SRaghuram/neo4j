@@ -92,6 +92,7 @@ public class ChannelPoolService implements Lifecycle
             endOfLife = new CompletableFuture<>();
             eventLoopGroup = bootstrapConfiguration.eventLoopGroup( scheduler.executor( group ) );
             Bootstrap baseBootstrap = new Bootstrap().group( eventLoopGroup ).channel( bootstrapConfiguration.channelClass() );
+            baseBootstrap.resolver( AlwaysResolveAddressResolver.INSTANCE );
             poolMap = new TrackingChannelPoolMap( baseBootstrap, poolHandler, poolFactory );
         }
         finally
