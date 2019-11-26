@@ -78,6 +78,7 @@ class ThreadedTransaction<S>
                                 {
                                     if ( result != null )
                                     {
+                                        result.accept( row -> true );
                                         result.close();
                                     }
                                     result = tx.execute( query );
@@ -95,7 +96,11 @@ class ThreadedTransaction<S>
                                 }
                                 latch.finishAndWaitForAllToFinish();
                             }
-                            result.close();
+                            if ( result != null )
+                            {
+                                result.accept( row -> true );
+                                result.close();
+                            }
                             tx.commit();
                             return null;
                         }
