@@ -12,88 +12,91 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
   // Privilege tests
 
-  test("should grant create role privilege") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
+  Seq(("GRANT", "GRANTED"), ("DENY", "DENIED")).foreach {
+    case (grant, relType) =>
+      test(s"should $grant create role privilege") {
+        // GIVEN
+        selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
 
-    // WHEN
-    execute("GRANT CREATE ROLE ON DBMS TO custom")
+        // WHEN
+        execute(s"$grant CREATE ROLE ON DBMS TO custom")
 
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      adminAction("create_role").role("custom").map
-    ))
-  }
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          adminAction("create_role", relType).role("custom").map
+        ))
+      }
 
-  test("should grant drop role privilege") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
+      test(s"should $grant drop role privilege") {
+        // GIVEN
+        selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
 
-    // WHEN
-    execute("GRANT DROP ROLE ON DBMS TO custom")
+        // WHEN
+        execute(s"$grant DROP ROLE ON DBMS TO custom")
 
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      adminAction("drop_role").role("custom").map
-    ))
-  }
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          adminAction("drop_role", relType).role("custom").map
+        ))
+      }
 
-  test("should grant assign role privilege") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
+      test(s"should $grant assign role privilege") {
+        // GIVEN
+        selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
 
-    // WHEN
-    execute("GRANT ASSIGN ROLE ON DBMS TO custom")
+        // WHEN
+        execute(s"$grant ASSIGN ROLE ON DBMS TO custom")
 
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      adminAction("assign_role").role("custom").map
-    ))
-  }
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          adminAction("assign_role", relType).role("custom").map
+        ))
+      }
 
-  test("should grant remove role privilege") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
+      test(s"should $grant remove role privilege") {
+        // GIVEN
+        selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
 
-    // WHEN
-    execute("GRANT REMOVE ROLE ON DBMS TO custom")
+        // WHEN
+        execute(s"$grant REMOVE ROLE ON DBMS TO custom")
 
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      adminAction("remove_role").role("custom").map
-    ))
-  }
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          adminAction("remove_role", relType).role("custom").map
+        ))
+      }
 
-  test("should grant show role privilege") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
+      test(s"should $grant show role privilege") {
+        // GIVEN
+        selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
 
-    // WHEN
-    execute("GRANT SHOW ROLE ON DBMS TO custom")
+        // WHEN
+        execute(s"$grant SHOW ROLE ON DBMS TO custom")
 
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      adminAction("show_role").role("custom").map
-    ))
-  }
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          adminAction("show_role", relType).role("custom").map
+        ))
+      }
 
-  test("should grant role management privilege") {
-    // GIVEN
-    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
+      test(s"should $grant role management privilege") {
+        // GIVEN
+        selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
 
-    // WHEN
-    execute("GRANT ROLE MANAGEMENT ON DBMS TO custom")
+        // WHEN
+        execute(s"$grant ROLE MANAGEMENT ON DBMS TO custom")
 
-    // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      adminAction("role_management").role("custom").map
-    ))
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          adminAction("role_management", relType).role("custom").map
+        ))
+      }
   }
 
   test("should revoke other role management privileges when revoking role management") {
