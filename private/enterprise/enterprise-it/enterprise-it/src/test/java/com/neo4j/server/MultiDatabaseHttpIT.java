@@ -6,6 +6,7 @@
 package com.neo4j.server;
 
 import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
+import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import com.neo4j.server.enterprise.EnterpriseNeoServer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -90,6 +91,7 @@ class MultiDatabaseHttpIT
                 .set( mode, EnterpriseEditionSettings.Mode.SINGLE )
                 .set( GraphDatabaseSettings.neo4j_home, testDirectory.homeDir().toPath().toAbsolutePath() )
                 .set( GraphDatabaseSettings.auth_enabled, false )
+                .set( OnlineBackupSettings.online_backup_enabled, false )
                 .set( BoltConnector.listen_address, new SocketAddress( "localhost", 0 ) )
                 .set( HttpConnector.listen_address, new SocketAddress( "localhost", 0 ) )
                 .set( HttpsConnector.listen_address, new SocketAddress( "localhost", 0 ) )
