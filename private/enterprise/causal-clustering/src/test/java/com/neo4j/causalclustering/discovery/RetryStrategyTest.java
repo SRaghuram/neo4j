@@ -61,7 +61,7 @@ class RetryStrategyTest
         RetryStrategy subject = new RetryStrategy( timeoutStrategy, retries );
 
         // when
-        subject.apply( countingSupplier, new ValidOnSecondTime() );
+        subject.apply( countingSupplier, new ValidAfterNAttempts( 2 ) );
 
         // then
         assertEquals( 1, timeoutStrategy.invocationCount() );
@@ -75,7 +75,7 @@ class RetryStrategyTest
         RetryStrategy subject = new RetryStrategy( 0, retries );
 
         // when
-        subject.apply( countingSupplier, new ValidOnSecondTime() );
+        subject.apply( countingSupplier, new ValidAfterNAttempts( 2 ) );
 
         // then
         assertEquals( 2, countingSupplier.invocationCount() );
@@ -85,26 +85,30 @@ class RetryStrategyTest
     void nonPositiveRetryNumberRetriesUntilSuccess() throws TimeoutException
     {
         RetryStrategy subject = new RetryStrategy( 0, 0 );
+        int retries = 50;
+        CountingSupplier countingSupplier = new CountingSupplier();
 
         // when
-        Integer result = subject.apply( () -> 0, new ValidOnSecondTime() );
+        Integer result = subject.apply( countingSupplier, new ValidAfterNAttempts( retries ) );
 
         // then no TimeoutException
-        assertEquals( 0, result.intValue() );
+        assertEquals( retries - 1, result.intValue() );
     }
 
-    private static class ValidOnSecondTime implements Predicate<Integer>
+    private static class ValidAfterNAttempts implements Predicate<Integer>
     {
-        private boolean nextSuccessful;
+        private int validAfter;
+        private int testCount;
+
+        ValidAfterNAttempts( int validAfter )
+        {
+            this.validAfter = validAfter;
+        }
+
         @Override
         public boolean test( Integer integer )
         {
-            if ( !nextSuccessful )
-            {
-                nextSuccessful = true;
-                return false;
-            }
-            return true;
+            return ++testCount >= validAfter;
         }
     }
 
