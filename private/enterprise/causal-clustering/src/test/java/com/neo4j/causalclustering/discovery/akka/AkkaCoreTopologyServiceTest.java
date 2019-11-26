@@ -24,6 +24,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.function.ThrowingConsumer;
@@ -64,7 +65,7 @@ class AkkaCoreTopologyServiceTest
 
     private ActorSystemLifecycle system = mock( ActorSystemLifecycle.class, RETURNS_MOCKS );
 
-    private RetryStrategy restartRetryStrategy = new RetryStrategy( 0L, 10L );
+    private RetryStrategy restartRetryStrategy = new RetryStrategy( 0L, 0L );
 
     private AkkaCoreTopologyService service = new AkkaCoreTopologyService(
             config,
@@ -300,6 +301,25 @@ class AkkaCoreTopologyServiceTest
         InOrder inOrder = inOrder( system );
         inOrder.verify( system ).shutdown();
         inOrder.verify( system, times( 2 ) ).createClusterActorSystem();
+    }
+
+    @Test
+    void shouldRetryUntilSuccessful() throws Throwable
+    {
+        service.init();
+        service.start();
+        reset( system );
+
+        int numFailures = 15;
+        Exception exception = new RuntimeException();
+        final Exception[] exceptions = Stream.generate( () -> exception ).limit( numFailures ).toArray( Exception[]::new );
+        Mockito.doThrow( exceptions ).doNothing().when( system ).createClusterActorSystem();
+
+        service.restart();
+
+        InOrder inOrder = inOrder( system );
+        inOrder.verify( system ).shutdown();
+        inOrder.verify( system, times( numFailures + 1 ) ).createClusterActorSystem();
     }
 
     private void testEmptyTopologiesAreReportedAfter( ThrowingConsumer<AkkaCoreTopologyService,Exception> testAction ) throws Exception
