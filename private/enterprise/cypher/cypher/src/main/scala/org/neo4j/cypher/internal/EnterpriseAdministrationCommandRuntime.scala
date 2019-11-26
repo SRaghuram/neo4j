@@ -251,8 +251,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
     // DROP ROLE foo [IF EXISTS]
     case DropRole(source, roleName) => (context, parameterMapping, securityContext) =>
       UpdatingSystemCommandExecutionPlan("DropRole", normalExecutionEngine,
-        """MATCH (role:Role {name: $name}) DETACH DELETE role
-          |RETURN role""".stripMargin,
+        """MATCH (role:Role {name: $name}) DETACH DELETE role""".stripMargin,
         VirtualValues.map(Array("name"), Array(Values.stringValue(roleName))),
         QueryHandler
           .handleError {
