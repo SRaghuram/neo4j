@@ -17,6 +17,7 @@
 
     <properties>
         <moduleName>com.neo4j.enterprise.causalclustering.it</moduleName>
+        <ThreadLeakageGuardExtension.PRINT_ONLY>true</ThreadLeakageGuardExtension.PRINT_ONLY>
     </properties>
 
     <scm>
