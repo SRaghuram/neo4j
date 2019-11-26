@@ -13,7 +13,7 @@ import io.netty.util.concurrent.EventExecutor;
 
 import java.net.InetSocketAddress;
 
-final class AlwaysResolveAddressResolver extends InetSocketAddressResolver
+class AlwaysResolveAddressResolver extends InetSocketAddressResolver
 {
     static AddressResolverGroup<InetSocketAddress> INSTANCE = new AddressResolverGroup<>()
     {
@@ -24,7 +24,7 @@ final class AlwaysResolveAddressResolver extends InetSocketAddressResolver
         }
     };
 
-    private AlwaysResolveAddressResolver( EventExecutor executor )
+    AlwaysResolveAddressResolver( EventExecutor executor )
     {
         super( executor, new DefaultNameResolver( executor ) );
     }
