@@ -8,6 +8,7 @@ package com.neo4j.internal.cypher.acceptance
 import org.neo4j.configuration.GraphDatabaseSettings.{DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME}
 import org.neo4j.graphdb.QueryExecutionException
 import org.neo4j.graphdb.security.AuthorizationViolationException
+import org.neo4j.internal.kernel.api.security.PrivilegeAction
 
 class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
 
@@ -444,6 +445,52 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     // THEN
     result.queryStatistics().systemUpdates should be(6)
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
+  }
+
+  test("Should revoke compound TOKEN privileges from built-in roles") {
+    // Given
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom AS COPY OF admin")
+    val expected = defaultRolePrivilegesFor("admin", "custom")
+    expected.foreach(println)
+
+    // When && Then
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(expected)
+
+    // When
+    execute("REVOKE NAME MANAGEMENT ON DATABASES * FROM custom")
+
+    // Then
+    val expectedWithoutNameManagement = expected.filter(_ ("action") != PrivilegeAction.TOKEN.toString)
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(expectedWithoutNameManagement)
+
+    // Now add and revoke each sub-privilege in turn, checking also the compound revokes work on sub-privileges
+    Seq(
+      ("CREATE NEW NODE LABEL", "create_label"),
+      ("CREATE NEW RELATIONSHIP TYPE", "create_reltype"),
+      ("CREATE NEW PROPERTY NAME", "create_propertykey"),
+    ).foreach {
+      case (privilege, action) =>
+        Seq("NAME MANAGEMENT", privilege).foreach {
+          case revokePrivilege =>
+            // When
+            execute(s"GRANT $privilege ON DATABASES * TO custom")
+
+            // Then
+            val expectedWithPrivilege = expectedWithoutNameManagement + grantToken().action(action).role("custom").map
+            withClue(s"After GRANT $privilege") {
+              execute("SHOW ROLE custom PRIVILEGES").toSet should be(expectedWithPrivilege)
+            }
+
+            // When
+            execute(s"REVOKE $revokePrivilege ON DATABASES * FROM custom")
+
+            // Then
+            withClue(s"After REVOKE $revokePrivilege") {
+              execute("SHOW ROLE custom PRIVILEGES").toSet should be(expectedWithoutNameManagement)
+            }
+        }
+    }
   }
 
   // Tests for actual behaviour of authorization rules for restricted users based on privileges

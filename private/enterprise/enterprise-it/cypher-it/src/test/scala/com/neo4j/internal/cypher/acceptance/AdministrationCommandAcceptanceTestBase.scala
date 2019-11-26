@@ -91,6 +91,19 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
     grantAdmin().role("admin").map,
   )
 
+  def defaultRolePrivilegesFor(role: String): Set[Map[String, AnyRef]] = defaultRolePrivileges.filter(m => m("role") == role)
+
+  def defaultRolePrivilegesFor(role: String, replace: String): Set[Map[String, AnyRef]] = {
+    defaultRolePrivileges.foldLeft(Set.empty[Map[String, AnyRef]]) {
+      case (acc, row) if row("role") == role =>
+        acc + row.map {
+          case (k, _) if k == "role" => (k, replace)
+          case (k, v) => (k, v)
+        }
+      case (acc, _) => acc
+    }
+  }
+
   def authManager: EnterpriseAuthManager = graph.getDependencyResolver.resolveDependency(classOf[EnterpriseAuthManager])
 
   override def databaseConfig(): Map[Setting[_], Object] = Map(GraphDatabaseSettings.auth_enabled -> TRUE)
