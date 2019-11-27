@@ -89,6 +89,11 @@ public class DiscoveryDatabaseState
     @Override
     public String toString()
     {
-        return "DiscoveryDatabaseState{" + "databaseId=" + databaseId + ", operatorState=" + operatorState + ", failure=" + failure + '}';
+        return "DiscoveryDatabaseState{" + databaseId + ", operatorState=" + operatorState + ", result=" + printResult( failure ) + '}';
+    }
+
+    private static String printResult( Throwable failure )
+    {
+        return failure == null ? "SUCCESS" : "FAIL [" + failure.getMessage() + ']';
     }
 }

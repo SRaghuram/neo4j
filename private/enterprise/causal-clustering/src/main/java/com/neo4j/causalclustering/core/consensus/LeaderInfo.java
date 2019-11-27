@@ -55,7 +55,7 @@ public class LeaderInfo
     @Override
     public String toString()
     {
-        return "LeaderInfo{" + "memberId=" + memberId + ", term=" + term + '}';
+        return "LeaderInfo{" + memberId + ", term=" + term + '}';
     }
 
     @Override

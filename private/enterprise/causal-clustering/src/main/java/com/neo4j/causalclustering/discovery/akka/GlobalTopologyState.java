@@ -18,12 +18,15 @@ import com.neo4j.causalclustering.discovery.akka.coretopology.BootstrapState;
 import com.neo4j.causalclustering.discovery.akka.database.state.DiscoveryDatabaseState;
 import com.neo4j.causalclustering.identity.MemberId;
 
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.kernel.database.DatabaseId;
@@ -31,9 +34,12 @@ import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
+import static java.lang.String.format;
+import static java.lang.System.lineSeparator;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.unmodifiableMap;
 import static java.util.Objects.requireNonNull;
+import static org.neo4j.internal.helpers.Strings.printMap;
 
 public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateSink, BootstrapStateUpdateSink, DatabaseStateUpdateSink
 {
@@ -65,8 +71,12 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
 
         if ( !Objects.equals( currentCoreTopology, newCoreTopology ) )
         {
+            if ( currentCoreTopology == null )
+            {
+                currentCoreTopology = DatabaseCoreTopology.empty( databaseId );
+            }
             this.coresByMemberId = extractServerInfos( coreTopologiesByDatabase );
-            log.info( "Core topology for database %s changed from %s to %s", databaseId, currentCoreTopology, newCoreTopology );
+            logTopologyChange( "Core topology", newCoreTopology, databaseId, currentCoreTopology );
             callback.accept( newCoreTopology );
         }
 
@@ -85,8 +95,12 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
 
         if ( !Objects.equals( currentReadReplicaTopology, newReadReplicaTopology ) )
         {
+            if ( currentReadReplicaTopology == null )
+            {
+                currentReadReplicaTopology = DatabaseReadReplicaTopology.empty( databaseId );
+            }
             this.readReplicasByMemberId = extractServerInfos( readReplicaTopologiesByDatabase );
-            log.info( "Read replica topology for database %s changed from %s to %s", databaseId, currentReadReplicaTopology, newReadReplicaTopology );
+            logTopologyChange( "Read replica topology", currentReadReplicaTopology, databaseId, newReadReplicaTopology );
         }
 
         if ( hasNoMembers( newReadReplicaTopology ) )
@@ -101,7 +115,7 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
     {
         if ( !leaderInfoMap.equals( remoteDbLeaderMap ) )
         {
-            log.info( "Database leaders changed: %s", leaderInfoMap );
+            log.info( "Database leader(s) update:%s", newPaddedLine(), printLeaderInfoMap( leaderInfoMap, remoteDbLeaderMap ) );
             this.remoteDbLeaderMap = leaderInfoMap;
         }
     }
@@ -116,7 +130,25 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
 
         if ( !Objects.equals( previousState, newState ) )
         {
-            log.info( "The %s replicated states for database %s changed from %s to %s", role, databaseId, previousState, newState );
+            StringBuilder stringBuilder = new StringBuilder( format( "The %s replicated states for database %s changed", role, databaseId ) );
+            if ( previousState == null )
+            {
+                stringBuilder.append( " previous state was empty" );
+            }
+            else
+            {
+                stringBuilder.append( "previous state was:" ).append( newPaddedLine() ).append( printMap( previousState.memberStates(), newPaddedLine() ) )
+                        .append( lineSeparator() );
+            }
+            if ( newState.isEmpty() )
+            {
+                stringBuilder.append( "current state is empty" );
+            }
+            else
+            {
+                stringBuilder.append( "current state is:" ).append( newPaddedLine() ).append( printMap( newState.memberStates(), newPaddedLine() ) );
+            }
+            log.info( stringBuilder.toString() );
         }
 
         if ( newState.isEmpty() )
@@ -130,6 +162,50 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
     public void onBootstrapStateUpdate( BootstrapState newBootstrapState )
     {
         bootstrapState = requireNonNull( newBootstrapState );
+    }
+
+    private static String printLeaderInfoMap( Map<DatabaseId,LeaderInfo> leaderInfoMap, Map<DatabaseId,LeaderInfo> oldDbLeaderMap )
+    {
+        return leaderInfoMap.entrySet().stream().map( entry ->
+        {
+            if ( !oldDbLeaderMap.containsKey( entry.getKey() ) )
+            {
+                return format( "Discovered database %s with leader %s on term %d", entry.getKey(), entry.getValue().memberId(), entry.getValue().term() );
+            }
+            else if ( entry.getValue().memberId().equals( oldDbLeaderMap.get( entry.getKey() ).memberId() ) )
+            {
+                return format( "Database %s has leader %s on term %d", entry.getKey(), entry.getValue().memberId(), entry.getValue().term() );
+            }
+            else
+            {
+                return format( "Database %s switch leader from %s to %s on term %d", entry.getKey(), oldDbLeaderMap.get( entry.getKey() ).memberId(),
+                        entry.getValue().memberId(), entry.getValue().term() );
+            }
+        } ).collect( Collectors.joining( newPaddedLine() ) );
+    }
+
+    private static String newPaddedLine()
+    {
+        return lineSeparator() + "  ";
+    }
+
+    private void logTopologyChange( String topologyDescription, Topology<?> newTopology, DatabaseId databaseId, Topology<?> oldTopology )
+    {
+        var allMembers = Collections.unmodifiableSet( newTopology.members().keySet() );
+
+        var lostMembers = new HashSet<>( oldTopology.members().keySet() );
+        lostMembers.removeAll( allMembers );
+
+        var newMembers = new HashMap<>( newTopology.members() );
+        newMembers.keySet().removeAll( oldTopology.members().keySet() );
+
+        String logLine =
+                format( "%s for database %s is now: %s", topologyDescription, databaseId, allMembers.isEmpty() ? "empty" : allMembers )
+                        + lineSeparator() +
+                        (lostMembers.isEmpty() ? "No members where lost" : format( "Lost members :%s", lostMembers ))
+                        + lineSeparator() +
+                        (newMembers.isEmpty() ? "No new members" : format( "New members: %s%s", newPaddedLine(), printMap( newMembers, newPaddedLine() ) ));
+        log.info( logLine );
     }
 
     public RoleInfo role( NamedDatabaseId namedDatabaseId, MemberId memberId )

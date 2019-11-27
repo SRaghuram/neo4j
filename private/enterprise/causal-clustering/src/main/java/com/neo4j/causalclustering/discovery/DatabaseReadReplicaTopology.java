@@ -12,6 +12,7 @@ import java.util.Objects;
 
 import org.neo4j.kernel.database.DatabaseId;
 
+import static java.lang.String.format;
 import static java.util.Collections.emptyMap;
 import static java.util.Objects.requireNonNull;
 
@@ -68,9 +69,6 @@ public class DatabaseReadReplicaTopology implements Topology<ReadReplicaInfo>
     @Override
     public String toString()
     {
-        return "DatabaseReadReplicaTopology{" +
-               "databaseId='" + databaseId + '\'' +
-               ", readReplicaMembers=" + readReplicaMembers +
-               '}';
+        return format( "DatabaseReadReplicaTopology{%s %s}", databaseId, readReplicaMembers.keySet() );
     }
 }
