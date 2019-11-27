@@ -158,56 +158,70 @@ public class SystemGraphRealm extends BasicSystemGraphRealm implements RealmLife
             try ( Transaction tx = getSystemDb().beginTx() )
             {
                 final Stream<Node> roleStream =
-                        tx.findNodes( Label.label( "Role" ) ).stream().filter( roleNode -> roles.contains( roleNode.getProperty( "name" ).toString() ) );
+                        tx.findNodes( Label.label( "Role" ) ).stream().filter( roleNode -> rolesForUserContainsRole( roles, roleNode ) );
                 roleStream.forEach( roleNode ->
                 {
-                    String roleName = (String) roleNode.getProperty( "name" );
-                    Set<ResourcePrivilege> rolePrivileges = resultsPerRole.computeIfAbsent( roleName, role -> new HashSet<>() );
-
-                    roleNode.getRelationships( Direction.OUTGOING ).forEach( relToPriv ->
+                    try
                     {
-                        try
+                        String roleName = (String) roleNode.getProperty( "name" );
+                        Set<ResourcePrivilege> rolePrivileges = resultsPerRole.computeIfAbsent( roleName, role -> new HashSet<>() );
+
+                        roleNode.getRelationships( Direction.OUTGOING ).forEach( relToPriv ->
                         {
-                            final Node privilege = relToPriv.getEndNode();
-                            String grantOrDeny = relToPriv.getType().name();
-                            String action = (String) privilege.getProperty( "action" );
-
-                            Node resourceNode =
-                                    single( privilege.getRelationships( Direction.OUTGOING, RelationshipType.withName( "APPLIES_TO" ) ) ).getEndNode();
-                            Node segmentNode = single( privilege.getRelationships( Direction.OUTGOING, RelationshipType.withName( "SCOPE" ) ) ).getEndNode();
-                            Node dbNode = single( segmentNode.getRelationships( Direction.OUTGOING, RelationshipType.withName( "FOR" ) ) ).getEndNode();
-                            String dbName = (String) dbNode.getProperty( "name" );
-                            Node qualifierNode =
-                                    single( segmentNode.getRelationships( Direction.OUTGOING, RelationshipType.withName( "QUALIFIED" ) ) ).getEndNode();
-
-                            ResourcePrivilege.GrantOrDeny privilegeType = ResourcePrivilege.GrantOrDeny.fromRelType( grantOrDeny );
-                            PrivilegeBuilder privilegeBuilder = new PrivilegeBuilder( privilegeType, action );
-
-                            privilegeBuilder.withinScope( qualifierNode ).onResource( resourceNode );
-
-                            String dbLabel = single( dbNode.getLabels() ).name();
-                            switch ( dbLabel )
+                            try
                             {
-                            case "Database":
-                                privilegeBuilder.forDatabase( dbName );
-                                break;
-                            case "DatabaseAll":
-                                privilegeBuilder.forAllDatabases();
-                                break;
-                            case "DeletedDatabase":
-                                //give up
-                                return;
-                            default:
-                                throw new IllegalStateException( "Cannot have database node without either 'Database' or 'DatabaseAll' labels: " + dbLabel );
-                            }
+                                final Node privilege = relToPriv.getEndNode();
+                                String grantOrDeny = relToPriv.getType().name();
+                                String action = (String) privilege.getProperty( "action" );
 
-                            rolePrivileges.add( privilegeBuilder.build() );
-                        }
-                        catch ( InvalidArgumentsException ie )
-                        {
-                            throw new IllegalStateException( "Failed to authorize", ie );
-                        }
-                    } );
+                                Node resourceNode =
+                                        single( privilege.getRelationships( Direction.OUTGOING, RelationshipType.withName( "APPLIES_TO" ) ) ).getEndNode();
+
+                                Node segmentNode =
+                                        single( privilege.getRelationships( Direction.OUTGOING, RelationshipType.withName( "SCOPE" ) ) ).getEndNode();
+
+                                Node dbNode = single( segmentNode.getRelationships( Direction.OUTGOING, RelationshipType.withName( "FOR" ) ) ).getEndNode();
+                                String dbName = (String) dbNode.getProperty( "name" );
+
+                                Node qualifierNode =
+                                        single( segmentNode.getRelationships( Direction.OUTGOING, RelationshipType.withName( "QUALIFIED" ) ) ).getEndNode();
+
+                                ResourcePrivilege.GrantOrDeny privilegeType = ResourcePrivilege.GrantOrDeny.fromRelType( grantOrDeny );
+                                PrivilegeBuilder privilegeBuilder = new PrivilegeBuilder( privilegeType, action );
+
+                                privilegeBuilder.withinScope( qualifierNode ).onResource( resourceNode );
+
+                                String dbLabel = single( dbNode.getLabels() ).name();
+                                switch ( dbLabel )
+                                {
+                                case "Database":
+                                    privilegeBuilder.forDatabase( dbName );
+                                    break;
+                                case "DatabaseAll":
+                                    privilegeBuilder.forAllDatabases();
+                                    break;
+                                case "DeletedDatabase":
+                                    //give up
+                                    return;
+                                default:
+                                    throw new IllegalStateException(
+                                            "Cannot have database node without either 'Database' or 'DatabaseAll' labels: " + dbLabel );
+                                }
+
+                                rolePrivileges.add( privilegeBuilder.build() );
+                            }
+                            catch ( InvalidArgumentsException ie )
+                            {
+                                throw new IllegalStateException( "Failed to authorize", ie );
+                            }
+                        } );
+                    }
+                    catch ( NotFoundException n )
+                    {
+                        // Can occur if the role was dropped by another thread during the privilege lookup.
+                        // The behaviour should be the same as if the user did not have the role,
+                        // i.e. the role should not be added to the privilege map.
+                    }
                 } );
                 tx.commit();
             }
@@ -224,6 +238,20 @@ public class SystemGraphRealm extends BasicSystemGraphRealm implements RealmLife
             combined.addAll( privs );
         }
         return combined;
+    }
+
+    private boolean rolesForUserContainsRole( Set<String> roles, Node roleNode )
+    {
+        try
+        {
+            return roles.contains( roleNode.getProperty( "name" ).toString() );
+        }
+        catch ( NotFoundException n )
+        {
+            // Can occur if the role was dropped by another thread.
+            // The behaviour should be the same as if the user did not have the role.
+            return false;
+        }
     }
 
     public void clearCacheForRoles()

@@ -11,6 +11,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -72,9 +73,27 @@ public class EnterpriseSecurityStressIT
         service.submit( transactionWork );
 
         service.awaitTermination( 30, TimeUnit.SECONDS );
+        assertNoUnexpectedErrors();
+    }
 
-        String msg = errors.stream().map( Throwable::getMessage ).collect( Collectors.joining( System.lineSeparator() ) );
-        assertThat( msg, errors, empty() );
+    @Test
+    public void shouldHandleConcurrentAuthAndDropRole() throws InterruptedException
+    {
+        try ( Session session = adminDriver.session( SessionConfig.forDatabase( SYSTEM_DATABASE_NAME ));
+                Transaction tx = session.beginTransaction() )
+        {
+            tx.run( "CREATE USER alice SET PASSWORD 'secret' CHANGE NOT REQUIRED" ).consume();
+            tx.commit();
+        }
+
+        ExecutorService service = Executors.newFixedThreadPool( 3 );
+
+        service.submit( createRoleWithAssignmentWork );
+        service.submit( deleteRoleWork );
+        service.submit( transactionWork );
+
+        service.awaitTermination( 10, TimeUnit.SECONDS );
+        assertNoUnexpectedErrors();
     }
 
     @SuppressWarnings( "InfiniteLoopStatement" )
@@ -84,7 +103,10 @@ public class EnterpriseSecurityStressIT
         String authenticationError = "The client is unauthorized due to authentication failure.";
 
         // Expected if the user is dropped before or during authorization
-        String authorizationError = "Database access is not allowed for user 'alice' with roles [].";
+        String userAuthorizationError = "Database access is not allowed for user 'alice' with roles [].";
+
+        // Expected if the role is dropped during authorization privilege lookup.
+        String roleAuthorizationError = "Database access is not allowed for user 'alice' with roles [custom].";
 
         for (; ; )
         {
@@ -100,7 +122,8 @@ public class EnterpriseSecurityStressIT
             }
             catch ( ClientException e )
             {
-                if ( ! ( e.getMessage().equals( authenticationError ) || e.getMessage().equals( authorizationError ) ) )
+                if ( !(e.getMessage().equals( authenticationError ) || e.getMessage().equals( userAuthorizationError ) ||
+                        e.getMessage().equals( roleAuthorizationError )) )
                 {
                     errors.add( e );
                 }
@@ -108,46 +131,47 @@ public class EnterpriseSecurityStressIT
         }
     };
 
+    private final Runnable deleteUserWork =
+            () -> systemDbWork( List.of( "DROP USER alice" ), "Failed to delete the specified user 'alice': User does not exist." );
+
+    private final Runnable createUserWithRoleWork =
+            () -> systemDbWork( List.of( "CREATE USER alice SET PASSWORD 'secret' CHANGE NOT REQUIRED", "GRANT ROLE architect TO alice" ),
+                    "Failed to create the specified user 'alice': User already exists." );
+
+    private final Runnable deleteRoleWork =
+            () -> systemDbWork( List.of( "DROP ROLE custom" ), "Failed to delete the specified role 'custom': Role does not exist." );
+
+    private final Runnable createRoleWithAssignmentWork =
+            () -> systemDbWork( List.of( "CREATE role custom AS COPY OF architect", "GRANT role custom TO alice" ),
+                    "Failed to create the specified role 'custom': Role already exists." );
+
     @SuppressWarnings( "InfiniteLoopStatement" )
-    private final Runnable deleteUserWork = () ->
+    private void systemDbWork( List<String> commands, String expectedErrorMessage )
     {
         for (; ; )
         {
             try ( Session session = adminDriver.session( SessionConfig.forDatabase( SYSTEM_DATABASE_NAME ) );
-                  Transaction tx = session.beginTransaction() )
-            {
-                tx.run( "DROP USER alice" ).consume();
-                tx.commit();
-            }
-            catch ( ClientException e )
-            {
-                if ( !e.getMessage().equals( "Failed to delete the specified user 'alice': User does not exist." ) )
-                {
-                    errors.add( e );
-                }
-            }
-        }
-    };
-
-    @SuppressWarnings( "InfiniteLoopStatement" )
-    private final Runnable createUserWithRoleWork = () ->
-    {
-        for (; ; )
-        {
-            try ( Session session = adminDriver.session( SessionConfig.forDatabase( SYSTEM_DATABASE_NAME ));
                     Transaction tx = session.beginTransaction() )
             {
-                tx.run( "CREATE USER alice SET PASSWORD 'secret' CHANGE NOT REQUIRED" ).consume();
-                tx.run( "GRANT ROLE architect TO alice" ).consume();
+                for ( String command: commands )
+                {
+                    tx.run( command ).consume();
+                }
                 tx.commit();
             }
             catch ( ClientException e )
             {
-                if ( !e.getMessage().equals( "Failed to create the specified user 'alice': User already exists." ) )
+                if ( !e.getMessage().equals( expectedErrorMessage ) )
                 {
                     errors.add( e );
                 }
             }
         }
-    };
+    }
+
+    private void assertNoUnexpectedErrors()
+    {
+        String msg = errors.stream().map( Throwable::getMessage ).collect( Collectors.joining( System.lineSeparator() ) );
+        assertThat( msg, errors, empty() );
+    }
 }
