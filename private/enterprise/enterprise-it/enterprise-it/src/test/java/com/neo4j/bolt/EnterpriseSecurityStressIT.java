@@ -57,6 +57,8 @@ public class EnterpriseSecurityStressIT
         adminDriver = graphDatabaseDriver( db.boltURI(), basic( "neo4j", "abc" ) );
     }
 
+    // Concurrency tests for authentication
+
     @Test
     public void shouldHandleConcurrentAuthAndDropUser() throws InterruptedException
     {
@@ -91,6 +93,145 @@ public class EnterpriseSecurityStressIT
         service.submit( createRoleWithAssignmentWork );
         service.submit( deleteRoleWork );
         service.submit( transactionWork );
+
+        service.awaitTermination( 10, TimeUnit.SECONDS );
+        assertNoUnexpectedErrors();
+    }
+
+    @Test
+    public void shouldHandleConcurrentAuthAndChangePrivileges() throws InterruptedException
+    {
+        try ( Session session = adminDriver.session( SessionConfig.forDatabase( SYSTEM_DATABASE_NAME ));
+                Transaction tx = session.beginTransaction() )
+        {
+            tx.run( "CREATE USER alice SET PASSWORD 'secret' CHANGE NOT REQUIRED" ).consume();
+            tx.run( "CREATE ROLE custom AS COPY OF architect" ).consume();
+            tx.run( "GRANT ROLE custom TO alice" ).consume();
+            tx.commit();
+        }
+
+        ExecutorService service = Executors.newFixedThreadPool( 3 );
+
+        service.submit( assignPrivilegeWork );
+        service.submit( revokePrivilegeWork );
+        service.submit( transactionWork );
+
+        service.awaitTermination( 30, TimeUnit.SECONDS );
+        assertNoUnexpectedErrors();
+    }
+
+    // Concurrency tests for altering users and roles
+
+    @Test
+    public void shouldHandleConcurrentAlterAndDropUser() throws InterruptedException
+    {
+        ExecutorService service = Executors.newFixedThreadPool( 3 );
+
+        service.submit( createUserWork );
+        service.submit( deleteUserWork );
+        service.submit( alterUserWork );
+
+        service.awaitTermination( 10, TimeUnit.SECONDS );
+        assertNoUnexpectedErrors();
+    }
+
+    @Test
+    public void shouldHandleConcurrentGrantAndRevokeRoleAndDrop() throws InterruptedException
+    {
+        ExecutorService service = Executors.newFixedThreadPool( 6 );
+
+        service.submit( createUserWork );
+        service.submit( deleteUserWork );
+        service.submit( createRoleWork );
+        service.submit( deleteRoleWork );
+        service.submit( grantRoleWork );
+        service.submit( revokeRoleWork );
+
+        service.awaitTermination( 10, TimeUnit.SECONDS );
+        assertNoUnexpectedErrors();
+    }
+
+    @Test
+    public void shouldHandleConcurrentCreateCopyOfAndDropRole() throws InterruptedException
+    {
+        ExecutorService service = Executors.newFixedThreadPool( 4 );
+
+        service.submit( createRoleWork );
+        service.submit( deleteRoleWork );
+        service.submit( createCopyRoleWork );
+        service.submit( deleteCopyRoleWork );
+
+        service.awaitTermination( 10, TimeUnit.SECONDS );
+        assertNoUnexpectedErrors();
+    }
+
+    @Test
+    public void shouldHandleConcurrentPrivilegeChangesAndDropRole() throws InterruptedException
+    {
+        ExecutorService service = Executors.newFixedThreadPool( 4 );
+
+        service.submit( createRoleWork );
+        service.submit( deleteRoleWork );
+        service.submit( assignPrivilegeWork );
+        service.submit( revokePrivilegeWork );
+
+        service.awaitTermination( 10, TimeUnit.SECONDS );
+        assertNoUnexpectedErrors();
+    }
+
+    // Concurrency tests for SHOW commands
+
+    @Test
+    public void shouldHandleConcurrentShowAndDropUser() throws InterruptedException
+    {
+        ExecutorService service = Executors.newFixedThreadPool( 3 );
+
+        service.submit( createUserWork );
+        service.submit( deleteUserWork );
+        service.submit( showUserWork );
+
+        service.awaitTermination( 10, TimeUnit.SECONDS );
+        assertNoUnexpectedErrors();
+    }
+
+    @Test
+    public void shouldHandleConcurrentShowRolesAndDrop() throws InterruptedException
+    {
+        ExecutorService service = Executors.newFixedThreadPool( 5 );
+
+        service.submit( createUserWork );
+        service.submit( deleteUserWork );
+        service.submit( createRoleWithAssignmentWork );
+        service.submit( deleteRoleWork );
+        service.submit( showRolesWork );
+
+        service.awaitTermination( 10, TimeUnit.SECONDS );
+        assertNoUnexpectedErrors();
+    }
+
+    @Test
+    public void shouldHandleConcurrentShowPrivilegesForUserAndDrop() throws InterruptedException
+    {
+        ExecutorService service = Executors.newFixedThreadPool( 5 );
+
+        service.submit( createUserWork );
+        service.submit( deleteUserWork );
+        service.submit( createRoleWithAssignmentWork );
+        service.submit( deleteRoleWork );
+        service.submit( showPrivilegesForUserWork );
+
+        service.awaitTermination( 10, TimeUnit.SECONDS );
+        assertNoUnexpectedErrors();
+    }
+
+    @Test
+    public void shouldHandleConcurrentShowPrivilegesForRoleAndDropRole() throws InterruptedException
+    {
+        ExecutorService service = Executors.newFixedThreadPool( 3 );
+
+        service.submit( createRoleWork );
+        service.submit( deleteRoleWork );
+        service.submit( showPrivilegesForRoleWork );
 
         service.awaitTermination( 10, TimeUnit.SECONDS );
         assertNoUnexpectedErrors();
@@ -132,21 +273,64 @@ public class EnterpriseSecurityStressIT
     };
 
     private final Runnable deleteUserWork =
-            () -> systemDbWork( List.of( "DROP USER alice" ), "Failed to delete the specified user 'alice': User does not exist." );
+            () -> systemDbWork( List.of( "DROP USER alice" ), Set.of( "Failed to delete the specified user 'alice': User does not exist." ) );
+
+    private final Runnable createUserWork =
+            () -> systemDbWork( List.of( "CREATE USER alice SET PASSWORD 'secret' CHANGE NOT REQUIRED" ),
+                    Set.of( "Failed to create the specified user 'alice': User already exists." ) );
 
     private final Runnable createUserWithRoleWork =
             () -> systemDbWork( List.of( "CREATE USER alice SET PASSWORD 'secret' CHANGE NOT REQUIRED", "GRANT ROLE architect TO alice" ),
-                    "Failed to create the specified user 'alice': User already exists." );
+                    Set.of( "Failed to create the specified user 'alice': User already exists." ) );
+
+    private final Runnable alterUserWork =
+            () -> systemDbWork( List.of( "ALTER USER alice SET STATUS suspended" ),
+                    Set.of( "Failed to alter the specified user 'alice': User does not exist." ) );
 
     private final Runnable deleteRoleWork =
-            () -> systemDbWork( List.of( "DROP ROLE custom" ), "Failed to delete the specified role 'custom': Role does not exist." );
+            () -> systemDbWork( List.of( "DROP ROLE custom" ), Set.of( "Failed to delete the specified role 'custom': Role does not exist." ) );
+
+    private final Runnable deleteCopyRoleWork =
+            () -> systemDbWork( List.of( "DROP ROLE customCopy" ),
+                    Set.of( "Failed to delete the specified role 'customCopy': Role does not exist." ) );
+
+    private final Runnable createRoleWork =
+            () -> systemDbWork( List.of( "CREATE role custom AS COPY OF architect" ),
+                    Set.of( "Failed to create the specified role 'custom': Role already exists." ) );
+
+    private final Runnable createCopyRoleWork =
+            () -> systemDbWork( List.of( "CREATE role customCopy AS COPY OF custom" ),
+                    Set.of( "Failed to create the specified role 'customCopy': Role already exists.",
+                            "Failed to create a role as copy of 'custom': Role does not exist." ) );
 
     private final Runnable createRoleWithAssignmentWork =
             () -> systemDbWork( List.of( "CREATE role custom AS COPY OF architect", "GRANT role custom TO alice" ),
-                    "Failed to create the specified role 'custom': Role already exists." );
+                    Set.of( "Failed to create the specified role 'custom': Role already exists.",
+                            "Failed to grant role 'custom' to user 'alice': User does not exist." ) );
+
+    private final Runnable grantRoleWork =
+            () -> systemDbWork( List.of( "GRANT role custom TO alice" ),
+                    Set.of( "Failed to grant role 'custom' to user 'alice': Role does not exist.",
+                            "Failed to grant role 'custom' to user 'alice': User does not exist." ) );
+
+    private final Runnable assignPrivilegeWork =
+            () -> systemDbWork( List.of( "GRANT TRAVERSE ON GRAPH * NODES A TO custom", "DENY READ {prop} ON GRAPH * NODES * TO custom" ),
+                    Set.of( "Failed to grant traversal privilege to role 'custom': Role 'custom' does not exist.",
+                            "Failed to deny read privilege to role 'custom': Role 'custom' does not exist.") );
+
+    private final Runnable revokePrivilegeWork =
+            () -> systemDbWork( List.of( "REVOKE TRAVERSE ON GRAPH * NODES C FROM custom", "REVOKE DENY READ {prop} ON GRAPH * NODES * FROM custom" ),
+                    Set.of() );
+
+    private final Runnable revokeRoleWork = () -> systemDbWork( List.of( "REVOKE role custom FROM alice" ), Set.of() );
+
+    private final Runnable showUserWork = () -> systemDbWork( List.of( "SHOW USERS" ), Set.of() );
+    private final Runnable showRolesWork = () -> systemDbWork( List.of( "SHOW ROLES WITH USERS" ), Set.of() );
+    private final Runnable showPrivilegesForUserWork = () -> systemDbWork( List.of( "SHOW USER alice PRIVILEGES" ), Set.of() );
+    private final Runnable showPrivilegesForRoleWork = () -> systemDbWork( List.of( "SHOW ROLE custom PRIVILEGES" ), Set.of() );
 
     @SuppressWarnings( "InfiniteLoopStatement" )
-    private void systemDbWork( List<String> commands, String expectedErrorMessage )
+    private void systemDbWork( List<String> commands, Set<String> expectedErrorMessages )
     {
         for (; ; )
         {
@@ -161,7 +345,7 @@ public class EnterpriseSecurityStressIT
             }
             catch ( ClientException e )
             {
-                if ( !e.getMessage().equals( expectedErrorMessage ) )
+                if ( !expectedErrorMessages.contains( e.getMessage() ) )
                 {
                     errors.add( e );
                 }
