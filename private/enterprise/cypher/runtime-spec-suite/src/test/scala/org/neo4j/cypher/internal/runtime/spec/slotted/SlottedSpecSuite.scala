@@ -31,6 +31,7 @@ class SlottedExpandIntoTest extends ExpandIntoTestBase(ENTERPRISE.DEFAULT, Slott
 class SlottedOptionalExpandAllTest extends OptionalExpandAllTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedOptionalExpandIntoTest extends OptionalExpandIntoTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedVarExpandAllTest extends VarLengthExpandTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
+class SlottedPruningVarExpandTest extends PruningVarLengthExpandTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedProjectEndpointsTest extends ProjectEndpointsTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedLabelScanTest extends LabelScanTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedNodeIndexScanTest extends NodeIndexScanTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
