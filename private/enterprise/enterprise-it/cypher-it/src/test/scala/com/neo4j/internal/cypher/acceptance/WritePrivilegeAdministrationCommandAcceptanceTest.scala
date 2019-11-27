@@ -607,7 +607,6 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     test(s"should read you own writes on nodes with WRITE and TRAVERSE privilege with $runtime") {
       // GIVEN
       setupUserWithCustomRole()
-      execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
 
       // Setup to create tokens
       selectDatabase(DEFAULT_DATABASE_NAME)
@@ -615,6 +614,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
       // WHEN
       selectDatabase(SYSTEM_DATABASE_NAME)
+      execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
       execute("GRANT WRITE ON GRAPH * ELEMENTS * (*) TO custom")
 
       // THEN
@@ -634,7 +634,6 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     test(s"should read you own writes on nodes with WRITE and restricted READ privilege with $runtime") {
       // GIVEN
       setupUserWithCustomRole()
-      execute("GRANT MATCH {name} ON GRAPH * NODES * (*) TO custom")
 
       // Setup to create tokens
       selectDatabase(DEFAULT_DATABASE_NAME)
@@ -642,6 +641,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
       // WHEN
       selectDatabase(SYSTEM_DATABASE_NAME)
+      execute("GRANT MATCH {name} ON GRAPH * NODES * (*) TO custom")
       execute("GRANT WRITE ON GRAPH * ELEMENTS * (*) TO custom")
 
       // THEN
@@ -664,8 +664,6 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
     test(s"should read you own writes on nodes with WRITE and restricted READ and TRAVERSE privileges with $runtime") {
       // GIVEN
       setupUserWithCustomRole()
-      execute("GRANT TRAVERSE ON GRAPH * NODES A (*) TO custom")
-      execute("GRANT READ {name} ON GRAPH * NODES B (*) TO custom")
 
       // Setup to create tokens
       selectDatabase(DEFAULT_DATABASE_NAME)
@@ -674,6 +672,8 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
       // WHEN
       selectDatabase(SYSTEM_DATABASE_NAME)
+      execute("GRANT TRAVERSE ON GRAPH * NODES A (*) TO custom")
+      execute("GRANT READ {name} ON GRAPH * NODES B (*) TO custom")
       execute("GRANT WRITE ON GRAPH * ELEMENTS * (*) TO custom")
 
       // THEN
@@ -698,10 +698,9 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
       }) should be(2)
     }
 
-    test(s"should read you own writes on nodes with WRITE and denied TRAVERSE privileges with $runtime") {
+    test(s"should read your own writes on nodes with WRITE and denied TRAVERSE privileges with $runtime") {
       // GIVEN
       setupUserWithCustomRole()
-      execute("GRANT MATCH {name} ON GRAPH * NODES * (*) TO custom")
 
       // Setup to create tokens
       selectDatabase(DEFAULT_DATABASE_NAME)
@@ -709,6 +708,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
       // WHEN
       selectDatabase(SYSTEM_DATABASE_NAME)
+      execute("GRANT MATCH {name} ON GRAPH * NODES * (*) TO custom")
       execute("DENY TRAVERSE ON GRAPH * NODES B (*) TO custom")
       execute("GRANT WRITE ON GRAPH * ELEMENTS * (*) TO custom")
 
@@ -724,10 +724,9 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
       execute(s"CYPHER runtime=$runtime MATCH (n) RETURN n.name").toSet should be(Set(Map("n.name" -> "ab"), Map("n.name" -> "b")))
     }
 
-    test(s"should read you own writes on nodes with WRITE and denied READ privileges with $runtime") {
+    test(s"should read your own writes on nodes with WRITE and denied READ privileges with $runtime") {
       // GIVEN
       setupUserWithCustomRole()
-      execute("GRANT MATCH {name} ON GRAPH * NODES * (*) TO custom")
 
       // Setup to create tokens
       selectDatabase(DEFAULT_DATABASE_NAME)
@@ -735,6 +734,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
       // WHEN
       selectDatabase(SYSTEM_DATABASE_NAME)
+      execute("GRANT MATCH {name} ON GRAPH * NODES * (*) TO custom")
       execute("DENY READ {name} ON GRAPH * NODES B (*) TO custom")
       execute("GRANT WRITE ON GRAPH * ELEMENTS * (*) TO custom")
 
@@ -753,11 +753,9 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
       execute(s"CYPHER runtime=$runtime MATCH (n) RETURN n.name").toSet should be(Set(Map("n.name" -> "ab"), Map("n.name" -> "b")))
     }
 
-    test(s"should not see property after setting denied label with $runtime") {
+    test(s"should see property until end of transaction after setting denied label with $runtime") {
       // GIVEN
       setupUserWithCustomRole()
-      execute("GRANT MATCH {name} ON GRAPH * NODES A (*) TO custom")
-      execute("DENY TRAVERSE ON GRAPH * NODES B (*) TO custom")
 
       // Setup to create tokens
       selectDatabase(DEFAULT_DATABASE_NAME)
@@ -766,6 +764,8 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
       // WHEN
       selectDatabase(SYSTEM_DATABASE_NAME)
+      execute("GRANT MATCH {name} ON GRAPH * NODES A (*) TO custom")
+      execute("DENY TRAVERSE ON GRAPH * NODES B (*) TO custom")
       execute("DENY READ {name} ON GRAPH * NODES B (*) TO custom")
       execute("GRANT WRITE ON GRAPH * ELEMENTS * (*) TO custom")
 
@@ -777,15 +777,13 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
            |RETURN a.name AS name""".stripMargin
 
       executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
-        row.get("name") should be(null)
+        row.get("name") should be("a")
       }) should be(1)
     }
 
-    test(s"should not find node in new MATCH after setting a denied label with $runtime") {
+    test(s"should find node and read possibly cached property in new MATCH until end of transaction after setting a denied label with $runtime") {
       // GIVEN
       setupUserWithCustomRole()
-      execute("GRANT MATCH {name} ON GRAPH * NODES A (*) TO custom")
-      execute("DENY TRAVERSE ON GRAPH * NODES B (*) TO custom")
 
       // Setup to create tokens
       selectDatabase(DEFAULT_DATABASE_NAME)
@@ -794,6 +792,8 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
       // WHEN
       selectDatabase(SYSTEM_DATABASE_NAME)
+      execute("GRANT MATCH {name} ON GRAPH * NODES A (*) TO custom")
+      execute("DENY TRAVERSE ON GRAPH * NODES B (*) TO custom")
       execute("DENY READ {name} ON GRAPH * NODES B (*) TO custom")
       execute("GRANT WRITE ON GRAPH * ELEMENTS * (*) TO custom")
 
@@ -807,10 +807,231 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
            |MATCH (a:A)
            |RETURN a.name AS name""".stripMargin
 
-      executeOnDefault("joe", "soap", query) should be(0)
+      executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+        row.get("name") should be("a")
+      }) should be(1)
     }
 
-    test(s"should read you own writes on relationships when granted ACCESS and WRITE privilege with $runtime") {
+    test(s"should find node and read property in new MATCH until end of transaction after setting a denied label with $runtime") {
+      // GIVEN
+      setupUserWithCustomRole()
+
+      // Setup to create tokens
+      selectDatabase(DEFAULT_DATABASE_NAME)
+      execute("CREATE (n:A {name:'a'})")
+      execute("CALL db.createLabel('B')")
+
+      // WHEN
+      selectDatabase(SYSTEM_DATABASE_NAME)
+      execute("GRANT MATCH {name} ON GRAPH * NODES A (*) TO custom")
+      execute("DENY TRAVERSE ON GRAPH * NODES B (*) TO custom")
+      execute("DENY READ {name} ON GRAPH * NODES B (*) TO custom")
+      execute("GRANT WRITE ON GRAPH * ELEMENTS * (*) TO custom")
+
+      // THEN
+      val query =
+        s"""CYPHER runtime=$runtime
+           |MATCH (a:A)
+           |SET a:B
+           |WITH 1 AS ignore
+           |MATCH (a:A)
+           |RETURN a.name AS name""".stripMargin
+
+      executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+        row.get("name") should be("a")
+      }) should be(1)
+    }
+
+    test(s"setting a deny traverse label on a node that can be found should still be found when in same transaction (with two queries) and with $runtime") {
+      // GIVEN
+      setupUserWithCustomRole()
+
+      selectDatabase(DEFAULT_DATABASE_NAME)
+      execute("CREATE (n:A {name:'a'})")
+      execute("CALL db.createLabel('B')")
+
+      // WHEN
+      selectDatabase(SYSTEM_DATABASE_NAME)
+      execute("GRANT WRITE ON GRAPH * ELEMENTS * (*) TO custom")
+      execute("GRANT MATCH {name} ON GRAPH * NODES A (*) TO custom")
+      execute("DENY TRAVERSE ON GRAPH * NODES B (*) TO custom")
+
+      // THEN: check read-only
+      executeOnDefault("joe", "soap", "MATCH (a:A) RETURN a.name AS name", resultHandler = (row, _) => {
+        row.get("name") should be("a")
+      }) should be(1)
+
+      // THEN: two part query
+      executeOnDefault("joe", "soap", s"CYPHER runtime=$runtime MATCH (a:A) SET a:B WITH 1 AS ignore MATCH (a:A) RETURN a.name AS name", resultHandler = (row, _) => {
+        row.get("name") should be("a")
+      }) should be(1)
+
+      // remove label B to go back to original set-up
+      execute("MATCH (n:A) REMOVE n:B")
+
+      // THEN: two queries in same transaction
+      executeOnDefault("joe", "soap", executeBefore = tx => tx.execute("MATCH (a:A) SET a:B"), query = s"CYPHER runtime=$runtime MATCH (a:A) RETURN a.name AS name",  resultHandler = (row, _) => {
+        row.get("name") should be("a")
+      }) should be(1)
+    }
+
+    // TODO: We are considering doing the opposite behaviour (see Read.java:334 'nodeLabelScan')
+    test(s"should find explicitly denied node when label is set in current transaction with $runtime") {
+      // GIVEN
+      setupUserWithCustomRole()
+
+      // Setup to create tokens
+      selectDatabase(DEFAULT_DATABASE_NAME)
+      execute("CREATE (n:A {name:'a'})")
+      execute("CALL db.createLabel('B')")
+
+      // WHEN
+      selectDatabase(SYSTEM_DATABASE_NAME)
+      execute("GRANT MATCH {name} ON GRAPH * NODES A (*) TO custom")
+      execute("DENY TRAVERSE ON GRAPH * NODES B (*) TO custom")
+      execute("DENY READ {name} ON GRAPH * NODES B (*) TO custom")
+      execute("GRANT WRITE ON GRAPH * ELEMENTS * (*) TO custom")
+
+      // THEN
+      val query =
+        s"""CYPHER runtime=$runtime
+           |MATCH (a:A)
+           |SET a:B
+           |WITH 1 AS ignore
+           |MATCH (b:B)
+           |RETURN b.name AS name""".stripMargin
+
+      executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+        row.get("name") should be("a")
+      }) should be(1)
+    }
+
+    test(s"should find node and read property after creating and setting a denied label with $runtime") {
+      // GIVEN
+      setupUserWithCustomRole()
+
+      // Setup to create tokens
+      selectDatabase(DEFAULT_DATABASE_NAME)
+      execute("CREATE (n:A {name:'a'})")
+
+      // WHEN
+      selectDatabase(SYSTEM_DATABASE_NAME)
+      execute("GRANT MATCH {name} ON GRAPH * NODES A (*) TO custom")
+      execute("GRANT WRITE ON GRAPH * ELEMENTS * (*) TO custom")
+      execute("GRANT CREATE NEW LABEL ON DATABASE * TO custom")
+      execute("DENY TRAVERSE ON GRAPH * NODES B (*) TO custom")
+      execute("DENY READ {name} ON GRAPH * NODES B (*) TO custom")
+
+      // THEN: label B is not a existing token
+      val query = s"CYPHER runtime=$runtime MATCH (a:A) WHERE a.name = 'a' SET a:B WITH 1 AS ignore MATCH (a:A) RETURN a.name AS name"
+      executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+        row.get("name") should be("a")
+      })
+    }
+
+    test(s"should not be able to read property after removing denied read label when in same transaction with $runtime") {
+      // GIVEN
+      setupUserWithCustomRole()
+
+      selectDatabase(DEFAULT_DATABASE_NAME)
+      execute("CREATE (n:A:B {name:'a'})")
+
+      // WHEN
+      selectDatabase(SYSTEM_DATABASE_NAME)
+      execute("GRANT WRITE ON GRAPH * ELEMENTS * (*) TO custom")
+      execute("GRANT MATCH {name} ON GRAPH * NODES A (*) TO custom")
+      execute("DENY READ {name} ON GRAPH * NODES B (*) TO custom")
+
+      // THEN: check read-only
+      executeOnDefault("joe", "soap", "MATCH (a:A) WHERE exists(a.name) RETURN a.name AS name") should be(0)
+
+      // THEN: two part query
+      executeOnDefault("joe", "soap", s"CYPHER runtime=$runtime MATCH (a:A:B) REMOVE a:B WITH 1 AS ignore MATCH (a:A) RETURN a.name AS name", resultHandler = (row, _) => {
+        row.get("name") should be(null)
+      }) should be(1)
+
+      // set label B to go back to original set-up
+      execute("MATCH (n:A) SET n:B")
+
+      // THEN: two queries in same transaction
+      executeOnDefault("joe", "soap", executeBefore = tx => tx.execute("MATCH (a:A:B) REMOVE a:B"), query = s"CYPHER runtime=$runtime MATCH (a:A) RETURN a.name AS name",  resultHandler = (row, _) => {
+        row.get("name") should be(null)
+      }) should be(1)
+
+      // THEN: check read-only after removal of denied label
+      executeOnDefault("joe", "soap", "MATCH (a:A) WHERE exists(a.name) RETURN a.name AS name", resultHandler = (row, _) => {
+        row.get("name") should be("a")
+      }) should be(1)
+    }
+
+    test(s"should find node and read property in new MATCH with index until end of transaction after setting a denied traverse label with $runtime") {
+      // GIVEN
+      setupUserWithCustomRole()
+
+      // Setup to create tokens
+      selectDatabase(DEFAULT_DATABASE_NAME)
+      execute("CREATE (n:A {name:'a'})")
+      execute("CALL db.createLabel('B')")
+      graph.createIndex("A", "name")
+
+      // WHEN
+      selectDatabase(SYSTEM_DATABASE_NAME)
+      execute("GRANT WRITE ON GRAPH * ELEMENTS * (*) TO custom")
+      execute("GRANT MATCH {name} ON GRAPH * NODES A (*) TO custom")
+      execute("DENY TRAVERSE ON GRAPH * NODES B (*) TO custom")
+      execute("DENY READ {name} ON GRAPH * NODES B (*) TO custom")
+
+      // THEN
+      val query =
+        s"""CYPHER runtime=$runtime
+           |MATCH (a:A)
+           |SET a:B
+           |WITH 1 AS ignore
+           |MATCH (a:A)
+           |WHERE a.name = 'a'
+           |RETURN a.name AS name""".stripMargin
+
+      executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+        row.get("name") should be("a")
+      }, requiredOperator = Some("NodeIndexSeek")) should be(1)
+    }
+
+    test(s"should not find node with index seek after removing a denied traverse label when in same transaction with $runtime") {
+      // GIVEN
+      setupUserWithCustomRole()
+
+      // Setup to create tokens
+      selectDatabase(DEFAULT_DATABASE_NAME)
+      execute("CREATE (n:A:B {name:'a'})")
+      graph.createIndex("A", "name")
+
+      // WHEN
+      selectDatabase(SYSTEM_DATABASE_NAME)
+      execute("GRANT WRITE ON GRAPH * ELEMENTS * (*) TO custom")
+      execute("GRANT MATCH {name} ON GRAPH * NODES A (*) TO custom")
+      execute("DENY READ {name} ON GRAPH * NODES B (*) TO custom")
+
+      // THEN: read-only check
+      executeOnDefault("joe", "soap", "MATCH (a:A) WHERE exists(a.name) RETURN a.name AS name", requiredOperator = Some("NodeIndexScan")) should be(0)
+
+      // THEN
+      val query =
+        s"""CYPHER runtime=$runtime
+           |MATCH (a:A)
+           |REMOVE a:B
+           |WITH 1 AS ignore
+           |MATCH (a:A) WHERE exists(a.name)
+           |RETURN a.name AS name""".stripMargin
+
+      executeOnDefault("joe", "soap", query, requiredOperator = Some("NodeIndexScan")) should be(0)
+
+      // THEN: read-only check
+      executeOnDefault("joe", "soap", "MATCH (a:A) WHERE exists(a.name) RETURN a.name AS name", resultHandler = (row, _) => {
+        row.get("name") should be("a")
+      }, requiredOperator = Some("NodeIndexScan")) should be(1)
+    }
+
+    test(s"should read your own writes on relationships when granted ACCESS and WRITE privilege with $runtime") {
       // GIVEN
       setupUserWithCustomRole()
 
@@ -833,11 +1054,9 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
       executeOnDefault("joe", "soap", "MATCH (:A)-[r:REL]->() RETURN r.name AS name") should be(0)
     }
 
-    test(s"should read you own writes on relationships when granted TRAVERSE and WRITE privilege with $runtime") {
+    test(s"should read your own writes on relationships when granted TRAVERSE and WRITE privilege with $runtime") {
       // GIVEN
       setupUserWithCustomRole()
-      execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
-      execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS * (*) TO custom")
 
       // Setup to create tokens
       selectDatabase(DEFAULT_DATABASE_NAME)
@@ -845,6 +1064,8 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
       // WHEN
       selectDatabase(SYSTEM_DATABASE_NAME)
+      execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
+      execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS * (*) TO custom")
       execute("GRANT WRITE ON GRAPH * ELEMENTS * (*) TO custom")
 
       // THEN
@@ -862,11 +1083,9 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
       }) should be(2)
     }
 
-    test(s"should read you own writes on relationships with WRITE and restricted TRAVERSE privilege with $runtime") {
+    test(s"should read your own writes on relationships with WRITE and restricted TRAVERSE privilege with $runtime") {
       // GIVEN
       setupUserWithCustomRole()
-      execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
-      execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS * (*) TO custom")
 
       // Setup to create tokens
       selectDatabase(DEFAULT_DATABASE_NAME)
@@ -874,6 +1093,8 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
       // WHEN
       selectDatabase(SYSTEM_DATABASE_NAME)
+      execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
+      execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS * (*) TO custom")
       execute("DENY TRAVERSE ON GRAPH * RELATIONSHIPS REL (*) TO custom")
       execute("GRANT WRITE ON GRAPH * ELEMENTS * (*) TO custom")
 
@@ -889,11 +1110,9 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
       executeOnDefault("joe", "soap", s"CYPHER runtime=$runtime MATCH (:A)-[r:REL]->() RETURN r.name AS name") should be(0)
     }
 
-    test(s"should read you own writes on relationships with WRITE and restricted READ privilege with $runtime") {
+    test(s"should read your own writes on relationships with WRITE and restricted READ privilege with $runtime") {
       // GIVEN
       setupUserWithCustomRole()
-      execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
-      execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS * (*) TO custom")
 
       // Setup to create tokens
       selectDatabase(DEFAULT_DATABASE_NAME)
@@ -901,6 +1120,8 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
       // WHEN
       selectDatabase(SYSTEM_DATABASE_NAME)
+      execute("GRANT TRAVERSE ON GRAPH * NODES * (*) TO custom")
+      execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS * (*) TO custom")
       execute("GRANT READ {name} ON GRAPH * RELATIONSHIPS * (*) TO custom")
       execute("DENY READ {pets} ON GRAPH * RELATIONSHIPS * (*) TO custom")
       execute("GRANT WRITE ON GRAPH * ELEMENTS * (*) TO custom")
