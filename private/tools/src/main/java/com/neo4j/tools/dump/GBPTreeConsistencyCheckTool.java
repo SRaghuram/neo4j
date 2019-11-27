@@ -29,14 +29,8 @@ import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitiali
 
 public class GBPTreeConsistencyCheckTool
 {
-    private static final String REPORT_CRASH = "reportCrash";
+    private static final String REPORT_DIRTY = "reportDirty";
 
-    /**
-     * Usage: --allowCrash gbpTreeFile
-     *
-     * --reportCrash <true|false>
-     * Set this flag to allow crash pointers in tree.
-     */
     public static void main( String[] args ) throws Exception
     {
         Args arguments = Args.parse( args );
@@ -45,11 +39,11 @@ public class GBPTreeConsistencyCheckTool
             return;
         }
         File file = new File( arguments.orphans().get( 0 ) );
-        final Boolean reportCrash = arguments.getBoolean( REPORT_CRASH, true );
-        new GBPTreeConsistencyCheckTool().run( file, reportCrash );
+        final Boolean reportDirty = arguments.getBoolean( REPORT_DIRTY, true );
+        new GBPTreeConsistencyCheckTool().run( file, reportDirty );
     }
 
-    private void run( File file, boolean reportCrashPointers ) throws Exception
+    private void run( File file, boolean reportDirty ) throws Exception
     {
         System.out.println( "Check consistency on " + file.getAbsolutePath() );
         try ( JobScheduler jobScheduler = createInitialisedScheduler();
@@ -62,7 +56,7 @@ public class GBPTreeConsistencyCheckTool
             {
                 final GBPTreeConsistencyCheckVisitor visitor = loggingInconsistencyVisitor();
                 System.out.println( "Starting consistency check" );
-                boolean consistent = tree.consistencyCheck( visitor, reportCrashPointers );
+                boolean consistent = tree.consistencyCheck( visitor, reportDirty );
                 if ( consistent )
                 {
                     System.out.println( "Consistency check finished successful." );
@@ -102,10 +96,10 @@ public class GBPTreeConsistencyCheckTool
         {
             layoutDescriptions.add( layoutDescription );
         }
-        System.out.println( String.format( "Usage: [--allowCrash] gbpTreeFile%n" +
+        System.out.println( String.format( "Usage: [--reportDirty] gbpTreeFile%n" +
                 "Must define file to consistency check.%n" +
-                "--allowCrash%n" +
-                "    Set this flag to allow crash pointers in tree.%n" +
+                "--reportDirty%n" +
+                "    Use this flag to control if dirty state and crashed pointers should be reported or not.%n" +
                 "Supported layouts are:%n%s%n", layoutDescriptions.toString() ) );
     }
 }
