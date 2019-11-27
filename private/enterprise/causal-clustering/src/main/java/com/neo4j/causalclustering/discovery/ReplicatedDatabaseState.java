@@ -19,12 +19,14 @@ public class ReplicatedDatabaseState
     private final DatabaseId databaseId;
     private final Map<MemberId,DiscoveryDatabaseState> memberStates;
     private final boolean coreStates;
+    private final String name;
 
     private ReplicatedDatabaseState( DatabaseId databaseId, Map<MemberId,DiscoveryDatabaseState> memberStates, boolean isCoreStates )
     {
         this.databaseId = databaseId;
         this.memberStates = memberStates;
         this.coreStates = isCoreStates;
+        this.name = isCoreStates ? "CoreReplicatedDatabaseState" : "ReadReplicaReplicatedDatabaseState";
     }
 
     public static ReplicatedDatabaseState ofCores( DatabaseId databaseId, Map<MemberId,DiscoveryDatabaseState> memberStates )
@@ -86,6 +88,6 @@ public class ReplicatedDatabaseState
     @Override
     public String toString()
     {
-        return "ReplicatedDatabaseState{" + "databaseId=" + databaseId + ", memberStates=" + memberStates + ", coreStates=" + coreStates + '}';
+        return String.format( "%s{%s}", name, memberStates );
     }
 }

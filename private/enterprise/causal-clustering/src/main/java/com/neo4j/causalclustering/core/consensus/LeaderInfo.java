@@ -58,7 +58,7 @@ public class LeaderInfo implements Serializable
     @Override
     public String toString()
     {
-        return "LeaderInfo{" + "memberId=" + memberId + ", term=" + term + '}';
+        return "LeaderInfo{" + memberId + ", term=" + term + '}';
     }
 
     @Override

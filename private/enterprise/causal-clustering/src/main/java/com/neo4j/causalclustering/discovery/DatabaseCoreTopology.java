@@ -13,6 +13,7 @@ import java.util.Objects;
 
 import org.neo4j.kernel.database.DatabaseId;
 
+import static java.lang.String.format;
 import static java.util.Collections.emptyMap;
 import static java.util.Objects.requireNonNull;
 
@@ -77,10 +78,6 @@ public class DatabaseCoreTopology implements Topology<CoreServerInfo>
     @Override
     public String toString()
     {
-        return "DatabaseCoreTopology{" +
-               "databaseId=" + databaseId +
-               ", raftId=" + raftId +
-               ", coreMembers=" + coreMembers +
-               '}';
+        return format( "DatabaseCoreTopology{%s%s %s}", databaseId, raftId == null ? "" : format( " %s", raftId ), coreMembers.keySet() );
     }
 }
