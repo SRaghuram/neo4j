@@ -29,7 +29,7 @@ public class LegacyCausalClusteringRedirectService extends AbstractCausalCluster
 
     public static Pattern databaseLegacyClusterUriPattern( Config config )
     {
-        return Pattern.compile( config.get( ServerSettings.management_api_path ).getPath() + CC_PATH );
+        return Pattern.compile( config.get( ServerSettings.management_api_path ).getPath() + CC_PATH + ".*" );
     }
 
     @Override

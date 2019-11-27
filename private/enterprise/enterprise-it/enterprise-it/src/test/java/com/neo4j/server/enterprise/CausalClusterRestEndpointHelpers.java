@@ -28,6 +28,7 @@ import org.neo4j.function.Predicates;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.graphdb.config.Setting;
 import org.neo4j.harness.Neo4j;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.FormattedLogProvider;
@@ -66,15 +67,27 @@ final class CausalClusterRestEndpointHelpers
 
     static CausalClusterInProcessBuilder.CausalCluster startCluster( TestDirectory testDirectory )
     {
+        return startCluster( testDirectory, Map.of() );
+    }
+
+    @SuppressWarnings( "unchecked" )
+    static CausalClusterInProcessBuilder.CausalCluster startCluster( TestDirectory testDirectory, Map<Setting<?>,?> additionalConfig )
+    {
         var clusterDirectory = testDirectory.directory( "CLUSTER" );
-        var cluster = CausalClusterInProcessBuilder.init()
+        var clusterBuilder = CausalClusterInProcessBuilder.init()
                 .withBuilder( EnterpriseInProcessNeo4jBuilder::new )
                 .withCores( 3 )
                 .withReplicas( 2 )
                 .withLogger( LOG_PROVIDER )
                 .atPath( clusterDirectory.toPath() )
-                .withOptionalPortsStrategy( new PortAuthorityPortPickingStrategy() )
-                .build();
+                .withOptionalPortsStrategy( new PortAuthorityPortPickingStrategy() );
+
+        for ( var entry : additionalConfig.entrySet() )
+        {
+            clusterBuilder = clusterBuilder.withConfig( (Setting) entry.getKey(), entry.getValue() );
+        }
+
+        var cluster = clusterBuilder.build();
 
         try
         {
