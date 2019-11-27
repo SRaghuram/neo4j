@@ -9,6 +9,7 @@ import java.util
 
 import org.neo4j.configuration.GraphDatabaseSettings.{DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME}
 import org.neo4j.graphdb.{Node, Relationship}
+import org.neo4j.kernel.impl.coreapi.InternalTransaction
 
 import scala.collection.JavaConverters._
 
@@ -378,6 +379,112 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
 
     // WHEN & THEN
     executeOnDefault("joe", "soap", "CALL db.labels()") shouldBe 0
+  }
+
+  test("db.labels should not return unused label after being removed in transaction") {
+    // GIVEN
+    val query = "CALL db.labels() YIELD label RETURN label ORDER BY label"
+    setupUserWithCustomRole()
+    execute("GRANT TRAVERSE ON GRAPH * NODE * TO custom")
+    execute("GRANT WRITE ON GRAPH * TO custom")
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:A:B)")
+
+    // THEN
+    val expected = List( "A", "B" )
+    executeOnDefault("joe", "soap", query, resultHandler = (row, index) => {
+      row.get("label") should be(expected(index))
+    }) should be(2)
+
+    // WHEN
+    val executeBefore: InternalTransaction => Unit = tx => tx.execute("MATCH (n:A:B) REMOVE n:B")
+
+    // THEN
+    executeOnDefault("joe", "soap", query, executeBefore = executeBefore, resultHandler = (row, _) => {
+      row.get("label") should be("A")
+    }) should be(1)
+  }
+
+  test("db.labels should return used label after being set in transaction") {
+    // GIVEN
+    val query = "CALL db.labels() YIELD label RETURN label ORDER BY label"
+    setupUserWithCustomRole()
+    execute("GRANT TRAVERSE ON GRAPH * NODE * TO custom")
+    execute("GRANT WRITE ON GRAPH * TO custom")
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:A)")
+    execute("CALL db.createLabel('B')")
+
+    // THEN
+    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+      row.get("label") should be("A")
+    }) should be(1)
+
+    // WHEN
+    val executeBefore: InternalTransaction => Unit = tx => tx.execute("MATCH (n:A) SET n:B")
+
+    // THEN
+    val expected = List( "A", "B" )
+    executeOnDefault("joe", "soap", query, executeBefore = executeBefore, resultHandler = (row, index) => {
+      row.get("label") should be(expected(index))
+    }) should be(2)
+  }
+
+  test("db.labels should not return used but denied label after being set in transaction") {
+    // GIVEN
+    val query = "CALL db.labels() YIELD label RETURN label ORDER BY label"
+    setupUserWithCustomRole()
+    execute("GRANT TRAVERSE ON GRAPH * NODE * TO custom")
+    execute("GRANT WRITE ON GRAPH * TO custom")
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:A)")
+    execute("CALL db.createLabel('B')")
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("DENY TRAVERSE ON GRAPH * NODE B TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
+      row.get("label") should be("A")
+    }) should be(1)
+
+    execute(query).toList should be(Seq(Map("label" -> "A")))
+
+    // WHEN
+    val executeBefore: InternalTransaction => Unit = tx => tx.execute("MATCH (n:A) SET n:B")
+
+    // THEN
+    executeOnDefault("joe", "soap", query, executeBefore = executeBefore, resultHandler = (row, _) => {
+      row.get("label") should be("A")
+    }) should be(1)
+
+    execute(query).toList should be(Seq(Map("label" -> "A"), Map("label" -> "B")))
+  }
+
+  test("db.labels should not return used but denied label after being created in transaction") {
+    // GIVEN
+    val query = "CALL db.labels() YIELD label RETURN label ORDER BY label"
+    setupUserWithCustomRole()
+    execute("GRANT TRAVERSE ON GRAPH * NODE * TO custom")
+    execute("GRANT WRITE ON GRAPH * TO custom")
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CALL db.createLabel('A')")
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("DENY TRAVERSE ON GRAPH * NODE A TO custom")
+
+    // THEN
+    executeOnDefault("joe", "soap", query) should be(0)
+    execute(query).toList should be(Seq.empty)
+
+    // WHEN
+    val executeBefore: InternalTransaction => Unit = tx => tx.execute("CREATE (:A)")
+
+    // THEN
+    executeOnDefault("joe", "soap", query, executeBefore = executeBefore) should be(0)
+    execute(query).toList should be(Seq(Map("label" -> "A")))
   }
 
   /*
