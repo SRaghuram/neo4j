@@ -447,12 +447,99 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
   }
 
+  test("Should revoke compound INDEX privileges from built-in roles") {
+    // Given
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom AS COPY OF admin")
+    val expected = defaultRolePrivilegesFor("admin", "custom")
+
+    // When && Then
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(expected)
+
+    // When
+    execute("REVOKE INDEX MANAGEMENT ON DATABASES * FROM custom")
+
+    // Then
+    val expectedWithoutIndexManagement = expected.filter(_ ("action") != PrivilegeAction.INDEX.toString)
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(expectedWithoutIndexManagement)
+
+    // Now add and revoke each sub-privilege in turn, checking also the compound revokes work on sub-privileges
+    Seq(
+      ("CREATE INDEX", "create_index"),
+      ("DROP INDEX", "drop_index")
+    ).foreach {
+      case (privilege, action) =>
+        Seq("INDEX MANAGEMENT", privilege).foreach {
+          revokePrivilege =>
+            // When
+            execute(s"GRANT $privilege ON DATABASES * TO custom")
+
+            // Then
+            val expectedWithPrivilege = expectedWithoutIndexManagement + grantToken().action(action).role("custom").map
+            withClue(s"After GRANT $privilege") {
+              execute("SHOW ROLE custom PRIVILEGES").toSet should be(expectedWithPrivilege)
+            }
+
+            // When
+            execute(s"REVOKE $revokePrivilege ON DATABASES * FROM custom")
+
+            // Then
+            withClue(s"After REVOKE $revokePrivilege") {
+              execute("SHOW ROLE custom PRIVILEGES").toSet should be(expectedWithoutIndexManagement)
+            }
+        }
+    }
+  }
+
+  test("Should revoke compound CONSTRAINT privileges from built-in roles") {
+    // Given
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom AS COPY OF admin")
+    val expected = defaultRolePrivilegesFor("admin", "custom")
+
+    // When && Then
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(expected)
+
+    // When
+    execute("REVOKE CONSTRAINT MANAGEMENT ON DATABASES * FROM custom")
+
+    // Then
+    val expectedWithoutConstraintManagement = expected.filter(_ ("action") != PrivilegeAction.CONSTRAINT.toString)
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(expectedWithoutConstraintManagement)
+
+    // Now add and revoke each sub-privilege in turn, checking also the compound revokes work on sub-privileges
+    Seq(
+      ("CREATE CONSTRAINT", "create_constraint"),
+      ("DROP CONSTRAINT", "drop_constraint")
+    ).foreach {
+      case (privilege, action) =>
+        Seq("CONSTRAINT MANAGEMENT", privilege).foreach {
+          revokePrivilege =>
+            // When
+            execute(s"GRANT $privilege ON DATABASES * TO custom")
+
+            // Then
+            val expectedWithPrivilege = expectedWithoutConstraintManagement + grantToken().action(action).role("custom").map
+            withClue(s"After GRANT $privilege") {
+              execute("SHOW ROLE custom PRIVILEGES").toSet should be(expectedWithPrivilege)
+            }
+
+            // When
+            execute(s"REVOKE $revokePrivilege ON DATABASES * FROM custom")
+
+            // Then
+            withClue(s"After REVOKE $revokePrivilege") {
+              execute("SHOW ROLE custom PRIVILEGES").toSet should be(expectedWithoutConstraintManagement)
+            }
+        }
+    }
+  }
+
   test("Should revoke compound TOKEN privileges from built-in roles") {
     // Given
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom AS COPY OF admin")
     val expected = defaultRolePrivilegesFor("admin", "custom")
-    expected.foreach(println)
 
     // When && Then
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(expected)
@@ -468,11 +555,11 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     Seq(
       ("CREATE NEW NODE LABEL", "create_label"),
       ("CREATE NEW RELATIONSHIP TYPE", "create_reltype"),
-      ("CREATE NEW PROPERTY NAME", "create_propertykey"),
+      ("CREATE NEW PROPERTY NAME", "create_propertykey")
     ).foreach {
       case (privilege, action) =>
         Seq("NAME MANAGEMENT", privilege).foreach {
-          case revokePrivilege =>
+          revokePrivilege =>
             // When
             execute(s"GRANT $privilege ON DATABASES * TO custom")
 
@@ -488,6 +575,69 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
             // Then
             withClue(s"After REVOKE $revokePrivilege") {
               execute("SHOW ROLE custom PRIVILEGES").toSet should be(expectedWithoutNameManagement)
+            }
+        }
+    }
+  }
+
+  test("Should revoke compound ALL DATABASE privileges from built-in roles") {
+    // Given
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom AS COPY OF admin")
+    val expected = defaultRolePrivilegesFor("admin", "custom")
+
+    // When && Then
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(expected)
+
+    // When
+    execute("REVOKE ALL DATABASE PRIVILEGES ON DATABASES * FROM custom")
+
+    // Then
+    val expectedWithoutAllDatabasePrivileges = expected.filter(a => PrivilegeAction.from(a("action").toString) match {
+      case PrivilegeAction.SCHEMA => false
+      case PrivilegeAction.TOKEN => false
+      case PrivilegeAction.ACCESS => false
+      case PrivilegeAction.START_DATABASE => true // should be false but currently not being revoked: part of compound which should not be fully revoked
+      case PrivilegeAction.STOP_DATABASE => true // should be false but currently not being revoked: part of compound which should not be fully revoked
+      case _ => true
+    })
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(expectedWithoutAllDatabasePrivileges)
+
+    // Now add and revoke each sub-privilege in turn, checking also the compound revokes work on sub-privileges
+    Seq(
+      ("CREATE INDEX", Seq("create_index")),
+      ("DROP INDEX", Seq("drop_index")),
+      ("INDEX MANAGEMENT", Seq("create_index", "drop_index")),
+      ("CREATE CONSTRAINT", Seq("create_constraint")),
+      ("DROP CONSTRAINT", Seq("drop_constraint")),
+      ("CONSTRAINT MANAGEMENT", Seq("create_constraint", "drop_constraint")),
+//      ("SCHEMA MANAGEMENT", Seq("create_index", "drop_index", "create_constraint", "drop_constraint")), // TODO: This would be nice to have but there is no syntax for it
+      ("CREATE NEW NODE LABEL", Seq("create_label")),
+      ("CREATE NEW RELATIONSHIP TYPE", Seq("create_reltype")),
+      ("CREATE NEW PROPERTY NAME", Seq("create_propertykey")),
+      ("NAME MANAGEMENT", Seq("create_label", "create_reltype", "create_propertykey")),
+      ("ACCESS", Seq("access")),
+      ("START", Seq("start_database")),
+      ("STOP", Seq("stop_database"))
+    ).foreach {
+      case (privilege, actions) =>
+        Seq("ALL DATABASE PRIVILEGES", privilege).foreach {
+          revokePrivilege =>
+            // When
+            execute(s"GRANT $privilege ON DATABASES * TO custom")
+
+            // Then
+            val expectedWithPrivilege = expectedWithoutAllDatabasePrivileges ++ actions.map(action => grantToken().action(action).role("custom").map)
+            withClue(s"After GRANT $privilege") {
+              execute("SHOW ROLE custom PRIVILEGES").toSet should be(expectedWithPrivilege)
+            }
+
+            // When
+            execute(s"REVOKE $revokePrivilege ON DATABASES * FROM custom")
+
+            // Then
+            withClue(s"After REVOKE $revokePrivilege") {
+              execute("SHOW ROLE custom PRIVILEGES").toSet should be(expectedWithoutAllDatabasePrivileges)
             }
         }
     }
