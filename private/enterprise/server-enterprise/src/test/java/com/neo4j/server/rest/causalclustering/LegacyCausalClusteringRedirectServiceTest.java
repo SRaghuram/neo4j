@@ -12,8 +12,9 @@ import java.net.URI;
 import org.neo4j.configuration.Config;
 
 import static com.neo4j.server.rest.causalclustering.LegacyCausalClusteringRedirectService.databaseLegacyClusterUriPattern;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.matchesPattern;
+import static org.hamcrest.Matchers.not;
 import static org.neo4j.server.configuration.ServerSettings.management_api_path;
 
 class LegacyCausalClusteringRedirectServiceTest
@@ -25,13 +26,18 @@ class LegacyCausalClusteringRedirectServiceTest
 
         var pattern = databaseLegacyClusterUriPattern( config );
 
-        assertTrue( pattern.matcher( "/custom/db/server/causalclustering" ).matches() );
-        assertTrue( pattern.matcher( "/custom/db/server/causalclustering" ).matches() );
-        assertTrue( pattern.matcher( "/custom/db/server/causalclustering" ).matches() );
+        assertThat( "/custom/db/server/causalclustering", matchesPattern( pattern ) );
+        assertThat( "/custom/db/server/causalclustering", matchesPattern( pattern ) );
+        assertThat( "/custom/db/server/causalclustering", matchesPattern( pattern ) );
 
-        assertFalse( pattern.matcher( "/db/neo4j/manage/causalclustering" ).matches() );
-        assertFalse( pattern.matcher( "/custom/db/neo4j/causalclustering" ).matches() );
-        assertFalse( pattern.matcher( "/custom/db/manage/causalclustering" ).matches() );
-        assertFalse( pattern.matcher( "/custom/db/neo4j/system/manage/causalclustering" ).matches() );
+        assertThat( "/custom/db/server/causalclustering/status", matchesPattern( pattern ) );
+        assertThat( "/custom/db/server/causalclustering/available", matchesPattern( pattern ) );
+        assertThat( "/custom/db/server/causalclustering/writable", matchesPattern( pattern ) );
+        assertThat( "/custom/db/server/causalclustering/read-only", matchesPattern( pattern ) );
+
+        assertThat( "/db/neo4j/manage/causalclustering", not( matchesPattern( pattern ) ) );
+        assertThat( "/custom/db/neo4j/causalclustering", not( matchesPattern( pattern ) ) );
+        assertThat( "/custom/db/manage/causalclustering", not( matchesPattern( pattern ) ) );
+        assertThat( "/custom/db/neo4j/system/manage/causalclustering", not( matchesPattern( pattern ) ) );
     }
 }

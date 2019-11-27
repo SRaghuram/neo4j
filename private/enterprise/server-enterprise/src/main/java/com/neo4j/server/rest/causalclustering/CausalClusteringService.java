@@ -30,7 +30,7 @@ public class CausalClusteringService extends AbstractCausalClusteringService
 
     public static Pattern databaseClusterUriPattern( Config config )
     {
-        return Pattern.compile( config.get( ServerSettings.db_api_path ).getPath() + "/[^/]*" + CLUSTER_PATH );
+        return Pattern.compile( config.get( ServerSettings.db_api_path ).getPath() + "/[^/]*" + CLUSTER_PATH + ".*" );
     }
 
     public static String absoluteDatabaseClusterPath( Config config )
