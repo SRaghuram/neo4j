@@ -87,18 +87,21 @@ public class CatchupPollingProcess extends LifecycleAdapter
     @Override
     public synchronized void start()
     {
+        log.debug( "Starting catchup polling process %s", this );
         state = TX_PULLING;
         upToDateFuture = new CompletableFuture<>();
     }
 
     public CompletableFuture<Boolean> upToDateFuture()
     {
+        log.debug( "Returning an up-to-date future %s", upToDateFuture );
         return upToDateFuture;
     }
 
     @Override
     public void stop()
     {
+        log.debug( "Stopping catchup polling process %s", this );
         state = CANCELLED;
     }
 
@@ -265,7 +268,7 @@ public class CatchupPollingProcess extends LifecycleAdapter
         switch ( result.status() )
         {
         case SUCCESS_END_OF_STREAM:
-            log.debug( "Successfully pulled transactions from tx id %d", lastQueuedTxId );
+            log.debug( "Successfully pulled transactions from tx id %d. Completing the up-to-date future %s", lastQueuedTxId, upToDateFuture );
             upToDateFuture.complete( Boolean.TRUE );
             return false;
         case E_TRANSACTION_PRUNED:
