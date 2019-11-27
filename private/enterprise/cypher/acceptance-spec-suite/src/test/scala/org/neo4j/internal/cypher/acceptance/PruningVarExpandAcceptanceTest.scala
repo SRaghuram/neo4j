@@ -36,4 +36,19 @@ class PruningVarExpandAcceptanceTest extends ExecutionEngineFunSuite with Cypher
     // Then
     result.toList should have size 1
   }
+
+  test("Pruning var expand should honour the predicate also for the first node") {
+    createLabeledNode(Map("bar" -> 2), "Foo")
+    val query =
+      """
+        |MATCH (a:Foo)
+        |MATCH path = ( (a)-[:REL*0..2]-(b) )
+        |WHERE ALL(n in nodes(path) WHERE n.bar = 1)
+        |RETURN DISTINCT b
+      """.stripMargin
+
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
+
+    result.toList shouldBe empty
+  }
 }
