@@ -5,6 +5,7 @@
  */
 package com.neo4j.bolt;
 
+import com.neo4j.harness.junit.rule.EnterpriseNeo4jRule;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.junit.Before;
 import org.junit.Rule;
@@ -31,10 +32,10 @@ import static org.hamcrest.Matchers.empty;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.driver.AuthTokens.basic;
 
-public class DeleteUserStressIT
+public class EnterpriseSecurityStressIT
 {
     @Rule
-    public Neo4jRule db = new Neo4jRule()
+    public Neo4jRule db = new EnterpriseNeo4jRule()
             .withConfig( GraphDatabaseSettings.auth_enabled, true )
             .withConfig( OnlineBackupSettings.online_backup_enabled, false );
 
@@ -56,39 +57,50 @@ public class DeleteUserStressIT
     }
 
     @Test
-    public void shouldRun() throws InterruptedException
+    public void shouldHandleConcurrentAuthAndDropUser() throws InterruptedException
     {
-        ExecutorService service = Executors.newFixedThreadPool( 3 );
-        service.submit( createUserWork );
+        ExecutorService service = Executors.newFixedThreadPool( 7 );
+
+        // Run several transaction threads to increase the risk of the user
+        // being dropped during user management in authorization.
+        service.submit( createUserWithRoleWork );
         service.submit( deleteUserWork );
+        service.submit( transactionWork );
+        service.submit( transactionWork );
+        service.submit( transactionWork );
+        service.submit( transactionWork );
         service.submit( transactionWork );
 
         service.awaitTermination( 30, TimeUnit.SECONDS );
 
-        String msg = String.join( System.lineSeparator(),
-                errors.stream().map( Throwable::getMessage ).collect( Collectors.toList() ) );
+        String msg = errors.stream().map( Throwable::getMessage ).collect( Collectors.joining( System.lineSeparator() ) );
         assertThat( msg, errors, empty() );
     }
 
     @SuppressWarnings( "InfiniteLoopStatement" )
     private final Runnable transactionWork = () ->
     {
+        // Expected if the user is dropped before or during authentication
+        String authenticationError = "The client is unauthorized due to authentication failure.";
+
+        // Expected if the user is dropped before or during authorization
+        String authorizationError = "Database access is not allowed for user 'alice' with roles [].";
 
         for (; ; )
         {
-            try ( Driver driver = graphDatabaseDriver( db.boltURI(), basic( "pontus", "sutnop" ) ) )
+            try ( Driver driver = graphDatabaseDriver( db.boltURI(), basic( "alice", "secret" ) ) )
             {
 
                 try ( Session session = driver.session();
                       Transaction tx = session.beginTransaction() )
                 {
-                    tx.run( "UNWIND range(1, 100000) AS n RETURN n" ).consume();
+                    tx.run( "UNWIND range(1, 10) AS n RETURN n" ).consume();
                     tx.commit();
                 }
             }
             catch ( ClientException e )
             {
-                if ( !e.getMessage().equals( "The client is unauthorized due to authentication failure." ) )
+                if ( ! ( e.getMessage().equals( authenticationError ) || e.getMessage().equals( authorizationError ) ) )
                 {
                     errors.add( e );
                 }
@@ -99,18 +111,17 @@ public class DeleteUserStressIT
     @SuppressWarnings( "InfiniteLoopStatement" )
     private final Runnable deleteUserWork = () ->
     {
-
         for (; ; )
         {
             try ( Session session = adminDriver.session( SessionConfig.forDatabase( SYSTEM_DATABASE_NAME ) );
                   Transaction tx = session.beginTransaction() )
             {
-                tx.run( "DROP USER pontus" ).consume();
+                tx.run( "DROP USER alice" ).consume();
                 tx.commit();
             }
             catch ( ClientException e )
             {
-                if ( !e.getMessage().equals( "Failed to delete the specified user 'pontus': User does not exist." ) )
+                if ( !e.getMessage().equals( "Failed to delete the specified user 'alice': User does not exist." ) )
                 {
                     errors.add( e );
                 }
@@ -119,19 +130,20 @@ public class DeleteUserStressIT
     };
 
     @SuppressWarnings( "InfiniteLoopStatement" )
-    private final Runnable createUserWork = () ->
+    private final Runnable createUserWithRoleWork = () ->
     {
         for (; ; )
         {
             try ( Session session = adminDriver.session( SessionConfig.forDatabase( SYSTEM_DATABASE_NAME ));
-                  Transaction tx = session.beginTransaction() )
+                    Transaction tx = session.beginTransaction() )
             {
-                tx.run( "CREATE USER pontus SET PASSWORD 'sutnop' CHANGE NOT REQUIRED" ).consume();
+                tx.run( "CREATE USER alice SET PASSWORD 'secret' CHANGE NOT REQUIRED" ).consume();
+                tx.run( "GRANT ROLE architect TO alice" ).consume();
                 tx.commit();
             }
             catch ( ClientException e )
             {
-                if ( !e.getMessage().equals( "Failed to create the specified user 'pontus': User already exists." ) )
+                if ( !e.getMessage().equals( "Failed to create the specified user 'alice': User already exists." ) )
                 {
                     errors.add( e );
                 }

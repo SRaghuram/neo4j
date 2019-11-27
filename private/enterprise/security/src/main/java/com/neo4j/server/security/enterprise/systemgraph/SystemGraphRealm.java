@@ -28,6 +28,7 @@ import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.NotFoundException;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
@@ -99,6 +100,12 @@ public class SystemGraphRealm extends BasicSystemGraphRealm implements RealmLife
                 rels.forEach( rel -> roleNames.add( (String) rel.getEndNode().getProperty( "name" ) ) );
             }
             tx.commit();
+        }
+        catch ( NotFoundException n )
+        {
+            // Can occur if the user was dropped by another thread after the null check.
+            // The behaviour should be the same as if the user did not exist at the start of the authorization.
+            return null;
         }
 
         if ( !existingUser )
