@@ -20,6 +20,8 @@ import java.util.Optional;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.scheduler.JobHandle;
 
+import static java.lang.String.format;
+
 class CoreBootstrap
 {
     private final Database kernelDatabase;
@@ -83,7 +85,16 @@ class CoreBootstrap
                 throw e;
             }
         }
-        if ( !raftIdStorage.exists() )
+        if ( raftIdStorage.exists() )
+        {
+            var raftIdStore = raftIdStorage.readState();
+            if ( !raftIdStore.equals( boundState.raftId() ) )
+            {
+                throw new IllegalStateException(
+                        format( "Exiting raft id '%s' is different from bound state '%s'.", raftIdStore.uuid(), boundState.raftId().uuid() ) );
+            }
+        }
+        else
         {
             raftIdStorage.writeState( boundState.raftId() );
         }
