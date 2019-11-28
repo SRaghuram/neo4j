@@ -247,7 +247,7 @@ class TransactionStatusResultTest
                         EmptyVersionContextSupplier.EMPTY, ON_HEAP, new StandardConstraintSemantics(), mock( SchemaState.class),
                         mockedTokenHolders(), mock( IndexingService.class ), mock( LabelScanStore.class ),
                         mock( IndexStatisticsStore.class ), dependencies, new TestDatabaseIdRepository().defaultDatabase(),
-                        LeaseService.NO_LEASES, () -> false )
+                        LeaseService.NO_LEASES )
             {
                 @Override
                 public Statistics getStatistics()
