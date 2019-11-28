@@ -7,6 +7,9 @@ package com.neo4j.causalclustering.catchup;
 
 import java.util.Objects;
 
+import static com.neo4j.causalclustering.catchup.CatchupResult.SUCCESS_END_OF_STREAM;
+import static org.neo4j.util.Preconditions.checkArgument;
+
 public class CatchupErrorResponse
 {
     private final CatchupResult status;
@@ -14,6 +17,7 @@ public class CatchupErrorResponse
 
     public CatchupErrorResponse( CatchupResult status, String message )
     {
+        checkArgument( SUCCESS_END_OF_STREAM != status, "Catchup error cannot contain successful status: " + status );
         this.status = status;
         this.message = message;
     }
