@@ -14,14 +14,15 @@ import java.util.UUID;
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
 import org.neo4j.kernel.database.DatabaseId;
+import org.neo4j.util.Id;
 
 public final class RaftId
 {
-    private final UUID uuid;
+    private final Id id;
 
     RaftId( UUID uuid )
     {
-        this.uuid = uuid;
+        this.id = new Id( uuid );
     }
 
     public static RaftId from( DatabaseId databaseId )
@@ -41,26 +42,24 @@ public final class RaftId
             return false;
         }
         RaftId raftId = (RaftId) o;
-        return Objects.equals( uuid, raftId.uuid );
+        return Objects.equals( id, raftId.id );
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash( uuid );
+        return Objects.hash( id );
     }
 
     public UUID uuid()
     {
-        return uuid;
+        return id.uuid();
     }
 
     @Override
     public String toString()
     {
-        return "RaftId{" +
-               "uuid=" + uuid +
-               '}';
+        return "RaftId{" + id + '}';
     }
 
     public static class Marshal extends SafeStateMarshal<RaftId>
@@ -71,7 +70,7 @@ public final class RaftId
         @Override
         public void marshal( RaftId raftId, WritableChannel channel ) throws IOException
         {
-            UUID uuid = raftId == null ? NIL : raftId.uuid;
+            UUID uuid = raftId == null ? NIL : raftId.uuid();
             channel.putLong( uuid.getMostSignificantBits() );
             channel.putLong( uuid.getLeastSignificantBits() );
         }
