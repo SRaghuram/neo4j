@@ -7,6 +7,7 @@ package com.neo4j.internal.cypher.acceptance
 
 import org.neo4j.configuration.GraphDatabaseSettings.{DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME}
 import org.neo4j.cypher.internal.DatabaseStatus
+import org.neo4j.graphdb.QueryExecutionException
 import org.neo4j.graphdb.security.AuthorizationViolationException
 
 import scala.collection.Map
@@ -537,9 +538,9 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     testAlwaysAllowedForAdmin(populatedRoles)
 
     // create tokens
-    the[AuthorizationViolationException] thrownBy {
+    the[QueryExecutionException] thrownBy {
       executeOnDefault("Alice", "secret", "CALL db.createLabel('Label')")
-    } should have message s"Write operations are not allowed for user 'Alice' with roles [$role]."
+    } should have message s"'create_label' operations are not allowed for user 'Alice' with roles [$role] restricted to TOKEN_WRITE."
 
     // index management
     execute("CALL db.createLabel('Label')")
@@ -586,10 +587,8 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     // THEN
     testAlwaysAllowedForAdmin(populatedRoles)
 
-    // create tokens (still needs write as well for this)
-    the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("Alice", "secret", "CALL db.createLabel('Label')")
-    } should have message s"Write operations are not allowed for user 'Alice' with roles [$role]."
+    // create tokens
+    executeOnDefault("Alice", "secret", "CALL db.createLabel('Label')")
 
     // index management
     executeOnDefault("Alice", "secret", "CREATE INDEX FOR (n:Label) ON (n.prop)") should be(0)
