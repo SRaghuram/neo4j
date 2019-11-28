@@ -97,6 +97,76 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
           adminAction("role_management", relType).role("custom").map
         ))
       }
+
+      test(s"should $grant create user privilege") {
+        // GIVEN
+        selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+
+        // WHEN
+        execute(s"$grant CREATE USER ON DBMS TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          adminAction("create_user", relType).role("custom").map
+        ))
+      }
+
+      test(s"should $grant drop user privilege") {
+        // GIVEN
+        selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+
+        // WHEN
+        execute(s"$grant DROP USER ON DBMS TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          adminAction("drop_user", relType).role("custom").map
+        ))
+      }
+
+      test(s"should $grant show user privilege") {
+        // GIVEN
+        selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+
+        // WHEN
+        execute(s"$grant SHOW USER ON DBMS TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          adminAction("show_user", relType).role("custom").map
+        ))
+      }
+
+      test(s"should $grant alter user privilege") {
+        // GIVEN
+        selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+
+        // WHEN
+        execute(s"$grant ALTER USER ON DBMS TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          adminAction("alter_user", relType).role("custom").map
+        ))
+      }
+
+      test(s"should $grant user management privilege") {
+        // GIVEN
+        selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+        execute("CREATE ROLE custom")
+
+        // WHEN
+        execute(s"$grant USER MANAGEMENT ON DBMS TO custom")
+
+        // THEN
+        execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+          adminAction("user_management", relType).role("custom").map
+        ))
+      }
   }
 
   test("should revoke other role management privileges when revoking role management") {
@@ -121,6 +191,31 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
     // WHEN
     execute("REVOKE ROLE MANAGEMENT ON DBMS FROM custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(empty)
+  }
+
+  test("should revoke other user management privileges when revoking user management") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("GRANT CREATE USER ON DBMS TO custom")
+    execute("GRANT DROP USER ON DBMS TO custom")
+    execute("GRANT SHOW USER ON DBMS TO custom")
+    execute("GRANT ALTER USER ON DBMS TO custom")
+    execute("GRANT USER MANAGEMENT ON DBMS TO custom")
+
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      adminAction("create_user").role("custom").map,
+      adminAction("drop_user").role("custom").map,
+      adminAction("alter_user").role("custom").map,
+      adminAction("show_user").role("custom").map,
+      adminAction("user_management").role("custom").map
+    ))
+
+    // WHEN
+    execute("REVOKE USER MANAGEMENT ON DBMS FROM custom")
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(empty)
@@ -395,6 +490,227 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
     // THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "CREATE ROLE role")
+    } should have message "Permission denied."
+  }
+
+  // CREATE USER
+
+  test("should enforce create user privilege") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
+    execute("GRANT ROLE custom TO foo")
+
+    // WHEN
+    execute("GRANT CREATE USER ON DBMS TO custom")
+
+    // THEN
+    executeOnSystem("foo", "bar", "CREATE USER user SET PASSWORD 'abc'")
+    execute("SHOW USERS").toSet should be(Set(neo4jUser, user("foo", passwordChangeRequired = false, roles = Seq("custom")), user("user")))
+
+    // WHEN
+    execute("DROP USER user")
+    execute("REVOKE CREATE USER ON DBMS FROM custom")
+
+    // THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnSystem("foo", "bar", "CREATE USER user SET PASSWORD 'abc'")
+    } should have message "Permission denied."
+  }
+
+  test("should fail when creating user when denied create user privilege") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom AS COPY OF admin")
+    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
+    execute("GRANT ROLE custom TO foo")
+
+    // WHEN
+    execute("DENY CREATE USER ON DBMS TO custom")
+
+    // THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnSystem("foo", "bar", "CREATE USER user SET PASSWORD 'abc'")
+    } should have message "Permission denied."
+  }
+
+  // DROP USER
+
+  test("should enforce drop user privilege") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
+    execute("GRANT ROLE custom TO foo")
+
+    // WHEN
+    execute("CREATE USER user SET PASSWORD 'abc'")
+    execute("GRANT DROP USER ON DBMS TO custom")
+
+    // THEN
+    executeOnSystem("foo", "bar", "DROP USER user")
+    execute("SHOW USERS").toSet should be(Set(neo4jUser, user("foo", passwordChangeRequired = false, roles = Seq("custom"))))
+
+    // WHEN
+    execute("CREATE USER user SET PASSWORD 'abc'")
+    execute("REVOKE DROP USER ON DBMS FROM custom")
+
+    // THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnSystem("foo", "bar", "DROP USER user")
+    } should have message "Permission denied."
+  }
+
+  test("should fail when dropping user when denied drop user privilege") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom AS COPY OF admin")
+    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
+    execute("GRANT ROLE custom TO foo")
+
+    // WHEN
+    execute("CREATE USER user SET PASSWORD 'abc'")
+    execute("DENY DROP USER ON DBMS TO custom")
+
+    // THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnSystem("foo", "bar", "DROP USER user")
+    } should have message "Permission denied."
+  }
+
+  // ALTER USER
+
+  test("should enforce alter user privilege") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
+    execute("GRANT ROLE custom TO foo")
+
+    // WHEN
+    execute("CREATE USER user SET PASSWORD 'abc'")
+    execute("GRANT ALTER USER ON DBMS TO custom")
+
+    // THEN
+  executeOnSystem("foo", "bar", "ALTER USER user SET PASSWORD CHANGE NOT REQUIRED")
+    execute("SHOW USERS").toSet should be(Set(
+      neo4jUser,
+      user("foo", passwordChangeRequired = false, roles = Seq("custom")),
+      user("user", passwordChangeRequired = false)
+    ))
+
+    // WHEN
+    execute("REVOKE ALTER USER ON DBMS FROM custom")
+
+    // THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnSystem("foo", "bar", "ALTER USER user SET PASSWORD CHANGE REQUIRED")
+    } should have message "Permission denied."
+  }
+
+  test("should fail when altering user when denied alter user privilege") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom AS COPY OF admin")
+    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
+    execute("GRANT ROLE custom TO foo")
+
+    // WHEN
+    execute("CREATE USER user SET PASSWORD 'abc'")
+    execute("DENY ALTER USER ON DBMS TO custom")
+
+    // THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnSystem("foo", "bar", "ALTER USER user SET PASSWORD CHANGE NOT REQUIRED")
+    } should have message "Permission denied."
+  }
+
+  // SHOW USER
+
+  test("should enforce show user privilege") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
+    execute("GRANT ROLE custom TO foo")
+
+    // WHEN
+    execute("GRANT SHOW USER ON DBMS TO custom")
+
+    // THEN
+    executeOnSystem("foo", "bar", "SHOW USERS") should be(2)
+
+    // WHEN
+    execute("REVOKE SHOW USER ON DBMS FROM custom")
+
+    // THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnSystem("foo", "bar", "SHOW USERS")
+    } should have message "Permission denied."
+  }
+
+  test("should fail when listing users when denied show user privilege") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom AS COPY OF admin")
+    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
+    execute("GRANT ROLE custom TO foo")
+
+    // WHEN
+    execute("DENY SHOW USER ON DBMS TO custom")
+
+    // THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnSystem("foo", "bar", "SHOW USERS")
+    } should have message "Permission denied."
+  }
+
+  // USER MANAGEMENT
+
+  test("should enforce user management privilege") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
+    execute("GRANT ROLE custom TO foo")
+
+    // WHEN
+    execute("GRANT USER MANAGEMENT ON DBMS TO custom")
+
+    // THEN
+    executeOnSystem("foo", "bar", "CREATE USER user SET PASSWORD 'abc'")
+    executeOnSystem("foo", "bar", "ALTER USER user SET PASSWORD CHANGE NOT REQUIRED")
+    executeOnSystem("foo", "bar", "SHOW USERS")
+    executeOnSystem("foo", "bar", "DROP USER user")
+  }
+
+  test("should deny user management when denied user management privilege") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom AS COPY OF admin")
+    execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
+    execute("GRANT ROLE custom TO foo")
+
+    // WHEN
+    execute("GRANT CREATE USER ON DBMS TO custom")
+    execute("GRANT DROP USER ON DBMS TO custom")
+    execute("GRANT ALTER USER ON DBMS TO custom")
+    execute("GRANT SHOW USER ON DBMS TO custom")
+    execute("DENY USER MANAGEMENT ON DBMS TO custom")
+
+    // THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnSystem("foo", "bar", "CREATE USER user SET PASSWORD 'abc'")
+    } should have message "Permission denied."
+    the[AuthorizationViolationException] thrownBy {
+      executeOnSystem("foo", "bar", "DROP USER neo4j")
+    } should have message "Permission denied."
+    the[AuthorizationViolationException] thrownBy {
+      executeOnSystem("foo", "bar", "ALTER USER foo SET PASSWORD 'abc'")
+    } should have message "Permission denied."
+    the[AuthorizationViolationException] thrownBy {
+      executeOnSystem("foo", "bar", "SHOW USERS")
     } should have message "Permission denied."
   }
 }
