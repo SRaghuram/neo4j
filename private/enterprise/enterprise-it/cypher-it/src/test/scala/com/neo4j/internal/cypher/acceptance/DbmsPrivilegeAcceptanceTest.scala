@@ -126,6 +126,28 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(empty)
   }
 
+  test("Should get error when revoking a subset of role management privilege") {
+    // Given
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("GRANT ROLE MANAGEMENT ON DBMS TO custom")
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(adminAction("role_management").role("custom").map))
+
+    // Now try to revoke each sub-privilege in turn
+    Seq(
+      "CREATE ROLE",
+      "DROP ROLE",
+      "SHOW ROLE",
+      "ASSIGN ROLE",
+      "REMOVE ROLE"
+    ).foreach { privilege =>
+      // When && Then
+      the[IllegalStateException] thrownBy {
+        execute(s"REVOKE $privilege ON DBMS FROM custom")
+      } should have message s"Unsupported to revoke a sub-privilege '$privilege' from a compound privilege 'ROLE MANAGEMENT', consider using DENY instead."
+    }
+  }
+
   // Enforcement tests
 
   // CREATE ROLE
