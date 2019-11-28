@@ -18,6 +18,7 @@ import com.neo4j.causalclustering.core.consensus.protocol.v2.RaftProtocolClientI
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.causalclustering.core.state.ClusterStateMigrator;
 import com.neo4j.causalclustering.core.state.DiscoveryModule;
+import com.neo4j.causalclustering.diagnostics.GlobalTopologyStateDiagnosticProvider;
 import com.neo4j.causalclustering.diagnostics.RaftMonitor;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.DiscoveryServiceFactory;
@@ -291,6 +292,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         dependencies.satisfyDependency( reconciledTxTracker );
 
         topologyService = createTopologyService( myIdentity, databaseManager, reconcilerModule.reconciler() );
+        dependencies.satisfyDependency( new GlobalTopologyStateDiagnosticProvider( topologyService ) );
         reconcilerModule.reconciler().registerListener( topologyService );
 
         final RaftMessageLogger<MemberId> raftLogger = createRaftLogger( globalModule, myIdentity );
