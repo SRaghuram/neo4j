@@ -82,6 +82,9 @@ class CoreBootstrap
                 raftMessageHandler.stop();
                 throw e;
             }
+        }
+        if ( !raftIdStorage.exists() )
+        {
             raftIdStorage.writeState( boundState.raftId() );
         }
     }
