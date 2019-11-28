@@ -807,6 +807,7 @@ public abstract class ProcedureInteractionTestBase<S>
         @Procedure( name = "test.staticWriteProcedure", mode = Mode.WRITE )
         public Stream<AuthProceduresBase.StringResult> staticWriteProcedure()
         {
+            transaction.createNode();
             return Stream.of( new AuthProceduresBase.StringResult( "static" ) );
         }
 

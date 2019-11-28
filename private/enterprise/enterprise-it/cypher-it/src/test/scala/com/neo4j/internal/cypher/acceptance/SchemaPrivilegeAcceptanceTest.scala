@@ -918,30 +918,10 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
   test("Should allow label creation for normal user with label create privilege") {
     setupUserWithCustomRole()
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT WRITE ON GRAPH * TO custom")
     execute("GRANT CREATE NEW LABEL ON DATABASE * TO custom")
-
-    // WHEN & THEN
-    executeOnDefault("joe", "soap", "CREATE (n:User) RETURN n") should be(1)
 
     // WHEN & THEN
     executeOnDefault("joe", "soap", "CALL db.createLabel('A')") should be(0)
-  }
-
-  test("Should not allow label creation for normal user without write privilege") {
-    setupUserWithCustomRole()
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT CREATE NEW LABEL ON DATABASE * TO custom")
-
-    // WHEN & THEN
-    the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("joe", "soap", "CALL db.createLabel('A')")
-    } should have message "Write operations are not allowed for user 'joe' with roles [custom]."
-
-    // WHEN & THEN
-    the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("joe", "soap", "CREATE (n:A) RETURN n")
-    } should have message "Write operations are not allowed for user 'joe' with roles [custom]."
   }
 
   test("Should not allow label creation for normal user with explicit deny") {
@@ -965,30 +945,10 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
   test("Should allow type creation for normal user with type create privilege") {
     setupUserWithCustomRole()
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT WRITE ON GRAPH * TO custom")
     execute("GRANT CREATE NEW TYPE ON DATABASE * TO custom")
-
-    // WHEN & THEN
-    executeOnDefault("joe", "soap", "CREATE ()-[n:Rel]->() RETURN n") should be(1)
 
     // WHEN & THEN
     executeOnDefault("joe", "soap", "CALL db.createRelationshipType('A')") should be(0)
-  }
-
-  test("Should not allow type creation for normal user without write privilege") {
-    setupUserWithCustomRole()
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT CREATE NEW TYPE ON DATABASE * TO custom")
-
-    // WHEN & THEN
-    the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("joe", "soap", "CALL db.createRelationshipType('A')")
-    } should have message "Write operations are not allowed for user 'joe' with roles [custom]."
-
-    // WHEN & THEN
-    the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("joe", "soap", "CREATE ()-[n:Rel]->() RETURN n")
-    } should have message "Write operations are not allowed for user 'joe' with roles [custom]."
   }
 
   test("Should not allow type creation for normal user with explicit deny") {
@@ -1012,39 +972,11 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
   test("Should allow property key creation for normal user with name creation privilege") {
     setupUserWithCustomRole()
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT WRITE ON GRAPH * TO custom")
     execute("GRANT CREATE NEW NAME ON DATABASE * TO custom")
     selectDatabase(DEFAULT_DATABASE_NAME)
-    execute("CREATE (:User)-[:Rel]->()")
-
-    // WHEN & THEN
-    executeOnDefault("joe", "soap", "CREATE (n:User {name: 'Alice'}) RETURN n.name", resultHandler = (row, _) => {
-      row.get("n.name") should be("Alice")
-    }) should be(1)
-
-    // WHEN & THEN
-    executeOnDefault("joe", "soap", "CREATE ()-[r:Rel {prop: 'value'}]->() RETURN r.prop", resultHandler = (row, _) => {
-      row.get("r.prop") should be("value")
-    }) should be(1)
 
     // WHEN & THEN
     executeOnDefault("joe", "soap", "CALL db.createProperty('age')") should be(0)
-  }
-
-  test("Should not allow property key creation for normal user without write privilege") {
-    setupUserWithCustomRole()
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT CREATE NEW NAME ON DATABASE * TO custom")
-
-    // WHEN & THEN
-    the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("joe", "soap", "CALL db.createProperty('age')")
-    } should have message "Write operations are not allowed for user 'joe' with roles [custom]."
-
-    // WHEN & THEN
-    the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("joe", "soap", "CREATE (n {age: 5}) RETURN n.age")
-    } should have message "Write operations are not allowed for user 'joe' with roles [custom]."
   }
 
   test("Should not allow property key creation for normal user with explicit deny") {
@@ -1104,27 +1036,6 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     executeOnDefault("joe", "soap", "CREATE (n:User {name: 'Alice'})-[:KNOWS {since: 2019}]->(:User {name: 'Bob'}) RETURN n.name", resultHandler = (row, _) => {
       row.get("n.name") should be("Alice")
     }) should be(1)
-  }
-
-  test("Should not allow creation for normal user without write privilege") {
-    setupUserWithCustomRole()
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT NAME MANAGEMENT ON DATABASE * TO custom")
-
-    // WHEN & THEN
-    the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("joe", "soap", "CALL db.createLabel('Label')")
-    } should have message "Write operations are not allowed for user 'joe' with roles [custom]."
-
-    // WHEN & THEN
-    the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("joe", "soap", "CALL db.createRelationshipType('RelType')")
-    } should have message "Write operations are not allowed for user 'joe' with roles [custom]."
-
-    // WHEN & THEN
-    the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("joe", "soap", "CALL db.createProperty('prop')")
-    } should have message "Write operations are not allowed for user 'joe' with roles [custom]."
   }
 
   test("Should allow all creation for normal user with all database privileges") {

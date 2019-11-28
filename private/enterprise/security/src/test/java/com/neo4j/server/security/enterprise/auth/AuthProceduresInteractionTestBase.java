@@ -808,7 +808,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
 
         assertFail( noneSubject, "CALL test.numNodes", ACCESS_DENIED );
         assertFail( readSubject, "CALL test.allowedWriteProcedure",
-                "Write operations are not allowed for user 'readSubject' with roles [reader]." );
+                "Write operations are not allowed for user 'readSubject' with roles [reader] restricted to TOKEN_WRITE." );
         assertFail( writeSubject, "CALL test.allowedSchemaProcedure",
                 "Schema operations are not allowed for user 'writeSubject' with roles [publisher]." );
         assertFail( mats, "CALL test.numNodes",
@@ -909,7 +909,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     {
         testSuccessfulRead( readSubject, 3 );
         testFailWrite( readSubject );
-        testFailTokenWrite( readSubject, WRITE_OPS_NOT_ALLOWED );
+        testFailTokenWrite( readSubject, CREATE_LABEL_OPS_NOT_ALLOWED );
         testFailSchema( readSubject );
         testFailCreateUser( readSubject, PERMISSION_DENIED );
         assertSystemCommandSuccess( readSubject, "ALTER CURRENT USER SET PASSWORD FROM '123' TO '321'" );

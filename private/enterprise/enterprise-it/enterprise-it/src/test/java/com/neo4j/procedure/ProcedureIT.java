@@ -835,7 +835,7 @@ public class ProcedureIT
         {
             QueryExecutionException exception =
                     assertThrows( QueryExecutionException.class, () -> tx.execute( "CALL com.neo4j.procedure.readOnlyCallingWriteProcedure" ).next() );
-            assertThat( exception.getMessage(), startsWith( "Write operations are not allowed" ) );
+            assertThat( exception.getMessage(), containsString( "Write operations are not allowed" ) );
         }
     }
 
@@ -1362,8 +1362,8 @@ public class ProcedureIT
         GraphDatabaseAPI gdapi = (GraphDatabaseAPI) db;
 
         // When
-        AuthorizationViolationException exception =
-                assertThrows( AuthorizationViolationException.class, () ->
+        QueryExecutionException exception =
+                assertThrows( QueryExecutionException.class, () ->
                 {
                     try ( Transaction tx = gdapi.beginTransaction( KernelTransaction.Type.explicit, AnonymousContext.read() ) )
                     {
