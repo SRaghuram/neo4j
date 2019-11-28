@@ -53,7 +53,7 @@ class UnknownDatabaseHandlerTest
     {
         channel.writeInbound( message );
         logProvider.assertAtLeastOnce( inLog( UnknownDatabaseHandler.class )
-                .warn( matchesAllOf( "database", databaseId.uuid().toString(), "does not exist" ) ) );
+                .warn( matchesAllOf( "database", databaseId.toString(), "does not exist" ) ) );
     }
 
     @Test
@@ -64,7 +64,7 @@ class UnknownDatabaseHandlerTest
         assertEquals( ResponseMessageType.ERROR, channel.readOutbound() );
         CatchupErrorResponse response = channel.readOutbound();
         assertEquals( CatchupResult.E_DATABASE_UNKNOWN, response.status() );
-        assertThat( response.message(), matchesAllOf( "database", databaseId.uuid().toString(), "does not exist" ) );
+        assertThat( response.message(), matchesAllOf( "database", databaseId.toString(), "does not exist" ) );
     }
 
     @Test

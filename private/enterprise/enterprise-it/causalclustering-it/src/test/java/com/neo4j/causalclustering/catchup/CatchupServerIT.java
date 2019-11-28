@@ -231,7 +231,7 @@ class CatchupServerIT
             Exception error = assertThrows( Exception.class, simpleCatchupClient::requestListOfFilesFromServer );
             assertThat( getRootCauseMessage( error ),
                     allOf(
-                            containsString( UNKNOWN_NAMED_DB_ID.databaseId().uuid().toString() ),
+                            containsString( UNKNOWN_NAMED_DB_ID.databaseId().toString() ),
                             containsString( "does not exist" ) ) );
         }
     }
@@ -262,7 +262,7 @@ class CatchupServerIT
             assertThat( getRootCauseMessage( error ),
                     allOf(
                             containsString( "database" ),
-                            containsString( namedDatabaseId.databaseId().uuid().toString() ),
+                            containsString( namedDatabaseId.databaseId().toString() ),
                             containsString( "is shutdown" ) ) );
         }
     }
@@ -282,7 +282,7 @@ class CatchupServerIT
             assertThat( getRootCauseMessage( error ),
                     allOf(
                             containsString( "database" ),
-                            containsString( namedDatabaseId.databaseId().uuid().toString() ),
+                            containsString( namedDatabaseId.databaseId().toString() ),
                             containsString( "is unavailable" ) ) );
         }
     }

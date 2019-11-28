@@ -8,38 +8,33 @@ package com.neo4j.causalclustering.identity;
 import com.neo4j.causalclustering.core.state.storage.SafeStateMarshal;
 
 import java.io.IOException;
-import java.io.Serializable;
 import java.util.Objects;
 import java.util.UUID;
 
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
+import org.neo4j.util.Id;
 
 import static java.lang.String.format;
 
-public class MemberId implements Serializable
+public class MemberId
 {
-    private static final long serialVersionUID = -984540169345015775L;
-    private final UUID uuid;
-    // for serialization compatibility with previous versions this field should not be removed.
-    @SuppressWarnings( {"unused", "FieldMayBeStatic"} )
-    private final String shortName = "";
+    private final Id id;
 
     public MemberId( UUID uuid )
     {
-        Objects.requireNonNull( uuid );
-        this.uuid = uuid;
+        id = new Id( uuid );
     }
 
     public UUID getUuid()
     {
-        return uuid;
+        return id.uuid();
     }
 
     @Override
     public String toString()
     {
-        return format( "MemberId{%s}", uuid.toString().substring( 0, 8 ) );
+        return format( "MemberId{%s}", id );
     }
 
     @Override
@@ -55,13 +50,13 @@ public class MemberId implements Serializable
         }
 
         MemberId that = (MemberId) o;
-        return Objects.equals( uuid, that.uuid );
+        return Objects.equals( id, that.id );
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash( uuid );
+        return Objects.hashCode( id );
     }
 
     /**
@@ -85,8 +80,8 @@ public class MemberId implements Serializable
             else
             {
                 channel.put( (byte) 1 );
-                channel.putLong( memberId.uuid.getMostSignificantBits() );
-                channel.putLong( memberId.uuid.getLeastSignificantBits() );
+                channel.putLong( memberId.getUuid().getMostSignificantBits() );
+                channel.putLong( memberId.getUuid().getLeastSignificantBits() );
             }
         }
 

@@ -60,27 +60,27 @@ class UnavailableDatabaseHandlerTest
     @Test
     void shouldLogWarningWhenUnavailable()
     {
-        testLogWarning( "database", databaseId.uuid().toString(), "unavailable" );
+        testLogWarning( "database", databaseId.toString(), "unavailable" );
     }
 
     @Test
     void shouldLogWarningWhenShutdown()
     {
         when( availabilityGuard.isShutdown() ).thenReturn( true );
-        testLogWarning( "database", databaseId.uuid().toString(), "shutdown" );
+        testLogWarning( "database", databaseId.toString(), "shutdown" );
     }
 
     @Test
     void shouldWriteErrorResponseWhenUnavailable()
     {
-        testErrorResponse( "database", databaseId.uuid().toString(), "unavailable" );
+        testErrorResponse( "database", databaseId.toString(), "unavailable" );
     }
 
     @Test
     void shouldWriteErrorResponseWhenShutdown()
     {
         when( availabilityGuard.isShutdown() ).thenReturn( true );
-        testErrorResponse( "database", databaseId.uuid().toString(), "shutdown" );
+        testErrorResponse( "database", databaseId.toString(), "shutdown" );
     }
 
     @Test
