@@ -25,6 +25,7 @@ import org.neo4j.cypher.internal.procs._
 import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.security.{SecureHasher, SystemGraphCredential}
 import org.neo4j.cypher.internal.v4_0.ast
+import org.neo4j.cypher.internal.v4_0.ast.{AllGraphsScope, NamedGraphScope}
 import org.neo4j.cypher.internal.v4_0.util.InputPosition
 import org.neo4j.dbms.api.{DatabaseExistsException, DatabaseLimitReachedException, DatabaseNotFoundException}
 import org.neo4j.exceptions.{CantCompileQueryException, DatabaseAdministrationException, InternalException}
@@ -35,7 +36,7 @@ import org.neo4j.kernel.api.exceptions.{InvalidArgumentsException, Status}
 import org.neo4j.kernel.impl.store.format.standard.Standard
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable._
-import org.neo4j.values.virtual.VirtualValues
+import org.neo4j.values.virtual.{ListValue, VirtualValues}
 
 import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
@@ -317,6 +318,43 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       val dbmsAction = AdminActionMapper.asKernelAction(action).toString
       makeRevokeExecutionPlan(dbmsAction, ast.DatabaseResource()(InputPosition.NONE), ast.AllGraphsScope()(InputPosition.NONE), ast.AllQualifier()(InputPosition.NONE), roleName, revokeType,
         source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), s"Failed to revoke dbms privilege from role '$roleName'")
+
+    case AssertValidRevoke(source, action, scope, roleName) => (context, parameterMapping, securityContext) =>
+      val (dbPredicate, dbValue) = scope match {
+        case AllGraphsScope() => ("d:DatabaseAll", Values.of("*"))
+        case NamedGraphScope(database) => ("d.name = $database", Values.of(database))
+      }
+      val query =
+        s"""
+           |MATCH (r:Role)-[g]->(p:Privilege)-[:SCOPE]->(s:Segment)-[:FOR]->(d)
+           |WHERE r.name = $$grantee AND $dbPredicate
+           |RETURN collect(p.action) as actions
+        """.stripMargin
+
+      val grantee = Values.of(roleName)
+      val privilegeAction = AdminActionMapper.asKernelAction(action)
+      UpdatingSystemCommandExecutionPlan("AssertValidRevoke", normalExecutionEngine, query, VirtualValues.map(Array("grantee", "database"), Array(grantee, dbValue)),
+        queryHandler = QueryHandler.handleResult((i, value) => {
+          value match {
+            case l: ListValue =>
+              l.asArray().foldLeft(Option.empty[Throwable]) {
+                case (Some(t), _) => Some(t)
+                case (None, s: StringValue) =>
+                  PrivilegeAction.from(s.stringValue()) match {
+                    case null => Some(new IllegalStateException(s"Unknown assigned action in AssertValidRevoke: ${s.stringValue()}"))
+                    case assignedAction if assignedAction == privilegeAction => None
+                    case assignedAction if assignedAction.satisfies(privilegeAction) =>
+                      val assigned = AdminActionMapper.asCypherAdminAction(assignedAction)
+                      Some(new IllegalStateException(s"Unsupported to revoke a sub-privilege '${action.name}' from a compound privilege '${assigned.name}', consider using DENY instead."))
+                    case _ => None
+                  }
+                case (None, v) => Some(new IllegalStateException(s"Unexpected result type from AssertValidRevoke: ${v.getTypeName}"))
+              }
+            case _ =>
+              Some(new IllegalStateException(s"Unexpected result type from AssertValidRevoke: ${value.getTypeName}"))
+          }
+        }),
+        source = source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)))
 
     // GRANT/DENY/REVOKE ACCESS ON DATABASE foo TO role
     case GrantDatabaseAction(source, action, database, roleName) => (context, parameterMapping, securityContext) =>

@@ -139,6 +139,14 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       createIndex().database("bar").role("role").map,
       dropIndex().database("bar").role("role").map
     ))
+
+    // WHEN
+    execute("REVOKE INDEX MANAGEMENT ON DATABASE bar FROM role")
+    execute("REVOKE INDEX MANAGEMENT ON DATABASE foo FROM role")
+    execute("REVOKE INDEX MANAGEMENT ON DATABASE * FROM role")
+
+    // THEN
+    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set.empty)
   }
 
   test("should list different constraint management privileges") {
@@ -197,6 +205,14 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       createConstraint().database("bar").role("role").map,
       dropConstraint().database("bar").role("role").map
     ))
+
+    // WHEN
+    execute("REVOKE CONSTRAINT MANAGEMENT ON DATABASE bar FROM role")
+    execute("REVOKE CONSTRAINT MANAGEMENT ON DATABASE foo FROM role")
+    execute("REVOKE CONSTRAINT MANAGEMENT ON DATABASE * FROM role")
+
+    // THEN
+    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set.empty)
   }
 
   test("should list different name management privileges") {
@@ -261,6 +277,14 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       createRelationshipType().database("bar").role("role").map,
       createPropertyKey().database("bar").role("role").map
     ))
+
+    // WHEN
+    execute("REVOKE NAME MANAGEMENT ON DATABASE bar FROM role")
+    execute("REVOKE NAME MANAGEMENT ON DATABASE foo FROM role")
+    execute("REVOKE NAME MANAGEMENT ON DATABASE * FROM role")
+
+    // THEN
+    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set.empty)
   }
 
   test("Should get correct privileges for combinations of schema and token write") {
@@ -447,94 +471,6 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
   }
 
-  test("Should revoke compound INDEX privileges from built-in roles") {
-    // Given
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom AS COPY OF admin")
-    val expected = defaultRolePrivilegesFor("admin", "custom")
-
-    // When && Then
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(expected)
-
-    // When
-    execute("REVOKE INDEX MANAGEMENT ON DATABASES * FROM custom")
-
-    // Then
-    val expectedWithoutIndexManagement = expected.filter(_ ("action") != PrivilegeAction.INDEX.toString)
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(expectedWithoutIndexManagement)
-
-    // Now add and revoke each sub-privilege in turn, checking also the compound revokes work on sub-privileges
-    Seq(
-      ("CREATE INDEX", "create_index"),
-      ("DROP INDEX", "drop_index")
-    ).foreach {
-      case (privilege, action) =>
-        Seq("INDEX MANAGEMENT", privilege).foreach {
-          revokePrivilege =>
-            // When
-            execute(s"GRANT $privilege ON DATABASES * TO custom")
-
-            // Then
-            val expectedWithPrivilege = expectedWithoutIndexManagement + grantToken().action(action).role("custom").map
-            withClue(s"After GRANT $privilege") {
-              execute("SHOW ROLE custom PRIVILEGES").toSet should be(expectedWithPrivilege)
-            }
-
-            // When
-            execute(s"REVOKE $revokePrivilege ON DATABASES * FROM custom")
-
-            // Then
-            withClue(s"After REVOKE $revokePrivilege") {
-              execute("SHOW ROLE custom PRIVILEGES").toSet should be(expectedWithoutIndexManagement)
-            }
-        }
-    }
-  }
-
-  test("Should revoke compound CONSTRAINT privileges from built-in roles") {
-    // Given
-    selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom AS COPY OF admin")
-    val expected = defaultRolePrivilegesFor("admin", "custom")
-
-    // When && Then
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(expected)
-
-    // When
-    execute("REVOKE CONSTRAINT MANAGEMENT ON DATABASES * FROM custom")
-
-    // Then
-    val expectedWithoutConstraintManagement = expected.filter(_ ("action") != PrivilegeAction.CONSTRAINT.toString)
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(expectedWithoutConstraintManagement)
-
-    // Now add and revoke each sub-privilege in turn, checking also the compound revokes work on sub-privileges
-    Seq(
-      ("CREATE CONSTRAINT", "create_constraint"),
-      ("DROP CONSTRAINT", "drop_constraint")
-    ).foreach {
-      case (privilege, action) =>
-        Seq("CONSTRAINT MANAGEMENT", privilege).foreach {
-          revokePrivilege =>
-            // When
-            execute(s"GRANT $privilege ON DATABASES * TO custom")
-
-            // Then
-            val expectedWithPrivilege = expectedWithoutConstraintManagement + grantToken().action(action).role("custom").map
-            withClue(s"After GRANT $privilege") {
-              execute("SHOW ROLE custom PRIVILEGES").toSet should be(expectedWithPrivilege)
-            }
-
-            // When
-            execute(s"REVOKE $revokePrivilege ON DATABASES * FROM custom")
-
-            // Then
-            withClue(s"After REVOKE $revokePrivilege") {
-              execute("SHOW ROLE custom PRIVILEGES").toSet should be(expectedWithoutConstraintManagement)
-            }
-        }
-    }
-  }
-
   test("Should revoke compound TOKEN privileges from built-in roles") {
     // Given
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -580,6 +516,35 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     }
   }
 
+  test("Should get sub-privileges when revoking compound and re-granting token privilege") {
+    // Given
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom AS COPY OF publisher")
+    execute("REVOKE READ {*} ON GRAPH * FROM custom")
+    execute("REVOKE TRAVERSE ON GRAPH * FROM custom")
+    execute("REVOKE WRITE ON GRAPH * FROM custom")
+    execute("REVOKE ACCESS ON DATABASE * FROM custom")
+
+    // Role have compound token privilege
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantToken().role("custom").map))
+
+    // When: revoking
+    execute("REVOKE NAME MANAGEMENT ON DATABASES * FROM custom")
+
+    // Then: role has no privileges
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
+
+    // When: granting
+    execute("GRANT NAME MANAGEMENT ON DATABASES * TO custom")
+
+    // Then: role has the sub-privileges
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      createNodeLabel().role("custom").map,
+      createRelationshipType().role("custom").map,
+      createPropertyKey().role("custom").map
+    ))
+  }
+
   test("Should revoke compound ALL DATABASE privileges from built-in roles") {
     // Given
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -593,6 +558,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     execute("REVOKE ALL DATABASE PRIVILEGES ON DATABASES * FROM custom")
 
     // Then
+    // TODO: The START/STOP are not correctly revoked yet, but this requires more complex work
     val expectedWithoutAllDatabasePrivileges = expected.filter(a => PrivilegeAction.from(a("action").toString) match {
       case PrivilegeAction.SCHEMA => false
       case PrivilegeAction.TOKEN => false
@@ -611,14 +577,11 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       ("CREATE CONSTRAINT", Seq("create_constraint")),
       ("DROP CONSTRAINT", Seq("drop_constraint")),
       ("CONSTRAINT MANAGEMENT", Seq("create_constraint", "drop_constraint")),
-//      ("SCHEMA MANAGEMENT", Seq("create_index", "drop_index", "create_constraint", "drop_constraint")), // TODO: This would be nice to have but there is no syntax for it
       ("CREATE NEW NODE LABEL", Seq("create_label")),
       ("CREATE NEW RELATIONSHIP TYPE", Seq("create_reltype")),
       ("CREATE NEW PROPERTY NAME", Seq("create_propertykey")),
       ("NAME MANAGEMENT", Seq("create_label", "create_reltype", "create_propertykey")),
-      ("ACCESS", Seq("access")),
-      ("START", Seq("start_database")),
-      ("STOP", Seq("stop_database"))
+      ("ACCESS", Seq("access"))
     ).foreach {
       case (privilege, actions) =>
         Seq("ALL DATABASE PRIVILEGES", privilege).foreach {
@@ -640,6 +603,86 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
               execute("SHOW ROLE custom PRIVILEGES").toSet should be(expectedWithoutAllDatabasePrivileges)
             }
         }
+    }
+  }
+
+  test("Should get error when revoking a subset of a compound admin privilege") {
+    // Given
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom AS COPY OF admin")
+    execute("REVOKE READ {*} ON GRAPH * FROM custom")
+    execute("REVOKE TRAVERSE ON GRAPH * FROM custom")
+    execute("REVOKE WRITE ON GRAPH * FROM custom")
+    execute("REVOKE ACCESS ON DATABASE * FROM custom")
+    execute("REVOKE ALL ON DATABASE * FROM custom")
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantAdmin().role("custom").map))
+
+    // Now try to revoke each sub-privilege (that we have syntax for) in turn
+    Seq(
+      ("CREATE ROLE ON DBMS", "CREATE ROLE"),
+      ("DROP ROLE ON DBMS", "DROP ROLE"),
+      ("SHOW ROLE ON DBMS", "SHOW ROLE"),
+      ("ASSIGN ROLE ON DBMS", "ASSIGN ROLE"),
+      ("REMOVE ROLE ON DBMS", "REMOVE ROLE"),
+      ("ROLE MANAGEMENT ON DBMS", "ROLE MANAGEMENT"),
+      ("START ON DATABASES *", "START"),
+      ("STOP ON DATABASES *", "STOP"),
+    ).foreach {
+      case (queryPart, privilege) =>
+        // When && Then
+        the[IllegalStateException] thrownBy {
+          execute(s"REVOKE $queryPart FROM custom")
+        } should have message s"Unsupported to revoke a sub-privilege '$privilege' from a compound privilege 'ALL ADMIN PRIVILEGES', consider using DENY instead."
+    }
+  }
+
+  test("Should get error when revoking a subset of a compound token privilege") {
+    // Given
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom AS COPY OF publisher")
+    execute("REVOKE READ {*} ON GRAPH * FROM custom")
+    execute("REVOKE TRAVERSE ON GRAPH * FROM custom")
+    execute("REVOKE WRITE ON GRAPH * FROM custom")
+    execute("REVOKE ACCESS ON DATABASE * FROM custom")
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantToken().role("custom").map))
+
+    // Now try to revoke each sub-privilege in turn
+    Seq(
+      "CREATE NEW NODE LABEL",
+      "CREATE NEW RELATIONSHIP TYPE",
+      "CREATE NEW PROPERTY NAME"
+    ).foreach { privilege =>
+      // When && Then
+      the[IllegalStateException] thrownBy {
+        execute(s"REVOKE $privilege ON DATABASE * FROM custom")
+      } should have message s"Unsupported to revoke a sub-privilege '$privilege' from a compound privilege 'NAME MANAGEMENT', consider using DENY instead."
+    }
+  }
+
+  test("Should get error when revoking a subset of a compound schema privilege") {
+    // Given
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom AS COPY OF admin")
+    execute("REVOKE READ {*} ON GRAPH * FROM custom")
+    execute("REVOKE TRAVERSE ON GRAPH * FROM custom")
+    execute("REVOKE WRITE ON GRAPH * FROM custom")
+    execute("REVOKE ACCESS ON DATABASE * FROM custom")
+    execute("REVOKE NAME MANAGEMENT ON DATABASE * FROM custom")
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantAdmin().role("custom").map, grantSchema().role("custom").map))
+
+    // Now try to revoke each sub-privilege in turn
+    Seq(
+      "CREATE INDEX",
+      "DROP INDEX",
+      "INDEX MANAGEMENT",
+      "CREATE CONSTRAINT",
+      "DROP CONSTRAINT",
+      "CONSTRAINT MANAGEMENT"
+    ).foreach { privilege =>
+      // When && Then
+      the[IllegalStateException] thrownBy {
+        execute(s"REVOKE $privilege ON DATABASE * FROM custom")
+      } should have message s"Unsupported to revoke a sub-privilege '$privilege' from a compound privilege 'SCHEMA MANAGEMENT', consider using DENY instead."
     }
   }
 
