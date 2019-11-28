@@ -511,17 +511,17 @@ class FuseOperators(operatorFactory: OperatorFactory,
                                                   missingTypes.toArray)(expressionCompiler)
               case ExpandInto =>
                 new ExpandIntoOperatorTaskTemplate(acc.template,
-                                                  plan.id,
-                                                  innermostTemplate,
-                                                  plan eq headPlan,
-                                                  fromSlot,
-                                                  relOffset,
-                                                  toSlot,
-                                                  dir,
-                                                  typeTokens.toArray,
-                                                  missingTypes.toArray)(expressionCompiler)
+                                                   plan.id,
+                                                   innermostTemplate,
+                                                   plan eq headPlan,
+                                                   fromSlot,
+                                                   relName,
+                                                   relOffset,
+                                                   toSlot,
+                                                   dir,
+                                                   typeTokens.toArray,
+                                                   missingTypes.toArray)(expressionCompiler)
             }
-
 
             acc.copy(
               template = newTemplate,
