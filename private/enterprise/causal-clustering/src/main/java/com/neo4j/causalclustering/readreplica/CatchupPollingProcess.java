@@ -36,7 +36,6 @@ import static com.neo4j.causalclustering.readreplica.CatchupPollingProcess.State
 import static com.neo4j.causalclustering.readreplica.CatchupPollingProcess.State.PANIC;
 import static com.neo4j.causalclustering.readreplica.CatchupPollingProcess.State.STORE_COPYING;
 import static com.neo4j.causalclustering.readreplica.CatchupPollingProcess.State.TX_PULLING;
-import static java.lang.String.format;
 import static org.neo4j.util.Preconditions.checkState;
 
 /**
@@ -66,7 +65,6 @@ public class CatchupPollingProcess extends LifecycleAdapter
 
     private volatile State state = TX_PULLING;
     private CompletableFuture<Boolean> upToDateFuture; // we are up-to-date when we are successfully pulling
-    private volatile long latestTxIdOfUpStream;
     private StoreCopyHandle storeCopyHandle;
 
     CatchupPollingProcess( Executor executor, ReadReplicaDatabaseContext databaseContext, CatchupClientFactory catchUpClient, BatchingTxApplier applier,
@@ -149,18 +147,6 @@ public class CatchupPollingProcess extends LifecycleAdapter
         } );
     }
 
-    String describeState()
-    {
-        if ( state == TX_PULLING && applier.lastQueuedTxId() > 0 && latestTxIdOfUpStream > 0 )
-        {
-            return format( "%s is %s (%d of %d)", databaseContext.databaseId(), TX_PULLING.name(), applier.lastQueuedTxId(), latestTxIdOfUpStream );
-        }
-        else
-        {
-            return String.format( "%s is %s", databaseContext.databaseId(), state.name() );
-        }
-    }
-
     private synchronized void panic( Throwable e )
     {
         upToDateFuture.completeExceptionally( e );
@@ -183,13 +169,7 @@ public class CatchupPollingProcess extends LifecycleAdapter
 
         StoreId localStoreId = databaseContext.storeId();
 
-        boolean moreToPull = true;
-        int batchCount = 1;
-        while ( moreToPull )
-        {
-            moreToPull = pullAndApplyBatchOfTransactions( address, batchCount, localStoreId );
-            batchCount++;
-        }
+        pullAndApplyTransactions( address, localStoreId );
     }
 
     private synchronized void handleTransaction( CommittedTransactionRepresentation tx )
@@ -226,11 +206,11 @@ public class CatchupPollingProcess extends LifecycleAdapter
         }
     }
 
-    private boolean pullAndApplyBatchOfTransactions( SocketAddress address, int batchCount, StoreId localStoreId )
+    private void pullAndApplyTransactions( SocketAddress address, StoreId localStoreId )
     {
         long lastQueuedTxId = applier.lastQueuedTxId();
         pullRequestMonitor.txPullRequest( lastQueuedTxId );
-        log.debug( "Pull transactions from %s where tx id > %d [batch #%d]", address, lastQueuedTxId, batchCount );
+        log.debug( "Pull transactions from %s where tx id > %d", address, lastQueuedTxId );
 
         CatchupResponseAdaptor<TxStreamFinishedResponse> responseHandler = new CatchupResponseAdaptor<>()
         {
@@ -268,24 +248,22 @@ public class CatchupPollingProcess extends LifecycleAdapter
         {
             log.warn( "Exception occurred while pulling transactions. Will retry shortly.", e );
             streamComplete();
-            return false;
+            return;
         }
-
-        latestTxIdOfUpStream = result.lastTxId();
 
         switch ( result.status() )
         {
         case SUCCESS_END_OF_STREAM:
             log.debug( "Successfully pulled transactions from tx id %d. Completing the up-to-date future %s", lastQueuedTxId, upToDateFuture );
             upToDateFuture.complete( Boolean.TRUE );
-            return false;
+            break;
         case E_TRANSACTION_PRUNED:
             log.info( "Tx pull unable to get transactions starting from %d since transactions have been pruned. Attempting a store copy.", lastQueuedTxId );
             transitionToStoreCopy();
-            return false;
+            break;
         default:
             log.info( "Tx pull request unable to get transactions > %d ", lastQueuedTxId );
-            return false;
+            break;
         }
     }
 
@@ -337,7 +315,6 @@ public class CatchupPollingProcess extends LifecycleAdapter
         storeCopyHandle = null;
         handle.release();
 
-        latestTxIdOfUpStream = 0; // we will find out on the next pull request response
         applier.refreshFromNewStore();
     }
 }
