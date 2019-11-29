@@ -327,9 +327,8 @@ class RunWorkloadCommandIT
         }
     }
 
-    private Path getNeo4jDir()
+    private String getNeo4jDir()
     {
-        String neo4jDirString = System.getenv( "NEO4J_DIR" );
-        return Paths.get( Objects.requireNonNull( neo4jDirString ) );
+        return System.getenv( "NEO4J_DIR" );
     }
 }

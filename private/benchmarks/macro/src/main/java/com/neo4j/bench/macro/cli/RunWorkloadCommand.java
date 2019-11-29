@@ -127,6 +127,7 @@ public class RunWorkloadCommand extends BaseRunWorkloadCommand
         }
 
         Neo4jDeployment neo4jDeployment = Neo4jDeployment.from( params.deployment() );
+        params.deployment().assertExists();
         Jvm jvm = Jvm.bestEffortOrFail( params.jvm() );
 
         try ( Resources resources = new Resources( workDir.toPath() ) )

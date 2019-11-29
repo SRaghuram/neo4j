@@ -5,18 +5,20 @@
  */
 package com.neo4j.bench.infra;
 
+import com.neo4j.bench.common.util.JsonUtil;
 import org.apache.commons.io.filefilter.NameFileFilter;
 import org.apache.commons.io.filefilter.TrueFileFilter;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -42,10 +44,10 @@ public class WorkspaceTest
         // when
         Workspace workspace = Workspace.create( workspaceBaseDir )
                                        .withArtifacts(
-                                               Paths.get( "benchmark-infra-scheduler.jar" ),
-                                               Paths.get( "neo4j-enterprise-3.3.10-unix.tar.gz" ),
-                                               Paths.get( "macro/target/macro.jar" ),
-                                               Paths.get( "macro/run-report-benchmark.sh" )
+                                               "benchmark-infra-scheduler.jar",
+                                               "neo4j-enterprise-3.3.10-unix.tar.gz",
+                                               "macro/target/macro.jar",
+                                               "macro/run-report-benchmark.sh"
                                        ).build();
         // then
         assertNotNull( workspace );
@@ -64,10 +66,10 @@ public class WorkspaceTest
         {
             Workspace.create( workspaceBaseDir )
                      .withArtifacts(
-                             Paths.get( "benchmark-infra-scheduler.jar" ),
-                             Paths.get( "neo4j-enterprise-3.3.10-unix.tar.gz" ),
-                             Paths.get( "macro/target/macro.jar" ),
-                             Paths.get( "macro/run-report-benchmark.sh" )
+                             "benchmark-infra-scheduler.jar",
+                             "neo4j-enterprise-3.3.10-unix.tar.gz",
+                             "macro/target/macro.jar",
+                             "macro/run-report-benchmark.sh"
                      ).build();
         } );
     }
@@ -103,9 +105,29 @@ public class WorkspaceTest
         Files.createFile( workspaceBaseDir.resolve( "benchmark-infra-scheduler.jar" ) );
         Workspace workspace = Workspace.create( workspaceBaseDir )
                                        .withArtifacts(
-                                               Paths.get( "benchmark-infra-scheduler.jar" )
+                                                "benchmark-infra-scheduler.jar"
                                        ).build();
         // when
         Path path = workspace.get( "artifact.jar" );
+    }
+
+    @Test
+    public void shouldSerializeAndDeserializerWorkspace() throws IOException
+    {
+        // given
+        Path workspaceBaseDir = temporaryFolder.newFolder().toPath();
+        // macro workspace structure
+        Files.createFile( workspaceBaseDir.resolve( "neo4j-enterprise-3.3.10-unix.tar.gz" ) );
+        Files.createDirectories( workspaceBaseDir.resolve( "macro" ) );
+        Files.createFile( workspaceBaseDir.resolve( "macro/run-report-benchmark.sh" ) );
+        Workspace workspace = Workspace.create( workspaceBaseDir )
+                                       .withArtifacts(
+                                               "neo4j-enterprise-3.3.10-unix.tar.gz",
+                                               "macro/run-report-benchmark.sh"
+                                                     ).build();
+        // when
+        String json = JsonUtil.serializeJson( workspace );
+        // then
+        assertThat( JsonUtil.deserializeJson( json, Workspace.class ).allArtifacts(), equalTo( workspace.allArtifacts() ) );
     }
 }

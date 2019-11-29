@@ -8,10 +8,12 @@ package com.neo4j.bench.infra.macro;
 import com.google.common.collect.Lists;
 import com.neo4j.bench.common.options.Version;
 import com.neo4j.bench.common.profiling.ProfilerType;
+import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.tool.macro.RunWorkloadParams;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.infra.BenchmarkingToolRunner;
 import com.neo4j.bench.infra.Dataset;
+import com.neo4j.bench.infra.Extractor;
 import com.neo4j.bench.infra.InfraParams;
 import com.neo4j.bench.infra.Workspace;
 import com.neo4j.bench.infra.aws.AWSS3ArtifactStorage;
@@ -26,6 +28,7 @@ import java.nio.file.attribute.PosixFilePermissions;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.neo4j.bench.common.tool.macro.DeploymentModes.SERVER;
 import static java.lang.String.format;
 import static java.lang.String.join;
 
@@ -65,6 +68,13 @@ public class MacroToolRunner implements BenchmarkingToolRunner<RunWorkloadParams
         Path storeDir = macroDir.resolve( infraParams.storeName() );
         Path resultsJson = workDir.resolve( "results.json" );
 
+        // Unzip the neo4jJar
+        if ( SERVER.equals( runWorkloadParams.deployment().deploymentModes() ) )
+        {
+            Deployment.Server server = (Deployment.Server) runWorkloadParams.deployment();
+            Path neo4jTar = Workspace.findNeo4jArchive( server.path().toString(), workspacePath );
+            Extractor.extract( workspacePath.resolve( macroDir ), Files.newInputStream( neo4jTar ) );
+        }
             /*
             At this point the workspace looks as follow:
 
@@ -73,6 +83,7 @@ public class MacroToolRunner implements BenchmarkingToolRunner<RunWorkloadParams
                     benchmark-infra-scheduler.jar
                     neo4j-{edition}-{version}-unix.tar.gz
                     macro/
+                        neo4j-{edition}-{version}/
                         run-report-benchmarks.sh
                         {store_name}/
                             graph.db/

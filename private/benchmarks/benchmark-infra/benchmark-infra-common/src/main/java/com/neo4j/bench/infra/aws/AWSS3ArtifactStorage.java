@@ -163,7 +163,7 @@ public class AWSS3ArtifactStorage implements ArtifactStorage
                 Files.createDirectories( absoluteArtifact.getParent() );
                 LOG.info( "copying build artifact {} into {}", key, absoluteArtifact );
                 Files.copy( s3Object.getObjectContent(), absoluteArtifact, StandardCopyOption.REPLACE_EXISTING );
-                builder.withArtifacts( Paths.get( relativeArtifact ) );
+                builder.withArtifacts( baseDir.relativize( absoluteArtifact ).toString() );
             }
             return builder.build();
         }

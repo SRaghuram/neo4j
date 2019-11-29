@@ -34,19 +34,21 @@ import static java.lang.String.format;
 public class Workspace
 {
     public static final String JOB_PARAMETERS_JSON = "job-parameters.json";
+    public static final String WORKSPACE_STRUCTURE_JSON = "workspace-structure.json";
 
     public static Workspace defaultMacroWorkspace( Path workspaceDir, Version neo4jVersion, Edition neo4jEdition )
     {
         return Workspace
-                .create( workspaceDir.toAbsolutePath() )
+                .create( workspaceDir )
                 .withArtifacts(
                         // required artifacts
-                        Paths.get( "neo4j.conf" ),
-                        Paths.get( "benchmark-infra-worker.jar" ),
-                        Paths.get( format( "neo4j-%s-%s-unix.tar.gz", neo4jEdition.name().toLowerCase(), neo4jVersion.fullVersion() ) ),
-                        Paths.get( "macro/target/macro.jar" ),
-                        Paths.get( "macro/run-report-benchmarks.sh" ),
-                        Paths.get( JOB_PARAMETERS_JSON )
+                        "neo4j.conf",
+                        "benchmark-infra-worker.jar",
+                        format( "neo4j-%s-%s-unix.tar.gz", neo4jEdition.name().toLowerCase(), neo4jVersion.fullVersion() ),
+                        "macro/target/macro.jar",
+                        "macro/run-report-benchmarks.sh",
+                        JOB_PARAMETERS_JSON,
+                        WORKSPACE_STRUCTURE_JSON
                 ).build();
     }
 
@@ -55,29 +57,50 @@ public class Workspace
         return Workspace.create( workspacePath )
                         .withArtifacts(
                                 // required artifacts
-                                Paths.get( "neo4j.conf" ),
-                                Paths.get( "benchmark-infra-worker.jar" ),
-                                Paths.get( "micro/target/micro-benchmarks.jar" ),
-                                Paths.get( "run-report-benchmarks.sh" ),
-                                Paths.get( "micro.config" ),
-                                Paths.get( JOB_PARAMETERS_JSON ) )
+                                "neo4j.conf",
+                                "benchmark-infra-worker.jar",
+                                "micro/target/micro-benchmarks.jar",
+                                "run-report-benchmarks.sh",
+                                "micro.config",
+                                JOB_PARAMETERS_JSON )
                         .build();
+    }
+
+    public static Workspace defaultMacroServerWorkspace( Path workspaceDir, String neo4jPath )
+    {
+        return Workspace
+                .create( workspaceDir )
+                .withArtifacts(
+                        // required artifacts
+                        "neo4j.conf",
+                        "benchmark-infra-worker.jar",
+                        format( "%s-unix.tar.gz", neo4jPath ),
+                        "macro/target/macro.jar",
+                        "macro/run-report-benchmarks.sh",
+                        JOB_PARAMETERS_JSON,
+                        WORKSPACE_STRUCTURE_JSON
+                              ).build();
     }
 
     public static void assertMacroWorkspace( Workspace artifactsWorkspace, Version neo4jVersion, Edition neo4jEdition )
     {
         Workspace defaultMacroWorkspace = defaultMacroWorkspace( artifactsWorkspace.baseDir, neo4jVersion, neo4jEdition );
+        assertWorkspaceAreEqual( defaultMacroWorkspace, artifactsWorkspace );
+    }
 
-        if ( !artifactsWorkspace.allArtifacts.containsAll( defaultMacroWorkspace.allArtifacts ) )
+    public static void assertWorkspaceAreEqual( Workspace original, Workspace newWorkspace )
+    {
+        if ( !newWorkspace.allArtifacts.containsAll( original.allArtifacts ) )
         {
-            throw new IllegalArgumentException( "workspace doesn't contain all required paths" );
+            throw new IllegalArgumentException( String.format( "workspace doesn't contain all required paths. Expected: %s But got: %s", original.allArtifacts,
+                                                               newWorkspace.allArtifacts ) );
         }
     }
 
     public Path get( String workspacePath )
     {
         Path path = baseDir.resolve( Paths.get( workspacePath ) );
-        if ( !allArtifacts.contains( path ) )
+        if ( !allArtifacts.contains( workspacePath ) )
         {
             throw new RuntimeException( format( "path %s not found in workspace %s", workspacePath, baseDir ) );
         }
@@ -87,7 +110,7 @@ public class Workspace
     public static class Builder
     {
         private final Path baseDir;
-        private final List<Path> artifacts = new ArrayList<>();
+        private final List<String> artifacts = new ArrayList<>();
         private FileFilter fileFilter;
 
         private Builder( Path baseDir )
@@ -95,7 +118,7 @@ public class Workspace
             this.baseDir = baseDir;
         }
 
-        public Builder withArtifacts( Path... artifacts )
+        public Builder withArtifacts( String... artifacts )
         {
             Objects.requireNonNull( artifacts, "build artifacts cannot be null" );
             this.artifacts.addAll( Arrays.asList( artifacts ) );
@@ -113,7 +136,6 @@ public class Workspace
         {
             List<Path> allArtifacts = artifacts.stream()
                                                .map( baseDir::resolve )
-                                               .map( Path::toAbsolutePath )
                                                .collect( Collectors.toList() );
 
             List<Path> invalidArtifacts = allArtifacts.stream()
@@ -139,8 +161,9 @@ public class Workspace
                     throw new UncheckedIOException( e );
                 }
             }
-
-            return new Workspace( baseDir, allArtifacts );
+            return new Workspace( baseDir, allArtifacts.stream()
+                                                       .map( baseDir::relativize )
+                                                       .map( Path::toString ).collect( Collectors.toList() ) );
         }
 
         private static class FilteringFileVisitor extends SimpleFileVisitor<Path>
@@ -179,12 +202,33 @@ public class Workspace
     }
 
     private final Path baseDir;
-    private final List<Path> allArtifacts;
+    private final List<String> allArtifacts;
 
-    private Workspace( Path baseDir, List<Path> allArtifacts )
+    private Workspace( Path baseDir, List<String> allArtifacts )
     {
         this.baseDir = baseDir;
         this.allArtifacts = allArtifacts;
+    }
+
+    /**
+     * WARNING: Never call this explicitly.
+     * No-params constructor is only used for JSON (de)serialization.
+     */
+    public Workspace()
+    {
+        this( null, null );
+    }
+
+    public static Path findNeo4jArchive( String tarName, Path workspaceDir )
+    {
+        String[] neo4jTars = workspaceDir.toFile().list( ( dir, name ) -> name.contains( tarName ) );
+        if ( neo4jTars.length != 1 )
+        {
+            throw new RuntimeException(
+                    format( "Found the wrong number of neo4j tar.gz only expect one but found %s at %s", neo4jTars.length,
+                            Arrays.toString( neo4jTars ) ) );
+        }
+        return workspaceDir.resolve( neo4jTars[0] );
     }
 
     /**
@@ -205,6 +249,6 @@ public class Workspace
      */
     public List<Path> allArtifacts()
     {
-        return allArtifacts;
+        return allArtifacts.stream().map( baseDir::resolve ).collect( Collectors.toList() );
     }
 }

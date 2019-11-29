@@ -11,7 +11,10 @@ import com.github.rvesse.airline.annotations.OptionType;
 import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.neo4j.bench.common.results.ErrorReportingPolicy;
 import com.neo4j.bench.common.tool.macro.BaseRunWorkloadCommand;
+import com.neo4j.bench.common.tool.macro.Deployment;
+import com.neo4j.bench.common.tool.macro.DeploymentModes;
 import com.neo4j.bench.common.tool.macro.RunWorkloadParams;
+import com.neo4j.bench.common.util.JsonUtil;
 import com.neo4j.bench.infra.ArtifactStoreException;
 import com.neo4j.bench.infra.BenchmarkingEnvironment;
 import com.neo4j.bench.infra.BenchmarkingTool;
@@ -167,13 +170,24 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
                                                          new BenchmarkingTool<>( MacroToolRunner.class, runWorkloadParams ) ) );
             Path workspacePath = workspaceDir.toPath();
             Files.write( workspacePath.resolve( Workspace.JOB_PARAMETERS_JSON ), jobParams.toJson().getBytes( StandardCharsets.UTF_8 ) );
-
-            Workspace workspace = Workspace.defaultMacroWorkspace( workspacePath,
-                                                                   runWorkloadParams.neo4jVersion(),
-                                                                   runWorkloadParams.neo4jEdition()
-            );
-
+            Path workspaceJson = workspacePath.resolve( Workspace.WORKSPACE_STRUCTURE_JSON );
+            Files.createFile( workspaceJson );
+            Workspace workspace = null;
+            if ( runWorkloadParams.deployment().deploymentModes().equals( DeploymentModes.SERVER ) )
+            {
+                Deployment.Server server = (Deployment.Server) runWorkloadParams.deployment();
+                workspace = Workspace.defaultMacroServerWorkspace( workspacePath, server.path().toString() );
+            }
+            else
+            {
+                //We we to update this to better support the -FOR-BENCHMARKING
+                workspace = Workspace.defaultMacroWorkspace( workspacePath,
+                                                             runWorkloadParams.neo4jVersion(),
+                                                             runWorkloadParams.neo4jEdition()
+                                                           );
+            }
             AWSS3ArtifactStorage artifactStorage = AWSS3ArtifactStorage.getAWSS3ArtifactStorage( infraParams );
+            JsonUtil.serializeJson( workspaceJson, workspace );
 
             URI artifactBaseURI = infraParams.artifactBaseUri();
             artifactStorage.uploadBuildArtifacts( artifactBaseURI, workspace );

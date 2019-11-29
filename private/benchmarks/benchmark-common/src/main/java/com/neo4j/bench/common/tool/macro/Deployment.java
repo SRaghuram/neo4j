@@ -16,17 +16,23 @@ import static java.lang.String.format;
 
 public abstract class Deployment implements DeploymentMode
 {
+    protected static DeploymentModes mode;
+
+    public Deployment( DeploymentModes mode )
+    {
+        this.mode = mode;
+    }
+
     public static Deployment parse( String value )
     {
-        if ( value.toUpperCase().equals( Embedded.NAME ) )
+        if ( value.toUpperCase().equals( DeploymentModes.EMBEDDED.name() ) )
         {
             return new Embedded();
         }
         else if ( value.toUpperCase().startsWith( Server.VALUE_PREFIX ) )
         {
             String neo4jDirString = value.substring( Server.VALUE_PREFIX.length() );
-            Path neo4jDir = Paths.get( neo4jDirString );
-            return server( neo4jDir );
+            return server( neo4jDirString );
         }
         else
         {
@@ -34,11 +40,22 @@ public abstract class Deployment implements DeploymentMode
         }
     }
 
-    public static Deployment server( Path neo4jDir )
+    public DeploymentModes deploymentModes()
     {
-        BenchmarkUtil.assertDirectoryExists( neo4jDir );
+        return mode;
+    }
+
+    public String name()
+    {
+        return mode.name();
+    }
+
+    public static Deployment server( String neo4jDir )
+    {
         return new Server( neo4jDir );
     }
+
+    public abstract void assertExists();
 
     public static Deployment embedded()
     {
@@ -58,18 +75,16 @@ public abstract class Deployment implements DeploymentMode
 
     public static class Embedded extends Deployment
     {
-        private static final String NAME = "EMBEDDED";
 
-        @Override
-        public String name()
+        public Embedded()
         {
-            return NAME;
+            super( DeploymentModes.EMBEDDED );
         }
 
         @Override
         public String parsableValue()
         {
-            return NAME;
+            return mode.name();
         }
 
         @Override
@@ -96,35 +111,48 @@ public abstract class Deployment implements DeploymentMode
             Embedded that = (Embedded) obj;
             return new EqualsBuilder().append( name(), that.name() ).isEquals();
         }
+
+        public void assertExists()
+        {
+            //We can always run EMBEDDED we do not need any other files then the NAME, so we do not have to check that it exists.
+        }
     }
 
     public static class Server extends Deployment
     {
-        private static final String NAME = "SERVER";
-        private static final String VALUE_PREFIX = NAME + ":";
+        private static final String VALUE_PREFIX = DeploymentModes.SERVER.name() + ":";
 
-        private final Path path;
+        private final String path;
 
-        private Server( Path path )
+        private Server( String path )
         {
+            super( DeploymentModes.SERVER );
             this.path = path;
+        }
+        /**
+         * WARNING: Never call this explicitly.
+         * No-params constructor is only used for JSON (de)serialization.
+         */
+        public Server()
+        {
+            this( null );
         }
 
         public Path path()
         {
-            return path;
-        }
-
-        @Override
-        public String name()
-        {
-            return NAME;
+            return Paths.get( path );
         }
 
         @Override
         public String parsableValue()
         {
-            return VALUE_PREFIX + path.toAbsolutePath();
+            return VALUE_PREFIX + path;
+        }
+
+        @Override
+        public void assertExists()
+        {
+            BenchmarkUtil.assertDirectoryExists( path() );
         }
 
         @Override

@@ -8,25 +8,14 @@ package com.neo4j.bench.infra.aws;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.util.IOUtils;
 import com.neo4j.bench.infra.Dataset;
-import org.apache.commons.compress.archivers.ArchiveEntry;
-import org.apache.commons.compress.archivers.ArchiveException;
-import org.apache.commons.compress.archivers.ArchiveInputStream;
-import org.apache.commons.compress.archivers.ArchiveStreamFactory;
-import org.apache.commons.compress.compressors.CompressorException;
-import org.apache.commons.compress.compressors.CompressorStreamFactory;
+import com.neo4j.bench.infra.Extractor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.BufferedInputStream;
-import java.io.File;
-import java.io.IOError;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.file.Files;
 import java.nio.file.Path;
-
-import static java.lang.String.format;
 
 class S3ObjectDataset implements Dataset
 {
@@ -52,49 +41,7 @@ class S3ObjectDataset implements Dataset
     @Override
     public void extractInto( Path dir )
     {
-        LOG.info( "extracting dataset into {}", dir  );
-        try ( InputStream objectContent = new BufferedInputStream( s3Object.getObjectContent() );
-              InputStream compressorInput = new CompressorStreamFactory()
-                      .createCompressorInputStream( CompressorStreamFactory.GZIP, objectContent );
-              ArchiveInputStream archiveInput =
-                      new ArchiveStreamFactory().createArchiveInputStream( ArchiveStreamFactory.TAR, compressorInput ) )
-        {
-            ArchiveEntry entry = null;
-            while ( (entry = archiveInput.getNextEntry()) != null )
-            {
-                if ( !archiveInput.canReadEntryData( entry ) )
-                {
-                    LOG.error( "can't read data entry {}", entry.getName() );
-                    continue;
-                }
-                File f = dir.resolve( entry.getName() ).toFile();
-                if ( entry.isDirectory() )
-                {
-                    mkDirs( f );
-                }
-                else
-                {
-                    File parent = f.getParentFile();
-                    mkDirs( parent );
-                    try ( OutputStream o = Files.newOutputStream( f.toPath() ) )
-                    {
-                        IOUtils.copy( archiveInput, o );
-                    }
-                }
-            }
-        }
-        catch ( IOException | CompressorException | ArchiveException e )
-        {
-            throw new IOError( e );
-        }
+        LOG.info( "extracting dataset into {}", dir );
+        Extractor.extract( dir, s3Object.getObjectContent() );
     }
-
-    private static void mkDirs( File f ) throws IOException
-    {
-        if ( !f.isDirectory() && !f.mkdirs() )
-        {
-            throw new IOException( format( "failed to create directory %s", f ) );
-        }
-    }
-
 }

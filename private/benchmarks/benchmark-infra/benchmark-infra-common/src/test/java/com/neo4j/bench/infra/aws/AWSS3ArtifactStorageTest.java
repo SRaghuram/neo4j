@@ -33,7 +33,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Arrays;
 
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -85,8 +84,8 @@ public class AWSS3ArtifactStorageTest
 
         Workspace workspace = Workspace.create( directory )
                                        .withArtifacts(
-                                               Paths.get( "artifact0.jar" ),
-                                               Paths.get( "artifact1/artifact1.jar" )
+                                               "artifact0.jar",
+                                               "artifact1/artifact1.jar"
                                        ).build();
 
         AWSS3ArtifactStorage artifactStorage = AWSS3ArtifactStorage.create( endpointConfiguration );
@@ -108,9 +107,12 @@ public class AWSS3ArtifactStorageTest
         Workspace artifactsWorkspace = artifactStorage.downloadBuildArtifacts( downloadDir, artifactURI );
         // then
         assertTrue( isValid( workspace, downloadDir ) );
+        assertEquals( artifactsWorkspace.baseDir(), downloadDir );
+        Path resolve = downloadDir.resolve( "artifact0.jar" );
+        Path resolve1 = downloadDir.resolve( "artifact1/artifact1.jar" );
         assertThat( artifactsWorkspace.allArtifacts(),
-                    containsInAnyOrder( downloadDir.resolve( "artifact0.jar" ),
-                                        downloadDir.resolve( "artifact1/artifact1.jar" ) ) );
+                    containsInAnyOrder( resolve,
+                                        resolve1 ) );
     }
 
     @Test
