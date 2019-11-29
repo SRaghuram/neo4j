@@ -13,8 +13,7 @@ import org.neo4j.kernel.impl.locking.SimpleStatementLocks;
 import org.neo4j.kernel.impl.locking.StatementLocks;
 
 import static com.neo4j.kernel.impl.locking.DeferringStatementLocksFactory.Configuration.deferred_locks_enabled;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.instanceOf;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
@@ -57,7 +56,7 @@ class DeferringStatementLocksFactoryTest
 
         StatementLocks statementLocks = factory.newInstance();
 
-        assertThat( statementLocks, instanceOf( SimpleStatementLocks.class ) );
+        assertThat( statementLocks ).isInstanceOf( SimpleStatementLocks.class );
         assertSame( client, statementLocks.optimistic() );
         assertSame( client, statementLocks.pessimistic() );
     }
@@ -76,8 +75,8 @@ class DeferringStatementLocksFactoryTest
 
         StatementLocks statementLocks = factory.newInstance();
 
-        assertThat( statementLocks, instanceOf( DeferringStatementLocks.class ) );
-        assertThat( statementLocks.optimistic(), instanceOf( DeferringLockClient.class ) );
+        assertThat( statementLocks ).isInstanceOf( DeferringStatementLocks.class );
+        assertThat( statementLocks.optimistic() ).isInstanceOf( DeferringLockClient.class );
         assertSame( client, statementLocks.pessimistic() );
     }
 }

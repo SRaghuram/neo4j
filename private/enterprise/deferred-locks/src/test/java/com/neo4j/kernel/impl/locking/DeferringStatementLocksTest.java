@@ -12,8 +12,7 @@ import org.neo4j.lock.LockTracer;
 import org.neo4j.lock.ResourceType;
 import org.neo4j.lock.ResourceTypes;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.instanceOf;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -34,7 +33,7 @@ class DeferringStatementLocksTest
 
         // THEN
         assertSame( client, statementLocks.pessimistic() );
-        assertThat( statementLocks.optimistic(), instanceOf( DeferringLockClient.class ) );
+        assertThat( statementLocks.optimistic() ).isInstanceOf( DeferringLockClient.class );
     }
 
     @Test
