@@ -77,3 +77,4 @@ class SlottedCartesianProductTest extends CartesianProductTestBase(ENTERPRISE.DE
 class SlottedExpressionTest extends ExpressionTestBase(ENTERPRISE.DEFAULT, SlottedRuntime)
                             with ThreadUnsafeExpressionTests[EnterpriseRuntimeContext]
                             with ExpressionWithTxStateChangesTests[EnterpriseRuntimeContext]
+class SlottedShortestPathTest extends ShortestPathTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)

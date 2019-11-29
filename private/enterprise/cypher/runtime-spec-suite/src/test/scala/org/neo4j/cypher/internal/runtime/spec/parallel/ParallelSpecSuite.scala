@@ -215,6 +215,10 @@ class ParallelRuntimeOptionalNoFusingTest extends OptionalTestBase(ENTERPRISE.NO
 class ParallelRuntimeCartesianProductTest extends CartesianProductTestBase(ENTERPRISE.FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
 class ParallelRuntimeCartesianProductNoFusingTest extends CartesianProductTestBase(ENTERPRISE.NO_FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
 
+// SHORTEST PATH
+class ParallelRuntimeShortestPathTest extends ShortestPathTestBase(ENTERPRISE.FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
+class ParallelRuntimeShortestPathNoFusingTest extends ShortestPathTestBase(ENTERPRISE.NO_FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
+
 // GENERAL
 class ParallelRuntimeMiscTest extends MiscTestBase(ENTERPRISE.FUSING, PARALLEL) with ParallelRuntimeSpecSuite
 class ParallelRuntimeNoFusingMiscTest extends MiscTestBase(ENTERPRISE.NO_FUSING, PARALLEL) with ParallelRuntimeSpecSuite

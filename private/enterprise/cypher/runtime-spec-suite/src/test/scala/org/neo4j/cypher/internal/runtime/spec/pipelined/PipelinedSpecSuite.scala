@@ -190,6 +190,10 @@ class PipelinedOptionalNoFusingTest extends OptionalTestBase(NO_FUSING, PIPELINE
 class PipelinedCartesianProductTest extends CartesianProductTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 class PipelinedCartesianProductNoFusingTest extends CartesianProductTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 
+// SHORTEST PATH
+class PipelinedShortestPathTest extends ShortestPathTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedShortestPathNoFusingTest extends ShortestPathTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+
 // GENERAL
 class PipelinedMiscTest extends MiscTestBase(FUSING, PIPELINED) with PipelinedSpecSuite
 class PipelinedMiscNoFusingTest extends MiscTestBase(NO_FUSING, PIPELINED) with PipelinedSpecSuite
