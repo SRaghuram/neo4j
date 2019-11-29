@@ -30,10 +30,7 @@ import org.neo4j.test.server.HTTP;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.time.ZoneOffset.UTC;
-import static org.hamcrest.CoreMatchers.containsString;
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.startsWith;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -69,7 +66,7 @@ class EnterpriseNeo4JExtensionRegisterIT
     void neo4jAvailable( Neo4j neo4j )
     {
         assertNotNull( neo4j );
-        assertThat( HTTP.GET( neo4j.httpURI().toString() ).status(), equalTo( 200 ) );
+        assertThat( HTTP.GET( neo4j.httpURI().toString() ).status() ).isEqualTo( 200 );
     }
 
     @Test
@@ -99,14 +96,14 @@ class EnterpriseNeo4JExtensionRegisterIT
     {
         String currentOffset = currentTimeZoneOffsetString();
 
-        assertThat( contentOf( "neo4j.log", databaseService ), containsString( currentOffset ) );
-        assertThat( contentOf( "debug.log", databaseService), containsString( currentOffset ) );
+        assertThat( contentOf( "neo4j.log", databaseService ) ).contains( currentOffset );
+        assertThat( contentOf( "debug.log", databaseService ) ).contains( currentOffset );
     }
 
     @Test
     void customExtensionWorkingDirectory( Neo4j neo4j )
     {
-        assertThat( neo4j.config().get( GraphDatabaseSettings.neo4j_home ).toFile().getParentFile().getName(), startsWith( REGISTERED_TEMP_PREFIX ) );
+        assertThat( neo4j.config().get( GraphDatabaseSettings.neo4j_home ).toFile().getParentFile().getName() ).startsWith( REGISTERED_TEMP_PREFIX );
     }
 
     @Test
@@ -116,7 +113,7 @@ class EnterpriseNeo4JExtensionRegisterIT
         HTTP.Response response = HTTP.POST( neo4j.httpURI().toString() + "db/neo4j/tx/commit",
                 quotedJson( "{'statements':[{'statement':'MATCH (n:User) RETURN n'}]}" ) );
 
-        assertThat( response.get( "results" ).get( 0 ).get( "data" ).size(), equalTo( 2 ) );
+        assertThat( response.get( "results" ).get( 0 ).get( "data" ).size() ).isEqualTo( 2 );
     }
 
     private static String currentTimeZoneOffsetString()

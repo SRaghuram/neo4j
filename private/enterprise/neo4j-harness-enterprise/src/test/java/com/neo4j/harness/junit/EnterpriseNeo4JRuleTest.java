@@ -18,8 +18,7 @@ import org.neo4j.test.rule.SuppressOutput;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.server.HTTP;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.core.IsEqual.equalTo;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class EnterpriseNeo4JRuleTest
 {
@@ -43,7 +42,7 @@ public class EnterpriseNeo4JRuleTest
 
         // Then
         HTTP.Response response = HTTP.GET( doSomethingUri );
-        assertThat( response.status(), equalTo( 234 ) );
+        assertThat( response.status() ).isEqualTo( 234 );
     }
 
     @Test
@@ -56,6 +55,6 @@ public class EnterpriseNeo4JRuleTest
 
         // Then constraint should be created
         HTTP.Response response = HTTP.GET( createConstraintUri );
-        assertThat( response.status(), equalTo( HttpStatus.CREATED_201 ) );
+        assertThat( response.status() ).isEqualTo( HttpStatus.CREATED_201 );
     }
 }

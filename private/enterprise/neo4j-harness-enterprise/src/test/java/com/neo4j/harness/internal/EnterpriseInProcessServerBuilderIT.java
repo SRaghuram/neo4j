@@ -23,8 +23,7 @@ import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.server.HTTP;
 
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 
 @TestDirectoryExtension
 @ExtendWith( SuppressOutputExtension.class )
@@ -44,12 +43,12 @@ class EnterpriseInProcessServerBuilderIT
         try ( Neo4j server = getTestServerBuilder( workDir ).build() )
         {
             // Then
-            assertThat( HTTP.GET( server.httpURI().toString() ).status(), equalTo( 200 ) );
-            assertThat( workDir.list().length, equalTo( 1 ) );
+            assertThat( HTTP.GET( server.httpURI().toString() ).status() ).isEqualTo( 200 );
+            assertThat( workDir.list().length ).isEqualTo( 1 );
         }
 
         // And after it's been closed, it should've cleaned up after itself.
-        assertThat( Arrays.toString( workDir.list() ), workDir.list().length, equalTo( 0 ) );
+        assertThat( workDir.list().length ).as( Arrays.toString( workDir.list() ) ).isEqualTo( 0 );
     }
 
     private Neo4jBuilder getTestServerBuilder( File workDir )
