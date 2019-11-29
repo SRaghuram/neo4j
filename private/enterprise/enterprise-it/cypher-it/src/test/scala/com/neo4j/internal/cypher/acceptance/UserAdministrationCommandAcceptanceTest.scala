@@ -663,18 +663,24 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     // THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnDefault("alice", "abc", "MATCH (n) RETURN n")
-    } should have message (String.format(
-      "Permission denied." + "%n%nThe credentials you provided were valid, but must be " +
-        "changed before you can " +
-        "use this instance. If this is the first time you are using Neo4j, this is to " +
-        "ensure you are not using the default credentials in production. If you are not " +
-        "using default credentials, you are getting this message because an administrator " +
-        "requires a password change.%n" +
-        "Changing your password is easy to do via the Neo4j Browser.%n" +
-        "If you are connecting via a shell or programmatically via a driver, " +
-        "just issue a `ALTER CURRENT USER SET PASSWORD FROM 'current password' TO 'new password'` " +
-        "statement against the system database in the current " +
-        "session, and then restart your driver with the new password configured.") )
+    } should have message String.format("Permission denied." + PASSWORD_CHANGE_REQUIRED_MESSAGE)
+  }
+
+  // TODO this is a hot fix to get browser to get password change required error
+  // It should be changed so that only a few key procedures are allowed to be run with password change required
+  test("should give correct error message when user with password change required tries to execute db.indexes") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE USER alice SET PASSWORD 'abc' CHANGE NOT REQUIRED")
+    execute("GRANT ROLE admin TO alice")
+
+    // WHEN
+    executeOnSystem("alice", "abc", "ALTER USER alice SET PASSWORD CHANGE REQUIRED")
+
+    // THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnSystem("alice", "abc", "CALL db.indexes")
+    } should have message String.format("Permission denied." + PASSWORD_CHANGE_REQUIRED_MESSAGE)
   }
 
   test("should alter user status to suspended") {

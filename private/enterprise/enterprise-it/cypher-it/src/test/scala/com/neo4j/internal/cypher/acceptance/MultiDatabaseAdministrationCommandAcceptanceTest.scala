@@ -351,6 +351,26 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
       "This is an administration command and it should be executed against the system database: SHOW DEFAULT DATABASE"
   }
 
+  test("should fail when showing databases when credentials expired") {
+    setup(defaultConfig)
+    setupUserWithCustomRole()
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("ALTER USER joe SET PASSWORD CHANGE REQUIRED")
+
+    Seq(
+      "SHOW DEFAULT DATABASE",
+      "SHOW DATABASES",
+      "SHOW DATABASE system"
+    ).foreach {
+      query =>
+        the[AuthorizationViolationException] thrownBy {
+          // WHEN
+          executeOnSystem("joe", "soap", query)
+          // THEN
+        } should have message String.format("Permission denied." + PASSWORD_CHANGE_REQUIRED_MESSAGE)
+    }
+  }
+
   // Tests for creating databases
 
   test("should create database in systemdb") {
