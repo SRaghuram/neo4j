@@ -17,7 +17,7 @@ import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
-import org.neo4j.driver.exceptions.DatabaseException;
+import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.driver.exceptions.TransientException;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
@@ -96,10 +96,7 @@ class MultiDatabaseBoltIT
         {
             system.run( "CREATE DATABASE foo" ).consume();
             assertDatabasesFound( "foo" );
-            DatabaseException exception = assertThrows( DatabaseException.class, () ->
-            {
-                system.run( "CREATE DATABASE foo" ).consume();
-            } );
+            var exception = assertThrows( ClientException.class, () -> system.run( "CREATE DATABASE foo" ).consume() );
             assertThat( exception.getMessage(), equalTo( "Failed to create the specified database 'foo': Database already exists." ) );
             assertDatabasesFound( "foo" );
         }
