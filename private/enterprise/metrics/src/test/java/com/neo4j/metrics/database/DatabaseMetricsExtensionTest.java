@@ -47,8 +47,7 @@ import org.neo4j.test.extension.Neo4jLayoutExtension;
 import org.neo4j.test.scheduler.CallingThreadJobScheduler;
 
 import static java.lang.String.format;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.hasItem;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -116,7 +115,7 @@ class DatabaseMetricsExtensionTest
         {
             try ( Lifespan ignored = new Lifespan( globalMetricsExtension, databaseMetricsExtension ) )
             {
-                assertThat( globalMetricsExtension.getRegistry().getNames(), hasItem( format( "neo4j.%s.check_point.events", DATABASE_ID.name() ) ) );
+                assertThat( globalMetricsExtension.getRegistry().getNames() ).contains( format( "neo4j.%s.check_point.events", DATABASE_ID.name() ) );
             }
         } );
     }
