@@ -56,8 +56,7 @@ import org.neo4j.test.ssl.SelfSignedCertificateFactory;
 import org.neo4j.values.virtual.MapValue;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsString;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -230,7 +229,7 @@ class DriverSslTest
             }
 
             assertEquals( errorCause, cause.getClass() );
-            assertThat( cause.getMessage(), containsString( errorMessage ) );
+            assertThat( cause.getMessage() ).contains( errorMessage );
         }
     }
 

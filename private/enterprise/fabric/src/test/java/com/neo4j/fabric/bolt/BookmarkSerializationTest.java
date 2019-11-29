@@ -11,8 +11,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -92,7 +91,7 @@ class BookmarkSerializationAndParsingTest
                 .map( FabricBookmark::serialize )
                 .collect( Collectors.toList() );
         var parsedBookmarks = parser.parse( serializedBookmarks );
-        assertThat( parsedBookmarks, containsInAnyOrder( fabricBookmark ) );
+        assertThat( parsedBookmarks ).contains( fabricBookmark );
     }
 
     private FabricBookmark bookmark( FabricBookmark.GraphState... graphStates )

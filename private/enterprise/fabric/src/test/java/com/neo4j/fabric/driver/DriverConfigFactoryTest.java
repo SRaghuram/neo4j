@@ -13,11 +13,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.ssl.config.SslPolicyLoader;
 import org.neo4j.driver.net.ServerAddress;
+import org.neo4j.ssl.config.SslPolicyLoader;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -134,11 +133,7 @@ class DriverConfigFactoryTest
         var graph0DriverConfig = driverConfigFactory.createConfig( getGraph( fabricConfig, 0 ) );
 
         var resolvedAddresses = graph0DriverConfig.resolver().resolve( null );
-        assertThat( resolvedAddresses, containsInAnyOrder(
-                ServerAddress.of( "core-1", 1111 ),
-                ServerAddress.of( "core-2", 2222 ),
-                ServerAddress.of( "core-3", 3333 )
-        ) );
+        assertThat( resolvedAddresses ).contains( ServerAddress.of( "core-1", 1111 ), ServerAddress.of( "core-2", 2222 ), ServerAddress.of( "core-3", 3333 ) );
     }
 
     private FabricConfig.Graph getGraph( FabricConfig fabricConfig, long id )

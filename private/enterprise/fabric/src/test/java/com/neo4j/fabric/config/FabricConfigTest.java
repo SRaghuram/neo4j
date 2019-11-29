@@ -14,8 +14,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.NormalizedGraphName;
 import org.neo4j.configuration.helpers.SocketAddress;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -217,7 +216,7 @@ class FabricConfigTest
         var uri = fabricConfig.getDatabase().getGraphs().stream().findFirst().get().getUri();
         assertEquals( uri.getScheme(), "bolt" );
         assertEquals( uri.getQuery(), "key=value" );
-        assertThat( uri.getAddresses(), containsInAnyOrder( new SocketAddress( "core-1", 1111 ), new SocketAddress( "core-2", 2222 ) ) );
+        assertThat( uri.getAddresses() ).contains( new SocketAddress( "core-1", 1111 ), new SocketAddress( "core-2", 2222 ) );
     }
 
     @Test

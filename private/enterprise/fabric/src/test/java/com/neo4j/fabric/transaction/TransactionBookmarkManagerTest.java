@@ -21,8 +21,7 @@ import org.neo4j.bolt.runtime.Bookmark;
 import org.neo4j.bolt.txtracking.TransactionIdTracker;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -57,9 +56,9 @@ class TransactionBookmarkManagerTest
 
         var bookmark = bookmarkManager.constructFinalBookmark();
         var graph1State = getGraphState( bookmark, graph1 );
-        assertThat( graph1State.getBookmarks(), containsInAnyOrder( "BB-3" ) );
+        assertThat( graph1State.getBookmarks() ).contains( "BB-3" );
         var graph2State = getGraphState( bookmark, graph2 );
-        assertThat( graph2State.getBookmarks(), containsInAnyOrder( "BB-2" ) );
+        assertThat( graph2State.getBookmarks() ).contains( "BB-2" );
     }
 
     @Test
@@ -69,20 +68,20 @@ class TransactionBookmarkManagerTest
         var b2 = bookmark( graphState( 1, "BB-5" ) );
         bookmarkManager.processSubmittedByClient( List.of( b1, b2 ) );
 
-        assertThat( bookmarkManager.getBookmarksForGraph( graph1 ), containsInAnyOrder( "BB-1", "BB-2", "BB-5" ) );
-        assertThat( bookmarkManager.getBookmarksForGraph( graph2 ), containsInAnyOrder( "BB-3", "BB-4" ) );
+        assertThat( bookmarkManager.getBookmarksForGraph( graph1 ) ).contains( "BB-1", "BB-2", "BB-5" );
+        assertThat( bookmarkManager.getBookmarksForGraph( graph2 ) ).contains( "BB-3", "BB-4" );
 
         bookmarkManager.recordBookmarkReceivedFromGraph( graph1, "BB-6" );
         bookmarkManager.recordBookmarkReceivedFromGraph( graph2, "BB-7" );
 
-        assertThat( bookmarkManager.getBookmarksForGraph( graph1 ), containsInAnyOrder( "BB-1", "BB-2", "BB-5" ) );
-        assertThat( bookmarkManager.getBookmarksForGraph( graph2 ), containsInAnyOrder( "BB-3", "BB-4" ) );
+        assertThat( bookmarkManager.getBookmarksForGraph( graph1 ) ).contains( "BB-1", "BB-2", "BB-5" );
+        assertThat( bookmarkManager.getBookmarksForGraph( graph2 ) ).contains( "BB-3", "BB-4" );
 
         var bookmark = bookmarkManager.constructFinalBookmark();
         var graph1State = getGraphState( bookmark, graph1 );
-        assertThat( graph1State.getBookmarks(), containsInAnyOrder( "BB-6" ) );
+        assertThat( graph1State.getBookmarks() ).contains( "BB-6" );
         var graph2State = getGraphState( bookmark, graph2 );
-        assertThat( graph2State.getBookmarks(), containsInAnyOrder( "BB-7" ) );
+        assertThat( graph2State.getBookmarks() ).contains( "BB-7" );
     }
 
     @Test
@@ -94,7 +93,7 @@ class TransactionBookmarkManagerTest
 
         var bookmark = bookmarkManager.constructFinalBookmark();
         var graph1State = getGraphState( bookmark, graph1 );
-        assertThat( graph1State.getBookmarks(), containsInAnyOrder( "BB-1", "BB-2", "BB-3" ) );
+        assertThat( graph1State.getBookmarks() ).contains( "BB-1", "BB-2", "BB-3" );
     }
 
     @Test
@@ -106,7 +105,7 @@ class TransactionBookmarkManagerTest
 
         verify( transactionIdTracker ).awaitUpToDate( NAMED_SYSTEM_DATABASE_ID, 1234, Duration.ofSeconds( 123 ) );
 
-        assertThat( bookmarkManager.getBookmarksForGraph( graph1 ), containsInAnyOrder( "BB-1" ) );
+        assertThat( bookmarkManager.getBookmarksForGraph( graph1 ) ).contains( "BB-1" );
     }
 
     private static FabricConfig.GraphDriverConfig emptyDriverConfig()
