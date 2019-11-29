@@ -7,7 +7,6 @@ package com.neo4j.kernel.impl.store.format.highlimit;
 
 import com.neo4j.kernel.impl.store.format.highlimit.v300.HighLimitV3_0_0;
 import com.neo4j.kernel.impl.store.format.highlimit.v340.HighLimitV3_4_0;
-import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -35,7 +34,7 @@ import org.neo4j.test.extension.Neo4jLayoutExtension;
 import org.neo4j.test.extension.pagecache.PageCacheExtension;
 import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -83,8 +82,8 @@ class HighLimitStoreMigrationTest
             migrator.migrate( databaseLayout, migrationLayout, progressMonitor, HighLimitV3_0_0.STORE_VERSION, HighLimit.STORE_VERSION );
 
             int newStoreFilesCount = fileSystem.listFiles( migrationLayout.databaseDirectory() ).length;
-            assertThat( "Store should be migrated and new store files should be created.", newStoreFilesCount,
-                    Matchers.greaterThanOrEqualTo( StoreType.values().length ) );
+            assertThat( newStoreFilesCount ).as( "Store should be migrated and new store files should be created." ).isGreaterThanOrEqualTo(
+                    StoreType.values().length );
         }
     }
 
