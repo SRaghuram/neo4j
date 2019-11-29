@@ -10,10 +10,12 @@ import com.neo4j.kernel.impl.enterprise.transaction.log.checkpoint.ConfigurableI
 import com.neo4j.kernel.impl.net.DefaultNetworkConnectionTracker;
 import com.neo4j.kernel.impl.pagecache.PageCacheWarmer;
 
+import java.util.Set;
 import java.util.function.Predicate;
 
 import org.neo4j.bolt.dbapi.BoltGraphDatabaseManagementServiceSPI;
 import org.neo4j.bolt.dbapi.impl.BoltKernelDatabaseManagementServiceProvider;
+import org.neo4j.bolt.runtime.scheduling.NettyThreadFactory;
 import org.neo4j.bolt.txtracking.DefaultReconciledTransactionTracker;
 import org.neo4j.bolt.txtracking.ReconciledTransactionTracker;
 import org.neo4j.collection.Dependencies;
@@ -27,15 +29,20 @@ import org.neo4j.kernel.api.net.NetworkConnectionTracker;
 import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFilesHelper;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.monitoring.Monitors;
+import org.neo4j.scheduler.Group;
+import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.time.SystemNanoClock;
 
 public abstract class ClusteringEditionModule extends AbstractEditionModule
 {
+    private static final Set<Group> NETTY_THREAD_GROUPS = Set.of( Group.CATCHUP_CLIENT, Group.CATCHUP_SERVER, Group.RAFT_CLIENT, Group.RAFT_SERVER );
+
     protected final ReconciledTransactionTracker reconciledTxTracker;
 
     protected ClusteringEditionModule( GlobalModule globalModule )
     {
         reconciledTxTracker = new DefaultReconciledTransactionTracker( globalModule.getLogService() );
+        configureThreadFactories( globalModule.getJobScheduler() );
     }
 
     protected void editionInvariants( GlobalModule globalModule, Dependencies dependencies )
@@ -64,7 +71,16 @@ public abstract class ClusteringEditionModule extends AbstractEditionModule
             DatabaseManagementService managementService, Monitors monitors, SystemNanoClock clock, LogService logService )
     {
         var config = dependencies.resolveDependency( Config.class );
-        var bookmarkAwaitDuration =  config.get( GraphDatabaseSettings.bookmark_ready_timeout );
+        var bookmarkAwaitDuration = config.get( GraphDatabaseSettings.bookmark_ready_timeout );
         return new BoltKernelDatabaseManagementServiceProvider( managementService, reconciledTxTracker, monitors, clock, bookmarkAwaitDuration );
+    }
+
+    private static void configureThreadFactories( JobScheduler jobScheduler )
+    {
+        for ( var group : NETTY_THREAD_GROUPS )
+        {
+            // thread factories can only be configured once, before the group's executor is started
+            jobScheduler.setThreadFactory( group, NettyThreadFactory::new );
+        }
     }
 }
