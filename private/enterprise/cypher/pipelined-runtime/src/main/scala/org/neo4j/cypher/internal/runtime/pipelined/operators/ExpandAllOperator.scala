@@ -13,7 +13,7 @@ import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.compiled.expressions.{CompiledHelpers, IntermediateExpression}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.RelationshipTypes
 import org.neo4j.cypher.internal.runtime.pipelined.execution.{CursorPools, MorselExecutionContext, QueryResources, QueryState}
-import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandAllOperatorTaskTemplate.loadTypes
+import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandAllOperatorTaskTemplate.{getNodeIdFromSlot, loadTypes}
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.DB_ACCESS
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
@@ -256,7 +256,7 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
     block(
       declareAndAssign(typeRefOf[Boolean], resultBoolean, constant(false)),
       setField(canContinue, constant(false)),
-      declareAndAssign(typeRefOf[Long], fromNode, getNodeIdFromSlot(fromSlot)),
+      declareAndAssign(typeRefOf[Long], fromNode, getNodeIdFromSlot(fromSlot, codeGen)),
       condition(notEqual(load(fromNode), constant(-1L))){
        block(
         loadTypes(types, missingTypes, typeField, missingTypeField),
@@ -310,7 +310,7 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
       },
 
       load(resultBoolean)
-    )
+      )
   }
 
   /**
@@ -386,22 +386,6 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
       inner.genSetExecutionEvent(event)
     )
   }
-
-  private def getNodeIdFromSlot(slot: Slot): IntermediateRepresentation = slot match {
-    // NOTE: We do not save the local slot variable, since we are only using it with our own local variable within a local scope
-    case LongSlot(offset, _, _) =>
-      codeGen.getLongAt(offset)
-    case RefSlot(offset, false, _) =>
-      invokeStatic(method[CompiledHelpers, Long, AnyValue]("nodeFromAnyValue"), codeGen.getRefAt(offset))
-    case RefSlot(offset, true, _) =>
-      ternary(
-        equal(codeGen.getRefAt(offset), noValue),
-        constant(-1L),
-        invokeStatic(method[CompiledHelpers, Long, AnyValue]("nodeFromAnyValue"), codeGen.getRefAt(offset))
-      )
-    case _ =>
-      throw new InternalException(s"Do not know how to get a node id for slot $slot")
-  }
 }
 
 object ExpandAllOperatorTaskTemplate {
@@ -425,5 +409,21 @@ object ExpandAllOperatorTaskTemplate {
                               loadField(typeField), loadField(missingTypeField), DB_ACCESS))
       }
     }
+  }
+
+  def getNodeIdFromSlot(slot: Slot, codeGen: OperatorExpressionCompiler): IntermediateRepresentation = slot match {
+    // NOTE: We do not save the local slot variable, since we are only using it with our own local variable within a local scope
+    case LongSlot(offset, _, _) =>
+      codeGen.getLongAt(offset)
+    case RefSlot(offset, false, _) =>
+      invokeStatic(method[CompiledHelpers, Long, AnyValue]("nodeFromAnyValue"), codeGen.getRefAt(offset))
+    case RefSlot(offset, true, _) =>
+      ternary(
+        equal(codeGen.getRefAt(offset), noValue),
+        constant(-1L),
+        invokeStatic(method[CompiledHelpers, Long, AnyValue]("nodeFromAnyValue"), codeGen.getRefAt(offset))
+        )
+    case _ =>
+      throw new InternalException(s"Do not know how to get a node id for slot $slot")
   }
 }

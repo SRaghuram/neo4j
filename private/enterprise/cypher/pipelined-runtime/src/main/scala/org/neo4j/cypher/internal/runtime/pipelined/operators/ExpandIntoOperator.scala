@@ -13,7 +13,7 @@ import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.compiled.expressions.{CompiledHelpers, IntermediateExpression}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.RelationshipTypes
 import org.neo4j.cypher.internal.runtime.pipelined.execution.{CursorPools, MorselExecutionContext, QueryResources, QueryState}
-import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandAllOperatorTaskTemplate.loadTypes
+import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandAllOperatorTaskTemplate.{getNodeIdFromSlot, loadTypes}
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandIntoOperatorTaskTemplate.CONNECTING_RELATIONSHIPS
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
@@ -176,7 +176,7 @@ class ExpandIntoOperatorTaskTemplate(inner: OperatorTaskTemplate,
     *    val fromNode = inputMorsel.getLongAt(fromOffset)
     *    val toNode = inputMorsel.getLongAt(toOffset)
     *    var innerLoop = false
-    *    if (fromNode != -1L && toNode != ) ) {
+    *    if (fromNode != -1L && toNode != -1L) ) {
     *      nodeCursor = resources.cursorPools.nodeCursorPool.allocate()
     *      groupCursor = resources.cursorPools.relationshipGroupCursorPool.allocate()
     *      traversalCursor = resources.cursorPools.relationshipTraversalCursorPool.allocate()
@@ -197,8 +197,8 @@ class ExpandIntoOperatorTaskTemplate(inner: OperatorTaskTemplate,
     block(
       declareAndAssign(typeRefOf[Boolean], resultBoolean, constant(false)),
       setField(canContinue, constant(false)),
-      declareAndAssign(typeRefOf[Long], fromNode, getNodeIdFromSlot(fromSlot)),
-      declareAndAssign(typeRefOf[Long], toNode, getNodeIdFromSlot(toSlot)),
+      declareAndAssign(typeRefOf[Long], fromNode, getNodeIdFromSlot(fromSlot, codeGen)),
+      declareAndAssign(typeRefOf[Long], toNode, getNodeIdFromSlot(toSlot, codeGen)),
       condition(and(notEqual(load(fromNode), constant(-1L)), notEqual(load(toNode), constant(-1L)))){
         block(
           loadTypes(types, missingTypes, typeField, missingTypeField),
@@ -285,22 +285,6 @@ class ExpandIntoOperatorTaskTemplate(inner: OperatorTaskTemplate,
         ),
       inner.genSetExecutionEvent(event)
       )
-  }
-
-  private def getNodeIdFromSlot(slot: Slot): IntermediateRepresentation = slot match {
-    // NOTE: We do not save the local slot variable, since we are only using it with our own local variable within a local scope
-    case LongSlot(offset, _, _) =>
-      codeGen.getLongAt(offset)
-    case RefSlot(offset, false, _) =>
-      invokeStatic(method[CompiledHelpers, Long, AnyValue]("nodeFromAnyValue"), codeGen.getRefAt(offset))
-    case RefSlot(offset, true, _) =>
-      ternary(
-        equal(codeGen.getRefAt(offset), noValue),
-        constant(-1L),
-        invokeStatic(method[CompiledHelpers, Long, AnyValue]("nodeFromAnyValue"), codeGen.getRefAt(offset))
-        )
-    case _ =>
-      throw new InternalException(s"Do not know how to get a node id for slot $slot")
   }
 }
 
