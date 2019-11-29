@@ -47,7 +47,7 @@ public class GBPTreeDumpTool
 
             try ( GBPTree<?,?> tree = bootstrap.getTree() )
             {
-                tree.visit( new PrintingGBPTreeVisitor<>( out, false, false, false, true, false ) );
+                tree.visit( new PrintingGBPTreeVisitor<>( out, false, false, false, true, false, false ) );
             }
         }
     }
