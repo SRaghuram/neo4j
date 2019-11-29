@@ -34,11 +34,14 @@ import org.neo4j.test.rule.RandomRule;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 
+import static com.neo4j.internal.batchimport.RestartableParallelBatchImporter.FILE_NAME_STATE;
 import static java.lang.Long.max;
 import static java.lang.ProcessBuilder.Redirect.appendTo;
+import static java.lang.String.format;
 import static java.time.Duration.ofSeconds;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.internal.batchimport.AdditionalInitialIds.EMPTY;
 import static org.neo4j.internal.batchimport.Configuration.DEFAULT;
@@ -69,36 +72,50 @@ class RestartableImportIT
             Neo4jLayout neo4jLayout = Neo4jLayout.ofFlat( testDirectory.homeDir() );
             DatabaseLayout dbLayout = neo4jLayout.databaseLayout( DEFAULT_DATABASE_NAME );
             long startTime = System.currentTimeMillis();
-            int timeMeasuringImportExitCode = startImportInSeparateProcess( dbLayout.databaseDirectory() ).waitFor();
+            File dbDirectory = dbLayout.databaseDirectory();
+            int timeMeasuringImportExitCode = startImportInSeparateProcess( dbDirectory ).waitFor();
             long time = System.currentTimeMillis() - startTime;
             assertEquals( 0, timeMeasuringImportExitCode );
             fs.deleteRecursively( neo4jLayout.homeDirectory() );
             fs.mkdir( neo4jLayout.homeDirectory() );
             Process process;
             int restartCount = 0;
+            int exitCode;
             do
             {
-                process = startImportInSeparateProcess( dbLayout.databaseDirectory() );
+                process = startImportInSeparateProcess( dbDirectory );
                 long waitTime = max( time / 4, random.nextLong( time ) + time / 20 * restartCount );
-                process.waitFor( waitTime, TimeUnit.MILLISECONDS );
-                boolean manuallyDestroyed = false;
-                if ( process.isAlive() )
+                boolean completedOnItsOwn = process.waitFor( waitTime, TimeUnit.MILLISECONDS );
+                if ( !completedOnItsOwn )
                 {
                     process.destroyForcibly();
-                    manuallyDestroyed = true;
                 }
-                int exitCode = process.waitFor();
-                if ( !manuallyDestroyed )
+                exitCode = process.waitFor();
+                if ( completedOnItsOwn )
                 {
                     assertEquals( 0, exitCode );
                 }
 
-                zip( fs, neo4jLayout.homeDirectory(), new File( testDirectory.directory( "snapshots" ), String.format( "killed-%02d.zip", restartCount ) ) );
+                zip( fs, dbDirectory, new File( testDirectory.directory( "snapshots" ), format( "killed-%02d.zip", restartCount ) ) );
+
+                if ( !completedOnItsOwn && !fs.fileExists( new File( dbDirectory, FILE_NAME_STATE ) ) )
+                {
+                    // This is a case which is, by all means, quite the edge case. This is state where an import started, but was killed
+                    // immediately afterwards... in the middle of creating the store files. There have been attempts to solve this in the
+                    // restartable importer, which works, but there's always some case somewhere else that breaks. This edge case is only
+                    // visible in this test and for users it's just this thing where you'll need to clear out your store manually if this happens.
+                    for ( File file : fs.listFiles( dbDirectory ) )
+                    {
+                        fs.deleteRecursively( file );
+                    }
+                }
+
                 restartCount++;
             }
-            while ( process.exitValue() != 0 );
+            while ( exitCode != 0 );
             DatabaseManagementService managementService = new TestDatabaseManagementServiceBuilder( dbLayout ).build();
             GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
+            assertTrue( db.isAvailable( TimeUnit.SECONDS.toMillis( 30 ) ) );
             try
             {
                 input( random.seed() ).verify( db );
@@ -144,6 +161,8 @@ class RestartableImportIT
             {
                 throw e;
             }
+            // else we're done actually. This could have happened if the previous process instance completed the import,
+            // but was killed before exiting normally itself.
         }
     }
 }
