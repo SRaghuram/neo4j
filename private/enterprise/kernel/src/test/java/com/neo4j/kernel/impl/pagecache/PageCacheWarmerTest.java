@@ -54,9 +54,7 @@ import org.neo4j.test.extension.testdirectory.EphemeralTestDirectoryExtension;
 import org.neo4j.test.rule.PageCacheConfig;
 import org.neo4j.test.rule.TestDirectory;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.greaterThan;
-import static org.hamcrest.Matchers.is;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
@@ -176,7 +174,7 @@ class PageCacheWarmerTest
             warmer.reheat();
         }
         cursorTracer.get().reportEvents();
-        assertThat( cacheTracer.faults(), is( 0L ) );
+        assertThat( cacheTracer.faults() ).isEqualTo( 0L );
     }
 
     @Test
@@ -206,7 +204,7 @@ class PageCacheWarmerTest
             warmer.reheat();
 
             pageCache.reportEvents();
-            assertThat( cacheTracer.faults(), is( initialFaults + 2L ) );
+            assertThat( cacheTracer.faults() ).isEqualTo( initialFaults + 2L );
 
             try ( PageCursor reader = pf.io( 0, PagedFile.PF_SHARED_READ_LOCK ) )
             {
@@ -216,7 +214,7 @@ class PageCacheWarmerTest
 
             // No additional faults must have been reported.
             pageCache.reportEvents();
-            assertThat( cacheTracer.faults(), is( initialFaults + 2L ) );
+            assertThat( cacheTracer.faults() ).isEqualTo( initialFaults + 2L );
         }
     }
 
@@ -252,7 +250,7 @@ class PageCacheWarmerTest
             warmer.reheat();
 
             pageCache.reportEvents();
-            assertThat( cacheTracer.faults(), is( initialFaults + pageIds.length ) );
+            assertThat( cacheTracer.faults() ).isEqualTo( initialFaults + pageIds.length );
 
             try ( PageCursor reader = pf.io( 0, PagedFile.PF_SHARED_READ_LOCK ) )
             {
@@ -264,7 +262,7 @@ class PageCacheWarmerTest
 
             // No additional faults must have been reported.
             pageCache.reportEvents();
-            assertThat( cacheTracer.faults(), is( initialFaults + pageIds.length ) );
+            assertThat( cacheTracer.faults() ).isEqualTo( initialFaults + pageIds.length );
         }
     }
 
@@ -294,7 +292,7 @@ class PageCacheWarmerTest
                 warmer.profile();
 
                 // The files in the file listing cannot be deleted while the listing is in use.
-                assertThat( fileListing.size(), greaterThan( 0 ) );
+                assertThat( fileListing.size() ).isGreaterThan( 0 );
                 assertFilesExists( fileListing );
                 warmer.profile();
                 try ( Resource secondListing = warmer.addFilesTo( new ArrayList<>() ) )
@@ -413,7 +411,7 @@ class PageCacheWarmerTest
         List<Profile> resortedProfiles = new ArrayList<>( sortedProfiles );
         Collections.shuffle( resortedProfiles );
         Collections.sort( resortedProfiles );
-        assertThat( resortedProfiles, is( sortedProfiles ) );
+        assertThat( resortedProfiles ).isEqualTo( sortedProfiles );
     }
 
     @Test
@@ -578,7 +576,7 @@ class PageCacheWarmerTest
                 try
                 {
                     long pagesLoadedReportedByWarmer = warmer.reheat().orElse( -1 );
-                    assertThat( pagesLoadedReportedByWarmer, greaterThan( 0L )  );
+                    assertThat( pagesLoadedReportedByWarmer ).isGreaterThan( 0L );
                 }
                 catch ( IOException e )
                 {

@@ -10,9 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.neo4j.kernel.api.net.NetworkConnectionTracker;
 import org.neo4j.kernel.api.net.TrackedNetworkConnection;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.hamcrest.Matchers.empty;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -50,7 +48,7 @@ class DefaultNetworkConnectionTrackerTest
         tracker.add( connection2 );
         tracker.add( connection3 );
 
-        assertThat( tracker.activeConnections(), containsInAnyOrder( connection1, connection2, connection3 ) );
+        assertThat( tracker.activeConnections() ).contains( connection1, connection2, connection3 );
     }
 
     @Test
@@ -69,10 +67,10 @@ class DefaultNetworkConnectionTrackerTest
         tracker.add( connection3 );
 
         tracker.remove( connection2 );
-        assertThat( tracker.activeConnections(), containsInAnyOrder( connection1, connection3 ) );
+        assertThat( tracker.activeConnections() ).contains( connection1, connection3 );
 
         tracker.remove( connection1 );
-        assertThat( tracker.activeConnections(), containsInAnyOrder( connection3 ) );
+        assertThat( tracker.activeConnections() ).contains( connection3 );
     }
 
     @Test
@@ -80,11 +78,11 @@ class DefaultNetworkConnectionTrackerTest
     {
         tracker.add( connection1 );
         tracker.add( connection3 );
-        assertThat( tracker.activeConnections(), containsInAnyOrder( connection1, connection3 ) );
+        assertThat( tracker.activeConnections() ).contains( connection1, connection3 );
 
         tracker.remove( connection2 );
 
-        assertThat( tracker.activeConnections(), containsInAnyOrder( connection1, connection3 ) );
+        assertThat( tracker.activeConnections() ).contains( connection1, connection3 );
     }
 
     @Test
@@ -110,7 +108,7 @@ class DefaultNetworkConnectionTrackerTest
     @Test
     void shouldListActiveConnectionsWhenEmpty()
     {
-        assertThat( tracker.activeConnections(), empty() );
+        assertThat( tracker.activeConnections() ).isEmpty();
     }
 
     private static TrackedNetworkConnection connectionMock( String id )

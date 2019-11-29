@@ -7,8 +7,7 @@ package com.neo4j.kernel.impl.enterprise.lock.forseti;
 
 import org.junit.jupiter.api.Test;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
@@ -29,8 +28,8 @@ class SharedLockTest
         assertTrue( lock.tryAcquireUpdateLock( clientA ) );
 
         // Then
-        assertThat( lock.numberOfHolders(), equalTo( 2 ) );
-        assertThat( lock.isUpdateLock(), equalTo( true ) );
+        assertThat( lock.numberOfHolders() ).isEqualTo( 2 );
+        assertThat( lock.isUpdateLock() ).isEqualTo( true );
     }
 
     @Test
@@ -44,8 +43,8 @@ class SharedLockTest
         assertTrue( lock.release( clientA ) );
 
         // Then
-        assertThat( lock.numberOfHolders(), equalTo( 0 ) );
-        assertThat( lock.isUpdateLock(), equalTo( false ) );
+        assertThat( lock.numberOfHolders() ).isEqualTo( 0 );
+        assertThat( lock.isUpdateLock() ).isEqualTo( false );
     }
 
 }

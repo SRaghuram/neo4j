@@ -16,9 +16,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.io.pagecache.IOLimiter;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.greaterThan;
-import static org.hamcrest.Matchers.is;
+import static org.assertj.core.api.Assertions.assertThat;
 
 class ConfigurableIOLimiterTest
 {
@@ -38,7 +36,7 @@ class ConfigurableIOLimiterTest
 
         // This should have led to about 10 seconds of pause, minus the time we spent in the loop.
         // So let's say 9 seconds - experiments indicate this gives us about a 10x margin.
-        assertThat( pauseNanosCounter.get(), greaterThan( TimeUnit.SECONDS.toNanos( 9 ) ) );
+        assertThat( pauseNanosCounter.get() ).isGreaterThan( TimeUnit.SECONDS.toNanos( 9 ) );
     }
 
     @Test
@@ -83,7 +81,7 @@ class ConfigurableIOLimiterTest
 
         // This should have led to about 10 seconds of pause, minus the time we spent in the loop.
         // So let's say 9 seconds - experiments indicate this gives us about a 10x margin.
-        assertThat( pauseNanosCounter.get(), greaterThan( TimeUnit.SECONDS.toNanos( 9 ) ) );
+        assertThat( pauseNanosCounter.get() ).isGreaterThan( TimeUnit.SECONDS.toNanos( 9 ) );
     }
 
     @Test
@@ -113,7 +111,7 @@ class ConfigurableIOLimiterTest
         }
 
         // We should've spent no time rushing
-        assertThat( pauseNanosCounter.get(), is( 0L ) );
+        assertThat( pauseNanosCounter.get() ).isEqualTo( 0L );
     }
 
     @Test
@@ -130,7 +128,7 @@ class ConfigurableIOLimiterTest
         repeatedlyCallMaybeLimitIO( limiter, stamp, 10 );
 
         // Then assert that the updated limit is respected
-        assertThat( pauseNanosCounter.get(), greaterThan( TimeUnit.SECONDS.toNanos( 9 ) ) );
+        assertThat( pauseNanosCounter.get() ).isGreaterThan( TimeUnit.SECONDS.toNanos( 9 ) );
 
         // Change back to unlimited
         config.setDynamic( GraphDatabaseSettings.check_point_iops_limit, -1, getClass().getSimpleName()  );
@@ -155,7 +153,7 @@ class ConfigurableIOLimiterTest
         // ...must make the limiter limit.
         long stamp = IOLimiter.INITIAL_STAMP;
         repeatedlyCallMaybeLimitIO( limiter, stamp, 10 );
-        assertThat( pauseNanosCounter.get(), greaterThan( TimeUnit.SECONDS.toNanos( 9 ) ) );
+        assertThat( pauseNanosCounter.get() ).isGreaterThan( TimeUnit.SECONDS.toNanos( 9 ) );
     }
 
     @Test
@@ -177,7 +175,7 @@ class ConfigurableIOLimiterTest
         config.setDynamic( GraphDatabaseSettings.check_point_iops_limit, 100, getClass().getSimpleName()  );
         long stamp = IOLimiter.INITIAL_STAMP;
         repeatedlyCallMaybeLimitIO( limiter, stamp, 10 );
-        assertThat( pauseNanosCounter.get(), greaterThan( TimeUnit.SECONDS.toNanos( 9 ) ) );
+        assertThat( pauseNanosCounter.get() ).isGreaterThan( TimeUnit.SECONDS.toNanos( 9 ) );
     }
 
     @Test
@@ -185,9 +183,9 @@ class ConfigurableIOLimiterTest
     {
         createIOLimiter( 100 );
 
-        assertThat( limiter.isLimited(), is( true ) );
+        assertThat( limiter.isLimited() ).isEqualTo( true );
         multipleDisableShouldReportUnlimited( limiter );
-        assertThat( limiter.isLimited(), is( true ) );
+        assertThat( limiter.isLimited() ).isEqualTo( true );
     }
 
     @Test
@@ -195,9 +193,9 @@ class ConfigurableIOLimiterTest
     {
         createIOLimiter( -1 );
 
-        assertThat( limiter.isLimited(), is( false ) );
+        assertThat( limiter.isLimited() ).isEqualTo( false );
         multipleDisableShouldReportUnlimited( limiter );
-        assertThat( limiter.isLimited(), is( false ) );
+        assertThat( limiter.isLimited() ).isEqualTo( false );
     }
 
     @Test
@@ -205,14 +203,14 @@ class ConfigurableIOLimiterTest
     {
         IOLimiter limiter = IOLimiter.UNLIMITED;
 
-        assertThat( limiter.isLimited(), is( false ) );
+        assertThat( limiter.isLimited() ).isEqualTo( false );
         multipleDisableShouldReportUnlimited( limiter );
-        assertThat( limiter.isLimited(), is( false ) );
+        assertThat( limiter.isLimited() ).isEqualTo( false );
 
         limiter.enableLimit();
         try
         {
-            assertThat( limiter.isLimited(), is( false ) );
+            assertThat( limiter.isLimited() ).isEqualTo( false );
         }
         finally
         {
@@ -237,7 +235,7 @@ class ConfigurableIOLimiterTest
     {
         long pauseTime = pauseNanosCounter.get();
         repeatedlyCallMaybeLimitIO( limiter, IOLimiter.INITIAL_STAMP, 1000000 );
-        assertThat( pauseNanosCounter.get(), is( pauseTime ) );
+        assertThat( pauseNanosCounter.get() ).isEqualTo( pauseTime );
     }
 
     private long repeatedlyCallMaybeLimitIO( IOLimiter ioLimiter, long stamp, int iosPerIteration )
@@ -254,17 +252,17 @@ class ConfigurableIOLimiterTest
         limiter.disableLimit();
         try
         {
-            assertThat( limiter.isLimited(), is( false ) );
+            assertThat( limiter.isLimited() ).isEqualTo( false );
             limiter.disableLimit();
             try
             {
-                assertThat( limiter.isLimited(), is( false ) );
+                assertThat( limiter.isLimited() ).isEqualTo( false );
             }
             finally
             {
                 limiter.enableLimit();
             }
-            assertThat( limiter.isLimited(), is( false ) );
+            assertThat( limiter.isLimited() ).isEqualTo( false );
         }
         finally
         {
