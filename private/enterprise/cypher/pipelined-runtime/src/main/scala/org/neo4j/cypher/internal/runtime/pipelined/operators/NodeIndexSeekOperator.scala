@@ -422,6 +422,7 @@ class ManyQueriesExactNodeIndexSeekTaskTemplate(override val inner: OperatorTask
                             loadField(nodeIndexCursorField),
                             loadField(queryIteratorField),
                             loadField(DATA_READ))),
+      profileRow(id, loadField(canContinue)),
       constant(true))
   }
 
@@ -446,14 +447,16 @@ class ManyQueriesExactNodeIndexSeekTaskTemplate(override val inner: OperatorTask
                                                                                loadField(queryIteratorField),
                                                                                method[ExactPredicateIterator, Value](
                                                                                  "current")))).getOrElse(noop()),
-        profileRow(id),
         inner.genOperateWithExpressions,
-        setField(canContinue,
-                 invokeStatic(nextMethod,
-                              indexReadSession(queryIndexId),
-                              loadField(nodeIndexCursorField),
-                              loadField(queryIteratorField),
-                              loadField(DATA_READ))),
+        doIfInnerCantContinue(
+          block(setField(canContinue,
+                         invokeStatic(nextMethod,
+                                      indexReadSession(queryIndexId),
+                                      loadField(nodeIndexCursorField),
+                                      loadField(queryIteratorField),
+                                      loadField(DATA_READ))),
+                profileRow(id, loadField(canContinue))),
+          ),
         endInnerLoop
         )
       )
