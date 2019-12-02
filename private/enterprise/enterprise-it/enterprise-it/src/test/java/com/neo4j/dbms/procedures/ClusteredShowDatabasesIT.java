@@ -20,7 +20,6 @@ import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.Nested;
@@ -29,7 +28,6 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.neo4j.dbms.OperatorState;
@@ -409,7 +407,7 @@ class ClusteredShowDatabasesIT
             cluster.awaitLeader( DEFAULT_DATABASE_NAME );
         }
 
-        @RepeatedTest( 10 )
+        @Test
         void shouldDisplayErrorForFailedDatabases() throws Exception
         {
             // given
