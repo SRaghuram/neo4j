@@ -22,7 +22,6 @@ class TransientFailurePredicate implements Predicate<Throwable>
     private static final List<Class<? extends Throwable>> transientFailureClasses = List.of(
             LeaseException.class,
             NoLeaderFoundException.class,
-            WriteOperationsNotAllowedException.class,
             TransientTransactionFailureException.class );
 
     @Override
