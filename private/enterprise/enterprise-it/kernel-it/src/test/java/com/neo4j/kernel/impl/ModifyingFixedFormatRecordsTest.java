@@ -106,7 +106,6 @@ class ModifyingFixedFormatRecordsTest
                 try ( Transaction tx = db.beginTx() )
                 {
                     Node node = tx.createNode( Label.label( "a" ) );
-//                    Node node = db.createNode();
                     node.setProperty( "a", 1 );
                     assertEquals( nodeId, node.getId() );
                     Relationship rel = node.createRelationshipTo( node, RelationshipType.withName( "a" ) );
