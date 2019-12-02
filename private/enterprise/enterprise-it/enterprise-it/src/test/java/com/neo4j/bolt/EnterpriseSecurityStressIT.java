@@ -13,49 +13,36 @@ import org.junit.Test;
 
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.driver.Driver;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.SessionConfig;
 import org.neo4j.driver.Transaction;
-import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.harness.junit.rule.Neo4jRule;
 
-import static com.neo4j.bolt.BoltDriverHelper.graphDatabaseDriver;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.empty;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
-import static org.neo4j.driver.AuthTokens.basic;
 
-public class EnterpriseSecurityStressIT
+public class EnterpriseSecurityStressIT extends SecurityStressTestBase
 {
     @Rule
     public Neo4jRule db = new EnterpriseNeo4jRule()
             .withConfig( GraphDatabaseSettings.auth_enabled, true )
             .withConfig( OnlineBackupSettings.online_backup_enabled, false );
 
-    private Driver adminDriver;
-    private final Set<Throwable> errors = ConcurrentHashMap.newKeySet();
-
     @Before
     public void setup()
     {
-        adminDriver = graphDatabaseDriver( db.boltURI(), basic( "neo4j", "neo4j" ) );
-        try ( Session session = adminDriver.session( SessionConfig.forDatabase( SYSTEM_DATABASE_NAME ) );
-              Transaction tx = session.beginTransaction() )
-        {
-            tx.run( "ALTER CURRENT USER SET PASSWORD FROM 'neo4j' TO 'abc'" ).consume();
-            tx.commit();
-        }
-        adminDriver.close();
-        adminDriver = graphDatabaseDriver( db.boltURI(), basic( "neo4j", "abc" ) );
+        setupAdminDriver( db );
     }
+
+    // Expected if the user is dropped before or during authorization
+    private String userAuthorizationError = "Database access is not allowed for user 'alice' with roles [].";
+
+    // Expected if the role is dropped during authorization privilege lookup.
+    private String roleAuthorizationError = "Database access is not allowed for user 'alice' with roles [custom].";
 
     // Concurrency tests for authentication
 
@@ -237,47 +224,10 @@ public class EnterpriseSecurityStressIT
         assertNoUnexpectedErrors();
     }
 
-    @SuppressWarnings( "InfiniteLoopStatement" )
     private final Runnable transactionWork = () ->
     {
-        // Expected if the user is dropped before or during authentication
-        String authenticationError = "The client is unauthorized due to authentication failure.";
-
-        // Expected if the user is dropped before or during authorization
-        String userAuthorizationError = "Database access is not allowed for user 'alice' with roles [].";
-
-        // Expected if the role is dropped during authorization privilege lookup.
-        String roleAuthorizationError = "Database access is not allowed for user 'alice' with roles [custom].";
-
-        for (; ; )
-        {
-            try ( Driver driver = graphDatabaseDriver( db.boltURI(), basic( "alice", "secret" ) ) )
-            {
-
-                try ( Session session = driver.session();
-                      Transaction tx = session.beginTransaction() )
-                {
-                    tx.run( "UNWIND range(1, 10) AS n RETURN n" ).consume();
-                    tx.commit();
-                }
-            }
-            catch ( ClientException e )
-            {
-                if ( !(e.getMessage().equals( authenticationError ) || e.getMessage().equals( userAuthorizationError ) ||
-                        e.getMessage().equals( roleAuthorizationError )) )
-                {
-                    errors.add( e );
-                }
-            }
-        }
+        defaultDbWork( db, Set.of( authenticationError, userAuthorizationError, roleAuthorizationError ) );
     };
-
-    private final Runnable deleteUserWork =
-            () -> systemDbWork( List.of( "DROP USER alice" ), Set.of( "Failed to delete the specified user 'alice': User does not exist." ) );
-
-    private final Runnable createUserWork =
-            () -> systemDbWork( List.of( "CREATE USER alice SET PASSWORD 'secret' CHANGE NOT REQUIRED" ),
-                    Set.of( "Failed to create the specified user 'alice': User already exists." ) );
 
     private final Runnable createUserWithRoleWork =
             () -> systemDbWork( List.of( "CREATE USER alice SET PASSWORD 'secret' CHANGE NOT REQUIRED", "GRANT ROLE architect TO alice" ),
@@ -318,6 +268,7 @@ public class EnterpriseSecurityStressIT
                     Set.of( "Failed to grant traversal privilege to role 'custom': Role 'custom' does not exist.",
                             "Failed to deny read privilege to role 'custom': Role 'custom' does not exist.") );
 
+    // Revoke both granted and non-granted privileges
     private final Runnable revokePrivilegeWork =
             () -> systemDbWork( List.of( "REVOKE TRAVERSE ON GRAPH * NODES C FROM custom", "REVOKE DENY READ {prop} ON GRAPH * NODES * FROM custom" ),
                     Set.of() );
@@ -328,34 +279,4 @@ public class EnterpriseSecurityStressIT
     private final Runnable showRolesWork = () -> systemDbWork( List.of( "SHOW ROLES WITH USERS" ), Set.of() );
     private final Runnable showPrivilegesForUserWork = () -> systemDbWork( List.of( "SHOW USER alice PRIVILEGES" ), Set.of() );
     private final Runnable showPrivilegesForRoleWork = () -> systemDbWork( List.of( "SHOW ROLE custom PRIVILEGES" ), Set.of() );
-
-    @SuppressWarnings( "InfiniteLoopStatement" )
-    private void systemDbWork( List<String> commands, Set<String> expectedErrorMessages )
-    {
-        for (; ; )
-        {
-            try ( Session session = adminDriver.session( SessionConfig.forDatabase( SYSTEM_DATABASE_NAME ) );
-                    Transaction tx = session.beginTransaction() )
-            {
-                for ( String command: commands )
-                {
-                    tx.run( command ).consume();
-                }
-                tx.commit();
-            }
-            catch ( ClientException e )
-            {
-                if ( !expectedErrorMessages.contains( e.getMessage() ) )
-                {
-                    errors.add( e );
-                }
-            }
-        }
-    }
-
-    private void assertNoUnexpectedErrors()
-    {
-        String msg = errors.stream().map( Throwable::getMessage ).collect( Collectors.joining( System.lineSeparator() ) );
-        assertThat( msg, errors, empty() );
-    }
 }
