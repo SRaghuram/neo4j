@@ -7,13 +7,10 @@ package com.neo4j.causalclustering.core.consensus;
 
 import com.neo4j.causalclustering.identity.MemberId;
 
-import java.io.Serializable;
 import java.util.Objects;
 
-public class LeaderInfo implements Serializable
+public class LeaderInfo
 {
-    private static final long serialVersionUID = 7983780359510842910L;
-
     public static final LeaderInfo INITIAL = new LeaderInfo( null, -1 );
 
     private final MemberId memberId;
