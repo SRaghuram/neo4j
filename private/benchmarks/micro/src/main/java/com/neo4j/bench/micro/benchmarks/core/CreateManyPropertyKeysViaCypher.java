@@ -121,7 +121,7 @@ public class CreateManyPropertyKeysViaCypher extends AbstractCoreBenchmark
             {
                 if ( node != null )
                 {
-                    node.delete();
+                    txBatch.transaction().getNodeById( node.getId() ).delete();
                 }
                 node = txBatch.transaction().createNode();
             }
