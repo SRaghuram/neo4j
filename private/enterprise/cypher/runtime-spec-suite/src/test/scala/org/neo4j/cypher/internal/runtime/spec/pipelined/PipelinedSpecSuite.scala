@@ -5,17 +5,20 @@
  */
 package org.neo4j.cypher.internal.runtime.spec.pipelined
 
+import java.lang.System.lineSeparator
+
 import org.neo4j.cypher.internal.EnterpriseRuntimeContext
 import org.neo4j.cypher.internal.PipelinedRuntime.PIPELINED
 import org.neo4j.cypher.internal.logical.plans.Ascending
-import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE.{FUSING, NO_FUSING}
+import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE.{FUSING, MORSEL_SIZE, NO_FUSING}
 import org.neo4j.cypher.internal.runtime.spec.pipelined.PipelinedSpecSuite.SIZE_HINT
 import org.neo4j.cypher.internal.runtime.spec.slotted.WithSlotsMemoryManagementTestBase
 import org.neo4j.cypher.internal.runtime.spec.stress._
 import org.neo4j.cypher.internal.runtime.spec.tests._
-import org.neo4j.cypher.internal.runtime.spec.{ENTERPRISE, LogicalQueryBuilder, RuntimeTestSuite}
+import org.neo4j.cypher.internal.runtime.spec.{LogicalQueryBuilder, RuntimeTestSuite}
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.result.OperatorProfile
+import org.scalatest.Outcome
 
 object PipelinedSpecSuite {
   val SIZE_HINT = 1000
@@ -23,6 +26,10 @@ object PipelinedSpecSuite {
 
 trait PipelinedSpecSuite extends AssertFusingSucceeded {
   self: RuntimeTestSuite[EnterpriseRuntimeContext] =>
+
+  abstract override def withFixture(test: NoArgTest): Outcome = {
+    withClue(s"Failed with MORSEL_SIZE = $MORSEL_SIZE${lineSeparator()}")(super.withFixture(test))
+  }
 }
 
 // INPUT
@@ -211,8 +218,8 @@ class PipelinedWorkloadTest extends WorkloadTestBase(FUSING, PIPELINED, SIZE_HIN
 class PipelinedNoFusingWorkloadTest extends WorkloadTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 
 // PROFILE
-class PipelinedProfileNoFusingRowsTest extends ProfileRowsTestBase(NO_FUSING, PIPELINED, SIZE_HINT, ENTERPRISE.MORSEL_SIZE) with PipelinedSpecSuite
-class PipelinedProfileRowsTest extends ProfileRowsTestBase(FUSING, PIPELINED, SIZE_HINT, ENTERPRISE.MORSEL_SIZE) with PipelinedSpecSuite
+class PipelinedProfileNoFusingRowsTest extends ProfileRowsTestBase(NO_FUSING, PIPELINED, SIZE_HINT, MORSEL_SIZE) with PipelinedSpecSuite
+class PipelinedProfileRowsTest extends ProfileRowsTestBase(FUSING, PIPELINED, SIZE_HINT, MORSEL_SIZE) with PipelinedSpecSuite
 class PipelinedProfileNoFusingTimeTest extends ProfileTimeTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 class PipelinedProfileNoTimeTest extends ProfileNoTimeTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite {
   //this test differs in Pipelined and Parallel since we fuse differently

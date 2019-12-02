@@ -20,10 +20,7 @@ import org.neo4j.scheduler.JobScheduler
 object ENTERPRISE {
   //randomize morsel size evenly in [1, 5]
   lazy val MORSEL_SIZE = {
-    val random = ThreadLocalRandom.current()
-    val morselSize = random.nextInt(1, 6)
-    println(s"Using morsel size $morselSize")
-    morselSize
+    ThreadLocalRandom.current().nextInt(1, 6)
   }
 
   private val edition = new Edition[EnterpriseRuntimeContext](

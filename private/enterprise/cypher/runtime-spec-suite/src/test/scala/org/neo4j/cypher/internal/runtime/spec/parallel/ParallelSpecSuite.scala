@@ -5,9 +5,12 @@
  */
 package org.neo4j.cypher.internal.runtime.spec.parallel
 
+import java.lang.System.lineSeparator
+
 import org.neo4j.cypher.internal.EnterpriseRuntimeContext
 import org.neo4j.cypher.internal.PipelinedRuntime.PARALLEL
 import org.neo4j.cypher.internal.logical.plans.Ascending
+import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE.MORSEL_SIZE
 import org.neo4j.cypher.internal.runtime.spec._
 import org.neo4j.cypher.internal.runtime.spec.parallel.ParallelRuntimeSpecSuite.SIZE_HINT
 import org.neo4j.cypher.internal.runtime.spec.pipelined._
@@ -15,6 +18,7 @@ import org.neo4j.cypher.internal.runtime.spec.stress._
 import org.neo4j.cypher.internal.runtime.spec.tests._
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.result.OperatorProfile
+import org.scalatest.Outcome
 
 object ParallelRuntimeSpecSuite {
   val SIZE_HINT = 1000
@@ -22,6 +26,9 @@ object ParallelRuntimeSpecSuite {
 
 trait ParallelRuntimeSpecSuite extends TimeLimitedCypherTest with AssertFusingSucceeded {
   self: RuntimeTestSuite[EnterpriseRuntimeContext] =>
+  abstract override def withFixture(test: NoArgTest): Outcome = {
+    withClue(s"Failed with MORSEL_SIZE = $MORSEL_SIZE${lineSeparator()}")(super.withFixture(test))
+  }
 }
 
 // INPUT
