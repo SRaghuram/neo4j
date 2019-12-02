@@ -141,7 +141,7 @@ class AdministrationCommandsOnClusterIT
                 tx.execute( "CREATE USER " + userName + " SET PASSWORD 'f00'" );
                 fail( "Should have failed to write on a FOLLOWER, but succeeded." );
             }
-            catch ( IllegalStateException e )
+            catch ( QueryExecutionException e )
             {
                 assertEquals( "Failed to create the specified user '" + userName + "': " + followerError, e.getMessage() );
             }
@@ -177,7 +177,7 @@ class AdministrationCommandsOnClusterIT
                 tx.execute( "CREATE USER " + userName + " IF NOT EXISTS SET PASSWORD 'f00'" );
                 fail( "Should have failed to write on a FOLLOWER, but succeeded." );
             }
-            catch ( IllegalStateException e )
+            catch ( QueryExecutionException e )
             {
                 assertEquals( "Failed to create the specified user '" + userName + "': " + followerError, e.getMessage() );
             }
@@ -224,7 +224,7 @@ class AdministrationCommandsOnClusterIT
                 tx.execute( "CREATE USER " + userName + " IF NOT EXISTS SET PASSWORD 'f00' CHANGE NOT REQUIRED" );
                 fail( "Should have failed to write on a FOLLOWER, but succeeded." );
             }
-            catch ( IllegalStateException e )
+            catch ( QueryExecutionException e )
             {
                 assertEquals( "Failed to create the specified user '" + userName + "': " + followerError, e.getMessage() );
             }
@@ -261,7 +261,7 @@ class AdministrationCommandsOnClusterIT
                 tx.execute( "CREATE OR REPLACE USER " + userName + " SET PASSWORD 'f00'" );
                 fail( "Should have failed to write on a FOLLOWER, but succeeded." );
             }
-            catch ( IllegalStateException e )
+            catch ( QueryExecutionException e )
             {
                 // First fail on trying to delete the old user
                 assertEquals( "Failed to delete the specified user '" + userName + "': " + followerError, e.getMessage() );
@@ -309,7 +309,7 @@ class AdministrationCommandsOnClusterIT
                 tx.execute( "CREATE OR REPLACE USER " + userName + " SET PASSWORD 'f00' CHANGE NOT REQUIRED" );
                 fail( "Should have failed to write on a FOLLOWER, but succeeded." );
             }
-            catch ( IllegalStateException e )
+            catch ( QueryExecutionException e )
             {
                 // First fail on deleting the old user
                 assertEquals( "Failed to delete the specified user '" + userName + "': " + followerError, e.getMessage() );
@@ -353,7 +353,7 @@ class AdministrationCommandsOnClusterIT
                 tx.execute( "DROP USER " + userName );
                 fail( "Should have failed to write on a FOLLOWER, but succeeded." );
             }
-            catch ( IllegalStateException e )
+            catch ( QueryExecutionException e )
             {
                 assertEquals( "Failed to delete the specified user '" + userName + "': " + followerError, e.getMessage() );
             }
@@ -389,7 +389,7 @@ class AdministrationCommandsOnClusterIT
                 tx.execute( "DROP USER " + userName + " IF EXISTS" );
                 fail( "Should have failed to write on a FOLLOWER, but succeeded." );
             }
-            catch ( IllegalStateException e )
+            catch ( QueryExecutionException e )
             {
                 assertEquals( "Failed to delete the specified user '" + userName + "': " + followerError, e.getMessage() );
             }
@@ -432,7 +432,7 @@ class AdministrationCommandsOnClusterIT
                 tx.execute( "DROP USER " + userName + " IF EXISTS" );
                 fail( "Should have failed to write on a FOLLOWER, but succeeded." );
             }
-            catch ( IllegalStateException e )
+            catch ( QueryExecutionException e )
             {
                 assertEquals( "Failed to delete the specified user '" + userName + "': " + followerError, e.getMessage() );
             }
@@ -468,7 +468,7 @@ class AdministrationCommandsOnClusterIT
                 tx.execute( "ALTER USER neo4j SET PASSWORD CHANGE NOT REQUIRED" );
                 fail( "Should have failed to write on a FOLLOWER, but succeeded." );
             }
-            catch ( IllegalStateException e )
+            catch ( QueryExecutionException e )
             {
                 assertEquals( "Failed to alter the specified user 'neo4j': " + followerError, e.getMessage() );
             }
@@ -504,7 +504,7 @@ class AdministrationCommandsOnClusterIT
                 tx.execute( "ALTER USER " + userName + " SET PASSWORD CHANGE NOT REQUIRED" );
                 fail( "Should have failed to write on a FOLLOWER, but succeeded." );
             }
-            catch ( IllegalStateException e )
+            catch ( QueryExecutionException e )
             {
                 assertEquals( "Failed to alter the specified user '" + userName + "': " + followerError, e.getMessage() );
             }
@@ -535,7 +535,7 @@ class AdministrationCommandsOnClusterIT
                 tx.execute( "ALTER CURRENT USER SET PASSWORD FROM 'old' TO 'new'" );
                 fail( "Should have failed to write on a FOLLOWER, but succeeded." );
             }
-            catch ( IllegalStateException e )
+            catch ( QueryExecutionException e )
             {
                 assertEquals( "User '' failed to alter their own password: " + followerError, e.getMessage() );
             }
@@ -588,7 +588,7 @@ class AdministrationCommandsOnClusterIT
                 tx.execute( "CREATE ROLE " + roleName );
                 fail( "Should have failed to write on a FOLLOWER, but succeeded." );
             }
-            catch ( IllegalStateException e )
+            catch ( QueryExecutionException e )
             {
                 assertEquals( "Failed to create the specified role '" + roleName + "': " + followerError, e.getMessage() );
             }
@@ -641,7 +641,7 @@ class AdministrationCommandsOnClusterIT
                 tx.execute( "CREATE ROLE " + roleName2 + " AS COPY OF " + roleName );
                 fail( "Should have failed to write on a FOLLOWER, but succeeded." );
             }
-            catch ( IllegalStateException e )
+            catch ( QueryExecutionException e )
             {
                 // First fail on checking that roleName exists
                 assertEquals( "Failed to create a role as copy of '" + roleName + "': " + followerError, e.getMessage() );
@@ -682,7 +682,7 @@ class AdministrationCommandsOnClusterIT
                 tx.execute( "CREATE ROLE " + roleName + " IF NOT EXISTS" );
                 fail( "Should have failed to write on a FOLLOWER, but succeeded." );
             }
-            catch ( IllegalStateException e )
+            catch ( QueryExecutionException e )
             {
                 assertEquals( "Failed to create the specified role '" + roleName + "': " + followerError, e.getMessage() );
             }
@@ -735,7 +735,7 @@ class AdministrationCommandsOnClusterIT
                 tx.execute( "CREATE OR REPLACE ROLE " + roleName );
                 fail( "Should have failed to write on a FOLLOWER, but succeeded." );
             }
-            catch ( IllegalStateException e )
+            catch ( QueryExecutionException e )
             {
                 // First fail on deleting the old user
                 assertEquals( "Failed to delete the specified role '" + roleName + "': " + followerError, e.getMessage() );
@@ -773,7 +773,7 @@ class AdministrationCommandsOnClusterIT
                 tx.execute( "DROP ROLE " + roleName );
                 fail( "Should have failed to write on a FOLLOWER, but succeeded." );
             }
-            catch ( IllegalStateException e )
+            catch ( QueryExecutionException e )
             {
                 assertEquals( "Failed to delete the specified role '" + roleName + "': " + followerError, e.getMessage() );
             }
@@ -816,7 +816,7 @@ class AdministrationCommandsOnClusterIT
                 tx.execute( "DROP ROLE " + roleName + " IF EXISTS" );
                 fail( "Should have failed to write on a FOLLOWER, but succeeded." );
             }
-            catch ( IllegalStateException e )
+            catch ( QueryExecutionException e )
             {
                 assertEquals( "Failed to delete the specified role '" + roleName + "': " + followerError, e.getMessage() );
             }
@@ -863,7 +863,7 @@ class AdministrationCommandsOnClusterIT
                 tx.execute( "GRANT ROLE " + roleName + " TO " + userName );
                 fail( "Should have failed to write on a FOLLOWER, but succeeded." );
             }
-            catch ( IllegalStateException e )
+            catch ( QueryExecutionException e )
             {
                 assertEquals( "Failed to grant role '" + roleName + "' to user '" + userName + "': " + followerError, e.getMessage() );
             }
@@ -907,7 +907,7 @@ class AdministrationCommandsOnClusterIT
                 tx.execute( "REVOKE ROLE " + roleName + " FROM " + userName );
                 fail( "Should have failed to write on a FOLLOWER, but succeeded." );
             }
-            catch ( IllegalStateException e )
+            catch ( QueryExecutionException e )
             {
                 assertEquals( "Failed to revoke role '" + roleName + "' from user '" + userName + "': " + followerError, e.getMessage() );
             }
@@ -966,7 +966,7 @@ class AdministrationCommandsOnClusterIT
                 tx.execute( "GRANT TRAVERSE ON GRAPH * TO " + roleName );
                 fail( "Should have failed to write on a FOLLOWER, but succeeded." );
             }
-            catch ( IllegalStateException e )
+            catch ( QueryExecutionException e )
             {
                 assertEquals( "Failed to grant traversal privilege to role '" + roleName + "': " + followerError, e.getMessage() );
             }
@@ -1003,7 +1003,7 @@ class AdministrationCommandsOnClusterIT
                 tx.execute( "DENY READ {prop} ON GRAPH * TO " + roleName );
                 fail( "Should have failed to write on a FOLLOWER, but succeeded." );
             }
-            catch ( IllegalStateException e )
+            catch ( QueryExecutionException e )
             {
                 assertEquals( "Failed to deny read privilege to role '" + roleName + "': " + followerError, e.getMessage() );
             }
@@ -1045,7 +1045,7 @@ class AdministrationCommandsOnClusterIT
                 tx.execute( "REVOKE WRITE ON GRAPH * FROM " + roleName );
                 fail( "Should have failed to write on a FOLLOWER, but succeeded." );
             }
-            catch ( IllegalStateException e )
+            catch ( QueryExecutionException e )
             {
                 assertEquals( "Failed to revoke write privilege from role '" + roleName + "': " + followerError, e.getMessage() );
             }
@@ -1145,7 +1145,7 @@ class AdministrationCommandsOnClusterIT
                 tx.execute( "CREATE DATABASE " + dbName );
                 fail( "Should have failed to write on a FOLLOWER, but succeeded." );
             }
-            catch ( IllegalStateException e )
+            catch ( QueryExecutionException e )
             {
                 assertEquals( "Failed to create the specified database '" + dbName + "': " + followerError, e.getMessage() );
             }
@@ -1198,7 +1198,7 @@ class AdministrationCommandsOnClusterIT
                 tx.execute( "CREATE DATABASE " + dbName + " IF NOT EXISTS" );
                 fail( "Should have failed to write on a FOLLOWER, but succeeded." );
             }
-            catch ( IllegalStateException e )
+            catch ( QueryExecutionException e )
             {
                 assertEquals( "Failed to create the specified database '" + dbName + "': " + followerError, e.getMessage() );
             }
@@ -1226,7 +1226,7 @@ class AdministrationCommandsOnClusterIT
                 tx.execute( "CREATE OR REPLACE DATABASE " + dbName );
                 fail( "Should have failed to write on a FOLLOWER, but succeeded." );
             }
-            catch ( IllegalStateException e )
+            catch ( QueryExecutionException e )
             {
                 // First fail on trying to delete the old user
                 assertEquals( "Failed to delete the specified database '" + dbName + "': " + followerError, e.getMessage() );
@@ -1267,7 +1267,7 @@ class AdministrationCommandsOnClusterIT
                 tx.execute( "DROP DATABASE " + dbName );
                 fail( "Should have failed to write on a FOLLOWER, but succeeded." );
             }
-            catch ( IllegalStateException e )
+            catch ( QueryExecutionException e )
             {
                 assertEquals( "Failed to delete the specified database '" + dbName + "': " + followerError, e.getMessage() );
             }
@@ -1297,7 +1297,7 @@ class AdministrationCommandsOnClusterIT
                 tx.execute( "DROP DATABASE " + dbName + " IF EXISTS" );
                 fail( "Should have failed to write on a FOLLOWER, but succeeded." );
             }
-            catch ( IllegalStateException e )
+            catch ( QueryExecutionException e )
             {
                 assertEquals( "Failed to delete the specified database '" + dbName + "': " + followerError, e.getMessage() );
             }
@@ -1321,7 +1321,7 @@ class AdministrationCommandsOnClusterIT
                 tx.execute( "START DATABASE " + dbName );
                 fail( "Should have failed to write on a FOLLOWER, but succeeded." );
             }
-            catch ( IllegalStateException e )
+            catch ( QueryExecutionException e )
             {
                 assertEquals( "Failed to start the specified database '" + dbName + "': " + followerError, e.getMessage() );
             }
@@ -1363,7 +1363,7 @@ class AdministrationCommandsOnClusterIT
                 tx.execute( "STOP DATABASE " + dbName );
                 fail( "Should have failed to write on a FOLLOWER, but succeeded." );
             }
-            catch ( IllegalStateException e )
+            catch ( QueryExecutionException e )
             {
                 assertEquals( "Failed to stop the specified database '" + dbName + "': " + followerError, e.getMessage() );
             }

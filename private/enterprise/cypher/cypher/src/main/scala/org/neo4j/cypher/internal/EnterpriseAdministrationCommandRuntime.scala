@@ -91,6 +91,7 @@ import org.neo4j.dbms.api.DatabaseLimitReachedException
 import org.neo4j.dbms.api.DatabaseNotFoundException
 import org.neo4j.exceptions.CantCompileQueryException
 import org.neo4j.exceptions.DatabaseAdministrationException
+import org.neo4j.exceptions.DatabaseAdministrationOnFollowerException
 import org.neo4j.exceptions.InternalException
 import org.neo4j.internal.kernel.api.security.PrivilegeAction
 import org.neo4j.internal.kernel.api.security.SecurityContext
@@ -184,7 +185,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
               case (_, _: UniquePropertyValueValidationException) =>
                 new InvalidArgumentsException(s"Failed to create the specified user '$userName': User already exists.", error)
               case (e: HasStatus, _) if e.status() == Status.Cluster.NotALeader =>
-                new IllegalStateException(s"Failed to create the specified user '$userName': $followerError", error)
+                new DatabaseAdministrationOnFollowerException(s"Failed to create the specified user '$userName': $followerError", error)
               case _ => new IllegalStateException(s"Failed to create the specified user '$userName'.", error)
             }),
           source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
@@ -220,7 +221,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           .handleNoResult(() => Some(new InvalidArgumentsException(s"Failed to alter the specified user '$userName': User does not exist.")))
           .handleError {
             case error: HasStatus if error.status() == Status.Cluster.NotALeader =>
-              new IllegalStateException(s"Failed to alter the specified user '$userName': $followerError", error)
+              new DatabaseAdministrationOnFollowerException(s"Failed to alter the specified user '$userName': $followerError", error)
             case error => new IllegalStateException(s"Failed to alter the specified user '$userName'.", error)
           }
           .handleResult((_, value) => {
@@ -289,7 +290,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
             case (_, _: UniquePropertyValueValidationException) =>
               new InvalidArgumentsException(s"Failed to create the specified role '$roleName': Role already exists.", error)
             case (e: HasStatus, _) if e.status() == Status.Cluster.NotALeader =>
-              new IllegalStateException(s"Failed to create the specified role '$roleName': $followerError", error)
+              new DatabaseAdministrationOnFollowerException(s"Failed to create the specified role '$roleName': $followerError", error)
             case _ => new IllegalStateException(s"Failed to create the specified role '$roleName'.", error)
           }),
         source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
@@ -305,7 +306,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           .handleNoResult(() => Some(new InvalidArgumentsException(s"Failed to create a role as copy of '$roleName': Role does not exist.")))
           .handleError {
             case error: HasStatus if error.status() == Status.Cluster.NotALeader =>
-              new IllegalStateException(s"Failed to create a role as copy of '$roleName': $followerError", error)
+              new DatabaseAdministrationOnFollowerException(s"Failed to create a role as copy of '$roleName': $followerError", error)
             case error => new IllegalStateException(s"Failed to create a role as copy of '$roleName'.", error) // should not get here but need a default case
           },
         source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
@@ -333,7 +334,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         QueryHandler
           .handleError {
             case error: HasStatus if error.status() == Status.Cluster.NotALeader =>
-              new IllegalStateException(s"Failed to delete the specified role '$roleName': $followerError", error)
+              new DatabaseAdministrationOnFollowerException(s"Failed to delete the specified role '$roleName': $followerError", error)
             case error => new IllegalStateException(s"Failed to delete the specified role '$roleName'.", error)
           },
         source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
@@ -354,7 +355,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
             case e: InternalException if e.getMessage.contains("ignore rows where a relationship node is missing") =>
               new InvalidArgumentsException(s"Failed to grant role '$roleName' to user '$userName': User does not exist.", e)
             case e: HasStatus if e.status() == Status.Cluster.NotALeader =>
-              new IllegalStateException(s"Failed to grant role '$roleName' to user '$userName': $followerError", e)
+              new DatabaseAdministrationOnFollowerException(s"Failed to grant role '$roleName' to user '$userName': $followerError", e)
             case e => new IllegalStateException(s"Failed to grant role '$roleName' to user '$userName'.", e)
           },
         source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
@@ -372,7 +373,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         VirtualValues.map(Array("role", "user"), Array(Values.stringValue(roleName), Values.stringValue(userName))),
         QueryHandler.handleError {
           case error: HasStatus if error.status() == Status.Cluster.NotALeader =>
-            new IllegalStateException(s"Failed to revoke role '$roleName' from user '$userName': $followerError", error)
+            new DatabaseAdministrationOnFollowerException(s"Failed to revoke role '$roleName' from user '$userName': $followerError", error)
           case error => new IllegalStateException(s"Failed to revoke role '$roleName' from user '$userName'.", error)
         },
         source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
@@ -624,7 +625,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
             case (_, _: UniquePropertyValueValidationException) =>
               new DatabaseExistsException(s"Failed to create the specified database '$dbName': Database already exists.", error)
             case (e: HasStatus, _) if e.status() == Status.Cluster.NotALeader =>
-              new IllegalStateException(s"Failed to create the specified database '$dbName': $followerError", error)
+              new DatabaseAdministrationOnFollowerException(s"Failed to create the specified database '$dbName': $followerError", error)
             case _ => new IllegalStateException(s"Failed to create the specified database '$dbName'.", error)
           }),
         source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
@@ -661,7 +662,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         VirtualValues.map(Array("name"), Array(Values.stringValue(dbName))),
         QueryHandler.handleError {
           case error: HasStatus if error.status() == Status.Cluster.NotALeader =>
-            new IllegalStateException(s"Failed to delete the specified database '$dbName': $followerError", error)
+            new DatabaseAdministrationOnFollowerException(s"Failed to delete the specified database '$dbName': $followerError", error)
           case error => new IllegalStateException(s"Failed to delete the specified database '$dbName'.", error)
         },
         source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
@@ -690,7 +691,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           })
           .handleError {
             case error: HasStatus if error.status() == Status.Cluster.NotALeader =>
-              new IllegalStateException(s"Failed to start the specified database '$dbName': $followerError", error)
+              new DatabaseAdministrationOnFollowerException(s"Failed to start the specified database '$dbName': $followerError", error)
             case error => new IllegalStateException(s"Failed to start the specified database '$dbName'.", error)
           },
         source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
@@ -713,7 +714,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         ),
         QueryHandler.handleError {
           case error: HasStatus if error.status() == Status.Cluster.NotALeader =>
-            new IllegalStateException(s"Failed to stop the specified database '$dbName': $followerError", error)
+            new DatabaseAdministrationOnFollowerException(s"Failed to stop the specified database '$dbName': $followerError", error)
           case error => new IllegalStateException(s"Failed to stop the specified database '$dbName'.", error)
         },
         source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
@@ -734,7 +735,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           .handleNoResult(() => Some(new DatabaseNotFoundException(s"Failed to $action the specified database '$dbName': Database does not exist.")))
           .handleError {
             case error: HasStatus if error.status() == Status.Cluster.NotALeader =>
-              new IllegalStateException(s"Failed to $action the specified database '$dbName': $followerError", error)
+              new DatabaseAdministrationOnFollowerException(s"Failed to $action the specified database '$dbName': $followerError", error)
             case error => new IllegalStateException(s"Failed to $action the specified database '$dbName'.", error) // should not get here but need a default case
           },
         source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
@@ -818,7 +819,8 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         .handleError {
           case e: InternalException if e.getMessage.contains("ignore rows where a relationship node is missing") =>
             new InvalidArgumentsException(s"$startOfErrorMessage: Role '$roleName' does not exist.", e)
-          case e: HasStatus if e.status() == Status.Cluster.NotALeader => new IllegalStateException(s"$startOfErrorMessage: $followerError", e)
+          case e: HasStatus if e.status() == Status.Cluster.NotALeader =>
+            new DatabaseAdministrationOnFollowerException(s"$startOfErrorMessage: $followerError", e)
           case e => new IllegalStateException(s"$startOfErrorMessage.", e)
         },
       source
@@ -860,7 +862,8 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
          |RETURN r.name AS role, g AS grant""".stripMargin,
       VirtualValues.map(Array("action", "resource", "property", "database", "label", "role"), Array(action, resourceType, property, dbName, label, role)),
       QueryHandler.handleError {
-        case e: HasStatus if e.status() == Status.Cluster.NotALeader => new IllegalStateException(s"$startOfErrorMessage: $followerError", e)
+        case e: HasStatus if e.status() == Status.Cluster.NotALeader =>
+          new DatabaseAdministrationOnFollowerException(s"$startOfErrorMessage: $followerError", e)
         case e => new IllegalStateException(s"$startOfErrorMessage.", e)
       },
       source
