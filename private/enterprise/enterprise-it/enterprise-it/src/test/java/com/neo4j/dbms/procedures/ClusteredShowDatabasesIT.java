@@ -70,7 +70,7 @@ class ClusteredShowDatabasesIT
     private static int numCores = 3;
     private static int numRRs = 2;
 
-    private static int timeout = 30;
+    private static int timeout = 60;
 
     @Nested
     @TestDirectoryExtension
@@ -440,7 +440,7 @@ class ClusteredShowDatabasesIT
 
             // then
             assertEventually( "SHOW DATABASES should return 2 rows with an error for database foo", () -> showDatabases( cluster ),
-                    containsError( "The total limit of databases is already reached", "foo", 2 ), 60, SECONDS );
+                    containsError( "The total limit of databases is already reached", "foo", 2 ), timeout, SECONDS );
             assertEventually( format( "SHOW DATABASES should show Started status for members %s, for database foo", initialClusterAddresses ),
                     () -> membersHaveStateForDatabases( initialClusterAddresses, singleton( ADDITIONAL_DATABASE_NAME ), STARTED, cluster ),
                     is( true ), timeout, SECONDS );
