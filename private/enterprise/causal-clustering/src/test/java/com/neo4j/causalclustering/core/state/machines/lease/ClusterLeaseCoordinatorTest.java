@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.core.state.machines.lease;
 
 import com.neo4j.causalclustering.core.consensus.LeaderLocator;
 import com.neo4j.causalclustering.core.replication.DirectReplicator;
+import com.neo4j.causalclustering.core.replication.ReplicationResult;
 import com.neo4j.causalclustering.core.state.storage.InMemoryStateStorage;
 import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.jupiter.api.Test;
@@ -140,5 +141,46 @@ class ClusterLeaseCoordinatorTest
         assertTrue( coordinator.isInvalid( clientA.leaseId() ) );
         assertTrue( coordinator.isInvalid( clientB.leaseId() ) );
         assertFalse( coordinator.isInvalid( clientC.leaseId() ) );
+    }
+
+    @Test
+    void shouldConsiderLeaseFromPreviousLifeInvalid() throws Exception
+    {
+        // given
+        when( leaderLocator.getLeader() ).thenReturn( myself );
+        ReplicatedLeaseRequest oldLease = new ReplicatedLeaseRequest( myself, 0, namedDatabaseId.databaseId() );
+        ReplicationResult result = replicator.replicate( oldLease );
+        assertEquals( true, result.stateMachineResult().consume() );
+
+        // when
+        LeaseClient clientA = coordinator.newClient();
+        clientA.ensureValid();
+
+        // then
+        assertEquals( 1, clientA.leaseId() );
+        assertFalse( coordinator.isInvalid( 1 ) );
+    }
+
+    @Test
+    void shouldAllocateAfterSwitch() throws Exception
+    {
+        // when
+        when( leaderLocator.getLeader() ).thenReturn( myself );
+        LeaseClient clientA = coordinator.newClient();
+        clientA.ensureValid();
+        assertEquals( 0, clientA.leaseId() );
+
+        // when
+        replicator.replicate( new ReplicatedLeaseRequest( other, 1, namedDatabaseId.databaseId() ) );
+
+        // then
+        assertThrows( LeaseException.class, clientA::ensureValid );
+
+        // when
+        LeaseClient clientB = coordinator.newClient();
+        clientB.ensureValid();
+
+        // then
+        assertEquals( 2, clientB.leaseId() );
     }
 }

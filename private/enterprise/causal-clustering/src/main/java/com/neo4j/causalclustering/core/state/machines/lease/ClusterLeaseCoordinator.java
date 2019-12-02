@@ -32,9 +32,10 @@ import static org.neo4j.kernel.api.exceptions.Status.Cluster.ReplicationFailure;
  */
 public class ClusterLeaseCoordinator implements LeaseService
 {
-    public static final String NOT_ON_LEADER_ERROR_MESSAGE = "Should only attempt to acquire lease when leader.";
+    private static final String NOT_ON_LEADER_ERROR_MESSAGE = "Should only attempt to acquire lease when leader.";
 
     private volatile int invalidLeaseId = NO_LEASE;
+    private volatile int myLeaseId = NO_LEASE;
 
     private final MemberId myself;
     private final Replicator replicator;
@@ -68,7 +69,7 @@ public class ClusterLeaseCoordinator implements LeaseService
         {
             throw new IllegalArgumentException( "Not a lease" );
         }
-        return leaseId == invalidLeaseId || leaseId != leaseStateMachine.leaseId();
+        return leaseId == invalidLeaseId || leaseId != leaseStateMachine.leaseId() || leaseId != myLeaseId;
     }
 
     public synchronized void invalidateLease( int leaseId )
@@ -124,7 +125,7 @@ public class ClusterLeaseCoordinator implements LeaseService
         }
 
         invalidLeaseId = currentLease.id();
-        return leaseRequest.id();
+        return myLeaseId = leaseRequest.id();
     }
 
     private void ensureLeader() throws LeaseException
