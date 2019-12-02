@@ -179,7 +179,7 @@ class BoltCausalClusteringIT
                         {
                             StatementResult result = session.run( "CREATE (p:Person)" );
                             return result.consume().server().address();
-                        } ) );
+                        }, 60_000 ) );
                 assertNotEquals( secondAddress, firstAddress );
             }
         }
@@ -623,7 +623,12 @@ class BoltCausalClusteringIT
 
     private static <T> T inExpirableSession( Driver driver, Function<Driver,Session> acquirer, Function<Session,T> op ) throws TimeoutException
     {
-        long endTime = System.currentTimeMillis() + DEFAULT_TIMEOUT_MS;
+        return inExpirableSession( driver, acquirer, op, DEFAULT_TIMEOUT_MS );
+    }
+
+    private static <T> T inExpirableSession( Driver driver, Function<Driver,Session> acquirer, Function<Session,T> op, long timeoutMs ) throws TimeoutException
+    {
+        long endTime = System.currentTimeMillis() + timeoutMs;
 
         do
         {
