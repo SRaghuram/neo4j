@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.runtime.spec
 
 import java.lang.Boolean.TRUE
+import java.util.concurrent.ThreadLocalRandom
 
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder
 import org.neo4j.configuration.GraphDatabaseSettings
@@ -17,7 +18,13 @@ import org.neo4j.scheduler.JobScheduler
 
 //noinspection TypeAnnotation
 object ENTERPRISE {
-  val MORSEL_SIZE = 4
+  //randomize morsel size evenly in [1, 5]
+  lazy val MORSEL_SIZE = {
+    val random = ThreadLocalRandom.current()
+    val morselSize = random.nextInt(1, 6)
+    println(s"Using morsel size $morselSize")
+    morselSize
+  }
 
   private val edition = new Edition[EnterpriseRuntimeContext](
     () => new TestEnterpriseDatabaseManagementServiceBuilder(),
