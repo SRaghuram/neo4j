@@ -729,8 +729,9 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     }
 
     // Then
-    exception.getCause should have message
-      "An equivalent index already exists, 'Index( 7, 'index_4a67150f', GENERAL BTREE, :Person(name, surname), native-btree-1.0 )'."
+    val message = exception.getCause.getMessage
+    message should startWith("An equivalent index already exists")
+    message should include("'index_4a67150f', GENERAL BTREE, :Person(name, surname), native-btree-1.0 )'.")
   }
 
   test("should fail on multiple attempts to create a named composite index") {
@@ -743,7 +744,9 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     }
 
     // Then
-    exception.getCause should have message "An equivalent index already exists, 'Index( 7, 'my_index', GENERAL BTREE, :Person(name, surname), native-btree-1.0 )'."
+    val message = exception.getCause.getMessage
+    message should startWith("An equivalent index already exists")
+    message should include("'my_index', GENERAL BTREE, :Person(name, surname), native-btree-1.0 )'.")
   }
 
   test("should fail on multiple attempts to create a named composite index with different name") {
