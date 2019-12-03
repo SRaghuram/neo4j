@@ -23,7 +23,6 @@ import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.procs._
 import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.security.{SecureHasher, SystemGraphCredential}
-import org.neo4j.cypher.internal.ast.{AllGraphsScope, NamedGraphScope}
 import org.neo4j.cypher.internal.util.InputPosition
 import org.neo4j.dbms.api.{DatabaseExistsException, DatabaseLimitReachedException, DatabaseNotFoundException}
 import org.neo4j.exceptions.{CantCompileQueryException, DatabaseAdministrationException, InternalException}
@@ -319,8 +318,9 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
 
     case AssertValidRevoke(source, action, scope, roleName) => (context, parameterMapping, securityContext) =>
       val (dbPredicate, dbValue) = scope match {
-        case AllGraphsScope() => ("d:DatabaseAll", Values.of("*"))
-        case NamedGraphScope(database) => ("d.name = $database", Values.of(database))
+        case ast.AllGraphsScope() => ("d:DatabaseAll", Values.of("*"))
+        case ast.NamedGraphScope(database) => ("d.name = $database", Values.of(database))
+        case ast.DefaultDatabaseScope() => ("d.default = true", Values.NO_VALUE)
       }
       val query =
         s"""
@@ -332,7 +332,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       val grantee = Values.of(roleName)
       val privilegeAction = AdminActionMapper.asKernelAction(action)
       UpdatingSystemCommandExecutionPlan("AssertValidRevoke", normalExecutionEngine, query, VirtualValues.map(Array("grantee", "database"), Array(grantee, dbValue)),
-        queryHandler = QueryHandler.handleResult((i, value) => {
+        queryHandler = QueryHandler.handleResult((_, value) => {
           value match {
             case l: ListValue =>
               l.asArray().foldLeft(Option.empty[Throwable]) {
@@ -687,7 +687,8 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
                                            resource: ast.ActionResource,
                                            database: ast.GraphScope,
                                            qualifier: ast.PrivilegeQualifier,
-                                           roleName: String, source: Option[ExecutionPlan],
+                                           roleName: String,
+                                           source: Option[ExecutionPlan],
                                            grant: GrantOrDeny,
                                            startOfErrorMessage: String): UpdatingSystemCommandExecutionPlan = {
 
@@ -700,6 +701,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
     val (dbName, db, databaseMerge, scopeMerge) = database match {
       case ast.NamedGraphScope(name) => (Values.stringValue(name), name, "MATCH (d:Database {name: $database})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)")
       case ast.AllGraphsScope() => (Values.NO_VALUE, "*", "MERGE (d:DatabaseAll {name: '*'})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)") // The name is just for later printout of results
+      case ast.DefaultDatabaseScope() => (Values.NO_VALUE, "DEFAULT DATABASE", "MATCH (d:Database {default: true})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)")
       case _ => throw new IllegalStateException(s"$startOfErrorMessage: Invalid privilege ${grant.name} scope database $database")
     }
     UpdatingSystemCommandExecutionPlan(commandName, normalExecutionEngine,
@@ -746,9 +748,10 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
 
     val (property: Value, resourceType: Value, resourceMatch: String) = getResourcePart(resource, startOfErrorMessage, "revoke", "MATCH")
     val (label: Value, qualifierMatch: String) = getQualifierPart(qualifier, startOfErrorMessage, "revoke", "MATCH")
-    val (dbName, _, scopeMatch) = database match {
-      case ast.NamedGraphScope(name) => (Values.stringValue(name), name, "MATCH (d:Database {name: $database})<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)")
-      case ast.AllGraphsScope() => (Values.NO_VALUE, "*", "MATCH (d:DatabaseAll {name: '*'})<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)") // The name is just for later printout of results
+    val (dbName, scopeMatch) = database match {
+      case ast.NamedGraphScope(name) => (Values.stringValue(name), "MATCH (d:Database {name: $database})<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)")
+      case ast.AllGraphsScope() => (Values.NO_VALUE, "MATCH (d:DatabaseAll {name: '*'})<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)")
+      case ast.DefaultDatabaseScope() => (Values.NO_VALUE, "MATCH (d:Database {default: true})<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)")
       case _ => throw new IllegalStateException(s"$startOfErrorMessage: Invalid privilege revoke scope database $database")
     }
     UpdatingSystemCommandExecutionPlan("RevokePrivilege", normalExecutionEngine,

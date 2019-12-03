@@ -153,6 +153,14 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set.empty)
+
+    // WHEN
+    execute("GRANT CREATE INDEX ON DEFAULT DATABASE TO role")
+
+    // THEN
+    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
+      createIndex().database(DEFAULT_DATABASE_NAME).role("role").map
+    ))
   }
 
   test("should list different constraint management privileges") {
@@ -219,6 +227,14 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set.empty)
+
+    // WHEN
+    execute("GRANT DROP CONSTRAINT ON DEFAULT DATABASE TO role")
+
+    // THEN
+    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
+      dropConstraint().database(DEFAULT_DATABASE_NAME).role("role").map
+    ))
   }
 
   test("should list different name management privileges") {
@@ -291,6 +307,14 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set.empty)
+
+    // WHEN
+    execute("GRANT CREATE NEW LABEL ON DEFAULT DATABASE TO role")
+
+    // THEN
+    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
+      createNodeLabel().database(DEFAULT_DATABASE_NAME).role("role").map
+    ))
   }
 
   test("Should get correct privileges for combinations of schema and token write") {

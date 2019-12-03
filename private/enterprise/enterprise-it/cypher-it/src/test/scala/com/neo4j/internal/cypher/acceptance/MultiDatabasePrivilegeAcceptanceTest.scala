@@ -94,6 +94,16 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
       startDatabase().role("role").map,
       stopDatabase().database("foo").role("role").map
     ))
+
+    // WHEN
+    execute("DENY STOP ON DEFAULT DATABASE TO role")
+
+    // THEN
+    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
+      startDatabase().role("role").map,
+      stopDatabase().database("foo").role("role").map,
+      stopDatabase("DENIED").database(DEFAULT_DATABASE_NAME).role("role").map
+    ))
   }
 
   test("should list access database privilege") {
@@ -123,6 +133,23 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
       access().database(DEFAULT_DATABASE_NAME).role("custom").map
+    ))
+
+    // WHEN
+    execute("DENY ACCESS ON DEFAULT DATABASE TO custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      access().database(DEFAULT_DATABASE_NAME).role("custom").map,
+      access("DENIED").database(DEFAULT_DATABASE_NAME).role("custom").map
+    ))
+
+    // WHEN
+    execute("REVOKE GRANT ACCESS ON DEFAULT DATABASE FROM custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      access("DENIED").database(DEFAULT_DATABASE_NAME).role("custom").map
     ))
   }
 
