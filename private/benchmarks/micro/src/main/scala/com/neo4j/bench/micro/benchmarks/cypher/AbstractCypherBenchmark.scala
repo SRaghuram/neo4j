@@ -71,7 +71,7 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
       count += 1
     }
 
-    override def onField(value: AnyValue): Unit = {
+    override def onField(offset: Int, value: AnyValue): Unit = {
       bh.consume(value)
     }
   }

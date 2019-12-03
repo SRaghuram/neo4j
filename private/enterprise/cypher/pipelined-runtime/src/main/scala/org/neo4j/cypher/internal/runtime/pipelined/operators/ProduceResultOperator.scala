@@ -154,7 +154,7 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
         if (state.prepopulateResults) {
           ValuePopulation.populate(value)
         }
-        subscriber.onField(value)
+        subscriber.onField(i, value)
         i += 1
       }
       subscriber.onRecordCompleted()

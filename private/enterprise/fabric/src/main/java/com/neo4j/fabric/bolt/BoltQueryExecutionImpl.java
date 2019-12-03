@@ -145,7 +145,7 @@ public class BoltQueryExecutionImpl implements BoltQueryExecution
         {
             for ( int i = 0; i < columns.size(); i++ )
             {
-                subscriber.onField( record.getValue( i ) );
+                subscriber.onField( i, record.getValue( i ) );
             }
         }
 
