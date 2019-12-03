@@ -12,6 +12,7 @@ import java.util.StringJoiner;
 
 import org.neo4j.index.internal.gbptree.GBPTree;
 import org.neo4j.index.internal.gbptree.GBPTreeBootstrapper;
+import org.neo4j.index.internal.gbptree.PrintConfig;
 import org.neo4j.index.internal.gbptree.PrintingGBPTreeVisitor;
 import org.neo4j.internal.helpers.Args;
 import org.neo4j.io.pagecache.PageCache;
@@ -47,7 +48,7 @@ public class GBPTreeDumpTool
 
             try ( GBPTree<?,?> tree = bootstrap.getTree() )
             {
-                tree.visit( new PrintingGBPTreeVisitor<>( out, false, false, false, true, false, false ) );
+                tree.visit( new PrintingGBPTreeVisitor<>( PrintConfig.defaults().printStream( out ).printHeader() ) );
             }
         }
     }
