@@ -5,17 +5,18 @@
  */
 package org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions
 
+import org.neo4j.cypher.internal.Require.require
 import org.neo4j.cypher.internal.runtime.compiled.codegen.CodeGenContext
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.MethodStructure
 import org.neo4j.cypher.internal.runtime.compiled.helpers.LiteralTypeSupport
 
 case class Literal(value: Object) extends CodeGenExpression {
 
-  override def init[E](generator: MethodStructure[E])(implicit context: CodeGenContext) = {}
+  override def init[E](generator: MethodStructure[E])(implicit context: CodeGenContext): Unit = {}
 
-  override def generateExpression[E](structure: MethodStructure[E])(implicit context: CodeGenContext) = {
+  override def generateExpression[E](structure: MethodStructure[E])(implicit context: CodeGenContext): E = {
     // When the literal value comes from the AST it should already have been converted
-    assert({
+    require({
       val needsConverison = value match {
         case n: java.lang.Byte => true // n.longValue()
         case n: java.lang.Short => true // n.longValue()
@@ -35,7 +36,7 @@ case class Literal(value: Object) extends CodeGenExpression {
       structure.constantValueExpression(value, ct)
   }
 
-  override def nullable(implicit context: CodeGenContext) = value == null
+  override def nullable(implicit context: CodeGenContext): Boolean = value == null
 
-  override def codeGenType(implicit context: CodeGenContext) = LiteralTypeSupport.deriveCodeGenType(value)
+  override def codeGenType(implicit context: CodeGenContext): CypherCodeGenType = LiteralTypeSupport.deriveCodeGenType(value)
 }

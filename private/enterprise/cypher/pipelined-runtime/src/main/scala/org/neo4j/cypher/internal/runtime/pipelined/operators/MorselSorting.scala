@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.operators
 
 import java.util.Comparator
 
+import org.neo4j.cypher.internal.Require.require
 import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot}
 import org.neo4j.cypher.internal.runtime.pipelined.execution.{Morsel, MorselExecutionContext}
 import org.neo4j.cypher.internal.runtime.slotted.ColumnOrder
@@ -55,12 +56,12 @@ object MorselSorting {
     var i = 0
     row.resetToFirstRow()
     while (i < rows) {
-      assert(row.isValidRow)
+      require(row.isValidRow)
       indexes(i) = row.getCurrentRow
       row.moveToNextRow()
       i += 1
     }
-    assert(!row.isValidRow)
+    require(!row.isValidRow)
     row.setCurrentRow(currentRow)
     indexes
   }

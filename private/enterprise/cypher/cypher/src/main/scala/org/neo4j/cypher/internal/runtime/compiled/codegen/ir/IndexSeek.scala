@@ -5,6 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.compiled.codegen.ir
 
+import org.neo4j.cypher.internal.Require.require
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.CodeGenExpression
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.MethodStructure
 import org.neo4j.cypher.internal.runtime.compiled.codegen.{CodeGenContext, Variable}
@@ -12,8 +13,8 @@ import org.neo4j.cypher.internal.runtime.compiled.codegen.{CodeGenContext, Varia
 case class IndexSeek(opName: String, labelName: String, propNames: Seq[String], descriptorVar: String,
                      expression: CodeGenExpression) extends LoopDataGenerator {
 
-  override def init[E](generator: MethodStructure[E])(implicit context: CodeGenContext) = {
-    assert(propNames.length == 1)
+  override def init[E](generator: MethodStructure[E])(implicit context: CodeGenContext): Unit = {
+    require(propNames.length == 1)
     expression.init(generator)
     val labelVar = context.namer.newVarName()
     val propKeyVar = context.namer.newVarName()
@@ -22,13 +23,13 @@ case class IndexSeek(opName: String, labelName: String, propNames: Seq[String], 
     generator.newIndexReference(descriptorVar, labelVar, propKeyVar)
   }
 
-  override def produceLoopData[E](cursorName: String, generator: MethodStructure[E])(implicit context: CodeGenContext) = {
+  override def produceLoopData[E](cursorName: String, generator: MethodStructure[E])(implicit context: CodeGenContext): Unit = {
       generator.indexSeek(cursorName, descriptorVar, expression.generateExpression(generator), expression.codeGenType)
       generator.incrementDbHits()
   }
 
   override def getNext[E](nextVar: Variable, cursorName: String, generator: MethodStructure[E])
-                         (implicit context: CodeGenContext) = {
+                         (implicit context: CodeGenContext): Unit = {
     generator.incrementDbHits()
     generator.nodeFromNodeValueIndexCursor(nextVar.name, cursorName)
   }

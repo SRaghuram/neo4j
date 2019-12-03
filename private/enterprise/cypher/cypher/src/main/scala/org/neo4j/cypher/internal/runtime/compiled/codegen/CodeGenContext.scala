@@ -5,9 +5,10 @@
  */
 package org.neo4j.cypher.internal.runtime.compiled.codegen
 
+import org.neo4j.cypher.internal.Require.require
+import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.JoinData
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.CodeGenType
-import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.exceptions.InternalException
@@ -30,12 +31,12 @@ class CodeGenContext(val semanticTable: SemanticTable,
     variables.put(queryVariable, variable)
   }
 
-  def numberOfColumns() = lookup.size
+  def numberOfColumns(): Int = lookup.size
 
-  def nameToIndex(name: String) = lookup.getOrElse(name, throw new InternalException(s"$name is not a mapped column"))
+  def nameToIndex(name: String): Int = lookup.getOrElse(name, throw new InternalException(s"$name is not a mapped column"))
 
   def updateVariable(queryVariable: String, variable: Variable) {
-    assert(variables.isDefinedAt(queryVariable), s"undefined: $queryVariable")
+    require(variables.isDefinedAt(queryVariable), s"undefined: $queryVariable")
     variables.put(queryVariable, variable)
   }
 

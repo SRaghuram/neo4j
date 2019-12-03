@@ -5,17 +5,18 @@
  */
 package org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions
 
+import org.neo4j.cypher.internal.Require.require
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.MethodStructure
 import org.neo4j.cypher.internal.runtime.compiled.codegen.{CodeGenContext, Variable}
 import org.neo4j.cypher.internal.v4_0.util.symbols._
 
 case class NodeProjection(nodeIdVar: Variable) extends CodeGenExpression {
 
-  assert(nodeIdVar.codeGenType.asInstanceOf[CypherCodeGenType].ct == CTNode)
+  require(nodeIdVar.codeGenType.asInstanceOf[CypherCodeGenType].ct == CTNode)
 
-  override def init[E](generator: MethodStructure[E])(implicit context: CodeGenContext) = {}
+  override def init[E](generator: MethodStructure[E])(implicit context: CodeGenContext): Unit = {}
 
-  override def generateExpression[E](structure: MethodStructure[E])(implicit context: CodeGenContext) ={
+  override def generateExpression[E](structure: MethodStructure[E])(implicit context: CodeGenContext): E ={
     if (nodeIdVar.nullable)
       structure.nullableReference(nodeIdVar.name, CodeGenType.primitiveNode,
         structure.materializeNode(nodeIdVar.name, nodeIdVar.codeGenType))
@@ -23,7 +24,7 @@ case class NodeProjection(nodeIdVar: Variable) extends CodeGenExpression {
       structure.materializeNode(nodeIdVar.name, nodeIdVar.codeGenType)
   }
 
-  override def nullable(implicit context: CodeGenContext) = nodeIdVar.nullable
+  override def nullable(implicit context: CodeGenContext): Boolean = nodeIdVar.nullable
 
   override def codeGenType(implicit context: CodeGenContext) = CypherCodeGenType(CTNode, ReferenceType)
 }

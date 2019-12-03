@@ -5,6 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.compiled.codegen.ir
 
+import org.neo4j.cypher.internal.Require.require
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.{CodeGenExpression, CodeGenType}
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.MethodStructure
 import org.neo4j.cypher.internal.runtime.compiled.codegen.{CodeGenContext, Variable}
@@ -22,7 +23,7 @@ case class UnwindCollection(opName: String, collection: CodeGenExpression, eleme
 
   override def getNext[E](nextVar: Variable, iterVar: String, generator: MethodStructure[E])
                          (implicit context: CodeGenContext): Unit = {
-    assert(elementCodeGenType == nextVar.codeGenType)
+    require(elementCodeGenType == nextVar.codeGenType)
     val next = generator.iteratorNext(generator.loadVariable(iterVar), nextVar.codeGenType)
     generator.assign(nextVar, next)
   }

@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.runtime.pipelined
 
 import org.neo4j.cypher.CypherInterpretedPipesFallbackOption
+import org.neo4j.cypher.internal.Require.require
 import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.physicalplanning.{OperatorFusionPolicy, PipelineBreakingPolicy}
 import org.neo4j.exceptions.CantCompileQueryException
@@ -78,7 +79,7 @@ case class PipelinedPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy, i
     * able to fuse them together and don't have to insert a pipeline break.
     */
   private def canFuseOneChildOperator(lp: LogicalPlan):Boolean = {
-    assert(lp.rhs.isEmpty)
+    require(lp.rhs.isEmpty)
 
     if (!fusionPolicy.canFuseOverPipeline(lp)) {
       return false

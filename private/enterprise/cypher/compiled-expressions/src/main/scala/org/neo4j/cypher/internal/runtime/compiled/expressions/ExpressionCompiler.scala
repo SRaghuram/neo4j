@@ -12,6 +12,7 @@ import java.util.{Optional, regex}
 import org.neo4j.codegen.api.CodeGeneration.compileAnonymousClass
 import org.neo4j.codegen.api.IntermediateRepresentation._
 import org.neo4j.codegen.api._
+import org.neo4j.cypher.internal.Require.require
 import org.neo4j.cypher.internal.compiler.helpers.PredicateHelper.isPredicate
 import org.neo4j.cypher.internal.logical.plans.{CoerceToPredicate, NestedPlanExpression, ResolvedFunctionInvocation}
 import org.neo4j.cypher.internal.physicalplanning._
@@ -196,7 +197,7 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
     val projections = orderedGroupings.flatMap(intermediateCompileExpression)
     if (projections.size < orderedGroupings.size) None
     else {
-      assert(projections.nonEmpty)
+      require(projections.nonEmpty)
       val singleValue = projections.size == 1
 
       val computeKeyOps = projections.map(p => nullCheckIfRequired(p))
@@ -2024,7 +2025,7 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
   }
 
   private def intermediateCompileGroupingExpression(orderedGroupings: Seq[(Slot, IntermediateExpression)]): IntermediateGroupingExpression = {
-    assert(orderedGroupings.nonEmpty)
+    require(orderedGroupings.nonEmpty)
     val listVar = namer.nextVariableName()
     val singleValue = orderedGroupings.size == 1
     def id[T](value: IntermediateRepresentation, nullable: Boolean)(implicit m: Manifest[T]) =  {

@@ -229,7 +229,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
       val property = SlottedIndexedProperty(node, properties.head, slots)
       valueExpr match {
         case SingleQueryExpression(expr) if !needsLockingUnique =>
-          assert(properties.length == 1)
+          require(properties.length == 1)
           Some(new SingleExactSeekQueryNodeIndexSeekTaskTemplate(acc.template,
                                                                  plan.id,
                                                                  innermostTemplate,
@@ -242,7 +242,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
 
         //MATCH (n:L) WHERE n.prop = 1337 OR n.prop = 42
         case ManyQueryExpression(expr) if !needsLockingUnique =>
-          assert(properties.length == 1)
+          require(properties.length == 1)
           Some(new ManyQueriesExactNodeIndexSeekTaskTemplate(acc.template,
                                                              plan.id,
                                                              innermostTemplate,
@@ -254,7 +254,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
                                                              physicalPlan.argumentSizes(id))(expressionCompiler))
 
         case RangeQueryExpression(rangeWrapper) if !needsLockingUnique=>
-          assert(properties.length == 1)
+          require(properties.length == 1)
           //NOTE: So far we only support fusing of single-bound inequalities. Not sure if it ever makes sense to have
           //multiple bounds
           (rangeWrapper match {

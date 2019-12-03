@@ -5,6 +5,7 @@
  */
 package org.neo4j.cypher.internal.physicalplanning
 
+import org.neo4j.cypher.internal.Require.require
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.Size
 import org.neo4j.cypher.internal.runtime.{EntityById, ExecutionContext}
 import org.neo4j.cypher.internal.v4_0.expressions.ASTCachedProperty
@@ -118,7 +119,7 @@ class SlotConfiguration(private val slots: mutable.Map[String, Slot],
     val existingAliases = slotAliases.getOrElse(existingSlot,
       throw new InternalError(s"Slot allocation failure - missing slot $existingSlot for $key")
     )
-    assert(existingAliases.contains(key))
+    require(existingAliases.contains(key))
     slotAliases.put(modifiedSlot, existingAliases)
     // Propagate changes to all corresponding entries in the slots map
     existingAliases.foreach(alias => slots.put(alias, modifiedSlot))
@@ -128,7 +129,7 @@ class SlotConfiguration(private val slots: mutable.Map[String, Slot],
   private def unifyTypeAndNullability(key: String, existingSlot: Slot, newSlot: Slot): Unit = {
     val updateNullable = !existingSlot.nullable && newSlot.nullable
     val updateTyp = existingSlot.typ != newSlot.typ && !existingSlot.typ.isAssignableFrom(newSlot.typ)
-    assert(!updateTyp || newSlot.typ.isAssignableFrom(existingSlot.typ))
+    require(!updateTyp || newSlot.typ.isAssignableFrom(existingSlot.typ))
     if (updateNullable || updateTyp) {
       val modifiedSlot = (existingSlot, updateNullable, updateTyp) match {
         // We are conservative about nullability and increase it to true
@@ -371,7 +372,7 @@ class SlotConfiguration(private val slots: mutable.Map[String, Slot],
     */
   def getLongSlots: immutable.IndexedSeq[SlotWithAliases] =
     slotAliases.toIndexedSeq.collect {
-      case (slot: LongSlot, aliases) => LongSlotWithAliases(slot, aliases.toSet)
+      case (slot: LongSlot, aliasesForSlot) => LongSlotWithAliases(slot, aliasesForSlot.toSet)
     }.sorted(SlotWithAliasesOrdering)
 
   /**
@@ -379,7 +380,7 @@ class SlotConfiguration(private val slots: mutable.Map[String, Slot],
     */
   def getRefSlots: immutable.IndexedSeq[SlotWithAliases] =
     slotAliases.toIndexedSeq.collect {
-      case (slot: RefSlot, aliases) => RefSlotWithAliases(slot, aliases.toSet)
+      case (slot: RefSlot, aliasesForSlot) => RefSlotWithAliases(slot, aliasesForSlot.toSet)
     }.sorted(SlotWithAliasesOrdering)
 
   /**

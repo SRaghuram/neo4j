@@ -5,16 +5,17 @@
  */
 package org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions
 
+import org.neo4j.cypher.internal.Require.require
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.MethodStructure
 import org.neo4j.cypher.internal.runtime.compiled.codegen.{CodeGenContext, Variable}
 import org.neo4j.cypher.internal.v4_0.util.symbols._
 
 case class RelationshipProjection(relId: Variable) extends CodeGenExpression {
-  assert(relId.codeGenType.asInstanceOf[CypherCodeGenType].ct == CTRelationship)
+  require(relId.codeGenType.asInstanceOf[CypherCodeGenType].ct == CTRelationship)
 
-  override def init[E](generator: MethodStructure[E])(implicit context: CodeGenContext) = {}
+  override def init[E](generator: MethodStructure[E])(implicit context: CodeGenContext): Unit = {}
 
-  override def generateExpression[E](structure: MethodStructure[E])(implicit context: CodeGenContext) ={
+  override def generateExpression[E](structure: MethodStructure[E])(implicit context: CodeGenContext): E ={
     if (relId.nullable)
       structure.nullableReference(relId.name, CodeGenType.primitiveRel,
         structure.materializeRelationship(relId.name, relId.codeGenType))
@@ -22,7 +23,7 @@ case class RelationshipProjection(relId: Variable) extends CodeGenExpression {
       structure.materializeRelationship(relId.name, relId.codeGenType)
   }
 
-  override def nullable(implicit context: CodeGenContext) = relId.nullable
+  override def nullable(implicit context: CodeGenContext): Boolean = relId.nullable
 
   override def codeGenType(implicit context: CodeGenContext) = CypherCodeGenType(CTRelationship, ReferenceType)
 }

@@ -5,6 +5,7 @@
  */
 package org.neo4j.cypher.internal.physicalplanning
 
+import org.neo4j.cypher.internal.Require.require
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.exceptions.InternalException
 
@@ -127,7 +128,7 @@ trait TreeBuilder[T, ARGUMENT] {
     }
 
     val result = outputStack.pop()
-    assert(outputStack.isEmpty, "Should have emptied the stack of output by now!")
+    require(outputStack.isEmpty, "Should have emptied the stack of output by now!")
 
     result
   }
