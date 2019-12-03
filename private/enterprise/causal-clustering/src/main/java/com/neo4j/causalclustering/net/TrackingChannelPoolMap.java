@@ -48,9 +48,10 @@ class TrackingChannelPoolMap extends AbstractChannelPoolMap<SocketAddress,Channe
     }
 
     @Override
-    protected ChannelPool newPool( SocketAddress key )
+    protected ChannelPool newPool( SocketAddress address )
     {
-        return poolFactory.create( baseBootstrap.remoteAddress( key.socketAddress() ), poolHandlers );
+        return poolFactory.create( baseBootstrap.remoteAddress( InetSocketAddress.createUnresolved( address.getHostname(), address.getPort() ) ),
+                poolHandlers );
     }
 
     private static class InstalledProtocolsTracker extends AbstractChannelPoolHandler
