@@ -139,7 +139,6 @@
         <exclude>org.apache.commons:commons-lang3</exclude>
         <exclude>io.dropwizard.metrics:*</exclude>
         <exclude>org.slf4j:slf4j-api</exclude>
-        <exclude>org.neo4j.client:neo4j-browser</exclude> <!-- TODO: temporary workaround for browser dependency -->
       </excludes>
     </dependencySet>
  </dependencySets>
