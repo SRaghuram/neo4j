@@ -165,7 +165,7 @@ class ModifyingFixedFormatRecordsTest
 
     private static class AlmostEphemeralPageSwapperFactory extends EphemeralPageSwapperFactory
     {
-        private SingleFilePageSwapperFactory alternativeFactory = new SingleFilePageSwapperFactory();
+        private SingleFilePageSwapperFactory alternativeFactory;
 
         @Override
         public PageSwapper createPageSwapper( File file, int filePageSize, PageEvictionCallback onEviction, boolean createIfNotExist,
@@ -178,11 +178,9 @@ class ModifyingFixedFormatRecordsTest
             return super.createPageSwapper( file, filePageSize, onEviction, createIfNotExist, noChannelStriping, useDirectIO );
         }
 
-        @Override
         public void open( FileSystemAbstraction fs )
         {
-            super.open( fs );
-            alternativeFactory.open( fs );
+            alternativeFactory = new SingleFilePageSwapperFactory( fs );
         }
     }
 }
