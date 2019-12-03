@@ -170,15 +170,15 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
         {
             if ( !oldDbLeaderMap.containsKey( entry.getKey() ) )
             {
-                return format( "Discovered database %s with leader %s on term %d", entry.getKey(), entry.getValue().memberId(), entry.getValue().term() );
+                return format( "Discovered database %s with leader %s in term %d", entry.getKey(), entry.getValue().memberId(), entry.getValue().term() );
             }
             else if ( entry.getValue().memberId().equals( oldDbLeaderMap.get( entry.getKey() ).memberId() ) )
             {
-                return format( "Database %s has leader %s on term %d", entry.getKey(), entry.getValue().memberId(), entry.getValue().term() );
+                return format( "Database %s has leader %s in term %d", entry.getKey(), entry.getValue().memberId(), entry.getValue().term() );
             }
             else
             {
-                return format( "Database %s switch leader from %s to %s on term %d", entry.getKey(), oldDbLeaderMap.get( entry.getKey() ).memberId(),
+                return format( "Database %s switch leader from %s to %s in term %d", entry.getKey(), oldDbLeaderMap.get( entry.getKey() ).memberId(),
                         entry.getValue().memberId(), entry.getValue().term() );
             }
         } ).collect( Collectors.joining( newPaddedLine() ) );
