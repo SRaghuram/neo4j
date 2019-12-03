@@ -12,6 +12,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
 import java.net.URI;
 
 import org.neo4j.collection.Dependencies;
@@ -37,16 +38,18 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.bolt.BoltDriverHelper.graphDatabaseDriver;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @TestDirectoryExtension
+@DriverExtension
 class BoltSnapshotQueryExecutionIT
 {
     @Inject
     private TestDirectory testDirectory;
+    @Inject
+    private DriverFactory driverFactory;
 
     private TestTransactionVersionContextSupplier testContextSupplier;
     private TestVersionContext testCursorContext;
@@ -55,7 +58,7 @@ class BoltSnapshotQueryExecutionIT
     private DatabaseManagementService managementService;
 
     @BeforeEach
-    void setUp()
+    void setUp() throws IOException
     {
         testContextSupplier = new TestTransactionVersionContextSupplier();
         var dependencies = new Dependencies();
@@ -123,9 +126,9 @@ class BoltSnapshotQueryExecutionIT
                       "'MATCH (n:toRetry) CREATE () RETURN n.c' that performs updates.", e.getMessage() );
     }
 
-    private void connectDriver()
+    private void connectDriver() throws IOException
     {
-        driver = graphDatabaseDriver( boltURI() );
+        driver = driverFactory.graphDatabaseDriver( boltURI() );
     }
 
     private URI boltURI()

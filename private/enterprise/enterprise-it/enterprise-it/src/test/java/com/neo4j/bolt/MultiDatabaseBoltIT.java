@@ -34,12 +34,15 @@ import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import static org.neo4j.driver.SessionConfig.forDatabase;
 
 @TestDirectoryExtension
+@DriverExtension
 class MultiDatabaseBoltIT
 {
     @Inject
     private TestDirectory testDirectory;
     @Inject
     private FileSystemAbstraction fileSystem;
+    @Inject
+    private DriverFactory driverFactory;
     private DatabaseManagementService managementService;
 
     @AfterEach
@@ -65,7 +68,7 @@ class MultiDatabaseBoltIT
 
         TransientException transientException = assertThrows( TransientException.class, () ->
         {
-            try ( var driver = graphDatabaseDriver( boltAddress() );
+            try ( var driver = driverFactory.graphDatabaseDriver( boltAddress() );
                   var session = driver.session( forDatabase( databaseName ) ) )
             {
                 session.run( "CREATE (n)" ).consume();
@@ -75,10 +78,10 @@ class MultiDatabaseBoltIT
     }
 
     @Test
-    void shouldBeAbleToCreateMultipleDatabasesUsingCypher()
+    void shouldBeAbleToCreateMultipleDatabasesUsingCypher() throws IOException
     {
         assertDatabasesNotFound( "foo", "bar" );
-        try ( var driver = graphDatabaseDriver( boltAddress() );
+        try ( var driver = driverFactory.graphDatabaseDriver( boltAddress() );
               var system = driver.session( forDatabase( SYSTEM_DATABASE_NAME ) ) )
         {
             system.run( "CREATE DATABASE foo" ).consume();
@@ -90,10 +93,10 @@ class MultiDatabaseBoltIT
     }
 
     @Test
-    void shouldFailToCreateExistingDatabaseWithCypher()
+    void shouldFailToCreateExistingDatabaseWithCypher() throws IOException
     {
         assertDatabasesNotFound( "foo" );
-        try ( var driver = graphDatabaseDriver( boltAddress() );
+        try ( var driver = driverFactory.graphDatabaseDriver( boltAddress() );
               var system = driver.session( forDatabase( SYSTEM_DATABASE_NAME ) ) )
         {
             system.run( "CREATE DATABASE foo" ).consume();
@@ -108,10 +111,10 @@ class MultiDatabaseBoltIT
     }
 
     @Test
-    void shouldBeAbleToCreateDatabaseIfNotExists()
+    void shouldBeAbleToCreateDatabaseIfNotExists() throws IOException
     {
         assertDatabasesNotFound( "foo", "bar" );
-        try ( var driver = graphDatabaseDriver( boltAddress() );
+        try ( var driver = driverFactory.graphDatabaseDriver( boltAddress() );
               var system = driver.session( forDatabase( SYSTEM_DATABASE_NAME ) ) )
         {
             system.run( "CREATE DATABASE foo IF NOT EXISTS" ).consume();

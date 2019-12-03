@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -82,11 +83,14 @@ import static org.neo4j.kernel.impl.factory.DatabaseInfo.ENTERPRISE;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @TestDirectoryExtension
+@DriverExtension
 @ExtendWith( SuppressOutputExtension.class )
 class BookmarkIT
 {
     @Inject
     private TestDirectory directory;
+    @Inject
+    private DriverFactory driverFactory;
 
     private Driver driver;
     private GraphDatabaseAPI db;
@@ -112,7 +116,7 @@ class BookmarkIT
     {
         CommitBlocker commitBlocker = new CommitBlocker();
         db = createDbms( commitBlocker );
-        driver = graphDatabaseDriver( boltAddress( db ) );
+        driver = driverFactory.graphDatabaseDriver( boltAddress( db ) );
 
         Bookmark firstBookmark = createNode( driver );
 
@@ -140,7 +144,7 @@ class BookmarkIT
     void shouldReturnBookmarkInNewFormat() throws Exception
     {
         db = createDbms();
-        driver = graphDatabaseDriver( boltAddress( db ) );
+        driver = driverFactory.graphDatabaseDriver( boltAddress( db ) );
 
         var bookmark = (InternalBookmark) createNode( driver );
         var bookmarkStr = Iterables.first( bookmark.values() );
@@ -150,10 +154,10 @@ class BookmarkIT
     }
 
     @Test
-    void shouldFailForUnreachableSystemDatabaseBookmark()
+    void shouldFailForUnreachableSystemDatabaseBookmark() throws IOException
     {
         db = createDbms();
-        driver = graphDatabaseDriver( boltAddress( db ) );
+        driver = driverFactory.graphDatabaseDriver( boltAddress( db ) );
 
         var unreachableSystemDbBookmark = systemDatabaseBookmark( lastCommittedSystemDatabaseTxId() + 9999 );
 
@@ -168,7 +172,7 @@ class BookmarkIT
     {
         var waitTrackingMonitor = new WaitTrackingMonitor();
         db = createDbms( waitTrackingMonitor );
-        driver = graphDatabaseDriver( boltAddress( db ) );
+        driver = driverFactory.graphDatabaseDriver( boltAddress( db ) );
         executor = newSingleThreadExecutor( daemon( "thread-" + testInfo.getDisplayName() ) );
 
         var txCount = 5;
