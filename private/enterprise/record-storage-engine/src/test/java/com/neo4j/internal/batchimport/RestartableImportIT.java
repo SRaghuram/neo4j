@@ -104,9 +104,13 @@ class RestartableImportIT
                     // immediately afterwards... in the middle of creating the store files. There have been attempts to solve this in the
                     // restartable importer, which works, but there's always some case somewhere else that breaks. This edge case is only
                     // visible in this test and for users it's just this thing where you'll need to clear out your store manually if this happens.
-                    for ( File file : fs.listFiles( dbDirectory ) )
+                    File[] files = fs.listFiles( dbDirectory );
+                    if ( files != null )
                     {
-                        fs.deleteRecursively( file );
+                        for ( File file : files )
+                        {
+                            fs.deleteRecursively( file );
+                        }
                     }
                 }
 
