@@ -5,9 +5,12 @@
  */
 package com.neo4j.procedure.routing;
 
+import com.neo4j.bolt.DriverExtension;
+import com.neo4j.bolt.DriverFactory;
 import org.hamcrest.Description;
 import org.hamcrest.TypeSafeMatcher;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
@@ -24,8 +27,8 @@ import org.neo4j.internal.helpers.collection.Iterators;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.procedure.builtin.routing.Role;
 import org.neo4j.procedure.builtin.routing.RoutingResult;
+import org.neo4j.test.extension.Inject;
 
-import static com.neo4j.bolt.BoltDriverHelper.graphDatabaseDriver;
 import static java.util.Collections.emptyList;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.stream.Collectors.toList;
@@ -45,15 +48,19 @@ import static org.neo4j.kernel.api.exceptions.Status.Database.DatabaseNotFound;
 import static org.neo4j.kernel.api.exceptions.Status.Database.DatabaseUnavailable;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
+@DriverExtension
 abstract class BaseRoutingProcedureIT
 {
+    @Inject
+    DriverFactory driverFactory;
+
     private static final String CALL_NEW_PROCEDURE_WITH_CONTEXT = "CALL dbms.routing.getRoutingTable($context)";
     private static final String CALL_NEW_PROCEDURE_WITH_CONTEXT_AND_DATABASE = "CALL dbms.routing.getRoutingTable($context, $database)";
 
     private static final String CALL_OLD_PROCEDURE_WITH_CONTEXT = "CALL dbms.cluster.routing.getRoutingTable($context)";
     private static final String CALL_OLD_PROCEDURE_WITH_CONTEXT_AND_DATABASE = "CALL dbms.cluster.routing.getRoutingTable($context, $database)";
 
-    static void assertPossibleToReadUsingRoutingDriver( String boltHostnamePort )
+    void assertPossibleToReadUsingRoutingDriver( String boltHostnamePort ) throws IOException
     {
         try ( Driver driver = createDriver( boltHostnamePort ) )
         {
@@ -61,7 +68,7 @@ abstract class BaseRoutingProcedureIT
         }
     }
 
-    static void assertPossibleToReadAndWriteUsingRoutingDriver( String boltHostnamePort )
+    void assertPossibleToReadAndWriteUsingRoutingDriver( String boltHostnamePort ) throws IOException
     {
         try ( Driver driver = createDriver( boltHostnamePort ) )
         {
@@ -70,7 +77,7 @@ abstract class BaseRoutingProcedureIT
         }
     }
 
-    static void assertNotPossibleToWriteUsingRoutingDriver( String boltHostnamePort )
+    void assertNotPossibleToWriteUsingRoutingDriver( String boltHostnamePort ) throws IOException
     {
         try ( Driver driver = createDriver( boltHostnamePort ) )
         {
@@ -81,7 +88,7 @@ abstract class BaseRoutingProcedureIT
         }
     }
 
-    static void assertRoutingDriverFailsForUnknownDatabase( String boltHostnamePort, String databaseName )
+    void assertRoutingDriverFailsForUnknownDatabase( String boltHostnamePort, String databaseName ) throws IOException
     {
         try ( Driver driver = createDriver( boltHostnamePort ) )
         {
@@ -94,20 +101,16 @@ abstract class BaseRoutingProcedureIT
     {
         Map<String,Object> params = paramsWithContext( Map.of() );
 
-        assertAll(
-                () -> assertRoutingProcedureAvailable( CALL_NEW_PROCEDURE_WITH_CONTEXT, params, db, expectedResult ),
-                () -> assertRoutingProcedureAvailable( CALL_OLD_PROCEDURE_WITH_CONTEXT, params, db, expectedResult )
-        );
+        assertAll( () -> assertRoutingProcedureAvailable( CALL_NEW_PROCEDURE_WITH_CONTEXT, params, db, expectedResult ),
+                () -> assertRoutingProcedureAvailable( CALL_OLD_PROCEDURE_WITH_CONTEXT, params, db, expectedResult ) );
     }
 
     static void assertRoutingProceduresAvailable( String databaseName, GraphDatabaseService db, RoutingResult expectedResult )
     {
         Map<String,Object> params = paramsWithContextAndDatabase( Map.of(), databaseName );
 
-        assertAll(
-                () -> assertRoutingProcedureAvailable( CALL_NEW_PROCEDURE_WITH_CONTEXT_AND_DATABASE, params, db, expectedResult ),
-                () -> assertRoutingProcedureAvailable( CALL_OLD_PROCEDURE_WITH_CONTEXT_AND_DATABASE, params, db, expectedResult )
-        );
+        assertAll( () -> assertRoutingProcedureAvailable( CALL_NEW_PROCEDURE_WITH_CONTEXT_AND_DATABASE, params, db, expectedResult ),
+                () -> assertRoutingProcedureAvailable( CALL_OLD_PROCEDURE_WITH_CONTEXT_AND_DATABASE, params, db, expectedResult ) );
     }
 
     static void assertRoutingProceduresFailForUnknownDatabase( String databaseName, GraphDatabaseService db )
@@ -124,10 +127,8 @@ abstract class BaseRoutingProcedureIT
     {
         Map<String,Object> params = paramsWithContextAndDatabase( Map.of(), databaseName );
 
-        assertAll(
-                () -> assertRoutingProcedureFails( CALL_NEW_PROCEDURE_WITH_CONTEXT_AND_DATABASE, params, db, failureStatus ),
-                () -> assertRoutingProcedureFails( CALL_OLD_PROCEDURE_WITH_CONTEXT_AND_DATABASE, params, db, failureStatus )
-        );
+        assertAll( () -> assertRoutingProcedureFails( CALL_NEW_PROCEDURE_WITH_CONTEXT_AND_DATABASE, params, db, failureStatus ),
+                () -> assertRoutingProcedureFails( CALL_OLD_PROCEDURE_WITH_CONTEXT_AND_DATABASE, params, db, failureStatus ) );
     }
 
     private static void performRead( Driver driver )
@@ -170,8 +171,7 @@ abstract class BaseRoutingProcedureIT
 
     private static RoutingResult invokeRoutingProcedure( String query, Map<String,Object> params, GraphDatabaseService db )
     {
-        try ( var tx = db.beginTx();
-              var result = tx.execute( query, params ) )
+        try ( var tx = db.beginTx(); var result = tx.execute( query, params ) )
         {
             var record = Iterators.single( result );
             return asRoutingResult( record );
@@ -204,17 +204,15 @@ abstract class BaseRoutingProcedureIT
                 List<String> addresses = (List<String>) entry.get( "addresses" );
                 assertNotNull( addresses );
 
-                return addresses.stream()
-                        .map( address -> socketAddress( address, SocketAddress::new ) )
-                        .collect( toList() );
+                return addresses.stream().map( address -> socketAddress( address, SocketAddress::new ) ).collect( toList() );
             }
         }
         return emptyList();
     }
 
-    private static Driver createDriver( String boltHostnamePort )
+    private Driver createDriver( String boltHostnamePort ) throws IOException
     {
-        return graphDatabaseDriver( "neo4j://" + boltHostnamePort );
+        return driverFactory.graphDatabaseDriver( "neo4j://" + boltHostnamePort );
     }
 
     private static Map<String,Object> paramsWithContext( Map<String,Object> context )
@@ -241,9 +239,8 @@ abstract class BaseRoutingProcedureIT
         {
             // compare addresses regardless of the order because procedure implementations are allowed to randomly shuffle the returned addresses
             return newBag( expected.readEndpoints() ).equals( newBag( actual.readEndpoints() ) ) &&
-                   newBag( expected.writeEndpoints() ).equals( newBag( actual.writeEndpoints() ) ) &&
-                   newBag( expected.routeEndpoints() ).equals( newBag( actual.routeEndpoints() ) ) &&
-                   expected.ttlMillis() == actual.ttlMillis();
+                    newBag( expected.writeEndpoints() ).equals( newBag( actual.writeEndpoints() ) ) &&
+                    newBag( expected.routeEndpoints() ).equals( newBag( actual.routeEndpoints() ) ) && expected.ttlMillis() == actual.ttlMillis();
         }
 
         @Override

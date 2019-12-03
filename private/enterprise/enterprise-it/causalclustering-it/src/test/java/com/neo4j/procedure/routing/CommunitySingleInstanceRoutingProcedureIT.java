@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
+import java.io.IOException;
 import java.time.Duration;
 import java.util.List;
 
@@ -66,7 +67,7 @@ class CommunitySingleInstanceRoutingProcedureIT extends BaseRoutingProcedureIT
     }
 
     @Test
-    void shouldAllowRoutingDriverToReadAndWrite()
+    void shouldAllowRoutingDriverToReadAndWrite() throws IOException
     {
         db = startDb();
 

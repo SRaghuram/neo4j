@@ -37,23 +37,4 @@ public class BoltDriverHelper
     {
         return GraphDatabase.driver( uri, auth, TEST_DRIVER_CONFIG.build() );
     }
-
-    public static Driver graphDatabaseDriver( String uri, AuthToken auth )
-    {
-        return GraphDatabase.driver( uri, auth, TEST_DRIVER_CONFIG.build() );
-    }
-
-    public static Driver graphDatabaseDriver( Cluster cluster, AuthToken auth )
-    {
-        ServerAddressResolver serverAddressResolver = address -> cluster
-                .coreMembers()
-                .stream()
-                .map( c -> URI.create( c.routingURI() ) )
-                .map( uri -> ServerAddress.of( uri.getHost(), uri.getPort() ) )
-                .collect( toSet() );
-
-        return GraphDatabase.driver( "neo4j://ignore.com", auth, TEST_DRIVER_CONFIG
-                .withResolver( serverAddressResolver )
-                .build() );
-    }
 }

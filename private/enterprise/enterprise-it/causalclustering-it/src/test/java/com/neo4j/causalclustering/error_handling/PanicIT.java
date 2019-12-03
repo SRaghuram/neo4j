@@ -5,6 +5,8 @@
  */
 package com.neo4j.causalclustering.error_handling;
 
+import com.neo4j.bolt.DriverExtension;
+import com.neo4j.bolt.DriverFactory;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
 import com.neo4j.test.causalclustering.ClusterConfig;
@@ -26,7 +28,6 @@ import org.neo4j.driver.AuthTokens;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.test.extension.Inject;
 
-import static com.neo4j.bolt.BoltDriverHelper.graphDatabaseDriver;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -36,6 +37,7 @@ import static org.neo4j.driver.SessionConfig.forDatabase;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @ClusterExtension
+@DriverExtension
 @TestInstance( TestInstance.Lifecycle.PER_METHOD )
 class PanicIT
 {
@@ -44,6 +46,9 @@ class PanicIT
 
     @Inject
     private ClusterFactory clusterFactory;
+
+    @Inject
+    private DriverFactory driverFactory;
 
     private Cluster cluster;
 
@@ -117,7 +122,7 @@ class PanicIT
     private void attemptToRestartDefaultDatabase() throws Exception
     {
         // use a routing driver and a single session so that system database bookmarks are passed between transactions
-        try ( var driver = graphDatabaseDriver( cluster, AuthTokens.basic( "neo4j", "neo4j" ) );
+        try ( var driver = driverFactory.graphDatabaseDriver( cluster, AuthTokens.basic( "neo4j", "neo4j" ) );
               var session = driver.session( forDatabase( SYSTEM_DATABASE_NAME ) ) )
         {
             session.writeTransaction( tx -> tx.run( "STOP DATABASE " + DEFAULT_DATABASE_NAME ) ).consume();

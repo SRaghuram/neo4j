@@ -5,6 +5,8 @@
  */
 package com.neo4j.causalclustering.scenarios;
 
+import com.neo4j.bolt.DriverExtension;
+import com.neo4j.bolt.DriverFactory;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
@@ -20,6 +22,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -40,7 +43,6 @@ import org.neo4j.driver.exceptions.SessionExpiredException;
 import org.neo4j.internal.helpers.collection.Iterators;
 import org.neo4j.test.extension.Inject;
 
-import static com.neo4j.bolt.BoltDriverHelper.graphDatabaseDriver;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.forceReelection;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.runWithLeaderDisabled;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -61,8 +63,11 @@ import static org.neo4j.driver.SessionConfig.builder;
 import static org.neo4j.driver.Values.parameters;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
+@DriverExtension
 class BoltCausalClusteringIT
 {
+    @Inject
+    DriverFactory driverFactory;
     private static final long DEFAULT_TIMEOUT_MS = 15_000;
 
     @Nested
@@ -83,13 +88,12 @@ class BoltCausalClusteringIT
         }
 
         @BeforeEach
-        void removePersons() throws TimeoutException
+        void removePersons() throws TimeoutException, IOException
         {
             try ( Driver driver = makeDriver( cluster ) )
             {
                 // when
-                inExpirableSession( driver, Driver::session,
-                        session -> session.run( "MATCH (n:Person) DELETE n" ).consume() );
+                inExpirableSession( driver, Driver::session, session -> session.run( "MATCH (n:Person) DELETE n" ).consume() );
             }
         }
 
@@ -147,8 +151,7 @@ class BoltCausalClusteringIT
             {
                 forceReelection( cluster, DEFAULT_DATABASE_NAME );
 
-                try ( Driver driver = makeDriver( cluster );
-                      Session session = driver.session( builder().withDefaultAccessMode( READ ).build() ) )
+                try ( Driver driver = makeDriver( cluster ); Session session = driver.session( builder().withDefaultAccessMode( READ ).build() ) )
                 {
                     // when
                     session.run( "CREATE (n:Person {name: 'Jim'})" ).consume();
@@ -174,12 +177,11 @@ class BoltCausalClusteringIT
                     return result.consume().server().address();
                 } );
 
-                var secondAddress = runWithLeaderDisabled( cluster, ( oldLeader, currentMembers ) -> inExpirableSession( driver, Driver::session,
-                        session ->
-                        {
-                            Result result = session.run( "CREATE (p:Person)" );
-                            return result.consume().server().address();
-                        }, 60_000 ) );
+                var secondAddress = runWithLeaderDisabled( cluster, ( oldLeader, currentMembers ) -> inExpirableSession( driver, Driver::session, session ->
+                {
+                    Result result = session.run( "CREATE (p:Person)" );
+                    return result.consume().server().address();
+                }, 60_000 ) );
                 assertNotEquals( secondAddress, firstAddress );
             }
         }
@@ -187,8 +189,7 @@ class BoltCausalClusteringIT
         @Test
         void sessionShouldExpireOnLeaderSwitch() throws Exception
         {
-            try ( Driver driver = makeDriver( cluster );
-                  Session session = driver.session() )
+            try ( Driver driver = makeDriver( cluster ); Session session = driver.session() )
             {
                 session.run( "CREATE (n:Person {name: 'Jim'})" ).consume();
 
@@ -209,8 +210,7 @@ class BoltCausalClusteringIT
             // given
             int clusterSize = cluster.allMembers().size();
 
-            try ( Driver driver = makeDriver( cluster );
-                  Session session = driver.session() )
+            try ( Driver driver = makeDriver( cluster ); Session session = driver.session() )
             {
                 assertEventually( () -> session.run( "CALL dbms.cluster.overview" ).list(), hasSize( clusterSize ), 60, SECONDS );
             }
@@ -515,11 +515,10 @@ class BoltCausalClusteringIT
         void transactionsShouldNotAppearOnTheReadReplicaWhilePollingIsPaused() throws Throwable
         {
             // given
-            Map<String,String> params = Map.of(
-                    GraphDatabaseSettings.keep_logical_logs.name(), "keep_none",
-                    GraphDatabaseSettings.logical_log_rotation_threshold.name(), "1M",
-                    GraphDatabaseSettings.check_point_interval_time.name(), "100ms",
-                    CausalClusteringSettings.cluster_allow_reads_on_followers.name(), FALSE );
+            Map<String,String> params =
+                    Map.of( GraphDatabaseSettings.keep_logical_logs.name(), "keep_none", GraphDatabaseSettings.logical_log_rotation_threshold.name(), "1M",
+                            GraphDatabaseSettings.check_point_interval_time.name(), "100ms", CausalClusteringSettings.cluster_allow_reads_on_followers.name(),
+                            FALSE );
 
             Cluster cluster = clusterFactory.createCluster( ClusterConfig.clusterConfig().withSharedCoreParams( params ).withNumberOfReadReplicas( 1 ) );
             cluster.start();
@@ -585,10 +584,9 @@ class BoltCausalClusteringIT
 
             assertEquals( numberOfRequests, happyCount );
         }
-
     }
 
-    private static int executeWriteAndReadThroughBolt( CoreClusterMember core ) throws TimeoutException
+    private int executeWriteAndReadThroughBolt( CoreClusterMember core ) throws TimeoutException, IOException
     {
         try ( Driver driver = makeDriver( core.routingURI() ) )
         {
@@ -603,14 +601,14 @@ class BoltCausalClusteringIT
         }
     }
 
-    private static Driver makeDriver( Cluster cluster )
+    private Driver makeDriver( Cluster cluster ) throws IOException
     {
-        return graphDatabaseDriver( cluster, AuthTokens.basic( "neo4j", "neo4j" ) );
+        return driverFactory.graphDatabaseDriver( cluster, AuthTokens.basic( "neo4j", "neo4j" ) );
     }
 
-    private static Driver makeDriver( String uri )
+    private Driver makeDriver( String uri ) throws IOException
     {
-        return graphDatabaseDriver( uri, AuthTokens.basic( "neo4j", "neo4j" ) );
+        return driverFactory.graphDatabaseDriver( uri, AuthTokens.basic( "neo4j", "neo4j" ) );
     }
 
     private static void executeReadQuery( Session session )
