@@ -34,7 +34,7 @@ abstract class SchedulerTracerTestBase(runtime: CypherRuntime[EnterpriseRuntimeC
     GraphDatabaseSettings.pipelined_scheduler_trace_filename -> tempCSVPath.toAbsolutePath
     ), runtime) {
 
-  override def afterTest(): Unit = {
+  override def stopTest(): Unit = {
     Files.delete(tempCSVPath)
   }
 

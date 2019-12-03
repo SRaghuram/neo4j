@@ -190,6 +190,10 @@ class PipelinedOptionalNoFusingTest extends OptionalTestBase(NO_FUSING, PIPELINE
 class PipelinedCartesianProductTest extends CartesianProductTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 class PipelinedCartesianProductNoFusingTest extends CartesianProductTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 
+// PROCEDURE CALL
+class PipelinedProcedureCallTest extends ProcedureCallTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedProcedureCallNoFusingTest extends ProcedureCallTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+
 // SHORTEST PATH
 class PipelinedShortestPathTest extends ShortestPathTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 class PipelinedShortestPathNoFusingTest extends ShortestPathTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
@@ -223,8 +227,11 @@ class PipelinedNoFusingWorkloadTest extends WorkloadTestBase(NO_FUSING, PIPELINE
 
 // PROFILE
 class PipelinedProfileNoFusingRowsTest extends ProfileRowsTestBase(NO_FUSING, PIPELINED, SIZE_HINT, MORSEL_SIZE) with PipelinedSpecSuite
+                                       with ProcedureCallRowsTestBase[EnterpriseRuntimeContext]
 class PipelinedProfileRowsTest extends ProfileRowsTestBase(FUSING, PIPELINED, SIZE_HINT, MORSEL_SIZE) with PipelinedSpecSuite
+                               with ProcedureCallRowsTestBase[EnterpriseRuntimeContext]
 class PipelinedProfileNoFusingTimeTest extends ProfileTimeTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+                                       with ProcedureCallTimeTestBase[EnterpriseRuntimeContext]
 class PipelinedProfileNoTimeTest extends ProfileNoTimeTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite {
   //this test differs in Pipelined and Parallel since we fuse differently
   test("should partially profile time if fused pipelines and non-fused pipelines co-exist") {

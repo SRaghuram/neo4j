@@ -64,6 +64,7 @@ class SlottedMiscTest extends MiscTestBase(ENTERPRISE.DEFAULT, SlottedRuntime)
 class SlottedProvidedOrderTest extends ProvidedOrderTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
                                with CartesianProductProvidedOrderTestBase[EnterpriseRuntimeContext]
 class SlottedProfileRowsTest extends ProfileRowsTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT, 1)
+                             with ProcedureCallRowsTestBase[EnterpriseRuntimeContext]
 class SlottedProfileDbHitsTest extends LegacyDbHitsTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
                                with ProcedureCallDbHitsTestBase[EnterpriseRuntimeContext]
 class SlottedProfilePageCacheStatsTest extends ProfilePageCacheStatsTestBase(ENTERPRISE.DEFAULT, SlottedRuntime)
@@ -77,4 +78,5 @@ class SlottedCartesianProductTest extends CartesianProductTestBase(ENTERPRISE.DE
 class SlottedExpressionTest extends ExpressionTestBase(ENTERPRISE.DEFAULT, SlottedRuntime)
                             with ThreadUnsafeExpressionTests[EnterpriseRuntimeContext]
                             with ExpressionWithTxStateChangesTests[EnterpriseRuntimeContext]
+class SlottedProcedureCallTest extends ProcedureCallTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedShortestPathTest extends ShortestPathTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
