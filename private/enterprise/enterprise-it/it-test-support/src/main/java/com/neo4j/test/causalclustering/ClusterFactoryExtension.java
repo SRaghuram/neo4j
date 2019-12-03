@@ -5,19 +5,16 @@
  */
 package com.neo4j.test.causalclustering;
 
-import com.neo4j.causalclustering.helper.ErrorHandler;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.AfterEachCallback;
-import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ConditionEvaluationResult;
 import org.junit.jupiter.api.extension.ExecutionCondition;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
-import java.io.IOException;
-
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.StatefullFieldExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectorySupportExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static java.lang.String.format;
@@ -26,7 +23,7 @@ import static java.lang.String.format;
  * Extension for cluster ITs. Allows the user to {@link Inject} a {@link ClusterFactory} into the test class. Clusters created will have the same lifecycle
  * as the {@link TestInstance.Lifecycle} of the root class.
  */
-class ClusterFactoryExtension extends StatefullFieldExtension<ClusterFactory> implements AfterEachCallback, BeforeEachCallback, ExecutionCondition
+public class ClusterFactoryExtension extends StatefullFieldExtension<ClusterFactory> implements AfterEachCallback, ExecutionCondition
 {
     private static final String CLUSTER = "cluster";
     private static final ExtensionContext.Namespace CLUSTER_NAMESPACE = ExtensionContext.Namespace.create( CLUSTER );
@@ -41,27 +38,13 @@ class ClusterFactoryExtension extends StatefullFieldExtension<ClusterFactory> im
         TrackingClusterFactory clusterFactory = (TrackingClusterFactory) removeStoredValue( context );
         if ( clusterFactory != null )
         {
-            shutdownAndComplete( clusterFactory );
+            shutdownCluster( clusterFactory );
         }
     }
 
-    private void shutdownAndComplete( TrackingClusterFactory clusterFactory )
+    private void shutdownCluster( TrackingClusterFactory clusterFactory )
     {
-        try ( ErrorHandler errorHandler = new ErrorHandler( "Shutting down cluster contexts" ) )
-        {
-            errorHandler.execute( clusterFactory::shutdownAll );
-            errorHandler.execute( clusterFactory::completeDirectory );
-        }
-    }
-
-    @Override
-    public void beforeEach( ExtensionContext context ) throws Exception
-    {
-        TrackingClusterFactory clusterFactory = (TrackingClusterFactory) getStoredValue( context );
-        if ( clusterFactory.getLifecycle() == TestInstance.Lifecycle.PER_METHOD )
-        {
-            clusterFactory.prepareDirectory( context );
-        }
+        clusterFactory.shutdownAll();
     }
 
     /**
@@ -74,7 +57,7 @@ class ClusterFactoryExtension extends StatefullFieldExtension<ClusterFactory> im
         context.getExecutionException().ifPresent( e -> clusterFactory.setFailed( context.getDisplayName() ) );
         if ( clusterFactory.getLifecycle() == TestInstance.Lifecycle.PER_METHOD )
         {
-            shutdownAndComplete( clusterFactory );
+            shutdownCluster( clusterFactory );
         }
     }
 
@@ -105,16 +88,9 @@ class ClusterFactoryExtension extends StatefullFieldExtension<ClusterFactory> im
 
     private static TestDirectory getTestDirectory( ExtensionContext extensionContext )
     {
-        TestDirectory testDirectory = TestDirectory.testDirectory();
-        try
-        {
-            testDirectory.prepareDirectory( extensionContext.getRequiredTestClass(), extensionContext.getUniqueId() );
-        }
-        catch ( IOException e )
-        {
-            throw new RuntimeException( e );
-        }
-        return testDirectory;
+        return extensionContext
+                .getStore( TestDirectorySupportExtension.TEST_DIRECTORY_NAMESPACE )
+                .get( TestDirectorySupportExtension.TEST_DIRECTORY, TestDirectory.class );
     }
 
     @Override

@@ -12,10 +12,12 @@ import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
+import org.neo4j.test.extension.testdirectory.TestDirectorySupportExtension;
+
 @Inherited
 @Retention( RetentionPolicy.RUNTIME )
 @TestInstance( TestInstance.Lifecycle.PER_CLASS )
-@ExtendWith( ClusterFactoryExtension.class )
+@ExtendWith( {TestDirectorySupportExtension.class, ClusterFactoryExtension.class} )
 public @interface ClusterExtension
 {
 }
