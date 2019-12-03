@@ -1,0 +1,168 @@
+/*
+ * Copyright (c) 2002-2019 "Neo4j,"
+ * Neo4j Sweden AB [http://neo4j.com]
+ * This file is a commercial add-on to Neo4j Enterprise Edition.
+ */
+package com.neo4j.bolt;
+
+import com.neo4j.causalclustering.common.Cluster;
+import com.neo4j.causalclustering.helper.ErrorHandler;
+
+import java.io.File;
+import java.io.IOException;
+import java.net.URI;
+import java.util.Collection;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
+
+import org.neo4j.driver.AuthToken;
+import org.neo4j.driver.Config;
+import org.neo4j.driver.Driver;
+import org.neo4j.driver.GraphDatabase;
+import org.neo4j.driver.Logger;
+import org.neo4j.driver.Logging;
+import org.neo4j.driver.net.ServerAddress;
+import org.neo4j.driver.net.ServerAddressResolver;
+import org.neo4j.logging.FormattedLog;
+import org.neo4j.logging.Log;
+import org.neo4j.test.rule.TestDirectory;
+
+import static java.util.stream.Collectors.toSet;
+
+public class DriverFactory implements AutoCloseable
+{
+    private final AtomicLong driverCounter = new AtomicLong();
+    private final Collection<AutoCloseable> closeableCollection = ConcurrentHashMap.newKeySet();
+    private final TestDirectory testDirectory;
+    static final String LOGS_DIR = "driver-logs";
+
+    DriverFactory( TestDirectory testDirectory )
+    {
+        this.testDirectory = testDirectory;
+    }
+
+    private FormattedLog createNewLogFile() throws IOException
+    {
+        var fs = testDirectory.getFileSystem();
+        var logDir = new File( testDirectory.absolutePath(), LOGS_DIR );
+        fs.mkdir( logDir );
+        var outputStream = fs.openAsOutputStream( new File( logDir, "driver-" + driverCounter.incrementAndGet() + ".log" ), false );
+        closeableCollection.add( outputStream );
+        return FormattedLog.toOutputStream( outputStream );
+    }
+
+    private Logging createLogger( Log log )
+    {
+        return name -> new TranslatedLogger( log );
+    }
+
+    private Config.ConfigBuilder createDefaultConfigBuilder() throws IOException
+    {
+        return Config.builder().withoutEncryption().withLogging( createLogger( createNewLogFile() ) );
+    }
+
+    public Driver graphDatabaseDriver( URI uri ) throws IOException
+    {
+        return GraphDatabase.driver( uri, createDefaultConfigBuilder().build() );
+    }
+
+    public Driver graphDatabaseDriver( String uri ) throws IOException
+    {
+        return GraphDatabase.driver( uri, createDefaultConfigBuilder().build() );
+    }
+
+    public Driver graphDatabaseDriver( URI uri, AuthToken auth ) throws IOException
+    {
+        return GraphDatabase.driver( uri, auth, createDefaultConfigBuilder().build() );
+    }
+
+    public Driver graphDatabaseDriver( String uri, AuthToken auth ) throws IOException
+    {
+        return GraphDatabase.driver( uri, auth, createDefaultConfigBuilder().build() );
+    }
+
+    public Driver graphDatabaseDriver( Cluster cluster, AuthToken auth ) throws IOException
+    {
+        ServerAddressResolver serverAddressResolver = address -> cluster
+                .coreMembers()
+                .stream()
+                .map( c -> URI.create( c.routingURI() ) )
+                .map( uri -> ServerAddress.of( uri.getHost(), uri.getPort() ) )
+                .collect( toSet() );
+
+        return GraphDatabase.driver( "neo4j://ignore.com", auth,
+                createDefaultConfigBuilder().withResolver( serverAddressResolver ).withLogging( createLogger( createNewLogFile() ) ).build() );
+    }
+
+    @Override
+    public void close()
+    {
+        try ( ErrorHandler errorHandler = new ErrorHandler( "Closing file output streams streams" ) )
+        {
+            for ( AutoCloseable autoCloseable : closeableCollection )
+            {
+                errorHandler.execute( autoCloseable::close );
+            }
+            closeableCollection.forEach( closeable -> errorHandler.execute( closeable::close ) );
+            closeableCollection.clear();
+        }
+    }
+
+    private static final class TranslatedLogger implements Logger
+    {
+        private final Log log;
+
+        private TranslatedLogger( Log log )
+        {
+            this.log = log;
+        }
+
+        @Override
+        public void error( String message, Throwable cause )
+        {
+            log.error( message, cause );
+        }
+
+        @Override
+        public void info( String message, Object... params )
+        {
+            log.info( message, params );
+        }
+
+        @Override
+        public void warn( String message, Object... params )
+        {
+            log.warn( message, params );
+        }
+
+        @Override
+        public void warn( String message, Throwable cause )
+        {
+            log.warn( message, cause );
+        }
+
+        @Override
+        public void debug( String message, Object... params )
+        {
+            log.debug( message, params );
+        }
+
+        @Override
+        public void trace( String message, Object... params )
+        {
+            log.debug( message, params );
+        }
+
+        @Override
+        public boolean isTraceEnabled()
+        {
+            return false;
+        }
+
+        @Override
+        public boolean isDebugEnabled()
+        {
+            return true;
+        }
+    }
+}
