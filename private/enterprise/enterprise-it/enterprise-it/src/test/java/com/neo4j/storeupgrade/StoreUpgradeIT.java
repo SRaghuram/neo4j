@@ -57,8 +57,6 @@ import org.neo4j.kernel.impl.storemigration.StoreUpgrader;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.register.Register.DoubleLongRegister;
-import org.neo4j.register.Registers;
 import org.neo4j.server.CommunityBootstrapper;
 import org.neo4j.server.ServerBootstrapper;
 import org.neo4j.server.ServerTestUtils;
@@ -474,7 +472,6 @@ public class StoreUpgradeIT
         {
             SchemaRead schemaRead = tx.schemaRead();
             Iterator<IndexDescriptor> indexes = IndexDescriptor.sortByType( getAllIndexes( schemaRead ) );
-            DoubleLongRegister register = Registers.newDoubleLongRegister();
             for ( int i = 0; indexes.hasNext(); i++ )
             {
                 IndexDescriptor reference = indexes.next();
@@ -482,10 +479,13 @@ public class StoreUpgradeIT
                 // wait index to be online since sometimes we need to rebuild the indexes on migration
                 awaitOnline( schemaRead, reference );
 
-                assertDoubleLongEquals( store.indexCounts[i][0], store.indexCounts[i][1],
-                       schemaRead.indexUpdatesAndSize( reference, register ) );
-                assertDoubleLongEquals( store.indexCounts[i][2], store.indexCounts[i][3],
-                        schemaRead.indexSample( reference, register ) );
+                var indexInfo = schemaRead.indexUpdatesAndSize( reference );
+                assertEquals( store.indexCounts[i][0], indexInfo.getUpdates() );
+                assertEquals( store.indexCounts[i][1], indexInfo.getSize() );
+                var indexSample = schemaRead.indexSample( reference );
+                assertEquals( store.indexCounts[i][2], indexSample.uniqueValues() );
+                assertEquals( store.indexCounts[i][3], indexSample.sampleSize() );
+
                 double selectivity = schemaRead.indexUniqueValuesSelectivity( reference );
                 assertEquals( store.indexSelectivity[i], selectivity, 0.0000001d );
             }
@@ -580,15 +580,6 @@ public class StoreUpgradeIT
             assertEquals( lastCommittedTxId, countsTxId );
             assertThat( lastCommittedTxId, is( store.lastTxId ) );
         }
-    }
-
-    private static void assertDoubleLongEquals( long expectedFirst, long expectedSecond, DoubleLongRegister register )
-    {
-        long first = register.readFirst();
-        long second = register.readSecond();
-        String msg = String.format( "Expected (%d,%d), got (%d,%d)", expectedFirst, expectedSecond, first, second );
-        assertEquals( msg, expectedFirst, first );
-        assertEquals( msg, expectedSecond, second );
     }
 
     private static double[] selectivities( double... selectivity )
