@@ -130,16 +130,17 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
 
         if ( !Objects.equals( previousState, newState ) )
         {
-            StringBuilder stringBuilder = new StringBuilder( format( "The %s replicated states for database %s changed", role, databaseId ) );
+            StringBuilder stringBuilder =
+                    new StringBuilder( format( "The %s replicated states for database %s changed", role, databaseId ) ).append( lineSeparator() );
             if ( previousState == null )
             {
-                stringBuilder.append( " previous state was empty" );
+                stringBuilder.append( "previous state was empty" );
             }
             else
             {
-                stringBuilder.append( "previous state was:" ).append( newPaddedLine() ).append( printMap( previousState.memberStates(), newPaddedLine() ) )
-                        .append( lineSeparator() );
+                stringBuilder.append( "previous state was:" ).append( newPaddedLine() ).append( printMap( previousState.memberStates(), newPaddedLine() ) );
             }
+            stringBuilder.append( lineSeparator() );
             if ( newState.isEmpty() )
             {
                 stringBuilder.append( "current state is empty" );
