@@ -9,6 +9,7 @@ import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.model.Neo4jConfig;
 import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
 import com.neo4j.bench.jmh.api.config.ParamValues;
+import com.neo4j.bench.micro.Main;
 import com.neo4j.bench.micro.benchmarks.RNGState;
 import com.neo4j.bench.micro.benchmarks.TxBatch;
 import com.neo4j.bench.micro.data.DataGeneratorConfig;
@@ -142,7 +143,7 @@ public class CreateRelationships extends AbstractCoreBenchmark
         Node nextNode()
         {
             nodesPosition = (nodesPosition + 1) % nodes.length;
-            return nodes[nodesPosition];
+            return txBatch.transaction().getNodeById( nodes[nodesPosition].getId() );
         }
 
         void advance()
@@ -171,4 +172,10 @@ public class CreateRelationships extends AbstractCoreBenchmark
         txState.advance();
         txState.nextNode().createRelationshipTo( txState.nextNode(), TYPE );
     }
+
+    public static void main( String... methods ) throws Exception
+    {
+        Main.run( CreateRelationships.class, methods );
+    }
+
 }
