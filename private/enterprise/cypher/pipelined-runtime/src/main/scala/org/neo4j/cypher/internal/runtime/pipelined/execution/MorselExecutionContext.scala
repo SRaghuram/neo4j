@@ -410,7 +410,7 @@ class MorselExecutionContext(private[execution] final val morsel: Morsel,
           case None =>
             // This case should not be possible to reach. It is harmless though if it does, which is why no Exception is thrown unless Assertions are enabled
             require(false,
-                    "Tried to invalidate a cached property $crp but no slot was found for the entity name in $slots.")
+                    s"Tried to invalidate a cached property $crp but no slot was found for the entity name in $slots.")
         }
     }
   }
