@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.compiled.codegen.ir.functions
 
-import org.neo4j.cypher.internal.Require.require
+import org.neo4j.cypher.internal.macros.Require.require
 import org.neo4j.cypher.internal.runtime.compiled.codegen.CodeGenContext
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions._
 import org.neo4j.cypher.internal.v4_0.expressions.{functions => astFunctions}

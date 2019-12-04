@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.execution
 
-import org.neo4j.cypher.internal.Require.require
+import org.neo4j.cypher.internal.macros.Require.require
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.QueryExecutionTracer
 import org.neo4j.cypher.internal.runtime.pipelined.{ExecutionState, Worker, WorkerResourceProvider}

@@ -14,8 +14,6 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.{Aggregat
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{ExecutionContextFactory, Pipe, QueryState}
 import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
 
-import scala.collection.JavaConverters._
-
 /**
   * Slotted variant of [[GroupingAggTable]]
   */

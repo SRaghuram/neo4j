@@ -5,8 +5,8 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.state
 
-import org.neo4j.cypher.internal.Require.require
 import org.neo4j.cypher.internal.RuntimeResourceLeakException
+import org.neo4j.cypher.internal.macros.Require.require
 import org.neo4j.cypher.internal.physicalplanning.PipelineId.NO_PIPELINE
 import org.neo4j.cypher.internal.physicalplanning._
 import org.neo4j.cypher.internal.runtime.QueryContext

@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.operators
 
 import java.util.Comparator
 
-import org.neo4j.cypher.internal.Require.require
+import org.neo4j.cypher.internal.macros.Require.require
 import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot}
 import org.neo4j.cypher.internal.runtime.pipelined.execution.{Morsel, MorselExecutionContext}
 import org.neo4j.cypher.internal.runtime.slotted.ColumnOrder
