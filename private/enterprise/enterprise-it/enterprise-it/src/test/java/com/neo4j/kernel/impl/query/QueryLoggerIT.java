@@ -122,6 +122,8 @@ class QueryLoggerIT
 
         // WHEN
         executeSystemCommandSuperUser( "CREATE USER foo SET PASSWORD 'neo4j' CHANGE NOT REQUIRED" );
+        executeSystemCommandSuperUser( "CREATE OR REPLACE USER foo SET PASSWORD 'neo5j' CHANGE NOT REQUIRED" );
+        executeSystemCommandSuperUser( "CREATE USER foo IF NOT EXISTS SET PASSWORD 'neo4j' CHANGE NOT REQUIRED" );
         executeSystemCommandSuperUser( "CREATE ROLE role IF NOT EXISTS" );
         executeSystemCommandSuperUser( "GRANT ROLE role TO foo" );
         executeSystemCommandSuperUser( "GRANT ACCESS ON DATABASE * TO role" );
@@ -134,10 +136,14 @@ class QueryLoggerIT
 
         // THEN
         List<String> logLines = readAllLines( logFilename );
-        assertThat( logLines.size(), equalTo( 8 ) );
+        assertThat( logLines.size(), equalTo( 10 ) );
         String connectionDetails = connectionAndDatabaseDetails( SYSTEM_DATABASE_NAME );
         assertThat( logLines, contains(
                 endsWith( String.format( " ms: %s - %s - {} - {}", connectionDetails, "CREATE USER foo SET PASSWORD '******' CHANGE NOT REQUIRED" ) ),
+                endsWith( String.format( " ms: %s - %s - {} - {}", connectionDetails,
+                        "CREATE OR REPLACE USER foo SET PASSWORD '******' CHANGE NOT REQUIRED" ) ),
+                endsWith( String.format( " ms: %s - %s - {} - {}", connectionDetails,
+                        "CREATE USER foo IF NOT EXISTS SET PASSWORD '******' CHANGE NOT REQUIRED" ) ),
                 endsWith( String.format( " ms: %s - %s - {} - {}", connectionDetails, "CREATE ROLE role IF NOT EXISTS" ) ),
                 endsWith( String.format( " ms: %s - %s - {} - {}", connectionDetails, "GRANT ROLE role TO foo" ) ),
                 endsWith( String.format( " ms: %s - %s - {} - {}", connectionDetails, "GRANT ACCESS ON DATABASE * TO role" ) ),
