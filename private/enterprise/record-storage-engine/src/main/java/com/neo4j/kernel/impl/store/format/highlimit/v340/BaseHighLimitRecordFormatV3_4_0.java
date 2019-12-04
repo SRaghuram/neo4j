@@ -118,7 +118,7 @@ abstract class BaseHighLimitRecordFormatV3_4_0<RECORD extends AbstractBaseRecord
             // but the trade-off is a great reduction in complexity.
             long secondaryId = Reference.decode( primaryCursor );
             long pageId = pageIdForRecord( secondaryId, recordsPerPage );
-            int offset = offsetForId( secondaryId, primaryCursor.getCurrentPageSize(), recordSize );
+            int offset = offsetForId( secondaryId, recordSize, recordsPerPage );
             PageCursor secondaryCursor = primaryCursor.openLinkedCursor( pageId );
             if ( (!secondaryCursor.next()) | offset < 0 )
             {
@@ -191,7 +191,7 @@ abstract class BaseHighLimitRecordFormatV3_4_0<RECORD extends AbstractBaseRecord
                 // into the secondary record
                 long secondaryUnitId = record.getSecondaryUnitId();
                 long pageId = pageIdForRecord( secondaryUnitId, recordsPerPage );
-                int offset = offsetForId( secondaryUnitId, primaryCursor.getCurrentPageSize(), recordSize );
+                int offset = offsetForId( secondaryUnitId, recordSize, recordsPerPage );
                 PageCursor secondaryCursor = primaryCursor.openLinkedCursor( pageId );
                 if ( !secondaryCursor.next() )
                 {
@@ -231,7 +231,7 @@ abstract class BaseHighLimitRecordFormatV3_4_0<RECORD extends AbstractBaseRecord
         {
             long secondaryUnitId = record.getSecondaryUnitId();
             long pageIdForSecondaryRecord = pageIdForRecord( secondaryUnitId, recordSize );
-            int offsetForSecondaryId = offsetForId( secondaryUnitId, cursor.getCurrentPageSize(), recordSize );
+            int offsetForSecondaryId = offsetForId( secondaryUnitId, recordSize, recordsPerPage );
             if ( !cursor.next( pageIdForSecondaryRecord ) )
             {
                 throw new UnderlyingStorageException( "Couldn't move to secondary page " + pageIdForSecondaryRecord );

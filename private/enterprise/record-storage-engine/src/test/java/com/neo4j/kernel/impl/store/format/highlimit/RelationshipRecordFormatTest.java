@@ -79,23 +79,24 @@ class RelationshipRecordFormatTest
     {
         // GIVEN a record which requires two units
         long hugeValue = 1L << 48;
+        final int recordsPerPage = cursor.getCurrentPageSize() / recordSize;
         RelationshipRecord record = new RelationshipRecord( 5 ).initialize( true,
                 hugeValue + 1, hugeValue + 2, hugeValue + 3, 4,
                 hugeValue + 5, hugeValue + 6, hugeValue + 7, hugeValue + 8, true, true );
         record.setSecondaryUnitIdOnLoad( 17 );
         record.setRequiresSecondaryUnit( true );
-        cursor.setOffset( offsetForId( record.getId(), cursor.getCurrentPageSize(), recordSize ) );
-        format.write( record, cursor, recordSize, cursor.getCurrentPageSize() / recordSize );
+        cursor.setOffset( offsetForId( record.getId(), recordSize, recordsPerPage ) );
+        format.write( record, cursor, recordSize, recordsPerPage );
 
         // WHEN deleting that record
         record.setInUse( false );
-        cursor.setOffset( offsetForId( record.getId(), cursor.getCurrentPageSize(), recordSize ) );
-        format.write( record, cursor, recordSize, cursor.getCurrentPageSize() / recordSize );
+        cursor.setOffset( offsetForId( record.getId(), recordSize, recordsPerPage ) );
+        format.write( record, cursor, recordSize, recordsPerPage );
 
         // THEN both units should have been marked as unused
-        cursor.setOffset( offsetForId( record.getId(), cursor.getCurrentPageSize(), recordSize ) );
+        cursor.setOffset( offsetForId( record.getId(), recordSize, recordsPerPage ) );
         assertFalse( recordInUse( cursor ) );
-        cursor.setOffset( offsetForId( record.getSecondaryUnitId(), cursor.getCurrentPageSize(), recordSize ) );
+        cursor.setOffset( offsetForId( record.getSecondaryUnitId(), recordSize, recordsPerPage ) );
         assertFalse( recordInUse( cursor ) );
     }
 
