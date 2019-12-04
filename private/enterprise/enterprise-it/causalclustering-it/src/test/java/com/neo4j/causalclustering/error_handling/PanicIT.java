@@ -116,10 +116,8 @@ class PanicIT
 
     private void attemptToRestartDefaultDatabase() throws Exception
     {
-        var uri = cluster.awaitLeader( SYSTEM_DATABASE_NAME ).routingURI();
-
         // use a routing driver and a single session so that system database bookmarks are passed between transactions
-        try ( var driver = graphDatabaseDriver( uri, AuthTokens.basic( "neo4j", "neo4j" ) );
+        try ( var driver = graphDatabaseDriver( cluster, AuthTokens.basic( "neo4j", "neo4j" ) );
               var session = driver.session( forDatabase( SYSTEM_DATABASE_NAME ) ) )
         {
             session.writeTransaction( tx -> tx.run( "STOP DATABASE " + DEFAULT_DATABASE_NAME ) ).consume();
