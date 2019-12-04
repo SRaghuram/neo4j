@@ -11,7 +11,7 @@ import org.mockito.ArgumentMatchers._
 import org.mockito.Mockito.{verify, _}
 import org.neo4j.cypher.GraphDatabaseTestSupport
 import org.neo4j.cypher.internal.compiler._
-import org.neo4j.cypher.internal.compiler.phases.{PlannerContext, PlannerContextCreator}
+import org.neo4j.cypher.internal.compiler.phases.{Compatibility4_1, PlannerContext, PlannerContextCreator}
 import org.neo4j.cypher.internal.compiler.planner.logical.idp._
 import org.neo4j.cypher.internal.compiler.planner.logical.{CachedMetricsFactory, SimpleMetricsFactory, simpleExpressionEvaluator}
 import org.neo4j.cypher.internal.planner.spi.{IDPPlannerName, PlanContext}
@@ -84,7 +84,7 @@ class CartesianProductNotificationAcceptanceTest extends CypherFunSuite with Gra
     graph.withTx( tx => {
       val tracer = CompilationPhaseTracer.NO_TRACING
       val innerVariableNamer = new GeneratingNamer
-      val parsed = compiler.parseQuery(query, query, logger, IDPPlannerName.name, Set.empty, None, tracer, innerVariableNamer, MapValue.EMPTY, compatibilityMode = false)
+      val parsed = compiler.parseQuery(query, query, logger, IDPPlannerName.name, Set.empty, None, tracer, innerVariableNamer, MapValue.EMPTY, compatibilityMode = Compatibility4_1)
       val kernelTransaction = tx.kernelTransaction()
       val statement = kernelTransaction.acquireStatement()
       val context = PlannerContextCreator.create(tracer, logger, planContext(kernelTransaction, statement), parsed.queryText, Set.empty,

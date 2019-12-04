@@ -15,24 +15,24 @@ class EnterpriseRootPlanAcceptanceTest extends ExecutionEngineFunSuite with Ente
 
   test("query that does not go through the pipelined runtime") {
     given("MATCH (n) RETURN n, count(*) SKIP 2")
-      .withCypherVersion(CypherVersion.v4_0)
-      .shouldHaveCypherVersion(CypherVersion.v4_0)
+      .withCypherVersion(CypherVersion.default)
+      .shouldHaveCypherVersion(CypherVersion.default)
       .shouldHaveRuntime(SlottedRuntimeName)
   }
 
   test("query that lacks support from the pipelined runtime") {
     given("CREATE ()")
-      .withCypherVersion(CypherVersion.v4_0)
+      .withCypherVersion(CypherVersion.default)
       .withRuntime(CompiledRuntimeName)
-      .shouldHaveCypherVersion(CypherVersion.v4_0)
+      .shouldHaveCypherVersion(CypherVersion.default)
       .shouldHaveRuntime(SlottedRuntimeName)
   }
 
   test("query that should go through the pipelined runtime") {
     given("MATCH (a)-->(b) RETURN a")
-      .withCypherVersion(CypherVersion.v4_0)
+      .withCypherVersion(CypherVersion.default)
       .withRuntime(PipelinedRuntimeName)
-      .shouldHaveCypherVersion(CypherVersion.v4_0)
+      .shouldHaveCypherVersion(CypherVersion.default)
       .shouldHaveRuntime(PipelinedRuntimeName)
       .shouldHavePlanner(CostBasedPlannerName.default)
   }
@@ -61,7 +61,7 @@ class EnterpriseRootPlanAcceptanceTest extends ExecutionEngineFunSuite with Ente
       given("match (n) return n")
         .withPlanner(planner)
         .withRuntime(runtime)
-        .shouldHaveCypherVersion(CypherVersion.v4_0)
+        .shouldHaveCypherVersion(CypherVersion.default)
         .shouldHavePlanner(planner)
         .shouldHaveRuntime(runtime)
     }

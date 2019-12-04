@@ -31,7 +31,7 @@ import static org.hamcrest.core.IsNull.notNullValue;
 @EnterpriseDbmsExtension
 class ExecutionResultTest
 {
-    private static final String CURRENT_VERSION = "CYPHER 4.0";
+    private static final String CURRENT_VERSION = "CYPHER 4.1";
     @Inject
     private GraphDatabaseService db;
 
