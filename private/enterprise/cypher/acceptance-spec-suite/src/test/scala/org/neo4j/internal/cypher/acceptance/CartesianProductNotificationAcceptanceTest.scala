@@ -132,7 +132,7 @@ class CartesianProductNotificationAcceptanceTest extends CypherFunSuite with Gra
     val tc = mock[TransactionalContextWrapper]
     when(tc.dataRead).thenReturn(transaction.dataRead())
     when(tc.graph).thenReturn(graph)
-    TransactionBoundPlanContext(tc, devNullLogger)
+    TransactionBoundPlanContext(tc, devNullLogger, null)
   }
 
   private def createQueryGraphSolver(): IDPQueryGraphSolver = {

@@ -7,17 +7,18 @@ package org.neo4j.internal.cypher.debug
 
 import java.io.File
 
-import org.neo4j.cypher.internal.v4_0.util.symbols._
 import org.json4s.DefaultFormats
 import org.json4s.native.Serialization
 import org.neo4j.cypher.internal.logical.plans.{CypherValue, FieldSignature, QualifiedName, UserFunctionSignature}
 import org.neo4j.cypher.internal.planning.CypherPlanner
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionalContextWrapper
 import org.neo4j.cypher.internal.v4_0.frontend.phases.InternalNotificationLogger
+import org.neo4j.cypher.internal.v4_0.util.symbols._
 import org.neo4j.cypher.{ExecutionEngineFunSuite, QueryStatisticsTestSupport}
 import org.neo4j.internal.collector.DataCollectorMatchers._
 import org.neo4j.internal.collector.SampleGraphs
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
+import org.neo4j.logging.Log
 
 class GraphCountAcceptanceTest extends ExecutionEngineFunSuite
                                with QueryStatisticsTestSupport
@@ -35,8 +36,9 @@ class GraphCountAcceptanceTest extends ExecutionEngineFunSuite
     // If your json is missing the boiler plate, you can try this instead:
     //val graphCountData = GraphCountsJson.parseAsGraphCountData(file)
 
-    def getPlanContext(tc: TransactionalContextWrapper, logger: InternalNotificationLogger): GraphCountsPlanContext = {
+    def getPlanContext(tc: TransactionalContextWrapper, logger: InternalNotificationLogger, log: Log): GraphCountsPlanContext = {
       val context = new GraphCountsPlanContext(graphCountData)(tc, logger)
+
       // Add UDFs here, if you have any in your query
 
       // Add UDFs for temporal functions

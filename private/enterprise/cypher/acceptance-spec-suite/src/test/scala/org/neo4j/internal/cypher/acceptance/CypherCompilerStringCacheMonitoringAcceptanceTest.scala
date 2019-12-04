@@ -40,7 +40,7 @@ class CypherCompilerStringCacheMonitoringAcceptanceTest extends ExecutionEngineF
       counts = counts.copy(flushes = counts.flushes + 1)
     }
 
-    override def cacheDiscard(key: Pair[String, ParameterTypeMap], key2: String, secondsSinceReplan: Int) {
+    override def cacheDiscard(key: Pair[String, ParameterTypeMap], key2: String, secondsSinceReplan: Int, maybeReason: Option[String]) {
       counts = counts.copy(evicted = counts.evicted + 1)
     }
   }
