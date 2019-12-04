@@ -94,6 +94,6 @@ public class DiscoveryDatabaseState
 
     private static String printResult( Throwable failure )
     {
-        return failure == null ? "SUCCESS" : "FAIL [" + failure.getMessage() + ']';
+        return failure == null ? "SUCCESS" : "FAIL [" + failure + ']';
     }
 }
