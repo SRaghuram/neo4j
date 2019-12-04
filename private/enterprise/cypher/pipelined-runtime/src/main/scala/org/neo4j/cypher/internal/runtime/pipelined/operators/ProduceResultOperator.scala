@@ -229,13 +229,13 @@ class ProduceResultOperatorTaskTemplate(val inner: OperatorTaskTemplate,
       *   ....
       * }}}
      */
-    val project = block(columns.map {
-      name =>
+    val project = block(columns.zipWithIndex.map {
+      case (name, index) =>
         val slot = slots.get(name).getOrElse(
           throw new InternalException(s"Did not find `$name` in the slot configuration")
           )
-        invokeSideEffect(load(SUBSCRIBER), method[QuerySubscriber, Unit, AnyValue]("onField"),
-                         getFromSlot(slot))
+        invokeSideEffect(load(SUBSCRIBER), method[QuerySubscriber, Unit, Int, AnyValue]("onField"),
+                         constant(index), getFromSlot(slot))
     }:_ *)
 
     /**
