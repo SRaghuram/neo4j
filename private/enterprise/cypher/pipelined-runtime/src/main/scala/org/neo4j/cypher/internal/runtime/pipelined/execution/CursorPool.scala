@@ -208,7 +208,7 @@ class CursorPool[CURSOR <: Cursor](cursorFactory: () => CURSOR) extends AutoClos
 object CursorPool {
 
   def apply[CURSOR <: Cursor](cursorFactory: () => CURSOR): CursorPool[CURSOR] =
-    if (AssertionRunner.isAssertionsEnabled) {
+    if (AssertionRunner.ASSERTIONS_ENABLED) {
       new TrackingCursorPool(cursorFactory)
     } else {
       new CursorPool(cursorFactory)

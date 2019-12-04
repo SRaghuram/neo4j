@@ -37,7 +37,7 @@ trait WorkerManagement extends WorkerWaker {
   /**
    * Throw an exception if any worker is active.
    */
-  def assertNoWorkerIsActive(): Unit
+  def assertNoWorkerIsActive(): Boolean
 }
 
 class WorkerManager(val numberOfWorkers: Int, threadFactory: ThreadFactory) extends WorkerManagement with Lifecycle {
@@ -50,7 +50,7 @@ class WorkerManager(val numberOfWorkers: Int, threadFactory: ThreadFactory) exte
 
   override def workers: Seq[Worker] = _workers
 
-  override def assertNoWorkerIsActive(): Unit = {
+  override def assertNoWorkerIsActive(): Boolean = {
     val activeWorkers =
       for {
         worker <- _workers.filter(_.sleeper.isWorking)
@@ -59,6 +59,7 @@ class WorkerManager(val numberOfWorkers: Int, threadFactory: ThreadFactory) exte
     if (activeWorkers.nonEmpty) {
       throw new RuntimeResourceLeakException(activeWorkers.mkString("\n"))
     }
+    true
   }
 
   // ========== WORKER WAKER ===========

@@ -5,6 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted
 
+import org.neo4j.cypher.internal.Require.require
 import org.neo4j.cypher.internal.ir.VarPatternLength
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans._
@@ -26,7 +27,6 @@ import org.neo4j.cypher.internal.runtime.slotted.{expressions => slottedExpressi
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryIndexRegistrator}
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v4_0.expressions.{Equals, SignedDecimalIntegerLiteral}
-import org.neo4j.cypher.internal.v4_0.util.AssertionUtils._
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.cypher.internal.v4_0.util.symbols._
 import org.neo4j.cypher.internal.v4_0.{expressions => frontEndAst}
@@ -384,7 +384,7 @@ class SlottedPipeMapper(fallback: PipeMapper,
 
         // Verify the assumption that the only shared slots we have are arguments which are identical on both lhs and rhs.
         // This assumption enables us to use array copy within CartesianProductSlottedPipe.
-        ifAssertionsEnabled(verifyOnlyArgumentsAreSharedSlots(plan, physicalPlan))
+        require(verifyOnlyArgumentsAreSharedSlots(plan, physicalPlan))
 
         CartesianProductSlottedPipe(lhs, rhs, lhsSlots.numberOfLongs, lhsSlots.numberOfReferences, slots, argumentSize)(id)
 
@@ -396,7 +396,7 @@ class SlottedPipeMapper(fallback: PipeMapper,
         val rightNodes: Array[Int] = nodes.map(k => rhsSlots.getLongOffsetFor(k))
 
         // Verify the assumption that the argument slots are the same on both sides
-        ifAssertionsEnabled(verifyArgumentsAreTheSameOnBothSides(plan, physicalPlan))
+        require(verifyArgumentsAreTheSameOnBothSides(plan, physicalPlan))
         val (longsToCopy, refsToCopy, cachedPropertiesToCopy) = computeSlotsToCopy(rhsSlots, argumentSize, slots)
 
         if (leftNodes.length == 1) {
@@ -415,7 +415,7 @@ class SlottedPipeMapper(fallback: PipeMapper,
 
         // Verify the assumption that the only shared slots we have are arguments which are identical on both lhs and rhs.
         // This assumption enables us to use array copy within ValueHashJoin.
-        ifAssertionsEnabled(verifyOnlyArgumentsAreSharedSlots(plan, physicalPlan))
+        require(verifyOnlyArgumentsAreSharedSlots(plan, physicalPlan))
 
         ValueHashJoinSlottedPipe(lhsCmdExp, rhsCmdExp, lhs, rhs, slots, longOffset, refOffset, argumentSize)(id)
 
@@ -574,7 +574,7 @@ class SlottedPipeMapper(fallback: PipeMapper,
 
   // Verifies the assumption that all shared slots are arguments with slot offsets within the first argument size number of slots
   // and the number of shared slots are identical to the argument size.
-  private def verifyOnlyArgumentsAreSharedSlots(plan: LogicalPlan, physicalPlan: PhysicalPlan): Unit = {
+  private def verifyOnlyArgumentsAreSharedSlots(plan: LogicalPlan, physicalPlan: PhysicalPlan): Boolean = {
     val argumentSize = physicalPlan.argumentSizes(plan.id)
     val lhsPlan = plan.lhs.get
     val rhsPlan = plan.rhs.get
@@ -611,9 +611,11 @@ class SlottedPipeMapper(fallback: PipeMapper,
       val refSlotsMessage = if (refSlotsOk) "" else s"#ref arguments=${argumentSize.nReferences} shared ref slots: $sharedRefSlots "
       throw new InternalException(s"Unexpected slot configuration. Shared slots not only within argument size: $longSlotsMessage$refSlotsMessage")
     }
+
+    true
   }
 
-  private def verifyArgumentsAreTheSameOnBothSides(plan: LogicalPlan, physicalPlan: PhysicalPlan): Unit = {
+  private def verifyArgumentsAreTheSameOnBothSides(plan: LogicalPlan, physicalPlan: PhysicalPlan): Boolean = {
     val argumentSize = physicalPlan.argumentSizes(plan.id)
     val lhsPlan = plan.lhs.get
     val rhsPlan = plan.rhs.get
@@ -665,6 +667,7 @@ class SlottedPipeMapper(fallback: PipeMapper,
       val refSlotsMessage = if (refSlotsOk) "" else s"#ref arguments=${argumentSize.nReferences} lhs: $lhsArgRefSlots rhs: $rhsArgRefSlots "
       throw new InternalException(s"Unexpected slot configuration. Arguments differ between lhs and rhs: $longSlotsMessage$refSlotsMessage")
     }
+    true
   }
 }
 

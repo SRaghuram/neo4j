@@ -165,10 +165,11 @@ class Worker(val workerId: Int,
     }
   }
 
-  def assertIsNotActive(): Unit = {
+  def assertIsNotActive(): Boolean = {
     if (sleeper.isWorking) {
       throw new RuntimeResourceLeakException(Worker.WORKING_THOUGH_RELEASED(this))
     }
+    true
   }
 
   private def upstreamWorkUnitEvents(task: PipelineTask): Seq[WorkUnitEvent] = {

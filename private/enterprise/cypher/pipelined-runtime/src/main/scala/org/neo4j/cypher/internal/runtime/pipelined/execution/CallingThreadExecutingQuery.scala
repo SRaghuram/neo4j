@@ -5,10 +5,10 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.execution
 
+import org.neo4j.cypher.internal.Require.require
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.QueryExecutionTracer
 import org.neo4j.cypher.internal.runtime.pipelined.{ExecutionState, Worker, WorkerResourceProvider}
-import org.neo4j.cypher.internal.v4_0.util.AssertionRunner
 import org.neo4j.kernel.impl.query.QuerySubscription
 
 class CallingThreadExecutingQuery(executionState: ExecutionState,
@@ -42,10 +42,8 @@ class CallingThreadExecutingQuery(executionState: ExecutionState,
       executionState.cancelQuery(workerResources)
     }
     try {
-      if (AssertionRunner.isAssertionsEnabled) {
-        worker.assertIsNotActive()
-        workerResourceProvider.assertAllReleased()
-      }
+      require(worker.assertIsNotActive() &&
+        workerResourceProvider.assertAllReleased())
     } finally {
       workerResourceProvider.shutdown()
     }
@@ -54,10 +52,7 @@ class CallingThreadExecutingQuery(executionState: ExecutionState,
   override def await(): Boolean = {
     if (executionState.hasEnded) {
       try {
-        if (AssertionRunner.isAssertionsEnabled) {
-          worker.assertIsNotActive()
-          workerResourceProvider.assertAllReleased()
-        }
+        require(worker.assertIsNotActive() && workerResourceProvider.assertAllReleased())
       } finally {
         workerResourceProvider.shutdown()
       }

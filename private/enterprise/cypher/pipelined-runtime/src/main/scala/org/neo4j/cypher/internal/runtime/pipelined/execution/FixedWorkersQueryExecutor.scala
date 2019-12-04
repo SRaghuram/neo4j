@@ -5,13 +5,13 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.execution
 
+import org.neo4j.cypher.internal.Require.require
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
 import org.neo4j.cypher.internal.runtime.debug.DebugLog
 import org.neo4j.cypher.internal.runtime.pipelined.state.{ConcurrentStateFactory, TheExecutionState}
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.SchedulerTracer
 import org.neo4j.cypher.internal.runtime.pipelined.{ExecutablePipeline, WorkerManagement, WorkerResourceProvider}
 import org.neo4j.cypher.internal.runtime.{InputDataStream, MemoryTracking, QueryContext}
-import org.neo4j.cypher.internal.v4_0.util.AssertionRunner
 import org.neo4j.cypher.result.QueryProfile
 import org.neo4j.exceptions.RuntimeUnsupportedException
 import org.neo4j.internal.kernel.api.IndexReadSession
@@ -30,10 +30,9 @@ class FixedWorkersQueryExecutor(val workerResourceProvider: WorkerResourceProvid
   // ========== QUERY EXECUTOR ===========
 
     def assertAllReleased(): Unit = {
-      AssertionRunner.runUnderAssertion { () =>
-        workerResourceProvider.assertAllReleased()
-        workerManager.assertNoWorkerIsActive()
-      }
+      require(workerResourceProvider.assertAllReleased() &&
+                        workerManager.assertNoWorkerIsActive())
+
     }
 
   override def execute[E <: Exception](executablePipelines: IndexedSeq[ExecutablePipeline],

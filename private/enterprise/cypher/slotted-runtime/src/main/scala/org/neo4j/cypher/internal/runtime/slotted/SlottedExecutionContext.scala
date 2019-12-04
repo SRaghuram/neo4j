@@ -5,12 +5,11 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted
 
+import org.neo4j.cypher.internal.Require.require
 import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot, SlotConfiguration}
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
 import org.neo4j.cypher.internal.runtime.{EntityById, ExecutionContext}
 import org.neo4j.cypher.internal.v4_0.expressions.ASTCachedProperty
-import org.neo4j.cypher.internal.v4_0.util.AssertionRunner
-import org.neo4j.cypher.internal.v4_0.util.AssertionUtils._
 import org.neo4j.cypher.internal.v4_0.util.symbols.{CTNode, CTRelationship}
 import org.neo4j.exceptions.InternalException
 import org.neo4j.graphdb.NotFoundException
@@ -34,6 +33,7 @@ trait SlottedCompatible {
   *
   * @param slots the slot configuration to use.
   */
+//noinspection NameBooleanParameters
 case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionContext {
 
   val longs = new Array[Long](slots.numberOfLongs)
@@ -73,7 +73,7 @@ case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionCo
     if (nLongs > slots.numberOfLongs || nRefs > slots.numberOfReferences)
       throw new InternalException("A bug has occurred in the slotted runtime: The target slotted execution context cannot hold the data to copy.")
     else input match {
-      case other@SlottedExecutionContext(otherPipeline) =>
+      case other@SlottedExecutionContext(_) =>
         System.arraycopy(other.longs, 0, longs, 0, nLongs)
         System.arraycopy(other.refs, 0, refs, 0, nRefs)
         setLinenumber(other.getLinenumber)
@@ -130,9 +130,8 @@ case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionCo
             }
           case None =>
             // This case should not be possible to reach. It is harmless though if it does, which is why no Exception is thrown unless Assertions are enabled
-            AssertionRunner.runUnderAssertion {
-              throw new IllegalStateException(s"Tried to invalidate a cached property $cnp but no slot was found for the entity name in $slots.")
-            }
+            require(false,
+                    s"Tried to invalidate a cached property $cnp but no slot was found for the entity name in $slots.")
         }
     }
   }
@@ -151,9 +150,8 @@ case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionCo
             }
           case None =>
             // This case should not be possible to reach. It is harmless though if it does, which is why no Exception is thrown unless Assertions are enabled
-            AssertionRunner.runUnderAssertion {
-              throw new IllegalStateException(s"Tried to invalidate a cached property $crp but no slot was found for the entity name in $slots.")
-            }
+            require(false,
+                    s"Tried to invalidate a cached property $crp but no slot was found for the entity name in $slots.")
         }
     }
   }
@@ -270,13 +268,7 @@ case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionCo
             throw new InternalException(s"Tried to merge slot $otherSlot from $other but it is missing from $this." +
               "Looks like something needs to be fixed in slot allocation.")
           )
-
-          ifAssertionsEnabled {
-            val thisSlot = slots.get(key).get
-            // This should be guaranteed by slot allocation or else we could get incorrect results
-            if (!thisSlot.nullable && otherSlot.nullable)
-              throw new InternalException(s"Tried to merge slot $otherSlot into $thisSlot but its nullability is incompatible")
-          }
+          require(checkCompatibleNullablility(key, otherSlot))
 
           val otherValue = slottedOther.getRefAtWithoutCheckingInitialized(offset)
           thisSlotSetter.apply(this, otherValue)
@@ -292,6 +284,14 @@ case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionCo
 
     case _ =>
       throw new InternalException("Well well, isn't this a delicate situation?")
+  }
+
+  private def checkCompatibleNullablility(key: String, otherSlot: RefSlot): Boolean = {
+    val thisSlot = slots.get(key).get
+    // This should be guaranteed by slot allocation or else we could get incorrect results
+    if (!thisSlot.nullable && otherSlot.nullable)
+      throw new InternalException(s"Tried to merge slot $otherSlot into $thisSlot but its nullability is incompatible")
+    true
   }
 
   override def createClone(): ExecutionContext = {
@@ -332,7 +332,7 @@ case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionCo
         if (entityId >= 0)
           entities += key -> materializeRelationship(getLongAt(offset))
       case _ => // Do nothing
-    }, ignoreCachedNodeProperties => ())
+    }, _ => ())
     entities.toMap
   }
 

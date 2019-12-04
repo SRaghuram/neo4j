@@ -12,7 +12,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.tracing.WorkUnitEvent
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedCompatible, SlottedExecutionContext}
 import org.neo4j.cypher.internal.runtime.{EntityById, ExecutionContext, ResourceLinenumber}
 import org.neo4j.cypher.internal.v4_0.expressions.ASTCachedProperty
-import org.neo4j.cypher.internal.v4_0.util.AssertionRunner
 import org.neo4j.cypher.internal.v4_0.util.symbols.{CTNode, CTRelationship}
 import org.neo4j.exceptions.InternalException
 import org.neo4j.graphdb.NotFoundException
@@ -41,6 +40,7 @@ object MorselExecutionContext {
     }
 }
 
+//noinspection NameBooleanParameters
 class MorselExecutionContext(private[execution] final val morsel: Morsel,
                              final val slots: SlotConfiguration,
                              final val maxNumberOfRows: Int,
@@ -389,9 +389,8 @@ class MorselExecutionContext(private[execution] final val morsel: Morsel,
             }
           case None =>
             // This case should not be possible to reach. It is harmless though if it does, which is why no Exception is thrown unless Assertions are enabled
-            AssertionRunner.runUnderAssertion {
-              throw new IllegalStateException(s"Tried to invalidate a cached property $cnp but no slot was found for the entity name in $slots.")
-            }
+            require(false,
+                    s"Tried to invalidate a cached property $cnp but no slot was found for the entity name in $slots.")
         }
     }
   }
@@ -410,9 +409,8 @@ class MorselExecutionContext(private[execution] final val morsel: Morsel,
             }
           case None =>
             // This case should not be possible to reach. It is harmless though if it does, which is why no Exception is thrown unless Assertions are enabled
-            AssertionRunner.runUnderAssertion {
-              throw new IllegalStateException(s"Tried to invalidate a cached property $crp but no slot was found for the entity name in $slots.")
-            }
+            require(false,
+                    "Tried to invalidate a cached property $crp but no slot was found for the entity name in $slots.")
         }
     }
   }

@@ -5,6 +5,7 @@
  */
 package org.neo4j.cypher.internal.physicalplanning
 
+import org.neo4j.cypher.internal.Require.require
 import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.SlotConfigurations
 import org.neo4j.cypher.internal.physicalplanning.ast._
@@ -12,7 +13,6 @@ import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.ast.{RuntimeProperty, RuntimeVariable}
 import org.neo4j.cypher.internal.v4_0.expressions
 import org.neo4j.cypher.internal.v4_0.expressions.{FunctionInvocation, functions => frontendFunctions, _}
-import org.neo4j.cypher.internal.v4_0.util.AssertionUtils.ifAssertionsEnabled
 import org.neo4j.cypher.internal.v4_0.util.Foldable._
 import org.neo4j.cypher.internal.v4_0.util.attribution.SameId
 import org.neo4j.cypher.internal.v4_0.util.symbols._
@@ -97,9 +97,8 @@ class SlottedRewriter(tokenContext: TokenContext) {
     val resultPlan = in.endoRewrite(rewritePlanWithSlots)
 
     // Verify that we could rewrite all instances of Variable (only under -ea)
-    ifAssertionsEnabled {
-      resultPlan.findByAllClass[Variable].foreach(v => throw new CantCompileQueryException(s"Failed to rewrite away $v\n$resultPlan"))
-    }
+    require(!resultPlan.findByAllClass[Variable].exists(v => throw new CantCompileQueryException(s"Failed to rewrite away $v\n$resultPlan")))
+
 
     resultPlan
   }

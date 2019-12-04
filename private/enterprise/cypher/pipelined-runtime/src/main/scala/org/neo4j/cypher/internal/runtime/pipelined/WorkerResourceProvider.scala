@@ -23,12 +23,13 @@ class WorkerResourceProvider(numberOfWorkers: Int,
   /**
     * Assert that all resources are released
     */
-  def assertAllReleased(): Unit = {
+  def assertAllReleased(): Boolean = {
     val liveCounts = new LiveCounts()
     for (q <- queryResourcesForWorkers) {
       q.cursorPools.collectLiveCounts(liveCounts)
     }
     liveCounts.assertAllReleased()
+    true
   }
 
   override def init(): Unit = {}

@@ -61,18 +61,18 @@ trait QueryCompletionTracker extends FlowControl {
     * Add an assertion to be run when the query is completed.
     */
   def addCompletionAssertion(assertion: Thunk): Unit = {
-    if (AssertionRunner.isAssertionsEnabled) {
+    if (AssertionRunner.ASSERTIONS_ENABLED) {
       assertions += assertion
     }
   }
 
   protected val assertions: ArrayBuffer[Thunk] =
-    if (AssertionRunner.isAssertionsEnabled)
+    if (AssertionRunner.ASSERTIONS_ENABLED)
       new ArrayBuffer[Thunk]()
     else null
 
   protected def runAssertions(): Unit = {
-    if (AssertionRunner.isAssertionsEnabled) {
+    if (AssertionRunner.ASSERTIONS_ENABLED) {
       assertions.foreach(_.apply())
     }
   }
