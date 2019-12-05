@@ -19,7 +19,7 @@ import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => InterpretedQueryState}
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, ListSupport, NoMemoryTracker, QueryContext}
 import org.neo4j.cypher.internal.v4_0.expressions
-import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.operations.CypherFunctions
 import org.neo4j.exceptions.CantCompileQueryException
 import org.neo4j.internal.kernel.api.IndexReadSession

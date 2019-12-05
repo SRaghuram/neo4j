@@ -12,8 +12,8 @@ import org.neo4j.cypher.internal.v4_0.ast.Statement
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticFeature.{Cypher9Comparability, MultipleDatabases}
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticState
 import org.neo4j.cypher.internal.v4_0.frontend.phases.{AstRewriting, BaseContains, InitialState, SemanticAnalysis}
-import org.neo4j.cypher.internal.v4_0.rewriting.RewriterStepSequencer
-import org.neo4j.cypher.internal.v4_0.rewriting.rewriters.{GeneratingNamer, IfNoParameter}
+import org.neo4j.cypher.internal.rewriting.RewriterStepSequencer
+import org.neo4j.cypher.internal.rewriting.rewriters.{GeneratingNamer, IfNoParameter}
 import org.neo4j.cypher.internal.{FullyParsedQuery, QueryOptions}
 
 trait FullyParsedQueryTestSupport {

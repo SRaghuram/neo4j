@@ -17,8 +17,8 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Argume
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.{DbAccess, ExecutionContext, QueryContext}
-import org.neo4j.cypher.internal.v4_0.util.NameId
-import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.cypher.internal.util.NameId
+import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.internal.kernel.api.NodeLabelIndexCursor
 import org.neo4j.util.Preconditions
 import org.neo4j.values.storable.{LongValue, Values}

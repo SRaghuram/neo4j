@@ -11,7 +11,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, PipeWithSource, QueryState}
 import org.neo4j.cypher.internal.runtime.slotted.pipes.DistinctSlottedPrimitivePipe.buildGroupingValue
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, PrefetchingIterator}
-import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.values.storable.{LongArray, Values}
 
 case class DistinctSlottedPrimitivePipe(source: Pipe,

@@ -10,7 +10,7 @@ import org.neo4j.cypher.internal.logical.plans.{ProcedureSignature, QualifiedNam
 import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v4_0.expressions.Variable
-import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.cypher.internal.util.attribution.Id
 
 import scala.collection.mutable.ArrayBuffer
 

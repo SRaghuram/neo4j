@@ -15,8 +15,8 @@ import com.neo4j.fabric.pipeline.SignatureResolver
 import com.neo4j.fabric.{FabricTest, ProcedureRegistryTestSupport}
 import org.neo4j.configuration.helpers.{NormalizedDatabaseName, NormalizedGraphName}
 import org.neo4j.cypher.internal.v4_0.ast.UseGraph
-import org.neo4j.cypher.internal.v4_0.parser.{Clauses, Query}
-import org.neo4j.cypher.internal.v4_0.util.test_helpers.TestName
+import org.neo4j.cypher.internal.parser.{Clauses, Query}
+import org.neo4j.cypher.internal.util.test_helpers.TestName
 import org.neo4j.exceptions.EntityNotFoundException
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values

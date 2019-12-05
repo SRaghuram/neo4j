@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions
 
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.MethodStructure
 import org.neo4j.cypher.internal.runtime.compiled.codegen.{CodeGenContext, Variable}
-import org.neo4j.cypher.internal.v4_0.util.symbols._
+import org.neo4j.cypher.internal.util.symbols._
 
 case class RelationshipProjection(relId: Variable) extends CodeGenExpression {
   require(relId.codeGenType.asInstanceOf[CypherCodeGenType].ct == CTRelationship)

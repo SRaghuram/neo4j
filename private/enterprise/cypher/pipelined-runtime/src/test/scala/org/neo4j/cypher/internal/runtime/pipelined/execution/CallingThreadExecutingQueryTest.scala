@@ -12,7 +12,7 @@ import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.pipelined.MockHelper.pipelineState
 import org.neo4j.cypher.internal.runtime.pipelined._
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.QueryExecutionTracer
-import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
+import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 
 class CallingThreadExecutingQueryTest extends CypherFunSuite {
 

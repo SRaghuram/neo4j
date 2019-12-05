@@ -10,7 +10,7 @@ import org.neo4j.cypher.internal.physicalplanning.{Slot, SlotConfiguration}
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, PipeWithSource, QueryState}
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, PrefetchingIterator}
-import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.values.AnyValue
 
 case class OrderedDistinctSlottedSinglePrimitivePipe(source: Pipe,

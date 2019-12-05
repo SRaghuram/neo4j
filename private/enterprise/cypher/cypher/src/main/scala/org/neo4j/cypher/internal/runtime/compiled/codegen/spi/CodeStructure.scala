@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.compiled.codegen.spi
 
 import org.neo4j.cypher.internal.runtime.compiled.codegen.{CodeGenConfiguration, CodeGenContext}
-import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.cypher.internal.util.attribution.Id
 
 /**
  * This constitutes the SPI for code generation.

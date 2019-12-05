@@ -8,8 +8,8 @@ package org.neo4j.cypher.internal.physicalplanning
 import org.neo4j.cypher.internal.physicalplanning.ast.ReferenceFromSlot
 import org.neo4j.cypher.internal.plandescription.Arguments.{Rows => ArgumentRows, _}
 import org.neo4j.cypher.internal.plandescription.{NoChildren, PlanDescriptionImpl, renderAsTreeTable}
-import org.neo4j.cypher.internal.v4_0.util.attribution.Id
-import org.neo4j.cypher.internal.v4_0.util.test_helpers.{CypherFunSuite, WindowsStringSafe}
+import org.neo4j.cypher.internal.util.attribution.Id
+import org.neo4j.cypher.internal.util.test_helpers.{CypherFunSuite, WindowsStringSafe}
 
 class ExecutionPlanDescriptionTest extends CypherFunSuite {
   implicit val windowsSafe = WindowsStringSafe

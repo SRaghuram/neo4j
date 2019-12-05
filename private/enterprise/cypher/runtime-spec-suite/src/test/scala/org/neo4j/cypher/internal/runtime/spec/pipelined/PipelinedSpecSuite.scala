@@ -16,7 +16,7 @@ import org.neo4j.cypher.internal.runtime.spec.slotted.WithSlotsMemoryManagementT
 import org.neo4j.cypher.internal.runtime.spec.stress._
 import org.neo4j.cypher.internal.runtime.spec.tests._
 import org.neo4j.cypher.internal.runtime.spec.{LogicalQueryBuilder, RuntimeTestSuite}
-import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.result.OperatorProfile
 import org.scalatest.Outcome
 

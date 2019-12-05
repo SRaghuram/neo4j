@@ -15,8 +15,8 @@ import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompilerTes
 import org.neo4j.cypher.internal.runtime.pipelined.operators.MorselUnitTest
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.{INPUT_MORSEL, UNINITIALIZED_LONG_SLOT_VALUE, UNINITIALIZED_REF_SLOT_VALUE}
 import org.neo4j.cypher.internal.v4_0.expressions.{NODE_TYPE, PropertyKeyName}
-import org.neo4j.cypher.internal.v4_0.util.InputPosition.NONE
-import org.neo4j.cypher.internal.v4_0.util.symbols.{CTAny, CTInteger, CTNode, CTRelationship, CTString}
+import org.neo4j.cypher.internal.util.InputPosition.NONE
+import org.neo4j.cypher.internal.util.symbols.{CTAny, CTInteger, CTNode, CTRelationship, CTString}
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Value
 import org.scalatest.matchers.{MatchResult, Matcher}

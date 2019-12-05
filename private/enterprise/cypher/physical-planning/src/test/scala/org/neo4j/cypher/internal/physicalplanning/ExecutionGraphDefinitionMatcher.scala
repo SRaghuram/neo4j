@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.physicalplanning
 import org.neo4j.cypher.internal.logical.plans.{LogicalPlan, ProduceResult}
 import org.neo4j.cypher.internal.physicalplanning
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition.{NO_ARGUMENT_STATE_MAPS, NO_BUFFERS}
-import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.cypher.internal.util.attribution.Id
 import org.scalatest.matchers.{MatchResult, Matcher}
 import org.scalatest.words.MatcherWords
 

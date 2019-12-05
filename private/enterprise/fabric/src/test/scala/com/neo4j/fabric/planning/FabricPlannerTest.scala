@@ -18,7 +18,7 @@ import org.neo4j.configuration.helpers.{NormalizedDatabaseName, NormalizedGraphN
 import org.neo4j.cypher.internal.CypherConfiguration
 import org.neo4j.cypher.internal.v4_0.ast.prettifier.{ExpressionStringifier, Prettifier}
 import org.neo4j.cypher.internal.v4_0.ast.{AstConstructionTestSupport, Clause, Query, SingleQuery, UnresolvedCall}
-import org.neo4j.cypher.internal.v4_0.util.symbols.CTAny
+import org.neo4j.cypher.internal.util.symbols.CTAny
 import org.neo4j.exceptions.{InvalidSemanticsException, SyntaxException}
 import org.neo4j.monitoring.Monitors
 import org.neo4j.values.storable.Values

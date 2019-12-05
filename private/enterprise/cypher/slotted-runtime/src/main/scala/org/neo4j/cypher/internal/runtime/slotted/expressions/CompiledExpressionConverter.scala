@@ -22,7 +22,7 @@ import org.neo4j.cypher.internal.runtime.slotted.SlottedQueryState
 import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionConverters.orderGroupingKeyExpressions
 import org.neo4j.cypher.internal.v4_0.expressions.FunctionInvocation
 import org.neo4j.cypher.internal.v4_0.expressions.functions.AggregatingFunction
-import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.internal.v4_0.{expressions => ast}
 import org.neo4j.exceptions.InternalException
 import org.neo4j.logging.Log
@@ -64,7 +64,7 @@ class CompiledExpressionConverter(log: Log,
   }
 
 
-  import org.neo4j.cypher.internal.v4_0.util.Foldable._
+  import org.neo4j.cypher.internal.util.Foldable._
 
   private def sizeOf(expression: ast.Expression)= expression.treeCount {
     case _: ast.Expression => true

@@ -23,8 +23,8 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.{Argum
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionConverters.orderGroupingKeyExpressions
 import org.neo4j.cypher.internal.v4_0.expressions.{Expression, LabelToken, ListLiteral}
-import org.neo4j.cypher.internal.v4_0.util._
-import org.neo4j.cypher.internal.v4_0.util.attribution.Id.INVALID_ID
+import org.neo4j.cypher.internal.util._
+import org.neo4j.cypher.internal.util.attribution.Id.INVALID_ID
 import org.neo4j.exceptions.{CantCompileQueryException, InternalException}
 import org.neo4j.internal.schema.IndexOrder
 

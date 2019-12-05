@@ -23,8 +23,8 @@ import org.neo4j.cypher.internal.v4_0.ast.{ProcedureResult, SingleQuery, Stateme
 import org.neo4j.cypher.internal.v4_0.expressions.{FunctionInvocation, FunctionName, Namespace, ProcedureName}
 import org.neo4j.cypher.internal.v4_0.frontend.PlannerName
 import org.neo4j.cypher.internal.v4_0.frontend.phases.{BaseState, Condition}
-import org.neo4j.cypher.internal.v4_0.util.InputPosition
-import org.neo4j.cypher.internal.v4_0.util.symbols.{CTAny, CypherType}
+import org.neo4j.cypher.internal.util.InputPosition
+import org.neo4j.cypher.internal.util.symbols.{CTAny, CypherType}
 import org.neo4j.cypher.internal.v4_0.{ast, expressions => exp}
 import org.neo4j.cypher.{CypherExecutionMode, CypherExpressionEngineOption, CypherRuntimeOption, CypherUpdateStrategy}
 import org.neo4j.kernel.api.exceptions.Status.Statement.SemanticError

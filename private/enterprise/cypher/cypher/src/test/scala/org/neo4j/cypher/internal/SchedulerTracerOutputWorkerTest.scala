@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal
 
 import org.mockito.Mockito.verify
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.{DataPointFlusher, SingleConsumerDataBuffers}
-import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
+import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 
 class SchedulerTracerOutputWorkerTest extends CypherFunSuite {
 

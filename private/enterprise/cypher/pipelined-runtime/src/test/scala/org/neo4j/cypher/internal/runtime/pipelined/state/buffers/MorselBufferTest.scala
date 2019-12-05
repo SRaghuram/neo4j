@@ -10,7 +10,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.{FilteringMorselExe
 import org.neo4j.cypher.internal.runtime.pipelined.operators.MorselUnitTest
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.WorkCanceller
 import org.neo4j.cypher.internal.runtime.pipelined.state.{ArgumentStateMap, QueryCompletionTracker, StandardArgumentStateMap}
-import org.neo4j.cypher.internal.v4_0.util.symbols
+import org.neo4j.cypher.internal.util.symbols
 
 import scala.collection.mutable
 

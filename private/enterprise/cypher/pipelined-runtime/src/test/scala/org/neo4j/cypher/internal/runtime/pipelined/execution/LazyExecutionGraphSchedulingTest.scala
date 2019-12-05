@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.execution
 
 import org.neo4j.cypher.internal.physicalplanning.PipelineId.NO_PIPELINE
 import org.neo4j.cypher.internal.physicalplanning.{ExecutionGraphDefinition, PipelineDefinition, PipelineId}
-import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
+import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 
 class LazyExecutionGraphSchedulingTest extends CypherFunSuite {
 

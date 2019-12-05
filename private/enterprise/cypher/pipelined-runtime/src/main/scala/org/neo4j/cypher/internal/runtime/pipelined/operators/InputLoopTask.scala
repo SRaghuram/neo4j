@@ -10,7 +10,7 @@ import org.neo4j.codegen.api.{Field, InstanceField, IntermediateRepresentation}
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.{MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
-import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.cypher.internal.util.attribution.Id
 
 /**
   * Operator task which takes an input morsel and produces one or many output rows

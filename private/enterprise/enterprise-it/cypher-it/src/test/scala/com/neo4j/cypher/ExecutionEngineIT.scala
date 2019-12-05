@@ -12,7 +12,7 @@ import org.neo4j.collection.RawIterator
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.cypher.GraphIcing
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
-import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
+import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 import org.neo4j.graphdb.ExecutionPlanDescription
 import org.neo4j.graphdb.Result.{ResultRow, ResultVisitor}
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException

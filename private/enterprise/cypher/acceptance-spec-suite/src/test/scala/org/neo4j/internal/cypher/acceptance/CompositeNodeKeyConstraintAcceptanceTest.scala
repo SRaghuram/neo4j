@@ -8,7 +8,7 @@ package org.neo4j.internal.cypher.acceptance
 import java.time.{LocalDate, LocalDateTime}
 
 import org.neo4j.cypher._
-import org.neo4j.cypher.internal.v4_0.util.helpers.StringHelper._
+import org.neo4j.cypher.internal.util.helpers.StringHelper._
 import org.neo4j.graphdb.ConstraintViolationException
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
 

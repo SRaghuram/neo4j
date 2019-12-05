@@ -9,7 +9,7 @@ import org.neo4j.cypher.internal.profiling.QueryProfiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.operators.{NoOutputOperator, PreparedOutput}
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.WorkUnitEvent
-import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.cypher.internal.util.attribution.Id
 
 /**
   * A task that is scheduled to clean up the execution state in case of cancellation

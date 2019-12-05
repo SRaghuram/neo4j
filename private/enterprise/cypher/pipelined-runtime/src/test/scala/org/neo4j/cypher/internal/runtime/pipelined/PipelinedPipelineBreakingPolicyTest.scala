@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.pipelined
 import org.neo4j.cypher.CypherInterpretedPipesFallbackOption.disabled
 import org.neo4j.cypher.internal.compiler.helpers.LogicalPlanBuilder
 import org.neo4j.cypher.internal.physicalplanning.OperatorFusionPolicy
-import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
+import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 
 class PipelinedPipelineBreakingPolicyTest  extends CypherFunSuite {
 

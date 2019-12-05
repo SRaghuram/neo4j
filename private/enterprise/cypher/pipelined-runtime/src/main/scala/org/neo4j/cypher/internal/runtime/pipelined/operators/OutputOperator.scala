@@ -14,8 +14,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.PerArg
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Sink
 import org.neo4j.cypher.internal.runtime.pipelined.{ExecutionState, Task}
 import org.neo4j.cypher.internal.runtime.scheduling.{HasWorkIdentity, WorkIdentity, WorkIdentityImpl}
-import org.neo4j.cypher.internal.v4_0.util.attribution.Id
-import org.neo4j.internal.kernel.api.KernelReadTracer
+import org.neo4j.cypher.internal.util.attribution.Id
 
 /**
   * Operator which ends a pipeline, and thus prepares the computed output.

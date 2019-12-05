@@ -11,7 +11,7 @@ import org.neo4j.cypher.internal.plandescription.Arguments.{DbHits, Rows}
 import org.neo4j.cypher.internal.plandescription.InternalPlanDescription
 import org.neo4j.cypher.internal.plandescription.InternalPlanDescription.TotalHits
 import org.neo4j.cypher.internal.runtime.{CreateTempFileTestSupport, ProfileMode}
-import org.neo4j.cypher.internal.v4_0.util.helpers.StringHelper.RichString
+import org.neo4j.cypher.internal.util.helpers.StringHelper.RichString
 import org.neo4j.cypher.{ExecutionEngineFunSuite, TxCounts}
 import org.neo4j.exceptions.ProfilerStatisticsNotReadyException
 import org.neo4j.graphdb.QueryExecutionException

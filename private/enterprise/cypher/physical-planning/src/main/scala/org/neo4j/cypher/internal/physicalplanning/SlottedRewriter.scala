@@ -13,10 +13,10 @@ import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.ast.{RuntimeProperty, RuntimeVariable}
 import org.neo4j.cypher.internal.v4_0.expressions
 import org.neo4j.cypher.internal.v4_0.expressions.{FunctionInvocation, functions => frontendFunctions, _}
-import org.neo4j.cypher.internal.v4_0.util.Foldable._
-import org.neo4j.cypher.internal.v4_0.util.attribution.SameId
-import org.neo4j.cypher.internal.v4_0.util.symbols._
-import org.neo4j.cypher.internal.v4_0.util.{Rewriter, topDown}
+import org.neo4j.cypher.internal.util.Foldable._
+import org.neo4j.cypher.internal.util.attribution.SameId
+import org.neo4j.cypher.internal.util.symbols._
+import org.neo4j.cypher.internal.util.{Rewriter, topDown}
 import org.neo4j.exceptions.{CantCompileQueryException, InternalException}
 
 /**

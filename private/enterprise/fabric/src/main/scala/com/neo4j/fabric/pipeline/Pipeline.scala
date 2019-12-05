@@ -12,9 +12,9 @@ import org.neo4j.cypher.internal.v4_0.ast.Statement
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticFeature._
 import org.neo4j.cypher.internal.v4_0.ast.semantics.{SemanticErrorDef, SemanticState}
 import org.neo4j.cypher.internal.v4_0.frontend.phases._
-import org.neo4j.cypher.internal.v4_0.rewriting.rewriters.{GeneratingNamer, Never, expandStar}
-import org.neo4j.cypher.internal.v4_0.rewriting.{Deprecations, RewriterStepSequencer}
-import org.neo4j.cypher.internal.v4_0.util.CypherExceptionFactory
+import org.neo4j.cypher.internal.rewriting.rewriters.{GeneratingNamer, Never, expandStar}
+import org.neo4j.cypher.internal.rewriting.{Deprecations, RewriterStepSequencer}
+import org.neo4j.cypher.internal.util.CypherExceptionFactory
 import org.neo4j.monitoring.{Monitors => KernelMonitors}
 
 

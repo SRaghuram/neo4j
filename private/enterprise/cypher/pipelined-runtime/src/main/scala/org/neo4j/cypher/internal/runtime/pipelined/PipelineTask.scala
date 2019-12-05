@@ -11,7 +11,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.{MorselExecutionCon
 import org.neo4j.cypher.internal.runtime.pipelined.operators.{ContinuableOperatorTask, OperatorTask, OutputOperatorState, PreparedOutput}
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.WorkUnitEvent
 import org.neo4j.cypher.internal.runtime.{QueryContext, WithHeapUsageEstimation}
-import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.cypher.internal.util.attribution.Id
 
 /**
   * The [[Task]] of executing an [[ExecutablePipeline]] once.

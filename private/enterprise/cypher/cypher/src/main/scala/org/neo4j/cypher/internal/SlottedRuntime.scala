@@ -6,7 +6,6 @@
 package org.neo4j.cypher.internal
 
 import org.neo4j.codegen.api.CodeGeneration
-import org.neo4j.codegen.api.CodeGeneration.CodeGenerationMode
 import org.neo4j.cypher.internal.InterpretedRuntime.InterpretedExecutionPlan
 import org.neo4j.cypher.internal.physicalplanning._
 import org.neo4j.cypher.internal.plandescription.Argument
@@ -16,7 +15,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{Community
 import org.neo4j.cypher.internal.runtime.interpreted.pipes._
 import org.neo4j.cypher.internal.runtime.slotted.expressions.{CompiledExpressionConverter, MaterializedEntitiesExpressionConverter, SlottedExpressionConverters}
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedExecutionResultBuilderFactory, SlottedPipeMapper, SlottedPipelineBreakingPolicy}
-import org.neo4j.cypher.internal.v4_0.util.CypherException
+import org.neo4j.cypher.internal.util.CypherException
 import org.neo4j.exceptions.CantCompileQueryException
 import org.neo4j.internal.kernel.api.security.SecurityContext
 

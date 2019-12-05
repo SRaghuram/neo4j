@@ -17,7 +17,7 @@ import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedProjectedPat
 import org.neo4j.cypher.internal.runtime.slotted.pipes._
 import org.neo4j.cypher.internal.runtime.slotted.{expressions => runtimeExpression}
 import org.neo4j.cypher.internal.v4_0.expressions._
-import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.internal.v4_0.{expressions => ast}
 
 object SlottedExpressionConverters {

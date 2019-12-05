@@ -9,7 +9,7 @@ import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.JoinData
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.CodeGenType
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
-import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.InternalException
 
 import scala.collection.mutable

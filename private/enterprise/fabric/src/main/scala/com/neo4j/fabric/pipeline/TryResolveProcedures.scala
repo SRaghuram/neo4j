@@ -10,7 +10,7 @@ import org.neo4j.cypher.internal.logical.plans.{QualifiedName, ResolvedCall, Res
 import org.neo4j.cypher.internal.planner.spi.ProcedureSignatureResolver
 import org.neo4j.cypher.internal.v4_0.ast._
 import org.neo4j.cypher.internal.v4_0.expressions.{FunctionInvocation, Variable}
-import org.neo4j.cypher.internal.v4_0.util.Rewriter
+import org.neo4j.cypher.internal.util.Rewriter
 
 import scala.util.Try
 

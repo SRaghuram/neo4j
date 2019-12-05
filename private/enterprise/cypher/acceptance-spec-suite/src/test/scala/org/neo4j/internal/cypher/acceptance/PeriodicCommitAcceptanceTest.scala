@@ -11,7 +11,7 @@ import org.apache.commons.lang3.exception.ExceptionUtils
 import org.neo4j.cypher._
 import org.neo4j.cypher.internal.plandescription.Arguments.{PageCacheHits, PageCacheMisses, PlannerImpl}
 import org.neo4j.cypher.internal.runtime.CreateTempFileTestSupport
-import org.neo4j.cypher.internal.v4_0.util.helpers.StringHelper.RichString
+import org.neo4j.cypher.internal.util.helpers.StringHelper.RichString
 import org.neo4j.exceptions
 import org.neo4j.exceptions.{Neo4jException, PeriodicCommitInOpenTransactionException, SyntaxException}
 import org.neo4j.graphdb.{Node, QueryExecutionException}

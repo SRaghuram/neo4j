@@ -7,7 +7,7 @@ package org.neo4j.internal.cypher.debug
 
 import org.json4s.native.JsonMethods
 import org.json4s.{DefaultFormats, Formats, StringInput}
-import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
+import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 
 class GraphCountsJsonTest extends CypherFunSuite {
 

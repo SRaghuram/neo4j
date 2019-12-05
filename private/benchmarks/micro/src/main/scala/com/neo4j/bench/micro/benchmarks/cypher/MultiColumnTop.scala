@@ -15,8 +15,8 @@ import org.neo4j.cypher.internal.planner.spi.PlanContext
 import org.neo4j.cypher.internal.v4_0.ast.ASTAnnotationMap
 import org.neo4j.cypher.internal.v4_0.ast.semantics.{ExpressionTypeInfo, SemanticTable}
 import org.neo4j.cypher.internal.v4_0.expressions.Expression
-import org.neo4j.cypher.internal.v4_0.util.symbols
-import org.neo4j.cypher.internal.v4_0.util.symbols.ListType
+import org.neo4j.cypher.internal.util.symbols
+import org.neo4j.cypher.internal.util.symbols.ListType
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.neo4j.kernel.impl.util.ValueUtils
 import org.neo4j.values.virtual.MapValue

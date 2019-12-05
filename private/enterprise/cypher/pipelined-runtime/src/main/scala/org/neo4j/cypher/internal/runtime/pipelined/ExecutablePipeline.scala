@@ -16,7 +16,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.Accumul
 import org.neo4j.cypher.internal.runtime.pipelined.state.{MorselParallelizer, StateFactory}
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.WorkUnitEvent
 import org.neo4j.cypher.internal.runtime.scheduling.{HasWorkIdentity, WorkIdentity}
-import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.util.Preconditions
 
 case class ExecutablePipeline(id: PipelineId,

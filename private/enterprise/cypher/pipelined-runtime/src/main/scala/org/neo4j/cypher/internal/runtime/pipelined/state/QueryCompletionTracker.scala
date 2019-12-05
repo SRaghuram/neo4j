@@ -13,8 +13,8 @@ import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.execution.FlowControl
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.QueryExecutionTracer
 import org.neo4j.cypher.internal.runtime.{QueryContext, QueryStatistics}
-import org.neo4j.cypher.internal.v4_0.util.AssertionRunner
-import org.neo4j.cypher.internal.v4_0.util.AssertionRunner.Thunk
+import org.neo4j.cypher.internal.util.AssertionRunner
+import org.neo4j.cypher.internal.util.AssertionRunner.Thunk
 import org.neo4j.internal.kernel.api.exceptions.LocksNotFrozenException
 import org.neo4j.kernel.impl.query.QuerySubscriber
 

@@ -10,7 +10,7 @@ import java.time.{ZoneId, ZonedDateTime}
 
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher._
-import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
+import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
 import org.neo4j.test.TestDatabaseManagementServiceBuilder

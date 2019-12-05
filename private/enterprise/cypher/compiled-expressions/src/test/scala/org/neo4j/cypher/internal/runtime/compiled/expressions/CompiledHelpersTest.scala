@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.compiled.expressions
 
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledHelpers._
-import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
+import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 import org.neo4j.exceptions.CypherTypeException
 import org.neo4j.values.storable.Values._
 

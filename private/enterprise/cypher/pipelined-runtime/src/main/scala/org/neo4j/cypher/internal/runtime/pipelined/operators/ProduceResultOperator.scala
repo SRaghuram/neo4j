@@ -17,8 +17,8 @@ import org.neo4j.cypher.internal.runtime.pipelined.{ExecutionState, OperatorExpr
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
 import org.neo4j.cypher.internal.runtime.{DbAccess, NoMemoryTracker, QueryContext, ValuePopulation}
-import org.neo4j.cypher.internal.v4_0.util.attribution.Id
-import org.neo4j.cypher.internal.v4_0.util.symbols
+import org.neo4j.cypher.internal.util.attribution.Id
+import org.neo4j.cypher.internal.util.symbols
 import org.neo4j.cypher.result.QueryResult
 import org.neo4j.exceptions.InternalException
 import org.neo4j.internal.kernel.api.IndexReadSession

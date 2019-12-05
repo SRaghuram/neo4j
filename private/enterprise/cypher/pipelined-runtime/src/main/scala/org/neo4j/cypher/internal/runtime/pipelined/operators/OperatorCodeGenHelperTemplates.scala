@@ -14,7 +14,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution._
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection
 import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection.{BOTH, INCOMING, OUTGOING}
-import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.operations.{CursorUtils, CypherCoercions, CypherFunctions}
 import org.neo4j.graphdb.Direction
 import org.neo4j.internal.kernel.api.IndexQuery.{ExactPredicate, RangePredicate, StringContainsPredicate, StringSuffixPredicate}

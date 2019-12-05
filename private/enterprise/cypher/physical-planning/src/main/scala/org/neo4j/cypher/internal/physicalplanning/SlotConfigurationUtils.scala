@@ -8,8 +8,8 @@ package org.neo4j.cypher.internal.physicalplanning
 import java.util.function.ToLongFunction
 
 import org.neo4j.cypher.internal.runtime.{EntityById, ExecutionContext}
-import org.neo4j.cypher.internal.v4_0.util.AssertionUtils
-import org.neo4j.cypher.internal.v4_0.util.symbols.{CTNode, CTRelationship, CypherType}
+import org.neo4j.cypher.internal.util.AssertionUtils
+import org.neo4j.cypher.internal.util.symbols.{CTNode, CTRelationship, CypherType}
 import org.neo4j.exceptions.{InternalException, ParameterWrongTypeException}
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values

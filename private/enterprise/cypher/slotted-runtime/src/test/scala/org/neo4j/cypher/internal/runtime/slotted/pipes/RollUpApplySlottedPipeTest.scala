@@ -16,8 +16,8 @@ import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.FakeEn
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, PipeTestSupport, QueryState}
 import org.neo4j.cypher.internal.runtime.slotted.expressions.{NodeFromSlot, ReferenceFromSlot}
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, NodeOperations, QueryContext}
-import org.neo4j.cypher.internal.v4_0.util.symbols._
-import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
+import org.neo4j.cypher.internal.util.symbols._
+import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 import org.neo4j.kernel.impl.util.ValueUtils.fromNodeEntity
 import org.neo4j.values.storable.Values
 import org.neo4j.values.storable.Values.NO_VALUE

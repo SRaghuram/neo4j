@@ -15,7 +15,7 @@ import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.{copyDataFromRhs, fillKeyArray}
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, PrefetchingIterator}
-import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.values.storable.{LongArray, Values}
 
 case class NodeHashJoinSlottedPipe(lhsOffsets: Array[Int],

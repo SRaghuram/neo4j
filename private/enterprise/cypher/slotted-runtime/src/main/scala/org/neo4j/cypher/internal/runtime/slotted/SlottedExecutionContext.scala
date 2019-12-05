@@ -10,7 +10,7 @@ import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot, SlotConfig
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
 import org.neo4j.cypher.internal.runtime.{EntityById, ExecutionContext}
 import org.neo4j.cypher.internal.v4_0.expressions.ASTCachedProperty
-import org.neo4j.cypher.internal.v4_0.util.symbols.{CTNode, CTRelationship}
+import org.neo4j.cypher.internal.util.symbols.{CTNode, CTRelationship}
 import org.neo4j.exceptions.InternalException
 import org.neo4j.graphdb.NotFoundException
 import org.neo4j.values.AnyValue

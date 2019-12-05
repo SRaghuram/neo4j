@@ -5,7 +5,6 @@
  */
 package org.neo4j.cypher.internal
 
-import java.util
 import java.util.UUID
 import java.util.concurrent.ThreadLocalRandom
 
@@ -26,7 +25,7 @@ import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.security.{SecureHasher, SystemGraphCredential}
 import org.neo4j.cypher.internal.v4_0.ast
 import org.neo4j.cypher.internal.v4_0.ast.{AllGraphsScope, NamedGraphScope}
-import org.neo4j.cypher.internal.v4_0.util.InputPosition
+import org.neo4j.cypher.internal.util.InputPosition
 import org.neo4j.dbms.api.{DatabaseExistsException, DatabaseLimitReachedException, DatabaseNotFoundException}
 import org.neo4j.exceptions.{CantCompileQueryException, DatabaseAdministrationException, InternalException}
 import org.neo4j.internal.kernel.api.security.{PrivilegeAction, SecurityContext}
@@ -117,7 +116,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         )
       } finally {
         // Clear password
-        if (initialPassword != null) util.Arrays.fill(initialPassword, 0.toByte)
+        if (initialPassword != null) java.util.Arrays.fill(initialPassword, 0.toByte)
       }
 
     // ALTER USER foo

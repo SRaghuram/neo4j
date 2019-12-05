@@ -9,7 +9,7 @@ import java.io.File
 
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder
 import org.neo4j.cypher.GraphDatabaseTestSupport
-import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
+import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 import org.neo4j.test.TestDatabaseManagementServiceBuilder
 
 /**

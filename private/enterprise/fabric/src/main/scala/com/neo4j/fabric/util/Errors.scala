@@ -8,8 +8,8 @@ package com.neo4j.fabric.util
 import com.neo4j.fabric.eval.Catalog
 import org.neo4j.cypher.internal.v4_0.ast.{CatalogDDL, CatalogName}
 import org.neo4j.cypher.internal.v4_0.ast.semantics.{FeatureError, SemanticError, SemanticErrorDef}
-import org.neo4j.cypher.internal.v4_0.util.symbols.CypherType
-import org.neo4j.cypher.internal.v4_0.util.{ASTNode, InputPosition}
+import org.neo4j.cypher.internal.util.symbols.CypherType
+import org.neo4j.cypher.internal.util.{ASTNode, InputPosition}
 import org.neo4j.exceptions._
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Value

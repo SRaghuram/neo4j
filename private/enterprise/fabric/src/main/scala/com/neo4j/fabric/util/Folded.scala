@@ -5,7 +5,7 @@
  */
 package com.neo4j.fabric.util
 
-import org.neo4j.cypher.internal.v4_0.util.Foldable.FoldableAny
+import org.neo4j.cypher.internal.util.Foldable.FoldableAny
 
 object Folded {
 

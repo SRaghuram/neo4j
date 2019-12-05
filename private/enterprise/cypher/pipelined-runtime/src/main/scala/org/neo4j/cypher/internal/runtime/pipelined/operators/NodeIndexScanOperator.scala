@@ -16,7 +16,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.pipelined.{NodeIndexCursorRepresentation, OperatorExpressionCompiler}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
-import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.internal.kernel.api.{IndexReadSession, KernelReadTracer, NodeValueIndexCursor}
 import org.neo4j.internal.schema.IndexOrder
 import org.neo4j.values.storable.Value

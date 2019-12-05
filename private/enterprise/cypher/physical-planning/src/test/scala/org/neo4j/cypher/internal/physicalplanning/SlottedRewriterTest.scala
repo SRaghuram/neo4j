@@ -13,10 +13,10 @@ import org.neo4j.cypher.internal.logical.{plans => logicalPlans}
 import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.v4_0.ast._
 import org.neo4j.cypher.internal.v4_0.expressions.AndedPropertyInequalities
-import org.neo4j.cypher.internal.v4_0.util.NonEmptyList
-import org.neo4j.cypher.internal.v4_0.util.attribution.SequentialIdGen
-import org.neo4j.cypher.internal.v4_0.util.symbols._
-import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
+import org.neo4j.cypher.internal.util.NonEmptyList
+import org.neo4j.cypher.internal.util.attribution.SequentialIdGen
+import org.neo4j.cypher.internal.util.symbols._
+import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 
 class SlottedRewriterTest extends CypherFunSuite with AstConstructionTestSupport {
   implicit val idGen: SequentialIdGen = new SequentialIdGen()

@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.tracing
 import org.neo4j.cypher.internal.profiling.QueryProfiler
 import org.neo4j.cypher.internal.runtime.pipelined.Task
 import org.neo4j.cypher.internal.runtime.pipelined.operators.PreparedOutput
-import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.cypher.internal.util.attribution.Id
 
 case object NOP extends Task[Unit.type] {
   override def executeWorkUnit(resource: Unit.type,

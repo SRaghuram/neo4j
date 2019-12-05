@@ -10,7 +10,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.{QueryExecutionTracer, ScheduledWorkUnitEvent, SchedulerTracer, WorkUnitEvent}
 import org.neo4j.cypher.internal.runtime.scheduling._
-import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.cypher.internal.util.attribution.Id
 
 import scala.collection.immutable
 import scala.collection.mutable.ArrayBuffer

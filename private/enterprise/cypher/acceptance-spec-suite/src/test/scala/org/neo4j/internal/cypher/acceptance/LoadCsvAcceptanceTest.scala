@@ -8,7 +8,7 @@ package org.neo4j.internal.cypher.acceptance
 import java.io.{File, PrintWriter}
 import java.lang.Boolean.FALSE
 import java.net.{URL, URLConnection, URLStreamHandler, URLStreamHandlerFactory}
-import java.nio.file.{Files, Path}
+import java.nio.file.Files
 import java.util.Collections.emptyMap
 
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder
@@ -16,7 +16,7 @@ import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.cypher._
 import org.neo4j.cypher.internal.runtime.CreateTempFileTestSupport
-import org.neo4j.cypher.internal.v4_0.util.helpers.StringHelper.RichString
+import org.neo4j.cypher.internal.util.helpers.StringHelper.RichString
 import org.neo4j.graphdb.QueryExecutionException
 import org.neo4j.graphdb.config.Configuration
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithAssertion, Configs, CypherComparisonSupport}

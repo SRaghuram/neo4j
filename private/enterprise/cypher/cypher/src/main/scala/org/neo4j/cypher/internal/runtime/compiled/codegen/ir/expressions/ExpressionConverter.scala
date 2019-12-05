@@ -11,7 +11,7 @@ import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.functions.functionC
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.MethodStructure
 import org.neo4j.cypher.internal.logical.plans.CoerceToPredicate
 import org.neo4j.cypher.internal.v4_0.expressions.CachedProperty
-import org.neo4j.cypher.internal.v4_0.util.symbols._
+import org.neo4j.cypher.internal.util.symbols._
 import org.neo4j.cypher.internal.v4_0.{expressions => ast}
 import org.neo4j.exceptions.CantCompileQueryException
 

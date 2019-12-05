@@ -26,9 +26,9 @@ import org.neo4j.cypher.internal.spi.codegen.Methods._
 import org.neo4j.cypher.internal.spi.codegen.Templates._
 import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection
 import org.neo4j.cypher.internal.v4_0.frontend.helpers._
-import org.neo4j.cypher.internal.v4_0.util.attribution.Id
-import org.neo4j.cypher.internal.v4_0.util.symbols
-import org.neo4j.cypher.internal.v4_0.util.symbols.{CTInteger, CTNode, CTRelationship, ListType}
+import org.neo4j.cypher.internal.util.attribution.Id
+import org.neo4j.cypher.internal.util.symbols
+import org.neo4j.cypher.internal.util.symbols.{CTInteger, CTNode, CTRelationship, ListType}
 import org.neo4j.cypher.operations.CursorUtils
 import org.neo4j.exceptions.ParameterNotFoundException
 import org.neo4j.graphdb.Direction

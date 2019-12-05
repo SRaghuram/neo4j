@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.execution
 
 import org.neo4j.cypher.internal.RuntimeResourceLeakException
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
-import org.neo4j.cypher.internal.v4_0.util.AssertionRunner
+import org.neo4j.cypher.internal.util.AssertionRunner
 import org.neo4j.internal.kernel.api._
 import org.neo4j.io.IOUtils
 

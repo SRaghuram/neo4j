@@ -5,9 +5,9 @@
  */
 package com.neo4j.fabric.util
 
-import org.neo4j.cypher.internal.v4_0.util
-import org.neo4j.cypher.internal.v4_0.util.Rewritable._
-import org.neo4j.cypher.internal.v4_0.util.Rewriter
+import org.neo4j.cypher.internal.util
+import org.neo4j.cypher.internal.util.Rewritable._
+import org.neo4j.cypher.internal.util.Rewriter
 
 object Rewritten {
 

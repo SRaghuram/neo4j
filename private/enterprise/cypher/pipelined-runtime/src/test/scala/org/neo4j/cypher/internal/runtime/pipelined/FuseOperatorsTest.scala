@@ -28,9 +28,9 @@ import org.neo4j.cypher.internal.runtime.{ParameterMapping, ProcedureCallMode, Q
 import org.neo4j.cypher.internal.v4_0.ast.AstConstructionTestSupport
 import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.v4_0.expressions.{Expression, SemanticDirection}
-import org.neo4j.cypher.internal.v4_0.util.attribution.{Id, SameId}
-import org.neo4j.cypher.internal.v4_0.util.symbols
-import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
+import org.neo4j.cypher.internal.util.attribution.{Id, SameId}
+import org.neo4j.cypher.internal.util.symbols
+import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 import org.neo4j.exceptions.CantCompileQueryException
 import org.neo4j.logging.NullLog
 import org.scalatest.matchers.{BeMatcher, MatchResult}

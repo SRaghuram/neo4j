@@ -25,8 +25,8 @@ import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, NoMemoryTracker, QueryContext}
 import org.neo4j.cypher.internal.v4_0.expressions.{Expression, ListLiteral}
-import org.neo4j.cypher.internal.v4_0.util.attribution.Id
-import org.neo4j.cypher.internal.v4_0.util.{Many, One, Zero, ZeroOneOrMany}
+import org.neo4j.cypher.internal.util.attribution.Id
+import org.neo4j.cypher.internal.util.{Many, One, Zero, ZeroOneOrMany}
 import org.neo4j.exceptions.CantCompileQueryException
 import org.neo4j.internal.kernel.api.{IndexReadSession, KernelReadTracer, RelationshipScanCursor}
 import org.neo4j.values.AnyValue

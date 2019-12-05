@@ -13,8 +13,8 @@ import org.neo4j.cypher.internal.runtime.slotted.pipes.TopSlottedPipeTestSupport
 import org.neo4j.cypher.internal.runtime.slotted.{Ascending, ColumnOrder, Descending, SlottedExecutionContext, SlottedExecutionContextOrdering}
 import org.neo4j.kernel.impl.util.ValueUtils
 import org.neo4j.values.AnyValue
-import org.neo4j.cypher.internal.v4_0.util.symbols._
-import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
+import org.neo4j.cypher.internal.util.symbols._
+import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 import org.neo4j.exceptions.InternalException
 
 import scala.util.Random

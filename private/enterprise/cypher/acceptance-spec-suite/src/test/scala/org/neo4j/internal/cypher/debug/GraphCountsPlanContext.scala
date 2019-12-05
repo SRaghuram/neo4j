@@ -11,7 +11,7 @@ import org.neo4j.cypher.internal.logical.plans.{ProcedureSignature, QualifiedNam
 import org.neo4j.cypher.internal.planner.spi._
 import org.neo4j.cypher.internal.runtime.interpreted.{TransactionBoundTokenContext, TransactionalContextWrapper}
 import org.neo4j.cypher.internal.v4_0.frontend.phases.InternalNotificationLogger
-import org.neo4j.cypher.internal.v4_0.util._
+import org.neo4j.cypher.internal.util._
 import org.neo4j.exceptions.KernelException
 import org.neo4j.internal.schema.{ConstraintDescriptor, SchemaDescriptor}
 

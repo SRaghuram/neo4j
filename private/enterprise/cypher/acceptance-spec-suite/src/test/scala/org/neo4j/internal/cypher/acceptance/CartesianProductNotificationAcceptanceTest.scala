@@ -19,11 +19,11 @@ import org.neo4j.cypher.internal.planning.WrappedMonitors
 import org.neo4j.cypher.internal.runtime.interpreted.{CSVResources, TransactionalContextWrapper}
 import org.neo4j.cypher.internal.spi.TransactionBoundPlanContext
 import org.neo4j.cypher.internal.v4_0.frontend.phases.{CompilationPhaseTracer, InternalNotificationLogger, devNullLogger}
-import org.neo4j.cypher.internal.v4_0.rewriting.RewriterStepSequencer
-import org.neo4j.cypher.internal.v4_0.rewriting.rewriters.GeneratingNamer
-import org.neo4j.cypher.internal.v4_0.util.attribution.SequentialIdGen
-import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
-import org.neo4j.cypher.internal.v4_0.util.{CartesianProductNotification, InputPosition}
+import org.neo4j.cypher.internal.rewriting.RewriterStepSequencer
+import org.neo4j.cypher.internal.rewriting.rewriters.GeneratingNamer
+import org.neo4j.cypher.internal.util.attribution.SequentialIdGen
+import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
+import org.neo4j.cypher.internal.util.{CartesianProductNotification, InputPosition}
 import org.neo4j.kernel.api.{KernelTransaction, Statement}
 import org.neo4j.values.virtual.MapValue
 

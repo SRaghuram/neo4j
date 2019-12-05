@@ -12,7 +12,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes._
 import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
 import org.neo4j.cypher.internal.logical.plans.{IndexOrder, QueryExpression}
 import org.neo4j.cypher.internal.v4_0.expressions.LabelToken
-import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.cypher.internal.util.attribution.Id
 
 case class NodeIndexSeekSlottedPipe(ident: String,
                                     label: LabelToken,

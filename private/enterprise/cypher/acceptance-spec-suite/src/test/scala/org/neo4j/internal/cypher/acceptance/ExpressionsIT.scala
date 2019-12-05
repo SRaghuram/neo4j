@@ -30,9 +30,9 @@ import org.neo4j.cypher.internal.v4_0.ast.AstConstructionTestSupport
 import org.neo4j.cypher.internal.v4_0.expressions
 import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection.{BOTH, INCOMING, OUTGOING}
 import org.neo4j.cypher.internal.v4_0.expressions._
-import org.neo4j.cypher.internal.v4_0.util._
-import org.neo4j.cypher.internal.v4_0.util.attribution.Id
-import org.neo4j.cypher.internal.v4_0.util.symbols.{CTAny, CypherType, ListType}
+import org.neo4j.cypher.internal.util._
+import org.neo4j.cypher.internal.util.attribution.Id
+import org.neo4j.cypher.internal.util.symbols.{CTAny, CypherType, ListType}
 import org.neo4j.exceptions
 import org.neo4j.exceptions.{CypherTypeException, InvalidArgumentException, InvalidSemanticsException, ParameterWrongTypeException}
 import org.neo4j.graphdb.{Entity, Node, Relationship}

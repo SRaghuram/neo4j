@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.execution
 import org.mockito.Mockito.RETURNS_DEEP_STUBS
 import org.neo4j.cypher.internal.RuntimeResourceLeakException
 import org.neo4j.cypher.internal.runtime.pipelined.{Worker, WorkerManager, WorkerResourceProvider}
-import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
+import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 import org.neo4j.internal.kernel.api.{Cursor, CursorFactory}
 
 import scala.util.Random
