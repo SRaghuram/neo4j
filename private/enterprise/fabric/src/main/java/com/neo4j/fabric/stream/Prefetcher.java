@@ -37,9 +37,11 @@ public class Prefetcher
         // so the configured buffer size is equally shared among the operators.
         // Note that operator buffer size is a soft limit, since decreasing it,
         // does not remove already queued records that are over the new limit
-        var newHighWatermark = computeHighWatermark( prefetchOperators.size() + 1 );
-        prefetchOperators.forEach( prefetchOperator -> prefetchOperator.bufferHighWatermark = newHighWatermark );
-        var prefetchOperator = new PrefetchOperator( recordStream, newHighWatermark );
+        var operatorsCount = prefetchOperators.size() + 1;
+        var newLowWatermark = computeLowWatermark( operatorsCount );
+        var newHighWatermark = computeHighWatermark( operatorsCount );
+        updateWatermarks( newLowWatermark, newHighWatermark );
+        var prefetchOperator = new PrefetchOperator( recordStream, newLowWatermark, newHighWatermark );
         prefetchOperators.add( prefetchOperator );
         return prefetchOperator;
     }
@@ -49,14 +51,30 @@ public class Prefetcher
         return Math.max( 1, streamConfig.getBufferSize() / operatorsCount );
     }
 
+    private int computeLowWatermark( int operatorsCount )
+    {
+        return streamConfig.getBufferLowWatermark() / operatorsCount;
+    }
+
+    private void updateWatermarks( int lowWatermark, int highWatermark )
+    {
+        prefetchOperators.forEach( prefetchOperator ->
+        {
+            prefetchOperator.bufferLowWatermark = lowWatermark;
+            prefetchOperator.bufferHighWatermark = highWatermark;
+        } );
+    }
+
     private synchronized void removeOperator( PrefetchOperator operator )
     {
         prefetchOperators.remove( operator );
 
         if ( prefetchOperators.size() > 0 )
         {
-            var newHighWatermark = computeHighWatermark( prefetchOperators.size() );
-            prefetchOperators.forEach( prefetchOperator -> prefetchOperator.bufferHighWatermark = newHighWatermark );
+            var operatorsCount = prefetchOperators.size();
+            var newLowWatermark = computeLowWatermark( operatorsCount );
+            var newHighWatermark = computeHighWatermark( operatorsCount );
+            updateWatermarks( newLowWatermark, newHighWatermark );
         }
     }
 
@@ -66,15 +84,16 @@ public class Prefetcher
         private final RecordSubscriber upstreamSubscriber;
         private final AtomicBoolean producing = new AtomicBoolean( false );
         private final AtomicLong pendingRequested = new AtomicLong( 0 );
-        private final int bufferLowWatermark = streamConfig.getBufferLowWatermark();
+        private volatile int bufferLowWatermark;
         private volatile int bufferHighWatermark;
         private volatile boolean finished;
         private volatile Subscriber<Record> downstreamSubscriber;
 
-        PrefetchOperator( Flux<Record> recordStream, int bufferHighWatermark )
+        PrefetchOperator( Flux<Record> recordStream, int bufferLowWatermark, int bufferHighWatermark )
         {
             super( recordStream );
             this.bufferHighWatermark = bufferHighWatermark;
+            this.bufferLowWatermark = bufferLowWatermark;
             buffer = new ArrayBlockingQueue<>( streamConfig.getBufferSize() + 1 );
             this.upstreamSubscriber = new RecordSubscriber();
             recordStream.subscribeWith( upstreamSubscriber );
@@ -84,9 +103,12 @@ public class Prefetcher
         {
             int buffered = buffer.size();
             long pendingRequested = upstreamSubscriber.pendingRequested.get();
-            if ( buffered + pendingRequested <= bufferLowWatermark )
+            long batchSize = bufferHighWatermark - buffered - pendingRequested;
+            if ( buffered + pendingRequested <= bufferLowWatermark
+                    // computed batch size can be 0 if low watermark equals high watermark
+                    && batchSize != 0 )
             {
-                upstreamSubscriber.request( bufferHighWatermark - buffered - pendingRequested );
+                upstreamSubscriber.request( batchSize );
             }
         }
 
