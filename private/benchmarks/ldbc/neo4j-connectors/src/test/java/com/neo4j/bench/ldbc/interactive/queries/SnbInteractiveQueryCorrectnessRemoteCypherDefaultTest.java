@@ -60,6 +60,7 @@ import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcUpdate7AddComment;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcUpdate8AddFriendship;
 import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
+import com.neo4j.bench.ldbc.DriverConfigUtils;
 import com.neo4j.bench.ldbc.Neo4jDb;
 import com.neo4j.bench.ldbc.Neo4jQuery;
 import com.neo4j.bench.ldbc.connection.LdbcDateCodec;
@@ -106,7 +107,6 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 
-import static com.neo4j.bench.ldbc.DriverConfigUtils.getResource;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public class SnbInteractiveQueryCorrectnessRemoteCypherDefaultTest
@@ -149,14 +149,13 @@ public class SnbInteractiveQueryCorrectnessRemoteCypherDefaultTest
     }
 
     @Override
-    public Neo4jConnectionState openConnection( String path ) throws Exception
+    public Neo4jConnectionState openConnection( File dbDir, File configDir ) throws Exception
     {
         try
         {
-            File dbDir = new File( path );
             DatabaseManagementService managementService = Neo4jDb.newDbBuilderForBolt(
                     dbDir,
-                        getResource( "/neo4j/neo4j_sf001.conf" ),
+                        DriverConfigUtils.neo4jTestConfig( configDir ),
                         "localhost",
                         0
                 ).build();

@@ -47,6 +47,7 @@ public class LdbcCli
     public static void importParallelRegular(
             File dbDir,
             File csvDataDir,
+            File configFile,
             boolean createUniqueConstraints,
             boolean createMandatoryConstraints,
             LdbcDateCodec.Format fromCsvFormat,
@@ -58,7 +59,7 @@ public class LdbcCli
                         Neo4jSchema.NEO4J_REGULAR,
                         dbDir,
                         csvDataDir,
-                        null,
+                        configFile,
                         createUniqueConstraints,
                         createMandatoryConstraints,
                         fromCsvFormat,
@@ -71,6 +72,7 @@ public class LdbcCli
     public static void importParallelImportDense1(
             File dbDir,
             File csvDataDir,
+            File configFile,
             boolean createUniqueConstraints,
             boolean createMandatoryConstraints,
             LdbcDateCodec.Format fromCsvFormat,
@@ -83,7 +85,7 @@ public class LdbcCli
                         Neo4jSchema.NEO4J_DENSE_1,
                         dbDir,
                         csvDataDir,
-                        null,
+                        configFile,
                         createUniqueConstraints,
                         createMandatoryConstraints,
                         fromCsvFormat,

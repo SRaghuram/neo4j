@@ -153,10 +153,9 @@ public class SnbInteractiveQueryCorrectnessEmbeddedCoreRegularTest
     }
 
     @Override
-    public Neo4jConnectionState openConnection( String path ) throws Exception
+    public Neo4jConnectionState openConnection( File dbDir, File configDir ) throws Exception
     {
-        File dbDir = new File( path );
-        DatabaseManagementService managementService = Neo4jDb.newDb( dbDir, DriverConfigUtils.neo4jTestConfig() );
+        DatabaseManagementService managementService = Neo4jDb.newDb( dbDir, DriverConfigUtils.neo4jTestConfig( configDir ) );
         return new Neo4jConnectionState( managementService, managementService.database( DEFAULT_DATABASE_NAME ),
                 null,
                 null,

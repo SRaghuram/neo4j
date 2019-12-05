@@ -139,13 +139,14 @@ class IntegrationValidationTest
 
         storeDir = temporaryFolder.directory( "store" );
 
+        File configFile = DriverConfigUtils.neo4jTestConfig( temporaryFolder.directory( "config" ) );
         LdbcSnbImporter.importerFor(
                 scenario.csvSchema(),
                 scenario.neo4jSchema()
         ).load(
                 storeDir,
                 scenario.csvDir(),
-                DriverConfigUtils.neo4jTestConfig(),
+                configFile,
                 scenario.csvDateFormat(),
                 scenario.neo4jDateFormat(),
                 scenario.timestampResolution(),
@@ -162,7 +163,7 @@ class IntegrationValidationTest
                         scenario.runtime(),
                         scenario.neo4jSchema(),
                         store.topLevelDirectory().toFile(),
-                        DriverConfigUtils.neo4jTestConfig(),
+                        configFile,
                         LdbcSnbBiWorkload.class,
                         null
                 )
@@ -247,13 +248,14 @@ class IntegrationValidationTest
          */
 
         File dbDir = temporaryFolder.directory( "db" );
+        File configFile = DriverConfigUtils.neo4jTestConfig( temporaryFolder.directory( "config" ) );
         LdbcSnbImporter.importerFor(
                 scenario.csvSchema(),
                 scenario.neo4jSchema()
         ).load(
                 dbDir,
                 scenario.csvDir(),
-                DriverConfigUtils.neo4jTestConfig(),
+                configFile,
                 scenario.csvDateFormat(),
                 scenario.neo4jDateFormat(),
                 scenario.timestampResolution(),
@@ -268,7 +270,7 @@ class IntegrationValidationTest
                         scenario.runtime(),
                         scenario.neo4jSchema(),
                         dbDir,
-                        DriverConfigUtils.neo4jTestConfig(),
+                        configFile,
                         LdbcSnbBiWorkload.class,
                         null
                 )

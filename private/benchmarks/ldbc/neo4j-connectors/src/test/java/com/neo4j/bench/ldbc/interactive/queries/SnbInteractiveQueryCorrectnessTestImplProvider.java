@@ -56,11 +56,12 @@ import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcUpdate6AddPost;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcUpdate7AddComment;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcUpdate8AddFriendship;
 
+import java.io.File;
 import java.util.List;
 
 public interface SnbInteractiveQueryCorrectnessTestImplProvider<CONNECTION>
 {
-    CONNECTION openConnection( String path ) throws Exception;
+    CONNECTION openConnection( File dbDir, File configDir ) throws Exception;
 
     void closeConnection( CONNECTION connection ) throws Exception;
 

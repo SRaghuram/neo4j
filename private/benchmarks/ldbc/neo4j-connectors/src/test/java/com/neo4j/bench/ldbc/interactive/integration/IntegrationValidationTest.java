@@ -150,13 +150,14 @@ class IntegrationValidationTest
 
         File storeDir = temporaryFolder.directory( "store" );
 
+        File configFile = DriverConfigUtils.neo4jTestConfig( temporaryFolder.directory( "config" ) );
         LdbcSnbImporter.importerFor(
                 scenario.csvSchema(),
                 scenario.neo4jSchema()
         ).load(
                 storeDir,
                 scenario.csvDir(),
-                DriverConfigUtils.neo4jTestConfig(),
+                configFile,
                 scenario.csvDateFormat(),
                 scenario.neo4jDateFormat(),
                 scenario.timestampResolution(),
@@ -173,7 +174,7 @@ class IntegrationValidationTest
                         scenario.runtime(),
                         scenario.neo4jSchema(),
                         store.topLevelDirectory().toFile(),
-                        DriverConfigUtils.neo4jTestConfig(),
+                        configFile,
                         LdbcSnbInteractiveWorkload.class,
                         null
                 )
@@ -326,13 +327,14 @@ class IntegrationValidationTest
          */
 
         File storeDir = temporaryFolder.directory( "store" );
+        File configFile = DriverConfigUtils.neo4jTestConfig( temporaryFolder.directory( "config" ) );
         LdbcSnbImporter.importerFor(
                 scenario.csvSchema(),
                 scenario.neo4jSchema()
         ).load(
                 storeDir,
                 scenario.csvDir(),
-                DriverConfigUtils.neo4jTestConfig(),
+                configFile,
                 scenario.csvDateFormat(),
                 scenario.neo4jDateFormat(),
                 scenario.timestampResolution(),
@@ -349,7 +351,7 @@ class IntegrationValidationTest
                         scenario.runtime(),
                         scenario.neo4jSchema(),
                         store.topLevelDirectory().toFile(),
-                        DriverConfigUtils.neo4jTestConfig(),
+                        configFile,
                         LdbcSnbInteractiveWorkload.class,
                         null
                 )
