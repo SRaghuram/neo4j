@@ -479,10 +479,9 @@ public class StoreUpgradeIT
                 // wait index to be online since sometimes we need to rebuild the indexes on migration
                 awaitOnline( schemaRead, reference );
 
-                var indexInfo = schemaRead.indexUpdatesAndSize( reference );
-                assertEquals( store.indexCounts[i][0], indexInfo.getUpdates() );
-                assertEquals( store.indexCounts[i][1], indexInfo.getSize() );
                 var indexSample = schemaRead.indexSample( reference );
+                assertEquals( store.indexCounts[i][0], indexSample.updates() );
+                assertEquals( store.indexCounts[i][1], indexSample.indexSize() );
                 assertEquals( store.indexCounts[i][2], indexSample.uniqueValues() );
                 assertEquals( store.indexCounts[i][3], indexSample.sampleSize() );
 
