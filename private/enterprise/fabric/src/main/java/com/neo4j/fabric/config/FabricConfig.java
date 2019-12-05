@@ -474,7 +474,15 @@ public class FabricConfig
 
         public DataStream( int bufferLowWatermark, int bufferSize, int batchSize, int concurrency )
         {
-            this.bufferLowWatermark = bufferLowWatermark;
+            if ( bufferLowWatermark > bufferSize )
+            {
+                this.bufferLowWatermark = bufferSize;
+            }
+            else
+            {
+                this.bufferLowWatermark = bufferLowWatermark;
+            }
+
             this.bufferSize = bufferSize;
             this.batchSize = batchSize;
             this.concurrency = concurrency;

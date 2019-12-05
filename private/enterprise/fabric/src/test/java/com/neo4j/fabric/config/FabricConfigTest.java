@@ -229,6 +229,64 @@ class FabricConfigTest
         assertThrows( IllegalArgumentException.class, () -> doTestRemoteUri( "neo4j://" ) );
     }
 
+    @Test
+    void testBufferSizeConstraint()
+    {
+        doTestStreamConstraint( "fabric.stream.buffer.size", "0",
+                "Error evaluating value for setting 'fabric.stream.buffer.size'. minimum allowed value is 1" );
+    }
+
+    @Test
+    void testBufferLowWatermarkConstraint()
+    {
+        doTestStreamConstraint( "fabric.stream.buffer.low_watermark", "-1",
+                "Error evaluating value for setting 'fabric.stream.buffer.low_watermark'. minimum allowed value is 0" );
+    }
+
+    @Test
+    void testBatchSizeConstraint()
+    {
+        doTestStreamConstraint( "fabric.stream.batch_size", "0", "Error evaluating value for setting 'fabric.stream.batch_size'. minimum allowed value is 1" );
+    }
+
+    @Test
+    void testConcurrencyConstraint()
+    {
+        doTestStreamConstraint( "fabric.stream.concurrency", "0",
+                "Error evaluating value for setting 'fabric.stream.concurrency'. minimum allowed value is 1" );
+    }
+
+    @Test
+    void testLowWatermarkBiggerThanBufferSize()
+    {
+        var properties = Map.of(
+                "fabric.database.name",
+                "mega", "fabric.graph.0.uri",
+                "bolt://mega:1111",
+                "fabric.stream.buffer.size", "10",
+                "fabric.stream.buffer.low_watermark'", "20"
+        );
+
+        var config = Config.newBuilder().setRaw( properties ).build();
+
+        var fabricConfig = FabricConfig.from( config );
+        assertEquals( 10, fabricConfig.getDataStream().getBufferLowWatermark() );
+    }
+
+    void doTestStreamConstraint( String settingKey, String settingValue, String expectedMessage )
+    {
+        var properties = Map.of(
+                "fabric.database.name",
+                "mega", "fabric.graph.0.uri",
+                "bolt://mega:1111",
+                settingKey, settingValue
+        );
+
+        var thrown = assertThrows( IllegalArgumentException.class, () -> Config.newBuilder().setRaw( properties ).build() );
+
+        assertThat( thrown.getMessage() ).contains( expectedMessage );
+    }
+
     private FabricConfig doTestRemoteUri( String uri )
     {
         var properties = Map.of(

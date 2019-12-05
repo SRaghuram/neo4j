@@ -22,6 +22,7 @@ import org.neo4j.logging.Level;
 
 import static java.time.Duration.ofMinutes;
 import static java.time.Duration.ofSeconds;
+import static org.neo4j.configuration.SettingConstraints.min;
 import static org.neo4j.configuration.SettingImpl.newBuilder;
 import static org.neo4j.configuration.SettingValueParsers.BOOL;
 import static org.neo4j.configuration.SettingValueParsers.DATABASENAME;
@@ -118,24 +119,31 @@ public class FabricSettings implements SettingsDeclaration
             "To compensate for latency to remote databases, the Fabric execution engine pre-fetches records needed for local executions.\n" +
             "This limit is enforced per fabric query. If a fabric query uses multiple remote stream at the same time, " +
             "this setting represents the maximal number of pre-fetched records counted together for all such remote streams" )
-    static Setting<Integer> bufferSizeSetting = newBuilder( "fabric.stream.buffer.size", INT, 1000 ).build();
+    static Setting<Integer> bufferSizeSetting = newBuilder( "fabric.stream.buffer.size", INT, 1000 )
+            .addConstraint( min(1) )
+            .build();
 
     @Description( "Number of records in prefetching buffer that will trigger prefetching again. This is strongly related to fabric.stream.buffer.size" )
     static Setting<Integer> bufferLowWatermarkSetting = newBuilder( "fabric.stream.buffer.low_watermark",
             INT,
             300 )
+            .addConstraint( min(0) )
             .build();
 
     @Description( "Batch size used when requesting records from local Cypher engine." )
     @Internal
-    static Setting<Integer> batchSizeSetting = newBuilder( "fabric.stream.batch_size", INT, 50 ).build();
+    static Setting<Integer> batchSizeSetting = newBuilder( "fabric.stream.batch_size", INT, 50 )
+            .addConstraint( min(1) )
+            .build();
 
     @Description( "Maximal concurrency within Fabric queries.\n" +
             "Limits the number of iterations of each subquery that are executed concurrently. " +
             "Higher concurrency may consume more memory and network resources simultaneously, " +
             "while lower concurrency may force sequential execution, requiring more time." )
     @DocumentedDefaultValue( "The number of remote graphs" )
-    static Setting<Integer> concurrency = newBuilder( "fabric.stream.concurrency", INT, null ).build();
+    static Setting<Integer> concurrency = newBuilder( "fabric.stream.concurrency", INT, null )
+            .addConstraint( min(1) )
+            .build();
 
     @Description( "Determines which driver API will be used. ASYNC must be used when the remote instance is 3.5" )
     static Setting<DriverApi> driverApi = newBuilder( "fabric." + DRIVER_API, ofEnum(DriverApi.class), DriverApi.RX ).build();
