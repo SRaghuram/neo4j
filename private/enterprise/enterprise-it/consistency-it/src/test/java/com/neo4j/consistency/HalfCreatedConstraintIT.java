@@ -35,8 +35,7 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.Neo4jLayoutExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static org.hamcrest.CoreMatchers.containsString;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
@@ -89,10 +88,9 @@ class HalfCreatedConstraintIT
                 tx.schema().awaitIndexesOnline( 10, TimeUnit.MINUTES );
             }
         } );
-        assertThat( exception.getMessage(), containsString(
-                    "Index IndexDefinition[label:MARKER on:property] " +
-                            "(Index( 1, 'constraint_952591e6', UNIQUE BTREE, :label[0](property[0]), native-btree-1.0 )) " +
-                            "entered a FAILED state. Please see database logs.: Cause of failure:" ) );
+        assertThat( exception.getMessage() ).contains( "Index IndexDefinition[label:MARKER on:property] " +
+                "(Index( 1, 'constraint_952591e6', UNIQUE BTREE, :label[0](property[0]), native-btree-1.0 )) " +
+                "entered a FAILED state. Please see database logs.: Cause of failure:" );
     }
 
     private static void addIndex( GraphDatabaseService database ) throws KernelException
