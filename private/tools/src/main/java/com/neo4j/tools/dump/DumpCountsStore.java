@@ -13,7 +13,6 @@ import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
-import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
 import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
 import org.neo4j.kernel.impl.pagecache.ConfiguringPageCacheFactory;
 import org.neo4j.logging.NullLog;
@@ -42,8 +41,8 @@ public class DumpCountsStore
         }
         try ( FileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction();
                 JobScheduler jobScheduler = createInitialisedScheduler();
-                PageCache pageCache = new ConfiguringPageCacheFactory( fileSystem, defaults( pagecache_memory, "80M" ), PageCacheTracer.NULL,
-                        PageCursorTracerSupplier.NULL, NullLog.getInstance(), EmptyVersionContextSupplier.EMPTY, jobScheduler ).getOrCreatePageCache() )
+                PageCache pageCache = new ConfiguringPageCacheFactory( fileSystem, defaults( pagecache_memory, "80M" ),
+                        PageCacheTracer.NULL, NullLog.getInstance(), EmptyVersionContextSupplier.EMPTY, jobScheduler ).getOrCreatePageCache() )
         {
             GBPTreeCountsStore.dump( pageCache, new File( args[0] ), out );
         }

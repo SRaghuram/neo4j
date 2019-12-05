@@ -37,6 +37,7 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.io.pagecache.impl.FileIsNotMappedException;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.impl.transaction.state.DatabaseFileListing;
 import org.neo4j.logging.Log;
 import org.neo4j.scheduler.Group;
@@ -50,6 +51,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_warmup_pre
 import static org.neo4j.io.pagecache.PagedFile.PF_NO_FAULT;
 import static org.neo4j.io.pagecache.PagedFile.PF_READ_AHEAD;
 import static org.neo4j.io.pagecache.PagedFile.PF_SHARED_READ_LOCK;
+import static org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier.TRACER_SUPPLIER;
 
 /**
  * The page cache warmer profiles the page cache to figure out what data is in memory and what is not, and uses those
@@ -197,14 +199,14 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
     private long touchAllPages( PagedFile pagedFile )
     {
         log.debug( "Pre-fetching %s", pagedFile.file().getName() );
-        try ( PageCursor cursor = pagedFile.io( 0, PF_READ_AHEAD | PF_SHARED_READ_LOCK ) )
+        try ( PageCursorTracer cursorTracer = TRACER_SUPPLIER.get();
+              PageCursor cursor = pagedFile.io( 0, PF_READ_AHEAD | PF_SHARED_READ_LOCK, cursorTracer ) )
         {
             long pages = 0;
             while ( !stopped && cursor.next() )
             {
                 pages++; // Iterate over all pages
             }
-            pageCache.reportEvents();
             return pages;
         }
         catch ( IOException e )
@@ -263,11 +265,9 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
             }
             if ( stopped )
             {
-                pageCache.reportEvents();
                 return OptionalLong.empty();
             }
         }
-        pageCache.reportEvents();
         return OptionalLong.of( pagesInMemory );
     }
 
@@ -296,7 +296,6 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
                 {
                     if ( stopped )
                     {
-                        pageCache.reportEvents();
                         return pagesLoaded;
                     }
                     if ( (b & 1) == 1 )
@@ -309,7 +308,6 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
                 }
             }
         }
-        pageCache.reportEvents();
         return pagesLoaded;
     }
 
@@ -340,8 +338,9 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
                 .map( Profile::next )
                 .orElse( Profile.first( databaseDirectory, file.file() ) );
 
-        try ( OutputStream output = nextProfile.write( fs );
-              PageCursor cursor = file.io( 0, PF_SHARED_READ_LOCK | PF_NO_FAULT ) )
+        try ( PageCursorTracer cursorTracer = TRACER_SUPPLIER.get();
+              OutputStream output = nextProfile.write( fs );
+              PageCursor cursor = file.io( 0, PF_SHARED_READ_LOCK | PF_NO_FAULT, cursorTracer ) )
         {
             int stepper = 0;
             int b = 0;

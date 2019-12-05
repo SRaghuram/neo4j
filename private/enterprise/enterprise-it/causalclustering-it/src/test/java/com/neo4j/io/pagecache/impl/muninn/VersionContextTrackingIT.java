@@ -22,6 +22,7 @@ import org.neo4j.internal.recordstorage.RecordStorageEngine;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.io.pagecache.impl.muninn.MuninnPageCursor;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -121,7 +122,7 @@ class VersionContextTrackingIT
         long lastPageId = pageFile.getLastPageId();
         for ( int i = 0; i <= lastPageId; i++ )
         {
-            try ( MuninnPageCursor pageCursor = (MuninnPageCursor) pageFile.io( i, PagedFile.PF_SHARED_READ_LOCK )  )
+            try ( MuninnPageCursor pageCursor = (MuninnPageCursor) pageFile.io( i, PagedFile.PF_SHARED_READ_LOCK, PageCursorTracer.NULL )  )
             {
                 if ( pageCursor.next() )
                 {

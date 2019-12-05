@@ -9,25 +9,24 @@ import java.io.IOException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.PagedFile;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 
 import static org.neo4j.io.pagecache.PagedFile.PF_SHARED_READ_LOCK;
+import static org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier.TRACER_SUPPLIER;
 
 class ParallelPageLoader implements PageLoader
 {
     private final PagedFile file;
     private final Executor executor;
-    private final PageCache pageCache;
     private final AtomicLong received;
     private final AtomicLong processed;
 
-    ParallelPageLoader( PagedFile file, Executor executor, PageCache pageCache )
+    ParallelPageLoader( PagedFile file, Executor executor )
     {
         this.file = file;
         this.executor = executor;
-        this.pageCache = pageCache;
         received = new AtomicLong();
         processed = new AtomicLong();
     }
@@ -40,7 +39,8 @@ class ParallelPageLoader implements PageLoader
         {
             try
             {
-                try ( PageCursor cursor = file.io( pageId, PF_SHARED_READ_LOCK ) )
+                try ( PageCursorTracer cursorTracer = TRACER_SUPPLIER.get();
+                      PageCursor cursor = file.io( pageId, PF_SHARED_READ_LOCK, cursorTracer ) )
                 {
                     cursor.next();
                 }
@@ -50,7 +50,6 @@ class ParallelPageLoader implements PageLoader
             }
             finally
             {
-                pageCache.reportEvents();
                 processed.getAndIncrement();
             }
         } );

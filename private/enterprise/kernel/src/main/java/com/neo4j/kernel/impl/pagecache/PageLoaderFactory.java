@@ -27,7 +27,7 @@ class PageLoaderFactory
     {
         if ( FileUtils.highIODevice( file.file().toPath() ) )
         {
-            return new ParallelPageLoader( file, executor, pageCache );
+            return new ParallelPageLoader( file, executor );
         }
         return new SingleCursorPageLoader( file );
     }

@@ -97,7 +97,7 @@ class PageCacheWarmerTest
         scheduler = life.add( createScheduler() );
         life.start();
         cacheTracer = new DefaultPageCacheTracer();
-        cursorTracer = DefaultPageCursorTracerSupplier.INSTANCE;
+        cursorTracer = DefaultPageCursorTracerSupplier.TRACER_SUPPLIER;
         clearTracerCounts();
         cfg = PageCacheConfig.config().withTracer( cacheTracer ).withCursorTracerSupplier( cursorTracer );
         file = new File( testDirectory.homeDir(), "a" );
@@ -153,7 +153,7 @@ class PageCacheWarmerTest
             warmer.start();
             warmer.stop();
             warmer.start();
-            try ( PageCursor writer = pf.io( 0, PagedFile.PF_SHARED_WRITE_LOCK ) )
+            try ( PageCursor writer = pf.io( 0, PagedFile.PF_SHARED_WRITE_LOCK, cursorTracer.get() ) )
             {
                 assertTrue( writer.next( 1 ) );
                 assertTrue( writer.next( 3 ) );
@@ -183,7 +183,7 @@ class PageCacheWarmerTest
         try ( PageCache pageCache = pageCacheExtension.getPageCache( fs, cfg );
               PagedFile pf = pageCache.map( file, pageCache.pageSize(), StandardOpenOption.CREATE ) )
         {
-            try ( PageCursor writer = pf.io( 0, PagedFile.PF_SHARED_WRITE_LOCK ) )
+            try ( PageCursor writer = pf.io( 0, PagedFile.PF_SHARED_WRITE_LOCK, cursorTracer.get() ) )
             {
                 assertTrue( writer.next( 1 ) );
                 assertTrue( writer.next( 3 ) );
@@ -203,17 +203,15 @@ class PageCacheWarmerTest
             warmer.start();
             warmer.reheat();
 
-            pageCache.reportEvents();
             assertThat( cacheTracer.faults() ).isEqualTo( initialFaults + 2L );
 
-            try ( PageCursor reader = pf.io( 0, PagedFile.PF_SHARED_READ_LOCK ) )
+            try ( PageCursor reader = pf.io( 0, PagedFile.PF_SHARED_READ_LOCK, cursorTracer.get() ) )
             {
                 assertTrue( reader.next( 1 ) );
                 assertTrue( reader.next( 3 ) );
             }
 
             // No additional faults must have been reported.
-            pageCache.reportEvents();
             assertThat( cacheTracer.faults() ).isEqualTo( initialFaults + 2L );
         }
     }
@@ -228,7 +226,7 @@ class PageCacheWarmerTest
         try ( PageCache pageCache = pageCacheExtension.getPageCache( fs, cfg.withMemory( pageCacheMemory ) );
               PagedFile pf = pageCache.map( file, pageCache.pageSize(), StandardOpenOption.CREATE ) )
         {
-            try ( PageCursor writer = pf.io( 0, PagedFile.PF_SHARED_WRITE_LOCK ) )
+            try ( PageCursor writer = pf.io( 0, PagedFile.PF_SHARED_WRITE_LOCK, cursorTracer.get() ) )
             {
                 for ( int pageId : pageIds )
                 {
@@ -249,10 +247,9 @@ class PageCacheWarmerTest
             warmer.start();
             warmer.reheat();
 
-            pageCache.reportEvents();
             assertThat( cacheTracer.faults() ).isEqualTo( initialFaults + pageIds.length );
 
-            try ( PageCursor reader = pf.io( 0, PagedFile.PF_SHARED_READ_LOCK ) )
+            try ( PageCursor reader = pf.io( 0, PagedFile.PF_SHARED_READ_LOCK, cursorTracer.get() ) )
             {
                 for ( int pageId : pageIds )
                 {
@@ -261,7 +258,6 @@ class PageCacheWarmerTest
             }
 
             // No additional faults must have been reported.
-            pageCache.reportEvents();
             assertThat( cacheTracer.faults() ).isEqualTo( initialFaults + pageIds.length );
         }
     }
@@ -273,7 +269,7 @@ class PageCacheWarmerTest
         try ( PageCache pageCache = pageCacheExtension.getPageCache( fs, cfg );
               PagedFile pf = pageCache.map( file, pageCache.pageSize(), StandardOpenOption.CREATE ) )
         {
-            try ( PageCursor writer = pf.io( 0, PagedFile.PF_SHARED_WRITE_LOCK ) )
+            try ( PageCursor writer = pf.io( 0, PagedFile.PF_SHARED_WRITE_LOCK, cursorTracer.get() ) )
             {
                 assertTrue( writer.next( 1 ) );
                 assertTrue( writer.next( 3 ) );
@@ -436,7 +432,6 @@ class PageCacheWarmerTest
                 long pagesLoadedReportedByWarmer = warmer.reheat().orElse( -1 );
                 warmer.stop();
 
-                pageCache.reportEvents();
                 assertEquals( numPages, cacheTracer.faults() );
                 assertEquals( numPages, pagesLoadedReportedByWarmer );
             }
@@ -467,7 +462,6 @@ class PageCacheWarmerTest
                 long pagesLoadedReportedByWarmer = warmer.reheat().orElse( -1 );
                 warmer.stop();
 
-                pageCache.reportEvents();
                 assertEquals( numPagesFile1 + numPagesFile2, cacheTracer.faults() );
                 assertEquals( numPagesFile1 + numPagesFile2, pagesLoadedReportedByWarmer );
             }
@@ -505,7 +499,6 @@ class PageCacheWarmerTest
                 long pagesLoadedReportedByWarmer = warmer.reheat().orElse( -1 );
                 warmer.stop();
 
-                pageCache.reportEvents();
                 assertEquals( numPagesFile1 + numPagesFile3, cacheTracer.faults() );
                 assertEquals( numPagesFile1 + numPagesFile3, pagesLoadedReportedByWarmer );
 
@@ -552,7 +545,7 @@ class PageCacheWarmerTest
             PagedFile pagedFile = mock( PagedFile.class );
             PageCursor cursor = mock( PageCursor.class );
             doReturn( List.of( pagedFile ) ).when( pageCache ).listExistingMappings();
-            when( pagedFile.io( 0, PF_READ_AHEAD | PF_SHARED_READ_LOCK  ) ).thenReturn( cursor );
+            when( pagedFile.io( 0, PF_READ_AHEAD | PF_SHARED_READ_LOCK, cursorTracer.get() ) ).thenReturn( cursor );
             when( pagedFile.file() ).thenReturn( new File( "testfile" ) );
 
             AtomicBoolean startedFetching = new AtomicBoolean( false );

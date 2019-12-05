@@ -20,6 +20,7 @@ import java.io.IOException;
 import org.neo4j.io.ByteUnit;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.PagedFile;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 
 /**
  * This benchmark is measuring the performance of bounds checking.
@@ -62,7 +63,7 @@ public class AccessV2 extends AbstractPageCacheBenchmarkV2
         public void setUp( AccessV2 benchmarkState ) throws IOException
         {
             PagedFile pagedFile = benchmarkState.pagedFile;
-            pageCursor = pagedFile.io( 0, PagedFile.PF_SHARED_WRITE_LOCK );
+            pageCursor = pagedFile.io( 0, PagedFile.PF_SHARED_WRITE_LOCK, PageCursorTracer.NULL );
             pageCursor.next();
         }
 

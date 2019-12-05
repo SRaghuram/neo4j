@@ -14,7 +14,6 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.impl.SingleFilePageSwapperFactory;
 import org.neo4j.io.pagecache.impl.muninn.MuninnPageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
-import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
 import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.scheduler.JobScheduler;
@@ -37,7 +36,7 @@ public class DumpIdGenerator
         LifeSupport life = new LifeSupport();
         JobScheduler scheduler = life.add( JobSchedulerFactory.createScheduler() );
         life.start();
-        try ( MuninnPageCache pageCache = new MuninnPageCache( swapper, 1_000, PageCacheTracer.NULL, PageCursorTracerSupplier.NULL, EMPTY, scheduler ) )
+        try ( MuninnPageCache pageCache = new MuninnPageCache( swapper, 1_000, PageCacheTracer.NULL, EMPTY, scheduler ) )
         {
             IndexedIdGenerator.dump( pageCache, file );
         }

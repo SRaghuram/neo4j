@@ -32,6 +32,8 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
+import org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.rule.DbmsRule;
@@ -274,14 +276,14 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
         PageCache pageCache = db.getDependencyResolver().resolveDependency( PageCache.class );
         for ( PagedFile pagedFile : pageCache.listExistingMappings() )
         {
-            try ( PageCursor cursor = pagedFile.io( 0, PF_SHARED_READ_LOCK ) )
+            try ( PageCursorTracer cursorTracer = DefaultPageCursorTracerSupplier.TRACER_SUPPLIER.get();
+                  PageCursor cursor = pagedFile.io( 0, PF_SHARED_READ_LOCK, cursorTracer ) )
             {
                 while ( cursor.next() )
                 {
                     //do nothing
                 }
             }
-            pageCache.reportEvents();
         }
     }
 

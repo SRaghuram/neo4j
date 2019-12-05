@@ -32,8 +32,7 @@ import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.io.pagecache.tracing.DefaultPageCacheTracer;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
-import org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier;
-import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
 import org.neo4j.kernel.impl.pagecache.ConfiguringPageCacheFactory;
 import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
@@ -133,20 +132,17 @@ public abstract class AbstractPageCacheBenchmarkV2 extends BaseDatabaseBenchmark
         Config config = Config.defaults( GraphDatabaseSettings.pagecache_memory, pageCacheMemory + "" );
         PageCacheTracer tracer = new DefaultPageCacheTracer();
         Log log = NullLog.getInstance();
-        PageCursorTracerSupplier tracerSupplier = DefaultPageCursorTracerSupplier.NULL;
         ConfiguringPageCacheFactory factory = new ConfiguringPageCacheFactory(
                 fs,
                 config,
-                tracer,
-                tracerSupplier,
-                log,
+                tracer, log,
                 EmptyVersionContextSupplier.EMPTY,
                 JobSchedulerFactory.createInitialisedScheduler() );
         pageCache = factory.getOrCreatePageCache();
         pagedFile = pageCache.map( STORE_FILE, (int) ByteUnit.kibiBytes( 8 ) );
         if ( getPercentageCached() > 0.49 )
         {
-            try ( PageCursor cursor = pagedFile.io( 0, PagedFile.PF_SHARED_READ_LOCK ) )
+            try ( PageCursor cursor = pagedFile.io( 0, PagedFile.PF_SHARED_READ_LOCK, PageCursorTracer.NULL ) )
             {
                 //noinspection StatementWithEmptyBody
                 while ( cursor.next() )
@@ -174,7 +170,7 @@ public abstract class AbstractPageCacheBenchmarkV2 extends BaseDatabaseBenchmark
         public void setUp( ThreadParams threadParams, AbstractPageCacheBenchmarkV2 benchmarkState ) throws IOException
         {
             PagedFile pagedFile = benchmarkState.pagedFile;
-            pageCursor = pagedFile.io( 1, getPageFlags() );
+            pageCursor = pagedFile.io( 1, getPageFlags(), PageCursorTracer.NULL );
 
             int threadCount = threadParams.getThreadCount();
             int threadIndex = threadParams.getThreadIndex();
@@ -204,7 +200,7 @@ public abstract class AbstractPageCacheBenchmarkV2 extends BaseDatabaseBenchmark
         interferenceFuture = executor.submit( () ->
                                               {
                                                   Throttler throttler = new Throttler( TARGET_INTERFERING_OPSSEC );
-                                                  try ( PageCursor cursor = pagedFile.io( 0, flags ) )
+                                                  try ( PageCursor cursor = pagedFile.io( 0, flags, PageCursorTracer.NULL ) )
                                                   {
                                                       long pages = pagedFile.fileSize() / pagedFile.pageSize();
                                                       long counter = 0;

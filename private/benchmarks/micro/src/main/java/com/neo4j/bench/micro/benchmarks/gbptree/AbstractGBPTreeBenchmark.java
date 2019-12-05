@@ -26,8 +26,6 @@ import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.DefaultPageCacheTracer;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
-import org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier;
-import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
 import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
 import org.neo4j.kernel.impl.pagecache.ConfiguringPageCacheFactory;
 import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
@@ -163,13 +161,10 @@ public abstract class AbstractGBPTreeBenchmark extends BaseDatabaseBenchmark
         Config config = Config.defaults();
         PageCacheTracer tracer = new DefaultPageCacheTracer();
         Log log = NullLog.getInstance();
-        PageCursorTracerSupplier tracerSupplier = DefaultPageCursorTracerSupplier.NULL;
         ConfiguringPageCacheFactory factory = new ConfiguringPageCacheFactory(
                 fs,
                 config,
-                tracer,
-                tracerSupplier,
-                log,
+                tracer, log,
                 EmptyVersionContextSupplier.EMPTY,
                 JobSchedulerFactory.createInitialisedScheduler() );
         return factory.getOrCreatePageCache();

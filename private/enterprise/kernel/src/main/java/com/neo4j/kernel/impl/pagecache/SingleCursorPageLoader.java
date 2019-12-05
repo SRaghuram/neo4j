@@ -11,6 +11,7 @@ import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.PagedFile;
 
 import static org.neo4j.io.pagecache.PagedFile.PF_SHARED_READ_LOCK;
+import static org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier.TRACER_SUPPLIER;
 
 class SingleCursorPageLoader implements PageLoader
 {
@@ -18,7 +19,7 @@ class SingleCursorPageLoader implements PageLoader
 
     SingleCursorPageLoader( PagedFile file ) throws IOException
     {
-        cursor = file.io( 0, PF_SHARED_READ_LOCK );
+        cursor = file.io( 0, PF_SHARED_READ_LOCK, TRACER_SUPPLIER.get() );
     }
 
     @Override
