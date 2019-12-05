@@ -27,6 +27,7 @@ import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.DatabaseShutdownException;
 import org.neo4j.graphdb.Label;
+import org.neo4j.graphdb.TransactionFailureException;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -41,7 +42,6 @@ import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.drop
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.startDatabase;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.stopDatabase;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
-import static java.util.Collections.singleton;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toSet;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -399,8 +399,6 @@ class ClusterDatabaseManagementIT
         // Restart core
         toStop.start();
 
-        // Core should have eventually started database and have only data from the recreation
-        assertDatabaseEventuallyStarted( databaseName, singleton( toStop ) );
         assertEventually( () -> hasNodeCount( toStop, databaseName, secondLabel ), equalTo( 1L ), 90, SECONDS );
         assertThat( hasNodeCount( toStop, databaseName, firstLabel ), equalTo( 0L ) );
     }
@@ -454,7 +452,7 @@ class ClusterDatabaseManagementIT
             result = (long) results.next().get( field );
             tx.commit();
         }
-        catch ( DatabaseNotFoundException | DatabaseShutdownException e )
+        catch ( DatabaseNotFoundException | DatabaseShutdownException | TransactionFailureException e )
         {
             return -1;
         }
