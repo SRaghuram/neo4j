@@ -17,11 +17,11 @@ import java.util.Map;
 
 public class DriverConfigUtils
 {
-    public static File neo4jTestConfig() throws DbException
+    public static File neo4jTestConfig( File tempDir ) throws DbException
     {
         try
         {
-            File tempConfigFile = File.createTempFile( "temp_neo4j_sf001", "conf" );
+            File tempConfigFile = new File( tempDir, "temp_neo4j_sf001.conf" );
             Neo4jConfigBuilder.withDefaults()
                               .mergeWith( Neo4jConfigBuilder.fromFile( getResource( "/neo4j/neo4j_sf001.conf" ) ).build() )
                               .writeToFile( tempConfigFile.toPath() );

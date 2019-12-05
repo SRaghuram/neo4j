@@ -78,13 +78,14 @@ public abstract class SnbBiExecutionTest
             Scenario scenario ) throws Exception
     {
         File storeDir = temporaryFolder.directory( "store" );
+        File configFile = DriverConfigUtils.neo4jTestConfig( temporaryFolder.directory( "config" ) );
         LdbcSnbImporter.importerFor(
                 scenario.csvSchema(),
                 scenario.neo4jSchema()
         ).load(
                 storeDir,
                 scenario.csvDir(),
-                DriverConfigUtils.neo4jTestConfig(),
+                configFile,
                 scenario.csvDateFormat(),
                 scenario.neo4jDateFormat(),
                 scenario.timestampResolution(),
@@ -129,7 +130,7 @@ public abstract class SnbBiExecutionTest
                         scenario.runtime(),
                         scenario.neo4jSchema(),
                         store.topLevelDirectory().toFile(),
-                        DriverConfigUtils.neo4jTestConfig(),
+                        configFile,
                         LdbcSnbBiWorkload.class,
                         null
                 )
@@ -231,7 +232,7 @@ public abstract class SnbBiExecutionTest
                 resultDir,
                 scenario.neo4jApi(),
                 ldbcConfigFile,
-                DriverConfigUtils.neo4jTestConfig(),
+                configFile,
                 threadCount
         );
 

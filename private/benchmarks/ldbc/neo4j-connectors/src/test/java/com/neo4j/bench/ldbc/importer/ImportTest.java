@@ -81,6 +81,7 @@ class ImportTest
         boolean withUnique = withUnique();
         Scenario scenario = Scenario.randomInteractive();
         File storeDir = temporaryFolder.directory( "store" );
+        File configFile = DriverConfigUtils.neo4jTestConfig( temporaryFolder.directory( "config" ) );
         String[] args = new String[]{
                 "import",
                 ImportCommand.CMD_CSV_SCHEMA, scenario.csvSchema().name(),
@@ -90,7 +91,7 @@ class ImportTest
                 ImportCommand.CMD_SOURCE_DATE, scenario.csvDateFormat().name(),
                 ImportCommand.CMD_TARGET_DATE, scenario.neo4jDateFormat().name(),
                 ImportCommand.CMD_TIMESTAMP_RESOLUTION, scenario.timestampResolution().name(),
-                ImportCommand.CMD_CONFIG, DriverConfigUtils.neo4jTestConfig().getAbsolutePath()
+                ImportCommand.CMD_CONFIG, configFile.getAbsolutePath()
         };
         if ( withUnique )
         {
@@ -103,20 +104,21 @@ class ImportTest
         LdbcCli.main( args );
         LdbcCli.inspect(
                 storeDir,
-                DriverConfigUtils.neo4jTestConfig() );
+                configFile );
         LdbcCli.index(
                 storeDir,
-                DriverConfigUtils.neo4jTestConfig(),
+                configFile,
                 null,
                 withUnique,
                 withMandatory,
                 true );
         LdbcCli.inspect(
                 storeDir,
-                DriverConfigUtils.neo4jTestConfig() );
+                configFile );
 
         assertGraphMetadataIsAsExpected(
                 storeDir,
+                configFile,
                 scenario.neo4jSchema(),
                 scenario.neo4jDateFormat(),
                 scenario.timestampResolution() );
@@ -130,6 +132,7 @@ class ImportTest
         boolean withUnique = withUnique();
         boolean withMandatory = withMandatory();
         Scenario scenario = Scenario.randomInteractive();
+        File config = DriverConfigUtils.neo4jTestConfig( temporaryFolder.directory( "config" ) );
 
         assertThrows( RuntimeException.class, () ->
         {
@@ -138,7 +141,7 @@ class ImportTest
                     ImportCommand.CMD_CSV, scenario.csvDir().getAbsolutePath(),
                     ImportCommand.CMD_SOURCE_DATE, scenario.csvDateFormat().name(),
                     ImportCommand.CMD_TARGET_DATE, scenario.neo4jDateFormat().name(),
-                    ImportCommand.CMD_CONFIG, DriverConfigUtils.neo4jTestConfig().getAbsolutePath()
+                    ImportCommand.CMD_CONFIG, config.getAbsolutePath()
             };
             if ( withUnique )
             {
@@ -161,12 +164,13 @@ class ImportTest
         File storeDir = temporaryFolder.directory( "store" );
         assertThrows( RuntimeException.class, () ->
         {
+            File config = DriverConfigUtils.neo4jTestConfig( temporaryFolder.directory( "config" ) );
             String[] args = new String[]{
                     "import",
                     ImportCommand.CMD_DB, storeDir.getAbsolutePath(),
                     ImportCommand.CMD_SOURCE_DATE, scenario.csvDateFormat().name(),
                     ImportCommand.CMD_TARGET_DATE, scenario.neo4jDateFormat().name(),
-                    ImportCommand.CMD_CONFIG, DriverConfigUtils.neo4jTestConfig().getAbsolutePath()
+                    ImportCommand.CMD_CONFIG, config.getAbsolutePath()
             };
             if ( withUnique )
             {
@@ -189,11 +193,12 @@ class ImportTest
         File storeDir = temporaryFolder.directory( "store" );
         assertThrows( RuntimeException.class, () ->
         {
+            File config = DriverConfigUtils.neo4jTestConfig( temporaryFolder.directory( "config" ) );
             String[] args = new String[]{
                     "import",
                     ImportCommand.CMD_DB, storeDir.getAbsolutePath(),
                     ImportCommand.CMD_CSV, scenario.csvDir().getAbsolutePath(),
-                    ImportCommand.CMD_CONFIG, DriverConfigUtils.neo4jTestConfig().getAbsolutePath()
+                    ImportCommand.CMD_CONFIG, config.getAbsolutePath()
             };
             if ( withUnique )
             {
@@ -206,7 +211,7 @@ class ImportTest
             LdbcCli.main( args );
             LdbcCli.index(
                     storeDir,
-                    DriverConfigUtils.neo4jTestConfig(),
+                    config,
                     scenario.neo4jSchema(),
                     withUnique,
                     withMandatory,
@@ -222,29 +227,32 @@ class ImportTest
         File storeDir = temporaryFolder.directory( "store" );
         File csvFilesDir = DriverConfigUtils.getResource(
                 "/validation_sets/data/social_network/string_date/" );
+        File configFile = DriverConfigUtils.neo4jTestConfig( temporaryFolder.directory( "config" ) );
         LdbcCli.importParallelRegular(
                 storeDir,
                 csvFilesDir,
+                configFile,
                 withUnique,
                 withMandatory,
                 LdbcDateCodec.Format.STRING_ENCODED,
                 LdbcDateCodec.Format.NUMBER_UTC );
         LdbcCli.inspect(
                 storeDir,
-                DriverConfigUtils.neo4jTestConfig() );
+                configFile );
         LdbcCli.index(
                 storeDir,
-                DriverConfigUtils.neo4jTestConfig(),
+                configFile,
                 null,
                 withUnique,
                 withMandatory,
                 true );
         LdbcCli.inspect(
                 storeDir,
-                DriverConfigUtils.neo4jTestConfig() );
+                configFile );
 
         assertGraphMetadataIsAsExpected(
                 storeDir,
+                configFile,
                 Neo4jSchema.NEO4J_REGULAR,
                 LdbcDateCodec.Format.NUMBER_UTC,
                 LdbcDateCodec.Resolution.NOT_APPLICABLE );
@@ -260,29 +268,32 @@ class ImportTest
         File storeDir = temporaryFolder.directory( "store" );
         File csvFilesDir = DriverConfigUtils.getResource(
                 "/validation_sets/data/social_network/string_date/" );
+        File configFile = DriverConfigUtils.neo4jTestConfig( temporaryFolder.directory( "config" ) );
         LdbcCli.importParallelRegular(
                 storeDir,
                 csvFilesDir,
+                configFile,
                 withUnique,
                 withMandatory,
                 LdbcDateCodec.Format.STRING_ENCODED,
                 LdbcDateCodec.Format.NUMBER_ENCODED );
         LdbcCli.inspect(
                 storeDir,
-                DriverConfigUtils.neo4jTestConfig() );
+                configFile );
         LdbcCli.index(
                 storeDir,
-                DriverConfigUtils.neo4jTestConfig(),
+                configFile,
                 null,
                 withUnique,
                 withMandatory,
                 true );
         LdbcCli.inspect(
                 storeDir,
-                DriverConfigUtils.neo4jTestConfig() );
+                configFile );
 
         assertGraphMetadataIsAsExpected(
                 storeDir,
+                configFile,
                 Neo4jSchema.NEO4J_REGULAR,
                 LdbcDateCodec.Format.NUMBER_ENCODED,
                 LdbcDateCodec.Resolution.NOT_APPLICABLE );
@@ -298,29 +309,32 @@ class ImportTest
         File storeDir = temporaryFolder.directory( "store" );
         File csvFilesDir = DriverConfigUtils.getResource(
                 "/validation_sets/data/social_network/num_date/" );
+        File configFile = DriverConfigUtils.neo4jTestConfig( temporaryFolder.directory( "config" ) );
         LdbcCli.importParallelRegular(
                 storeDir,
                 csvFilesDir,
+                configFile,
                 withUnique,
                 withMandatory,
                 LdbcDateCodec.Format.NUMBER_UTC,
                 LdbcDateCodec.Format.NUMBER_UTC );
         LdbcCli.inspect(
                 storeDir,
-                DriverConfigUtils.neo4jTestConfig() );
+                configFile );
         LdbcCli.index(
                 storeDir,
-                DriverConfigUtils.neo4jTestConfig(),
+                configFile,
                 null,
                 withUnique,
                 withMandatory,
                 true );
         LdbcCli.inspect(
                 storeDir,
-                DriverConfigUtils.neo4jTestConfig() );
+                configFile );
 
         assertGraphMetadataIsAsExpected(
                 storeDir,
+                configFile,
                 Neo4jSchema.NEO4J_REGULAR,
                 LdbcDateCodec.Format.NUMBER_UTC,
                 LdbcDateCodec.Resolution.NOT_APPLICABLE );
@@ -336,29 +350,32 @@ class ImportTest
         File storeDir = temporaryFolder.directory( "store" );
         File csvFilesDir = DriverConfigUtils.getResource(
                 "/validation_sets/data/social_network/num_date/" );
+        File configFile = DriverConfigUtils.neo4jTestConfig( temporaryFolder.directory( "config" ) );
         LdbcCli.importParallelRegular(
                 storeDir,
                 csvFilesDir,
+                configFile,
                 withUnique,
                 withMandatory,
                 LdbcDateCodec.Format.NUMBER_UTC,
                 LdbcDateCodec.Format.NUMBER_ENCODED );
         LdbcCli.inspect(
                 storeDir,
-                DriverConfigUtils.neo4jTestConfig() );
+                configFile );
         LdbcCli.index(
                 storeDir,
-                DriverConfigUtils.neo4jTestConfig(),
+                configFile,
                 null,
                 withUnique,
                 withMandatory,
                 true );
         LdbcCli.inspect(
                 storeDir,
-                DriverConfigUtils.neo4jTestConfig() );
+                configFile );
 
         assertGraphMetadataIsAsExpected(
                 storeDir,
+                configFile,
                 Neo4jSchema.NEO4J_REGULAR,
                 LdbcDateCodec.Format.NUMBER_ENCODED,
                 LdbcDateCodec.Resolution.NOT_APPLICABLE );
@@ -375,9 +392,11 @@ class ImportTest
         File csvFilesDir = DriverConfigUtils.getResource(
                 "/validation_sets/data/merge/social_network/string_date/" );
         LdbcDateCodec.Resolution timestampResolution = Scenario.timestampResolution( Neo4jSchema.NEO4J_DENSE_1 );
+        File configFile = DriverConfigUtils.neo4jTestConfig( temporaryFolder.directory( "config" ) );
         LdbcCli.importParallelImportDense1(
                 storeDir,
                 csvFilesDir,
+                configFile,
                 withUnique,
                 withMandatory,
                 LdbcDateCodec.Format.STRING_ENCODED,
@@ -385,20 +404,21 @@ class ImportTest
                 timestampResolution );
         LdbcCli.inspect(
                 storeDir,
-                DriverConfigUtils.neo4jTestConfig() );
+                configFile );
         LdbcCli.index(
                 storeDir,
-                DriverConfigUtils.neo4jTestConfig(),
+                configFile,
                 null,
                 withUnique,
                 withMandatory,
                 true );
         LdbcCli.inspect(
                 storeDir,
-                DriverConfigUtils.neo4jTestConfig() );
+                configFile );
 
         assertGraphMetadataIsAsExpected(
                 storeDir,
+                configFile,
                 Neo4jSchema.NEO4J_DENSE_1,
                 LdbcDateCodec.Format.NUMBER_UTC,
                 timestampResolution );
@@ -415,9 +435,11 @@ class ImportTest
         File csvFilesDir = DriverConfigUtils.getResource(
                 "/validation_sets/data/merge/social_network/string_date/" );
         LdbcDateCodec.Resolution timestampResolution = Scenario.timestampResolution( Neo4jSchema.NEO4J_DENSE_1 );
+        File configFile = DriverConfigUtils.neo4jTestConfig( temporaryFolder.directory( "config" ) );
         LdbcCli.importParallelImportDense1(
                 storeDir,
                 csvFilesDir,
+                configFile,
                 withUnique,
                 withMandatory,
                 LdbcDateCodec.Format.STRING_ENCODED,
@@ -425,20 +447,21 @@ class ImportTest
                 timestampResolution );
         LdbcCli.inspect(
                 storeDir,
-                DriverConfigUtils.neo4jTestConfig() );
+                configFile );
         LdbcCli.index(
                 storeDir,
-                DriverConfigUtils.neo4jTestConfig(),
+                configFile,
                 null,
                 withUnique,
                 withMandatory,
                 true );
         LdbcCli.inspect(
                 storeDir,
-                DriverConfigUtils.neo4jTestConfig() );
+                configFile );
 
         assertGraphMetadataIsAsExpected(
                 storeDir,
+                configFile,
                 Neo4jSchema.NEO4J_DENSE_1,
                 LdbcDateCodec.Format.NUMBER_ENCODED,
                 timestampResolution );
@@ -455,9 +478,11 @@ class ImportTest
         File csvFilesDir = DriverConfigUtils.getResource(
                 "/validation_sets/data/merge/social_network/num_date/" );
         LdbcDateCodec.Resolution timestampResolution = Scenario.timestampResolution( Neo4jSchema.NEO4J_DENSE_1 );
+        File configFile = DriverConfigUtils.neo4jTestConfig( temporaryFolder.directory( "config" ) );
         LdbcCli.importParallelImportDense1(
                 storeDir,
                 csvFilesDir,
+                configFile,
                 withUnique,
                 withMandatory,
                 LdbcDateCodec.Format.NUMBER_UTC,
@@ -465,20 +490,21 @@ class ImportTest
                 timestampResolution );
         LdbcCli.inspect(
                 storeDir,
-                DriverConfigUtils.neo4jTestConfig() );
+                configFile );
         LdbcCli.index(
                 storeDir,
-                DriverConfigUtils.neo4jTestConfig(),
+                configFile,
                 null,
                 withUnique,
                 withMandatory,
                 true );
         LdbcCli.inspect(
                 storeDir,
-                DriverConfigUtils.neo4jTestConfig() );
+                configFile );
 
         assertGraphMetadataIsAsExpected(
                 storeDir,
+                configFile,
                 Neo4jSchema.NEO4J_DENSE_1,
                 LdbcDateCodec.Format.NUMBER_UTC,
                 timestampResolution );
@@ -495,9 +521,11 @@ class ImportTest
         File csvFilesDir = DriverConfigUtils.getResource(
                 "/validation_sets/data/merge/social_network/num_date/" );
         LdbcDateCodec.Resolution timestampResolution = Scenario.timestampResolution( Neo4jSchema.NEO4J_DENSE_1 );
+        File configFile = DriverConfigUtils.neo4jTestConfig( temporaryFolder.directory( "config" ) );
         LdbcCli.importParallelImportDense1(
                 storeDir,
                 csvFilesDir,
+                configFile,
                 withUnique,
                 withMandatory,
                 LdbcDateCodec.Format.NUMBER_UTC,
@@ -505,20 +533,21 @@ class ImportTest
                 timestampResolution );
         LdbcCli.inspect(
                 storeDir,
-                DriverConfigUtils.neo4jTestConfig() );
+                configFile );
         LdbcCli.index(
                 storeDir,
-                DriverConfigUtils.neo4jTestConfig(),
+                configFile,
                 null,
                 withUnique,
                 withMandatory,
                 true );
         LdbcCli.inspect(
                 storeDir,
-                DriverConfigUtils.neo4jTestConfig() );
+                configFile );
 
         assertGraphMetadataIsAsExpected(
                 storeDir,
+                configFile,
                 Neo4jSchema.NEO4J_DENSE_1,
                 LdbcDateCodec.Format.NUMBER_ENCODED,
                 timestampResolution );
@@ -528,11 +557,12 @@ class ImportTest
 
     private void assertGraphMetadataIsAsExpected(
             File dbDir,
+            File configFile,
             Neo4jSchema neo4jSchema,
             LdbcDateCodec.Format neo4jFormat,
             LdbcDateCodec.Resolution timestampResolution ) throws DbException
     {
-        DatabaseManagementService managementService = Neo4jDb.newDb( dbDir, DriverConfigUtils.neo4jTestConfig() );
+        DatabaseManagementService managementService = Neo4jDb.newDb( dbDir, configFile );
         GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
         GraphMetadataProxy metadata = GraphMetadataProxy.loadFrom( db );
         QueryDateUtil dateUtil = QueryDateUtil.createFor( neo4jFormat, timestampResolution, new LdbcDateCodecUtil() );

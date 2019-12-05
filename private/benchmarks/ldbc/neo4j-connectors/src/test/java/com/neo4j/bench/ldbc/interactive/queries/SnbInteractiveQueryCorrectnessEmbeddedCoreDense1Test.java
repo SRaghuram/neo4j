@@ -172,17 +172,17 @@ public class SnbInteractiveQueryCorrectnessEmbeddedCoreDense1Test
     }
 
     @Override
-    public Neo4jConnectionState openConnection( String path ) throws Exception
+    public Neo4jConnectionState openConnection( File dbDir, File configDir ) throws Exception
     {
-        File dbDir = new File( path );
-        DatabaseManagementService managementService = Neo4jDb.newDb( dbDir, DriverConfigUtils.neo4jTestConfig() );
-        Neo4jConnectionState connection = new Neo4jConnectionState( managementService, managementService.database( DEFAULT_DATABASE_NAME ),
-                null,
-                null,
-                new Log4jLoggingServiceFactory( true ).loggingServiceFor( "TEST" ),
-                SnbInteractiveCypherQueries.none(),
-                LdbcDateCodec.Format.NUMBER_UTC,
-                Scenario.timestampResolution( Neo4jSchema.NEO4J_DENSE_1 )
+        DatabaseManagementService managementService = Neo4jDb.newDb( dbDir, DriverConfigUtils.neo4jTestConfig( configDir ) );
+        Neo4jConnectionState connection = new Neo4jConnectionState( managementService,
+                                                                    managementService.database( DEFAULT_DATABASE_NAME ),
+                                                                    null,
+                                                                    null,
+                                                                    new Log4jLoggingServiceFactory( true ).loggingServiceFor( "TEST" ),
+                                                                    SnbInteractiveCypherQueries.none(),
+                                                                    LdbcDateCodec.Format.NUMBER_UTC,
+                                                                    Scenario.timestampResolution( Neo4jSchema.NEO4J_DENSE_1 )
         );
         replaceMessageIsLocatedInRelationshipsWithTimeStampedVersions( connection );
         decorateWithTimeStampedHasCreatorRelationships( connection );

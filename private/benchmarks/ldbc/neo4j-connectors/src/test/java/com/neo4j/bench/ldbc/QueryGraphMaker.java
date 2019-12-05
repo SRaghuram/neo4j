@@ -53,14 +53,14 @@ public abstract class QueryGraphMaker
 
     public static void createDbFromQueryGraphMaker(
             QueryGraphMaker queryGraphMaker,
-            String dbDirString,
-            Neo4jSchema neo4jSchema ) throws Exception
+            File dbDir,
+            Neo4jSchema neo4jSchema,
+            File configDir ) throws Exception
     {
         System.out.println();
         System.out.println( MapUtils.prettyPrint( queryGraphMaker.params() ) );
         System.out.println( queryGraphMaker.queryString() );
-        File dbDir = new File( dbDirString );
-        DatabaseManagementService managementService = Neo4jDb.newDb( dbDir, DriverConfigUtils.neo4jTestConfig() );
+        DatabaseManagementService managementService = Neo4jDb.newDb( dbDir, DriverConfigUtils.neo4jTestConfig( configDir ) );
         GraphDatabaseService db = managementService.database( DEFAULT_DATABASE_NAME );
         createDbFromCypherQuery(
                 db,

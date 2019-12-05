@@ -114,13 +114,14 @@ abstract class SnbInteractiveExecutionTest
             Scenario scenario ) throws Exception
     {
         File storeDir = temporaryFolder.directory( "store" );
+        File configFile = DriverConfigUtils.neo4jTestConfig( temporaryFolder.directory( "config" ) );
         LdbcSnbImporter.importerFor(
                 scenario.csvSchema(),
                 scenario.neo4jSchema()
         ).load(
                 storeDir,
                 scenario.csvDir(),
-                DriverConfigUtils.neo4jTestConfig(),
+                configFile,
                 scenario.csvDateFormat(),
                 scenario.neo4jDateFormat(),
                 scenario.timestampResolution(),
@@ -171,7 +172,7 @@ abstract class SnbInteractiveExecutionTest
                             scenario.runtime(),
                             scenario.neo4jSchema(),
                             store.topLevelDirectory().toFile(),
-                            DriverConfigUtils.neo4jTestConfig(),
+                            configFile,
                             LdbcSnbInteractiveWorkload.class,
                             databaseAndUrl.url
                     )
@@ -193,7 +194,7 @@ abstract class SnbInteractiveExecutionTest
                     resultDir,
                     scenario.neo4jApi(),
                     ldbcConfigFile,
-                    DriverConfigUtils.neo4jTestConfig(),
+                    configFile,
                     threadCount
             );
 
@@ -247,13 +248,14 @@ abstract class SnbInteractiveExecutionTest
             Scenario scenario ) throws Exception
     {
         File storeDir = temporaryFolder.directory( "store" );
+        File configFile = DriverConfigUtils.neo4jTestConfig( temporaryFolder.directory( "config" ) );
         LdbcSnbImporter.importerFor(
                 scenario.csvSchema(),
                 scenario.neo4jSchema()
         ).load(
                 storeDir,
                 scenario.csvDir(),
-                DriverConfigUtils.neo4jTestConfig(),
+                configFile,
                 scenario.csvDateFormat(),
                 scenario.neo4jDateFormat(),
                 scenario.timestampResolution(),
@@ -307,7 +309,7 @@ abstract class SnbInteractiveExecutionTest
                             scenario.runtime(),
                             scenario.neo4jSchema(),
                             store.topLevelDirectory().toFile(),
-                            DriverConfigUtils.neo4jTestConfig(),
+                            configFile,
                             LdbcSnbInteractiveWorkload.class,
                             databaseAndUrl.url
                     )
@@ -339,7 +341,7 @@ abstract class SnbInteractiveExecutionTest
                     resultDir,
                     scenario.neo4jApi(),
                     ldbcConfigFile,
-                    DriverConfigUtils.neo4jTestConfig(),
+                    configFile,
                     threadCount
             );
 
@@ -394,13 +396,14 @@ abstract class SnbInteractiveExecutionTest
             Scenario scenario ) throws Exception
     {
         File storeDir = temporaryFolder.directory( "store" );
+        File configFile = DriverConfigUtils.neo4jTestConfig( temporaryFolder.directory( "config" ) );
         LdbcSnbImporter.importerFor(
                 scenario.csvSchema(),
                 scenario.neo4jSchema()
         ).load(
                 storeDir,
                 scenario.csvDir(),
-                DriverConfigUtils.neo4jTestConfig(),
+                configFile,
                 scenario.csvDateFormat(),
                 scenario.neo4jDateFormat(),
                 scenario.timestampResolution(),
@@ -449,7 +452,7 @@ abstract class SnbInteractiveExecutionTest
                             scenario.runtime(),
                             scenario.neo4jSchema(),
                             store.topLevelDirectory().toFile(),
-                            DriverConfigUtils.neo4jTestConfig(),
+                            configFile,
                             LdbcSnbInteractiveWorkload.class,
                             databaseAndUrl.url
                     )
@@ -485,7 +488,7 @@ abstract class SnbInteractiveExecutionTest
                     resultDir,
                     scenario.neo4jApi(),
                     ldbcConfigFile,
-                    DriverConfigUtils.neo4jTestConfig(),
+                    configFile,
                     threadCount
             );
 

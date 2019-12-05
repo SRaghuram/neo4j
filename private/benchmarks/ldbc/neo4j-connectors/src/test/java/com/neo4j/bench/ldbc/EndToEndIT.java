@@ -73,7 +73,7 @@ public class EndToEndIT extends BaseEndToEndIT
         // prepare neo4j config file
         Path baseNeo4jConfig = resources.getResourceFile( "/neo4j/neo4j_sf001.conf" );
         Path benchmarkNeo4jConfig = temporaryFolder.createFile( "neo4j_benchmark.config" ).toPath();
-        Neo4jConfigBuilder.empty()
+        Neo4jConfigBuilder.withDefaults()
                           .setDense( true )
                           .writeToFile( benchmarkNeo4jConfig );
 
@@ -89,7 +89,7 @@ public class EndToEndIT extends BaseEndToEndIT
         Path ldbcConfigFile = temporaryFolder.createFile( "ldbc_driver.conf" ).toPath();
         BenchmarkUtil.stringToFile( ldbcConfig().toPropertiesString(), ldbcConfigFile );
 
-        Path dbPath = createLdbcStore( resources );
+        Path dbPath = createLdbcStore( resources, benchmarkNeo4jConfig );
 
         return asList( "./" + scriptName(),
                        "3.5.1",
@@ -206,7 +206,7 @@ public class EndToEndIT extends BaseEndToEndIT
         }
     }
 
-    private Path createLdbcStore( Resources resources )
+    private Path createLdbcStore( Resources resources, Path benchmarkNeo4jConfig ) throws IOException
     {
         Path dbPath = temporaryFolder.directory( "db" ).toPath();
         Path csvData = resources.getResourceFile( "/validation_sets/data/social_network/num_date" );
@@ -214,6 +214,7 @@ public class EndToEndIT extends BaseEndToEndIT
         boolean createMandatoryConstraints = true;
         LdbcCli.importParallelRegular( dbPath.toFile(),
                                        csvData.toFile(),
+                                       benchmarkNeo4jConfig.toFile(),
                                        createUniqueConstraints,
                                        createMandatoryConstraints,
                                        LdbcDateCodec.Format.NUMBER_UTC,
