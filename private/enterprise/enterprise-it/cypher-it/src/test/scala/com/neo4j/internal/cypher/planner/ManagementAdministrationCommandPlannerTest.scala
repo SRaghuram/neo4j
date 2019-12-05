@@ -178,7 +178,7 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
     // Then
     plan should include(
       managementPlan("ShowUsers",
-        assertDbmsAdminPlan("SHOW USERS")
+        assertDbmsAdminPlan("SHOW USER")
       ).toString
     )
   }

@@ -40,6 +40,7 @@ class AdministrationCommandPlannerTestBase extends AdministrationCommandAcceptan
   def databasePrivilegePlan(name: String, action: String, roleName: String, source: InternalPlanDescription): PlanDescriptionImpl = planDescription(name, Seq(DatabaseAction(action), Database("*"), roleArg(roleName)), SingleChild(source))
 
   def rolePrivilegePlan(name: String, action: String, roleName: String, source: InternalPlanDescription): PlanDescriptionImpl = planDescription(name, Seq(DbmsAction(action), roleArg(roleName)), SingleChild(source))
+  def userPrivilegePlan(name: String, action: String, username: String, source: InternalPlanDescription): PlanDescriptionImpl = planDescription(name, Seq(DbmsAction(action), userArg(username)), SingleChild(source))
 
   def graphPrivilegePlan(name: String, database: String, qualifier: Qualifier, roleName: String, source: InternalPlanDescription): PlanDescriptionImpl = planDescription(name, Seq(databaseArg(database), qualifier, roleArg(roleName)), SingleChild(source))
   def graphPrivilegePlan(name: String, qualifier: Qualifier, roleName: String, source: InternalPlanDescription): PlanDescriptionImpl = planDescription(name, Seq(Database("*"), qualifier, roleArg(roleName)), SingleChild(source))

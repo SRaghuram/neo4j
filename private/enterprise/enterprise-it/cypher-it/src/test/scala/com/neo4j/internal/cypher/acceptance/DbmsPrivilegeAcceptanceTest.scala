@@ -243,6 +243,27 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
     }
   }
 
+  test("Should get error when revoking a subset of user management privilege") {
+    // Given
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("GRANT USER MANAGEMENT ON DBMS TO custom")
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(adminAction("user_management").role("custom").map))
+
+    // Now try to revoke each sub-privilege in turn
+    Seq(
+      "CREATE USER",
+      "DROP USER",
+      "SHOW USER",
+      "ALTER USER"
+    ).foreach { privilege =>
+      // When && Then
+      the[IllegalStateException] thrownBy {
+        execute(s"REVOKE $privilege ON DBMS FROM custom")
+      } should have message s"Unsupported to revoke a sub-privilege '$privilege' from a compound privilege 'USER MANAGEMENT', consider using DENY instead."
+    }
+  }
+
   // Enforcement tests
 
   // CREATE ROLE
@@ -589,11 +610,11 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
     execute("GRANT ROLE custom TO foo")
 
     // WHEN
-    execute("CREATE USER user SET PASSWORD 'abc'")
+    execute("CREATE USER user SET PASSWORD 'abc' CHANGE REQUIRED")
     execute("GRANT ALTER USER ON DBMS TO custom")
 
     // THEN
-  executeOnSystem("foo", "bar", "ALTER USER user SET PASSWORD CHANGE NOT REQUIRED")
+    executeOnSystem("foo", "bar", "ALTER USER user SET PASSWORD CHANGE NOT REQUIRED")
     execute("SHOW USERS").toSet should be(Set(
       neo4jUser,
       user("foo", passwordChangeRequired = false, roles = Seq("custom")),
@@ -683,6 +704,24 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
     executeOnSystem("foo", "bar", "ALTER USER user SET PASSWORD CHANGE NOT REQUIRED")
     executeOnSystem("foo", "bar", "SHOW USERS")
     executeOnSystem("foo", "bar", "DROP USER user")
+
+    // WHEN
+    execute("REVOKE USER MANAGEMENT ON DBMS FROM custom")
+    execute("CREATE USER alice SET PASSWORD 'bar' CHANGE NOT REQUIRED")
+
+    // THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnSystem("foo", "bar", "CREATE USER user SET PASSWORD 'abc'")
+    } should have message "Permission denied."
+    the[AuthorizationViolationException] thrownBy {
+      executeOnSystem("foo", "bar", "ALTER USER alice SET PASSWORD CHANGE NOT REQUIRED")
+    } should have message "Permission denied."
+    the[AuthorizationViolationException] thrownBy {
+      executeOnSystem("foo", "bar", "SHOW USERS")
+    } should have message "Permission denied."
+    the[AuthorizationViolationException] thrownBy {
+      executeOnSystem("foo", "bar", "DROP USER alice")
+    } should have message "Permission denied."
   }
 
   test("should deny user management when denied user management privilege") {

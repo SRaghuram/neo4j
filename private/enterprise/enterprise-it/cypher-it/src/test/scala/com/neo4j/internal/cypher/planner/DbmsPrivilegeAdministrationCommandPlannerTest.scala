@@ -355,4 +355,292 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
       ).toString
     )
   }
+
+  // User privileges
+
+  test("Grant show user") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute("EXPLAIN GRANT SHOW USER ON DBMS TO reader, editor").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        userPrivilegePlan("GrantDbmsAction", "SHOW USER", "editor",
+          userPrivilegePlan("GrantDbmsAction", "SHOW USER", "reader",
+            assertDbmsAdminPlan("GRANT PRIVILEGE")
+          )
+        )
+      ).toString
+    )
+  }
+
+  test("Deny show user") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute("EXPLAIN DENY SHOW USER ON DBMS TO reader").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        userPrivilegePlan("DenyDbmsAction", "SHOW USER", "reader",
+          assertDbmsAdminPlan("DENY PRIVILEGE")
+        )
+      ).toString
+    )
+  }
+
+  test("Revoke show user") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute("EXPLAIN REVOKE SHOW USER ON DBMS FROM reader").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        userPrivilegePlan("RevokeDbmsAction(DENIED)", "SHOW USER", "reader",
+          userPrivilegePlan("RevokeDbmsAction(GRANTED)", "SHOW USER", "reader",
+            helperPlan("AssertValidRevoke", Seq(DbmsAction("SHOW USER"), roleArg("reader")),
+              assertDbmsAdminPlan("REVOKE PRIVILEGE")
+            )
+          )
+        )
+      ).toString
+    )
+  }
+
+  test("Grant create user") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute("EXPLAIN GRANT CREATE USER ON DBMS TO reader, editor").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        userPrivilegePlan("GrantDbmsAction", "CREATE USER", "editor",
+          userPrivilegePlan("GrantDbmsAction", "CREATE USER", "reader",
+            assertDbmsAdminPlan("GRANT PRIVILEGE")
+          )
+        )
+      ).toString
+    )
+  }
+
+  test("Deny create user") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute("EXPLAIN DENY CREATE USER ON DBMS TO reader").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        userPrivilegePlan("DenyDbmsAction", "CREATE USER", "reader",
+          assertDbmsAdminPlan("DENY PRIVILEGE")
+        )
+      ).toString
+    )
+  }
+
+  test("Revoke create user") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute("EXPLAIN REVOKE CREATE USER ON DBMS FROM reader").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        userPrivilegePlan("RevokeDbmsAction(DENIED)", "CREATE USER", "reader",
+          userPrivilegePlan("RevokeDbmsAction(GRANTED)", "CREATE USER", "reader",
+            helperPlan("AssertValidRevoke", Seq(DbmsAction("CREATE USER"), roleArg("reader")),
+              assertDbmsAdminPlan("REVOKE PRIVILEGE")
+            )
+          )
+        )
+      ).toString
+    )
+  }
+
+  test("Grant drop user") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute("EXPLAIN GRANT DROP USER ON DBMS TO reader, editor").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        userPrivilegePlan("GrantDbmsAction", "DROP USER", "editor",
+          userPrivilegePlan("GrantDbmsAction", "DROP USER", "reader",
+            assertDbmsAdminPlan("GRANT PRIVILEGE")
+          )
+        )
+      ).toString
+    )
+  }
+
+  test("Deny drop user") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute("EXPLAIN DENY DROP USER ON DBMS TO reader").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        userPrivilegePlan("DenyDbmsAction", "DROP USER", "reader",
+          assertDbmsAdminPlan("DENY PRIVILEGE")
+        )
+      ).toString
+    )
+  }
+
+  test("Revoke drop user") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute("EXPLAIN REVOKE DROP USER ON DBMS FROM reader").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        userPrivilegePlan("RevokeDbmsAction(DENIED)", "DROP USER", "reader",
+          userPrivilegePlan("RevokeDbmsAction(GRANTED)", "DROP USER", "reader",
+            helperPlan("AssertValidRevoke", Seq(DbmsAction("DROP USER"), roleArg("reader")),
+              assertDbmsAdminPlan("REVOKE PRIVILEGE")
+            )
+          )
+        )
+      ).toString
+    )
+  }
+
+  test("Grant alter user") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute("EXPLAIN GRANT ALTER USER ON DBMS TO reader, editor").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        userPrivilegePlan("GrantDbmsAction", "ALTER USER", "editor",
+          userPrivilegePlan("GrantDbmsAction", "ALTER USER", "reader",
+            assertDbmsAdminPlan("GRANT PRIVILEGE")
+          )
+        )
+      ).toString
+    )
+  }
+
+  test("Deny alter user") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute("EXPLAIN DENY ALTER USER ON DBMS TO reader").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        userPrivilegePlan("DenyDbmsAction", "ALTER USER", "reader",
+          assertDbmsAdminPlan("DENY PRIVILEGE")
+        )
+      ).toString
+    )
+  }
+
+  test("Revoke alter user") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute("EXPLAIN REVOKE ALTER USER ON DBMS FROM reader").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        userPrivilegePlan("RevokeDbmsAction(DENIED)", "ALTER USER", "reader",
+          userPrivilegePlan("RevokeDbmsAction(GRANTED)", "ALTER USER", "reader",
+            helperPlan("AssertValidRevoke", Seq(DbmsAction("ALTER USER"), roleArg("reader")),
+              assertDbmsAdminPlan("REVOKE PRIVILEGE")
+            )
+          )
+        )
+      ).toString
+    )
+  }
+
+  test("Grant user management") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute("EXPLAIN GRANT USER MANAGEMENT ON DBMS TO reader, editor").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        userPrivilegePlan("GrantDbmsAction", "USER MANAGEMENT", "editor",
+          userPrivilegePlan("GrantDbmsAction", "USER MANAGEMENT", "reader",
+            assertDbmsAdminPlan("GRANT PRIVILEGE")
+          )
+        )
+      ).toString
+    )
+  }
+
+  test("Deny user management") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute("EXPLAIN DENY USER MANAGEMENT ON DBMS TO reader").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        userPrivilegePlan("DenyDbmsAction", "USER MANAGEMENT", "reader",
+          assertDbmsAdminPlan("DENY PRIVILEGE")
+        )
+      ).toString
+    )
+  }
+
+  test("Revoke user management") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute("EXPLAIN REVOKE USER MANAGEMENT ON DBMS FROM reader").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        userPrivilegePlan("RevokeDbmsAction(DENIED)", "SHOW USER", "reader",
+          userPrivilegePlan("RevokeDbmsAction(GRANTED)", "SHOW USER", "reader",
+            userPrivilegePlan("RevokeDbmsAction(DENIED)", "ALTER USER", "reader",
+              userPrivilegePlan("RevokeDbmsAction(GRANTED)", "ALTER USER", "reader",
+                userPrivilegePlan("RevokeDbmsAction(DENIED)", "DROP USER", "reader",
+                  userPrivilegePlan("RevokeDbmsAction(GRANTED)", "DROP USER", "reader",
+                    userPrivilegePlan("RevokeDbmsAction(DENIED)", "CREATE USER", "reader",
+                      userPrivilegePlan("RevokeDbmsAction(GRANTED)", "CREATE USER", "reader",
+                        userPrivilegePlan("RevokeDbmsAction(DENIED)", "USER MANAGEMENT", "reader",
+                          userPrivilegePlan("RevokeDbmsAction(GRANTED)", "USER MANAGEMENT", "reader",
+                            helperPlan("AssertValidRevoke", Seq(DbmsAction("USER MANAGEMENT"), roleArg("reader")),
+                              assertDbmsAdminPlan("REVOKE PRIVILEGE")
+                            )
+                          )
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+      ).toString
+    )
+  }
 }
