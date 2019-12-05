@@ -7,8 +7,8 @@
 
 set -eu
 
-old_neo4j_version="35"
-new_neo4j_version="40"
+old_neo4j_version="40"
+new_neo4j_version="41"
 set -e
 set -u
 
@@ -55,8 +55,8 @@ for i in "${dbs[@]}"; do
 
     echo "Temporary old db path : ${temp_old_db_path}"
 
-	mkdir -p "${temp_old_db_path}"/data/databases/neo4j
-	mv "${old_db_path}"/* "${temp_old_db_path}/data/databases/neo4j"
+	mkdir -p "${temp_old_db_path}"
+	mv "${old_db_path}"/* "${temp_old_db_path}"
 
 	temp_new_db_path="$working_dir/"$(basename "$(mktemp -d -u)")
 
