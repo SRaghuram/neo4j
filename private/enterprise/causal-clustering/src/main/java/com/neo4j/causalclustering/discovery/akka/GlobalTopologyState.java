@@ -167,20 +167,38 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
 
     private static String printLeaderInfoMap( Map<DatabaseId,LeaderInfo> leaderInfoMap, Map<DatabaseId,LeaderInfo> oldDbLeaderMap )
     {
-        return leaderInfoMap.entrySet().stream().map( entry ->
+        var allDatabaseIds = new HashSet<>( leaderInfoMap.keySet() );
+        allDatabaseIds.addAll( oldDbLeaderMap.keySet() );
+
+        if ( allDatabaseIds.isEmpty() )
         {
-            if ( !oldDbLeaderMap.containsKey( entry.getKey() ) )
+            return "No leader information was detected for any database";
+        }
+        return allDatabaseIds.stream().map( dbId ->
+        {
+            var oldLeader = oldDbLeaderMap.get( dbId );
+            var newLeader = leaderInfoMap.get( dbId );
+            if ( oldLeader == null )
             {
-                return format( "Discovered database %s with leader %s in term %d", entry.getKey(), entry.getValue().memberId(), entry.getValue().term() );
-            }
-            else if ( entry.getValue().memberId().equals( oldDbLeaderMap.get( entry.getKey() ).memberId() ) )
-            {
-                return format( "Database %s has leader %s in term %d", entry.getKey(), entry.getValue().memberId(), entry.getValue().term() );
+                if ( newLeader == null )
+                {
+                    return format( "No leader for database %s", dbId );
+                }
+                else
+                {
+                    return format( "Discovered leader %s in term %d for database %s", newLeader.memberId(), newLeader.term(), dbId );
+                }
             }
             else
             {
-                return format( "Database %s switch leader from %s to %s in term %d", entry.getKey(), oldDbLeaderMap.get( entry.getKey() ).memberId(),
-                        entry.getValue().memberId(), entry.getValue().term() );
+                if ( newLeader == null )
+                {
+                    return format( "Database %s lost its leader. Previous leader was %s", dbId, oldLeader.memberId() );
+                }
+                else
+                {
+                    return format( "Database %s switch leader from %s to %s in term %d", dbId, oldLeader.memberId(), newLeader.memberId(), newLeader.term() );
+                }
             }
         } ).collect( Collectors.joining( newPaddedLine() ) );
     }
