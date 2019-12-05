@@ -5,29 +5,40 @@
  */
 package com.neo4j.internal.cypher.acceptance
 
+import java.io.File
 import java.lang.Boolean.TRUE
 import java.util
 import java.util.Collections
 
 import com.neo4j.cypher.EnterpriseGraphDatabaseTestSupport
+import com.neo4j.dbms.EnterpriseSystemGraphInitializer
 import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager
+import com.neo4j.server.security.enterprise.auth.InMemoryRoleRepository
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
-import org.neo4j.configuration.GraphDatabaseSettings
+import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphInitializer
+import org.neo4j.configuration.{Config, GraphDatabaseSettings}
+import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
+import org.neo4j.cypher.internal.DatabaseStatus
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.cypher.internal.plandescription.PlanDescriptionImpl
+import org.neo4j.cypher.internal.security.SecureHasher
 import org.neo4j.cypher.{ExecutionEngineFunSuite, ExecutionEngineHelper}
+import org.neo4j.dbms.database.{DatabaseContext, DatabaseManager}
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.graphdb.{ExecutionPlanDescription, Result}
 import org.neo4j.internal.kernel.api.security.AuthenticationResult
 import org.neo4j.kernel.api.KernelTransaction.Type
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
-import org.neo4j.server.security.auth.SecurityTestUtils
+import org.neo4j.logging.Log
+import org.neo4j.server.security.auth.{InMemoryUserRepository, SecurityTestUtils}
 
 import scala.collection.Map
 
 abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFunSuite with EnterpriseGraphDatabaseTestSupport {
   val neo4jUser: Map[String, Any] = user("neo4j", Seq(PredefinedRoles.ADMIN))
   val neo4jUserActive: Map[String, Any] = user("neo4j", Seq(PredefinedRoles.ADMIN), passwordChangeRequired = false)
+  val onlineStatus: String = DatabaseStatus.Online.stringValue()
+  val offlineStatus: String = DatabaseStatus.Offline.stringValue()
 
   val defaultRoles: Set[Map[String, Any]] = Set(
     role(PredefinedRoles.ADMIN).builtIn().map,
@@ -117,6 +128,15 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
   def user(username: String, roles: Seq[String] = Seq.empty, suspended: Boolean = false, passwordChangeRequired: Boolean = true): Map[String, Any] = {
     Map("user" -> username, "roles" -> roles, "suspended" -> suspended, "passwordChangeRequired" -> passwordChangeRequired)
   }
+
+  def db(name: String, status: String = onlineStatus, default: Boolean = false): Map[String, Any] =
+    Map("name" -> name,
+      "address" -> "localhost:7687",
+      "role" -> "standalone",
+      "requestedStatus" -> status,
+      "currentStatus" -> status,
+      "error" -> "",
+      "default" -> default)
 
   def setupUserWithCustomRole(username: String = "joe", password: String = "soap", rolename: String = "custom", access: Boolean = true): Unit = {
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -256,4 +276,30 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
     "just issue a `ALTER CURRENT USER SET PASSWORD FROM 'current password' TO 'new password'` " +
     "statement against the system database in the current " +
     "session, and then restart your driver with the new password configured."
+
+  // Setup methods/variables for starting with different settings
+  val defaultConfig: Config = Config.defaults( GraphDatabaseSettings.auth_enabled, TRUE )
+
+  def setup(config: Config = defaultConfig): Unit = {
+    managementService = graphDatabaseFactory(new File("test")).impermanent().setConfig(config).setInternalLogProvider(logProvider).build()
+    graphOps = managementService.database(SYSTEM_DATABASE_NAME)
+    graph = new GraphDatabaseCypherService(graphOps)
+
+    initSystemGraph(config)
+  }
+
+  def initSystemGraph(config: Config): Unit = {
+    val databaseManager = graph.getDependencyResolver.resolveDependency(classOf[DatabaseManager[DatabaseContext]])
+    val systemGraphInitializer = new EnterpriseSystemGraphInitializer(databaseManager, config)
+    val securityGraphInitializer = new EnterpriseSecurityGraphInitializer(databaseManager,
+      systemGraphInitializer,
+      mock[Log],
+      new InMemoryUserRepository,
+      new InMemoryRoleRepository,
+      new InMemoryUserRepository,
+      new InMemoryUserRepository,
+      new SecureHasher)
+    securityGraphInitializer.initializeSecurityGraph()
+    selectDatabase(SYSTEM_DATABASE_NAME)
+  }
 }

@@ -9,8 +9,7 @@ import org.neo4j.configuration.GraphDatabaseSettings.{DEFAULT_DATABASE_NAME, SYS
 import org.neo4j.cypher.internal.DatabaseStatus
 import org.neo4j.graphdb.QueryExecutionException
 import org.neo4j.graphdb.security.AuthorizationViolationException
-
-import scala.collection.Map
+import org.neo4j.graphdb.config.Setting
 
 class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
 
@@ -18,7 +17,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     //TODO: ADD ANY NEW UPDATING COMMANDS HERE
 
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
+    setup()
     execute("CREATE ROLE custom")
 
     // Notice: They are executed in succession so they have to make sense in that order
@@ -51,7 +50,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
   test("should list start and stop database privileges") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
+    setup()
     execute("CREATE DATABASE foo")
     execute("CREATE DATABASE bar")
     execute("CREATE ROLE role")
@@ -108,6 +107,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
   test("should list access database privilege") {
     // GIVEN
+    setup()
     setupUserWithCustomRole(access = false)
 
     // WHEN
@@ -156,7 +156,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
   // START DATABASE
 
   test("admin should be allowed to start database") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
+    setup()
     execute("CREATE DATABASE foo")
     execute("STOP DATABASE foo")
 
@@ -175,7 +175,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
   }
 
   test("should fail to start database without privilege") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
+    setup()
     execute("CREATE DATABASE foo")
     execute("CREATE USER alice SET PASSWORD 'abc' CHANGE NOT REQUIRED")
     execute("CREATE ROLE role")
@@ -189,7 +189,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
   }
 
   test("should start database with privilege") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
+    setup()
     execute("CREATE DATABASE foo")
     execute("CREATE DATABASE bar")
     execute("STOP DATABASE foo")
@@ -224,7 +224,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
   }
 
   test("should only start named database with privilege") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
+    setup()
     execute("CREATE DATABASE foo")
     execute("CREATE DATABASE bar")
     execute("STOP DATABASE foo")
@@ -262,7 +262,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
   }
 
   test("start database should not imply stop privilege") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
+    setup()
     execute("CREATE DATABASE foo")
 
     execute("CREATE USER alice SET PASSWORD 'abc' CHANGE NOT REQUIRED")
@@ -285,7 +285,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
   }
 
   test("should only start database if not denied") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
+    setup()
     execute("CREATE DATABASE foo")
     execute("CREATE DATABASE bar")
     execute("STOP DATABASE foo")
@@ -324,7 +324,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
   // STOP DATABASE
 
   test("admin should be allowed to stop database") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
+    setup()
     execute("CREATE DATABASE foo")
 
     execute("CREATE USER alice SET PASSWORD 'abc' CHANGE NOT REQUIRED")
@@ -342,7 +342,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
   }
 
   test("stop database should not imply start privilege") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
+    setup()
     execute("CREATE DATABASE foo")
     execute("STOP DATABASE foo")
 
@@ -366,7 +366,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
   }
 
   test("should fail to stop database without privilege") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
+    setup()
     execute("CREATE DATABASE foo")
     execute("CREATE USER alice SET PASSWORD 'abc' CHANGE NOT REQUIRED")
     execute("CREATE ROLE role")
@@ -380,7 +380,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
   }
 
   test("should stop database with privilege") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
+    setup()
     execute("CREATE DATABASE foo")
     execute("CREATE DATABASE bar")
 
@@ -413,7 +413,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
   }
 
   test("should only stop named database with privilege") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
+    setup()
     execute("CREATE DATABASE foo")
     execute("CREATE DATABASE bar")
 
@@ -449,7 +449,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
   }
 
   test("should only stop database if not denied") {
-    selectDatabase(SYSTEM_DATABASE_NAME)
+    setup()
     execute("CREATE DATABASE foo")
     execute("CREATE DATABASE bar")
 
@@ -487,6 +487,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
   test("should be able to access database with grant privilege") {
     // GIVEN
+    setup()
     setupUserWithCustomRole(access = false)
     selectDatabase(DEFAULT_DATABASE_NAME)
     execute("CREATE ()")
@@ -501,6 +502,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
   test("should not be able to access database with deny privilege") {
     // GIVEN
+    setup()
     setupUserWithCustomRole(access = false)
 
     // WHEN
@@ -514,6 +516,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
   test("should not be able to access database without privilege") {
     // GIVEN
+    setup()
     setupUserWithCustomRole(access = false)
 
     // THEN
@@ -531,7 +534,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     case (partialName, testMethod) =>
       test(s"Test role copied from admin $partialName") {
         // WHEN
-        selectDatabase(SYSTEM_DATABASE_NAME)
+        setup()
         execute("CREATE ROLE custom AS COPY OF admin")
         execute("CREATE USER Alice SET PASSWORD 'oldSecret' CHANGE NOT REQUIRED")
         execute("GRANT ROLE custom TO Alice")
@@ -542,7 +545,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
       test(s"Test admin $partialName") {
         // WHEN
-        selectDatabase(SYSTEM_DATABASE_NAME)
+        setup()
         execute("CREATE USER Alice SET PASSWORD 'oldSecret' CHANGE NOT REQUIRED")
         execute("GRANT ROLE admin TO Alice")
 
@@ -674,15 +677,9 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     executeOnSystem("Alice", "secret", "DROP DATABASE bar")
   }
 
-  private val onlineStatus = DatabaseStatus.Online.stringValue()
-  private val offlineStatus = DatabaseStatus.Offline.stringValue()
+  // Disable normal database creation because we need different settings on each test
+  override protected def initTest() {}
 
-  private def db(name: String, status: String = onlineStatus, default: Boolean = false) =
-    Map("name" -> name,
-      "address" -> "localhost:7687",
-      "role" -> "standalone",
-      "requestedStatus" -> status,
-      "currentStatus" -> status,
-      "error" -> "",
-      "default" -> default)
+  // Use the default value instead of the new value in AdministrationCommandAcceptanceTestBase
+  override def databaseConfig(): Map[Setting[_], Object] = Map()
 }

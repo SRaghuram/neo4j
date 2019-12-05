@@ -7,6 +7,7 @@ package com.neo4j.internal.cypher.acceptance
 
 import org.neo4j.configuration.GraphDatabaseSettings.{DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME}
 import org.neo4j.graphdb.QueryExecutionException
+import org.neo4j.graphdb.config.Setting
 import org.neo4j.graphdb.security.AuthorizationViolationException
 import org.neo4j.internal.kernel.api.security.PrivilegeAction
 
@@ -16,7 +17,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     //TODO: ADD ANY NEW UPDATING COMMANDS HERE
 
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
+    setup()
     execute("CREATE ROLE custom")
     execute("CREATE DATABASE foo")
 
@@ -91,7 +92,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
   test("should list different index management privileges") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
+    setup()
     execute("CREATE DATABASE foo")
     execute("CREATE DATABASE bar")
     execute("CREATE ROLE role")
@@ -165,7 +166,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
   test("should list different constraint management privileges") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
+    setup()
     execute("CREATE DATABASE foo")
     execute("CREATE DATABASE bar")
     execute("CREATE ROLE role")
@@ -239,7 +240,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
   test("should list different name management privileges") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
+    setup()
     execute("CREATE DATABASE foo")
     execute("CREATE DATABASE bar")
     execute("CREATE ROLE role")
@@ -318,8 +319,8 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
   }
 
   test("Should get correct privileges for combinations of schema and token write") {
+    setup()
     setupUserWithCustomRole()
-    selectDatabase(SYSTEM_DATABASE_NAME)
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
@@ -352,6 +353,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
   test("Should get correct privileges for all database privileges") {
     // Given
+    setup()
     val dbx: Set[PrivilegeMapBuilder] = Set(access(), startDatabase(), stopDatabase())
     val schema = Set(createIndex(), dropIndex(), createConstraint(), dropConstraint())
     val token = Set(createNodeLabel(), createRelationshipType(), createPropertyKey())
@@ -392,8 +394,8 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
   }
 
   test("Should revoke subset of token and index management with superset revokes") {
+    setup()
     setupUserWithCustomRole()
-    selectDatabase(SYSTEM_DATABASE_NAME)
 
     // WHEN
     execute("GRANT CREATE NEW RELATIONSHIP TYPE ON DATABASE * TO custom")
@@ -418,7 +420,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
   test("Should revoke both grant, deny, create and drop in one command (index management)") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
+    setup()
     execute("CREATE ROLE custom")
 
     // WHEN
@@ -445,7 +447,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
   test("Should revoke both grant, deny, create and drop in one command (constraint management)") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
+    setup()
     execute("CREATE ROLE custom")
 
     // WHEN
@@ -472,7 +474,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
   test("Should revoke both grant and deny for all create tokens in one command (name management)") {
     // GIVEN
-    selectDatabase(SYSTEM_DATABASE_NAME)
+    setup()
     execute("CREATE ROLE custom")
 
     // WHEN
@@ -503,7 +505,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
   test("Should revoke compound TOKEN privileges from built-in roles") {
     // Given
-    selectDatabase(SYSTEM_DATABASE_NAME)
+    setup()
     execute("CREATE ROLE custom AS COPY OF admin")
     val expected = defaultRolePrivilegesFor("admin", "custom")
 
@@ -548,7 +550,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
   test("Should get sub-privileges when revoking compound and re-granting token privilege") {
     // Given
-    selectDatabase(SYSTEM_DATABASE_NAME)
+    setup()
     execute("CREATE ROLE custom AS COPY OF publisher")
     execute("REVOKE READ {*} ON GRAPH * FROM custom")
     execute("REVOKE TRAVERSE ON GRAPH * FROM custom")
@@ -577,7 +579,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
   test("Should revoke compound ALL DATABASE privileges from built-in roles") {
     // Given
-    selectDatabase(SYSTEM_DATABASE_NAME)
+    setup()
     execute("CREATE ROLE custom AS COPY OF admin")
     val expected = defaultRolePrivilegesFor("admin", "custom")
 
@@ -638,7 +640,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
   test("Should get error when revoking a subset of a compound admin privilege") {
     // Given
-    selectDatabase(SYSTEM_DATABASE_NAME)
+    setup()
     execute("CREATE ROLE custom AS COPY OF admin")
     execute("REVOKE READ {*} ON GRAPH * FROM custom")
     execute("REVOKE TRAVERSE ON GRAPH * FROM custom")
@@ -668,7 +670,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
   test("Should get error when revoking a subset of a compound token privilege") {
     // Given
-    selectDatabase(SYSTEM_DATABASE_NAME)
+    setup()
     execute("CREATE ROLE custom AS COPY OF publisher")
     execute("REVOKE READ {*} ON GRAPH * FROM custom")
     execute("REVOKE TRAVERSE ON GRAPH * FROM custom")
@@ -691,7 +693,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
   test("Should get error when revoking a subset of a compound schema privilege") {
     // Given
-    selectDatabase(SYSTEM_DATABASE_NAME)
+    setup()
     execute("CREATE ROLE custom AS COPY OF admin")
     execute("REVOKE READ {*} ON GRAPH * FROM custom")
     execute("REVOKE TRAVERSE ON GRAPH * FROM custom")
@@ -720,8 +722,8 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
   // Index Management
   test("Should not allow index creation on non-existing tokens for normal user without token create privilege") {
+    setup()
     setupUserWithCustomRole()
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT CREATE INDEX ON DATABASE * TO custom")
 
     // WHEN & THEN
@@ -734,8 +736,8 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
   }
 
   test("Should allow index creation on already existing tokens for normal user without token create privilege") {
+    setup()
     setupUserWithCustomRole()
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT CREATE INDEX ON DATABASE * TO custom")
     selectDatabase(DEFAULT_DATABASE_NAME)
     execute("CREATE (:User {name: 'Me'})")
@@ -748,8 +750,8 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
   }
 
   test("Should not allow index creation for normal user without index create privilege") {
+    setup()
     setupUserWithCustomRole()
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT NAME MANAGEMENT ON DATABASE * TO custom")
 
     // WHEN & THEN
@@ -760,8 +762,8 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
   test("Should not allow index create for normal user with only index drop privilege") {
     // Given
+    setup()
     setupUserWithCustomRole()
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT NAME MANAGEMENT ON DATABASE * TO custom")
     execute("GRANT DROP INDEX ON DATABASE * TO custom")
 
@@ -773,8 +775,8 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
   test("Should not allow index drop for normal user with only index create privilege") {
     // Given
+    setup()
     setupUserWithCustomRole()
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT NAME MANAGEMENT ON DATABASE * TO custom")
     execute("GRANT INDEX MANAGEMENT ON DATABASE * TO custom")
     executeOnDefault("joe", "soap", "CREATE INDEX my_index FOR (u:User) ON (u.name)") should be(0)
@@ -790,8 +792,8 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
   }
 
   test("Should allow index creation for normal user with index create privilege") {
+    setup()
     setupUserWithCustomRole()
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT NAME MANAGEMENT ON DATABASE * TO custom")
     execute("GRANT CREATE INDEX ON DATABASE * TO custom")
 
@@ -856,8 +858,8 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
   }
 
   test("Should allow index creation for normal user with all database privileges") {
+    setup()
     setupUserWithCustomRole()
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE DATABASE foo")
     execute("GRANT ALL PRIVILEGES ON DATABASE foo TO custom")
 
@@ -866,8 +868,8 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
   }
 
   test("Should not allow index creation for normal user with all database privileges and explicit deny") {
+    setup()
     setupUserWithCustomRole()
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE DATABASE foo")
     execute("GRANT ALL PRIVILEGES ON DATABASE * TO custom")
     execute("DENY CREATE INDEX ON DATABASE foo TO custom")
@@ -880,8 +882,8 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
   // Constraint Management
   test("Should not allow constraint creation on non-existing tokens for normal user without token create privilege") {
+    setup()
     setupUserWithCustomRole()
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT CREATE CONSTRAINT ON DATABASE * TO custom")
 
     // WHEN & THEN
@@ -894,8 +896,8 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
   }
 
   test("Should allow constraint creation on already existing tokens for normal user without token create privilege") {
+    setup()
     setupUserWithCustomRole()
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT CREATE CONSTRAINT ON DATABASE * TO custom")
     selectDatabase(DEFAULT_DATABASE_NAME)
     execute("CREATE (:User {name: 'Me'})")
@@ -908,8 +910,8 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
   }
 
   test("Should not allow constraint creation for normal user without constraint create privilege") {
+    setup()
     setupUserWithCustomRole()
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT NAME MANAGEMENT ON DATABASE * TO custom")
 
     // WHEN & THEN
@@ -920,8 +922,8 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
   test("Should not allow constraint create for normal user with only constraint drop privilege") {
     // Given
+    setup()
     setupUserWithCustomRole()
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT NAME MANAGEMENT ON DATABASE * TO custom")
     execute("GRANT DROP CONSTRAINT ON DATABASE * TO custom")
 
@@ -933,8 +935,8 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
   test("Should not allow constraint drop for normal user with only constraint create privilege") {
     // Given
+    setup()
     setupUserWithCustomRole()
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT NAME MANAGEMENT ON DATABASE * TO custom")
     execute("GRANT CONSTRAINT MANAGEMENT ON DATABASE * TO custom")
     executeOnDefault("joe", "soap", "CREATE CONSTRAINT my_constraint ON (n:User) ASSERT exists(n.name)") should be(0)
@@ -950,8 +952,8 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
   }
 
   test("Should allow constraint creation for normal user with constraint create privilege") {
+    setup()
     setupUserWithCustomRole()
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT NAME MANAGEMENT ON DATABASE * TO custom")
     execute("GRANT CREATE CONSTRAINT ON DATABASE * TO custom")
 
@@ -1016,8 +1018,8 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
   }
 
   test("Should allow constraint creation for normal user with all database privileges") {
+    setup()
     setupUserWithCustomRole()
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE DATABASE foo")
     execute("GRANT ALL PRIVILEGES ON DATABASE foo TO custom")
 
@@ -1026,8 +1028,8 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
   }
 
   test("Should not allow constraint creation for normal user with all database privileges and explicit deny") {
+    setup()
     setupUserWithCustomRole()
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE DATABASE foo")
     execute("GRANT ALL PRIVILEGES ON DATABASE * TO custom")
     execute("DENY CREATE CONSTRAINT ON DATABASE foo TO custom")
@@ -1040,8 +1042,8 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
   // Name Management
   test("Should allow label creation for normal user with label create privilege") {
+    setup()
     setupUserWithCustomRole()
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT CREATE NEW LABEL ON DATABASE * TO custom")
 
     // WHEN & THEN
@@ -1049,8 +1051,8 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
   }
 
   test("Should not allow label creation for normal user with explicit deny") {
+    setup()
     setupUserWithCustomRole()
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT WRITE ON GRAPH * TO custom")
     execute("GRANT NAME MANAGEMENT ON DATABASE * TO custom")
     execute("DENY CREATE NEW LABEL ON DATABASE * TO custom")
@@ -1067,8 +1069,8 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
   }
 
   test("Should allow type creation for normal user with type create privilege") {
+    setup()
     setupUserWithCustomRole()
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT CREATE NEW TYPE ON DATABASE * TO custom")
 
     // WHEN & THEN
@@ -1076,8 +1078,8 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
   }
 
   test("Should not allow type creation for normal user with explicit deny") {
+    setup()
     setupUserWithCustomRole()
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT WRITE ON GRAPH * TO custom")
     execute("GRANT NAME MANAGEMENT ON DATABASE * TO custom")
     execute("DENY CREATE NEW TYPE ON DATABASE * TO custom")
@@ -1094,8 +1096,8 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
   }
 
   test("Should allow property key creation for normal user with name creation privilege") {
+    setup()
     setupUserWithCustomRole()
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT CREATE NEW NAME ON DATABASE * TO custom")
     selectDatabase(DEFAULT_DATABASE_NAME)
 
@@ -1104,8 +1106,8 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
   }
 
   test("Should not allow property key creation for normal user with explicit deny") {
+    setup()
     setupUserWithCustomRole()
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT WRITE ON GRAPH * TO custom")
     execute("GRANT NAME MANAGEMENT ON DATABASE * TO custom")
     execute("DENY CREATE NEW NAME ON DATABASE * TO custom")
@@ -1127,8 +1129,8 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
   }
 
   test("Should not allow property key creation for normal user with only label creation privilege") {
+    setup()
     setupUserWithCustomRole()
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT WRITE ON GRAPH * TO custom")
     execute("GRANT CREATE NEW LABEL ON DATABASE * TO custom")
 
@@ -1139,8 +1141,8 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
   }
 
   test("Should not allow property key creation for normal user with only type creation privilege") {
+    setup()
     setupUserWithCustomRole()
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT WRITE ON GRAPH * TO custom")
     execute("GRANT CREATE NEW TYPE ON DATABASE * TO custom")
 
@@ -1151,8 +1153,8 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
   }
 
   test("Should allow all creation for normal user with name management privilege") {
+    setup()
     setupUserWithCustomRole()
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT WRITE ON GRAPH * TO custom")
     execute("GRANT NAME MANAGEMENT ON DATABASE * TO custom")
 
@@ -1163,8 +1165,8 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
   }
 
   test("Should allow all creation for normal user with all database privileges") {
+    setup()
     setupUserWithCustomRole()
-    selectDatabase(SYSTEM_DATABASE_NAME)
     execute("GRANT WRITE ON GRAPH * TO custom")
     execute("GRANT ALL ON DATABASE * TO custom")
 
@@ -1173,4 +1175,10 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       row.get("n.name") should be("Alice")
     }) should be(1)
   }
+
+  // Disable normal database creation because we need different settings on each test
+  override protected def initTest() {}
+
+  // Use the default value instead of the new value in AdministrationCommandAcceptanceTestBase
+  override def databaseConfig(): Map[Setting[_], Object] = Map()
 }

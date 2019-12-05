@@ -5,40 +5,22 @@
  */
 package com.neo4j.internal.cypher.acceptance
 
-import java.io.File
-import java.lang.Boolean.TRUE
-
-import com.neo4j.dbms.EnterpriseSystemGraphInitializer
 import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings
-import com.neo4j.server.security.enterprise.auth.InMemoryRoleRepository
-import com.neo4j.server.security.enterprise.systemgraph._
 import org.neo4j.configuration.GraphDatabaseSettings.{DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME, default_database}
 import org.neo4j.configuration.{Config, GraphDatabaseSettings}
-import org.neo4j.cypher.internal.DatabaseStatus
-import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
-import org.neo4j.cypher.internal.security.SecureHasher
 import org.neo4j.dbms.api.{DatabaseExistsException, DatabaseLimitReachedException, DatabaseNotFoundException}
-import org.neo4j.dbms.database.{DatabaseContext, DatabaseManager}
 import org.neo4j.exceptions.{DatabaseAdministrationException, InvalidArgumentException, SyntaxException}
 import org.neo4j.graphdb.DatabaseShutdownException
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.graphdb.security.AuthorizationViolationException
-import org.neo4j.logging.Log
-import org.neo4j.server.security.auth.InMemoryUserRepository
 import org.scalatest.enablers.Messaging.messagingNatureOfThrowable
 
-import scala.collection.Map
-
 class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
-  private val onlineStatus = DatabaseStatus.Online.stringValue()
-  private val offlineStatus = DatabaseStatus.Offline.stringValue()
-  private val defaultConfig = Config.defaults( GraphDatabaseSettings.auth_enabled, TRUE )
-
   test("should return empty counts to the outside for commands that update the system graph internally") {
     //TODO: ADD ANY NEW UPDATING COMMANDS HERE
 
     // GIVEN
-    setup(defaultConfig)
+    setup()
 
     // Notice: They are executed in succession so they have to make sense in that order
     assertQueriesAndSubQueryCounts(List(
@@ -105,13 +87,13 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
 
   test(s"should show database $DEFAULT_DATABASE_NAME") {
     // GIVEN
-    setup(defaultConfig)
+    setup()
 
     // WHEN
     val result = execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME")
 
     // THEN
-    result.toList should be(List(db(DEFAULT_DATABASE_NAME, isDefault = true)))
+    result.toList should be(List(db(DEFAULT_DATABASE_NAME, default = true)))
   }
 
   test("should show custom default database") {
@@ -124,7 +106,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     val result = execute("SHOW DATABASE foo")
 
     // THEN
-    result.toList should be(List(db("foo", isDefault = true)))
+    result.toList should be(List(db("foo", default = true)))
 
     // WHEN
     val result2 = execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME")
@@ -144,7 +126,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     val fooResult = execute("SHOW DATABASE foo")
 
     // THEN
-    neoResult.toSet should be(Set(db(DEFAULT_DATABASE_NAME, isDefault = true)))
+    neoResult.toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true)))
     fooResult.toSet should be(Set(db("foo")))
 
     // GIVEN
@@ -157,7 +139,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
 
     // THEN
     neoResult2.toSet should be(Set(db(DEFAULT_DATABASE_NAME)))
-    fooResult2.toSet should be(Set(db("foo", isDefault = true)))
+    fooResult2.toSet should be(Set(db("foo", default = true)))
   }
 
   test("should start a stopped database when it becomes default") {
@@ -183,12 +165,12 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
 
     // THEN
     // The new default database should be started when the system is restarted
-    result2.toSet should be(Set(db("foo", isDefault = true)))
+    result2.toSet should be(Set(db("foo", default = true)))
   }
 
   test("should show database using mixed case name") {
     // GIVEN
-    setup(defaultConfig)
+    setup()
     execute("CREATE DATABASE FOO")
 
     // WHEN
@@ -200,7 +182,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
 
   test("should give nothing when showing a non-existing database") {
     // GIVEN
-    setup(defaultConfig)
+    setup()
     selectDatabase(SYSTEM_DATABASE_NAME)
 
     // WHEN
@@ -218,7 +200,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
   }
 
   test("should fail when showing a database when not on system database") {
-    setup(defaultConfig)
+    setup()
     selectDatabase(DEFAULT_DATABASE_NAME)
     the[DatabaseAdministrationException] thrownBy {
       // WHEN
@@ -230,13 +212,13 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
 
   test("should show default databases") {
     // GIVEN
-    setup(defaultConfig)
+    setup()
 
     // WHEN
     val result = execute("SHOW DATABASES")
 
     // THEN
-    result.toSet should be(Set(db(DEFAULT_DATABASE_NAME, isDefault = true), db(SYSTEM_DATABASE_NAME)))
+    result.toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true), db(SYSTEM_DATABASE_NAME)))
   }
 
   test("should show custom default and system databases") {
@@ -249,7 +231,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     val result = execute("SHOW DATABASES")
 
     // THEN
-    result.toSet should be(Set(db("foo", isDefault = true), db(SYSTEM_DATABASE_NAME)))
+    result.toSet should be(Set(db("foo", default = true), db(SYSTEM_DATABASE_NAME)))
   }
 
   test("should show databases for switch of default database") {
@@ -262,7 +244,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     val result = execute("SHOW DATABASES")
 
     // THEN
-    result.toSet should be(Set(db(DEFAULT_DATABASE_NAME, isDefault = true), db("foo"), db(SYSTEM_DATABASE_NAME)))
+    result.toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true), db("foo"), db(SYSTEM_DATABASE_NAME)))
 
     // GIVEN
     config.set(default_database, "foo")
@@ -272,11 +254,11 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     val result2 = execute("SHOW DATABASES")
 
     // THEN
-    result2.toSet should be(Set(db(DEFAULT_DATABASE_NAME), db("foo", isDefault = true), db(SYSTEM_DATABASE_NAME)))
+    result2.toSet should be(Set(db(DEFAULT_DATABASE_NAME), db("foo", default = true), db(SYSTEM_DATABASE_NAME)))
   }
 
   test("should fail when showing databases when not on system database") {
-    setup(defaultConfig)
+    setup()
     selectDatabase(DEFAULT_DATABASE_NAME)
     the[DatabaseAdministrationException] thrownBy {
       // WHEN
@@ -288,7 +270,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
 
   test("should show default database") {
     // GIVEN
-    setup( defaultConfig )
+    setup()
 
     // WHEN
     val result = execute("SHOW DEFAULT DATABASE")
@@ -341,9 +323,9 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
   }
 
   test("should fail when showing default database when not on system database") {
-    setup(defaultConfig)
+    setup()
     selectDatabase(DEFAULT_DATABASE_NAME)
-    the [DatabaseAdministrationException] thrownBy {
+    the[DatabaseAdministrationException] thrownBy {
       // WHEN
       execute("SHOW DEFAULT DATABASE")
       // THEN
@@ -352,7 +334,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
   }
 
   test("should fail when showing databases when credentials expired") {
-    setup(defaultConfig)
+    setup()
     setupUserWithCustomRole()
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("ALTER USER joe SET PASSWORD CHANGE REQUIRED")
@@ -374,7 +356,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
   // Tests for creating databases
 
   test("should create database in systemdb") {
-    setup(defaultConfig)
+    setup()
 
     // WHEN
     execute("CREATE DATABASE `f.o-o123`")
@@ -385,7 +367,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
   }
 
   test("should create database using if not exists") {
-    setup(defaultConfig)
+    setup()
 
     // WHEN
     execute("CREATE DATABASE `f.o-o123` IF NOT EXISTS")
@@ -398,7 +380,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
   test("should create database in systemdb when max number of databases is not reached") {
 
     val config = Config.defaults()
-    config.set(EnterpriseEditionSettings.maxNumberOfDatabases, java.lang.Long.valueOf(3L) )
+    config.set(EnterpriseEditionSettings.maxNumberOfDatabases, java.lang.Long.valueOf(3L))
     setup(config)
     execute("SHOW DATABASES").toList.size should equal(2)
 
@@ -413,7 +395,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
   test("should fail to create database in systemdb when max number of databases is already reached") {
 
     val config = Config.defaults()
-    config.set(EnterpriseEditionSettings.maxNumberOfDatabases, java.lang.Long.valueOf(2L) )
+    config.set(EnterpriseEditionSettings.maxNumberOfDatabases, java.lang.Long.valueOf(2L))
     setup(config)
     execute("SHOW DATABASES").toList.size should equal(2)
 
@@ -430,7 +412,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
   }
 
   test("should create database using mixed case name") {
-    setup(defaultConfig)
+    setup()
 
     // WHEN
     execute("CREATE DATABASE FoO")
@@ -442,13 +424,13 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
 
   test("should create default database on re-start after being dropped") {
     // GIVEN
-    setup(defaultConfig)
+    setup()
     execute("CREATE ROLE custom")
     execute("CREATE USER joe SET PASSWORD 'soap' CHANGE NOT REQUIRED")
     execute("GRANT ROLE custom TO joe")
     execute(s"GRANT ACCESS ON DATABASE $DEFAULT_DATABASE_NAME TO custom")
     execute(s"GRANT MATCH {*} ON GRAPH $DEFAULT_DATABASE_NAME NODES * (*) TO custom")
-    execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, isDefault = true)))
+    execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true)))
     execute(s"SHOW USER joe PRIVILEGES").toSet should be(Set(
       access().database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map,
       read().node("*").database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map,
@@ -470,7 +452,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
 
     // THEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, isDefault = true)))
+    execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true)))
     the[AuthorizationViolationException] thrownBy {
       executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name")
     } should have message "Database access is not allowed for user 'joe' with roles [custom]."
@@ -480,7 +462,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
 
   test("should have access on a created database") {
     // GIVEN
-    setup(defaultConfig)
+    setup()
     execute("CREATE USER baz SET PASSWORD 'bar' CHANGE NOT REQUIRED")
     execute("GRANT ROLE editor TO baz")
     execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin")),
@@ -496,7 +478,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
 
   test("should have no access on a re-created database") {
     // GIVEN
-    setup(defaultConfig)
+    setup()
     execute("CREATE DATABASE foo")
     selectDatabase("foo")
     execute("CREATE (:A {name:'a'})")
@@ -541,9 +523,9 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     execute(s"SHOW USER joe PRIVILEGES").toSet should be(Set.empty)
   }
 
-  test("should have no access on a re-created default database"){
+  test("should have no access on a re-created default database") {
     // GIVEN
-    setup(defaultConfig)
+    setup()
     selectDatabase(DEFAULT_DATABASE_NAME)
     execute("CREATE (:A {name:'a'})")
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -581,7 +563,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
 
     // THEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, isDefault = true)))
+    execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true)))
     the[AuthorizationViolationException] thrownBy {
       executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name")
     } should have message "Database access is not allowed for user 'joe' with roles [custom]."
@@ -590,7 +572,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
   }
 
   test("should fail when creating an already existing database") {
-    setup(defaultConfig)
+    setup()
 
     // GIVEN
     execute("CREATE DATABASE foo")
@@ -606,7 +588,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
 
   test("should do nothing when creating an already existing database using if not exists") {
     // GIVEN
-    setup(defaultConfig)
+    setup()
     execute("CREATE DATABASE foo")
     execute("STOP DATABASE foo")
     execute("SHOW DATABASE foo").toList should be(List(db("foo", status = offlineStatus)))
@@ -635,7 +617,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
   }
 
   test("should fail when creating a database with invalid name") {
-    setup(defaultConfig)
+    setup()
     selectDatabase(SYSTEM_DATABASE_NAME)
 
     // Empty name
@@ -695,23 +677,23 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
 
   test("should replace default database") {
     // GIVEN
-    setup(defaultConfig)
+    setup()
     execute("SHOW DATABASES").toList.size should equal(2)
     execute(s"STOP DATABASE $DEFAULT_DATABASE_NAME")
-    execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toList should be(List(db(DEFAULT_DATABASE_NAME, status = offlineStatus, isDefault = true)))
+    execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toList should be(List(db(DEFAULT_DATABASE_NAME, status = offlineStatus, default = true)))
 
     // WHEN
     execute(s"CREATE OR REPLACE DATABASE $DEFAULT_DATABASE_NAME")
 
     // THEN
-    execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toList should be(List(db(DEFAULT_DATABASE_NAME, isDefault = true)))
+    execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toList should be(List(db(DEFAULT_DATABASE_NAME, default = true)))
     execute("SHOW DATABASES").toList.size should equal(2)
   }
 
   test("should fail to create database when max number of databases reached using replace") {
     // GIVEN
     val config = Config.defaults()
-    config.set(EnterpriseEditionSettings.maxNumberOfDatabases, java.lang.Long.valueOf(2L) )
+    config.set(EnterpriseEditionSettings.maxNumberOfDatabases, java.lang.Long.valueOf(2L))
     setup(config)
     execute("SHOW DATABASES").toList.size should equal(2)
 
@@ -729,7 +711,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
 
   test("should get syntax exception when using both replace and if not exists") {
     // GIVEN
-    setup(defaultConfig)
+    setup()
 
     // WHEN
     val exception = the[SyntaxException] thrownBy {
@@ -741,7 +723,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
   }
 
   test("should fail when creating a database when not on system database") {
-    setup(defaultConfig)
+    setup()
     selectDatabase(DEFAULT_DATABASE_NAME)
     the[DatabaseAdministrationException] thrownBy {
       // WHEN
@@ -754,7 +736,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
   // Tests for dropping databases
 
   test("should create and drop databases") {
-    setup(defaultConfig)
+    setup()
 
     // GIVEN
     execute("CREATE DATABASE foo")
@@ -787,7 +769,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
 
   test("should drop existing database using if exists") {
     // GIVEN
-    setup(defaultConfig)
+    setup()
     execute("CREATE DATABASE foo")
     execute("SHOW DATABASE foo").toSet should be(Set(db("foo")))
 
@@ -800,7 +782,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
 
   test("should drop database using mixed case name") {
     // GIVEN
-    setup(defaultConfig)
+    setup()
     execute("CREATE DATABASE foo")
     execute("SHOW DATABASES").toList should contain(db("foo"))
 
@@ -815,18 +797,18 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
 
   test("should have no access on a dropped database") {
     // GIVEN
-    setup(defaultConfig)
+    setup()
     execute("CREATE DATABASE baz")
     execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
     execute("GRANT ROLE editor TO foo")
     execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin")),
       user("foo", Seq("editor"), passwordChangeRequired = false))
     execute("SHOW DATABASES").toSet should be(Set(
-      db(DEFAULT_DATABASE_NAME, isDefault = true), db("baz"), db(SYSTEM_DATABASE_NAME)))
+      db(DEFAULT_DATABASE_NAME, default = true), db("baz"), db(SYSTEM_DATABASE_NAME)))
 
     // WHEN
     execute("DROP DATABASE baz")
-    execute("SHOW DATABASES").toSet should be(Set(db(DEFAULT_DATABASE_NAME, isDefault = true), db(SYSTEM_DATABASE_NAME)))
+    execute("SHOW DATABASES").toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true), db(SYSTEM_DATABASE_NAME)))
 
     // THEN
     the[DatabaseNotFoundException] thrownBy {
@@ -835,7 +817,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
   }
 
   test("should fail when dropping a non-existing database") {
-    setup(defaultConfig)
+    setup()
 
     the[DatabaseNotFoundException] thrownBy {
       // WHEN
@@ -858,7 +840,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
   }
 
   test("should do nothing when dropping a non-existing database using if exists") {
-    setup(defaultConfig)
+    setup()
 
     // WHEN
     execute("DROP DATABASE foo IF EXISTS")
@@ -876,7 +858,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
   }
 
   test("should fail when dropping a dropped database") {
-    setup(defaultConfig)
+    setup()
 
     // GIVEN
     execute("CREATE DATABASE foo")
@@ -895,7 +877,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
   }
 
   test("should do nothing when dropping a dropped database using if exists") {
-    setup(defaultConfig)
+    setup()
 
     // GIVEN
     execute("CREATE DATABASE foo")
@@ -911,7 +893,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
   }
 
   test("should fail on dropping system database") {
-    setup(defaultConfig)
+    setup()
 
     the[DatabaseAdministrationException] thrownBy {
       // WHEN
@@ -934,8 +916,8 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
   }
 
   test("should drop default database") {
-    setup(defaultConfig)
-    execute("SHOW DATABASES").toSet should be(Set(db(DEFAULT_DATABASE_NAME, isDefault = true), db(SYSTEM_DATABASE_NAME)))
+    setup()
+    execute("SHOW DATABASES").toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true), db(SYSTEM_DATABASE_NAME)))
 
     // WHEN
     execute(s"DROP DATABASE $DEFAULT_DATABASE_NAME")
@@ -947,7 +929,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     execute(s"CREATE DATABASE $DEFAULT_DATABASE_NAME")
 
     // THEN
-    execute("SHOW DATABASES").toSet should be(Set(db(DEFAULT_DATABASE_NAME, isDefault = true), db(SYSTEM_DATABASE_NAME)))
+    execute("SHOW DATABASES").toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true), db(SYSTEM_DATABASE_NAME)))
   }
 
   test("should drop custom default database") {
@@ -955,7 +937,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     val config = Config.defaults()
     config.set(default_database, "foo")
     setup(config)
-    execute("SHOW DATABASES").toSet should be(Set(db("foo", isDefault = true), db(SYSTEM_DATABASE_NAME)))
+    execute("SHOW DATABASES").toSet should be(Set(db("foo", default = true), db(SYSTEM_DATABASE_NAME)))
 
     // WHEN
     execute("DROP DATABASE foo")
@@ -967,12 +949,12 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     execute("CREATE DATABASE foo")
 
     // THEN
-    execute("SHOW DATABASES").toSet should be(Set(db("foo", isDefault = true), db(SYSTEM_DATABASE_NAME)))
+    execute("SHOW DATABASES").toSet should be(Set(db("foo", default = true), db(SYSTEM_DATABASE_NAME)))
   }
 
   test("should fail when dropping a database when not on system database") {
     // GIVEN
-    setup(defaultConfig)
+    setup()
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE DATABASE foo")
     selectDatabase(GraphDatabaseSettings.DEFAULT_DATABASE_NAME)
@@ -988,7 +970,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
   // Tests for starting databases
 
   test("should start database on create") {
-    setup(defaultConfig)
+    setup()
 
     // WHEN
     execute("CREATE DATABASE foo")
@@ -999,7 +981,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
   }
 
   test("should fail when starting a non-existing database") {
-    setup(defaultConfig)
+    setup()
 
     the[DatabaseNotFoundException] thrownBy {
       // WHEN
@@ -1016,7 +998,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
   }
 
   test("should fail when starting a dropped database") {
-    setup(defaultConfig)
+    setup()
 
     // GIVEN
     execute("CREATE DATABASE foo")
@@ -1035,7 +1017,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
   }
 
   test("should be able to start a started database") {
-    setup(defaultConfig)
+    setup()
 
     // GIVEN
     execute("CREATE DATABASE foo")
@@ -1051,7 +1033,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
   }
 
   test("should re-start database") {
-    setup(defaultConfig)
+    setup()
 
     // GIVEN
     execute("CREATE DATABASE foo")
@@ -1070,7 +1052,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
   }
 
   test("should re-start database using mixed case name") {
-    setup(defaultConfig)
+    setup()
 
     // GIVEN
     execute("CREATE DATABASE foo")
@@ -1090,7 +1072,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
 
   test("should have access on a re-started database") {
     // GIVEN
-    setup(defaultConfig)
+    setup()
     execute("CREATE DATABASE foo")
     execute("STOP DATABASE foo")
     execute("SHOW DATABASE foo").toList should be(List(db("foo", status = offlineStatus)))
@@ -1114,7 +1096,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
 
   test("should fail when starting a database when not on system database") {
     // GIVEN
-    setup(defaultConfig)
+    setup()
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE DATABASE foo")
     execute("STOP DATABASE foo")
@@ -1131,7 +1113,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
   // Tests for stopping databases
 
   test("should stop database") {
-    setup(defaultConfig)
+    setup()
 
     // GIVEN
     execute("CREATE DATABASE foo")
@@ -1147,7 +1129,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
   }
 
   test("should stop database using mixed case name") {
-    setup(defaultConfig)
+    setup()
 
     // GIVEN
     execute("CREATE DATABASE foo")
@@ -1164,14 +1146,14 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
 
   test("should have no access on a stopped database") {
     // GIVEN
-    setup(defaultConfig)
+    setup()
     execute("CREATE DATABASE baz")
     execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
     execute("GRANT ROLE editor TO foo")
     execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin")),
       user("foo", Seq("editor"), passwordChangeRequired = false))
     execute("SHOW DATABASES").toSet should be(Set(
-      db(DEFAULT_DATABASE_NAME, isDefault = true),
+      db(DEFAULT_DATABASE_NAME, default = true),
       db("baz"),
       db(SYSTEM_DATABASE_NAME)))
 
@@ -1193,7 +1175,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
   }
 
   test("should fail when stopping a non-existing database") {
-    setup(defaultConfig)
+    setup()
 
     the[DatabaseNotFoundException] thrownBy {
       // WHEN
@@ -1210,7 +1192,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
   }
 
   test("should fail when stopping a dropped database") {
-    setup(defaultConfig)
+    setup()
 
     // GIVEN
     execute("CREATE DATABASE foo")
@@ -1229,7 +1211,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
   }
 
   test("should fail on stopping system database") {
-    setup(defaultConfig)
+    setup()
 
     // GIVEN
     the[DatabaseAdministrationException] thrownBy {
@@ -1247,14 +1229,14 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
 
   test("should stop default database") {
     // GIVEN
-    setup(defaultConfig)
+    setup()
 
     // WHEN
     execute(s"STOP DATABASE $DEFAULT_DATABASE_NAME")
 
     // THEN
     execute("SHOW DATABASES").toSet should be(Set(
-      db(DEFAULT_DATABASE_NAME, status = offlineStatus, isDefault = true), db(SYSTEM_DATABASE_NAME)))
+      db(DEFAULT_DATABASE_NAME, status = offlineStatus, default = true), db(SYSTEM_DATABASE_NAME)))
   }
 
   test("should stop custom default database") {
@@ -1267,22 +1249,22 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     execute("STOP DATABASE foo")
 
     // THEN
-    execute("SHOW DATABASES").toSet should be(Set(db("foo", status = offlineStatus, isDefault = true),
+    execute("SHOW DATABASES").toSet should be(Set(db("foo", status = offlineStatus, default = true),
       db(SYSTEM_DATABASE_NAME)))
   }
 
   test("should have no access on a stopped default database") {
     // GIVEN
-    setup(defaultConfig)
+    setup()
     execute("CREATE USER foo SET PASSWORD 'bar' CHANGE NOT REQUIRED")
     execute("GRANT ROLE editor TO foo")
     execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin")),
       user("foo", Seq("editor"), passwordChangeRequired = false))
-    execute("SHOW DATABASES").toSet should be(Set(db(DEFAULT_DATABASE_NAME, isDefault = true), db(SYSTEM_DATABASE_NAME)))
+    execute("SHOW DATABASES").toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true), db(SYSTEM_DATABASE_NAME)))
 
     // WHEN
     execute(s"STOP DATABASE $DEFAULT_DATABASE_NAME")
-    execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, status = offlineStatus, isDefault = true)))
+    execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, status = offlineStatus, default = true)))
 
     // THEN
     the[DatabaseShutdownException] thrownBy {
@@ -1298,7 +1280,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
   }
 
   test("should be able to stop a stopped database") {
-    setup(defaultConfig)
+    setup()
 
     // GIVEN
     execute("CREATE DATABASE foo")
@@ -1315,7 +1297,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
   }
 
   test("should fail when stopping a database when not on system database") {
-    setup(defaultConfig)
+    setup()
     selectDatabase(DEFAULT_DATABASE_NAME)
     the[DatabaseAdministrationException] thrownBy {
       // WHEN
@@ -1324,15 +1306,6 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     } should have message
       "This is an administration command and it should be executed against the system database: STOP DATABASE"
   }
-
-  private def db(name: String, status: String = onlineStatus, isDefault: Boolean = false) =
-    Map("name" -> name,
-      "address" -> "localhost:7687",
-      "role" -> "standalone",
-      "requestedStatus" -> status,
-      "currentStatus" -> status,
-      "error" -> "",
-      "default" -> isDefault)
 
   private def defaultDb(name: String = DEFAULT_DATABASE_NAME, status: String = onlineStatus) =
     Map("name" -> name,
@@ -1345,29 +1318,6 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
   // Disable normal database creation because we need different settings on each test
   override protected def initTest() {}
 
-  private def setup(config: Config): Unit = {
-    managementService = graphDatabaseFactory(new File("test")).impermanent().setConfig(config).setInternalLogProvider(logProvider).build()
-    graphOps = managementService.database(SYSTEM_DATABASE_NAME)
-    graph = new GraphDatabaseCypherService(graphOps)
-
-    initSystemGraph(config)
-  }
-
-  private def initSystemGraph(config: Config): Unit = {
-    val databaseManager = graph.getDependencyResolver.resolveDependency(classOf[DatabaseManager[DatabaseContext]])
-    val systemGraphInitializer = new EnterpriseSystemGraphInitializer(databaseManager, config)
-    val securityGraphInitializer = new EnterpriseSecurityGraphInitializer(databaseManager,
-      systemGraphInitializer,
-      mock[Log],
-      new InMemoryUserRepository,
-      new InMemoryRoleRepository,
-      new InMemoryUserRepository,
-      new InMemoryUserRepository,
-      new SecureHasher)
-    securityGraphInitializer.initializeSecurityGraph()
-    selectDatabase(SYSTEM_DATABASE_NAME)
-  }
-
-  // Use the default value instead of the new value in DDLAcceptanceTestBase
+  // Use the default value instead of the new value in AdministrationCommandAcceptanceTestBase
   override def databaseConfig(): Map[Setting[_], Object] = Map()
 }
