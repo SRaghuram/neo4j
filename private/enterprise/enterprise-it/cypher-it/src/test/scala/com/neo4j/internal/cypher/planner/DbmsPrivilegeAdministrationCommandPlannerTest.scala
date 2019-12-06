@@ -7,7 +7,6 @@ package com.neo4j.internal.cypher.planner
 
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import org.neo4j.cypher.internal.plandescription.Arguments.DbmsAction
-import org.neo4j.cypher.internal.plandescription.SingleChild
 
 class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationCommandPlannerTestBase {
 
@@ -20,11 +19,15 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
     val plan = execute("EXPLAIN GRANT SHOW ROLE ON DBMS TO reader, editor").executionPlanString()
 
     // Then
-    val assertAdmin = planDescription("AssertDbmsAdmin", Seq(DbmsAction("GRANT PRIVILEGE")))
-    val grantReader = planDescription("GrantDbmsAction", Seq(DbmsAction("SHOW ROLE"), roleArg("reader")), SingleChild(assertAdmin))
-    val grantEditor = planDescription("GrantDbmsAction", Seq(DbmsAction("SHOW ROLE"), roleArg("editor")), SingleChild(grantReader))
-    val expectedPlan = planDescription("LogSystemCommand", children = SingleChild(grantEditor))
-    plan should include(expectedPlan.toString)
+    plan should include(
+      logPlan(
+        rolePrivilegePlan("GrantDbmsAction", "SHOW ROLE", "editor",
+          rolePrivilegePlan("GrantDbmsAction", "SHOW ROLE", "reader",
+            assertDbmsAdminPlan("GRANT PRIVILEGE")
+          )
+        )
+      ).toString
+    )
   }
 
   test("Deny show role") {
@@ -34,10 +37,13 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
     val plan = execute("EXPLAIN DENY SHOW ROLE ON DBMS TO reader").executionPlanString()
 
     // Then
-    val assertAdmin = planDescription("AssertDbmsAdmin", Seq(DbmsAction("DENY PRIVILEGE")))
-    val deny = planDescription("DenyDbmsAction", Seq(DbmsAction("SHOW ROLE"), roleArg("reader")), SingleChild(assertAdmin))
-    val expectedPlan = planDescription("LogSystemCommand", children = SingleChild(deny))
-    plan should include(expectedPlan.toString)
+    plan should include(
+      logPlan(
+        rolePrivilegePlan("DenyDbmsAction", "SHOW ROLE", "reader",
+          assertDbmsAdminPlan("DENY PRIVILEGE")
+        )
+      ).toString
+    )
   }
 
   test("Revoke show role") {
@@ -47,12 +53,17 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
     val plan = execute("EXPLAIN REVOKE SHOW ROLE ON DBMS FROM reader").executionPlanString()
 
     // Then
-    val assertAdmin = planDescription("AssertDbmsAdmin", Seq(DbmsAction("REVOKE PRIVILEGE")))
-    val assertValid = planDescription("AssertValidRevoke", Seq(DbmsAction("SHOW ROLE"), roleArg("reader")), SingleChild(assertAdmin))
-    val revokeGrant = planDescription("RevokeDbmsAction(GRANTED)", Seq(DbmsAction("SHOW ROLE"), roleArg("reader")), SingleChild(assertValid))
-    val revokeDeny = planDescription("RevokeDbmsAction(DENIED)", Seq(DbmsAction("SHOW ROLE"), roleArg("reader")), SingleChild(revokeGrant))
-    val expectedPlan = planDescription("LogSystemCommand", children = SingleChild(revokeDeny))
-    plan should include(expectedPlan.toString)
+    plan should include(
+      logPlan(
+        rolePrivilegePlan("RevokeDbmsAction(DENIED)", "SHOW ROLE", "reader",
+          rolePrivilegePlan("RevokeDbmsAction(GRANTED)", "SHOW ROLE", "reader",
+            helperPlan("AssertValidRevoke", Seq(DbmsAction("SHOW ROLE"), roleArg("reader")),
+              assertDbmsAdminPlan("REVOKE PRIVILEGE")
+            )
+          )
+        )
+      ).toString
+    )
   }
 
   test("Grant create role") {
@@ -62,11 +73,15 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
     val plan = execute("EXPLAIN GRANT CREATE ROLE ON DBMS TO reader, editor").executionPlanString()
 
     // Then
-    val assertAdmin = planDescription("AssertDbmsAdmin", Seq(DbmsAction("GRANT PRIVILEGE")))
-    val grantReader = planDescription("GrantDbmsAction", Seq(DbmsAction("CREATE ROLE"), roleArg("reader")), SingleChild(assertAdmin))
-    val grantEditor = planDescription("GrantDbmsAction", Seq(DbmsAction("CREATE ROLE"), roleArg("editor")), SingleChild(grantReader))
-    val expectedPlan = planDescription("LogSystemCommand", children = SingleChild(grantEditor))
-    plan should include(expectedPlan.toString)
+    plan should include(
+      logPlan(
+        rolePrivilegePlan("GrantDbmsAction", "CREATE ROLE", "editor",
+          rolePrivilegePlan("GrantDbmsAction", "CREATE ROLE", "reader",
+            assertDbmsAdminPlan("GRANT PRIVILEGE")
+          )
+        )
+      ).toString
+    )
   }
 
   test("Deny create role") {
@@ -76,10 +91,13 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
     val plan = execute("EXPLAIN DENY CREATE ROLE ON DBMS TO reader").executionPlanString()
 
     // Then
-    val assertAdmin = planDescription("AssertDbmsAdmin", Seq(DbmsAction("DENY PRIVILEGE")))
-    val deny = planDescription("DenyDbmsAction", Seq(DbmsAction("CREATE ROLE"), roleArg("reader")), SingleChild(assertAdmin))
-    val expectedPlan = planDescription("LogSystemCommand", children = SingleChild(deny))
-    plan should include(expectedPlan.toString)
+    plan should include(
+      logPlan(
+        rolePrivilegePlan("DenyDbmsAction", "CREATE ROLE", "reader",
+          assertDbmsAdminPlan("DENY PRIVILEGE")
+        )
+      ).toString
+    )
   }
 
   test("Revoke create role") {
@@ -89,12 +107,17 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
     val plan = execute("EXPLAIN REVOKE CREATE ROLE ON DBMS FROM reader").executionPlanString()
 
     // Then
-    val assertAdmin = planDescription("AssertDbmsAdmin", Seq(DbmsAction("REVOKE PRIVILEGE")))
-    val assertValid = planDescription("AssertValidRevoke", Seq(DbmsAction("CREATE ROLE"), roleArg("reader")), SingleChild(assertAdmin))
-    val revokeGrant = planDescription("RevokeDbmsAction(GRANTED)", Seq(DbmsAction("CREATE ROLE"), roleArg("reader")), SingleChild(assertValid))
-    val revokeDeny = planDescription("RevokeDbmsAction(DENIED)", Seq(DbmsAction("CREATE ROLE"), roleArg("reader")), SingleChild(revokeGrant))
-    val expectedPlan = planDescription("LogSystemCommand", children = SingleChild(revokeDeny))
-    plan should include(expectedPlan.toString)
+    plan should include(
+      logPlan(
+        rolePrivilegePlan("RevokeDbmsAction(DENIED)", "CREATE ROLE", "reader",
+          rolePrivilegePlan("RevokeDbmsAction(GRANTED)", "CREATE ROLE", "reader",
+            helperPlan("AssertValidRevoke", Seq(DbmsAction("CREATE ROLE"), roleArg("reader")),
+              assertDbmsAdminPlan("REVOKE PRIVILEGE")
+            )
+          )
+        )
+      ).toString
+    )
   }
 
   test("Grant drop role") {
@@ -104,11 +127,15 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
     val plan = execute("EXPLAIN GRANT DROP ROLE ON DBMS TO reader, editor").executionPlanString()
 
     // Then
-    val assertAdmin = planDescription("AssertDbmsAdmin", Seq(DbmsAction("GRANT PRIVILEGE")))
-    val grantReader = planDescription("GrantDbmsAction", Seq(DbmsAction("DROP ROLE"), roleArg("reader")), SingleChild(assertAdmin))
-    val grantEditor = planDescription("GrantDbmsAction", Seq(DbmsAction("DROP ROLE"), roleArg("editor")), SingleChild(grantReader))
-    val expectedPlan = planDescription("LogSystemCommand", children = SingleChild(grantEditor))
-    plan should include(expectedPlan.toString)
+    plan should include(
+      logPlan(
+        rolePrivilegePlan("GrantDbmsAction", "DROP ROLE", "editor",
+          rolePrivilegePlan("GrantDbmsAction", "DROP ROLE", "reader",
+            assertDbmsAdminPlan("GRANT PRIVILEGE")
+          )
+        )
+      ).toString
+    )
   }
 
   test("Deny drop role") {
@@ -118,10 +145,13 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
     val plan = execute("EXPLAIN DENY DROP ROLE ON DBMS TO reader").executionPlanString()
 
     // Then
-    val assertAdmin = planDescription("AssertDbmsAdmin", Seq(DbmsAction("DENY PRIVILEGE")))
-    val deny = planDescription("DenyDbmsAction", Seq(DbmsAction("DROP ROLE"), roleArg("reader")), SingleChild(assertAdmin))
-    val expectedPlan = planDescription("LogSystemCommand", children = SingleChild(deny))
-    plan should include(expectedPlan.toString)
+    plan should include(
+      logPlan(
+        rolePrivilegePlan("DenyDbmsAction", "DROP ROLE", "reader",
+          assertDbmsAdminPlan("DENY PRIVILEGE")
+        )
+      ).toString
+    )
   }
 
   test("Revoke drop role") {
@@ -131,12 +161,17 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
     val plan = execute("EXPLAIN REVOKE DROP ROLE ON DBMS FROM reader").executionPlanString()
 
     // Then
-    val assertAdmin = planDescription("AssertDbmsAdmin", Seq(DbmsAction("REVOKE PRIVILEGE")))
-    val assertValid = planDescription("AssertValidRevoke", Seq(DbmsAction("DROP ROLE"), roleArg("reader")), SingleChild(assertAdmin))
-    val revokeGrant = planDescription("RevokeDbmsAction(GRANTED)", Seq(DbmsAction("DROP ROLE"), roleArg("reader")), SingleChild(assertValid))
-    val revokeDeny = planDescription("RevokeDbmsAction(DENIED)", Seq(DbmsAction("DROP ROLE"), roleArg("reader")), SingleChild(revokeGrant))
-    val expectedPlan = planDescription("LogSystemCommand", children = SingleChild(revokeDeny))
-    plan should include(expectedPlan.toString)
+    plan should include(
+      logPlan(
+        rolePrivilegePlan("RevokeDbmsAction(DENIED)", "DROP ROLE", "reader",
+          rolePrivilegePlan("RevokeDbmsAction(GRANTED)", "DROP ROLE", "reader",
+            helperPlan("AssertValidRevoke", Seq(DbmsAction("DROP ROLE"), roleArg("reader")),
+              assertDbmsAdminPlan("REVOKE PRIVILEGE")
+            )
+          )
+        )
+      ).toString
+    )
   }
 
   test("Grant assign role") {
@@ -146,11 +181,15 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
     val plan = execute("EXPLAIN GRANT ASSIGN ROLE ON DBMS TO reader, editor").executionPlanString()
 
     // Then
-    val assertAdmin = planDescription("AssertDbmsAdmin", Seq(DbmsAction("GRANT PRIVILEGE")))
-    val grantReader = planDescription("GrantDbmsAction", Seq(DbmsAction("ASSIGN ROLE"), roleArg("reader")), SingleChild(assertAdmin))
-    val grantEditor = planDescription("GrantDbmsAction", Seq(DbmsAction("ASSIGN ROLE"), roleArg("editor")), SingleChild(grantReader))
-    val expectedPlan = planDescription("LogSystemCommand", children = SingleChild(grantEditor))
-    plan should include(expectedPlan.toString)
+    plan should include(
+      logPlan(
+        rolePrivilegePlan("GrantDbmsAction", "ASSIGN ROLE", "editor",
+          rolePrivilegePlan("GrantDbmsAction", "ASSIGN ROLE", "reader",
+            assertDbmsAdminPlan("GRANT PRIVILEGE")
+          )
+        )
+      ).toString
+    )
   }
 
   test("Deny assign role") {
@@ -160,10 +199,13 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
     val plan = execute("EXPLAIN DENY ASSIGN ROLE ON DBMS TO reader").executionPlanString()
 
     // Then
-    val assertAdmin = planDescription("AssertDbmsAdmin", Seq(DbmsAction("DENY PRIVILEGE")))
-    val deny = planDescription("DenyDbmsAction", Seq(DbmsAction("ASSIGN ROLE"), roleArg("reader")), SingleChild(assertAdmin))
-    val expectedPlan = planDescription("LogSystemCommand", children = SingleChild(deny))
-    plan should include(expectedPlan.toString)
+    plan should include(
+      logPlan(
+        rolePrivilegePlan("DenyDbmsAction", "ASSIGN ROLE", "reader",
+          assertDbmsAdminPlan("DENY PRIVILEGE")
+        )
+      ).toString
+    )
   }
 
   test("Revoke assign role") {
@@ -173,12 +215,17 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
     val plan = execute("EXPLAIN REVOKE ASSIGN ROLE ON DBMS FROM reader").executionPlanString()
 
     // Then
-    val assertAdmin = planDescription("AssertDbmsAdmin", Seq(DbmsAction("REVOKE PRIVILEGE")))
-    val assertValid = planDescription("AssertValidRevoke", Seq(DbmsAction("ASSIGN ROLE"), roleArg("reader")), SingleChild(assertAdmin))
-    val revokeGrant = planDescription("RevokeDbmsAction(GRANTED)", Seq(DbmsAction("ASSIGN ROLE"), roleArg("reader")), SingleChild(assertValid))
-    val revokeDeny = planDescription("RevokeDbmsAction(DENIED)", Seq(DbmsAction("ASSIGN ROLE"), roleArg("reader")), SingleChild(revokeGrant))
-    val expectedPlan = planDescription("LogSystemCommand", children = SingleChild(revokeDeny))
-    plan should include(expectedPlan.toString)
+    plan should include(
+      logPlan(
+        rolePrivilegePlan("RevokeDbmsAction(DENIED)", "ASSIGN ROLE", "reader",
+          rolePrivilegePlan("RevokeDbmsAction(GRANTED)", "ASSIGN ROLE", "reader",
+            helperPlan("AssertValidRevoke", Seq(DbmsAction("ASSIGN ROLE"), roleArg("reader")),
+              assertDbmsAdminPlan("REVOKE PRIVILEGE")
+            )
+          )
+        )
+      ).toString
+    )
   }
 
   test("Grant remove role") {
@@ -188,11 +235,15 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
     val plan = execute("EXPLAIN GRANT REMOVE ROLE ON DBMS TO reader, editor").executionPlanString()
 
     // Then
-    val assertAdmin = planDescription("AssertDbmsAdmin", Seq(DbmsAction("GRANT PRIVILEGE")))
-    val grantReader = planDescription("GrantDbmsAction", Seq(DbmsAction("REMOVE ROLE"), roleArg("reader")), SingleChild(assertAdmin))
-    val grantEditor = planDescription("GrantDbmsAction", Seq(DbmsAction("REMOVE ROLE"), roleArg("editor")), SingleChild(grantReader))
-    val expectedPlan = planDescription("LogSystemCommand", children = SingleChild(grantEditor))
-    plan should include(expectedPlan.toString)
+    plan should include(
+      logPlan(
+        rolePrivilegePlan("GrantDbmsAction", "REMOVE ROLE", "editor",
+          rolePrivilegePlan("GrantDbmsAction", "REMOVE ROLE", "reader",
+            assertDbmsAdminPlan("GRANT PRIVILEGE")
+          )
+        )
+      ).toString
+    )
   }
 
   test("Deny remove role") {
@@ -202,10 +253,13 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
     val plan = execute("EXPLAIN DENY REMOVE ROLE ON DBMS TO reader").executionPlanString()
 
     // Then
-    val assertAdmin = planDescription("AssertDbmsAdmin", Seq(DbmsAction("DENY PRIVILEGE")))
-    val deny = planDescription("DenyDbmsAction", Seq(DbmsAction("REMOVE ROLE"), roleArg("reader")), SingleChild(assertAdmin))
-    val expectedPlan = planDescription("LogSystemCommand", children = SingleChild(deny))
-    plan should include(expectedPlan.toString)
+    plan should include(
+      logPlan(
+        rolePrivilegePlan("DenyDbmsAction", "REMOVE ROLE", "reader",
+          assertDbmsAdminPlan("DENY PRIVILEGE")
+        )
+      ).toString
+    )
   }
 
   test("Revoke remove role") {
@@ -215,12 +269,17 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
     val plan = execute("EXPLAIN REVOKE REMOVE ROLE ON DBMS FROM reader").executionPlanString()
 
     // Then
-    val assertAdmin = planDescription("AssertDbmsAdmin", Seq(DbmsAction("REVOKE PRIVILEGE")))
-    val assertValid = planDescription("AssertValidRevoke", Seq(DbmsAction("REMOVE ROLE"), roleArg("reader")), SingleChild(assertAdmin))
-    val revokeGrant = planDescription("RevokeDbmsAction(GRANTED)", Seq(DbmsAction("REMOVE ROLE"), roleArg("reader")), SingleChild(assertValid))
-    val revokeDeny = planDescription("RevokeDbmsAction(DENIED)", Seq(DbmsAction("REMOVE ROLE"), roleArg("reader")), SingleChild(revokeGrant))
-    val expectedPlan = planDescription("LogSystemCommand", children = SingleChild(revokeDeny))
-    plan should include(expectedPlan.toString)
+    plan should include(
+      logPlan(
+        rolePrivilegePlan("RevokeDbmsAction(DENIED)", "REMOVE ROLE", "reader",
+          rolePrivilegePlan("RevokeDbmsAction(GRANTED)", "REMOVE ROLE", "reader",
+            helperPlan("AssertValidRevoke", Seq(DbmsAction("REMOVE ROLE"), roleArg("reader")),
+              assertDbmsAdminPlan("REVOKE PRIVILEGE")
+            )
+          )
+        )
+      ).toString
+    )
   }
 
   test("Grant role management") {
@@ -230,11 +289,15 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
     val plan = execute("EXPLAIN GRANT ROLE MANAGEMENT ON DBMS TO reader, editor").executionPlanString()
 
     // Then
-    val assertAdmin = planDescription("AssertDbmsAdmin", Seq(DbmsAction("GRANT PRIVILEGE")))
-    val grantReader = planDescription("GrantDbmsAction", Seq(DbmsAction("ROLE MANAGEMENT"), roleArg("reader")), SingleChild(assertAdmin))
-    val grantEditor = planDescription("GrantDbmsAction", Seq(DbmsAction("ROLE MANAGEMENT"), roleArg("editor")), SingleChild(grantReader))
-    val expectedPlan = planDescription("LogSystemCommand", children = SingleChild(grantEditor))
-    plan should include(expectedPlan.toString)
+    plan should include(
+      logPlan(
+        rolePrivilegePlan("GrantDbmsAction", "ROLE MANAGEMENT", "editor",
+          rolePrivilegePlan("GrantDbmsAction", "ROLE MANAGEMENT", "reader",
+            assertDbmsAdminPlan("GRANT PRIVILEGE")
+          )
+        )
+      ).toString
+    )
   }
 
   test("Deny role management") {
@@ -244,10 +307,13 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
     val plan = execute("EXPLAIN DENY ROLE MANAGEMENT ON DBMS TO reader").executionPlanString()
 
     // Then
-    val assertAdmin = planDescription("AssertDbmsAdmin", Seq(DbmsAction("DENY PRIVILEGE")))
-    val deny = planDescription("DenyDbmsAction", Seq(DbmsAction("ROLE MANAGEMENT"), roleArg("reader")), SingleChild(assertAdmin))
-    val expectedPlan = planDescription("LogSystemCommand", children = SingleChild(deny))
-    plan should include(expectedPlan.toString)
+    plan should include(
+      logPlan(
+        rolePrivilegePlan("DenyDbmsAction", "ROLE MANAGEMENT", "reader",
+          assertDbmsAdminPlan("DENY PRIVILEGE")
+        )
+      ).toString
+    )
   }
 
   test("Revoke role management") {
@@ -257,21 +323,36 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
     val plan = execute("EXPLAIN REVOKE ROLE MANAGEMENT ON DBMS FROM reader").executionPlanString()
 
     // Then
-    val assertAdmin = planDescription("AssertDbmsAdmin", Seq(DbmsAction("REVOKE PRIVILEGE")))
-    val assertValid = planDescription("AssertValidRevoke", Seq(DbmsAction("ROLE MANAGEMENT"), roleArg("reader")), SingleChild(assertAdmin))
-    val revokeGrantManagement = planDescription("RevokeDbmsAction(GRANTED)", Seq(DbmsAction("ROLE MANAGEMENT"), roleArg("reader")), SingleChild(assertValid))
-    val revokeDenyManagement = planDescription("RevokeDbmsAction(DENIED)", Seq(DbmsAction("ROLE MANAGEMENT"), roleArg("reader")), SingleChild(revokeGrantManagement))
-    val revokeGrantCreate = planDescription("RevokeDbmsAction(GRANTED)", Seq(DbmsAction("CREATE ROLE"), roleArg("reader")), SingleChild(revokeDenyManagement))
-    val revokeDenyCreate = planDescription("RevokeDbmsAction(DENIED)", Seq(DbmsAction("CREATE ROLE"), roleArg("reader")), SingleChild(revokeGrantCreate))
-    val revokeGrantDrop = planDescription("RevokeDbmsAction(GRANTED)", Seq(DbmsAction("DROP ROLE"), roleArg("reader")), SingleChild(revokeDenyCreate))
-    val revokeDenyDrop = planDescription("RevokeDbmsAction(DENIED)", Seq(DbmsAction("DROP ROLE"), roleArg("reader")), SingleChild(revokeGrantDrop))
-    val revokeGrantAssign = planDescription("RevokeDbmsAction(GRANTED)", Seq(DbmsAction("ASSIGN ROLE"), roleArg("reader")), SingleChild(revokeDenyDrop))
-    val revokeDenyAssign = planDescription("RevokeDbmsAction(DENIED)", Seq(DbmsAction("ASSIGN ROLE"), roleArg("reader")), SingleChild(revokeGrantAssign))
-    val revokeGrantRemove = planDescription("RevokeDbmsAction(GRANTED)", Seq(DbmsAction("REMOVE ROLE"), roleArg("reader")), SingleChild(revokeDenyAssign))
-    val revokeDenyRemove = planDescription("RevokeDbmsAction(DENIED)", Seq(DbmsAction("REMOVE ROLE"), roleArg("reader")), SingleChild(revokeGrantRemove))
-    val revokeGrantShow = planDescription("RevokeDbmsAction(GRANTED)", Seq(DbmsAction("SHOW ROLE"), roleArg("reader")), SingleChild(revokeDenyRemove))
-    val revokeDenyShow = planDescription("RevokeDbmsAction(DENIED)", Seq(DbmsAction("SHOW ROLE"), roleArg("reader")), SingleChild(revokeGrantShow))
-    val expectedPlan = planDescription("LogSystemCommand", children = SingleChild(revokeDenyShow))
-    plan should include(expectedPlan.toString)
+    plan should include(
+      logPlan(
+        rolePrivilegePlan("RevokeDbmsAction(DENIED)", "SHOW ROLE", "reader",
+          rolePrivilegePlan("RevokeDbmsAction(GRANTED)", "SHOW ROLE", "reader",
+            rolePrivilegePlan("RevokeDbmsAction(DENIED)", "REMOVE ROLE", "reader",
+              rolePrivilegePlan("RevokeDbmsAction(GRANTED)", "REMOVE ROLE", "reader",
+                rolePrivilegePlan("RevokeDbmsAction(DENIED)", "ASSIGN ROLE", "reader",
+                  rolePrivilegePlan("RevokeDbmsAction(GRANTED)", "ASSIGN ROLE", "reader",
+                    rolePrivilegePlan("RevokeDbmsAction(DENIED)", "DROP ROLE", "reader",
+                      rolePrivilegePlan("RevokeDbmsAction(GRANTED)", "DROP ROLE", "reader",
+                        rolePrivilegePlan("RevokeDbmsAction(DENIED)", "CREATE ROLE", "reader",
+                          rolePrivilegePlan("RevokeDbmsAction(GRANTED)", "CREATE ROLE", "reader",
+                            rolePrivilegePlan("RevokeDbmsAction(DENIED)", "ROLE MANAGEMENT", "reader",
+                              rolePrivilegePlan("RevokeDbmsAction(GRANTED)", "ROLE MANAGEMENT", "reader",
+                                helperPlan("AssertValidRevoke", Seq(DbmsAction("ROLE MANAGEMENT"), roleArg("reader")),
+                                  assertDbmsAdminPlan("REVOKE PRIVILEGE")
+                                )
+                              )
+                            )
+                          )
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+      ).toString
+    )
   }
 }

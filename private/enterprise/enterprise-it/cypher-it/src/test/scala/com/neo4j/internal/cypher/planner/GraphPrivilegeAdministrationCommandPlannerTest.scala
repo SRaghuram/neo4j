@@ -6,8 +6,7 @@
 package com.neo4j.internal.cypher.planner
 
 import org.neo4j.configuration.GraphDatabaseSettings.{DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME}
-import org.neo4j.cypher.internal.plandescription.Arguments.{Database, DbmsAction, Qualifier}
-import org.neo4j.cypher.internal.plandescription.SingleChild
+import org.neo4j.cypher.internal.plandescription.Arguments.Qualifier
 
 class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationCommandPlannerTestBase {
 
@@ -17,16 +16,22 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     selectDatabase(SYSTEM_DATABASE_NAME)
 
     // When
-    val plan = execute(s"EXPLAIN GRANT TRAVERSE ON GRAPH $DEFAULT_DATABASE_NAME TO reader, editor").executionPlanString()
+    val plan = execute(s"EXPLAIN GRANT TRAVERSE ON GRAPH * TO reader, editor").executionPlanString()
 
     // Then
-    val assertAdmin = planDescription("AssertDbmsAdmin", Seq(DbmsAction("GRANT PRIVILEGE")))
-    val grantNodes1 = planDescription("GrantTraverse", Seq(databaseArg(DEFAULT_DATABASE_NAME), Qualifier("NODES *"), roleArg("reader")), SingleChild(assertAdmin))
-    val grantRelationships1 = planDescription("GrantTraverse", Seq(databaseArg(DEFAULT_DATABASE_NAME), Qualifier("RELATIONSHIPS *"), roleArg("reader")), SingleChild(grantNodes1))
-    val grantNodes2 = planDescription("GrantTraverse", Seq(databaseArg(DEFAULT_DATABASE_NAME), Qualifier("NODES *"), roleArg("editor")), SingleChild(grantRelationships1))
-    val grantRelationships2 = planDescription("GrantTraverse", Seq(databaseArg(DEFAULT_DATABASE_NAME), Qualifier("RELATIONSHIPS *"), roleArg("editor")), SingleChild(grantNodes2))
-    val expectedPlan = planDescription("LogSystemCommand", children = SingleChild(grantRelationships2))
-    plan should include(expectedPlan.toString)
+    plan should include(
+      logPlan(
+        graphPrivilegePlan("GrantTraverse", Qualifier("RELATIONSHIPS *"), "editor",
+          graphPrivilegePlan("GrantTraverse", Qualifier("NODES *"), "editor",
+            graphPrivilegePlan("GrantTraverse", Qualifier("RELATIONSHIPS *"), "reader",
+              graphPrivilegePlan("GrantTraverse", Qualifier("NODES *"), "reader",
+                assertDbmsAdminPlan("GRANT PRIVILEGE")
+              )
+            )
+          )
+        )
+      ).toString
+    )
   }
 
   test("Deny traverse") {
@@ -36,10 +41,13 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     val plan = execute(s"EXPLAIN DENY TRAVERSE ON GRAPH $SYSTEM_DATABASE_NAME NODE A TO reader").executionPlanString()
 
     // Then
-    val assertAdmin = planDescription("AssertDbmsAdmin", Seq(DbmsAction("DENY PRIVILEGE")))
-    val denyNodes = planDescription("DenyTraverse", Seq(databaseArg(SYSTEM_DATABASE_NAME), qualifierArg("NODE", "A"), roleArg("reader")), SingleChild(assertAdmin))
-    val expectedPlan = planDescription("LogSystemCommand", children = SingleChild(denyNodes))
-    plan should include(expectedPlan.toString)
+    plan should include(
+      logPlan(
+        graphPrivilegePlan("DenyTraverse", SYSTEM_DATABASE_NAME, qualifierArg("NODE", "A"), "reader",
+          assertDbmsAdminPlan("DENY PRIVILEGE")
+        )
+      ).toString
+    )
   }
 
   test("Revoke traverse") {
@@ -49,13 +57,19 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     val plan = execute(s"EXPLAIN REVOKE TRAVERSE ON GRAPH $DEFAULT_DATABASE_NAME RELATIONSHIPS A, B FROM reader").executionPlanString()
 
     // Then
-    val assertAdmin = planDescription("AssertDbmsAdmin", Seq(DbmsAction("REVOKE PRIVILEGE")))
-    val revokeAGrant = planDescription("RevokeTraverse(GRANTED)", Seq(databaseArg(DEFAULT_DATABASE_NAME), qualifierArg("RELATIONSHIP", "A"), roleArg("reader")), SingleChild(assertAdmin))
-    val revokeADeny = planDescription("RevokeTraverse(DENIED)", Seq(databaseArg(DEFAULT_DATABASE_NAME), qualifierArg("RELATIONSHIP", "A"), roleArg("reader")), SingleChild(revokeAGrant))
-    val revokeBGrant = planDescription("RevokeTraverse(GRANTED)", Seq(databaseArg(DEFAULT_DATABASE_NAME), qualifierArg("RELATIONSHIP", "B"), roleArg("reader")), SingleChild(revokeADeny))
-    val revokeBDeny = planDescription("RevokeTraverse(DENIED)", Seq(databaseArg(DEFAULT_DATABASE_NAME), qualifierArg("RELATIONSHIP", "B"), roleArg("reader")), SingleChild(revokeBGrant))
-    val expectedPlan = planDescription("LogSystemCommand", children = SingleChild(revokeBDeny))
-    plan should include(expectedPlan.toString)
+    plan should include(
+      logPlan(
+        graphPrivilegePlan("RevokeTraverse(DENIED)", DEFAULT_DATABASE_NAME, qualifierArg("RELATIONSHIP", "B"), "reader",
+          graphPrivilegePlan("RevokeTraverse(GRANTED)", DEFAULT_DATABASE_NAME, qualifierArg("RELATIONSHIP", "B"), "reader",
+            graphPrivilegePlan("RevokeTraverse(DENIED)", DEFAULT_DATABASE_NAME, qualifierArg("RELATIONSHIP", "A"), "reader",
+              graphPrivilegePlan("RevokeTraverse(GRANTED)", DEFAULT_DATABASE_NAME, qualifierArg("RELATIONSHIP", "A"), "reader",
+                assertDbmsAdminPlan("REVOKE PRIVILEGE")
+              )
+            )
+          )
+        )
+      ).toString
+    )
   }
 
   // Read
@@ -67,29 +81,41 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     val plan = execute(s"EXPLAIN GRANT READ {*} ON GRAPH $DEFAULT_DATABASE_NAME TO reader, editor").executionPlanString()
 
     // Then
-    val assertAdmin = planDescription("AssertDbmsAdmin", Seq(DbmsAction("GRANT PRIVILEGE")))
-    val grantNodes1 = planDescription("GrantRead", Seq(databaseArg(DEFAULT_DATABASE_NAME), Qualifier("NODES *"), roleArg("reader")), SingleChild(assertAdmin))
-    val grantRelationships1 = planDescription("GrantRead", Seq(databaseArg(DEFAULT_DATABASE_NAME), Qualifier("RELATIONSHIPS *"), roleArg("reader")), SingleChild(grantNodes1))
-    val grantNodes2 = planDescription("GrantRead", Seq(databaseArg(DEFAULT_DATABASE_NAME), Qualifier("NODES *"), roleArg("editor")), SingleChild(grantRelationships1))
-    val grantRelationships2 = planDescription("GrantRead", Seq(databaseArg(DEFAULT_DATABASE_NAME), Qualifier("RELATIONSHIPS *"), roleArg("editor")), SingleChild(grantNodes2))
-    val expectedPlan = planDescription("LogSystemCommand", children = SingleChild(grantRelationships2))
-    plan should include(expectedPlan.toString)
+    plan should include(
+      logPlan(
+        graphPrivilegePlan("GrantRead", DEFAULT_DATABASE_NAME, Qualifier("RELATIONSHIPS *"), "editor",
+          graphPrivilegePlan("GrantRead", DEFAULT_DATABASE_NAME, Qualifier("NODES *"), "editor",
+            graphPrivilegePlan("GrantRead", DEFAULT_DATABASE_NAME, Qualifier("RELATIONSHIPS *"), "reader",
+              graphPrivilegePlan("GrantRead", DEFAULT_DATABASE_NAME, Qualifier("NODES *"), "reader",
+                assertDbmsAdminPlan("GRANT PRIVILEGE")
+              )
+            )
+          )
+        )
+      ).toString
+    )
   }
 
   test("Deny read") {
     selectDatabase(SYSTEM_DATABASE_NAME)
 
     // When
-    val plan = execute(s"EXPLAIN DENY READ {foo, prop} ON GRAPH $SYSTEM_DATABASE_NAME TO reader").executionPlanString()
+    val plan = execute(s"EXPLAIN DENY READ {foo, prop} ON GRAPH * TO reader").executionPlanString()
 
     // Then
-    val assertAdmin = planDescription("AssertDbmsAdmin", Seq(DbmsAction("DENY PRIVILEGE")))
-    val denyNodes1 = planDescription("DenyRead", Seq(databaseArg(SYSTEM_DATABASE_NAME), Qualifier("NODES *"), roleArg("reader")), SingleChild(assertAdmin))
-    val denyNodes2 = planDescription("DenyRead", Seq(databaseArg(SYSTEM_DATABASE_NAME), Qualifier("NODES *"), roleArg("reader")), SingleChild(denyNodes1))
-    val denyRelationships1 = planDescription("DenyRead", Seq(databaseArg(SYSTEM_DATABASE_NAME), Qualifier("RELATIONSHIPS *"), roleArg("reader")), SingleChild(denyNodes2))
-    val denyRelationships2 = planDescription("DenyRead", Seq(databaseArg(SYSTEM_DATABASE_NAME), Qualifier("RELATIONSHIPS *"), roleArg("reader")), SingleChild(denyRelationships1))
-    val expectedPlan = planDescription("LogSystemCommand", children = SingleChild(denyRelationships2))
-    plan should include(expectedPlan.toString)
+    plan should include(
+      logPlan(
+        graphPrivilegePlan("DenyRead", Qualifier("RELATIONSHIPS *"), "reader",
+          graphPrivilegePlan("DenyRead", Qualifier("RELATIONSHIPS *"), "reader",
+            graphPrivilegePlan("DenyRead", Qualifier("NODES *"), "reader",
+              graphPrivilegePlan("DenyRead", Qualifier("NODES *"), "reader",
+                assertDbmsAdminPlan("DENY PRIVILEGE")
+              )
+            )
+          )
+        )
+      ).toString
+    )
   }
 
   test("Revoke read") {
@@ -99,13 +125,19 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     val plan = execute(s"EXPLAIN REVOKE READ {prop} ON GRAPH $DEFAULT_DATABASE_NAME FROM reader").executionPlanString()
 
     // Then
-    val assertAdmin = planDescription("AssertDbmsAdmin", Seq(DbmsAction("REVOKE PRIVILEGE")))
-    val revokeNodesGrant = planDescription("RevokeRead(GRANTED)", Seq(databaseArg(DEFAULT_DATABASE_NAME), Qualifier("NODES *"), roleArg("reader")), SingleChild(assertAdmin))
-    val revokeNodesDeny = planDescription("RevokeRead(DENIED)", Seq(databaseArg(DEFAULT_DATABASE_NAME), Qualifier("NODES *"), roleArg("reader")), SingleChild(revokeNodesGrant))
-    val revokeRelationshipsGrant = planDescription("RevokeRead(GRANTED)", Seq(databaseArg(DEFAULT_DATABASE_NAME), Qualifier("RELATIONSHIPS *"), roleArg("reader")), SingleChild(revokeNodesDeny))
-    val revokeRelationshipsDeny = planDescription("RevokeRead(DENIED)", Seq(databaseArg(DEFAULT_DATABASE_NAME), Qualifier("RELATIONSHIPS *"), roleArg("reader")), SingleChild(revokeRelationshipsGrant))
-    val expectedPlan = planDescription("LogSystemCommand", children = SingleChild(revokeRelationshipsDeny))
-    plan should include(expectedPlan.toString)
+    plan should include(
+      logPlan(
+        graphPrivilegePlan("RevokeRead(DENIED)", DEFAULT_DATABASE_NAME, Qualifier("RELATIONSHIPS *"), "reader",
+          graphPrivilegePlan("RevokeRead(GRANTED)", DEFAULT_DATABASE_NAME, Qualifier("RELATIONSHIPS *"), "reader",
+            graphPrivilegePlan("RevokeRead(DENIED)", DEFAULT_DATABASE_NAME, Qualifier("NODES *"), "reader",
+              graphPrivilegePlan("RevokeRead(GRANTED)", DEFAULT_DATABASE_NAME, Qualifier("NODES *"), "reader",
+                assertDbmsAdminPlan("REVOKE PRIVILEGE")
+              )
+            )
+          )
+        )
+      ).toString
+    )
   }
 
   // Match
@@ -117,13 +149,19 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     val plan = execute(s"EXPLAIN GRANT MATCH {*} ON GRAPH $DEFAULT_DATABASE_NAME TO reader").executionPlanString()
 
     // Then
-    val assertAdmin = planDescription("AssertDbmsAdmin", Seq(DbmsAction("GRANT PRIVILEGE")))
-    val grantNodes1 = planDescription("GrantTraverse", Seq(databaseArg(DEFAULT_DATABASE_NAME), Qualifier("NODES *"), roleArg("reader")), SingleChild(assertAdmin))
-    val grantRelationships1 = planDescription("GrantTraverse", Seq(databaseArg(DEFAULT_DATABASE_NAME), Qualifier("RELATIONSHIPS *"), roleArg("reader")), SingleChild(grantNodes1))
-    val grantNodes2 = planDescription("GrantRead", Seq(databaseArg(DEFAULT_DATABASE_NAME), Qualifier("NODES *"), roleArg("reader")), SingleChild(grantRelationships1))
-    val grantRelationships2 = planDescription("GrantRead", Seq(databaseArg(DEFAULT_DATABASE_NAME), Qualifier("RELATIONSHIPS *"), roleArg("reader")), SingleChild(grantNodes2))
-    val expectedPlan = planDescription("LogSystemCommand", children = SingleChild(grantRelationships2))
-    plan should include(expectedPlan.toString)
+    plan should include(
+      logPlan(
+        graphPrivilegePlan("GrantRead", DEFAULT_DATABASE_NAME, Qualifier("RELATIONSHIPS *"), "reader",
+          graphPrivilegePlan("GrantRead", DEFAULT_DATABASE_NAME, Qualifier("NODES *"), "reader",
+            graphPrivilegePlan("GrantTraverse", DEFAULT_DATABASE_NAME, Qualifier("RELATIONSHIPS *"), "reader",
+              graphPrivilegePlan("GrantTraverse", DEFAULT_DATABASE_NAME, Qualifier("NODES *"), "reader",
+                assertDbmsAdminPlan("GRANT PRIVILEGE")
+              )
+            )
+          )
+        )
+      ).toString
+    )
   }
 
   test("Deny match all") {
@@ -133,27 +171,37 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     val plan = execute(s"EXPLAIN DENY MATCH {*} ON GRAPH $SYSTEM_DATABASE_NAME TO reader").executionPlanString()
 
     // Then
-    val assertAdmin = planDescription("AssertDbmsAdmin", Seq(DbmsAction("DENY PRIVILEGE")))
-    val denyNodes1 = planDescription("DenyTraverse", Seq(databaseArg(SYSTEM_DATABASE_NAME), Qualifier("NODES *"), roleArg("reader")), SingleChild(assertAdmin))
-    val denyRelationships1 = planDescription("DenyTraverse", Seq(databaseArg(SYSTEM_DATABASE_NAME), Qualifier("RELATIONSHIPS *"), roleArg("reader")), SingleChild(denyNodes1))
-    val denyNodes2 = planDescription("DenyRead", Seq(databaseArg(SYSTEM_DATABASE_NAME), Qualifier("NODES *"), roleArg("reader")), SingleChild(denyRelationships1))
-    val denyRelationships2 = planDescription("DenyRead", Seq(databaseArg(SYSTEM_DATABASE_NAME), Qualifier("RELATIONSHIPS *"), roleArg("reader")), SingleChild(denyNodes2))
-    val expectedPlan = planDescription("LogSystemCommand", children = SingleChild(denyRelationships2))
-    plan should include(expectedPlan.toString)
+    plan should include(
+      logPlan(
+        graphPrivilegePlan("DenyRead", SYSTEM_DATABASE_NAME, Qualifier("RELATIONSHIPS *"), "reader",
+          graphPrivilegePlan("DenyRead", SYSTEM_DATABASE_NAME, Qualifier("NODES *"), "reader",
+            graphPrivilegePlan("DenyTraverse", SYSTEM_DATABASE_NAME, Qualifier("RELATIONSHIPS *"), "reader",
+              graphPrivilegePlan("DenyTraverse", SYSTEM_DATABASE_NAME, Qualifier("NODES *"), "reader",
+                assertDbmsAdminPlan("DENY PRIVILEGE")
+              )
+            )
+          )
+        )
+      ).toString
+    )
   }
 
   test("Deny match prop") {
     selectDatabase(SYSTEM_DATABASE_NAME)
 
     // When
-    val plan = execute(s"EXPLAIN DENY MATCH {prop} ON GRAPH $SYSTEM_DATABASE_NAME TO reader").executionPlanString()
+    val plan = execute(s"EXPLAIN DENY MATCH {prop} ON GRAPH * TO reader").executionPlanString()
 
     // Then
-    val assertAdmin = planDescription("AssertDbmsAdmin", Seq(DbmsAction("DENY PRIVILEGE")))
-    val denyNodes = planDescription("DenyRead", Seq(databaseArg(SYSTEM_DATABASE_NAME), Qualifier("NODES *"), roleArg("reader")), SingleChild(assertAdmin))
-    val denyRelationships = planDescription("DenyRead", Seq(databaseArg(SYSTEM_DATABASE_NAME), Qualifier("RELATIONSHIPS *"), roleArg("reader")), SingleChild(denyNodes))
-    val expectedPlan = planDescription("LogSystemCommand", children = SingleChild(denyRelationships))
-    plan should include(expectedPlan.toString)
+    plan should include(
+      logPlan(
+        graphPrivilegePlan("DenyRead", Qualifier("RELATIONSHIPS *"), "reader",
+          graphPrivilegePlan("DenyRead", Qualifier("NODES *"), "reader",
+            assertDbmsAdminPlan("DENY PRIVILEGE")
+          )
+        )
+      ).toString
+    )
   }
 
   // Write
@@ -165,13 +213,19 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     val plan = execute("EXPLAIN GRANT WRITE ON GRAPH * TO reader, editor").executionPlanString()
 
     // Then
-    val assertAdmin = planDescription("AssertDbmsAdmin", Seq(DbmsAction("GRANT PRIVILEGE")))
-    val grantNodes1 = planDescription("GrantWrite", Seq(Database("*"), Qualifier("NODES *"), roleArg("reader")), SingleChild(assertAdmin))
-    val grantRelationships1 = planDescription("GrantWrite", Seq(Database("*"), Qualifier("RELATIONSHIPS *"), roleArg("reader")), SingleChild(grantNodes1))
-    val grantNodes2 = planDescription("GrantWrite", Seq(Database("*"), Qualifier("NODES *"), roleArg("editor")), SingleChild(grantRelationships1))
-    val grantRelationships2 = planDescription("GrantWrite", Seq(Database("*"), Qualifier("RELATIONSHIPS *"), roleArg("editor")), SingleChild(grantNodes2))
-    val expectedPlan = planDescription("LogSystemCommand", children = SingleChild(grantRelationships2))
-    plan should include(expectedPlan.toString)
+    plan should include(
+      logPlan(
+        graphPrivilegePlan("GrantWrite", Qualifier("RELATIONSHIPS *"), "editor",
+          graphPrivilegePlan("GrantWrite", Qualifier("NODES *"), "editor",
+            graphPrivilegePlan("GrantWrite", Qualifier("RELATIONSHIPS *"), "reader",
+              graphPrivilegePlan("GrantWrite", Qualifier("NODES *"), "reader",
+                assertDbmsAdminPlan("GRANT PRIVILEGE")
+              )
+            )
+          )
+        )
+      ).toString
+    )
   }
 
   test("Deny write") {
@@ -181,13 +235,19 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     val plan = execute(s"EXPLAIN DENY WRITE ON GRAPH $SYSTEM_DATABASE_NAME TO reader, editor").executionPlanString()
 
     // Then
-    val assertAdmin = planDescription("AssertDbmsAdmin", Seq(DbmsAction("DENY PRIVILEGE")))
-    val denyNodes1 = planDescription("DenyWrite", Seq(databaseArg(SYSTEM_DATABASE_NAME), Qualifier("NODES *"), roleArg("reader")), SingleChild(assertAdmin))
-    val denyRelationships1 = planDescription("DenyWrite", Seq(databaseArg(SYSTEM_DATABASE_NAME), Qualifier("RELATIONSHIPS *"), roleArg("reader")), SingleChild(denyNodes1))
-    val denyNodes2 = planDescription("DenyWrite", Seq(databaseArg(SYSTEM_DATABASE_NAME), Qualifier("NODES *"), roleArg("editor")), SingleChild(denyRelationships1))
-    val denyRelationships2 = planDescription("DenyWrite", Seq(databaseArg(SYSTEM_DATABASE_NAME), Qualifier("RELATIONSHIPS *"), roleArg("editor")), SingleChild(denyNodes2))
-    val expectedPlan = planDescription("LogSystemCommand", children = SingleChild(denyRelationships2))
-    plan should include(expectedPlan.toString)
+    plan should include(
+      logPlan(
+        graphPrivilegePlan("DenyWrite", SYSTEM_DATABASE_NAME, Qualifier("RELATIONSHIPS *"), "editor",
+          graphPrivilegePlan("DenyWrite", SYSTEM_DATABASE_NAME, Qualifier("NODES *"), "editor",
+            graphPrivilegePlan("DenyWrite", SYSTEM_DATABASE_NAME, Qualifier("RELATIONSHIPS *"), "reader",
+              graphPrivilegePlan("DenyWrite", SYSTEM_DATABASE_NAME, Qualifier("NODES *"), "reader",
+                assertDbmsAdminPlan("DENY PRIVILEGE")
+              )
+            )
+          )
+        )
+      ).toString
+    )
   }
 
   test("Revoke grant write") {
@@ -197,11 +257,15 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     val plan = execute(s"EXPLAIN REVOKE GRANT WRITE ON GRAPH $DEFAULT_DATABASE_NAME FROM reader").executionPlanString()
 
     // Then
-    val assertAdmin = planDescription("AssertDbmsAdmin", Seq(DbmsAction("REVOKE PRIVILEGE")))
-    val revokeNodes = planDescription("RevokeWrite(GRANTED)", Seq(databaseArg(DEFAULT_DATABASE_NAME), Qualifier("NODES *"), roleArg("reader")), SingleChild(assertAdmin))
-    val revokeRelationships = planDescription("RevokeWrite(GRANTED)", Seq(databaseArg(DEFAULT_DATABASE_NAME), Qualifier("RELATIONSHIPS *"), roleArg("reader")), SingleChild(revokeNodes))
-    val expectedPlan = planDescription("LogSystemCommand", children = SingleChild(revokeRelationships))
-    plan should include(expectedPlan.toString)
+    plan should include(
+      logPlan(
+        graphPrivilegePlan("RevokeWrite(GRANTED)", DEFAULT_DATABASE_NAME, Qualifier("RELATIONSHIPS *"), "reader",
+          graphPrivilegePlan("RevokeWrite(GRANTED)", DEFAULT_DATABASE_NAME, Qualifier("NODES *"), "reader",
+            assertDbmsAdminPlan("REVOKE PRIVILEGE")
+          )
+        )
+      ).toString
+    )
   }
 
   test("Revoke deny write") {
@@ -211,10 +275,14 @@ class GraphPrivilegeAdministrationCommandPlannerTest extends AdministrationComma
     val plan = execute(s"EXPLAIN REVOKE DENY WRITE ON GRAPH $DEFAULT_DATABASE_NAME FROM reader").executionPlanString()
 
     // Then
-    val assertAdmin = planDescription("AssertDbmsAdmin", Seq(DbmsAction("REVOKE PRIVILEGE")))
-    val revokeNodes = planDescription("RevokeWrite(DENIED)", Seq(databaseArg(DEFAULT_DATABASE_NAME), Qualifier("NODES *"), roleArg("reader")), SingleChild(assertAdmin))
-    val revokeRelationships = planDescription("RevokeWrite(DENIED)", Seq(databaseArg(DEFAULT_DATABASE_NAME), Qualifier("RELATIONSHIPS *"), roleArg("reader")), SingleChild(revokeNodes))
-    val expectedPlan = planDescription("LogSystemCommand", children = SingleChild(revokeRelationships))
-    plan should include(expectedPlan.toString)
+    plan should include(
+      logPlan(
+        graphPrivilegePlan("RevokeWrite(DENIED)", DEFAULT_DATABASE_NAME, Qualifier("RELATIONSHIPS *"), "reader",
+          graphPrivilegePlan("RevokeWrite(DENIED)", DEFAULT_DATABASE_NAME, Qualifier("NODES *"), "reader",
+            assertDbmsAdminPlan("REVOKE PRIVILEGE")
+          )
+        )
+      ).toString
+    )
   }
 }
