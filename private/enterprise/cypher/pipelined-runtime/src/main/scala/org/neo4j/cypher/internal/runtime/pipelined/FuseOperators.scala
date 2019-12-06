@@ -527,7 +527,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
               template = newTemplate,
               fusedPlans = nextPlan :: acc.fusedPlans)
 
-          case plan@plans.OptionalExpand(_, fromName, dir, types, to, relName, ExpandAll, None) =>
+          case plan@plans.OptionalExpand(_, fromName, dir, types, to, relName, ExpandAll, maybePredicate) =>
             val fromSlot = slots(fromName)
             val relOffset = slots.getLongOffsetFor(relName)
             val toSlot = slots(to)
@@ -555,7 +555,8 @@ class FuseOperators(operatorFactory: OperatorFactory,
                                                         toSlot.offset,
                                                         dir,
                                                         typeTokens.toArray,
-                                                        missingTypes.toArray)(expressionCompiler)
+                                                        missingTypes.toArray,
+                                                        maybePredicate.map(compileExpression))(expressionCompiler)
             acc.copy(
               template = newTemplate,
               fusedPlans = nextPlan :: acc.fusedPlans)

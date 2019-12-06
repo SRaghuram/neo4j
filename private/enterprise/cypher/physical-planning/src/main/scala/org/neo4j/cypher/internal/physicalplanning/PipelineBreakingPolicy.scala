@@ -112,7 +112,7 @@ object OperatorFusionPolicy {
         => true
 
         // one child operators
-        case OptionalExpand(_, _, _, _, _, _, ExpandAll, None) => true
+        case p: OptionalExpand if p.mode == ExpandAll => true
 
         case _: Expand |
              _: Selection |
