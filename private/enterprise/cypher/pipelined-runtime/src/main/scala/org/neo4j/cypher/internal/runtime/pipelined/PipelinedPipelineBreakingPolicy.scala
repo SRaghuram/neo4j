@@ -33,10 +33,10 @@ case class PipelinedPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy, i
       => true
 
       // 1 child operators
-      case e: Expand if e.mode == ExpandAll
-      => !canFuseOneChildOperator(e)
+      case e: OptionalExpand if e.mode == ExpandAll => !canFuseOneChildOperator(e)
 
-      case _: UnwindCollection |
+      case _: Expand |
+           _: UnwindCollection |
            _: Sort |
            _: Top |
            _: Aggregation |
