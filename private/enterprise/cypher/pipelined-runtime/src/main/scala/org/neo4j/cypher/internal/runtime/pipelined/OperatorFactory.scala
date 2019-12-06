@@ -174,6 +174,28 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
           valueExpr.map(converters.toCommandExpression(id, _)),
           indexSeekMode)
 
+      case plans.MultiNodeUniqueIndexSeek(nodeUniqueIndexSeeks) =>
+        val argumentSize = physicalPlan.argumentSizes(id)
+        val x = nodeUniqueIndexSeeks.map {
+          case NodeUniqueIndexSeek(column, label, properties, valueExpr, _, indexOrder) =>
+            val columnOffset = slots.getLongOffsetFor(column)
+            val slottedIndexProperties = properties.map(SlottedIndexedProperty(column, _, slots)).toArray
+            val queryIndex = indexRegistrator.registerQueryIndex(label, properties)
+            val kernelIndexOrder = asKernelIndexOrder(indexOrder)
+            val valueExpression = valueExpr.map(converters.toCommandExpression(id, _))
+            val indexSeekMode = IndexSeekModeFactory(unique = true, readOnly = readOnly).fromQueryExpression(valueExpr)
+
+        }
+
+        new MultiNodeIndexSeekOperator(WorkIdentity.fromPlan(plan),
+                                       slots.getLongOffsetFor(column),
+                                  properties.map(SlottedIndexedProperty(column, _, slots)).toArray,
+                                  indexRegistrator.regsterQueryIndex(label, properties),
+                                  asKernelIndexOrder(indexOrder),
+                                  argumentSize,
+                                  valueExpr.map(converters.toCommandExpression(id, _)),
+                                  indexSeekMode)
+
       case plans.NodeIndexScan(column, labelToken, properties, _, indexOrder) =>
         val argumentSize = physicalPlan.argumentSizes(id)
         new NodeIndexScanOperator(WorkIdentity.fromPlan(plan),

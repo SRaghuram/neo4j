@@ -415,6 +415,12 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
    */
   private def allocateLeaf(lp: LogicalPlan, nullable: Boolean, slots: SlotConfiguration): Unit =
     lp match {
+      case MultiNodeIndexSeek(leafPlans) =>
+        leafPlans.foreach { p =>
+          allocateLeaf(p, nullable, slots)
+          allocations.set(p.id, slots)
+        }
+
       case leaf: IndexLeafPlan =>
         slots.newLong(leaf.idName, nullable, CTNode)
         leaf.cachedProperties.foreach(slots.newCachedProperty(_))

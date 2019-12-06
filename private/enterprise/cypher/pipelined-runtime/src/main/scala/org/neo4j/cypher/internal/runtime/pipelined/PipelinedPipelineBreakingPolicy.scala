@@ -68,6 +68,7 @@ case class PipelinedPipelineBreakingPolicy(fusionPolicy: OperatorFusionPolicy, i
            _: NodeIndexEndsWithScan |
            _: NodeIndexScan |
            _: NodeByIdSeek |
+           _: MultiNodeIndexSeek |
            _: DirectedRelationshipByIdSeek |
            _: UndirectedRelationshipByIdSeek |
            _: NodeCountFromCountStore |
