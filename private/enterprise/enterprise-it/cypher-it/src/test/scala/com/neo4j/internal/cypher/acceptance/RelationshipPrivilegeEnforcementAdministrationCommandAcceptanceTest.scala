@@ -234,6 +234,32 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     }) should be(1)
   }
 
+  test("should get correct count for relationship within transaction with traversal privilege") {
+    // GIVEN
+    setupUserWithCustomRole()
+    execute("GRANT WRITE ON GRAPH * TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE (:A)-[:R]->(:A:B)<-[:R]-(:B)")
+
+    val countQuery = "MATCH ()-[r:R]->(:A) RETURN count(r) as count"
+
+    // WHEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("GRANT TRAVERSE ON GRAPH * NODES A TO custom")
+    execute("GRANT TRAVERSE ON GRAPH * RELATIONSHIPS R TO custom")
+
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute(countQuery).toList should be(List(Map("count" -> 2)))
+
+    // THEN
+    executeOnDefault("joe", "soap", countQuery, requiredOperator = Some("RelationshipCountFromCountStore"), resultHandler = (row, _) => {
+      row.get("count") should be(3)
+    }, executeBefore = tx => tx.execute("CREATE (:A)-[:R]->(:A)<-[:R]-(:B)")) should be(1)
+
+    execute(countQuery).toList should be(List(Map("count" -> 4)))
+  }
+
   test("should get relationships for a matched node") {
 
     import scala.collection.JavaConverters._
