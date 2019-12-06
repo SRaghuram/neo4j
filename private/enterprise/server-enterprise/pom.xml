@@ -95,12 +95,6 @@
             <artifactId>mockito-core</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.google.code.gson</groupId>
-            <artifactId>gson</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
             <groupId>com.neo4j</groupId>
             <artifactId>enterprise-it-test-support</artifactId>
             <version>${project.version}</version>

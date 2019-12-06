@@ -118,9 +118,6 @@
         <include>io.dropwizard.metrics:*</include>
         <include>org.slf4j:slf4j-api</include>
       </includes>
-      <excludes>
-        <exclude>*:pom:*</exclude>
-      </excludes>
     </dependencySet>
     <dependencySet>
       <outputDirectory>lib</outputDirectory>
