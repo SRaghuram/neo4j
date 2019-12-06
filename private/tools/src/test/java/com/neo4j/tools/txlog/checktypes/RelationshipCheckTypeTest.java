@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class RelationshipCheckTypeTest
 {
     @Test
-    void inUseRecordEquality() throws CloneNotSupportedException
+    void inUseRecordEquality()
     {
         RelationshipRecord record1 = new RelationshipRecord( 1 );
         record1.initialize( true, 1, 2, 3, 4, 5, 6, 7, 8, true, false );

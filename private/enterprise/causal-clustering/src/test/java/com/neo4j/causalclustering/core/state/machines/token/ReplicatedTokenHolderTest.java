@@ -114,15 +114,7 @@ public class ReplicatedTokenHolderTest
                 public void visitCreatedLabelToken( long id, String name, boolean internal )
                 {
                     LabelTokenRecord before = new LabelTokenRecord( id );
-                    LabelTokenRecord after;
-                    try
-                    {
-                        after = before.clone();
-                    }
-                    catch ( CloneNotSupportedException e )
-                    {
-                        throw new AssertionError( "Record should be cloneable: " + before, e );
-                    }
+                    LabelTokenRecord after = before.clone();
                     after.setInUse( true );
                     after.setInternal( internal );
                     target.add( new Command.LabelTokenCommand( before, after ) );

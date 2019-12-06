@@ -5,6 +5,7 @@
  */
 package com.neo4j.kernel.impl;
 
+import org.apache.commons.io.IOUtils;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.Test;
 
@@ -155,11 +156,7 @@ class ModifyingFixedFormatRecordsTest
         try ( OutputStream out = crashFs.openAsOutputStream( file, false );
               InputStream in = fs.openAsInputStream( file ) )
         {
-            int b;
-            while ( (b = in.read() ) != -1 )
-            {
-                out.write( b );
-            }
+            IOUtils.copy( in, out );
         }
     }
 
