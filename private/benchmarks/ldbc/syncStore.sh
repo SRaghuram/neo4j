@@ -8,6 +8,7 @@
 
 set -e
 set -u
+set -x
 if [[ $# -lt 4 ]] ; then
     echo "Expected 1 argument, but got $#"
     echo "usage: ./syncStore.sh dataSet dbName rootDbDir rootCsvDir"
@@ -18,9 +19,14 @@ dbName="${2}"
 rootDbDir="${3}"
 rootCsvDir="${4}"
 dataSetTar="${dbName}".tar.gz
-doDownload=$(aws s3 sync s3://benchmarking.neo4j.com/datasets/ldbc/db/ "${rootDbDir}" --exclude "*" --include "${dataSetTar}" --dryrun | grep download ; echo $? )
-if [[ -z ${doDownload} ]]; then
+#Check if we need to sync, and store the result in doDownload
+doDownload=$(aws s3 sync s3://benchmarking.neo4j.com/datasets/ldbc/db/ "${rootDbDir}" --exclude "*" --include "${dataSetTar}" --dryrun)
+if [[ -n ${doDownload} ]]; then
+    #sync
     aws s3 sync s3://benchmarking.neo4j.com/datasets/ldbc/db/ "${rootDbDir}" --exclude "*" --include "${dataSetTar}"
+    #remove the old db folder on disk
+    rm -rf "${rootDbDir}"/"${dbName}"
+    #extract the synced db into the right folder
     tar -xzvf "${rootDbDir}"/"${dataSetTar}" -C "${rootDbDir}"
 fi
 
