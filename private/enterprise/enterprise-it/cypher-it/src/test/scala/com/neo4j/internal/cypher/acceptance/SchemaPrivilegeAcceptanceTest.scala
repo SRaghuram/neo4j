@@ -778,6 +778,53 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     executeOnDefault("joe", "soap", "CREATE INDEX FOR (u:User) ON (u.name)") should be(0)
   }
 
+  test("Should allow index dropping for normal user with index drop privilege") {
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    graph.createIndexWithName("my_index", "Label", "prop")
+    setupUserWithCustomRole()
+    execute("GRANT DROP INDEX ON DATABASE * TO custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      access().role("custom").map,
+      dropIndex().role("custom").map
+    ))
+
+    // WHEN
+    executeOnDefault("joe", "soap", "DROP INDEX my_index") should be(0)
+
+    // THEN
+    graph.getMaybeIndex("Label", Seq("prop")) should be(None)
+  }
+
+  test("Should allow index creation and dropping for normal user with index management privilege") {
+    setupUserWithCustomRole()
+    execute("GRANT NAME MANAGEMENT ON DATABASE * TO custom")
+    execute("GRANT INDEX ON DATABASE * TO custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      access().role("custom").map,
+      createNodeLabel().role("custom").map,
+      createRelationshipType().role("custom").map,
+      createPropertyKey().role("custom").map,
+      createIndex().role("custom").map,
+      dropIndex().role("custom").map
+    ))
+
+    // WHEN
+    executeOnDefault("joe", "soap", "CREATE INDEX my_index FOR (u:User) ON (u.name)") should be(0)
+
+    // THEN
+    graph.getMaybeIndex("User", Seq("name")).isDefined should be(true)
+
+    // WHEN
+    executeOnDefault("joe", "soap", "DROP INDEX my_index") should be(0)
+
+    // THEN
+    graph.getMaybeIndex("User", Seq("name")).isDefined should be(false)
+  }
+
   test("Should allow index creation for normal user with all database privileges") {
     setupUserWithCustomRole()
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -889,6 +936,53 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // WHEN & THEN
     executeOnDefault("joe", "soap", "CREATE CONSTRAINT ON (n:User) ASSERT exists(n.name)") should be(0)
+  }
+
+  test("Should allow constraint dropping for normal user with constraint drop privilege") {
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    graph.createNodeExistenceConstraintWithName("my_constraint", "Label", "prop")
+    setupUserWithCustomRole()
+    execute("GRANT DROP CONSTRAINT ON DATABASE * TO custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      access().role("custom").map,
+      dropConstraint().role("custom").map
+    ))
+
+    // WHEN
+    executeOnDefault("joe", "soap", "DROP CONSTRAINT my_constraint") should be(0)
+
+    // THEN
+    graph.getMaybeNodeConstraint("Label", Seq("prop")) should be(None)
+  }
+
+  test("Should allow constraint creation and dropping for normal user with constraint management privilege") {
+    setupUserWithCustomRole()
+    execute("GRANT NAME MANAGEMENT ON DATABASE * TO custom")
+    execute("GRANT CONSTRAINT ON DATABASE * TO custom")
+
+    // THEN
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      access().role("custom").map,
+      createNodeLabel().role("custom").map,
+      createRelationshipType().role("custom").map,
+      createPropertyKey().role("custom").map,
+      createConstraint().role("custom").map,
+      dropConstraint().role("custom").map
+    ))
+
+    // WHEN
+    executeOnDefault("joe", "soap", "CREATE CONSTRAINT my_constraint ON (u:User) ASSERT exists(u.name)") should be(0)
+
+    // THEN
+    graph.getMaybeNodeConstraint("User", Seq("name")).isDefined should be(true)
+
+    // WHEN
+    executeOnDefault("joe", "soap", "DROP CONSTRAINT my_constraint") should be(0)
+
+    // THEN
+    graph.getMaybeNodeConstraint("User", Seq("name")).isDefined should be(false)
   }
 
   test("Should allow constraint creation for normal user with all database privileges") {
