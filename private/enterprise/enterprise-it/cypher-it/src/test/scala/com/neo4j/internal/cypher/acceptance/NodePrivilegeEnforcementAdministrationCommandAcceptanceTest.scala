@@ -1609,7 +1609,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     execute("GRANT TRAVERSE ON GRAPH * NODES A TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", countQuery, resultHandler = (row, _) => {
+    executeOnDefault("joe", "soap", countQuery, requiredOperator = Some("NodeCountFromCountStore"), resultHandler = (row, _) => {
       row.get("count") should be(3) // commited (:A) and (:A:B) nodes and one in TX, but not the commited (:B) node
     }, executeBefore = tx => tx.createNode(Label.label("A"))) should be(1)
 
@@ -1620,7 +1620,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     execute("GRANT TRAVERSE ON GRAPH * NODES * TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", countQuery, resultHandler = (row, _) => {
+    executeOnDefault("joe", "soap", countQuery, requiredOperator = Some("NodeCountFromCountStore"), resultHandler = (row, _) => {
       row.get("count") should be(4) // commited one more, and allowed traverse on all labels (but not matching on B)
     }, executeBefore = tx => tx.createNode(Label.label("A"))) should be(1)
 
@@ -1631,7 +1631,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     execute("DENY TRAVERSE ON GRAPH * NODES B TO custom")
 
     // THEN
-    executeOnDefault("joe", "soap", countQuery, resultHandler = (row, _) => {
+    executeOnDefault("joe", "soap", countQuery, requiredOperator = Some("NodeCountFromCountStore"), resultHandler = (row, _) => {
       row.get("count") should be(4) // Commited one more, but disallowed B so (:A:B) disappears
     }, executeBefore = tx => tx.createNode(Label.label("A"))) should be(1)
 
