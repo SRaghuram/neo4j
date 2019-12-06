@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class NodeCheckTypeTest
 {
     @Test
-    void inUseRecordEquality() throws CloneNotSupportedException
+    void inUseRecordEquality()
     {
         NodeRecord record1 = new NodeRecord( 1 );
         record1.initialize( true, 1, false, 2, 3 );

@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class PropertyCheckTypeTest
 {
     @Test
-    void inUseRecordEquality() throws CloneNotSupportedException
+    void inUseRecordEquality()
     {
         PropertyRecord record1 = new PropertyRecord( 1 );
         record1.initialize( true, 1, 2 );
