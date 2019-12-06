@@ -5,17 +5,23 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.operators
 
+import org.neo4j.codegen.api.IntermediateRepresentation._
+import org.neo4j.codegen.api.{Field, IntermediateRepresentation}
 import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.RelationshipTypes
 import org.neo4j.cypher.internal.runtime.pipelined.execution.{CursorPools, MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandAllOperatorTaskTemplate.getNodeIdFromSlot
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
+import org.neo4j.cypher.internal.runtime.pipelined.{NodeCursorRepresentation, OperatorExpressionCompiler}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.SlottedQueryState
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, NoMemoryTracker, QueryContext}
 import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection
+import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection.{BOTH, INCOMING, OUTGOING}
+import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.internal.kernel.api._
 import org.neo4j.internal.kernel.api.helpers.RelationshipSelectionCursor
 import org.neo4j.values.storable.Values
@@ -146,6 +152,98 @@ class OptionalExpandAllOperator(val workIdentity: WorkIdentity,
   }
 }
 
+
+class OptionalExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
+                                    id: Id,
+                                    innermost: DelegateOperatorTaskTemplate,
+                                    isHead: Boolean,
+                                    fromName: String,
+                                    fromSlot: Slot,
+                                    relName: String,
+                                    relOffset: Int,
+                                    toOffset: Int,
+                                    dir: SemanticDirection,
+                                    types: Array[Int],
+                                    missingTypes: Array[String])
+                                   (codeGen: OperatorExpressionCompiler)
+  extends ExpandAllOperatorTaskTemplate(inner,
+                                        id,
+                                        innermost,
+                                        isHead,
+                                        fromName,
+                                        fromSlot,
+                                        relName,
+                                        relOffset,
+                                        toOffset,
+                                        dir,
+                                        types,
+                                        missingTypes)(codeGen) {
+
+  import OperatorCodeGenHelperTemplates._
+
+  private val hasWritten = field[Boolean](codeGen.namer.nextVariableName())
+  override final def scopeId: String = "optionalExpandAll" + id.x
+
+  override def genMoreFields: Seq[Field] = super.genMoreFields :+ hasWritten
+
+  override protected def genInitializeInnerLoop: IntermediateRepresentation = {
+
+    val fromNode = codeGen.namer.nextVariableName() + "fromNode"
+    val externalCursor = codeGen.cursorFor(fromName) match {
+      case Some(cursor: NodeCursorRepresentation) => Some(cursor)
+      case _ =>
+        codeGen.registerCursor(fromName, NodeCursorRepresentation(loadField(nodeCursorField)))
+        None
+    }
+    block(
+      declareAndAssign(typeRefOf[Long], fromNode, getNodeIdFromSlot(fromSlot, codeGen)),
+      setField(hasWritten, constant(false)),
+      ifElse(notEqual(load(fromNode), constant(-1L))){
+        block(
+          setUpCursors(fromNode, externalCursor)
+          )
+      }{//else
+        block(
+          //TODO
+          noop()
+        )
+      },
+      constant(true))
+  }
+
+  override protected def genInnerLoop: IntermediateRepresentation = {
+    val otherNode = dir match {
+      case OUTGOING => method[RelationshipSelectionCursor, Long]("targetNodeReference")
+      case INCOMING => method[RelationshipSelectionCursor, Long]("sourceNodeReference")
+      case BOTH => method[RelationshipSelectionCursor, Long]("otherNodeReference")
+    }
+    block(
+    loop(and(innermost.predicate, loadField(canContinue)))(
+      block(
+        codeGen.copyFromInput(Math.min(codeGen.inputSlotConfiguration.numberOfLongs, codeGen.slots.numberOfLongs),
+                              Math.min(codeGen.inputSlotConfiguration.numberOfReferences, codeGen.slots.numberOfReferences)),
+        codeGen.setLongAt(relOffset, invoke(loadField(relationshipsField),
+                                            method[RelationshipSelectionCursor, Long]("relationshipReference"))),
+        codeGen.setLongAt(toOffset, invoke(loadField(relationshipsField), otherNode)),
+        setField(hasWritten, constant(true)),
+        inner.genOperateWithExpressions,
+        doIfInnerCantContinue(setField(canContinue, profilingCursorNext[RelationshipSelectionCursor](loadField(relationshipsField), id))),
+        endInnerLoop
+        )
+      ),
+    condition(and(not(loadField(hasWritten)), not(loadField(canContinue))))(
+      block(
+        codeGen.copyFromInput(Math.min(codeGen.inputSlotConfiguration.numberOfLongs, codeGen.slots.numberOfLongs),
+                              Math.min(codeGen.inputSlotConfiguration.numberOfReferences,
+                                       codeGen.slots.numberOfReferences)),
+        codeGen.setLongAt(relOffset, constant(-1L)),
+        codeGen.setLongAt(toOffset, constant(-1L)),
+        inner.genOperateWithExpressions
+        ),
+      )
+    )
+  }
+}
 
 
 

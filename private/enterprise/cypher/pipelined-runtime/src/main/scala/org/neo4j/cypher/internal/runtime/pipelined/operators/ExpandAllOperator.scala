@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.operators
 import java.util.function.ToLongFunction
 
 import org.neo4j.codegen.api.IntermediateRepresentation.{condition, _}
-import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable}
+import org.neo4j.codegen.api.{Field, InstanceField, IntermediateRepresentation, LocalVariable}
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeGetPrimitiveNodeFromSlotFunctionFor
 import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot, Slot}
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
@@ -204,20 +204,20 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
                                     (codeGen: OperatorExpressionCompiler) extends InputLoopTaskTemplate(inner, id, innermost, codeGen, isHead) {
   import OperatorCodeGenHelperTemplates._
 
-  private val nodeCursorField = field[NodeCursor](codeGen.namer.nextVariableName() + "nodeCursor")
+  protected val nodeCursorField: InstanceField = field[NodeCursor](codeGen.namer.nextVariableName() + "nodeCursor")
   private val groupCursorField = field[RelationshipGroupCursor](codeGen.namer.nextVariableName() + "group")
   private val traversalCursorField = field[RelationshipTraversalCursor](codeGen.namer.nextVariableName() + "traversal")
-  private val relationshipsField = field[RelationshipSelectionCursor](codeGen.namer.nextVariableName() + "relationships")
+  protected val relationshipsField: InstanceField = field[RelationshipSelectionCursor](codeGen.namer.nextVariableName() + "relationships")
   private val typeField = field[Array[Int]](codeGen.namer.nextVariableName() + "type",
-                                            if (types.isEmpty && missingTypes.isEmpty) constant(null)
+                                                                                        if (types.isEmpty && missingTypes.isEmpty) constant(null)
                                             else arrayOf[Int](types.map(constant):_*)
                                                                                         )
-  private val missingTypeField = field[Array[String]](codeGen.namer.nextVariableName() + "missingType",
-                                                      arrayOf[String](missingTypes.map(constant):_*))
+  private val missingTypeField: InstanceField = field[Array[String]](codeGen.namer.nextVariableName() + "missingType",
+                                                                                                  arrayOf[String](missingTypes.map(constant):_*))
 
   codeGen.registerCursor(relName, RelationshipCursorRepresentation(loadField(relationshipsField)))
 
-  override final def scopeId: String = "expandAll" + id.x
+  override def scopeId: String = "expandAll" + id.x
 
   override def genMoreFields: Seq[Field] = {
     val localFields =
@@ -257,17 +257,7 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
     *
     */
   override protected def genInitializeInnerLoop: IntermediateRepresentation = {
-    val (denseMethod, sparseMethod) = dir match {
-      case OUTGOING =>
-        (method[RelationshipSelections, RelationshipSelectionCursor, RelationshipGroupCursor, RelationshipTraversalCursor, NodeCursor, Array[Int]]("outgoingDenseCursor"),
-          method[RelationshipSelections, RelationshipSelectionCursor, RelationshipTraversalCursor, NodeCursor, Array[Int]]("outgoingSparseCursor"))
-      case INCOMING =>
-        (method[RelationshipSelections, RelationshipSelectionCursor, RelationshipGroupCursor, RelationshipTraversalCursor, NodeCursor, Array[Int]]("incomingDenseCursor"),
-          method[RelationshipSelections, RelationshipSelectionCursor, RelationshipTraversalCursor, NodeCursor, Array[Int]]("incomingSparseCursor"))
-      case BOTH =>
-        (method[RelationshipSelections, RelationshipSelectionCursor, RelationshipGroupCursor, RelationshipTraversalCursor, NodeCursor, Array[Int]]("allDenseCursor"),
-          method[RelationshipSelections, RelationshipSelectionCursor, RelationshipTraversalCursor, NodeCursor, Array[Int]]("allSparseCursor"))
-    }
+
     val resultBoolean = codeGen.namer.nextVariableName()
     val fromNode = codeGen.namer.nextVariableName() + "fromNode"
     val externalCursor = codeGen.cursorFor(fromName) match {
@@ -282,57 +272,79 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
       declareAndAssign(typeRefOf[Long], fromNode, getNodeIdFromSlot(fromSlot, codeGen)),
       condition(notEqual(load(fromNode), constant(-1L))){
        block(
-        loadTypes(types, missingTypes, typeField, missingTypeField),
-         //specialize if we have an external NodeCursor already pointing at the correct offset
-         externalCursor.map{c =>
-           ifElse(c.isDense)(
-             block(allocateAndTraceCursor(groupCursorField, executionEventField, ALLOCATE_GROUP_CURSOR),
-                   allocateAndTraceCursor(traversalCursorField, executionEventField, ALLOCATE_TRAVERSAL_CURSOR),
-                   setField(relationshipsField, invokeStatic(denseMethod,
-                                                             loadField(groupCursorField),
-                                                             loadField(traversalCursorField),
-                                                             c.target,
-                                                             loadField(typeField))))
-             )( //else
-                block(
-                  allocateAndTraceCursor(traversalCursorField, executionEventField, ALLOCATE_TRAVERSAL_CURSOR),
-                  setField(relationshipsField, invokeStatic(sparseMethod,
-                                                            loadField(traversalCursorField),
-                                                            c.target,
-                                                            loadField(typeField))))
-                )
-         }.getOrElse(//otherwise we need to set up a cursor to point at the from node
-           block(allocateAndTraceCursor(nodeCursorField, executionEventField, ALLOCATE_NODE_CURSOR),
-                 singleNode(load(fromNode), loadField(nodeCursorField)),
-                 ifElse(cursorNext[NodeCursor](loadField(nodeCursorField)))(
-                   ifElse(invoke(loadField(nodeCursorField), method[NodeCursor, Boolean]("isDense")))(
-                     block(allocateAndTraceCursor(groupCursorField, executionEventField, ALLOCATE_GROUP_CURSOR),
-                           allocateAndTraceCursor(traversalCursorField, executionEventField, ALLOCATE_TRAVERSAL_CURSOR),
-                           setField(relationshipsField, invokeStatic(denseMethod,
-                                                                     loadField(groupCursorField),
-                                                                     loadField(traversalCursorField),
-                                                                     loadField(nodeCursorField),
-                                                                     loadField(typeField))))
-                     )( //else
-                        block(
-                          allocateAndTraceCursor(traversalCursorField, executionEventField, ALLOCATE_TRAVERSAL_CURSOR),
-                          setField(relationshipsField, invokeStatic(sparseMethod,
-                                                                    loadField(traversalCursorField),
-                                                                    loadField(nodeCursorField),
-                                                                    loadField(typeField))))
-                        )
-
-                   )( //else
-                      setField(relationshipsField,
-                               getStatic[RelationshipSelectionCursor, RelationshipSelectionCursor]("EMPTY"))
-                      ))),
-         invokeSideEffect(loadField(relationshipsField), method[RelationshipSelectionCursor, Unit, KernelReadTracer]("setTracer"), loadField(executionEventField)),
          assign(resultBoolean, constant(true)),
-         setField(canContinue, profilingCursorNext[RelationshipSelectionCursor](loadField(relationshipsField), id)),
+         setUpCursors(fromNode, externalCursor)
          )
       },
 
       load(resultBoolean)
+      )
+  }
+
+  protected def setUpCursors(fromNode: String,
+                           externalCursor: Option[NodeCursorRepresentation]): IntermediateRepresentation = {
+    val (denseMethod, sparseMethod) = dir match {
+      case OUTGOING =>
+        (method[RelationshipSelections, RelationshipSelectionCursor, RelationshipGroupCursor, RelationshipTraversalCursor, NodeCursor, Array[Int]]("outgoingDenseCursor"),
+          method[RelationshipSelections, RelationshipSelectionCursor, RelationshipTraversalCursor, NodeCursor, Array[Int]]("outgoingSparseCursor"))
+      case INCOMING =>
+        (method[RelationshipSelections, RelationshipSelectionCursor, RelationshipGroupCursor, RelationshipTraversalCursor, NodeCursor, Array[Int]]("incomingDenseCursor"),
+          method[RelationshipSelections, RelationshipSelectionCursor, RelationshipTraversalCursor, NodeCursor, Array[Int]]("incomingSparseCursor"))
+      case BOTH =>
+        (method[RelationshipSelections, RelationshipSelectionCursor, RelationshipGroupCursor, RelationshipTraversalCursor, NodeCursor, Array[Int]]("allDenseCursor"),
+          method[RelationshipSelections, RelationshipSelectionCursor, RelationshipTraversalCursor, NodeCursor, Array[Int]]("allSparseCursor"))
+    }
+    block(
+      loadTypes(types, missingTypes, typeField, missingTypeField),
+      //specialize if we have an external NodeCursor already pointing at the correct offset
+      externalCursor.map { c =>
+        ifElse(c.isDense)(
+          block(allocateAndTraceCursor(groupCursorField, executionEventField, ALLOCATE_GROUP_CURSOR),
+                allocateAndTraceCursor(traversalCursorField, executionEventField, ALLOCATE_TRAVERSAL_CURSOR),
+                setField(relationshipsField, invokeStatic(denseMethod,
+                                                          loadField(groupCursorField),
+                                                          loadField(traversalCursorField),
+                                                          c.target,
+                                                          loadField(typeField))))
+          )( //else
+             block(
+               allocateAndTraceCursor(traversalCursorField, executionEventField, ALLOCATE_TRAVERSAL_CURSOR),
+               setField(relationshipsField, invokeStatic(sparseMethod,
+                                                         loadField(traversalCursorField),
+                                                         c.target,
+                                                         loadField(typeField))))
+             )
+      }.getOrElse( //otherwise we need to set up a cursor to point at the from node
+                   block(allocateAndTraceCursor(nodeCursorField, executionEventField, ALLOCATE_NODE_CURSOR),
+                         singleNode(load(fromNode), loadField(nodeCursorField)),
+                         ifElse(cursorNext[NodeCursor](loadField(nodeCursorField)))(
+                           ifElse(invoke(loadField(nodeCursorField), method[NodeCursor, Boolean]("isDense")))(
+                             block(allocateAndTraceCursor(groupCursorField, executionEventField, ALLOCATE_GROUP_CURSOR),
+                                   allocateAndTraceCursor(traversalCursorField, executionEventField,
+                                                          ALLOCATE_TRAVERSAL_CURSOR),
+                                   setField(relationshipsField, invokeStatic(denseMethod,
+                                                                             loadField(groupCursorField),
+                                                                             loadField(traversalCursorField),
+                                                                             loadField(nodeCursorField),
+                                                                             loadField(typeField))))
+                             )( //else
+                                block(
+                                  allocateAndTraceCursor(traversalCursorField, executionEventField,
+                                                         ALLOCATE_TRAVERSAL_CURSOR),
+                                  setField(relationshipsField, invokeStatic(sparseMethod,
+                                                                            loadField(traversalCursorField),
+                                                                            loadField(nodeCursorField),
+                                                                            loadField(typeField))))
+                                )
+
+                           )( //else
+                              setField(relationshipsField,
+                                       getStatic[RelationshipSelectionCursor, RelationshipSelectionCursor]("EMPTY"))
+                              ))),
+      invokeSideEffect(loadField(relationshipsField),
+                       method[RelationshipSelectionCursor, Unit, KernelReadTracer]("setTracer"),
+                       loadField(executionEventField)),
+      setField(canContinue, profilingCursorNext[RelationshipSelectionCursor](loadField(relationshipsField), id)),
       )
   }
 

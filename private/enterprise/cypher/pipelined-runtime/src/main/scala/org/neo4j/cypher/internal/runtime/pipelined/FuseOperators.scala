@@ -527,6 +527,39 @@ class FuseOperators(operatorFactory: OperatorFactory,
               template = newTemplate,
               fusedPlans = nextPlan :: acc.fusedPlans)
 
+          case plan@plans.OptionalExpand(_, fromName, dir, types, to, relName, ExpandAll, None) =>
+            val fromSlot = slots(fromName)
+            val relOffset = slots.getLongOffsetFor(relName)
+            val toSlot = slots(to)
+            val tokensOrNames = types.map(r => tokenContext.getOptRelTypeId(r.name) match {
+              case Some(token) => Left(token)
+              case None => Right(r.name)
+            })
+
+            val typeTokens = tokensOrNames.collect {
+              case Left(token: Int) => token
+            }
+            val missingTypes = tokensOrNames.collect {
+              case Right(name: String) => name
+            }
+
+            val newTemplate =
+              new OptionalExpandAllOperatorTaskTemplate(acc.template,
+                                                        plan.id,
+                                                        innermostTemplate,
+                                                        plan eq headPlan,
+                                                        fromName,
+                                                        fromSlot,
+                                                        relName,
+                                                        relOffset,
+                                                        toSlot.offset,
+                                                        dir,
+                                                        typeTokens.toArray,
+                                                        missingTypes.toArray)(expressionCompiler)
+            acc.copy(
+              template = newTemplate,
+              fusedPlans = nextPlan :: acc.fusedPlans)
+
           case  plan@plans.VarExpand(_,
                                fromName,
                                dir,
