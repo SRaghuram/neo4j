@@ -25,7 +25,7 @@ if [[ -n ${doDownload} ]]; then
     #sync
     aws s3 sync s3://benchmarking.neo4j.com/datasets/ldbc/db/ "${rootDbDir}" --exclude "*" --include "${dataSetTar}"
     #remove the old db folder on disk
-    rm -rf "${rootDbDir}"/"${dbName}"
+    rm -rf "${rootDbDir:?}"/"${dbName}"
     #extract the synced db into the right folder
     tar -xzvf "${rootDbDir}"/"${dataSetTar}" -C "${rootDbDir}"
 fi
