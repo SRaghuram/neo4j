@@ -5,6 +5,8 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.operators
 
+import java.util.function.ToLongFunction
+
 import org.neo4j.codegen.api.IntermediateRepresentation.{condition, _}
 import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable}
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeGetPrimitiveNodeFromSlotFunctionFor
@@ -39,10 +41,10 @@ class ExpandAllOperator(val workIdentity: WorkIdentity,
                         toOffset: Int,
                         dir: SemanticDirection,
                         types: RelationshipTypes) extends StreamingOperator {
+
   //===========================================================================
   // Compile-time initializations
   //===========================================================================
-  private val getFromNodeFunction = makeGetPrimitiveNodeFromSlotFunctionFor(fromSlot)
 
   override def toString: String = "ExpandAll"
 
@@ -52,96 +54,116 @@ class ExpandAllOperator(val workIdentity: WorkIdentity,
                                    parallelism: Int,
                                    resources: QueryResources,
                                    argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorsel] =
-    IndexedSeq(new OTask(inputMorsel.nextCopy))
+    IndexedSeq(new ExpandAllTask(inputMorsel.nextCopy,
+                                 workIdentity,
+                                 fromSlot,
+                                 relOffset,
+                                 toOffset,
+                                 dir,
+                                 types))
 
-  class OTask(val inputMorsel: MorselExecutionContext) extends InputLoopTask {
+}
 
-    override def workIdentity: WorkIdentity = ExpandAllOperator.this.workIdentity
+class ExpandAllTask(val inputMorsel: MorselExecutionContext,
+                    val workIdentity: WorkIdentity,
+                    fromSlot: Slot,
+                    relOffset: Int,
+                    toOffset: Int,
+                    dir: SemanticDirection,
+                    types: RelationshipTypes) extends InputLoopTask {
 
-    override def toString: String = "ExpandAllTask"
+  override def toString: String = "ExpandAllTask"
 
-    /*
-    This might look wrong, but it's like this by design. This allows the loop to terminate early and still be
-    picked up at any point again - all without impacting the tight loop.
-    The mutable state is an unfortunate cost for this feature.
-     */
-    private var nodeCursor: NodeCursor = _
-    private var groupCursor: RelationshipGroupCursor = _
-    private var traversalCursor: RelationshipTraversalCursor = _
-    private var relationships: RelationshipSelectionCursor = _
+  protected val getFromNodeFunction: ToLongFunction[ExecutionContext] =
+    makeGetPrimitiveNodeFromSlotFunctionFor(fromSlot)
 
-    protected override def initializeInnerLoop(context: QueryContext,
-                                               state: QueryState,
-                                               resources: QueryResources,
-                                               initExecutionContext: ExecutionContext): Boolean = {
-      val fromNode = getFromNodeFunction.applyAsLong(inputMorsel)
-      if (entityIsNull(fromNode))
-        false
-      else {
-        val pools: CursorPools = resources.cursorPools
-        nodeCursor = pools.nodeCursorPool.allocateAndTrace()
-        relationships = getRelationshipsCursor(context, pools, fromNode, dir, types.types(context))
-        true
-      }
+  /*
+  This might look wrong, but it's like this by design. This allows the loop to terminate early and still be
+  picked up at any point again - all without impacting the tight loop.
+  The mutable state is an unfortunate cost for this feature.
+   */
+  protected var nodeCursor: NodeCursor = _
+  private var groupCursor: RelationshipGroupCursor = _
+  private var traversalCursor: RelationshipTraversalCursor = _
+  protected var relationships: RelationshipSelectionCursor = _
+
+  protected override def initializeInnerLoop(context: QueryContext,
+                                             state: QueryState,
+                                             resources: QueryResources,
+                                             initExecutionContext: ExecutionContext): Boolean = {
+    val fromNode = getFromNodeFunction.applyAsLong(inputMorsel)
+    if (entityIsNull(fromNode))
+      false
+    else {
+      val pools: CursorPools = resources.cursorPools
+      nodeCursor = pools.nodeCursorPool.allocateAndTrace()
+      relationships = getRelationshipsCursor(context, pools, fromNode, dir, types.types(context))
+      true
     }
+  }
 
-    override protected def innerLoop(outputRow: MorselExecutionContext,
-                                     context: QueryContext,
-                                     state: QueryState): Unit = {
+  override protected def innerLoop(outputRow: MorselExecutionContext,
+                                   context: QueryContext,
+                                   state: QueryState): Unit = {
 
-      while (outputRow.isValidRow && relationships.next()) {
-        val relId = relationships.relationshipReference()
-        val otherSide = relationships.otherNodeReference()
+    while (outputRow.isValidRow && relationships.next()) {
+      val relId = relationships.relationshipReference()
+      val otherSide = relationships.otherNodeReference()
 
-        // Now we have everything needed to create a row.
-        outputRow.copyFrom(inputMorsel)
-        outputRow.setLongAt(relOffset, relId)
-        outputRow.setLongAt(toOffset, otherSide)
-        outputRow.moveToNextRow()
-      }
+      // Now we have everything needed to create a row.
+      outputRow.copyFrom(inputMorsel)
+      outputRow.setLongAt(relOffset, relId)
+      outputRow.setLongAt(toOffset, otherSide)
+      outputRow.moveToNextRow()
     }
+  }
 
-    override def setExecutionEvent(event: OperatorProfileEvent): Unit = {
-      if (relationships != null) {
-        nodeCursor.setTracer(event)
-        relationships.setTracer(event)
-      }
+  override def setExecutionEvent(event: OperatorProfileEvent): Unit = {
+    if (nodeCursor != null) {
+      nodeCursor.setTracer(event)
     }
-
-    override protected def closeInnerLoop(resources: QueryResources): Unit = {
-      val pools = resources.cursorPools
-      pools.nodeCursorPool.free(nodeCursor)
-      pools.relationshipGroupCursorPool.free(groupCursor)
-      pools.relationshipTraversalCursorPool.free(traversalCursor)
-      nodeCursor = null
-      groupCursor = null
-      traversalCursor = null
-      relationships = null
+    if (groupCursor != null) {
+      groupCursor.setTracer(event)
     }
+    if (traversalCursor != null) {
+      traversalCursor.setTracer(event)
+    }
+  }
 
-    private def getRelationshipsCursor(context: QueryContext,
+  override protected def closeInnerLoop(resources: QueryResources): Unit = {
+    val pools = resources.cursorPools
+    pools.nodeCursorPool.free(nodeCursor)
+    pools.relationshipGroupCursorPool.free(groupCursor)
+    pools.relationshipTraversalCursorPool.free(traversalCursor)
+    nodeCursor = null
+    groupCursor = null
+    traversalCursor = null
+    relationships = null
+  }
+
+  protected def getRelationshipsCursor(context: QueryContext,
                                        pools: CursorPools,
                                        node: Long,
                                        dir: SemanticDirection,
                                        types: Array[Int]): RelationshipSelectionCursor = {
 
-      val read = context.transactionalContext.dataRead
-      read.singleNode(node, nodeCursor)
-      if (!nodeCursor.next()) RelationshipSelectionCursor.EMPTY
-      else {
-        dir match {
-          case OUTGOING =>
-            if (nodeCursor.isDense) {
-              groupCursor = pools.relationshipGroupCursorPool.allocateAndTrace()
-              traversalCursor = pools.relationshipTraversalCursorPool.allocateAndTrace()
-              outgoingDenseCursor(groupCursor, traversalCursor, nodeCursor, types)
-            }
-            else {
-              traversalCursor = pools.relationshipTraversalCursorPool.allocateAndTrace()
-              outgoingSparseCursor(traversalCursor, nodeCursor, types)
-            }
-          case INCOMING =>
-            if (nodeCursor.isDense) {
+    val read = context.transactionalContext.dataRead
+    read.singleNode(node, nodeCursor)
+    if (!nodeCursor.next()) RelationshipSelectionCursor.EMPTY
+    else {
+      dir match {
+        case OUTGOING =>
+          if (nodeCursor.isDense) {
+            groupCursor = pools.relationshipGroupCursorPool.allocateAndTrace()
+            traversalCursor = pools.relationshipTraversalCursorPool.allocateAndTrace()
+            outgoingDenseCursor(groupCursor, traversalCursor, nodeCursor, types)
+          }
+          else {
+            traversalCursor = pools.relationshipTraversalCursorPool.allocateAndTrace()
+            outgoingSparseCursor(traversalCursor, nodeCursor, types)
+          }
+        case INCOMING =>
+          if (nodeCursor.isDense) {
             groupCursor = pools.relationshipGroupCursorPool.allocateAndTrace()
             traversalCursor = pools.relationshipTraversalCursorPool.allocateAndTrace()
             incomingDenseCursor(groupCursor, traversalCursor, nodeCursor, types)
@@ -150,21 +172,22 @@ class ExpandAllOperator(val workIdentity: WorkIdentity,
             traversalCursor = pools.relationshipTraversalCursorPool.allocateAndTrace()
             incomingSparseCursor(traversalCursor, nodeCursor, types)
           }
-          case BOTH =>
-            if (nodeCursor.isDense) {
-              groupCursor = pools.relationshipGroupCursorPool.allocateAndTrace()
-              traversalCursor = pools.relationshipTraversalCursorPool.allocateAndTrace()
-              allDenseCursor(groupCursor, traversalCursor, nodeCursor, types)
-            }
-            else {
-              traversalCursor = pools.relationshipTraversalCursorPool.allocateAndTrace()
-              allSparseCursor(traversalCursor, nodeCursor, types)
-            }
-        }
+        case BOTH =>
+          if (nodeCursor.isDense) {
+            groupCursor = pools.relationshipGroupCursorPool.allocateAndTrace()
+            traversalCursor = pools.relationshipTraversalCursorPool.allocateAndTrace()
+            allDenseCursor(groupCursor, traversalCursor, nodeCursor, types)
+          }
+          else {
+            traversalCursor = pools.relationshipTraversalCursorPool.allocateAndTrace()
+            allSparseCursor(traversalCursor, nodeCursor, types)
+          }
       }
     }
   }
 }
+
+
 
 class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
                                     id: Id,

@@ -229,6 +229,19 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
                               nodePredicate.map(x => converters.toCommandExpression(id, x.predicate)).getOrElse(True()),
                               relationshipPredicate.map(x => converters.toCommandExpression(id, x.predicate)).getOrElse(True()))
 
+      case plans.OptionalExpand(_, fromName, dir, types, to, relName, plans.ExpandAll, maybePredicate) =>
+        val fromSlot = slots(fromName)
+        val relOffset = slots.getLongOffsetFor(relName)
+        val toOffset = slots.getLongOffsetFor(to)
+        val lazyTypes = RelationshipTypes(types.toArray)(semanticTable)
+        new OptionalExpandAllOperator(WorkIdentity.fromPlan(plan),
+                                      fromSlot,
+                                      relOffset,
+                                      toOffset,
+                                      dir,
+                                      lazyTypes,
+                                      maybePredicate.map(converters.toCommandExpression(id, _)))
+
       case plans.Optional(source, protectedSymbols) =>
         val argumentStateMapId = inputBuffer.variant.asInstanceOf[OptionalBufferVariant].argumentStateMapId
         val nullableKeys = source.availableSymbols -- protectedSymbols
