@@ -9,8 +9,8 @@ import com.neo4j.bench.micro.data.DiscreteGenerator.Bucket
 import com.neo4j.bench.micro.data.TypeParamValues._
 import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.planner.spi.PlanContext
-import org.neo4j.cypher.internal.v4_0.expressions
-import org.neo4j.cypher.internal.v4_0.expressions._
+import org.neo4j.cypher.internal.expressions
+import org.neo4j.cypher.internal.expressions._
 import org.neo4j.cypher.internal.util._
 import org.neo4j.cypher.internal.util.attribution.SequentialIdGen
 import org.neo4j.cypher.internal.util.symbols.CypherType

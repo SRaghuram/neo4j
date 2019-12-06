@@ -17,7 +17,7 @@ import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions._
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi._
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Value
-import org.neo4j.cypher.internal.v4_0.frontend.helpers._
+import org.neo4j.cypher.internal.frontend.helpers._
 import org.neo4j.cypher.internal.util.symbols
 
 import scala.collection.mutable

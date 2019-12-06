@@ -5,8 +5,8 @@
  */
 package org.neo4j.cypher.internal.physicalplanning
 
-import org.neo4j.cypher.internal.v4_0.ast.AstConstructionTestSupport
-import org.neo4j.cypher.internal.v4_0.expressions.{ASTCachedProperty, CachedProperty, NODE_TYPE, PropertyKeyName}
+import org.neo4j.cypher.internal.ast.AstConstructionTestSupport
+import org.neo4j.cypher.internal.expressions.{ASTCachedProperty, CachedProperty, NODE_TYPE, PropertyKeyName}
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.internal.util.symbols._
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite

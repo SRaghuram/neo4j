@@ -9,7 +9,7 @@ import com.neo4j.cypher.EnterpriseGraphDatabaseTestSupport
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.plandescription.InternalPlanDescription
 import org.neo4j.cypher.internal.planner.spi.{DPPlannerName, IDPPlannerName}
-import org.neo4j.cypher.internal.v4_0.frontend.PlannerName
+import org.neo4j.cypher.internal.frontend.PlannerName
 import org.scalatest.matchers.Matcher
 
 class PreParsingAcceptanceTest extends ExecutionEngineFunSuite with EnterpriseGraphDatabaseTestSupport {

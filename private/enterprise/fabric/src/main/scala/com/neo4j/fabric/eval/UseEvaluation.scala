@@ -12,8 +12,8 @@ import com.neo4j.fabric.util.Rewritten._
 import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.planner.spi.ProcedureSignatureResolver
 import org.neo4j.cypher.internal.runtime.ExecutionContext
-import org.neo4j.cypher.internal.v4_0.ast.{CatalogName, UseGraph}
-import org.neo4j.cypher.internal.v4_0.expressions._
+import org.neo4j.cypher.internal.ast.{CatalogName, UseGraph}
+import org.neo4j.cypher.internal.expressions._
 import org.neo4j.internal.kernel.api.{QueryContext => _}
 import org.neo4j.kernel.api.procedure.GlobalProcedures
 import org.neo4j.values.AnyValue

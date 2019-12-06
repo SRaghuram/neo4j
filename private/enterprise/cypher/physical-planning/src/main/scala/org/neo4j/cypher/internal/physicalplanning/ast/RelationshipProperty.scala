@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.physicalplanning.ast
 
 import org.neo4j.cypher.internal.runtime.ast.RuntimeProperty
-import org.neo4j.cypher.internal.v4_0.expressions.LogicalProperty
+import org.neo4j.cypher.internal.expressions.LogicalProperty
 
 case class RelationshipProperty(offset: Int, propToken: Int, name: String)(prop: LogicalProperty) extends RuntimeProperty(prop) {
   override def asCanonicalStringVal: String = name

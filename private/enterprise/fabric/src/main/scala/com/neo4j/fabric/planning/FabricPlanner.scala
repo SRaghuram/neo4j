@@ -18,14 +18,14 @@ import com.neo4j.fabric.util.Rewritten._
 import org.neo4j.cypher.internal._
 import org.neo4j.cypher.internal.logical.plans.{ResolvedCall, ResolvedFunctionInvocation}
 import org.neo4j.cypher.internal.planner.spi.ProcedureSignatureResolver
-import org.neo4j.cypher.internal.v4_0.ast.semantics.{SemanticState, SemanticTable}
-import org.neo4j.cypher.internal.v4_0.ast.{ProcedureResult, SingleQuery, Statement, UnresolvedCall}
-import org.neo4j.cypher.internal.v4_0.expressions.{FunctionInvocation, FunctionName, Namespace, ProcedureName}
-import org.neo4j.cypher.internal.v4_0.frontend.PlannerName
-import org.neo4j.cypher.internal.v4_0.frontend.phases.{BaseState, Condition}
+import org.neo4j.cypher.internal.ast.semantics.{SemanticState, SemanticTable}
+import org.neo4j.cypher.internal.ast.{ProcedureResult, SingleQuery, Statement, UnresolvedCall}
+import org.neo4j.cypher.internal.expressions.{FunctionInvocation, FunctionName, Namespace, ProcedureName}
+import org.neo4j.cypher.internal.frontend.PlannerName
+import org.neo4j.cypher.internal.frontend.phases.{BaseState, Condition}
 import org.neo4j.cypher.internal.util.InputPosition
 import org.neo4j.cypher.internal.util.symbols.{CTAny, CypherType}
-import org.neo4j.cypher.internal.v4_0.{ast, expressions => exp}
+import org.neo4j.cypher.internal.{ast, expressions => exp}
 import org.neo4j.cypher.{CypherExecutionMode, CypherExpressionEngineOption, CypherRuntimeOption, CypherUpdateStrategy}
 import org.neo4j.kernel.api.exceptions.Status.Statement.SemanticError
 import org.neo4j.monitoring.Monitors

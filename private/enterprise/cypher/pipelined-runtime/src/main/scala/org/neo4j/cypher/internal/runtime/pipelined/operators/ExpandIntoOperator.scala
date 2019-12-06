@@ -21,7 +21,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.{OperatorExpressionCompiler, 
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
-import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection
+import org.neo4j.cypher.internal.expressions.SemanticDirection
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.graphdb.Direction
 import org.neo4j.internal.kernel.api._

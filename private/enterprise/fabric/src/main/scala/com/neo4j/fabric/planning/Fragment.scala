@@ -7,7 +7,7 @@ package com.neo4j.fabric.planning
 
 import com.neo4j.fabric.planning.FabricQuery.Columns
 import com.neo4j.fabric.util.PrettyPrinting
-import org.neo4j.cypher.internal.v4_0.ast
+import org.neo4j.cypher.internal.ast
 
 sealed trait Fragment {
   def columns: Columns

@@ -21,7 +21,7 @@ import java.util.Map;
 import java.util.function.Function;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.cypher.internal.v4_0.ast.CatalogName;
+import org.neo4j.cypher.internal.ast.CatalogName;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.ResourceIterator;

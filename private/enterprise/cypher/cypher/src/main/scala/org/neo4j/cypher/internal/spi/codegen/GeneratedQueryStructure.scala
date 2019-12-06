@@ -14,7 +14,7 @@ import org.neo4j.codegen.TypeReference._
 import org.neo4j.codegen.api.CodeGeneration.CodeSaver
 import org.neo4j.codegen.bytecode.ByteCode.{BYTECODE, VERIFY_GENERATED_BYTECODE}
 import org.neo4j.codegen.source.SourceCode.SOURCECODE
-import org.neo4j.codegen.source.{SourceCode, SourceVisitor}
+import org.neo4j.codegen.source.SourceCode
 import org.neo4j.codegen.{CodeGenerator, Parameter, TypeReference, _}
 import org.neo4j.cypher.internal.CodeGenPlanDescriptionHelper
 import org.neo4j.cypher.internal.codegen.{PrimitiveNodeStream, PrimitiveRelationshipStream}
@@ -26,7 +26,7 @@ import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.compiled.codegen._
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions._
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.{CodeStructure, CodeStructureResult, MethodStructure}
-import org.neo4j.cypher.internal.v4_0.frontend.helpers.using
+import org.neo4j.cypher.internal.frontend.helpers.using
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.internal.util.symbols
 import org.neo4j.cypher.result.QueryResult.QueryResultVisitor

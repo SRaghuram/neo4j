@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.compiled.codegen.spi
 import org.neo4j.codegen.Expression
 import org.neo4j.cypher.internal.runtime.compiled.codegen.Variable
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.CodeGenType
-import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection
+import org.neo4j.cypher.internal.expressions.SemanticDirection
 
 /**
   * Describes the SPI for generating a method.

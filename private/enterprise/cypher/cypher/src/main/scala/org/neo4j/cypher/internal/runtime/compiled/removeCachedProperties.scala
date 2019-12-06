@@ -6,8 +6,8 @@
 package org.neo4j.cypher.internal.runtime.compiled
 
 import org.neo4j.cypher.internal.logical.plans._
-import org.neo4j.cypher.internal.v4_0.ast.semantics.{ExpressionTypeInfo, SemanticTable}
-import org.neo4j.cypher.internal.v4_0.expressions.{CachedProperty, Property, PropertyKeyName, Variable}
+import org.neo4j.cypher.internal.ast.semantics.{ExpressionTypeInfo, SemanticTable}
+import org.neo4j.cypher.internal.expressions.{CachedProperty, Property, Variable}
 import org.neo4j.cypher.internal.util.attribution.SameId
 import org.neo4j.cypher.internal.util.symbols.CTNode
 import org.neo4j.cypher.internal.util.{InputPosition, Rewriter, topDown}

@@ -5,7 +5,7 @@
  */
 package com.neo4j.fabric.planning
 
-import org.neo4j.cypher.internal.v4_0.ast._
+import org.neo4j.cypher.internal.ast._
 import com.neo4j.fabric.util.Folded._
 
 

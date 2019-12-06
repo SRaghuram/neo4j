@@ -9,7 +9,7 @@ import org.neo4j.cypher.internal.physicalplanning.{SlotConfiguration, SlottedInd
 import org.neo4j.cypher.internal.runtime.ExecutionContext
 import org.neo4j.cypher.internal.runtime.interpreted.pipes._
 import org.neo4j.cypher.internal.logical.plans.IndexOrder
-import org.neo4j.cypher.internal.v4_0.expressions.LabelToken
+import org.neo4j.cypher.internal.expressions.LabelToken
 import org.neo4j.cypher.internal.util.attribution.Id
 
 case class NodeIndexScanSlottedPipe(ident: String,

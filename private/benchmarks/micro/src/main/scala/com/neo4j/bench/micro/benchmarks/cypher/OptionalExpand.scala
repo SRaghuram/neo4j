@@ -11,10 +11,10 @@ import com.neo4j.bench.micro.data.Plans._
 import com.neo4j.bench.micro.data._
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.planner.spi.PlanContext
-import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
-import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection.OUTGOING
-import org.neo4j.cypher.internal.v4_0.expressions.functions.Id
-import org.neo4j.cypher.internal.v4_0.expressions.{Modulo, SignedDecimalIntegerLiteral}
+import org.neo4j.cypher.internal.ast.semantics.SemanticTable
+import org.neo4j.cypher.internal.expressions.SemanticDirection.OUTGOING
+import org.neo4j.cypher.internal.expressions.functions.Id
+import org.neo4j.cypher.internal.expressions.{Modulo, SignedDecimalIntegerLiteral}
 import org.neo4j.graphdb.RelationshipType
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.openjdk.jmh.annotations._

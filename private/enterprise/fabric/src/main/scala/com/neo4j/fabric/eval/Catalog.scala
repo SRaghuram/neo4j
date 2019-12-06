@@ -9,7 +9,7 @@ import com.neo4j.fabric.config.FabricConfig
 import com.neo4j.fabric.util.Errors
 import com.neo4j.fabric.util.Errors.show
 import org.neo4j.configuration.helpers.NormalizedGraphName
-import org.neo4j.cypher.internal.v4_0.ast.CatalogName
+import org.neo4j.cypher.internal.ast.CatalogName
 import org.neo4j.cypher.internal.util.InputPosition
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.IntegralValue

@@ -9,8 +9,8 @@ import com.neo4j.fabric.planning.FabricPlan.DebugOptions
 import com.neo4j.fabric.planning.FabricQuery.Columns
 import com.neo4j.fabric.util.PrettyPrinting
 import org.neo4j.cypher.internal.FullyParsedQuery
-import org.neo4j.cypher.internal.v4_0.ast.prettifier.{ExpressionStringifier, Prettifier}
-import org.neo4j.cypher.internal.v4_0.ast.{Query, UseGraph}
+import org.neo4j.cypher.internal.ast.prettifier.{ExpressionStringifier, Prettifier}
+import org.neo4j.cypher.internal.ast.{Query, UseGraph}
 
 case class FabricPlan(
   query: FabricQuery,

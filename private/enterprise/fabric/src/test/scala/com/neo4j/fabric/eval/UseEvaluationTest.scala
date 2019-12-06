@@ -14,7 +14,7 @@ import com.neo4j.fabric.eval.Catalog.RemoteGraph
 import com.neo4j.fabric.pipeline.SignatureResolver
 import com.neo4j.fabric.{FabricTest, ProcedureRegistryTestSupport}
 import org.neo4j.configuration.helpers.{NormalizedDatabaseName, NormalizedGraphName}
-import org.neo4j.cypher.internal.v4_0.ast.UseGraph
+import org.neo4j.cypher.internal.ast.UseGraph
 import org.neo4j.cypher.internal.parser.{Clauses, Query}
 import org.neo4j.cypher.internal.util.test_helpers.TestName
 import org.neo4j.exceptions.EntityNotFoundException

@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.slotted
 
 import org.neo4j.cypher.internal.physicalplanning.{SlotConfiguration, SlotConfigurationUtils}
 import org.neo4j.cypher.internal.runtime.ExecutionContext
-import org.neo4j.cypher.internal.v4_0.expressions.{CachedProperty, NODE_TYPE, PropertyKeyName, Variable}
+import org.neo4j.cypher.internal.expressions.{CachedProperty, NODE_TYPE, PropertyKeyName, Variable}
 import org.neo4j.cypher.internal.util.InputPosition
 import org.neo4j.cypher.internal.util.symbols._
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite

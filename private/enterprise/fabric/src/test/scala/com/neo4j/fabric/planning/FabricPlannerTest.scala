@@ -16,8 +16,8 @@ import com.neo4j.fabric.{FabricTest, ProcedureRegistryTestSupport}
 import org.neo4j.configuration.Config
 import org.neo4j.configuration.helpers.{NormalizedDatabaseName, NormalizedGraphName}
 import org.neo4j.cypher.internal.CypherConfiguration
-import org.neo4j.cypher.internal.v4_0.ast.prettifier.{ExpressionStringifier, Prettifier}
-import org.neo4j.cypher.internal.v4_0.ast.{AstConstructionTestSupport, Clause, Query, SingleQuery, UnresolvedCall}
+import org.neo4j.cypher.internal.ast.prettifier.{ExpressionStringifier, Prettifier}
+import org.neo4j.cypher.internal.ast.{AstConstructionTestSupport, Clause, Query, SingleQuery, UnresolvedCall}
 import org.neo4j.cypher.internal.util.symbols.CTAny
 import org.neo4j.exceptions.{InvalidSemanticsException, SyntaxException}
 import org.neo4j.monitoring.Monitors

@@ -15,7 +15,7 @@ import org.neo4j.cypher.internal.evaluator.{EvaluationException, SimpleInternalE
 import org.neo4j.cypher.internal.logical.plans.IndexOrder
 import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
-import org.neo4j.cypher.internal.v4_0.expressions.{Expression, SemanticDirection}
+import org.neo4j.cypher.internal.expressions.{Expression, SemanticDirection}
 import org.neo4j.graphdb.{Entity, Path}
 import org.neo4j.internal.kernel.api.procs.ProcedureCallContext
 import org.neo4j.internal.kernel.api.security.SecurityContext

@@ -30,7 +30,7 @@ import java.util.stream.IntStream;
 
 import org.neo4j.bolt.runtime.AccessMode;
 import org.neo4j.exceptions.InvalidSemanticsException;
-import org.neo4j.cypher.internal.v4_0.ast.UseGraph;
+import org.neo4j.cypher.internal.ast.UseGraph;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;

@@ -20,9 +20,9 @@ import org.neo4j.cypher.internal.runtime.ast.{ExpressionVariable, ParameterFromS
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler._
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.NestedPipeExpression
 import org.neo4j.cypher.internal.runtime.{DbAccess, ExecutionContext, ExpressionCursors}
-import org.neo4j.cypher.internal.v4_0.expressions
-import org.neo4j.cypher.internal.v4_0.expressions._
-import org.neo4j.cypher.internal.v4_0.expressions.functions.AggregatingFunction
+import org.neo4j.cypher.internal.expressions
+import org.neo4j.cypher.internal.expressions._
+import org.neo4j.cypher.internal.expressions.functions.AggregatingFunction
 import org.neo4j.cypher.internal.util.symbols.{CTAny, CTBoolean, CTDate, CTDateTime, CTDuration, CTFloat, CTGeometry, CTInteger, CTLocalDateTime, CTLocalTime, CTMap, CTNode, CTNumber, CTPath, CTPoint, CTRelationship, CTString, CTTime, CypherType, ListType}
 import org.neo4j.cypher.operations._
 import org.neo4j.exceptions.{CypherTypeException, InternalException}

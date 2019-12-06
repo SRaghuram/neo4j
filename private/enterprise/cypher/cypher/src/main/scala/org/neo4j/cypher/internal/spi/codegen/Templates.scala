@@ -21,7 +21,7 @@ import org.neo4j.cypher.internal.profiling.QueryProfiler
 import org.neo4j.cypher.internal.runtime.compiled.codegen.Namer
 import org.neo4j.cypher.internal.runtime.{QueryContext, QueryTransactionalContext}
 import org.neo4j.cypher.internal.spi.codegen.Methods.{newNodeEntityById, newRelationshipEntityById}
-import org.neo4j.cypher.internal.v4_0.frontend.helpers.using
+import org.neo4j.cypher.internal.frontend.helpers.using
 import org.neo4j.exceptions.{CypherExecutionException, EntityNotFoundException, KernelException}
 import org.neo4j.graphdb.{Direction, Node, Relationship}
 import org.neo4j.internal.kernel.api._

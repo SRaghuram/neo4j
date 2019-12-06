@@ -13,7 +13,7 @@ import com.neo4j.bench.micro.data.ValueGeneratorUtil.randPropertyFor
 import com.neo4j.bench.micro.data._
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.planner.spi.PlanContext
-import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
+import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole

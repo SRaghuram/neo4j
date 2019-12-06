@@ -24,8 +24,8 @@ import org.neo4j.cypher.internal.runtime.compiled.codegen.spi._
 import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure._
 import org.neo4j.cypher.internal.spi.codegen.Methods._
 import org.neo4j.cypher.internal.spi.codegen.Templates._
-import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection
-import org.neo4j.cypher.internal.v4_0.frontend.helpers._
+import org.neo4j.cypher.internal.expressions.SemanticDirection
+import org.neo4j.cypher.internal.frontend.helpers._
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.internal.util.symbols
 import org.neo4j.cypher.internal.util.symbols.{CTInteger, CTNode, CTRelationship, ListType}

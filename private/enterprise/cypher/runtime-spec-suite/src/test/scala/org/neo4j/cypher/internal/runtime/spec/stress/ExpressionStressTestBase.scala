@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.spec.stress
 
 import org.neo4j.cypher.internal.runtime.spec.{Edition, LogicalQueryBuilder}
-import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection
+import org.neo4j.cypher.internal.expressions.SemanticDirection
 import org.neo4j.cypher.internal.{CypherRuntime, EnterpriseRuntimeContext}
 
 abstract class ExpressionStressTestBase(edition: Edition[EnterpriseRuntimeContext],

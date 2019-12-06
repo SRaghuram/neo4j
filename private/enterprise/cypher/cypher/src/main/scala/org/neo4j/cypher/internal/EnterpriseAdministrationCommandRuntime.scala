@@ -23,8 +23,7 @@ import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.procs._
 import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.security.{SecureHasher, SystemGraphCredential}
-import org.neo4j.cypher.internal.v4_0.ast
-import org.neo4j.cypher.internal.v4_0.ast.{AllGraphsScope, NamedGraphScope}
+import org.neo4j.cypher.internal.ast.{AllGraphsScope, NamedGraphScope}
 import org.neo4j.cypher.internal.util.InputPosition
 import org.neo4j.dbms.api.{DatabaseExistsException, DatabaseLimitReachedException, DatabaseNotFoundException}
 import org.neo4j.exceptions.{CantCompileQueryException, DatabaseAdministrationException, InternalException}

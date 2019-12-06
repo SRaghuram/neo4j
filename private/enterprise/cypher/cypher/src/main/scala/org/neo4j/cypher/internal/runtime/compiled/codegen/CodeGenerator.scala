@@ -6,7 +6,6 @@
 package org.neo4j.cypher.internal.runtime.compiled.codegen
 
 import java.time.Clock
-import java.util
 
 import org.neo4j.cypher.internal.executionplan.{GeneratedQuery, GeneratedQueryExecution}
 import org.neo4j.cypher.internal.plandescription.Argument
@@ -16,7 +15,7 @@ import org.neo4j.cypher.internal.runtime.compiled.codegen.ir._
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.{CodeStructure, CodeStructureResult}
 import org.neo4j.cypher.internal.runtime.compiled.{CompiledExecutionResult, CompiledPlan, RunnablePlan}
 import org.neo4j.cypher.internal.runtime.{ExecutionMode, QueryContext, compiled}
-import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
+import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.logical.plans.{LogicalPlan, ProduceResult}
 import org.neo4j.cypher.internal.profiling.{ProfilingTracer, QueryProfiler}
 import org.neo4j.cypher.internal.util.Eagerly

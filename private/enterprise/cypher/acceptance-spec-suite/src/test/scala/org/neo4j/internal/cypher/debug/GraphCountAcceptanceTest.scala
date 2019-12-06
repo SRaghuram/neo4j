@@ -13,7 +13,7 @@ import org.json4s.native.Serialization
 import org.neo4j.cypher.internal.logical.plans.{CypherValue, FieldSignature, QualifiedName, UserFunctionSignature}
 import org.neo4j.cypher.internal.planning.CypherPlanner
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionalContextWrapper
-import org.neo4j.cypher.internal.v4_0.frontend.phases.InternalNotificationLogger
+import org.neo4j.cypher.internal.frontend.phases.InternalNotificationLogger
 import org.neo4j.cypher.{ExecutionEngineFunSuite, QueryStatisticsTestSupport}
 import org.neo4j.internal.collector.DataCollectorMatchers._
 import org.neo4j.internal.collector.SampleGraphs

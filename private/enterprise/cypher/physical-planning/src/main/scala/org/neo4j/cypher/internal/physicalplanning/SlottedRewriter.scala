@@ -11,8 +11,8 @@ import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.Slo
 import org.neo4j.cypher.internal.physicalplanning.ast._
 import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.ast.{RuntimeProperty, RuntimeVariable}
-import org.neo4j.cypher.internal.v4_0.expressions
-import org.neo4j.cypher.internal.v4_0.expressions.{FunctionInvocation, functions => frontendFunctions, _}
+import org.neo4j.cypher.internal.expressions
+import org.neo4j.cypher.internal.expressions.{FunctionInvocation, functions => frontendFunctions, _}
 import org.neo4j.cypher.internal.util.Foldable._
 import org.neo4j.cypher.internal.util.attribution.SameId
 import org.neo4j.cypher.internal.util.symbols._

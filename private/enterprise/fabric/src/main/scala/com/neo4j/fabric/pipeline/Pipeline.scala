@@ -8,10 +8,10 @@ package com.neo4j.fabric.pipeline
 import org.neo4j.cypher.internal.compiler.Neo4jCypherExceptionFactory
 import org.neo4j.cypher.internal.planner.spi.{CostBasedPlannerName, ProcedureSignatureResolver}
 import org.neo4j.cypher.internal.planning.WrappedMonitors
-import org.neo4j.cypher.internal.v4_0.ast.Statement
-import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticFeature._
-import org.neo4j.cypher.internal.v4_0.ast.semantics.{SemanticErrorDef, SemanticState}
-import org.neo4j.cypher.internal.v4_0.frontend.phases._
+import org.neo4j.cypher.internal.ast.Statement
+import org.neo4j.cypher.internal.ast.semantics.SemanticFeature._
+import org.neo4j.cypher.internal.ast.semantics.{SemanticErrorDef, SemanticState}
+import org.neo4j.cypher.internal.frontend.phases._
 import org.neo4j.cypher.internal.rewriting.rewriters.{GeneratingNamer, Never, expandStar}
 import org.neo4j.cypher.internal.rewriting.{Deprecations, RewriterStepSequencer}
 import org.neo4j.cypher.internal.util.CypherExceptionFactory

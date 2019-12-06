@@ -22,8 +22,8 @@ import org.neo4j.cypher.internal.runtime.interpreted.{InterpretedPipeMapper, com
 import org.neo4j.cypher.internal.runtime.slotted.aggregation.SlottedPrimitiveGroupingAggTable
 import org.neo4j.cypher.internal.runtime.slotted.expressions.{NodeProperty, SlottedCommandProjection, SlottedExpressionConverters}
 import org.neo4j.cypher.internal.runtime.slotted.pipes._
-import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
-import org.neo4j.cypher.internal.v4_0.expressions.{LabelName, LabelToken, SemanticDirection}
+import org.neo4j.cypher.internal.ast.semantics.SemanticTable
+import org.neo4j.cypher.internal.expressions.{LabelName, LabelToken, SemanticDirection}
 import org.neo4j.cypher.internal.util.LabelId
 import org.neo4j.cypher.internal.util.symbols.{CTAny, CTList, CTNode, CTRelationship}
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite

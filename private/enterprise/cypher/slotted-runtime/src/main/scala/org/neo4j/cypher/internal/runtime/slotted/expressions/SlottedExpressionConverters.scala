@@ -16,9 +16,9 @@ import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionCo
 import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedProjectedPath._
 import org.neo4j.cypher.internal.runtime.slotted.pipes._
 import org.neo4j.cypher.internal.runtime.slotted.{expressions => runtimeExpression}
-import org.neo4j.cypher.internal.v4_0.expressions._
+import org.neo4j.cypher.internal.expressions._
 import org.neo4j.cypher.internal.util.attribution.Id
-import org.neo4j.cypher.internal.v4_0.{expressions => ast}
+import org.neo4j.cypher.internal.{expressions => ast}
 
 object SlottedExpressionConverters {
   // This is a shared method to provide consistent ordering of grouping keys for all slot-based runtimes

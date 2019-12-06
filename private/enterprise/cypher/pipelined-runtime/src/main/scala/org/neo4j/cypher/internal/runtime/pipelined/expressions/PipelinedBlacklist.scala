@@ -8,8 +8,8 @@ package org.neo4j.cypher.internal.runtime.pipelined.expressions
 import org.neo4j.cypher.internal.ir.ProvidedOrder
 import org.neo4j.cypher.internal.logical.plans.{CartesianProduct, LogicalPlan, NestedPlanExpression, ResolvedFunctionInvocation}
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.ProvidedOrders
-import org.neo4j.cypher.internal.v4_0.expressions.FunctionInvocation
-import org.neo4j.cypher.internal.v4_0.expressions.functions.{File, Linenumber, Type}
+import org.neo4j.cypher.internal.expressions.FunctionInvocation
+import org.neo4j.cypher.internal.expressions.functions.{File, Linenumber, Type}
 import org.neo4j.exceptions.CantCompileQueryException
 
 object PipelinedBlacklist {

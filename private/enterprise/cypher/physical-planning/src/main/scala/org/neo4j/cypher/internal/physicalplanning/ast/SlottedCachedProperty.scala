@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.physicalplanning.ast
 
 import org.neo4j.cypher.internal.runtime.ast.RuntimeExpression
-import org.neo4j.cypher.internal.v4_0.expressions.{ASTCachedProperty, EntityType, PropertyKeyName}
+import org.neo4j.cypher.internal.expressions.{ASTCachedProperty, EntityType, PropertyKeyName}
 
 trait SlottedCachedProperty extends ASTCachedProperty with RuntimeExpression {
   def offset: Int

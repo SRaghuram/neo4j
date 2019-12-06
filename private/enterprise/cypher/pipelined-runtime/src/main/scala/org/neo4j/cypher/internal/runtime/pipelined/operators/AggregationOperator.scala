@@ -24,7 +24,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.{ArgumentStateMapCreator, Exe
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
 import org.neo4j.cypher.internal.runtime.{NoMemoryTracker, QueryContext, QueryMemoryTracker}
-import org.neo4j.cypher.internal.v4_0.expressions.{Expression => AstExpression}
+import org.neo4j.cypher.internal.expressions.{Expression => AstExpression}
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.SyntaxException
 import org.neo4j.internal.kernel.api.IndexReadSession

@@ -15,10 +15,10 @@ import org.neo4j.cypher.internal.runtime.interpreted.commands.{AstNode, predicat
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.interpreted.{CommandProjection, GroupingExpression, commands}
 import org.neo4j.cypher.internal.runtime.{CastSupport, ExecutionContext, IsNoValue}
-import org.neo4j.cypher.internal.v4_0.expressions.functions.{Exists, Function, Keys, Labels}
-import org.neo4j.cypher.internal.v4_0.expressions.{Property, _}
+import org.neo4j.cypher.internal.expressions.functions.{Exists, Function, Keys, Labels}
+import org.neo4j.cypher.internal.expressions.{Property, _}
 import org.neo4j.cypher.internal.util.attribution.Id
-import org.neo4j.cypher.internal.v4_0.{expressions => ast}
+import org.neo4j.cypher.internal.{expressions => ast}
 import org.neo4j.cypher.operations.CypherFunctions
 import org.neo4j.values.AnyValue
 import org.neo4j.values.virtual.{ListValue, NodeValue, RelationshipValue}

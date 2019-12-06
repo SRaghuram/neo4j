@@ -10,13 +10,13 @@ import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.{ApplyPlans, ArgumentSizes, NestedPlanArgumentConfigurations, SlotConfigurations}
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.Size
 import org.neo4j.cypher.internal.runtime.expressionVariableAllocation.AvailableExpressionVariables
-import org.neo4j.cypher.internal.v4_0.ast.ProcedureResultItem
-import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
-import org.neo4j.cypher.internal.v4_0.expressions._
+import org.neo4j.cypher.internal.ast.ProcedureResultItem
+import org.neo4j.cypher.internal.ast.semantics.SemanticTable
+import org.neo4j.cypher.internal.expressions._
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.internal.util.symbols._
 import org.neo4j.cypher.internal.util.{Foldable, UnNamedNameGenerator}
-import org.neo4j.cypher.internal.v4_0.{expressions => parserAst}
+import org.neo4j.cypher.internal.{expressions => parserAst}
 import org.neo4j.exceptions.InternalException
 
 import scala.collection.mutable

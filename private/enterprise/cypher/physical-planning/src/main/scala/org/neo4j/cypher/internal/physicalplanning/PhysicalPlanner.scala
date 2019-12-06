@@ -10,7 +10,7 @@ import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.{Ap
 import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.expressionVariableAllocation.{AvailableExpressionVariables, Result}
 import org.neo4j.cypher.internal.runtime.{ParameterMapping, expressionVariableAllocation, slottedParameters}
-import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
+import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 
 object PhysicalPlanner {
 

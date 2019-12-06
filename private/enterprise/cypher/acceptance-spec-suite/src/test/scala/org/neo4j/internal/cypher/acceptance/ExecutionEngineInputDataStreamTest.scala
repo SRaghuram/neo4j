@@ -9,7 +9,7 @@ import java.util
 
 import org.neo4j.cypher.internal.QueryOptions
 import org.neo4j.cypher.internal.runtime.InputDataStreamTestSupport
-import org.neo4j.cypher.internal.v4_0.ast.AstConstructionTestSupport
+import org.neo4j.cypher.internal.ast.AstConstructionTestSupport
 import org.neo4j.cypher.{CypherExpressionEngineOption, CypherRuntimeOption, ExecutionEngineFunSuite}
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 import org.neo4j.kernel.impl.util.ValueUtils

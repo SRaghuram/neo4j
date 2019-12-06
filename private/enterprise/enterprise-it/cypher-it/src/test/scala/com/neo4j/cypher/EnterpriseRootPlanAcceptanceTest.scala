@@ -7,7 +7,7 @@ package com.neo4j.cypher
 
 import org.neo4j.cypher.internal._
 import org.neo4j.cypher.internal.planner.spi.{CostBasedPlannerName, DPPlannerName, IDPPlannerName}
-import org.neo4j.cypher.internal.v4_0.frontend.PlannerName
+import org.neo4j.cypher.internal.frontend.PlannerName
 import org.neo4j.cypher.{CypherVersion, ExecutionEngineFunSuite}
 import org.neo4j.graphdb.ExecutionPlanDescription
 

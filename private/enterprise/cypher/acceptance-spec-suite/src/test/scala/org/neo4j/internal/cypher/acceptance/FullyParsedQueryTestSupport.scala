@@ -8,10 +8,10 @@ package org.neo4j.internal.cypher.acceptance
 import org.neo4j.cypher.internal.compiler.phases.CompilationPhases
 import org.neo4j.cypher.internal.compiler.test_helpers.ContextHelper
 import org.neo4j.cypher.internal.planner.spi.PlannerNameFor
-import org.neo4j.cypher.internal.v4_0.ast.Statement
-import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticFeature.{Cypher9Comparability, MultipleDatabases}
-import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticState
-import org.neo4j.cypher.internal.v4_0.frontend.phases.{AstRewriting, BaseContains, InitialState, SemanticAnalysis}
+import org.neo4j.cypher.internal.ast.Statement
+import org.neo4j.cypher.internal.ast.semantics.SemanticFeature.{Cypher9Comparability, MultipleDatabases}
+import org.neo4j.cypher.internal.ast.semantics.SemanticState
+import org.neo4j.cypher.internal.frontend.phases.{AstRewriting, BaseContains, InitialState, SemanticAnalysis}
 import org.neo4j.cypher.internal.rewriting.RewriterStepSequencer
 import org.neo4j.cypher.internal.rewriting.rewriters.{GeneratingNamer, IfNoParameter}
 import org.neo4j.cypher.internal.{FullyParsedQuery, QueryOptions}

@@ -22,7 +22,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.{Operator, Operator
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionConverters.orderGroupingKeyExpressions
-import org.neo4j.cypher.internal.v4_0.expressions.{Expression, LabelToken, ListLiteral}
+import org.neo4j.cypher.internal.expressions.{Expression, LabelToken, ListLiteral}
 import org.neo4j.cypher.internal.util._
 import org.neo4j.cypher.internal.util.attribution.Id.INVALID_ID
 import org.neo4j.exceptions.{CantCompileQueryException, InternalException}
@@ -115,7 +115,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
     val namer = new VariableNamer
     val expressionCompiler = new OperatorExpressionCompiler(slots, inputSlotConfiguration, operatorFactory.readOnly, codeGenerationMode, namer) // NOTE: We assume slots is the same within an entire pipeline
 
-    def compileExpression(astExpression: org.neo4j.cypher.internal.v4_0.expressions.Expression): () => IntermediateExpression =
+    def compileExpression(astExpression: Expression): () => IntermediateExpression =
       () => expressionCompiler.intermediateCompileExpression(astExpression)
                               .getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $astExpression"))
 

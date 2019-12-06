@@ -7,7 +7,7 @@ package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.runtime.{InputDataStreamTestSupport, NoInput}
-import org.neo4j.cypher.internal.v4_0.ast.AstConstructionTestSupport
+import org.neo4j.cypher.internal.ast.AstConstructionTestSupport
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 
 class ExecutionEngineFullyParsedQueryTest

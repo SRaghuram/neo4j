@@ -6,8 +6,8 @@
 package org.neo4j.cypher.internal.runtime.pipelined.aggregators
 
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlan
-import org.neo4j.cypher.internal.v4_0.expressions.functions.AggregatingFunction
-import org.neo4j.cypher.internal.v4_0.expressions.{CountStar, FunctionInvocation, Null, functions, Expression => AstExpression}
+import org.neo4j.cypher.internal.expressions.functions.AggregatingFunction
+import org.neo4j.cypher.internal.expressions.{CountStar, FunctionInvocation, Null, functions, Expression => AstExpression}
 import org.neo4j.exceptions.{CantCompileQueryException, SyntaxException}
 
 case class AggregatorFactory(physicalPlan: PhysicalPlan) {

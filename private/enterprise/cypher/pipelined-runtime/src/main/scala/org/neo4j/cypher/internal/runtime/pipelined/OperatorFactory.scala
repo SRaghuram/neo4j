@@ -23,7 +23,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.aggregators.{Aggregator, Aggr
 import org.neo4j.cypher.internal.runtime.pipelined.operators._
 import org.neo4j.cypher.internal.runtime.scheduling.{WorkIdentity, WorkIdentityMutableDescription, WorkIdentityMutableDescriptionImpl}
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.{createProjectionsForResult, translateColumnOrder}
-import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
+import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.{CantCompileQueryException, InternalException}
 

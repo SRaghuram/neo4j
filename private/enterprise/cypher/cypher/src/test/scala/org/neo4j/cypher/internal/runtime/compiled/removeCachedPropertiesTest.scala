@@ -8,8 +8,8 @@ package org.neo4j.cypher.internal.runtime.compiled
 import org.neo4j.cypher.internal.compiler.planner.LogicalPlanningTestSupport2
 import org.neo4j.cypher.internal.compiler.planner.logical.PlanMatchHelp
 import org.neo4j.cypher.internal.logical.plans._
-import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
-import org.neo4j.cypher.internal.v4_0.expressions.{NODE_TYPE, CachedProperty, LabelToken, Property, PropertyKeyName, Variable}
+import org.neo4j.cypher.internal.ast.semantics.SemanticTable
+import org.neo4j.cypher.internal.expressions.{NODE_TYPE, CachedProperty, LabelToken, Property, PropertyKeyName, Variable}
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 import org.neo4j.cypher.internal.util.{InputPosition, LabelId}
 

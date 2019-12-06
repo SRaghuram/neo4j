@@ -8,8 +8,8 @@ package com.neo4j.fabric.pipeline
 import com.neo4j.fabric.util.Rewritten._
 import org.neo4j.cypher.internal.logical.plans.{QualifiedName, ResolvedCall, ResolvedFunctionInvocation}
 import org.neo4j.cypher.internal.planner.spi.ProcedureSignatureResolver
-import org.neo4j.cypher.internal.v4_0.ast._
-import org.neo4j.cypher.internal.v4_0.expressions.{FunctionInvocation, Variable}
+import org.neo4j.cypher.internal.ast._
+import org.neo4j.cypher.internal.expressions.{FunctionInvocation, Variable}
 import org.neo4j.cypher.internal.util.Rewriter
 
 import scala.util.Try

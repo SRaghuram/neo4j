@@ -25,11 +25,11 @@ import org.neo4j.cypher.internal.runtime.slotted.pipes.UnionSlottedPipe.RowMappi
 import org.neo4j.cypher.internal.runtime.slotted.pipes._
 import org.neo4j.cypher.internal.runtime.slotted.{expressions => slottedExpressions}
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryIndexRegistrator}
-import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
-import org.neo4j.cypher.internal.v4_0.expressions.{Equals, SignedDecimalIntegerLiteral}
+import org.neo4j.cypher.internal.ast.semantics.SemanticTable
+import org.neo4j.cypher.internal.expressions.{Equals, SignedDecimalIntegerLiteral}
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.internal.util.symbols._
-import org.neo4j.cypher.internal.v4_0.{expressions => frontEndAst}
+import org.neo4j.cypher.internal.{expressions => frontEndAst}
 import org.neo4j.exceptions.InternalException
 
 import scala.collection.mutable

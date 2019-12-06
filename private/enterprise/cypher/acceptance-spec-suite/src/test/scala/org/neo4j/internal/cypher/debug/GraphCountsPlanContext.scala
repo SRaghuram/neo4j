@@ -6,11 +6,10 @@
 package org.neo4j.internal.cypher.debug
 
 import org.neo4j.cypher.internal.LastCommittedTxIdProvider
-import org.neo4j.cypher.internal.planning.CypherPlanner
 import org.neo4j.cypher.internal.logical.plans.{ProcedureSignature, QualifiedName, UserFunctionSignature}
 import org.neo4j.cypher.internal.planner.spi._
 import org.neo4j.cypher.internal.runtime.interpreted.{TransactionBoundTokenContext, TransactionalContextWrapper}
-import org.neo4j.cypher.internal.v4_0.frontend.phases.InternalNotificationLogger
+import org.neo4j.cypher.internal.frontend.phases.InternalNotificationLogger
 import org.neo4j.cypher.internal.util._
 import org.neo4j.exceptions.KernelException
 import org.neo4j.internal.schema.{ConstraintDescriptor, SchemaDescriptor}
