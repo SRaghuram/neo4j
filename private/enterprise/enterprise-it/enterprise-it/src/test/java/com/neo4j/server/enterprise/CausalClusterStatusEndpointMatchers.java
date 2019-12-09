@@ -14,9 +14,9 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
 import java.util.function.Function;
 
-import org.neo4j.function.ThrowingSupplier;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.harness.Neo4j;
@@ -168,14 +168,14 @@ class CausalClusterStatusEndpointMatchers
         };
     }
 
-    static ThrowingSupplier<Map<String,Object>,RuntimeException> statusEndpoint( Neo4j server, String databaseName )
+    static Callable<Map<String,Object>> statusEndpoint( Neo4j server, String databaseName )
     {
         return () -> queryStatusEndpoint( server, databaseName ).body();
     }
 
-    static ThrowingSupplier<Boolean,RuntimeException> canVote( ThrowingSupplier<Map<String,Object>,RuntimeException> statusDescription )
+    static Callable<Boolean> canVote( Callable<Map<String,Object>> statusDescription )
     {
-        return () -> Boolean.parseBoolean( statusDescription.get().get( FIELD_PARTICIPATING ).toString() );
+        return () -> Boolean.parseBoolean( statusDescription.call().get( FIELD_PARTICIPATING ).toString() );
     }
 
     static Long getNodeCount( Neo4j serverControls )
@@ -187,21 +187,21 @@ class CausalClusterStatusEndpointMatchers
         }
     }
 
-    static <T> ThrowingSupplier<Collection<T>,RuntimeException> asCollection( ThrowingSupplier<T,RuntimeException> supplier )
+    static <T> Callable<Collection<T>> asCollection( Callable<T> supplier )
     {
-        return () -> Collections.singletonList( supplier.get() );
+        return () -> Collections.singletonList( supplier.call() );
     }
 
-    static <T extends Exception> ThrowingSupplier<Collection<Long>,T> lastAppliedRaftIndex( ThrowingSupplier<Collection<Map<String,Object>>,T> statusSupplier )
+    static <T extends Exception> Callable<Collection<Long>> lastAppliedRaftIndex( Callable<Collection<Map<String,Object>>> statusSupplier )
     {
-        return () -> statusSupplier.get()
+        return () -> statusSupplier.call()
                 .stream()
                 .map( status -> status.get( FIELD_LAST_INDEX ).toString() )
                 .map( Long::parseLong )
                 .collect( toList() );
     }
 
-    static ThrowingSupplier<Collection<Map<String,Object>>,RuntimeException> allStatusEndpointValues( CausalCluster cluster, String databaseName )
+    static Callable<Collection<Map<String,Object>>> allStatusEndpointValues( CausalCluster cluster, String databaseName )
     {
         return () -> cluster.getCoresAndReadReplicas()
                 .stream()
@@ -209,7 +209,7 @@ class CausalClusterStatusEndpointMatchers
                 .collect( toList() );
     }
 
-    static <T> ThrowingSupplier<Collection<T>,RuntimeException> allReplicaFieldValues( CausalCluster cluster,
+    static <T> Callable<Collection<T>> allReplicaFieldValues( CausalCluster cluster,
             Function<Neo4j,T> mapper )
     {
         return () -> cluster.getReadReplicas().stream().map( mapper ).collect( toList() );

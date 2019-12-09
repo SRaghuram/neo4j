@@ -264,51 +264,51 @@ public final class CausalClusteringTestHelpers
         return ShowDatabasesHelpers.showDatabases( systemLeader.managementService() );
     }
 
-    public static void assertDatabaseEventuallyStarted( String databaseName, Cluster cluster ) throws InterruptedException
+    public static void assertDatabaseEventuallyStarted( String databaseName, Cluster cluster )
     {
-        assertEventually( ignore -> "Database is not started on all members: " + memberDatabaseStates( databaseName, cluster ),
+        assertEventually( () -> "Database is not started on all members: " + memberDatabaseStates( databaseName, cluster ),
                 () -> allMembersHaveDatabaseState( DatabaseAvailability.AVAILABLE, cluster, databaseName ), is( true ), 10, MINUTES );
     }
 
-    public static void assertDatabaseEventuallyStarted( String databaseName, Set<? extends ClusterMember> members ) throws InterruptedException
+    public static void assertDatabaseEventuallyStarted( String databaseName, Set<? extends ClusterMember> members )
     {
-        assertEventually( ignore -> "Database is not started on all members: " + memberDatabaseStates( databaseName, members ),
+        assertEventually( () -> "Database is not started on all members: " + memberDatabaseStates( databaseName, members ),
                 () -> membersHaveDatabaseState( DatabaseAvailability.AVAILABLE, members, databaseName ), is( true ), 10, MINUTES );
     }
 
-    public static void assertDatabaseEventuallyStopped( String databaseName, Cluster cluster ) throws InterruptedException
+    public static void assertDatabaseEventuallyStopped( String databaseName, Cluster cluster )
     {
-        assertEventually( ignore -> "Database is not stopped on all members: " + memberDatabaseStates( databaseName, cluster ),
+        assertEventually( () -> "Database is not stopped on all members: " + memberDatabaseStates( databaseName, cluster ),
                 () -> allMembersHaveDatabaseState( DatabaseAvailability.STOPPED, cluster, databaseName ), is( true ), 1, MINUTES );
     }
 
-    public static void assertDatabaseEventuallyStopped( String databaseName, Set<ClusterMember> members ) throws InterruptedException
+    public static void assertDatabaseEventuallyStopped( String databaseName, Set<ClusterMember> members )
     {
-        assertEventually( ignore -> "Database is not stopped on all members: " + memberDatabaseStates( databaseName, members ),
+        assertEventually( () -> "Database is not stopped on all members: " + memberDatabaseStates( databaseName, members ),
                 () -> membersHaveDatabaseState( DatabaseAvailability.STOPPED, members, databaseName ), is( true ), 1, MINUTES );
     }
 
-    public static void assertDatabaseEventuallyDoesNotExist( String databaseName, Cluster cluster ) throws InterruptedException
+    public static void assertDatabaseEventuallyDoesNotExist( String databaseName, Cluster cluster )
     {
-        assertEventually( ignore -> "Database is not absent on all members: " + memberDatabaseStates( databaseName, cluster ),
+        assertEventually( () -> "Database is not absent on all members: " + memberDatabaseStates( databaseName, cluster ),
                 () -> allMembersHaveDatabaseState( DatabaseAvailability.ABSENT, cluster, databaseName ), is( true ), 1, MINUTES );
     }
 
-    public static void assertDatabaseEventuallyDoesNotExist( String databaseName, Set<ClusterMember> members ) throws InterruptedException
+    public static void assertDatabaseEventuallyDoesNotExist( String databaseName, Set<ClusterMember> members )
     {
-        assertEventually( ignore -> "Database is not absent on all members: " + memberDatabaseStates( databaseName, members ),
+        assertEventually( () -> "Database is not absent on all members: " + memberDatabaseStates( databaseName, members ),
                 () -> membersHaveDatabaseState( DatabaseAvailability.ABSENT, members, databaseName ), is( true ), 1, MINUTES );
     }
 
-    public static void assertUserDoesNotExist( String userName, Cluster cluster ) throws InterruptedException
+    public static void assertUserDoesNotExist( String userName, Cluster cluster )
     {
-        assertEventually( ignore -> "User is not absent on all members: " + memberUserStates( cluster ),
+        assertEventually( () -> "User is not absent on all members: " + memberUserStates( cluster ),
                 () -> noMembersHaveUserAndNoErrors( cluster, userName ), is( true ), 1, MINUTES);
     }
 
-    public static void assertRoleDoesNotExist( String roleName, Cluster cluster ) throws InterruptedException
+    public static void assertRoleDoesNotExist( String roleName, Cluster cluster )
     {
-        assertEventually( ignore -> "Role is not absent on all members: " + memberRoleStates( cluster ),
+        assertEventually( () -> "Role is not absent on all members: " + memberRoleStates( cluster ),
                 () -> noMembersHaveRoleAndNoErrors( cluster, roleName ), is( true ), 1, MINUTES);
     }
 

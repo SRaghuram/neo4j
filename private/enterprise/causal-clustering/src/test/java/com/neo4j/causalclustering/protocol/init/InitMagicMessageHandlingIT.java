@@ -185,29 +185,29 @@ class InitMagicMessageHandlingIT
         return new ClientChannelInitializer( initializer, NettyPipelineBuilderFactory.insecure(), timeout, logProvider );
     }
 
-    private static void assertEventuallyClosed( Channel clientChannel ) throws InterruptedException
+    private static void assertEventuallyClosed( Channel clientChannel )
     {
         assertEventually( "Server did not drop the connection", clientChannel::isActive, is( false ), 1, MINUTES );
     }
 
-    private void assertReadTimeoutLogged( Class<?> logClass ) throws InterruptedException
+    private void assertReadTimeoutLogged( Class<?> logClass )
     {
         var readTimeoutLogMatcher = inLog( logClass ).error( containsString( "Exception in inbound" ), instanceOf( ReadTimeoutException.class ) );
 
-        assertEventually( ignore -> "Read timeout error did not get logged:\n" + logProvider.serialize(),
+        assertEventually( () -> "Read timeout error did not get logged:\n" + logProvider.serialize(),
                 () -> logProvider.containsMatchingLogCall( readTimeoutLogMatcher ), is( true ), 1, MINUTES );
     }
 
-    private void assertWrongMagicValueLogged( Class<?> logClass ) throws InterruptedException
+    private void assertWrongMagicValueLogged( Class<?> logClass )
     {
         var wrongMagicMessageLogMatcher = inLog( logClass ).error( containsString( "Exception in inbound" ),
                 throwableWithMessage( DecoderException.class, containsString( "Wrong magic value" ) ) );
 
-        assertEventually( ignore -> "Wrong magic value did not get logged:\n" + logProvider.serialize(),
+        assertEventually( () -> "Wrong magic value did not get logged:\n" + logProvider.serialize(),
                 () -> logProvider.containsMatchingLogCall( wrongMagicMessageLogMatcher ), is( true ), 1, MINUTES );
     }
 
-    private static void assertCorrectInitMessageReceived( String side, RecordingHandler recordingHandler ) throws InterruptedException
+    private static void assertCorrectInitMessageReceived( String side, RecordingHandler recordingHandler )
     {
         assertEventually( side + " did not receive a magic message", () -> recordingHandler.messages, contains( magicValueBuf() ), 1, MINUTES );
     }

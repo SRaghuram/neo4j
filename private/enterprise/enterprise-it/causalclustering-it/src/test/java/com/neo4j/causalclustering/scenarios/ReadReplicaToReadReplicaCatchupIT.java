@@ -17,8 +17,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.UUID;
+import java.util.concurrent.Callable;
 
-import org.neo4j.function.ThrowingSupplier;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
@@ -151,7 +151,7 @@ class ReadReplicaToReadReplicaCatchupIT
             GraphDatabaseService readReplica = server.defaultDatabase();
             try ( Transaction tx = readReplica.beginTx() )
             {
-                ThrowingSupplier<Long,Exception> nodeCount = () -> count( tx.getAllNodes() );
+                Callable<Long> nodeCount = () -> count( tx.getAllNodes() );
                 assertEventually( "node to appear on read replica", nodeCount, is( numberOfNodes ), 1, MINUTES );
 
                 for ( Node node : tx.getAllNodes() )

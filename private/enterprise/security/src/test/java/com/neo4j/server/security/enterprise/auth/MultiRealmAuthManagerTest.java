@@ -25,8 +25,10 @@ import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.server.security.auth.AuthenticationStrategy;
 import org.neo4j.server.security.systemgraph.SecurityGraphInitializer;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -39,7 +41,6 @@ import static org.neo4j.server.security.auth.BasicSystemGraphRealmTest.clearedPa
 import static org.neo4j.server.security.auth.SecurityTestUtils.authToken;
 import static org.neo4j.server.security.auth.SecurityTestUtils.credentialFor;
 import static org.neo4j.server.security.auth.SecurityTestUtils.password;
-import static org.neo4j.test.assertion.Assert.assertException;
 
 class MultiRealmAuthManagerTest
 {
@@ -152,30 +153,25 @@ class MultiRealmAuthManagerTest
     {
         manager.start();
 
-        assertException(
-                () -> manager.login( map( AuthToken.SCHEME_KEY, "supercool", AuthToken.PRINCIPAL, "neo4j" ) ),
-                InvalidAuthTokenException.class,
-                "Unsupported authentication token: { scheme='supercool', principal='neo4j' }" );
+        assertThatThrownBy( () -> manager.login( map( AuthToken.SCHEME_KEY, "supercool", AuthToken.PRINCIPAL, "neo4j" ) ) )
+                .isInstanceOf( InvalidAuthTokenException.class )
+                .hasMessage( "Unsupported authentication token: { scheme='supercool', principal='neo4j' }" );
 
-        assertException(
-                () -> manager.login( map( AuthToken.SCHEME_KEY, "none" ) ),
-                InvalidAuthTokenException.class,
-                "Unsupported authentication token, scheme='none' only allowed when auth is disabled: { scheme='none' }" );
+        assertThatThrownBy( () -> manager.login( map( AuthToken.SCHEME_KEY, "none" ) ) )
+                .isInstanceOf( InvalidAuthTokenException.class )
+                .hasMessage( "Unsupported authentication token, scheme='none' only allowed when auth is disabled: { scheme='none' }" );
 
-        assertException(
-                () -> manager.login( map( "key", "value" ) ),
-                InvalidAuthTokenException.class,
-                "Unsupported authentication token, missing key `scheme`: { key='value' }" );
+        assertThatThrownBy( () -> manager.login( map( "key", "value" ) ) )
+                .isInstanceOf( InvalidAuthTokenException.class )
+                .hasMessage( "Unsupported authentication token, missing key `scheme`: { key='value' }" );
 
-        assertException(
-                () -> manager.login( map( AuthToken.SCHEME_KEY, "basic", AuthToken.PRINCIPAL, "neo4j" ) ),
-                InvalidAuthTokenException.class,
-                "Unsupported authentication token, missing key `credentials`: { scheme='basic', principal='neo4j' }" );
+        assertThatThrownBy( () -> manager.login( map( AuthToken.SCHEME_KEY, "basic", AuthToken.PRINCIPAL, "neo4j" ) ) )
+                .isInstanceOf( InvalidAuthTokenException.class )
+                .hasMessage( "Unsupported authentication token, missing key `credentials`: { scheme='basic', principal='neo4j' }" );
 
-        assertException(
-                () -> manager.login( map( AuthToken.SCHEME_KEY, "basic", AuthToken.CREDENTIALS, "very-secret" ) ),
-                InvalidAuthTokenException.class,
-                "Unsupported authentication token, missing key `principal`: { scheme='basic', credentials='******' }" );
+        assertThatThrownBy( () -> manager.login( map( AuthToken.SCHEME_KEY, "basic", AuthToken.CREDENTIALS, "very-secret" ) ) )
+                .isInstanceOf( InvalidAuthTokenException.class )
+                .hasMessage( "Unsupported authentication token, missing key `principal`: { scheme='basic', credentials='******' }" );
     }
 
     @Test
@@ -256,7 +252,7 @@ class MultiRealmAuthManagerTest
         authToken.put( AuthToken.SCHEME_KEY, null ); // Null is not a valid scheme
 
         // When
-        assertException( () -> manager.login( authToken ), InvalidAuthTokenException.class );
+        assertThrows( InvalidAuthTokenException.class, () -> manager.login( authToken ) );
 
         // Then
         assertThat( password, equalTo( clearedPasswordWithSameLengthAs( "abc123" ) ) );

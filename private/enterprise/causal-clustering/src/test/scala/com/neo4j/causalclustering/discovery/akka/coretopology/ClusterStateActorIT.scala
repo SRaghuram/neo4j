@@ -8,22 +8,21 @@ package com.neo4j.causalclustering.discovery.akka.coretopology
 import java.time.Duration
 import java.util
 import java.util.Collections
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.{Callable, TimeUnit}
 
 import akka.actor.Address
 import akka.cluster.ClusterEvent.{ClusterDomainEvent, UnreachableMember}
 import akka.cluster.{Cluster, ClusterEvent, Member, MemberStatus}
 import akka.testkit.TestProbe
 import com.neo4j.causalclustering.core.CausalClusteringSettings.{akka_failure_detector_acceptable_heartbeat_pause, akka_failure_detector_heartbeat_interval}
+import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
 import com.neo4j.causalclustering.discovery.akka.coretopology.ClusterStateActor.ClusterMonitorRefresh
 import com.neo4j.causalclustering.discovery.akka.coretopology.ClusterViewMessageTest.createMember
 import com.neo4j.causalclustering.discovery.akka.monitoring.ClusterSizeMonitor
-import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
 import org.hamcrest.Matchers.is
 import org.mockito.ArgumentMatchers
 import org.mockito.Mockito.{atLeastOnce, verify}
 import org.neo4j.configuration.Config
-import org.neo4j.function.ThrowingSupplier
 import org.neo4j.internal.helpers.collection.Iterators
 import org.neo4j.test.assertion.Assert.assertEventually
 
@@ -218,14 +217,14 @@ class ClusterStateActorIT extends BaseAkkaIT("ClusterStateActorTest") {
       var hasSetUnreachable = false
       var hasSetConverged = false
 
-      def membersSet = new ThrowingSupplier[Boolean, Exception] {
-        override def get(): Boolean = hasSetMembers
+      def membersSet = new Callable[Boolean] {
+        override def call(): Boolean = hasSetMembers
       }
-      def unreachableSet = new ThrowingSupplier[Boolean, Exception] {
-        override def get(): Boolean = hasSetUnreachable
+      def unreachableSet = new Callable[Boolean] {
+        override def call(): Boolean = hasSetUnreachable
       }
-      def convergedSet = new ThrowingSupplier[Boolean, Exception] {
-        override def get(): Boolean = hasSetConverged
+      def convergedSet = new Callable[Boolean] {
+        override def call(): Boolean = hasSetConverged
       }
 
       override def setMembers(size: Int): Unit = hasSetMembers = true

@@ -128,14 +128,7 @@ class ClusterReconciledTransactionTrackerIT
     private static void assertAvailable( GraphDatabaseAPI db )
     {
         var availabilityGuard = resolve( db, DatabaseAvailabilityGuard.class );
-        try
-        {
-            assertEventually( availabilityGuard::isAvailable, is( true ), 1, MINUTES );
-        }
-        catch ( InterruptedException e )
-        {
-            throw new RuntimeException( e );
-        }
+        assertEventually( availabilityGuard::isAvailable, is( true ), 1, MINUTES );
     }
 
     private static <T> T resolve( GraphDatabaseAPI db, Class<T> clazz )

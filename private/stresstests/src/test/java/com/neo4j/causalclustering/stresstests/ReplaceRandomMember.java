@@ -86,7 +86,7 @@ class ReplaceRandomMember extends RepeatOnRandomMember
         successfulReplacements++;
     }
 
-    private void awaitRaftMembership( CoreClusterMember core ) throws InterruptedException
+    private void awaitRaftMembership( CoreClusterMember core )
     {
         var databaseNames = core.managementService().listDatabases();
 
@@ -94,7 +94,7 @@ class ReplaceRandomMember extends RepeatOnRandomMember
         {
             log.info( format( "Waiting for membership of '%s'", databaseName ) );
             RaftMachine raft = core.resolveDependency( databaseName, RaftMachine.class );
-            assertEventually( members -> format( "Voting members %s do not contain %s", members, core.id() ),
+            assertEventually(  members -> format( "Voting members %s do not contain %s", members, core.id() ),
                     raft::votingMembers, hasItem( core.id() ), 10, MINUTES );
         }
     }

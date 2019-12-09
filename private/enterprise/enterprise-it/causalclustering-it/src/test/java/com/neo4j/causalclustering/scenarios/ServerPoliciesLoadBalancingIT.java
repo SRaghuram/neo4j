@@ -30,6 +30,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.function.Function;
 import java.util.function.IntFunction;
 import java.util.function.Predicate;
@@ -37,7 +38,6 @@ import java.util.stream.Collectors;
 
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.function.Predicates;
-import org.neo4j.function.ThrowingSupplier;
 import org.neo4j.internal.helpers.collection.Iterators;
 import org.neo4j.internal.helpers.collection.MapUtil;
 import org.neo4j.kernel.api.KernelTransaction;
@@ -277,8 +277,7 @@ class ServerPoliciesLoadBalancingIT
         }
     }
 
-    private static <T, E extends Exception> void assertEventually( Matcher<? super T> matcher,
-            ThrowingSupplier<T,E> actual ) throws InterruptedException, E
+    private static <T> void assertEventually( Matcher<? super T> matcher, Callable<T> actual )
     {
         org.neo4j.test.assertion.Assert.assertEventually( "", actual, matcher, 120, SECONDS );
     }

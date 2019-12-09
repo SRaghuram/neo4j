@@ -32,6 +32,7 @@ import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -44,7 +45,6 @@ import org.neo4j.bolt.txtracking.TransactionIdTracker;
 import org.neo4j.bolt.txtracking.TransactionIdTrackerException;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.DatabaseStateService;
-import org.neo4j.function.ThrowingSupplier;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.WriteOperationsNotAllowedException;
 import org.neo4j.internal.index.label.LabelScanStore;
@@ -133,7 +133,7 @@ class ReadReplicaReplicationIT
         // then
         for ( var readReplica : cluster.readReplicas() )
         {
-            ThrowingSupplier<Boolean,Exception> availability = () -> readReplica.defaultDatabase().isAvailable( 0 );
+            Callable<Boolean> availability = () -> readReplica.defaultDatabase().isAvailable( 0 );
             assertEventually( "read replica becomes available", availability, is( true ), 10, SECONDS );
         }
     }
@@ -179,7 +179,7 @@ class ReadReplicaReplicationIT
             var readReplicaDb = server.defaultDatabase();
             try ( var tx = readReplicaDb.beginTx() )
             {
-                ThrowingSupplier<Long,Exception> nodeCount = () -> count( tx.getAllNodes() );
+                Callable<Long> nodeCount = () -> count( tx.getAllNodes() );
                 assertEventually( "node to appear on read replica", nodeCount, is( 400L ), 1, MINUTES );
 
                 for ( var node : tx.getAllNodes() )
@@ -274,7 +274,7 @@ class ReadReplicaReplicationIT
         // then
         for ( var readReplica : cluster.readReplicas() )
         {
-            ThrowingSupplier<Boolean,Exception> availability = () -> readReplica.defaultDatabase().isAvailable( 0 );
+            Callable<Boolean> availability = () -> readReplica.defaultDatabase().isAvailable( 0 );
             assertEventually( "read replica becomes available", availability, is( true ), 10, SECONDS );
         }
     }
@@ -552,7 +552,7 @@ class ReadReplicaReplicationIT
                 .withSharedCoreParam( cluster_topology_refresh, "5s" );
     }
 
-    private static void assertReadReplicasEventuallyUpToDateWithLeader( Cluster cluster ) throws TimeoutException, InterruptedException
+    private static void assertReadReplicasEventuallyUpToDateWithLeader( Cluster cluster )
     {
         assertEventually( () -> ReadReplicasProgress.of( cluster ), readReplicasUpToDateWithLeader(), 1, MINUTES );
     }

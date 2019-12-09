@@ -14,10 +14,10 @@ import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.concurrent.Callable;
 
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.function.ThrowingSupplier;
 import org.neo4j.internal.recordstorage.RecordStorageEngine;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.PagedFile;
@@ -63,8 +63,7 @@ class VersionContextTrackingIT
         {
             generateData();
             long expectedLatestPageVersion = getExpectedLatestPageVersion( baseTxId, i );
-            ThrowingSupplier<Long,Exception> anyCoreSupplier =
-                    () -> getLatestPageVersion( getAnyCore() );
+            Callable<Long> anyCoreSupplier = () -> getLatestPageVersion( getAnyCore() );
             assertEventually( "Any core page version should match to expected page version.", anyCoreSupplier,
                     is( expectedLatestPageVersion ), 2, MINUTES );
         }
@@ -78,8 +77,7 @@ class VersionContextTrackingIT
         {
             generateData();
             long expectedLatestPageVersion = getExpectedLatestPageVersion( baseTxId, i );
-            ThrowingSupplier<Long,Exception> replicateVersionSupplier =
-                    () -> getLatestPageVersion( getAnyReadReplica() );
+            Callable<Long> replicateVersionSupplier = () -> getLatestPageVersion( getAnyReadReplica() );
             assertEventually( "Read replica page version should match to core page version.", replicateVersionSupplier,
                     is( expectedLatestPageVersion ), 2, MINUTES );
         }

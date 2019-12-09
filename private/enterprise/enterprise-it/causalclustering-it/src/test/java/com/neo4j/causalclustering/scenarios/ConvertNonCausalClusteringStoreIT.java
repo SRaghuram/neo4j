@@ -18,10 +18,10 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.concurrent.Callable;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.function.ThrowingSupplier;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
@@ -86,7 +86,7 @@ class ConvertNonCausalClusteringStoreIT
 
             try ( Transaction tx = db.beginTx() )
             {
-                ThrowingSupplier<Long,Exception> nodeCount = () -> count( tx.getAllNodes() );
+                Callable<Long> nodeCount = () -> count( tx.getAllNodes() );
 
                 Config config = db.getDependencyResolver().resolveDependency( Config.class );
 

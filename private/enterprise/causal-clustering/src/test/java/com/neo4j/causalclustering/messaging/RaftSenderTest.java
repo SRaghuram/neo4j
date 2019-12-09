@@ -15,15 +15,14 @@ import org.hamcrest.Description;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.helpers.SocketAddress;
-import org.neo4j.function.ThrowingSupplier;
 import org.neo4j.logging.AssertableLogProvider;
 
 import static java.lang.String.format;
+import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -32,7 +31,7 @@ import static org.neo4j.test.assertion.Assert.assertEventually;
 class RaftSenderTest
 {
     @Test
-    void shouldLogErrorOnNonBlockingIncludingAddressAndChannelId() throws Exception
+    void shouldLogErrorOnNonBlockingIncludingAddressAndChannelId()
     {
         // given
         AssertableLogProvider logProvider = new AssertableLogProvider();
@@ -50,7 +49,7 @@ class RaftSenderTest
         } );
         var pooledChannel = mock( PooledChannel.class );
         when( pooledChannel.channel() ).thenReturn( embeddedChannel );
-        when( channelPoolService.acquire( any( SocketAddress.class ) ) ).thenReturn( CompletableFuture.completedFuture( pooledChannel ) );
+        when( channelPoolService.acquire( any( SocketAddress.class ) ) ).thenReturn( completedFuture( pooledChannel ) );
 
         RaftSender raftSender = new RaftSender( logProvider, channelPoolService );
 
@@ -60,9 +59,9 @@ class RaftSenderTest
         { }, false );
 
         // then
-        assertEventually( (ThrowingSupplier<Boolean,Exception>) () -> logProvider.containsMatchingLogCall( AssertableLogProvider
+        assertEventually( () -> logProvider.containsMatchingLogCall( AssertableLogProvider
                         .inLog( RaftSender.class )
-                        .warn( Matchers.equalTo( format( "Raft sender failed exceptionally [Address: %s]", socketAddress ) ), new BaseMatcher<Throwable>()
+                        .warn( Matchers.equalTo( format( "Raft sender failed exceptionally [Address: %s]", socketAddress ) ), new BaseMatcher<>()
                         {
                             @Override
                             public void describeTo( Description description )

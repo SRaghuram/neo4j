@@ -431,7 +431,7 @@ class CausalClusterRestEndpointsIT
         writeSomeData( cluster, KNOWN_DB );
         assertEventually( allReplicaFieldValues( cluster, CausalClusterStatusEndpointMatchers::getNodeCount ), allValuesEqual(), 1, MINUTES );
         var initialLastAppliedRaftIndex = lastAppliedRaftIndex( asCollection(
-                statusEndpoint( awaitLeader( cluster, KNOWN_DB ), KNOWN_DB ) ) ).get()
+                statusEndpoint( awaitLeader( cluster, KNOWN_DB ), KNOWN_DB ) ) ).call()
                 .stream()
                 .findFirst()
                 .orElseThrow( () -> new RuntimeException( "List is empty" ) );

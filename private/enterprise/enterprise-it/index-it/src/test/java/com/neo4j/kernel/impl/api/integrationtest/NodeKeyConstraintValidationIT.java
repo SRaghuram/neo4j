@@ -17,10 +17,11 @@ import org.neo4j.internal.kernel.api.SchemaWrite;
 import org.neo4j.internal.kernel.api.TokenWrite;
 import org.neo4j.internal.schema.IndexPrototype;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.anyOf;
 import static org.hamcrest.Matchers.containsString;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.internal.schema.SchemaDescriptor.forLabel;
-import static org.neo4j.test.assertion.Assert.assertException;
 
 class NodeKeyConstraintValidationIT extends NodePropertyExistenceConstraintValidationIT
 {
@@ -50,7 +51,7 @@ class NodeKeyConstraintValidationIT extends NodePropertyExistenceConstraintValid
             transaction.commit();
         }
 
-        assertException( () ->
+        var e = assertThrows( ConstraintViolationException.class, () ->
         {
             try ( org.neo4j.graphdb.Transaction transaction = db.beginTx() )
             {
@@ -59,11 +60,11 @@ class NodeKeyConstraintValidationIT extends NodePropertyExistenceConstraintValid
                 node.setProperty( "property2", "2" );
                 transaction.commit();
             }
-        }, ConstraintViolationException.class,
-                anyOf( containsString( "with label `multiNodeKeyLabel` must have the properties (property2, property3)" ),
-                        containsString( "with label `multiNodeKeyLabel` must have the properties (property3, property4)" ) ) );
+        } );
+        assertThat( e.getMessage(), anyOf( containsString( "with label `multiNodeKeyLabel` must have the properties (property2, property3)" ),
+                containsString( "with label `multiNodeKeyLabel` must have the properties (property3, property4)" ) ) );
 
-        assertException( () ->
+        var exception = assertThrows( ConstraintViolationException.class, () ->
         {
             try ( org.neo4j.graphdb.Transaction transaction = db.beginTx() )
             {
@@ -73,6 +74,7 @@ class NodeKeyConstraintValidationIT extends NodePropertyExistenceConstraintValid
                 node.setProperty( "property3", "3" );
                 transaction.commit();
             }
-        }, ConstraintViolationException.class, containsString( "with label `multiNodeKeyLabel` must have the properties (property3, property4)" ) );
+        } );
+        assertThat( exception.getMessage(), containsString( "with label `multiNodeKeyLabel` must have the properties (property3, property4)" ) );
     }
 }

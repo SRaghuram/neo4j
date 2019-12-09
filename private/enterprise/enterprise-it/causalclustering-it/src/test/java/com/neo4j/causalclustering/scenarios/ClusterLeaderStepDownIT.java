@@ -16,9 +16,9 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
-import org.neo4j.function.ThrowingSupplier;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.test.extension.Inject;
@@ -54,13 +54,13 @@ class ClusterLeaderStepDownIT
             tx.commit();
         } );
 
-        ThrowingSupplier<List<CoreClusterMember>,Exception> followers = () -> cluster.coreMembers().stream().filter(
+        Callable<List<CoreClusterMember>> followers = () -> cluster.coreMembers().stream().filter(
                 m -> m.resolveDependency( DEFAULT_DATABASE_NAME, RaftMachine.class ).currentRole() != Role.LEADER ).collect( toList() );
         assertEventually( "All followers visible", followers, Matchers.hasSize( 7 ), 2, TimeUnit.MINUTES );
 
         //when
         //shutdown 4 servers, leaving 4 remaining and therefore not a quorum.
-        followers.get().subList( 0, 4 ).forEach( CoreClusterMember::shutdown );
+        followers.call().subList( 0, 4 ).forEach( CoreClusterMember::shutdown );
 
         //then
         RaftMachine raft = leader.resolveDependency( DEFAULT_DATABASE_NAME, RaftMachine.class );

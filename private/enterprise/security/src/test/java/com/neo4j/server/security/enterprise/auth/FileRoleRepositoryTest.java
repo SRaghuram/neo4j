@@ -33,6 +33,7 @@ import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.concurrent.ThreadingRule;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.CoreMatchers.startsWith;
@@ -43,7 +44,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.neo4j.test.assertion.Assert.assertException;
 
 public class FileRoleRepositoryTest
 {
@@ -130,16 +130,21 @@ public class FileRoleRepositoryTest
         roleRepository.assertValidRoleName( "johnosbourne" );
         roleRepository.assertValidRoleName( "john_osbourne" );
 
-        assertException( () -> roleRepository.assertValidRoleName( null ), InvalidArgumentsException.class,
-                "The provided role name is empty." );
-        assertException( () -> roleRepository.assertValidRoleName( "" ), InvalidArgumentsException.class,
-                "The provided role name is empty." );
-        assertException( () -> roleRepository.assertValidRoleName( ":" ), InvalidArgumentsException.class,
-                "Role name ':' contains illegal characters. Use simple ascii characters and numbers." );
-        assertException( () -> roleRepository.assertValidRoleName( "john osbourne" ), InvalidArgumentsException.class,
-                "Role name 'john osbourne' contains illegal characters. Use simple ascii characters and numbers." );
-        assertException( () -> roleRepository.assertValidRoleName( "john:osbourne" ), InvalidArgumentsException.class,
-                "Role name 'john:osbourne' contains illegal characters. Use simple ascii characters and numbers." );
+        assertThatThrownBy( () -> roleRepository.assertValidRoleName( null ) )
+                .isInstanceOf( InvalidArgumentsException.class )
+                .hasMessage( "The provided role name is empty." );
+        assertThatThrownBy( () -> roleRepository.assertValidRoleName( "" ) )
+                .isInstanceOf( InvalidArgumentsException.class )
+                .hasMessage( "The provided role name is empty." );
+        assertThatThrownBy( () -> roleRepository.assertValidRoleName( ":" ) )
+                .isInstanceOf( InvalidArgumentsException.class )
+                .hasMessage( "Role name ':' contains illegal characters. Use simple ascii characters and numbers." );
+        assertThatThrownBy( () -> roleRepository.assertValidRoleName( "john osbourne" ) )
+                .isInstanceOf( InvalidArgumentsException.class )
+                .hasMessage( "Role name 'john osbourne' contains illegal characters. Use simple ascii characters and numbers." );
+        assertThatThrownBy( () -> roleRepository.assertValidRoleName( "john:osbourne" ) )
+                .isInstanceOf( InvalidArgumentsException.class )
+                .hasMessage( "Role name 'john:osbourne' contains illegal characters. Use simple ascii characters and numbers." );
     }
 
     @Test
@@ -304,7 +309,7 @@ public class FileRoleRepositoryTest
         setUsers.get();
     }
 
-    class HangingListSnapshot extends ListSnapshot<RoleRecord>
+    static class HangingListSnapshot extends ListSnapshot<RoleRecord>
     {
         private final DoubleLatch latch;
 

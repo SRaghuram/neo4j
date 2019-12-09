@@ -15,9 +15,9 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
+import java.util.concurrent.Callable;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.function.ThrowingSupplier;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
 
@@ -175,7 +175,7 @@ class CausalClusterMetricIT
     {
         try ( var tx = db.beginTx() )
         {
-            ThrowingSupplier<Long,Exception> nodeCount = () -> count( tx.getAllNodes() );
+            Callable<Long> nodeCount = () -> count( tx.getAllNodes() );
 
             var config = db.getDependencyResolver().resolveDependency( Config.class );
 

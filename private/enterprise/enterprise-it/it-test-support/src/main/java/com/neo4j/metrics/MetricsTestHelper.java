@@ -11,10 +11,9 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.concurrent.Callable;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
-
-import org.neo4j.function.ThrowingSupplier;
 
 import static java.lang.System.currentTimeMillis;
 import static java.util.concurrent.TimeUnit.MINUTES;
@@ -92,52 +91,52 @@ public class MetricsTestHelper
     {
     }
 
-    public static long readLongCounterValue( File metricFile ) throws IOException, InterruptedException
+    public static long readLongCounterValue( File metricFile ) throws IOException
     {
         return readLongCounterAndAssert( metricFile, ( one, two ) -> true );
     }
 
-    public static long readLongGaugeValue( File metricFile ) throws IOException, InterruptedException
+    public static long readLongGaugeValue( File metricFile ) throws IOException
     {
         return readLongGaugeAndAssert( metricFile, ( one, two ) -> true );
     }
 
     public static long readLongGaugeAndAssert( File metricFile, BiPredicate<Long,Long> assumption )
-            throws IOException, InterruptedException
+            throws IOException
     {
         return readValueAndAssert( metricFile, 0L, GaugeField.TIME_STAMP, GaugeField.METRICS_VALUE, Long::parseLong, assumption );
     }
 
     public static long readLongCounterAndAssert( File metricFile, BiPredicate<Long,Long> assumption )
-            throws IOException, InterruptedException
+            throws IOException
     {
         return readValueAndAssert( metricFile, 0L, CounterField.TIME_STAMP, CounterField.COUNT, Long::parseLong, assumption );
     }
 
     public static long readLongCounterAndAssert( File metricFile, long startValue, BiPredicate<Long,Long> assumption )
-            throws IOException, InterruptedException
+            throws IOException
     {
         return readValueAndAssert( metricFile, startValue, CounterField.TIME_STAMP, CounterField.COUNT, Long::parseLong, assumption );
     }
 
-    static double readDoubleGaugeValue( File metricFile ) throws IOException, InterruptedException
+    static double readDoubleGaugeValue( File metricFile ) throws IOException
     {
         return readValueAndAssert( metricFile, 0d, GaugeField.TIME_STAMP, GaugeField.METRICS_VALUE,
                 Double::parseDouble, ( one, two ) -> true );
     }
 
-    static long readTimerLongValueAndAssert( File metricFile, BiPredicate<Long,Long> assumption, TimerField field ) throws IOException, InterruptedException
+    static long readTimerLongValueAndAssert( File metricFile, BiPredicate<Long,Long> assumption, TimerField field ) throws IOException
     {
         return readValueAndAssert( metricFile, 0L, TimerField.T, field, Long::parseLong, assumption );
     }
 
-    static double readTimerDoubleValue( File metricFile, TimerField field ) throws IOException, InterruptedException
+    static double readTimerDoubleValue( File metricFile, TimerField field ) throws IOException
     {
         return readTimerDoubleValueAndAssert( metricFile, ( a, b ) -> true, field );
     }
 
     private static double readTimerDoubleValueAndAssert( File metricFile, BiPredicate<Double,Double> assumption, TimerField field )
-            throws IOException, InterruptedException
+            throws IOException
     {
         return readValueAndAssert( metricFile, 0d, TimerField.T, field, Double::parseDouble, assumption );
     }
@@ -190,14 +189,14 @@ public class MetricsTestHelper
         return startValue;
     }
 
-    public static File metricsCsv( File dbDir, String metric ) throws InterruptedException
+    public static File metricsCsv( File dbDir, String metric )
     {
         File csvFile = new File( dbDir, metric + ".csv" );
         assertEventually( "Metrics file should exist", fileExistAndHasDataLines(csvFile), is( true ), 2, MINUTES );
         return csvFile;
     }
 
-    private static <E extends RuntimeException> ThrowingSupplier<Boolean,E> fileExistAndHasDataLines( File file )
+    private static Callable<Boolean> fileExistAndHasDataLines( File file )
     {
         return () ->
         {

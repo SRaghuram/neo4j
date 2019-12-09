@@ -18,9 +18,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.function.Function;
 
-import org.neo4j.function.ThrowingSupplier;
 import org.neo4j.graphdb.QueryExecutionException;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
@@ -266,7 +266,7 @@ class CausalClusteringProceduresIT
         }
     }
 
-    private ThrowingSupplier<RoleInfo,RuntimeException> roleReportedByProcedure( ClusterMember member, String databaseName )
+    private Callable<RoleInfo> roleReportedByProcedure( ClusterMember member, String databaseName )
     {
         return () ->
         {

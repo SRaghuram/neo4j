@@ -44,13 +44,13 @@ public final class ClusterOverviewHelper
     {
     }
 
-    public static void assertAllEventualOverviews( Cluster cluster, Matcher<List<MemberInfo>> expected ) throws InterruptedException
+    public static void assertAllEventualOverviews( Cluster cluster, Matcher<List<MemberInfo>> expected )
     {
         assertAllEventualOverviews( cluster, expected, Collections.emptySet(), Collections.emptySet() );
     }
 
     public static void assertAllEventualOverviews( Cluster cluster, Matcher<List<MemberInfo>> expected, Set<Integer> excludedCores,
-            Set<Integer> excludedRRs ) throws InterruptedException
+            Set<Integer> excludedRRs )
     {
         for ( CoreClusterMember core : cluster.coreMembers() )
         {
@@ -70,18 +70,17 @@ public final class ClusterOverviewHelper
         }
     }
 
-    public static void assertEventualOverview( Matcher<List<MemberInfo>> expected, CoreClusterMember core ) throws InterruptedException
+    public static void assertEventualOverview( Matcher<List<MemberInfo>> expected, CoreClusterMember core )
     {
         assertEventualOverview( expected, core, "core" );
     }
 
-    public static void assertEventualOverview( Matcher<List<MemberInfo>> expected, ReadReplica readReplica ) throws InterruptedException
+    public static void assertEventualOverview( Matcher<List<MemberInfo>> expected, ReadReplica readReplica )
     {
         assertEventualOverview( expected, readReplica, "rr" );
     }
 
     private static void assertEventualOverview( Matcher<List<MemberInfo>> expected, ClusterMember member, String role )
-            throws InterruptedException
     {
         Function<List<MemberInfo>, String> printableMemberInfos =
                 memberInfos -> memberInfos.stream().map( MemberInfo::toString ).collect( Collectors.joining( ", " ) );

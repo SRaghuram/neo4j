@@ -5,7 +5,7 @@
  */
 package com.neo4j.causalclustering.discovery.akka
 
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.{Callable, TimeUnit}
 
 import akka.actor.{ActorRef, ActorSystem, BootstrapSetup, ProviderSelection}
 import akka.cluster.Cluster
@@ -22,7 +22,6 @@ import org.hamcrest.Matchers.is
 import org.junit.runner.RunWith
 import org.neo4j.configuration.Config
 import org.neo4j.configuration.helpers.SocketAddress
-import org.neo4j.function.ThrowingSupplier
 import org.neo4j.test.assertion.Assert.assertEventually
 import org.scalatest.exceptions.TestFailedException
 import org.scalatest.junit.JUnitRunner
@@ -137,11 +136,11 @@ abstract class BaseAkkaIT(name: String) extends TestKit(ActorSystem(name, BaseAk
       private var hasSetVisible = false
       private var hasSetInvisible = false
 
-      def visSet = new ThrowingSupplier[Boolean, Exception] {
-        override def get(): Boolean = hasSetVisible
+      def visSet = new Callable[Boolean] {
+        override def call(): Boolean = hasSetVisible
       }
-      def invisSet = new ThrowingSupplier[Boolean, Exception] {
-        override def get(): Boolean = hasSetInvisible
+      def invisSet = new Callable[Boolean] {
+        override def call(): Boolean = hasSetInvisible
       }
 
       override def setVisibleDataSize(key: ReplicatedDataIdentifier, size: Int): Unit = hasSetVisible = true
