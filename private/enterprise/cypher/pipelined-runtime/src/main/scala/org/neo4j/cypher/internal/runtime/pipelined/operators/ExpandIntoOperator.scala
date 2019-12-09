@@ -14,7 +14,7 @@ import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpres
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.RelationshipTypes
 import org.neo4j.cypher.internal.runtime.pipelined.execution.{CursorPools, MorselExecutionContext, QueryResources, QueryState}
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandAllOperatorTaskTemplate.{getNodeIdFromSlot, loadTypes}
-import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandIntoOperatorTaskTemplate.CONNECTING_RELATIONSHIPS
+import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandIntoOperatorTaskTemplate._
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.pipelined.{OperatorExpressionCompiler, RelationshipCursorRepresentation}
@@ -153,6 +153,7 @@ class ExpandIntoOperatorTaskTemplate(inner: OperatorTaskTemplate,
                                             )
   private val missingTypeField = field[Array[String]](codeGen.namer.nextVariableName() + "missingType",
                                                       arrayOf[String](missingTypes.map(constant):_*))
+  private val expandInto = field[CachingExpandInto](codeGen.namer.nextVariableName() + "expandInto")
 
   codeGen.registerCursor(relName, RelationshipCursorRepresentation(loadField(relationshipsField)))
 
@@ -160,7 +161,7 @@ class ExpandIntoOperatorTaskTemplate(inner: OperatorTaskTemplate,
 
   override def genMoreFields: Seq[Field] = {
     val localFields =
-      ArrayBuffer(nodeCursorField, groupCursorField, traversalCursorField, relationshipsField, typeField)
+      ArrayBuffer(nodeCursorField, groupCursorField, traversalCursorField, relationshipsField, typeField, expandInto)
     if (missingTypes.nonEmpty) {
       localFields += missingTypeField
     }
@@ -203,18 +204,18 @@ class ExpandIntoOperatorTaskTemplate(inner: OperatorTaskTemplate,
       condition(and(notEqual(load(fromNode), constant(-1L)), notEqual(load(toNode), constant(-1L)))){
         block(
           loadTypes(types, missingTypes, typeField, missingTypeField),
+          condition(isNull(loadField(expandInto)))(
+            setField(expandInto, newInstance(constructor[CachingExpandInto, Read, Direction, Array[Int]],
+                                             loadField(DATA_READ), directionRepresentation(dir), loadField(typeField) ))),
           allocateAndTraceCursor(nodeCursorField, executionEventField, ALLOCATE_NODE_CURSOR),
           allocateAndTraceCursor(groupCursorField, executionEventField, ALLOCATE_GROUP_CURSOR),
           allocateAndTraceCursor(traversalCursorField, executionEventField, ALLOCATE_TRAVERSAL_CURSOR),
-          setField(relationshipsField, invokeStatic(CONNECTING_RELATIONSHIPS,
-                                                    loadField(DATA_READ),
+          setField(relationshipsField, invoke(loadField(expandInto), CONNECTING_RELATIONSHIPS,
                                                     loadField(nodeCursorField),
                                                     loadField(groupCursorField),
                                                     loadField(traversalCursorField),
                                                     load(fromNode),
-                                                    directionRepresentation(dir),
-                                                    load(toNode),
-                                                    loadField(typeField))),
+                                                    load(toNode))),
           invokeSideEffect(loadField(relationshipsField), method[RelationshipSelectionCursor, Unit, KernelReadTracer]("setTracer"), loadField(executionEventField)),
           assign(resultBoolean, constant(true)),
           setField(canContinue, profilingCursorNext[RelationshipSelectionCursor](loadField(relationshipsField), id)),
@@ -272,7 +273,8 @@ class ExpandIntoOperatorTaskTemplate(inner: OperatorTaskTemplate,
       setField(nodeCursorField, constant(null)),
       setField(groupCursorField, constant(null)),
       setField(traversalCursorField, constant(null)),
-      setField(relationshipsField, constant(null))
+      setField(relationshipsField, constant(null)),
+      setField(expandInto, constant(null))
       )
   }
 
@@ -293,14 +295,11 @@ object ExpandIntoOperatorTaskTemplate {
 
   val CONNECTING_RELATIONSHIPS: Method = method[CachingExpandInto,
       RelationshipSelectionCursor,
-      Read,
       NodeCursor,
       RelationshipGroupCursor,
       RelationshipTraversalCursor,
       Long,
-      Direction,
-      Long,
-      Array[Int]]("connectingRelationships")
+      Long]("connectingRelationships")
 }
 
 
