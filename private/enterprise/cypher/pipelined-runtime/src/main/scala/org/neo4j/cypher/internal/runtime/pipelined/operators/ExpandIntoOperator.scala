@@ -23,10 +23,9 @@ import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNul
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
 import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
-import org.neo4j.cypher.operations.ExpandIntoCursors
 import org.neo4j.graphdb.Direction
 import org.neo4j.internal.kernel.api._
-import org.neo4j.internal.kernel.api.helpers.RelationshipSelectionCursor
+import org.neo4j.internal.kernel.api.helpers.{CachingExpandInto, RelationshipSelectionCursor}
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -62,11 +61,17 @@ class ExpandIntoOperator(val workIdentity: WorkIdentity,
     private var groupCursor: RelationshipGroupCursor = _
     private var traversalCursor: RelationshipTraversalCursor = _
     private var relationships: RelationshipSelectionCursor = _
+    private var expandInto: CachingExpandInto = _
 
     protected override def initializeInnerLoop(context: QueryContext,
                                                state: QueryState,
                                                resources: QueryResources,
                                                initExecutionContext: ExecutionContext): Boolean = {
+      if (expandInto == null) {
+        expandInto = new CachingExpandInto(context.transactionalContext.dataRead,
+                                           kernelDirection(dir),
+                                           types.types(context))
+      }
       val fromNode = getFromNodeFunction.applyAsLong(inputMorsel)
       val toNode = getToNodeFunction.applyAsLong(inputMorsel)
       if (entityIsNull(fromNode) || entityIsNull(toNode))
@@ -74,20 +79,12 @@ class ExpandIntoOperator(val workIdentity: WorkIdentity,
       else {
         val pools: CursorPools = resources.cursorPools
         nodeCursor = pools.nodeCursorPool.allocateAndTrace()
-        val d = dir match {
-          case SemanticDirection.OUTGOING => Direction.OUTGOING
-          case SemanticDirection.INCOMING => Direction.INCOMING
-          case SemanticDirection.BOTH => Direction.BOTH
-        }
         groupCursor = pools.relationshipGroupCursorPool.allocateAndTrace()
         traversalCursor = pools.relationshipTraversalCursorPool.allocateAndTrace()
-        relationships = ExpandIntoCursors.connectingRelationships(context.transactionalContext.dataRead,
-                                                                  nodeCursor,
-                                                                  groupCursor, traversalCursor,
-                                                                  fromNode,
-                                                                  d,
-                                                                  toNode,
-                                                                  types.types(context))
+        relationships = expandInto.connectingRelationships(nodeCursor,
+                                                           groupCursor, traversalCursor,
+                                                           fromNode,
+                                                           toNode)
         true
       }
     }
@@ -122,7 +119,13 @@ class ExpandIntoOperator(val workIdentity: WorkIdentity,
       groupCursor = null
       traversalCursor = null
       relationships = null
+      expandInto = null
     }
+  }
+  private def kernelDirection(dir: SemanticDirection): Direction = dir match {
+    case SemanticDirection.OUTGOING => Direction.OUTGOING
+    case SemanticDirection.INCOMING => Direction.INCOMING
+    case SemanticDirection.BOTH => Direction.BOTH
   }
 }
 
@@ -287,7 +290,8 @@ class ExpandIntoOperatorTaskTemplate(inner: OperatorTaskTemplate,
 }
 
 object ExpandIntoOperatorTaskTemplate {
-  val CONNECTING_RELATIONSHIPS: Method = method[ExpandIntoCursors,
+
+  val CONNECTING_RELATIONSHIPS: Method = method[CachingExpandInto,
       RelationshipSelectionCursor,
       Read,
       NodeCursor,
