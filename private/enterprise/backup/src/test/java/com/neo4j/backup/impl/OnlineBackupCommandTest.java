@@ -122,7 +122,8 @@ class OnlineBackupCommandTest
 
         // when
         String firstLogLine;
-        try ( ByteArrayOutputStream os = new ByteArrayOutputStream(); PrintStream ps = new PrintStream( os ) )
+        try ( ByteArrayOutputStream os = new ByteArrayOutputStream();
+              PrintStream ps = new PrintStream( os ) )
         {
             ExecutionContext ctx = new ExecutionContext( dir.homeDir().toPath(), cfg.getParentFile().toPath(), ps, ps, fs );
 

@@ -78,7 +78,8 @@ class MultiDatabaseBoltIT
     void shouldBeAbleToCreateMultipleDatabasesUsingCypher()
     {
         assertDatabasesNotFound( "foo", "bar" );
-        try ( var driver = graphDatabaseDriver( boltAddress() ); var system = driver.session( forDatabase( SYSTEM_DATABASE_NAME ) ) )
+        try ( var driver = graphDatabaseDriver( boltAddress() );
+              var system = driver.session( forDatabase( SYSTEM_DATABASE_NAME ) ) )
         {
             system.run( "CREATE DATABASE foo" ).consume();
             assertDatabasesFound( "foo" );
@@ -92,7 +93,8 @@ class MultiDatabaseBoltIT
     void shouldFailToCreateExistingDatabaseWithCypher()
     {
         assertDatabasesNotFound( "foo" );
-        try ( var driver = graphDatabaseDriver( boltAddress() ); var system = driver.session( forDatabase( SYSTEM_DATABASE_NAME ) ) )
+        try ( var driver = graphDatabaseDriver( boltAddress() );
+              var system = driver.session( forDatabase( SYSTEM_DATABASE_NAME ) ) )
         {
             system.run( "CREATE DATABASE foo" ).consume();
             assertDatabasesFound( "foo" );
@@ -109,7 +111,8 @@ class MultiDatabaseBoltIT
     void shouldBeAbleToCreateDatabaseIfNotExists()
     {
         assertDatabasesNotFound( "foo", "bar" );
-        try ( var driver = graphDatabaseDriver( boltAddress() ); var system = driver.session( forDatabase( SYSTEM_DATABASE_NAME ) ) )
+        try ( var driver = graphDatabaseDriver( boltAddress() );
+              var system = driver.session( forDatabase( SYSTEM_DATABASE_NAME ) ) )
         {
             system.run( "CREATE DATABASE foo IF NOT EXISTS" ).consume();
             assertDatabasesFound( "foo" );

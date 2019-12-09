@@ -290,7 +290,8 @@ class BoltCausalClusteringIT
 
                 assertNotNull( bookmark );
 
-                try ( Session session = driver.session( builder().withBookmarks( bookmark ).build() ); Transaction tx = session.beginTransaction() )
+                try ( Session session = driver.session( builder().withBookmarks( bookmark ).build() );
+                      Transaction tx = session.beginTransaction() )
                 {
                     Record record = tx.run( "MATCH (n:Person) RETURN COUNT(*) AS count" ).next();
                     assertEquals( 1, record.get( "count" ).asInt() );
