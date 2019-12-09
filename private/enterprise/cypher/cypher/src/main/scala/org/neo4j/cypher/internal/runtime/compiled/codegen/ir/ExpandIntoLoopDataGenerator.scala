@@ -9,31 +9,41 @@ import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.MethodStructure
 import org.neo4j.cypher.internal.runtime.compiled.codegen.{CodeGenContext, Variable}
 import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection
 
-case class ExpandIntoLoopDataGenerator(opName: String, fromVar: Variable, dir: SemanticDirection,
-                   types: Map[String, String], toVar: Variable, relVar: Variable)
+case class ExpandIntoLoopDataGenerator(opName: String,
+                                       fromVar: Variable,
+                                       dir: SemanticDirection,
+                                       types: Map[String, String],
+                                       toVar: Variable,
+                                       relVar: Variable,
+                                       expandIntoVar: String)
   extends LoopDataGenerator {
 
-  override def init[E](generator: MethodStructure[E])(implicit context: CodeGenContext) = {
+  override def init[E](generator: MethodStructure[E])(implicit context: CodeGenContext): Unit = {
     types.foreach {
       case (typeVar,relType) => generator.lookupRelationshipTypeId(typeVar, relType)
     }
+    generator.createCachingExpandInto(expandIntoVar, dir, types.keys.toIndexedSeq)
   }
 
-  override def produceLoopData[E](cursorName: String, generator: MethodStructure[E])(implicit context: CodeGenContext) = {
-    if(types.isEmpty)
-      generator.connectingRelationships(cursorName, fromVar.name, fromVar.codeGenType, dir, toVar.name, toVar.codeGenType)
-    else
-      generator.connectingRelationships(cursorName, fromVar.name, fromVar.codeGenType, dir, types.keys.toIndexedSeq, toVar.name, toVar.codeGenType)
+  override def produceLoopData[E](cursorName: String, generator: MethodStructure[E])(implicit context: CodeGenContext): Unit = {
+      generator.connectingRelationships(cursorName,
+                                        expandIntoVar,
+                                        fromVar.name,
+                                        fromVar.codeGenType,
+                                        toVar.name,
+                                        toVar.codeGenType)
     generator.incrementDbHits()
   }
 
   override def getNext[E](nextVar: Variable, cursorName: String, generator: MethodStructure[E])
-                         (implicit context: CodeGenContext) = {
+                         (implicit context: CodeGenContext): Unit = {
     generator.incrementDbHits()
     generator.nextRelationship(cursorName, dir, relVar.name)
   }
 
-  override def checkNext[E](generator: MethodStructure[E], cursorName: String): E = generator.advanceRelationshipSelectionCursor(cursorName)
+  override def checkNext[E](generator: MethodStructure[E], cursorName: String): E =
+    generator.advanceRelationshipSelectionCursor(cursorName)
 
-  override def close[E](cursorName: String, generator: MethodStructure[E]): Unit = generator.closeRelationshipSelectionCursor(cursorName)
+  override def close[E](cursorName: String, generator: MethodStructure[E]): Unit =
+    generator.closeRelationshipSelectionCursor(cursorName)
 }

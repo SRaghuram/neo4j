@@ -146,8 +146,15 @@ trait MethodStructure[E] {
   def lookupRelationshipTypeIdE(typeName: String): E
   def nodeGetRelationshipsWithDirection(iterVar: String, nodeVar: String, nodeVarType: CodeGenType, direction: SemanticDirection): Unit
   def nodeGetRelationshipsWithDirectionAndTypes(iterVar: String, nodeVar: String, nodeVarType: CodeGenType, direction: SemanticDirection, typeVars: Seq[String]): Unit
-  def connectingRelationships(iterVar: String, fromNode: String, fromNodeType: CodeGenType, dir: SemanticDirection, toNode:String, toNodeType: CodeGenType)
-  def connectingRelationships(iterVar: String, fromNode: String, fromNodeType: CodeGenType, dir: SemanticDirection, types: Seq[String], toNode: String, toNodeType: CodeGenType)
+  def createCachingExpandInto(expandIntoVar: String,
+                              dir: SemanticDirection,
+                              types: Seq[String]): Unit
+  def connectingRelationships(iterVar: String,
+                              expandIntoVar: String,
+                              fromNode: String,
+                              fromNodeType: CodeGenType,
+                              toNode:String,
+                              toNodeType: CodeGenType)
   def nodeFromNodeValueIndexCursor(targetVar: String, iterVar: String): Unit
   def nodeFromNodeCursor(targetVar: String, iterVar: String): Unit
   def nodeFromNodeLabelIndexCursor(targetVar: String, iterVar: String): Unit

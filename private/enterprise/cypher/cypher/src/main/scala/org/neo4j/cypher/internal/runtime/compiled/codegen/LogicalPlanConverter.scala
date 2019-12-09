@@ -5,6 +5,8 @@
  */
 package org.neo4j.cypher.internal.runtime.compiled.codegen
 
+import org.neo4j.cypher.internal.logical.plans
+import org.neo4j.cypher.internal.logical.plans.ColumnOrder
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.Cardinalities
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir._
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.aggregation.AggregationConverter.aggregateExpressionConverter
@@ -13,8 +15,6 @@ import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.Express
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions._
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.SortItem
 import org.neo4j.cypher.internal.v4_0.expressions.{Expression, FunctionInvocation, functions => ast_functions}
-import org.neo4j.cypher.internal.logical.plans
-import org.neo4j.cypher.internal.logical.plans.ColumnOrder
 import org.neo4j.cypher.internal.v4_0.util.Eagerly.immutableMapValues
 import org.neo4j.cypher.internal.v4_0.util.Foldable._
 import org.neo4j.cypher.internal.v4_0.util.attribution.SameId
@@ -355,8 +355,13 @@ object LogicalPlanConverter {
       val (methodHandle, action :: tl) = context.popParent().consume(context, this, cardinalities)
       val typeVar2TypeName = expand.types.map(t => context.namer.newVarName() -> t.name).toMap
       val opName = context.registerOperator(expand)
-      val expandGenerator = ExpandIntoLoopDataGenerator(opName, fromNodeVar, expand.dir, typeVar2TypeName, toNodeVar,
-        relVar)
+      val expandGenerator = ExpandIntoLoopDataGenerator(opName,
+                                                        fromNodeVar,
+                                                        expand.dir,
+                                                        typeVar2TypeName,
+                                                        toNodeVar,
+                                                        relVar,
+                                                        context.namer.newVarName())
 
       (methodHandle, WhileLoop(relVar, expandGenerator, action) :: tl)
     }

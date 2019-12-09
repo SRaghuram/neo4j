@@ -7,9 +7,10 @@ package org.neo4j.cypher.internal.spi.codegen
 
 import java.util
 
+import org.neo4j.codegen.Expression.{invoke, newInstance}
+import org.neo4j.codegen._
 import org.neo4j.codegen.bytecode.ByteCode
 import org.neo4j.codegen.source.SourceCode
-import org.neo4j.codegen.{CodeGenerationStrategy, CodeGenerator, Expression, MethodDeclaration}
 import org.neo4j.cypher.internal.profiling.QueryProfiler
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.compiled.codegen.CodeGenContext
@@ -21,7 +22,8 @@ import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection
 import org.neo4j.cypher.internal.v4_0.frontend.helpers._
 import org.neo4j.cypher.internal.v4_0.util.symbols
 import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
-import org.neo4j.internal.kernel.api.helpers.RelationshipSelectionCursor
+import org.neo4j.graphdb.Direction
+import org.neo4j.internal.kernel.api.helpers.{CachingExpandInto, RelationshipSelectionCursor}
 import org.neo4j.internal.kernel.api.{CursorFactory, NodeCursor, PropertyCursor, Read, _}
 import org.neo4j.kernel.impl.core.TransactionalEntityFactory
 
@@ -159,27 +161,42 @@ class GeneratedMethodStructureTest extends CypherFunSuite {
     Operation("expand into", m => {
       m.declareAndInitialize("from", CodeGenType.primitiveNode)
       m.declareAndInitialize("to", CodeGenType.primitiveNode)
+      val expandInto = m.generator.declare(typeRef[CachingExpandInto], "expandInto")
       val local = m.generator.declare(typeRef[RelationshipSelectionCursor], "iter")
-      m.generator.assign(local, Expression.invoke(Methods.allConnectingRelationships,
-                                             Expression.get(m.generator.self(), m.fields.dataRead),
-                                             Expression.get(m.generator.self(), m.fields.cursors),
-                                             Expression.get(m.generator.self(), m.fields.nodeCursor),
-                                             m.generator.load("from"),
-                                             Templates.outgoing,
-                                             m.generator.load("to")))
+      m.generator.assign(expandInto,invoke(newInstance(typeRef[CachingExpandInto]),
+                                           MethodReference.constructorReference(typeRef[CachingExpandInto],
+                                                                                typeRef[Read],
+                                                                                typeRef[Direction],
+                                                                                typeRef[Array[Int]]),
+                                           Expression.get(m.generator.self(), m.fields.dataRead),
+                                           Templates.outgoing,
+                                           Expression.constant(null)))
+      m.generator.assign(local, Expression.invoke(Expression.load(expandInto),
+                                                  Methods.connectingRelationships,
+                                                  Expression.get(m.generator.self(), m.fields.cursors),
+                                                  Expression.get(m.generator.self(), m.fields.nodeCursor),
+                                                  m.generator.load("from"),
+                                                  m.generator.load("to")))
     }),
     Operation("expand into with types", m => {
       m.declareAndInitialize("from", CodeGenType.primitiveNode)
       m.declareAndInitialize("to", CodeGenType.primitiveNode)
+      val expandInto = m.generator.declare(typeRef[CachingExpandInto], "expandInto")
       val local = m.generator.declare(typeRef[RelationshipSelectionCursor], "iter")
-      m.generator.assign(local, Expression.invoke(Methods.connectingRelationships,
-                                                  Expression.get(m.generator.self(), m.fields.dataRead),
+      m.generator.assign(expandInto,invoke(newInstance(typeRef[CachingExpandInto]),
+                                           MethodReference.constructorReference(typeRef[CachingExpandInto],
+                                                                                typeRef[Read],
+                                                                                typeRef[Direction],
+                                                                                typeRef[Array[Int]]),
+                                           Expression.get(m.generator.self(), m.fields.dataRead),
+                                           Templates.outgoing,
+                                           Expression.newInitializedArray(typeRef[Int], Expression.constant(1))))
+      m.generator.assign(local, Expression.invoke(Expression.load(expandInto),
+                                                  Methods.connectingRelationships,
                                                   Expression.get(m.generator.self(), m.fields.cursors),
                                                   Expression.get(m.generator.self(), m.fields.nodeCursor),
                                                   m.generator.load("from"),
-                                                  Templates.outgoing,
-                                                  m.generator.load("to"),
-                                             Expression.newInitializedArray(typeRef[Int], Expression.constant(1))))
+                                                  m.generator.load("to")))
     }),
     Operation("expand from all node", m => {
       m.allNodesScan("nodeIter")

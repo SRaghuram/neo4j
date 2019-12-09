@@ -33,7 +33,7 @@ import org.neo4j.cypher.operations.CursorUtils
 import org.neo4j.exceptions.ParameterNotFoundException
 import org.neo4j.graphdb.Direction
 import org.neo4j.internal.kernel.api._
-import org.neo4j.internal.kernel.api.helpers.RelationshipSelectionCursor
+import org.neo4j.internal.kernel.api.helpers.{CachingExpandInto, RelationshipSelectionCursor}
 import org.neo4j.internal.schema.IndexDescriptor
 import org.neo4j.kernel.impl.util.ValueUtils
 import org.neo4j.values.AnyValue
@@ -578,23 +578,36 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
     generator.expression(pop(invoke(get(generator.self(), fields.closeables), Methods.listAdd, generator.load(iterVar))))
   }
 
-  override def connectingRelationships(iterVar: String, fromNode: String, fromNodeType: CodeGenType, direction: SemanticDirection,
-                                       toNode: String, toNodeType: CodeGenType): Unit = {
-    generator.assign(typeRef[RelationshipSelectionCursor], iterVar, invoke(Methods.allConnectingRelationships,
-                                                                           dataRead, cursors, nodeCursor,
-                                                                           forceLong(fromNode, fromNodeType),
-                                                                           dir(direction),  forceLong(toNode, toNodeType)))
-    generator.expression(pop(invoke(get(generator.self(), fields.closeables), Methods.listAdd, generator.load(iterVar))))
+  override def createCachingExpandInto(variable: String,
+                                       direction: SemanticDirection,
+                                       types: Seq[String]): Unit = {
+    val typesRep =
+      if (types.isEmpty) constant(null)
+      else newInitializedArray(typeRef[Int], types.map(generator.load): _*)
+    generator.assign(typeRef[CachingExpandInto],
+                     variable,
+                     invoke(newInstance(typeRef[CachingExpandInto]),
+                            MethodReference.constructorReference(typeRef[CachingExpandInto],
+                                                                 typeRef[Read],
+                                                                 typeRef[Direction],
+                                                                 typeRef[Array[Int]]),
+                            dataRead, dir(direction),
+                            typesRep))
   }
 
-  override def connectingRelationships(iterVar: String, fromNode: String, fromNodeType: CodeGenType, direction: SemanticDirection,
-
-                                       typeVars: Seq[String], toNode: String, toNodeType: CodeGenType): Unit = {
-      generator.assign(typeRef[RelationshipSelectionCursor], iterVar, invoke(Methods.connectingRelationships,
-                                                                             dataRead, cursors, nodeCursor,
-                                                                             forceLong(fromNode, fromNodeType),
-                                                                             dir(direction), forceLong(toNode, toNodeType),
-                                                                             newInitializedArray(typeRef[Int], typeVars.map(generator.load): _*)))
+  override def connectingRelationships(iterVar: String,
+                                       expandIntoVar: String,
+                                       fromNode: String,
+                                       fromNodeType: CodeGenType,
+                                       toNode: String,
+                                       toNodeType: CodeGenType): Unit = {
+    generator.assign(typeRef[RelationshipSelectionCursor], iterVar,
+                     invoke(generator.load(expandIntoVar),
+                            Methods.connectingRelationships,
+                            cursors,
+                            nodeCursor,
+                            forceLong(fromNode, fromNodeType),
+                            forceLong(toNode, toNodeType)))
     generator.expression(pop(invoke(get(generator.self(), fields.closeables), Methods.listAdd, generator.load(iterVar))))
   }
 
