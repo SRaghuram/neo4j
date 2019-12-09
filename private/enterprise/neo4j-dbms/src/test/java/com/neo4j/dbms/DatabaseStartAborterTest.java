@@ -28,7 +28,7 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyZeroInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 
@@ -61,7 +61,7 @@ class DatabaseStartAborterTest
         var otherId = TestDatabaseIdRepository.randomNamedDatabaseId();
         aborter.shouldAbort( otherId );
         verify( dbmsModel ).getStatus( otherId );
-        verifyZeroInteractions( dbmsModel );
+        verifyNoMoreInteractions( dbmsModel );
         aborter.shouldAbort( NAMED_SYSTEM_DATABASE_ID );
     }
 

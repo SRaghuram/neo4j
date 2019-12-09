@@ -30,8 +30,7 @@ import org.neo4j.test.extension.Inject;
 import static com.neo4j.dbms.EnterpriseOperatorState.DROPPED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.dbms.database.SystemGraphDbmsModel.DATABASE_LABEL;
@@ -80,7 +79,7 @@ class EnterpriseSystemGraphDbmsModelTest
         }
 
         // then
-        assertThat( updatedDatabases, containsInAnyOrder( expectedCreated.keySet().toArray() ) );
+        assertThat( updatedDatabases ).containsAll( expectedCreated.keySet() );
 
         // given
         updatedDatabases.clear();
@@ -96,7 +95,7 @@ class EnterpriseSystemGraphDbmsModelTest
         }
 
         // then
-        assertThat( updatedDatabases, containsInAnyOrder( expectedDeleted.keySet().toArray() ) );
+        assertThat( updatedDatabases ).containsAll( expectedDeleted.keySet() );
     }
 
     @Test

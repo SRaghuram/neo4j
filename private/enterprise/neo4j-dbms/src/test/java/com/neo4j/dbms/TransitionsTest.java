@@ -7,7 +7,6 @@ package com.neo4j.dbms;
 
 import com.neo4j.dbms.Transitions.Transition;
 import com.neo4j.dbms.Transitions.TransitionFunction;
-import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -28,7 +27,7 @@ import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STORE_COPYING;
 import static java.lang.String.format;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -174,7 +173,7 @@ class TransitionsTest
         }
         catch ( IllegalArgumentException e )
         {
-            assertThat( e.getMessage(), Matchers.containsString( "'DROPPED', which is a final state" ) );
+            assertThat( e.getMessage() ).contains( "'DROPPED', which is a final state" );
         }
     }
 
@@ -255,7 +254,7 @@ class TransitionsTest
         }
         catch ( IllegalArgumentException e )
         {
-            assertThat( e.getMessage(), Matchers.containsString( "unsupported state transition" ) );
+            assertThat( e.getMessage() ).contains( "unsupported state transition" );
         }
     }
 
