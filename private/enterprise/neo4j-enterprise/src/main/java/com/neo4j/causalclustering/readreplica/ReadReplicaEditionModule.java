@@ -170,7 +170,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
     }
 
     @Override
-    public DatabaseManager<?> createDatabaseManager( GlobalModule globalModule )
+    public DatabaseManager<ClusteredDatabaseContext> createDatabaseManager( GlobalModule globalModule )
     {
         var databaseManager = new ReadReplicaDatabaseManager( globalModule, this, catchupComponentsProvider::createDatabaseComponents,
                 globalModule.getFileSystem(), globalModule.getPageCache(), logProvider, globalConfig, clusterStateLayout );

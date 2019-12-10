@@ -16,7 +16,7 @@ import org.neo4j.internal.kernel.api.security.SecurityContext;
 import org.neo4j.kernel.api.Kernel;
 import org.neo4j.kernel.api.KernelTransaction;
 
-import static org.neo4j.kernel.api.KernelTransaction.Type.implicit;
+import static org.neo4j.kernel.api.KernelTransaction.Type.IMPLICIT;
 
 public class KernelTxBatch
 {
@@ -68,7 +68,7 @@ public class KernelTxBatch
 
     private void newTx() throws TransactionFailureException, InvalidTransactionTypeKernelException
     {
-        this.tx = kernel.beginTransaction( implicit, SecurityContext.AUTH_DISABLED );
+        this.tx = kernel.beginTransaction( IMPLICIT, SecurityContext.AUTH_DISABLED );
         cursors = tx.cursors();
         token = tx.token();
         read = tx.dataRead();

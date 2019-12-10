@@ -27,9 +27,10 @@ public class BenchmarkGroupBenchmarkMetrics
         for ( BenchmarkGroup group : other.inner.keySet() )
         {
             Map<Benchmark,AnnotatedMetrics> annotatedBenchmarks = other.inner.get( group );
-            for ( Benchmark benchmark : annotatedBenchmarks.keySet() )
+            for ( var entry : annotatedBenchmarks.entrySet() )
             {
-                AnnotatedMetrics annotatedMetrics = annotatedBenchmarks.get( benchmark );
+                Benchmark benchmark = entry.getKey();
+                AnnotatedMetrics annotatedMetrics = entry.getValue();
                 add( group, benchmark, annotatedMetrics.metrics(), annotatedMetrics.neo4jConfig() );
             }
         }

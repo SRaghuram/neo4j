@@ -204,7 +204,7 @@ class QueryLoggerIT
         executeQuery( subject, "UNWIND range(0, 10) AS i CREATE (:Foo {p: i})", emptyMap() );
 
         // Set meta data and execute query in transaction
-        try ( InternalTransaction tx = database.beginTransaction( KernelTransaction.Type.explicit, subject ) )
+        try ( InternalTransaction tx = database.beginTransaction( KernelTransaction.Type.EXPLICIT, subject ) )
         {
             tx.execute( "CALL tx.setMetaData( { User: 'Johan' } )", emptyMap() );
             tx.execute( "CALL dbms.procedures() YIELD name RETURN name", emptyMap() ).close();
@@ -214,7 +214,7 @@ class QueryLoggerIT
         }
 
         // Ensure that old meta data is not retained
-        try ( InternalTransaction tx = database.beginTransaction( KernelTransaction.Type.explicit, subject ) )
+        try ( InternalTransaction tx = database.beginTransaction( KernelTransaction.Type.EXPLICIT, subject ) )
         {
             tx.execute( "CALL tx.setMetaData( { Location: 'Sweden' } )", emptyMap() );
             tx.execute( "MATCH ()-[r]-() RETURN count(r)", emptyMap() ).close();
@@ -738,7 +738,7 @@ class QueryLoggerIT
     private void executeQuery( GraphDatabaseFacade db, EnterpriseLoginContext loginContext, String query, Map<String,Object> params )
     {
         Consumer<ResourceIterator<Map<String,Object>>> resultConsumer = ResourceIterator::close;
-        try ( InternalTransaction tx = db.beginTransaction( KernelTransaction.Type.implicit, loginContext ) )
+        try ( InternalTransaction tx = db.beginTransaction( KernelTransaction.Type.IMPLICIT, loginContext ) )
         {
             Map<String,Object> p = (params == null) ? emptyMap() : params;
             resultConsumer.accept( tx.execute( query, p ) );

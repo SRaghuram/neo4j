@@ -55,10 +55,10 @@ public class FabricLocalExecutor
     {
         if ( fabricTransactionInfo.isImplicitTransaction() )
         {
-            return KernelTransaction.Type.implicit;
+            return KernelTransaction.Type.IMPLICIT;
         }
 
-        return KernelTransaction.Type.explicit;
+        return KernelTransaction.Type.EXPLICIT;
     }
 
     public class FabricLocalTransaction

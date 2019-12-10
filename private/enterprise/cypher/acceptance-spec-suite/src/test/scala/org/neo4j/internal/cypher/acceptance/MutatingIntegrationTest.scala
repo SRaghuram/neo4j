@@ -318,7 +318,7 @@ class MutatingIntegrationTest extends ExecutionEngineFunSuite with QueryStatisti
   }
 
   test("failure_only_fails_inner_transaction") {
-    val tx = graph.beginTransaction( Type.explicit, AnonymousContext.write() )
+    val tx = graph.beginTransaction( Type.EXPLICIT, AnonymousContext.write() )
     try {
       executeWith(Configs.InterpretedAndSlotted, "match (a) where id(a) = $id set a.foo = 'bar' return a", params = Map("id"->"0"))
     } catch {

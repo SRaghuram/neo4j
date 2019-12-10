@@ -65,9 +65,10 @@ public class ProfilerRecordings
                                              Map<RecordingType,List<Parameters>> recordingParameters )
     {
         Map<String,String> map = new HashMap<>();
-        for ( RecordingType recordingType : recordingFilenames.keySet() )
+        for ( var entry : recordingFilenames.entrySet() )
         {
-            List<String> filenameList = recordingFilenames.get( recordingType );
+            RecordingType recordingType = entry.getKey();
+            List<String> filenameList = entry.getValue();
             List<Parameters> parametersList = recordingParameters.get( recordingType );
             for ( int i = 0; i < filenameList.size(); i++ )
             {

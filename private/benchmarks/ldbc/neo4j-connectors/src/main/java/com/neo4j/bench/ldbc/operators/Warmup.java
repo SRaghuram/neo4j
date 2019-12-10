@@ -26,7 +26,7 @@ import org.neo4j.kernel.impl.store.format.standard.RelationshipRecordFormat;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 
 import static java.lang.String.format;
-import static org.neo4j.kernel.api.KernelTransaction.Type.implicit;
+import static org.neo4j.kernel.api.KernelTransaction.Type.IMPLICIT;
 
 public class Warmup
 {
@@ -128,7 +128,7 @@ public class Warmup
     private static KernelTransaction startTransaction( Kernel kernel )
             throws TransactionFailureException
     {
-        return kernel.beginTransaction( implicit, SecurityContext.AUTH_DISABLED );
+        return kernel.beginTransaction( IMPLICIT, SecurityContext.AUTH_DISABLED );
     }
 
     private static Kernel getKernel( GraphDatabaseAPI db )

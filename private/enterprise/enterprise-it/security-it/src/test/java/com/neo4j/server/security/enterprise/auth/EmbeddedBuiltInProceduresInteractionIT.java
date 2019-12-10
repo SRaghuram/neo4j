@@ -59,7 +59,7 @@ public class EmbeddedBuiltInProceduresInteractionIT extends BuiltInProceduresInt
         GraphDatabaseFacade graph = neo.getLocalGraph();
 
         try ( InternalTransaction tx = graph
-                .beginTransaction( KernelTransaction.Type.explicit, unAuthSubject ) )
+                .beginTransaction( KernelTransaction.Type.EXPLICIT, unAuthSubject ) )
         {
             Result result = tx.execute(  "CALL dbms.listQueries" );
             assertFalse( result.hasNext() );
@@ -81,7 +81,7 @@ public class EmbeddedBuiltInProceduresInteractionIT extends BuiltInProceduresInt
 
         String id = extractQueryId( query );
 
-        try ( Transaction transaction = graph.beginTransaction( KernelTransaction.Type.explicit, unAuthSubject ) )
+        try ( Transaction transaction = graph.beginTransaction( KernelTransaction.Type.EXPLICIT, unAuthSubject ) )
         {
             transaction.execute( "CALL dbms.killQuery('" + id + "')" );
             throw new AssertionError( "Expected exception to be thrown" );

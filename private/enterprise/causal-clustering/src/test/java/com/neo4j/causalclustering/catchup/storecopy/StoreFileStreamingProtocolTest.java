@@ -18,7 +18,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
-import org.neo4j.cursor.RawCursor;
 import org.neo4j.test.rule.PageCacheRule;
 import org.neo4j.test.rule.fs.EphemeralFileSystemRule;
 
@@ -27,7 +26,6 @@ import static com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResp
 import static com.neo4j.causalclustering.catchup.storecopy.StoreCopyFinishedResponse.Status.SUCCESS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
-import static org.neo4j.kernel.impl.util.Cursors.rawCursorOf;
 
 public class StoreFileStreamingProtocolTest
 {
@@ -55,12 +53,11 @@ public class StoreFileStreamingProtocolTest
         {
             resourceList.add( createResource( new File( file ), ThreadLocalRandom.current().nextInt( 1, 4096 ) ) );
         }
-        RawCursor<StoreResource,IOException> resources = rawCursorOf( resourceList );
 
         // when
-        while ( resources.next() )
+        for ( StoreResource storeResource : resourceList )
         {
-            protocol.stream( ctx, resources.get() );
+            protocol.stream( ctx, storeResource );
         }
 
         // then

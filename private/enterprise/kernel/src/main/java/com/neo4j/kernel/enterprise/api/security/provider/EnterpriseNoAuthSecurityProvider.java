@@ -11,7 +11,7 @@ import org.neo4j.kernel.api.security.AuthManager;
 import org.neo4j.kernel.api.security.provider.SecurityProvider;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 
-public class EnterpriseNoAuthSecurityProvider extends LifecycleAdapter implements SecurityProvider
+public final class EnterpriseNoAuthSecurityProvider extends LifecycleAdapter implements SecurityProvider
 {
     public static final EnterpriseNoAuthSecurityProvider INSTANCE = new EnterpriseNoAuthSecurityProvider();
 

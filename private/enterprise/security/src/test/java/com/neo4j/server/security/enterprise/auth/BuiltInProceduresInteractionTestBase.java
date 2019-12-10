@@ -114,7 +114,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         latch.waitForAllToStart();
 
         ThreadedTransaction<S> tx2 = new ThreadedTransaction<>( neo, blockedModifierLatch );
-        tx2.executeEarly( threading, writeSubject, KernelTransaction.Type.explicit, secondModifier );
+        tx2.executeEarly( threading, writeSubject, KernelTransaction.Type.EXPLICIT, secondModifier );
 
         waitTransactionToStartWaitingForTheLock();
 
@@ -689,7 +689,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
 
             try
             {
-                String writeQuery = write.executeEarly( threading, writeSubject, KernelTransaction.Type.implicit,
+                String writeQuery = write.executeEarly( threading, writeSubject, KernelTransaction.Type.IMPLICIT,
                         format( "USING PERIODIC COMMIT 10 LOAD CSV FROM 'http://localhost:%d' AS line ", localPort ) +
                         "CREATE (n:A {id: line[0], square: line[1]}) " + "RETURN count(*)" );
                 latch.startAndWaitForAllToStart();
@@ -810,7 +810,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         // start never-ending query
         String query1 = "MATCH (n:MyNode) SET n.prop = 5 WITH * CALL test.neverEnding() RETURN 1";
         ThreadedTransaction<S> tx1 = new ThreadedTransaction<>( neo, new DoubleLatch() );
-        tx1.executeEarly( threading, writeSubject, KernelTransaction.Type.explicit, query1 );
+        tx1.executeEarly( threading, writeSubject, KernelTransaction.Type.EXPLICIT, query1 );
 
         // wait for query1 to be stuck in procedure with its write lock
         ClassWithProcedures.doubleLatch.startAndWaitForAllToStart();
@@ -818,7 +818,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         // start query2
         ThreadedTransaction<S> tx2 = new ThreadedTransaction<>( neo, new DoubleLatch() );
         String query2 = "MATCH (n:MyNode) SET n.prop = 10 RETURN 1";
-        tx2.executeEarly( threading, writeSubject, KernelTransaction.Type.explicit, query2 );
+        tx2.executeEarly( threading, writeSubject, KernelTransaction.Type.EXPLICIT, query2 );
 
         assertQueryIsRunning( query2 );
 
@@ -960,7 +960,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
 
             try
             {
-                String writeQuery = write.executeEarly( threading, writeSubject, KernelTransaction.Type.implicit,
+                String writeQuery = write.executeEarly( threading, writeSubject, KernelTransaction.Type.IMPLICIT,
                         format( "USING PERIODIC COMMIT 10 LOAD CSV FROM 'http://localhost:%d' AS line ", localPort ) +
                         "CREATE (n:A {id: line[0], square: line[1]}) RETURN count(*)" );
                 latch.startAndWaitForAllToStart();
@@ -1070,7 +1070,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         String testKey = "test";
         GraphDatabaseFacade graph = neo.getLocalGraph();
         try ( InternalTransaction transaction = neo
-                .beginLocalTransactionAsUser( writeSubject, KernelTransaction.Type.explicit ) )
+                .beginLocalTransactionAsUser( writeSubject, KernelTransaction.Type.EXPLICIT ) )
         {
             transaction.execute( "CALL tx.setMetaData({" + testKey + ":'" + testValue + "'})" );
             Map<String,Object> metadata =

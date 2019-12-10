@@ -721,14 +721,14 @@ class FunctionIT
     {
         // Given
         GraphDatabaseAPI gdapi = (GraphDatabaseAPI) db;
-        try ( Transaction tx = gdapi.beginTransaction( KernelTransaction.Type.explicit, AnonymousContext.full() ) )
+        try ( Transaction tx = gdapi.beginTransaction( KernelTransaction.Type.EXPLICIT, AnonymousContext.full() ) )
         {
             tx.execute( "CREATE ()" );
             tx.commit();
         }
 
         // When
-        try ( Transaction tx = gdapi.beginTransaction( KernelTransaction.Type.explicit, AnonymousContext.access() ) )
+        try ( Transaction tx = gdapi.beginTransaction( KernelTransaction.Type.EXPLICIT, AnonymousContext.access() ) )
         {
             Result result = tx.execute( "RETURN com.neo4j.procedure.nodeCount() AS count" );
 

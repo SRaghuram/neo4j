@@ -23,7 +23,7 @@ import org.neo4j.storageengine.api.StorageEngineFactory;
 
 import static java.lang.String.format;
 
-public class OnlineBackupExecutor
+public final class OnlineBackupExecutor
 {
     private final FileSystemAbstraction fs;
     private final LogProvider userLogProvider;

@@ -323,7 +323,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
     }
 
     @Override
-    public DatabaseManager<?> createDatabaseManager( GlobalModule globalModule )
+    public DatabaseManager<ClusteredDatabaseContext> createDatabaseManager( GlobalModule globalModule )
     {
         var databaseManager = new CoreDatabaseManager( globalModule, this, catchupComponentsProvider::createDatabaseComponents,
                 globalModule.getFileSystem(), globalModule.getPageCache(), logProvider, globalModule.getGlobalConfig(), clusterStateLayout );

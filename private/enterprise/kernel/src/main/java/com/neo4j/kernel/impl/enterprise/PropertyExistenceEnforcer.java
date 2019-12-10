@@ -345,7 +345,7 @@ class PropertyExistenceEnforcer
                 relationshipType, propertyKey ) );
     }
 
-    private boolean contains( int[] list, int value )
+    private static boolean contains( int[] list, int value )
     {
         for ( int x : list )
         {

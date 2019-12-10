@@ -28,6 +28,6 @@ public interface AuthenticationInfo extends Serializable
 
     static AuthenticationInfo of( Object principal )
     {
-        return (AuthenticationInfo) () -> principal;
+        return () -> principal;
     }
 }

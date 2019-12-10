@@ -54,9 +54,13 @@ import static org.neo4j.kernel.impl.pagecache.ConfigurableStandalonePageCacheFac
 /**
  * Stand alone tool for migrating/upgrading a neo4j database from one version to the next.
  */
-public class StoreMigration
+public final class StoreMigration
 {
     private static final String HELP_FLAG = "help";
+
+    private StoreMigration()
+    {
+    }
 
     public static void main( String[] args ) throws Exception
     {
@@ -70,7 +74,7 @@ public class StoreMigration
         FormattedLogProvider userLogProvider = FormattedLogProvider.toOutputStream( System.out );
         try ( FileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction() )
         {
-            new StoreMigration().run( fileSystem, storeDir, getMigrationConfig( storeDir ), userLogProvider );
+            StoreMigration.run( fileSystem, storeDir, getMigrationConfig( storeDir ), userLogProvider );
         }
     }
 

@@ -521,7 +521,7 @@ public class Cluster
                 throw new DatabaseShutdownException();
             }
 
-            try ( Transaction tx = db.beginTransaction( KernelTransaction.Type.explicit, EnterpriseSecurityContext.AUTH_DISABLED ) )
+            try ( Transaction tx = db.beginTransaction( KernelTransaction.Type.EXPLICIT, EnterpriseSecurityContext.AUTH_DISABLED ) )
             {
                 op.accept( db, tx );
                 return member;

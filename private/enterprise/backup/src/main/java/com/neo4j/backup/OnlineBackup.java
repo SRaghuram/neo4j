@@ -35,7 +35,7 @@ import static org.neo4j.util.Preconditions.checkArgument;
  * @see OnlineBackup#from(String, int)
  */
 @PublicApi
-public class OnlineBackup
+public final class OnlineBackup
 {
     private final String hostnameOrIp;
     private final int port;
@@ -196,7 +196,7 @@ public class OnlineBackup
     /**
      * Represents an outcome of a successful backup.
      */
-    public static class Result
+    public static final class Result
     {
         private final boolean consistent;
 

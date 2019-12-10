@@ -50,7 +50,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.internal.schema.IndexPrototype.uniqueForSchema;
-import static org.neo4j.kernel.api.KernelTransaction.Type.implicit;
+import static org.neo4j.kernel.api.KernelTransaction.Type.IMPLICIT;
 
 @EphemeralTestDirectoryExtension
 @TestInstance( TestInstance.Lifecycle.PER_CLASS )
@@ -437,7 +437,7 @@ class SchemaRuleCollisionTest
     private static KernelTransaction newTransaction( GraphDatabaseAPI db ) throws org.neo4j.internal.kernel.api.exceptions.TransactionFailureException
     {
         final Kernel kernel = db.getDependencyResolver().resolveDependency( Kernel.class );
-        return kernel.beginTransaction( implicit, LoginContext.AUTH_DISABLED );
+        return kernel.beginTransaction( IMPLICIT, LoginContext.AUTH_DISABLED );
     }
 
     private static Result equivalentSchemaRuleExists()

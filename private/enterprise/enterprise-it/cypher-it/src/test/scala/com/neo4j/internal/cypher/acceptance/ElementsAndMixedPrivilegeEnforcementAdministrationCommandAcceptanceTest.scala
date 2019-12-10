@@ -8,8 +8,8 @@ package com.neo4j.internal.cypher.acceptance
 import java.util
 
 import org.neo4j.configuration.GraphDatabaseSettings.{DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME}
-import org.neo4j.graphdb.{RelationshipType, Result}
 import org.neo4j.graphdb.security.AuthorizationViolationException
+import org.neo4j.graphdb.{RelationshipType, Result}
 import org.neo4j.internal.kernel.api.security.LoginContext
 import org.neo4j.kernel.api.KernelTransaction.Type
 
@@ -132,7 +132,7 @@ class ElementsAndMixedPrivilegeEnforcementAdministrationCommandAcceptanceTest ex
   test("should rollback transaction") {
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
-    val tx = graph.beginTransaction(Type.explicit, LoginContext.AUTH_DISABLED)
+    val tx = graph.beginTransaction(Type.EXPLICIT, LoginContext.AUTH_DISABLED)
     try {
       val result: Result = tx.execute("GRANT TRAVERSE ON GRAPH * NODES A,B TO custom")
       result.accept(_ => true)

@@ -43,12 +43,12 @@ class ThreadedTransaction<S>
 
     String execute( ThreadingRule threading, S subject, String query )
     {
-        return doExecute( threading, subject, KernelTransaction.Type.explicit, false, query )[0];
+        return doExecute( threading, subject, KernelTransaction.Type.EXPLICIT, false, query )[0];
     }
 
     String[] execute( ThreadingRule threading, S subject, String... queries )
     {
-        return doExecute( threading, subject, KernelTransaction.Type.explicit, false, queries );
+        return doExecute( threading, subject, KernelTransaction.Type.EXPLICIT, false, queries );
     }
 
     String executeEarly( ThreadingRule threading, S subject, KernelTransaction.Type txType, String query )

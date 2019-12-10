@@ -50,7 +50,7 @@ trait CodeGenSugar extends MockitoSugar with LogicalPlanConstructionTestSupport 
   }
 
   def compileAndProfile(plan: LogicalPlan, graphDb: GraphDatabaseQueryService): RuntimeResult = {
-    val tx = graphDb.beginTransaction(Type.explicit, AnonymousContext.read())
+    val tx = graphDb.beginTransaction(Type.EXPLICIT, AnonymousContext.read())
     var transactionalContext: TransactionalContextWrapper = null
     try {
       val contextFactory = Neo4jTransactionalContextFactory.create(graphDb)

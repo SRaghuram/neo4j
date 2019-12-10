@@ -35,14 +35,12 @@ import org.neo4j.test.extension.Inject;
 import static java.util.Arrays.stream;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.cypher.operations.ExpandIntoCursors.connectingRelationships;
 import static org.neo4j.cypher.operations.ExpandIntoCursors.nodeGetDegreeDense;
 import static org.neo4j.graphdb.Direction.BOTH;
 import static org.neo4j.graphdb.Direction.INCOMING;
 import static org.neo4j.graphdb.Direction.OUTGOING;
-import static org.neo4j.kernel.api.KernelTransaction.Type.implicit;
+import static org.neo4j.kernel.api.KernelTransaction.Type.IMPLICIT;
 
 @DbmsExtension( configurationCallback = "config" )
 class ExpandIntoCursorsTest
@@ -61,7 +59,7 @@ class ExpandIntoCursorsTest
     private KernelTransaction transaction() throws TransactionFailureException
     {
         DependencyResolver resolver = db.getDependencyResolver();
-        return resolver.resolveDependency( Kernel.class ).beginTransaction( implicit, LoginContext.AUTH_DISABLED );
+        return resolver.resolveDependency( Kernel.class ).beginTransaction( IMPLICIT, LoginContext.AUTH_DISABLED );
     }
 
     @Test

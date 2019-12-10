@@ -151,7 +151,7 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
     beginInternalTransaction(SecurityContext.AUTH_DISABLED)
 
   def beginInternalTransaction(loginContext: LoginContext): InternalTransaction =
-    new GraphDatabaseCypherService(db).beginTransaction(Type.explicit, loginContext)
+    new GraphDatabaseCypherService(db).beginTransaction(Type.EXPLICIT, loginContext)
 
   private def solve(logicalPlan: LogicalPlan) {
     solveds.set(logicalPlan.id, SinglePlannerQuery.empty)

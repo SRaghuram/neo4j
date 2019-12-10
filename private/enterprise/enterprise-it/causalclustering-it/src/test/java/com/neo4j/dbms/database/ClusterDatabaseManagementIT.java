@@ -447,7 +447,7 @@ class ClusterDatabaseManagementIT
         GraphDatabaseAPI db = (GraphDatabaseAPI) member.managementService().database( databaseName );
 
         long result;
-        try ( var tx = db.beginTransaction( KernelTransaction.Type.explicit, EnterpriseSecurityContext.AUTH_DISABLED ) )
+        try ( var tx = db.beginTransaction( KernelTransaction.Type.EXPLICIT, EnterpriseSecurityContext.AUTH_DISABLED ) )
         {
             var field = "count";
             var results = tx.execute( String.format( "MATCH (n:%s) RETURN count(n) AS %s", label, field ) );

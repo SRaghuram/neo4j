@@ -104,7 +104,7 @@ public class InstalledProtocolsProcedureIT
     {
         List<ProtocolInfo> infos = new LinkedList<>();
         Kernel kernel = db.getDependencyResolver().resolveDependency( Kernel.class );
-        try ( KernelTransaction tx = kernel.beginTransaction( KernelTransaction.Type.implicit, AnonymousContext.read() ) )
+        try ( KernelTransaction tx = kernel.beginTransaction( KernelTransaction.Type.IMPLICIT, AnonymousContext.read() ) )
         {
             Procedures procedures = tx.procedures();
             int procedureId = procedures.procedureGet( procedureName( "dbms", "cluster", InstalledProtocolsProcedure.PROCEDURE_NAME ) ).id();

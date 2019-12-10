@@ -32,7 +32,7 @@ public final class ShowDatabasesHelpers
         var systemDb = (GraphDatabaseFacade) dbms.database( SYSTEM_DATABASE_NAME );
         List<ShowDatabasesResultRow> rows;
 
-        try ( var tx = systemDb.beginTransaction( KernelTransaction.Type.explicit, EnterpriseSecurityContext.AUTH_DISABLED ) )
+        try ( var tx = systemDb.beginTransaction( KernelTransaction.Type.EXPLICIT, EnterpriseSecurityContext.AUTH_DISABLED ) )
         {
             var result = tx.execute( "SHOW DATABASES" );
             try ( var resultRows = result.stream() )

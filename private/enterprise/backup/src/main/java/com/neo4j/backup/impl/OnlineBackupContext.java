@@ -199,11 +199,11 @@ public class OnlineBackupContext
                 reportsDirectory = Paths.get( "." );
             }
 
-            SocketAddress address = buildAddress();
+            SocketAddress socketAddress = buildAddress();
             Path databaseBackupDirectory = backupDirectory.resolve( databaseName );
             ConsistencyFlags consistencyFlags = buildConsistencyFlags();
 
-            return new OnlineBackupContext( address, databaseName, databaseBackupDirectory, reportsDirectory,
+            return new OnlineBackupContext( socketAddress, databaseName, databaseBackupDirectory, reportsDirectory,
                     fallbackToFullBackup, consistencyCheck, consistencyFlags, config );
         }
 

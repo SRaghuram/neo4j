@@ -82,7 +82,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       }
     }
 
-    beginTransaction(Type.explicit, LoginContext.AUTH_DISABLED)
+    beginTransaction(Type.EXPLICIT, LoginContext.AUTH_DISABLED)
     context = Neo4jTransactionalContextFactory.create(graph).newContext(tx, "X", EMPTY_MAP)
     query = new TransactionBoundQueryContext(TransactionalContextWrapper(context))(mock[IndexSearchMonitor])
     cursors = new ExpressionCursors(TransactionalContextWrapper(context).cursors)

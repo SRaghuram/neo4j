@@ -14,10 +14,10 @@ import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
-import org.neo4j.cypher.internal.plandescription.{InternalPlanDescription, PlanDescriptionImpl}
+import org.neo4j.cypher.internal.plandescription.PlanDescriptionImpl
 import org.neo4j.cypher.{ExecutionEngineFunSuite, ExecutionEngineHelper}
-import org.neo4j.graphdb.{ExecutionPlanDescription, Result}
 import org.neo4j.graphdb.config.Setting
+import org.neo4j.graphdb.{ExecutionPlanDescription, Result}
 import org.neo4j.internal.kernel.api.security.AuthenticationResult
 import org.neo4j.kernel.api.KernelTransaction.Type
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
@@ -221,7 +221,7 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
                 requiredOperator: Option[String] = None): Int = {
     selectDatabase(database)
     val login = authManager.login(SecurityTestUtils.authToken(username, password))
-    val tx = graph.beginTransaction(Type.explicit, login)
+    val tx = graph.beginTransaction(Type.EXPLICIT, login)
     try {
       executeBefore(tx)
       var count = 0

@@ -158,7 +158,7 @@ public class EmbeddedUserManagementProceduresInteractionIT extends AuthProcedure
     @SuppressWarnings( "SameParameterValue" )
     private void assertNotificationForSystemCommand( String call, Notification wantedNotification )
     {
-        try ( Transaction tx = neo.getSystemGraph().beginTransaction( KernelTransaction.Type.implicit, adminSubject ) )
+        try ( Transaction tx = neo.getSystemGraph().beginTransaction( KernelTransaction.Type.IMPLICIT, adminSubject ) )
         {
             Result result = tx.execute( call );
 

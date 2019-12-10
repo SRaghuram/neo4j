@@ -64,8 +64,9 @@ public class BenchmarkConfigFile
     static BenchmarkConfigFile fromMap( Map<String,String> confMap, Validation validation, BenchmarksFinder benchmarksFinder )
     {
         Map<String,BenchmarkConfigFileEntry> benchmarkConfigFileEntries = benchmarks( confMap, benchmarksFinder );
-        for ( String key : confMap.keySet() )
+        for ( var entry : confMap.entrySet() )
         {
+            String key = entry.getKey();
             int separator = key.lastIndexOf( '.' );
             if ( separator == -1 )
             {
@@ -95,7 +96,7 @@ public class BenchmarkConfigFile
             }
 
             BenchmarkConfigFileEntry configFileEntry = benchmarkConfigFileEntries.get( benchmarkNamePrefix );
-            String valueString = confMap.get( key );
+            String valueString = entry.getValue();
             Set<String> value = splitAndTrimCommaSeparatedString( valueString );
             if ( configFileEntry.isEnabled() && value.isEmpty() )
             {

@@ -158,7 +158,7 @@ class StandaloneShowDatabasesIT
 
     private static void execute( String query, GraphDatabaseAPI systemDb )
     {
-        try ( var tx = systemDb.beginTransaction( KernelTransaction.Type.explicit, EnterpriseSecurityContext.AUTH_DISABLED ) )
+        try ( var tx = systemDb.beginTransaction( KernelTransaction.Type.EXPLICIT, EnterpriseSecurityContext.AUTH_DISABLED ) )
         {
             tx.execute( query );
             tx.commit();

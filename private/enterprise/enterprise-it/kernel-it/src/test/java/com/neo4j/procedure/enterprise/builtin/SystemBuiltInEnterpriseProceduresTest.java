@@ -45,7 +45,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.internal.helpers.collection.Iterators.asList;
 import static org.neo4j.internal.kernel.api.procs.ProcedureSignature.procedureName;
-import static org.neo4j.kernel.api.KernelTransaction.Type.implicit;
+import static org.neo4j.kernel.api.KernelTransaction.Type.IMPLICIT;
 
 @EnterpriseDbmsExtension
 class SystemBuiltInEnterpriseProceduresTest implements ProcedureITBase
@@ -63,7 +63,7 @@ class SystemBuiltInEnterpriseProceduresTest implements ProcedureITBase
     {
         // When
         GraphDatabaseAPI system = getGraphDatabaseAPI();
-        KernelTransaction transaction = system.beginTransaction( implicit, AnonymousContext.read() ).kernelTransaction();
+        KernelTransaction transaction = system.beginTransaction( IMPLICIT, AnonymousContext.read() ).kernelTransaction();
         ProcedureHandle procedures = transaction.procedures().procedureGet( procedureName( "dbms", "procedures" ) );
         RawIterator<AnyValue[],ProcedureException> stream =
                 transaction.procedures().procedureCallRead( procedures.id(), new AnyValue[0], ProcedureCallContext.EMPTY );

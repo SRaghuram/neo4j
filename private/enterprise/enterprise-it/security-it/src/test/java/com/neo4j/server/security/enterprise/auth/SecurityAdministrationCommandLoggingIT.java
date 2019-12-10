@@ -475,7 +475,7 @@ class SecurityAdministrationCommandLoggingIT
 
     private void execute( LoginContext loginContext, String query, Map<String,Object> params )
     {
-        try ( InternalTransaction transaction = database.beginTransaction( KernelTransaction.Type.explicit, loginContext ) )
+        try ( InternalTransaction transaction = database.beginTransaction( KernelTransaction.Type.EXPLICIT, loginContext ) )
         {
             transaction.execute( query, params );
             transaction.commit();

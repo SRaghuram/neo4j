@@ -72,7 +72,7 @@ class CompiledProfilingTest extends CypherFunSuite with CodeGenSugar {
     val database = managementService.database(DEFAULT_DATABASE_NAME)
     try {
       val graphDb = new GraphDatabaseCypherService(database)
-      val tx = graphDb.beginTransaction(Type.explicit, AnonymousContext.write())
+      val tx = graphDb.beginTransaction(Type.EXPLICIT, AnonymousContext.write())
       tx.createNode()
       tx.createNode()
       tx.commit()

@@ -77,7 +77,7 @@ class ReflectiveProcedureCallAcceptanceTest extends ExecutionEngineFunSuite with
   test("should close resources on mid-stream transaction close") {
     val counters = setUpProcedures()
 
-    val tx = graph.beginTransaction(Type.`implicit`, LoginContext.AUTH_DISABLED)
+    val tx = graph.beginTransaction(Type.IMPLICIT, LoginContext.AUTH_DISABLED)
     val result = tx.execute(defaultQuery)
 
     // Pull one row and then close the transaction
@@ -105,7 +105,7 @@ class ReflectiveProcedureCallAcceptanceTest extends ExecutionEngineFunSuite with
   test("should not leave any resources open on transaction close before pulling on the result") {
     val counters = setUpProcedures()
 
-    val tx = graph.beginTransaction(KernelTransaction.Type.`implicit`, LoginContext.AUTH_DISABLED)
+    val tx = graph.beginTransaction(KernelTransaction.Type.IMPLICIT, LoginContext.AUTH_DISABLED)
     tx.execute(defaultQuery)
 
     // Close the transaction directly without pulling the result
@@ -120,7 +120,7 @@ class ReflectiveProcedureCallAcceptanceTest extends ExecutionEngineFunSuite with
     val counters = setUpProcedures()
     val numberOfRows = 100
 
-    val tx = graph.beginTransaction(KernelTransaction.Type.`implicit`, LoginContext.AUTH_DISABLED)
+    val tx = graph.beginTransaction(KernelTransaction.Type.IMPLICIT, LoginContext.AUTH_DISABLED)
     val result = tx.execute(s"UNWIND range(1,$numberOfRows) as i CALL org.neo4j.test.testResourceProcedure(1) YIELD value RETURN value")
 
     // Pull one row and then close the transaction

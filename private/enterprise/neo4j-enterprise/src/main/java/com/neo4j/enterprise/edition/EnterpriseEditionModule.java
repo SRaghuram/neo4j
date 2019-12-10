@@ -181,7 +181,7 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
     }
 
     @Override
-    public DatabaseManager<?> createDatabaseManager( GlobalModule globalModule )
+    public DatabaseManager<StandaloneDatabaseContext> createDatabaseManager( GlobalModule globalModule )
     {
         var databaseManager = new EnterpriseMultiDatabaseManager( globalModule, this );
 

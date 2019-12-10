@@ -843,14 +843,14 @@ public class ProcedureIT
     void shouldNotGetReadAccessCallingReadProcedureThroughWriteProcedureInWriteOnlyTransaction()
     {
         GraphDatabaseAPI gdapi = (GraphDatabaseAPI) db;
-        try ( Transaction tx = gdapi.beginTransaction( KernelTransaction.Type.explicit, AnonymousContext.full() ) )
+        try ( Transaction tx = gdapi.beginTransaction( KernelTransaction.Type.EXPLICIT, AnonymousContext.full() ) )
         {
             tx.execute( "CREATE ()" );
             tx.commit();
         }
 
         // When
-        try ( Transaction tx = gdapi.beginTransaction( KernelTransaction.Type.explicit, AnonymousContext.writeOnly() ) )
+        try ( Transaction tx = gdapi.beginTransaction( KernelTransaction.Type.EXPLICIT, AnonymousContext.writeOnly() ) )
         {
             Result result = tx.execute( "CALL com.neo4j.procedure.writeProcedureCallingReadProcedure" );
             assertFalse( result.hasNext() );
@@ -882,7 +882,7 @@ public class ProcedureIT
         GraphDatabaseAPI gdapi = (GraphDatabaseAPI) db;
 
         // When
-        try ( Transaction tx = gdapi.beginTransaction( KernelTransaction.Type.explicit, AnonymousContext.write() ) )
+        try ( Transaction tx = gdapi.beginTransaction( KernelTransaction.Type.EXPLICIT, AnonymousContext.write() ) )
         {
             QueryExecutionException exception =
                     assertThrows( QueryExecutionException.class,
@@ -1339,14 +1339,14 @@ public class ProcedureIT
     {
         // Given
         GraphDatabaseAPI gdapi = (GraphDatabaseAPI) db;
-        try ( Transaction tx = gdapi.beginTransaction( KernelTransaction.Type.explicit, AnonymousContext.full() ) )
+        try ( Transaction tx = gdapi.beginTransaction( KernelTransaction.Type.EXPLICIT, AnonymousContext.full() ) )
         {
             tx.execute( "CREATE ()" );
             tx.commit();
         }
 
         // When
-        try ( Transaction tx = gdapi.beginTransaction( KernelTransaction.Type.explicit, AnonymousContext.access() ) )
+        try ( Transaction tx = gdapi.beginTransaction( KernelTransaction.Type.EXPLICIT, AnonymousContext.access() ) )
         {
             Result result = tx.execute( "CALL com.neo4j.procedure.nodeIds()" );
 
@@ -1365,7 +1365,7 @@ public class ProcedureIT
         QueryExecutionException exception =
                 assertThrows( QueryExecutionException.class, () ->
                 {
-                    try ( Transaction tx = gdapi.beginTransaction( KernelTransaction.Type.explicit, AnonymousContext.read() ) )
+                    try ( Transaction tx = gdapi.beginTransaction( KernelTransaction.Type.EXPLICIT, AnonymousContext.read() ) )
                     {
                         tx.execute( "CALL com.neo4j.procedure.writingProcedure()" );
                         tx.commit();
@@ -1383,7 +1383,7 @@ public class ProcedureIT
         AuthorizationViolationException exception =
                 assertThrows( AuthorizationViolationException.class, () ->
                 {
-                    try ( Transaction tx = gdapi.beginTransaction( KernelTransaction.Type.explicit, AnonymousContext.write() ) )
+                    try ( Transaction tx = gdapi.beginTransaction( KernelTransaction.Type.EXPLICIT, AnonymousContext.write() ) )
                     {
                         tx.execute( "CALL com.neo4j.procedure.schemaProcedure()" );
                         tx.commit();

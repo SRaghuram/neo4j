@@ -52,7 +52,7 @@ public class RestoreDatabaseCommand
         catch ( IllegalArgumentException e )
         {
             throw new IllegalArgumentException(
-                    format( "Source directory is not a database backup [%s]", fromDatabasePath ) );
+                    format( "Source directory is not a database backup [%s]", fromDatabasePath ), e );
         }
 
         if ( fs.fileExists( targetDatabaseLayout.databaseDirectory() ) && !forceOverwrite )

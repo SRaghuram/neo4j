@@ -88,7 +88,7 @@ import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.consistency.store.StoreAssertions.assertConsistentStore;
 import static org.neo4j.internal.helpers.collection.Iterables.count;
-import static org.neo4j.kernel.api.KernelTransaction.Type.implicit;
+import static org.neo4j.kernel.api.KernelTransaction.Type.IMPLICIT;
 
 @RunWith( Enclosed.class )
 public class StoreUpgradeIT
@@ -468,7 +468,7 @@ public class StoreUpgradeIT
     private static void checkIndexCounts( Store store, GraphDatabaseAPI db ) throws KernelException
     {
         Kernel kernel = db.getDependencyResolver().resolveDependency( Kernel.class );
-        try ( KernelTransaction tx = kernel.beginTransaction( implicit, AnonymousContext.read() ) )
+        try ( KernelTransaction tx = kernel.beginTransaction( IMPLICIT, AnonymousContext.read() ) )
         {
             SchemaRead schemaRead = tx.schemaRead();
             Iterator<IndexDescriptor> indexes = IndexDescriptor.sortByType( getAllIndexes( schemaRead ) );

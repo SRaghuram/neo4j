@@ -257,7 +257,7 @@ class ServerPoliciesLoadBalancingIT
 
     private static RoutingResult getRoutingTable( GraphDatabaseFacade db, Map<String,String> context )
     {
-        try ( var tx = db.beginTransaction( KernelTransaction.Type.explicit, EnterpriseLoginContext.AUTH_DISABLED ) )
+        try ( var tx = db.beginTransaction( KernelTransaction.Type.EXPLICIT, EnterpriseLoginContext.AUTH_DISABLED ) )
         {
             var parameters = MapUtil.map( ParameterNames.CONTEXT.parameterName(), context );
             try ( var result = tx.execute( "CALL dbms.routing.getRoutingTable", parameters ) )

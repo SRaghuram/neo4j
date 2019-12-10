@@ -103,7 +103,7 @@ public class EmbeddedInteraction implements NeoInteractionLevel<EnterpriseLoginC
                                 Consumer<ResourceIterator<Map<String,Object>>> resultConsumer )
     {
         var gdb = (GraphDatabaseFacade) managementService.database( database );
-        try ( InternalTransaction tx = gdb.beginTransaction( KernelTransaction.Type.implicit, loginContext ) )
+        try ( InternalTransaction tx = gdb.beginTransaction( KernelTransaction.Type.IMPLICIT, loginContext ) )
         {
             Map<String,Object> p = (params == null) ? Collections.emptyMap() : params;
             resultConsumer.accept( tx.execute( call, p ) );

@@ -145,7 +145,7 @@ public class InMemoryRaftLog implements RaftLog
                     hasNext = currentIndex <= appendIndex;
                     if ( hasNext )
                     {
-                        if ( currentIndex <= prevIndex || currentIndex > appendIndex )
+                        if ( currentIndex <= prevIndex )
                         {
                             return false;
                         }
