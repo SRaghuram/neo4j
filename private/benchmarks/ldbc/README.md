@@ -13,7 +13,7 @@ It contains code for the following:
 	cd ldbc
 	git submodule init
 	git submodule update
-	mvn clean package -DskipTests
+	mvn clean package -DskipTests -PfullBenchmarks
 
 This produces an uberjar here: `neo4j-connectors/target/ldbc.jar`. 
 

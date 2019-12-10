@@ -1,5 +1,7 @@
 Available Commands
 --------------
+Make sure that you have build with the flag `-PfullBenchmarks`
+
         $ java -jar target/micro-benchmarks.jar help
         usage: bench <command> [<args>]
         

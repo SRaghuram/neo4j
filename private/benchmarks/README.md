@@ -13,27 +13,27 @@ This repository contains multiple modules, to build them all just do the regular
 Alternatively, you may want to build just a subset of them.
 See below for commands you'll need to build and package your benchmarks.
 
+If you want to build the jars that are needed to run benchmarks add 
+
+        mvn clean package -DskipTests -PfullBenchmarks
+
 #####Micro
 
-        mvn clean package -pl benchmark-results-client -pl micro -DskipTests
+        mvn clean package -pl benchmark-results-client -pl micro -DskipTests -PfullBenchmarks
 
 There are instructions on how to run in [micro/README](micro/README.md)
 
 #####LDBC
 
-        mvn clean package -pl benchmark-results-client -pl ldbc/neo4j-connectors
+        mvn clean package -pl benchmark-results-client -pl ldbc/neo4j-connectors -PfullBenchmarks
         
 There are instructions on how to run in [ldbc/README](ldbc/README.md)
 
 #####Macro
 
-        mvn clean package -pl benchmark-results-client -pl macro -DskipTests
+        mvn clean package -pl benchmark-results-client -pl macro -DskipTests -PfullBenchmarks
         
 There are instructions on how to run in [macro/README](macro/README.md)
-
-#####Procedures 
-
-        mvn clean package -pl benchmark-results-client -pl benchmark-procedures -DskipTests      
 
 #####Result Client
 
