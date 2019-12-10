@@ -22,6 +22,7 @@ import com.neo4j.dbms.ShowDatabasesHelpers.ShowDatabasesResultRow;
 import java.io.File;
 import java.io.IOException;
 import java.io.Reader;
+import java.net.URI;
 import java.nio.CharBuffer;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
@@ -39,6 +40,8 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
+import org.neo4j.driver.net.ServerAddress;
+import org.neo4j.driver.net.ServerAddressResolver;
 import org.neo4j.graphdb.DatabaseShutdownException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
@@ -90,6 +93,16 @@ public final class CausalClusteringTestHelpers
 {
     private CausalClusteringTestHelpers()
     {
+    }
+
+    public static ServerAddressResolver clusterResolver( Cluster cluster )
+    {
+        return address -> cluster
+                .coreMembers()
+                .stream()
+                .map( c -> URI.create( c.routingURI() ) )
+                .map( uri -> ServerAddress.of( uri.getHost(), uri.getPort() ) )
+                .collect( toSet() );
     }
 
     public static CatchupClientFactory getCatchupClient( LogProvider logProvider, JobScheduler scheduler )

@@ -8,6 +8,8 @@ package com.neo4j.bolt;
 import com.neo4j.kernel.impl.pagecache.PageCacheWarmerExtensionFactory;
 import com.neo4j.metrics.global.GlobalMetricsExtensionFactory;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
+import com.neo4j.test.driver.DriverExtension;
+import com.neo4j.test.driver.DriverFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

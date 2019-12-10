@@ -3,7 +3,7 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.bolt;
+package com.neo4j.test.driver;
 
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.Test;
@@ -12,11 +12,13 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
+import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.api.DatabaseManagementService;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
-import org.neo4j.test.ports.PortAuthority;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -33,7 +35,7 @@ class DriverFactoryExtensionTest
     @Test
     void shouldCreateLogFileForDriver() throws IOException
     {
-        var boltAddress = new SocketAddress( "localhost", PortAuthority.allocatePort() );
+        var boltAddress = new SocketAddress( "localhost", 0 );
         var fsa = testDirectory.getFileSystem();
         DatabaseManagementService managementService = null;
 
@@ -45,7 +47,11 @@ class DriverFactoryExtensionTest
                     .setConfig( BoltConnector.listen_address, boltAddress )
                     .build();
 
-            try ( var driver = driverFactory.graphDatabaseDriver( URI.create( "bolt://" + boltAddress.getHostname() + ":" + boltAddress.getPort() ) ) )
+            var bolt = ((GraphDatabaseAPI) managementService.database( GraphDatabaseSettings.DEFAULT_DATABASE_NAME ))
+                    .getDependencyResolver()
+                    .resolveDependency( ConnectorPortRegister.class )
+                    .getLocalAddress( "bolt" );
+            try ( var driver = driverFactory.graphDatabaseDriver( URI.create( "bolt://" + bolt ) ) )
             {
                 driver.session().run( "RETURN 1" ).consume();
             }

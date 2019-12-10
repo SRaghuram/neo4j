@@ -3,10 +3,9 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
-package com.neo4j.bolt;
+package com.neo4j.test.driver;
 
-import com.neo4j.causalclustering.common.Cluster;
-import com.neo4j.causalclustering.helper.ErrorHandler;
+import org.junit.jupiter.api.extension.ExtensionContext;
 
 import java.io.File;
 import java.io.IOException;
@@ -15,21 +14,19 @@ import java.util.Collection;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.neo4j.driver.AuthToken;
 import org.neo4j.driver.Config;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Logger;
 import org.neo4j.driver.Logging;
-import org.neo4j.driver.net.ServerAddress;
 import org.neo4j.driver.net.ServerAddressResolver;
 import org.neo4j.logging.FormattedLog;
 import org.neo4j.logging.Log;
 import org.neo4j.test.rule.TestDirectory;
 
-import static java.util.stream.Collectors.toSet;
+import static org.neo4j.io.IOUtils.closeAll;
 
-public class DriverFactory implements AutoCloseable
+public class DriverFactory implements ExtensionContext.Store.CloseableResource
 {
     private final AtomicLong driverCounter = new AtomicLong();
     private final Collection<AutoCloseable> closeableCollection = ConcurrentHashMap.newKeySet();
@@ -71,41 +68,16 @@ public class DriverFactory implements AutoCloseable
         return GraphDatabase.driver( uri, createDefaultConfigBuilder().build() );
     }
 
-    public Driver graphDatabaseDriver( URI uri, AuthToken auth ) throws IOException
+    public Driver graphDatabaseDriver( ServerAddressResolver resolver ) throws IOException
     {
-        return GraphDatabase.driver( uri, auth, createDefaultConfigBuilder().build() );
-    }
-
-    public Driver graphDatabaseDriver( String uri, AuthToken auth ) throws IOException
-    {
-        return GraphDatabase.driver( uri, auth, createDefaultConfigBuilder().build() );
-    }
-
-    public Driver graphDatabaseDriver( Cluster cluster, AuthToken auth ) throws IOException
-    {
-        ServerAddressResolver serverAddressResolver = address -> cluster
-                .coreMembers()
-                .stream()
-                .map( c -> URI.create( c.routingURI() ) )
-                .map( uri -> ServerAddress.of( uri.getHost(), uri.getPort() ) )
-                .collect( toSet() );
-
-        return GraphDatabase.driver( "neo4j://ignore.com", auth,
-                createDefaultConfigBuilder().withResolver( serverAddressResolver ).withLogging( createLogger( createNewLogFile() ) ).build() );
+        return GraphDatabase.driver( "neo4j://ignore.com", createDefaultConfigBuilder().withResolver( resolver ).build() );
     }
 
     @Override
-    public void close()
+    public void close() throws IOException
     {
-        try ( ErrorHandler errorHandler = new ErrorHandler( "Closing file output streams streams" ) )
-        {
-            for ( AutoCloseable autoCloseable : closeableCollection )
-            {
-                errorHandler.execute( autoCloseable::close );
-            }
-            closeableCollection.forEach( closeable -> errorHandler.execute( closeable::close ) );
-            closeableCollection.clear();
-        }
+        closeAll( closeableCollection );
+        closeableCollection.clear();
     }
 
     private static final class TranslatedLogger implements Logger

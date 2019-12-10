@@ -6,6 +6,8 @@
 package com.neo4j.bolt;
 
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
+import com.neo4j.test.driver.DriverExtension;
+import com.neo4j.test.driver.DriverFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,7 +28,6 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.bolt.BoltDriverHelper.graphDatabaseDriver;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertThrows;

@@ -5,8 +5,8 @@
  */
 package com.neo4j.procedure.routing;
 
-import com.neo4j.bolt.DriverExtension;
-import com.neo4j.bolt.DriverFactory;
+import com.neo4j.test.driver.DriverExtension;
+import com.neo4j.test.driver.DriverFactory;
 import org.hamcrest.Description;
 import org.hamcrest.TypeSafeMatcher;
 
@@ -171,7 +171,8 @@ abstract class BaseRoutingProcedureIT
 
     private static RoutingResult invokeRoutingProcedure( String query, Map<String,Object> params, GraphDatabaseService db )
     {
-        try ( var tx = db.beginTx(); var result = tx.execute( query, params ) )
+        try ( var tx = db.beginTx();
+              var result = tx.execute( query, params ) )
         {
             var record = Iterators.single( result );
             return asRoutingResult( record );

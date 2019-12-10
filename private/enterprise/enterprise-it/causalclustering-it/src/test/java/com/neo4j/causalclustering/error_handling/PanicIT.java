@@ -5,13 +5,13 @@
  */
 package com.neo4j.causalclustering.error_handling;
 
-import com.neo4j.bolt.DriverExtension;
-import com.neo4j.bolt.DriverFactory;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
+import com.neo4j.test.driver.DriverExtension;
+import com.neo4j.test.driver.DriverFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.DynamicTest;
@@ -24,10 +24,11 @@ import java.util.concurrent.ExecutionException;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-import org.neo4j.driver.AuthTokens;
+import org.neo4j.driver.Driver;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.test.extension.Inject;
 
+import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.clusterResolver;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -122,7 +123,7 @@ class PanicIT
     private void attemptToRestartDefaultDatabase() throws Exception
     {
         // use a routing driver and a single session so that system database bookmarks are passed between transactions
-        try ( var driver = driverFactory.graphDatabaseDriver( cluster, AuthTokens.basic( "neo4j", "neo4j" ) );
+        try ( var driver = driverFactory.graphDatabaseDriver( clusterResolver( cluster ) );
               var session = driver.session( forDatabase( SYSTEM_DATABASE_NAME ) ) )
         {
             session.writeTransaction( tx -> tx.run( "STOP DATABASE " + DEFAULT_DATABASE_NAME ) ).consume();

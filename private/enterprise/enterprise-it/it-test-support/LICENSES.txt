@@ -47,6 +47,7 @@ Apache Software License, Version 2.0
   Lucene Core
   Lucene QueryParsers
   LZ4 and xxHash
+  Neo4j Java Driver
   Netty
   Netty/All-in-One
   Non-Blocking Reactive Foundation for the JVM

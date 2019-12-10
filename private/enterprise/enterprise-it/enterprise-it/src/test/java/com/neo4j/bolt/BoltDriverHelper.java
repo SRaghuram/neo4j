@@ -5,8 +5,6 @@
  */
 package com.neo4j.bolt;
 
-import com.neo4j.causalclustering.common.Cluster;
-
 import java.net.URI;
 
 import org.neo4j.driver.AuthToken;
@@ -14,10 +12,6 @@ import org.neo4j.driver.Config;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Logging;
-import org.neo4j.driver.net.ServerAddress;
-import org.neo4j.driver.net.ServerAddressResolver;
-
-import static java.util.stream.Collectors.toSet;
 
 public class BoltDriverHelper
 {

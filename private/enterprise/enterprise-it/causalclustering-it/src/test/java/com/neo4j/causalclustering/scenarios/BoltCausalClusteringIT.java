@@ -5,8 +5,6 @@
  */
 package com.neo4j.causalclustering.scenarios;
 
-import com.neo4j.bolt.DriverExtension;
-import com.neo4j.bolt.DriverFactory;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.CoreClusterMember;
@@ -16,6 +14,8 @@ import com.neo4j.causalclustering.readreplica.CatchupPollingProcess;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
+import com.neo4j.test.driver.DriverExtension;
+import com.neo4j.test.driver.DriverFactory;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -30,7 +30,6 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Bookmark;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.Record;
@@ -43,6 +42,7 @@ import org.neo4j.driver.exceptions.SessionExpiredException;
 import org.neo4j.internal.helpers.collection.Iterators;
 import org.neo4j.test.extension.Inject;
 
+import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.clusterResolver;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.forceReelection;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.runWithLeaderDisabled;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -189,7 +189,8 @@ class BoltCausalClusteringIT
         @Test
         void sessionShouldExpireOnLeaderSwitch() throws Exception
         {
-            try ( Driver driver = makeDriver( cluster ); Session session = driver.session() )
+            try ( Driver driver = makeDriver( cluster );
+                  Session session = driver.session() )
             {
                 session.run( "CREATE (n:Person {name: 'Jim'})" ).consume();
 
@@ -210,7 +211,8 @@ class BoltCausalClusteringIT
             // given
             int clusterSize = cluster.allMembers().size();
 
-            try ( Driver driver = makeDriver( cluster ); Session session = driver.session() )
+            try ( Driver driver = makeDriver( cluster );
+                  Session session = driver.session() )
             {
                 assertEventually( () -> session.run( "CALL dbms.cluster.overview" ).list(), hasSize( clusterSize ), 60, SECONDS );
             }
@@ -603,12 +605,12 @@ class BoltCausalClusteringIT
 
     private Driver makeDriver( Cluster cluster ) throws IOException
     {
-        return driverFactory.graphDatabaseDriver( cluster, AuthTokens.basic( "neo4j", "neo4j" ) );
+        return driverFactory.graphDatabaseDriver( clusterResolver( cluster ) );
     }
 
     private Driver makeDriver( String uri ) throws IOException
     {
-        return driverFactory.graphDatabaseDriver( uri, AuthTokens.basic( "neo4j", "neo4j" ) );
+        return driverFactory.graphDatabaseDriver( uri );
     }
 
     private static void executeReadQuery( Session session )
