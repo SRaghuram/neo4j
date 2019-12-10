@@ -108,9 +108,9 @@ public class FabricLocalExecutor
             kernelTransactions.forEach( SingleStatementKernelTransaction::rollback );
         }
 
-        public void markForTermination( Status reason )
+        public void terminate()
         {
-            kernelTransactions.forEach( tx -> tx.markForTermination( reason ) );
+            kernelTransactions.forEach( SingleStatementKernelTransaction::terminate );
         }
 
         private SingleStatementKernelTransaction beginKernelTransaction()
@@ -130,12 +130,11 @@ public class FabricLocalExecutor
             var executionEngine = dependencyResolver.resolveDependency( ExecutionEngine.class );
 
             var internalTransaction = beginInternalTransaction( databaseFacade, transactionInfo );
-            var kernelTransaction = internalTransaction.kernelTransaction();
 
             var queryService = dependencyResolver.resolveDependency( GraphDatabaseQueryService.class );
             var transactionalContextFactory = Neo4jTransactionalContextFactory.create( queryService );
 
-            return new SingleStatementKernelTransaction( executionEngine, transactionalContextFactory, kernelTransaction, internalTransaction, config );
+            return new SingleStatementKernelTransaction( executionEngine, transactionalContextFactory, internalTransaction, config );
         }
 
         private InternalTransaction beginInternalTransaction( GraphDatabaseFacade databaseFacade, FabricTransactionInfo transactionInfo )

@@ -204,7 +204,7 @@ public class FabricTransactionImpl implements FabricTransaction, FabricTransacti
         internalLog.debug( "Terminating transaction %d", id );
         terminationStatus = reason;
 
-        localTransaction.markForTermination( reason );
+        localTransaction.terminate();
         doRollback();
     }
 

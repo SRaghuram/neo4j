@@ -16,8 +16,6 @@ import reactor.core.publisher.Flux;
 import org.neo4j.cypher.internal.FullyParsedQuery;
 import org.neo4j.cypher.internal.javacompat.ExecutionEngine;
 import org.neo4j.cypher.internal.runtime.InputDataStream;
-import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
-import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.query.QueryExecution;
@@ -31,17 +29,15 @@ public class SingleStatementKernelTransaction
 {
     private final ExecutionEngine queryExecutionEngine;
     private final TransactionalContextFactory transactionalContextFactory;
-    private final KernelTransaction kernelTransaction;
     private final InternalTransaction internalTransaction;
     private final FabricConfig config;
     private TransactionalContext executionContext;
 
     SingleStatementKernelTransaction( ExecutionEngine queryExecutionEngine, TransactionalContextFactory transactionalContextFactory,
-            KernelTransaction kernelTransaction, InternalTransaction internalTransaction, FabricConfig config )
+            InternalTransaction internalTransaction, FabricConfig config )
     {
         this.queryExecutionEngine = queryExecutionEngine;
         this.transactionalContextFactory = transactionalContextFactory;
-        this.kernelTransaction = kernelTransaction;
         this.internalTransaction = internalTransaction;
         this.config = config;
     }
@@ -86,34 +82,19 @@ public class SingleStatementKernelTransaction
 
     public void commit()
     {
-        if ( kernelTransaction.isOpen() )
+        if ( internalTransaction.isOpen() )
         {
-            try
-            {
-                closeContext();
-                kernelTransaction.commit();
-            }
-            catch ( TransactionFailureException e )
-            {
-                throw new FabricException( e.status(), e );
-            }
+            closeContext();
+            internalTransaction.commit();
         }
     }
 
     public void rollback()
     {
-        if ( kernelTransaction.isOpen() )
+        if ( internalTransaction.isOpen() )
         {
-
-            try
-            {
-                closeContext();
-                kernelTransaction.rollback();
-            }
-            catch ( TransactionFailureException e )
-            {
-                throw new FabricException( e.status(), e );
-            }
+            closeContext();
+            internalTransaction.rollback();
         }
     }
 
@@ -125,8 +106,8 @@ public class SingleStatementKernelTransaction
         }
     }
 
-    public void markForTermination( Status reason )
+    public void terminate()
     {
-        kernelTransaction.markForTermination( reason );
+        internalTransaction.terminate();
     }
 }
