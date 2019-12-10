@@ -2,6 +2,8 @@ Macro Benchmarks
 --------------
 Available Commands
 --------------
+Make sure that you have build with the flag `-PfullBenchmarks`
+
         $java -jar macro.jar help
         usage: bench <command> [<args>]
 
