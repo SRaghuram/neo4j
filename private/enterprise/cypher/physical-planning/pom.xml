@@ -18,7 +18,7 @@
     <url>http://components.neo4j.org/${project.artifactId}/${project.version}</url>
 
     <properties>
-        <moduleName>com.neo4j.cypher.internal.compatibility.v4_0.runtime</moduleName>
+        <moduleName>com.neo4j.cypher.internal.compatibility.runtime</moduleName>
     </properties>
 
     <scm>
