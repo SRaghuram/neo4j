@@ -266,7 +266,8 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
       condition(notEqual(load(fromNode), constant(-1L))){
        block(
          assign(resultBoolean, constant(true)),
-         setUpCursors(fromNode)
+         setUpCursors(fromNode),
+         setField(canContinue, profilingCursorNext[RelationshipSelectionCursor](loadField(relationshipsField), id))
          )
       },
 
@@ -379,8 +380,7 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
         .getOrElse(expandWithNewNodeCursor(fromNode)),
       invokeSideEffect(loadField(relationshipsField),
                        method[RelationshipSelectionCursor, Unit, KernelReadTracer]("setTracer"),
-                       loadField(executionEventField)),
-      setField(canContinue, profilingCursorNext[RelationshipSelectionCursor](loadField(relationshipsField), id)),
+                       loadField(executionEventField))
       )
   }
 

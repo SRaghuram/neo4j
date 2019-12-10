@@ -204,69 +204,61 @@ class OptionalExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
     block(
       declareAndAssign(typeRefOf[Long], fromNode, getNodeIdFromSlot(fromSlot, codeGen)),
       setField(hasWritten, constant(false)),
-      condition(notEqual(load(fromNode), constant(-1L))) {
+      ifElse(notEqual(load(fromNode), constant(-1L))) {
         block(
-          setUpCursors(fromNode)
+          setUpCursors(fromNode),
+          setField(canContinue, cursorNext[RelationshipSelectionCursor](loadField(relationshipsField))),
           )
+      }{//else
+        setField(relationshipsField,
+                 getStatic[RelationshipSelectionCursor, RelationshipSelectionCursor]("EMPTY"))
       },
       constant(true))
   }
 
   /**
     *{{{
-    *   while (hasDemand && this.canContinue) {
-    *     val relId = relationships.relationshipReference()
-    *     val otherSide = relationships.otherNodeReference()
-    *     if ( [evaluate predicate if existing] ) {
-    *         this.hasWritten = true
-    *         outputRow.copyFrom(inputMorsel)
-    *         outputRow.setLongAt(relOffset, relId)
-    *         outputRow.setLongAt(toOffset, otherSide)
-    *         <<< inner.genOperate() >>>
+    *   val writeNullRow = false
+    *   while (!this.hasWritten || (hasDemand && this.canContinue) ) {
+    *     if (!this.hasWritten && !this.canContinue) {
+    *       rel = -1L
+    *       node = -1L
+    *       writeNullRow = true
+    *     } else {
+    *       [rel = getRel]
+    *       [node = getNode]
     *     }
-    *     val tmp = relationship.next()
-    *     profileRow(tmp)
-    *     this.canContinue = tmp
-    *     }
-    *   }
-    *   if (!this.hasWritten && !this.canContinue) {
-    *       this.hasWritten = true
-    *       outputRow.copyFrom(inputMorsel)
-    *       outputRow.setLongAt(relOffset, relId)
-    *       outputRow.setLongAt(toOffset, otherSide)
+    *     if ( writeNullRow || [evaluate predicate] {
     *       <<< inner.genOperate() >>>
+    *       this.hasWritten = true
+    *      }
+    *     this.canContinue = this.canContinue && relationship.next()
     *   }
     *}}}
     */
   override protected def genInnerLoop: IntermediateRepresentation = {
-    //this is lazy since we only want to generate inner once
-    lazy val continuation= {
-      block(
-        setField(hasWritten, constant(true)),
-        inner.genOperateWithExpressions
-        )
-    }
-
-    block(
-      loop(and(innermost.predicate, loadField(canContinue)))(
-        block(
-          //this utilizes the fact that we don't actually write the row here but just assigns to local variables
-          //the actual writing happens in the continuation
-          writeRow(getRelationship, getOtherNode),
-          predicate.map(p => condition(equal(nullCheckIfRequired(p), trueValue))(continuation)).getOrElse(continuation),
-          doIfInnerCantContinue(
-            setField(canContinue, profilingCursorNext[RelationshipSelectionCursor](loadField(relationshipsField), id))),
-          endInnerLoop
-          )
-        ),
-      condition(and(not(loadField(hasWritten)), not(loadField(canContinue))))(
-        block(
-          //write a null row
-          writeRow(constant(-1L), constant(-1L)),
-          continuation,
-          ),
-        )
+    def doIfPredicate(ir: => IntermediateRepresentation): IntermediateRepresentation =
+      if (generatePredicate.isEmpty) noop() else ir
+    def innerBlock: IntermediateRepresentation = block(
+      setField(hasWritten, constant(true)),
+      profileRow(id),
+      inner.genOperateWithExpressions,
       )
+    val writeNullRow = codeGen.namer.nextVariableName()
+    block(
+      doIfPredicate(declareAndAssign(typeRefOf[Boolean], writeNullRow, constant(false))),
+      loop(or(not(loadField(hasWritten)), and(innermost.predicate, loadField(canContinue))))(
+        block(
+          ifElse(and(not(loadField(hasWritten)), not(loadField(canContinue))))(block(
+              writeRow(constant(-1L), constant(-1L)),
+              doIfPredicate(assign(writeNullRow, constant(true)))
+            ))(//else
+            writeRow(getRelationship, getOtherNode)),
+          predicate.map(p => condition(or(load(writeNullRow), equal(nullCheckIfRequired(p), trueValue)))(innerBlock)).getOrElse(innerBlock),
+          doIfInnerCantContinue(
+            setField(canContinue, and(loadField(canContinue), cursorNext[RelationshipSelectionCursor](loadField(relationshipsField))))),
+          endInnerLoop
+        )))
   }
 }
 
