@@ -501,39 +501,41 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
     // Given
     graph.createUniqueConstraint("L", "prop")
     val node1 = createLabeledNode(Map("prop" -> 1), "L")
-    val node2 = createLabeledNode(Map("prop" -> 2), "L")
-    createLabeledNode(Map("prop" -> 3), "L")
+    val node2 = createLabeledNode(Map("prop" -> 10), "L")
+    createLabeledNode(Map("prop" -> 100), "L")
 
     // When
+    val query = "MATCH (a:L), (b:L) WHERE a.prop = 1 AND b.prop = 10 RETURN a.prop + b.prop AS s"
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
-                             "MATCH (a:L), (b:L) WHERE a.prop = 1 AND b.prop = 2 RETURN a.prop + b.prop AS s",
+                             query,
                              planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.nTimes(1, aPlan("MultiNodeIndexSeek"))))
-    //val result = executeSingle("CYPHER runtime=interpreted MATCH (a:L), (b:L) WHERE a.prop = 1 AND b.prop = 2 RETURN a.prop + b.prop AS s")
+    //val result = executeSingle(s"CYPHER runtime=interpreted $query")
 
     //println(result.executionPlanDescription())
 
     // Then
-    result.toList should equal(List(Map("s" -> 3L)))
+    result.toList should equal(List(Map("s" -> 11L)))
   }
 
   test("should specialize cartesian product of multiple (3) node unique index seeks") {
     // Given
     graph.createUniqueConstraint("L", "prop")
     val node1 = createLabeledNode(Map("prop" -> 1), "L")
-    val node2 = createLabeledNode(Map("prop" -> 2), "L")
-    val node3 = createLabeledNode(Map("prop" -> 3), "L")
-    createLabeledNode(Map("prop" -> 4), "L")
+    val node2 = createLabeledNode(Map("prop" -> 10), "L")
+    val node3 = createLabeledNode(Map("prop" -> 100), "L")
+    createLabeledNode(Map("prop" -> 1000), "L")
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
-                             "MATCH (a:L), (b:L), (c:L) WHERE a.prop = 1 AND b.prop = 2 AND c.prop = 3 RETURN a.prop + b.prop + c.prop AS s",
-                             planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.nTimes(1, aPlan("MultiNodeIndexSeek"))))
-    //val result = executeSingle("CYPHER runtime=interpreted MATCH (a:L), (b:L), (c:L) WHERE a.prop = 1 AND b.prop = 2 AND c.prop = 3 RETURN a.prop + b.prop + c.prop AS s")
+    val query = "MATCH (a:L), (b:L), (c:L) WHERE a.prop = 1 AND b.prop = 10 AND c.prop = 100 RETURN a.prop + b.prop + c.prop AS s"
+//    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
+//                             query,
+//                             planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.nTimes(1, aPlan("MultiNodeIndexSeek"))))
+    val result = executeSingle(s"CYPHER runtime=pipelined $query")
 
     //println(result.executionPlanDescription())
 
     // Then
-    result.toList should equal(List(Map("s" -> 6L)))
+    result.toList should equal(List(Map("s" -> 111L)))
   }
 
   test("should specialize cartesian product of multiple (2) node index seeks") {
@@ -541,44 +543,45 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
     graph.createIndex("L", "prop")
     val node11 = createLabeledNode(Map("prop" -> 1), "L")
     val node12 = createLabeledNode(Map("prop" -> 1), "L")
-    val node21 = createLabeledNode(Map("prop" -> 2), "L")
-    val node22 = createLabeledNode(Map("prop" -> 2), "L")
-    createLabeledNode(Map("prop" -> 10), "L")
+    val node21 = createLabeledNode(Map("prop" -> 10), "L")
+    val node22 = createLabeledNode(Map("prop" -> 10), "L")
+    createLabeledNode(Map("prop" -> 100), "L")
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
-                             "MATCH (a:L), (b:L) WHERE a.prop = 1 AND b.prop = 2 RETURN a.prop + b.prop AS s",
-                             planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.nTimes(1, aPlan("MultiNodeIndexSeek"))))
-    //val result = executeSingle("CYPHER runtime=interpreted MATCH (a:L), (b:L) WHERE a.prop = 1 AND b.prop = 2 RETURN a.prop + b.prop AS s")
+    val query = "MATCH (a:L), (b:L) WHERE a.prop = 1 AND b.prop = 10 RETURN a.prop + b.prop AS s"
+//    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
+//                             query,
+//                             planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.nTimes(1, aPlan("MultiNodeIndexSeek"))))
+    val result = executeSingle(s"CYPHER runtime=pipelined $query")
 
     //println(result.executionPlanDescription())
 
     // Then
-    result.toList should equal(List(Map("s" -> 6L)))
+    result.toList should equal(List(Map("s" -> 11L), Map("s" -> 11L), Map("s" -> 11L), Map("s" -> 11L)))
   }
-
 
   test("should specialize cartesian product of multiple (3) node index seeks") {
     // Given
     graph.createIndex("L", "prop")
     val node11 = createLabeledNode(Map("prop" -> 1), "L")
     val node12 = createLabeledNode(Map("prop" -> 1), "L")
-    val node21 = createLabeledNode(Map("prop" -> 2), "L")
-    val node22 = createLabeledNode(Map("prop" -> 2), "L")
-    val node31 = createLabeledNode(Map("prop" -> 3), "L")
-    val node32 = createLabeledNode(Map("prop" -> 3), "L")
-    createLabeledNode(Map("prop" -> 20), "L")
+    val node21 = createLabeledNode(Map("prop" -> 10), "L")
+    val node22 = createLabeledNode(Map("prop" -> 10), "L")
+    val node31 = createLabeledNode(Map("prop" -> 100), "L")
+    val node32 = createLabeledNode(Map("prop" -> 100), "L")
+    createLabeledNode(Map("prop" -> 1000), "L")
 
     // When
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
-                             "MATCH (a:L), (b:L), (c:L) WHERE a.prop = 1 AND b.prop = 2 AND c.prop = 3 RETURN a.prop + b.prop + c.prop AS s",
-                             planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.nTimes(1, aPlan("MultiNodeIndexSeek"))))
-    //val result = executeSingle("CYPHER runtime=interpreted MATCH (a:L), (b:L), (c:L) WHERE a.prop = 1 AND b.prop = 2 AND c.prop = 3 RETURN a.prop + b.prop + c.prop AS s")
+    val query = "MATCH (a:L), (b:L), (c:L) WHERE a.prop = 1 AND b.prop = 10 AND c.prop = 100 RETURN a.prop + b.prop + c.prop AS s"
+//    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
+//                             query,
+//                             planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.nTimes(1, aPlan("MultiNodeIndexSeek"))))
+    val result = executeSingle(s"CYPHER runtime=pipelined $query")
 
     //println(result.executionPlanDescription())
 
     // Then
-    result.toList should equal(List(Map("s" -> 12L)))
+    result.toList should equal((1 to 8).map(_ => Map("s" -> 111L)).toList)
   }
 
   private def setUpDatabaseForTests() {

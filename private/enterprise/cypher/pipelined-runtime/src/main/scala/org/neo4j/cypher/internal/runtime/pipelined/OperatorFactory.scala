@@ -9,6 +9,7 @@ import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans.DoNotIncludeTies
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
+import org.neo4j.cypher.internal.logical.plans.QueryExpression
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateBufferVariant
 import org.neo4j.cypher.internal.physicalplanning.BufferDefinition
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
@@ -38,6 +39,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.True
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.DropResultPipe
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.IndexSeekMode
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.IndexSeekModeFactory
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyLabel
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.LockingUniqueIndexSeek
@@ -65,6 +67,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.MiddleOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.MorselArgumentStateBufferOutputOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.MorselBufferOutputOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.MorselFeedPipe
+import org.neo4j.cypher.internal.runtime.pipelined.operators.MultiNodeIndexSeekOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.NoOutputOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeByIdSeekOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeCountFromCountStoreOperator
@@ -99,6 +102,7 @@ import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.translateColu
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.CantCompileQueryException
 import org.neo4j.exceptions.InternalException
+import org.neo4j.internal.schema.IndexOrder
 
 import scala.annotation.tailrec
 import scala.collection.mutable.ArrayBuffer
@@ -174,27 +178,21 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
           valueExpr.map(converters.toCommandExpression(id, _)),
           indexSeekMode)
 
-      case plans.MultiNodeUniqueIndexSeek(nodeUniqueIndexSeeks) =>
+      case plans.MultiNodeIndexSeek(nodeIndexSeeks) =>
         val argumentSize = physicalPlan.argumentSizes(id)
-        val x = nodeUniqueIndexSeeks.map {
-          case NodeUniqueIndexSeek(column, label, properties, valueExpr, _, indexOrder) =>
-            val columnOffset = slots.getLongOffsetFor(column)
-            val slottedIndexProperties = properties.map(SlottedIndexedProperty(column, _, slots)).toArray
-            val queryIndex = indexRegistrator.registerQueryIndex(label, properties)
-            val kernelIndexOrder = asKernelIndexOrder(indexOrder)
-            val valueExpression = valueExpr.map(converters.toCommandExpression(id, _))
-            val indexSeekMode = IndexSeekModeFactory(unique = true, readOnly = readOnly).fromQueryExpression(valueExpr)
-
+        val nodeIndexSeekParameters: Seq[NodeIndexSeekParameters] = nodeIndexSeeks.map { p =>
+            val columnOffset = slots.getLongOffsetFor(p.idName)
+            val slottedIndexProperties = p.properties.map(SlottedIndexedProperty(p.idName, _, slots)).toArray
+            val queryIndex = indexRegistrator.registerQueryIndex(p.label, p.properties)
+            val kernelIndexOrder = asKernelIndexOrder(p.indexOrder)
+            val valueExpression = p.valueExpr.map(converters.toCommandExpression(id, _))
+            val indexSeekMode = IndexSeekModeFactory(unique = true, readOnly = readOnly).fromQueryExpression(p.valueExpr)
+            NodeIndexSeekParameters(columnOffset, slottedIndexProperties, queryIndex, kernelIndexOrder, valueExpression, indexSeekMode)
         }
 
         new MultiNodeIndexSeekOperator(WorkIdentity.fromPlan(plan),
-                                       slots.getLongOffsetFor(column),
-                                  properties.map(SlottedIndexedProperty(column, _, slots)).toArray,
-                                  indexRegistrator.regsterQueryIndex(label, properties),
-                                  asKernelIndexOrder(indexOrder),
-                                  argumentSize,
-                                  valueExpr.map(converters.toCommandExpression(id, _)),
-                                  indexSeekMode)
+                                       argumentSize,
+                                       nodeIndexSeekParameters)
 
       case plans.NodeIndexScan(column, labelToken, properties, _, indexOrder) =>
         val argumentSize = physicalPlan.argumentSizes(id)
@@ -705,3 +703,10 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
   }
 
 }
+
+case class NodeIndexSeekParameters(nodeSlotOffset: Int,
+                                   slottedIndexProperties: Array[SlottedIndexedProperty],
+                                   queryIndex: Int,
+                                   kernelIndexOrder: IndexOrder,
+                                   valueExpression: QueryExpression[Expression],
+                                   indexSeekMode: IndexSeekMode)

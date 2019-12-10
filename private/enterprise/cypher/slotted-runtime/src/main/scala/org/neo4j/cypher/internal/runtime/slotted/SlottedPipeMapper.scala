@@ -45,6 +45,7 @@ import org.neo4j.cypher.internal.logical.plans.LockNodes
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.logical.plans.MergeCreateNode
 import org.neo4j.cypher.internal.logical.plans.MergeCreateRelationship
+import org.neo4j.cypher.internal.logical.plans.MultiNodeIndexSeek
 import org.neo4j.cypher.internal.logical.plans.NodeByLabelScan
 import org.neo4j.cypher.internal.logical.plans.NodeHashJoin
 import org.neo4j.cypher.internal.logical.plans.NodeIndexScan
@@ -89,6 +90,8 @@ import org.neo4j.cypher.internal.physicalplanning.VariablePredicates.expressionS
 import org.neo4j.cypher.internal.physicalplanning.ast.NodeFromSlot
 import org.neo4j.cypher.internal.physicalplanning.ast.NullCheckVariable
 import org.neo4j.cypher.internal.physicalplanning.ast.RelationshipFromSlot
+import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.QueryIndexRegistrator
 import org.neo4j.cypher.internal.runtime.interpreted.commands
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.AggregationExpression
@@ -154,14 +157,13 @@ import org.neo4j.cypher.internal.runtime.slotted.pipes.ProduceResultSlottedPipe
 import org.neo4j.cypher.internal.runtime.slotted.pipes.RollUpApplySlottedPipe
 import org.neo4j.cypher.internal.runtime.slotted.pipes.UnionSlottedPipe
 import org.neo4j.cypher.internal.runtime.slotted.pipes.UnionSlottedPipe.RowMapping
-import org.neo4j.cypher.internal.runtime.ExecutionContext
-import org.neo4j.cypher.internal.runtime.QueryIndexRegistrator
 import org.neo4j.cypher.internal.runtime.slotted.pipes.UnwindSlottedPipe
 import org.neo4j.cypher.internal.runtime.slotted.pipes.ValueHashJoinSlottedPipe
 import org.neo4j.cypher.internal.runtime.slotted.pipes.VarLengthExpandSlottedPipe
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.internal.util.symbols.CTNode
 import org.neo4j.cypher.internal.util.symbols.CTRelationship
+import org.neo4j.exceptions.CantCompileQueryException
 import org.neo4j.exceptions.InternalException
 
 import scala.collection.mutable
@@ -207,6 +209,9 @@ class SlottedPipeMapper(fallback: PipeMapper,
 
       case _: Argument =>
         ArgumentSlottedPipe(slots, argumentSize)(id)
+
+      case _: MultiNodeIndexSeek =>
+        throw new CantCompileQueryException(s"Slotted runtime does not support $plan") // TODO: FIXME This is not acceptable
 
       case _ =>
         fallback.onLeaf(plan)
