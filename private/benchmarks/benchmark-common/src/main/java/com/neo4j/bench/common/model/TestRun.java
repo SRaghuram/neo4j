@@ -30,7 +30,7 @@ public class TestRun
     private final long dateUtc;
     private final long build;
     private String archive;
-    private String BatchJobId;
+    private String batchJobId;
 
     /**
      * WARNING: Never call this explicitly.
@@ -104,17 +104,12 @@ public class TestRun
 
     public String batchJobId()
     {
-        return BatchJobId;
+        return batchJobId;
     }
 
     public void setBatchJobId( String batchJobId )
     {
-        this.archive = requireNonNull( batchJobId );
-    }
-
-    public void setJobId( String jobId )
-    {
-        this.archive = requireNonNull( jobId );
+        this.batchJobId = requireNonNull( batchJobId );
     }
 
     public Map<String,Object> toMap()
@@ -128,9 +123,9 @@ public class TestRun
         {
             map.put( ARCHIVE, archive );
         }
-        if ( null != BatchJobId )
+        if ( null != batchJobId )
         {
-            map.put( BATCH_JOB_ID, BatchJobId );
+            map.put( BATCH_JOB_ID, batchJobId );
         }
         map.put( PARENT_BUILD, parentBuild );
         map.put( TRIGGERED_BY, triggeredBy );
@@ -153,7 +148,7 @@ public class TestRun
                dateUtc == testRun.dateUtc &&
                build == testRun.build &&
                Objects.equals( id, testRun.id ) &&
-               Objects.equals( BatchJobId, testRun.BatchJobId ) &&
+               Objects.equals( batchJobId, testRun.batchJobId ) &&
                parentBuild == testRun.parentBuild &&
                Objects.equals( archive, testRun.archive );
     }
@@ -161,7 +156,7 @@ public class TestRun
     @Override
     public int hashCode()
     {
-        return Objects.hash( id, durationMs, dateUtc, build, archive, parentBuild, BatchJobId );
+        return Objects.hash( id, durationMs, dateUtc, build, archive, parentBuild, batchJobId );
     }
 
     @Override
@@ -174,7 +169,7 @@ public class TestRun
                ", build=" + build +
                ", archive='" + archive + '\'' +
                ", parentBuild='" + parentBuild + '\'' +
-               ", BatchJobId='" + BatchJobId + '\'' +
+               ", BatchJobId='" + batchJobId + '\'' +
                '}';
     }
 }

@@ -116,7 +116,7 @@ public class RunWorkloadCommand extends BaseRunWorkloadCommand
              name = {CMD_BATCH_JOB_ID},
              description = "Job ID of the batch infra runner",
              title = "Batch Job Id" )
-    private String jobId;
+    private String batchJobId;
 
     protected void doRun( RunWorkloadParams params )
     {
@@ -235,9 +235,9 @@ public class RunWorkloadCommand extends BaseRunWorkloadCommand
                     params.parentBuild(),
                     params.parentBuild(),
                     params.triggeredBy() );
-            if ( jobId != null )
+            if ( batchJobId != null )
             {
-                testRun.setJobId( jobId );
+                testRun.setBatchJobId( batchJobId );
             }
 
             BenchmarkTool tool = new BenchmarkTool( Repository.MACRO_BENCH, params.toolCommit(), params.toolOwner(), params.toolBranch() );
