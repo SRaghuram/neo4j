@@ -217,6 +217,10 @@ public class EnterpriseBuiltInDbmsProcedures
         private static final List<String> ADMIN_PROCEDURES =
                 Arrays.asList( "changeUserPassword", "listRolesForUser" );
 
+        // These procedures have WRITE mode but an editor is not allowed to execute them. So we need to not add that role to the list of roles
+        private static final List<String> NON_EDITOR_PROCEDURES =
+                Arrays.asList( "createLabel", "createProperty", "createRelationshipType" );
+
         public final String name;
         public final String signature;
         public final String description;
@@ -253,7 +257,10 @@ public class EnterpriseBuiltInDbmsProcedures
             case READ:
                 defaultBuiltInRoles.add( "reader" );
             case WRITE:
-                defaultBuiltInRoles.add( "editor" );
+                if ( !NON_EDITOR_PROCEDURES.contains( signature.name().name() ) )
+                {
+                    defaultBuiltInRoles.add( "editor" );
+                }
                 defaultBuiltInRoles.add( "publisher" );
             case SCHEMA:
                 defaultBuiltInRoles.add( "architect" );
