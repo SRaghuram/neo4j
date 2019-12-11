@@ -34,9 +34,9 @@ import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 
 import static com.neo4j.bench.micro.data.NumberGenerator.stridingLong;
+import static org.apache.commons.lang3.ArrayUtils.shuffle;
 import static org.neo4j.configuration.GraphDatabaseSettings.dense_node_threshold;
 import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
-import static org.apache.commons.lang3.ArrayUtils.shuffle;
 
 @BenchmarkEnabled( true )
 public class CreateRelationships extends AbstractCoreBenchmark
@@ -111,7 +111,7 @@ public class CreateRelationships extends AbstractCoreBenchmark
     public static class TxState
     {
         TxBatch txBatch;
-        Node[] nodes;
+        long[] nodesIds;
         int nodesPosition = -1;
 
         @Setup
@@ -133,17 +133,17 @@ public class CreateRelationships extends AbstractCoreBenchmark
                     nodesList.add( tx.getNodeById( ids.next( rngState.rng ) ) );
                 }
             }
-            nodes = nodesList.toArray( new Node[0] );
+            nodesIds = nodesList.stream().mapToLong( Node::getId ).toArray();
             // access store in random/scattered pattern
             // NOTE: really should use provided random, but shuffle does not support SplittableRandom
-            shuffle( this.nodes, ThreadLocalRandom.current() );
+            shuffle( this.nodesIds, ThreadLocalRandom.current() );
             txBatch = new TxBatch( benchmarkState.db(), benchmarkState.txSize );
         }
 
         Node nextNode()
         {
-            nodesPosition = (nodesPosition + 1) % nodes.length;
-            return txBatch.transaction().getNodeById( nodes[nodesPosition].getId() );
+            nodesPosition = (nodesPosition + 1) % nodesIds.length;
+            return txBatch.transaction().getNodeById( nodesIds[nodesPosition] );
         }
 
         void advance()
@@ -177,5 +177,4 @@ public class CreateRelationships extends AbstractCoreBenchmark
     {
         Main.run( CreateRelationships.class, methods );
     }
-
 }
