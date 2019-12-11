@@ -25,7 +25,8 @@ import java.nio.file.PathMatcher;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -49,6 +50,8 @@ public class ForkDirectory
         Path dir = parentDir.resolve( BenchmarkUtil.sanitize( name ) );
         if ( Files.exists( dir ) )
         {
+            Path jsonPath = pathFor( dir, FORK_JSON );
+            updateForkDetails( jsonPath, profilers );
             return openAt( dir );
         }
         else
@@ -64,7 +67,7 @@ public class ForkDirectory
             Path dir = parentDir.resolve( BenchmarkUtil.sanitize( name ) );
             assertDoesNotExist( dir );
             Files.createDirectory( dir );
-            serializeForkDetails( dir, name, profilers );
+            createForkDetails( dir, name, profilers );
             return openAt( dir );
         }
         catch ( IOException e )
@@ -80,16 +83,25 @@ public class ForkDirectory
         return new ForkDirectory( dir );
     }
 
-    private static void serializeForkDetails( Path dir, String name, List<ProfilerType> profilers )
+    private static void createForkDetails( Path dir, String name, List<ProfilerType> profilers )
     {
         Path jsonPath = create( dir, FORK_JSON );
-        JsonUtil.serializeJson( jsonPath, new ForkDescription( name, profilers ) );
+        ForkDescription forkDescription = new ForkDescription( name );
+        forkDescription.addProfilers( profilers );
+        JsonUtil.serializeJson( jsonPath, forkDescription );
+    }
+
+    private static void updateForkDetails( Path jsonPath, List<ProfilerType> profilers )
+    {
+        ForkDescription forkDescription = loadDescription( jsonPath );
+        forkDescription.addProfilers( profilers );
+        JsonUtil.serializeJson( jsonPath, forkDescription );
     }
 
     private ForkDirectory( Path dir )
     {
         this.dir = dir;
-        this.forkDescription = loadDescription( dir );
+        this.forkDescription = loadDescription( dir.resolve( FORK_JSON ) );
     }
 
     public void unsanitizeProfilerRecordingsFor( BenchmarkGroup benchmarkGroup,
@@ -267,14 +279,13 @@ public class ForkDirectory
         return dir.resolve( "error-" + UUID.randomUUID() + ".log" );
     }
 
-    public List<ProfilerType> profilers()
+    public Set<ProfilerType> profilers()
     {
         return forkDescription.profilers();
     }
 
-    private static ForkDescription loadDescription( Path dir )
+    private static ForkDescription loadDescription( Path jsonPath )
     {
-        Path jsonPath = dir.resolve( FORK_JSON );
         assertFileExists( jsonPath );
         return JsonUtil.deserializeJson( jsonPath, ForkDescription.class );
     }
@@ -311,17 +322,17 @@ public class ForkDirectory
     private static class ForkDescription
     {
         private final String name;
-        private final List<ProfilerType> profilers;
+        private final Set<ProfilerType> profilers;
 
         private ForkDescription()
         {
-            this( "INVALID_NAME", new ArrayList<>() );
+            this( "INVALID_NAME" );
         }
 
-        private ForkDescription( String name, List<ProfilerType> profilers )
+        private ForkDescription( String name )
         {
             this.name = name;
-            this.profilers = profilers;
+            this.profilers = new HashSet<>();
         }
 
         private String name()
@@ -333,9 +344,14 @@ public class ForkDirectory
             return name;
         }
 
-        public List<ProfilerType> profilers()
+        private Set<ProfilerType> profilers()
         {
             return profilers;
+        }
+
+        private void addProfilers( Collection<ProfilerType> newProfilers )
+        {
+            this.profilers.addAll( newProfilers );
         }
     }
 }

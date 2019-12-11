@@ -17,6 +17,7 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -44,31 +45,56 @@ public class BenchmarkDirectory
         try
         {
             Path dir = parentDir.resolve( nameFor( benchmark ) );
-
-            if ( Files.exists( dir ) )
-            {
-                Benchmark foundBenchmark = loadBenchmarkOrFail( dir );
-                if ( !foundBenchmark.equals( benchmark ) )
-                {
-                    throw new RuntimeException( format( "Directory contained unexpected benchmark file\n" +
-                                                        "Directory          : %s\n" +
-                                                        "Expected Benchmark : %s\n" +
-                                                        "Found Benchmark    : %s",
-                                                        dir.toAbsolutePath(), benchmark.name(), foundBenchmark.name() ) );
-                }
-            }
-            else
+            Optional<BenchmarkDirectory> maybeBenchmark = tryOpenAt( dir, benchmark );
+            if ( !maybeBenchmark.isPresent() )
             {
                 // No directory found, create new
                 Files.createDirectory( dir );
                 JsonUtil.serializeJson( dir.resolve( BENCHMARK_JSON ), benchmark );
+                return new BenchmarkDirectory( dir, benchmark );
             }
-
-            return new BenchmarkDirectory( dir, benchmark );
+            else
+            {
+                return maybeBenchmark.get();
+            }
         }
         catch ( IOException e )
         {
             throw new RuntimeException( format( "Error creating benchmark directory for '%s' in: %s", benchmark.name(), parentDir.toAbsolutePath() ), e );
+        }
+    }
+
+    static BenchmarkDirectory findOrFailAt( Path parentDir, Benchmark benchmark )
+    {
+        Path dir = parentDir.resolve( nameFor( benchmark ) );
+        Optional<BenchmarkDirectory> maybeBenchmarkDirectory = tryOpenAt( dir, benchmark );
+        if ( !maybeBenchmarkDirectory.isPresent() )
+        {
+            throw new RuntimeException( format( "Could not find benchmark directory for '%s' in: %s",
+                                                benchmark.name(), parentDir.toAbsolutePath() ) );
+        }
+
+        return new BenchmarkDirectory( dir, benchmark );
+    }
+
+    private static Optional<BenchmarkDirectory> tryOpenAt( Path benchmarkDir, Benchmark benchmark )
+    {
+        if ( Files.exists( benchmarkDir ) )
+        {
+            Benchmark foundBenchmark = loadBenchmarkOrFail( benchmarkDir );
+            if ( !foundBenchmark.equals( benchmark ) )
+            {
+                throw new RuntimeException( format( "Directory contained unexpected benchmark file\n" +
+                                                    "Directory          : %s\n" +
+                                                    "Expected Benchmark : %s\n" +
+                                                    "Found Benchmark    : %s",
+                                                    benchmarkDir.toAbsolutePath(), benchmark.name(), foundBenchmark.name() ) );
+            }
+            return Optional.of( new BenchmarkDirectory( benchmarkDir, benchmark ) );
+        }
+        else
+        {
+            return Optional.empty();
         }
     }
 

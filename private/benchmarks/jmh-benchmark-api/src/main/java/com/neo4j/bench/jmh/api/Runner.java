@@ -307,7 +307,7 @@ public abstract class Runner
                             Class<? extends AbstractMicroProfiler> profiler = AbstractMicroProfiler.toJmhProfiler( profilerType );
 
                             ChainedOptionsBuilder builder = baseBuilder(
-                                    runnerParams,
+                                    runnerParams.copyWithNewRunId(),
                                     benchmark,
                                     threadCount,
                                     jvm,
@@ -323,7 +323,8 @@ public abstract class Runner
                             // sanity check, make sure provided benchmarks were correctly exploded
                             JmhOptionsUtil.assertExactlyOneBenchmarkIsEnabled( options );
 
-                            executeBenchmarksForConfig( options, new BenchmarkGroupBenchmarkMetrics(), runnerParams );
+                            // not interested in results from profiling run, the profiling artifacts will be generated however, and collected later
+                            new org.openjdk.jmh.runner.Runner( options ).run();
                         }
                         catch ( Exception e )
                         {
@@ -368,7 +369,7 @@ public abstract class Runner
                     try
                     {
                         ChainedOptionsBuilder builder = baseBuilder(
-                                runnerParams,
+                                runnerParams.copyWithNewRunId(),
                                 benchmark,
                                 threadCount,
                                 jvm,

@@ -14,6 +14,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
@@ -25,6 +26,7 @@ public final class RunnerParams
 {
     private static final String PARAM_RUNNER_PARAMS = "runnerParams";
     private static final String PARAM_WORK_DIR = "workDir";
+    private static final String PARAM_RUN_ID = "runId";
 
     public static RunnerParams extractFrom( BenchmarkParams benchmarkParams )
     {
@@ -35,21 +37,29 @@ public final class RunnerParams
             String paramValue = benchmarkParams.getParam( paramName );
             if ( null == paramValue )
             {
-                throw new RuntimeException( format( "Could not find Runner Parameters '%s' in JMH benchmark params", paramName ) );
+                throw new RuntimeException( format( "Could not find Runner Parameters '%s' in JMH benchmark params\n" +
+                                                    "Parameters Found: %s", paramName, benchmarkParams.getParamsKeys() ) );
             }
             runnerParams.addParam( paramName, paramValue );
         }
-        if ( !runnerParamNames.contains( PARAM_WORK_DIR ) )
-        {
-            throw new RuntimeException( format( "Could not find Runner Parameter '%s' in JMH benchmark params", PARAM_WORK_DIR ) );
-        }
+        assertParamExists( runnerParamNames, PARAM_WORK_DIR );
+        assertParamExists( runnerParamNames, PARAM_RUN_ID );
         return runnerParams;
+    }
+
+    private static void assertParamExists( List<String> runnerParamNames, String param )
+    {
+        if ( !runnerParamNames.contains( param ) )
+        {
+            throw new RuntimeException( format( "Could not find Runner Parameter '%s' in JMH benchmark params", param ) );
+        }
     }
 
     public static RunnerParams create( Path workDir )
     {
         RunnerParams runnerParams = new RunnerParams();
         runnerParams.addParam( PARAM_WORK_DIR, workDir.toAbsolutePath().toString() );
+        runnerParams.addParam( PARAM_RUN_ID, UUID.randomUUID().toString() );
         return runnerParams;
     }
 
@@ -60,9 +70,22 @@ public final class RunnerParams
         this.runnerParams = new HashMap<>();
     }
 
+    public RunnerParams copyWithNewRunId()
+    {
+        RunnerParams newRunnerParams = new RunnerParams();
+        newRunnerParams.runnerParams.putAll( runnerParams );
+        newRunnerParams.runnerParams.put( PARAM_RUN_ID, UUID.randomUUID().toString() );
+        return newRunnerParams;
+    }
+
     public Path workDir()
     {
         return Paths.get( runnerParams.get( PARAM_WORK_DIR ) );
+    }
+
+    public String runId()
+    {
+        return runnerParams.get( PARAM_RUN_ID );
     }
 
     public boolean containsParam( String paramName )

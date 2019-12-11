@@ -16,6 +16,7 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -52,32 +53,56 @@ public class BenchmarkGroupDirectory
         try
         {
             Path dir = parentDir.resolve( nameFor( benchmarkGroup ) );
-
-            if ( Files.exists( dir ) )
-            {
-                BenchmarkGroup foundBenchmarkGroup = loadBenchmarkGroup( dir );
-                if ( !foundBenchmarkGroup.equals( benchmarkGroup ) )
-                {
-                    throw new RuntimeException( format( "Directory contained unexpected benchmark group file\n" +
-                                                        "Directory                : %s\n" +
-                                                        "Expected Benchmark Group : %s\n" +
-                                                        "Found Benchmark Group    : %s",
-                                                        dir.toAbsolutePath(), benchmarkGroup.name(), foundBenchmarkGroup.name() ) );
-                }
-            }
-            else
+            Optional<BenchmarkGroupDirectory> maybeBenchmarkGroupDirectory = tryOpenAt( dir, benchmarkGroup );
+            if ( !maybeBenchmarkGroupDirectory.isPresent() )
             {
                 // No directory found, create new
                 Files.createDirectory( dir );
                 JsonUtil.serializeJson( dir.resolve( BENCHMARK_GROUP_JSON ), benchmarkGroup );
+                return new BenchmarkGroupDirectory( dir );
             }
-
-            return new BenchmarkGroupDirectory( dir );
+            else
+            {
+                return maybeBenchmarkGroupDirectory.get();
+            }
         }
         catch ( IOException e )
         {
             throw new RuntimeException( format( "Error creating benchmark group directory for '%s' in: %s",
                                                 benchmarkGroup.name(), parentDir.toAbsolutePath() ), e );
+        }
+    }
+
+    public static BenchmarkGroupDirectory findOrFailAt( Path parentDir, BenchmarkGroup benchmarkGroup )
+    {
+        Path dir = parentDir.resolve( nameFor( benchmarkGroup ) );
+        Optional<BenchmarkGroupDirectory> maybeBenchmarkGroupDirectory = tryOpenAt( dir, benchmarkGroup );
+        if ( !maybeBenchmarkGroupDirectory.isPresent() )
+        {
+            throw new RuntimeException( format( "Could not find benchmark group directory for '%s' in: %s",
+                                                benchmarkGroup.name(), parentDir.toAbsolutePath() ) );
+        }
+        return new BenchmarkGroupDirectory( dir );
+    }
+
+    private static Optional<BenchmarkGroupDirectory> tryOpenAt( Path benchmarkGroupDir, BenchmarkGroup benchmarkGroup )
+    {
+        if ( Files.exists( benchmarkGroupDir ) )
+        {
+            BenchmarkGroup foundBenchmarkGroup = loadBenchmarkGroup( benchmarkGroupDir );
+            if ( !foundBenchmarkGroup.equals( benchmarkGroup ) )
+            {
+                throw new RuntimeException( format( "Directory contained unexpected benchmark group file\n" +
+                                                    "Directory                : %s\n" +
+                                                    "Expected Benchmark Group : %s\n" +
+                                                    "Found Benchmark Group    : %s",
+                                                    benchmarkGroupDir.toAbsolutePath(), benchmarkGroup.name(), foundBenchmarkGroup.name() ) );
+            }
+            return Optional.of( new BenchmarkGroupDirectory( benchmarkGroupDir ) );
+        }
+        else
+        {
+            return Optional.empty();
         }
     }
 
@@ -141,6 +166,11 @@ public class BenchmarkGroupDirectory
     public BenchmarkDirectory findOrCreate( Benchmark benchmark )
     {
         return BenchmarkDirectory.findOrCreateAt( dir, benchmark );
+    }
+
+    public BenchmarkDirectory findOrFail( Benchmark benchmark )
+    {
+        return BenchmarkDirectory.findOrFailAt( dir, benchmark );
     }
 
     public void copyProfilerRecordings( Path targetDir )
