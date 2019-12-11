@@ -179,7 +179,7 @@ public class Store implements AutoCloseable
         }
     }
 
-    private void delete()
+    public void delete()
     {
         deleteDir( topLevelDir );
     }

@@ -89,6 +89,7 @@ class PlannerDescriptionIT
                             }
                         }
                     }
+                    store.delete();
                 }
             }
         }
