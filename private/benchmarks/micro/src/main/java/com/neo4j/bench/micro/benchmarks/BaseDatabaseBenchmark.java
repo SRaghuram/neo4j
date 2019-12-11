@@ -5,14 +5,18 @@
  */
 package com.neo4j.bench.micro.benchmarks;
 
+import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.common.model.Benchmark;
 import com.neo4j.bench.common.model.BenchmarkGroup;
 import com.neo4j.bench.common.model.Neo4jConfig;
+import com.neo4j.bench.common.profiling.FullBenchmarkName;
+import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.jmh.api.BaseBenchmark;
 import com.neo4j.bench.jmh.api.config.RunnerParams;
 import com.neo4j.bench.micro.data.Augmenterizer;
 import com.neo4j.bench.micro.data.Augmenterizer.NullAugmenterizer;
+import com.neo4j.bench.micro.data.DataGenerator;
 import com.neo4j.bench.micro.data.DataGeneratorConfig;
 import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder;
 import com.neo4j.bench.micro.data.ManagedStore;
@@ -23,7 +27,7 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.infra.BenchmarkParams;
 import org.openjdk.jmh.infra.Blackhole;
 
-import java.nio.file.Paths;
+import java.nio.file.Path;
 import java.util.Iterator;
 
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -81,19 +85,44 @@ public abstract class BaseDatabaseBenchmark extends BaseBenchmark
     }
 
     @Override
-    protected final void onSetup( BenchmarkGroup group, Benchmark benchmark, RunnerParams runnerParams, BenchmarkParams benchmarkParams )
+    protected final void onSetup( BenchmarkGroup group,
+                                  Benchmark benchmark,
+                                  RunnerParams runnerParams,
+                                  BenchmarkParams benchmarkParams,
+                                  ForkDirectory forkDirectory )
     {
         Stores stores = new Stores( runnerParams.workDir() );
-        Neo4jConfig neo4jConfig = Neo4jConfig.fromJson( baseNeo4jConfig );
+
+        DataGeneratorConfig baseBenchmarkGeneratorConfig = getConfig();
+        Neo4jConfig neo4jConfig = Neo4jConfig.fromJson( this.baseNeo4jConfig )
+                                             .mergeWith( baseBenchmarkGeneratorConfig.neo4jConfig() );
+
+        Path neo4jConfigFile = forkDirectory.create( "neo4j.conf" );
+        System.out.println( "\nWriting Neo4j config to: " + neo4jConfigFile.toAbsolutePath() );
+        Neo4jConfigBuilder.writeToFile( neo4jConfig, neo4jConfigFile );
 
         Augmenterizer augmenterizer = augmentDataGeneration();
-        managedStore = new ManagedStore( stores );
-        DataGeneratorConfig config = getConfig();
-        managedStore.prepareDb( group, benchmark, config, neo4jConfig, augmenterizer, benchmarkParams.getThreads() );
+
+        DataGeneratorConfig finalGeneratorConfig = DataGeneratorConfigBuilder
+                .from( baseBenchmarkGeneratorConfig )
+                .withNeo4jConfig( neo4jConfig )
+                .withRngSeed( DataGenerator.DEFAULT_RNG_SEED )
+                .augmentedBy( augmenterizer.augmentKey( FullBenchmarkName.from( group, benchmark ) ) )
+                .build();
+        Stores.StoreAndConfig storeAndConfig = stores.prepareDb(
+                finalGeneratorConfig,
+                group,
+                benchmark,
+                augmenterizer,
+                neo4jConfigFile,
+                benchmarkParams.getThreads() );
+
+        managedStore = new ManagedStore( finalGeneratorConfig, storeAndConfig );
+
         if ( afterDataGeneration().equals( StartDatabaseInstruction.START_DB ) )
         {
             managedStore.startDb();
-            afterDatabaseStart( config );
+            afterDatabaseStart( finalGeneratorConfig );
         }
         else
         {

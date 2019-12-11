@@ -111,8 +111,8 @@ class InteractiveRunIT extends AnnotationsFixture
         Class benchmark = DefaultDisabled.class;
         BenchmarkDescription benchmarkDescription = of( benchmark, new Validation(), getTestOnlyAnnotations() );
         int expectedBenchmarkCount = benchmarkDescription.executionCount( 1 );
-        // parameters DO NOT affect store content, in this benchmark
-        int expectedStoreCount = 1;
+        // extends BaseRegularBenchmark not BaseDatabaseBenchmark, so no store should be created
+        int expectedStoreCount = 0;
         runInteractively( benchmark, expectedBenchmarkCount, expectedStoreCount, ErrorPolicy.FAIL );
     }
 

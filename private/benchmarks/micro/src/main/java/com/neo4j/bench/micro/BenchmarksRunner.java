@@ -91,7 +91,7 @@ class BenchmarksRunner extends Runner
                 try
                 {
                     ChainedOptionsBuilder builder = baseBuilder(
-                            runnerParams,
+                            runnerParams.copyWithNewRunId(),
                             benchmark,
                             1, // thread count
                             jvm,

@@ -6,10 +6,6 @@
 package com.neo4j.bench.micro.data;
 
 import com.neo4j.bench.common.database.Store;
-import com.neo4j.bench.common.model.Benchmark;
-import com.neo4j.bench.common.model.BenchmarkGroup;
-import com.neo4j.bench.common.model.Neo4jConfig;
-import com.neo4j.bench.common.profiling.FullBenchmarkName;
 import com.neo4j.bench.micro.data.Stores.StoreAndConfig;
 import com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder;
 
@@ -29,38 +25,15 @@ import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 
 public class ManagedStore
 {
-    private final Stores stores;
-    private DataGeneratorConfig dataGeneratorConfig;
-    private StoreAndConfig storeAndConfig;
+    private final DataGeneratorConfig dataGeneratorConfig;
+    private final StoreAndConfig storeAndConfig;
     protected GraphDatabaseService db;
     private static DatabaseManagementService managementService;
 
-    public ManagedStore( Stores stores )
+    public ManagedStore( DataGeneratorConfig dataGeneratorConfig, StoreAndConfig storeAndConfig )
     {
-        this.stores = stores;
-    }
-
-    public void prepareDb(
-            BenchmarkGroup group,
-            Benchmark benchmark,
-            DataGeneratorConfig benchmarkConfig,
-            Neo4jConfig baseNeo4jConfig,
-            Augmenterizer augmenterizer,
-            int threads )
-    {
-        FullBenchmarkName benchmarkName = FullBenchmarkName.from( group, benchmark );
-        dataGeneratorConfig = DataGeneratorConfigBuilder
-                .from( benchmarkConfig )
-                .withNeo4jConfig( baseNeo4jConfig.mergeWith( benchmarkConfig.neo4jConfig() ) )
-                .withRngSeed( DataGenerator.DEFAULT_RNG_SEED )
-                .augmentedBy( augmenterizer.augmentKey( benchmarkName ) )
-                .build();
-        storeAndConfig = stores.prepareDb(
-                dataGeneratorConfig,
-                group,
-                benchmark,
-                augmenterizer,
-                threads );
+        this.dataGeneratorConfig = dataGeneratorConfig;
+        this.storeAndConfig = storeAndConfig;
     }
 
     public GraphDatabaseService startDb()

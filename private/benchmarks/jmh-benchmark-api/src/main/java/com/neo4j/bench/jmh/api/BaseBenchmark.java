@@ -7,6 +7,9 @@ package com.neo4j.bench.jmh.api;
 
 import com.neo4j.bench.common.model.Benchmark;
 import com.neo4j.bench.common.model.BenchmarkGroup;
+import com.neo4j.bench.common.results.BenchmarkDirectory;
+import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
+import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.jmh.api.config.RunnerParams;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
@@ -16,11 +19,16 @@ import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.infra.BenchmarkParams;
 import org.openjdk.jmh.infra.ThreadParams;
 
+import static java.util.Collections.emptyList;
+
 @State( Scope.Benchmark )
 public abstract class BaseBenchmark
 {
     @Param( {} )
     public String workDir;
+
+    @Param( {} )
+    public String runId;
 
     @Param( {} )
     public String runnerParams;
@@ -31,7 +39,12 @@ public abstract class BaseBenchmark
         BenchmarkGroup group = BenchmarkDiscoveryUtils.toBenchmarkGroup( benchmarkParams );
         RunnerParams runnerParams = RunnerParams.extractFrom( benchmarkParams );
         Benchmark benchmark = BenchmarkDiscoveryUtils.toBenchmarks( benchmarkParams, runnerParams ).parentBenchmark();
-        onSetup( group, benchmark, runnerParams, benchmarkParams );
+
+        BenchmarkGroupDirectory benchmarkGroupDir = BenchmarkGroupDirectory.findOrCreateAt( runnerParams.workDir(), group );
+        BenchmarkDirectory benchmarkDir = benchmarkGroupDir.findOrCreate( benchmark );
+        ForkDirectory forkDirectory = benchmarkDir.findOrCreate( runnerParams.runId(), emptyList() );
+
+        onSetup( group, benchmark, runnerParams, benchmarkParams, forkDirectory );
     }
 
     @TearDown
@@ -45,7 +58,11 @@ public abstract class BaseBenchmark
      * In addition to what JMH does, this tool has a Neo4j-specific life-cycle.
      * It is easier to understand how these two life-cycles interact if this method is used instead of @Setup(Level.Trial).
      */
-    protected void onSetup( BenchmarkGroup group, Benchmark benchmark, RunnerParams runnerParams, BenchmarkParams benchmarkParams ) throws Throwable
+    protected void onSetup( BenchmarkGroup group,
+                            Benchmark benchmark,
+                            RunnerParams runnerParams,
+                            BenchmarkParams benchmarkParams,
+                            ForkDirectory forkDirectory ) throws Throwable
     {
     }
 

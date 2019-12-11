@@ -427,11 +427,13 @@ public class DataGeneratorConfigBuilder
 
     /**
      * If a store is augmented, determinism of store generation can not be trusted.
+     * <p>
+     * NOTE: Do not explicitly set this, if you do it will be overridden by the framework anyway.
      *
      * @param augmentedBy
      * @return mutated version of the same builder instance
      */
-    DataGeneratorConfigBuilder augmentedBy( String augmentedBy )
+    public DataGeneratorConfigBuilder augmentedBy( String augmentedBy )
     {
         this.augmentedBy = augmentedBy;
         return this;

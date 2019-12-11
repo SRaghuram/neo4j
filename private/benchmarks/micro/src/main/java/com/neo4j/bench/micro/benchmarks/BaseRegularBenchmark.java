@@ -5,10 +5,11 @@
  */
 package com.neo4j.bench.micro.benchmarks;
 
+import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.model.Benchmark;
 import com.neo4j.bench.common.model.BenchmarkGroup;
 import com.neo4j.bench.common.model.Neo4jConfig;
-import com.neo4j.bench.common.profiling.FullBenchmarkName;
+import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.jmh.api.BaseBenchmark;
 import com.neo4j.bench.jmh.api.config.RunnerParams;
 import com.neo4j.bench.micro.data.Stores;
@@ -17,7 +18,7 @@ import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.infra.BenchmarkParams;
 
-import java.nio.file.Paths;
+import java.nio.file.Path;
 
 @State( Scope.Benchmark )
 public abstract class BaseRegularBenchmark extends BaseBenchmark
@@ -26,12 +27,19 @@ public abstract class BaseRegularBenchmark extends BaseBenchmark
     public String baseNeo4jConfig;
 
     @Override
-    protected final void onSetup( BenchmarkGroup group, Benchmark benchmark, RunnerParams runnerParams, BenchmarkParams benchmarkParams ) throws Throwable
+    protected final void onSetup( BenchmarkGroup group,
+                                  Benchmark benchmark,
+                                  RunnerParams runnerParams,
+                                  BenchmarkParams benchmarkParams,
+                                  ForkDirectory forkDirectory ) throws Throwable
     {
         Stores stores = new Stores( runnerParams.workDir() );
         Neo4jConfig neo4jConfig = Neo4jConfig.fromJson( baseNeo4jConfig );
 
-        stores.writeNeo4jConfigForNoStore( neo4jConfig, FullBenchmarkName.from( group, benchmark ) );
+        Path neo4jConfigFile = forkDirectory.create( "neo4j.conf" );
+        System.out.println( "\nWriting Neo4j config to: " + neo4jConfigFile.toAbsolutePath() );
+        Neo4jConfigBuilder.writeToFile( neo4jConfig, neo4jConfigFile );
+
         benchmarkSetup( group, benchmark, stores, neo4jConfig );
     }
 

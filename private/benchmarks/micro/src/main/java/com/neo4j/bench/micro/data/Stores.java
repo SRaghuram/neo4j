@@ -11,7 +11,11 @@ import com.neo4j.bench.common.model.Benchmark;
 import com.neo4j.bench.common.model.BenchmarkGroup;
 import com.neo4j.bench.common.model.Neo4jConfig;
 import com.neo4j.bench.common.profiling.FullBenchmarkName;
+import com.neo4j.bench.common.results.BenchmarkDirectory;
+import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
+import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.util.BenchmarkUtil;
+import com.neo4j.bench.common.util.JsonUtil;
 import com.neo4j.bench.micro.benchmarks.Kaboom;
 import com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder;
 
@@ -25,7 +29,11 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -36,10 +44,8 @@ import org.neo4j.io.fs.FileUtils;
 
 import static com.neo4j.bench.common.util.BenchmarkUtil.bytesToString;
 import static com.neo4j.bench.common.util.BenchmarkUtil.durationToString;
-import static com.neo4j.bench.common.util.BenchmarkUtil.forceRecreateFile;
 import static com.neo4j.bench.common.util.BenchmarkUtil.tryMkDir;
 import static java.lang.String.format;
-import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASES_ROOT_DIR_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
@@ -47,7 +53,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATA_DIR_NAM
 
 public class Stores
 {
-    private static final String NEO4J_CONFIG_FILENAME_SUFFIX = "__neo4j.conf";
+    private static final String DB_DIR_NAME = "graph.db";
     private static final String CONFIG_FILENAME = "data_gen_config.json";
     private static final String TEMP_STORE_COPY_MARKER_FILENAME = "this_is_a_temporary_store.tmp";
     // Used by benchmarks that do not need a database
@@ -61,32 +67,36 @@ public class Stores
         this.storesDir = storesDir;
     }
 
-    public Path storesDir()
-    {
-        return storesDir;
-    }
-
     public Neo4jConfig neo4jConfigFor( BenchmarkGroup benchmarkGroup, Benchmark benchmark )
     {
-        return Neo4jConfigBuilder.fromFile( findNeo4jConfigFor( FullBenchmarkName.from( benchmarkGroup, benchmark ) ) ).build();
+        BenchmarkGroupDirectory benchmarkGroupDirectory = BenchmarkGroupDirectory.findOrFailAt( storesDir, benchmarkGroup );
+        BenchmarkDirectory benchmarkDirectory = benchmarkGroupDirectory.findOrFail( benchmark );
+        ForkDirectory forkDirectory = benchmarkDirectory.measurementForks().stream()
+                                                        .findFirst()
+                                                        .orElseThrow( () -> new RuntimeException( format( "No measurement forks found for '%s' in : %s",
+                                                                                                          benchmark.name(),
+                                                                                                          benchmarkDirectory.toAbsolutePath() ) ) );
+        return Neo4jConfigBuilder.fromFile( forkDirectory.findOrFail( "neo4j.conf" ) ).build();
     }
 
-    StoreAndConfig prepareDb(
+    public StoreAndConfig prepareDb(
             DataGeneratorConfig config,
             BenchmarkGroup group,
             Benchmark benchmark,
             Augmenterizer augmenterizer,
+            Path neo4jConfigFile,
             int threads )
     {
         List<Path> topLevelDirs = findAllStoresMatchingConfig( config, storesDir );
-        FullBenchmarkName benchmarkName = FullBenchmarkName.from( group, benchmark );
 
         if ( topLevelDirs.isEmpty() )
         {
             StoreAndConfig initialStoreAndConfig = generateDb(
                     config,
                     augmenterizer,
-                    benchmarkName,
+                    group,
+                    benchmark,
+                    neo4jConfigFile,
                     threads );
             if ( config.isReusable() )
             {
@@ -100,7 +110,6 @@ public class Stores
         else if ( topLevelDirs.size() == 1 )
         {
             Path topLevelDir = topLevelDirs.get( 0 );
-            Path neo4jConfig = getOrCreateNeo4jConfigFor( topLevelDir, benchmarkName, config.neo4jConfig() );
 
             // if configs are identical in all ways except re-usability, make persisted config not-reusable
             // saves time (only generate once) & saves space (only one permanent store per equivalent config)
@@ -121,12 +130,12 @@ public class Stores
                                     "  > Benchmark group: " + group.name() + "\n" +
                                     "  > Benchmark:       " + benchmark.name() + "\n" +
                                     "  > Store:           " + topLevelDir.toAbsolutePath() + "\n" +
-                                    "  > Config:          " + neo4jConfig.toAbsolutePath() );
-                return new StoreAndConfig( topLevelDir, neo4jConfig );
+                                    "  > Config:          " + neo4jConfigFile.toAbsolutePath() );
+                return new StoreAndConfig( topLevelDir, neo4jConfigFile );
             }
             else
             {
-                return getCopyOf( group, benchmark, new StoreAndConfig( topLevelDir, neo4jConfig ) );
+                return getCopyOf( group, benchmark, new StoreAndConfig( topLevelDir, neo4jConfigFile ) );
             }
         }
         else
@@ -137,33 +146,16 @@ public class Stores
         }
     }
 
-    public void writeNeo4jConfigForNoStore( Neo4jConfig neo4jConfig, FullBenchmarkName benchmarkName )
-    {
-        Path topLevelDir = storesDir.resolve( NULL_STORE_DIR_NAME );
-        tryMkDir( topLevelDir );
-        writeNeo4jConfig( neo4jConfig, benchmarkName, topLevelDir );
-    }
-
-    private Path writeNeo4jConfig( Neo4jConfig neo4jConfig, FullBenchmarkName benchmarkName, Path topLevelDir )
-    {
-        Path neo4jConfigFile = topLevelDir.resolve( benchmarkName.sanitizedName() + NEO4J_CONFIG_FILENAME_SUFFIX );
-        System.out.println( "\nWriting Neo4j config to: " + neo4jConfigFile.toAbsolutePath() );
-        forceRecreateFile( neo4jConfigFile );
-        Neo4jConfigBuilder.writeToFile( neo4jConfig, neo4jConfigFile );
-        return neo4jConfigFile;
-    }
-
     private StoreAndConfig generateDb(
             DataGeneratorConfig config,
             Augmenterizer augmenterizer,
-            FullBenchmarkName benchmarkName,
+            BenchmarkGroup benchmarkGroup,
+            Benchmark benchmark,
+            Path neo4jConfigFile,
             int threads )
     {
         Path topLevelStoreDir = randomTopLevelStoreDir();
         tryMkDir( topLevelStoreDir );
-
-        // store Neo4j config every time, even if DataGeneratorConfig is identical -- they are retrieved later
-        Path neo4jConfig = writeNeo4jConfig( config.neo4jConfig(), benchmarkName, topLevelStoreDir );
 
         System.out.println( "Generating store in: " + topLevelStoreDir.toAbsolutePath() );
         System.out.println( config );
@@ -176,7 +168,10 @@ public class Stores
 
         try
         {
-            new DataGenerator( config ).generate( Store.createFrom( topLevelStoreDir ), neo4jConfig );
+            new DataGenerator( config ).generate( Store.createFrom( topLevelStoreDir ), neo4jConfigFile );
+            String storeName = topLevelStoreDir.getFileName().toString();
+            StoreUsage.load( storesDir )
+                      .register( storeName, benchmarkGroup, benchmark );
         }
         catch ( Exception e )
         {
@@ -191,7 +186,7 @@ public class Stores
             }
             throw new Kaboom( "Error creating store at: " + topLevelStoreDir.toFile().getAbsolutePath(), e );
         }
-        StoreAndConfig storeAndConfig = new StoreAndConfig( topLevelStoreDir, neo4jConfig );
+        StoreAndConfig storeAndConfig = new StoreAndConfig( topLevelStoreDir, neo4jConfigFile );
 
         System.out.println( "Executing store augmentation step..." );
         Instant augmentStart = Instant.now();
@@ -276,10 +271,11 @@ public class Stores
                 .append( format( "\t%1$-20s %2$s\n", bytesToString( BenchmarkUtil.bytes( storesDir ) ),
                                  storesDir.toAbsolutePath() ) )
                 .append( "---------------------------------------------------------------------\n" );
+        StoreUsage storeUsage = StoreUsage.load( storesDir );
         for ( Path topLevelDir : findAllTopLevelDirs( storesDir ) )
         {
             sb.append( format( "\t%1$-20s %2$s\n", bytesToString( BenchmarkUtil.bytes( topLevelDir ) ), topLevelDir.toAbsolutePath() ) );
-            for ( String benchmarkName : namesOfBenchmarksThatUseStore( topLevelDir ) )
+            for ( String benchmarkName : storeUsage.benchmarksUsingStore( topLevelDir.getFileName().toString() ) )
             {
                 sb.append( "\t\t" ).append( benchmarkName ).append( "\n" );
             }
@@ -287,54 +283,6 @@ public class Stores
         return sb
                 .append( "-----------------------------------------------------------------------------------------\n" )
                 .toString();
-    }
-
-    // TODO why is this never called anymore?
-    private Path findNeo4jConfigFor( FullBenchmarkName benchmarkName )
-    {
-        List<Path> neo4jConfigs = findAllTopLevelDirs( storesDir ).stream()
-                                                                  .map( store -> store.resolve( benchmarkName.sanitizedName() + NEO4J_CONFIG_FILENAME_SUFFIX ) )
-                                                                  .filter( Files::exists )
-                                                                  .collect( toList() );
-        if ( neo4jConfigs.isEmpty() )
-        {
-            throw new Kaboom( "Could not find Neo4j config file for: " + benchmarkName.sanitizedName() );
-        }
-        else if ( neo4jConfigs.size() == 1 )
-        {
-            return neo4jConfigs.get( 0 );
-        }
-        else
-        {
-            throw new Kaboom( "Found multiple Neo4j config files for: " + benchmarkName.sanitizedName() + "\n" +
-                              neo4jConfigs.stream().map( Path::toString ).collect( joining( "\n" ) ) );
-        }
-    }
-
-    private Path getOrCreateNeo4jConfigFor( Path topLevelDir, FullBenchmarkName benchmarkName, Neo4jConfig neo4jConfig )
-    {
-        Path neo4jConfigFile = topLevelDir.resolve( benchmarkName.sanitizedName() + NEO4J_CONFIG_FILENAME_SUFFIX );
-        if ( !Files.exists( neo4jConfigFile ) )
-        {
-            writeNeo4jConfig( neo4jConfig, benchmarkName, topLevelDir );
-        }
-        return neo4jConfigFile;
-    }
-
-    private List<String> namesOfBenchmarksThatUseStore( Path topLevelDir )
-    {
-        try ( Stream<Path> entries = Files.list( topLevelDir ) )
-        {
-            return entries
-                    .filter( p -> p.toString().endsWith( NEO4J_CONFIG_FILENAME_SUFFIX ) )
-                    .map( p -> p.getFileName().toString() )
-                    .map( name -> name.substring( 0, name.length() - NEO4J_CONFIG_FILENAME_SUFFIX.length() ) )
-                    .collect( toList() );
-        }
-        catch ( IOException e )
-        {
-            throw new UncheckedIOException( e );
-        }
     }
 
     // returns stores that are supposed to be temporary copies -- used to clean up after a benchmark crashes
@@ -389,7 +337,7 @@ public class Stores
                 topStoreLevelDir.endsWith( NULL_STORE_DIR_NAME );
     }
 
-    public class StoreAndConfig
+    public static class StoreAndConfig
     {
         private final Store store;
         private final Path config;
@@ -455,6 +403,64 @@ public class Stores
                 copyingProcess.get();
             }
             executorService.shutdown();
+        }
+    }
+
+    private static class StoreUsage
+    {
+        private static final String STORE_USAGE_JSON = "store-usage.json";
+
+        private static StoreUsage load( Path dir )
+        {
+            Path jsonPath = dir.resolve( STORE_USAGE_JSON );
+            if ( !Files.exists( jsonPath ) )
+            {
+                try
+                {
+                    Files.createFile( jsonPath );
+                }
+                catch ( IOException e )
+                {
+                    throw new UncheckedIOException( "Failed to create: " + jsonPath.toAbsolutePath(), e );
+                }
+                StoreUsage storeUsage = new StoreUsage( jsonPath );
+                JsonUtil.serializeJson( jsonPath );
+                return storeUsage;
+            }
+            else
+            {
+                return JsonUtil.deserializeJson( jsonPath, StoreUsage.class );
+            }
+        }
+
+        private Path jsonPath;
+        private Map<String,Set<String>> storeBenchmarks;
+
+        /**
+         * WARNING: Never call this explicitly.
+         * No-params constructor is only used for JSON (de)serialization.
+         */
+        private StoreUsage()
+        {
+            this( null );
+        }
+
+        private StoreUsage( Path jsonPath )
+        {
+            this.jsonPath = jsonPath;
+            this.storeBenchmarks = new HashMap<>();
+        }
+
+        private void register( String storeName, BenchmarkGroup benchmarkGroup, Benchmark benchmark )
+        {
+            Set<String> benchmarks = storeBenchmarks.computeIfAbsent( storeName, name -> new HashSet<>() );
+            benchmarks.add( FullBenchmarkName.from( benchmarkGroup, benchmark ).name() );
+            JsonUtil.serializeJson( jsonPath, this );
+        }
+
+        private Iterable<String> benchmarksUsingStore( String storeName )
+        {
+            return storeBenchmarks.get( storeName );
         }
     }
 }

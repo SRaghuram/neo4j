@@ -28,7 +28,6 @@ import org.openjdk.jmh.results.Result;
 import org.openjdk.jmh.runner.IterationType;
 
 import java.io.File;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.Collections;
@@ -82,10 +81,10 @@ public abstract class AbstractMicroProfiler implements InternalProfiler, Externa
                                                         Benchmark benchmark,
                                                         BenchmarkParams benchmarkParams )
     {
-        Path workDir = RunnerParams.extractFrom( benchmarkParams ).workDir();
-        BenchmarkGroupDirectory benchmarkGroupDir = BenchmarkGroupDirectory.findOrCreateAt( workDir, benchmarkGroup );
+        RunnerParams runnerParams = RunnerParams.extractFrom( benchmarkParams );
+        BenchmarkGroupDirectory benchmarkGroupDir = BenchmarkGroupDirectory.findOrCreateAt( runnerParams.workDir(), benchmarkGroup );
         BenchmarkDirectory benchmarkDir = benchmarkGroupDir.findOrCreate( benchmark );
-        String forkName = "fork_" + profilerType.name();
+        String forkName = runnerParams.runId();
         return benchmarkDir.findOrCreate( forkName, singletonList( profilerType ) );
     }
 
