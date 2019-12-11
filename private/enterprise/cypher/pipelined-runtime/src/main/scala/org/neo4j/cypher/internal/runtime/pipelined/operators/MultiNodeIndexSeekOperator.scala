@@ -27,7 +27,6 @@ import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, NoMemoryTracker, QueryContext, makeValueNeoSafe}
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
-import org.neo4j.exceptions.CantCompileQueryException
 import org.neo4j.internal.kernel.api.IndexQuery.ExactPredicate
 import org.neo4j.internal.kernel.api._
 import org.neo4j.internal.schema.IndexOrder
@@ -53,9 +52,6 @@ class MultiNodeIndexSeekOperator(val workIdentity: WorkIdentity,
     val indexPropertySlotOffsets: Array[Int] = parameters.slottedIndexProperties.flatMap(_.maybeCachedNodePropertySlot)
     val needsValues: Boolean = indexPropertyIndices.nonEmpty
   }
-
-  if (nodeIndexSeekParameters.length > 3)
-    throw new CantCompileQueryException("MultiNodeIndexSeek with more than 3 seeks is not supported with operatorEngine=interpreted")
 
   private val indexSeekers: Array[IndexSeeker] = nodeIndexSeekParameters.map(new IndexSeeker(_)).toArray
 
@@ -102,7 +98,7 @@ class MultiNodeIndexSeekOperator(val workIdentity: WorkIdentity,
         val indexQueryIterator = indexQueries.toIterator
         if (!indexQueryIterator.hasNext) {
           // If an index query does not have any predicates we can abort already
-          assert(false, "An index query should always have at least one predicate")
+          assert(assertion = false, "An index query should always have at least one predicate")
           return false
         }
         seeks(i) = new ArrayBuffer[() => Unit]()
