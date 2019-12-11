@@ -39,7 +39,6 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.io.pagecache.tracing.DefaultPageCacheTracer;
-import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.AssertableLogProvider;
@@ -114,9 +113,7 @@ class PageCacheWarmerTest
 
     private void clearTracerCounts()
     {
-        cursorTracer.get().init( PageCacheTracer.NULL );
         cursorTracer.get().reportEvents();
-        cursorTracer.get().init( cacheTracer );
     }
 
     @Test
