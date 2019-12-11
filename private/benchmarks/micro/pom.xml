@@ -13,7 +13,7 @@
 
     <properties>
         <moduleName>com.neo4j.bench.micro</moduleName>
-        <jmh.version>1.21</jmh.version>
+        <jmh.version>1.22</jmh.version>
         <uberjar.name>micro-benchmarks</uberjar.name>
         <jmh.generator>default</jmh.generator>
         <license-text.header>../build/license-header.txt</license-text.header>

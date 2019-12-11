@@ -13,7 +13,7 @@
 
     <properties>
         <moduleName>com.neo4j.bench.jmh.api</moduleName>
-        <jmh.version>1.21</jmh.version>
+        <jmh.version>1.22</jmh.version>
         <metrics.version>3.1.2</metrics.version>
         <jmh.generator>default</jmh.generator>
         <license-text.header>../build/license-header.txt</license-text.header>
