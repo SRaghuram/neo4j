@@ -158,7 +158,7 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
                 "dbms.procedures", newSet( "default", READER, EDITOR, PUBLISHER, ARCHITECT, ADMIN ),
                 "dbms.listQueries", newSet( "default", READER, EDITOR, PUBLISHER, ARCHITECT, ADMIN ),
                 "dbms.security.createUser", newSet( ADMIN ),
-                "db.createLabel", newSet( "default", EDITOR, PUBLISHER, ARCHITECT, ADMIN ) );
+                "db.createLabel", newSet( "default", PUBLISHER, ARCHITECT, ADMIN ) );
 
         String call = "CALL dbms.procedures";
         assertListProceduresHasRoles( adminSubject, expected, call );
