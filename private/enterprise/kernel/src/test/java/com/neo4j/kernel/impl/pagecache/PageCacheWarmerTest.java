@@ -10,6 +10,7 @@ import org.eclipse.collections.api.set.primitive.MutableIntSet;
 import org.eclipse.collections.impl.set.mutable.primitive.IntHashSet;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -72,6 +73,7 @@ import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createSchedule
 import static org.neo4j.logging.AssertableLogProvider.inLog;
 
 @EphemeralTestDirectoryExtension
+@Disabled
 class PageCacheWarmerTest
 {
     @RegisterExtension
@@ -99,7 +101,7 @@ class PageCacheWarmerTest
         cacheTracer = new DefaultPageCacheTracer();
         cursorTracer = DefaultPageCursorTracerSupplier.TRACER_SUPPLIER;
         clearTracerCounts();
-        cfg = PageCacheConfig.config().withTracer( cacheTracer ).withCursorTracerSupplier( cursorTracer );
+        cfg = PageCacheConfig.config().withTracer( cacheTracer );
         file = new File( testDirectory.homeDir(), "a" );
         fs.write( file );
     }
