@@ -17,6 +17,7 @@ import org.neo4j.cypher.internal.physicalplanning.OperatorFusionPolicy
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanner
 import org.neo4j.cypher.internal.physicalplanning.PipelineBuilder
 import org.neo4j.cypher.internal.plandescription.Argument
+import org.neo4j.cypher.internal.rewriting.RewriterStepSequencer
 import org.neo4j.cypher.internal.runtime.ExecutionMode
 import org.neo4j.cypher.internal.runtime.InputDataStream
 import org.neo4j.cypher.internal.runtime.MemoryTracking
@@ -44,6 +45,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.LazyScheduling
 import org.neo4j.cypher.internal.runtime.pipelined.execution.ProfiledQuerySubscription
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryExecutor
 import org.neo4j.cypher.internal.runtime.pipelined.expressions.PipelinedBlacklist
+import org.neo4j.cypher.internal.runtime.pipelined.rewriters.PipelinedPlanRewriter
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.SchedulerTracer
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper
 import org.neo4j.cypher.internal.runtime.slotted.expressions.CompiledExpressionConverter
@@ -86,6 +88,14 @@ class PipelinedRuntime private(parallelExecution: Boolean,
   override val PRINT_REWRITTEN_LOGICAL_PLAN = true
   override val PRINT_PIPELINE_INFO = false
   override val PRINT_FAILURE_STACK_TRACE = true
+
+  private val rewriterSequencer: String => RewriterStepSequencer = {
+    import org.neo4j.cypher.internal.Assertion._
+    import org.neo4j.cypher.internal.rewriting.RewriterStepSequencer._
+
+    if (assertionsEnabled()) newValidating else newPlain
+  }
+  private val optimizingRewriter = PipelinedPlanRewriter(rewriterSequencer)
 
   override def compileToExecutable(query: LogicalQuery, context: EnterpriseRuntimeContext, securityContext: SecurityContext): ExecutionPlan = {
     DebugLog.log("PipelinedRuntime.compileToExecutable()")
@@ -131,14 +141,19 @@ class PipelinedRuntime private(parallelExecution: Boolean,
                           context: EnterpriseRuntimeContext,
                           queryIndexRegistrator: QueryIndexRegistrator,
                           warnings: Set[InternalNotification]): PipelinedExecutionPlan = {
+    val batchSize = selectBatchSize(query, context)
+    val optimizedLogicalPlan = optimizingRewriter(query.logicalPlan, query.cardinalities, batchSize)
+
+    PipelinedBlacklist.throwOnUnsupportedPlan(optimizedLogicalPlan, parallelExecution, query.providedOrders)
+
     val interpretedPipesFallbackPolicy = InterpretedPipesFallbackPolicy(context.interpretedPipesFallback, parallelExecution)
     val breakingPolicy = PipelinedPipelineBreakingPolicy(operatorFusionPolicy, interpretedPipesFallbackPolicy)
 
     val physicalPlan = PhysicalPlanner.plan(context.tokenContext,
-      query.logicalPlan,
-      query.semanticTable,
-      breakingPolicy,
-      allocateArgumentSlots = true)
+                                            optimizedLogicalPlan,
+                                            query.semanticTable,
+                                            breakingPolicy,
+                                            allocateArgumentSlots = true)
 
     if (ENABLE_DEBUG_PRINTS && PRINT_PLAN_INFO_EARLY) {
       printRewrittenPlanInfo(physicalPlan.logicalPlan)
@@ -156,8 +171,6 @@ class PipelinedRuntime private(parallelExecution: Boolean,
         SlottedExpressionConverters(physicalPlan),
         CommunityExpressionConverter(context.tokenContext))
     }
-
-    PipelinedBlacklist.throwOnUnsupportedPlan(query.logicalPlan, parallelExecution, query.providedOrders)
 
     //=======================================================
     val slottedPipeBuilder =
@@ -200,8 +213,6 @@ class PipelinedRuntime private(parallelExecution: Boolean,
       //=======================================================
 
       val executor = context.runtimeEnvironment.getQueryExecutor(parallelExecution)
-
-      val batchSize = selectBatchSize(query, context)
 
       val maybeThreadSafeExecutionResources =
         if (parallelExecution) {

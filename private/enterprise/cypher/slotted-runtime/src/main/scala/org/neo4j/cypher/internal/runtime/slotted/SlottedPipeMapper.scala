@@ -210,8 +210,9 @@ class SlottedPipeMapper(fallback: PipeMapper,
       case _: Argument =>
         ArgumentSlottedPipe(slots, argumentSize)(id)
 
+      // Currently used for testing only
       case _: MultiNodeIndexSeek =>
-        throw new CantCompileQueryException(s"Slotted runtime does not support $plan") // TODO: FIXME This is not acceptable
+        throw new CantCompileQueryException(s"Slotted runtime does not support $plan")
 
       case _ =>
         fallback.onLeaf(plan)
