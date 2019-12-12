@@ -128,6 +128,8 @@ object StaticEvaluation {
 
     override def relationshipIterator(cursor: RelationshipSelectionCursor): Iterator[RelationshipValue] = notAvailable()
 
+    override def primitiveRelationshipIterator(cursor: RelationshipSelectionCursor): RelationshipIterator = notAvailable()
+
     override def getRelationshipsForIdsPrimitive(node: Long, dir: SemanticDirection, types: Array[Int]): RelationshipIterator = notAvailable()
 
     override def relationshipById(id: Long, startNode: Long, endNode: Long, `type`: Int): RelationshipValue = notAvailable()

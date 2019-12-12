@@ -15,6 +15,7 @@ import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNul
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, PrimitiveLongHelper}
 import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.graphdb.Direction
 import org.neo4j.values.storable.Values
 
 abstract class OptionalExpandIntoSlottedPipe(source: Pipe,
@@ -24,13 +25,17 @@ abstract class OptionalExpandIntoSlottedPipe(source: Pipe,
                                              dir: SemanticDirection,
                                              lazyTypes: RelationshipTypes,
                                              slots: SlotConfiguration)
-  extends PipeWithSource(source) with PrimitiveCachingExpandInto {
+  extends PipeWithSource(source) {
   self =>
 
   //===========================================================================
   // Compile-time initializations
   //===========================================================================
-  private final val CACHE_SIZE = 100000
+  private val kernelDirection = dir match {
+    case SemanticDirection.OUTGOING => Direction.OUTGOING
+    case SemanticDirection.INCOMING => Direction.INCOMING
+    case SemanticDirection.BOTH => Direction.BOTH
+  }
   private val getFromNodeFunction = makeGetPrimitiveNodeFromSlotFunctionFor(fromSlot)
   private val getToNodeFunction = makeGetPrimitiveNodeFromSlotFunctionFor(toSlot)
 
@@ -38,9 +43,11 @@ abstract class OptionalExpandIntoSlottedPipe(source: Pipe,
   // Runtime code
   //===========================================================================
   protected def internalCreateResults(input: Iterator[ExecutionContext], state: QueryState): Iterator[ExecutionContext] = {
-    //cache of known connected nodes
-    val relCache = new PrimitiveRelationshipsCache(CACHE_SIZE)
-
+    val query = state.query
+    val expandInto = new org.neo4j.internal.kernel.api.helpers.CachingExpandInto(query.transactionalContext.dataRead,
+                                                                                 kernelDirection,
+                                                                                 lazyTypes.types(query))
+    val nodeCursor = state.cursors.nodeCursor
     input.flatMap {
       inputRow: ExecutionContext =>
         val fromNode = getFromNodeFunction.applyAsLong(inputRow)
@@ -49,9 +56,10 @@ abstract class OptionalExpandIntoSlottedPipe(source: Pipe,
         if (entityIsNull(fromNode) || entityIsNull(toNode)) {
           Iterator(withNulls(inputRow))
         } else {
-          val relationships: LongIterator = relCache.get(fromNode, toNode, dir)
-            .getOrElse(findRelationships(state, fromNode, toNode, relCache, dir, lazyTypes.types(state.query)))
-
+          val relationships = query.primitiveRelationshipIterator(expandInto.connectingRelationships(query.transactionalContext.cursors,
+                                                                                                     nodeCursor,
+                                                                                                     fromNode,
+                                                                                                     toNode))
           val matchIterator = findMatchIterator(inputRow, state, relationships)
 
           if (matchIterator.isEmpty)

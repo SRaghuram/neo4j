@@ -5,7 +5,6 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted.pipes
 
-import org.eclipse.collections.api.iterator.LongIterator
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeGetPrimitiveNodeFromSlotFunctionFor
 import org.neo4j.cypher.internal.physicalplanning.{Slot, SlotConfiguration}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes._
@@ -14,6 +13,7 @@ import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNul
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, PrimitiveLongHelper}
 import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.graphdb.Direction
 
 /**
   * Expand when both end-points are known, find all relationships of the given
@@ -32,13 +32,17 @@ case class ExpandIntoSlottedPipe(source: Pipe,
                                  lazyTypes: RelationshipTypes,
                                  slots: SlotConfiguration)
                                 (val id: Id = Id.INVALID_ID)
-  extends PipeWithSource(source) with PrimitiveCachingExpandInto {
+  extends PipeWithSource(source) {
   self =>
 
   //===========================================================================
   // Compile-time initializations
   //===========================================================================
-  private final val CACHE_SIZE = 100000
+  private val kernelDirection = dir match {
+    case SemanticDirection.OUTGOING => Direction.OUTGOING
+    case SemanticDirection.INCOMING => Direction.INCOMING
+    case SemanticDirection.BOTH => Direction.BOTH
+  }
   private val getFromNodeFunction = makeGetPrimitiveNodeFromSlotFunctionFor(fromSlot)
   private val getToNodeFunction = makeGetPrimitiveNodeFromSlotFunctionFor(toSlot)
 
@@ -46,9 +50,11 @@ case class ExpandIntoSlottedPipe(source: Pipe,
   // Runtime code
   //===========================================================================
   protected def internalCreateResults(input: Iterator[ExecutionContext], state: QueryState): Iterator[ExecutionContext] = {
-    //cache of known connected nodes
-    val relCache = new PrimitiveRelationshipsCache(CACHE_SIZE)
-
+    val query = state.query
+    val expandInto = new org.neo4j.internal.kernel.api.helpers.CachingExpandInto(query.transactionalContext.dataRead,
+                                                                                 kernelDirection,
+                                                                                 lazyTypes.types(query))
+    val nodeCursor = state.cursors.nodeCursor
     input.flatMap {
       inputRow =>
         val fromNode = getFromNodeFunction.applyAsLong(inputRow)
@@ -57,8 +63,10 @@ case class ExpandIntoSlottedPipe(source: Pipe,
         if (entityIsNull(fromNode) || entityIsNull(toNode))
           Iterator.empty
         else {
-          val relationships: LongIterator = relCache.get(fromNode, toNode, dir)
-            .getOrElse(findRelationships(state, fromNode, toNode, relCache, dir, lazyTypes.types(state.query)))
+          val relationships = query.primitiveRelationshipIterator(expandInto.connectingRelationships(query.transactionalContext.cursors,
+                                                                                                     nodeCursor,
+                                                                                                     fromNode,
+                                                                                                     toNode))
 
           PrimitiveLongHelper.map(relationships, (relId: Long) => {
             val outputRow = SlottedExecutionContext(slots)
