@@ -65,9 +65,10 @@ class PlannerDescriptionIT
                 System.out.println( "Verifying plan extraction on workload: " + workload.name() );
                 Path neo4jConfigFile = Files.createTempFile( temporaryFolder.absolutePath().toPath(), "neo4j", ".conf" );
                 Neo4jConfigBuilder.withDefaults().writeToFile( neo4jConfigFile );
-                try ( Store store = StoreTestUtil.createEmptyStoreFor( workload,
-                                                                       createTempDirectory( temporaryFolder.absolutePath().toPath(), "store" ), /* store */
-                                                                       neo4jConfigFile ) )
+                try ( Store store = StoreTestUtil.createTemporaryEmptyStoreFor( workload,
+                                                                                createTempDirectory( temporaryFolder.absolutePath().toPath(),
+                                                                                                     "store" ), /* store */
+                                                                                neo4jConfigFile ) )
                 {
                     try ( EmbeddedDatabase database = EmbeddedDatabase.startWith( store, Edition.ENTERPRISE, neo4jConfigFile ) )
                     {
@@ -89,7 +90,6 @@ class PlannerDescriptionIT
                             }
                         }
                     }
-                    store.delete();
                 }
             }
         }
