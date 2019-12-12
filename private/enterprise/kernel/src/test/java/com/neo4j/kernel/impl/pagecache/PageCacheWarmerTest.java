@@ -97,7 +97,7 @@ class PageCacheWarmerTest
         life = new LifeSupport();
         scheduler = life.add( createScheduler() );
         life.start();
-        cacheTracer = new DefaultPageCacheTracer();
+        cacheTracer = DefaultPageCacheTracer.TRACER;
         cursorTracer = DefaultPageCursorTracerSupplier.TRACER_SUPPLIER;
         clearTracerCounts();
         cfg = PageCacheConfig.config().withTracer( cacheTracer );
