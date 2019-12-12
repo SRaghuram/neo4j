@@ -306,7 +306,7 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
         val fields: Seq[Field] = in.foldLeft(Seq.empty[Field])((a, b) => a ++ b.fields)
         val variables: Seq[LocalVariable] = in.foldLeft(Seq.empty[LocalVariable])((a, b) => a ++ b.variables)
         Some(IntermediateExpression(
-          invokeStatic(method[VirtualValues, ListValue, Array[AnyValue]]("list"), arrayOf[AnyValue](in.map(_.ir): _*)),
+          invokeStatic(method[VirtualValues, ListValue, Array[AnyValue]]("list"), arrayOf[AnyValue](in.map(i => nullCheckIfRequired(i)): _*)),
           fields, variables, Set.empty, requireNullCheck = false))
       }
 
