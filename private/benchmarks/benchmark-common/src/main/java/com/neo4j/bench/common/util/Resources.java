@@ -84,7 +84,7 @@ public class Resources implements AutoCloseable
 
     private static String toTopLevelResourceFilename( String resourceFilename )
     {
-        return File.separator + resourceFilename.substring( 1 ).split( File.separator )[0];
+        return "/" + resourceFilename.substring( 1 ).split( "/" )[0];
     }
 
     private Path innerGet( String resourceFilename )
@@ -156,9 +156,9 @@ public class Resources implements AutoCloseable
     private static void assertStartsWithSeparatorChar( String resourceFilename )
     {
         // resource paths should always start with '/'
-        if ( !resourceFilename.startsWith( File.separator ) )
+        if ( !resourceFilename.startsWith( "/" ) )
         {
-            throw new RuntimeException( format( "Resources path unexpectedly did not start with '%s'", File.separator ) );
+            throw new RuntimeException( "Resources path unexpectedly did not start with '/'" );
         }
     }
 
