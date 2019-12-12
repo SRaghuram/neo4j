@@ -51,6 +51,11 @@ public class Store implements AutoCloseable
         return new Store( originalTopLevelDir, false );
     }
 
+    public static Store createTemporaryFrom( Path originalTopLevelDir )
+    {
+        return new Store( originalTopLevelDir, true );
+    }
+
     /**
      * Store directory will be automatically deleted on close.
      *
@@ -179,7 +184,7 @@ public class Store implements AutoCloseable
         }
     }
 
-    public void delete()
+    private void delete()
     {
         deleteDir( topLevelDir );
     }

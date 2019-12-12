@@ -23,4 +23,15 @@ public class TestSupport
         managementService.shutdown();
         return Store.createFrom( homeDir );
     }
+
+    public static Store createTemporaryEmptyStore( Path homeDir, Path neo4jConfigFile )
+    {
+        DatabaseManagementService managementService =
+                new EnterpriseDatabaseManagementServiceBuilder( homeDir.toFile() )
+                        .loadPropertiesFromFile( neo4jConfigFile.toFile().getAbsolutePath() )
+                        .build();
+        managementService.shutdown();
+        return Store.createTemporaryFrom( homeDir );
+    }
+
 }

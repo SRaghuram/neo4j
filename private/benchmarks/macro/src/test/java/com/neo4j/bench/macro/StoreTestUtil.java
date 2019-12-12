@@ -24,14 +24,26 @@ public class StoreTestUtil
     {
         try
         {
-            Schema schema = workload.expectedSchema();
             Store store = TestSupport.createEmptyStore( Files.createTempDirectory( storePath, "store" ), neo4jConfigFile );
-            EmbeddedDatabase.recreateSchema( store, Edition.ENTERPRISE, neo4jConfigFile, schema );
+            recreateSchema( store, neo4jConfigFile, workload );
             return store;
         }
         catch ( IOException e )
         {
             throw new UncheckedIOException( e );
         }
+    }
+
+    public static Store createTemporaryEmptyStoreFor( Workload workload, Path storePath, Path neo4jConfigFile )
+    {
+        Store store = TestSupport.createTemporaryEmptyStore( storePath, neo4jConfigFile );
+        recreateSchema( store, neo4jConfigFile, workload );
+        return store;
+    }
+
+    private static void recreateSchema( Store store, Path neo4jConfigFile, Workload workload )
+    {
+        Schema schema = workload.expectedSchema();
+        EmbeddedDatabase.recreateSchema( store, Edition.ENTERPRISE, neo4jConfigFile, schema );
     }
 }
