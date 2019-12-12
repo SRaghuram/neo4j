@@ -84,7 +84,6 @@ class RelationshipRecordFormatTest
                 hugeValue + 1, hugeValue + 2, hugeValue + 3, 4,
                 hugeValue + 5, hugeValue + 6, hugeValue + 7, hugeValue + 8, true, true );
         record.setSecondaryUnitIdOnLoad( 17 );
-        record.setRequiresSecondaryUnit( true );
         cursor.setOffset( offsetForId( record.getId(), recordSize, recordsPerPage ) );
         format.write( record, cursor, recordSize, recordsPerPage );
 
