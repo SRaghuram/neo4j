@@ -64,7 +64,8 @@ public class FabricQueryMonitoring
 
         void startExecution()
         {
-            executingQuery.executionStarted( OptionalMemoryTracker.NONE );
+            executingQuery.onCompilationCompleted( null, null, null );
+            executingQuery.onExecutionStarted( OptionalMemoryTracker.NONE );
         }
 
         void endSuccess()
