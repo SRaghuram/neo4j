@@ -279,7 +279,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
       "MATCH (n) OPTIONAL MATCH (n)-->(x) RETURN x",
       _ should (
         includeSomewhere.aPlan("ProduceResults").withDBHits(0) and
-          includeSomewhere.aPlan("OptionalExpand(All)").withDBHits(1) and
+          includeSomewhere.aPlan("OptionalExpand(All)").withDBHitsBetween(0, 1) and
           includeSomewhere.aPlan("AllNodesScan").withDBHits(2)
         ))
   }
