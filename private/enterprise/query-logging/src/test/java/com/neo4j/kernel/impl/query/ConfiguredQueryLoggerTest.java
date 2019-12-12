@@ -456,7 +456,8 @@ class ConfiguredQueryLoggerTest
         ConfiguredQueryLogger queryLogger = queryLogger( logProvider,
                 Config.defaults( GraphDatabaseSettings.log_queries_allocation_logging_enabled, true ) );
         ExecutingQuery query = query( SESSION_1, "TestUser", QUERY_1 );
-        query.executionStarted( memoryTracker );
+        query.onCompilationCompleted( null, null, null );
+        query.onExecutionStarted( memoryTracker );
 
         // when
         clock.forward( 17, TimeUnit.MILLISECONDS );
@@ -500,7 +501,7 @@ class ConfiguredQueryLoggerTest
 
         // when
         clock.forward( 11, TimeUnit.MILLISECONDS );
-        query.compilationCompleted( new CompilerInfo( "magic", "quantum", Collections.emptyList() ), READ_ONLY, null );
+        query.onCompilationCompleted( new CompilerInfo( "magic", "quantum", Collections.emptyList() ), READ_ONLY, null );
         queryLogger.success( query );
 
         // then
