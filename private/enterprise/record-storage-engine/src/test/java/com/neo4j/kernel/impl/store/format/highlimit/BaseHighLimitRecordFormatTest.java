@@ -68,7 +68,6 @@ class BaseHighLimitRecordFormatTest
         MyRecordFormat format = new MyRecordFormat();
         StubPageCursor cursor = new StubPageCursor( 0, 5 );
         MyRecord record = new MyRecord( 0 );
-        record.setRequiresSecondaryUnit( true );
         record.setSecondaryUnitIdOnCreate( 42 );
         record.setInUse( true );
         format.shortsPerRecord.add( 3 ); // make the write go out of bounds
