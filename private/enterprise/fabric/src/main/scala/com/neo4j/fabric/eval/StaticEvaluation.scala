@@ -17,6 +17,7 @@ import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.v4_0.expressions.{Expression, SemanticDirection}
 import org.neo4j.graphdb.{Entity, Path}
+import org.neo4j.internal.kernel.api.helpers.RelationshipSelectionCursor
 import org.neo4j.internal.kernel.api.procs.ProcedureCallContext
 import org.neo4j.internal.kernel.api.security.SecurityContext
 import org.neo4j.internal.kernel.api.{QueryContext => _, _}
@@ -124,6 +125,8 @@ object StaticEvaluation {
     override def getOrCreateRelTypeId(relTypeName: String): Int = notAvailable()
 
     override def getRelationshipsForIds(node: Long, dir: SemanticDirection, types: Array[Int]): Iterator[RelationshipValue] = notAvailable()
+
+    override def relationshipIterator(cursor: RelationshipSelectionCursor): Iterator[RelationshipValue] = notAvailable()
 
     override def getRelationshipsForIdsPrimitive(node: Long, dir: SemanticDirection, types: Array[Int]): RelationshipIterator = notAvailable()
 
