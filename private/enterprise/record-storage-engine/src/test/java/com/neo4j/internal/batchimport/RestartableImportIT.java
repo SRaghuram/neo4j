@@ -54,6 +54,7 @@ import static org.neo4j.test.proc.ProcessUtil.getJavaExecutable;
 @ExtendWith( RandomExtension.class )
 class RestartableImportIT
 {
+    private static final String COMPLETED = "completed";
     private static final int NODE_COUNT = 100;
     private static final int RELATIONSHIP_COUNT = 10_000;
 
@@ -98,7 +99,8 @@ class RestartableImportIT
 
                 zip( fs, dbDirectory, new File( testDirectory.directory( "snapshots" ), format( "killed-%02d.zip", restartCount ) ) );
 
-                if ( !completedOnItsOwn && !fs.fileExists( new File( dbDirectory, FILE_NAME_STATE ) ) )
+                if ( !completedOnItsOwn && !fs.fileExists( new File( dbDirectory, FILE_NAME_STATE ) ) &&
+                        !fs.fileExists( new File( dbDirectory, COMPLETED ) ) )
                 {
                     // This is a case which is, by all means, quite the edge case. This is state where an import started, but was killed
                     // immediately afterwards... in the middle of creating the store files. There have been attempts to solve this in the
@@ -154,10 +156,13 @@ class RestartableImportIT
     {
         try ( JobScheduler jobScheduler = new ThreadPoolJobScheduler() )
         {
-            BatchImporterFactory.withHighestPriority().instantiate( DatabaseLayout.ofFlat( new File( args[0] ) ), new DefaultFileSystemAbstraction(),
+            File databaseDirectory = new File( args[0] );
+            BatchImporterFactory.withHighestPriority().instantiate( DatabaseLayout.ofFlat( databaseDirectory ), new DefaultFileSystemAbstraction(),
                     null, DEFAULT, NullLogService.getInstance(), ExecutionMonitors.invisible(), EMPTY, Config.defaults(),
                     RecordFormatSelector.defaultFormat(), NO_MONITOR, jobScheduler, Collector.EMPTY, TransactionLogsInitializer.INSTANCE )
                     .doImport( input( Long.parseLong( args[1] ) ) );
+            // Create this file to communicate completion for realz
+            new File( databaseDirectory, COMPLETED ).createNewFile();
         }
         catch ( IllegalStateException e )
         {
