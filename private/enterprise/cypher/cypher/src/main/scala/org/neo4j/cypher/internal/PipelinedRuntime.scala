@@ -15,8 +15,11 @@ import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
 import org.neo4j.cypher.internal.physicalplanning.OperatorFusionPolicy
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanner
+import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.RewrittenPlans
 import org.neo4j.cypher.internal.physicalplanning.PipelineBuilder
+import org.neo4j.cypher.internal.physicalplanning.ProduceResultOutput
 import org.neo4j.cypher.internal.plandescription.Argument
+import org.neo4j.cypher.internal.plandescription.Arguments.PipelineInfo
 import org.neo4j.cypher.internal.rewriting.RewriterStepSequencer
 import org.neo4j.cypher.internal.runtime.ExecutionMode
 import org.neo4j.cypher.internal.runtime.InputDataStream
@@ -50,6 +53,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.tracing.SchedulerTracer
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper
 import org.neo4j.cypher.internal.runtime.slotted.expressions.CompiledExpressionConverter
 import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionConverters
+import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.internal.util.CypherException
 import org.neo4j.cypher.internal.util.InternalNotification
 import org.neo4j.cypher.result.QueryProfile
@@ -142,7 +146,8 @@ class PipelinedRuntime private(parallelExecution: Boolean,
                           queryIndexRegistrator: QueryIndexRegistrator,
                           warnings: Set[InternalNotification]): PipelinedExecutionPlan = {
     val batchSize = selectBatchSize(query, context)
-    val optimizedLogicalPlan = optimizingRewriter(query.logicalPlan, query.cardinalities, batchSize)
+    val rewrittenPlans = new RewrittenPlans // Used to track which plans are rewritten by the optimizing rewriter
+    val optimizedLogicalPlan = optimizingRewriter(query.logicalPlan, query.cardinalities, batchSize, rewrittenPlans)
 
     PipelinedBlacklist.throwOnUnsupportedPlan(optimizedLogicalPlan, parallelExecution, query.providedOrders)
 
@@ -235,20 +240,21 @@ class PipelinedRuntime private(parallelExecution: Boolean,
       }
 
       new PipelinedExecutionPlan(executablePipelines,
-        executionGraphDefinition,
-        queryIndexRegistrator.result(),
-        physicalPlan.nExpressionSlots,
-        physicalPlan.logicalPlan,
-        physicalPlan.parameterMapping,
-        query.resultColumns,
-        executor,
-        context.runtimeEnvironment.tracer,
-        batchSize,
-        context.config.memoryTrackingController,
-        maybeThreadSafeExecutionResources,
-        metadata,
-        warnings,
-        executionGraphSchedulingPolicy)
+                                 executionGraphDefinition,
+                                 queryIndexRegistrator.result(),
+                                 physicalPlan.nExpressionSlots,
+                                 physicalPlan.logicalPlan,
+                                 physicalPlan.parameterMapping,
+                                 query.resultColumns,
+                                 executor,
+                                 context.runtimeEnvironment.tracer,
+                                 batchSize,
+                                 context.config.memoryTrackingController,
+                                 maybeThreadSafeExecutionResources,
+                                 metadata,
+                                 warnings,
+                                 executionGraphSchedulingPolicy,
+                                 rewrittenPlans)
     } catch {
       case e:Exception if operatorFusionPolicy.fusionEnabled =>
         // We failed to compile all the pipelines. Retry physical planning with fusing disabled.
@@ -283,7 +289,8 @@ class PipelinedRuntime private(parallelExecution: Boolean,
                                maybeThreadSafeExecutionResources: Option[(CursorFactory, ResourceManagerFactory)],
                                override val metadata: Seq[Argument],
                                warnings: Set[InternalNotification],
-                               executionGraphSchedulingPolicy: ExecutionGraphSchedulingPolicy) extends ExecutionPlan {
+                               executionGraphSchedulingPolicy: ExecutionGraphSchedulingPolicy,
+                               rewrittenPlans: RewrittenPlans) extends ExecutionPlan {
 
     override def run(queryContext: QueryContext,
                      executionMode: ExecutionMode,
@@ -322,6 +329,43 @@ class PipelinedRuntime private(parallelExecution: Boolean,
       else warnings
 
     override def threadSafeExecutionResources(): Option[(CursorFactory, ResourceManagerFactory)] = maybeThreadSafeExecutionResources
+
+    override def operatorMetadata(plan: Id): Seq[Argument] = {
+      val maybePipelineInfo = pipelineInfoForPlanInExecutionGraph(plan)
+      maybePipelineInfo.toSeq
+    }
+
+    override def mapPlan(plan: LogicalPlan): LogicalPlan = {
+      rewrittenPlans.getOrElse(plan.id, plan)
+    }
+
+    private def pipelineInfoForPlanInExecutionGraph(planId: Id): Option[PipelineInfo] = {
+      // If this proves to be too costly we could maintain a map structure
+      executionGraphDefinition.pipelines.foreach { pipeline =>
+        if (pipeline.fusedPlans.exists(_.id.x == planId.x)) {
+          return Some(PipelineInfo(s"${pipeline.id.x}.0F"))
+        }
+        else if (pipeline.headPlan.id == planId) {
+          return Some(PipelineInfo(s"${pipeline.id.x}.0"))
+        }
+        else {
+          val middleIndex = pipeline.middlePlans.indexWhere(_.id.x == planId.x)
+          if (middleIndex >= 0) {
+            return Some(PipelineInfo(s"${pipeline.id.x}.${middleIndex + 1}"))
+          } else {
+            pipeline.outputDefinition match {
+              case ProduceResultOutput(o) if o.id.x == planId.x =>
+                val outputIndex = 1 + pipeline.middlePlans.size
+                return Some(PipelineInfo(s"${pipeline.id.x}.$outputIndex"))
+
+              case _ =>
+                // Do nothing
+            }
+          }
+        }
+      }
+      None
+    }
   }
 
   class PipelinedRuntimeResult(executablePipelines: IndexedSeq[ExecutablePipeline],

@@ -182,13 +182,11 @@ class MultiNodeIndexSeekOperator(val workIdentity: WorkIdentity,
           } else {
             // Restart the next index query
             val nextI = i + 1
-            //indexQueryIterators(nextI) = indexQueries(nextI).toIterator
             seeks(nextI)(0)()
             currentSeekI(nextI) = 0
             return next(nextI)
           }
-        } else if (currentSeekI(i) < seeks(i).length - 1) { // indexQueryIterators(i).hasNext
-          //val indexQuery = indexQueryIterators(i).next() // TODO: Replace with just an integer index?
+        } else if (currentSeekI(i) < seeks(i).length - 1) {
           currentSeekI(i) += 1
           seeks(i)(currentSeekI(i))()
         } else {
@@ -235,8 +233,7 @@ class MultiNodeIndexSeekOperator(val workIdentity: WorkIdentity,
   }
 }
 
-class NodeWithValues(val nodeId: Long, val values: Array[Value])
-
+/*
 abstract class SingleQueryNodeIndexSeekTaskTemplate(
                                                      override val inner: OperatorTaskTemplate,
                                                      id: Id,
@@ -619,3 +616,4 @@ class ExactPredicateIterator(propertyKey: Int, list: ListValue) {
 
   def current: Value = _current
 }
+*/

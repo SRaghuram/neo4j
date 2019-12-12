@@ -15,4 +15,5 @@ object PhysicalPlanningAttributes {
   class ArgumentSizes extends Attribute[LogicalPlan, Size]
   class ApplyPlans extends Attribute[LogicalPlan, Id]
   class NestedPlanArgumentConfigurations extends Attribute[LogicalPlan, SlotConfiguration]
+  class RewrittenPlans extends Attribute[LogicalPlan, LogicalPlan]
 }
