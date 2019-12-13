@@ -20,7 +20,7 @@ public class HighLimitWithSmallRecords extends HighLimit
     public static final String STORE_VERSION = "vT.H.0";
     public static final RecordFormats RECORD_FORMATS = new HighLimitWithSmallRecords();
 
-    private static final int NODE_RECORD_SIZE = NodeRecordFormat.RECORD_SIZE / 2;
+    private static final int NODE_RECORD_SIZE = NodeRecordFormat.RECORD_SIZE / 2 + 1;
     private static final int RELATIONSHIP_RECORD_SIZE = RelationshipRecordFormat.RECORD_SIZE / 2;
     private static final int RELATIONSHIP_GROUP_RECORD_SIZE = RelationshipGroupRecordFormat.RECORD_SIZE / 2;
 
