@@ -18,6 +18,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
+    execute("CREATE DATABASE foo")
 
     // Notice: They are executed in succession so they have to make sense in that order
     assertQueriesAndSubQueryCounts(List(
@@ -77,7 +78,12 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       "REVOKE DENY NAME MANAGEMENT ON DATABASES * FROM custom" -> 3,
       "GRANT NAME MANAGEMENT ON DATABASES * TO custom" -> 3,
       "DENY NAME MANAGEMENT ON DATABASES * TO custom" -> 3,
-      "REVOKE NAME MANAGEMENT ON DATABASES * FROM custom" -> 6
+      "REVOKE NAME MANAGEMENT ON DATABASES * FROM custom" -> 6,
+
+
+      "GRANT ALL DATABASE PRIVILEGES ON DATABASES foo TO custom" -> 10,
+      "DENY ALL DATABASE PRIVILEGES ON DATABASES foo TO custom" -> 10,
+      "REVOKE ALL DATABASE PRIVILEGES ON DATABASES foo FROM custom" -> 20
     ))
   }
 
