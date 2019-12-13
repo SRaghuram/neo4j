@@ -25,13 +25,14 @@ import org.apache.shiro.realm.AuthorizingRealm;
 import org.apache.shiro.subject.PrincipalCollection;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ForkJoinPool;
-import java.util.stream.Stream;
 
 import org.neo4j.cypher.internal.security.FormatException;
 import org.neo4j.graphdb.Direction;
@@ -300,89 +301,93 @@ public class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle
 
     public Set<ResourcePrivilege> getPrivilegesForRoles( Set<String> roles )
     {
+        Set<ResourcePrivilege> privileges = new HashSet<>();
         Map<String,Set<ResourcePrivilege>> resultsPerRole = new HashMap<>();
-        // check if all in cache else lookup and store in cache
-        boolean lookupPrivileges = false;
+        // check which roles need to be looked up
+        List<String> rolesToLookup = new ArrayList<>();
         for ( String role : roles )
         {
-            Set<ResourcePrivilege> privileges = privilegeCache.getIfPresent( role );
-            if ( privileges == null )
+            Set<ResourcePrivilege> privilegesForRole = privilegeCache.getIfPresent( role );
+            if ( privilegesForRole == null )
             {
-                lookupPrivileges = true;
+                rolesToLookup.add( role );
             }
             else
             {
                 // save cached result in output map
-                resultsPerRole.put( role, privileges );
+                privileges.addAll( privilegesForRole );
             }
         }
 
-        if ( lookupPrivileges )
+        if ( !rolesToLookup.isEmpty() )
         {
 
             try ( Transaction tx = systemGraphRealmHelper.getSystemDb().beginTx() )
             {
-                final Stream<Node> roleStream =
-                        tx.findNodes( Label.label( "Role" ) ).stream().filter( roleNode -> rolesForUserContainsRole( roles, roleNode ) );
-                roleStream.forEach( roleNode ->
+                for ( String roleName : rolesToLookup )
                 {
                     try
                     {
-                        String roleName = (String) roleNode.getProperty( "name" );
-                        Set<ResourcePrivilege> rolePrivileges = resultsPerRole.computeIfAbsent( roleName, role -> new HashSet<>() );
-
-                        roleNode.getRelationships( Direction.OUTGOING ).forEach( relToPriv ->
+                        Node roleNode = tx.findNode( Label.label( "Role" ), "name", roleName );
+                        if ( roleNode != null )
                         {
-                            try
+                            Set<ResourcePrivilege> rolePrivileges = new HashSet<>();
+                            roleNode.getRelationships( Direction.OUTGOING ).forEach( relToPriv ->
                             {
-                                final Node privilege = relToPriv.getEndNode();
-                                String grantOrDeny = relToPriv.getType().name();
-                                String action = (String) privilege.getProperty( "action" );
-
-                                Node resourceNode =
-                                        single( privilege.getRelationships( Direction.OUTGOING, RelationshipType.withName( "APPLIES_TO" ) ) ).getEndNode();
-
-                                Node segmentNode =
-                                        single( privilege.getRelationships( Direction.OUTGOING, RelationshipType.withName( "SCOPE" ) ) ).getEndNode();
-
-                                Node dbNode = single( segmentNode.getRelationships( Direction.OUTGOING, RelationshipType.withName( "FOR" ) ) ).getEndNode();
-                                String dbName = (String) dbNode.getProperty( "name" );
-
-                                Node qualifierNode =
-                                        single( segmentNode.getRelationships( Direction.OUTGOING, RelationshipType.withName( "QUALIFIED" ) ) ).getEndNode();
-
-                                ResourcePrivilege.GrantOrDeny privilegeType = ResourcePrivilege.GrantOrDeny.fromRelType( grantOrDeny );
-                                PrivilegeBuilder privilegeBuilder = new PrivilegeBuilder( privilegeType, action );
-
-                                privilegeBuilder.withinScope( qualifierNode ).onResource( resourceNode );
-
-                                String dbLabel = single( dbNode.getLabels() ).name();
-                                switch ( dbLabel )
+                                try
                                 {
-                                case "Database":
-                                    privilegeBuilder.forDatabase( dbName );
-                                    break;
-                                case "DatabaseAll":
-                                    privilegeBuilder.forAllDatabases();
-                                    break;
-                                case "DatabaseDefault":
-                                    privilegeBuilder.forDefaultDatabase();
-                                    break;
-                                case "DeletedDatabase":
-                                    //give up
-                                    return;
-                                default:
-                                    throw new IllegalStateException(
-                                            "Cannot have database node without either 'Database', 'DatabaseDefault' or 'DatabaseAll' labels: " + dbLabel );
-                                }
+                                    final Node privilegeNode = relToPriv.getEndNode();
+                                    String grantOrDeny = relToPriv.getType().name();
+                                    String action = (String) privilegeNode.getProperty( "action" );
 
-                                rolePrivileges.add( privilegeBuilder.build() );
-                            }
-                            catch ( InvalidArgumentsException ie )
-                            {
-                                throw new IllegalStateException( "Failed to authorize", ie );
-                            }
-                        } );
+                                    Node resourceNode = single(
+                                            privilegeNode.getRelationships( Direction.OUTGOING, RelationshipType.withName( "APPLIES_TO" ) ) ).getEndNode();
+
+                                    Node segmentNode = single(
+                                            privilegeNode.getRelationships( Direction.OUTGOING, RelationshipType.withName( "SCOPE" ) ) ).getEndNode();
+
+                                    Node dbNode = single( segmentNode.getRelationships( Direction.OUTGOING, RelationshipType.withName( "FOR" ) ) ).getEndNode();
+                                    String dbName = (String) dbNode.getProperty( "name" );
+
+                                    Node qualifierNode =
+                                            single( segmentNode.getRelationships( Direction.OUTGOING, RelationshipType.withName( "QUALIFIED" ) ) ).getEndNode();
+
+                                    ResourcePrivilege.GrantOrDeny privilegeType = ResourcePrivilege.GrantOrDeny.fromRelType( grantOrDeny );
+                                    PrivilegeBuilder privilegeBuilder = new PrivilegeBuilder( privilegeType, action );
+
+                                    privilegeBuilder.withinScope( qualifierNode ).onResource( resourceNode );
+
+                                    String dbLabel = single( dbNode.getLabels() ).name();
+                                    switch ( dbLabel )
+                                    {
+                                    case "Database":
+                                        privilegeBuilder.forDatabase( dbName );
+                                        break;
+                                    case "DatabaseAll":
+                                        privilegeBuilder.forAllDatabases();
+                                        break;
+                                    case "DatabaseDefault":
+                                        privilegeBuilder.forDefaultDatabase();
+                                        break;
+                                    case "DeletedDatabase":
+                                        //give up
+                                        return;
+                                    default:
+                                        throw new IllegalStateException(
+                                                "Cannot have database node without either 'Database', 'DatabaseDefault' or 'DatabaseAll' labels: " + dbLabel );
+                                    }
+
+                                    ResourcePrivilege privilege = privilegeBuilder.build();
+                                    rolePrivileges.add( privilege );
+                                    privileges.add( privilege );
+                                }
+                                catch ( InvalidArgumentsException ie )
+                                {
+                                    throw new IllegalStateException( "Failed to authorize", ie );
+                                }
+                            } );
+                            privilegeCache.put( roleName, rolePrivileges );
+                        }
                     }
                     catch ( NotFoundException n )
                     {
@@ -390,36 +395,11 @@ public class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle
                         // The behaviour should be the same as if the user did not have the role,
                         // i.e. the role should not be added to the privilege map.
                     }
-                } );
+                }
                 tx.commit();
             }
         }
-
-        if ( !resultsPerRole.isEmpty() )
-        {
-            // cache the privileges we looked up
-            privilegeCache.putAll( resultsPerRole );
-        }
-        Set<ResourcePrivilege> combined = new HashSet<>();
-        for ( Set<ResourcePrivilege> privs : resultsPerRole.values() )
-        {
-            combined.addAll( privs );
-        }
-        return combined;
-    }
-
-    private boolean rolesForUserContainsRole( Set<String> roles, Node roleNode )
-    {
-        try
-        {
-            return roles.contains( roleNode.getProperty( "name" ).toString() );
-        }
-        catch ( NotFoundException n )
-        {
-            // Can occur if the role was dropped by another thread.
-            // The behaviour should be the same as if the user did not have the role.
-            return false;
-        }
+        return privileges;
     }
 
     public void clearCacheForRoles()
