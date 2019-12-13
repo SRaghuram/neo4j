@@ -86,7 +86,7 @@ class PropertyRecordFormat extends BaseOneByteHeaderRecordFormat<PropertyRecord>
             if ( useFixedReferences )
             {
                 // read record in a fixed reference format
-                readFixedReferencesRecord( record, cursor );
+                readFixedReferencesRecord( record, cursor, inUse );
             }
             else
             {
@@ -172,14 +172,14 @@ class PropertyRecordFormat extends BaseOneByteHeaderRecordFormat<PropertyRecord>
         return FIXED_FORMAT_RECORD_SIZE <= recordSize;
     }
 
-    private void readFixedReferencesRecord( PropertyRecord record, PageCursor cursor )
+    private void readFixedReferencesRecord( PropertyRecord record, PageCursor cursor, boolean inUse )
     {
         // since fixed reference limits property reference to 34 bits, 6 bytes is ample.
         long prevMod = cursor.getShort() & 0xFFFFL;
         long prevProp = cursor.getInt() & 0xFFFFFFFFL;
         long nextMod = cursor.getShort() & 0xFFFFL;
         long nextProp = cursor.getInt() & 0xFFFFFFFFL;
-        record.initialize( true,
+        record.initialize( inUse,
                 BaseRecordFormat.longFromIntAndMod( prevProp, prevMod << 32 ),
                 BaseRecordFormat.longFromIntAndMod( nextProp, nextMod << 32 ) );
         // skip padding bytes
