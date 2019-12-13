@@ -73,4 +73,12 @@
         </dependency>
     </dependencies>
 
+    <profiles>
+        <profile>
+            <properties>
+                <benchmarks.deploy.skip>false</benchmarks.deploy.skip>
+            </properties>
+            <id>benchmarksDeploy</id>
+        </profile>
+    </profiles>
 </project>
