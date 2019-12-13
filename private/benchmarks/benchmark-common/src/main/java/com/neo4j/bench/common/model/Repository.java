@@ -50,6 +50,11 @@ public enum Repository
             "neo-technology",
             "^master$",
             "^\\d{1,2}\\.\\d{1,2}\\.\\d{1,2}(\\.\\d{1,2})?$" ),
+    QUALITY_TASK( "Quality Task",
+               "quality-tasks",
+               "neo-technology",
+               "^master$",
+               "^\\d{1,2}\\.\\d{1,2}\\.\\d{1,2}\\.\\d{1,2}$" ),
 
     // -----------------------
     // --- target systems ----
