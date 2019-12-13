@@ -11,8 +11,8 @@ import javax.ws.rs.core.Context;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.server.configuration.ServerSettings;
-import org.neo4j.server.database.DatabaseService;
 import org.neo4j.server.rest.repr.OutputFormat;
 
 import static com.neo4j.server.rest.causalclustering.LegacyCausalClusteringRedirectService.CC_PATH;
@@ -22,9 +22,10 @@ public class LegacyCausalClusteringRedirectService extends AbstractCausalCluster
 {
     static final String CC_PATH = "/server/causalclustering";
 
-    public LegacyCausalClusteringRedirectService( @Context OutputFormat output, @Context DatabaseService dbService, @Context Config config )
+    public LegacyCausalClusteringRedirectService( @Context OutputFormat output, @Context DatabaseManagementService managementService,
+            @Context Config config )
     {
-        super( output, dbService, config.get( GraphDatabaseSettings.default_database ) );
+        super( output, managementService, config.get( GraphDatabaseSettings.default_database ) );
     }
 
     public static Pattern databaseLegacyClusterUriPattern( Config config )

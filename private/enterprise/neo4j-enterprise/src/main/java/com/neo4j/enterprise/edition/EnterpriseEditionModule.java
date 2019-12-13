@@ -35,6 +35,7 @@ import com.neo4j.kernel.impl.pagecache.PageCacheWarmer;
 import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInDbmsProcedures;
 import com.neo4j.procedure.enterprise.builtin.EnterpriseBuiltInProcedures;
 import com.neo4j.procedure.enterprise.builtin.SettingsWhitelist;
+import com.neo4j.server.enterprise.EnterpriseNeoWebServer;
 import com.neo4j.server.security.enterprise.EnterpriseSecurityModule;
 
 import java.time.Duration;
@@ -76,11 +77,13 @@ import org.neo4j.kernel.availability.UnavailableException;
 import org.neo4j.kernel.database.DatabaseStartupController;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.constraints.ConstraintSemantics;
+import org.neo4j.kernel.impl.factory.DatabaseInfo;
 import org.neo4j.kernel.impl.factory.StatementLocksFactorySelector;
 import org.neo4j.kernel.impl.locking.Locks;
 import org.neo4j.kernel.impl.locking.StatementLocksFactory;
 import org.neo4j.kernel.impl.query.QueryEngineProvider;
 import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFilesHelper;
+import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.monitoring.Monitors;
@@ -276,6 +279,13 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
     public DatabaseStartupController getDatabaseStartupController()
     {
         return databaseStartAborter;
+    }
+
+    @Override
+    public Lifecycle createWebServer( DatabaseManagementService managementService, Dependencies globalDependencies, Config config,
+            LogProvider userLogProvider, DatabaseInfo databaseInfo )
+    {
+        return new EnterpriseNeoWebServer( managementService, globalDependencies, config, userLogProvider, databaseInfo );
     }
 
     @Override

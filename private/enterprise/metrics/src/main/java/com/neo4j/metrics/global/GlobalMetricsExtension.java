@@ -45,7 +45,6 @@ public class GlobalMetricsExtension implements Lifecycle, MetricsManager
     public void init()
     {
         configured = !reporter.isEmpty();
-        LogService logService = dependencies.logService();
         Config config = dependencies.configuration();
 
         if ( !config.get( metricsEnabled ) )
@@ -60,7 +59,7 @@ public class GlobalMetricsExtension implements Lifecycle, MetricsManager
                     "Metrics extension is disabled." );
             return;
         }
-        new GlobalMetricsExporter( registry, config, logService, context, dependencies, life ).export();
+        new GlobalMetricsExporter( registry, config, context, dependencies, life ).export();
         life.init();
     }
 

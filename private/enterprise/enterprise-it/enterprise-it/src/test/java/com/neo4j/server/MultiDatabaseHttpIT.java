@@ -7,7 +7,7 @@ package com.neo4j.server;
 
 import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
-import com.neo4j.server.enterprise.EnterpriseNeoServer;
+import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -16,10 +16,11 @@ import java.io.IOException;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
+import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.configuration.connectors.HttpConnector;
 import org.neo4j.configuration.connectors.HttpsConnector;
 import org.neo4j.configuration.helpers.SocketAddress;
-import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
+import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.api.exceptions.Status;
@@ -32,6 +33,7 @@ import org.neo4j.test.server.HTTP;
 
 import static com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings.mode;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.server.http.cypher.integration.TransactionMatchers.hasErrors;
 import static org.neo4j.server.rest.AbstractRestFunctionalTestBase.txCommitUri;
 import static org.neo4j.test.server.HTTP.POST;
@@ -44,14 +46,14 @@ class MultiDatabaseHttpIT
     private TestDirectory testDirectory;
     @Inject
     private FileSystemAbstraction fileSystem;
-    private EnterpriseNeoServer enterpriseNeoServer;
+    private DatabaseManagementService managementService;
 
     @AfterEach
     void tearDown()
     {
-        if ( enterpriseNeoServer != null )
+        if ( managementService != null )
         {
-            enterpriseNeoServer.stop();
+            managementService.shutdown();
         }
     }
 
@@ -63,30 +65,31 @@ class MultiDatabaseHttpIT
 
         fileSystem.deleteRecursively( testDatabaseLayout.getTransactionLogsDirectory() );
 
-        enterpriseNeoServer = createService();
+        managementService = createService();
         HTTP.Response response = POST( txCommitUri( databaseName, httpPort() ), quotedJson( "{ 'statements': [ { 'statement': 'RETURN 1' } ] }" ) );
         assertThat( response, hasErrors( Status.Database.DatabaseUnavailable ) );
     }
 
     private DatabaseLayout prepareEmptyDatabase( String databaseName )
     {
-        enterpriseNeoServer = createService();
-        var databaseService = enterpriseNeoServer.getDatabaseService();
-        databaseService.getDatabaseManagementService().createDatabase( databaseName );
-        var databaseApi = (GraphDatabaseAPI) databaseService.getDatabase( databaseName );
+        managementService = createService();
+        managementService.createDatabase( databaseName );
+        var databaseApi = (GraphDatabaseAPI) managementService.database( databaseName );
         DatabaseLayout testDatabaseLayout = databaseApi.databaseLayout();
-        enterpriseNeoServer.stop();
+        managementService.shutdown();
         return testDatabaseLayout;
     }
 
     private int httpPort()
     {
-        return enterpriseNeoServer.getWebServer().getLocalHttpAddress().getPort();
+        var databaseAPI = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
+        var portRegister = databaseAPI.getDependencyResolver().resolveDependency( ConnectorPortRegister.class );
+        return portRegister.getLocalAddress( "http" ).getPort();
     }
 
-    private EnterpriseNeoServer createService()
+    private DatabaseManagementService createService()
     {
-        Config config = Config.newBuilder()
+        Config custom = Config.newBuilder()
                 .setDefaults( GraphDatabaseSettings.SERVER_DEFAULTS )
                 .set( mode, EnterpriseEditionSettings.Mode.SINGLE )
                 .set( GraphDatabaseSettings.neo4j_home, testDirectory.homeDir().toPath().toAbsolutePath() )
@@ -96,9 +99,7 @@ class MultiDatabaseHttpIT
                 .set( HttpConnector.listen_address, new SocketAddress( "localhost", 0 ) )
                 .set( HttpsConnector.listen_address, new SocketAddress( "localhost", 0 ) )
                 .build();
-        GraphDatabaseDependencies dependencies = GraphDatabaseDependencies.newDependencies().userLogProvider( NullLogProvider.getInstance() );
-        EnterpriseNeoServer server = new EnterpriseNeoServer( config, dependencies );
-        server.start();
-        return server;
+        return new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() ).setConfig( custom )
+                .setUserLogProvider( NullLogProvider.getInstance() ).build();
     }
 }

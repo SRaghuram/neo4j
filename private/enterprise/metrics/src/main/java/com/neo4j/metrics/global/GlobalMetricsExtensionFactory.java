@@ -5,6 +5,8 @@
  */
 package com.neo4j.metrics.global;
 
+import java.util.function.Supplier;
+
 import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
@@ -16,6 +18,7 @@ import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.server.web.WebContainerThreadInfo;
 
 @ServiceProvider
 public class GlobalMetricsExtensionFactory extends ExtensionFactory<GlobalMetricsExtensionFactory.Dependencies>
@@ -35,6 +38,8 @@ public class GlobalMetricsExtensionFactory extends ExtensionFactory<GlobalMetric
         JobScheduler scheduler();
 
         ConnectorPortRegister portRegister();
+
+        Supplier<WebContainerThreadInfo> webContainerThreadInfo();
     }
 
     public GlobalMetricsExtensionFactory()

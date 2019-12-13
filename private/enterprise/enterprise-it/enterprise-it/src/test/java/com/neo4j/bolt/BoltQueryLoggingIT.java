@@ -16,7 +16,7 @@ import java.util.List;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.GraphDatabaseSettings.LogQueryLevel;
 import org.neo4j.harness.junit.rule.Neo4jRule;
-import org.neo4j.server.ServerTestUtils;
+import org.neo4j.server.WebContainerTestUtils;
 
 import static com.neo4j.bolt.BoltDriverHelper.graphDatabaseDriver;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -31,7 +31,7 @@ public class BoltQueryLoggingIT
 
     public BoltQueryLoggingIT() throws IOException
     {
-        Path tmpDir = ServerTestUtils.createTempDir().toPath().toAbsolutePath();
+        Path tmpDir = WebContainerTestUtils.createTempDir().toPath().toAbsolutePath();
         this.neo4j = new Neo4jRule()
                 .withConfig( GraphDatabaseSettings.auth_enabled, false )
                 .withConfig( GraphDatabaseSettings.logs_directory, tmpDir )

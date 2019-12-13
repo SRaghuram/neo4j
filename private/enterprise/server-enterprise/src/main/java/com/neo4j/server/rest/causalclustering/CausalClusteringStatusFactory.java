@@ -5,9 +5,9 @@
  */
 package com.neo4j.server.rest.causalclustering;
 
+import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.server.database.DatabaseService;
 import org.neo4j.server.rest.repr.OutputFormat;
 
 import static javax.ws.rs.core.Response.Status.FORBIDDEN;
@@ -15,9 +15,10 @@ import static javax.ws.rs.core.Response.Status.NOT_FOUND;
 
 public class CausalClusteringStatusFactory
 {
-    public static CausalClusteringStatus build( OutputFormat output, DatabaseService dbService, String databaseName, ClusterService clusterService )
+    public static CausalClusteringStatus build( OutputFormat output, DatabaseManagementService managementService, String databaseName,
+            ClusterService clusterService )
     {
-        var db = findDb( dbService, databaseName );
+        var db = findDb( managementService, databaseName );
         if ( db == null )
         {
             return new FixedStatus( NOT_FOUND );
@@ -34,11 +35,11 @@ public class CausalClusteringStatusFactory
         }
     }
 
-    private static GraphDatabaseAPI findDb( DatabaseService dbService, String databaseName )
+    private static GraphDatabaseAPI findDb( DatabaseManagementService managementService, String databaseName )
     {
         try
         {
-            return dbService.getDatabase( databaseName );
+            return (GraphDatabaseAPI) managementService.database( databaseName );
         }
         catch ( DatabaseNotFoundException e )
         {

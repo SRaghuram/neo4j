@@ -23,23 +23,20 @@ import org.neo4j.configuration.connectors.HttpConnector;
 import org.neo4j.configuration.connectors.HttpsConnector;
 import org.neo4j.kernel.extension.context.ExtensionContext;
 import org.neo4j.kernel.lifecycle.LifeSupport;
-import org.neo4j.logging.internal.LogService;
 
 public class GlobalMetricsExporter
 {
     private final MetricRegistry registry;
     private final LifeSupport life;
     private final Config config;
-    private final LogService logService;
     private final ExtensionContext context;
     private final Dependencies dependencies;
 
-    GlobalMetricsExporter( MetricRegistry registry, Config config, LogService logService,
+    GlobalMetricsExporter( MetricRegistry registry, Config config,
             ExtensionContext context, Dependencies dependencies, LifeSupport life )
     {
         this.registry = registry;
         this.config = config;
-        this.logService = logService;
         this.context = context;
         this.dependencies = dependencies;
         this.life = life;
@@ -91,7 +88,7 @@ public class GlobalMetricsExporter
         boolean httpOrHttpsEnabled = config.get( HttpConnector.enabled ) || config.get( HttpsConnector.enabled );
         if ( httpOrHttpsEnabled && config.get( MetricsSettings.neoServerEnabled ) )
         {
-            life.add( new ServerMetrics( globalMetricsPrefix, registry, logService, context.dependencySatisfier() ) );
+            life.add( new ServerMetrics( globalMetricsPrefix, registry, dependencies.webContainerThreadInfo() ) );
         }
     }
 }

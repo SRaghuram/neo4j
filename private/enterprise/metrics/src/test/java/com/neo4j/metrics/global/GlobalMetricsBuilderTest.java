@@ -17,7 +17,6 @@ import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.kernel.extension.context.ExtensionContext;
 import org.neo4j.kernel.extension.context.GlobalExtensionContext;
 import org.neo4j.kernel.lifecycle.LifeSupport;
-import org.neo4j.logging.internal.NullLogService;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
@@ -53,7 +52,7 @@ class GlobalMetricsBuilderTest
         ExtensionContext extensionContext = new GlobalExtensionContext( Neo4jLayout.of( config ), COMMUNITY, mock( DependencySatisfier.class ) );
         LifeSupport life = new LifeSupport();
 
-        GlobalMetricsExporter exporter = new GlobalMetricsExporter( new MetricRegistry(), config, NullLogService.getInstance(),
+        GlobalMetricsExporter exporter = new GlobalMetricsExporter( new MetricRegistry(), config,
                 extensionContext, mock( GlobalMetricsExtensionFactory.Dependencies.class ), life );
 
         exporter.export();

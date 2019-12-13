@@ -63,6 +63,11 @@
             <artifactId>neo4j-server-enterprise</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>com.neo4j</groupId>
+            <artifactId>neo4j-enterprise</artifactId>
+            <version>${project.version}</version>
+        </dependency>
 
         <!-- Test dependencies -->
         <dependency>
@@ -86,6 +91,4 @@
             <optional>true</optional>
         </dependency>
     </dependencies>
-
-
 </project>

@@ -8,10 +8,10 @@ package com.neo4j.server.rest.causalclustering;
 import org.junit.jupiter.api.Test;
 
 import org.neo4j.common.DependencyResolver;
+import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
-import org.neo4j.server.database.DatabaseService;
 import org.neo4j.server.rest.repr.OutputFormat;
 
 import static javax.ws.rs.core.Response.Status.FORBIDDEN;
@@ -95,20 +95,20 @@ class CausalClusteringStatusFactoryTest
         assertEquals( FORBIDDEN.getStatusCode(), status.description().getStatus() );
     }
 
-    private static CausalClusteringStatus buildStatus( DatabaseService dbService, String databaseName )
+    private static CausalClusteringStatus buildStatus( DatabaseManagementService managementService, String databaseName )
     {
-        return CausalClusteringStatusFactory.build( mock( OutputFormat.class ), dbService, databaseName, mock( ClusterService.class ) );
+        return CausalClusteringStatusFactory.build( mock( OutputFormat.class ), managementService, databaseName, mock( ClusterService.class ) );
     }
 
-    private static DatabaseService databaseServiceMock( DatabaseInfo knownDbInfo )
+    private static DatabaseManagementService databaseServiceMock( DatabaseInfo knownDbInfo )
     {
-        var dbService = mock( DatabaseService.class );
+        var dbService = mock( DatabaseManagementService.class );
         var db = mock( GraphDatabaseFacade.class );
         when( db.databaseInfo() ).thenReturn( knownDbInfo );
         var dependencyResolver = mock( DependencyResolver.class );
         when( db.getDependencyResolver() ).thenReturn( dependencyResolver );
-        when( dbService.getDatabase( KNOWN_DB ) ).thenReturn( db );
-        when( dbService.getDatabase( UNKNOWN_DB ) ).thenThrow( new DatabaseNotFoundException() );
+        when( dbService.database( KNOWN_DB ) ).thenReturn( db );
+        when( dbService.database( UNKNOWN_DB ) ).thenThrow( new DatabaseNotFoundException() );
         return dbService;
     }
 }

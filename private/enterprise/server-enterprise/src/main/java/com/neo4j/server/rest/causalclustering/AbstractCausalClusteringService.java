@@ -9,7 +9,7 @@ import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.core.Response;
 
-import org.neo4j.server.database.DatabaseService;
+import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.server.rest.repr.OutputFormat;
 
 public abstract class AbstractCausalClusteringService implements ClusterService
@@ -21,9 +21,9 @@ public abstract class AbstractCausalClusteringService implements ClusterService
 
     private final CausalClusteringStatus status;
 
-    AbstractCausalClusteringService( OutputFormat output, DatabaseService dbService, String databaseName )
+    AbstractCausalClusteringService( OutputFormat output, DatabaseManagementService managementService, String databaseName )
     {
-        this.status = CausalClusteringStatusFactory.build( output, dbService, databaseName, this );
+        this.status = CausalClusteringStatusFactory.build( output, managementService, databaseName, this );
     }
 
     @GET

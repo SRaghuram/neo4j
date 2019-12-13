@@ -41,6 +41,7 @@ import org.neo4j.logging.internal.LogService;
 import org.neo4j.logging.internal.SimpleLogService;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.server.web.WebContainerThreadInfo;
 import org.neo4j.storageengine.api.TransactionIdStore;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.Neo4jLayoutExtension;
@@ -167,6 +168,12 @@ class DatabaseMetricsExtensionTest
 
         @Override
         public ConnectorPortRegister portRegister()
+        {
+            return null;
+        }
+
+        @Override
+        public Supplier<WebContainerThreadInfo> webContainerThreadInfo()
         {
             return null;
         }

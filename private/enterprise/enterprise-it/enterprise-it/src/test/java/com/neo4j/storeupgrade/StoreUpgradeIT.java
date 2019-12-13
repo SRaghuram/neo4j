@@ -58,8 +58,7 @@ import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.server.CommunityBootstrapper;
-import org.neo4j.server.ServerBootstrapper;
-import org.neo4j.server.ServerTestUtils;
+import org.neo4j.server.NeoBootstrapper;
 import org.neo4j.storageengine.api.TransactionIdStore;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.Unzip;
@@ -89,6 +88,7 @@ import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.consistency.store.StoreAssertions.assertConsistentStore;
 import static org.neo4j.internal.helpers.collection.Iterables.count;
 import static org.neo4j.kernel.api.KernelTransaction.Type.IMPLICIT;
+import static org.neo4j.server.WebContainerTestUtils.getDefaultRelativeProperties;
 
 @RunWith( Enclosed.class )
 public class StoreUpgradeIT
@@ -191,7 +191,7 @@ public class StoreUpgradeIT
 
             File configFile = new File( rootDir, Config.DEFAULT_CONFIG_FILE_NAME );
             Properties props = new Properties();
-            props.putAll( ServerTestUtils.getDefaultRelativeProperties( rootDir ) );
+            props.putAll( getDefaultRelativeProperties( rootDir ) );
             props.setProperty( data_directory.name(), rootDir.getAbsolutePath() );
             props.setProperty( logs_directory.name(), rootDir.getAbsolutePath() );
             props.setProperty( databases_root_path.name(), rootDir.getAbsolutePath() );
@@ -207,12 +207,12 @@ public class StoreUpgradeIT
                 props.store( writer, "" );
             }
 
-            ServerBootstrapper bootstrapper = new CommunityBootstrapper();
+            NeoBootstrapper bootstrapper = new CommunityBootstrapper();
             try
             {
                 bootstrapper.start( rootDir.getAbsoluteFile(), Optional.of( configFile ), Collections.emptyMap() );
                 assertTrue( bootstrapper.isRunning() );
-                checkInstance( store, bootstrapper.getServer().getDatabaseService().getDatabase() );
+                checkInstance( store, (GraphDatabaseAPI) bootstrapper.getDatabaseManagementService().database( DEFAULT_DATABASE_NAME ) );
             }
             finally
             {

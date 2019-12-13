@@ -9,6 +9,8 @@ import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.function.Supplier;
+
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
@@ -24,6 +26,7 @@ import org.neo4j.logging.internal.LogService;
 import org.neo4j.logging.internal.SimpleLogService;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.server.web.WebContainerThreadInfo;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.Neo4jLayoutExtension;
 
@@ -146,6 +149,12 @@ class GlobalMetricsExtensionTest
 
         @Override
         public ConnectorPortRegister portRegister()
+        {
+            return null;
+        }
+
+        @Override
+        public Supplier<WebContainerThreadInfo> webContainerThreadInfo()
         {
             return null;
         }
