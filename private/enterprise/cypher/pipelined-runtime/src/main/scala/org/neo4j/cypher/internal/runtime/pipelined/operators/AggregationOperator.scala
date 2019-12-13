@@ -11,6 +11,7 @@ import org.neo4j.codegen.api.IntermediateRepresentation.{arrayLoad, arrayOf, get
 import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable}
 import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, BufferId, PipelineId}
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
@@ -435,7 +436,8 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
        */
       block(
         compiledAggregationExpressions.indices.map(i => {
-          invokeSideEffect(arrayLoad(cast[Array[Updater]](load(updaters)), i), method[Updater, Unit, AnyValue]("update"), compiledAggregationExpressions(i).ir)
+          invokeSideEffect(arrayLoad(cast[Array[Updater]](load(updaters)), i), method[Updater, Unit, AnyValue]("update"),
+                           nullCheckIfRequired(compiledAggregationExpressions(i)))
         }): _ *
       ),
 
