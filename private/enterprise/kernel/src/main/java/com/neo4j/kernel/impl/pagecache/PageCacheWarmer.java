@@ -37,8 +37,10 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.io.pagecache.impl.FileIsNotMappedException;
+import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.impl.transaction.state.DatabaseFileListing;
+import org.neo4j.kernel.monitoring.tracing.Tracers;
 import org.neo4j.logging.Log;
 import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobHandle;
@@ -51,7 +53,6 @@ import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_warmup_pre
 import static org.neo4j.io.pagecache.PagedFile.PF_NO_FAULT;
 import static org.neo4j.io.pagecache.PagedFile.PF_READ_AHEAD;
 import static org.neo4j.io.pagecache.PagedFile.PF_SHARED_READ_LOCK;
-import static org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier.TRACER_SUPPLIER;
 
 /**
  * The page cache warmer profiles the page cache to figure out what data is in memory and what is not, and uses those
@@ -72,6 +73,9 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
     public static final String SUFFIX_CACHEPROF = ".cacheprof";
 
     private static final int IO_PARALLELISM = Runtime.getRuntime().availableProcessors();
+    private static final String PAGE_CACHE_WARMER = "PageCacheWarmer";
+    private static final String PAGE_CACHE_PROFILER = "PageCacheProfiler";
+    public static final String PAGE_CACHE_PROFILE_LOADER = "PageCacheProfileLoader";
 
     private final FileSystemAbstraction fs;
     private final PageCache pageCache;
@@ -81,11 +85,13 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
     private final Log log;
     private final ProfileRefCounts refCounts;
     private final Config config;
+    private final PageCacheTracer pageCacheTracer;
     private volatile boolean stopped;
     private ExecutorService executor;
     private PageLoaderFactory pageLoaderFactory;
 
-    PageCacheWarmer( FileSystemAbstraction fs, PageCache pageCache, JobScheduler scheduler, File databaseDirectory, Config config, Log log )
+    PageCacheWarmer( FileSystemAbstraction fs, PageCache pageCache, JobScheduler scheduler, File databaseDirectory, Config config, Log log,
+            Tracers tracers )
     {
         this.fs = fs;
         this.pageCache = pageCache;
@@ -93,6 +99,7 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
         this.databaseDirectory = databaseDirectory;
         this.profilesDirectory = new File( databaseDirectory, Profile.PROFILE_DIR );
         this.log = log;
+        this.pageCacheTracer = tracers.getPageCacheTracer();
         this.refCounts = new ProfileRefCounts();
         this.config = config;
     }
@@ -118,7 +125,7 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
     {
         stopped = false;
         executor = buildExecutorService( scheduler );
-        pageLoaderFactory = new PageLoaderFactory( executor, pageCache );
+        pageLoaderFactory = new PageLoaderFactory( executor );
     }
 
     public void stop()
@@ -199,7 +206,7 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
     private long touchAllPages( PagedFile pagedFile )
     {
         log.debug( "Pre-fetching %s", pagedFile.file().getName() );
-        try ( PageCursorTracer cursorTracer = TRACER_SUPPLIER.get();
+        try ( PageCursorTracer cursorTracer = pageCacheTracer.createPageCursorTracer( PAGE_CACHE_WARMER );
               PageCursor cursor = pagedFile.io( 0, PF_READ_AHEAD | PF_SHARED_READ_LOCK, cursorTracer ) )
         {
             long pages = 0;
@@ -286,7 +293,7 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
         // The file contents checks out. Let's load it in.
         long pagesLoaded = 0;
         try ( InputStream input = savedProfile.get().read( fs );
-              PageLoader loader = pageLoaderFactory.getLoader( file ) )
+              PageLoader loader = pageLoaderFactory.getLoader( file, pageCacheTracer ) )
         {
             long pageId = 0;
             int b;
@@ -338,7 +345,7 @@ public class PageCacheWarmer implements DatabaseFileListing.StoreFileProvider
                 .map( Profile::next )
                 .orElse( Profile.first( databaseDirectory, file.file() ) );
 
-        try ( PageCursorTracer cursorTracer = TRACER_SUPPLIER.get();
+        try ( PageCursorTracer cursorTracer = pageCacheTracer.createPageCursorTracer( PAGE_CACHE_PROFILER );
               OutputStream output = nextProfile.write( fs );
               PageCursor cursor = file.io( 0, PF_SHARED_READ_LOCK | PF_NO_FAULT, cursorTracer ) )
         {

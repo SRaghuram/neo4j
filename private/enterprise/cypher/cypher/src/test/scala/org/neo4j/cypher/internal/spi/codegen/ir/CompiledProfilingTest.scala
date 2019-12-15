@@ -53,7 +53,7 @@ class CompiledProfilingTest extends CypherFunSuite with CodeGenSugar {
     val transactionalContext = mock[TransactionalContextWrapper]
     when(queryContext.entityAccessor).thenReturn(transaction)
     when(queryContext.transactionalContext).thenReturn(transactionalContext.asInstanceOf[QueryTransactionalContext])
-    when(transactionalContext.kernelStatisticProvider).thenReturn(new DelegatingKernelStatisticProvider(new DefaultPageCursorTracer(DefaultPageCacheTracer.TRACER)))
+    when(transactionalContext.kernelStatisticProvider).thenReturn(new DelegatingKernelStatisticProvider(new DefaultPageCursorTracer(DefaultPageCacheTracer.TRACER, "test")))
     when(transactionalContext.cursors).thenReturn(cursors)
     when(transactionalContext.dataRead).thenReturn(dataRead)
     when(transaction.newNodeEntity(anyLong())).thenReturn(mock[NodeEntity])

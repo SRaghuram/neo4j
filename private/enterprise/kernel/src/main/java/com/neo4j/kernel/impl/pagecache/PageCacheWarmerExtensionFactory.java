@@ -18,6 +18,7 @@ import org.neo4j.kernel.extension.ExtensionFactory;
 import org.neo4j.kernel.extension.ExtensionType;
 import org.neo4j.kernel.extension.context.ExtensionContext;
 import org.neo4j.kernel.lifecycle.Lifecycle;
+import org.neo4j.kernel.monitoring.tracing.Tracers;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.monitoring.Monitors;
@@ -44,6 +45,8 @@ public class PageCacheWarmerExtensionFactory
         Monitors monitors();
 
         Config config();
+
+        Tracers tracers();
     }
 
     public PageCacheWarmerExtensionFactory()
@@ -65,7 +68,8 @@ public class PageCacheWarmerExtensionFactory
         PageCacheWarmerMonitor monitor = monitors.newMonitor( PageCacheWarmerMonitor.class );
         monitors.addMonitorListener( new PageCacheWarmerLoggingMonitor( log ) );
         Config config = deps.config();
+        var tracers = deps.tracers();
         return new PageCacheWarmerExtension(
-                scheduler, databaseAvailabilityGuard, pageCache, fs, database, log, monitor, config );
+                scheduler, databaseAvailabilityGuard, pageCache, fs, database, log, monitor, config, tracers );
     }
 }

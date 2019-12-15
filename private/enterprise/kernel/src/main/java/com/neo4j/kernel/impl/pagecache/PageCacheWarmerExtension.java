@@ -15,6 +15,7 @@ import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.transaction.state.DatabaseFileListing;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
+import org.neo4j.kernel.monitoring.tracing.Tracers;
 import org.neo4j.logging.Log;
 import org.neo4j.scheduler.JobScheduler;
 
@@ -27,14 +28,13 @@ class PageCacheWarmerExtension extends LifecycleAdapter
     private final WarmupAvailabilityListener availabilityListener;
     private volatile boolean started;
 
-    PageCacheWarmerExtension(
-            JobScheduler scheduler, DatabaseAvailabilityGuard databaseAvailabilityGuard, PageCache pageCache, FileSystemAbstraction fs,
-            Database database, Log log, PageCacheWarmerMonitor monitor, Config config )
+    PageCacheWarmerExtension( JobScheduler scheduler, DatabaseAvailabilityGuard databaseAvailabilityGuard, PageCache pageCache, FileSystemAbstraction fs,
+            Database database, Log log, PageCacheWarmerMonitor monitor, Config config, Tracers tracers )
     {
         this.databaseAvailabilityGuard = databaseAvailabilityGuard;
         this.database = database;
         this.config = config;
-        this.pageCacheWarmer = new PageCacheWarmer( fs, pageCache, scheduler, database.getDatabaseLayout().databaseDirectory(), config, log );
+        this.pageCacheWarmer = new PageCacheWarmer( fs, pageCache, scheduler, database.getDatabaseLayout().databaseDirectory(), config, log, tracers );
         this.availabilityListener = new WarmupAvailabilityListener( scheduler, pageCacheWarmer, config, log, monitor, database.getNamedDatabaseId() );
     }
 

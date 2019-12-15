@@ -9,26 +9,24 @@ import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 
 import org.neo4j.io.fs.FileUtils;
-import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.PagedFile;
+import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 
 class PageLoaderFactory
 {
     private final ExecutorService executor;
-    private final PageCache pageCache;
 
-    PageLoaderFactory( ExecutorService executor, PageCache pageCache )
+    PageLoaderFactory( ExecutorService executor )
     {
         this.executor = executor;
-        this.pageCache = pageCache;
     }
 
-    PageLoader getLoader( PagedFile file ) throws IOException
+    PageLoader getLoader( PagedFile file, PageCacheTracer tracer ) throws IOException
     {
         if ( FileUtils.highIODevice( file.file().toPath() ) )
         {
-            return new ParallelPageLoader( file, executor );
+            return new ParallelPageLoader( file, executor, tracer );
         }
-        return new SingleCursorPageLoader( file );
+        return new SingleCursorPageLoader( file, tracer );
     }
 }
