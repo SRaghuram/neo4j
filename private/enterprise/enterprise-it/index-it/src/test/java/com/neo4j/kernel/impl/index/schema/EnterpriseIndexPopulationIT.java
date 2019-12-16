@@ -6,9 +6,7 @@
 package com.neo4j.kernel.impl.index.schema;
 
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
-import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.ArrayList;
@@ -34,9 +32,7 @@ import org.neo4j.test.rule.RandomRule;
 import org.neo4j.test.rule.TestDirectory;
 
 import static java.util.concurrent.Executors.newFixedThreadPool;
-import static java.util.concurrent.TimeUnit.MINUTES;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.neo4j.configuration.GraphDatabaseSettings.index_population_parallelism;
 import static org.neo4j.configuration.GraphDatabaseSettings.index_population_workers;
 import static org.neo4j.test.TestLabels.LABEL_ONE;
@@ -55,7 +51,6 @@ class EnterpriseIndexPopulationIT
     private int nbrOfPopulationWorkerThreads;
 
     @Test
-    @Timeout( value = 10, unit = MINUTES )
     void shouldPopulateMultipleIndexesOnMultipleDbsConcurrentlyWithFewIndexPopulationThreads() throws ExecutionException, InterruptedException
     {
         nbrOfPopulationMainThreads = random.nextInt( 1, 2 );
@@ -101,17 +96,17 @@ class EnterpriseIndexPopulationIT
                 {
                     if ( Group.INDEX_POPULATION.equals( activeGroup.group ) )
                     {
-                        assertEquals( nbrOfPopulationMainThreads, activeGroup.threads );
+                        assertThat( activeGroup.threads ).isLessThanOrEqualTo( nbrOfPopulationMainThreads );
                     }
                     if ( Group.INDEX_POPULATION_WORK.equals( activeGroup.group ) )
                     {
-                        assertEquals( nbrOfPopulationWorkerThreads, activeGroup.threads );
+                        assertThat( activeGroup.threads ).isLessThanOrEqualTo( nbrOfPopulationWorkerThreads );
                     }
                 }
             }
             else
             {
-                assertThat( jobScheduler, Matchers.sameInstance( globalJobScheduler ) );
+                assertThat( jobScheduler ).isSameAs( globalJobScheduler );
             }
         }
     }
