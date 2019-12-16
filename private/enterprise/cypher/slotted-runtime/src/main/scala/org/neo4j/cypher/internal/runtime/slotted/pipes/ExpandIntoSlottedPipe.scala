@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.slotted.pipes
 
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeGetPrimitiveNodeFromSlotFunctionFor
 import org.neo4j.cypher.internal.physicalplanning.{Slot, SlotConfiguration}
+import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext.RelationshipCursorIterator
 import org.neo4j.cypher.internal.runtime.interpreted.pipes._
 import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
@@ -54,7 +55,7 @@ case class ExpandIntoSlottedPipe(source: Pipe,
     val expandInto = new org.neo4j.internal.kernel.api.helpers.CachingExpandInto(query.transactionalContext.dataRead,
                                                                                  kernelDirection,
                                                                                  lazyTypes.types(query))
-    val nodeCursor = state.cursors.nodeCursor
+    val nodeCursor = query.nodeCursor()
     input.flatMap {
       inputRow =>
         val fromNode = getFromNodeFunction.applyAsLong(inputRow)
@@ -63,11 +64,14 @@ case class ExpandIntoSlottedPipe(source: Pipe,
         if (entityIsNull(fromNode) || entityIsNull(toNode))
           Iterator.empty
         else {
-          val relationships = query.primitiveRelationshipIterator(expandInto.connectingRelationships(query.transactionalContext.cursors,
-                                                                                                     nodeCursor,
-                                                                                                     fromNode,
-                                                                                                     toNode))
-
+          val groupCursor = query.groupCursor()
+          val traversalCursor = query.traversalCursor()
+          val relationships =
+            new RelationshipCursorIterator(expandInto.connectingRelationships(nodeCursor,
+                                                                              groupCursor,
+                                                                              traversalCursor,
+                                                                              fromNode,
+                                                                              toNode))
           PrimitiveLongHelper.map(relationships, (relId: Long) => {
             val outputRow = SlottedExecutionContext(slots)
             inputRow.copyTo(outputRow)

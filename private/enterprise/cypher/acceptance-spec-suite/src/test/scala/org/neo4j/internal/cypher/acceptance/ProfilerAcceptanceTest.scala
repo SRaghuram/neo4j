@@ -586,7 +586,7 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
         |MATCH (m)<-[r]-(n)
         |WHERE ANY(x IN categories WHERE (n)-[:HAS_CATEGORY]->(x))
         |RETURN count(n)""".stripMargin,
-      _ should includeSomewhere.aPlan("Filter").withDBHits(14))
+      _ should includeSomewhere.aPlan("Filter").withDBHits(16))
   }
 
   test("profile pruning var length expand") {

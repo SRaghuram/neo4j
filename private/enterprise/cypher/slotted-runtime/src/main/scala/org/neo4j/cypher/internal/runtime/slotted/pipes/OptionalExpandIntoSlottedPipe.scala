@@ -8,6 +8,7 @@ package org.neo4j.cypher.internal.runtime.slotted.pipes
 import org.eclipse.collections.api.iterator.LongIterator
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeGetPrimitiveNodeFromSlotFunctionFor
 import org.neo4j.cypher.internal.physicalplanning.{Slot, SlotConfiguration}
+import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext.RelationshipCursorIterator
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes._
 import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
@@ -47,7 +48,7 @@ abstract class OptionalExpandIntoSlottedPipe(source: Pipe,
     val expandInto = new org.neo4j.internal.kernel.api.helpers.CachingExpandInto(query.transactionalContext.dataRead,
                                                                                  kernelDirection,
                                                                                  lazyTypes.types(query))
-    val nodeCursor = state.cursors.nodeCursor
+    val nodeCursor = query.nodeCursor()
     input.flatMap {
       inputRow: ExecutionContext =>
         val fromNode = getFromNodeFunction.applyAsLong(inputRow)
@@ -56,16 +57,18 @@ abstract class OptionalExpandIntoSlottedPipe(source: Pipe,
         if (entityIsNull(fromNode) || entityIsNull(toNode)) {
           Iterator(withNulls(inputRow))
         } else {
-          val relationships = query.primitiveRelationshipIterator(expandInto.connectingRelationships(query.transactionalContext.cursors,
-                                                                                                     nodeCursor,
-                                                                                                     fromNode,
-                                                                                                     toNode))
+          val groupCursor = query.groupCursor()
+          val traversalCursor = query.traversalCursor()
+          val relationships =
+            new RelationshipCursorIterator(expandInto.connectingRelationships(nodeCursor,
+                                                                              groupCursor,
+                                                                              traversalCursor,
+                                                                              fromNode,
+                                                                              toNode))
           val matchIterator = findMatchIterator(inputRow, state, relationships)
 
-          if (matchIterator.isEmpty)
-            Iterator(withNulls(inputRow))
-          else
-            matchIterator
+          if (matchIterator.isEmpty) Iterator(withNulls(inputRow))
+          else matchIterator
         }
     }
   }
