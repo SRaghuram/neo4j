@@ -19,6 +19,7 @@ import org.neo4j.kernel.impl.store.record.PropertyRecord;
 import org.neo4j.kernel.impl.store.record.Record;
 import org.neo4j.kernel.impl.store.record.RecordLoad;
 
+import static com.neo4j.kernel.impl.store.format.highlimit.BaseHighLimitRecordFormat.NULL;
 import static com.neo4j.kernel.impl.store.format.highlimit.PropertyRecordFormat.RECORD_SIZE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -181,6 +182,29 @@ class PropertyRecordFormatTest
 
         recordFormat.read( newFormatRecord, pageCursor, RecordLoad.NORMAL, RECORD_SIZE, pageCursor.getCurrentPageSize() / RECORD_SIZE );
         verifySameReferences( oldFormatRecord, newFormatRecord );
+    }
+
+    @Test
+    void readUnusedRecordShouldStillBeUnused()
+    {
+        //Given
+        int recordSize = RECORD_SIZE;
+        int recordsPerPage = pageCursor.getCurrentPageSize() / recordSize;
+        PropertyRecord record = new PropertyRecord( 1 );
+        record.setNextProp( NULL );
+        record.setPrevProp( NULL );
+        record.setInUse( true );
+        recordFormat.write( record, pageCursor, recordSize, recordsPerPage );
+
+        //When
+        pageCursor.setOffset( 0 );
+        record.setInUse( false );
+        recordFormat.write( record, pageCursor, recordSize, recordsPerPage );
+
+        //Then
+        pageCursor.setOffset( 0 );
+        recordFormat.read( record, pageCursor, RecordLoad.FORCE, recordSize, recordsPerPage );
+        assertFalse( record.inUse() );
     }
 
     private void writeRecordWithOldFormat( PropertyRecord oldFormatRecord )
