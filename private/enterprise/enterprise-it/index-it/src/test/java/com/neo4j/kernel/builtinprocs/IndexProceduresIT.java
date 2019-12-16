@@ -220,8 +220,9 @@ class IndexProceduresIT
             final QueryExecutionException e =
                     assertThrows( QueryExecutionException.class, () -> tx.execute( createSchemaProcedureCall( procedure, "some name", configString ) ) );
             final String asString = Exceptions.stringify( e );
-            assertThat( asString,
-                    containsString( "Caused by: java.lang.IllegalArgumentException: Could not parse value 'not_applicable_type' as double[]." ) );
+            assertThat( asString, containsString(
+                    "Caused by: org.neo4j.graphdb.schema.IndexSettingUtil$IndexSettingParseException: " +
+                            "Could not parse value 'not_applicable_type' as double[]." ) );
         }
         assertNoSchemaRules();
     }
