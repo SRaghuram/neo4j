@@ -16,7 +16,6 @@ import java.util.function.Consumer;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.SettingImpl;
 import org.neo4j.configuration.connectors.BoltConnector;
-import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
@@ -40,7 +39,6 @@ public class EmbeddedInteraction implements NeoInteractionLevel<EnterpriseLoginC
 {
     private GraphDatabaseFacade db;
     private EnterpriseAuthManager authManager;
-    private ConnectorPortRegister connectorRegister;
     private DatabaseManagementService managementService;
 
     EmbeddedInteraction( Map<Setting<?>, String> config, TestDirectory testDirectory )
@@ -65,7 +63,6 @@ public class EmbeddedInteraction implements NeoInteractionLevel<EnterpriseLoginC
         managementService = builder.build();
         db = (GraphDatabaseFacade) managementService.database( DEFAULT_DATABASE_NAME );
         authManager = db.getDependencyResolver().resolveDependency( EnterpriseAuthManager.class );
-        connectorRegister = db.getDependencyResolver().resolveDependency( ConnectorPortRegister.class );
     }
 
     @Override

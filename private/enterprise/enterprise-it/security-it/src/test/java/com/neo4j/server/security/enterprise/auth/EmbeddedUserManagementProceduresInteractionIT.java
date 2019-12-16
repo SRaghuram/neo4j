@@ -33,7 +33,6 @@ public class EmbeddedUserManagementProceduresInteractionIT extends AuthProcedure
 {
     @Override
     protected NeoInteractionLevel<EnterpriseLoginContext> setUpNeoServer( Map<Setting<?>, String> config )
-            throws Throwable
     {
         return new EmbeddedInteraction( config, testDirectory );
     }
