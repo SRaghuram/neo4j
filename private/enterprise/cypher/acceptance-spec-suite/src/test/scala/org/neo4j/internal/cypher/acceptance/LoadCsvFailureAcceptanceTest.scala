@@ -8,7 +8,7 @@ package org.neo4j.internal.cypher.acceptance
 import org.neo4j.cypher._
 import org.neo4j.cypher.internal.runtime.CreateTempFileTestSupport
 import org.neo4j.exceptions
-import org.neo4j.exceptions.{CypherTypeException, InvalidSemanticsException, LoadCsvStatusWrapCypherException, LoadExternalResourceException}
+import org.neo4j.exceptions.{LoadCsvStatusWrapCypherException, LoadExternalResourceException}
 import org.scalatest.BeforeAndAfterAll
 
 class LoadCsvFailureAcceptanceTest extends ExecutionEngineFunSuite

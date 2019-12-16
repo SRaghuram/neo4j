@@ -150,7 +150,7 @@ class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
         tx.getNodeById(n3.getId).removeProperty("foo")
         tx.createNode()
         val node = tx.createNode()
-        node.setProperty("foo", 5);
+        node.setProperty("foo", 5)
       })
 
     res.executionPlanDescription() should includeSomewhere.

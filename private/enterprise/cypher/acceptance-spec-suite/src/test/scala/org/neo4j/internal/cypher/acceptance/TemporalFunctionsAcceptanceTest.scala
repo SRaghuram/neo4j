@@ -9,7 +9,7 @@ import java.time._
 
 import org.neo4j.cypher.{ExecutionEngineFunSuite, FakeClock}
 import org.neo4j.values.storable.DurationValue
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport, TestConfiguration}
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
 
 class TemporalFunctionsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport with FakeClock {
 

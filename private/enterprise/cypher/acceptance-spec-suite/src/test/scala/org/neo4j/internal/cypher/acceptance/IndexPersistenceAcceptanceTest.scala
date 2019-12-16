@@ -12,7 +12,7 @@ import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.io.fs.FileUtils
-import org.neo4j.kernel.impl.index.schema.config.{CrsConfig, SpatialIndexSettings}
+import org.neo4j.kernel.impl.index.schema.config.CrsConfig
 import org.neo4j.test.rule.TestDirectory
 import org.neo4j.values.storable._
 

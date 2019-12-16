@@ -39,7 +39,7 @@ class IdAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupp
     val n = idResult("n")
 
     // when
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, s"MATCH (n) WHERE id(n)=${id}.0 RETURN n")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, s"MATCH (n) WHERE id(n)=$id.0 RETURN n")
 
     // then
     result.toList should equal(
@@ -54,7 +54,7 @@ class IdAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupp
     val r = idResult("r")
 
     // when
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined - Configs.Parallel, s"MATCH ()-[r:R]->() WHERE id(r)=${id}.0 RETURN r")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined - Configs.Parallel, s"MATCH ()-[r:R]->() WHERE id(r)=$id.0 RETURN r")
 
     // then
     result.toList should equal(
@@ -69,7 +69,7 @@ class IdAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupp
     val r = idResult("r")
 
     // when
-    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined - Configs.Parallel, s"MATCH ()-[r:R]-() WHERE id(r)=${id}.0 RETURN r")
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined - Configs.Parallel, s"MATCH ()-[r:R]-() WHERE id(r)=$id.0 RETURN r")
 
     // then
     result.toList should equal(

@@ -125,7 +125,7 @@ class MiscAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
     ) { dbService =>
 
       graph = dbService
-      graphOps = dbService.getGraphDatabaseService()
+      graphOps = dbService.getGraphDatabaseService
       onNewGraphDatabase()
 
       executeSingle("CREATE INDEX FOR (n:L0) ON (n.p0)")
