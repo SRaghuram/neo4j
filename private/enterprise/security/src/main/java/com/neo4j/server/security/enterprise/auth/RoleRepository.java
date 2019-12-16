@@ -80,11 +80,11 @@ public interface RoleRepository extends Lifecycle
     Set<String> getAllRoleNames();
 
     /**
-     * Returns a snapshot of the current persisted role repository
-     * @return a snapshot of the current persisted role repository
+     * Returns a snapshot of the current role repository
+     * @return a snapshot of the current role repository
      * @throws IOException
      */
-    ListSnapshot<RoleRecord> getPersistedSnapshot() throws IOException;
+    ListSnapshot<RoleRecord> getSnapshot() throws IOException;
 
     /**
      * Permanently deletes all data in this repository

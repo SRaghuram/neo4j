@@ -393,8 +393,8 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
 
     private boolean doMigrateRoles( Transaction tx, UserRepository userRepository, RoleRepository roleRepository ) throws Exception
     {
-        ListSnapshot<User> users = userRepository.getPersistedSnapshot();
-        ListSnapshot<RoleRecord> roles = roleRepository.getPersistedSnapshot();
+        ListSnapshot<User> users = userRepository.getSnapshot();
+        ListSnapshot<RoleRecord> roles = roleRepository.getSnapshot();
 
         boolean usersToMigrate = !users.values().isEmpty();
         boolean rolesToMigrate = !roles.values().isEmpty();
@@ -439,8 +439,8 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
     private boolean validateMigrationSucceeded( Transaction tx, UserRepository userRepository, RoleRepository roleRepository ) throws Exception
     {
         // Take a new snapshot of the migration repositories
-        ListSnapshot<User> users = userRepository.getPersistedSnapshot();
-        ListSnapshot<RoleRecord> roles = roleRepository.getPersistedSnapshot();
+        ListSnapshot<User> users = userRepository.getSnapshot();
+        ListSnapshot<RoleRecord> roles = roleRepository.getSnapshot();
 
         Set<String> systemGraphUsers = getAllNames( tx, USER_LABEL );
         List<String> repoUsernames = users.values().stream().map( User::name ).collect( Collectors.toList() );

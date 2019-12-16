@@ -315,7 +315,7 @@ public class FileRoleRepositoryTest
 
         HangingListSnapshot( DoubleLatch latch, long timestamp, List<RoleRecord> values )
         {
-            super( timestamp, values, true );
+            super( timestamp, values );
             this.latch = latch;
         }
 
