@@ -591,7 +591,8 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
                                                                  typeRef[Read],
                                                                  typeRef[Direction],
                                                                  typeRef[Array[Int]]),
-                            dataRead, dir(direction),
+                            dataRead,
+                            dir(direction),
                             typesRep))
   }
 
