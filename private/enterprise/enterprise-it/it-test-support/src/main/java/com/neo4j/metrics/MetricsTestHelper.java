@@ -166,6 +166,7 @@ public class MetricsTestHelper
                 String line;
 
                 // Always read at least one line of data
+                boolean dataFound = false;
                 while ( (line = reader.readLine()) != null )
                 {
                     String[] fields = line.split( "," );
@@ -174,12 +175,12 @@ public class MetricsTestHelper
                     //this needs to be this tricky assertion and not assertTrue to make it junit version independent
                     assertThat( "assertion failed on " + newValue + " " + currentValue, true, is( assumption.test( newValue, currentValue ) ) );
                     currentValue = newValue;
+                    dataFound = true;
                 }
-                if ( currentValue == startValue )
+                if ( dataFound )
                 {
-                    continue;
+                    return currentValue;
                 }
-                return currentValue;
             }
             catch ( FileNotFoundException e )
             {
