@@ -19,6 +19,7 @@ import org.neo4j.kernel.impl.store.record.PropertyRecord;
 import org.neo4j.kernel.impl.store.record.Record;
 import org.neo4j.kernel.impl.store.record.RecordLoad;
 
+import static com.neo4j.kernel.impl.store.format.highlimit.BaseHighLimitRecordFormat.NULL;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -180,6 +181,27 @@ class PropertyRecordFormatTest
 
         recordFormat.read( newFormatRecord, pageCursor, RecordLoad.NORMAL, PropertyRecordFormat.RECORD_SIZE );
         verifySameReferences( oldFormatRecord, newFormatRecord );
+    }
+
+    @Test
+    void readUnusedRecordShouldStillBeUnused()
+    {
+        //Given
+        PropertyRecord record = new PropertyRecord( 1 );
+        record.setNextProp( NULL );
+        record.setPrevProp( NULL );
+        record.setInUse( true );
+        recordFormat.write( record, pageCursor, PropertyRecordFormat.RECORD_SIZE );
+
+        //When
+        pageCursor.setOffset( 0 );
+        record.setInUse( false );
+        recordFormat.write( record, pageCursor, PropertyRecordFormat.RECORD_SIZE );
+
+        //Then
+        pageCursor.setOffset( 0 );
+        recordFormat.read( record, pageCursor, RecordLoad.FORCE, PropertyRecordFormat.RECORD_SIZE );
+        assertFalse( record.inUse() );
     }
 
     private void writeRecordWithOldFormat( PropertyRecord oldFormatRecord )
