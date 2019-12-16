@@ -9,6 +9,7 @@ import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -16,16 +17,20 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.scheduler.ActiveGroup;
 import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.RandomExtension;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
+import org.neo4j.test.rule.RandomRule;
 import org.neo4j.test.rule.TestDirectory;
 
 import static java.util.concurrent.Executors.newFixedThreadPool;
@@ -39,18 +44,25 @@ import static org.neo4j.test.TestLabels.LABEL_THREE;
 import static org.neo4j.test.TestLabels.LABEL_TWO;
 
 @TestDirectoryExtension
+@ExtendWith( RandomExtension.class )
 class EnterpriseIndexPopulationIT
 {
     @Inject
     private TestDirectory directory;
+    @Inject
+    private RandomRule random;
+    private int nbrOfPopulationMainThreads;
+    private int nbrOfPopulationWorkerThreads;
 
     @Test
     @Timeout( value = 10, unit = MINUTES )
-    void shouldPopulateMultipleIndexesOnMultipleDbsConcurrentlyWithSingleMainThreadAndSingleWorkerThread() throws ExecutionException, InterruptedException
+    void shouldPopulateMultipleIndexesOnMultipleDbsConcurrentlyWithFewIndexPopulationThreads() throws ExecutionException, InterruptedException
     {
+        nbrOfPopulationMainThreads = random.nextInt( 1, 2 );
+        nbrOfPopulationWorkerThreads = random.nextInt( 1, 2 );
         DatabaseManagementService dbms = newDbmsBuilder()
-                .setConfig( index_population_parallelism, 1 )
-                .setConfig( index_population_workers, 1 )
+                .setConfig( index_population_parallelism, nbrOfPopulationMainThreads )
+                .setConfig( index_population_workers, nbrOfPopulationWorkerThreads )
                 .build();
         int nbrOfDbs = 4;
         ExecutorService executorService = newFixedThreadPool( nbrOfDbs );
@@ -84,9 +96,18 @@ class EnterpriseIndexPopulationIT
             if ( globalJobScheduler == null )
             {
                 globalJobScheduler = jobScheduler;
-                jobScheduler.activeGroups()
-                        .filter( activeGroup -> Group.INDEX_POPULATION.equals( activeGroup.group ) || Group.INDEX_POPULATION_WORK.equals( activeGroup.group ) )
-                        .forEach( activeGroup -> assertEquals( 1, activeGroup.threads ) );
+                List<ActiveGroup> activeGroups = jobScheduler.activeGroups().collect( Collectors.toList() );
+                for ( ActiveGroup activeGroup : activeGroups )
+                {
+                    if ( Group.INDEX_POPULATION.equals( activeGroup.group ) )
+                    {
+                        assertEquals( nbrOfPopulationMainThreads, activeGroup.threads );
+                    }
+                    if ( Group.INDEX_POPULATION_WORK.equals( activeGroup.group ) )
+                    {
+                        assertEquals( nbrOfPopulationWorkerThreads, activeGroup.threads );
+                    }
+                }
             }
             else
             {
