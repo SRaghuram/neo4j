@@ -8,9 +8,9 @@ package com.neo4j.internal.cypher.planner
 import com.neo4j.internal.cypher.acceptance.AdministrationCommandAcceptanceTestBase
 import org.neo4j.cypher.internal.plandescription.Arguments._
 import org.neo4j.cypher.internal.plandescription._
-import org.neo4j.cypher.internal.v4_0.ast.prettifier.Prettifier
-import org.neo4j.cypher.internal.v4_0.util.attribution.Id
-import org.neo4j.cypher.internal.v4_0.util.test_helpers.WindowsStringSafe
+import org.neo4j.cypher.internal.ast.prettifier.Prettifier
+import org.neo4j.cypher.internal.util.attribution.Id
+import org.neo4j.cypher.internal.util.test_helpers.WindowsStringSafe
 
 class AdministrationCommandPlannerTestBase extends AdministrationCommandAcceptanceTestBase {
   implicit val windowsSafe: WindowsStringSafe.type = WindowsStringSafe
