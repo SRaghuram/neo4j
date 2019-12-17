@@ -17,14 +17,16 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.kernel.impl.store;
+package org.neo4j.storageengine.api;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import org.neo4j.storageengine.api.TransactionId;
-import org.neo4j.test.Race;
 
 import static java.lang.Math.max;
 import static java.lang.Runtime.getRuntime;
@@ -66,23 +68,25 @@ class HighestTransactionIdTest
     {
         // GIVEN
         final HighestTransactionId highest = new HighestTransactionId( -1, -1, -1 );
-        Race race = new Race();
         int updaters = max( 2, getRuntime().availableProcessors() );
+        ExecutorService executorService = Executors.newFixedThreadPool( updaters );
         final AtomicInteger accepted = new AtomicInteger();
+        Collection<Callable<Object>> runnables = new ArrayList<>();
         for ( int i = 0; i < updaters; i++ )
         {
             final long id = i + 1;
-            race.addContestant( () ->
+            runnables.add( () ->
             {
                 if ( highest.offer( id, (int) id, id ) )
                 {
                     accepted.incrementAndGet();
                 }
+                return null;
             } );
         }
 
         // WHEN
-        race.go();
+        executorService.invokeAll( runnables );
 
         // THEN
         assertTrue( accepted.get() > 0 );
