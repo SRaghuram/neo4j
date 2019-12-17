@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.pipelined.state
 
 import org.neo4j.cypher.internal.RuntimeResourceLeakException
-import org.neo4j.cypher.internal.macros.Require.require
+import org.neo4j.cypher.internal.macros.AssertMacros.checkOnlyWhenAssertionsAreEnabled
 import org.neo4j.cypher.internal.physicalplanning.PipelineId.NO_PIPELINE
 import org.neo4j.cypher.internal.physicalplanning._
 import org.neo4j.cypher.internal.runtime.QueryContext
@@ -30,7 +30,7 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
                         initializationResources: QueryResources,
                         tracker: QueryCompletionTracker) extends ExecutionState {
 
-  require(verifyThatIdsAndOffsetsMatch())
+  checkOnlyWhenAssertionsAreEnabled(verifyThatIdsAndOffsetsMatch())
 
   // Add assertion for query completion
   tracker.addCompletionAssertion(() => this.assertEmpty())

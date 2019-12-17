@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.slotted
 import org.neo4j.cypher.internal.ir.VarPatternLength
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans._
-import org.neo4j.cypher.internal.macros.Require.require
+import org.neo4j.cypher.internal.macros.AssertMacros.checkOnlyWhenAssertionsAreEnabled
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.isRefSlotAndNotAlias
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.generateSlotAccessorFunctions
 import org.neo4j.cypher.internal.physicalplanning.VariablePredicates.expressionSlotForPredicate
@@ -384,7 +384,7 @@ class SlottedPipeMapper(fallback: PipeMapper,
 
         // Verify the assumption that the only shared slots we have are arguments which are identical on both lhs and rhs.
         // This assumption enables us to use array copy within CartesianProductSlottedPipe.
-        require(verifyOnlyArgumentsAreSharedSlots(plan, physicalPlan))
+        checkOnlyWhenAssertionsAreEnabled(verifyOnlyArgumentsAreSharedSlots(plan, physicalPlan))
 
         CartesianProductSlottedPipe(lhs, rhs, lhsSlots.numberOfLongs, lhsSlots.numberOfReferences, slots, argumentSize)(id)
 
@@ -396,7 +396,7 @@ class SlottedPipeMapper(fallback: PipeMapper,
         val rightNodes: Array[Int] = nodes.map(k => rhsSlots.getLongOffsetFor(k))
 
         // Verify the assumption that the argument slots are the same on both sides
-        require(verifyArgumentsAreTheSameOnBothSides(plan, physicalPlan))
+        checkOnlyWhenAssertionsAreEnabled(verifyArgumentsAreTheSameOnBothSides(plan, physicalPlan))
         val (longsToCopy, refsToCopy, cachedPropertiesToCopy) = computeSlotsToCopy(rhsSlots, argumentSize, slots)
 
         if (leftNodes.length == 1) {
@@ -415,7 +415,7 @@ class SlottedPipeMapper(fallback: PipeMapper,
 
         // Verify the assumption that the only shared slots we have are arguments which are identical on both lhs and rhs.
         // This assumption enables us to use array copy within ValueHashJoin.
-        require(verifyOnlyArgumentsAreSharedSlots(plan, physicalPlan))
+        checkOnlyWhenAssertionsAreEnabled(verifyOnlyArgumentsAreSharedSlots(plan, physicalPlan))
 
         ValueHashJoinSlottedPipe(lhsCmdExp, rhsCmdExp, lhs, rhs, slots, longOffset, refOffset, argumentSize)(id)
 

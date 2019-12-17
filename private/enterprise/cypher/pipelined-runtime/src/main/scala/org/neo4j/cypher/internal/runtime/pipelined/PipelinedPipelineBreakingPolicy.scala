@@ -7,7 +7,6 @@ package org.neo4j.cypher.internal.runtime.pipelined
 
 import org.neo4j.cypher.CypherInterpretedPipesFallbackOption
 import org.neo4j.cypher.internal.logical.plans._
-import org.neo4j.cypher.internal.macros.Require.require
 import org.neo4j.cypher.internal.physicalplanning.{OperatorFusionPolicy, PipelineBreakingPolicy}
 import org.neo4j.exceptions.CantCompileQueryException
 

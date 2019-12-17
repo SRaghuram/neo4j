@@ -14,7 +14,6 @@ import org.neo4j.codegen.api.IntermediateRepresentation._
 import org.neo4j.codegen.api._
 import org.neo4j.cypher.internal.compiler.helpers.PredicateHelper.isPredicate
 import org.neo4j.cypher.internal.logical.plans.{CoerceToPredicate, NestedPlanExpression, ResolvedFunctionInvocation}
-import org.neo4j.cypher.internal.macros.Require.require
 import org.neo4j.cypher.internal.physicalplanning._
 import org.neo4j.cypher.internal.physicalplanning.ast._
 import org.neo4j.cypher.internal.runtime.ast.{ExpressionVariable, ParameterFromSlot}

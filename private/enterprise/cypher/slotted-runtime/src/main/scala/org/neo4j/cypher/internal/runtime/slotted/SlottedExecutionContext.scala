@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted
 
-import org.neo4j.cypher.internal.macros.Require.require
+import org.neo4j.cypher.internal.macros.AssertMacros.checkOnlyWhenAssertionsAreEnabled
 import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot, SlotConfiguration}
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
 import org.neo4j.cypher.internal.runtime.{EntityById, ExecutionContext}
@@ -268,7 +268,7 @@ case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionCo
             throw new InternalException(s"Tried to merge slot $otherSlot from $other but it is missing from $this." +
               "Looks like something needs to be fixed in slot allocation.")
           )
-          require(checkCompatibleNullablility(key, otherSlot))
+          checkOnlyWhenAssertionsAreEnabled(checkCompatibleNullablility(key, otherSlot))
 
           val otherValue = slottedOther.getRefAtWithoutCheckingInitialized(offset)
           thisSlotSetter.apply(this, otherValue)
@@ -332,7 +332,8 @@ case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionCo
         if (entityId >= 0)
           entities += key -> materializeRelationship(getLongAt(offset))
       case _ => // Do nothing
-    }, _ => ())
+    }, _ => ()//ignore cached properties
+     )
     entities.toMap
   }
 

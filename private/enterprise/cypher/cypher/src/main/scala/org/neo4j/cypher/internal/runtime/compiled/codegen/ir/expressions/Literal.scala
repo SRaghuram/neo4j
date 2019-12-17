@@ -5,7 +5,6 @@
  */
 package org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions
 
-import org.neo4j.cypher.internal.macros.Require.require
 import org.neo4j.cypher.internal.runtime.compiled.codegen.CodeGenContext
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.MethodStructure
 import org.neo4j.cypher.internal.runtime.compiled.helpers.LiteralTypeSupport

@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.physicalplanning
 
 import org.neo4j.cypher.internal.logical.plans._
-import org.neo4j.cypher.internal.macros.Require.require
+import org.neo4j.cypher.internal.macros.AssertMacros.checkOnlyWhenAssertionsAreEnabled
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.SlotConfigurations
 import org.neo4j.cypher.internal.physicalplanning.ast._
 import org.neo4j.cypher.internal.planner.spi.TokenContext
@@ -97,7 +97,7 @@ class SlottedRewriter(tokenContext: TokenContext) {
     val resultPlan = in.endoRewrite(rewritePlanWithSlots)
 
     // Verify that we could rewrite all instances of Variable (only under -ea)
-    require(!resultPlan.findByAllClass[Variable].exists(v => throw new CantCompileQueryException(s"Failed to rewrite away $v\n$resultPlan")))
+    checkOnlyWhenAssertionsAreEnabled(!resultPlan.findByAllClass[Variable].exists(v => throw new CantCompileQueryException(s"Failed to rewrite away $v\n$resultPlan")))
 
 
     resultPlan

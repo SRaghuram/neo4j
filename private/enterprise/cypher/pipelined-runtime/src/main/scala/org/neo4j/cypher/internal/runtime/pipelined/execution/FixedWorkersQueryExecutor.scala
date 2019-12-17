@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.execution
 
-import org.neo4j.cypher.internal.macros.Require.require
+import org.neo4j.cypher.internal.macros.AssertMacros.checkOnlyWhenAssertionsAreEnabled
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
 import org.neo4j.cypher.internal.runtime.debug.DebugLog
 import org.neo4j.cypher.internal.runtime.pipelined.state.{ConcurrentStateFactory, TheExecutionState}
@@ -30,7 +30,7 @@ class FixedWorkersQueryExecutor(val workerResourceProvider: WorkerResourceProvid
   // ========== QUERY EXECUTOR ===========
 
     def assertAllReleased(): Unit = {
-      require(workerResourceProvider.assertAllReleased() &&
+      checkOnlyWhenAssertionsAreEnabled(workerResourceProvider.assertAllReleased() &&
                         workerManager.assertNoWorkerIsActive())
 
     }

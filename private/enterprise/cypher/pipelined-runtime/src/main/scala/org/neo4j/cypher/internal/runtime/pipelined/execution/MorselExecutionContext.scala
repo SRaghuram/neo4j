@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.execution
 
-import org.neo4j.cypher.internal.macros.Require.require
+import org.neo4j.cypher.internal.macros.AssertMacros.checkOnlyWhenAssertionsAreEnabled
 import org.neo4j.cypher.internal.physicalplanning.SlotAllocation.INITIAL_SLOT_CONFIGURATION
 import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot, SlotConfiguration, TopLevelArgument}
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.WorkUnitEvent
@@ -155,7 +155,7 @@ class MorselExecutionContext(private[execution] final val morsel: Morsel,
     * Copies from input to the beginning of this morsel. Input is assumed not to contain any cancelledRows
     */
   def compactRowsFrom(input: MorselExecutionContext): Unit = {
-      require(!input.isInstanceOf[FilteringMorselExecutionContext] && numberOfRows >= input.numberOfRows)
+      checkOnlyWhenAssertionsAreEnabled(!input.isInstanceOf[FilteringMorselExecutionContext] && numberOfRows >= input.numberOfRows)
 
     if (longsPerRow > 0) {
       System.arraycopy(input.morsel.longs,
