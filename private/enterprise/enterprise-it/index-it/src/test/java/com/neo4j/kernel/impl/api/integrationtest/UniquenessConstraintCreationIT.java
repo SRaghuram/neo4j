@@ -11,7 +11,6 @@ import org.junit.jupiter.api.Test;
 import java.util.Iterator;
 import java.util.OptionalLong;
 
-import org.neo4j.common.TokenNameLookup;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
@@ -32,7 +31,6 @@ import org.neo4j.internal.schema.SchemaDescriptor;
 import org.neo4j.internal.schema.constraints.ConstraintDescriptorFactory;
 import org.neo4j.internal.schema.constraints.UniquenessConstraintDescriptor;
 import org.neo4j.kernel.api.KernelTransaction;
-import org.neo4j.kernel.api.SilentTokenNameLookup;
 import org.neo4j.kernel.api.exceptions.index.IndexEntryConflictException;
 import org.neo4j.kernel.api.exceptions.schema.DropConstraintFailureException;
 import org.neo4j.kernel.api.exceptions.schema.NoSuchConstraintException;
@@ -318,8 +316,7 @@ class UniquenessConstraintCreationIT extends AbstractConstraintCreationIT<Constr
     {
         try ( KernelTransaction tx = newTransaction() )
         {
-            TokenNameLookup lookup = new SilentTokenNameLookup( tx.tokenRead() );
-            return cause.getUserMessage( lookup );
+            return cause.getUserMessage( tx.tokenRead() );
         }
     }
 }

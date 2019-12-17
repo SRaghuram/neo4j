@@ -116,4 +116,22 @@ public class ReadOnlyTokenRead implements TokenRead
     {
         return tokenHolders.relationshipTypeTokens().size();
     }
+
+    @Override
+    public String labelGetName( int labelId )
+    {
+        return tokenHolders.labelGetName( labelId );
+    }
+
+    @Override
+    public String relationshipTypeGetName( int relationshipTypeId )
+    {
+        return tokenHolders.relationshipTypeGetName( relationshipTypeId );
+    }
+
+    @Override
+    public String propertyKeyGetName( int propertyKeyId )
+    {
+        return tokenHolders.propertyKeyGetName( propertyKeyId );
+    }
 }

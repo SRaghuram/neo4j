@@ -26,7 +26,6 @@ import org.neo4j.exceptions.{CypherExecutionException, EntityNotFoundException, 
 import org.neo4j.graphdb.{Direction, Node, Relationship}
 import org.neo4j.internal.kernel.api._
 import org.neo4j.io.IOUtils
-import org.neo4j.kernel.api.SilentTokenNameLookup
 import org.neo4j.kernel.impl.api.RelationshipDataExtractor
 import org.neo4j.kernel.impl.core.TransactionalEntityFactory
 import org.neo4j.kernel.impl.util.ValueUtils
@@ -116,11 +115,7 @@ object Templates {
         MethodReference.constructorReference(typeRef[CypherExecutionException], typeRef[String], typeRef[Throwable]),
         Expression
           .invoke(handle.load(e), method[KernelException, String]("getUserMessage", typeRef[TokenNameLookup]),
-                  Expression.invoke(
-                    Expression.newInstance(typeRef[SilentTokenNameLookup]),
-                    MethodReference
-                      .constructorReference(typeRef[SilentTokenNameLookup], typeRef[TokenRead]),
-                    Expression.get(handle.self(), fields.tokenRead))), handle.load(e)
+            Expression.get(handle.self(), fields.tokenRead)), handle.load(e)
         ))
     }, param[KernelException](e))
 
