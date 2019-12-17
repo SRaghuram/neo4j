@@ -81,6 +81,7 @@
     <module>layout</module>
     <module>counts-store</module>
     <module>meta-data-store</module>
+    <module>freki-storage-engine</module>
   </modules>
 
   <licenses>
