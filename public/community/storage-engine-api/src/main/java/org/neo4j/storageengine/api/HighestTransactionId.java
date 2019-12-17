@@ -17,11 +17,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.kernel.impl.store;
+package org.neo4j.storageengine.api;
 
 import java.util.concurrent.atomic.AtomicReference;
-
-import org.neo4j.storageengine.api.TransactionId;
 
 /**
  * Can accept offerings about {@link TransactionId}, but will always only keep the highest one,
