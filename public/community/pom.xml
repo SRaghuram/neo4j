@@ -77,6 +77,7 @@
     <module>testing</module>
     <module>neo4j-exceptions</module>
     <module>layout</module>
+    <module>counts-store</module>
   </modules>
 
   <licenses>
