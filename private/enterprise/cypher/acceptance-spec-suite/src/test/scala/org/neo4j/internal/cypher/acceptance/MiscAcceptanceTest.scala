@@ -214,4 +214,9 @@ class MiscAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
     result.toList should equal(List(Map("total" -> 1)))
   }
 
+  test("unary add works") {
+    val result = executeWith(Configs.All, "RETURN +1 AS x, +2")
+    result.toList should be(List(Map("x" -> 1, "+2" -> 2)))
+  }
+
 }
