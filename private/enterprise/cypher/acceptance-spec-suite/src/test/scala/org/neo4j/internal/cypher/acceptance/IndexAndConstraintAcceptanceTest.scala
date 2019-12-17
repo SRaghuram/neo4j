@@ -467,25 +467,25 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     executeSingle("CREATE CONSTRAINT ON (n:Label1) ASSERT (n.prop) IS NODE KEY")
     the[CypherExecutionException] thrownBy {
       executeSingle("CREATE CONSTRAINT ON (n:Label1) ASSERT (n.prop) IS NODE KEY")
-    } should have message "An equivalent constraint already exists, 'Constraint( UNIQUE_EXISTS, :Label1(prop) )'."
+    } should have message "An equivalent constraint already exists, 'Constraint( 2, 'constraint_a8ca1b14', NODE KEY, :Label1(prop), ownedIndex=1 )'."
 
     // Uniqueness constraint
     executeSingle("CREATE CONSTRAINT ON (n:Label2) ASSERT (n.prop) IS UNIQUE")
     the[CypherExecutionException] thrownBy {
       executeSingle("CREATE CONSTRAINT ON (n:Label2) ASSERT (n.prop) IS UNIQUE")
-    } should have message "An equivalent constraint already exists, 'Constraint( UNIQUE, :Label2(prop) )'."
+    } should have message "An equivalent constraint already exists, 'Constraint( 4, 'constraint_380bd7de', UNIQUENESS, :Label2(prop), ownedIndex=3 )'."
 
     // Node property existence constraint
     executeSingle("CREATE CONSTRAINT ON (n:Label3) ASSERT EXISTS (n.prop)")
     the[CypherExecutionException] thrownBy {
       executeSingle("CREATE CONSTRAINT ON (n:Label3) ASSERT EXISTS (n.prop)")
-    } should have message "An equivalent constraint already exists, 'Constraint( EXISTS, :Label3(prop) )'."
+    } should have message "An equivalent constraint already exists, 'Constraint( 5, 'constraint_5f73eda7', NODE PROPERTY EXISTENCE, :Label3(prop) )'."
 
     // Relationship property existence constraint
     executeSingle("CREATE CONSTRAINT ON ()-[r:Type]-() ASSERT EXISTS (r.prop)")
     the[CypherExecutionException] thrownBy {
       executeSingle("CREATE CONSTRAINT ON ()-[r:Type]-() ASSERT EXISTS (r.prop)")
-    } should have message "An equivalent constraint already exists, 'Constraint( EXISTS, -[:Type(prop)]- )'."
+    } should have message "An equivalent constraint already exists, 'Constraint( 6, 'constraint_3e723b4d', RELATIONSHIP PROPERTY EXISTENCE, -[:Type(prop)]- )'."
   }
 
   test("should fail to create multiple named constraints with same name and schema") {
@@ -493,25 +493,25 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     executeSingle("CREATE CONSTRAINT constraint1 ON (n:Label1) ASSERT (n.prop) IS NODE KEY")
     the[CypherExecutionException] thrownBy {
       executeSingle("CREATE CONSTRAINT constraint1 ON (n:Label1) ASSERT (n.prop) IS NODE KEY")
-    } should have message "An equivalent constraint already exists, 'Constraint( UNIQUE_EXISTS, :Label1(prop) )'."
+    } should have message "An equivalent constraint already exists, 'Constraint( 2, 'constraint1', NODE KEY, :Label1(prop), ownedIndex=1 )'."
 
     // Uniqueness constraint
     executeSingle("CREATE CONSTRAINT constraint2 ON (n:Label2) ASSERT (n.prop) IS UNIQUE")
     the[CypherExecutionException] thrownBy {
       executeSingle("CREATE CONSTRAINT constraint2 ON (n:Label2) ASSERT (n.prop) IS UNIQUE")
-    } should have message "An equivalent constraint already exists, 'Constraint( UNIQUE, :Label2(prop) )'."
+    } should have message "An equivalent constraint already exists, 'Constraint( 4, 'constraint2', UNIQUENESS, :Label2(prop), ownedIndex=3 )'."
 
     // Node property existence constraint
     executeSingle("CREATE CONSTRAINT constraint3 ON (n:Label3) ASSERT EXISTS (n.prop)")
     the[CypherExecutionException] thrownBy {
       executeSingle("CREATE CONSTRAINT constraint3 ON (n:Label3) ASSERT EXISTS (n.prop)")
-    } should have message "An equivalent constraint already exists, 'Constraint( EXISTS, :Label3(prop) )'."
+    } should have message "An equivalent constraint already exists, 'Constraint( 5, 'constraint3', NODE PROPERTY EXISTENCE, :Label3(prop) )'."
 
     // Relationship property existence constraint
     executeSingle("CREATE CONSTRAINT constraint4 ON ()-[r:Type]-() ASSERT EXISTS (r.prop)")
     the[CypherExecutionException] thrownBy {
       executeSingle("CREATE CONSTRAINT constraint4 ON ()-[r:Type]-() ASSERT EXISTS (r.prop)")
-    } should have message "An equivalent constraint already exists, 'Constraint( EXISTS, -[:Type(prop)]- )'."
+    } should have message "An equivalent constraint already exists, 'Constraint( 6, 'constraint4', RELATIONSHIP PROPERTY EXISTENCE, -[:Type(prop)]- )'."
   }
 
   test("should fail to create multiple named constraints with different name and same schema") {
@@ -519,25 +519,25 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     executeSingle("CREATE CONSTRAINT constraint1 ON (n:Label1) ASSERT (n.prop) IS NODE KEY")
     the[CypherExecutionException] thrownBy {
       executeSingle("CREATE CONSTRAINT constraint5 ON (n:Label1) ASSERT (n.prop) IS NODE KEY")
-    } should have message "Constraint already exists: Constraint( UNIQUE_EXISTS, :Label1(prop) )"
+    } should have message "Constraint already exists: Constraint( 2, 'constraint1', NODE KEY, :Label1(prop), ownedIndex=1 )"
 
     // Uniqueness constraint
     executeSingle("CREATE CONSTRAINT constraint2 ON (n:Label2) ASSERT (n.prop) IS UNIQUE")
     the[CypherExecutionException] thrownBy {
       executeSingle("CREATE CONSTRAINT constraint6 ON (n:Label2) ASSERT (n.prop) IS UNIQUE")
-    } should have message "Constraint already exists: Constraint( UNIQUE, :Label2(prop) )"
+    } should have message "Constraint already exists: Constraint( 4, 'constraint2', UNIQUENESS, :Label2(prop), ownedIndex=3 )"
 
     // Node property existence constraint
     executeSingle("CREATE CONSTRAINT constraint3 ON (n:Label3) ASSERT EXISTS (n.prop)")
     the[CypherExecutionException] thrownBy {
       executeSingle("CREATE CONSTRAINT constraint7 ON (n:Label3) ASSERT EXISTS (n.prop)")
-    } should have message "Constraint already exists: Constraint( EXISTS, :Label3(prop) )"
+    } should have message "Constraint already exists: Constraint( 5, 'constraint3', NODE PROPERTY EXISTENCE, :Label3(prop) )"
 
     // Relationship property existence constraint
     executeSingle("CREATE CONSTRAINT constraint4 ON ()-[r:Type]-() ASSERT EXISTS (r.prop)")
     the[CypherExecutionException] thrownBy {
       executeSingle("CREATE CONSTRAINT constraint8 ON ()-[r:Type]-() ASSERT EXISTS (r.prop)")
-    } should have message "Constraint already exists: Constraint( EXISTS, -[:Type(prop)]- )"
+    } should have message "Constraint already exists: Constraint( 6, 'constraint4', RELATIONSHIP PROPERTY EXISTENCE, -[:Type(prop)]- )"
   }
 
   test("should fail to create multiple named constraints with same name") {
@@ -573,7 +573,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     // Uniqueness constraint
     the[CypherExecutionException] thrownBy {
       executeSingle("CREATE CONSTRAINT ON (n:Label) ASSERT (n.prop) IS UNIQUE")
-    } should have message "Constraint already exists: Constraint( UNIQUE_EXISTS, :Label(prop) )"
+    } should have message "Constraint already exists: Constraint( 2, 'constraint_f6242497', NODE KEY, :Label(prop), ownedIndex=1 )"
 
     // Node property existence constraint
     executeSingle("CREATE CONSTRAINT ON (n:Label) ASSERT EXISTS (n.prop)")
@@ -589,7 +589,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     // Uniqueness constraint
     the[CypherExecutionException] thrownBy {
       executeSingle("CREATE CONSTRAINT constraint2 ON (n:Label) ASSERT (n.prop) IS UNIQUE")
-    } should have message "Constraint already exists: Constraint( UNIQUE_EXISTS, :Label(prop) )"
+    } should have message "Constraint already exists: Constraint( 2, 'constraint1', NODE KEY, :Label(prop), ownedIndex=1 )"
 
     // Node property existence constraint
     executeSingle("CREATE CONSTRAINT constraint3 ON (n:Label) ASSERT EXISTS (n.prop)")
@@ -645,7 +645,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     // Node key constraint
     the[CypherExecutionException] thrownBy {
       executeSingle("CREATE CONSTRAINT ON (n:Label) ASSERT (n.prop) IS NODE KEY")
-    } should have message "Constraint already exists: Constraint( UNIQUE, :Label(prop) )"
+    } should have message "Constraint already exists: Constraint( 2, 'constraint_952591e6', UNIQUENESS, :Label(prop), ownedIndex=1 )"
 
     // Node property existence constraint
     executeSingle("CREATE CONSTRAINT ON (n:Label) ASSERT EXISTS (n.prop)")
@@ -661,7 +661,7 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
     // Node key constraint
     the[CypherExecutionException] thrownBy {
       executeSingle("CREATE CONSTRAINT constraint2 ON (n:Label) ASSERT (n.prop) IS NODE KEY")
-    } should have message "Constraint already exists: Constraint( UNIQUE, :Label(prop) )"
+    } should have message "Constraint already exists: Constraint( 2, 'constraint1', UNIQUENESS, :Label(prop), ownedIndex=1 )"
 
     // Node property existence constraint
     executeSingle("CREATE CONSTRAINT constraint3 ON (n:Label) ASSERT EXISTS (n.prop)")
