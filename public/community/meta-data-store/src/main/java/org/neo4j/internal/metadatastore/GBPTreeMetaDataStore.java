@@ -1,5 +1,9 @@
 /*
+<<<<<<< HEAD
  * Copyright (c) 2002-2020 "Neo4j,"
+=======
+ * Copyright (c) 2002-2019 "Neo4j,"
+>>>>>>> A simple meta-data store based on the GBPTree
  * Neo4j Sweden AB [http://neo4j.com]
  *
  * This file is part of Neo4j.
