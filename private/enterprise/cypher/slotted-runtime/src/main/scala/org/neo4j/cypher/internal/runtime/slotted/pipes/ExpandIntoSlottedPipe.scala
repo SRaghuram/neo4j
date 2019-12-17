@@ -15,6 +15,7 @@ import org.neo4j.cypher.internal.runtime.{ExecutionContext, PrimitiveLongHelper}
 import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.graphdb.Direction
+import org.neo4j.internal.kernel.api.helpers.CachingExpandInto
 
 /**
   * Expand when both end-points are known, find all relationships of the given
@@ -52,9 +53,7 @@ case class ExpandIntoSlottedPipe(source: Pipe,
   //===========================================================================
   protected def internalCreateResults(input: Iterator[ExecutionContext], state: QueryState): Iterator[ExecutionContext] = {
     val query = state.query
-    val expandInto = new org.neo4j.internal.kernel.api.helpers.CachingExpandInto(query.transactionalContext.dataRead,
-                                                                                 kernelDirection,
-                                                                                 lazyTypes.types(query))
+    val expandInto = new CachingExpandInto(query.transactionalContext.dataRead, kernelDirection)
     val nodeCursor = query.nodeCursor()
     input.flatMap {
       inputRow =>
@@ -71,6 +70,7 @@ case class ExpandIntoSlottedPipe(source: Pipe,
                                                                               groupCursor,
                                                                               traversalCursor,
                                                                               fromNode,
+                                                                              lazyTypes.types(query),
                                                                               toNode))
           PrimitiveLongHelper.map(relationships, (relId: Long) => {
             val outputRow = SlottedExecutionContext(slots)

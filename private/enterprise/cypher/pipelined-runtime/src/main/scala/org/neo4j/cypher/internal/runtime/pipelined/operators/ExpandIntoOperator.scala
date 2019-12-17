@@ -69,8 +69,7 @@ class ExpandIntoOperator(val workIdentity: WorkIdentity,
                                                initExecutionContext: ExecutionContext): Boolean = {
       if (expandInto == null) {
         expandInto = new CachingExpandInto(context.transactionalContext.dataRead,
-                                           kernelDirection(dir),
-                                           types.types(context))
+                                           kernelDirection(dir))
       }
       val fromNode = getFromNodeFunction.applyAsLong(inputMorsel)
       val toNode = getToNodeFunction.applyAsLong(inputMorsel)
@@ -84,6 +83,7 @@ class ExpandIntoOperator(val workIdentity: WorkIdentity,
         relationships = expandInto.connectingRelationships(nodeCursor,
                                                            groupCursor, traversalCursor,
                                                            fromNode,
+                                                           types.types(context),
                                                            toNode)
         true
       }
@@ -205,17 +205,19 @@ class ExpandIntoOperatorTaskTemplate(inner: OperatorTaskTemplate,
         block(
           loadTypes(types, missingTypes, typeField, missingTypeField),
           condition(isNull(loadField(expandInto)))(
-            setField(expandInto, newInstance(constructor[CachingExpandInto, Read, Direction, Array[Int]],
-                                             loadField(DATA_READ), directionRepresentation(dir), loadField(typeField) ))),
+            setField(expandInto, newInstance(constructor[CachingExpandInto, Read, Direction],
+                                             loadField(DATA_READ), directionRepresentation(dir)))),
           allocateAndTraceCursor(nodeCursorField, executionEventField, ALLOCATE_NODE_CURSOR),
           allocateAndTraceCursor(groupCursorField, executionEventField, ALLOCATE_GROUP_CURSOR),
           allocateAndTraceCursor(traversalCursorField, executionEventField, ALLOCATE_TRAVERSAL_CURSOR),
-          setField(relationshipsField, invoke(loadField(expandInto), CONNECTING_RELATIONSHIPS,
-                                                    loadField(nodeCursorField),
-                                                    loadField(groupCursorField),
-                                                    loadField(traversalCursorField),
-                                                    load(fromNode),
-                                                    load(toNode))),
+          setField(relationshipsField, invoke(loadField(expandInto),
+                                              CONNECTING_RELATIONSHIPS,
+                                              loadField(nodeCursorField),
+                                              loadField(groupCursorField),
+                                              loadField(traversalCursorField),
+                                              load(fromNode),
+                                              loadField(typeField),
+                                              load(toNode))),
           invokeSideEffect(loadField(relationshipsField), method[RelationshipSelectionCursor, Unit, KernelReadTracer]("setTracer"), loadField(executionEventField)),
           assign(resultBoolean, constant(true)),
           setField(canContinue, profilingCursorNext[RelationshipSelectionCursor](loadField(relationshipsField), id)),
@@ -299,6 +301,7 @@ object ExpandIntoOperatorTaskTemplate {
       RelationshipGroupCursor,
       RelationshipTraversalCursor,
       Long,
+      Array[Int],
       Long]("connectingRelationships")
 }
 

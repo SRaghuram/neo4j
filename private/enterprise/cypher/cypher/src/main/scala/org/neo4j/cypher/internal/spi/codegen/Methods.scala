@@ -51,6 +51,7 @@ object Methods {
                                                                                                         typeRef[CursorFactory],
                                                                                                         typeRef[NodeCursor],
                                                                                                         typeRef[Long],
+                                                                                                        typeRef[Array[Int]],
                                                                                                         typeRef[Long])
 
   val mathAdd: MethodReference = method[CompiledMathHelper, Object]("add", typeRef[Object], typeRef[Object])

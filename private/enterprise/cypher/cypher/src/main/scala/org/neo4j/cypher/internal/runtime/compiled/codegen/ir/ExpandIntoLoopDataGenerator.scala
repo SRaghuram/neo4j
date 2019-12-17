@@ -22,7 +22,7 @@ case class ExpandIntoLoopDataGenerator(opName: String,
     types.foreach {
       case (typeVar,relType) => generator.lookupRelationshipTypeId(typeVar, relType)
     }
-    generator.createCachingExpandInto(expandIntoVar, dir, types.keys.toIndexedSeq)
+    generator.createCachingExpandInto(expandIntoVar, dir)
   }
 
   override def produceLoopData[E](cursorName: String, generator: MethodStructure[E])(implicit context: CodeGenContext): Unit = {
@@ -31,7 +31,8 @@ case class ExpandIntoLoopDataGenerator(opName: String,
                                         fromVar.name,
                                         fromVar.codeGenType,
                                         toVar.name,
-                                        toVar.codeGenType)
+                                        toVar.codeGenType,
+                                        types.keys.toIndexedSeq)
     generator.incrementDbHits()
   }
 

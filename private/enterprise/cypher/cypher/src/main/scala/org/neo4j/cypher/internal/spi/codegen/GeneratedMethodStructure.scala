@@ -579,21 +579,16 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
   }
 
   override def createCachingExpandInto(variable: String,
-                                       direction: SemanticDirection,
-                                       types: Seq[String]): Unit = {
-    val typesRep =
-      if (types.isEmpty) constant(null)
-      else newInitializedArray(typeRef[Int], types.map(generator.load): _*)
+                                       direction: SemanticDirection): Unit = {
+
     generator.assign(typeRef[CachingExpandInto],
                      variable,
                      invoke(newInstance(typeRef[CachingExpandInto]),
                             MethodReference.constructorReference(typeRef[CachingExpandInto],
                                                                  typeRef[Read],
-                                                                 typeRef[Direction],
-                                                                 typeRef[Array[Int]]),
+                                                                 typeRef[Direction]),
                             dataRead,
-                            dir(direction),
-                            typesRep))
+                            dir(direction)))
   }
 
   override def connectingRelationships(iterVar: String,
@@ -601,13 +596,18 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
                                        fromNode: String,
                                        fromNodeType: CodeGenType,
                                        toNode: String,
-                                       toNodeType: CodeGenType): Unit = {
+                                       toNodeType: CodeGenType,
+                                       types: Seq[String]): Unit = {
+    val typesRep =
+      if (types.isEmpty) constant(null)
+      else newInitializedArray(typeRef[Int], types.map(generator.load): _*)
     generator.assign(typeRef[RelationshipSelectionCursor], iterVar,
                      invoke(generator.load(expandIntoVar),
                             Methods.connectingRelationships,
                             cursors,
                             nodeCursor,
                             forceLong(fromNode, fromNodeType),
+                            typesRep,
                             forceLong(toNode, toNodeType)))
     generator.expression(pop(invoke(get(generator.self(), fields.closeables), Methods.listAdd, generator.load(iterVar))))
   }

@@ -166,16 +166,15 @@ class GeneratedMethodStructureTest extends CypherFunSuite {
       m.generator.assign(expandInto,invoke(newInstance(typeRef[CachingExpandInto]),
                                            MethodReference.constructorReference(typeRef[CachingExpandInto],
                                                                                 typeRef[Read],
-                                                                                typeRef[Direction],
-                                                                                typeRef[Array[Int]]),
+                                                                                typeRef[Direction]),
                                            Expression.get(m.generator.self(), m.fields.dataRead),
-                                           Templates.outgoing,
-                                           Expression.constant(null)))
+                                           Templates.outgoing))
       m.generator.assign(local, Expression.invoke(Expression.load(expandInto),
                                                   Methods.connectingRelationships,
                                                   Expression.get(m.generator.self(), m.fields.cursors),
                                                   Expression.get(m.generator.self(), m.fields.nodeCursor),
                                                   m.generator.load("from"),
+                                                  Expression.constant(null),
                                                   m.generator.load("to")))
     }),
     Operation("expand into with types", m => {
@@ -186,16 +185,15 @@ class GeneratedMethodStructureTest extends CypherFunSuite {
       m.generator.assign(expandInto,invoke(newInstance(typeRef[CachingExpandInto]),
                                            MethodReference.constructorReference(typeRef[CachingExpandInto],
                                                                                 typeRef[Read],
-                                                                                typeRef[Direction],
-                                                                                typeRef[Array[Int]]),
+                                                                                typeRef[Direction]),
                                            Expression.get(m.generator.self(), m.fields.dataRead),
-                                           Templates.outgoing,
-                                           Expression.newInitializedArray(typeRef[Int], Expression.constant(1))))
+                                           Templates.outgoing))
       m.generator.assign(local, Expression.invoke(Expression.load(expandInto),
                                                   Methods.connectingRelationships,
                                                   Expression.get(m.generator.self(), m.fields.cursors),
                                                   Expression.get(m.generator.self(), m.fields.nodeCursor),
                                                   m.generator.load("from"),
+                                                  Expression.newInitializedArray(typeRef[Int], Expression.constant(1)),
                                                   m.generator.load("to")))
     }),
     Operation("expand from all node", m => {

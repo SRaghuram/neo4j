@@ -147,14 +147,14 @@ trait MethodStructure[E] {
   def nodeGetRelationshipsWithDirection(iterVar: String, nodeVar: String, nodeVarType: CodeGenType, direction: SemanticDirection): Unit
   def nodeGetRelationshipsWithDirectionAndTypes(iterVar: String, nodeVar: String, nodeVarType: CodeGenType, direction: SemanticDirection, typeVars: Seq[String]): Unit
   def createCachingExpandInto(expandIntoVar: String,
-                              dir: SemanticDirection,
-                              types: Seq[String]): Unit
+                              dir: SemanticDirection): Unit
   def connectingRelationships(iterVar: String,
                               expandIntoVar: String,
                               fromNode: String,
                               fromNodeType: CodeGenType,
                               toNode:String,
-                              toNodeType: CodeGenType)
+                              toNodeType: CodeGenType,
+                              types: Seq[String])
   def nodeFromNodeValueIndexCursor(targetVar: String, iterVar: String): Unit
   def nodeFromNodeCursor(targetVar: String, iterVar: String): Unit
   def nodeFromNodeLabelIndexCursor(targetVar: String, iterVar: String): Unit

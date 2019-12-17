@@ -17,6 +17,7 @@ import org.neo4j.cypher.internal.runtime.{ExecutionContext, PrimitiveLongHelper}
 import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection
 import org.neo4j.cypher.internal.v4_0.util.attribution.Id
 import org.neo4j.graphdb.Direction
+import org.neo4j.internal.kernel.api.helpers.CachingExpandInto
 import org.neo4j.values.storable.Values
 
 abstract class OptionalExpandIntoSlottedPipe(source: Pipe,
@@ -45,9 +46,7 @@ abstract class OptionalExpandIntoSlottedPipe(source: Pipe,
   //===========================================================================
   protected def internalCreateResults(input: Iterator[ExecutionContext], state: QueryState): Iterator[ExecutionContext] = {
     val query = state.query
-    val expandInto = new org.neo4j.internal.kernel.api.helpers.CachingExpandInto(query.transactionalContext.dataRead,
-                                                                                 kernelDirection,
-                                                                                 lazyTypes.types(query))
+    val expandInto = new CachingExpandInto(query.transactionalContext.dataRead, kernelDirection)
     val nodeCursor = query.nodeCursor()
     input.flatMap {
       inputRow: ExecutionContext =>
@@ -64,6 +63,7 @@ abstract class OptionalExpandIntoSlottedPipe(source: Pipe,
                                                                               groupCursor,
                                                                               traversalCursor,
                                                                               fromNode,
+                                                                              lazyTypes.types(query),
                                                                               toNode))
           val matchIterator = findMatchIterator(inputRow, state, relationships)
 
