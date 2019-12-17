@@ -76,6 +76,7 @@
     <module>testing</module>
     <module>neo4j-exceptions</module>
     <module>layout</module>
+    <module>counts-store</module>
     <module>push-to-cloud</module>
     <module>fabric</module>
   </modules>
