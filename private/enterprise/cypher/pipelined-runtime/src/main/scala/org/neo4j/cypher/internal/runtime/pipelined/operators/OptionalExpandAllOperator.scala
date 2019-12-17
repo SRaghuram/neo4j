@@ -228,7 +228,7 @@ class OptionalExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
     *       [rel = getRel]
     *       [node = getNode]
     *     }
-    *     if ( writeNullRow || [evaluate predicate] {
+    *     if (writeNullRow || [evaluate predicate]) {
     *       <<< inner.genOperate() >>>
     *       this.hasWritten = true
     *      }
@@ -249,14 +249,18 @@ class OptionalExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
       doIfPredicate(declareAndAssign(typeRefOf[Boolean], writeNullRow, constant(false))),
       loop(or(not(loadField(hasWritten)), and(innermost.predicate, loadField(canContinue))))(
         block(
-          ifElse(and(not(loadField(hasWritten)), not(loadField(canContinue))))(block(
+          ifElse(and(not(loadField(hasWritten)), not(loadField(canContinue))))(
+            block(
               writeRow(constant(-1L), constant(-1L)),
-              doIfPredicate(assign(writeNullRow, constant(true)))
-            ))(//else
-            writeRow(getRelationship, getOtherNode)),
-          predicate.map(p => condition(or(load(writeNullRow), equal(nullCheckIfRequired(p), trueValue)))(innerBlock)).getOrElse(innerBlock),
+              doIfPredicate(assign(writeNullRow, constant(true)))))
+          ( //else
+                writeRow(getRelationship, getOtherNode)),
+          predicate.map(p =>
+                          condition(or(load(writeNullRow),
+                                       equal(nullCheckIfRequired(p), trueValue)))(innerBlock)).getOrElse(innerBlock),
           doIfInnerCantContinue(
-            setField(canContinue, and(loadField(canContinue), cursorNext[RelationshipSelectionCursor](loadField(relationshipsField))))),
+            setField(canContinue, and(loadField(canContinue),
+                                      cursorNext[RelationshipSelectionCursor](loadField(relationshipsField))))),
           endInnerLoop
         )))
   }
