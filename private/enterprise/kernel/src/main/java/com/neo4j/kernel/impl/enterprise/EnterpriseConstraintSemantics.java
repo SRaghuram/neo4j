@@ -65,8 +65,8 @@ public class EnterpriseConstraintSemantics extends StandardConstraintSemantics
     }
 
     @Override
-    public void validateNodePropertyExistenceConstraint( NodeLabelIndexCursor allNodes, NodeCursor nodeCursor,
-            PropertyCursor propertyCursor, LabelSchemaDescriptor descriptor )
+    public void validateNodePropertyExistenceConstraint( NodeLabelIndexCursor allNodes, NodeCursor nodeCursor, PropertyCursor propertyCursor,
+            LabelSchemaDescriptor descriptor )
             throws CreateConstraintFailureException
     {
         while ( allNodes.next() )
@@ -80,8 +80,7 @@ public class EnterpriseConstraintSemantics extends StandardConstraintSemantics
                     if ( !hasProperty( propertyCursor, propertyKey ) )
                     {
                         throw createConstraintFailure(
-                                new NodePropertyExistenceException( descriptor, VERIFICATION,
-                                        nodeCursor.nodeReference() ) );
+                                new NodePropertyExistenceException( descriptor, VERIFICATION, nodeCursor.nodeReference() ) );
                     }
                 }
             }
@@ -89,8 +88,8 @@ public class EnterpriseConstraintSemantics extends StandardConstraintSemantics
     }
 
     @Override
-    public void validateNodeKeyConstraint( NodeLabelIndexCursor allNodes, NodeCursor nodeCursor,
-            PropertyCursor propertyCursor, LabelSchemaDescriptor descriptor ) throws CreateConstraintFailureException
+    public void validateNodeKeyConstraint( NodeLabelIndexCursor allNodes, NodeCursor nodeCursor, PropertyCursor propertyCursor,
+            LabelSchemaDescriptor descriptor ) throws CreateConstraintFailureException
     {
         validateNodePropertyExistenceConstraint( allNodes, nodeCursor, propertyCursor, descriptor );
     }
