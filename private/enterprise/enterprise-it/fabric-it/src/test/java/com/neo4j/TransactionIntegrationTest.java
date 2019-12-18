@@ -32,6 +32,7 @@ import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.SessionConfig;
 import org.neo4j.driver.Transaction;
+import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.driver.internal.shaded.reactor.core.publisher.Mono;
 import org.neo4j.driver.reactive.RxTransaction;
 import org.neo4j.exceptions.KernelException;
@@ -47,6 +48,7 @@ import org.neo4j.procedure.impl.GlobalProceduresRegistry;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.neo4j.internal.helpers.Strings.joinAsLines;
@@ -389,6 +391,30 @@ class TransactionIntegrationTest
 
         verifyNoOpenTransactions();
         verify( remote0Listener, 1, 0 );
+
+        verifyNoOpenTransactions();
+    }
+
+    @Test
+    void testErrorPropagation()
+    {
+        var tx = begin();
+
+        var statement = joinAsLines(
+                "UNWIND [1, 1, 0, 1, 1] AS gid",
+                "WITH gid, 1/gid AS x",
+                "CALL {",
+                "  USE mega.graph(gid)",
+                "  RETURN 1 As y",
+                "}",
+                "RETURN x, y"
+        );
+
+        var exception = assertThrows( ClientException.class, () -> Flux.from( tx.run( statement ).records() )
+                .collectList()
+                .block() );
+
+        assertThat( exception.getMessage(), containsString( "/ by zero" ) );
 
         verifyNoOpenTransactions();
     }

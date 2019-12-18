@@ -123,6 +123,7 @@ public class StatementResults
         private Subscriber<? super Record> subscriber;
         private QueryExecution queryExecution;
         private Throwable cachedError;
+        private boolean errorReceived;
 
         void setQueryExecution( QueryExecution queryExecution )
         {
@@ -138,6 +139,8 @@ public class StatementResults
         @Override
         public void onError( Throwable throwable )
         {
+            errorReceived = true;
+
             if ( subscriber == null )
             {
                 cachedError = throwable;
@@ -220,7 +223,14 @@ public class StatementResults
                     try
                     {
                         queryExecution.request( size );
-                        queryExecution.await();
+
+                        // If 'await' is called after an error has been received, it will throw with the same error.
+                        // Reactor operators don't like when 'onError' is called more than once. Typically, the second call throws an exception,
+                        // which can have a disastrous effect on the RX pipeline
+                        if ( !errorReceived )
+                        {
+                            queryExecution.await();
+                        }
                     }
                     catch ( Exception e )
                     {
