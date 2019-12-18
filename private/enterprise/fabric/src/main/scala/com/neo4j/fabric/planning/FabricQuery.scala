@@ -11,12 +11,14 @@ import com.neo4j.fabric.util.PrettyPrinting
 import org.neo4j.cypher.internal.FullyParsedQuery
 import org.neo4j.cypher.internal.ast.prettifier.{ExpressionStringifier, Prettifier}
 import org.neo4j.cypher.internal.ast.{Query, UseGraph}
+import org.neo4j.cypher.internal.util.ObfuscationMetadata
 
 case class FabricPlan(
   query: FabricQuery,
   queryType: QueryType,
   executionType: FabricPlan.ExecutionType,
   debugOptions: DebugOptions,
+  obfuscationMetadata: ObfuscationMetadata
 )
 
 object FabricPlan {

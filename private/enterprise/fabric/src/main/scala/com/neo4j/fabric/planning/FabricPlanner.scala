@@ -23,7 +23,7 @@ import org.neo4j.cypher.internal.ast.{ProcedureResult, SingleQuery, Statement, U
 import org.neo4j.cypher.internal.expressions.{FunctionInvocation, FunctionName, Namespace, ProcedureName}
 import org.neo4j.cypher.internal.frontend.PlannerName
 import org.neo4j.cypher.internal.frontend.phases.{BaseState, Condition}
-import org.neo4j.cypher.internal.util.InputPosition
+import org.neo4j.cypher.internal.util.{InputPosition, ObfuscationMetadata}
 import org.neo4j.cypher.internal.util.symbols.{CTAny, CypherType}
 import org.neo4j.cypher.internal.{ast, expressions => exp}
 import org.neo4j.cypher.{CypherExecutionMode, CypherExpressionEngineOption, CypherRuntimeOption, CypherUpdateStrategy}
@@ -69,6 +69,7 @@ case class FabricPlanner(
       options = preParsed.options,
       catalog = catalog,
       pipeline = pipeline,
+      obfuscationMetadata = state.obfuscationMetadata()
     )
   }
 
@@ -106,6 +107,7 @@ case class FabricPlanner(
     options: QueryOptions,
     catalog: Catalog,
     pipeline: Pipeline.Instance,
+    obfuscationMetadata: ObfuscationMetadata
   ) {
 
     def fragment: Fragment = original match {
@@ -266,7 +268,8 @@ case class FabricPlanner(
           case CypherExecutionMode.explain => FabricPlan.Explain
           case CypherExecutionMode.profile => Errors.notSupported("Query option: 'PROFILE'")
         },
-        debugOptions = DebugOptions.from(options.debugOptions)
+        debugOptions = DebugOptions.from(options.debugOptions),
+        obfuscationMetadata = obfuscationMetadata
       )
     }
 
@@ -444,6 +447,8 @@ case class FabricPlanner(
 
       override def maybeReturnColumns: Option[Seq[String]] = fail("maybeReturnColumns")
 
+      override def maybeObfuscationMetadata: Option[ObfuscationMetadata] = fail("maybeObfuscation")
+
       override def accumulatedConditions: Set[Condition] = fail("accumulatedConditions")
 
       override def plannerName: PlannerName = fail("plannerName")
@@ -457,6 +462,8 @@ case class FabricPlanner(
       override def withReturnColumns(cols: Seq[String]): BaseState = fail("withReturnColumns")
 
       override def withParams(p: Map[String, Any]): BaseState = fail("withParams")
+
+      override def withObfuscationMetadata(o: ObfuscationMetadata): BaseState = fail("withObfuscation")
     }
 
   }

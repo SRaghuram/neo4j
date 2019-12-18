@@ -35,6 +35,7 @@ object Pipeline {
       prepare,
       semantics,
       fabricPrepare(signatures),
+      collectObfuscationMetadata,
       semantics
     ), context)
 
@@ -81,6 +82,9 @@ object Pipeline {
 
   private def fabricPrepare(signatures: ProcedureSignatureResolver) =
     FabricPreparatoryRewriting(signatures)
+
+  private val collectObfuscationMetadata =
+    ObfuscationMetadataCollection
 
   private val namespace =
     Namespacer
