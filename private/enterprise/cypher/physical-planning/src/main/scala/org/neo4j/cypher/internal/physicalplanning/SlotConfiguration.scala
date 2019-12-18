@@ -155,7 +155,7 @@ class SlotConfiguration(private val slots: mutable.Map[String, Slot],
     slots.get(key) match {
       case Some(existingSlot) =>
         if (!existingSlot.isTypeCompatibleWith(slot)) {
-          throw new InternalException(s"Tried overwriting already taken variable name $key as $slot (was: $existingSlot)")
+          throw new InternalException(s"Tried overwriting already taken variable name '$key' as $slot (was: $existingSlot)")
         }
         // Reuse the existing (compatible) slot
         unifyTypeAndNullability(key, existingSlot, slot)
@@ -184,7 +184,7 @@ class SlotConfiguration(private val slots: mutable.Map[String, Slot],
     slots.get(key) match {
       case Some(existingSlot) =>
         if (!existingSlot.isTypeCompatibleWith(slot)) {
-          throw new InternalException(s"Tried overwriting already taken variable name $key as $slot (was: $existingSlot)")
+          throw new InternalException(s"Tried overwriting already taken variable name '$key' as $slot (was: $existingSlot)")
         }
         // Reuse the existing (compatible) slot
         unifyTypeAndNullability(key, existingSlot, slot)
