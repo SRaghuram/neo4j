@@ -44,7 +44,7 @@ public class TestCredentialsOnlyPlugin extends AuthenticationPlugin.Adapter
             this.username = username;
             // Since the credentials array will be cleared we make need to make a copy here
             // (in a real world scenario you would probably not store this copy in clear text)
-            this.credentials = credentials.clone();
+            this.credentials = Arrays.copyOf( credentials, credentials.length );
         }
 
         @Override

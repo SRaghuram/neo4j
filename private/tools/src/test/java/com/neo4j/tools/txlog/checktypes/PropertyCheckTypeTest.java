@@ -20,7 +20,7 @@ class PropertyCheckTypeTest
         record1.initialize( true, 1, 2 );
         record1.setSecondaryUnitIdOnLoad( 42 );
 
-        PropertyRecord record2 = record1.clone();
+        PropertyRecord record2 = record1.copy();
 
         PropertyCheckType check = new PropertyCheckType();
 

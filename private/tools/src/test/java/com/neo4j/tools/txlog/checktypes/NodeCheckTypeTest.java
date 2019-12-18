@@ -20,7 +20,7 @@ class NodeCheckTypeTest
         record1.initialize( true, 1, false, 2, 3 );
         record1.setSecondaryUnitIdOnLoad( 42 );
 
-        NodeRecord record2 = record1.clone();
+        NodeRecord record2 = record1.copy();
 
         NodeCheckType check = new NodeCheckType();
 

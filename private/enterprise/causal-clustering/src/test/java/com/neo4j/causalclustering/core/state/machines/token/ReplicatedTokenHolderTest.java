@@ -114,7 +114,7 @@ public class ReplicatedTokenHolderTest
                 public void visitCreatedLabelToken( long id, String name, boolean internal )
                 {
                     LabelTokenRecord before = new LabelTokenRecord( id );
-                    LabelTokenRecord after = before.clone();
+                    LabelTokenRecord after = before.copy();
                     after.setInUse( true );
                     after.setInternal( internal );
                     target.add( new Command.LabelTokenCommand( before, after ) );

@@ -20,7 +20,7 @@ class RelationshipGroupCheckTypeTest
         record1.initialize( true, 1, 2, 3, 4, 5, 6 );
         record1.setSecondaryUnitIdOnLoad( 42 );
 
-        RelationshipGroupRecord record2 = record1.clone();
+        RelationshipGroupRecord record2 = record1.copy();
 
         RelationshipGroupCheckType check = new RelationshipGroupCheckType();
 

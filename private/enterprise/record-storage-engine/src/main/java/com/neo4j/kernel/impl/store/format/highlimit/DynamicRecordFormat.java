@@ -59,8 +59,8 @@ public class DynamicRecordFormat extends BaseOneByteHeaderRecordFormat<DynamicRe
             }
             long next = cursor.getLong();
             boolean isStartRecord = (headerByte & START_RECORD_BIT) != 0;
-            record.initialize( inUse, isStartRecord, next, -1, length );
-            readData( record, cursor );
+            record.initialize( inUse, isStartRecord, next, -1 );
+            readData( record, cursor, length );
         }
         else
         {
