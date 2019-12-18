@@ -24,6 +24,7 @@ import org.neo4j.procedure.Admin;
 import org.neo4j.procedure.Description;
 import org.neo4j.procedure.Name;
 import org.neo4j.procedure.Procedure;
+import org.neo4j.kernel.api.procedure.Sensitive;
 
 import static org.neo4j.kernel.api.exceptions.Status.Procedure.ProcedureCallFailed;
 import static org.neo4j.kernel.api.exceptions.Status.Statement.FeatureDeprecationWarning;
@@ -39,7 +40,7 @@ public class UserManagementProcedures extends AuthProceduresBase
     @Procedure( name = "dbms.security.createUser", mode = DBMS, deprecatedBy = "Administration command: CREATE USER" )
     public void createUser(
             @Name( "username" ) String username,
-            @Name( "password" ) String password,
+            @Name( "password" ) @Sensitive String password,
             @Name( value = "requirePasswordChange", defaultValue = "true" ) boolean requirePasswordChange )
             throws ProcedureException
     {
@@ -52,8 +53,10 @@ public class UserManagementProcedures extends AuthProceduresBase
     @Deprecated
     @Description( "Change the current user's password." )
     @Procedure( name = "dbms.security.changePassword", mode = DBMS, deprecatedBy = "Administration command: ALTER CURRENT USER SET PASSWORD" )
-    public void changePassword( @Name( "password" ) String password,
-            @Name( value = "requirePasswordChange", defaultValue = "false" ) boolean requirePasswordChange ) throws ProcedureException
+    public void changePassword(
+            @Name( "password" ) @Sensitive String password,
+            @Name( value = "requirePasswordChange", defaultValue = "false" ) boolean requirePasswordChange )
+            throws ProcedureException
     {
         throw new ProcedureException( FeatureDeprecationWarning, "This procedure is no longer available, use: 'ALTER CURRENT USER SET PASSWORD'" );
     }
@@ -63,7 +66,9 @@ public class UserManagementProcedures extends AuthProceduresBase
     @Deprecated
     @Description( "Change the given user's password." )
     @Procedure( name = "dbms.security.changeUserPassword", mode = DBMS, deprecatedBy = "Administration command: ALTER USER" )
-    public void changeUserPassword( @Name( "username" ) String username, @Name( "newPassword" ) String newPassword,
+    public void changeUserPassword(
+            @Name( "username" ) String username,
+            @Name( "newPassword" ) @Sensitive String newPassword,
             @Name( value = "requirePasswordChange", defaultValue = "true" ) boolean requirePasswordChange )
             throws ProcedureException
     {
