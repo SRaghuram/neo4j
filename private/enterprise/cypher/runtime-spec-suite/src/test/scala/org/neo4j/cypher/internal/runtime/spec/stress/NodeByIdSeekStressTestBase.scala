@@ -18,7 +18,7 @@ abstract class NodeByIdSeekStressTestBase(edition: Edition[EnterpriseRuntimeCont
     val random = new Random(42)
     val seekNodes = (1 to 5).map(_ => nodes(random.nextInt(nodes.size)))
     RHSOfApplyLeafTD(
-      _.nodeByIdSeek(variable, ids = seekNodes.map(_.getId): _*),
+      _.nodeByIdSeek(variable, Set.empty, ids = seekNodes.map(_.getId): _*),
       rowsComingIntoTheOperator =>
         for {
           Array(x) <- rowsComingIntoTheOperator
