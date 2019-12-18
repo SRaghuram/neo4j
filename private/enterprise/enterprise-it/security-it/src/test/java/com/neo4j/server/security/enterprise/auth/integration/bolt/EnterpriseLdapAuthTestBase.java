@@ -14,7 +14,6 @@ import org.junit.rules.RuleChain;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
-import java.io.Reader;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
@@ -112,20 +111,19 @@ public abstract class EnterpriseLdapAuthTestBase extends AbstractLdapTestUnit
         File workingDirectory = testDirectory.homeDir();
         File logFile = new File( workingDirectory, "logs/security.log" );
 
-        Reader reader = fileSystem.openAsReader( logFile, UTF_8 );
-        BufferedReader bufferedReader = new BufferedReader( reader );
-        String line;
         boolean foundError = false;
-
-        while ( (line = bufferedReader.readLine()) != null )
+        try ( BufferedReader bufferedReader = new BufferedReader( fileSystem.openAsReader( logFile, UTF_8 ) ) )
         {
-            if ( line.contains( message ) )
+            String line;
+
+            while ( (line = bufferedReader.readLine()) != null )
             {
-                foundError = true;
+                if ( line.contains( message ) )
+                {
+                    foundError = true;
+                }
             }
         }
-        bufferedReader.close();
-        reader.close();
 
         assertThat( "Security log should contain message '" + message + "'", foundError );
     }
@@ -136,17 +134,15 @@ public abstract class EnterpriseLdapAuthTestBase extends AbstractLdapTestUnit
         File workingDirectory = testDirectory.homeDir();
         File logFile = new File( workingDirectory, "logs/security.log" );
 
-        Reader reader = fileSystem.openAsReader( logFile, UTF_8 );
-        BufferedReader bufferedReader = new BufferedReader( reader );
-        String line;
-
-        while ( (line = bufferedReader.readLine()) != null )
+        try ( BufferedReader bufferedReader = new BufferedReader( fileSystem.openAsReader( logFile, UTF_8 ) ) )
         {
-            assertThat( "Security log should not contain message '" + message + "'",
-                    !line.contains( message ) );
+            String line;
+
+            while ( (line = bufferedReader.readLine()) != null )
+            {
+                assertThat( "Security log should not contain message '" + message + "'", !line.contains( message ) );
+            }
         }
-        bufferedReader.close();
-        reader.close();
     }
 
     void createRole( String roleName, boolean withAccess )

@@ -134,11 +134,12 @@ class SecurityLogTest
 
     private String[] readLogFile( FileSystemAbstraction fs, File activeLogFile ) throws IOException
     {
-        Scanner scan = new Scanner( fs.openAsInputStream( activeLogFile ) );
-        scan.useDelimiter( "\\Z" );
-        String allLines = scan.next();
-        scan.close();
-        return allLines.split( "\\n" );
+        try ( Scanner scan = new Scanner( fs.openAsInputStream( activeLogFile ) ) )
+        {
+            scan.useDelimiter( "\\Z" );
+            String allLines = scan.next();
+            return allLines.split( "\\n" );
+        }
     }
 
     private File archive( int archiveNumber )
