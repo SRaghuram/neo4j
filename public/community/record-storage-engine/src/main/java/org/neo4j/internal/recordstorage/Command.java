@@ -31,7 +31,6 @@ import java.util.Map;
 import org.neo4j.internal.schema.SchemaRule;
 import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
-import org.neo4j.kernel.impl.store.SchemaStore;
 import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
 import org.neo4j.kernel.impl.store.record.DynamicRecord;
 import org.neo4j.kernel.impl.store.record.LabelTokenRecord;
@@ -54,6 +53,7 @@ import org.neo4j.values.storable.ValueWriter;
 
 import static java.lang.Math.toIntExact;
 import static java.lang.String.format;
+import static org.neo4j.internal.schema.SchemaRuleMapifier.mapifySchemaRule;
 import static org.neo4j.token.api.TokenIdPrettyPrinter.label;
 import static org.neo4j.token.api.TokenIdPrettyPrinter.relationshipType;
 import static org.neo4j.util.Bits.bitFlag;
@@ -707,7 +707,7 @@ public abstract class Command implements StorageCommand
 
         private void writeSchemaRule( WritableChannel channel ) throws IOException
         {
-            Map<String,Value> ruleMap = SchemaStore.mapifySchemaRule( schemaRule );
+            Map<String,Value> ruleMap = mapifySchemaRule( schemaRule );
             writeStringValueMap( channel, ruleMap );
         }
 
