@@ -48,6 +48,7 @@ import org.neo4j.internal.recordstorage.NeoStoresDiagnostics.NeoStoreIdUsage;
 import org.neo4j.internal.recordstorage.NeoStoresDiagnostics.NeoStoreRecords;
 import org.neo4j.internal.recordstorage.NeoStoresDiagnostics.NeoStoreVersions;
 import org.neo4j.internal.schema.IndexConfigCompleter;
+import org.neo4j.internal.schema.SchemaCache;
 import org.neo4j.internal.schema.SchemaState;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;

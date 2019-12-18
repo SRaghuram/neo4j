@@ -17,38 +17,30 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.internal.recordstorage;
+package org.neo4j.internal.schema;
 
 import org.apache.commons.lang3.mutable.MutableInt;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.internal.helpers.collection.Iterators;
-import org.neo4j.internal.schema.ConstraintDescriptor;
-import org.neo4j.internal.schema.ConstraintType;
-import org.neo4j.internal.schema.FulltextSchemaDescriptor;
-import org.neo4j.internal.schema.IndexCapability;
-import org.neo4j.internal.schema.IndexConfigCompleter;
-import org.neo4j.internal.schema.IndexDescriptor;
-import org.neo4j.internal.schema.IndexOrder;
-import org.neo4j.internal.schema.IndexPrototype;
-import org.neo4j.internal.schema.IndexValueCapability;
-import org.neo4j.internal.schema.SchemaDescriptor;
-import org.neo4j.internal.schema.SchemaRule;
 import org.neo4j.internal.schema.constraints.ConstraintDescriptorFactory;
 import org.neo4j.storageengine.api.StandardConstraintRuleAccessor;
-import org.neo4j.test.Race;
 import org.neo4j.values.storable.ValueCategory;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.singleton;
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -225,7 +217,7 @@ class SchemaCacheTest
         IndexDescriptor actual = single( cache.indexesForSchema( forLabel( 1, 3 ) ) );
 
         // Then
-        assertThat( actual ).isEqualTo( expected );
+        Assertions.assertThat( actual ).isEqualTo( expected );
     }
 
     @Test
@@ -330,14 +322,20 @@ class SchemaCacheTest
     void concurrentSchemaRuleAdd() throws Throwable
     {
         SchemaCache cache = newSchemaCache();
-        Race race = new Race();
         int indexNumber = 10;
+        Collection<Callable<Object>> tasks = new ArrayList<>();
         for ( int i = 0; i < indexNumber; i++ )
         {
             int id = i;
-            race.addContestant( () -> cache.addSchemaRule( newIndexRule( id, id, id ) ) );
+            tasks.add( () ->
+            {
+                cache.addSchemaRule( newIndexRule( id, id, id ) );
+                return null;
+            } );
         }
-        race.go();
+        ExecutorService executorService = Executors.newFixedThreadPool( indexNumber );
+        executorService.invokeAll( tasks );
+        executorService.shutdown();
 
         assertEquals( indexNumber, Iterables.count( cache.indexes() ) );
         for ( int labelId = 0; labelId < indexNumber; labelId++ )
@@ -355,14 +353,20 @@ class SchemaCacheTest
         {
             cache.addSchemaRule( newIndexRule( i, i, i ) );
         }
-        Race race = new Race();
+        Collection<Callable<Object>> tasks = new ArrayList<>();
         int numberOfDeletions = 10;
         for ( int i = 0; i < numberOfDeletions; i++ )
         {
             int indexId = i;
-            race.addContestant( () -> cache.removeSchemaRule( indexId ) );
+            tasks.add( () ->
+            {
+                cache.removeSchemaRule( indexId );
+                return null;
+            } );
         }
-        race.go();
+        ExecutorService executorService = Executors.newFixedThreadPool( indexNumber );
+        executorService.invokeAll( tasks );
+        executorService.shutdown();
 
         assertEquals( indexNumber - numberOfDeletions, Iterables.count( cache.indexes() ) );
         for ( int labelId = numberOfDeletions; labelId < indexNumber; labelId++ )
@@ -401,21 +405,21 @@ class SchemaCacheTest
     void shouldGetRelatedIndexForLabel()
     {
         SchemaCache cache = newSchemaCacheWithRulesForRelatedToCalls();
-        assertThat( cache.getIndexesRelatedTo( entityTokens( 3 ), noEntityToken, properties(), false, NODE ) ).contains( schema3_4, node35_8 );
+        Assertions.assertThat( cache.getIndexesRelatedTo( entityTokens( 3 ), noEntityToken, properties(), false, NODE ) ).contains( schema3_4, node35_8 );
     }
 
     @Test
     void shouldGetRelatedIndexForProperty()
     {
         SchemaCache cache = newSchemaCacheWithRulesForRelatedToCalls();
-        assertThat( cache.getIndexesRelatedTo( noEntityToken, entityTokens( 3, 4, 5 ), properties( 4 ), false, NODE ) ).contains( schema3_4 );
+        Assertions.assertThat( cache.getIndexesRelatedTo( noEntityToken, entityTokens( 3, 4, 5 ), properties( 4 ), false, NODE ) ).contains( schema3_4 );
     }
 
     @Test
     void shouldGetRelatedIndexesForLabel()
     {
         SchemaCache cache = newSchemaCacheWithRulesForRelatedToCalls();
-        assertThat( cache.getIndexesRelatedTo( entityTokens( 5 ), entityTokens( 3, 4 ), properties(), false, NODE ) ).contains( schema5_6_7, schema5_8,
+        Assertions.assertThat( cache.getIndexesRelatedTo( entityTokens( 5 ), entityTokens( 3, 4 ), properties(), false, NODE ) ).contains( schema5_6_7, schema5_8,
                 node35_8 );
     }
 
@@ -423,7 +427,7 @@ class SchemaCacheTest
     void shouldGetRelatedIndexes()
     {
         SchemaCache cache = newSchemaCacheWithRulesForRelatedToCalls();
-        assertThat( cache.getIndexesRelatedTo( entityTokens( 3 ), entityTokens( 4, 5 ), properties( 7 ), false, NODE ) ).contains( schema3_4, schema5_6_7,
+        Assertions.assertThat( cache.getIndexesRelatedTo( entityTokens( 3 ), entityTokens( 4, 5 ), properties( 7 ), false, NODE ) ).contains( schema3_4, schema5_6_7,
                 node35_8 );
     }
 
@@ -431,20 +435,20 @@ class SchemaCacheTest
     void shouldGetRelatedIndexOnce()
     {
         SchemaCache cache = newSchemaCacheWithRulesForRelatedToCalls();
-        assertThat( cache.getIndexesRelatedTo( entityTokens( 3 ), noEntityToken, properties( 4 ), false, NODE ) ).contains( schema3_4, node35_8 );
+        Assertions.assertThat( cache.getIndexesRelatedTo( entityTokens( 3 ), noEntityToken, properties( 4 ), false, NODE ) ).contains( schema3_4, node35_8 );
 
-        assertThat( cache.getIndexesRelatedTo( noEntityToken, entityTokens( 5 ), properties( 6, 7 ), false, NODE ) ).contains( schema5_6_7 );
+        Assertions.assertThat( cache.getIndexesRelatedTo( noEntityToken, entityTokens( 5 ), properties( 6, 7 ), false, NODE ) ).contains( schema5_6_7 );
     }
 
     @Test
     void shouldHandleUnrelated()
     {
         SchemaCache cache = newSchemaCacheWithRulesForRelatedToCalls();
-        assertThat( cache.getIndexesRelatedTo( noEntityToken, noEntityToken, properties(), false, NODE ) ).isEmpty();
+        Assertions.assertThat( cache.getIndexesRelatedTo( noEntityToken, noEntityToken, properties(), false, NODE ) ).isEmpty();
 
         assertTrue( cache.getIndexesRelatedTo( entityTokens( 2 ), noEntityToken, properties(), false, NODE ).isEmpty() );
 
-        assertThat( cache.getIndexesRelatedTo( noEntityToken, entityTokens( 2 ), properties( 1 ), false, NODE ) ).isEmpty();
+        Assertions.assertThat( cache.getIndexesRelatedTo( noEntityToken, entityTokens( 2 ), properties( 1 ), false, NODE ) ).isEmpty();
 
         assertTrue( cache.getIndexesRelatedTo( entityTokens( 2 ), entityTokens( 2 ), properties( 1 ), false, NODE ).isEmpty() );
     }
@@ -453,18 +457,18 @@ class SchemaCacheTest
     void shouldGetMultiLabelForAnyOfTheLabels()
     {
         SchemaCache cache = newSchemaCacheWithRulesForRelatedToCalls();
-        assertThat( cache.getIndexesRelatedTo( entityTokens( 3 ), noEntityToken, properties(), false, NODE ) ).contains( schema3_4, node35_8 );
+        Assertions.assertThat( cache.getIndexesRelatedTo( entityTokens( 3 ), noEntityToken, properties(), false, NODE ) ).contains( schema3_4, node35_8 );
 
-        assertThat( cache.getIndexesRelatedTo( entityTokens( 5 ), noEntityToken, properties(), false, NODE ) ).contains( schema5_8, schema5_6_7, node35_8 );
+        Assertions.assertThat( cache.getIndexesRelatedTo( entityTokens( 5 ), noEntityToken, properties(), false, NODE ) ).contains( schema5_8, schema5_6_7, node35_8 );
     }
 
     @Test
     void shouldOnlyGetRelIndexesForRelUpdates()
     {
         SchemaCache cache = newSchemaCacheWithRulesForRelatedToCalls();
-        assertThat( cache.getIndexesRelatedTo( entityTokens( 3 ), noEntityToken, properties(), false, RELATIONSHIP ) ).contains( rel35_8 );
+        Assertions.assertThat( cache.getIndexesRelatedTo( entityTokens( 3 ), noEntityToken, properties(), false, RELATIONSHIP ) ).contains( rel35_8 );
 
-        assertThat( cache.getIndexesRelatedTo( entityTokens( 5 ), noEntityToken, properties(), false, RELATIONSHIP ) ).contains( rel35_8 );
+        Assertions.assertThat( cache.getIndexesRelatedTo( entityTokens( 5 ), noEntityToken, properties(), false, RELATIONSHIP ) ).contains( rel35_8 );
     }
 
     @Test
@@ -472,12 +476,12 @@ class SchemaCacheTest
     {
         SchemaCache cache = newSchemaCacheWithRulesForRelatedToCalls();
         cache.removeSchemaRule( node35_8.getId() );
-        assertThat( cache.getIndexesRelatedTo( entityTokens( 3 ), noEntityToken, properties(), false, NODE ) ).contains( schema3_4 );
-        assertThat( cache.getIndexesRelatedTo( entityTokens( 3 ), noEntityToken, properties(), false, RELATIONSHIP ) ).contains( rel35_8 );
+        Assertions.assertThat( cache.getIndexesRelatedTo( entityTokens( 3 ), noEntityToken, properties(), false, NODE ) ).contains( schema3_4 );
+        Assertions.assertThat( cache.getIndexesRelatedTo( entityTokens( 3 ), noEntityToken, properties(), false, RELATIONSHIP ) ).contains( rel35_8 );
 
         cache.removeSchemaRule( 7 );
-        assertThat( cache.getIndexesRelatedTo( entityTokens( 5 ), noEntityToken, properties(), false, NODE ) ).contains( schema5_8, schema5_6_7 );
-        assertThat( cache.getIndexesRelatedTo( entityTokens( 5 ), noEntityToken, properties(), false, RELATIONSHIP ) ).contains( rel35_8 );
+        Assertions.assertThat( cache.getIndexesRelatedTo( entityTokens( 5 ), noEntityToken, properties(), false, NODE ) ).contains( schema5_8, schema5_6_7 );
+        Assertions.assertThat( cache.getIndexesRelatedTo( entityTokens( 5 ), noEntityToken, properties(), false, RELATIONSHIP ) ).contains( rel35_8 );
 
     }
 
