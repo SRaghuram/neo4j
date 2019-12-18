@@ -7,7 +7,6 @@ package com.neo4j.bench.common.util;
 
 import com.google.common.io.CharStreams;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -24,8 +23,6 @@ import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Collections;
-
-import static java.lang.String.format;
 
 public class Resources implements AutoCloseable
 {
@@ -84,7 +81,7 @@ public class Resources implements AutoCloseable
 
     private static String toTopLevelResourceFilename( String resourceFilename )
     {
-        return File.separator + resourceFilename.substring( 1 ).split( File.separator )[0];
+        return "/" + resourceFilename.substring( 1 ).split( "/" )[0];
     }
 
     private Path innerGet( String resourceFilename )
@@ -156,9 +153,9 @@ public class Resources implements AutoCloseable
     private static void assertStartsWithSeparatorChar( String resourceFilename )
     {
         // resource paths should always start with '/'
-        if ( !resourceFilename.startsWith( File.separator ) )
+        if ( !resourceFilename.startsWith( "/" ) )
         {
-            throw new RuntimeException( format( "Resources path unexpectedly did not start with '%s'", File.separator ) );
+            throw new RuntimeException( "Resources path unexpectedly did not start with '/'" );
         }
     }
 
