@@ -57,7 +57,8 @@ class SignatureResolver(
       inputSignature = signature.inputSignature().asScala.toIndexedSeq.map(s => FieldSignature(
         name = s.name(),
         typ = asCypherType(s.neo4jType()),
-        default = s.defaultValue().asScala.map(asCypherValue))),
+        default = s.defaultValue().asScala.map(asCypherValue),
+        sensitive = s.isSensitive)),
       outputSignature = if (signature.isVoid)
         None else
         Some(signature.outputSignature().asScala.toIndexedSeq.map(s => FieldSignature(
