@@ -365,12 +365,15 @@ public class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle
                                 case "DatabaseAll":
                                     privilegeBuilder.forAllDatabases();
                                     break;
+                                case "DatabaseDefault":
+                                    privilegeBuilder.forDefaultDatabase();
+                                    break;
                                 case "DeletedDatabase":
                                     //give up
                                     return;
                                 default:
                                     throw new IllegalStateException(
-                                            "Cannot have database node without either 'Database' or 'DatabaseAll' labels: " + dbLabel );
+                                            "Cannot have database node without either 'Database', 'DatabaseDefault' or 'DatabaseAll' labels: " + dbLabel );
                                 }
 
                                 rolePrivileges.add( privilegeBuilder.build() );

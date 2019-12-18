@@ -18,16 +18,26 @@ public class ResourcePrivilege
     private final Resource resource;
     private final Segment segment;
     private final String dbName;
-    private final boolean allDatabases;
+    private final boolean allDatabases, defaultDatabase;
 
-    public ResourcePrivilege( GrantOrDeny privilegeType, PrivilegeAction action, Resource resource, Segment segment ) throws InvalidArgumentsException
+    public ResourcePrivilege( GrantOrDeny privilegeType, PrivilegeAction action, Resource resource, Segment segment, SpecialDatabase specialDatabase )
+            throws InvalidArgumentsException
     {
         this.privilegeType = privilegeType;
         this.action = action;
         this.resource = resource;
         this.segment = segment;
         this.dbName = "";
-        this.allDatabases = true;
+        if ( specialDatabase.equals( SpecialDatabase.ALL ) )
+        {
+            this.allDatabases = true;
+            this.defaultDatabase = false;
+        }
+        else
+        {
+            this.allDatabases = false;
+            this.defaultDatabase = true;
+        }
         resource.assertValidCombination( action );
     }
 
@@ -40,6 +50,7 @@ public class ResourcePrivilege
         this.segment = segment;
         this.dbName = dbName;
         this.allDatabases = false;
+        this.defaultDatabase = false;
         resource.assertValidCombination( action );
     }
 
@@ -55,32 +66,37 @@ public class ResourcePrivilege
         return allDatabases || database.equals( dbName );
     }
 
+    boolean appliesToDefault()
+    {
+        return defaultDatabase;
+    }
+
     GrantOrDeny getPrivilegeType()
     {
         return privilegeType;
     }
 
-    public Resource getResource()
+    Resource getResource()
     {
         return resource;
     }
 
-    public PrivilegeAction getAction()
+    PrivilegeAction getAction()
     {
         return action;
     }
 
-    public Segment getSegment()
+    Segment getSegment()
     {
         return segment;
     }
 
-    public String getDbName()
+    String getDbName()
     {
         return this.dbName;
     }
 
-    public boolean isAllDatabases()
+    boolean appliesToAll()
     {
         return allDatabases;
     }
@@ -156,5 +172,11 @@ public class ResourcePrivilege
         {
             return name;
         }
+    }
+
+    public enum SpecialDatabase
+    {
+        ALL,
+        DEFAULT
     }
 }

@@ -35,6 +35,7 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.internal.helpers.Strings.escape;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
 import static org.neo4j.logging.AssertableLogProvider.inLog;
@@ -64,7 +65,7 @@ class MultiRealmAuthManagerTest
         SystemGraphRealm realm = new SystemGraphRealm( SecurityGraphInitializer.NO_OP, realmHelper, authStrategy, true, true );
 
         manager = new MultiRealmAuthManager( realm, Collections.singleton( realm ), new MemoryConstrainedCacheManager(),
-                new SecurityLog( logProvider.getLog( this.getClass() ) ), logSuccessfulAuthentications );
+                new SecurityLog( logProvider.getLog( this.getClass() ) ), logSuccessfulAuthentications, DEFAULT_DATABASE_NAME );
 
         manager.init();
         return manager;

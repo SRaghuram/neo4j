@@ -6,6 +6,7 @@
 package com.neo4j.server.security.enterprise.auth;
 
 import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
+import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.SpecialDatabase;
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 import com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealm;
@@ -68,23 +69,24 @@ class EnterpriseLoginContextTest
         when( realm.supports( any() ) ).thenReturn( true );
         createPrivileges();
 
-        authManager = new MultiRealmAuthManager( realm, Collections.singleton( realm ), new MemoryConstrainedCacheManager(), mock( SecurityLog.class ), false );
+        authManager = new MultiRealmAuthManager( realm, Collections.singleton( realm ), new MemoryConstrainedCacheManager(), mock( SecurityLog.class ), false,
+                DEFAULT_DATABASE_NAME );
         authManager.start();
 
     }
 
     private void createPrivileges() throws InvalidArgumentsException
     {
-        accessPrivilege = new ResourcePrivilege( GRANT, ACCESS, new Resource.DatabaseResource(), DatabaseSegment.ALL );
-        traverseNodePrivilege = new ResourcePrivilege( GRANT, TRAVERSE, new Resource.GraphResource(), LabelSegment.ALL );
-        traverseRelPrivilege = new ResourcePrivilege( GRANT, TRAVERSE, new Resource.GraphResource(), RelTypeSegment.ALL );
-        readNodePrivilege = new ResourcePrivilege( GRANT, READ, new Resource.AllPropertiesResource(), LabelSegment.ALL );
-        readRelPrivilege = new ResourcePrivilege( GRANT, READ, new Resource.AllPropertiesResource(), RelTypeSegment.ALL );
-        writeNodePrivilege = new ResourcePrivilege( GRANT, WRITE, new Resource.AllPropertiesResource(), LabelSegment.ALL );
-        writeRelPrivilege = new ResourcePrivilege( GRANT, WRITE, new Resource.AllPropertiesResource(), RelTypeSegment.ALL );
-        tokenPrivilege = new ResourcePrivilege( GRANT, TOKEN, new Resource.DatabaseResource(), DatabaseSegment.ALL );
-        schemaPrivilege = new ResourcePrivilege( GRANT, SCHEMA, new Resource.DatabaseResource(), DatabaseSegment.ALL );
-        adminPrivilege = new ResourcePrivilege( GRANT, ADMIN, new Resource.DatabaseResource(), DatabaseSegment.ALL );
+        accessPrivilege = new ResourcePrivilege( GRANT, ACCESS, new Resource.DatabaseResource(), DatabaseSegment.ALL, SpecialDatabase.ALL );
+        traverseNodePrivilege = new ResourcePrivilege( GRANT, TRAVERSE, new Resource.GraphResource(), LabelSegment.ALL, SpecialDatabase.ALL );
+        traverseRelPrivilege = new ResourcePrivilege( GRANT, TRAVERSE, new Resource.GraphResource(), RelTypeSegment.ALL, SpecialDatabase.ALL );
+        readNodePrivilege = new ResourcePrivilege( GRANT, READ, new Resource.AllPropertiesResource(), LabelSegment.ALL, SpecialDatabase.ALL );
+        readRelPrivilege = new ResourcePrivilege( GRANT, READ, new Resource.AllPropertiesResource(), RelTypeSegment.ALL, SpecialDatabase.ALL );
+        writeNodePrivilege = new ResourcePrivilege( GRANT, WRITE, new Resource.AllPropertiesResource(), LabelSegment.ALL, SpecialDatabase.ALL );
+        writeRelPrivilege = new ResourcePrivilege( GRANT, WRITE, new Resource.AllPropertiesResource(), RelTypeSegment.ALL, SpecialDatabase.ALL );
+        tokenPrivilege = new ResourcePrivilege( GRANT, TOKEN, new Resource.DatabaseResource(), DatabaseSegment.ALL, SpecialDatabase.ALL );
+        schemaPrivilege = new ResourcePrivilege( GRANT, SCHEMA, new Resource.DatabaseResource(), DatabaseSegment.ALL, SpecialDatabase.ALL );
+        adminPrivilege = new ResourcePrivilege( GRANT, ADMIN, new Resource.DatabaseResource(), DatabaseSegment.ALL, SpecialDatabase.ALL );
     }
 
     @Test

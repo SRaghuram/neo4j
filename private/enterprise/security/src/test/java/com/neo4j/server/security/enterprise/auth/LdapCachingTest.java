@@ -7,6 +7,7 @@ package com.neo4j.server.security.enterprise.auth;
 
 import com.google.common.testing.FakeTicker;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
+import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.SpecialDatabase;
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
 import com.neo4j.server.security.enterprise.systemgraph.SystemGraphRealm;
@@ -38,6 +39,7 @@ import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.server.security.auth.SecurityTestUtils.authToken;
 
 class LdapCachingTest
@@ -58,11 +60,12 @@ class LdapCachingTest
         fakeTicker = new FakeTicker();
         SystemGraphRealm systemGraphRealm = mock( SystemGraphRealm.class );
         when( systemGraphRealm.getPrivilegesForRoles( anySet() ) ).thenReturn( Collections.singleton(
-                new ResourcePrivilege( ResourcePrivilege.GrantOrDeny.GRANT, PrivilegeAction.ACCESS, new Resource.DatabaseResource(), DatabaseSegment.ALL ) ) );
+                new ResourcePrivilege( ResourcePrivilege.GrantOrDeny.GRANT, PrivilegeAction.ACCESS, new Resource.DatabaseResource(), DatabaseSegment.ALL,
+                        SpecialDatabase.ALL ) ) );
 
         authManager = new MultiRealmAuthManager( systemGraphRealm, Collections.singletonList( testRealm ),
                                                  new ShiroCaffeineCache.Manager( fakeTicker::read, 100, 10, true ),
-                                                 securityLog, false );
+                                                 securityLog, false, DEFAULT_DATABASE_NAME );
         authManager.init();
         authManager.start();
     }

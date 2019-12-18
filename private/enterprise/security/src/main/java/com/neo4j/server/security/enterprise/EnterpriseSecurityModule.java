@@ -42,6 +42,7 @@ import java.util.stream.Collectors;
 import org.neo4j.commandline.admin.security.SetDefaultAdminCommand;
 import org.neo4j.common.DependencySatisfier;
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.cypher.internal.security.SecureHasher;
 import org.neo4j.dbms.DatabaseManagementSystemSettings;
 import org.neo4j.dbms.database.DatabaseManager;
@@ -235,7 +236,7 @@ public class EnterpriseSecurityModule extends SecurityModule
         }
 
         return new MultiRealmAuthManager( internalRealm, orderedActiveRealms, createCacheManager( config ),
-                securityLog, config.get( SecuritySettings.security_log_successful_authentication ) );
+                securityLog, config.get( SecuritySettings.security_log_successful_authentication ), config.get( GraphDatabaseSettings.default_database ) );
     }
 
     private SecurityConfig getValidatedSecurityConfig( Config config )

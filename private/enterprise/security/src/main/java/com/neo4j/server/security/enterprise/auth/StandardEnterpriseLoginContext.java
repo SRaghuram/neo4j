@@ -26,12 +26,14 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
 {
     private final MultiRealmAuthManager authManager;
     private final ShiroSubject shiroSubject;
+    private final String defaultDatabase;
     private final NeoShiroSubject neoShiroSubject;
 
-    StandardEnterpriseLoginContext( MultiRealmAuthManager authManager, ShiroSubject shiroSubject )
+    StandardEnterpriseLoginContext( MultiRealmAuthManager authManager, ShiroSubject shiroSubject, String defaultDatabase )
     {
         this.authManager = authManager;
         this.shiroSubject = shiroSubject;
+        this.defaultDatabase = defaultDatabase;
         this.neoShiroSubject = new NeoShiroSubject();
     }
 
@@ -46,12 +48,14 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
         boolean isAuthenticated = shiroSubject.isAuthenticated();
         boolean passwordChangeRequired = shiroSubject.getAuthenticationResult() == AuthenticationResult.PASSWORD_CHANGE_REQUIRED;
         Set<String> roles = queryForRoleNames();
-        StandardAccessMode.Builder accessModeBuilder = new StandardAccessMode.Builder( isAuthenticated, passwordChangeRequired, roles, resolver, dbName );
+        StandardAccessMode.Builder accessModeBuilder =
+                new StandardAccessMode.Builder( isAuthenticated, passwordChangeRequired, roles, resolver, dbName, defaultDatabase );
 
         Set<ResourcePrivilege> privileges = authManager.getPermissions( roles );
+        boolean isDefault = dbName.equals( defaultDatabase );
         for ( ResourcePrivilege privilege : privileges )
         {
-            if ( privilege.appliesTo( dbName ) )
+            if ( privilege.appliesTo( dbName ) || isDefault && privilege.appliesToDefault() )
             {
                 accessModeBuilder.addPrivilege( privilege );
             }

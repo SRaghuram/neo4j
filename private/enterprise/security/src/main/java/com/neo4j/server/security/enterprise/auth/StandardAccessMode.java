@@ -24,7 +24,7 @@ import org.neo4j.graphdb.security.AuthorizationViolationException;
 import org.neo4j.internal.kernel.api.LabelSet;
 import org.neo4j.internal.kernel.api.security.AccessMode;
 import org.neo4j.internal.kernel.api.security.AdminActionOnResource;
-import org.neo4j.internal.kernel.api.security.LoginContext;
+import org.neo4j.internal.kernel.api.security.LoginContext.IdLookup;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 
 import static com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny.DENY;
@@ -448,8 +448,9 @@ class StandardAccessMode implements AccessMode
         private final boolean isAuthenticated;
         private final boolean passwordChangeRequired;
         private final Set<String> roles;
-        private final LoginContext.IdLookup resolver;
+        private final IdLookup resolver;
         private final String database;
+        private final String defaultDbName;
 
         private Map<ResourcePrivilege.GrantOrDeny,Boolean> anyAccess = new HashMap<>();  // track any access rights
         private Map<ResourcePrivilege.GrantOrDeny,Boolean> anyRead = new HashMap<>();  // track any reads for optimization purposes
@@ -473,13 +474,14 @@ class StandardAccessMode implements AccessMode
 
         private StandardAdminAccessMode.Builder adminModeBuilder = new StandardAdminAccessMode.Builder();
 
-        Builder( boolean isAuthenticated, boolean passwordChangeRequired, Set<String> roles, LoginContext.IdLookup resolver, String database )
+        Builder( boolean isAuthenticated, boolean passwordChangeRequired, Set<String> roles, IdLookup resolver, String database, String defaultDbName )
         {
             this.isAuthenticated = isAuthenticated;
             this.passwordChangeRequired = passwordChangeRequired;
             this.roles = roles;
             this.resolver = resolver;
             this.database = database;
+            this.defaultDbName = defaultDbName;
             for ( ResourcePrivilege.GrantOrDeny privilegeType : ResourcePrivilege.GrantOrDeny.values() )
             {
                 this.traverseLabels.put( privilegeType, IntSets.mutable.empty() );
@@ -692,8 +694,19 @@ class StandardAccessMode implements AccessMode
 
         private void addPrivilegeAction( ResourcePrivilege privilege )
         {
-            var dbScope =
-                    privilege.isAllDatabases() ? AdminActionOnResource.DatabaseScope.ALL : new AdminActionOnResource.DatabaseScope( privilege.getDbName() );
+            AdminActionOnResource.DatabaseScope dbScope;
+            if ( privilege.appliesToAll() )
+            {
+                dbScope = AdminActionOnResource.DatabaseScope.ALL;
+            }
+            else if ( privilege.appliesToDefault() )
+            {
+                dbScope = new AdminActionOnResource.DatabaseScope( defaultDbName );
+            }
+            else
+            {
+                dbScope = new AdminActionOnResource.DatabaseScope( privilege.getDbName() );
+            }
             var adminAction = new AdminActionOnResource( privilege.getAction(), dbScope );
             if ( privilege.getPrivilegeType().isGrant() )
             {

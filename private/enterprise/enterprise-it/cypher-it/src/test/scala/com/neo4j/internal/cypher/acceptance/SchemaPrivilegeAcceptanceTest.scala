@@ -15,6 +15,7 @@ import org.neo4j.graphdb.security.AuthorizationViolationException
 import org.neo4j.internal.kernel.api.security.PrivilegeAction
 
 class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
+  private val default = "DEFAULT"
 
   test("should return empty counts to the outside for commands that update the system graph internally") {
     //TODO: ADD ANY NEW UPDATING COMMANDS HERE
@@ -163,15 +164,14 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      createIndex().database(DEFAULT_DATABASE_NAME).role("role").map
+      createIndex().database(default).role("role").map
     ))
   }
 
   test("should list different index management privileges on custom default database") {
     // GIVEN
-    val newDefaultDatabase = "foo"
     val config = Config.defaults()
-    config.set(default_database, newDefaultDatabase)
+    config.set(default_database, "foo")
     setup(config)
     execute("CREATE ROLE role")
 
@@ -180,7 +180,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      createIndex().database(newDefaultDatabase).role("role").map
+      createIndex().database(default).role("role").map
     ))
 
     // WHEN
@@ -189,7 +189,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      dropIndex("DENIED").database(newDefaultDatabase).role("role").map
+      dropIndex("DENIED").database(default).role("role").map
     ))
 
     // WHEN
@@ -198,8 +198,8 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      createIndex().database(newDefaultDatabase).role("role").map,
-      dropIndex().database(newDefaultDatabase).role("role").map
+      createIndex().database(default).role("role").map,
+      dropIndex().database(default).role("role").map
     ))
 
     // WHEN
@@ -279,15 +279,14 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      dropConstraint().database(DEFAULT_DATABASE_NAME).role("role").map
+      dropConstraint().database(default).role("role").map
     ))
   }
 
   test("should list different constraint management privileges on custom default database") {
     // GIVEN
-    val newDefaultDatabase = "foo"
     val config = Config.defaults()
-    config.set(default_database, newDefaultDatabase)
+    config.set(default_database, "foo")
     setup(config)
     execute("CREATE ROLE role")
 
@@ -296,7 +295,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      createConstraint().database(newDefaultDatabase).role("role").map
+      createConstraint().database(default).role("role").map
     ))
 
     // WHEN
@@ -305,7 +304,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      dropConstraint("DENIED").database(newDefaultDatabase).role("role").map
+      dropConstraint("DENIED").database(default).role("role").map
     ))
 
     // WHEN
@@ -314,8 +313,8 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      createConstraint().database(newDefaultDatabase).role("role").map,
-      dropConstraint().database(newDefaultDatabase).role("role").map
+      createConstraint().database(default).role("role").map,
+      dropConstraint().database(default).role("role").map
     ))
 
     // WHEN
@@ -401,15 +400,14 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      createNodeLabel().database(DEFAULT_DATABASE_NAME).role("role").map
+      createNodeLabel().database(default).role("role").map
     ))
   }
 
   test("should list different name management privileges on custom default database") {
     // GIVEN
-    val newDefaultDatabase = "foo"
     val config = Config.defaults()
-    config.set(default_database, newDefaultDatabase)
+    config.set(default_database, "foo")
     setup(config)
     execute("CREATE ROLE role")
 
@@ -418,7 +416,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      createNodeLabel().database(newDefaultDatabase).role("role").map
+      createNodeLabel().database(default).role("role").map
     ))
 
     // WHEN
@@ -427,7 +425,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      createRelationshipType("DENIED").database(newDefaultDatabase).role("role").map
+      createRelationshipType("DENIED").database(default).role("role").map
     ))
 
     // WHEN
@@ -436,7 +434,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      createPropertyKey("DENIED").database(newDefaultDatabase).role("role").map
+      createPropertyKey("DENIED").database(default).role("role").map
     ))
 
     // WHEN
@@ -445,9 +443,9 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      createNodeLabel().database(newDefaultDatabase).role("role").map,
-      createRelationshipType().database(newDefaultDatabase).role("role").map,
-      createPropertyKey().database(newDefaultDatabase).role("role").map
+      createNodeLabel().database(default).role("role").map,
+      createRelationshipType().database(default).role("role").map,
+      createPropertyKey().database(default).role("role").map
     ))
 
     // WHEN
@@ -950,6 +948,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
   }
 
   test("Should allow index dropping for normal user with index drop privilege") {
+    setup()
     selectDatabase(DEFAULT_DATABASE_NAME)
     graph.createIndexWithName("my_index", "Label", "prop")
     setupUserWithCustomRole()
@@ -969,6 +968,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
   }
 
   test("Should allow index creation and dropping for normal user with index management privilege") {
+    setup()
     setupUserWithCustomRole()
     execute("GRANT NAME MANAGEMENT ON DATABASE * TO custom")
     execute("GRANT INDEX ON DATABASE * TO custom")
@@ -1019,11 +1019,11 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     } should have message "Schema operation 'create_index' is not allowed for user 'joe' with roles [custom]."
   }
 
-  test("should have index management privilege on old default after switch of default database") {
+  test("should have index management privilege on new default after switch of default database") {
     // GIVEN
     val newDefaultDatabase = "foo"
     val config = Config.defaults(GraphDatabaseSettings.auth_enabled, TRUE)
-    setup(config)
+    setup(config, impermanent = false)
     setupUserWithCustomRole("alice", "abc", "role")
     execute("GRANT NAME MANAGEMENT ON DATABASE * TO role")
     execute(s"CREATE database $newDefaultDatabase")
@@ -1035,14 +1035,14 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     // WHEN: Grant on default database
     execute(s"GRANT INDEX MANAGEMENT ON DEFAULT DATABASE TO role")
 
-    // THEN: Get privilege on current default
+    // THEN: Get privilege on default
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
       access().role("role").map,
       createNodeLabel().role("role").map,
       createRelationshipType().role("role").map,
       createPropertyKey().role("role").map,
-      createIndex().database(DEFAULT_DATABASE_NAME).role("role").map,
-      dropIndex().database(DEFAULT_DATABASE_NAME).role("role").map
+      createIndex().database(default).role("role").map,
+      dropIndex().database(default).role("role").map
     ))
 
     // WHEN: creating index on default
@@ -1061,7 +1061,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // WHEN: switch default database and create index on foo
     config.set(default_database, newDefaultDatabase)
-    initSystemGraph(config)
+    restart(config)
     selectDatabase(newDefaultDatabase)
     graph.createIndexWithName("foo_index", "Label", "prop")
 
@@ -1070,29 +1070,29 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME)))
     execute(s"SHOW DATABASE $newDefaultDatabase").toSet should be(Set(db(newDefaultDatabase, default = true)))
 
-    // THEN: still same privilege, not changed with the change of default database
+    // THEN: confirm privilege
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
       access().role("role").map,
       createNodeLabel().role("role").map,
       createRelationshipType().role("role").map,
       createPropertyKey().role("role").map,
-      createIndex().database(DEFAULT_DATABASE_NAME).role("role").map,
-      dropIndex().database(DEFAULT_DATABASE_NAME).role("role").map
+      createIndex().database(default).role("role").map,
+      dropIndex().database(default).role("role").map
     ))
 
     // WHEN: dropping index on default
-    executeOn(DEFAULT_DATABASE_NAME, "alice", "abc", "DROP INDEX neo_index") should be(0)
-
-    // THEN
-    graph.getMaybeIndex("Label", Seq("prop")).isEmpty should be(true)
-
-    // WHEN: dropping index on foo
     the[AuthorizationViolationException] thrownBy {
-      executeOn(newDefaultDatabase, "alice", "abc", "DROP INDEX foo_index")
+      executeOn(DEFAULT_DATABASE_NAME, "alice", "abc", "DROP INDEX neo_index")
     } should have message "Schema operations are not allowed for user 'alice' with roles [role]."
 
     // THEN
     graph.getMaybeIndex("Label", Seq("prop")).isEmpty should be(false)
+
+    // WHEN: dropping index on foo
+    executeOn(newDefaultDatabase, "alice", "abc", "DROP INDEX foo_index") should be(0)
+
+    // THEN
+    graph.getMaybeIndex("Label", Seq("prop")).isEmpty should be(true)
   }
 
   // Constraint Management
@@ -1186,6 +1186,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
   }
 
   test("Should allow constraint dropping for normal user with constraint drop privilege") {
+    setup()
     selectDatabase(DEFAULT_DATABASE_NAME)
     graph.createNodeExistenceConstraintWithName("my_constraint", "Label", "prop")
     setupUserWithCustomRole()
@@ -1205,6 +1206,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
   }
 
   test("Should allow constraint creation and dropping for normal user with constraint management privilege") {
+    setup()
     setupUserWithCustomRole()
     execute("GRANT NAME MANAGEMENT ON DATABASE * TO custom")
     execute("GRANT CONSTRAINT ON DATABASE * TO custom")
@@ -1255,11 +1257,11 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     } should have message "Schema operation 'create_constraint' is not allowed for user 'joe' with roles [custom]."
   }
 
-  test("should have constraint management privilege on old default after switch of default database") {
+  test("should have constraint management privilege on new default after switch of default database") {
     // GIVEN
     val newDefaultDatabase = "foo"
     val config = Config.defaults(GraphDatabaseSettings.auth_enabled, TRUE)
-    setup(config)
+    setup(config, impermanent = false)
     setupUserWithCustomRole("alice", "abc", "role")
     execute("GRANT NAME MANAGEMENT ON DATABASE * TO role")
     execute(s"CREATE database $newDefaultDatabase")
@@ -1271,14 +1273,14 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     // WHEN: Grant on default database
     execute(s"GRANT CONSTRAINT MANAGEMENT ON DEFAULT DATABASE TO role")
 
-    // THEN: Get privilege on current default
+    // THEN: Get privilege on default
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
       access().role("role").map,
       createNodeLabel().role("role").map,
       createRelationshipType().role("role").map,
       createPropertyKey().role("role").map,
-      createConstraint().database(DEFAULT_DATABASE_NAME).role("role").map,
-      dropConstraint().database(DEFAULT_DATABASE_NAME).role("role").map
+      createConstraint().database(default).role("role").map,
+      dropConstraint().database(default).role("role").map
     ))
 
     // WHEN: creating constraint on default
@@ -1297,7 +1299,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // WHEN: switch default database and create constraint on foo
     config.set(default_database, newDefaultDatabase)
-    initSystemGraph(config)
+    restart(config)
     selectDatabase(newDefaultDatabase)
     graph.createNodeExistenceConstraintWithName("foo_constraint", "Label", "prop")
 
@@ -1306,29 +1308,29 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME)))
     execute(s"SHOW DATABASE $newDefaultDatabase").toSet should be(Set(db(newDefaultDatabase, default = true)))
 
-    // THEN: still same privilege, not changed with the change of default database
+    // THEN: confirm privilege
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
       access().role("role").map,
       createNodeLabel().role("role").map,
       createRelationshipType().role("role").map,
       createPropertyKey().role("role").map,
-      createConstraint().database(DEFAULT_DATABASE_NAME).role("role").map,
-      dropConstraint().database(DEFAULT_DATABASE_NAME).role("role").map
+      createConstraint().database(default).role("role").map,
+      dropConstraint().database(default).role("role").map
     ))
 
     // WHEN: dropping constraint on default
-    executeOn(DEFAULT_DATABASE_NAME, "alice", "abc", "DROP CONSTRAINT neo_constraint") should be(0)
-
-    // THEN
-    graph.getMaybeNodeConstraint("Label", Seq("prop")).isEmpty should be(true)
-
-    // WHEN: dropping constraint on foo
     the[AuthorizationViolationException] thrownBy {
-      executeOn(newDefaultDatabase, "alice", "abc", "DROP CONSTRAINT foo_constraint")
+      executeOn(DEFAULT_DATABASE_NAME, "alice", "abc", "DROP CONSTRAINT neo_constraint")
     } should have message "Schema operations are not allowed for user 'alice' with roles [role]."
 
     // THEN
     graph.getMaybeNodeConstraint("Label", Seq("prop")).isEmpty should be(false)
+
+    // WHEN: dropping constraint on foo
+    executeOn(newDefaultDatabase, "alice", "abc", "DROP CONSTRAINT foo_constraint") should be(0)
+
+    // THEN
+    graph.getMaybeNodeConstraint("Label", Seq("prop")).isEmpty should be(true)
   }
 
   // Name Management
@@ -1455,11 +1457,11 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     }) should be(1)
   }
 
-  test("should have name management privilege on old default after switch of default database") {
+  test("should have name management privilege on new default after switch of default database") {
     // GIVEN
     val newDefaultDatabase = "foo"
     val config = Config.defaults(GraphDatabaseSettings.auth_enabled, TRUE)
-    setup(config)
+    setup(config, impermanent = false)
     setupUserWithCustomRole("alice", "abc", "role")
     execute("GRANT WRITE ON GRAPH * TO role")
     execute(s"CREATE database $newDefaultDatabase")
@@ -1471,25 +1473,25 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     // WHEN: Grant on default database
     execute(s"GRANT NAME MANAGEMENT ON DEFAULT DATABASE TO role")
 
-    // THEN: Get privilege on current default
+    // THEN: Get privilege on default
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
       access().role("role").map,
       write().node("*").role("role").map,
       write().relationship("*").role("role").map,
-      createNodeLabel().database(DEFAULT_DATABASE_NAME).role("role").map,
-      createRelationshipType().database(DEFAULT_DATABASE_NAME).role("role").map,
-      createPropertyKey().database(DEFAULT_DATABASE_NAME).role("role").map
+      createNodeLabel().database(default).role("role").map,
+      createRelationshipType().database(default).role("role").map,
+      createPropertyKey().database(default).role("role").map
     ))
 
     // WHEN: creating on default
-    executeOn(DEFAULT_DATABASE_NAME, "alice", "abc", "CREATE (n:Label)-[:Type]->({prop: 1}) RETURN n") should be(1)
+    executeOn(DEFAULT_DATABASE_NAME, "alice", "abc", "CREATE (n:Label1)-[:Type1]->({prop1: 1}) RETURN n") should be(1)
 
     // THEN
-    execute("MATCH (n:Label) RETURN n").isEmpty should be(false)
+    execute("MATCH (n:Label1) RETURN n").isEmpty should be(false)
 
     // WHEN: creating on foo
     val exception1 = the[AuthorizationViolationException] thrownBy {
-      executeOn(newDefaultDatabase, "alice", "abc", "CREATE (n:Label)-[:Type]->({prop: 1}) RETURN n")
+      executeOn(newDefaultDatabase, "alice", "abc", "CREATE (n:Label1)-[:Type1]->({prop1: 1}) RETURN n")
     }
     exception1.getMessage should (
       be("'create_label' operations are not allowed for user 'alice' with roles [role].") or (
@@ -1498,36 +1500,30 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       )
 
     // THEN
-    execute("MATCH (n:Label) RETURN n").isEmpty should be(true)
+    execute("MATCH (n:Label1) RETURN n").isEmpty should be(true)
 
     // WHEN: switch default database
     config.set(default_database, newDefaultDatabase)
-    initSystemGraph(config)
+    restart(config)
 
     // Confirm default database
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME)))
     execute(s"SHOW DATABASE $newDefaultDatabase").toSet should be(Set(db(newDefaultDatabase, default = true)))
 
-    // THEN: still same privilege, not changed with the change of default database
+    // THEN: confirm privilege
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
       access().role("role").map,
       write().node("*").role("role").map,
       write().relationship("*").role("role").map,
-      createNodeLabel().database(DEFAULT_DATABASE_NAME).role("role").map,
-      createRelationshipType().database(DEFAULT_DATABASE_NAME).role("role").map,
-      createPropertyKey().database(DEFAULT_DATABASE_NAME).role("role").map
+      createNodeLabel().database(default).role("role").map,
+      createRelationshipType().database(default).role("role").map,
+      createPropertyKey().database(default).role("role").map
     ))
 
     // WHEN: creating on default
-    executeOn(DEFAULT_DATABASE_NAME, "alice", "abc", "CREATE (n:Label)-[:Type]->({prop: 1}) RETURN n") should be(1)
-
-    // THEN
-    execute("MATCH (n:Label) RETURN n").isEmpty should be(false)
-
-    // WHEN: creating on foo
     val exception2 = the[AuthorizationViolationException] thrownBy {
-      executeOn(newDefaultDatabase, "alice", "abc", "CREATE (n:Label)-[:Type]->({prop: 1}) RETURN n")
+      executeOn(DEFAULT_DATABASE_NAME, "alice", "abc", "CREATE (n:Label2)-[:Type2]->({prop2: 1}) RETURN n")
     }
     exception2.getMessage should (
       be("'create_label' operations are not allowed for user 'alice' with roles [role].") or (
@@ -1536,7 +1532,13 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       )
 
     // THEN
-    execute("MATCH (n:Label) RETURN n").isEmpty should be(true)
+    execute("MATCH (n:Label2) RETURN n").isEmpty should be(true)
+
+    // WHEN: creating on foo
+    executeOn(newDefaultDatabase, "alice", "abc", "CREATE (n:Label2)-[:Type2]->({prop2: 1}) RETURN n") should be(1)
+
+    // THEN
+    execute("MATCH (n:Label2) RETURN n").isEmpty should be(false)
   }
 
   test("Should allow all creation for normal user with all database privileges") {

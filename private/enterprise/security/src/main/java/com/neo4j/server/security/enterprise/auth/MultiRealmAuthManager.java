@@ -53,9 +53,10 @@ public class MultiRealmAuthManager implements EnterpriseAuthManager
     private final CacheManager cacheManager;
     private final SecurityLog securityLog;
     private final boolean logSuccessfulLogin;
+    private final String defaultDatabase;
 
     public MultiRealmAuthManager( SystemGraphRealm systemGraphRealm, Collection<Realm> realms, CacheManager cacheManager,
-            SecurityLog securityLog, boolean logSuccessfulLogin )
+            SecurityLog securityLog, boolean logSuccessfulLogin, String defaultDatabase )
     {
         this.systemGraphRealm = systemGraphRealm;
         this.realms = realms;
@@ -64,6 +65,7 @@ public class MultiRealmAuthManager implements EnterpriseAuthManager
         securityManager = new DefaultSecurityManager( realms );
         this.securityLog = securityLog;
         this.logSuccessfulLogin = logSuccessfulLogin;
+        this.defaultDatabase = defaultDatabase;
         securityManager.setSubjectFactory( new ShiroSubjectFactory() );
         ((ModularRealmAuthenticator) securityManager.getAuthenticator())
                 .setAuthenticationStrategy( new ShiroAuthenticationStrategy() );
@@ -93,7 +95,7 @@ public class MultiRealmAuthManager implements EnterpriseAuthManager
             try
             {
                 securityContext = new StandardEnterpriseLoginContext(
-                        this, (ShiroSubject) securityManager.login( null, token ) );
+                        this, (ShiroSubject) securityManager.login( null, token ), defaultDatabase );
                 AuthenticationResult authenticationResult = securityContext.subject().getAuthenticationResult();
                 if ( authenticationResult == AuthenticationResult.SUCCESS )
                 {
@@ -128,8 +130,8 @@ public class MultiRealmAuthManager implements EnterpriseAuthManager
             catch ( ExcessiveAttemptsException e )
             {
                 // NOTE: We only get this with single (internal) realm authentication
-                securityContext = new StandardEnterpriseLoginContext( this,
-                                                                      new ShiroSubject( securityManager, AuthenticationResult.TOO_MANY_ATTEMPTS ) );
+                securityContext = new StandardEnterpriseLoginContext( this, new ShiroSubject( securityManager, AuthenticationResult.TOO_MANY_ATTEMPTS ),
+                        defaultDatabase );
                 securityLog.error( "[%s]: failed to log in: too many failed attempts",
                         escape( token.getPrincipal().toString() ) );
             }
@@ -152,7 +154,7 @@ public class MultiRealmAuthManager implements EnterpriseAuthManager
                     throw new AuthProviderFailedException( e.getCause().getMessage(), e.getCause() );
                 }
                 securityContext = new StandardEnterpriseLoginContext( this,
-                                                                      new ShiroSubject( securityManager, AuthenticationResult.FAILURE ) );
+                                                                      new ShiroSubject( securityManager, AuthenticationResult.FAILURE ), defaultDatabase );
                 Throwable cause = e.getCause();
                 Throwable causeCause = e.getCause() != null ? e.getCause().getCause() : null;
                 String errorMessage = String.format( "invalid principal or credentials%s%s",

@@ -10,6 +10,7 @@ import com.neo4j.server.security.enterprise.auth.LabelSegment;
 import com.neo4j.server.security.enterprise.auth.RelTypeSegment;
 import com.neo4j.server.security.enterprise.auth.Resource;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
+import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.SpecialDatabase;
 import com.neo4j.server.security.enterprise.auth.Segment;
 
 import java.util.NoSuchElementException;
@@ -28,7 +29,7 @@ class PrivilegeBuilder
     private PrivilegeAction action;
     private Resource resource;
     private String dbName = "";
-    private boolean allDatabases;
+    private SpecialDatabase specialDatabase;
 
     PrivilegeBuilder( ResourcePrivilege.GrantOrDeny privilegeType, String action )
     {
@@ -38,7 +39,13 @@ class PrivilegeBuilder
 
     PrivilegeBuilder forAllDatabases()
     {
-        this.allDatabases = true;
+        this.specialDatabase = SpecialDatabase.ALL;
+        return this;
+    }
+
+    PrivilegeBuilder forDefaultDatabase()
+    {
+        this.specialDatabase = SpecialDatabase.DEFAULT;
         return this;
     }
 
@@ -128,9 +135,9 @@ class PrivilegeBuilder
 
     ResourcePrivilege build() throws InvalidArgumentsException
     {
-        if ( allDatabases )
+        if ( specialDatabase != null )
         {
-            return new ResourcePrivilege( privilegeType, action, resource, segment );
+            return new ResourcePrivilege( privilegeType, action, resource, segment, specialDatabase );
         }
         else
         {

@@ -12,6 +12,7 @@ import com.neo4j.server.security.enterprise.auth.LabelSegment;
 import com.neo4j.server.security.enterprise.auth.RelTypeSegment;
 import com.neo4j.server.security.enterprise.auth.Resource;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
+import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.SpecialDatabase;
 import com.neo4j.server.security.enterprise.auth.RoleRecord;
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
@@ -310,16 +311,26 @@ class SystemGraphRealmIT
     {
         SystemGraphRealm realm = startSystemGraphRealm();
 
-        ResourcePrivilege accessPrivilege = new ResourcePrivilege( GRANT, ACCESS, new Resource.DatabaseResource(), DatabaseSegment.ALL );
-        ResourcePrivilege readNodePrivilege = new ResourcePrivilege( GRANT, READ, new Resource.AllPropertiesResource(), LabelSegment.ALL );
-        ResourcePrivilege readRelPrivilege = new ResourcePrivilege( GRANT, READ, new Resource.AllPropertiesResource(), RelTypeSegment.ALL );
-        ResourcePrivilege findNodePrivilege = new ResourcePrivilege( GRANT, TRAVERSE, new Resource.GraphResource(), LabelSegment.ALL );
-        ResourcePrivilege findRelPrivilege = new ResourcePrivilege( GRANT, TRAVERSE, new Resource.GraphResource(), RelTypeSegment.ALL );
-        ResourcePrivilege writeNodePrivilege = new ResourcePrivilege( GRANT, WRITE, new Resource.AllPropertiesResource(), LabelSegment.ALL );
-        ResourcePrivilege writeRelPrivilege = new ResourcePrivilege( GRANT, WRITE, new Resource.AllPropertiesResource(), RelTypeSegment.ALL );
-        ResourcePrivilege tokenNodePrivilege = new ResourcePrivilege( GRANT, TOKEN, new Resource.DatabaseResource(), DatabaseSegment.ALL );
-        ResourcePrivilege schemaNodePrivilege = new ResourcePrivilege( GRANT, SCHEMA, new Resource.DatabaseResource(), DatabaseSegment.ALL );
-        ResourcePrivilege adminNodePrivilege = new ResourcePrivilege( GRANT, ADMIN, new Resource.DatabaseResource(), DatabaseSegment.ALL );
+        ResourcePrivilege accessPrivilege =
+                new ResourcePrivilege( GRANT, ACCESS, new Resource.DatabaseResource(), DatabaseSegment.ALL, SpecialDatabase.ALL );
+        ResourcePrivilege readNodePrivilege =
+                new ResourcePrivilege( GRANT, READ, new Resource.AllPropertiesResource(), LabelSegment.ALL, SpecialDatabase.ALL );
+        ResourcePrivilege readRelPrivilege =
+                new ResourcePrivilege( GRANT, READ, new Resource.AllPropertiesResource(), RelTypeSegment.ALL, SpecialDatabase.ALL );
+        ResourcePrivilege findNodePrivilege =
+                new ResourcePrivilege( GRANT, TRAVERSE, new Resource.GraphResource(), LabelSegment.ALL, SpecialDatabase.ALL );
+        ResourcePrivilege findRelPrivilege =
+                new ResourcePrivilege( GRANT, TRAVERSE, new Resource.GraphResource(), RelTypeSegment.ALL, SpecialDatabase.ALL );
+        ResourcePrivilege writeNodePrivilege =
+                new ResourcePrivilege( GRANT, WRITE, new Resource.AllPropertiesResource(), LabelSegment.ALL, SpecialDatabase.ALL );
+        ResourcePrivilege writeRelPrivilege =
+                new ResourcePrivilege( GRANT, WRITE, new Resource.AllPropertiesResource(), RelTypeSegment.ALL, SpecialDatabase.ALL );
+        ResourcePrivilege tokenNodePrivilege =
+                new ResourcePrivilege( GRANT, TOKEN, new Resource.DatabaseResource(), DatabaseSegment.ALL, SpecialDatabase.ALL );
+        ResourcePrivilege schemaNodePrivilege =
+                new ResourcePrivilege( GRANT, SCHEMA, new Resource.DatabaseResource(), DatabaseSegment.ALL, SpecialDatabase.ALL );
+        ResourcePrivilege adminNodePrivilege =
+                new ResourcePrivilege( GRANT, ADMIN, new Resource.DatabaseResource(), DatabaseSegment.ALL, SpecialDatabase.ALL );
 
         // When
         Set<ResourcePrivilege> privileges = realm.getPrivilegesForRoles( Collections.singleton( PredefinedRoles.READER ) );

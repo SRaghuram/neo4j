@@ -7,6 +7,7 @@ package com.neo4j.internal.cypher.acceptance
 
 import java.io.File
 import java.lang.Boolean.TRUE
+import java.nio.file.Files
 import java.util
 import java.util.Collections
 
@@ -280,8 +281,23 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
   // Setup methods/variables for starting with different settings
   val defaultConfig: Config = Config.defaults( GraphDatabaseSettings.auth_enabled, TRUE )
 
-  def setup(config: Config = defaultConfig): Unit = {
-    managementService = graphDatabaseFactory(new File("test")).impermanent().setConfig(config).setInternalLogProvider(logProvider).build()
+  var databaseDirectory: File = _
+
+  def setup(config: Config = defaultConfig, impermanent: Boolean = true): Unit = {
+    databaseDirectory = Files.createTempDirectory("test").toFile
+    val builder = graphDatabaseFactory(databaseDirectory).setConfig(config).setInternalLogProvider(logProvider)
+    if (impermanent) builder.impermanent()
+    managementService = builder.build()
+    graphOps = managementService.database(SYSTEM_DATABASE_NAME)
+    graph = new GraphDatabaseCypherService(graphOps)
+
+    initSystemGraph(config)
+  }
+
+  def restart(config: Config = defaultConfig): Unit = {
+    managementService.shutdown()
+    val builder = graphDatabaseFactory(databaseDirectory).setConfig(config).setInternalLogProvider(logProvider)
+    managementService = builder.build()
     graphOps = managementService.database(SYSTEM_DATABASE_NAME)
     graph = new GraphDatabaseCypherService(graphOps)
 

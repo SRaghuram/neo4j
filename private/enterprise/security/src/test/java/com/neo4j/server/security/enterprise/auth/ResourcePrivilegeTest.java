@@ -10,6 +10,7 @@ import com.neo4j.server.security.enterprise.auth.Resource.DatabaseResource;
 import com.neo4j.server.security.enterprise.auth.Resource.GraphResource;
 import com.neo4j.server.security.enterprise.auth.Resource.ProcedureResource;
 import com.neo4j.server.security.enterprise.auth.Resource.PropertyResource;
+import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.SpecialDatabase;
 import org.junit.jupiter.api.Test;
 
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
@@ -157,12 +158,12 @@ class ResourcePrivilegeTest
 
     private void assertFail( ResourcePrivilege.GrantOrDeny privilegeType, PrivilegeAction action, Resource resource )
     {
-        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( privilegeType, action, resource, TEST_SEGMENT ) );
+        assertThrows( InvalidArgumentsException.class, () -> new ResourcePrivilege( privilegeType, action, resource, TEST_SEGMENT, SpecialDatabase.ALL ) );
     }
 
     private void assertOk( ResourcePrivilege.GrantOrDeny privilegeType, PrivilegeAction action, Resource resource ) throws InvalidArgumentsException
     {
-        new ResourcePrivilege( privilegeType, action, resource, TEST_SEGMENT );
+        new ResourcePrivilege( privilegeType, action, resource, TEST_SEGMENT, SpecialDatabase.ALL );
     }
 
     private static Segment TEST_SEGMENT = new Segment()

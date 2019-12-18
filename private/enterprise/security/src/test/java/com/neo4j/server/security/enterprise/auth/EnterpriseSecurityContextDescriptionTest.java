@@ -19,7 +19,6 @@ import java.util.Collections;
 import java.util.Set;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
-import org.neo4j.exceptions.KernelException;
 import org.neo4j.internal.kernel.api.security.AccessMode;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
 import org.neo4j.internal.kernel.api.security.LoginContext;
@@ -34,6 +33,7 @@ import static org.junit.Assert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.server.security.auth.SecurityTestUtils.authToken;
 
 public class EnterpriseSecurityContextDescriptionTest
@@ -50,7 +50,8 @@ public class EnterpriseSecurityContextDescriptionTest
         realm = mock(SystemGraphRealm.class);
         when( realm.doGetAuthenticationInfo( any() ) ).thenReturn( new ShiroAuthenticationInfo( "mats", "SystemGraphRealm", AuthenticationResult.SUCCESS ) );
         when( realm.supports( any() ) ).thenReturn( true );
-        authManager = new MultiRealmAuthManager( realm, Collections.singleton( realm ), new MemoryConstrainedCacheManager(), mock( SecurityLog.class ), false );
+        authManager = new MultiRealmAuthManager( realm, Collections.singleton( realm ), new MemoryConstrainedCacheManager(), mock( SecurityLog.class ), false,
+                DEFAULT_DATABASE_NAME );
         authManager.start();
         principals = new SimplePrincipalCollection( "mats", "SystemGraphRealm" );
     }
@@ -112,7 +113,7 @@ public class EnterpriseSecurityContextDescriptionTest
         assertThat( restricted.description(), equalTo( "AUTH_DISABLED with FULL restricted to READ" ) );
     }
 
-    private EnterpriseSecurityContext context() throws InvalidAuthTokenException, KernelException
+    private EnterpriseSecurityContext context() throws InvalidAuthTokenException
     {
         return authManager.login( authToken( "mats", "foo" ) )
                 .authorize( token, GraphDatabaseSettings.SYSTEM_DATABASE_NAME );

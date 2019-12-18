@@ -14,6 +14,7 @@ import org.neo4j.graphdb.config.Setting
 import org.neo4j.graphdb.security.AuthorizationViolationException
 
 class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
+  private val default = "DEFAULT"
 
   test("should return empty counts to the outside for commands that update the system graph internally") {
     //TODO: ADD ANY NEW UPDATING COMMANDS HERE
@@ -103,7 +104,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
       startDatabase().role("role").map,
       stopDatabase().database("foo").role("role").map,
-      stopDatabase("DENIED").database(DEFAULT_DATABASE_NAME).role("role").map
+      stopDatabase("DENIED").database(default).role("role").map
     ))
   }
 
@@ -143,7 +144,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
       access().database(DEFAULT_DATABASE_NAME).role("custom").map,
-      access("DENIED").database(DEFAULT_DATABASE_NAME).role("custom").map
+      access("DENIED").database(default).role("custom").map
     ))
 
     // WHEN
@@ -151,21 +152,24 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-      access("DENIED").database(DEFAULT_DATABASE_NAME).role("custom").map
+      access().database(DEFAULT_DATABASE_NAME).role("custom").map,
+      access("DENIED").database(default).role("custom").map
     ))
 
     // WHEN
     execute(s"REVOKE DENY ACCESS ON DATABASE $DEFAULT_DATABASE_NAME FROM custom")
 
     // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set.empty)
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      access().database(DEFAULT_DATABASE_NAME).role("custom").map,
+      access("DENIED").database(default).role("custom").map
+    ))
   }
 
   test("should list database privilege on custom default database") {
     // GIVEN
-    val newDefaultDatabase = "foo"
     val config = Config.defaults()
-    config.set(default_database, newDefaultDatabase)
+    config.set(default_database, "foo")
     setup(config)
     execute("CREATE ROLE role")
 
@@ -174,7 +178,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      access().database(newDefaultDatabase).role("role").map
+      access().database(default).role("role").map
     ))
 
     // WHEN
@@ -183,7 +187,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      startDatabase("DENIED").database(newDefaultDatabase).role("role").map
+      startDatabase("DENIED").database(default).role("role").map
     ))
 
     // WHEN
@@ -192,7 +196,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      stopDatabase().database(newDefaultDatabase).role("role").map
+      stopDatabase().database(default).role("role").map
     ))
 
     // WHEN
@@ -370,11 +374,11 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     )
   }
 
-  test("should have start database privilege on old default after switch of default database") {
+  test("should have start database privilege on new default after switch of default database") {
     // GIVEN
     val newDefaultDatabase = "foo"
     val config = Config.defaults(GraphDatabaseSettings.auth_enabled, TRUE)
-    setup(config)
+    setup(config, impermanent = false)
     setupUserWithCustomRole("alice", "abc", "role", access = false)
     execute(s"CREATE database $newDefaultDatabase")
     execute(s"STOP database $newDefaultDatabase")
@@ -387,8 +391,8 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     // WHEN: Grant on default database
     execute(s"GRANT START ON DEFAULT DATABASE TO role")
 
-    // THEN: Get privilege on current default
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(startDatabase().database(DEFAULT_DATABASE_NAME).role("role").map))
+    // THEN: Get privilege on default
+    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(startDatabase().database(default).role("role").map))
 
     // WHEN: Starting the databases
     executeOnSystem("alice", "abc", s"START DATABASE $DEFAULT_DATABASE_NAME")
@@ -403,7 +407,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
     // WHEN: switch default database and stop both databases
     config.set(default_database, newDefaultDatabase)
-    initSystemGraph(config)
+    restart(config)
     execute(s"STOP database $newDefaultDatabase")
     execute(s"STOP database $DEFAULT_DATABASE_NAME")
 
@@ -411,19 +415,19 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, offlineStatus)))
     execute(s"SHOW DATABASE $newDefaultDatabase").toSet should be(Set(db(newDefaultDatabase, offlineStatus, default = true)))
 
-    // THEN: still same privilege, not changed with the change of default database
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(startDatabase().database(DEFAULT_DATABASE_NAME).role("role").map))
+    // THEN: confirm privilege
+    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(startDatabase().database(default).role("role").map))
 
     // WHEN: Starting the databases
-    executeOnSystem("alice", "abc", s"START DATABASE $DEFAULT_DATABASE_NAME")
-
     the[AuthorizationViolationException] thrownBy {
-      executeOnSystem("alice", "abc", s"START DATABASE $newDefaultDatabase")
+      executeOnSystem("alice", "abc", s"START DATABASE $DEFAULT_DATABASE_NAME")
     } should have message "Permission denied."
 
-    // THEN: new status on old default, but not the new
-    execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, onlineStatus)))
-    execute(s"SHOW DATABASE $newDefaultDatabase").toSet should be(Set(db(newDefaultDatabase, offlineStatus, default = true)))
+    executeOnSystem("alice", "abc", s"START DATABASE $newDefaultDatabase")
+
+    // THEN: new status on new default, but not the old
+    execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, offlineStatus)))
+    execute(s"SHOW DATABASE $newDefaultDatabase").toSet should be(Set(db(newDefaultDatabase, onlineStatus, default = true)))
   }
 
   // STOP DATABASE
@@ -588,11 +592,11 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     )
   }
 
-  test("should have stop database privilege on old default after switch of default database") {
+  test("should have stop database privilege on new default after switch of default database") {
     // GIVEN
     val newDefaultDatabase = "foo"
     val config = Config.defaults(GraphDatabaseSettings.auth_enabled, TRUE)
-    setup(config)
+    setup(config, impermanent = false)
     setupUserWithCustomRole("alice", "abc", "role", access = false)
     execute(s"CREATE database $newDefaultDatabase")
 
@@ -603,8 +607,8 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     // WHEN: Grant on default database
     execute(s"GRANT STOP ON DEFAULT DATABASE TO role")
 
-    // THEN: Get privilege on current default
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(stopDatabase().database(DEFAULT_DATABASE_NAME).role("role").map))
+    // THEN: Get privilege on default
+    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(stopDatabase().database(default).role("role").map))
 
     // WHEN: Stopping the databases
     executeOnSystem("alice", "abc", s"STOP DATABASE $DEFAULT_DATABASE_NAME")
@@ -619,7 +623,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
     // WHEN: switch default database and start both databases
     config.set(default_database, newDefaultDatabase)
-    initSystemGraph(config)
+    restart(config)
     execute(s"START database $newDefaultDatabase")
     execute(s"START database $DEFAULT_DATABASE_NAME")
 
@@ -627,19 +631,19 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, onlineStatus)))
     execute(s"SHOW DATABASE $newDefaultDatabase").toSet should be(Set(db(newDefaultDatabase, onlineStatus, default = true)))
 
-    // THEN: still same privilege, not changed with the change of default database
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(stopDatabase().database(DEFAULT_DATABASE_NAME).role("role").map))
+    // THEN: confirm privilege
+    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(stopDatabase().database(default).role("role").map))
 
     // WHEN: Stopping the databases
-    executeOnSystem("alice", "abc", s"STOP DATABASE $DEFAULT_DATABASE_NAME")
-
     the[AuthorizationViolationException] thrownBy {
-      executeOnSystem("alice", "abc", s"STOP DATABASE $newDefaultDatabase")
+      executeOnSystem("alice", "abc", s"STOP DATABASE $DEFAULT_DATABASE_NAME")
     } should have message "Permission denied."
 
-    // THEN: new status on old default, but not the new
-    execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, offlineStatus)))
-    execute(s"SHOW DATABASE $newDefaultDatabase").toSet should be(Set(db(newDefaultDatabase, onlineStatus, default = true)))
+    executeOnSystem("alice", "abc", s"STOP DATABASE $newDefaultDatabase")
+
+    // THEN: new status on new default, but not the old
+    execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, onlineStatus)))
+    execute(s"SHOW DATABASE $newDefaultDatabase").toSet should be(Set(db(newDefaultDatabase, offlineStatus, default = true)))
   }
 
   // ACCESS DATABASE
@@ -684,11 +688,11 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     } should have message "Database access is not allowed for user 'joe' with roles [custom]."
   }
 
-  test("should have access database privilege on old default after switch of default database") {
+  test("should have access database privilege on new default after switch of default database") {
     // GIVEN
     val newDefaultDatabase = "foo"
     val config = Config.defaults(GraphDatabaseSettings.auth_enabled, TRUE)
-    setup(config)
+    setup(config, impermanent = false)
     setupUserWithCustomRole("alice", "abc", "role", access = false)
     execute(s"CREATE database $newDefaultDatabase")
 
@@ -699,8 +703,8 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     // WHEN: Grant on default database
     execute(s"GRANT ACCESS ON DEFAULT DATABASE TO role")
 
-    // THEN: Get privilege on current default
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(access().database(DEFAULT_DATABASE_NAME).role("role").map))
+    // THEN: Get privilege on default
+    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(access().database(default).role("role").map))
 
     // WHEN & THEN: accessing the databases
     executeOn(DEFAULT_DATABASE_NAME, "alice", "abc", "MATCH (n) RETURN n") should be(0)
@@ -711,21 +715,21 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
     // WHEN: switch default database
     config.set(default_database, newDefaultDatabase)
-    initSystemGraph(config)
+    restart(config)
 
     // Confirm default database
     execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME)))
     execute(s"SHOW DATABASE $newDefaultDatabase").toSet should be(Set(db(newDefaultDatabase, default = true)))
 
-    // THEN: still same privilege, not changed with the change of default database
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(access().database(DEFAULT_DATABASE_NAME).role("role").map))
+    // THEN: confirm privilege
+    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(access().database(default).role("role").map))
 
     // WHEN & THEN: accessing the databases
-    executeOn(DEFAULT_DATABASE_NAME, "alice", "abc", "MATCH (n) RETURN n") should be(0)
-
     the[AuthorizationViolationException] thrownBy {
-      executeOn(newDefaultDatabase, "alice", "abc", "MATCH (n) RETURN n")
+      executeOn(DEFAULT_DATABASE_NAME, "alice", "abc", "MATCH (n) RETURN n")
     } should have message "Database access is not allowed for user 'alice' with roles [role]."
+
+    executeOn(newDefaultDatabase, "alice", "abc", "MATCH (n) RETURN n") should be(0)
   }
 
   // REDUCED ADMIN

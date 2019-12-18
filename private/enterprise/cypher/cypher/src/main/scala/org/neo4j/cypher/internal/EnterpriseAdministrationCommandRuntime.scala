@@ -320,7 +320,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       val (dbPredicate, dbValue) = scope match {
         case ast.AllGraphsScope() => ("d:DatabaseAll", Values.of("*"))
         case ast.NamedGraphScope(database) => ("d.name = $database", Values.of(database))
-        case ast.DefaultDatabaseScope() => ("d.default = true", Values.NO_VALUE)
+        case ast.DefaultDatabaseScope() => ("d:DatabaseDefault", Values.NO_VALUE)
       }
       val query =
         s"""
@@ -417,7 +417,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           |    (p)-[:APPLIES_TO]->(res:Resource),
           |    (s)-[:FOR]->(d),
           |    (s)-[:QUALIFIED]->(q)
-          |WHERE d:Database OR d:DatabaseAll
+          |WHERE d:Database OR d:DatabaseAll OR d:DatabaseDefault
         """.stripMargin
       val segmentColumn =
         """
@@ -701,7 +701,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
     val (dbName, db, databaseMerge, scopeMerge) = database match {
       case ast.NamedGraphScope(name) => (Values.stringValue(name), name, "MATCH (d:Database {name: $database})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)")
       case ast.AllGraphsScope() => (Values.NO_VALUE, "*", "MERGE (d:DatabaseAll {name: '*'})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)") // The name is just for later printout of results
-      case ast.DefaultDatabaseScope() => (Values.NO_VALUE, "DEFAULT DATABASE", "MATCH (d:Database {default: true})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)")
+      case ast.DefaultDatabaseScope() => (Values.NO_VALUE, "DEFAULT DATABASE", "MERGE (d:DatabaseDefault {name: 'DEFAULT'})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)") // The name is just for later printout of results
       case _ => throw new IllegalStateException(s"$startOfErrorMessage: Invalid privilege ${grant.name} scope database $database")
     }
     UpdatingSystemCommandExecutionPlan(commandName, normalExecutionEngine,
@@ -710,7 +710,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
          |$qualifierMerge
          |WITH q
          |
-         |// Find the specified database, or find/create the special DatabaseAll node for '*'
+         |// Find the specified database, the default database or find/create the special DatabaseAll node for '*'
          |$databaseMerge
          |WITH q, d
          |
@@ -751,7 +751,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
     val (dbName, scopeMatch) = database match {
       case ast.NamedGraphScope(name) => (Values.stringValue(name), "MATCH (d:Database {name: $database})<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)")
       case ast.AllGraphsScope() => (Values.NO_VALUE, "MATCH (d:DatabaseAll {name: '*'})<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)")
-      case ast.DefaultDatabaseScope() => (Values.NO_VALUE, "MATCH (d:Database {default: true})<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)")
+      case ast.DefaultDatabaseScope() => (Values.NO_VALUE, "MATCH (d:DatabaseDefault {name: 'DEFAULT'})<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)")
       case _ => throw new IllegalStateException(s"$startOfErrorMessage: Invalid privilege revoke scope database $database")
     }
     UpdatingSystemCommandExecutionPlan("RevokePrivilege", normalExecutionEngine,
