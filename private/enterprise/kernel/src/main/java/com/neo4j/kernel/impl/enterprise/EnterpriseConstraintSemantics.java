@@ -6,6 +6,7 @@
 package com.neo4j.kernel.impl.enterprise;
 
 import org.neo4j.annotations.service.ServiceProvider;
+import org.neo4j.common.TokenNameLookup;
 import org.neo4j.internal.kernel.api.CursorFactory;
 import org.neo4j.internal.kernel.api.NodeCursor;
 import org.neo4j.internal.kernel.api.NodeLabelIndexCursor;
@@ -66,7 +67,7 @@ public class EnterpriseConstraintSemantics extends StandardConstraintSemantics
 
     @Override
     public void validateNodePropertyExistenceConstraint( NodeLabelIndexCursor allNodes, NodeCursor nodeCursor, PropertyCursor propertyCursor,
-            LabelSchemaDescriptor descriptor )
+            LabelSchemaDescriptor descriptor, TokenNameLookup tokenNameLookup )
             throws CreateConstraintFailureException
     {
         while ( allNodes.next() )
@@ -77,10 +78,10 @@ public class EnterpriseConstraintSemantics extends StandardConstraintSemantics
                 for ( int propertyKey : descriptor.getPropertyIds() )
                 {
                     nodeCursor.properties( propertyCursor );
-                    if ( !hasProperty( propertyCursor, propertyKey ) )
+                    if ( noSuchProperty( propertyCursor, propertyKey ) )
                     {
                         throw createConstraintFailure(
-                                new NodePropertyExistenceException( descriptor, VERIFICATION, nodeCursor.nodeReference() ) );
+                                new NodePropertyExistenceException( descriptor, VERIFICATION, nodeCursor.nodeReference(), tokenNameLookup ) );
                     }
                 }
             }
@@ -89,19 +90,19 @@ public class EnterpriseConstraintSemantics extends StandardConstraintSemantics
 
     @Override
     public void validateNodeKeyConstraint( NodeLabelIndexCursor allNodes, NodeCursor nodeCursor, PropertyCursor propertyCursor,
-            LabelSchemaDescriptor descriptor ) throws CreateConstraintFailureException
+            LabelSchemaDescriptor descriptor, TokenNameLookup tokenNameLookup ) throws CreateConstraintFailureException
     {
-        validateNodePropertyExistenceConstraint( allNodes, nodeCursor, propertyCursor, descriptor );
+        validateNodePropertyExistenceConstraint( allNodes, nodeCursor, propertyCursor, descriptor, tokenNameLookup );
     }
 
-    private boolean hasProperty( PropertyCursor propertyCursor, int property )
+    private boolean noSuchProperty( PropertyCursor propertyCursor, int property )
     {
-       return propertyCursor.seekProperty( property );
+       return !propertyCursor.seekProperty( property );
     }
 
     @Override
-    public void validateRelationshipPropertyExistenceConstraint( RelationshipScanCursor relationshipCursor,
-            PropertyCursor propertyCursor, RelationTypeSchemaDescriptor descriptor )
+    public void validateRelationshipPropertyExistenceConstraint( RelationshipScanCursor relationshipCursor, PropertyCursor propertyCursor,
+            RelationTypeSchemaDescriptor descriptor, TokenNameLookup tokenNameLookup )
             throws CreateConstraintFailureException
     {
         while ( relationshipCursor.next() )
@@ -110,12 +111,11 @@ public class EnterpriseConstraintSemantics extends StandardConstraintSemantics
 
             for ( int propertyKey : descriptor.getPropertyIds() )
             {
-                if ( relationshipCursor.type() == descriptor.getRelTypeId() &&
-                     !hasProperty( propertyCursor, propertyKey ) )
+                if ( relationshipCursor.type() == descriptor.getRelTypeId() && noSuchProperty( propertyCursor, propertyKey ) )
                 {
                     throw createConstraintFailure(
                             new RelationshipPropertyExistenceException( descriptor, VERIFICATION,
-                                    relationshipCursor.relationshipReference() ) );
+                                    relationshipCursor.relationshipReference(), tokenNameLookup ) );
                 }
             }
         }

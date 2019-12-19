@@ -25,9 +25,9 @@ import org.neo4j.kernel.impl.store.record.PropertyRecord;
 import org.neo4j.kernel.impl.store.record.RelationshipGroupRecord;
 import org.neo4j.kernel.impl.store.record.RelationshipRecord;
 import org.neo4j.logging.FormattedLog;
+import org.neo4j.test.InMemoryTokens;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.neo4j.common.TokenNameLookup.idTokenNameLookup;
 import static org.neo4j.internal.schema.SchemaDescriptor.forLabel;
 
 class InconsistencyReportReaderTest
@@ -39,6 +39,7 @@ class InconsistencyReportReaderTest
         ByteArrayOutputStream out = new ByteArrayOutputStream( 1_000 );
         FormattedLog log = FormattedLog.toOutputStream( out );
         InconsistencyMessageLogger logger = new InconsistencyMessageLogger( log );
+        InMemoryTokens tokens = new InMemoryTokens().label( 1, "label" ).propertyKey( 1, "prop" );
         long nodeId = 5;
         long indexNodeId = 7;
         long nodeNotInTheIndexId = 17;
@@ -55,7 +56,7 @@ class InconsistencyReportReaderTest
                 "Some error", "something" );
         logger.error( RecordType.PROPERTY, new PropertyRecord( propertyId ),
                 "Some error", "something" );
-        logger.error( RecordType.INDEX, new IndexEntry( someIndexDescriptor(), idTokenNameLookup, indexNodeId ), "Some index error",
+        logger.error( RecordType.INDEX, new IndexEntry( someIndexDescriptor(), tokens, indexNodeId ), "Some index error",
                 "Something wrong with index" );
         logger.error( RecordType.NODE, new NodeRecord( nodeNotInTheIndexId ), "Some index error",
                       IndexPrototype.forSchema( forLabel( 1, 2 ) ).withName( "index_" + indexId ).materialise( indexId ).toString() );

@@ -20,6 +20,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.function.Function;
 
+import org.neo4j.common.TokenNameLookup;
 import org.neo4j.internal.kernel.api.CursorFactory;
 import org.neo4j.internal.kernel.api.LabelSet;
 import org.neo4j.internal.kernel.api.NodeCursor;
@@ -56,11 +57,13 @@ class PropertyExistenceEnforcer
     private final List<RelationTypeSchemaDescriptor> relationshipConstraints;
     private final MutableLongObjectMap<int[]> mandatoryNodePropertiesByLabel = new LongObjectHashMap<>();
     private final MutableLongObjectMap<int[]> mandatoryRelationshipPropertiesByType = new LongObjectHashMap<>();
+    private TokenNameLookup tokenNameLookup;
 
-    private PropertyExistenceEnforcer( List<LabelSchemaDescriptor> nodes, List<RelationTypeSchemaDescriptor> rels )
+    private PropertyExistenceEnforcer( List<LabelSchemaDescriptor> nodes, List<RelationTypeSchemaDescriptor> rels, TokenNameLookup tokenNameLookup )
     {
         this.nodeConstraints = nodes;
         this.relationshipConstraints = rels;
+        this.tokenNameLookup = tokenNameLookup;
         for ( LabelSchemaDescriptor constraint : nodes )
         {
             update( mandatoryNodePropertiesByLabel, constraint.getLabelId(),
@@ -97,7 +100,7 @@ class PropertyExistenceEnforcer
     }
 
     private static final PropertyExistenceEnforcer NO_CONSTRAINTS = new PropertyExistenceEnforcer(
-            emptyList(), emptyList() )
+            emptyList(), emptyList(), null /*not used when there are no constraints*/ )
     {
         @Override
         TxStateVisitor decorate( TxStateVisitor visitor, Read read, CursorFactory cursorFactory )
@@ -140,14 +143,13 @@ class PropertyExistenceEnforcer
         {
             return NO_CONSTRAINTS;
         }
-        return new PropertyExistenceEnforcer( nodes, relationships );
+        return new PropertyExistenceEnforcer( nodes, relationships, storageReader.tokenNameLookup() );
     };
 
     private class Decorator extends TxStateVisitor.Delegator
     {
         private final MutableIntSet propertyKeyIds = new IntHashSet();
         private final Read read;
-        private final CursorFactory cursorFactory;
         private final NodeCursor nodeCursor;
         private final PropertyCursor propertyCursor;
         private final RelationshipScanCursor relationshipCursor;
@@ -156,7 +158,6 @@ class PropertyExistenceEnforcer
         {
             super( next );
             this.read = read;
-            this.cursorFactory = cursorFactory;
             this.nodeCursor = cursorFactory.allocateFullAccessNodeCursor();
             this.propertyCursor = cursorFactory.allocateFullAccessPropertyCursor();
             this.relationshipCursor = cursorFactory.allocateRelationshipScanCursor();
@@ -322,7 +323,7 @@ class PropertyExistenceEnforcer
         {
             if ( constraint.getLabelId() == label && contains( constraint.getPropertyIds(), propertyKey ) )
             {
-                throw new NodePropertyExistenceException( constraint, VALIDATION, id );
+                throw new NodePropertyExistenceException( constraint, VALIDATION, id, tokenNameLookup );
             }
         }
         throw new IllegalStateException( format(
@@ -337,7 +338,7 @@ class PropertyExistenceEnforcer
         {
             if ( constraint.getRelTypeId() == relationshipType && contains( constraint.getPropertyIds(), propertyKey ) )
             {
-                throw new RelationshipPropertyExistenceException( constraint, VALIDATION, id );
+                throw new RelationshipPropertyExistenceException( constraint, VALIDATION, id, tokenNameLookup );
             }
         }
         throw new IllegalStateException( format(
