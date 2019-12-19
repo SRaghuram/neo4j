@@ -5,8 +5,7 @@
  */
 package com.neo4j.test.driver;
 
-import org.junit.jupiter.api.extension.ExtensionContext;
-
+import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
@@ -26,7 +25,7 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static org.neo4j.io.IOUtils.closeAll;
 
-public class DriverFactory implements ExtensionContext.Store.CloseableResource
+public class DriverFactory implements Closeable
 {
     private final AtomicLong driverCounter = new AtomicLong();
     private final Collection<AutoCloseable> closeableCollection = ConcurrentHashMap.newKeySet();
