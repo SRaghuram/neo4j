@@ -111,7 +111,7 @@ abstract class AbstractRESTInteraction extends CommunityWebContainerTestBase imp
     @Override
     public void shutdown()
     {
-        testWebContainer.stop();
+        testWebContainer.shutdown();
     }
 
     @Override
@@ -183,7 +183,7 @@ abstract class AbstractRESTInteraction extends CommunityWebContainerTestBase imp
     {
         if ( testWebContainer != null )
         {
-            testWebContainer.stop();
+            testWebContainer.shutdown();
         }
     }
 

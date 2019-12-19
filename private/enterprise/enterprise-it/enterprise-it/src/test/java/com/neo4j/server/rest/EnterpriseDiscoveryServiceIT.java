@@ -32,7 +32,7 @@ public class EnterpriseDiscoveryServiceIT extends ExclusiveWebContainerTestBase
     @After
     public void stopTheServer()
     {
-        testWebContainer.stop();
+        testWebContainer.shutdown();
     }
 
     @Test

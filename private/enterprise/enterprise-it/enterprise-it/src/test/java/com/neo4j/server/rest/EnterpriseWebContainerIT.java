@@ -37,6 +37,6 @@ public abstract class EnterpriseWebContainerIT extends ExclusiveWebContainerTest
     @AfterClass
     public static void stopServer() throws Exception
     {
-        testWebContainer.stop();
+        testWebContainer.shutdown();
     }
 }

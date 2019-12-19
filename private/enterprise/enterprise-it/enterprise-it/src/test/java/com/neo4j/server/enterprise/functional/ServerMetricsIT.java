@@ -86,7 +86,7 @@ class ServerMetricsIT
         }
         finally
         {
-            webServerContainer.stop();
+            webServerContainer.shutdown();
         }
     }
 

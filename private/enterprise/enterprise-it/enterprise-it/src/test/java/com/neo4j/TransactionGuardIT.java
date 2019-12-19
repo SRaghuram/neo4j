@@ -104,7 +104,7 @@ class TransactionGuardIT
         databaseWithoutTimeout = null;
         if ( testWebContainer != null )
         {
-            testWebContainer.stop();
+            testWebContainer.shutdown();
             testWebContainer = null;
         }
         customManagementService.shutdown();
