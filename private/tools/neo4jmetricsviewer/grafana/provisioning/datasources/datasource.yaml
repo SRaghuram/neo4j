@@ -1,0 +1,7 @@
+datasources:
+    # <string, required> name of the datasource. Required
+  - name: Neo4JMetrics
+    # <string, required> datasource type. Required
+    type: grafana-simple-json-datasource
+    url: http://localhost:4000
+    access: proxy

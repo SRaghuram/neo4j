@@ -1,0 +1,17 @@
+A simple tool to display Neo4J metrics in csv format using grafana in docker.
+First version is not very fault tolerant and lack error messages
+
+Usage:
+1. (Only first time) run install.sh to build the docker image (inside packaging folder)
+2. (Only first time, optional) Move the docker image and run.sh to any convenient location
+3. Move any metric files(csv) to a 'metrics' folder beside the docker image and the run.sh
+4. Run run.sh and visit http://localhost:3000/ in any browser
+5. Locate the 'Neo4J metrics' dashboard in grafana and view the metrics
+
+
+Technical setup:
+1. Docker image will start latest grafana and install necessary dependencies
+2. All csv files inside 'metrics' folder will be copied inside the container
+3. builddashboards.js will create one grafana panel (all are currently the same) per metric file
+4. CSVServer.js will serve grafana with the metrics, converting csv to json (may be slow/memory heavy with many big metric files)
+
