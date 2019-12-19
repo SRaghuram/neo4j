@@ -1,7 +1,6 @@
 package org.neo4j.internal.freki;
 
 import org.neo4j.internal.counts.GBPTreeCountsStore;
-import org.neo4j.internal.freki.store.Store;
 import org.neo4j.internal.schema.SchemaCache;
 import org.neo4j.internal.schemastore.GBPTreeSchemaStore;
 import org.neo4j.internal.tokenstore.GBPTreeTokenStore;

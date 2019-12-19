@@ -30,10 +30,10 @@ import org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector;
 import org.neo4j.internal.counts.CountsBuilder;
 import org.neo4j.internal.counts.GBPTreeCountsStore;
 import org.neo4j.internal.diagnostics.DiagnosticsManager;
-import org.neo4j.internal.freki.store.Store;
 import org.neo4j.internal.id.IdController;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.id.IdType;
+import org.neo4j.internal.kernel.api.exceptions.TransactionApplyKernelException;
 import org.neo4j.internal.metadatastore.GBPTreeMetaDataStore;
 import org.neo4j.internal.schema.IndexConfigCompleter;
 import org.neo4j.internal.schema.SchemaCache;
@@ -49,6 +49,7 @@ import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.lifecycle.Lifecycle;
+import org.neo4j.lock.LockGroup;
 import org.neo4j.lock.LockService;
 import org.neo4j.lock.ResourceLocker;
 import org.neo4j.logging.Log;
@@ -152,6 +153,7 @@ class FrekiStorageEngine implements StorageEngine
             SchemaCache schemaCache = new SchemaCache( constraintSemantics, indexConfigCompleter );
             this.stores = new Stores( mainStore, metaDataStore, countsStore, schemaStore, schemaCache, propertyKeyTokenStore, relationshipTypeTokenStore,
                     labelTokenStore );
+            life.add( stores );
             success = true;
         }
         catch ( IOException e )
@@ -208,13 +210,37 @@ class FrekiStorageEngine implements StorageEngine
             CommandCreationContext creationContext, ResourceLocker locks, long lastTransactionIdWhenStarted, TxStateVisitor.Decorator additionalTxStateVisitor )
             throws KernelException
     {
-        throw new UnsupportedOperationException( "Not implemented yet" );
+        try ( TxStateVisitor visitor = additionalTxStateVisitor.apply( new CommandCreator( target, stores ) ) )
+        {
+            state.accept( visitor );
+        }
     }
 
     @Override
     public void apply( CommandsToApply batch, TransactionApplicationMode mode ) throws Exception
     {
-        throw new UnsupportedOperationException( "Not implemented yet" );
+        // Have these command appliers as separate try-with-resource to have better control over
+        // point between closing this and the locks above
+        CommandsToApply initialBatch = batch;
+        try ( LockGroup locks = new LockGroup();
+              TransactionApplier batchApplier = new TransactionApplier( stores ) )
+        {
+            while ( batch != null )
+            {
+                try ( TransactionApplier txApplier = batchApplier.startTx( batch, locks ) )
+                {
+                    batch.accept( txApplier );
+                }
+                batch = batch.next();
+            }
+        }
+        catch ( Throwable cause )
+        {
+            TransactionApplyKernelException kernelException = new TransactionApplyKernelException(
+                    cause, "Failed to apply transaction: %s", batch == null ? initialBatch : batch );
+            databaseHealth.panic( kernelException );
+            throw kernelException;
+        }
     }
 
     @Override

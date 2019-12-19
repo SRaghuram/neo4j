@@ -17,10 +17,11 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.internal.freki.store;
+package org.neo4j.internal.freki;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.OpenOption;
 import java.nio.file.StandardOpenOption;
 
@@ -29,6 +30,7 @@ import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.id.IdType;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
@@ -46,6 +48,7 @@ public class Store extends LifecycleAdapter implements AutoCloseable
     private final boolean readOnly;
     private final boolean createIfNotExists;
     private final PageCursorTracerSupplier tracerSupplier;
+    private final int recordsPerPage;
 
     private PagedFile mappedFile;
     private IdGenerator idGenerator;
@@ -61,6 +64,7 @@ public class Store extends LifecycleAdapter implements AutoCloseable
         this.readOnly = readOnly;
         this.createIfNotExists = createIfNotExists;
         this.tracerSupplier = tracerSupplier;
+        this.recordsPerPage = pageCache.pageSize() / Record.SIZE_BASE;
     }
 
     @Override
@@ -98,5 +102,71 @@ public class Store extends LifecycleAdapter implements AutoCloseable
     public void close()
     {
         shutdown();
+    }
+
+    PageCursor openWriteCursor() throws IOException
+    {
+        return mappedFile.io( 0, PagedFile.PF_SHARED_WRITE_LOCK, PageCursorTracer.NULL );
+    }
+
+    public void write( PageCursor cursor, Record record ) throws IOException
+    {
+        long id = record.internalId;
+        long pageId = id / recordsPerPage;
+        int offset = (int) ((id % recordsPerPage) * Record.SIZE_BASE);
+        System.out.println( "Writing " + id + " " + pageId + " " + offset );
+        if ( !cursor.next( pageId ) )
+        {
+            throw new IllegalStateException( "Could not grow file?" );
+        }
+        cursor.setOffset( offset );
+        record.serialize( cursor );
+    }
+
+    PageCursor openReadCursor()
+    {
+        try
+        {
+            return mappedFile.io( 0, PagedFile.PF_SHARED_READ_LOCK, PageCursorTracer.NULL );
+        }
+        catch ( IOException e )
+        {
+            throw new UncheckedIOException( e );
+        }
+    }
+
+    public boolean read( PageCursor cursor, Record record, long id )
+    {
+        record.clear();
+        long pageId = id / recordsPerPage;
+        int offset = (int) ((id % recordsPerPage) * Record.SIZE_BASE);
+        try
+        {
+            if ( !cursor.next( pageId ) )
+            {
+                return false;
+            }
+            record.internalId = id;
+            do
+            {
+                cursor.setOffset( offset );
+                record.deserialize( cursor );
+            }
+            while ( cursor.shouldRetry() );
+        }
+        catch ( IOException e )
+        {
+            throw new UncheckedIOException( e );
+        }
+        return true;
+    }
+
+    boolean exists( long id ) throws IOException
+    {
+        try ( PageCursor cursor = openReadCursor() )
+        {
+            Record record = new Record( 1 );
+            return read( cursor, record, id ) && record.hasFlag( Record.FLAG_IN_USE );
+        }
     }
 }

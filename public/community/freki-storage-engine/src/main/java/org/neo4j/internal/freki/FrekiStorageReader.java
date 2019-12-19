@@ -19,6 +19,8 @@
  */
 package org.neo4j.internal.freki;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.OptionalLong;
@@ -244,7 +246,14 @@ class FrekiStorageReader implements StorageReader
     @Override
     public boolean nodeExists( long id )
     {
-        return false;
+        try
+        {
+            return stores.mainStore.exists( id );
+        }
+        catch ( IOException e )
+        {
+            throw new UncheckedIOException( e );
+        }
     }
 
     @Override
@@ -274,13 +283,13 @@ class FrekiStorageReader implements StorageReader
     @Override
     public StorageNodeCursor allocateNodeCursor()
     {
-        return null;
+        return new FrekiNodeCursor( stores.mainStore );
     }
 
     @Override
     public StoragePropertyCursor allocatePropertyCursor()
     {
-        return null;
+        return new FrekiPropertyCursor();
     }
 
     @Override
