@@ -24,6 +24,7 @@ import org.neo4j.kernel.impl.security.User;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.server.security.auth.AuthenticationStrategy;
 import org.neo4j.server.security.systemgraph.SecurityGraphInitializer;
+import org.neo4j.server.security.systemgraph.SystemGraphRealmHelper;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -47,20 +48,20 @@ class MultiRealmAuthManagerTest
     private AuthenticationStrategy authStrategy;
     private MultiRealmAuthManager manager;
     private AssertableLogProvider logProvider;
-    private SystemGraphRealm realm;
+    private SystemGraphRealmHelper realmHelper;
 
     @BeforeEach
     void setUp() throws Throwable
     {
         authStrategy = mock( AuthenticationStrategy.class );
         logProvider = new AssertableLogProvider();
-
         manager = createAuthManager( true );
     }
 
     private MultiRealmAuthManager createAuthManager( boolean logSuccessfulAuthentications ) throws Throwable
     {
-        realm = spy( new SystemGraphRealm( SecurityGraphInitializer.NO_OP, null, new SecureHasher(), authStrategy, true, true ) );
+        realmHelper = spy( new SystemGraphRealmHelper( null, new SecureHasher() ) );
+        SystemGraphRealm realm = new SystemGraphRealm( SecurityGraphInitializer.NO_OP, realmHelper, authStrategy, true, true );
 
         manager = new MultiRealmAuthManager( realm, Collections.singleton( realm ), new MemoryConstrainedCacheManager(),
                 new SecurityLog( logProvider.getLog( this.getClass() ) ), logSuccessfulAuthentications );
@@ -81,7 +82,7 @@ class MultiRealmAuthManagerTest
     {
         // Given
         User user = new User.Builder( "jake", credentialFor( "abc123" ) ).build();
-        doReturn( user ).when( realm ).getUser( "jake" );
+        doReturn( user ).when( realmHelper ).getUser( "jake" );
         setMockAuthenticationStrategyResult( user, "abc123", AuthenticationResult.SUCCESS );
 
         // When
@@ -100,7 +101,7 @@ class MultiRealmAuthManagerTest
         manager = createAuthManager( false );
 
         User user = new User.Builder( "jake", credentialFor( "abc123" ) ).build();
-        doReturn( user ).when( realm ).getUser( "jake" );
+        doReturn( user ).when( realmHelper ).getUser( "jake" );
 
         manager.start();
         setMockAuthenticationStrategyResult( user, "abc123", AuthenticationResult.SUCCESS );
@@ -118,7 +119,7 @@ class MultiRealmAuthManagerTest
     {
         // Given
         User user = new User.Builder( "jake", credentialFor( "abc123" ) ).withRequiredPasswordChange( true ).build();
-        doReturn( user ).when( realm ).getUser( "jake" );
+        doReturn( user ).when( realmHelper ).getUser( "jake" );
         manager.start();
         setMockAuthenticationStrategyResult( user, "wrong password", AuthenticationResult.TOO_MANY_ATTEMPTS );
 
@@ -136,7 +137,7 @@ class MultiRealmAuthManagerTest
     {
         // Given
         User user = new User.Builder( "jake", credentialFor( "abc123" ) ).withRequiredPasswordChange( true ).build();
-        doReturn( user ).when( realm ).getUser( "jake" );
+        doReturn( user ).when( realmHelper ).getUser( "jake" );
         manager.start();
         setMockAuthenticationStrategyResult( user, "abc123", AuthenticationResult.SUCCESS );
 
@@ -209,7 +210,7 @@ class MultiRealmAuthManagerTest
     {
         // Given
         User user = new User.Builder( "jake", credentialFor( "abc123" ) ).withRequiredPasswordChange( true ).build();
-        doReturn( user ).when( realm ).getUser( "jake" );
+        doReturn( user ).when( realmHelper ).getUser( "jake" );
         manager.start();
         setMockAuthenticationStrategyResult( user, "abc123", AuthenticationResult.SUCCESS );
         setMockAuthenticationStrategyResult( user, "wrong", AuthenticationResult.FAILURE );
@@ -230,7 +231,7 @@ class MultiRealmAuthManagerTest
 
         manager.start();
         User user = new User.Builder( "jake", credentialFor( "abc123" ) ).withRequiredPasswordChange( true ).build();
-        doReturn( user ).when( realm ).getUser( "jake" );
+        doReturn( user ).when( realmHelper ).getUser( "jake" );
         byte[] password = password( "abc123" );
         Map<String,Object> authToken = AuthToken.newBasicAuthToken( "jake", password );
 

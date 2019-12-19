@@ -19,7 +19,7 @@ import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.procedure.Context;
 
 import static org.neo4j.kernel.impl.security.User.PASSWORD_CHANGE_REQUIRED;
-import static org.neo4j.server.security.systemgraph.BasicSystemGraphRealm.IS_SUSPENDED;
+import static org.neo4j.server.security.systemgraph.SystemGraphRealmHelper.IS_SUSPENDED;
 
 @SuppressWarnings( "WeakerAccess" )
 public class AuthProceduresBase

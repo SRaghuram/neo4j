@@ -60,6 +60,7 @@ import org.neo4j.server.security.auth.CommunitySecurityModule;
 import org.neo4j.server.security.auth.FileUserRepository;
 import org.neo4j.server.security.auth.UserRepository;
 import org.neo4j.server.security.systemgraph.SecurityGraphInitializer;
+import org.neo4j.server.security.systemgraph.SystemGraphRealmHelper;
 import org.neo4j.service.Services;
 import org.neo4j.time.Clocks;
 
@@ -284,8 +285,7 @@ public class EnterpriseSecurityModule extends SecurityModule
 
         return new SystemGraphRealm(
                 securityGraphInitializer,
-                databaseManager,
-                secureHasher,
+                new SystemGraphRealmHelper( databaseManager, secureHasher ),
                 CommunitySecurityModule.createAuthenticationStrategy( config ),
                 securityConfig.nativeAuthentication,
                 securityConfig.nativeAuthorization

@@ -29,6 +29,7 @@ import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.server.security.auth.InMemoryUserRepository;
 import org.neo4j.server.security.auth.RateLimitedAuthenticationStrategy;
+import org.neo4j.server.security.systemgraph.SystemGraphRealmHelper;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
@@ -43,7 +44,8 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 class SystemGraphCachingTest
 {
     private GraphDatabaseService database;
-    private TestCachingSystemGraphRealm realm;
+    private SystemGraphRealm realm;
+    private TestCachingRealmHelper cachingRealmHelper;
 
     @Inject
     private TestDirectory testDirectory;
@@ -70,8 +72,9 @@ class SystemGraphCachingTest
                                                         new InMemoryRoleRepository(), new InMemoryUserRepository(), new InMemoryUserRepository(),
                                                         secureHasher );
 
-        realm = new TestCachingSystemGraphRealm( securityGraphInitializer, databaseManager, secureHasher,
-                new RateLimitedAuthenticationStrategy( Clock.systemUTC(), Config.defaults() ) );
+        cachingRealmHelper = new TestCachingRealmHelper( databaseManager );
+        realm = new SystemGraphRealm( securityGraphInitializer, cachingRealmHelper,
+                new RateLimitedAuthenticationStrategy( Clock.systemUTC(), Config.defaults() ), true, true );
 
         realm.initialize();
         realm.start();
@@ -91,20 +94,20 @@ class SystemGraphCachingTest
     void shouldCachePrivilegeForRole()
     {
         // Given
-        realm.takeAccessFlag();
+        cachingRealmHelper.takeAccessFlag();
         realm.clearCacheForRoles();
 
         // When
         realm.getPrivilegesForRoles( Set.of( READER ) );
 
         // Then
-        assertTrue( realm.takeAccessFlag(), "Should have looked up privilege for role in system graph" );
+        assertTrue( cachingRealmHelper.takeAccessFlag(), "Should have looked up privilege for role in system graph" );
 
         // When
         realm.getPrivilegesForRoles( Set.of( READER ) );
 
         // Then
-        assertFalse( realm.takeAccessFlag(), "Should have looked up privilege for role in cache" );
+        assertFalse( cachingRealmHelper.takeAccessFlag(), "Should have looked up privilege for role in cache" );
     }
 
     @Test
@@ -113,29 +116,28 @@ class SystemGraphCachingTest
         // Given
         realm.getPrivilegesForRoles( Set.of( READER ) );
         realm.clearCacheForRoles();
-        realm.takeAccessFlag();
+        cachingRealmHelper.takeAccessFlag();
 
         // When
         realm.getPrivilegesForRoles( Set.of( READER, EDITOR ) );
 
         // Then
-        assertTrue( realm.takeAccessFlag(), "Should have looked up privilege for roles in system graph" );
+        assertTrue( cachingRealmHelper.takeAccessFlag(), "Should have looked up privilege for roles in system graph" );
 
         // When
         realm.getPrivilegesForRoles( Set.of( READER, EDITOR ) );
 
         // Then
-        assertFalse( realm.takeAccessFlag(), "Should have looked up privilege for roles in cache" );
+        assertFalse( cachingRealmHelper.takeAccessFlag(), "Should have looked up privilege for roles in cache" );
     }
 
-    private static class TestCachingSystemGraphRealm extends SystemGraphRealm
+    private static class TestCachingRealmHelper extends SystemGraphRealmHelper
     {
         private boolean systemAccess;
 
-        TestCachingSystemGraphRealm( EnterpriseSecurityGraphInitializer securityGraphInitializer, DatabaseManager<?> databaseManager, SecureHasher secureHasher,
-                RateLimitedAuthenticationStrategy rateLimitedAuthenticationStrategy )
+        TestCachingRealmHelper( DatabaseManager<?> databaseManager )
         {
-            super( securityGraphInitializer, databaseManager, secureHasher, rateLimitedAuthenticationStrategy, true, true );
+            super( databaseManager, new SecureHasher() );
         }
 
         boolean takeAccessFlag()
@@ -146,7 +148,7 @@ class SystemGraphCachingTest
         }
 
         @Override
-        protected GraphDatabaseService getSystemDb()
+        public GraphDatabaseService getSystemDb()
         {
             systemAccess = true;
             return super.getSystemDb();

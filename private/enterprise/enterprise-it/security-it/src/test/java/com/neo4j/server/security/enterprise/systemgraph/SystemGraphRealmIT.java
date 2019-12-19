@@ -39,6 +39,7 @@ import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.server.security.auth.InMemoryUserRepository;
 import org.neo4j.server.security.auth.RateLimitedAuthenticationStrategy;
+import org.neo4j.server.security.systemgraph.SystemGraphRealmHelper;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
@@ -73,6 +74,7 @@ import static org.neo4j.logging.AssertableLogProvider.inLog;
 class SystemGraphRealmIT
 {
     private TestDatabaseManager dbManager;
+    private SystemGraphRealmHelper realmHelper;
     private AssertableLogProvider logProvider;
     private SecurityLog securityLog;
     private Config defaultConfig;
@@ -91,6 +93,7 @@ class SystemGraphRealmIT
     {
         secureHasher = new SecureHasher();
         dbManager = new TestDatabaseManager( testDirectory );
+        realmHelper = new SystemGraphRealmHelper( dbManager, secureHasher );
         logProvider = new AssertableLogProvider();
         securityLog = new SecurityLog( logProvider.getLog( getClass() ) );
         defaultConfig = Config.defaults();
@@ -115,12 +118,12 @@ class SystemGraphRealmIT
         oldRoles.create( new RoleRecord( PredefinedRoles.ADMIN, "alice" ) );
         oldRoles.create( new RoleRecord( "goon", "bob" ) );
 
-        SystemGraphRealm realm = startSystemGraphRealm();
+        startSystemGraphRealm();
 
         assertTrue( dbManager.userHasRole( "alice", PredefinedRoles.ADMIN ) );
         assertTrue( dbManager.userHasRole( "bob", "goon" ) );
-        assertAuthenticationSucceeds( realm, "alice", "foo" );
-        assertAuthenticationSucceeds( realm, "bob", "bar", true );
+        assertAuthenticationSucceeds( realmHelper, "alice", "foo" );
+        assertAuthenticationSucceeds( realmHelper, "bob", "bar", true );
         logProvider.assertExactly(
                 info( "Completed migration of %s %s into system graph.", "2", "users" ),
                 info( "Completed migration of %s %s into system graph.", "2", "roles" )
@@ -130,10 +133,10 @@ class SystemGraphRealmIT
     @Test
     void shouldCreateDefaultAdminWithPredefinedUsername() throws Throwable
     {
-        SystemGraphRealm realm = startSystemGraphRealm();
+        startSystemGraphRealm();
 
         assertTrue( dbManager.userHasRole( INITIAL_USER_NAME, PredefinedRoles.ADMIN ) );
-        assertAuthenticationSucceeds( realm, INITIAL_USER_NAME, INITIAL_PASSWORD, true );
+        assertAuthenticationSucceeds( realmHelper, INITIAL_USER_NAME, INITIAL_PASSWORD, true );
         logProvider.assertExactly(
                 info( "Assigned %s role to user '%s'.", PredefinedRoles.ADMIN, INITIAL_USER_NAME )
         );
@@ -144,11 +147,11 @@ class SystemGraphRealmIT
     {
         initialPassword.create( createUser( INITIAL_USER_NAME, "neo4j1", false ) );
 
-        SystemGraphRealm realm = startSystemGraphRealm();
+        startSystemGraphRealm();
 
         assertTrue( dbManager.userHasRole( INITIAL_USER_NAME, PredefinedRoles.ADMIN ) );
-        assertAuthenticationFails( realm, INITIAL_USER_NAME, INITIAL_PASSWORD );
-        assertAuthenticationSucceeds( realm, INITIAL_USER_NAME, "neo4j1" );
+        assertAuthenticationFails( realmHelper, INITIAL_USER_NAME, INITIAL_PASSWORD );
+        assertAuthenticationSucceeds( realmHelper, INITIAL_USER_NAME, "neo4j1" );
     }
 
     @Test
@@ -156,11 +159,11 @@ class SystemGraphRealmIT
     {
         initialPassword.create( createUser( INITIAL_USER_NAME, "neo4j1", true ) );
 
-        SystemGraphRealm realm = startSystemGraphRealm();
+        startSystemGraphRealm();
 
         assertTrue( dbManager.userHasRole( INITIAL_USER_NAME, PredefinedRoles.ADMIN ) );
-        assertAuthenticationFails( realm, INITIAL_USER_NAME, INITIAL_PASSWORD );
-        assertAuthenticationSucceeds( realm, INITIAL_USER_NAME, "neo4j1", true );
+        assertAuthenticationFails( realmHelper, INITIAL_USER_NAME, INITIAL_PASSWORD );
+        assertAuthenticationSucceeds( realmHelper, INITIAL_USER_NAME, "neo4j1", true );
     }
 
     @Test
@@ -168,7 +171,7 @@ class SystemGraphRealmIT
     {
         // Given
         SystemGraphRealm realm = startSystemGraphRealm();
-        assertAuthenticationSucceeds( realm, INITIAL_USER_NAME, INITIAL_PASSWORD, true );
+        assertAuthenticationSucceeds( realmHelper, INITIAL_USER_NAME, INITIAL_PASSWORD, true );
 
         realm.stop();
 
@@ -178,8 +181,8 @@ class SystemGraphRealmIT
         realm.start();
 
         // Then
-        assertAuthenticationFails( realm, INITIAL_USER_NAME, INITIAL_PASSWORD );
-        assertAuthenticationSucceeds( realm, INITIAL_USER_NAME, "abc123" );
+        assertAuthenticationFails( realmHelper, INITIAL_USER_NAME, INITIAL_PASSWORD );
+        assertAuthenticationSucceeds( realmHelper, INITIAL_USER_NAME, "abc123" );
     }
 
     @Test
@@ -200,9 +203,9 @@ class SystemGraphRealmIT
         realm.start();
 
         // Then
-        assertAuthenticationFails( realm, INITIAL_USER_NAME, INITIAL_PASSWORD );
-        assertAuthenticationSucceeds( realm, INITIAL_USER_NAME, "foo" );
-        assertAuthenticationFails( realm, INITIAL_USER_NAME, "bar" );
+        assertAuthenticationFails( realmHelper, INITIAL_USER_NAME, INITIAL_PASSWORD );
+        assertAuthenticationSucceeds( realmHelper, INITIAL_USER_NAME, "foo" );
+        assertAuthenticationFails( realmHelper, INITIAL_USER_NAME, "bar" );
     }
 
     @Test
@@ -237,10 +240,10 @@ class SystemGraphRealmIT
     {
         oldUsers.create( createUser( "jane", "doe", false ) );
 
-        SystemGraphRealm realm = startSystemGraphRealm();
+        startSystemGraphRealm();
 
         assertTrue( dbManager.userHasRole( "jane", PredefinedRoles.ADMIN ) );
-        assertAuthenticationSucceeds( realm, "jane", "doe" );
+        assertAuthenticationSucceeds( realmHelper, "jane", "doe" );
         logProvider.assertExactly(
                 info( "Completed migration of %s %s into system graph.", "1", "user" ),
                 info( "Completed migration of %s %s into system graph.", "0", "roles" ),
@@ -255,10 +258,10 @@ class SystemGraphRealmIT
         oldUsers.create( createUser( "alice", "foo", false ) );
         oldUsers.create( createUser( INITIAL_USER_NAME, "bar", false ) );
 
-        SystemGraphRealm realm = startSystemGraphRealm();
+        startSystemGraphRealm();
 
         assertTrue( dbManager.userHasRole( "neo4j", PredefinedRoles.ADMIN ) );
-        assertAuthenticationSucceeds( realm, "jane", "doe" );
+        assertAuthenticationSucceeds( realmHelper, "jane", "doe" );
         logProvider.assertExactly(
                 info( "Completed migration of %s %s into system graph.", "3", "users" ),
                 info( "Completed migration of %s %s into system graph.", "0", "roles" ),
@@ -290,10 +293,10 @@ class SystemGraphRealmIT
         // When a default admin is set by command
         defaultAdmin.create( createUser( "trinity", "ignored", false ) );
 
-        var realm = startSystemGraphRealm();
+        startSystemGraphRealm();
 
         // Then
-        assertAuthenticationSucceeds( realm, "trinity", "abc" );
+        assertAuthenticationSucceeds( realmHelper, "trinity", "abc" );
         assertTrue( dbManager.userHasRole( "trinity", PredefinedRoles.ADMIN ) );
         logProvider.assertExactly(
                 info( "Completed migration of %s %s into system graph.", "3", "users" ),
@@ -363,10 +366,10 @@ class SystemGraphRealmIT
         dbManager.getManagementService().createDatabase( "foo" );
         defaultConfig.set( default_database, "foo" );
 
-        SystemGraphRealm realm = startSystemGraphRealm();
+        startSystemGraphRealm();
 
         assertTrue( dbManager.userHasRole( INITIAL_USER_NAME, PredefinedRoles.ADMIN  ));
-        assertAuthenticationSucceeds( realm, INITIAL_USER_NAME, INITIAL_PASSWORD, true );
+        assertAuthenticationSucceeds( realmHelper, INITIAL_USER_NAME, INITIAL_PASSWORD, true );
         logProvider.assertExactly(
                 info( "Assigned %s role to user '%s'.", PredefinedRoles.ADMIN, INITIAL_USER_NAME )
         );
@@ -390,7 +393,7 @@ class SystemGraphRealmIT
             transaction.commit();
         }
 
-        assertAuthenticationSucceeds( realm, "alice", "bar" );
+        assertAuthenticationSucceeds( realmHelper, "alice", "bar" );
         Set<ResourcePrivilege> privileges = realm.getPrivilegesForRoles( Collections.singleton( "custom" ) );
         assertThat( privileges, containsInAnyOrder( readPrivilege, findPrivilege ) );
 
@@ -403,7 +406,7 @@ class SystemGraphRealmIT
         realm.start();
 
         // Alice should still be able to authenticate
-        assertAuthenticationSucceeds( realm, "alice", "bar" );
+        assertAuthenticationSucceeds( realmHelper, "alice", "bar" );
 
         // Alice should still have read privileges in 'neo4j'
         privileges = realm.getPrivilegesForRoles( Collections.singleton( "custom" ) );
@@ -421,7 +424,7 @@ class SystemGraphRealmIT
         realm.start();
 
         // Alice should still be able to authenticate
-        assertAuthenticationSucceeds( realm, "alice", "bar" );
+        assertAuthenticationSucceeds( realmHelper, "alice", "bar" );
 
         // Alice should still have read privileges in 'neo4j'
         privileges = realm.getPrivilegesForRoles( Collections.singleton( "custom" ) );
@@ -437,7 +440,7 @@ class SystemGraphRealmIT
                         secureHasher );
 
         RateLimitedAuthenticationStrategy authenticationStrategy = new RateLimitedAuthenticationStrategy( Clock.systemUTC(), config );
-        SystemGraphRealm realm = new SystemGraphRealm( securityGraphInitializer, dbManager, secureHasher, authenticationStrategy, true, true );
+        SystemGraphRealm realm = new SystemGraphRealm( securityGraphInitializer, realmHelper, authenticationStrategy, true, true );
         realm.initialize();
         realm.start();
         return realm;

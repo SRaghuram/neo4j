@@ -10,8 +10,18 @@ import com.neo4j.server.security.enterprise.auth.RealmLifecycle;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
 import com.neo4j.server.security.enterprise.auth.ShiroAuthorizationInfoProvider;
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
+import org.apache.shiro.authc.AuthenticationException;
+import org.apache.shiro.authc.AuthenticationInfo;
+import org.apache.shiro.authc.AuthenticationToken;
+import org.apache.shiro.authc.DisabledAccountException;
+import org.apache.shiro.authc.ExcessiveAttemptsException;
+import org.apache.shiro.authc.IncorrectCredentialsException;
+import org.apache.shiro.authc.UnknownAccountException;
+import org.apache.shiro.authc.credential.CredentialsMatcher;
+import org.apache.shiro.authc.pam.UnsupportedTokenException;
 import org.apache.shiro.authz.AuthorizationInfo;
 import org.apache.shiro.authz.SimpleAuthorizationInfo;
+import org.apache.shiro.realm.AuthorizingRealm;
 import org.apache.shiro.subject.PrincipalCollection;
 
 import java.time.Duration;
@@ -23,8 +33,7 @@ import java.util.TreeSet;
 import java.util.concurrent.ForkJoinPool;
 import java.util.stream.Stream;
 
-import org.neo4j.cypher.internal.security.SecureHasher;
-import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.cypher.internal.security.FormatException;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -32,26 +41,41 @@ import org.neo4j.graphdb.NotFoundException;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.internal.kernel.api.security.AuthenticationResult;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
+import org.neo4j.kernel.api.security.AuthToken;
+import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
+import org.neo4j.kernel.impl.security.User;
 import org.neo4j.server.security.auth.AuthenticationStrategy;
-import org.neo4j.server.security.systemgraph.BasicSystemGraphRealm;
+import org.neo4j.server.security.auth.ShiroAuthToken;
 import org.neo4j.server.security.systemgraph.SecurityGraphInitializer;
+import org.neo4j.server.security.systemgraph.SystemGraphRealmHelper;
 
 import static org.neo4j.internal.helpers.collection.Iterables.single;
+import static org.neo4j.server.security.systemgraph.SystemGraphRealmHelper.IS_SUSPENDED;
 
 /**
  * Shiro realm using a Neo4j graph to store users and roles
  */
-public class SystemGraphRealm extends BasicSystemGraphRealm implements RealmLifecycle, ShiroAuthorizationInfoProvider
+public class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle, ShiroAuthorizationInfoProvider, CredentialsMatcher
 {
+    private final SecurityGraphInitializer systemGraphInitializer;
+    private SystemGraphRealmHelper systemGraphRealmHelper;
+    private final AuthenticationStrategy authenticationStrategy;
+    private final boolean authenticationEnabled;
     private final boolean authorizationEnabled;
+
     private com.github.benmanes.caffeine.cache.Cache<String,Set<ResourcePrivilege>> privilegeCache;
 
-    public SystemGraphRealm( SecurityGraphInitializer systemGraphInitializer, DatabaseManager<?> databaseManager,  SecureHasher secureHasher,
-            AuthenticationStrategy authenticationStrategy, boolean authenticationEnabled,
-            boolean authorizationEnabled )
+    public SystemGraphRealm( SecurityGraphInitializer systemGraphInitializer, SystemGraphRealmHelper systemGraphRealmHelper,
+            AuthenticationStrategy authenticationStrategy, boolean authenticationEnabled, boolean authorizationEnabled )
     {
-        super( systemGraphInitializer, databaseManager, secureHasher, authenticationStrategy, authenticationEnabled );
+        this.systemGraphInitializer = systemGraphInitializer;
+        this.systemGraphRealmHelper = systemGraphRealmHelper;
+        this.authenticationStrategy = authenticationStrategy;
+        this.authenticationEnabled = authenticationEnabled;
+
+        setAuthenticationCachingEnabled( true );
         setName( SecuritySettings.NATIVE_REALM_NAME );
         this.authorizationEnabled = authorizationEnabled;
         Caffeine<Object,Object> builder = Caffeine.newBuilder()
@@ -60,11 +84,152 @@ public class SystemGraphRealm extends BasicSystemGraphRealm implements RealmLife
                 .expireAfterAccess( Duration.ofHours( 1 ) );
         privilegeCache = builder.build();
         setAuthorizationCachingEnabled( true );
+        setCredentialsMatcher( this );
     }
 
     @Override
     public void initialize()
     {
+    }
+
+    @Override
+    public void start() throws Exception
+    {
+        systemGraphInitializer.initializeSecurityGraph();
+    }
+
+    @Override
+    public void stop()
+    {
+    }
+
+    @Override
+    public void shutdown()
+    {
+    }
+
+    @Override
+    public boolean supports( AuthenticationToken token )
+    {
+        try
+        {
+            if ( token instanceof ShiroAuthToken )
+            {
+                ShiroAuthToken shiroAuthToken = (ShiroAuthToken) token;
+                return shiroAuthToken.getScheme().equals( AuthToken.BASIC_SCHEME ) &&
+                        (shiroAuthToken.supportsRealm( AuthToken.NATIVE_REALM ));
+            }
+            return false;
+        }
+        catch ( InvalidAuthTokenException e )
+        {
+            return false;
+        }
+    }
+
+    @Override
+    public boolean doCredentialsMatch( AuthenticationToken token, AuthenticationInfo info )
+    {
+        // We assume that the given info originated from this class, so we can get the user record from it
+        SystemGraphAuthenticationInfo ourInfo = (SystemGraphAuthenticationInfo) info;
+        User user = ourInfo.getUserRecord();
+
+        // Get the password from the token
+        byte[] password;
+        try
+        {
+            ShiroAuthToken shiroAuthToken = (ShiroAuthToken) token;
+            password = AuthToken.safeCastCredentials( AuthToken.CREDENTIALS, shiroAuthToken.getAuthTokenMap() );
+        }
+        catch ( InvalidAuthTokenException e )
+        {
+            throw new UnsupportedTokenException( e );
+        }
+
+        // Authenticate using our strategy (i.e. with rate limiting)
+        AuthenticationResult result = authenticationStrategy.authenticate( user, password );
+
+        // Map failures to exceptions
+        switch ( result )
+        {
+        case SUCCESS:
+            break;
+        case PASSWORD_CHANGE_REQUIRED:
+            break;
+        case FAILURE:
+            throw new IncorrectCredentialsException();
+        case TOO_MANY_ATTEMPTS:
+            throw new ExcessiveAttemptsException();
+        default:
+            throw new AuthenticationException();
+        }
+
+        // We also need to look at the user record flags
+        if ( user.hasFlag( IS_SUSPENDED ) )
+        {
+            throw new DisabledAccountException( "User '" + user.name() + "' is suspended." );
+        }
+
+        if ( user.passwordChangeRequired() )
+        {
+            result = AuthenticationResult.PASSWORD_CHANGE_REQUIRED;
+        }
+
+        // Ok, if no exception was thrown by now it was a match.
+        // Modify the given AuthenticationInfo with the final result and return with success.
+        ourInfo.setAuthenticationResult( result );
+        return true;
+    }
+
+    @Override
+    protected Object getAuthenticationCacheKey( AuthenticationToken token )
+    {
+        Object principal = token != null ? token.getPrincipal() : null;
+        return principal != null ? principal : "";
+    }
+
+    @Override
+    protected Object getAuthenticationCacheKey( PrincipalCollection principals )
+    {
+        Object principal = getAvailablePrincipal( principals );
+        return principal == null ? "" : principal;
+    }
+
+    @Override
+    public AuthenticationInfo doGetAuthenticationInfo( AuthenticationToken token )
+    {
+        if ( !authenticationEnabled )
+        {
+            return null;
+        }
+
+        ShiroAuthToken shiroAuthToken = (ShiroAuthToken) token;
+
+        String username;
+        try
+        {
+            username = AuthToken.safeCast( AuthToken.PRINCIPAL, shiroAuthToken.getAuthTokenMap() );
+            // This is only checked here to check for InvalidAuthToken
+            AuthToken.safeCastCredentials( AuthToken.CREDENTIALS, shiroAuthToken.getAuthTokenMap() );
+        }
+        catch ( InvalidAuthTokenException e )
+        {
+            throw new UnsupportedTokenException( e );
+        }
+
+        User user;
+        try
+        {
+            user = systemGraphRealmHelper.getUser( username );
+        }
+        catch ( InvalidArgumentsException | FormatException e )
+        {
+            throw new UnknownAccountException();
+        }
+
+        // Stash the user record in the AuthenticationInfo that will be cached.
+        // The credentials will then be checked when Shiro calls doCredentialsMatch()
+        return new SystemGraphAuthenticationInfo( user, getName() /* Realm name */ );
     }
 
     @Override
@@ -86,7 +251,7 @@ public class SystemGraphRealm extends BasicSystemGraphRealm implements RealmLife
         boolean suspended = false;
         Set<String> roleNames = new TreeSet<>();
 
-        try ( Transaction tx = getSystemDb().beginTx() )
+        try ( Transaction tx = systemGraphRealmHelper.getSystemDb().beginTx() )
         {
             Node userNode = tx.findNode( Label.label( "User" ), "name", username );
 
@@ -155,7 +320,7 @@ public class SystemGraphRealm extends BasicSystemGraphRealm implements RealmLife
         if ( lookupPrivileges )
         {
 
-            try ( Transaction tx = getSystemDb().beginTx() )
+            try ( Transaction tx = systemGraphRealmHelper.getSystemDb().beginTx() )
             {
                 final Stream<Node> roleStream =
                         tx.findNodes( Label.label( "Role" ) ).stream().filter( roleNode -> rolesForUserContainsRole( roles, roleNode ) );
