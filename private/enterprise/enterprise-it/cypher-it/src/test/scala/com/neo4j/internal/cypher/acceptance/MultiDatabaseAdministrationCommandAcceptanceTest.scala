@@ -5,6 +5,8 @@
  */
 package com.neo4j.internal.cypher.acceptance
 
+import java.util.concurrent.{CountDownLatch, TimeUnit}
+
 import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings
 import org.neo4j.configuration.GraphDatabaseSettings.{DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME, default_database}
 import org.neo4j.configuration.{Config, GraphDatabaseSettings}
@@ -13,6 +15,9 @@ import org.neo4j.exceptions.{DatabaseAdministrationException, InvalidArgumentExc
 import org.neo4j.graphdb.DatabaseShutdownException
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.graphdb.security.AuthorizationViolationException
+import org.neo4j.internal.kernel.api.security.LoginContext
+import org.neo4j.kernel.DeadlockDetectedException
+import org.neo4j.kernel.api.KernelTransaction
 import org.scalatest.enablers.Messaging.messagingNatureOfThrowable
 
 class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
@@ -1305,6 +1310,40 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
       // THEN
     } should have message
       "This is an administration command and it should be executed against the system database: STOP DATABASE"
+  }
+
+  test("should pass through deadlock exception") {
+    val secondNodeLocked = new CountDownLatch(1)
+
+    class StopDb2AndThenDb1 extends Runnable {
+      override def run(): Unit = {
+        val tx = graph.beginTransaction(KernelTransaction.Type.EXPLICIT, LoginContext.AUTH_DISABLED)
+        tx.execute("STOP DATABASE db2")
+        secondNodeLocked.countDown()
+        tx.execute("STOP DATABASE db1")
+      }
+    }
+
+    setup(defaultConfig)
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute("CREATE DATABASE db1")
+    execute("CREATE DATABASE db2")
+
+    val tx = graph.beginTransaction(KernelTransaction.Type.EXPLICIT, LoginContext.AUTH_DISABLED)
+    // take lock on db1 node
+    tx.execute("STOP DATABASE db1")
+
+    // take lock on db2 and wait for a lock on db1 in other transaction
+    new Thread(new StopDb2AndThenDb1).start()
+
+    // and wait for those locks to be pending
+    secondNodeLocked.await(10, TimeUnit.SECONDS)
+    Thread.sleep(1000)
+
+    // try to take lock on db2
+    assertThrows[DeadlockDetectedException] {
+      tx.execute("STOP DATABASE db2")
+    }
   }
 
   // Disable normal database creation because we need different settings on each test
