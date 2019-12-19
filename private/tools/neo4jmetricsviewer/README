@@ -5,8 +5,9 @@ Usage:
 1. (Only first time) run install.sh to build the docker image (inside packaging folder)
 2. (Only first time, optional) Move the docker image and run.sh to any convenient location
 3. Move any metric files(csv) to a 'metrics' folder beside the docker image and the run.sh
-4. Run run.sh and visit http://localhost:3000/ in any browser
-5. Locate the 'Neo4J metrics' dashboard in grafana and view the metrics
+4. (Optional) If you have many/big metric files, remove any you are not interested in, to improve performance
+5. Run run.sh and visit http://localhost:3000/ in any browser
+6. Locate the 'Neo4J metrics' dashboard in grafana and view the metrics
 
 
 Technical setup:
