@@ -218,18 +218,19 @@ class OptionalExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
 
   /**
     *{{{
-    *   val writeNullRow = false
+    *   val shouldWriteRow = false
     *   while (!this.hasWritten || (hasDemand && this.canContinue) ) {
     *     if (!this.hasWritten && !this.canContinue) {
     *       rel = -1L
     *       node = -1L
-    *       writeNullRow = true
+    *       shouldWriteRow = true
     *     } else {
     *       [rel = getRel]
     *       [node = getNode]
+    *       shouldWriteRow = [evaluate predicate]
     *     }
-    *     if (writeNullRow || [evaluate predicate]) {
-    *       <<< inner.genOperate() >>>
+    *     if (shouldWriteRow) {
+    *        <<< inner.genOperate() >>>
     *       this.hasWritten = true
     *      }
     *     this.canContinue = this.canContinue && relationship.next()
@@ -237,27 +238,30 @@ class OptionalExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
     *}}}
     */
   override protected def genInnerLoop: IntermediateRepresentation = {
-    def doIfPredicate(ir: => IntermediateRepresentation): IntermediateRepresentation =
-      if (generatePredicate.isEmpty) noop() else ir
+    def doIfPredicateOrElse(onPredicate: => IntermediateRepresentation)(orElse: => IntermediateRepresentation): IntermediateRepresentation =
+      if (generatePredicate.isEmpty) orElse else onPredicate
+    def doIfPredicate(ir: => IntermediateRepresentation): IntermediateRepresentation = doIfPredicateOrElse(ir)(noop())
     def innerBlock: IntermediateRepresentation = block(
       setField(hasWritten, constant(true)),
       profileRow(id),
       inner.genOperateWithExpressions,
       )
-    val writeNullRow = codeGen.namer.nextVariableName()
+
+    val shouldWriteRow = codeGen.namer.nextVariableName()
     block(
-      doIfPredicate(declareAndAssign(typeRefOf[Boolean], writeNullRow, constant(false))),
+      doIfPredicate(declareAndAssign(typeRefOf[Boolean], shouldWriteRow, constant(false))),
       loop(or(not(loadField(hasWritten)), and(innermost.predicate, loadField(canContinue))))(
         block(
           ifElse(and(not(loadField(hasWritten)), not(loadField(canContinue))))(
             block(
               writeRow(constant(-1L), constant(-1L)),
-              doIfPredicate(assign(writeNullRow, constant(true)))))
-          ( //else
-                writeRow(getRelationship, getOtherNode)),
-          predicate.map(p =>
-                          condition(or(load(writeNullRow),
-                                       equal(nullCheckIfRequired(p), trueValue)))(innerBlock)).getOrElse(innerBlock),
+              doIfPredicate(assign(shouldWriteRow, constant(true)))))
+          (/*else*/
+           block(
+              writeRow(getRelationship, getOtherNode),
+              doIfPredicate(assign(shouldWriteRow, predicate.map(p => equal(nullCheckIfRequired(p), trueValue)).getOrElse(constant(true))))
+           )),
+          doIfPredicateOrElse(condition(load(shouldWriteRow))(innerBlock))(innerBlock),
           doIfInnerCantContinue(
             setField(canContinue, and(loadField(canContinue),
                                       cursorNext[RelationshipSelectionCursor](loadField(relationshipsField))))),
@@ -265,6 +269,32 @@ class OptionalExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
         )))
   }
 }
+ //           while( ((this.optionalExpandAll1CanContinue) || (this.optionalExpandAll1InnerLoop)) && ((served) < (demand)) )
+//231	                                    {
+//232	                                        if ( !( this.optionalExpandAll1InnerLoop ) )
+//233	                                        {
+//234	                                            long v25fromNode;
+//235	                                            v25fromNode = longSlot2;
+//236	                                            this.v6 = false;
+//237	                                            if ( (v25fromNode) != (-1L) )
+//238	                                            {
+//239	                                                if ( this.v0nodeCursor.isDense() )
+//240	                                                {
 
-
-
+//working
+//  while( ((this.optionalExpandAll1CanContinue) || (this.optionalExpandAll1InnerLoop)) && ((served) < (demand)) )
+//230	                                    {
+//231	                                        if ( !( this.optionalExpandAll1InnerLoop ) )
+//232	                                        {
+//233	                                            long v20fromNode;
+//234	                                            v20fromNode = longSlot2;
+//235	                                            this.v6 = false;
+//236	                                            if ( (v20fromNode) != (-1L) )
+//237	                                            {
+//238	                                                if ( this.v0nodeCursor == null )
+//239	                                                {
+//240	                                                    this.v0nodeCursor = cursorPools.nodeCursorPool().allocate();
+//241	                                                    this.v0nodeCursor.setTracer( this.operatorExecutionEvent_1 );
+//242	                                                }
+//243	                                                this.dataRead.singleNode( v20fromNode, this.v0nodeCursor );
+//244	                                                if ( this.v0nodeCursor.next() )
