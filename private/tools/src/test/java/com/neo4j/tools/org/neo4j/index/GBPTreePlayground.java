@@ -26,6 +26,8 @@ import org.neo4j.io.pagecache.impl.muninn.StandalonePageCacheFactory;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 
 import static com.neo4j.tools.input.ConsoleUtil.staticPrompt;
+import static org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier.TRACER_SUPPLIER;
+import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
 
 public class GBPTreePlayground
@@ -82,7 +84,7 @@ public class GBPTreePlayground
         @Override
         public void run( String[] args, PrintStream out ) throws Exception
         {
-            tree.printTree();
+            tree.printTree( NULL );
         }
 
         @Override
@@ -97,7 +99,7 @@ public class GBPTreePlayground
         @Override
         public void run( String[] args, PrintStream out ) throws Exception
         {
-            tree.printState();
+            tree.printState( TRACER_SUPPLIER.get() );
         }
 
         @Override
@@ -112,7 +114,7 @@ public class GBPTreePlayground
         @Override
         public void run( String[] args, PrintStream out )
         {
-            tree.checkpoint( IOLimiter.UNLIMITED );
+            tree.checkpoint( IOLimiter.UNLIMITED, NULL );
         }
         @Override
         public String toString()
@@ -133,7 +135,7 @@ public class GBPTreePlayground
             }
             MutableLong key = new MutableLong();
             MutableLong value = new MutableLong();
-            try ( Writer<MutableLong,MutableLong> writer = tree.writer() )
+            try ( Writer<MutableLong,MutableLong> writer = tree.writer( NULL ) )
             {
                 for ( Long longValue : longValues )
                 {
@@ -166,7 +168,7 @@ public class GBPTreePlayground
                 longValues[i] = Long.valueOf( args[i] );
             }
             MutableLong key = new MutableLong();
-            try ( Writer<MutableLong,MutableLong> writer = tree.writer() )
+            try ( Writer<MutableLong,MutableLong> writer = tree.writer( NULL ) )
             {
                 for ( Long longValue : longValues )
                 {
@@ -232,7 +234,7 @@ public class GBPTreePlayground
         public void run( String[] args, PrintStream out ) throws Exception
         {
             System.out.println( "Checking consistency..." );
-            tree.consistencyCheck();
+            tree.consistencyCheck( NULL );
             System.out.println( "Consistency check finished!");
         }
 
@@ -253,10 +255,10 @@ public class GBPTreePlayground
 
     private void print() throws IOException
     {
-        tree.printTree();
+        tree.printTree( NULL );
     }
 
-    public static void main( String[] args ) throws InterruptedException, IOException
+    public static void main( String[] args ) throws InterruptedException
     {
         File indexFile;
         if ( args.length > 0 )

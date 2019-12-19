@@ -36,6 +36,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.SchemaIndex.NATIVE30;
+import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 
 @EnterpriseDbmsExtension
 class PrepareStoreCopyFilesIT
@@ -112,7 +113,7 @@ class PrepareStoreCopyFilesIT
         try
         {
             MutableBoolean headerRead = new MutableBoolean();
-            GBPTree.readHeader( pageCache, file, buffer -> headerRead.setTrue() );
+            GBPTree.readHeader( pageCache, file, buffer -> headerRead.setTrue(), NULL );
             return headerRead.booleanValue();
         }
         catch ( Exception e )

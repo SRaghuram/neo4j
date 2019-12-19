@@ -23,6 +23,7 @@ import org.neo4j.test.rule.TestDirectory;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 
 @PageCacheExtension
 class GBPTreeDumpToolTest
@@ -39,7 +40,7 @@ class GBPTreeDumpToolTest
         File file = dir.file( "index" );
         try ( GBPTree<?,?> tree = new GBPTreeBuilder<>( pageCache, file, new LabelScanLayout() ).build() )
         {
-            tree.checkpoint( IOLimiter.UNLIMITED );
+            tree.checkpoint( IOLimiter.UNLIMITED, NULL );
         }
 
         // When dumping

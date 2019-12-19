@@ -22,6 +22,7 @@ import java.util.Random;
 
 import org.neo4j.index.internal.gbptree.GBPTree;
 import org.neo4j.index.internal.gbptree.Seeker;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 
 import static com.neo4j.bench.micro.Main.run;
 
@@ -144,7 +145,7 @@ public class ReadGBPTree extends AbstractGBPTreeBenchmark
         layout.keyWithSeed( seekerState.from, exactMatch );
         layout.keyWithSeed( seekerState.to, exactMatch );
         long count = 0;
-        try ( Seeker<AdaptableKey,AdaptableValue> seek = seekerState.gbpTree.seek( seekerState.from, seekerState.to ) )
+        try ( Seeker<AdaptableKey,AdaptableValue> seek = seekerState.gbpTree.seek( seekerState.from, seekerState.to, PageCursorTracer.NULL ) )
         {
             while ( seek.next() )
             {
@@ -162,7 +163,7 @@ public class ReadGBPTree extends AbstractGBPTreeBenchmark
         layout.keyWithSeed( seekerState.from, Long.MIN_VALUE );
         layout.keyWithSeed( seekerState.to, Long.MAX_VALUE );
         long count = 0;
-        try ( Seeker<AdaptableKey,AdaptableValue> seek = seekerState.gbpTree.seek( seekerState.from, seekerState.to ) )
+        try ( Seeker<AdaptableKey,AdaptableValue> seek = seekerState.gbpTree.seek( seekerState.from, seekerState.to, PageCursorTracer.NULL ) )
         {
             while ( seek.next() )
             {

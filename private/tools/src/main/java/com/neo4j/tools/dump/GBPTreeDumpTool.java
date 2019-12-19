@@ -16,6 +16,8 @@ import org.neo4j.index.internal.gbptree.PrintConfig;
 import org.neo4j.index.internal.gbptree.PrintingGBPTreeVisitor;
 import org.neo4j.internal.helpers.Args;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.io.pagecache.tracing.PageCacheTracer;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.impl.index.schema.SchemaLayouts;
 import org.neo4j.scheduler.JobScheduler;
 
@@ -43,12 +45,12 @@ public class GBPTreeDumpTool
         try ( JobScheduler jobScheduler = createInitialisedScheduler();
               PageCache pageCache = GBPTreeBootstrapper.pageCache( jobScheduler ) )
         {
-            final GBPTreeBootstrapper bootstrapper = new GBPTreeBootstrapper( pageCache, new SchemaLayouts(), true );
+            final GBPTreeBootstrapper bootstrapper = new GBPTreeBootstrapper( pageCache, new SchemaLayouts(), true, PageCacheTracer.NULL );
             final GBPTreeBootstrapper.Bootstrap bootstrap = bootstrapper.bootstrapTree( file );
 
             try ( GBPTree<?,?> tree = bootstrap.getTree() )
             {
-                tree.visit( new PrintingGBPTreeVisitor<>( PrintConfig.defaults().printStream( out ).printHeader() ) );
+                tree.visit( new PrintingGBPTreeVisitor<>( PrintConfig.defaults().printStream( out ).printHeader() ), PageCursorTracer.NULL );
             }
         }
     }

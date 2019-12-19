@@ -20,11 +20,13 @@ import org.neo4j.index.internal.gbptree.GBPTreeBootstrapper;
 import org.neo4j.index.internal.gbptree.GBPTreeConsistencyCheckVisitor;
 import org.neo4j.internal.helpers.Args;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.impl.index.schema.SchemaLayouts;
 import org.neo4j.logging.FormattedLog;
 import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.scheduler.JobScheduler;
 
+import static org.neo4j.io.pagecache.tracing.PageCacheTracer.NULL;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
 
 public class GBPTreeConsistencyCheckTool
@@ -49,14 +51,14 @@ public class GBPTreeConsistencyCheckTool
         try ( JobScheduler jobScheduler = createInitialisedScheduler();
               PageCache pageCache = GBPTreeBootstrapper.pageCache( jobScheduler ) )
         {
-            final GBPTreeBootstrapper bootstrapper = new GBPTreeBootstrapper( pageCache, new SchemaLayouts(), true );
+            final GBPTreeBootstrapper bootstrapper = new GBPTreeBootstrapper( pageCache, new SchemaLayouts(), true, NULL );
             final GBPTreeBootstrapper.Bootstrap bootstrap = bootstrapper.bootstrapTree( file );
 
             try ( GBPTree<?,?> tree = bootstrap.getTree() )
             {
                 final GBPTreeConsistencyCheckVisitor visitor = loggingInconsistencyVisitor();
                 System.out.println( "Starting consistency check" );
-                boolean consistent = tree.consistencyCheck( visitor, reportDirty );
+                boolean consistent = tree.consistencyCheck( visitor, reportDirty, PageCursorTracer.NULL );
                 if ( consistent )
                 {
                     System.out.println( "Consistency check finished successful." );

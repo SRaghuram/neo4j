@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.Random;
 
 import org.neo4j.index.internal.gbptree.Writer;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 
 import static com.neo4j.bench.micro.Main.run;
 
@@ -112,7 +113,7 @@ public class WriteGBPTree extends AbstractGBPTreeBenchmark
         {
             long initialTreeSize = benchmarkState.initialTreeSize();
             random = randomSequence( initialTreeSize );
-            writer = benchmarkState.gbpTree.writer();
+            writer = benchmarkState.gbpTree.writer( PageCursorTracer.NULL );
             key = benchmarkState.layout.newKey();
             value = benchmarkState.layout.newValue();
         }

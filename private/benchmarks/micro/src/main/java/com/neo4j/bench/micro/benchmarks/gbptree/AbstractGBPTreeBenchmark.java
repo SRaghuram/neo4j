@@ -35,6 +35,7 @@ import org.neo4j.logging.NullLog;
 import static org.neo4j.index.internal.gbptree.GBPTree.NO_HEADER_READER;
 import static org.neo4j.index.internal.gbptree.GBPTree.NO_HEADER_WRITER;
 import static org.neo4j.index.internal.gbptree.GBPTree.NO_MONITOR;
+import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 
 public abstract class AbstractGBPTreeBenchmark extends BaseDatabaseBenchmark
 {
@@ -122,7 +123,7 @@ public abstract class AbstractGBPTreeBenchmark extends BaseDatabaseBenchmark
     {
         AdaptableKey key = layout.newKey();
         AdaptableValue value = layout.newValue();
-        try ( Writer<AdaptableKey,AdaptableValue> writer = gbpTree.writer() )
+        try ( Writer<AdaptableKey,AdaptableValue> writer = gbpTree.writer( NULL ) )
         {
             long initialTreeSize = initialTreeSize();
             Random random = randomSequence( 0 );
@@ -141,7 +142,7 @@ public abstract class AbstractGBPTreeBenchmark extends BaseDatabaseBenchmark
                 }
             }
         }
-        gbpTree.checkpoint( IOLimiter.UNLIMITED );
+        gbpTree.checkpoint( IOLimiter.UNLIMITED, NULL );
     }
 
     static Random randomSequence( long pos )
@@ -184,7 +185,7 @@ public abstract class AbstractGBPTreeBenchmark extends BaseDatabaseBenchmark
                 NO_HEADER_READER,
                 NO_HEADER_WRITER,
                 RecoveryCleanupWorkCollector.immediate(),
-                false );
+                false, PageCacheTracer.NULL );
     }
 
     @Override
