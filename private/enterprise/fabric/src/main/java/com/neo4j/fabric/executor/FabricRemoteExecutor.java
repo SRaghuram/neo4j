@@ -15,9 +15,9 @@ import com.neo4j.fabric.transaction.FabricTransactionInfo;
 import com.neo4j.fabric.transaction.TransactionBookmarkManager;
 import reactor.core.publisher.Mono;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.neo4j.bolt.runtime.AccessMode;
 
@@ -40,11 +40,12 @@ public class FabricRemoteExecutor
 
     public class FabricRemoteTransaction
     {
+        private final Object writeTransactionStartLock = new Object();
         private final FabricTransactionInfo transactionInfo;
         private final TransactionBookmarkManager bookmarkManager;
-        private final Map<FabricConfig.Graph,PooledDriver> usedDrivers = new HashMap<>();
-        private FabricConfig.Graph writingTo;
-        private Mono<FabricDriverTransaction> writeTransaction;
+        private final Map<FabricConfig.Graph,PooledDriver> usedDrivers = new ConcurrentHashMap<>();
+        private volatile FabricConfig.Graph writingTo;
+        private volatile Mono<FabricDriverTransaction> writeTransaction;
 
         private FabricRemoteTransaction( FabricTransactionInfo transactionInfo, TransactionBookmarkManager bookmarkManager )
         {
@@ -72,12 +73,19 @@ public class FabricRemoteExecutor
                 throw writeInReadError( location );
             }
 
-            if ( writingTo != null && !writingTo.equals( location ) )
+            synchronized ( writeTransactionStartLock )
             {
-                throw multipleWriteError( location, writingTo );
+                if ( writingTo != null && !writingTo.equals( location ) )
+                {
+                    throw multipleWriteError( location, writingTo );
+                }
+
+                if ( writingTo == null )
+                {
+                    beginWriteTransaction( location );
+                }
             }
 
-            beginWriteTransaction( location );
             return runInWriteTransaction( query, params );
         }
 
