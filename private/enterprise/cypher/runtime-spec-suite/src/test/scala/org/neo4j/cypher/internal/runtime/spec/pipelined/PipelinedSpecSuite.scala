@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.spec.pipelined
 
 import java.lang.System.lineSeparator
 
-import org.neo4j.cypher.internal.EnterpriseRuntimeContext
+import org.neo4j.cypher.internal.{CommunityRuntimeContext, EnterpriseRuntimeContext}
 import org.neo4j.cypher.internal.PipelinedRuntime.PIPELINED
 import org.neo4j.cypher.internal.logical.plans.Ascending
 import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE.{FUSING, MORSEL_SIZE, NO_FUSING}
@@ -104,11 +104,13 @@ class PipelinedExpandAllTestNoFusing extends ExpandAllTestBase(NO_FUSING, PIPELI
 
 // EXPAND INTO
 class PipelinedExpandIntoTest extends ExpandIntoTestBase(FUSING, PIPELINED, SIZE_HINT)
-                           with ExpandIntoWithOtherOperatorsTestBase[EnterpriseRuntimeContext]
-                           with PipelinedSpecSuite
+                              with ExpandIntoWithOtherOperatorsTestBase[EnterpriseRuntimeContext]
+                              with ExpandIntoArgumentOrderTestBase[CommunityRuntimeContext]
+                              with PipelinedSpecSuite
 class PipelinedExpandIntoTestNoFusing extends ExpandIntoTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
-                                   with ExpandIntoWithOtherOperatorsTestBase[EnterpriseRuntimeContext]
-                                   with PipelinedSpecSuite
+                                      with ExpandIntoWithOtherOperatorsTestBase[EnterpriseRuntimeContext]
+                                      with ExpandIntoArgumentOrderTestBase[CommunityRuntimeContext]
+                                      with PipelinedSpecSuite
 
 // OPTIONAL EXPAND ALL
 class PipelinedOptionalExpandAllTest extends OptionalExpandAllTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite

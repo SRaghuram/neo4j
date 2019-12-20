@@ -9,7 +9,7 @@ import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE
 import org.neo4j.cypher.internal.runtime.spec.interpreted.LegacyDbHitsTestBase
 import org.neo4j.cypher.internal.runtime.spec.slotted.SlottedSpecSuite.SIZE_HINT
 import org.neo4j.cypher.internal.runtime.spec.tests._
-import org.neo4j.cypher.internal.{EnterpriseRuntimeContext, SlottedRuntime}
+import org.neo4j.cypher.internal.{CommunityRuntimeContext, EnterpriseRuntimeContext, SlottedRuntime}
 
 object SlottedSpecSuite {
   val SIZE_HINT = 200
@@ -28,6 +28,7 @@ class SlottedExpandAllTest extends ExpandAllTestBase(ENTERPRISE.DEFAULT, Slotted
                            with ExpandAllWithOtherOperatorsTestBase[EnterpriseRuntimeContext]
 class SlottedExpandIntoTest extends ExpandIntoTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
                             with ExpandIntoWithOtherOperatorsTestBase[EnterpriseRuntimeContext]
+                            with ExpandIntoArgumentOrderTestBase[CommunityRuntimeContext]
 class SlottedOptionalExpandAllTest extends OptionalExpandAllTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedOptionalExpandIntoTest extends OptionalExpandIntoTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedVarExpandAllTest extends VarLengthExpandTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
