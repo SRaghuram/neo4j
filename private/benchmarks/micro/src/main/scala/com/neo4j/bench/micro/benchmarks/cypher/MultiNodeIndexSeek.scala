@@ -6,9 +6,10 @@
 package com.neo4j.bench.micro.benchmarks.cypher
 
 import com.neo4j.bench.jmh.api.config.{BenchmarkEnabled, ParamValues}
+import com.neo4j.bench.micro.Main
 import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
 import com.neo4j.bench.micro.data.DiscreteGenerator.{Bucket, discrete}
-import com.neo4j.bench.micro.data.Plans.{IdGen, astLabelToken, astLiteralFor, astPropertyKeyToken, astVariable}
+import com.neo4j.bench.micro.data.Plans._
 import com.neo4j.bench.micro.data.TypeParamValues.{DBL, LNG, STR_BIG, STR_SML}
 import com.neo4j.bench.micro.data.ValueGeneratorUtil.discreteBucketsFor
 import com.neo4j.bench.micro.data.{DataGeneratorConfig, DataGeneratorConfigBuilder, LabelKeyDefinition, PropertyDefinition}
@@ -30,8 +31,8 @@ class MultiNodeIndexSeek extends AbstractCypherBenchmark {
   var runtime: String = _
 
   @ParamValues(
-    allowed = Array("0.001", "0.01", "0.1"),
-    base = Array("0.001", "0.1"))
+    allowed = Array("0.001", "0.01"),
+    base = Array("0.001"))
   @Param(Array[String]())
   var selectivity: Double = _
 
@@ -48,26 +49,32 @@ class MultiNodeIndexSeek extends AbstractCypherBenchmark {
   private val KEY = "key"
 
   private val TOLERATED_ROW_COUNT_ERROR = 0.05
-  // TODO: Maybe use private vars and afterDatabaseRestart() to set these, since they are accessed on each invocation
-  private lazy val expectedRowCount: Double = NODE_COUNT * selectivity
-  private lazy val minExpectedRowCount: Int = Math.round(expectedRowCount - TOLERATED_ROW_COUNT_ERROR * expectedRowCount).toInt
-  private lazy val maxExpectedRowCount: Int = Math.round(expectedRowCount + TOLERATED_ROW_COUNT_ERROR * expectedRowCount).toInt
 
-  private lazy val buckets: Array[Bucket] = discreteBucketsFor(propertyType, selectivity, 1 - selectivity)
+  private var expectedRowCount: Double = _
+  private var minExpectedRowCount: Int = _
+  private var maxExpectedRowCount: Int = _
+
+  private def computeBuckets: Array[Bucket] = discreteBucketsFor(propertyType, selectivity, 1 - selectivity)
 
   override protected def getConfig: DataGeneratorConfig =
     new DataGeneratorConfigBuilder()
       .withNodeCount(NODE_COUNT)
       .withLabels(LABEL)
-      .withNodeProperties(new PropertyDefinition(KEY, discrete(buckets: _*)))
+      .withNodeProperties(new PropertyDefinition(KEY, discrete(computeBuckets: _*)))
       .withSchemaIndexes(new LabelKeyDefinition(LABEL, KEY))
       .isReusableStore(true)
       .build()
 
+  override protected def afterDatabaseStart(config: DataGeneratorConfig): Unit = {
+    expectedRowCount = Math.pow(NODE_COUNT * selectivity, 2)
+    minExpectedRowCount = Math.round(expectedRowCount - TOLERATED_ROW_COUNT_ERROR * expectedRowCount).toInt
+    maxExpectedRowCount = Math.round(expectedRowCount + TOLERATED_ROW_COUNT_ERROR * expectedRowCount).toInt
+  }
+
   override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
     val a = "a"
     val b = "b"
-    val literal = astLiteralFor(buckets(0), propertyType)
+    val literal = astLiteralFor(computeBuckets(0), propertyType)
     val seekExpression = SingleQueryExpression(literal)
     val indexSeekA = plans.NodeIndexSeek(
       a,
@@ -103,13 +110,19 @@ class MultiNodeIndexSeek extends AbstractCypherBenchmark {
   }
 }
 
+object MultiNodeIndexSeek {
+  def main(args: Array[String]): Unit = {
+    Main.run(classOf[MultiNodeIndexSeek])
+  }
+}
+
 @State(Scope.Thread)
 class MultipleNodeIndexSeekThreadState {
   var tx: InternalTransaction = _
   var executablePlan: ExecutablePlan = _
 
   @Setup
-  def setUp(benchmarkState: CartesianProduct): Unit = {
+  def setUp(benchmarkState: MultiNodeIndexSeek): Unit = {
     executablePlan = benchmarkState.buildPlan(from(benchmarkState.runtime))
     tx = benchmarkState.beginInternalTransaction()
   }
