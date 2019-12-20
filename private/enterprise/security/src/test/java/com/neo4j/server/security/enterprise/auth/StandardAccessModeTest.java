@@ -324,6 +324,34 @@ class StandardAccessModeTest
     }
 
     @Test
+    void shouldAllowReadPropertyTraverseAllNodes() throws Exception
+    {
+        // WHEN
+        // GRANT TRAVERSE ON GRAPH neo4j NODES *
+        // GRANT READ {PROP1} ON GRAPH neo4j NODES A
+        var privilege1 = new ResourcePrivilege( GRANT, TRAVERSE, new Resource.GraphResource(), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
+        var privilege2 = new ResourcePrivilege( GRANT, READ, new Resource.PropertyResource( "PROP1" ), new LabelSegment( "A" ), DEFAULT_DATABASE_NAME );
+        var mode = builder.addPrivilege( privilege1 ).addPrivilege( privilege2 ).build();
+
+        // THEN
+        assertThat( mode.allowsReadPropertyAllLabels( PROP1 ), equalTo( false ) );
+        assertThat( mode.allowsReadPropertyAllLabels( PROP2 ), equalTo( false ) );
+
+        assertThat( mode.disallowsReadPropertyForSomeLabel( PROP1 ), equalTo( false ) );
+        assertThat( mode.disallowsReadPropertyForSomeLabel( PROP2 ), equalTo( false ) );
+
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A ), PROP1 ), equalTo( true ) );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A ), PROP2 ), equalTo( false ) );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( B ), PROP1 ), equalTo( false ) );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( B ), PROP2 ), equalTo( false ) );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A, B ), PROP1 ), equalTo( true ) );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A, B ), PROP2 ), equalTo( false ) );
+
+        assertThat( mode.allowsReadNodeProperty( Labels::from, PROP1 ), equalTo( false ) );
+        assertThat( mode.allowsReadNodeProperty( Labels::from, PROP2 ), equalTo( false ) );
+    }
+
+    @Test
     void shouldDenyReadPropertyAllNodes() throws Exception
     {
         // WHEN
@@ -452,6 +480,26 @@ class StandardAccessModeTest
         // GRANT READ {PROP1} ON GRAPH neo4j RELATIONSHIPS R1
         var privilege = new ResourcePrivilege( GRANT, READ, new Resource.PropertyResource( "PROP1" ), new RelTypeSegment( "R1" ), DEFAULT_DATABASE_NAME );
         var mode = builder.addPrivilege( privilege ).build();
+
+        // THEN
+        assertThat( mode.allowsReadPropertyAllRelTypes( PROP1 ), equalTo( false ) );
+        assertThat( mode.allowsReadPropertyAllRelTypes( PROP2 ), equalTo( false ) );
+
+        assertThat( mode.allowsReadRelationshipProperty( () -> R1, PROP1 ), equalTo( true ) );
+        assertThat( mode.allowsReadRelationshipProperty( () -> R1, PROP2 ), equalTo( false ) );
+        assertThat( mode.allowsReadRelationshipProperty( () -> R2, PROP1 ), equalTo( false ) );
+        assertThat( mode.allowsReadRelationshipProperty( () -> R2, PROP2 ), equalTo( false ) );
+    }
+
+    @Test
+    void shouldAllowReadPropertyTraverseAllRelationships() throws Exception
+    {
+        // WHEN
+        // GRANT TRAVERSE ON GRAPH neo4j RELATIONSHIPS *
+        // GRANT READ {PROP1} ON GRAPH neo4j RELATIONSHIPS R1
+        var privilege1 = new ResourcePrivilege( GRANT, TRAVERSE, new Resource.GraphResource(), RelTypeSegment.ALL, DEFAULT_DATABASE_NAME );
+        var privilege2 = new ResourcePrivilege( GRANT, READ, new Resource.PropertyResource( "PROP1" ), new RelTypeSegment( "R1" ), DEFAULT_DATABASE_NAME );
+        var mode = builder.addPrivilege( privilege1 ).addPrivilege( privilege2 ).build();
 
         // THEN
         assertThat( mode.allowsReadPropertyAllRelTypes( PROP1 ), equalTo( false ) );
