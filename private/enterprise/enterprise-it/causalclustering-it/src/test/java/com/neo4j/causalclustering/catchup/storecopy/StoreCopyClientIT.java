@@ -60,15 +60,13 @@ import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 
 import static java.lang.Math.toIntExact;
-import static org.hamcrest.CoreMatchers.any;
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.CoreMatchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.io.ByteUnit.kibiBytes;
 import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId;
-import static org.neo4j.logging.AssertableLogProvider.inLog;
+import static org.neo4j.logging.AssertableLogProvider.Level.WARN;
+import static org.neo4j.logging.LogAssertions.assertThat;
 
 @TestDirectoryExtension
 @ExtendWith( {SuppressOutputExtension.class, LifeExtension.class} )
@@ -265,7 +263,7 @@ class StoreCopyClientIT
         storeCopyClient.copyStoreFiles( addressProvider, storeId, streamToDiskProvider, defaultTerminationCondition, targetLocation );
 
         // then
-        assertEquals( fileContent( new File( databaseDir, fileName ) ), finishedContent );
+        assertEquals( finishedContent, fileContent( new File( databaseDir, fileName ) ) );
 
         // and
         File fileCopy = new File( databaseDir, copyFileName );
@@ -303,8 +301,9 @@ class StoreCopyClientIT
         assertThrows( StoreCopyFailedException.class, () ->
                 storeCopyClient.copyStoreFiles( addressProvider, serverHandler.getStoreId(), clientStoreFileStream, Once::new, targetLocation ) );
 
-        assertableLogProvider.containsMatchingLogCall( inLog( StoreCopyClient.class )
-                .warn( any( String.class ), equalTo( "Connection refused: localhost/127.0.0.1:" + port ) ) );
+        assertThat( assertableLogProvider ).forClass( StoreCopyClient.class ).forLevel( WARN )
+                .assertExceptionForLogMessage( "StoreCopyRequest failed exceptionally" )
+                .hasStackTraceContaining( "Connection refused: localhost/127.0.0.1:" + port );
     }
 
     @Test
@@ -331,8 +330,8 @@ class StoreCopyClientIT
         assertThrows( StoreCopyFailedException.class, () ->
                 storeCopyClient.copyStoreFiles( addressProvider, serverHandler.getStoreId(), clientStoreFileStream, Once::new, targetLocation ) );
 
-        assertableLogProvider.rawMessageMatcher().assertContainsSingle( startsWith( "Unable to resolve address for" ) );
-        assertableLogProvider.internalToStringMessageMatcher().assertContains( catchupAddressResolutionException.getMessage() );
+        assertThat( assertableLogProvider ).containsMessages( "Unable to resolve address for" );
+        assertThat( assertableLogProvider ).containsMessages( catchupAddressResolutionException.getMessage() );
     }
 
     private File relative( String filename )

@@ -79,7 +79,11 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.internal.helpers.collection.Iterables.asList;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
-import static org.neo4j.logging.AssertableLogProvider.inLog;
+import static org.neo4j.logging.AssertableLogProvider.Level.DEBUG;
+import static org.neo4j.logging.AssertableLogProvider.Level.ERROR;
+import static org.neo4j.logging.AssertableLogProvider.Level.INFO;
+import static org.neo4j.logging.AssertableLogProvider.Level.WARN;
+import static org.neo4j.logging.LogAssertions.assertThat;
 import static org.neo4j.procedure.Mode.WRITE;
 
 @TestDirectoryExtension
@@ -367,13 +371,11 @@ class FunctionIT
         }
 
         // Then
-        AssertableLogProvider.LogMatcherBuilder match = inLog( GlobalProcedures.class );
-        logProvider.assertAtLeastOnce(
-                match.debug( "1" ),
-                match.info( "2" ),
-                match.warn( "3" ),
-                match.error( "4" )
-        );
+        assertThat( logProvider ).forClass( GlobalProcedures.class )
+                .forLevel( DEBUG ).containsMessages( "1" )
+                .forLevel( INFO ).containsMessages( "2" )
+                .forLevel( WARN ).containsMessages( "3" )
+                .forLevel( ERROR ).containsMessages( "4" );
     }
 
     @Test
@@ -676,11 +678,9 @@ class FunctionIT
         {
             tx.createNode( Label.label( "Person" ) );
             tx.createNode( Label.label( "Person" ) );
-            assertEquals(
-                    tx.execute( "MATCH (n:Person) RETURN com.neo4j.procedure.nodeListArgument(collect(n)) AS someVal" )
-                            .next()
-                            .get( "someVal" ),
-                    2L );
+            assertEquals( 2L, tx.execute( "MATCH (n:Person) RETURN com.neo4j.procedure.nodeListArgument(collect(n)) AS someVal" )
+                    .next()
+                    .get( "someVal" ) );
         }
     }
 
@@ -690,11 +690,9 @@ class FunctionIT
         try ( Transaction tx = db.beginTx() )
         {
             tx.createNode( Label.label( "Person" ) );
-            assertEquals(
-                    tx.execute( "MATCH (n:Person) RETURN com.neo4j.procedure.nodeListArgument([n, null]) AS someVal" )
-                            .next()
-                            .get( "someVal" ),
-                    1L );
+            assertEquals( 1L, tx.execute( "MATCH (n:Person) RETURN com.neo4j.procedure.nodeListArgument([n, null]) AS someVal" )
+                    .next()
+                    .get( "someVal" ) );
         }
     }
 

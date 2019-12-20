@@ -36,14 +36,12 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.JobScheduler;
 
 import static com.neo4j.server.security.enterprise.EnterpriseSecurityModule.mergeAuthenticationAndAuthorization;
-import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsInRelativeOrder;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
-import static org.hamcrest.core.Is.isA;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -51,7 +49,8 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.neo4j.logging.AssertableLogProvider.inLog;
+import static org.neo4j.logging.AssertableLogProvider.Level.ERROR;
+import static org.neo4j.logging.LogAssertions.assertThat;
 
 class EnterpriseSecurityModuleTest
 {
@@ -110,8 +109,8 @@ class EnterpriseSecurityModuleTest
         assertThat( runtimeException.getMessage(), equalTo( errorMessage ) );
         assertThat( runtimeException.getCause(), instanceOf( KernelException.class ) );
 
-        logProvider.assertAtLeastOnce( inLog( EnterpriseSecurityModule.class )
-                .error( containsString( errorMessage ), isA( KernelException.class )  ) );
+        assertThat( logProvider ).forClass( EnterpriseSecurityModule.class ).forLevel( ERROR )
+                .assertExceptionForLogMessage( errorMessage ).isInstanceOf( KernelException.class );
     }
 
     @Test

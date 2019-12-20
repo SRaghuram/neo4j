@@ -17,7 +17,8 @@ import org.neo4j.logging.NullLog;
 import static com.neo4j.causalclustering.core.consensus.ReplicatedInteger.valueOf;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
-import static org.neo4j.logging.AssertableLogProvider.inLog;
+import static org.neo4j.logging.AssertableLogProvider.Level.DEBUG;
+import static org.neo4j.logging.LogAssertions.assertThat;
 
 public class TruncateLogCommandTest
 {
@@ -47,8 +48,8 @@ public class TruncateLogCommandTest
         assertNull( inFlightCache.get( 2L ) );
         assertNull( inFlightCache.get( 3L ) );
 
-        logProvider.assertAtLeastOnce( inLog( getClass() )
-                .debug( "Start truncating in-flight-map from index %d. Current map:%n%s", fromIndex, inFlightCache ) );
+        assertThat(logProvider).forClass( getClass() ).forLevel( DEBUG )
+                .containsMessageWithArguments( "Start truncating in-flight-map from index %d. Current map:%n%s", fromIndex, inFlightCache );
     }
 
     @Test

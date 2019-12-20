@@ -16,9 +16,9 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.logging.AssertableLogProvider;
 
-import static org.hamcrest.CoreMatchers.containsString;
-import static org.hamcrest.Matchers.anyOf;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.logging.AssertableLogProvider.Level.DEBUG;
+import static org.neo4j.logging.LogAssertions.assertThat;
 
 class ExpressionEngineConfigurationTest
 {
@@ -136,12 +136,10 @@ class ExpressionEngineConfigurationTest
             transaction.commit();
         }
 
-        logProvider.assertAtLeastOnce(
-                AssertableLogProvider.inLog( EnterpriseCompilerFactory.class )
-                                     .debug( anyOf(
-                                containsString( "Compiling expression:" ),
-                                containsString( "Compiling projection:" )
-                        ) ) );
+        assertThat( logProvider ).forClass( EnterpriseCompilerFactory.class ).forLevel( DEBUG )
+                .satisfiesAnyOf(
+                        logProvider -> assertThat( logProvider ).containsMessages( "Compiling expression:" ),
+                        logProvider -> assertThat( logProvider ).containsMessages( "Compiling projection:" ) );
     }
 
     private void assertNotUsingCompiled( GraphDatabaseService db, String query )
@@ -153,12 +151,8 @@ class ExpressionEngineConfigurationTest
             transaction.commit();
         }
 
-        logProvider.assertNone(
-                AssertableLogProvider.inLog( EnterpriseCompilerFactory.class )
-                                     .debug( anyOf(
-                                containsString( "Compiling expression:" ),
-                                containsString( "Compiling projection:" )
-                        ) ) );
+        assertThat( logProvider ).forClass( EnterpriseCompilerFactory.class ).forLevel( DEBUG )
+                .doesNotContainMessageWithArguments( "Compiling expression:", "Compiling projection:" );
     }
 
 }

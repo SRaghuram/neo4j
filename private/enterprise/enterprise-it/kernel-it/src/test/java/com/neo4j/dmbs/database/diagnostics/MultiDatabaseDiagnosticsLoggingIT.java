@@ -19,6 +19,7 @@ import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.logging.LogAssertions.assertThat;
 
 @TestDirectoryExtension
 class MultiDatabaseDiagnosticsLoggingIT
@@ -47,28 +48,28 @@ class MultiDatabaseDiagnosticsLoggingIT
     @Test
     void dumpDefaultDatabaseInformation()
     {
-        provider.rawMessageMatcher().assertContains( "Database: neo4j" );
-        provider.rawMessageMatcher().assertContains( "Version" );
-        provider.rawMessageMatcher().assertContains( "Store files" );
-        provider.rawMessageMatcher().assertContains( "Transaction log" );
-        provider.rawMessageMatcher().assertContains( "Id usage" );
-        provider.rawMessageMatcher().assertContains( "Neostore records" );
-        provider.rawMessageMatcher().assertContains( "Store versions" );
+        assertThat( provider ).containsMessages( "Database: neo4j",
+                                                 "Version",
+                                                 "Store files",
+                                                 "Transaction log",
+                                                 "Id usage",
+                                                 "Neostore records",
+                                                 "Store versions" );
     }
 
     @Test
     void dumpDbInformationOnCreation() throws DatabaseExistsException
     {
         provider.clear();
-        provider.assertNoLoggingOccurred();
+        assertThat( provider ).doesNotHaveAnyLogs();
 
         managementService.createDatabase( "NewDatabase" );
-        provider.rawMessageMatcher().assertContains( "Database: newdatabase" );
-        provider.rawMessageMatcher().assertContains( "Version" );
-        provider.rawMessageMatcher().assertContains( "Store files" );
-        provider.rawMessageMatcher().assertContains( "Transaction log" );
-        provider.rawMessageMatcher().assertContains( "Id usage" );
-        provider.rawMessageMatcher().assertContains( "Neostore records" );
-        provider.rawMessageMatcher().assertContains( "Store versions" );
+        assertThat( provider ).containsMessages( "Database: newdatabase",
+                                                 "Version",
+                                                 "Store files",
+                                                 "Transaction log",
+                                                 "Id usage",
+                                                 "Neostore records",
+                                                 "Store versions" );
     }
 }

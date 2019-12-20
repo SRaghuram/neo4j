@@ -7,16 +7,16 @@ package com.neo4j.causalclustering.discovery;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
 public class MockSrvRecordResolver extends SrvRecordResolver
 {
-    private final HashMap<String,List<SrvRecord>> records;
+    private final Map<String,List<SrvRecord>> records;
 
-    public MockSrvRecordResolver( HashMap<String,List<SrvRecord>> records )
+    public MockSrvRecordResolver( Map<String,List<SrvRecord>> records )
     {
         this.records = records;
     }

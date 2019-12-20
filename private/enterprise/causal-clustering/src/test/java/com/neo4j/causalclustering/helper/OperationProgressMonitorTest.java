@@ -27,6 +27,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.neo4j.logging.LogAssertions.assertThat;
 
 @SuppressWarnings( "unchecked" )
 class OperationProgressMonitorTest
@@ -74,12 +75,12 @@ class OperationProgressMonitorTest
         assertThrows( TimeoutException.class, retryFuture::get );
 
         // then
-        logProvider.rawMessageMatcher().assertContains( "Request timed out" );
+        assertThat( logProvider ).containsMessages( "Request timed out" );
         verify( future, atLeast( 3 ) ).get( anyLong(), any() );
     }
 
     @Test
-    void shouldStopImmediatelyForNonTimeoutErrors() throws Throwable
+    void shouldStopImmediatelyForNonTimeoutErrors()
     {
         // given
         long inactivityTimeout = 1;

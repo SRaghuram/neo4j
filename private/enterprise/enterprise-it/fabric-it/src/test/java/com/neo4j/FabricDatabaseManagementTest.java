@@ -34,14 +34,14 @@ import org.neo4j.logging.NullLogProvider;
 import org.neo4j.logging.internal.SimpleLogService;
 import org.neo4j.values.storable.Values;
 
-import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.dbms.database.SystemGraphDbmsModel.DATABASE_LABEL;
 import static org.neo4j.dbms.database.SystemGraphDbmsModel.DATABASE_NAME_PROPERTY;
 import static org.neo4j.dbms.database.SystemGraphDbmsModel.DATABASE_STATUS_PROPERTY;
-import static org.neo4j.logging.AssertableLogProvider.inLog;
+import static org.neo4j.logging.AssertableLogProvider.Level.INFO;
+import static org.neo4j.logging.LogAssertions.assertThat;
 import static scala.collection.JavaConverters.asScalaBuffer;
 
 class FabricDatabaseManagementTest
@@ -96,9 +96,8 @@ class FabricDatabaseManagementTest
 
         createServer( "mega" );
 
-        logProvider.assertAtLeastOnce(
-                inLog( FabricDatabaseManager.class ).info( containsString( "Creating Fabric virtual database '%s'" ), "mega" )
-        );
+        assertThat( logProvider ).forClass( FabricDatabaseManager.class )
+                .forLevel( INFO ).containsMessages( "Creating Fabric virtual database '%s'", "mega" );
 
         try ( var tx = openSystemDbTransaction() )
         {
@@ -113,12 +112,9 @@ class FabricDatabaseManagementTest
 
         createServer( "giga" );
 
-        logProvider.assertAtLeastOnce(
-                inLog( FabricDatabaseManager.class ).info( containsString( "Creating Fabric virtual database '%s'" ), "giga" )
-        );
-        logProvider.assertAtLeastOnce(
-                inLog( FabricDatabaseManager.class ).info( containsString( "Setting Fabric virtual database '%s' status to offline" ), "mega" )
-        );
+        assertThat( logProvider ).forClass( FabricDatabaseManager.class ).forLevel( INFO )
+                .containsMessageWithArguments( "Creating Fabric virtual database '%s'", "giga" )
+                .containsMessageWithArguments( "Setting Fabric virtual database '%s' status to offline", "mega" );
 
         try ( var tx = openSystemDbTransaction() )
         {
@@ -137,15 +133,10 @@ class FabricDatabaseManagementTest
 
         createServer( null );
 
-        logProvider.assertAtLeastOnce(
-                inLog( FabricDatabaseManager.class ).info( containsString( "Setting Fabric virtual database '%s' status to offline" ), "mega" )
-        );
-        logProvider.assertAtLeastOnce(
-                inLog( FabricDatabaseManager.class ).info( containsString( "Setting Fabric virtual database '%s' status to offline" ), "giga" )
-        );
-        logProvider.assertNone(
-                inLog( FabricDatabaseManager.class ).info( containsString( "Creating Fabric virtual database" ) )
-        );
+        assertThat( logProvider ).forClass( FabricDatabaseManager.class ).forLevel( INFO )
+                            .containsMessageWithArguments( "Setting Fabric virtual database '%s' status to offline", "mega" )
+                            .containsMessageWithArguments( "Setting Fabric virtual database '%s' status to offline", "giga" )
+                            .doesNotContainMessage( "Creating Fabric virtual database" );
 
         try ( var tx = openSystemDbTransaction() )
         {
@@ -164,18 +155,11 @@ class FabricDatabaseManagementTest
 
         createServer( "mega" );
 
-        logProvider.assertAtLeastOnce(
-                inLog( FabricDatabaseManager.class ).info( containsString( "Setting Fabric virtual database '%s' status to online" ), "mega" )
-        );
-        logProvider.assertAtLeastOnce(
-                inLog( FabricDatabaseManager.class ).info( containsString( "Setting Fabric virtual database '%s' status to offline" ), "giga" )
-        );
-        logProvider.assertAtLeastOnce(
-                inLog( FabricDatabaseManager.class ).info( containsString( "Using existing Fabric virtual database '%s'" ), "mega" )
-        );
-        logProvider.assertNone(
-                inLog( FabricDatabaseManager.class ).info( containsString( "Creating Fabric virtual database" ) )
-        );
+        assertThat( logProvider ).forClass( FabricDatabaseManager.class ).forLevel( INFO )
+                .containsMessageWithArguments( "Setting Fabric virtual database '%s' status to online", "mega" )
+                .containsMessageWithArguments( "Setting Fabric virtual database '%s' status to offline", "giga" )
+                .containsMessageWithArguments( "Using existing Fabric virtual database '%s'", "mega" )
+                .doesNotContainMessage( "Creating Fabric virtual database" );
 
         try ( var tx = openSystemDbTransaction() )
         {

@@ -18,6 +18,7 @@ import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.logging.LogAssertions.assertThat;
 
 @TestDirectoryExtension
 class PageCacheFlushTracingTest
@@ -40,6 +41,6 @@ class PageCacheFlushTracingTest
             transaction.commit();
         }
         managementService.shutdown();
-        logProvider.rawMessageMatcher().assertContains( "Flushing file" );
+        assertThat( logProvider ).containsMessages( "Flushing file" );
     }
 }

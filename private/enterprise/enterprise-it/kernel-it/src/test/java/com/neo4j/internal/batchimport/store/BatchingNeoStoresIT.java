@@ -33,6 +33,7 @@ import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.logging.LogAssertions.assertThat;
 
 @Neo4jLayoutExtension
 class BatchingNeoStoresIT
@@ -62,7 +63,7 @@ class BatchingNeoStoresIT
         {
             batchingNeoStores.createNew();
         }
-        provider.assertNone( AssertableLogProvider.inLog( GlobalMetricsExtension.class ).any() );
+        assertThat( provider ).forClass( GlobalMetricsExtension.class ).doesNotHaveAnyLogs();
     }
 
     @Test

@@ -83,7 +83,7 @@ public class ReplicatedTokenStateMachineTest
     private final CleanupRule cleanupRule = new CleanupRule();
 
     @Rule
-    public RuleChain rules = RuleChain.outerRule( fs ).around( testDirectory ).around( logProvider ).around( pageCacheRule ).around( cleanupRule );
+    public RuleChain rules = RuleChain.outerRule( fs ).around( testDirectory ).around( pageCacheRule ).around( cleanupRule );
 
     @Test
     public void shouldCreateTokenId() throws Exception

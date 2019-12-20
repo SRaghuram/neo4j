@@ -11,15 +11,18 @@ import org.junit.jupiter.api.Test;
 import java.util.Map;
 import java.util.logging.Level;
 
-import  org.neo4j.driver.Logger;
-
 import org.neo4j.configuration.Config;
+import org.neo4j.driver.Logger;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.server.logging.JULBridge;
 import org.neo4j.ssl.config.SslPolicyLoader;
 
 import static org.mockito.Mockito.mock;
-import static org.neo4j.logging.AssertableLogProvider.inLog;
+import static org.neo4j.logging.AssertableLogProvider.Level.DEBUG;
+import static org.neo4j.logging.AssertableLogProvider.Level.ERROR;
+import static org.neo4j.logging.AssertableLogProvider.Level.INFO;
+import static org.neo4j.logging.AssertableLogProvider.Level.WARN;
+import static org.neo4j.logging.LogAssertions.assertThat;
 
 class DriverLoggingTest
 {
@@ -38,7 +41,7 @@ class DriverLoggingTest
     {
         setUp( "ERROR" );
 
-        logProvider.assertExactly( inLog( LOG_NAME ).error( ERROR_MESSAGE ) );
+        assertThat( logProvider ).forLevel( ERROR ).containsMessages( ERROR_MESSAGE );
     }
 
     @Test
@@ -46,7 +49,8 @@ class DriverLoggingTest
     {
         setUp( "WARN" );
 
-        logProvider.assertExactly( inLog( LOG_NAME ).error( ERROR_MESSAGE ), inLog( LOG_NAME ).warn( WARN_MESSAGE ) );
+        assertThat( logProvider ).forLevel( ERROR ).containsMessages( ERROR_MESSAGE )
+                                 .forLevel( WARN ).containsMessages( WARN_MESSAGE );
     }
 
     @Test
@@ -54,7 +58,10 @@ class DriverLoggingTest
     {
         setUp( "INFO" );
 
-        logProvider.assertExactly( inLog( LOG_NAME ).error( ERROR_MESSAGE ), inLog( LOG_NAME ).warn( WARN_MESSAGE ), inLog( LOG_NAME ).info( INFO_MESSAGE ) );
+        assertThat( logProvider )
+                .forLevel( ERROR ).containsMessages( ERROR_MESSAGE )
+                .forLevel( WARN ).containsMessages( WARN_MESSAGE )
+                .forLevel( INFO ).containsMessages( INFO_MESSAGE );
     }
 
     @Test
@@ -62,12 +69,11 @@ class DriverLoggingTest
     {
         setUp( "DEBUG" );
 
-        logProvider.assertExactly(
-                inLog( LOG_NAME ).error( ERROR_MESSAGE ),
-                inLog( LOG_NAME ).warn( WARN_MESSAGE ),
-                inLog( LOG_NAME ).info( INFO_MESSAGE ),
-                inLog( LOG_NAME ).debug( DEBUG_MESSAGE )
-        );
+        assertThat( logProvider )
+                .forLevel( ERROR ).containsMessages( ERROR_MESSAGE )
+                .forLevel( WARN ).containsMessages( WARN_MESSAGE )
+                .forLevel( INFO ).containsMessages( INFO_MESSAGE )
+                .forLevel( DEBUG ).containsMessages( DEBUG_MESSAGE );
     }
 
     @Test
@@ -75,7 +81,7 @@ class DriverLoggingTest
     {
         setUp( "NONE" );
 
-        logProvider.assertNone( inLog( LOG_NAME ).error( ERROR_MESSAGE ));
+        assertThat( logProvider ).doesNotContainMessage( ERROR_MESSAGE );
     }
 
     private void setUp( String configuredLevel )

@@ -36,13 +36,12 @@ import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Session;
-import org.neo4j.driver.SessionConfig;
 import org.neo4j.driver.Transaction;
 import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.driver.summary.Notification;
 import org.neo4j.driver.summary.Plan;
-import org.neo4j.driver.summary.ResultSummary;
 import org.neo4j.driver.summary.QueryType;
+import org.neo4j.driver.summary.ResultSummary;
 import org.neo4j.graphdb.InputPosition;
 import org.neo4j.graphdb.QueryStatistics;
 import org.neo4j.graphdb.impl.notification.NotificationCode;
@@ -60,7 +59,6 @@ import static com.neo4j.AssertableQueryExecutionMonitor.query;
 import static com.neo4j.AssertableQueryExecutionMonitor.start;
 import static com.neo4j.AssertableQueryExecutionMonitor.throwable;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsInRelativeOrder;
@@ -75,7 +73,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.when;
 import static org.neo4j.internal.helpers.Strings.joinAsLines;
-import static org.neo4j.logging.AssertableLogProvider.inLog;
+import static org.neo4j.logging.AssertableLogProvider.Level.DEBUG;
+import static org.neo4j.logging.LogAssertions.assertThat;
 
 class FabricExecutorTest
 {
@@ -177,11 +176,6 @@ class FabricExecutorTest
 
         when( mockDriver.run( any(), any(), any(), accessModeArgument.capture(), any(), any() ) ).thenReturn( mockStatementResult );
         return mockDriver;
-    }
-
-    private Transaction transaction( String database, AccessMode mode )
-    {
-        return clientDriver.session( SessionConfig.builder().withDatabase( database ).withDefaultAccessMode( mode ).build() ).beginTransaction();
     }
 
     @Test
@@ -544,9 +538,8 @@ class FabricExecutorTest
                 "RETURN 1"
         ) ).consume() );
 
-        internalLogProvider.assertAtLeastOnce(
-                inLog( FabricExecutor.class ).debug( containsString( "Fabric plan:" ) )
-        );
+        assertThat( internalLogProvider ).forClass( FabricExecutor.class )
+                .forLevel( DEBUG ).containsMessages( "Fabric plan:" );
     }
 
     @Test
@@ -567,19 +560,11 @@ class FabricExecutorTest
                 "RETURN s, y ORDER BY s, y"
         ) ).consume() );
 
-        internalLogProvider.assertAtLeastOnce(
-                inLog( FabricExecutor.class ).debug( allOf( containsString( "local" ), containsString( "UNWIND [0, 1] AS s" ) ) )
-        );
-        internalLogProvider.assertAtLeastOnce(
-                inLog( FabricExecutor.class ).debug( allOf( containsString( "remote 0" ), containsString( "RETURN 2 AS `y`" ) ) )
-        );
-        internalLogProvider.assertAtLeastOnce(
-                inLog( FabricExecutor.class ).debug( allOf( containsString( "remote 1" ), containsString( "RETURN 2 AS `y`" ) ) )
-        );
-        internalLogProvider.assertAtLeastOnce(
-                inLog( FabricExecutor.class ).debug(
-                        allOf( containsString( "local" ), containsString( "RETURN s AS s, y AS y ORDER BY s ASCENDING, y ASCENDING" ) ) )
-        );
+        assertThat( internalLogProvider ).forClass( FabricExecutor.class ).forLevel( DEBUG )
+                .containsMessages( "local", "UNWIND [0, 1] AS s",
+                                   "remote 0", "RETURN 2 AS `y`",
+                                   "remote 1", "RETURN 2 AS `y`",
+                                   "local", "RETURN s AS s, y AS y ORDER BY s ASCENDING, y ASCENDING" );
     }
 
     @Test

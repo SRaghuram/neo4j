@@ -10,13 +10,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
-import org.hamcrest.BaseMatcher;
-import org.hamcrest.Description;
-import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
-
-import java.util.concurrent.CompletionException;
-import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.logging.AssertableLogProvider;
@@ -26,7 +20,8 @@ import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.neo4j.test.assertion.Assert.assertEventually;
+import static org.neo4j.logging.AssertableLogProvider.Level.WARN;
+import static org.neo4j.logging.LogAssertions.assertThat;
 
 class RaftSenderTest
 {
@@ -58,26 +53,9 @@ class RaftSenderTest
         raftSender.send( socketAddress, new Message()
         { }, false );
 
-        // then
-        assertEventually( () -> logProvider.containsMatchingLogCall( AssertableLogProvider
-                        .inLog( RaftSender.class )
-                        .warn( Matchers.equalTo( format( "Raft sender failed exceptionally [Address: %s]", socketAddress ) ), new BaseMatcher<>()
-                        {
-                            @Override
-                            public void describeTo( Description description )
-                            {
-
-                            }
-
-                            @Override
-                            public boolean matches( Object o )
-                            {
-                                CompletionException exception = (CompletionException) o;
-                                return format( "[ChannelId: %s]", embeddedChannel.id() ).equals( exception.getMessage() ) &&
-                                        exception.getCause().equals( failingWrite );
-                            }
-                        } ) ),
-                Matchers.is( true ), 1,
-                TimeUnit.MINUTES );
+        assertThat( logProvider ).forClass( RaftSender.class ).forLevel( WARN )
+                .assertExceptionForLogMessage( format( "Raft sender failed exceptionally [Address: %s]", socketAddress ) )
+                .hasMessage( format( "[ChannelId: %s]", embeddedChannel.id() ) )
+                .hasCause( failingWrite );
     }
 }

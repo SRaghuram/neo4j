@@ -33,11 +33,6 @@ import org.neo4j.time.FakeClock;
 import static io.netty.channel.local.LocalAddress.ANY;
 import static java.lang.String.format;
 import static java.util.Collections.emptyMap;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.sameInstance;
-import static org.hamcrest.core.Is.is;
-import static org.neo4j.configuration.GraphDatabaseSettings.LogQueryLevel.INFO;
 import static org.neo4j.configuration.GraphDatabaseSettings.LogQueryLevel.VERBOSE;
 import static org.neo4j.configuration.GraphDatabaseSettings.log_queries;
 import static org.neo4j.configuration.GraphDatabaseSettings.log_queries_parameter_logging_enabled;
@@ -45,7 +40,9 @@ import static org.neo4j.configuration.GraphDatabaseSettings.log_queries_threshol
 import static org.neo4j.graphdb.QueryExecutionType.QueryType.READ_ONLY;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
 import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId;
-import static org.neo4j.logging.AssertableLogProvider.inLog;
+import static org.neo4j.logging.AssertableLogProvider.Level.ERROR;
+import static org.neo4j.logging.AssertableLogProvider.Level.INFO;
+import static org.neo4j.logging.LogAssertions.assertThat;
 
 class ConfiguredQueryLoggerTest
 {
@@ -82,9 +79,8 @@ class ConfiguredQueryLoggerTest
 
         // then
         String expectedSessionString = sessionConnectionDetails( SESSION_1, "TestUser" );
-        logProvider.assertExactly(
-            inLog( getClass() ).info( format( LOG_MESSAGE_TEMPLATE, 11L, expectedSessionString, QUERY_1 ) )
-        );
+        assertThat( logProvider ).forClass( this.getClass() ).forLevel( AssertableLogProvider.Level.INFO )
+                .containsMessages( format( LOG_MESSAGE_TEMPLATE, 11L, expectedSessionString, QUERY_1 ) );
     }
 
     @Test
@@ -99,7 +95,7 @@ class ConfiguredQueryLoggerTest
         queryLogger.success( query );
 
         // then
-        logProvider.assertNoLoggingOccurred();
+        assertThat( logProvider ).doesNotHaveAnyLogs();
 
         // and when
         ExecutingQuery query2 = query( SESSION_2, "TestUser2", QUERY_2 );
@@ -110,9 +106,8 @@ class ConfiguredQueryLoggerTest
 
         // then
         String expectedSessionString = sessionConnectionDetails( SESSION_2, "TestUser2" );
-        logProvider.assertExactly(
-                inLog( getClass() ).info( format( LOG_MESSAGE_TEMPLATE, 9L, expectedSessionString, QUERY_2 ) )
-        );
+        assertThat( logProvider ).forClass( this.getClass() ).forLevel( INFO )
+                .containsMessages( format( LOG_MESSAGE_TEMPLATE, 9L, expectedSessionString, QUERY_2 ) );
     }
 
     @Test
@@ -140,10 +135,9 @@ class ConfiguredQueryLoggerTest
         // then
         String expectedSession1String = sessionConnectionDetails( SESSION_1, "TestUser1" );
         String expectedSession2String = sessionConnectionDetails( SESSION_2, "TestUser2" );
-        logProvider.assertExactly(
-                inLog( getClass() ).info( format( LOG_MESSAGE_TEMPLATE, 17L, expectedSession2String, QUERY_2 ) ),
-                inLog( getClass() ).info( format( LOG_MESSAGE_TEMPLATE, 25L, expectedSession1String, QUERY_1 ) )
-        );
+        assertThat( logProvider ).forClass( this.getClass() ).forLevel( INFO )
+                .containsMessages( format( LOG_MESSAGE_TEMPLATE, 17L, expectedSession2String, QUERY_2 ),
+                                   format( LOG_MESSAGE_TEMPLATE, 25L, expectedSession1String, QUERY_1 ) );
     }
 
     @Test
@@ -160,11 +154,8 @@ class ConfiguredQueryLoggerTest
         queryLogger.failure( query, failure );
 
         // then
-        logProvider.assertExactly(
-                inLog( getClass() )
-                        .error( is( "1 ms: " + sessionConnectionDetails( SESSION_1, "TestUser" )
-                                + " - MATCH (n) RETURN n - {}" ), sameInstance( failure ) )
-        );
+        assertThat( logProvider ).forClass( getClass() ).forLevel( ERROR ).containsMessageWithException(
+                "1 ms: " + sessionConnectionDetails( SESSION_1, "TestUser" ) + " - MATCH (n) RETURN n - {}", failure );
     }
 
     @Test
@@ -183,11 +174,10 @@ class ConfiguredQueryLoggerTest
 
         // then
         String expectedSessionString = sessionConnectionDetails( SESSION_1, "TestUser" );
-        logProvider.assertExactly(
-            inLog( getClass() ).info( format( "%d ms: %s - %s - %s - {}", 11L, expectedSessionString, QUERY_4,
+        assertThat( logProvider ).forClass( this.getClass() ).forLevel( INFO )
+                .containsMessages( format( "%d ms: %s - %s - %s - {}", 11L, expectedSessionString, QUERY_4,
                     "{ages: " +
-                    "[41, 42, 43]}" ) )
-        );
+                    "[41, 42, 43]}" ) );
     }
 
     @Test
@@ -206,12 +196,9 @@ class ConfiguredQueryLoggerTest
         queryLogger.failure( query, failure );
 
         // then
-        logProvider.assertExactly(
-            inLog( getClass() ).error(
-                    is( "1 ms: " + sessionConnectionDetails( SESSION_1, "TestUser" )
-                            + " - MATCH (n) WHERE n.age IN $ages RETURN n - {ages: [41, 42, 43]} - {}" ),
-                sameInstance( failure ) )
-        );
+        assertThat( logProvider ).forClass( getClass() ).forLevel( ERROR )
+                .containsMessageWithException( "1 ms: " + sessionConnectionDetails( SESSION_1, "TestUser" ) +
+                                " - MATCH (n) WHERE n.age IN $ages RETURN n - {ages: [41, 42, 43]} - {}", failure );
     }
 
     @Test
@@ -230,12 +217,11 @@ class ConfiguredQueryLoggerTest
         queryLogger.success( anotherQuery );
 
         // then
-        logProvider.assertExactly(
-                inLog( getClass() ).info( format( LOG_MESSAGE_TEMPLATE, 10L,
-                        sessionConnectionDetails( SESSION_1, "TestUser" ), QUERY_1 ) ),
-                inLog( getClass() ).info( format( LOG_MESSAGE_TEMPLATE, 10L,
-                        sessionConnectionDetails( SESSION_1, "AnotherUser" ), QUERY_1 ) )
-        );
+        assertThat( logProvider ).forClass( this.getClass() ).forLevel( INFO )
+                .containsMessages( format( LOG_MESSAGE_TEMPLATE, 10L,
+                        sessionConnectionDetails( SESSION_1, "TestUser" ), QUERY_1 ),
+                        format( LOG_MESSAGE_TEMPLATE, 10L,
+                        sessionConnectionDetails( SESSION_1, "AnotherUser" ), QUERY_1 ) );
     }
 
     @Test
@@ -256,15 +242,13 @@ class ConfiguredQueryLoggerTest
         queryLogger.failure( anotherQuery, error );
 
         // then
-        logProvider.assertExactly(
-                inLog( getClass() ).info( format( "%d ms: %s - %s - {User: 'UltiMate'}", 10L,
-                        sessionConnectionDetails( SESSION_1, "TestUser" ), QUERY_1
-                ) ),
-                inLog( getClass() ).error(
-                        equalTo( format( "%d ms: %s - %s - {Place: 'Town'}", 10L,
-                            sessionConnectionDetails( SESSION_1, "AnotherUser" ), QUERY_1 ) ),
-                        sameInstance( error ) )
-        );
+        assertThat( logProvider ).forClass( getClass() )
+                .forLevel( INFO )
+                .containsMessages( format( "%d ms: %s - %s - {User: 'UltiMate'}", 10L,
+                        sessionConnectionDetails( SESSION_1, "TestUser" ), QUERY_1 ) )
+                .forLevel( ERROR )
+                .containsMessageWithException( format( "%d ms: %s - %s - {Place: 'Town'}", 10L,
+                            sessionConnectionDetails( SESSION_1, "AnotherUser" ), QUERY_1 ), error );
     }
 
     @Test
@@ -425,10 +409,10 @@ class ConfiguredQueryLoggerTest
         queryLogger.success( query );
 
         // then
-        logProvider.assertExactly( inLog( getClass() )
-                .info( format( "%d ms: %s - %s - {%s} - {}", 10L, sessionConnectionDetails( SESSION_1, "neo" ),
+        assertThat( logProvider ).forClass( this.getClass() ).forLevel( INFO )
+                .containsMessages( format( "%d ms: %s - %s - {%s} - {}", 10L, sessionConnectionDetails( SESSION_1, "neo" ),
                         outputQuery,
-                        paramsString ) ) );
+                        paramsString ) );
     }
 
     @Test
@@ -445,8 +429,7 @@ class ConfiguredQueryLoggerTest
         queryLogger.success( query );
 
         // then
-        logProvider.assertExactly( inLog( getClass() ).info(
-                containsString( "17 ms: (planning: 17, cpu: 12, waiting: 0) - " ) ) );
+        assertThat( logProvider ).forClass( getClass() ).forLevel( INFO ).containsMessages( "17 ms: (planning: 17, cpu: 12, waiting: 0) - " );
     }
 
     @Test
@@ -465,8 +448,7 @@ class ConfiguredQueryLoggerTest
         queryLogger.success( query );
 
         // then
-        logProvider.assertExactly( inLog( getClass() ).info(
-                containsString( "ms: 4096 B - " ) ) );
+        assertThat( logProvider ).forClass( getClass() ).forLevel( INFO ).containsMessages( "ms: 4096 B - " );
     }
 
     @Test
@@ -484,8 +466,7 @@ class ConfiguredQueryLoggerTest
         queryLogger.success( query );
 
         // then
-        logProvider.assertExactly( inLog( getClass() ).info(
-                containsString( " 17 page hits, 12 page faults - " ) ) );
+        assertThat( logProvider ).forClass( getClass() ).forLevel( INFO ).containsMessages( " 17 page hits, 12 page faults - " );
     }
 
     @Test
@@ -506,10 +487,9 @@ class ConfiguredQueryLoggerTest
 
         // then
         String expectedSessionString = sessionConnectionDetails( SESSION_1, "TestUser" );
-        logProvider.assertExactly(
-                inLog( getClass() ).info( format( "%d ms: %s - %s - %s - {}", 11L, expectedSessionString, QUERY_4,
-                        "{ages: [41, 42, 43]} - runtime=quantum" ) )
-        );
+        assertThat( logProvider ).forClass( this.getClass() ).forLevel( INFO )
+                .containsMessages( format( "%d ms: %s - %s - %s - {}", 11L, expectedSessionString, QUERY_4,
+                        "{ages: [41, 42, 43]} - runtime=quantum" ) );
     }
 
     @Test
@@ -528,12 +508,11 @@ class ConfiguredQueryLoggerTest
         queryLogger.success( anotherQuery );
 
         // then
-        logProvider.assertExactly(
-                inLog( getClass() ).info( format( LOG_MESSAGE_TEMPLATE, 10L,
-                        sessionConnectionDetails( SESSION_1, defaultDbId.name(), "TestUser" ), QUERY_1 ) ),
-                inLog( getClass() ).info( format( LOG_MESSAGE_TEMPLATE, 10L,
-                        sessionConnectionDetails( SESSION_1, otherDbId.name(), "AnotherUser" ), QUERY_1 ) )
-        );
+        assertThat( logProvider ).forClass( this.getClass() ).forLevel( INFO ).containsMessages(
+                format( LOG_MESSAGE_TEMPLATE, 10L,
+                        sessionConnectionDetails( SESSION_1, defaultDbId.name(), "TestUser" ), QUERY_1 ),
+                format( LOG_MESSAGE_TEMPLATE, 10L,
+                        sessionConnectionDetails( SESSION_1, otherDbId.name(), "AnotherUser" ), QUERY_1 ) );
     }
 
     @Test
@@ -554,10 +533,9 @@ class ConfiguredQueryLoggerTest
 
         // then
         String expectedSessionString = sessionConnectionDetails( SESSION_1, "TestUser" );
-        logProvider.assertExactly(
-                inLog( getClass() ).info( format( VERBOSE_START_LOG_MESSAGE_TEMPLATE, query.internalQueryId(), 0L, expectedSessionString, QUERY_1 ) ),
-                inLog( getClass() ).info( format( VERBOSE_LOG_MESSAGE_TEMPLATE, query.internalQueryId(), 11L, expectedSessionString, QUERY_1 ) )
-        );
+        assertThat( logProvider ).forClass( this.getClass() ).forLevel( INFO )
+                .containsMessages( format( VERBOSE_START_LOG_MESSAGE_TEMPLATE, query.internalQueryId(), 0L, expectedSessionString, QUERY_1 ),
+                                   format( VERBOSE_LOG_MESSAGE_TEMPLATE, query.internalQueryId(), 11L, expectedSessionString, QUERY_1 ) );
     }
 
     @Test
@@ -584,12 +562,11 @@ class ConfiguredQueryLoggerTest
         // then
         Assertions.assertNotEquals( query1.internalQueryId(), query2.internalQueryId(), "Queries should have different ids");
         String expectedSessionString = sessionConnectionDetails( SESSION_1, "TestUser" );
-        logProvider.assertExactly(
-                inLog( getClass() ).info( format( VERBOSE_START_LOG_MESSAGE_TEMPLATE, query1.internalQueryId(), 0L, expectedSessionString, QUERY_1 ) ),
-                inLog( getClass() ).info( format( VERBOSE_START_LOG_MESSAGE_TEMPLATE, query2.internalQueryId(), 5L, expectedSessionString, QUERY_1 ) ),
-                inLog( getClass() ).info( format( VERBOSE_LOG_MESSAGE_TEMPLATE, query2.internalQueryId(), 10L, expectedSessionString, QUERY_1 ) ),
-                inLog( getClass() ).info( format( VERBOSE_LOG_MESSAGE_TEMPLATE, query1.internalQueryId(), 15L, expectedSessionString, QUERY_1 ) )
-        );
+        assertThat( logProvider ).forClass( this.getClass() ).forLevel( INFO )
+                .containsMessages( format( VERBOSE_START_LOG_MESSAGE_TEMPLATE, query1.internalQueryId(), 0L, expectedSessionString, QUERY_1 ),
+                format( VERBOSE_START_LOG_MESSAGE_TEMPLATE, query2.internalQueryId(), 5L, expectedSessionString, QUERY_1 ),
+                format( VERBOSE_LOG_MESSAGE_TEMPLATE, query2.internalQueryId(), 10L, expectedSessionString, QUERY_1 ),
+                format( VERBOSE_LOG_MESSAGE_TEMPLATE, query1.internalQueryId(), 15L, expectedSessionString, QUERY_1 ) );
     }
 
     private ConfiguredQueryLogger queryLogger( LogProvider logProvider )
@@ -600,7 +577,7 @@ class ConfiguredQueryLoggerTest
     private ConfiguredQueryLogger queryLogger( LogProvider logProvider, Config config )
     {
         config.set( log_queries_threshold, Duration.ofMillis( thresholdInMillis ) );
-        config.set( log_queries, INFO );
+        config.set( log_queries, GraphDatabaseSettings.LogQueryLevel.INFO );
         return new ConfiguredQueryLogger( logProvider.getLog( getClass() ), config );
     }
 

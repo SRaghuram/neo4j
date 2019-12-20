@@ -51,6 +51,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.configuration.ssl.SslPolicyScope.CLUSTER;
 import static org.neo4j.function.ThrowingAction.executeAll;
+import static org.neo4j.logging.LogAssertions.assertThat;
 import static org.neo4j.ssl.SslResourceBuilder.selfSignedKeyId;
 
 @TestDirectoryExtension
@@ -113,7 +114,7 @@ public class KubernetesResolverIT
         withServer( longJson(), () ->
         {
             resolver.resolve( null );
-            userLogProvider.rawMessageMatcher().assertContains( "Resolved %s from Kubernetes API at %s namespace %s labelSelector %s" );
+            assertThat( userLogProvider ).containsMessages( "Resolved %s from Kubernetes API at %s namespace %s labelSelector %s" );
         } );
     }
 
@@ -123,7 +124,7 @@ public class KubernetesResolverIT
         String response = "{ \"kind\":\"ServiceList\", \"items\":[] }";
         withServer( response, () -> {
             resolver.resolve( null );
-            logProvider.rawMessageMatcher().assertContains( "Resolved empty hosts from Kubernetes API at %s namespace %s labelSelector %s" );
+            assertThat( logProvider ).containsMessages( "Resolved empty hosts from Kubernetes API at %s namespace %s labelSelector %s" );
         } );
     }
 
@@ -133,12 +134,12 @@ public class KubernetesResolverIT
         String response = "{}";
         withServer( response, () -> {
             resolver.resolve( null );
-            logProvider.rawMessageMatcher().assertContains( "Failed to parse result from Kubernetes API" );
+            assertThat( logProvider ).containsMessages( "Failed to parse result from Kubernetes API" );
         } );
     }
 
     @Test
-    public void shouldReportFailureDueToAuth() throws Throwable
+    public void shouldReportFailureDueToAuth()
     {
         IllegalStateException ex = assertThrows( IllegalStateException.class,
                 () -> withServer( failJson(), () -> resolver.resolve( null ) ) );

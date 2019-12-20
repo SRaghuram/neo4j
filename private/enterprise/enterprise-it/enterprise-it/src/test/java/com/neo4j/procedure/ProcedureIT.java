@@ -85,7 +85,11 @@ import static org.neo4j.configuration.GraphDatabaseSettings.procedure_unrestrict
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.internal.helpers.collection.Iterables.asList;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
-import static org.neo4j.logging.AssertableLogProvider.inLog;
+import static org.neo4j.logging.AssertableLogProvider.Level.DEBUG;
+import static org.neo4j.logging.AssertableLogProvider.Level.ERROR;
+import static org.neo4j.logging.AssertableLogProvider.Level.INFO;
+import static org.neo4j.logging.AssertableLogProvider.Level.WARN;
+import static org.neo4j.logging.LogAssertions.assertThat;
 import static org.neo4j.procedure.Mode.SCHEMA;
 import static org.neo4j.procedure.Mode.WRITE;
 
@@ -747,8 +751,11 @@ public class ProcedureIT
         }
 
         // Then
-        AssertableLogProvider.LogMatcherBuilder match = inLog( GlobalProcedures.class );
-        logProvider.assertAtLeastOnce( match.debug( "1" ), match.info( "2" ), match.warn( "3" ), match.error( "4" ) );
+        assertThat( logProvider ).forClass( GlobalProcedures.class )
+                .forLevel( DEBUG ).containsMessages( "1" )
+                .forLevel( INFO ).containsMessages( "2" )
+                .forLevel( WARN ).containsMessages( "3" )
+                .forLevel( ERROR ).containsMessages( "4" );
     }
 
     @Test

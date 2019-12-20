@@ -19,9 +19,8 @@ import org.neo4j.monitoring.Monitors;
 import org.neo4j.time.Clocks;
 
 import static java.lang.String.format;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.equalToIgnoringCase;
-import static org.neo4j.logging.AssertableLogProvider.inLog;
+import static org.neo4j.logging.AssertableLogProvider.Level.INFO;
+import static org.neo4j.logging.LogAssertions.assertThat;
 
 class RaftMonitorTest
 {
@@ -49,9 +48,9 @@ class RaftMonitorTest
         var raftId = RaftId.from( namedDatabaseId.databaseId() );
         raftBinderMonitor.boundToRaftThroughTopology( namedDatabaseId, raftId );
 
-        var expected = equalToIgnoringCase( format( "Bound database '%s' to raft with id '%s'.", namedDatabaseId.name(), raftId.uuid() ) );
-        user.rawMessageMatcher().assertContainsSingle( expected );
-        debug.rawMessageMatcher().assertContainsSingle( expected );
+        var expected = format( "Bound database '%s' to raft with id '%s'.", namedDatabaseId.name(), raftId.uuid() );
+        assertThat( user ).containsMessages( expected );
+        assertThat( debug ).containsMessages( expected );
     }
 
     @Test
@@ -60,9 +59,9 @@ class RaftMonitorTest
         var raftId = RaftId.from( namedDatabaseId.databaseId() );
         raftBinderMonitor.boundToRaftFromDisk( namedDatabaseId, raftId );
 
-        var expected = equalToIgnoringCase( format( "Bound database '%s' to raft with id '%s', found on disk.", namedDatabaseId.name(), raftId.uuid() ) );
-        user.rawMessageMatcher().assertContainsSingle( expected );
-        debug.rawMessageMatcher().assertContainsSingle( expected );
+        var expected = format( "Bound database '%s' to raft with id '%s', found on disk.", namedDatabaseId.name(), raftId.uuid() );
+        assertThat( user ).containsMessages( expected );
+        assertThat( debug ).containsMessages( expected );
     }
 
     @Test
@@ -70,8 +69,8 @@ class RaftMonitorTest
     {
         raftBinderMonitor.waitingForCoreMembers( namedDatabaseId, 42 );
 
-        user.assertExactly( inLog( RaftMonitor.class ).info(
-                containsString( "Database '%s' is waiting for a total of %d core members" ), namedDatabaseId.name(), 42 ) );
+        assertThat( user ).forClass( RaftMonitor.class ).forLevel( INFO )
+                .containsMessageWithArguments( "Database '%s' is waiting for a total of %d core members" , namedDatabaseId.name(), 42 );
     }
 
     @Test
@@ -79,8 +78,8 @@ class RaftMonitorTest
     {
         raftBinderMonitor.waitingForBootstrap( namedDatabaseId );
 
-        user.assertExactly( inLog( RaftMonitor.class ).info(
-                containsString( "Database '%s' is waiting for bootstrap by other instance" ), namedDatabaseId.name() ) );
+        assertThat( user ).forClass( RaftMonitor.class ).forLevel( INFO )
+                .containsMessageWithArguments( "Database '%s' is waiting for bootstrap by other instance" , namedDatabaseId.name() );
     }
 
     @Test
@@ -88,8 +87,8 @@ class RaftMonitorTest
     {
         snapshotMonitor.startedDownloadingSnapshot( namedDatabaseId );
 
-        user.assertExactly( inLog( RaftMonitor.class ).info(
-                containsString( "Started downloading snapshot for database '%s'" ), namedDatabaseId.name() ) );
+        assertThat( user ).forClass( RaftMonitor.class ).forLevel( INFO )
+                .containsMessageWithArguments( "Started downloading snapshot for database '%s'", namedDatabaseId.name() );
     }
 
     @Test
@@ -97,7 +96,7 @@ class RaftMonitorTest
     {
         snapshotMonitor.downloadSnapshotComplete( namedDatabaseId );
 
-        user.assertExactly( inLog( RaftMonitor.class ).info(
-                containsString( "Download of snapshot for database '%s' complete" ), namedDatabaseId.name() ) );
+        assertThat( user ).forClass( RaftMonitor.class ).forLevel( INFO )
+                .containsMessageWithArguments( "Download of snapshot for database '%s' complete" , namedDatabaseId.name() );
     }
 }

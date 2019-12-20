@@ -10,6 +10,7 @@ import java.io.File
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.cypher._
 import org.neo4j.logging.AssertableLogProvider
+import org.neo4j.logging.LogAssertions.assertThat
 
 class QueryEngineProceduresAcceptanceTest extends ExecutionEngineFunSuite {
 
@@ -77,7 +78,7 @@ class QueryEngineProceduresAcceptanceTest extends ExecutionEngineFunSuite {
       tx.execute(query).close()
       tx.commit()
 
-      logProvider.rawMessageMatcher().assertContains("Called db.clearQueryCaches(): Query caches successfully cleared of 1 queries.")
+      assertThat(logProvider).containsMessages("Called db.clearQueryCaches(): Query caches successfully cleared of 1 queries.")
     }
     finally {
       managementService.shutdown()

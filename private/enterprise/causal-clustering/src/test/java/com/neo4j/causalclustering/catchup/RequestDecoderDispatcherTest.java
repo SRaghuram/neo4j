@@ -13,9 +13,10 @@ import org.neo4j.logging.AssertableLogProvider;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
-import static org.mockito.Mockito.verifyZeroInteractions;
-import static org.neo4j.logging.AssertableLogProvider.inLog;
+import static org.neo4j.logging.AssertableLogProvider.Level.WARN;
+import static org.neo4j.logging.LogAssertions.assertThat;
 
 public class RequestDecoderDispatcherTest
 {
@@ -50,7 +51,7 @@ public class RequestDecoderDispatcherTest
         // then
         verify( delegateTwo ).channelRead( ctx, msg );
         verifyNoMoreInteractions( delegateTwo );
-        verifyZeroInteractions( delegateOne, delegateThree );
+        verifyNoInteractions( delegateOne, delegateThree );
     }
 
     @Test
@@ -67,10 +68,9 @@ public class RequestDecoderDispatcherTest
         dispatcher.channelRead( mock( ChannelHandlerContext.class ), new Object() );
 
         // then
-        AssertableLogProvider.LogMatcher matcher =
-                inLog( RequestDecoderDispatcher.class ).warn( "Unregistered handler for protocol %s", protocol );
+        assertThat( logProvider ).forClass( RequestDecoderDispatcher.class ).forLevel( WARN )
+                .containsMessageWithArguments( "Unregistered handler for protocol %s", protocol );
 
-        logProvider.assertExactly( matcher );
-        verifyZeroInteractions( delegateOne, delegateThree );
+        verifyNoInteractions( delegateOne, delegateThree );
     }
 }

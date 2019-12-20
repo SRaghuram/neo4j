@@ -6,13 +6,12 @@
 package com.neo4j.causalclustering.discovery;
 
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
+import org.eclipse.collections.impl.factory.Maps;
 import org.junit.Test;
 import org.mockito.Mockito;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
 import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
@@ -27,16 +26,12 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.neo4j.logging.LogAssertions.assertThat;
 
 public class SrvHostnameResolverTest
 {
     private final MockSrvRecordResolver mockSrvRecordResolver =
-            new MockSrvRecordResolver( new HashMap<String,List<SrvRecordResolver.SrvRecord>>()
-            {
-                {
-                    put( "emptyrecord.com", new ArrayList<>() );
-                }
-            } );
+            new MockSrvRecordResolver( Maps.mutable.with("emptyrecord.com", new ArrayList<>() ) );
 
     private final AssertableLogProvider logProvider = new AssertableLogProvider();
     private final AssertableLogProvider userLogProvider = new AssertableLogProvider();
@@ -88,7 +83,7 @@ public class SrvHostnameResolverTest
         );
 
         // then
-        userLogProvider.rawMessageMatcher().assertContains( "Resolved initial host '%s' to %s" );
+        assertThat( userLogProvider ).containsMessages( "Resolved initial host '%s' to %s" );
     }
 
     @Test
@@ -98,7 +93,7 @@ public class SrvHostnameResolverTest
         resolver.resolve( new SocketAddress( "unknown.com", 0 ) );
 
         // then
-        logProvider.rawMessageMatcher().assertContains( "Failed to resolve srv records for '%s'" );
+        assertThat( logProvider ).containsMessages( "Failed to resolve srv records for '%s'" );
     }
 
     @Test
@@ -108,7 +103,7 @@ public class SrvHostnameResolverTest
         resolver.resolve( new SocketAddress( "emptyrecord.com", 0 ) );
 
         // then
-        logProvider.rawMessageMatcher().assertContains( "Failed to resolve srv records for '%s'" );
+        assertThat( logProvider ).containsMessages( "Failed to resolve srv records for '%s'" );
     }
 
     @Test

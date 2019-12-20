@@ -17,7 +17,10 @@ import org.neo4j.logging.AssertableLogProvider;
 
 import static java.lang.String.format;
 import static org.mockito.Mockito.mock;
-import static org.neo4j.logging.AssertableLogProvider.inLog;
+import static org.neo4j.logging.AssertableLogProvider.Level.ERROR;
+import static org.neo4j.logging.AssertableLogProvider.Level.INFO;
+import static org.neo4j.logging.AssertableLogProvider.Level.WARN;
+import static org.neo4j.logging.LogAssertions.assertThat;
 
 public class PluginRealmTest
 {
@@ -58,11 +61,10 @@ public class PluginRealmTest
 
     private void assertLogged( String name )
     {
-        log.assertExactly(
-                inLog( this.getClass() ).info( format( "{plugin-%s} info line", name ) ),
-                inLog( this.getClass() ).warn( format( "{plugin-%s} warn line", name ) ),
-                inLog( this.getClass() ).error( format( "{plugin-%s} error line", name ) )
-            );
+        var matcher = assertThat( log ).forClass( getClass() );
+        matcher.forLevel( INFO ).containsMessages( format( "{plugin-%s} info line", name ) );
+        matcher.forLevel( WARN ).containsMessages( format( "{plugin-%s} warn line", name ) );
+        matcher.forLevel( ERROR ).containsMessages( format( "{plugin-%s} error line", name ) );
     }
 
     private class LoggingAuthPlugin extends TestAuthPlugin

@@ -22,6 +22,7 @@ import org.neo4j.kernel.api.security.AuthToken;
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
 import org.neo4j.kernel.impl.security.User;
 import org.neo4j.logging.AssertableLogProvider;
+import org.neo4j.logging.LogAssert;
 import org.neo4j.server.security.auth.AuthenticationStrategy;
 import org.neo4j.server.security.systemgraph.SecurityGraphInitializer;
 import org.neo4j.server.security.systemgraph.SystemGraphRealmHelper;
@@ -38,7 +39,9 @@ import static org.mockito.Mockito.when;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.internal.helpers.Strings.escape;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
-import static org.neo4j.logging.AssertableLogProvider.inLog;
+import static org.neo4j.logging.AssertableLogProvider.Level.ERROR;
+import static org.neo4j.logging.AssertableLogProvider.Level.INFO;
+import static org.neo4j.logging.LogAssertions.assertThat;
 import static org.neo4j.server.security.auth.BasicSystemGraphRealmTest.clearedPasswordWithSameLengthAs;
 import static org.neo4j.server.security.auth.SecurityTestUtils.authToken;
 import static org.neo4j.server.security.auth.SecurityTestUtils.credentialFor;
@@ -91,7 +94,7 @@ class MultiRealmAuthManagerTest
 
         // Then
         assertThat( result, equalTo( AuthenticationResult.SUCCESS ) );
-        logProvider.assertExactly( info( "[jake]: logged in" ) );
+        info( "[jake]: logged in" );
     }
 
     @Test
@@ -112,7 +115,7 @@ class MultiRealmAuthManagerTest
 
         // Then
         assertThat( result, equalTo( AuthenticationResult.SUCCESS ) );
-        logProvider.assertNone( info( "[jake]: logged in" ) );
+        assertThat( logProvider ).forClass( this.getClass() ).forLevel( INFO ).doesNotContainMessage( "[jake]: logged in" );
     }
 
     @Test
@@ -130,7 +133,7 @@ class MultiRealmAuthManagerTest
 
         // Then
         assertThat( result, equalTo( AuthenticationResult.TOO_MANY_ATTEMPTS ) );
-        logProvider.assertExactly( error( "[%s]: failed to log in: too many failed attempts", "jake" ) );
+        error( "[%s]: failed to log in: too many failed attempts", "jake" );
     }
 
     @Test
@@ -147,7 +150,7 @@ class MultiRealmAuthManagerTest
 
         // Then
         assertThat( result, equalTo( AuthenticationResult.PASSWORD_CHANGE_REQUIRED ) );
-        logProvider.assertExactly( info( "[jake]: logged in (password change required)" ) );
+        info( "[jake]: logged in (password change required)" );
     }
 
     @Test
@@ -188,7 +191,7 @@ class MultiRealmAuthManagerTest
 
         // Then
         assertThat( result, equalTo( AuthenticationResult.FAILURE ) );
-        logProvider.assertExactly( error( "[%s]: failed to log in: %s", "unknown", "invalid principal or credentials" ) );
+        error( "[%s]: failed to log in: %s", "unknown", "invalid principal or credentials" );
     }
 
     @Test
@@ -203,7 +206,7 @@ class MultiRealmAuthManagerTest
 
         // Then
         assertThat( result, equalTo( AuthenticationResult.FAILURE ) );
-        logProvider.assertExactly( error( "[%s]: failed to log in: %s", escape( "unknown\n\t\r\"haxx0r\"" ), "invalid principal or credentials" ) );
+        error( "[%s]: failed to log in: %s", escape( "unknown\n\t\r\"haxx0r\"" ), "invalid principal or credentials" );
     }
 
     @Test
@@ -261,14 +264,15 @@ class MultiRealmAuthManagerTest
         assertThat( authToken.get( AuthToken.CREDENTIALS ), equalTo( clearedPasswordWithSameLengthAs( "abc123" ) ) );
     }
 
-    private AssertableLogProvider.LogMatcher info( String message )
+    private LogAssert info( String message )
     {
-        return inLog( this.getClass() ).info( message );
+        return assertThat( logProvider ).forClass( this.getClass() ).forLevel( INFO ).containsMessages( message );
     }
 
-    private AssertableLogProvider.LogMatcher error( String message, String... arguments )
+    private LogAssert error( String message, String... arguments )
     {
-        return inLog( this.getClass() ).error( message, (Object[]) arguments );
+        return assertThat( logProvider ).forClass( this.getClass() ).forLevel( ERROR ).containsMessageWithArguments( message,
+                (Object[]) arguments );
     }
 
     private void setMockAuthenticationStrategyResult( User user, String password, AuthenticationResult result )

@@ -59,7 +59,6 @@ import static com.neo4j.causalclustering.catchup.CatchupResult.E_STORE_ID_MISMAT
 import static com.neo4j.causalclustering.catchup.CatchupResult.E_STORE_UNAVAILABLE;
 import static com.neo4j.causalclustering.catchup.CatchupResult.E_TRANSACTION_PRUNED;
 import static com.neo4j.causalclustering.catchup.CatchupResult.SUCCESS_END_OF_STREAM;
-import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.isA;
@@ -68,7 +67,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.neo4j.kernel.impl.api.state.StubCursors.cursor;
-import static org.neo4j.logging.AssertableLogProvider.inLog;
+import static org.neo4j.logging.AssertableLogProvider.Level.INFO;
+import static org.neo4j.logging.LogAssertions.assertThat;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_CHECKSUM;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_ID;
 
@@ -175,8 +175,8 @@ class TxPullRequestHandlerTest
 
         verify( context ).write( ResponseMessageType.TX_STREAM_FINISHED );
         verify( context ).writeAndFlush( new TxStreamFinishedResponse( E_TRANSACTION_PRUNED, -1L ) );
-        logProvider.assertAtLeastOnce( inLog( TxPullRequestHandler.class )
-                .info( containsString( "Failed to serve TxPullRequest for tx %d because the transaction does not exist. Last committed tx %d" ), 14L, 15L ) );
+        assertThat( logProvider ).forClass( TxPullRequestHandler.class ).forLevel( INFO ).containsMessageWithArguments(
+                "Failed to serve TxPullRequest for tx %d because the transaction does not exist. Last committed tx %d", 14L, 15L );
     }
 
     @Test
@@ -198,9 +198,9 @@ class TxPullRequestHandlerTest
         // then
         verify( context ).write( ResponseMessageType.TX_STREAM_FINISHED );
         verify( context ).writeAndFlush( new TxStreamFinishedResponse( E_STORE_ID_MISMATCH, -1L ) );
-        logProvider.assertAtLeastOnce( inLog( TxPullRequestHandler.class )
-                .info( containsString( "Failed to serve TxPullRequest for tx %d and storeId %s because that storeId is different " +
-                                       "from this machine with %s" ), 2L, clientStoreId, serverStoreId ) );
+        assertThat( logProvider ).forClass( TxPullRequestHandler.class ).forLevel( INFO )
+                .containsMessageWithArguments( "Failed to serve TxPullRequest for tx %d and storeId %s because that storeId " +
+                                "is different from this machine with %s", 2L, clientStoreId, serverStoreId );
     }
 
     @Test
@@ -220,8 +220,8 @@ class TxPullRequestHandlerTest
         // then
         verify( context ).write( ResponseMessageType.TX_STREAM_FINISHED );
         verify( context ).writeAndFlush( new TxStreamFinishedResponse( E_STORE_UNAVAILABLE, -1L ) );
-        logProvider.assertAtLeastOnce( inLog( TxPullRequestHandler.class )
-                .info( containsString( "Failed to serve TxPullRequest for tx %d because the local database is unavailable." ), 2L ) );
+        assertThat( logProvider ).forClass( TxPullRequestHandler.class ).forLevel( INFO ).containsMessageWithArguments(
+                "Failed to serve TxPullRequest for tx %d because the local database is unavailable.", 2L );
     }
 
     @ParameterizedTest

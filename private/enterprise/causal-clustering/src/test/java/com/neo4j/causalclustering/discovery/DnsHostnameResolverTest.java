@@ -27,6 +27,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.neo4j.logging.LogAssertions.assertThat;
 
 public class DnsHostnameResolverTest
 {
@@ -80,7 +81,7 @@ public class DnsHostnameResolverTest
         resolver.resolve( new SocketAddress( "google.com", 1234 ) );
 
         // then
-        userLogProvider.rawMessageMatcher().assertContains( "Resolved initial host '%s' to %s" );
+        assertThat( userLogProvider ).containsMessages( "Resolved initial host '%s' to %s" );
     }
 
     @Test
@@ -90,7 +91,7 @@ public class DnsHostnameResolverTest
         resolver.resolve( new SocketAddress( "google.com", 1234 ) );
 
         // then
-        logProvider.rawMessageMatcher().assertContains( "Failed to resolve host '%s'" );
+        assertThat( logProvider ).containsMessages( "Failed to resolve host '%s'" );
     }
 
     @Test

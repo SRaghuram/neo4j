@@ -52,6 +52,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_TX_LOGS_ROOT_DIR_NAME;
 import static org.neo4j.io.fs.FileUtils.deleteRecursively;
 import static org.neo4j.io.pagecache.PagedFile.PF_SHARED_READ_LOCK;
+import static org.neo4j.logging.LogAssertions.assertThat;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSupport
@@ -227,8 +228,7 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
 
         verifyEventuallyWarmsUp( pagesInMemory, metricsDirectory );
 
-        logProvider.rawMessageMatcher().assertContains( "Page cache warmup started." );
-        logProvider.rawMessageMatcher().assertContains( "Page cache warmup completed. %d pages loaded. Duration: %s." );
+        assertThat( logProvider ).containsMessages( "Page cache warmup started.", "Page cache warmup completed. %d pages loaded. Duration: %s." );
     }
 
     @Test

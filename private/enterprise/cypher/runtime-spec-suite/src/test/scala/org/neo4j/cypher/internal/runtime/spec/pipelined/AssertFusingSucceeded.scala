@@ -5,13 +5,13 @@
  */
 package org.neo4j.cypher.internal.runtime.spec.pipelined
 
-import org.hamcrest.CoreMatchers.any
 import org.hamcrest.Matcher
-import org.hamcrest.Matchers.{containsString, instanceOf}
+import org.hamcrest.Matchers.instanceOf
 import org.neo4j.cypher.internal.PipelinedRuntime
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 import org.neo4j.logging.AssertableLogProvider
-import org.neo4j.logging.AssertableLogProvider.inLog
+import org.neo4j.logging.AssertableLogProvider.Level
+import org.neo4j.logging.LogAssertions.assertThat
 import org.scalatest.{Exceptional, Outcome, TestSuiteMixin}
 
 /**
@@ -26,9 +26,9 @@ trait AssertFusingSucceeded extends TestSuiteMixin {
     val result = super.withFixture(test)
 
     try {
-      logProvider.assertNone(inLog(any(classOf[String])).debug(
-        containsString(PipelinedRuntime.CODE_GEN_FAILED_MESSAGE),
-        instanceOf(classOf[Exception]): Matcher[Throwable] /*Type annotation is a compiler help to choose the right overloaded method - do not remove!*/))
+      assertThat(logProvider).forLevel(Level.DEBUG).doesNotContainMessageWithArguments(
+        PipelinedRuntime.CODE_GEN_FAILED_MESSAGE,
+        instanceOf(classOf[Exception]): Matcher[Throwable] /*Type annotation is a compiler help to choose the right overloaded method - do not remove!*/)
       result
     } catch {
       case t: Throwable =>

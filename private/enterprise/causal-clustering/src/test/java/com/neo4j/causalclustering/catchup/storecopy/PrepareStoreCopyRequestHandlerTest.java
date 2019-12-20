@@ -32,13 +32,13 @@ import org.neo4j.logging.internal.DatabaseLogService;
 import org.neo4j.logging.internal.SimpleLogService;
 import org.neo4j.storageengine.api.StoreId;
 
-import static org.hamcrest.CoreMatchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.neo4j.logging.AssertableLogProvider.inLog;
+import static org.neo4j.logging.AssertableLogProvider.Level.WARN;
+import static org.neo4j.logging.LogAssertions.assertThat;
 
 //TODO: Update with some test cases for issues related to databaseId
 class PrepareStoreCopyRequestHandlerTest
@@ -157,7 +157,8 @@ class PrepareStoreCopyRequestHandlerTest
         assertEquals( response, embeddedChannel.readOutbound() );
 
         // warning should be logged
-        logProvider.containsMatchingLogCall( inLog( PrepareStoreCopyRequestHandler.class ).warn( containsString( "Unable to prepare for store copy" ) ) );
+        assertThat( logProvider ).forClass( PrepareStoreCopyRequestHandler.class ).forLevel( WARN )
+                .containsMessages( "Unable to prepare for store copy" );
 
         // and the protocol is reset to expect any message type after listing has been transmitted
         assertTrue( catchupServerProtocol.isExpecting( CatchupServerProtocol.State.MESSAGE_TYPE ) );

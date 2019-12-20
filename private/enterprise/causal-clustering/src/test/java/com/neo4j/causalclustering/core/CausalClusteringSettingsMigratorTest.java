@@ -37,7 +37,8 @@ import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 import static org.neo4j.configuration.GraphDatabaseSettings.routing_ttl;
 import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static org.neo4j.configuration.SettingValueParsers.TRUE;
-import static org.neo4j.logging.AssertableLogProvider.inLog;
+import static org.neo4j.logging.AssertableLogProvider.Level.WARN;
+import static org.neo4j.logging.LogAssertions.assertThat;
 
 class CausalClusteringSettingsMigratorTest
 {
@@ -87,7 +88,7 @@ class CausalClusteringSettingsMigratorTest
         var logProvider = new AssertableLogProvider();
         config.setLogger( logProvider.getLog( Config.class ) );
 
-        logProvider.assertNoLoggingOccurred();
+        assertThat(logProvider).doesNotHaveAnyLogs();
     }
 
     @Test
@@ -142,13 +143,14 @@ class CausalClusteringSettingsMigratorTest
 
         String msg = "Use of deprecated setting port propagation. port %s is migrated from %s to %s.";
 
-        logProvider.assertAtLeastOnce( inLog( Config.class ).warn( msg, 111, listenAddr.name(), advertisedAddr.name() ) );
-        logProvider.assertAtLeastOnce( inLog( Config.class ).warn( msg, 222, listenAddr.name(), advertisedAddr.name() ) );
-        logProvider.assertAtLeastOnce( inLog( Config.class ).warn( msg, 333, listenAddr.name(), advertisedAddr.name() ) );
+        var matcher = assertThat( logProvider ).forClass( Config.class ).forLevel( WARN );
+        matcher.containsMessageWithArguments( msg, 111, listenAddr.name(), advertisedAddr.name() );
+        matcher.containsMessageWithArguments( msg, 222, listenAddr.name(), advertisedAddr.name() );
+        matcher.containsMessageWithArguments( msg, 333, listenAddr.name(), advertisedAddr.name() );
 
-        logProvider.assertNone( inLog( Config.class ).warn( msg, 444, listenAddr.name(), advertisedAddr.name() ) );
-        logProvider.assertNone( inLog( Config.class ).warn( msg, 555, listenAddr.name(), advertisedAddr.name() ) );
-        logProvider.assertNone( inLog( Config.class ).warn( msg, 666, listenAddr.name(), advertisedAddr.name() ) );
+        matcher.doesNotContainMessageWithArguments( msg, 444, listenAddr.name(), advertisedAddr.name() );
+        matcher.doesNotContainMessageWithArguments( msg, 555, listenAddr.name(), advertisedAddr.name() );
+        matcher.doesNotContainMessageWithArguments( msg, 666, listenAddr.name(), advertisedAddr.name() );
     }
 
     private static void testRoutingTtlSettingMigration( String rawValue, Duration expectedValue )
@@ -164,8 +166,8 @@ class CausalClusteringSettingsMigratorTest
 
         if ( StringUtils.isNotEmpty( rawValue ) )
         {
-            logProvider.assertAtLeastOnce(
-                    inLog( Config.class ).warn( "Use of deprecated setting %s. It is replaced by %s", setting, routing_ttl.name() ) );
+            assertThat(logProvider).forClass( Config.class ).forLevel( WARN )
+                    .containsMessageWithArguments( "Use of deprecated setting %s. It is replaced by %s", setting, routing_ttl.name() );
         }
     }
 
@@ -180,9 +182,9 @@ class CausalClusteringSettingsMigratorTest
         var logProvider = new AssertableLogProvider();
         config.setLogger( logProvider.getLog( Config.class ) );
 
-        logProvider.assertAtLeastOnce(
-                inLog( Config.class )
-                        .warn( "Old value format in %s used. %s migrated to %s", middleware_logging_level.name(), oldValue, neo4jLevel.toString() ) );
+        assertThat(logProvider).forClass( Config.class ).forLevel( WARN )
+                .containsMessageWithArguments( "Old value format in %s used. %s migrated to %s",
+                        middleware_logging_level.name(), oldValue, neo4jLevel.toString() );
     }
 
     private static void testMiddlewareLoggingLevelMigrationFromOldSetting( java.util.logging.Level julLevel, Level neo4jLevel )
@@ -197,11 +199,10 @@ class CausalClusteringSettingsMigratorTest
         var logProvider = new AssertableLogProvider();
         config.setLogger( logProvider.getLog( Config.class ) );
 
-        logProvider.assertAtLeastOnce(
-                inLog( Config.class )
-                        .warn( "Use of deprecated setting %s. It is replaced by %s", oldSettingName, middleware_logging_level.name() ),
-                inLog( Config.class )
-                        .warn( "Old value format in %s used. %s migrated to %s", middleware_logging_level.name(), oldValue, neo4jLevel.toString() ) );
+        var matcher = assertThat( logProvider ).forClass( Config.class ).forLevel( WARN );
+        matcher.containsMessageWithArguments( "Use of deprecated setting %s. It is replaced by %s", oldSettingName, middleware_logging_level.name() );
+        matcher.containsMessageWithArguments( "Old value format in %s used. %s migrated to %s", middleware_logging_level.name(), oldValue,
+                neo4jLevel.toString() );
     }
 
     private static void testDisableMiddlewareLoggingMigration( String rawValue, Level configuredLevel, Level expectedLevel )
@@ -221,8 +222,8 @@ class CausalClusteringSettingsMigratorTest
 
         if ( Objects.equals( TRUE, rawValue ) )
         {
-            logProvider.assertAtLeastOnce( inLog( Config.class )
-                    .warn( "Use of deprecated setting %s. It is replaced by %s", settingName, middleware_logging_level.name() ) );
+            assertThat( logProvider ).forClass( Config.class ).forLevel( WARN ).containsMessageWithArguments(
+                    "Use of deprecated setting %s. It is replaced by %s", settingName, middleware_logging_level.name() );
         }
     }
 

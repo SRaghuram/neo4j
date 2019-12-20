@@ -24,7 +24,8 @@ import static com.neo4j.causalclustering.catchup.error.UnavailableDatabaseHandle
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.neo4j.logging.AssertableLogProvider.inLog;
+import static org.neo4j.logging.AssertableLogProvider.Level.WARN;
+import static org.neo4j.logging.LogAssertions.assertThat;
 
 class UnknownDatabaseHandlerTest
 {
@@ -52,8 +53,9 @@ class UnknownDatabaseHandlerTest
     void shouldLogWarning()
     {
         channel.writeInbound( message );
-        logProvider.assertAtLeastOnce( inLog( UnknownDatabaseHandler.class )
-                .warn( matchesAllOf( "database", databaseId.toString(), "does not exist" ) ) );
+
+        assertThat( logProvider ).forClass( UnknownDatabaseHandler.class ).forLevel( WARN )
+                .containsMessages( "database " +  databaseId.toString() + " does not exist" );
     }
 
     @Test

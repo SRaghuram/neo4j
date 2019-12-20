@@ -24,6 +24,7 @@ import org.neo4j.time.Clocks;
 import org.neo4j.time.FakeClock;
 
 import static org.mockito.Mockito.mock;
+import static org.neo4j.logging.LogAssertions.assertThat;
 
 class VerbosePageCacheTracerTest
 {
@@ -36,7 +37,7 @@ class VerbosePageCacheTracerTest
     {
         VerbosePageCacheTracer tracer = createTracer();
         tracer.mappedFile( new File( "mapFile" ) );
-        logProvider.rawMessageMatcher().assertContains( "Map file: 'mapFile'." );
+        assertThat( logProvider ).containsMessages( "Map file: 'mapFile'." );
     }
 
     @Test
@@ -44,7 +45,7 @@ class VerbosePageCacheTracerTest
     {
         VerbosePageCacheTracer tracer = createTracer();
         tracer.unmappedFile( new File( "unmapFile" ) );
-        logProvider.rawMessageMatcher().assertContains( "Unmap file: 'unmapFile'." );
+        assertThat( logProvider ).containsMessages( "Unmap file: 'unmapFile'." );
     }
 
     @Test
@@ -59,8 +60,8 @@ class VerbosePageCacheTracerTest
             flushEvent.addPagesFlushed( 7 );
             flushEvent.done();
         }
-        logProvider.formattedMessageMatcher().assertContains( "Start whole page cache flush." );
-        logProvider.formattedMessageMatcher().assertContains( "Page cache flush completed. Flushed 2B in 7 pages. Flush took: 0ns. " +
+        assertThat( logProvider ).containsMessages( "Start whole page cache flush." );
+        assertThat( logProvider ).containsMessages( "Page cache flush completed. Flushed 2B in 7 pages. Flush took: 0ns. " +
                 "Average speed: 2bytes/ns." );
     }
 
@@ -88,8 +89,8 @@ class VerbosePageCacheTracerTest
             flushEvent.addPagesFlushed( 7 );
             flushEvent.done();
         }
-        logProvider.formattedMessageMatcher().assertContains( "Start whole page cache flush." );
-        logProvider.formattedMessageMatcher().assertContains( "Page cache flush completed. Flushed 2B in 7 pages. Flush took: 2ms. " +
+        assertThat( logProvider ).containsMessages( "Start whole page cache flush." );
+        assertThat( logProvider ).containsMessages( "Page cache flush completed. Flushed 2B in 7 pages. Flush took: 2ms. " +
                 "Average speed: 0bytes/ns." );
     }
 
@@ -112,8 +113,8 @@ class VerbosePageCacheTracerTest
             flushEvent2.addBytesWritten( ByteUnit.ONE_MEBI_BYTE );
             flushEvent2.done();
         }
-        logProvider.formattedMessageMatcher().assertContains( "Flushing file: 'fileToFlush'." );
-        logProvider.formattedMessageMatcher().assertContains(
+        assertThat( logProvider ).containsMessages( "Flushing file: 'fileToFlush'." );
+        assertThat( logProvider ).containsMessages(
                 "'fileToFlush' flush completed. Flushed 2.000MiB in 110 pages. Flush took: 1s. Average speed: 2.000MiB/s." );
     }
 

@@ -21,6 +21,7 @@ import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.logging.AssertableLogProvider;
 
 import static com.neo4j.causalclustering.net.BootstrapConfiguration.serverConfig;
+import static org.neo4j.logging.LogAssertions.assertThat;
 
 class ConnectionInfoIT
 {
@@ -64,8 +65,8 @@ class ConnectionInfoIT
             executor.shutdown();
         }
         String expectedPartOfMessage = String.format( "server-name: cannot bind to '%s' with transport ", listenSocketAddress );
-        logProvider.rawMessageMatcher().assertContains( expectedPartOfMessage );
-        userLogProvider.rawMessageMatcher().assertContains( expectedPartOfMessage );
+        assertThat( logProvider ).containsMessages( expectedPartOfMessage );
+        assertThat( userLogProvider ).containsMessages( expectedPartOfMessage );
     }
 
     @SuppressWarnings( "SameParameterValue" )

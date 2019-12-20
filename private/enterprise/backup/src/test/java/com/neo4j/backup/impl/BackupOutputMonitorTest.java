@@ -14,8 +14,8 @@ import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.time.FakeClock;
 
-import static org.hamcrest.Matchers.containsString;
-import static org.neo4j.logging.AssertableLogProvider.inLog;
+import static org.neo4j.logging.AssertableLogProvider.Level.INFO;
+import static org.neo4j.logging.LogAssertions.assertThat;
 
 class BackupOutputMonitorTest
 {
@@ -35,7 +35,7 @@ class BackupOutputMonitorTest
         storeCopyClientMonitor.startReceivingStoreFiles();
 
         // then
-        logProvider.assertAtLeastOnce( inLog( BackupOutputMonitor.class ).info( containsString( "Start receiving store files" ) ) );
+        assertThat( logProvider ).forClass( BackupOutputMonitor.class ).forLevel( INFO ).containsMessages( "Start receiving store files" );
     }
 
     @Test
@@ -54,7 +54,7 @@ class BackupOutputMonitorTest
         monitor.finishReceivingStoreFiles();
 
         // then
-        logProvider.formattedMessageMatcher().assertContains( "Finish receiving store files, took 3s" );
+        assertThat( logProvider ).containsMessages( "Finish receiving store files, took 3s" );
     }
 
     @Test
@@ -72,7 +72,7 @@ class BackupOutputMonitorTest
         monitor.finishReceivingTransactions( endTxId );
 
         // then
-        logProvider.formattedMessageMatcher().assertContains( "Finish receiving transactions at " + endTxId + ", took 10s 500ms" );
+        assertThat( logProvider ).containsMessages( "Finish receiving transactions at " + endTxId + ", took 10s 500ms" );
     }
 
     @Test
@@ -89,7 +89,7 @@ class BackupOutputMonitorTest
         monitor.finishRecoveringStore();
 
         // then
-        logProvider.formattedMessageMatcher().assertContains( "Finish recovering store, took 1s" );
+        assertThat( logProvider ).containsMessages( "Finish recovering store, took 1s" );
     }
 
     @Test
@@ -108,7 +108,7 @@ class BackupOutputMonitorTest
         monitor.finishReceivingIndexSnapshots();
 
         // then
-        logProvider.formattedMessageMatcher().assertContains( "Finished receiving index snapshots, took 2s" );
+        assertThat( logProvider ).containsMessages( "Finished receiving index snapshots, took 2s" );
     }
 
     @Test
@@ -125,7 +125,7 @@ class BackupOutputMonitorTest
         monitor.finish();
 
         // then
-        logProvider.formattedMessageMatcher().assertContains( "Finished, took 5s" );
+        assertThat( logProvider ).containsMessages( "Finished, took 5s" );
     }
 
     @Test
@@ -145,7 +145,6 @@ class BackupOutputMonitorTest
         monitor.finish();
 
         // then
-        logProvider.formattedMessageMatcher().assertContains( "Finish receiving store files, took 5s" );
-        logProvider.formattedMessageMatcher().assertContains( "Finished, took 7s 500ms" );
+        assertThat( logProvider ).containsMessages( "Finish receiving store files, took 5s", "Finished, took 7s 500ms" );
     }
 }

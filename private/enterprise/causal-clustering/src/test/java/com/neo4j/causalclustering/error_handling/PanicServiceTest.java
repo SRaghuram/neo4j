@@ -32,7 +32,8 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.internal.helpers.NamedThreadFactory.daemon;
 import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId;
-import static org.neo4j.logging.AssertableLogProvider.inLog;
+import static org.neo4j.logging.AssertableLogProvider.Level.ERROR;
+import static org.neo4j.logging.LogAssertions.assertThat;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 class PanicServiceTest
@@ -56,7 +57,7 @@ class PanicServiceTest
     }
 
     @Test
-    void shouldPanicDatabaseOnce() throws Exception
+    void shouldPanicDatabaseOnce()
     {
         var lockedEventHandler1 = new LockedEventHandler();
         var lockedEventHandler2 = new LockedEventHandler();
@@ -80,7 +81,7 @@ class PanicServiceTest
     }
 
     @Test
-    void shouldLogPanicInformation() throws Exception
+    void shouldLogPanicInformation()
     {
         var error = new Exception();
         var panicker = panicService.panickerFor( namedDatabaseId2 );
@@ -88,14 +89,15 @@ class PanicServiceTest
         panicker.panic( error );
 
         panicExecutor.awaitBackgroundTaskCompletion();
-        assertableLogProvider.assertExactly( inLog( panicService.getClass() )
-                .error(
-                        equalTo( format( "Clustering components for database '%s' have encountered a critical error", namedDatabaseId2.name() ) ),
-                        equalTo( error ) ) );
+        assertThat( assertableLogProvider )
+                .forClass( panicService.getClass() )
+                .forLevel( ERROR )
+                .containsMessageWithException( format( "Clustering components for database '%s' have encountered a critical error", namedDatabaseId2.name() ),
+                        error );
     }
 
     @Test
-    void shouldIgnoreExceptionsInHandlers() throws Exception
+    void shouldIgnoreExceptionsInHandlers()
     {
         var numberOfInvokedHandlers = new AtomicInteger();
 
@@ -116,7 +118,7 @@ class PanicServiceTest
     }
 
     @Test
-    void shouldExecuteHandlersInOrder() throws Exception
+    void shouldExecuteHandlersInOrder()
     {
         var handlerIds = new LinkedBlockingQueue<Integer>();
 
@@ -193,7 +195,7 @@ class PanicServiceTest
             super( 1, 1, 0L, SECONDS, new LinkedBlockingQueue<>(), daemon( PanicServiceTest.class.getSimpleName() ) );
         }
 
-        void awaitBackgroundTaskCompletion() throws Exception
+        void awaitBackgroundTaskCompletion()
         {
             assertEventually( this::getCompletedTaskCount, equalTo( 1L ), 30, SECONDS );
         }

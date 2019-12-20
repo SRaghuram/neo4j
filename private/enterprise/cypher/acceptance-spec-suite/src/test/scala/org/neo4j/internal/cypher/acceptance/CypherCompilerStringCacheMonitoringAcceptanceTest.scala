@@ -7,7 +7,6 @@ package org.neo4j.internal.cypher.acceptance
 
 import java.time.Duration
 
-import org.hamcrest.Matchers
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.ExecutionEngineHelper.createEngine
@@ -17,6 +16,8 @@ import org.neo4j.graphdb.config.Setting
 import org.neo4j.internal.helpers.collection.Pair
 import org.neo4j.kernel.impl.query.QuerySubscriber.DO_NOTHING_SUBSCRIBER
 import org.neo4j.logging.AssertableLogProvider
+import org.neo4j.logging.AssertableLogProvider.Level
+import org.neo4j.logging.LogAssertions.assertThat
 import org.neo4j.values.virtual.VirtualValues.EMPTY_MAP
 
 import scala.collection.Map
@@ -137,17 +138,8 @@ class CypherCompilerStringCacheMonitoringAcceptanceTest extends ExecutionEngineF
       result2.consumeAll()
     }
 
-    logProvider.assertAtLeastOnce(
-
-      AssertableLogProvider
-        .inLog(classOf[ExecutionEngine])
-        .info(
-          Matchers.allOf[String](
-            Matchers.containsString("Discarded stale query from the query cache"),
-            Matchers.containsString(query)
-          )
-        )
-      )
+    assertThat(logProvider).forClass(classOf[ExecutionEngine]).forLevel(Level.INFO)
+      .containsMessages("Discarded stale query from the query cache", query)
   }
 }
 

@@ -46,7 +46,6 @@ import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny.GRANT;
-import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.equalTo;
@@ -69,7 +68,9 @@ import static org.neo4j.internal.kernel.api.security.PrivilegeAction.TRAVERSE;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.WRITE;
 import static org.neo4j.kernel.api.security.AuthManager.INITIAL_PASSWORD;
 import static org.neo4j.kernel.api.security.AuthManager.INITIAL_USER_NAME;
-import static org.neo4j.logging.AssertableLogProvider.inLog;
+import static org.neo4j.logging.AssertableLogProvider.Level.ERROR;
+import static org.neo4j.logging.AssertableLogProvider.Level.INFO;
+import static org.neo4j.logging.LogAssertions.assertThat;
 
 @TestDirectoryExtension
 class SystemGraphRealmIT
@@ -125,10 +126,9 @@ class SystemGraphRealmIT
         assertTrue( dbManager.userHasRole( "bob", "goon" ) );
         assertAuthenticationSucceeds( realmHelper, "alice", "foo" );
         assertAuthenticationSucceeds( realmHelper, "bob", "bar", true );
-        logProvider.assertExactly(
-                info( "Completed migration of %s %s into system graph.", "2", "users" ),
-                info( "Completed migration of %s %s into system graph.", "2", "roles" )
-        );
+        assertThat( logProvider )
+                .containsMessageWithArguments(  "Completed migration of %s %s into system graph.", "2", "users" )
+                .containsMessageWithArguments(  "Completed migration of %s %s into system graph.", "2", "roles" );
     }
 
     @Test
@@ -138,9 +138,8 @@ class SystemGraphRealmIT
 
         assertTrue( dbManager.userHasRole( INITIAL_USER_NAME, PredefinedRoles.ADMIN ) );
         assertAuthenticationSucceeds( realmHelper, INITIAL_USER_NAME, INITIAL_PASSWORD, true );
-        logProvider.assertExactly(
-                info( "Assigned %s role to user '%s'.", PredefinedRoles.ADMIN, INITIAL_USER_NAME )
-        );
+        assertThat( logProvider ).forLevel( INFO )
+                .containsMessageWithArguments(  "Assigned %s role to user '%s'.", PredefinedRoles.ADMIN, INITIAL_USER_NAME );
     }
 
     @Test
@@ -219,7 +218,7 @@ class SystemGraphRealmIT
         IllegalStateException wrongUsernameException = assertThrows( IllegalStateException.class, this::startSystemGraphRealm );
         String wrongUsernameErrorMessage = "Invalid `auth.ini` file: the user in the file is not named " + INITIAL_USER_NAME;
         assertThat( wrongUsernameException.getMessage(), equalTo( wrongUsernameErrorMessage ) );
-        logProvider.assertAtLeastOnce( inLog( this.getClass() ).error( containsString( wrongUsernameErrorMessage ) ) );
+        assertThat( logProvider ).forClass( getClass() ).forLevel( ERROR ).containsMessages( wrongUsernameErrorMessage );
 
         // Given
         initialPassword.clear();
@@ -233,7 +232,7 @@ class SystemGraphRealmIT
         IllegalStateException multipleUsersErrorException = assertThrows( IllegalStateException.class, this::startSystemGraphRealm );
         String multipleUsersErrorMessage = "Invalid `auth.ini` file: the file contains more than one user";
         assertThat( multipleUsersErrorException.getMessage(), equalTo(  multipleUsersErrorMessage) );
-        logProvider.assertAtLeastOnce( inLog( this.getClass() ).error( containsString( multipleUsersErrorMessage ) ) );
+        assertThat( logProvider ).forClass( getClass() ).forLevel( ERROR ).containsMessages( multipleUsersErrorMessage );
     }
 
     @Test
@@ -245,11 +244,10 @@ class SystemGraphRealmIT
 
         assertTrue( dbManager.userHasRole( "jane", PredefinedRoles.ADMIN ) );
         assertAuthenticationSucceeds( realmHelper, "jane", "doe" );
-        logProvider.assertExactly(
-                info( "Completed migration of %s %s into system graph.", "1", "user" ),
-                info( "Completed migration of %s %s into system graph.", "0", "roles" ),
-                info( "Assigned %s role to user '%s'.", PredefinedRoles.ADMIN, "jane" )
-        );
+        assertThat( logProvider ).forLevel( INFO )
+                .containsMessageWithArguments( "Completed migration of %s %s into system graph.", "1", "user" )
+                .containsMessageWithArguments(  "Completed migration of %s %s into system graph.", "0", "roles" )
+                .containsMessageWithArguments( "Assigned %s role to user '%s'.", PredefinedRoles.ADMIN, "jane" );
     }
 
     @Test
@@ -263,11 +261,10 @@ class SystemGraphRealmIT
 
         assertTrue( dbManager.userHasRole( "neo4j", PredefinedRoles.ADMIN ) );
         assertAuthenticationSucceeds( realmHelper, "jane", "doe" );
-        logProvider.assertExactly(
-                info( "Completed migration of %s %s into system graph.", "3", "users" ),
-                info( "Completed migration of %s %s into system graph.", "0", "roles" ),
-                info( "Assigned %s role to user '%s'.", PredefinedRoles.ADMIN, "neo4j" )
-        );
+        assertThat( logProvider ).forLevel( INFO )
+                .containsMessageWithArguments( "Completed migration of %s %s into system graph.", "3", "users" )
+                .containsMessageWithArguments( "Completed migration of %s %s into system graph.", "0", "roles" )
+                .containsMessageWithArguments( "Assigned %s role to user '%s'.", PredefinedRoles.ADMIN, "neo4j" );
     }
 
     @Test
@@ -299,11 +296,10 @@ class SystemGraphRealmIT
         // Then
         assertAuthenticationSucceeds( realmHelper, "trinity", "abc" );
         assertTrue( dbManager.userHasRole( "trinity", PredefinedRoles.ADMIN ) );
-        logProvider.assertExactly(
-                info( "Completed migration of %s %s into system graph.", "3", "users" ),
-                info( "Completed migration of %s %s into system graph.", "0", "roles" ),
-                info( "Assigned %s role to user '%s'.", PredefinedRoles.ADMIN, "trinity" )
-        );
+        assertThat( logProvider ).forLevel( INFO )
+                .containsMessageWithArguments( "Completed migration of %s %s into system graph.", "3", "users" )
+                .containsMessageWithArguments( "Completed migration of %s %s into system graph.", "0", "roles" )
+                .containsMessageWithArguments( "Assigned %s role to user '%s'.", PredefinedRoles.ADMIN, "trinity" );
     }
 
     @Test
@@ -381,9 +377,8 @@ class SystemGraphRealmIT
 
         assertTrue( dbManager.userHasRole( INITIAL_USER_NAME, PredefinedRoles.ADMIN  ));
         assertAuthenticationSucceeds( realmHelper, INITIAL_USER_NAME, INITIAL_PASSWORD, true );
-        logProvider.assertExactly(
-                info( "Assigned %s role to user '%s'.", PredefinedRoles.ADMIN, INITIAL_USER_NAME )
-        );
+        assertThat( logProvider ).forLevel( INFO )
+                .containsMessageWithArguments( "Assigned %s role to user '%s'.", PredefinedRoles.ADMIN, INITIAL_USER_NAME );
     }
 
     @Test
@@ -455,15 +450,6 @@ class SystemGraphRealmIT
         realm.initialize();
         realm.start();
         return realm;
-    }
-
-    private AssertableLogProvider.LogMatcher info( String message, String... arguments )
-    {
-        if ( arguments.length == 0 )
-        {
-            return inLog( this.getClass() ).info( message );
-        }
-        return inLog( this.getClass() ).info( message, (Object[]) arguments );
     }
 
     private static class TestDatabaseManager extends BasicSystemGraphRealmTestHelper.TestDatabaseManager

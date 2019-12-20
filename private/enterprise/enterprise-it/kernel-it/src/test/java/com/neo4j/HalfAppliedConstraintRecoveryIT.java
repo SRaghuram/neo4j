@@ -117,8 +117,7 @@ public class HalfAppliedConstraintRecoveryIT
     public final EphemeralFileSystemRule fs = new EphemeralFileSystemRule();
     @Rule
     public final OtherThreadRule<Void> t2 = new OtherThreadRule<>( "T2" );
-    @Rule
-    public final AssertableLogProvider logProvider = new AssertableLogProvider( true );
+    private final AssertableLogProvider logProvider = new AssertableLogProvider( true );
     private final Monitors monitors = new Monitors();
 
     @Test

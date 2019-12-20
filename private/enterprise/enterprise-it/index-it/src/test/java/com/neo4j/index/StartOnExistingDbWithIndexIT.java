@@ -22,6 +22,7 @@ import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.logging.LogAssertions.assertThat;
 
 @TestDirectoryExtension
 class StartOnExistingDbWithIndexIT
@@ -41,7 +42,7 @@ class StartOnExistingDbWithIndexIT
         getDatabase( logProvider );
         managementService.shutdown();
 
-        logProvider.rawMessageMatcher().assertNotContains( "Failed to open index" );
+        assertThat( logProvider ).doesNotContainMessage( "Failed to open index" );
     }
 
     private void prepareDb( Label label, String propertyName, LogProvider logProvider )

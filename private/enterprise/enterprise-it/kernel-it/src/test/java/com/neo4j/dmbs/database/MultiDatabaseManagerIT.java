@@ -38,6 +38,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.default_database;
+import static org.neo4j.logging.LogAssertions.assertThat;
 
 @TestDirectoryExtension
 class MultiDatabaseManagerIT
@@ -336,8 +337,7 @@ class MultiDatabaseManagerIT
         String logTestDb = "logTestDb";
         managementService.createDatabase( logTestDb );
         managementService.shutdownDatabase( logTestDb );
-        logProvider.formattedMessageMatcher().assertContains( "Creating 'logtestdb' database." );
-        logProvider.formattedMessageMatcher().assertContains( "Stop 'logtestdb' database." );
+        assertThat( logProvider ).containsMessages( "Creating 'logtestdb' database.", "Stop 'logtestdb' database." );
     }
 
     @Test

@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.protocol;
 
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
@@ -30,17 +29,15 @@ import org.neo4j.ssl.SslPolicy;
 import static com.neo4j.causalclustering.protocol.NettyPipelineBuilder.SSL_HANDLER_NAME;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.any;
-import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItems;
-import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.neo4j.logging.AssertableLogProvider.inLog;
+import static org.neo4j.logging.AssertableLogProvider.Level.ERROR;
+import static org.neo4j.logging.LogAssertions.assertThat;
 
 class NettyPipelineBuilderTest
 {
@@ -67,7 +64,7 @@ class NettyPipelineBuilderTest
         channel.writeOneInbound( new Object() );
 
         // then
-        logProvider.assertExactly( inLog( getClass() ).error( startsWith( "Exception in inbound" ), equalTo( ex ) ) );
+        assertThat( logProvider ).forClass( getClass() ).forLevel( ERROR ).containsMessageWithException( "Exception in inbound", ex );
         assertFalse( channel.isOpen() );
     }
 
@@ -82,8 +79,8 @@ class NettyPipelineBuilderTest
         channel.writeOneInbound( msg );
 
         // then
-        logProvider.assertExactly( inLog( getClass() )
-                .error( equalTo( "Unhandled inbound message: %s for channel: %s" ), equalTo( msg ), any( Channel.class ) ) );
+        assertThat( logProvider ).forClass( getClass() ).forLevel( ERROR )
+                .containsMessageWithArguments( "Unhandled inbound message: %s for channel: %s", msg, channel );
         assertFalse( channel.isOpen() );
     }
 
@@ -98,8 +95,8 @@ class NettyPipelineBuilderTest
         channel.writeAndFlush( msg );
 
         // then
-        logProvider.assertExactly( inLog( getClass() )
-                .error( equalTo( "Unhandled outbound message: %s for channel: %s" ), equalTo( msg ), any( Channel.class )  ) );
+        assertThat( logProvider ).forClass( getClass() ).forLevel( ERROR )
+                .containsMessageWithArguments( "Unhandled outbound message: %s for channel: %s", msg, channel );
         assertFalse( channel.isOpen() );
     }
 
@@ -120,7 +117,7 @@ class NettyPipelineBuilderTest
         channel.writeAndFlush( new Object() );
 
         // then
-        logProvider.assertExactly( inLog( getClass() ).error( startsWith( "Exception in outbound" ), equalTo( ex ) ) );
+        assertThat( logProvider ).forClass( getClass() ).forLevel( ERROR ).containsMessageWithException( "Exception in outbound", ex );
         assertFalse( channel.isOpen() );
     }
 
@@ -141,7 +138,7 @@ class NettyPipelineBuilderTest
         channel.writeAndFlush( new Object(), channel.voidPromise() );
 
         // then
-        logProvider.assertExactly( inLog( getClass() ).error( startsWith( "Exception in outbound" ), equalTo( ex ) ) );
+        assertThat( logProvider ).forClass( getClass() ).forLevel( ERROR ).containsMessageWithException( "Exception in outbound", ex );
         assertFalse( channel.isOpen() );
     }
 
@@ -164,7 +161,7 @@ class NettyPipelineBuilderTest
         channel.writeOneInbound( msg );
 
         // then
-        logProvider.assertNoLoggingOccurred();
+        assertThat( logProvider ).doesNotHaveAnyLogs();
     }
 
     @Test
@@ -186,7 +183,7 @@ class NettyPipelineBuilderTest
         channel.writeAndFlush( msg );
 
         // then
-        logProvider.assertNoLoggingOccurred();
+        assertThat( logProvider ).doesNotHaveAnyLogs();
     }
 
     @Test

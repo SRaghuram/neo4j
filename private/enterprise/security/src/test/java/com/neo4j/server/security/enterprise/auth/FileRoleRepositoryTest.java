@@ -44,6 +44,8 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.neo4j.logging.AssertableLogProvider.Level.ERROR;
+import static org.neo4j.logging.LogAssertions.assertThat;
 
 public class FileRoleRepositoryTest
 {
@@ -256,12 +258,10 @@ public class FileRoleRepositoryTest
         catch ( IllegalStateException e )
         {
             assertThat( roleRepository.numberOfRoles(), equalTo( 0 ) );
-            logProvider.assertExactly(
-                    AssertableLogProvider.inLog( FileRoleRepository.class ).error(
+            assertThat( logProvider ).forClass( FileRoleRepository.class ).forLevel( ERROR )
+                    .containsMessageWithArguments(
                             "Failed to read role file \"%s\" (%s)", roleFile.getAbsolutePath(),
-                            "wrong number of line fields [line 2]"
-                    )
-            );
+                            "wrong number of line fields [line 2]" );
             throw e;
         }
     }

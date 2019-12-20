@@ -31,6 +31,7 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.io.fs.FileUtils.deleteFile;
+import static org.neo4j.logging.LogAssertions.assertThat;
 
 @TestDirectoryExtension
 class MultiDatabaseFileWatchIT
@@ -78,9 +79,9 @@ class MultiDatabaseFileWatchIT
 
         deletionListener.awaitDeletionNotification();
 
-        logProvider.formattedMessageMatcher().assertContains( "'neostore' which belongs to the 'first' database was deleted while it was running." );
-        logProvider.formattedMessageMatcher().assertNotContains( "'neostore' which belongs to the 'second' database was deleted while it was running." );
-        logProvider.formattedMessageMatcher().assertNotContains( "'neostore' which belongs to the 'third' database was deleted while it was running." );
+        assertThat( logProvider ).containsMessages( "'neostore' which belongs to the 'first' database was deleted while it was running." )
+                                 .doesNotContainMessage( "'neostore' which belongs to the 'second' database was deleted while it was running." )
+                                 .doesNotContainMessage( "'neostore' which belongs to the 'third' database was deleted while it was running." );
     }
 
     @Test
@@ -102,10 +103,8 @@ class MultiDatabaseFileWatchIT
 
         deletionListener.awaitDeletionNotification();
 
-        logProvider.formattedMessageMatcher().assertContains( "'neostore' which belongs to the 'first' database was deleted while it was running." );
-        logProvider.formattedMessageMatcher().assertContains(
-                "'neostore.nodestore.db' which belongs to the 'second' database was deleted while it was running." );
-        logProvider.formattedMessageMatcher().assertContains(
+        assertThat( logProvider ).containsMessages( "'neostore' which belongs to the 'first' database was deleted while it was running.",
+                "'neostore.nodestore.db' which belongs to the 'second' database was deleted while it was running.",
                 "'neostore.relationshipstore.db' which belongs to the 'third' database was deleted while it was running." );
     }
 

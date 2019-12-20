@@ -32,7 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.neo4j.logging.AssertableLogProvider.inLog;
+import static org.neo4j.logging.LogAssertions.assertThat;
 
 class UnavailableDatabaseHandlerTest
 {
@@ -94,7 +94,7 @@ class UnavailableDatabaseHandlerTest
     {
         channel.writeInbound( message );
 
-        logProvider.assertAtLeastOnce( inLog( UnavailableDatabaseHandler.class ).warn( matchesAllOf( messageComponents ) ) );
+        assertThat( logProvider ).forClass(  UnavailableDatabaseHandler.class  ).containsMessages( messageComponents );
     }
 
     private void testErrorResponse( String... messageComponents )

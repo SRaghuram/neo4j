@@ -27,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.fail_on_missing_files;
 import static org.neo4j.internal.helpers.collection.Iterables.count;
+import static org.neo4j.logging.LogAssertions.assertThat;
 
 @Neo4jLayoutExtension
 class ExistingDatabaseCreationIT
@@ -124,7 +125,7 @@ class ExistingDatabaseCreationIT
 
         managementService.createDatabase( cloneDatabase );
         //TODO: replace with failed to reconcile when failures are handled by reconciler not database manager
-        logProvider.rawMessageMatcher().assertContains( "Exception occurred while starting the database" );
+        assertThat( logProvider ).containsMessages( "Exception occurred while starting the database" );
         assertFalse( managementService.database( cloneDatabase ).isAvailable( 0 ) );
     }
 

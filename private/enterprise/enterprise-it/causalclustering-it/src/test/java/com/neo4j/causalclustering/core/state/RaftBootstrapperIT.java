@@ -60,7 +60,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 import static org.neo4j.kernel.impl.store.format.standard.Standard.LATEST_STORE_VERSION;
-import static org.neo4j.logging.AssertableLogProvider.inLog;
+import static org.neo4j.logging.AssertableLogProvider.Level.ERROR;
+import static org.neo4j.logging.LogAssertions.assertThat;
 
 @PageCacheExtension
 @Neo4jLayoutExtension
@@ -251,7 +252,8 @@ class RaftBootstrapperIT
         Set<MemberId> membership = asSet( randomMember(), randomMember(), randomMember() );
         BootstrapException exception = assertThrows( BootstrapException.class, () -> bootstrapper.bootstrap( membership, storeId ) );
         assertThat( exception.getCause(), instanceOf( IllegalStateException.class ) );
-        assertableLogProvider.assertAtLeastOnce( inLog( RaftBootstrapper.class ).error( exception.getCause().getMessage() ) );
+        assertThat( assertableLogProvider ).forClass( RaftBootstrapper.class ).forLevel( ERROR )
+                .containsMessages( exception.getCause().getMessage() );
     }
 
     @Test
@@ -284,7 +286,8 @@ class RaftBootstrapperIT
         // when
         Set<MemberId> membership = asSet( randomMember(), randomMember(), randomMember() );
         BootstrapException exception = assertThrows( BootstrapException.class, () -> bootstrapper.bootstrap( membership, storeId ) );
-        assertableLogProvider.assertAtLeastOnce( inLog( RaftBootstrapper.class ).error( exception.getCause().getMessage() ) );
+        assertThat( assertableLogProvider ).forClass( RaftBootstrapper.class ).forLevel( ERROR )
+                .containsMessages( exception.getCause().getMessage() );
     }
 
     private void verifySnapshot( CoreSnapshot snapshot, Set<MemberId> expectedMembership, Config activeDatabaseConfig ) throws IOException

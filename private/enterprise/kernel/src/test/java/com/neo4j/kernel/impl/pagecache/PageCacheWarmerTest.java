@@ -56,7 +56,6 @@ import org.neo4j.test.rule.PageCacheConfig;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.time.Clocks;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
@@ -73,7 +72,9 @@ import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_warmup_pre
 import static org.neo4j.io.pagecache.PagedFile.PF_READ_AHEAD;
 import static org.neo4j.io.pagecache.PagedFile.PF_SHARED_READ_LOCK;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createScheduler;
-import static org.neo4j.logging.AssertableLogProvider.inLog;
+import static org.neo4j.logging.AssertableLogProvider.Level.DEBUG;
+import static org.neo4j.logging.AssertableLogProvider.Level.INFO;
+import static org.neo4j.logging.LogAssertions.assertThat;
 
 @EphemeralTestDirectoryExtension
 @Disabled
@@ -525,12 +526,11 @@ class PageCacheWarmerTest
                 warmer.reheat();
                 warmer.stop();
             }
-            var matcher = inLog( PageCacheWarmer.class );
-            logProvider.assertExactly(
-                    matcher.info( "Warming up page cache by pre-fetching files matching regex: %s", pagecache_warmup_prefetch_whitelist.defaultValue() ),
-                    matcher.debug( "Pre-fetching %s", testfile.getName() ),
-                    matcher.info( "Warming of page cache completed" )
-            );
+            assertThat( logProvider ).forClass( PageCacheWarmer.class ).forLevel( INFO ).containsMessageWithArguments(
+                    "Warming up page cache by pre-fetching files matching regex: %s", pagecache_warmup_prefetch_whitelist.defaultValue() );
+            assertThat( logProvider ).forClass( PageCacheWarmer.class ).forLevel( DEBUG )
+                    .containsMessageWithArguments(  "Pre-fetching %s", testfile.getName() );
+            assertThat( logProvider ).forClass( PageCacheWarmer.class ).forLevel( INFO ).containsMessages( "Warming of page cache completed" );
         }
     }
 

@@ -12,6 +12,7 @@ import com.neo4j.causalclustering.core.CausalClusteringSettings
 import com.neo4j.causalclustering.discovery.akka.NeoSuite
 import com.neo4j.causalclustering.discovery.akka.system.TypesafeConfigService.ArteryTransport
 import org.neo4j.configuration.Config
+import org.neo4j.logging.LogAssertions.assertThat
 import org.neo4j.logging.{AssertableLogProvider, Level}
 
 class LoggingActorIT extends NeoSuite {
@@ -23,9 +24,9 @@ class LoggingActorIT extends NeoSuite {
       "pass warning messages on to Neo logProvider" in new Fixture(Level.WARN) {
 
         withLogging {
-          logProvider.rawMessageMatcher().assertNotContains("debug test")
-          logProvider.rawMessageMatcher().assertNotContains("info test")
-          logProvider.rawMessageMatcher().assertContains("warning test")
+          assertThat(logProvider).doesNotContainMessage("debug test")
+          assertThat(logProvider).doesNotContainMessage("info test")
+          assertThat(logProvider).containsMessages("warning test")
         }
       }
     }
@@ -36,9 +37,8 @@ class LoggingActorIT extends NeoSuite {
 
         withLogging {
           println( Thread.currentThread().getName )
-          logProvider.rawMessageMatcher().assertNotContains("debug test")
-          logProvider.rawMessageMatcher().assertContains("info test")
-          logProvider.rawMessageMatcher().assertContains("warning test")
+          assertThat(logProvider).doesNotContainMessage("debug test")
+          assertThat(logProvider).containsMessages("info test", "warning test")
         }
       }
     }
@@ -48,9 +48,7 @@ class LoggingActorIT extends NeoSuite {
       "pass all messages on to Neo logProvider" in new Fixture(Level.DEBUG) {
 
         withLogging {
-          logProvider.rawMessageMatcher().assertContains("info test")
-          logProvider.rawMessageMatcher().assertContains("warning test")
-          logProvider.rawMessageMatcher().assertContains("debug test")
+          assertThat(logProvider).containsMessages("info test", "warning test", "debug test")
         }
       }
     }

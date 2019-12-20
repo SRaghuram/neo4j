@@ -35,13 +35,11 @@ import static com.neo4j.causalclustering.protocol.init.MagicValueUtil.magicValue
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.Matchers.contains;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.neo4j.logging.AssertableLogProvider.inLog;
+import static org.neo4j.logging.AssertableLogProvider.Level.ERROR;
+import static org.neo4j.logging.LogAssertions.assertThat;
 import static org.neo4j.test.assertion.Assert.assertEventually;
-import static org.neo4j.test.matchers.CommonMatchers.throwableWithMessage;
 
 class InitMagicMessageHandlingIT
 {
@@ -192,19 +190,32 @@ class InitMagicMessageHandlingIT
 
     private void assertReadTimeoutLogged( Class<?> logClass )
     {
-        var readTimeoutLogMatcher = inLog( logClass ).error( containsString( "Exception in inbound" ), instanceOf( ReadTimeoutException.class ) );
-
         assertEventually( () -> "Read timeout error did not get logged:\n" + logProvider.serialize(),
-                () -> logProvider.containsMatchingLogCall( readTimeoutLogMatcher ), is( true ), 1, MINUTES );
+                () -> safeTry( () -> assertThat( logProvider ).forClass( logClass ).forLevel( ERROR )
+                        .assertExceptionForLogMessage( "Exception in inbound" )
+                        .isInstanceOf( ReadTimeoutException.class ) ), is( true ), 1, MINUTES );
     }
 
     private void assertWrongMagicValueLogged( Class<?> logClass )
     {
-        var wrongMagicMessageLogMatcher = inLog( logClass ).error( containsString( "Exception in inbound" ),
-                throwableWithMessage( DecoderException.class, containsString( "Wrong magic value" ) ) );
-
         assertEventually( () -> "Wrong magic value did not get logged:\n" + logProvider.serialize(),
-                () -> logProvider.containsMatchingLogCall( wrongMagicMessageLogMatcher ), is( true ), 1, MINUTES );
+                () -> safeTry( () -> assertThat( logProvider ).forClass( logClass ).forLevel( ERROR )
+                        .assertExceptionForLogMessage( "Exception in inbound" )
+                        .isInstanceOf( DecoderException.class )
+                        .hasMessageContaining( "Wrong magic value" ) ), is( true ), 1, MINUTES );
+    }
+
+    private boolean safeTry( Runnable runnable )
+    {
+        try
+        {
+            runnable.run();
+            return true;
+        }
+        catch ( Exception e )
+        {
+            return false;
+        }
     }
 
     private static void assertCorrectInitMessageReceived( String side, RecordingHandler recordingHandler )

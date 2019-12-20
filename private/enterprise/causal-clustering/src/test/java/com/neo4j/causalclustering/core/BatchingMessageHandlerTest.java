@@ -10,8 +10,8 @@ import com.neo4j.causalclustering.core.consensus.RaftMessages.ReceivedInstantRaf
 import com.neo4j.causalclustering.core.consensus.ReplicatedString;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
-import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.RaftIdFactory;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 import org.junit.After;
@@ -45,6 +45,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.neo4j.internal.helpers.ArrayUtil.lastOf;
+import static org.neo4j.logging.AssertableLogProvider.Level.DEBUG;
+import static org.neo4j.logging.LogAssertions.assertThat;
 
 public class BatchingMessageHandlerTest
 {
@@ -368,8 +370,8 @@ public class BatchingMessageHandlerTest
         // then
         verify( downstreamHandler, never() ).handle(
                 ArgumentMatchers.any( ReceivedInstantRaftIdAwareMessage.class ) );
-        logProvider.assertAtLeastOnce( AssertableLogProvider.inLog( BatchingMessageHandler.class )
-                .debug( "This handler has been stopped, dropping the message: %s", wrap( message ) ) );
+        assertThat( logProvider ).forClass( BatchingMessageHandler.class ).forLevel( DEBUG )
+                .containsMessageWithArguments( "This handler has been stopped, dropping the message: %s", wrap( message ) );
     }
 
     @Test( timeout = 5_000 /* 5 seconds */ )
