@@ -28,6 +28,18 @@ abstract class ParallelInputTestBase(edition: Edition[EnterpriseRuntimeContext],
     result should beColumns("x").withRows(input.flatten)
 
     // and
-    executeAndAssertCondition(logicalQuery, input, ENTERPRISE.HAS_EVIDENCE_OF_PARALLELISM)
+    def try100times(): Unit = {
+      val condition = ENTERPRISE.HAS_EVIDENCE_OF_PARALLELISM
+      val nAttempts = 100
+      for (_ <- 0 until nAttempts) {
+        val (result, context) = executeAndContext(logicalQuery, runtime, input)
+        //TODO here we should not materialize the result
+        result.awaitAll()
+        if (condition.test(context))
+          return
+      }
+      fail(s"${condition.errorMsg} in $nAttempts attempts!")
+    }
+    try100times()
   }
 }

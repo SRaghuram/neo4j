@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.runtime.spec.stress
 
 import org.neo4j.configuration.GraphDatabaseSettings
+import org.neo4j.cypher.internal.runtime.InputValues
 import org.neo4j.cypher.internal.runtime.spec._
 import org.neo4j.cypher.internal.runtime.spec.stress.ParallelStressSuite.{MORSEL_SIZE, WORKERS}
 import org.neo4j.cypher.internal.{CypherRuntime, EnterpriseRuntimeContext}
