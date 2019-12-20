@@ -31,6 +31,7 @@ import org.neo4j.kernel.impl.pagecache.ConfiguringPageCacheFactory;
 import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.NullLog;
+import org.neo4j.time.Clocks;
 
 import static org.neo4j.index.internal.gbptree.GBPTree.NO_HEADER_READER;
 import static org.neo4j.index.internal.gbptree.GBPTree.NO_HEADER_WRITER;
@@ -167,7 +168,8 @@ public abstract class AbstractGBPTreeBenchmark extends BaseDatabaseBenchmark
                 config,
                 tracer, log,
                 EmptyVersionContextSupplier.EMPTY,
-                JobSchedulerFactory.createInitialisedScheduler() );
+                JobSchedulerFactory.createInitialisedScheduler(),
+                Clocks.nanoClock() );
         return factory.getOrCreatePageCache();
     }
 

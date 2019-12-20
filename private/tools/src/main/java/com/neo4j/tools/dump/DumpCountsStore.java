@@ -8,15 +8,19 @@ package com.neo4j.tools.dump;
 import java.io.File;
 import java.io.PrintStream;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.internal.counts.GBPTreeCountsStore;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
+import org.neo4j.io.pagecache.tracing.cursor.context.VersionContextSupplier;
 import org.neo4j.kernel.impl.pagecache.ConfiguringPageCacheFactory;
 import org.neo4j.logging.NullLog;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.time.Clocks;
+import org.neo4j.time.SystemNanoClock;
 
 import static org.neo4j.configuration.Config.defaults;
 import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_memory;
@@ -39,10 +43,14 @@ public class DumpCountsStore
             System.err.println( "Expecting exactly one argument describing the path to the store" );
             System.exit( 1 );
         }
-        try ( FileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction();
-                JobScheduler jobScheduler = createInitialisedScheduler();
-                PageCache pageCache = new ConfiguringPageCacheFactory( fileSystem, defaults( pagecache_memory, "80M" ),
-                        PageCacheTracer.NULL, NullLog.getInstance(), EmptyVersionContextSupplier.EMPTY, jobScheduler ).getOrCreatePageCache() )
+        Config config = defaults( pagecache_memory, "80M" );
+        PageCacheTracer tracer = PageCacheTracer.NULL;
+        NullLog log = NullLog.getInstance();
+        VersionContextSupplier versions = EmptyVersionContextSupplier.EMPTY;
+        SystemNanoClock clock = Clocks.nanoClock();
+        try ( FileSystemAbstraction fs = new DefaultFileSystemAbstraction();
+              JobScheduler scheduler = createInitialisedScheduler();
+              PageCache pageCache = new ConfiguringPageCacheFactory( fs, config, tracer, log, versions, scheduler, clock ).getOrCreatePageCache() )
         {
             GBPTreeCountsStore.dump( pageCache, new File( args[0] ), out );
         }
