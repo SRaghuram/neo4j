@@ -14,7 +14,7 @@ import org.neo4j.server.helpers.TestWebContainer;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.server.ExclusiveWebContainerTestBase;
 
-import static com.neo4j.server.enterprise.helpers.EnterpriseWebContainerBuilder.builderOnRandomPorts;
+import static com.neo4j.server.enterprise.helpers.EnterpriseWebContainerBuilder.serverOnRandomPorts;
 
 public abstract class EnterpriseWebContainerIT extends ExclusiveWebContainerTestBase
 {
@@ -26,7 +26,7 @@ public abstract class EnterpriseWebContainerIT extends ExclusiveWebContainerTest
     @BeforeClass
     public static void setupServer() throws Exception
     {
-        testWebContainer = builderOnRandomPorts()
+        testWebContainer = serverOnRandomPorts()
                                         .persistent()
                                         .usingDataDir( staticFolder.homeDir().getAbsolutePath() )
                                         .build();

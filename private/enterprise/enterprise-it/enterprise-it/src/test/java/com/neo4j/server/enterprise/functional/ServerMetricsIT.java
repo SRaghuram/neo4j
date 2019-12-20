@@ -28,7 +28,7 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.metrics.MetricsTestHelper.metricsCsv;
 import static com.neo4j.metrics.MetricsTestHelper.readLongGaugeValue;
-import static com.neo4j.server.enterprise.helpers.EnterpriseWebContainerBuilder.builderOnRandomPorts;
+import static com.neo4j.server.enterprise.helpers.EnterpriseWebContainerBuilder.serverOnRandomPorts;
 import static java.net.http.HttpRequest.BodyPublishers.ofString;
 import static java.net.http.HttpResponse.BodyHandlers.discarding;
 import static javax.ws.rs.core.HttpHeaders.ACCEPT;
@@ -52,7 +52,7 @@ class ServerMetricsIT
     {
         // Given
         File metrics = directory.file( "metrics" );
-        var webServerContainer = builderOnRandomPorts()
+        var webServerContainer = serverOnRandomPorts()
                                                   .usingDataDir( directory.homeDir().getAbsolutePath() )
                                                   .withProperty( MetricsSettings.metricsEnabled.name(), TRUE )
                                                   .withProperty( MetricsSettings.csvEnabled.name(), TRUE )

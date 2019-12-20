@@ -18,7 +18,7 @@ import org.neo4j.server.rest.security.AuthenticationIT;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.server.HTTP;
 
-import static com.neo4j.server.enterprise.helpers.EnterpriseWebContainerBuilder.builderOnRandomPorts;
+import static com.neo4j.server.enterprise.helpers.EnterpriseWebContainerBuilder.serverOnRandomPorts;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.hasItems;
 import static org.junit.Assert.assertThat;
@@ -31,7 +31,7 @@ public class EnterpriseAuthenticationIT extends AuthenticationIT
     @Override
     public void startServer( boolean authEnabled ) throws IOException
     {
-        testWebContainer = builderOnRandomPorts()
+        testWebContainer = serverOnRandomPorts()
                                         .usingDataDir( testDirectory.homeDir().getAbsolutePath() )
                                         .persistent()
                                         .withProperty( GraphDatabaseSettings.auth_enabled.name(), Boolean.toString( authEnabled ) )
@@ -87,7 +87,7 @@ public class EnterpriseAuthenticationIT extends AuthenticationIT
 
     private void startServerWithAuthDisabled() throws IOException
     {
-        testWebContainer = builderOnRandomPorts()
+        testWebContainer = serverOnRandomPorts()
                                         .persistent()
                                         .usingDataDir( testDirectory.homeDir().getAbsolutePath() )
                                         .withProperty( GraphDatabaseSettings.auth_enabled.name(), Boolean.toString( false ) )

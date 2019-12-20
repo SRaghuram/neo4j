@@ -77,7 +77,7 @@ abstract class AbstractRESTInteraction extends CommunityWebContainerTestBase imp
         Map<String,String> stringMap = new HashMap<>( config.size() );
         config.forEach( ( setting, s ) -> stringMap.put( setting.name(), s ) );
 
-        CommunityWebContainerBuilder builder = EnterpriseWebContainerBuilder.builderOnRandomPorts();
+        CommunityWebContainerBuilder builder = EnterpriseWebContainerBuilder.serverOnRandomPorts();
         builder = builder
                 .persistent()
                 .usingDataDir( dataDir.getAbsolutePath() )

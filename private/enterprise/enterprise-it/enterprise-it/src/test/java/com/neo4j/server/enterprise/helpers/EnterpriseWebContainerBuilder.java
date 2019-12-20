@@ -32,7 +32,7 @@ public class EnterpriseWebContainerBuilder extends CommunityWebContainerBuilder
         return builder( NullLogProvider.getInstance() );
     }
 
-    public static EnterpriseWebContainerBuilder builderOnRandomPorts()
+    public static EnterpriseWebContainerBuilder serverOnRandomPorts()
     {
         EnterpriseWebContainerBuilder server = builder();
         server.onRandomPorts();

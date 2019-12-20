@@ -18,7 +18,6 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.configuration.connectors.HttpConnector;
-import org.neo4j.configuration.connectors.HttpsConnector;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -97,7 +96,6 @@ class MultiDatabaseHttpIT
                 .set( OnlineBackupSettings.online_backup_enabled, false )
                 .set( BoltConnector.listen_address, new SocketAddress( "localhost", 0 ) )
                 .set( HttpConnector.listen_address, new SocketAddress( "localhost", 0 ) )
-                .set( HttpsConnector.listen_address, new SocketAddress( "localhost", 0 ) )
                 .build();
         return new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() ).setConfig( custom )
                 .setUserLogProvider( NullLogProvider.getInstance() ).build();

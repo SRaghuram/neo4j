@@ -14,7 +14,7 @@ import org.neo4j.server.helpers.TestWebContainer;
 import org.neo4j.test.server.ExclusiveWebContainerTestBase;
 import org.neo4j.test.server.HTTP;
 
-import static com.neo4j.server.enterprise.helpers.EnterpriseWebContainerBuilder.builderOnRandomPorts;
+import static com.neo4j.server.enterprise.helpers.EnterpriseWebContainerBuilder.serverOnRandomPorts;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertEquals;
@@ -39,7 +39,7 @@ public class EnterpriseDiscoveryServiceIT extends ExclusiveWebContainerTestBase
     public void shouldReportEnterpriseEdition() throws Exception
     {
         // Given
-        testWebContainer = builderOnRandomPorts()
+        testWebContainer = serverOnRandomPorts()
                 .usingDataDir( folder.directory( name.getMethodName() ).getAbsolutePath() )
                 .persistent()
                 .build();
