@@ -26,7 +26,6 @@ import org.neo4j.io.pagecache.impl.muninn.StandalonePageCacheFactory;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 
 import static com.neo4j.tools.input.ConsoleUtil.staticPrompt;
-import static org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier.TRACER_SUPPLIER;
 import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
 
@@ -99,7 +98,7 @@ public class GBPTreePlayground
         @Override
         public void run( String[] args, PrintStream out ) throws Exception
         {
-            tree.printState( TRACER_SUPPLIER.get() );
+            tree.printState( NULL );
         }
 
         @Override
