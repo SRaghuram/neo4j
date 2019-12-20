@@ -14,7 +14,7 @@
   },
   "editable": true,
   "gnetId": null,
-  "graphTooltip": 0,
+  "graphTooltip": 1,
   "links": [],
   "panels": [
     {
@@ -59,7 +59,7 @@
       "targets": [
         {
           "refId": "A",
-          "target": "neo4j.bolt.connections_idle.csv",
+          "target": "file.csv",
           "type": "timeserie"
         }
       ],
@@ -119,6 +119,6 @@
   "timepicker": {},
   "timezone": "",
   "title": "Neo4J metrics",
-  "uid": "kjS-8hBWz",
+  "uid": "neo4j-metrics",
   "version": 1
 }
