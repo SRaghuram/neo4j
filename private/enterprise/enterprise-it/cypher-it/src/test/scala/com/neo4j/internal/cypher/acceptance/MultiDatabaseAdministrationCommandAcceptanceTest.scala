@@ -1307,14 +1307,6 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
       "This is an administration command and it should be executed against the system database: STOP DATABASE"
   }
 
-  private def defaultDb(name: String = DEFAULT_DATABASE_NAME, status: String = onlineStatus) =
-    Map("name" -> name,
-      "address" -> "localhost:7687",
-      "role" -> "standalone",
-      "requestedStatus" -> status,
-      "currentStatus" -> status,
-      "error" -> "")
-
   // Disable normal database creation because we need different settings on each test
   override protected def initTest() {}
 

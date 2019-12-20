@@ -49,7 +49,7 @@ class StandardAccessModeTest
         when( lookup.getPropertyKeyId( "PROP1" ) ).thenReturn( PROP1 );
         when( lookup.getPropertyKeyId( "PROP2" ) ).thenReturn( PROP2 );
 
-        builder = new StandardAccessMode.Builder( true, false, Collections.emptySet(), lookup, DEFAULT_DATABASE_NAME );
+        builder = new StandardAccessMode.Builder( true, false, Collections.emptySet(), lookup, DEFAULT_DATABASE_NAME, DEFAULT_DATABASE_NAME );
     }
 
     @Test

@@ -18,7 +18,7 @@ import com.neo4j.server.security.enterprise.auth.InMemoryRoleRepository
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
 import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphInitializer
 import org.neo4j.configuration.{Config, GraphDatabaseSettings}
-import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
+import org.neo4j.configuration.GraphDatabaseSettings.{DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME}
 import org.neo4j.cypher.internal.DatabaseStatus
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.cypher.internal.plandescription.PlanDescriptionImpl
@@ -138,6 +138,14 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
       "currentStatus" -> status,
       "error" -> "",
       "default" -> default)
+
+  def defaultDb(name: String = DEFAULT_DATABASE_NAME, status: String = onlineStatus): Map[String, String] =
+    Map("name" -> name,
+      "address" -> "localhost:7687",
+      "role" -> "standalone",
+      "requestedStatus" -> status,
+      "currentStatus" -> status,
+      "error" -> "")
 
   def setupUserWithCustomRole(username: String = "joe", password: String = "soap", rolename: String = "custom", access: Boolean = true): Unit = {
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)

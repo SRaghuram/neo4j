@@ -1029,8 +1029,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     execute(s"CREATE database $newDefaultDatabase")
 
     // Confirm default database
-    execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true)))
-    execute(s"SHOW DATABASE $newDefaultDatabase").toSet should be(Set(db(newDefaultDatabase)))
+    execute(s"SHOW DEFAULT DATABASE").toSet should be(Set(defaultDb(DEFAULT_DATABASE_NAME)))
 
     // WHEN: Grant on default database
     execute(s"GRANT INDEX MANAGEMENT ON DEFAULT DATABASE TO role")
@@ -1067,8 +1066,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // Confirm default database
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME)))
-    execute(s"SHOW DATABASE $newDefaultDatabase").toSet should be(Set(db(newDefaultDatabase, default = true)))
+    execute(s"SHOW DEFAULT DATABASE").toSet should be(Set(defaultDb(newDefaultDatabase)))
 
     // THEN: confirm privilege
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
@@ -1267,8 +1265,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     execute(s"CREATE database $newDefaultDatabase")
 
     // Confirm default database
-    execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true)))
-    execute(s"SHOW DATABASE $newDefaultDatabase").toSet should be(Set(db(newDefaultDatabase)))
+    execute(s"SHOW DEFAULT DATABASE").toSet should be(Set(defaultDb(DEFAULT_DATABASE_NAME)))
 
     // WHEN: Grant on default database
     execute(s"GRANT CONSTRAINT MANAGEMENT ON DEFAULT DATABASE TO role")
@@ -1305,8 +1302,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // Confirm default database
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME)))
-    execute(s"SHOW DATABASE $newDefaultDatabase").toSet should be(Set(db(newDefaultDatabase, default = true)))
+    execute(s"SHOW DEFAULT DATABASE").toSet should be(Set(defaultDb(newDefaultDatabase)))
 
     // THEN: confirm privilege
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
@@ -1467,8 +1463,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     execute(s"CREATE database $newDefaultDatabase")
 
     // Confirm default database
-    execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true)))
-    execute(s"SHOW DATABASE $newDefaultDatabase").toSet should be(Set(db(newDefaultDatabase)))
+    execute(s"SHOW DEFAULT DATABASE").toSet should be(Set(defaultDb(DEFAULT_DATABASE_NAME)))
 
     // WHEN: Grant on default database
     execute(s"GRANT NAME MANAGEMENT ON DEFAULT DATABASE TO role")
@@ -1508,8 +1503,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // Confirm default database
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME)))
-    execute(s"SHOW DATABASE $newDefaultDatabase").toSet should be(Set(db(newDefaultDatabase, default = true)))
+    execute(s"SHOW DEFAULT DATABASE").toSet should be(Set(defaultDb(newDefaultDatabase)))
 
     // THEN: confirm privilege
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
