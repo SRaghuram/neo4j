@@ -102,6 +102,11 @@
       <artifactId>neo4j-values</artifactId>
       <version>${project.version}</version>
     </dependency>
+    <dependency>
+      <groupId>org.neo4j</groupId>
+      <artifactId>neo4j-random-values</artifactId>
+      <version>${project.version}</version>
+    </dependency>
 
     <!-- neo4j testing -->
 
@@ -179,6 +184,12 @@
       <artifactId>neo4j-cypher-runtime-spec-suite</artifactId>
       <version>${project.version}</version>
       <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.neo4j</groupId>
+      <artifactId>neo4j-cypher-logical-plan-generator</artifactId>
+      <version>${project.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
