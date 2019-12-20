@@ -44,10 +44,7 @@ import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 
 import static java.util.Collections.emptySet;
 import static java.util.Collections.singletonList;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.anyOf;
-import static org.hamcrest.Matchers.instanceOf;
-import static org.hamcrest.Matchers.startsWith;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -67,8 +64,7 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
     int propertyKeyId;
     DESCRIPTOR schema;
 
-    abstract int initializeLabelOrRelType( TokenWrite tokenWrite, String name )
-            throws KernelException;
+    abstract int initializeLabelOrRelType( TokenWrite tokenWrite, String name ) throws KernelException;
 
     abstract Constraint createConstraint( SchemaWrite writeOps, DESCRIPTOR descriptor ) throws Exception;
 
@@ -371,7 +367,7 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
             SchemaWrite statement = schemaWriteInNewTransaction();
 
             var e = assertThrows( DropConstraintFailureException.class, () -> dropConstraint( statement, constraint ) );
-            assertThat( e.getCause(), instanceOf( NoSuchConstraintException.class ) );
+            assertThat( e.getCause() ).isInstanceOf( NoSuchConstraintException.class );
             commit();
         }
 
@@ -402,8 +398,8 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
                 createConstraintInRunningTx( helper, db, tx, KEY, PROP );
                 tx.commit();
             } );
-            assertThat( e.getMessage(), startsWith( "Unable to create CONSTRAINT" ) );
-            assertThat( e, anyOf( instanceOf( ConstraintViolationException.class ), instanceOf( QueryExecutionException.class ) ) );
+            assertThat( e.getMessage() ).startsWith( "Unable to create CONSTRAINT" );
+            assertThat( e ).isInstanceOfAny( ConstraintViolationException.class, QueryExecutionException.class );
         }
 
         // then
@@ -435,8 +431,8 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
                 createConstraintInRunningTx( helper, db, tx, KEY, PROP );
                 tx.commit();
             } );
-            assertThat( e.getMessage(), startsWith( "Unable to create CONSTRAINT" ) );
-            assertThat( e, anyOf( instanceOf( ConstraintViolationException.class ), instanceOf( QueryExecutionException.class ) ) );
+            assertThat( e.getMessage() ).startsWith( "Unable to create CONSTRAINT" );
+            assertThat( e ).isInstanceOfAny( ConstraintViolationException.class, QueryExecutionException.class );
         }
 
         try ( org.neo4j.graphdb.Transaction tx = db.beginTx() )
@@ -480,7 +476,7 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
             } );
 
             // Then
-            assertThat( e.getCause(), instanceOf( TransactionFailureException.class ) );
+            assertThat( e.getCause() ).isInstanceOf( TransactionFailureException.class );
             TransactionFailureException cause = (TransactionFailureException) e.getCause();
             assertEquals( Status.Transaction.ConstraintsChanged, cause.status() );
         }

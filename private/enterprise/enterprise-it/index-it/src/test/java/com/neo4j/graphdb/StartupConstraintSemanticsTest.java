@@ -20,8 +20,7 @@ import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static org.apache.commons.lang3.exception.ExceptionUtils.getRootCause;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.instanceOf;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
@@ -117,7 +116,7 @@ class StartupConstraintSemanticsTest
             DatabaseStateService dbStateService = graphDb.getDependencyResolver().resolveDependency( DatabaseStateService.class );
             assertTrue( dbStateService.causeOfFailure( graphDb.databaseId() ).isPresent() );
             Throwable error = getRootCause( dbStateService.causeOfFailure( graphDb.databaseId() ).get() );
-            assertThat( error, instanceOf( IllegalStateException.class ) );
+            assertThat( error ).isInstanceOf( IllegalStateException.class );
             assertEquals( errorMessage, error.getMessage() );
         }
         finally

@@ -21,8 +21,7 @@ import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.Values;
 
 import static org.apache.commons.lang3.exception.ExceptionUtils.getRootCause;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.core.Is.is;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -65,7 +64,7 @@ abstract class AbstractPropertyExistenceConstraintValidationIT extends KernelInt
         createEntity( transaction, "Type1" );
         var e = assertThrows( ConstraintViolationException.class, this::commit );
         var rootCause = (Status.HasStatus) getRootCause( e );
-        assertThat( rootCause.status(), is( Status.Schema.ConstraintValidationFailed ) );
+        assertThat( rootCause.status() ).isEqualTo( Status.Schema.ConstraintValidationFailed );
     }
 
     @Test
@@ -81,7 +80,7 @@ abstract class AbstractPropertyExistenceConstraintValidationIT extends KernelInt
 
         var e = assertThrows( ConstraintViolationException.class, this::commit );
         var rootCause = (Status.HasStatus) getRootCause( e );
-        assertThat( rootCause.status(), is( Status.Schema.ConstraintValidationFailed ) );
+        assertThat( rootCause.status() ).isEqualTo( Status.Schema.ConstraintValidationFailed );
     }
 
     @Test

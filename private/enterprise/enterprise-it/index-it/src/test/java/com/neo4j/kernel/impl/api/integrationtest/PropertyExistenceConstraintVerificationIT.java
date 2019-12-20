@@ -25,10 +25,7 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.actors.Actor;
 import org.neo4j.test.extension.actors.ActorsExtension;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.anyOf;
-import static org.hamcrest.Matchers.instanceOf;
-import static org.hamcrest.Matchers.startsWith;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.fail;
 
 @EnterpriseDbmsExtension
@@ -75,7 +72,7 @@ abstract class PropertyExistenceConstraintVerificationIT
         // then
         catch ( QueryExecutionException | ConstraintViolationException e )
         {
-            assertThat( e.getMessage(), startsWith( "Unable to create CONSTRAINT" ) );
+            assertThat( e.getMessage() ).startsWith( "Unable to create CONSTRAINT" );
         }
     }
 
@@ -101,14 +98,13 @@ abstract class PropertyExistenceConstraintVerificationIT
         // then, we either fail to create the constraint,
         catch ( ConstraintViolationException e )
         {
-            assertThat( e.getCause(), instanceOf( CreateConstraintFailureException.class ) );
+            assertThat( e.getCause() ).isInstanceOf( CreateConstraintFailureException.class );
         }
         // or we fail to create the offending node
         catch ( ExecutionException e )
         {
-            assertThat( e.getCause(), instanceOf( ConstraintViolationException.class ) );
-            assertThat( e.getCause().getCause(),
-                    instanceOf( ConstraintViolationTransactionFailureException.class ) );
+            assertThat( e.getCause() ).isInstanceOf( ConstraintViolationException.class );
+            assertThat( e.getCause().getCause() ).isInstanceOf( ConstraintViolationTransactionFailureException.class );
         }
     }
 
@@ -135,13 +131,13 @@ abstract class PropertyExistenceConstraintVerificationIT
         // then, we either fail to create the constraint,
         catch ( ExecutionException e )
         {
-            assertThat( e.getCause(), anyOf( instanceOf( QueryExecutionException.class ), instanceOf( ConstraintViolationException.class ) ) );
-            assertThat( e.getCause().getMessage(), startsWith( "Unable to create CONSTRAINT" ) );
+            assertThat( e.getCause() ).isInstanceOfAny( QueryExecutionException.class, ConstraintViolationException.class );
+            assertThat( e.getCause().getMessage() ).startsWith( "Unable to create CONSTRAINT" );
         }
         // or we fail to create the offending node
         catch ( ConstraintViolationException e )
         {
-            assertThat( e.getCause(), instanceOf( ConstraintViolationTransactionFailureException.class ) );
+            assertThat( e.getCause() ).isInstanceOf( ConstraintViolationTransactionFailureException.class );
         }
     }
 

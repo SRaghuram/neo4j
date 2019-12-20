@@ -44,12 +44,9 @@ import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.token.TokenHolders;
 import org.neo4j.values.storable.Values;
 
-import static java.util.Arrays.asList;
 import static java.util.Collections.emptySet;
 import static org.apache.commons.lang3.exception.ExceptionUtils.getRootCause;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.instanceOf;
-import static org.hamcrest.Matchers.stringContainsInOrder;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -158,7 +155,7 @@ class UniquenessConstraintCreationIT extends AbstractConstraintCreationIT<Constr
 
         assertEquals( ConstraintDescriptorFactory.uniqueForSchema( descriptor ), e.constraint() );
         Throwable cause = e.getCause();
-        assertThat( cause, instanceOf( ConstraintValidationException.class ) );
+        assertThat( cause ).isInstanceOf( ConstraintValidationException.class );
         rollback();
 
         String expectedMessage = String.format( "Both Node(%d) and Node(%d) have the label `Foo` and property `name` = 'foo'", node1, node2 );
@@ -224,7 +221,7 @@ class UniquenessConstraintCreationIT extends AbstractConstraintCreationIT<Constr
         } );
 
         // then
-        assertThat( e.getCause(), instanceOf( NoSuchConstraintException.class ) );
+        assertThat( e.getCause() ).isInstanceOf( NoSuchConstraintException.class );
 
         // then
         {
@@ -280,9 +277,9 @@ class UniquenessConstraintCreationIT extends AbstractConstraintCreationIT<Constr
 
         // then
         Throwable rootCause = getRootCause( e );
-        assertThat( rootCause, instanceOf( IndexEntryConflictException.class ) );
-        assertThat( rootCause.getMessage(), stringContainsInOrder( asList( "Both node", "share the property value", "smurf" ) ) );
-        assertableLogProvider.rawMessageMatcher().assertContains( stringContainsInOrder( asList( "Failed to populate index:", KEY, PROP ) ) );
+        assertThat( rootCause ).isInstanceOf( IndexEntryConflictException.class );
+        assertThat( rootCause.getMessage() ).containsSubsequence( "Both node", "share the property value", "smurf" );
+        assertThat( assertableLogProvider.serialize() ).containsSubsequence( "Failed to populate index:", KEY, PROP );
     }
 
     private NeoStores neoStores()

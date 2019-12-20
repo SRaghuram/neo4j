@@ -6,8 +6,11 @@
 package com.neo4j.kernel.impl.api.integrationtest;
 
 import com.neo4j.SchemaHelper;
+import org.assertj.core.api.Condition;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+
+import java.util.List;
 
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.ConstraintViolationException;
@@ -17,9 +20,7 @@ import org.neo4j.internal.kernel.api.SchemaWrite;
 import org.neo4j.internal.kernel.api.TokenWrite;
 import org.neo4j.internal.schema.IndexPrototype;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.anyOf;
-import static org.hamcrest.Matchers.containsString;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.internal.schema.SchemaDescriptor.forLabel;
 
@@ -61,8 +62,9 @@ class NodeKeyConstraintValidationIT extends NodePropertyExistenceConstraintValid
                 transaction.commit();
             }
         } );
-        assertThat( e.getMessage(), anyOf( containsString( "with label `multiNodeKeyLabel` must have the properties (property2, property3)" ),
-                containsString( "with label `multiNodeKeyLabel` must have the properties (property3, property4)" ) ) );
+        var options = List.of( "with label `multiNodeKeyLabel` must have the properties (property2, property3)",
+                "with label `multiNodeKeyLabel` must have the properties (property3, property4)" );
+        assertThat( options ).areAtLeastOne( new Condition<>( value -> e.getMessage().contains( value ), "Contains at least one of the messages" ) );
 
         var exception = assertThrows( ConstraintViolationException.class, () ->
         {
@@ -75,6 +77,6 @@ class NodeKeyConstraintValidationIT extends NodePropertyExistenceConstraintValid
                 transaction.commit();
             }
         } );
-        assertThat( exception.getMessage(), containsString( "with label `multiNodeKeyLabel` must have the properties (property3, property4)" ) );
+        assertThat( exception.getMessage() ).contains( "with label `multiNodeKeyLabel` must have the properties (property3, property4)" );
     }
 }

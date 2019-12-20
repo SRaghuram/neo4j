@@ -40,8 +40,7 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.causalclustering.common.TransactionBackupServiceProvider.BACKUP_SERVER_NAME;
 import static java.lang.String.format;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.databases_root_path;
 import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
@@ -147,12 +146,12 @@ class FulltextIndexBackupIT
             try ( Result nodes = tx.execute( format( QUERY_NODES, NODE_INDEX, "additional" ) ) )
             {
                 List<Long> nodeIds = nodes.stream().map( m -> ((Node) m.get( NODE )).getId() ).collect( Collectors.toList() );
-                assertThat( nodeIds, containsInAnyOrder( nodeId3, nodeId4 ) );
+                assertThat( nodeIds ).contains( nodeId3, nodeId4 );
             }
             try ( Result relationships = tx.execute( format( QUERY_RELS, REL_INDEX, "knows" ) ) )
             {
                 List<Long> relIds = relationships.stream().map( m -> ((Relationship) m.get( RELATIONSHIP )).getId() ).collect( Collectors.toList() );
-                assertThat( relIds, containsInAnyOrder( relId2 ) );
+                assertThat( relIds ).contains( relId2 );
             }
             tx.commit();
         }
@@ -212,12 +211,12 @@ class FulltextIndexBackupIT
             try ( Result nodes = tx.execute( format( QUERY_NODES, NODE_INDEX, "integration" ) ) )
             {
                 List<Long> nodeIds = nodes.stream().map( m -> ((Node) m.get( NODE )).getId() ).collect( Collectors.toList() );
-                assertThat( nodeIds, containsInAnyOrder( nodeId1, nodeId2 ) );
+                assertThat( nodeIds ).contains( nodeId1, nodeId2 );
             }
             try ( Result relationships = tx.execute( format( QUERY_RELS, REL_INDEX, "relate" ) ) )
             {
                 List<Long> relIds = relationships.stream().map( m -> ((Relationship) m.get( RELATIONSHIP )).getId() ).collect( Collectors.toList() );
-                assertThat( relIds, containsInAnyOrder( relId1 ) );
+                assertThat( relIds ).contains( relId1 );
             }
             tx.commit();
         }

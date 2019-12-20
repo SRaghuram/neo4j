@@ -44,9 +44,7 @@ import org.neo4j.test.rule.RandomRule;
 
 import static java.lang.String.format;
 import static org.apache.commons.lang3.exception.ExceptionUtils.getRootCause;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.instanceOf;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -119,10 +117,10 @@ class IndexProceduresIT
             final QueryExecutionException e = assertThrows( QueryExecutionException.class,
                     () -> tx.execute( createSchemaProcedureCall( procedure, "some name", fulltextProviderName, NO_CONFIG ) ) );
             final Throwable rootCause = getRootCause( e );
-            assertThat( rootCause, instanceOf( ProcedureException.class ) );
-            assertThat( rootCause.getMessage(), containsString(
+            assertThat( rootCause ).isInstanceOf( ProcedureException.class );
+            assertThat( rootCause.getMessage() ).contains(
                     "Could not create index with specified index provider 'fulltext-1.0'. To create fulltext index, please use " +
-                            "'db.index.fulltext.createNodeIndex' or 'db.index.fulltext.createRelationshipIndex'." ) );
+                            "'db.index.fulltext.createNodeIndex' or 'db.index.fulltext.createRelationshipIndex'." );
         }
 
         // Then we should not have any new index
@@ -143,9 +141,9 @@ class IndexProceduresIT
             final QueryExecutionException e = assertThrows( QueryExecutionException.class,
                     () -> tx.execute( createSchemaProcedureCall( procedure, "some name", nonExistingProvider, NO_CONFIG ) ) );
             final Throwable rootCause = getRootCause( e );
-            assertThat( rootCause, instanceOf( IndexProviderNotFoundException.class ) );
-            assertThat( rootCause.getMessage(),
-                    containsString( "Tried to get index provider with name non-existing-provider whereas available providers in this session being " ) );
+            assertThat( rootCause ).isInstanceOf( IndexProviderNotFoundException.class );
+            assertThat( rootCause.getMessage() ).contains(
+                    "Tried to get index provider with name non-existing-provider whereas available providers in this session being " );
         }
 
         // Then we should not have any new index
@@ -201,9 +199,8 @@ class IndexProceduresIT
             final QueryExecutionException e =
                     assertThrows( QueryExecutionException.class, () -> tx.execute( createSchemaProcedureCall( procedure, "some name", configString ) ) );
             final Throwable rootCause = getRootCause( e );
-            assertThat( rootCause, instanceOf( IllegalArgumentException.class ) );
-            assertThat( rootCause.getMessage(),
-                    containsString( "Invalid index config key 'non_existing_setting', it was not recognized as an index setting." ) );
+            assertThat( rootCause ).isInstanceOf( IllegalArgumentException.class );
+            assertThat( rootCause.getMessage() ).contains( "Invalid index config key 'non_existing_setting', it was not recognized as an index setting." );
         }
         assertNoSchemaRules();
     }
@@ -220,9 +217,8 @@ class IndexProceduresIT
             final QueryExecutionException e =
                     assertThrows( QueryExecutionException.class, () -> tx.execute( createSchemaProcedureCall( procedure, "some name", configString ) ) );
             final String asString = Exceptions.stringify( e );
-            assertThat( asString, containsString(
-                    "Caused by: org.neo4j.graphdb.schema.IndexSettingUtil$IndexSettingParseException: " +
-                            "Could not parse value 'not_applicable_type' as double[]." ) );
+            assertThat( asString ).contains( "Caused by: org.neo4j.graphdb.schema.IndexSettingUtil$IndexSettingParseException: " +
+                    "Could not parse value 'not_applicable_type' as double[]." );
         }
         assertNoSchemaRules();
     }
@@ -239,8 +235,8 @@ class IndexProceduresIT
             final QueryExecutionException e =
                     assertThrows( QueryExecutionException.class, () -> tx.execute( createSchemaProcedureCall( procedure, "some name", configString ) ) );
             final Throwable rootCause = getRootCause( e );
-            assertThat( rootCause, instanceOf( NullPointerException.class ) );
-            assertThat( rootCause.getMessage(), containsString( "Index setting value can not be null." ) );
+            assertThat( rootCause ).isInstanceOf( NullPointerException.class );
+            assertThat( rootCause.getMessage() ).contains( "Index setting value can not be null." );
         }
         assertNoSchemaRules();
     }
@@ -259,7 +255,7 @@ class IndexProceduresIT
                 }
         );
         final Throwable rootCause = getRootCause( exception );
-        assertThat( rootCause, instanceOf( IllegalArgumentException.class ) );
+        assertThat( rootCause ).isInstanceOf( IllegalArgumentException.class );
         assertEquals( "Schema rule name cannot be the empty string or only contain whitespace.", rootCause.getMessage() );
     }
 

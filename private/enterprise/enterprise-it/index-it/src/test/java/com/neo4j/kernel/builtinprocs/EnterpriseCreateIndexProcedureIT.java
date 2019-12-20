@@ -44,11 +44,7 @@ import org.neo4j.values.virtual.VirtualValues;
 
 import static java.util.Arrays.asList;
 import static org.apache.commons.lang3.exception.ExceptionUtils.getRootCause;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.allOf;
-import static org.hamcrest.Matchers.contains;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.instanceOf;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -139,7 +135,7 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
         ProcedureException e = assertThrows( ProcedureException.class, () -> callIndexProcedure( null, null, "Person", "name" ) );
 
         // then
-        assertThat( e.getMessage(), containsString( "Tried to get index provider with name null whereas available providers in this session being" ) );
+        assertThat( e.getMessage() ).contains( "Tried to get index provider with name null whereas available providers in this session being" );
         commit();
     }
 
@@ -158,12 +154,8 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
         // when
         newTransaction( AnonymousContext.full() );
         var e = assertThrows( ProcedureException.class, () -> callIndexProcedure( null, "non+existing-1.0", "Person", "name" ) );
-        assertThat( e.getMessage(), allOf(
-                containsString( "Failed to invoke procedure" ),
-                containsString( "Tried to get index provider" ),
-                containsString( "available providers in this session being" ),
-                containsString( "default being" )
-            ) );
+        assertThat( e.getMessage() ).contains( "Failed to invoke procedure", "Tried to get index provider", "available providers in this session being",
+                "default being" );
     }
 
     @ParameterizedTest
@@ -271,8 +263,8 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
         String specifiedProvider = nonDefaultSchemaIndex.providerName();
         RawIterator<AnyValue[],ProcedureException> result = callIndexProcedure( name, specifiedProvider, label, properties );
         // then
-        assertThat( asList( result.next() ), contains( stringValue( name ), stringArray( label ), stringArray( properties ), stringValue( specifiedProvider ),
-                stringValue( expectedSuccessfulCreationStatus ) ) );
+        assertThat( asList( result.next() ) ).containsExactly( stringValue( name ), stringArray( label ), stringArray( properties ),
+                stringValue( specifiedProvider ), stringValue( expectedSuccessfulCreationStatus ) );
         commit();
         awaitIndexOnline();
 
@@ -354,7 +346,7 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
 
         // when
         var e = assertThrows( ProcedureException.class, () -> createConstraint( label, properties ) );
-        assertThat( getRootCause( e ), instanceOf( IndexEntryConflictException.class ) );
+        assertThat( getRootCause( e ) ).isInstanceOf( IndexEntryConflictException.class );
     }
 
     @SuppressWarnings( "SameParameterValue" )

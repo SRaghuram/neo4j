@@ -26,8 +26,7 @@ import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.exceptions.schema.DropConstraintFailureException;
 import org.neo4j.kernel.api.exceptions.schema.NoSuchConstraintException;
 
-import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.graphdb.Label.label;
@@ -117,7 +116,7 @@ class NodePropertyExistenceConstraintCreationIT extends AbstractConstraintCreati
                 rollback();
             }
         } );
-        assertThat( e.getCause(), instanceOf( NoSuchConstraintException.class ) );
+        assertThat( e.getCause() ).isInstanceOf( NoSuchConstraintException.class );
 
         // then
         {
