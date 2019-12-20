@@ -5,7 +5,7 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.cypher.{ExecutionEngineFunSuite, SyntaxException}
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
 import org.neo4j.values.storable.DurationValue
 
@@ -246,5 +246,108 @@ class AggregationAcceptanceTest extends ExecutionEngineFunSuite with CypherCompa
   test("Should not avg durations and numbers together") {
     val query = "UNWIND [duration('PT10S'), duration('P1D'), duration('PT30.5S'), 90] as x RETURN avg(x) AS length"
     failWithError(Configs.UDF, query, Seq("cannot mix number and duration"))
+  }
+
+  test("should give correct scope for ORDER BY following aggregation with shadowing of variable") {
+    val query = """WITH 1 AS foo, 2 AS bar
+                  |WITH foo AS foo,
+                  |     head(collect(bar)) AS agg
+                  |  ORDER BY foo ASC
+                  |RETURN *""".stripMargin
+    executeWith(Configs.InterpretedAndSlotted, query).toList should equal(List(Map("agg" -> 2, "foo" -> 1)))
+  }
+
+  test("should give correct scope for ORDER BY following aggregation with shadowing of variable ||") {
+    val query = """WITH 1 AS foo, 2 AS bar
+                  |WITH foo AS foo,
+                  |    collect(bar) AS agg
+                  |  ORDER BY foo ASC
+                  |RETURN *""".stripMargin
+    executeWith(Configs.InterpretedAndSlotted, query).toList should equal(List(Map("agg" -> List(2), "foo" -> 1)))
+  }
+
+  test("foo3") {
+    executeSingle(   """
+      MATCH (owner)
+      WITH owner, count(*) AS collected
+      ORDER BY owner
+      RETURN owner
+      """).toList
+  }
+
+  test("should give correct scope for WHERE following aggregation with shadowing of variable") {
+    val query = """WITH 1 AS foo, 2 AS bar
+                  |WITH foo AS foo,
+                  |     head(collect(bar)) AS agg
+                  |  WHERE foo = 1
+                  |RETURN *""".stripMargin
+    executeWith(Configs.InterpretedAndSlotted, query).toList should equal(List(Map("agg" -> 2, "foo" -> 1)))
+  }
+
+  test("should give correct scope for ORDER BY following distinct with shadowing of variable") {
+    val query = """WITH 1 AS foo, 2 AS bar
+                  |WITH DISTINCT foo AS foo,
+                  |    bar AS bar
+                  |  ORDER BY foo ASC
+                  |RETURN *""".stripMargin
+    executeSingle(query).toList should equal(List(Map("bar" -> 2, "foo" -> 1)))
+  }
+
+  test("should give correct scope for ORDER BY following distinct with shadowing of variable II") {
+    val query = """WITH 1 AS foo, 2 AS bar
+                  |WITH DISTINCT foo AS foo,
+                  |     head(collect(bar)) AS agg
+                  |  ORDER BY foo ASC
+                  |RETURN *""".stripMargin
+    executeSingle(query).toList should equal(List(Map("agg" -> 2, "foo" -> 1)))
+  }
+
+  test("should give correct scope for ORDER BY following distinct with shadowing of variable III") {
+    val query = """WITH 1 AS foo, 2 AS bar
+                  |WITH DISTINCT foo + foo AS foo
+                  |  ORDER BY foo ASC
+                  |RETURN *""".stripMargin
+    executeSingle(query).toList should equal(List(Map("foo" -> 2)))
+  }
+
+  test("should not be able to see variable after distinct") {
+    val query = """WITH 1 AS foo, 2 AS bar
+                  |WITH DISTINCT foo + bar AS foobar
+                  |  ORDER BY foo ASC
+                  |RETURN *""".stripMargin
+    val error = the[SyntaxException] thrownBy {
+      executeSingle(query)
+    }
+
+    error.getMessage should startWith("In a WITH/RETURN with DISTINCT or an aggregation, " +
+                                      "it is not possible to access variables declared before the WITH/RETURN:")
+  }
+
+
+  test("should give correct scope for ORDER BY following aggregation") {
+    val query = """WITH 1 AS foo, 2 AS bar
+                  |WITH foo + bar AS foobar,
+                  |     head(collect(bar)) AS agg
+                  |  ORDER BY foobar ASC
+                  |RETURN *""".stripMargin
+    executeWith(Configs.InterpretedAndSlotted, query).toList should equal(List(Map("agg" -> 2, "foobar" -> 3)))
+  }
+
+  test("should give correct scope for ORDER BY following aggregation and distinct") {
+    val query = """WITH 1 AS foo, 2 AS bar
+                  |WITH DISTINCT foo + bar AS foobar,
+                  |     head(collect(bar)) AS agg
+                  |  ORDER BY foobar ASC
+                  |RETURN *""".stripMargin
+    executeWith(Configs.InterpretedAndSlotted, query).toList should equal(List(Map("agg" -> 2, "foobar" -> 3)))
+  }
+
+  test("should give correct scope for WHERE following aggregation") {
+    val query = """WITH 1 AS foo, 2 AS bar
+                  |WITH foo + bar AS foobar,
+                  |     head(collect(bar)) AS agg
+                  |  WHERE foobar = 3
+                  |RETURN *""".stripMargin
+    executeWith(Configs.InterpretedAndSlotted, query).toList should equal(List(Map("agg" -> 2, "foobar" -> 3)))
   }
 }
