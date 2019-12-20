@@ -32,8 +32,6 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
-import org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier;
-import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.rule.DbmsRule;
@@ -246,9 +244,10 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
         createData();
 
         db.restartDatabase();
-        long pagesInMemoryWithoutPrefetch = getPageFaults( db );
-        touchAllPages( db );
-        long pagesInMemoryWithoutPrefetchAfterTouch = getPageFaults( db );
+        var pageCacheTracer = getPageCacheTracer( db );
+        long pagesInMemoryWithoutPrefetch = pageCacheTracer.faults();
+        touchAllPages( db, pageCacheTracer );
+        long pagesInMemoryWithoutPrefetchAfterTouch = pageCacheTracer.faults();
 
         Map<Setting<?>,Object> config = Map.of(
                 GraphDatabaseSettings.pagecache_warmup_enabled, true,
@@ -262,34 +261,37 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
         db.restartDatabase( config );
         verifyEventuallyWarmsUp( pagesInMemoryWithoutPrefetchAfterTouch, metricsDirectory );
 
-        long pagesInMemoryWithPrefetch = getPageFaults( db );
-        touchAllPages( db );
-        long pagesInMemoryWithPrefetchAfterTouch = getPageFaults( db );
+        pageCacheTracer = getPageCacheTracer( db );
+        long pagesInMemoryWithPrefetch = pageCacheTracer.faults();
+        touchAllPages( db, pageCacheTracer );
+        long pagesInMemoryWithPrefetchAfterTouch = pageCacheTracer.faults();
 
         assertThat( pagesInMemoryWithoutPrefetch, lessThanOrEqualTo( pagesInMemoryWithoutPrefetchAfterTouch ) ); //we dont prefetch everything by default
         assertThat( pagesInMemoryWithoutPrefetchAfterTouch, lessThanOrEqualTo( pagesInMemoryWithPrefetch ) ); //prefetch should load same or more pages
         assertThat( pagesInMemoryWithPrefetch, equalTo( pagesInMemoryWithPrefetchAfterTouch ) ); //touching everything should not generate faults
     }
 
-    private static void touchAllPages( EnterpriseDbmsRule db ) throws IOException
+    private static void touchAllPages( EnterpriseDbmsRule db, PageCacheTracer pageCacheTracer ) throws IOException
     {
         PageCache pageCache = db.getDependencyResolver().resolveDependency( PageCache.class );
-        for ( PagedFile pagedFile : pageCache.listExistingMappings() )
+        try ( var cursorTracer = pageCacheTracer.createPageCursorTracer( "touchAll" ) )
         {
-            try ( PageCursorTracer cursorTracer = DefaultPageCursorTracerSupplier.TRACER_SUPPLIER.get();
-                  PageCursor cursor = pagedFile.io( 0, PF_SHARED_READ_LOCK, cursorTracer ) )
+            for ( PagedFile pagedFile : pageCache.listExistingMappings() )
             {
-                while ( cursor.next() )
+                try ( PageCursor cursor = pagedFile.io( 0, PF_SHARED_READ_LOCK, cursorTracer ) )
                 {
-                    //do nothing
+                    while ( cursor.next() )
+                    {
+                        //do nothing
+                    }
                 }
             }
         }
     }
 
-    private static long getPageFaults( EnterpriseDbmsRule db )
+    private static PageCacheTracer getPageCacheTracer( EnterpriseDbmsRule db )
     {
-        return db.getDependencyResolver().resolveDependency( PageCacheTracer.class ).faults();
+        return db.getDependencyResolver().resolveDependency( PageCacheTracer.class );
     }
 
     private void executeBackup( File backupDir ) throws Exception
