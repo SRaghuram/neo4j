@@ -269,32 +269,3 @@ class OptionalExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
         )))
   }
 }
- //           while( ((this.optionalExpandAll1CanContinue) || (this.optionalExpandAll1InnerLoop)) && ((served) < (demand)) )
-//231	                                    {
-//232	                                        if ( !( this.optionalExpandAll1InnerLoop ) )
-//233	                                        {
-//234	                                            long v25fromNode;
-//235	                                            v25fromNode = longSlot2;
-//236	                                            this.v6 = false;
-//237	                                            if ( (v25fromNode) != (-1L) )
-//238	                                            {
-//239	                                                if ( this.v0nodeCursor.isDense() )
-//240	                                                {
-
-//working
-//  while( ((this.optionalExpandAll1CanContinue) || (this.optionalExpandAll1InnerLoop)) && ((served) < (demand)) )
-//230	                                    {
-//231	                                        if ( !( this.optionalExpandAll1InnerLoop ) )
-//232	                                        {
-//233	                                            long v20fromNode;
-//234	                                            v20fromNode = longSlot2;
-//235	                                            this.v6 = false;
-//236	                                            if ( (v20fromNode) != (-1L) )
-//237	                                            {
-//238	                                                if ( this.v0nodeCursor == null )
-//239	                                                {
-//240	                                                    this.v0nodeCursor = cursorPools.nodeCursorPool().allocate();
-//241	                                                    this.v0nodeCursor.setTracer( this.operatorExecutionEvent_1 );
-//242	                                                }
-//243	                                                this.dataRead.singleNode( v20fromNode, this.v0nodeCursor );
-//244	                                                if ( this.v0nodeCursor.next() )
