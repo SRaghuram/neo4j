@@ -8,12 +8,13 @@ var panelstr = JSON.stringify(json.panels[0]);
 json.panels = [];
 var files = fs.readdirSync(metricsDir)
 var index = 0;
-for ( var file in files )
-{
+for (var file in files) {
     var panel = JSON.parse(panelstr);
     panel.title = files[file];
-    panel.id = ++index;
     panel.targets[0].target = files[file];
+    if (index % 2 == 0)
+        panel.gridPos.x = 12;
+    panel.id = ++index;
     json.panels.push(panel);
 }
 fs.writeFileSync(path, JSON.stringify(json))

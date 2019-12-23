@@ -47,14 +47,28 @@ server.post('/query', function (request, reply) {
 const cache = new Map()
 async function query(target) {
 	var filename = metricsDir + '/' + target.target;
-	var json;
+	var csvStr;
 	if (cache.has(filename)) {
-		json = cache.get(filename);
+		csvStr = cache.get(filename);
 	}
 	else {
-		json = await csv().fromFile(filename, { headers: true, trim: true });
-		cache.set(filename, json);
+		csvStr = fs.readFileSync(filename, "utf8");
+		cache.set(filename, csvStr);
 	}
+	var from = new Date(target.dateRange.from).getTime();
+	var to = new Date(target.dateRange.to).getTime();
+
+	var json = await csv({ fork: true })
+		.preFileLine((line, lineNbr) => {
+			return new Promise((resolve, reject) => {
+				var pointTime = Number(line.split(',')[0]) * 1000;
+				if (pointTime >= from && pointTime <= to || lineNbr == 0) { //within requested range
+					resolve(line);
+				}
+				resolve("0");
+			})
+		})
+		.fromString(csvStr, { headers: true, trim: true });
 	return parseJson(target, json);
 }
 
@@ -63,15 +77,13 @@ function parseJson(target, json) {
 	result.target = Object.keys(json[0])[1];
 	result.datapoints = [];
 	var pointsWithinRange = [];
-	var from = new Date(target.dateRange.from).getTime();
-	var to = new Date(target.dateRange.to).getTime();
+
 	json.forEach(function (row) {
 		var array = Object.keys(row).map(function (key) { return row[key]; });
-		var pointTime = array[0] * 1000; //timestamp -> unix timestamp in ms
-		if (pointTime >= from && pointTime <= to) { //within requested range
+		if (array.length > 1) {
 			var dataPoint = []; //format: [data,timestamp]
 			dataPoint[0] = Number(array[1]);
-			dataPoint[1] = pointTime;
+			dataPoint[1] = array[0] * 1000; //timestamp -> unix timestamp in ms
 			pointsWithinRange.push(dataPoint);
 		}
 	});
