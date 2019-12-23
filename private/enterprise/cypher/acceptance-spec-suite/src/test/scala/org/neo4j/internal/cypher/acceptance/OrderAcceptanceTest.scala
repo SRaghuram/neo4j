@@ -532,7 +532,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       .onTopOf(aPlan("Projection")
         .containingArgument("{a.age : a.age}")
         .onTopOf(aPlan("Distinct")
-          .containingVariables("name", "a")
+          .containingVariables("  a@43", "name")
           .containingArgument("name, a")
         )
       )
@@ -613,7 +613,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
       .aPlan("Sort")
       .withOrder(ProvidedOrder.asc(prop("a", "foo")))
       .onTopOf(aPlan("Projection")
-        .containingArgument("{a.foo : a.foo}")
+        .containingArgument("{ : `a`.foo}")
         .onTopOf(aPlan("EagerAggregation")
           .containingVariables("age", "name") // the introduced variables
           .containingArgument("name, a") // the group columns
