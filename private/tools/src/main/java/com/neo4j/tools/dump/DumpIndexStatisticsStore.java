@@ -17,6 +17,7 @@ import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.impl.api.index.stats.IndexStatisticsStore;
 import org.neo4j.kernel.impl.api.index.stats.IndexStatisticsVisitor;
 import org.neo4j.kernel.impl.store.NeoStores;
@@ -59,7 +60,7 @@ public class DumpIndexStatisticsStore
                 DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( path );
                 indexStatisticsStore = new IndexStatisticsStore( pageCache, databaseLayout, immediate(), true );
                 StoreFactory factory = new StoreFactory( databaseLayout, Config.defaults(), new DefaultIdGeneratorFactory( fs, immediate() ),
-                        pageCache, fs, logProvider );
+                        pageCache, fs, logProvider, PageCacheTracer.NULL );
                 NeoStores neoStores = factory.openAllNeoStores();
                 TokenHolders tokenHolders = StoreTokens.readOnlyTokenHolders( neoStores );
                 SchemaRuleAccess schemaStorage = SchemaRuleAccess.getSchemaRuleAccess( neoStores.getSchemaStore(), tokenHolders );

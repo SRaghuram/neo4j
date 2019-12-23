@@ -48,6 +48,7 @@ import org.neo4j.storageengine.api.TransactionMetaDataStore;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.TEMP_BOOTSTRAP_DIRECTORY_NAME;
 import static java.lang.System.currentTimeMillis;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.io.pagecache.tracing.PageCacheTracer.NULL;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_CHECKSUM;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_COMMIT_TIMESTAMP;
 
@@ -271,7 +272,8 @@ public class RaftBootstrapper
                 channel.prepareForFlush().flush();
             }
 
-            try ( TransactionMetaDataStore transactionMetaDataStore = storageEngineFactory.transactionMetaDataStore( fs, layout, config, databasePageCache ) )
+            try ( TransactionMetaDataStore transactionMetaDataStore = storageEngineFactory.transactionMetaDataStore( fs, layout, config, databasePageCache,
+                    NULL ) )
             {
                 transactionMetaDataStore.setLastCommittedAndClosedTransactionId( dummyTransactionId, 0, currentTimeMillis(),
                         logPositionMarker.getByteOffset(), logPositionMarker.getLogVersion() );

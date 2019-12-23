@@ -54,7 +54,8 @@ public class ReadReplicaDatabaseComponents implements EditionDatabaseComponents
         DatabaseLogService databaseLogService = new DatabaseLogService( new DatabaseNameLogContext( namedDatabaseId ), globalModule.getLogService() );
         this.statementLocksFactory = new StatementLocksFactorySelector( locksManager, globalConfig, databaseLogService ).select();
 
-        IdContextFactory idContextFactory = IdContextFactoryBuilder.of( globalModule.getFileSystem(), globalModule.getJobScheduler(), globalConfig ).build();
+        IdContextFactory idContextFactory = IdContextFactoryBuilder.of( globalModule.getFileSystem(), globalModule.getJobScheduler(),
+                globalConfig, globalModule.getTracers().getPageCacheTracer() ).build();
 
         this.idContext = idContextFactory.createIdContext( namedDatabaseId );
         this.tokenHolders = new TokenHolders(

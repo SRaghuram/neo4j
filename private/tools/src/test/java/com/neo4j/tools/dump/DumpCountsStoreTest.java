@@ -15,6 +15,7 @@ import java.io.PrintStream;
 import org.neo4j.counts.CountsAccessor;
 import org.neo4j.internal.counts.GBPTreeCountsStore;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.pagecache.PageCacheExtension;
@@ -47,7 +48,7 @@ class DumpCountsStoreTest
         File file = directory.file( "file" );
         try ( GBPTreeCountsStore store = new GBPTreeCountsStore( pageCache, file, immediate(), EMPTY, false, NO_MONITOR ) )
         {
-            store.start();
+            store.start( PageCursorTracer.NULL );
             try ( CountsAccessor.Updater updater = store.apply( BASE_TX_ID + 1 ) )
             {
                 updater.incrementNodeCount( 0, 4 );
@@ -55,7 +56,7 @@ class DumpCountsStoreTest
                 updater.incrementNodeCount( -1, 9 );
                 updater.incrementRelationshipCount( 0, 4, 1, 67 );
             }
-            store.checkpoint( UNLIMITED );
+            store.checkpoint( UNLIMITED, PageCursorTracer.NULL );
         }
 
         // when

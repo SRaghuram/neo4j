@@ -37,6 +37,7 @@ import static java.lang.System.currentTimeMillis;
 import static org.neo4j.configuration.GraphDatabaseSettings.logical_log_rotation_threshold;
 import static org.neo4j.configuration.GraphDatabaseSettings.preallocate_logical_logs;
 import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
+import static org.neo4j.io.pagecache.tracing.PageCacheTracer.NULL;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogHeaderReader.readLogHeader;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogVersions.CURRENT_FORMAT_LOG_HEADER_SIZE;
 
@@ -68,7 +69,7 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
         databasePageCache = new DatabasePageCache( pageCache, EmptyVersionContextSupplier.EMPTY );
         Dependencies dependencies = new Dependencies();
         dependencies.satisfyDependencies( databaseLayout, fs, databasePageCache, configWithoutSpecificStoreFormat );
-        metaDataStore = storageEngineFactory.transactionMetaDataStore( fs, databaseLayout, configWithoutSpecificStoreFormat, databasePageCache );
+        metaDataStore = storageEngineFactory.transactionMetaDataStore( fs, databaseLayout, configWithoutSpecificStoreFormat, databasePageCache, NULL );
         LogPosition startPosition = getLastClosedTransactionPosition( databaseLayout, metaDataStore, fs );
         LogFilesBuilder logFilesBuilder = LogFilesBuilder
                 .builder( databaseLayout, fs ).withDependencies( dependencies ).withLastCommittedTransactionIdSupplier( () -> validInitialTxId.from() - 1 )

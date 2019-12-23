@@ -36,9 +36,10 @@ public class DumpIdGenerator
         LifeSupport life = new LifeSupport();
         JobScheduler scheduler = life.add( JobSchedulerFactory.createScheduler() );
         life.start();
-        try ( MuninnPageCache pageCache = new MuninnPageCache( swapper, 1_000, PageCacheTracer.NULL, EMPTY, scheduler ) )
+        var pageCacheTracer = PageCacheTracer.NULL;
+        try ( MuninnPageCache pageCache = new MuninnPageCache( swapper, 1_000, pageCacheTracer, EMPTY, scheduler ) )
         {
-            IndexedIdGenerator.dump( pageCache, file );
+            IndexedIdGenerator.dump( pageCache, file, pageCacheTracer );
         }
         finally
         {

@@ -73,6 +73,7 @@ import static java.lang.String.format;
 import static org.neo4j.configuration.GraphDatabaseSettings.logs_directory;
 import static org.neo4j.internal.batchimport.ImportLogic.NO_MONITOR;
 import static org.neo4j.internal.recordstorage.StoreTokens.readOnlyTokenHolders;
+import static org.neo4j.io.pagecache.tracing.PageCacheTracer.NULL;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
 import static org.neo4j.logging.Level.DEBUG;
 import static org.neo4j.logging.Level.INFO;
@@ -128,8 +129,8 @@ public class StoreCopy
                     JobScheduler scheduler = createInitialisedScheduler();
                     PageCache pageCache = StandalonePageCacheFactory.createPageCache( fs, scheduler );
                     NeoStores neoStores =
-                            new StoreFactory( from, config, new ScanOnOpenReadOnlyIdGeneratorFactory(), pageCache, fs, NullLogProvider.getInstance() )
-                                    .openAllNeoStores(); )
+                            new StoreFactory( from, config, new ScanOnOpenReadOnlyIdGeneratorFactory(), pageCache, fs, NullLogProvider.getInstance(),
+                                    NULL ).openAllNeoStores(); )
             {
                 out.println( "Starting to copy store, output will be saved to: " + logFilePath.toAbsolutePath() );
                 nodeStore = neoStores.getNodeStore();

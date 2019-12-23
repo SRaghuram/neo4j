@@ -39,6 +39,7 @@ import static java.util.Arrays.asList;
 import static org.neo4j.internal.batchimport.ImportLogic.instantiateNeoStores;
 import static org.neo4j.internal.helpers.ArrayUtil.array;
 import static org.neo4j.internal.helpers.collection.Iterators.prefetching;
+import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 import static org.neo4j.kernel.impl.store.PropertyType.EMPTY_BYTE_ARRAY;
 import static org.neo4j.kernel.impl.store.StoreType.LABEL_TOKEN;
 import static org.neo4j.kernel.impl.store.StoreType.LABEL_TOKEN_NAME;
@@ -243,7 +244,7 @@ public class RestartableParallelBatchImporter implements BatchImporter
 
     private void writeState( BatchingNeoStores store, StateStorage state, String stateName, byte[] checkPoint ) throws IOException
     {
-        store.flushAndForce();
+        store.flushAndForce( NULL );
         if ( stateName != null )
         {
             state.set( stateName, checkPoint );

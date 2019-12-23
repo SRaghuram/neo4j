@@ -30,6 +30,7 @@ import org.neo4j.test.extension.Inject;
 import static com.neo4j.commandline.dbms.StoreCopyCommandIT.getCopyName;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.neo4j.io.pagecache.tracing.PageCacheTracer.NULL;
 
 class StoreCopyCommandBrokenDatabaseIT extends AbstractCommandIT
 {
@@ -85,7 +86,7 @@ class StoreCopyCommandBrokenDatabaseIT extends AbstractCommandIT
     {
         return new StoreFactory( databaseAPI.databaseLayout().getNeo4jLayout().databaseLayout( databaseName ), Config.defaults(),
                 new ScanOnOpenReadOnlyIdGeneratorFactory(),
-                databaseAPI.getDependencyResolver().resolveDependency( PageCache.class ), fs, NullLogProvider.getInstance() ).openAllNeoStores();
+                databaseAPI.getDependencyResolver().resolveDependency( PageCache.class ), fs, NullLogProvider.getInstance(), NULL ).openAllNeoStores();
     }
 
     private void copyDatabase( String... args ) throws Exception

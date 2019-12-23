@@ -102,6 +102,7 @@ import org.neo4j.internal.helpers.TimeoutStrategy;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
 import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
 import org.neo4j.io.pagecache.tracing.cursor.context.VersionContextSupplier;
@@ -136,6 +137,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.neo4j.graphdb.factory.EditionLocksFactories.createLockFactory;
 import static org.neo4j.graphdb.factory.module.DatabaseInitializer.NO_INITIALIZATION;
 import static org.neo4j.graphdb.factory.module.id.IdContextFactoryBuilder.defaultIdGeneratorFactoryProvider;
+import static org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier.TRACER_SUPPLIER;
 
 class CoreDatabaseFactory
 {
@@ -162,6 +164,7 @@ class CoreDatabaseFactory
     private final RaftMessageDispatcher raftMessageDispatcher;
     private final RaftMessageLogger<MemberId> raftLogger;
 
+    private final PageCacheTracer pageCacheTracer;
     private final PageCursorTracerSupplier cursorTracerSupplier;
     private final RecoveryFacade recoveryFacade;
     private final Outbound<SocketAddress,Message> raftSender;
@@ -197,7 +200,9 @@ class CoreDatabaseFactory
         this.raftLogger = raftLogger;
         this.raftSender = raftSender;
         this.databaseEventService = databaseEventService;
-        this.cursorTracerSupplier = globalModule.getTracers().getPageCursorTracerSupplier();
+        var tracers = globalModule.getTracers();
+        this.pageCacheTracer = tracers.getPageCacheTracer();
+        this.cursorTracerSupplier = tracers.getPageCursorTracerSupplier();
     }
 
     CoreRaftContext createRaftContext( NamedDatabaseId namedDatabaseId, LifeSupport life, Monitors monitors, Dependencies dependencies,
@@ -429,7 +434,7 @@ class CoreDatabaseFactory
     {
         Function<NamedDatabaseId,IdGeneratorFactory> idGeneratorProvider = defaultIdGeneratorFactoryProvider( fileSystem, config );
         IdContextFactory idContextFactory = IdContextFactoryBuilder
-                .of( fileSystem, jobScheduler, config )
+                .of( fileSystem, jobScheduler, config, pageCacheTracer )
                 .withIdGenerationFactoryProvider( idGeneratorProvider )
                 .withFactoryWrapper( generator -> generator )
                 .build();
@@ -440,7 +445,7 @@ class CoreDatabaseFactory
             DatabaseLogProvider databaseLogProvider, CoreKernelResolvers resolvers )
     {
         StateStorage<ReplicatedLeaseState> leaseStorage = storageFactory.createLeaseStorage( namedDatabaseId.name(), life, databaseLogProvider );
-        return new ReplicatedLeaseStateMachine( leaseStorage, () -> resolvers.idGeneratorFactory().get().clearCache() );
+        return new ReplicatedLeaseStateMachine( leaseStorage, () -> resolvers.idGeneratorFactory().get().clearCache( TRACER_SUPPLIER.get() ) );
     }
 
     private Locks createLockManager( final Config config, Clock clock, LogService logService )

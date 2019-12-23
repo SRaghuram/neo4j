@@ -17,6 +17,7 @@ import org.neo4j.internal.id.IdGenerator;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.id.IdType;
 import org.neo4j.internal.recordstorage.Command;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.store.record.LabelTokenRecord;
@@ -85,7 +86,7 @@ public class ReplicatedTokenHolderTest
 
         IdGeneratorFactory idGeneratorFactory = mock( IdGeneratorFactory.class );
         IdGenerator idGenerator = mock( IdGenerator.class );
-        when( idGenerator.nextId() ).thenReturn( 1L );
+        when( idGenerator.nextId( PageCursorTracer.NULL ) ).thenReturn( 1L );
 
         when( idGeneratorFactory.get( any( IdType.class ) ) ).thenReturn( idGenerator );
 

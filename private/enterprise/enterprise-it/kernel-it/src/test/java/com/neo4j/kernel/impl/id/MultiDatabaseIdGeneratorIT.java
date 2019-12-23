@@ -28,6 +28,7 @@ import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 
 @TestDirectoryExtension
 class MultiDatabaseIdGeneratorIT
@@ -79,7 +80,7 @@ class MultiDatabaseIdGeneratorIT
         IdGenerator secondNodeIdGenerator = secondIdGeneratorFactory.get( IdType.NODE );
 
         assertEquals( firstNodeIdGenerator.getHighId(), secondNodeIdGenerator.getHighId() );
-        assertEquals( firstNodeIdGenerator.nextId(), secondNodeIdGenerator.nextId() );
+        assertEquals( firstNodeIdGenerator.nextId( NULL ), secondNodeIdGenerator.nextId( NULL ) );
     }
 
     @Test
@@ -91,11 +92,11 @@ class MultiDatabaseIdGeneratorIT
         long requestedSize = 100;
         int idsToReuse = 10;
 
-        IdRange batch = firstNodeIdGenerator.nextIdBatch( (int) requestedSize );
+        IdRange batch = firstNodeIdGenerator.nextIdBatch( (int) requestedSize, NULL );
         assertThat( firstNodeIdGenerator.getNumberOfIdsInUse(), greaterThanOrEqualTo( requestedSize ) );
         for ( long idToReuse = batch.getRangeStart(); idToReuse < batch.getRangeStart() + idsToReuse; idToReuse++ )
         {
-            try ( Marker marker = firstNodeIdGenerator.marker() )
+            try ( Marker marker = firstNodeIdGenerator.marker( NULL ) )
             {
                 marker.markDeleted( idToReuse );
             }

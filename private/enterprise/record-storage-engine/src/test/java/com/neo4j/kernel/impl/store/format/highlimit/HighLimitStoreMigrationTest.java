@@ -20,6 +20,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.impl.store.StoreType;
 import org.neo4j.kernel.impl.store.format.RecordFormats;
@@ -39,6 +40,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.immediate;
+import static org.neo4j.io.pagecache.tracing.PageCacheTracer.NULL;
 import static org.neo4j.kernel.impl.store.MetaDataStore.Position.STORE_VERSION;
 
 @PageCacheExtension
@@ -71,7 +73,8 @@ class HighLimitStoreMigrationTest
     {
         try ( JobScheduler jobScheduler = new ThreadPoolJobScheduler() )
         {
-            RecordStorageMigrator migrator = new RecordStorageMigrator( fileSystem, pageCache, Config.defaults(), NullLogService.getInstance(), jobScheduler );
+            RecordStorageMigrator migrator = new RecordStorageMigrator( fileSystem, pageCache, Config.defaults(), NullLogService.getInstance(), jobScheduler,
+                    NULL );
             DatabaseLayout migrationLayout = neo4jLayout.databaseLayout( "migration" );
             fileSystem.mkdirs( migrationLayout.databaseDirectory() );
 
@@ -114,7 +117,7 @@ class HighLimitStoreMigrationTest
         IdType idType = IdType.SCHEMA;
         try ( SchemaStore35 schemaStore35 = new SchemaStore35( store, idFile, config, idType, idGeneratorFactory, pageCache, logProvider, recordFormats ) )
         {
-            schemaStore35.initialise( true );
+            schemaStore35.initialise( true, PageCursorTracer.NULL );
         }
     }
 }

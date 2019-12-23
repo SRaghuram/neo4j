@@ -64,6 +64,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.immediate;
+import static org.neo4j.io.pagecache.tracing.PageCacheTracer.NULL;
 import static org.neo4j.lock.LockService.NO_LOCK_SERVICE;
 import static org.neo4j.logging.NullLogProvider.nullLogProvider;
 import static org.neo4j.storageengine.api.CommandVersion.AFTER;
@@ -198,7 +199,7 @@ public class ReplicatedTokenStateMachineTest
         Config config = Config.defaults();
         PageCache pageCache = pageCacheRule.getPageCache( fs );
         IdGeneratorFactory idFactory = new DefaultIdGeneratorFactory( fs, immediate() );
-        StoreFactory storeFactory = new StoreFactory( layout, config, idFactory, pageCache, fs, logProvider );
+        StoreFactory storeFactory = new StoreFactory( layout, config, idFactory, pageCache, fs, logProvider, NULL );
         NeoStores stores = cleanupRule.add( storeFactory.openAllNeoStores( true ) );
         TransactionCommitProcess commitProcess = mock( TransactionCommitProcess.class );
         when( commitProcess.commit( any( TransactionToApply.class ), any( CommitEvent.class ), eq( EXTERNAL ) ) ).then( inv ->

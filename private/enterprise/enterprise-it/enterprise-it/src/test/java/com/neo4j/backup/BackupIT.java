@@ -134,6 +134,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.read_only;
 import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
 import static org.neo4j.configuration.GraphDatabaseSettings.store_internal_log_path;
 import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
+import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 import static org.neo4j.kernel.impl.MyRelTypes.TEST;
 import static org.neo4j.kernel.impl.store.record.Record.NO_LABELS_FIELD;
 import static org.neo4j.kernel.impl.store.record.Record.NO_NEXT_PROPERTY;
@@ -1336,7 +1337,7 @@ class BackupIT
     {
         DependencyResolver resolver = dependencyResolver( db );
         StorageEngine storageEngine = resolver.resolveDependency( StorageEngine.class );
-        storageEngine.flushAndForce( IOLimiter.UNLIMITED );
+        storageEngine.flushAndForce( IOLimiter.UNLIMITED, NULL );
     }
 
     private static SocketAddress backupAddress( GraphDatabaseService db )

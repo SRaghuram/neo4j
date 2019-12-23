@@ -20,6 +20,7 @@ import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseFile;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.impl.store.CommonAbstractStore;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.NodeStore;
@@ -91,7 +92,7 @@ public class DumpStore<RECORD extends AbstractBaseRecord, STORE extends RecordSt
         {
             final DefaultIdGeneratorFactory idGeneratorFactory = new DefaultIdGeneratorFactory( fs, immediate() );
             Function<File,StoreFactory> createStoreFactory = file -> new StoreFactory( DatabaseLayout.ofFlat( file.getParentFile() ),
-                    Config.defaults(), idGeneratorFactory, pageCache, fs, logProvider() );
+                    Config.defaults(), idGeneratorFactory, pageCache, fs, logProvider(), PageCacheTracer.NULL );
 
             for ( String arg : args )
             {

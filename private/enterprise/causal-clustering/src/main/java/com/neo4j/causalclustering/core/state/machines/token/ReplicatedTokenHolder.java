@@ -28,6 +28,7 @@ import org.neo4j.storageengine.api.StorageReader;
 import org.neo4j.token.AbstractTokenHolderBase;
 import org.neo4j.token.TokenRegistry;
 
+import static org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier.TRACER_SUPPLIER;
 import static org.neo4j.storageengine.api.txstate.TxStateVisitor.NO_DECORATION;
 
 public class ReplicatedTokenHolder extends AbstractTokenHolderBase
@@ -100,7 +101,7 @@ public class ReplicatedTokenHolder extends AbstractTokenHolderBase
         StorageEngine storageEngine = storageEngineSupplier.get();
         Collection<StorageCommand> commands = new ArrayList<>();
         TransactionState txState = new TxState();
-        int tokenId = Math.toIntExact( idGeneratorFactory.get( tokenIdType ).nextId() );
+        int tokenId = Math.toIntExact( idGeneratorFactory.get( tokenIdType ).nextId( TRACER_SUPPLIER.get() ) );
         tokenCreator.createToken( txState, tokenName, internal, tokenId );
         try ( StorageReader reader = storageEngine.newReader();
               CommandCreationContext creationContext = storageEngine.newCommandCreationContext() )

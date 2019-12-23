@@ -21,6 +21,7 @@ import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
 import org.neo4j.kernel.impl.store.record.Record;
 import org.neo4j.kernel.impl.store.record.RecordLoad;
 
+import static org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier.TRACER_SUPPLIER;
 import static org.neo4j.kernel.impl.store.RecordPageLocationCalculator.offsetForId;
 import static org.neo4j.kernel.impl.store.RecordPageLocationCalculator.pageIdForRecord;
 
@@ -260,7 +261,7 @@ abstract class BaseHighLimitRecordFormatV3_4_0<RECORD extends AbstractBaseRecord
                 {
                     // Allocate a new id at this point, but this is not the time to free this ID the the case where
                     // this record doesn't need this secondary unit anymore... that needs to be done when applying to store.
-                    record.setSecondaryUnitIdOnCreate( idSequence.nextId() );
+                    record.setSecondaryUnitIdOnCreate( idSequence.nextId( TRACER_SUPPLIER.get() ) );
                 }
             }
         }

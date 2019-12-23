@@ -53,6 +53,8 @@ import org.neo4j.io.fs.EphemeralFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.FileUtils;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.io.pagecache.tracing.PageCacheTracer;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.impl.api.transaction.monitor.KernelTransactionMonitor;
 import org.neo4j.kernel.impl.scheduler.JobSchedulerFactory;
@@ -493,7 +495,7 @@ class TransactionGuardIT
 
     private IdContextFactory createIdContextFactory( FileSystemAbstraction fileSystem )
     {
-        return IdContextFactoryBuilder.of( fileSystem, JobSchedulerFactory.createScheduler(), Config.defaults() )
+        return IdContextFactoryBuilder.of( fileSystem, JobSchedulerFactory.createScheduler(), Config.defaults(), PageCacheTracer.NULL )
                 .withIdGenerationFactoryProvider(
                         any -> new TerminationIdGeneratorFactory( new DefaultIdGeneratorFactory( fileSystem, immediate() ) ) )
                 .build();
@@ -551,16 +553,17 @@ class TransactionGuardIT
 
         @Override
         public IdGenerator open( PageCache pageCache, File filename, IdType idType, LongSupplier highIdSupplier, long maxId, boolean readOnly,
-                OpenOption... openOptions )
+                PageCursorTracer cursorTracer, OpenOption... openOptions )
         {
-            return new TerminationIdGenerator( delegate.open( pageCache, filename, idType, highIdSupplier, maxId, readOnly ) );
+            return new TerminationIdGenerator( delegate.open( pageCache, filename, idType, highIdSupplier, maxId, readOnly, cursorTracer ) );
         }
 
         @Override
         public IdGenerator create( PageCache pageCache, File filename, IdType idType, long highId, boolean throwIfFileExists, long maxId,
-                boolean readOnly, OpenOption... openOptions )
+                boolean readOnly, PageCursorTracer cursorTracer, OpenOption... openOptions )
         {
-            return new TerminationIdGenerator( delegate.create( pageCache, filename, idType, highId, throwIfFileExists, maxId, readOnly, openOptions ) );
+            return new TerminationIdGenerator(
+                    delegate.create( pageCache, filename, idType, highId, throwIfFileExists, maxId, readOnly, cursorTracer, openOptions ) );
         }
 
         @Override
@@ -576,9 +579,9 @@ class TransactionGuardIT
         }
 
         @Override
-        public void clearCache()
+        public void clearCache( PageCursorTracer cursorTracer )
         {
-            delegate.clearCache();
+            delegate.clearCache( cursorTracer );
         }
 
         @Override
@@ -596,10 +599,10 @@ class TransactionGuardIT
         }
 
         @Override
-        public long nextId()
+        public long nextId( PageCursorTracer cursorTracer )
         {
             getIdInjectionFunction.tickAndCheck();
-            return super.nextId();
+            return super.nextId( cursorTracer );
         }
     }
 }
