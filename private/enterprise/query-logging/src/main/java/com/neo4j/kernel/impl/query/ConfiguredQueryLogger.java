@@ -69,7 +69,7 @@ class ConfiguredQueryLogger implements QueryLogger
         String sourceString = query.clientConnection().asConnectionDetails();
         String username = query.username();
         NamedDatabaseId namedDatabaseId = query.databaseId();
-        String queryText = query.queryText();
+        String queryText = query.obfuscatedQueryText().get();
 
         StringBuilder result = new StringBuilder();
         if ( verboseLogging )
@@ -92,7 +92,7 @@ class ConfiguredQueryLogger implements QueryLogger
         result.append( sourceString ).append( "\t" ).append( namedDatabaseId.name() ).append( " - " ).append( username ).append( " - " ).append( queryText );
         if ( logQueryParameters )
         {
-            QueryLogFormatter.formatMapValue( result.append(" - "), query.queryParameters() );
+            QueryLogFormatter.formatMapValue( result.append(" - "), query.obfuscatedQueryParameters().get() );
         }
         if ( logRuntime )
         {

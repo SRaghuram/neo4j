@@ -80,7 +80,7 @@ public class TransactionStatusResult
         {
             QuerySnapshot snapshot = querySnapshot.get();
             this.currentQueryId = new DbmsQueryId( database, snapshot.internalQueryId() ).toString();
-            this.currentQuery = snapshot.queryText();
+            this.currentQuery = snapshot.obfuscatedQueryText().orElse( null );
         }
         else
         {

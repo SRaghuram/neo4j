@@ -81,9 +81,9 @@ public class QueryStatusResult
     {
         this.queryId = new DbmsQueryId( database,query.internalQueryId() ).toString();
         this.username = query.username();
-        this.query = query.queryText();
+        this.query = query.obfuscatedQueryText().orElse( null );
         this.database = database;
-        this.parameters = asRawMap( query.queryParameters(), new ParameterWriter( manager ) );
+        this.parameters = asRawMap( query.obfuscatedQueryParameters().orElse( MapValue.EMPTY ), new ParameterWriter( manager ) );
         this.startTime = ProceduresTimeFormatHelper.formatTime( query.startTimestampMillis(), zoneId );
         this.elapsedTimeMillis = asMillis( query.elapsedTimeMicros() );
         ClientConnectionInfo clientConnection = query.clientConnection();

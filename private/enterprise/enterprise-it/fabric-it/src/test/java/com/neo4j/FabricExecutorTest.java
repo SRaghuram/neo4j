@@ -600,12 +600,12 @@ class FabricExecutorTest
         assertThat( queryExecutionMonitor.events, containsInRelativeOrder(
                 start()
                         .where( "query", e -> e.query, query()
-                                .where( "queryText", ExecutingQuery::queryText, is( query ) )
+                                .where( "queryText", ExecutingQuery::rawQueryText, is( query ) )
                                 .where( "dbName", q -> q.databaseId().name(), is( "mega" ) ) )
-                        .where( "status", e -> e.snapshot.status(), is( "planning" ) ),
+                        .where( "status", e -> e.snapshot.status(), is( "running" ) ),
                 endSuccess()
                         .where( "query", e -> e.query, query()
-                                .where( "queryText", ExecutingQuery::queryText, is( query ) )
+                                .where( "queryText", ExecutingQuery::rawQueryText, is( query ) )
                                 .where( "dbName", q -> q.databaseId().name(), is( "mega" ) ) )
                         .where( "status", e -> e.snapshot.status(), is( "running" ) )
         ) );
@@ -662,12 +662,12 @@ class FabricExecutorTest
         assertThat( queryExecutionMonitor.events, containsInRelativeOrder(
                 start()
                         .where( "query", e -> e.query, query()
-                                .where( "queryText", ExecutingQuery::queryText, is( query ) )
+                                .where( "queryText", ExecutingQuery::rawQueryText, is( query ) )
                                 .where( "dbName", q -> q.databaseId().name(), is( "mega" ) ) )
-                        .where( "status", e -> e.snapshot.status(), is( "planning" ) ),
+                        .where( "status", e -> e.snapshot.status(), is( "running" ) ),
                 endFailure()
                         .where( "query", e -> e.query, query()
-                                .where( "queryText", ExecutingQuery::queryText, is( query ) )
+                                .where( "queryText", ExecutingQuery::rawQueryText, is( query ) )
                                 .where( "dbName", q -> q.databaseId().name(), is( "mega" ) ) )
                         .where( "failure", e -> e.failure, throwable( is( FabricException.class ), containsString( "my failure!" ) ) )
                         .where( "status", e -> e.snapshot.status(), is( "running" ) )

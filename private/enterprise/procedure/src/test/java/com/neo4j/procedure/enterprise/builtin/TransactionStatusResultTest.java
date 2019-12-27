@@ -28,6 +28,7 @@ import org.neo4j.kernel.api.KernelTransactionHandle;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.api.query.ExecutingQuery;
+import org.neo4j.kernel.api.query.QueryObfuscator;
 import org.neo4j.kernel.api.query.QuerySnapshot;
 import org.neo4j.kernel.database.DatabaseTracers;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
@@ -180,6 +181,7 @@ class TransactionStatusResultTest
     private static QuerySnapshot createQuerySnapshot( long queryId )
     {
         ExecutingQuery executingQuery = createExecutingQuery( queryId );
+        executingQuery.onObfuscatorReady( QueryObfuscator.PASSTHROUGH );
         return executingQuery.snapshot();
     }
 

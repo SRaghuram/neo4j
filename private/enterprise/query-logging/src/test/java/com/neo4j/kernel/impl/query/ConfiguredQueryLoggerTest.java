@@ -20,6 +20,7 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.internal.kernel.api.connectioninfo.ClientConnectionInfo;
 import org.neo4j.kernel.api.query.CompilerInfo;
 import org.neo4j.kernel.api.query.ExecutingQuery;
+import org.neo4j.kernel.api.query.QueryObfuscator;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.query.clientconnection.BoltConnectionInfo;
 import org.neo4j.kernel.impl.util.ValueUtils;
@@ -74,6 +75,7 @@ class ConfiguredQueryLoggerTest
         ConfiguredQueryLogger queryLogger = queryLogger( logProvider );
 
         // when
+        query.onObfuscatorReady( QueryObfuscator.PASSTHROUGH );
         clock.forward( 11, TimeUnit.MILLISECONDS );
         queryLogger.success( query );
 
@@ -91,6 +93,7 @@ class ConfiguredQueryLoggerTest
         ConfiguredQueryLogger queryLogger = queryLogger( logProvider );
 
         // when
+        query.onObfuscatorReady( QueryObfuscator.PASSTHROUGH );
         clock.forward( 9, TimeUnit.MILLISECONDS );
         queryLogger.success( query );
 
@@ -102,6 +105,7 @@ class ConfiguredQueryLoggerTest
         thresholdInMillis = 5;
         queryLogger = queryLogger( logProvider ); // Rebuild queryLogger, like the DynamicQueryLogger would.
         clock.forward( 9, TimeUnit.MILLISECONDS );
+        query2.onObfuscatorReady( QueryObfuscator.PASSTHROUGH );
         queryLogger.success( query2 );
 
         // then
@@ -121,6 +125,10 @@ class ConfiguredQueryLoggerTest
         ExecutingQuery query3 = query( SESSION_3, "TestUser3", QUERY_3 );
 
         ConfiguredQueryLogger queryLogger = queryLogger( logProvider );
+
+        query1.onObfuscatorReady( QueryObfuscator.PASSTHROUGH );
+        query2.onObfuscatorReady( QueryObfuscator.PASSTHROUGH );
+        query3.onObfuscatorReady( QueryObfuscator.PASSTHROUGH );
 
         // when
         clock.forward( 1, TimeUnit.MILLISECONDS );
@@ -150,6 +158,7 @@ class ConfiguredQueryLoggerTest
         RuntimeException failure = new RuntimeException();
 
         // when
+        query.onObfuscatorReady( QueryObfuscator.PASSTHROUGH );
         clock.forward( 1, TimeUnit.MILLISECONDS );
         queryLogger.failure( query, failure );
 
@@ -169,6 +178,7 @@ class ConfiguredQueryLoggerTest
                 Config.defaults( log_queries_parameter_logging_enabled, true ) );
 
         // when
+        query.onObfuscatorReady( QueryObfuscator.PASSTHROUGH );
         clock.forward( 11, TimeUnit.MILLISECONDS );
         queryLogger.success( query );
 
@@ -192,6 +202,7 @@ class ConfiguredQueryLoggerTest
         RuntimeException failure = new RuntimeException();
 
         // when
+        query.onObfuscatorReady( QueryObfuscator.PASSTHROUGH );
         clock.forward( 1, TimeUnit.MILLISECONDS );
         queryLogger.failure( query, failure );
 
@@ -209,10 +220,12 @@ class ConfiguredQueryLoggerTest
 
         // when
         ExecutingQuery query = query( SESSION_1, "TestUser", QUERY_1 );
+        query.onObfuscatorReady( QueryObfuscator.PASSTHROUGH );
         clock.forward( 10, TimeUnit.MILLISECONDS );
         queryLogger.success( query );
 
         ExecutingQuery anotherQuery = query( SESSION_1, "AnotherUser", QUERY_1 );
+        anotherQuery.onObfuscatorReady( QueryObfuscator.PASSTHROUGH );
         clock.forward( 10, TimeUnit.MILLISECONDS );
         queryLogger.success( anotherQuery );
 
@@ -232,6 +245,7 @@ class ConfiguredQueryLoggerTest
 
         // when
         ExecutingQuery query = query( SESSION_1, defaultDbId, "TestUser", QUERY_1, emptyMap(), map( "User", "UltiMate" ) );
+        query.onObfuscatorReady( QueryObfuscator.PASSTHROUGH );
         clock.forward( 10, TimeUnit.MILLISECONDS );
         queryLogger.success( query );
 
@@ -239,6 +253,7 @@ class ConfiguredQueryLoggerTest
                 query( SESSION_1, defaultDbId, "AnotherUser", QUERY_1, emptyMap(), map( "Place", "Town" ) );
         clock.forward( 10, TimeUnit.MILLISECONDS );
         Throwable error = new Throwable();
+        anotherQuery.onObfuscatorReady( QueryObfuscator.PASSTHROUGH );
         queryLogger.failure( anotherQuery, error );
 
         // then
@@ -252,170 +267,6 @@ class ConfiguredQueryLoggerTest
     }
 
     @Test
-    void shouldNotLogPassword()
-    {
-        String inputQuery = "CALL dbms.security.changePassword('abc123')";
-        String outputQuery = "CALL dbms.security.changePassword('******')";
-
-        runAndCheck( inputQuery, outputQuery, emptyMap(), "" );
-    }
-
-    @Test
-    void shouldNotLogChangeUserPassword()
-    {
-        String inputQuery = "CALL dbms.security.changeUserPassword('user', 'abc123')";
-        String outputQuery = "CALL dbms.security.changeUserPassword('user', '******')";
-
-        runAndCheck( inputQuery, outputQuery, emptyMap(), "" );
-    }
-
-    @Test
-    void shouldNotLogChangeUserPasswordWithChangeRequired()
-    {
-        String inputQuery = "CALL dbms.security.changeUserPassword('user', 'abc123', true)";
-        String outputQuery = "CALL dbms.security.changeUserPassword('user', '******', true)";
-
-        runAndCheck( inputQuery, outputQuery, emptyMap(), "" );
-    }
-
-    @Test
-    void shouldNotLogPasswordNull()
-    {
-        String inputQuery = "CALL dbms.security.changeUserPassword(null, 'password')";
-        String outputQuery = "CALL dbms.security.changeUserPassword(null, '******')";
-
-        runAndCheck( inputQuery, outputQuery, emptyMap(), "" );
-    }
-
-    @Test
-    void shouldNotLogPasswordWhenMalformedArgument()
-    {
-        String inputQuery = "CALL dbms.security.changeUserPassword('user, 'password')";
-        String outputQuery = "CALL dbms.security.changeUserPassword('user, '******')";
-
-        runAndCheck( inputQuery, outputQuery, emptyMap(), "" );
-    }
-
-    @Test
-    void shouldNotLogPasswordExplain()
-    {
-        String inputQuery = "EXPLAIN CALL dbms.security.changePassword('abc123')";
-        String outputQuery = "EXPLAIN CALL dbms.security.changePassword('******')";
-
-        runAndCheck( inputQuery, outputQuery, emptyMap(), "" );
-    }
-
-    @Test
-    void shouldNotLogPasswordEvenIfPasswordIsSilly()
-    {
-        String inputQuery = "CALL dbms.security.changePassword('.changePassword(\\'si\"lly\\')')";
-        String outputQuery = "CALL dbms.security.changePassword('******')";
-
-        runAndCheck( inputQuery, outputQuery, emptyMap(), "" );
-    }
-
-    @Test
-    void shouldNotLogPasswordEvenIfYouDoTwoThingsAtTheSameTime()
-    {
-        String inputQuery = "CALL dbms.security.changeUserPassword('neo4j','.changePassword(silly)') " +
-                "CALL dbms.security.changeUserPassword('smith','other$silly') RETURN 1";
-        String outputQuery = "CALL dbms.security.changeUserPassword('neo4j','******') " +
-                "CALL dbms.security.changeUserPassword('smith','******') RETURN 1";
-
-        runAndCheck( inputQuery, outputQuery, emptyMap(), "" );
-    }
-
-    @Test
-    void shouldNotLogCreateUserPassword()
-    {
-        String inputQuery = "CALL dbms.security.createUser('user', 'abc123')";
-        String outputQuery = "CALL dbms.security.createUser('user', '******')";
-
-        runAndCheck( inputQuery, outputQuery, emptyMap(), "" );
-    }
-
-    @Test
-    void shouldNotLogCreateUserPasswordWithRequiredChange()
-    {
-        String inputQuery = "CALL dbms.security.createUser('user', 'abc123', true)";
-        String outputQuery = "CALL dbms.security.createUser('user', '******', true)";
-
-        runAndCheck( inputQuery, outputQuery, emptyMap(), "" );
-    }
-
-    @Test
-    void shouldNotLogPasswordEvenIfYouDoTwoThingsAtTheSameTimeWithSeveralParms()
-    {
-        String inputQuery = "CALL dbms.security.changeUserPassword('neo4j',$first) " +
-                "CALL dbms.security.changeUserPassword('smith',$second) RETURN 1";
-        String outputQuery = "CALL dbms.security.changeUserPassword('neo4j',$first) " +
-                "CALL dbms.security.changeUserPassword('smith',$second) RETURN 1";
-
-        Map<String,Object> params = new HashMap<>();
-        params.put( "first", ".changePassword(silly)" );
-        params.put( "second", ".other$silly" );
-
-        runAndCheck( inputQuery, outputQuery, params, "first: '******', second: '******'" );
-    }
-
-    @Test
-    void shouldNotLogPasswordInParams()
-    {
-        String inputQuery = "CALL dbms.security.changePassword($password)";
-        String outputQuery = "CALL dbms.security.changePassword($password)";
-
-        runAndCheck( inputQuery, outputQuery, Collections.singletonMap( "password", ".changePassword(silly)" ),
-                "password: '******'" );
-    }
-
-    @Test
-    void shouldNotLogPasswordInDeprecatedParams()
-    {
-        String inputQuery = "CALL dbms.security.changePassword($password)";
-        String outputQuery = "CALL dbms.security.changePassword($password)";
-
-        runAndCheck( inputQuery, outputQuery, Collections.singletonMap( "password", "abc123" ), "password: '******'" );
-    }
-
-    @Test
-    void shouldNotLogPasswordDifferentWhitespace()
-    {
-        String inputQuery = "CALL dbms.security.changeUserPassword(%s'abc123'%s)";
-        String outputQuery = "CALL dbms.security.changeUserPassword(%s'******'%s)";
-
-        runAndCheck(
-                format( inputQuery, "'user',", "" ),
-                format( outputQuery, "'user',", "" ), emptyMap(), "" );
-        runAndCheck(
-                format( inputQuery, "'user', ", "" ),
-                format( outputQuery, "'user', ", "" ), emptyMap(), "" );
-        runAndCheck(
-                format( inputQuery, "'user' ,", " " ),
-                format( outputQuery, "'user' ,", " " ), emptyMap(), "" );
-        runAndCheck(
-                format( inputQuery, "'user',  ", "  " ),
-                format( outputQuery, "'user',  ", "  " ), emptyMap(), "" );
-    }
-
-    private void runAndCheck( String inputQuery, String outputQuery, Map<String,Object> params, String paramsString )
-    {
-        logProvider.clear();
-        ConfiguredQueryLogger queryLogger = queryLogger( logProvider,
-                Config.defaults( log_queries_parameter_logging_enabled, true ) );
-
-        // when
-        ExecutingQuery query = query( SESSION_1, defaultDbId, "neo", inputQuery, params, emptyMap() );
-        clock.forward( 10, TimeUnit.MILLISECONDS );
-        queryLogger.success( query );
-
-        // then
-        assertThat( logProvider ).forClass( this.getClass() ).forLevel( INFO )
-                .containsMessages( format( "%d ms: %s - %s - {%s} - {}", 10L, sessionConnectionDetails( SESSION_1, "neo" ),
-                        outputQuery,
-                        paramsString ) );
-    }
-
-    @Test
     void shouldBeAbleToLogDetailedTime()
     {
         // given
@@ -424,6 +275,7 @@ class ConfiguredQueryLoggerTest
         ExecutingQuery query = query( SESSION_1, "TestUser", QUERY_1 );
 
         // when
+        query.onObfuscatorReady( QueryObfuscator.PASSTHROUGH );
         clock.forward( 17, TimeUnit.MILLISECONDS );
         cpuClock.add( 12, TimeUnit.MILLISECONDS );
         queryLogger.success( query );
@@ -439,6 +291,7 @@ class ConfiguredQueryLoggerTest
         ConfiguredQueryLogger queryLogger = queryLogger( logProvider,
                 Config.defaults( GraphDatabaseSettings.log_queries_allocation_logging_enabled, true ) );
         ExecutingQuery query = query( SESSION_1, "TestUser", QUERY_1 );
+        query.onObfuscatorReady( QueryObfuscator.PASSTHROUGH );
         query.onCompilationCompleted( null, null, null );
         query.onExecutionStarted( memoryTracker );
 
@@ -460,6 +313,7 @@ class ConfiguredQueryLoggerTest
         ExecutingQuery query = query( SESSION_1, "TestUser", QUERY_1 );
 
         // when
+        query.onObfuscatorReady( QueryObfuscator.PASSTHROUGH );
         clock.forward( 12, TimeUnit.MILLISECONDS );
         pageHits = 17;
         pageFaults = 12;
@@ -482,6 +336,7 @@ class ConfiguredQueryLoggerTest
 
         // when
         clock.forward( 11, TimeUnit.MILLISECONDS );
+        query.onObfuscatorReady( QueryObfuscator.PASSTHROUGH );
         query.onCompilationCompleted( new CompilerInfo( "magic", "quantum", Collections.emptyList() ), READ_ONLY, null );
         queryLogger.success( query );
 
@@ -499,11 +354,13 @@ class ConfiguredQueryLoggerTest
 
         // when
         ExecutingQuery query = query( SESSION_1, "TestUser", QUERY_1 );
+        query.onObfuscatorReady( QueryObfuscator.PASSTHROUGH );
         clock.forward( 10, TimeUnit.MILLISECONDS );
         queryLogger.success( query );
 
         var otherDbId = randomNamedDatabaseId();
         ExecutingQuery anotherQuery = query( SESSION_1, otherDbId, "AnotherUser", QUERY_1 );
+        anotherQuery.onObfuscatorReady( QueryObfuscator.PASSTHROUGH );
         clock.forward( 10, TimeUnit.MILLISECONDS );
         queryLogger.success( anotherQuery );
 
@@ -527,6 +384,7 @@ class ConfiguredQueryLoggerTest
         ExecutingQuery query = query( SESSION_1, "TestUser", QUERY_1 );
 
         // when
+        query.onObfuscatorReady( QueryObfuscator.PASSTHROUGH );
         queryLogger.start( query );
         clock.forward( 11, TimeUnit.MILLISECONDS );
         queryLogger.success( query );
@@ -549,6 +407,9 @@ class ConfiguredQueryLoggerTest
         ConfiguredQueryLogger queryLogger = new ConfiguredQueryLogger( logProvider.getLog( getClass() ), config );
         ExecutingQuery query1 = query( SESSION_1, "TestUser", QUERY_1 );
         ExecutingQuery query2 = query( SESSION_1, "TestUser", QUERY_1 ); //same query text, distinguishable only by id
+
+        query1.onObfuscatorReady( QueryObfuscator.PASSTHROUGH );
+        query2.onObfuscatorReady( QueryObfuscator.PASSTHROUGH );
 
         // when
         queryLogger.start( query1 );

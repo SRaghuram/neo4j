@@ -29,6 +29,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.neo4j.bolt.runtime.AccessMode;
+import org.neo4j.cypher.internal.CypherQueryObfuscator;
 import org.neo4j.exceptions.InvalidSemanticsException;
 import org.neo4j.cypher.internal.ast.UseGraph;
 import org.neo4j.kernel.api.exceptions.Status;
@@ -70,6 +71,8 @@ public class FabricExecutor
         queryMonitor.start();
 
         FabricPlan plan = planner.plan( statement, params );
+
+        queryMonitor.getMonitoredQuery().onObfuscatorReady( CypherQueryObfuscator.apply( plan.obfuscationMetadata() ) );
 
         AccessMode accessMode = fabricTransaction.getTransactionInfo().getAccessMode();
 
