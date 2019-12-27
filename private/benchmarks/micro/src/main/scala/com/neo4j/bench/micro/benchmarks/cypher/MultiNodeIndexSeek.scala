@@ -31,16 +31,22 @@ class MultiNodeIndexSeek extends AbstractCypherBenchmark {
   var runtime: String = _
 
   @ParamValues(
-    allowed = Array("0.001", "0.01"),
-    base = Array("0.001"))
+    allowed = Array("0.0001", "0.001", "0.01"),
+    base = Array("0.0001"))
   @Param(Array[String]())
   var selectivity: Double = _
 
   @ParamValues(
     allowed = Array(LNG, DBL, STR_SML, STR_BIG),
-    base = Array(LNG, STR_SML))
+    base = Array(STR_SML))
   @Param(Array[String]())
   var propertyType: String = _
+
+  @ParamValues(
+    allowed = Array("2", "4", "8"),
+    base = Array("2", "4"))
+  @Param(Array[String]())
+  var indexes: Int = _
 
   override def description = "Cartesian Product of Multiple Index Seeks"
 
@@ -50,7 +56,6 @@ class MultiNodeIndexSeek extends AbstractCypherBenchmark {
 
   private val TOLERATED_ROW_COUNT_ERROR = 0.05
 
-  private var expectedRowCount: Double = _
   private var minExpectedRowCount: Int = _
   private var maxExpectedRowCount: Int = _
 
@@ -66,39 +71,51 @@ class MultiNodeIndexSeek extends AbstractCypherBenchmark {
       .build()
 
   override protected def afterDatabaseStart(config: DataGeneratorConfig): Unit = {
-    expectedRowCount = Math.pow(NODE_COUNT * selectivity, 2)
-    minExpectedRowCount = Math.round(expectedRowCount - TOLERATED_ROW_COUNT_ERROR * expectedRowCount).toInt
-    maxExpectedRowCount = Math.round(expectedRowCount + TOLERATED_ROW_COUNT_ERROR * expectedRowCount).toInt
+    val expectedSingleSeekRowCount = NODE_COUNT * selectivity
+    val minSingleSeekRowCount = expectedSingleSeekRowCount - TOLERATED_ROW_COUNT_ERROR * expectedSingleSeekRowCount
+    val maxSingleSeekRowCount = expectedSingleSeekRowCount + TOLERATED_ROW_COUNT_ERROR * expectedSingleSeekRowCount
+    minExpectedRowCount = Math.pow(minSingleSeekRowCount, indexes).toInt
+    maxExpectedRowCount = Math.pow(maxSingleSeekRowCount, indexes).toInt
   }
 
   override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
-    val a = "a"
-    val b = "b"
-    val literal = astLiteralFor(computeBuckets(0), propertyType)
-    val seekExpression = SingleQueryExpression(literal)
-    val indexSeekA = plans.NodeIndexSeek(
-      a,
+    val indexCreator: String => plans.NodeIndexSeek = plans.NodeIndexSeek(
+      _,
       astLabelToken(LABEL, planContext),
       Seq(IndexedProperty(astPropertyKeyToken(KEY, planContext), DoNotGetValue)),
-      seekExpression,
-      Set.empty,
-      IndexOrderNone)(IdGen)
-    val indexSeekB = plans.NodeIndexSeek(
-      b,
-      astLabelToken(LABEL, planContext),
-      Seq(IndexedProperty(astPropertyKeyToken(KEY, planContext), DoNotGetValue)),
-      seekExpression,
+      SingleQueryExpression(astLiteralFor(computeBuckets(0), propertyType)),
       Set.empty,
       IndexOrderNone)(IdGen)
 
+    val columns = (0 until indexes).map("n" + _).toList
+
+    val indexSeekA = indexCreator(columns(0))
+    val indexSeekB = indexCreator(columns(1))
     val cartesianProduct = plans.CartesianProduct(indexSeekA, indexSeekB)(IdGen)
-    val resultColumns = List(a, b)
-    val produceResults = plans.ProduceResult(cartesianProduct, columns = resultColumns)(IdGen)
 
-    val table = SemanticTable().addNode(astVariable(a)).addNode(astVariable(b))
+    val table = SemanticTable()
+      .addNode(astVariable(columns(0)))
+      .addNode(astVariable(columns(1)))
 
-    (produceResults, table, resultColumns)
+    val (finalCartesianProduct, finalTable) = addCartesianProducts(cartesianProduct, table, indexCreator, columns.slice(2, columns.size))
+
+    val produceResults = plans.ProduceResult(finalCartesianProduct, columns)(IdGen)
+
+    (produceResults, finalTable, columns)
   }
+
+  @scala.annotation.tailrec
+  private def addCartesianProducts(lhs: plans.CartesianProduct,
+                                   table: SemanticTable,
+                                   indexCreator: String => plans.NodeIndexSeek,
+                                   names: Seq[String]): (plans.CartesianProduct, SemanticTable) =
+    if (names.isEmpty) {
+      (lhs, table)
+    } else {
+      val newLhs = plans.CartesianProduct(lhs, indexCreator(names.head))(IdGen)
+      val newTable = SemanticTable().addNode(astVariable(names.head))
+      addCartesianProducts(newLhs, newTable, indexCreator, names.tail)
+    }
 
   @Benchmark
   @BenchmarkMode(Array(Mode.SampleTime))
