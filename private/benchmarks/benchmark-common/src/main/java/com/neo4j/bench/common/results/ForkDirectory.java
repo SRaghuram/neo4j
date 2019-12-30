@@ -67,7 +67,7 @@ public class ForkDirectory
             Path dir = parentDir.resolve( BenchmarkUtil.sanitize( name ) );
             assertDoesNotExist( dir );
             Files.createDirectory( dir );
-            createForkDetails( dir, name, profilers );
+            saveForkDetails( dir, name, profilers );
             return openAt( dir );
         }
         catch ( IOException e )
@@ -83,7 +83,7 @@ public class ForkDirectory
         return new ForkDirectory( dir );
     }
 
-    private static void createForkDetails( Path dir, String name, List<ProfilerType> profilers )
+    private static void saveForkDetails( Path dir, String name, List<ProfilerType> profilers )
     {
         Path jsonPath = create( dir, FORK_JSON );
         ForkDescription forkDescription = new ForkDescription( name );

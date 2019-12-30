@@ -170,7 +170,7 @@ public class Stores
         {
             new DataGenerator( config ).generate( Store.createFrom( topLevelStoreDir ), neo4jConfigFile );
             String storeName = topLevelStoreDir.getFileName().toString();
-            StoreUsage.load( storesDir )
+            StoreUsage.loadOrCreateIfAbsent( storesDir )
                       .register( storeName, benchmarkGroup, benchmark );
         }
         catch ( Exception e )
@@ -271,7 +271,7 @@ public class Stores
                 .append( format( "\t%1$-20s %2$s\n", bytesToString( BenchmarkUtil.bytes( storesDir ) ),
                                  storesDir.toAbsolutePath() ) )
                 .append( "---------------------------------------------------------------------\n" );
-        StoreUsage storeUsage = StoreUsage.load( storesDir );
+        StoreUsage storeUsage = StoreUsage.loadOrCreateIfAbsent( storesDir );
         for ( Path topLevelDir : findAllTopLevelDirs( storesDir ) )
         {
             sb.append( format( "\t%1$-20s %2$s\n", bytesToString( BenchmarkUtil.bytes( topLevelDir ) ), topLevelDir.toAbsolutePath() ) );
@@ -406,11 +406,11 @@ public class Stores
         }
     }
 
-    private static class StoreUsage
+    static class StoreUsage
     {
         private static final String STORE_USAGE_JSON = "store-usage.json";
 
-        private static StoreUsage load( Path dir )
+        static StoreUsage loadOrCreateIfAbsent( Path dir )
         {
             Path jsonPath = dir.resolve( STORE_USAGE_JSON );
             if ( !Files.exists( jsonPath ) )
@@ -451,14 +451,34 @@ public class Stores
             this.storeBenchmarks = new HashMap<>();
         }
 
-        private void register( String storeName, BenchmarkGroup benchmarkGroup, Benchmark benchmark )
+        /**
+         * 'Registering' a benchmark with a store means that the store was used by that benchmark.
+         *
+         * @throws IllegalStateException if benchmark had already been registered previously.
+         */
+        void register( String storeName, BenchmarkGroup benchmarkGroup, Benchmark benchmark )
         {
             Set<String> benchmarks = storeBenchmarks.computeIfAbsent( storeName, name -> new HashSet<>() );
-            benchmarks.add( FullBenchmarkName.from( benchmarkGroup, benchmark ).name() );
+            String benchmarkName = FullBenchmarkName.from( benchmarkGroup, benchmark ).name();
+            if ( !benchmarks.add( benchmarkName ) )
+            {
+                throw new IllegalStateException( format( "Benchmark '%s' was already registered to store '%s'", benchmarkName, storeName ) );
+            }
             JsonUtil.serializeJson( jsonPath, this );
         }
 
-        private Iterable<String> benchmarksUsingStore( String storeName )
+        /**
+         * @return all store-to-benchmark mappings
+         */
+        Map<String,Set<String>> allStoreBenchmarkInfo()
+        {
+            return storeBenchmarks;
+        }
+
+        /**
+         * @return all benchmarks registered as using the provided store
+         */
+        Iterable<String> benchmarksUsingStore( String storeName )
         {
             return storeBenchmarks.get( storeName );
         }
