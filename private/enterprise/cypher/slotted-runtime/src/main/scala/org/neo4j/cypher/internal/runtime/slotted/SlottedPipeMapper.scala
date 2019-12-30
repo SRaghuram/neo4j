@@ -366,6 +366,11 @@ class SlottedPipeMapper(fallback: PipeMapper,
       case Apply(_, _) =>
         ApplySlottedPipe(lhs, rhs)(id)
 
+      case CrossApply(lhsPlan, rhsPlan) =>
+        val rhsArgumentSize = physicalPlan.argumentSizes(rhsPlan.leftmostLeaf.id)
+        val lhsSlots = slotConfigs(lhsPlan.id)
+        CrossApplySlottedPipe(lhs, rhs, lhsSlots.numberOfLongs, lhsSlots.numberOfReferences, slots, rhsArgumentSize)(id)
+
       case _: AbstractSemiApply |
            _: AbstractSelectOrSemiApply =>
         fallback.onTwoChildPlan(plan, lhs, rhs)

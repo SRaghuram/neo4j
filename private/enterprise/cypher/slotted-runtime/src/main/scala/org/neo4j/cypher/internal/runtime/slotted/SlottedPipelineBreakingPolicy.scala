@@ -34,6 +34,7 @@ object SlottedPipelineBreakingPolicy extends PipelineBreakingPolicy {
 
         // 2 child operators
       case _: CartesianProduct |
+           _: CrossApply |
            _: RightOuterHashJoin |
            _: LeftOuterHashJoin |
            _: NodeHashJoin |

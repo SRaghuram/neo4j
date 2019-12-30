@@ -643,13 +643,14 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
         lhs.newReference(name, false, CTBoolean)
         lhs
 
-      case _: CartesianProduct =>
+      case _: CartesianProduct |
+           _: CrossApply =>
         // A new pipeline is not strictly needed here unless we have batching/vectorization
         recordArgument(lp)
         val result = breakingPolicy.invoke(lp, lhs, argument.slotConfiguration)
         // For the implementation of the slotted pipe to use array copy
         // it is very important that we add the slots in the same order
-        rhs.foreachSlotOrdered(result.add, p => result.newCachedProperty(p, shouldDuplicate = true), applyPlan => result.newArgument(applyPlan) , argument.argumentSize)
+        rhs.foreachSlotOrdered(result.add, p => result.newCachedProperty(p, shouldDuplicate = true), applyPlan => result.newArgument(applyPlan), argument.argumentSize)
 
         result
 
@@ -714,7 +715,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
         // If both lhs and rhs has a long slot with the same type the result should
         // also use a long slot, otherwise we use a ref slot.
         val result = lhs.emptyUnderSameApply()
-        lhs.foreachSlot({
+        lhs.foreachSlotOrdered({
           case (key, lhsSlot: LongSlot) =>
             //find all shared variables and look for other long slots with same type
             rhs.get(key).foreach {
@@ -733,7 +734,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
             }
         }, {
           // Cached properties that exist on both sides are retained
-          case (key, _) if rhs.hasCachedPropertySlot(key) =>
+          case key if rhs.hasCachedPropertySlot(key) =>
             result.newCachedProperty(key)
           case _ => //do nothing
         })

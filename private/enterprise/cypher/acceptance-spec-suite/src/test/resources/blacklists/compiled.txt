@@ -241,3 +241,6 @@ Feature "SubqueryAcceptance": Scenario "Should treat variables with the same nam
 Feature "SubqueryAcceptance": Scenario "Post-processing of a subquery result"
 Feature "SubqueryAcceptance": Scenario "Should work with preceding MATCH and aggregation"
 Feature "SubqueryAcceptance": Scenario "Aggregating top and bottom results within correlated subquery"
+Feature "SubqueryAcceptance": Scenario "Aggregating top and bottom results from correlated subquery"
+Feature "SubqueryAcceptance": Scenario "Aggregation on imported variables"
+Feature "SubqueryAcceptance": Scenario "Grouping and aggregating within correlated subquery"
