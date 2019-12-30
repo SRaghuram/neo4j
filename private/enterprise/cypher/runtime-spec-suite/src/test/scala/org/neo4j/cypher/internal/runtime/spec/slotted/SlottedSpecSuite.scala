@@ -28,7 +28,6 @@ class SlottedExpandAllTest extends ExpandAllTestBase(ENTERPRISE.DEFAULT, Slotted
                            with ExpandAllWithOtherOperatorsTestBase[EnterpriseRuntimeContext]
 class SlottedExpandIntoTest extends ExpandIntoTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
                             with ExpandIntoWithOtherOperatorsTestBase[EnterpriseRuntimeContext]
-                            with ExpandIntoArgumentOrderTestBase[CommunityRuntimeContext]
 class SlottedOptionalExpandAllTest extends OptionalExpandAllTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedOptionalExpandIntoTest extends OptionalExpandIntoTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedVarExpandAllTest extends VarLengthExpandTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)

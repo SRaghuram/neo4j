@@ -105,11 +105,9 @@ class PipelinedExpandAllTestNoFusing extends ExpandAllTestBase(NO_FUSING, PIPELI
 // EXPAND INTO
 class PipelinedExpandIntoTest extends ExpandIntoTestBase(FUSING, PIPELINED, SIZE_HINT)
                               with ExpandIntoWithOtherOperatorsTestBase[EnterpriseRuntimeContext]
-                              with ExpandIntoArgumentOrderTestBase[CommunityRuntimeContext]
                               with PipelinedSpecSuite
 class PipelinedExpandIntoTestNoFusing extends ExpandIntoTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
                                       with ExpandIntoWithOtherOperatorsTestBase[EnterpriseRuntimeContext]
-                                      with ExpandIntoArgumentOrderTestBase[CommunityRuntimeContext]
                                       with PipelinedSpecSuite
 
 // OPTIONAL EXPAND ALL
