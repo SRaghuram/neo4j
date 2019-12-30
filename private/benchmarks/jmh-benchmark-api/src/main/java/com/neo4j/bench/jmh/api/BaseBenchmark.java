@@ -42,7 +42,8 @@ public abstract class BaseBenchmark
 
         BenchmarkGroupDirectory benchmarkGroupDir = BenchmarkGroupDirectory.findOrCreateAt( runnerParams.workDir(), group );
         BenchmarkDirectory benchmarkDir = benchmarkGroupDir.findOrCreate( benchmark );
-        ForkDirectory forkDirectory = benchmarkDir.findOrCreate( runnerParams.runId(), emptyList() );
+        String forkName = runnerParams.runId();
+        ForkDirectory forkDirectory = benchmarkDir.findOrCreate( forkName, emptyList() );
 
         onSetup( group, benchmark, runnerParams, benchmarkParams, forkDirectory );
     }
