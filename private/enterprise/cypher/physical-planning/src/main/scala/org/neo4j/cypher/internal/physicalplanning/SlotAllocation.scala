@@ -715,29 +715,36 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
         // If both lhs and rhs has a long slot with the same type the result should
         // also use a long slot, otherwise we use a ref slot.
         val result = lhs.emptyUnderSameApply()
-        lhs.foreachSlotOrdered({
-          case (key, lhsSlot: LongSlot) =>
-            //find all shared variables and look for other long slots with same type
-            rhs.get(key).foreach {
-              case LongSlot(_, rhsNullable, typ) if typ == lhsSlot.typ =>
-                result.newLong(key, lhsSlot.nullable || rhsNullable, typ)
-              case rhsSlot =>
-                val newType = if (lhsSlot.typ == rhsSlot.typ) lhsSlot.typ else CTAny
-                result.newReference(key, lhsSlot.nullable || rhsSlot.nullable, newType)
-            }
-          case (key, lhsSlot) =>
-            //We know lhs uses a ref slot so just look for shared variables.
-            rhs.get(key).foreach {
-              rhsSlot =>
-                val newType = if (lhsSlot.typ == rhsSlot.typ) lhsSlot.typ else CTAny
-                result.newReference(key, lhsSlot.nullable || rhsSlot.nullable, newType)
-            }
-        }, {
+        def addVariableToResult(key: String, slot: Slot): Unit = slot match {
+            case lhsSlot: LongSlot =>
+              //find all shared variables and look for other long slots with same type
+              rhs.get(key).foreach {
+                case LongSlot(_, rhsNullable, typ) if typ == lhsSlot.typ =>
+                  result.newLong(key, lhsSlot.nullable || rhsNullable, typ)
+                case rhsSlot =>
+                  val newType = if (lhsSlot.typ == rhsSlot.typ) lhsSlot.typ else CTAny
+                  result.newReference(key, lhsSlot.nullable || rhsSlot.nullable, newType)
+              }
+            case lhsSlot =>
+              //We know lhs uses a ref slot so just look for shared variables.
+              rhs.get(key).foreach {
+                rhsSlot =>
+                  val newType = if (lhsSlot.typ == rhsSlot.typ) lhsSlot.typ else CTAny
+                  result.newReference(key, lhsSlot.nullable || rhsSlot.nullable, newType)
+              }
+          }
+
+        lhs.foreachSlotOrdered(
+          (key, slot) => if (!lhs.isAlias(key)) addVariableToResult(key, slot),
+          _ => () // ignore on the first pass
+        )
+
+        lhs.foreachSlotOrdered(
+          (key, slot) => if (lhs.isAlias(key)) addVariableToResult(key, slot),
           // Cached properties that exist on both sides are retained
-          case key if rhs.hasCachedPropertySlot(key) =>
-            result.newCachedProperty(key)
-          case _ => //do nothing
-        })
+          key => if (rhs.hasCachedPropertySlot(key)) result.newCachedProperty(key)
+        )
+
         result
 
       case _: AssertSameNode =>
