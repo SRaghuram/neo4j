@@ -6,6 +6,7 @@
 package com.neo4j.bench.common.results;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.neo4j.bench.common.model.Benchmark;
 import com.neo4j.bench.common.model.BenchmarkGroup;
 import com.neo4j.bench.common.profiling.ProfilerType;
@@ -123,12 +124,12 @@ public class DirectoryTest
         Path expectedForkDirPath1 = benchDirPath.resolve( sanitize( FORK1 ) );
         assertThat( "Fork dir had unexpected location", expectedForkDirPath1, equalTo( forkDirPath1 ) );
         assertTrue( Files.exists( expectedForkDirPath1 ), "Fork dir was not created" );
-        assertThat( "Fork dir should know its profilers", forkDir1.profilers(), equalTo( expectedProfilers1 ) );
+        assertThat( "Fork dir should know its profilers", forkDir1.profilers(), equalTo( Sets.newHashSet( expectedProfilers1 ) ) );
         assertThat( "Fork dir should know its name", forkDir1.name(), equalTo( FORK1 ) );
 
         ForkDirectory forkDir2 = benchDir.create( FORK2, expectedProfilers2 );
 
-        assertThat( forkDir2.profilers(), equalTo( expectedProfilers2 ) );
+        assertThat( forkDir2.profilers(), equalTo( Sets.newHashSet( expectedProfilers2 ) ) );
 
         assertThat( "Bench dir contained unexpected forks",
                     benchDir.forks().stream().map( ForkDirectory::name ).collect( toList() ),
