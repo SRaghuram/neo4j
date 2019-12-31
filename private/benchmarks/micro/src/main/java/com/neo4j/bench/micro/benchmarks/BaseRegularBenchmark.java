@@ -33,14 +33,13 @@ public abstract class BaseRegularBenchmark extends BaseBenchmark
                                   BenchmarkParams benchmarkParams,
                                   ForkDirectory forkDirectory ) throws Throwable
     {
-        Stores stores = new Stores( runnerParams.workDir() );
         Neo4jConfig neo4jConfig = Neo4jConfig.fromJson( baseNeo4jConfig );
 
         Path neo4jConfigFile = forkDirectory.create( "neo4j.conf" );
         System.out.println( "\nWriting Neo4j config to: " + neo4jConfigFile.toAbsolutePath() );
         Neo4jConfigBuilder.writeToFile( neo4jConfig, neo4jConfigFile );
 
-        benchmarkSetup( group, benchmark, stores, neo4jConfig );
+        benchmarkSetup( group, benchmark, neo4jConfig, forkDirectory);
     }
 
     @Override
@@ -54,7 +53,10 @@ public abstract class BaseRegularBenchmark extends BaseBenchmark
      * In addition to what JMH does, this tool has a Neo4j-specific life-cycle.
      * It is easier to understand how these two life-cycles interact if this method is used instead of @Setup(Level.Trial).
      */
-    protected void benchmarkSetup( BenchmarkGroup group, Benchmark benchmark, Stores stores, Neo4jConfig neo4jConfig ) throws Throwable
+    protected void benchmarkSetup( BenchmarkGroup group,
+                                   Benchmark benchmark,
+                                   Neo4jConfig neo4jConfig,
+                                   ForkDirectory forkDirectory ) throws Throwable
     {
     }
 
