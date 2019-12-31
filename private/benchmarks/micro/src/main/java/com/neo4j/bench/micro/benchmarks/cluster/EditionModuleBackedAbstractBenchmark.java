@@ -8,16 +8,16 @@ package com.neo4j.bench.micro.benchmarks.cluster;
 import com.neo4j.bench.common.model.Benchmark;
 import com.neo4j.bench.common.model.BenchmarkGroup;
 import com.neo4j.bench.common.model.Neo4jConfig;
-import com.neo4j.bench.common.profiling.FullBenchmarkName;
+import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.micro.benchmarks.BaseRegularBenchmark;
-import com.neo4j.bench.micro.data.Stores;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransactionMarshalV2;
 import com.neo4j.causalclustering.core.state.machines.tx.TransactionRepresentationReplicatedTransaction;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Stack;
 
 import org.neo4j.configuration.Config;
@@ -57,22 +57,17 @@ public abstract class EditionModuleBackedAbstractBenchmark extends BaseRegularBe
     protected abstract void shutdown();
 
     @Override
-    protected void benchmarkSetup( BenchmarkGroup group, Benchmark benchmark, Stores stores, Neo4jConfig neo4jConfig ) throws Throwable
+    protected void benchmarkSetup( BenchmarkGroup group,
+                                   Benchmark benchmark,
+                                   Neo4jConfig neo4jConfig,
+                                   ForkDirectory forkDirectory ) throws Throwable
     {
-        tempDirectory = createTempDirectory( group, benchmark, stores );
+        Path tempDirectory = Paths.get( forkDirectory.toAbsolutePath() ).resolve( "temp-db" );
+        BenchmarkUtil.assertDoesNotExist( tempDirectory );
         managementService = new DatabaseManagementServiceFactory( DatabaseInfo.COMMUNITY, TxProbingEditionModule::new )
-                .build( Config.defaults(),GraphDatabaseDependencies.newDependencies().dependencies( noOpSystemGraphInitializer() ) );
+                .build( Config.defaults(), GraphDatabaseDependencies.newDependencies().dependencies( noOpSystemGraphInitializer() ) );
         graphDatabaseFacade = (GraphDatabaseFacade) managementService.database( Config.defaults().get( GraphDatabaseSettings.default_database ) );
         setUp();
-    }
-
-    private Path createTempDirectory( BenchmarkGroup group, Benchmark benchmark, Stores stores )
-    {
-        FullBenchmarkName benchmarkName = FullBenchmarkName.from( group, benchmark );
-        String tempDirName = benchmarkName.sanitizedName() + "-temp-work-dir";
-        tempDirectory = stores.storesDir().resolve( tempDirName );
-        BenchmarkUtil.assertDoesNotExist( tempDirectory );
-        return BenchmarkUtil.tryMkDir( tempDirectory );
     }
 
     @Override
@@ -80,8 +75,6 @@ public abstract class EditionModuleBackedAbstractBenchmark extends BaseRegularBe
     {
         shutdown();
         managementService.shutdown();
-        BenchmarkUtil.assertDirectoryExists( tempDirectory );
-        BenchmarkUtil.deleteDir( tempDirectory );
     }
 
     protected ClusterTx popLatest()

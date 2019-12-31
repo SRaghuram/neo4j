@@ -7,10 +7,10 @@ package com.neo4j.bench.micro.benchmarks;
 
 import com.neo4j.bench.common.model.BenchmarkGroup;
 import com.neo4j.bench.common.model.Neo4jConfig;
+import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
 import com.neo4j.bench.jmh.api.config.ParamValues;
 import com.neo4j.bench.micro.Main;
-import com.neo4j.bench.micro.data.Stores;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.CompilerControl;
@@ -54,8 +54,8 @@ public class RecentBufferBenchmark extends BaseRegularBenchmark
     @Override
     protected void benchmarkSetup( BenchmarkGroup group,
                                    com.neo4j.bench.common.model.Benchmark benchmark,
-                                   Stores stores,
-                                   Neo4jConfig neo4jConfig )
+                                   Neo4jConfig neo4jConfig,
+                                   ForkDirectory forkDirectory )
     {
         switch ( impl )
         {

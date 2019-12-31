@@ -8,11 +8,14 @@ package com.neo4j.bench.micro.benchmarks.cluster;
 import com.neo4j.bench.common.model.Benchmark;
 import com.neo4j.bench.common.model.BenchmarkGroup;
 import com.neo4j.bench.common.model.Neo4jConfig;
-import com.neo4j.bench.micro.data.Stores;
+import com.neo4j.bench.common.results.BenchmarkDirectory;
+import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
+import com.neo4j.bench.common.results.ForkDirectory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -80,11 +83,15 @@ public class PathModelTest
             }
         };
 
-        Stores stores = new Stores( testDirectory.absolutePath().toPath() );
         BenchmarkGroup benchmarkGroup = new BenchmarkGroup( "group1" );
         Benchmark benchmark = Benchmark.benchmarkFor( "test benchmark", "benchmark1", Benchmark.Mode.LATENCY, Collections.emptyMap() );
 
-        editionModuleBackedAbstractBenchmark.benchmarkSetup( benchmarkGroup, benchmark, stores, Neo4jConfig.empty() );
+        Path workDir = testDirectory.absolutePath().toPath();
+        BenchmarkGroupDirectory benchmarkGroupDirectory = BenchmarkGroupDirectory.createAt( workDir, benchmarkGroup );
+        BenchmarkDirectory benchmarkDirectory = benchmarkGroupDirectory.findOrCreate( benchmark );
+        ForkDirectory forkDirectory = benchmarkDirectory.create( "fork", Collections.emptyList() );
+
+        editionModuleBackedAbstractBenchmark.benchmarkSetup( benchmarkGroup, benchmark, Neo4jConfig.empty(), forkDirectory );
 
         db = editionModuleBackedAbstractBenchmark.db();
     }
