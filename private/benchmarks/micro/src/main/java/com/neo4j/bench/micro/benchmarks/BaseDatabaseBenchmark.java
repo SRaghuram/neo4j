@@ -37,22 +37,24 @@ import org.neo4j.internal.kernel.api.NodeValueIndexCursor;
 import org.neo4j.internal.kernel.api.RelationshipScanCursor;
 
 /**
- * Benchmark classes that extend this class will operate with the following life-cycle:
- * <br>
- * <br>
- * Setup:
+ * Benchmark classes that extend this class will operate with the following life-cycle (note that there is no <code>'setup()'</code> method):
+ * <p>
  * <ol>
- * <li>Base store generation is performed, using the <code>DataGeneratorConfig</code> returned by <code>getConfig()</code></li>
- * <li>The <code>Augmenterizer</code> returned by <code>augmentDataGeneration()</code> is now invoked, to perform additional store generation</li>
- * <li>After store generation & before starting the database, <code>afterDataGeneration()</code> will be invoked.
- * Override this callback to mess with the generated store, or to prevent the database from starting.</li>
- * <li>After the database is started <code>afterDatabaseStart()</code> will be called.
- * Note that if <code>afterDataGeneration()</code> requests for the database to not be started this callback will never be called.</li>
- * <li>Actual benchmark starts</li>
- * </ol>
- * Tear Down:
- * <ol>
- * <li>After benchmark completes <code>databaseBenchmarkTearDown()</code> will be called, teardown logic should live in there</li>
+ * <li>{@link BaseDatabaseBenchmark#getConfig()}</li>
+ * <li>Store Generation <p>
+ *     Base store generation is performed, using the <code>DataGeneratorConfig</code> returned by <code>getConfig()</code> </li>
+ * <li>Store Augmentation <p>
+ *     The <code>Augmenterizer</code> returned by <code>augmentDataGeneration()</code> is now invoked, to perform additional store generation</li>
+ * <li>{@link BaseDatabaseBenchmark#afterDataGeneration()} <p>
+ *     After store generation & before starting of the database, <code>afterDataGeneration()</code> will be called. <p>
+ *     Override this callback to mess with the generated store, or to prevent the database from starting.</li>
+ * <li>{@link BaseDatabaseBenchmark#afterDatabaseStart()} <p>
+ *     After the database is started <code>afterDatabaseStart()</code> will be called, <p>
+ *     but only if {@link BaseDatabaseBenchmark#afterDataGeneration()} returns {@link StartDatabaseInstruction#START_DB}. <p>
+ *     Note that if {@link StartDatabaseInstruction#DO_NOT_START_DB} is returned this callback will never be called.</li>
+ * <li>Benchmark Execution</li>
+ * <li>{@link BaseDatabaseBenchmark#benchmarkTearDown()}</li> <p>
+ *     After benchmark completes teardown will be called, all teardown logic should live in that method.
  * </ol>
  */
 @State( Scope.Benchmark )
@@ -154,7 +156,8 @@ public abstract class BaseDatabaseBenchmark extends BaseBenchmark
 
     /**
      * Called after store generation & before starting of database.
-     * Return value specifies whether store should be started.
+     *
+     * @return value specifying whether store should be started.
      */
     protected StartDatabaseInstruction afterDataGeneration()
     {
@@ -168,6 +171,11 @@ public abstract class BaseDatabaseBenchmark extends BaseBenchmark
     {
     }
 
+    /**
+     * Used to define the size & structure of the store that will be used by this benchmark.
+     *
+     * @return the instance of {@link DataGeneratorConfig} that will guide store generation.
+     */
     protected DataGeneratorConfig getConfig()
     {
         return new DataGeneratorConfigBuilder()
