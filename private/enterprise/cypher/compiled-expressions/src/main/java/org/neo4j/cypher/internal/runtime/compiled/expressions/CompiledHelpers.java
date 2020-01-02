@@ -11,6 +11,7 @@ import org.neo4j.cypher.internal.runtime.KernelAPISupport$;
 import org.neo4j.exceptions.CypherTypeException;
 import org.neo4j.exceptions.ParameterWrongTypeException;
 import org.neo4j.internal.kernel.api.IndexQuery;
+import org.neo4j.util.CalledFromGeneratedCode;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.BooleanValue;
 import org.neo4j.values.storable.Value;
@@ -23,7 +24,6 @@ import static org.neo4j.values.storable.Values.NO_VALUE;
 /**
  * Contains helper methods used from compiled expressions
  */
-@SuppressWarnings( "unused" )
 public final class CompiledHelpers
 {
     private CompiledHelpers()
@@ -43,23 +43,27 @@ public final class CompiledHelpers
         return (Value) value;
     }
 
+    @CalledFromGeneratedCode
     public static AnyValue nodeOrNoValue( ExecutionContext context, DbAccess dbAccess, int offset )
     {
         long nodeId = context.getLongAt( offset );
         return nodeId == -1 ? NO_VALUE : dbAccess.nodeById( nodeId );
     }
 
+    @CalledFromGeneratedCode
     public static AnyValue nodeOrNoValue( DbAccess dbAccess, long nodeId )
     {
         return nodeId == -1 ? NO_VALUE : dbAccess.nodeById( nodeId );
     }
 
+    @CalledFromGeneratedCode
     public static AnyValue relationshipOrNoValue( ExecutionContext context, DbAccess dbAccess, int offset )
     {
         long relationshipId = context.getLongAt( offset );
         return relationshipId == -1 ? NO_VALUE : dbAccess.relationshipById( relationshipId );
     }
 
+    @CalledFromGeneratedCode
     public static boolean possibleRangePredicate( IndexQuery query )
     {
         ValueGroup valueGroup = query.valueGroup();
@@ -74,6 +78,7 @@ public final class CompiledHelpers
         return false;
     }
 
+    @CalledFromGeneratedCode
     public static long nodeFromAnyValue( AnyValue value )
     {
         if ( value instanceof VirtualNodeValue )
@@ -87,6 +92,7 @@ public final class CompiledHelpers
         }
     }
 
+    @CalledFromGeneratedCode
     public static long nodeIdOrNullFromAnyValue( AnyValue value )
     {
         if ( value instanceof VirtualNodeValue )
