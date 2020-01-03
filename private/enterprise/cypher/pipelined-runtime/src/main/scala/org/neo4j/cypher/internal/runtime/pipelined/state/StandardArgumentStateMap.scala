@@ -62,7 +62,10 @@ object StandardArgumentStateMap {
     // No actual "taking" in single threaded
     override def take(): Boolean = true
 
-    override def toString: String = {
+   // No actual "taking" in single threaded
+   override def isTaken: Boolean = isZero
+
+   override def toString: String = {
       s"[count: ${_count}, state: $state]"
     }
   }

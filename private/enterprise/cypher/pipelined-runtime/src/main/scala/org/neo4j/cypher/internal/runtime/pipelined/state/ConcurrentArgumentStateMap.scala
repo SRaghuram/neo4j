@@ -8,6 +8,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.state
 import java.util.concurrent.atomic.AtomicLong
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
+import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.pipelined.state.AbstractArgumentStateMap.ImmutableStateController
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory}
@@ -33,6 +34,23 @@ class ConcurrentArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId:
       new ImmutableStateController(factory.newConcurrentArgumentState(argument, argumentMorsel, argumentRowIdsForReducers))
     } else {
       new ConcurrentStateController(factory.newConcurrentArgumentState(argument, argumentMorsel, argumentRowIdsForReducers))
+    }
+  }
+
+  override def update(argumentRowId: Long, onState: STATE => Unit): Unit = {
+    val controller = controllers.get(argumentRowId)
+    if (controller != null) {
+      // This increment and decrement serves as a soft lock to make sure that if we apply `onState`, the modified state will be taken.
+      controller.increment()
+      if (!controller.isTaken) {
+        // If we incremented before a different Thread tried to take, it won't be able to take until the update is performed and we decremented,
+        // thus it will take the updated state.
+        // If, on the other hand, the other Thread took before our increment, we will not enter this if block, and the update, including any side effects like incrementing counts,
+        // won't be performed.
+        DebugSupport.ASM.log("ASM %s update %03d", argumentStateMapId, argumentRowId)
+        onState(controller.state)
+      }
+      controller.decrement()
     }
   }
 }
@@ -61,6 +79,10 @@ object ConcurrentArgumentStateMap {
     override def take(): Boolean = count.getAndSet(TAKEN) >= 0
 
     override def isZero: Boolean = count.get() == 0
+
+    // Since we allow increments/decrements for soft locks, the value can deviate from [[TAKEN]]
+    // and we count any negative value as taken
+    override def isTaken: Boolean = count.get() < 0
 
     override def toString: String = {
       s"[count: ${count.get()}, state: $state]"

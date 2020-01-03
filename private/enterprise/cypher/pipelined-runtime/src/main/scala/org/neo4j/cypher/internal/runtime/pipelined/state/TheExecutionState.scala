@@ -240,7 +240,8 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
                          resources: QueryResources,
                          failedPipeline: ExecutablePipeline): Unit = {
 
-    DebugSupport.ERROR_HANDLING.log("Starting ExecutionState.failQuery, because of %s", throwable)
+    DebugSupport.ERROR_HANDLING.log("Starting ExecutionState.failQuery")
+    DebugSupport.ERROR_HANDLING.log(throwable)
     tracker.error(throwable)
     closeOutstandingWork(resources, failedPipeline)
   }

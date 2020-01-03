@@ -35,6 +35,7 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
   protected def newStateController(argument: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): CONTROLLER
 
   override def update(argumentRowId: Long, onState: STATE => Unit): Unit = {
+    DebugSupport.ASM.log("ASM %s update %03d", argumentStateMapId, argumentRowId)
     onState(controllers.get(argumentRowId).state)
   }
 
@@ -80,6 +81,7 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
       if (controller.tryTake()) {
         lastCompletedArgumentId += 1
         controllers.remove(controller.state.argumentRowId)
+        DebugSupport.ASM.log("ASM %s take %03d", argumentStateMapId, controller.state.argumentRowId)
         ArgumentStateWithCompleted(controller.state, isCompleted = true)
       } else {
         ArgumentStateWithCompleted(controller.state, isCompleted = false)
@@ -201,6 +203,11 @@ object AbstractArgumentStateMap {
       * @return if this call succeeded in taking the controller
       */
     def tryTake(): Boolean
+
+    /**
+     * @return true if this controller was taken.
+     */
+    def isTaken: Boolean
   }
 
   /**
@@ -223,6 +230,8 @@ object AbstractArgumentStateMap {
     override def take(): Boolean = throw new IllegalStateException(s"Cannot mutate ${this.getClass.getSimpleName}")
 
     override def isZero: Boolean = true
+
+    override def isTaken: Boolean = true
 
     override def toString: String = {
       s"[immutable, state: $state]"

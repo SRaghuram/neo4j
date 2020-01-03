@@ -18,6 +18,13 @@ trait ArgumentStateMap[S <: ArgumentState] {
 
   def clearAll(f: S => Unit): Unit
 
+  /**
+   * Update the state for the given argument row id.
+   * Make sure that the controller exists and the state is not taken, an donly apply the function then.
+   *
+   * @param argumentRowId the argument row id.
+   * @param onState the function to apply on the state.
+   */
   def update(argumentRowId: Long, onState: S => Unit): Unit
 
   /**

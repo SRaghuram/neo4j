@@ -93,12 +93,14 @@ class OptionalMorselBuffer(id: BufferId,
     if (DebugSupport.BUFFERS.enabled) {
       DebugSupport.BUFFERS.log(s"[put]   $this <- ${data.mkString(", ")}")
     }
-    // We increment for each morsel view, otherwise we can reach a count of zero too early, when the all data arrived in this buffer, but has not been
-    // streamed out yet.
-    tracker.incrementBy(data.length)
+
     var i = 0
     while (i < data.length) {
       argumentStateMap.update(data(i).argumentRowId, {acc =>
+        // We increment for each morsel view, otherwise we can reach a count of zero too early, when the all data arrived in this buffer, but has not been
+        // streamed out yet.
+        // We have to do the increments in this lambda function, because it can happed that we try to update argument row IDs that are concurrently cancelled and taken
+        tracker.increment() // Thought: If we increment before (line 98), the count will not match the number of states that exist, since some might be cancelled already.
         acc.update(data(i).value)
         forAllArgumentReducers(downstreamArgumentReducers, acc.argumentRowIdsForReducers, _.increment(_))
       })
