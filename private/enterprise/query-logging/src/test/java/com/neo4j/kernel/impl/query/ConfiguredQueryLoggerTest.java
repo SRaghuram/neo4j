@@ -5,6 +5,9 @@
  */
 package com.neo4j.kernel.impl.query;
 
+import com.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
+import com.neo4j.server.security.enterprise.auth.UserManagementProcedures;
+import com.neo4j.server.security.enterprise.log.SecurityLog;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -17,6 +20,8 @@ import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.cypher.CypherQueryObfuscatorFactory;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.connectioninfo.ClientConnectionInfo;
 import org.neo4j.kernel.api.query.CompilerInfo;
 import org.neo4j.kernel.api.query.ExecutingQuery;
@@ -24,6 +29,7 @@ import org.neo4j.kernel.api.query.QueryObfuscator;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.query.clientconnection.BoltConnectionInfo;
 import org.neo4j.kernel.impl.util.ValueUtils;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.test.FakeCpuClock;
@@ -66,6 +72,7 @@ class ConfiguredQueryLoggerTest
     private long pageFaults;
     private long thresholdInMillis = 10;
     private int queryId;
+    private final ObfuscatorFactory obfuscatorFactory = new ObfuscatorFactory();
 
     @Test
     void shouldLogQuerySlowerThanThreshold()
@@ -265,6 +272,163 @@ class ConfiguredQueryLoggerTest
                 .containsMessageWithException( format( "%d ms: %s - %s - {Place: 'Town'}", 10L,
                             sessionConnectionDetails( SESSION_1, "AnotherUser" ), QUERY_1 ), error );
     }
+
+    @Test
+    void shouldNotLogPassword()
+    {
+        String inputQuery = "CALL dbms.security.changePassword('abc123')";
+        String outputQuery = "CALL dbms.security.changePassword('******')";
+
+        runAndCheck( inputQuery, outputQuery, emptyMap(), "" );
+    }
+
+    @Test
+    void shouldNotLogChangeUserPassword()
+    {
+        String inputQuery = "CALL dbms.security.changeUserPassword('user', 'abc123')";
+        String outputQuery = "CALL dbms.security.changeUserPassword('user', '******')";
+
+        runAndCheck( inputQuery, outputQuery, emptyMap(), "" );
+    }
+
+    @Test
+    void shouldNotLogChangeUserPasswordWithChangeRequired()
+    {
+        String inputQuery = "CALL dbms.security.changeUserPassword('user', 'abc123', true)";
+        String outputQuery = "CALL dbms.security.changeUserPassword('user', '******', true)";
+
+        runAndCheck( inputQuery, outputQuery, emptyMap(), "" );
+    }
+
+    @Test
+    void shouldNotLogPasswordNull()
+    {
+        String inputQuery = "CALL dbms.security.changeUserPassword(null, 'password')";
+        String outputQuery = "CALL dbms.security.changeUserPassword(null, '******')";
+
+        runAndCheck( inputQuery, outputQuery, emptyMap(), "" );
+    }
+
+    @Test
+    void shouldNotLogPasswordExplain()
+    {
+        String inputQuery = "EXPLAIN CALL dbms.security.changePassword('abc123')";
+        String outputQuery = "EXPLAIN CALL dbms.security.changePassword('******')";
+
+        runAndCheck( inputQuery, outputQuery, emptyMap(), "" );
+    }
+
+    @Test
+    void shouldNotLogPasswordEvenIfPasswordIsSilly()
+    {
+        String inputQuery = "CALL dbms.security.changePassword('.changePassword(\\'si\"lly\\')')";
+        String outputQuery = "CALL dbms.security.changePassword('******')";
+
+        runAndCheck( inputQuery, outputQuery, emptyMap(), "" );
+    }
+
+    @Test
+    void shouldNotLogPasswordEvenIfYouDoTwoThingsAtTheSameTime()
+    {
+        String inputQuery = "CALL dbms.security.changeUserPassword('neo4j','.changePassword(silly)') " +
+                            "CALL dbms.security.changeUserPassword('smith','other$silly') RETURN 1";
+        String outputQuery = "CALL dbms.security.changeUserPassword('neo4j','******') " +
+                             "CALL dbms.security.changeUserPassword('smith','******') RETURN 1";
+
+        runAndCheck( inputQuery, outputQuery, emptyMap(), "" );
+    }
+
+    @Test
+    void shouldNotLogCreateUserPassword()
+    {
+        String inputQuery = "CALL dbms.security.createUser('user', 'abc123')";
+        String outputQuery = "CALL dbms.security.createUser('user', '******')";
+
+        runAndCheck( inputQuery, outputQuery, emptyMap(), "" );
+    }
+
+    @Test
+    void shouldNotLogCreateUserPasswordWithRequiredChange()
+    {
+        String inputQuery = "CALL dbms.security.createUser('user', 'abc123', true)";
+        String outputQuery = "CALL dbms.security.createUser('user', '******', true)";
+
+        runAndCheck( inputQuery, outputQuery, emptyMap(), "" );
+    }
+
+    @Test
+    void shouldNotLogPasswordEvenIfYouDoTwoThingsAtTheSameTimeWithSeveralParms()
+    {
+        String inputQuery = "CALL dbms.security.changeUserPassword('neo4j',$first) " +
+                            "CALL dbms.security.changeUserPassword('smith',$second) RETURN 1";
+        String outputQuery = "CALL dbms.security.changeUserPassword('neo4j',$first) " +
+                             "CALL dbms.security.changeUserPassword('smith',$second) RETURN 1";
+
+        Map<String,Object> params = new HashMap<>();
+        params.put( "first", ".changePassword(silly)" );
+        params.put( "second", ".other$silly" );
+
+        runAndCheck( inputQuery, outputQuery, params, "first: '******', second: '******'" );
+    }
+
+    @Test
+    void shouldNotLogPasswordInParams()
+    {
+        String inputQuery = "CALL dbms.security.changePassword($password)";
+        String outputQuery = "CALL dbms.security.changePassword($password)";
+
+        runAndCheck( inputQuery, outputQuery, Collections.singletonMap( "password", ".changePassword(silly)" ),
+                     "password: '******'" );
+    }
+
+    @Test
+    void shouldNotLogPasswordInDeprecatedParams()
+    {
+        String inputQuery = "CALL dbms.security.changePassword($password)";
+        String outputQuery = "CALL dbms.security.changePassword($password)";
+
+        runAndCheck( inputQuery, outputQuery, Collections.singletonMap( "password", "abc123" ), "password: '******'" );
+    }
+
+    @Test
+    void shouldNotLogPasswordDifferentWhitespace()
+    {
+        String inputQuery = "CALL dbms.security.changeUserPassword(%s'abc123'%s)";
+        String outputQuery = "CALL dbms.security.changeUserPassword(%s'******'%s)";
+
+        runAndCheck(
+                format( inputQuery, "'user',", "" ),
+                format( outputQuery, "'user',", "" ), emptyMap(), "" );
+        runAndCheck(
+                format( inputQuery, "'user', ", "" ),
+                format( outputQuery, "'user', ", "" ), emptyMap(), "" );
+        runAndCheck(
+                format( inputQuery, "'user' ,", " " ),
+                format( outputQuery, "'user' ,", " " ), emptyMap(), "" );
+        runAndCheck(
+                format( inputQuery, "'user',  ", "  " ),
+                format( outputQuery, "'user',  ", "  " ), emptyMap(), "" );
+    }
+
+    private void runAndCheck( String inputQuery, String outputQuery, Map<String,Object> params, String paramsString )
+    {
+        logProvider.clear();
+        ConfiguredQueryLogger queryLogger = queryLogger( logProvider,
+                                                         Config.defaults( log_queries_parameter_logging_enabled, true ) );
+
+        QueryObfuscator ob = obfuscatorFactory.obfuscatorForQuery( inputQuery );
+
+        // when
+        ExecutingQuery query = query( SESSION_1, defaultDbId, "neo", inputQuery, params, emptyMap() );
+        query.onObfuscatorReady( ob );
+        clock.forward( 10, TimeUnit.MILLISECONDS );
+        queryLogger.success( query );
+
+        // then
+        assertThat( logProvider ).forClass( this.getClass() ).forLevel( INFO )
+                                 .containsMessages( format( "%d ms: %s - %s - {%s} - {}", 10L, sessionConnectionDetails( SESSION_1, "neo" ),
+                                                            outputQuery,
+                                                            paramsString ) );    }
 
     @Test
     void shouldBeAbleToLogDetailedTime()
@@ -487,5 +651,19 @@ class ConfiguredQueryLoggerTest
                 thread.getName(),
                 clock,
                 cpuClock );
+    }
+
+    private static class ObfuscatorFactory extends CypherQueryObfuscatorFactory
+    {
+        ObfuscatorFactory()
+        {
+            // required by procedure compiler
+            registerComponent( EnterpriseSecurityContext.class );
+            registerComponent( Transaction.class );
+            registerComponent( GraphDatabaseAPI.class ) ;
+            registerComponent( SecurityLog.class );
+
+            registerProcedure( UserManagementProcedures.class );
+        }
     }
 }
