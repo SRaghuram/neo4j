@@ -128,11 +128,7 @@ abstract class SecondaryRecordingCreator
                 Path flameGraphDir = BenchmarkUtil.getPathEnvironmentVariable( FLAME_GRAPH_DIR );
                 BenchmarkUtil.assertDirectoryExists( flameGraphDir );
 
-                List<String> args = Lists.newArrayList( "perl",
-                                                        "flamegraph.pl",
-                                                        "--colors=java",
-                                                        collapsedStackFrames.toAbsolutePath().toString() );
-                SecondaryRecordingCreator.waitOnProcess( args, flameGraphDir, ProfilerType.JFR, collapsedStackFrames, flameGraphSvg );
+                Flamegraph.createFlamegraphs( forkDirectory, flameGraphDir, collapsedStackFrames, flameGraphSvg );
             }
             catch ( Exception e )
             {
@@ -237,12 +233,7 @@ abstract class SecondaryRecordingCreator
             Path flameGraphSvg = SecondaryRecordingCreator.getFlameGraphSvg( forkDirectory, recordingDescriptor, RecordingType.ASYNC_FLAMEGRAPH );
             Path asyncFlameGraphDir = BenchmarkUtil.getPathEnvironmentVariable( FLAME_GRAPH_DIR );
             BenchmarkUtil.assertDirectoryExists( asyncFlameGraphDir );
-
-            List<String> args = Lists.newArrayList( "perl",
-                                                    "flamegraph.pl",
-                                                    "--colors=java",
-                                                    profilerRecording.toAbsolutePath().toString() );
-            SecondaryRecordingCreator.waitOnProcess( args, asyncFlameGraphDir, ProfilerType.ASYNC, profilerRecording, flameGraphSvg );
+            Flamegraph.createFlamegraphs( forkDirectory, asyncFlameGraphDir, profilerRecording.toAbsolutePath(), flameGraphSvg );
         }
     }
 
