@@ -7,10 +7,7 @@ package com.neo4j.bench.jmh.api;
 
 import com.neo4j.bench.common.model.Benchmark;
 import com.neo4j.bench.common.model.BenchmarkGroup;
-import com.neo4j.bench.common.results.BenchmarkDirectory;
-import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
 import com.neo4j.bench.common.results.ForkDirectory;
-import com.neo4j.bench.jmh.api.config.RunnerParams;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
@@ -19,11 +16,12 @@ import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.infra.BenchmarkParams;
 import org.openjdk.jmh.infra.ThreadParams;
 
-import static java.util.Collections.emptyList;
-
 @State( Scope.Benchmark )
 public abstract class BaseBenchmark
 {
+    @Param( {} )
+    public String profilerTypes;
+
     @Param( {} )
     public String workDir;
 
@@ -40,10 +38,8 @@ public abstract class BaseBenchmark
         RunnerParams runnerParams = RunnerParams.extractFrom( benchmarkParams );
         Benchmark benchmark = BenchmarkDiscoveryUtils.toBenchmarks( benchmarkParams, runnerParams ).parentBenchmark();
 
-        BenchmarkGroupDirectory benchmarkGroupDir = BenchmarkGroupDirectory.findOrCreateAt( runnerParams.workDir(), group );
-        BenchmarkDirectory benchmarkDir = benchmarkGroupDir.findOrCreate( benchmark );
-        String forkName = runnerParams.runId();
-        ForkDirectory forkDirectory = benchmarkDir.findOrCreate( forkName, emptyList() );
+        JmhLifecycleTracker jmhLifecycleTracker = JmhLifecycleTracker.load( runnerParams.workDir() );
+        ForkDirectory forkDirectory = jmhLifecycleTracker.getForkDirectory( runnerParams, group, benchmark );
 
         onSetup( group, benchmark, runnerParams, benchmarkParams, forkDirectory );
     }

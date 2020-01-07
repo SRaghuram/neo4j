@@ -5,6 +5,7 @@
  */
 package com.neo4j.bench.micro;
 
+import com.google.common.collect.Lists;
 import com.neo4j.bench.common.model.Benchmark;
 import com.neo4j.bench.common.model.BenchmarkGroup;
 import com.neo4j.bench.common.model.Neo4jConfig;
@@ -12,10 +13,12 @@ import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.util.ErrorReporter;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.jmh.api.BenchmarkDiscoveryUtils;
+import com.neo4j.bench.jmh.api.JmhLifecycleTracker;
 import com.neo4j.bench.jmh.api.Runner;
+import com.neo4j.bench.jmh.api.RunnerParams;
 import com.neo4j.bench.jmh.api.config.BenchmarkDescription;
 import com.neo4j.bench.jmh.api.config.JmhOptionsUtil;
-import com.neo4j.bench.jmh.api.config.RunnerParams;
+import com.neo4j.bench.jmh.api.profile.NoOpProfiler;
 import com.neo4j.bench.micro.data.Stores;
 import org.openjdk.jmh.runner.options.ChainedOptionsBuilder;
 import org.openjdk.jmh.runner.options.Options;
@@ -91,7 +94,8 @@ class BenchmarksRunner extends Runner
                 try
                 {
                     ChainedOptionsBuilder builder = baseBuilder(
-                            runnerParams.copyWithNewRunId(),
+                            runnerParams.copyWithNewRunId()
+                                        .copyWithProfilerTypes( Lists.newArrayList( ProfilerType.NO_OP ) ),
                             benchmark,
                             1, // thread count
                             jvm,
@@ -103,9 +107,15 @@ class BenchmarksRunner extends Runner
                             .measurementTime( TimeValue.NONE )
                             .verbosity( VerboseMode.SILENT )
                             .forks( Math.min( forkCount, 1 ) );
+                    // necessary for robust fork directory creation
+                    builder = builder.addProfiler( NoOpProfiler.class );
                     Options options = builder.build();
                     // sanity check, make sure provided benchmarks were correctly exploded
                     JmhOptionsUtil.assertExactlyOneBenchmarkIsEnabled( options );
+
+                    // Clear the JMH lifecycle event log for every new execution
+                    JmhLifecycleTracker.load( runnerParams.workDir() ).reset();
+
                     new org.openjdk.jmh.runner.Runner( options ).run();
                 }
                 catch ( Exception e )
@@ -169,8 +179,7 @@ class BenchmarksRunner extends Runner
     @Override
     protected RunnerParams runnerParams( RunnerParams runnerParams )
     {
-        runnerParams.addParam( PARAM_NEO4J_CONFIG, baseNeo4jConfig.toJson() );
-        return runnerParams;
+        return runnerParams.copyWithParam( PARAM_NEO4J_CONFIG, baseNeo4jConfig.toJson() );
     }
 
     private ChainedOptionsBuilder augmentOptions( ChainedOptionsBuilder optionsBuilder, Path workDir, BenchmarkDescription benchmark )

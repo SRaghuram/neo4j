@@ -23,6 +23,7 @@ import java.util.stream.Stream;
 
 import static com.neo4j.bench.common.util.BenchmarkUtil.assertDirectoryExists;
 import static java.lang.String.format;
+import static java.util.Collections.singleton;
 import static java.util.stream.Collectors.toList;
 
 public class BenchmarkDirectory
@@ -131,6 +132,11 @@ public class BenchmarkDirectory
         return dir.toAbsolutePath().toString();
     }
 
+    public ForkDirectory findOrFail( String forkName )
+    {
+        return ForkDirectory.findOrFailAt( dir, forkName );
+    }
+
     public ForkDirectory findOrCreate( String forkName, List<ProfilerType> profilers )
     {
         return ForkDirectory.findOrCreateAt( dir, forkName, profilers );
@@ -143,7 +149,15 @@ public class BenchmarkDirectory
 
     public List<ForkDirectory> measurementForks()
     {
-        return forks().stream().filter( fork -> fork.profilers().isEmpty() ).collect( toList() );
+        return forks().stream()
+                      .filter( BenchmarkDirectory::isMeasurementFork )
+                      .collect( toList() );
+    }
+
+    private static boolean isMeasurementFork( ForkDirectory forkDirectory )
+    {
+        Set<ProfilerType> profilers = forkDirectory.profilers();
+        return profilers.isEmpty() || profilers.equals( singleton( ProfilerType.NO_OP ) );
     }
 
     public List<Path> plans()

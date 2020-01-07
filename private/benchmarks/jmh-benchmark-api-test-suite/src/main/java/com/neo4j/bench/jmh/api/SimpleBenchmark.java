@@ -14,9 +14,8 @@ import org.openjdk.jmh.infra.Blackhole;
 
 import java.util.stream.IntStream;
 
-public class SimpleBenchmark extends BaseBenchmark
+public class SimpleBenchmark extends BaseSimpleBenchmark
 {
-
     @ParamValues(
             allowed = {"10000", "20000"},
             base = {"10000", "20000"}

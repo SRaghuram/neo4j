@@ -13,7 +13,7 @@ import com.neo4j.bench.common.model.Neo4jConfig;
 import com.neo4j.bench.common.profiling.FullBenchmarkName;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.jmh.api.BaseBenchmark;
-import com.neo4j.bench.jmh.api.config.RunnerParams;
+import com.neo4j.bench.jmh.api.RunnerParams;
 import com.neo4j.bench.micro.data.Augmenterizer;
 import com.neo4j.bench.micro.data.Augmenterizer.NullAugmenterizer;
 import com.neo4j.bench.micro.data.DataGenerator;

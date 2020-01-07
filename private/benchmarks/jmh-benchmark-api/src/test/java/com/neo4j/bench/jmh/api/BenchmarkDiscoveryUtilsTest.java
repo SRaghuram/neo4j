@@ -9,7 +9,6 @@ import com.neo4j.bench.jmh.api.benchmarks.valid.ValidDisabledBenchmark;
 import com.neo4j.bench.jmh.api.benchmarks.valid.ValidEnabledBenchmark1;
 import com.neo4j.bench.jmh.api.benchmarks.valid.ValidEnabledBenchmark2;
 import com.neo4j.bench.jmh.api.config.ParameterValue;
-import com.neo4j.bench.jmh.api.config.RunnerParams;
 import org.hamcrest.CoreMatchers;
 import org.junit.jupiter.api.Test;
 import org.openjdk.jmh.infra.BenchmarkParams;
@@ -117,8 +116,8 @@ class BenchmarkDiscoveryUtilsTest
         ParameterValue param3 = new ParameterValue( "param3", "value" );
         ParameterValue paramThreads = new ParameterValue( THREADS_PARAM, Integer.toString( threads ) );
 
-        RunnerParams runnerParams = RunnerParams.create( Paths.get( "work_dir" ) );
-        runnerParams.addParam( "system_param_1", "value_1" );
+        RunnerParams runnerParams = RunnerParams.create( Paths.get( "work_dir" ) )
+                                                .copyWithParam( "system_param_1", "value_1" );
 
         WorkloadParams workloadParams = new WorkloadParams();
         workloadParams.put( param1.param(), param1.value(), 1 );

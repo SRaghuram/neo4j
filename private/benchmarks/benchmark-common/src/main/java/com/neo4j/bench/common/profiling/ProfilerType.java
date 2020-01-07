@@ -82,6 +82,15 @@ public enum ProfilerType
             RecordingType.HEAP_DUMP,
             // requires no environment variables
             Sets.newHashSet(),
+            SecondaryRecordingCreator.NONE ),
+    /**
+     * See {@link NoOpProfiler} for explanation about why this profiler is required.
+     */
+    NO_OP(
+            NoOpProfiler.class,
+            RecordingType.NONE,
+            // requires no environment variables
+            Sets.newHashSet(),
             SecondaryRecordingCreator.NONE );
 
     private final Class<? extends Profiler> profiler;

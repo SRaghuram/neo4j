@@ -11,8 +11,7 @@ import com.neo4j.bench.common.model.BenchmarkGroup;
 import com.neo4j.bench.common.model.Neo4jConfig;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.jmh.api.BaseBenchmark;
-import com.neo4j.bench.jmh.api.config.RunnerParams;
-import com.neo4j.bench.micro.data.Stores;
+import com.neo4j.bench.jmh.api.RunnerParams;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
@@ -39,7 +38,7 @@ public abstract class BaseRegularBenchmark extends BaseBenchmark
         System.out.println( "\nWriting Neo4j config to: " + neo4jConfigFile.toAbsolutePath() );
         Neo4jConfigBuilder.writeToFile( neo4jConfig, neo4jConfigFile );
 
-        benchmarkSetup( group, benchmark, neo4jConfig, forkDirectory);
+        benchmarkSetup( group, benchmark, neo4jConfig, forkDirectory );
     }
 
     @Override
