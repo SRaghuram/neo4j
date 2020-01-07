@@ -80,6 +80,87 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
     result.toList should equal(List())
   }
 
+  test("exists after optional match without where clause") {
+
+    val query =
+      """
+        |OPTIONAL MATCH (person:Person {name:'Bosse'})
+        |WHERE EXISTS {
+        |  MATCH (person)-[:HAS_DOG]->(dog:Dog)
+        |}
+        |RETURN person.name
+      """.stripMargin
+
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
+
+    val plan = result.executionPlanDescription()
+    plan should includeSomewhere.aPlan("SemiApply")
+
+    result.toList should equal(List(Map("person.name" -> "Bosse")))
+
+  }
+
+  test("exists after empty optional match without where clause") {
+
+    val query =
+      """
+        |OPTIONAL MATCH (person:Person {name:'Charlie'}) // Charlie does not exist
+        |WHERE EXISTS {
+        |  MATCH (person)-[:HAS_DOG]->(dog:Dog)
+        |}
+        |RETURN person.name
+      """.stripMargin
+
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
+
+    val plan = result.executionPlanDescription()
+    plan should includeSomewhere.aPlan("SemiApply")
+
+    result.toList should equal(List(Map("person.name" -> null)))
+
+  }
+
+  test("(unfulfilled) exists after optional match without where clause") {
+
+    val query =
+      """
+        |OPTIONAL MATCH (person:Person {name:'Alice'})
+        |WHERE EXISTS {
+        |  MATCH (person)-[:HAS_DOG]->(dog:Dog) // Alice don't have any dogs
+        |}
+        |RETURN person.name
+      """.stripMargin
+
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
+
+    val plan = result.executionPlanDescription()
+    plan should includeSomewhere.aPlan("SemiApply")
+
+    result.toList should equal(List(Map("person.name" -> null)))
+
+  }
+
+  test("exists after simple WITH without where clause") {
+
+    val query =
+      """
+        |MATCH (person:Person {name:'Bosse'})
+        |WITH person
+        |WHERE EXISTS {
+        |  MATCH (person)-[:HAS_DOG]->(dog:Dog)
+        |}
+        |RETURN person.name
+      """.stripMargin
+
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
+
+    val plan = result.executionPlanDescription()
+    plan should includeSomewhere.aPlan("SemiApply")
+
+    result.toList should equal(List(Map("person.name" -> "Bosse")))
+
+  }
+
   // EXISTS with inner MATCH WHERE
 
   test("exists subquery with predicate") {
@@ -288,6 +369,91 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
     plan should includeSomewhere.aPlan("SemiApply")
 
     result.toList should equal(List(Map("alice.name" -> "Alice")))
+  }
+
+  test("exists after optional match with simple predicate") {
+
+    val query =
+      """
+        |OPTIONAL MATCH (person:Person)
+        |WHERE EXISTS {
+        |  MATCH (person)-[:HAS_DOG]->(dog:Dog)
+        |  WHERE person.name = dog.name
+        |}
+        |RETURN person.name
+      """.stripMargin
+
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
+
+    val plan = result.executionPlanDescription()
+    plan should includeSomewhere.aPlan("SemiApply")
+
+    result.toList should equal(List(Map("person.name" -> "Bosse")))
+
+  }
+
+  test("exists after empty optional match with simple predicate") {
+
+    val query =
+      """
+        |OPTIONAL MATCH (person:Person {name:'Charlie'}) // Charlie does not exist
+        |WHERE EXISTS {
+        |  MATCH (person)-[:HAS_DOG]->(dog:Dog)
+        |  WHERE person.name = dog.name
+        |}
+        |RETURN person.name
+      """.stripMargin
+
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
+
+    val plan = result.executionPlanDescription()
+    plan should includeSomewhere.aPlan("SemiApply")
+
+    result.toList should equal(List(Map("person.name" -> null)))
+
+  }
+
+  test("(unfulfilled) exists after optional match with simple predicate") {
+
+    val query =
+      """
+        |OPTIONAL MATCH (person:Person {name:'Chris'})
+        |WHERE EXISTS {
+        |  MATCH (person)-[:HAS_DOG]->(dog:Dog)
+        |  WHERE person.name = dog.name // neither of Chris dogs are named Chris
+        |}
+        |RETURN person.name
+      """.stripMargin
+
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
+
+    val plan = result.executionPlanDescription()
+    plan should includeSomewhere.aPlan("SemiApply")
+
+    result.toList should equal(List(Map("person.name" -> null)))
+
+  }
+
+  test("exists after simple WITH with simple predicate") {
+
+    val query =
+      """
+        |MATCH (person:Person)
+        |WITH person
+        |WHERE EXISTS {
+        |  MATCH (person)-[:HAS_DOG]->(dog:Dog)
+        |  WHERE person.name = dog.name
+        |}
+        |RETURN person.name
+      """.stripMargin
+
+    val result = executeWith(Configs.InterpretedAndSlotted, query)
+
+    val plan = result.executionPlanDescription()
+    plan should includeSomewhere.aPlan("SemiApply")
+
+    result.toList should equal(List(Map("person.name" -> "Bosse")))
+
   }
 
   // Relationship predicates
@@ -740,6 +906,7 @@ class ExistsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparison
     val result = executeWith(Configs.InterpretedAndSlotted, query)
     result.toList should equal(List(Map("dog.name" -> "Fido"), Map("dog.name" -> "Ozzy")))
   }
+
   // More unsupported EXISTS subqueries
 
   test("RETURN in inner MATCH should fail with syntax error at parsing") {
