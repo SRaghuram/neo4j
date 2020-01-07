@@ -136,7 +136,7 @@ public class OOMProfiler implements ExternalProfiler
         }
         catch ( IOException e )
         {
-            new UncheckedIOException( format( "cannot create out of memory dump directory at ", oomDirectory ), e );
+            throw new UncheckedIOException( format( "cannot create out of memory dump directory at %s", oomDirectory ), e );
         }
         return oomDirectory;
     }
@@ -167,7 +167,6 @@ public class OOMProfiler implements ExternalProfiler
     // for testing
     static Path getOOMDirectory( ForkDirectory forkDirectory )
     {
-        Path oomDirectory = Paths.get( forkDirectory.toAbsolutePath() ).resolve( "out-of-memory" );
-        return oomDirectory;
+        return Paths.get( forkDirectory.toAbsolutePath() ).resolve( "out-of-memory" );
     }
 }

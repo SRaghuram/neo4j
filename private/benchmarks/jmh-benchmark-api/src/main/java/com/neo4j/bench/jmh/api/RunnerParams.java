@@ -3,8 +3,9 @@
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
  */
-package com.neo4j.bench.jmh.api.config;
+package com.neo4j.bench.jmh.api;
 
+import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import org.openjdk.jmh.infra.BenchmarkParams;
 
@@ -24,9 +25,10 @@ import static java.util.stream.Collectors.toList;
  */
 public final class RunnerParams
 {
-    private static final String PARAM_RUNNER_PARAMS = "runnerParams";
-    private static final String PARAM_WORK_DIR = "workDir";
-    private static final String PARAM_RUN_ID = "runId";
+    static final String PARAM_RUNNER_PARAMS = "runnerParams";
+    static final String PARAM_WORK_DIR = "workDir";
+    static final String PARAM_RUN_ID = "runId";
+    static final String PARAM_PROFILER_TYPES = "profilerTypes";
 
     public static RunnerParams extractFrom( BenchmarkParams benchmarkParams )
     {
@@ -40,10 +42,11 @@ public final class RunnerParams
                 throw new RuntimeException( format( "Could not find Runner Parameters '%s' in JMH benchmark params\n" +
                                                     "Parameters Found: %s", paramName, benchmarkParams.getParamsKeys() ) );
             }
-            runnerParams.addParam( paramName, paramValue );
+            runnerParams = runnerParams.copyWithParam( paramName, paramValue );
         }
         assertParamExists( runnerParamNames, PARAM_WORK_DIR );
         assertParamExists( runnerParamNames, PARAM_RUN_ID );
+        assertParamExists( runnerParamNames, PARAM_PROFILER_TYPES );
         return runnerParams;
     }
 
@@ -57,10 +60,10 @@ public final class RunnerParams
 
     public static RunnerParams create( Path workDir )
     {
-        RunnerParams runnerParams = new RunnerParams();
-        runnerParams.addParam( PARAM_WORK_DIR, workDir.toAbsolutePath().toString() );
-        runnerParams.addParam( PARAM_RUN_ID, UUID.randomUUID().toString() );
-        return runnerParams;
+        return new RunnerParams()
+                .copyWithParam( PARAM_WORK_DIR, workDir.toAbsolutePath().toString() )
+                .copyWithParam( PARAM_RUN_ID, UUID.randomUUID().toString() )
+                .copyWithParam( PARAM_PROFILER_TYPES, "" );
     }
 
     private final Map<String,String> runnerParams;
@@ -78,6 +81,32 @@ public final class RunnerParams
         return newRunnerParams;
     }
 
+    /**
+     * {@link Runner} is the only class that (should) use this method, it overwrites the profilers just before starting a benchmark run.
+     *
+     * @return new {@link RunnerParams} instance, with <code>profilerTypes<code/> updated.
+     */
+    public RunnerParams copyWithProfilerTypes( List<ProfilerType> profilerTypes )
+    {
+        RunnerParams newRunnerParams = new RunnerParams();
+        newRunnerParams.runnerParams.putAll( runnerParams );
+        newRunnerParams.runnerParams.put( PARAM_PROFILER_TYPES, ProfilerType.serializeProfilers( profilerTypes ) );
+        return newRunnerParams;
+    }
+
+    public RunnerParams copyWithParam( String name, String value )
+    {
+        if ( runnerParams.containsKey( name ) )
+        {
+            throw new IllegalStateException( format( "Runner Parameters already contains parameter with name '%s'\n" +
+                                                     " * '%s' == '%s'", name, name, runnerParams.get( name ) ) );
+        }
+        RunnerParams newRunnerParams = new RunnerParams();
+        newRunnerParams.runnerParams.putAll( runnerParams );
+        newRunnerParams.runnerParams.put( name, value );
+        return newRunnerParams;
+    }
+
     public Path workDir()
     {
         return Paths.get( runnerParams.get( PARAM_WORK_DIR ) );
@@ -88,19 +117,14 @@ public final class RunnerParams
         return runnerParams.get( PARAM_RUN_ID );
     }
 
+    public List<ProfilerType> profilerTypes()
+    {
+        return ProfilerType.deserializeProfilers( runnerParams.get( PARAM_PROFILER_TYPES ) );
+    }
+
     public boolean containsParam( String paramName )
     {
         return runnerParams.containsKey( paramName ) || paramName.equals( PARAM_RUNNER_PARAMS );
-    }
-
-    public void addParam( String name, String value )
-    {
-        if ( runnerParams.containsKey( name ) )
-        {
-            throw new IllegalStateException( format( "Runner Parameters already contains parameter with name '%s'\n" +
-                                                     " * '%s' == '%s'", name, name, runnerParams.get( name ) ) );
-        }
-        runnerParams.put( name, value );
     }
 
     public List<RunnerParam> asList()
@@ -138,6 +162,12 @@ public final class RunnerParams
         public String value()
         {
             return value;
+        }
+
+        @Override
+        public String toString()
+        {
+            return "(" + name + "," + value + ")";
         }
     }
 }

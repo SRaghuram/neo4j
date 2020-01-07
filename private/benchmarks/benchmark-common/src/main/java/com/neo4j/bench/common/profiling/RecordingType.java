@@ -25,7 +25,11 @@ public enum RecordingType
     TRACE_IOSTAT( "iostat", ".iostat.log" ),
     TRACE_JVM( "jvm_log", ".jvm.log" ),
     NMT_SUMMARY( "nmt_summary", ".nmt.summary.csv" ),
-    HEAP_DUMP( "heap_dump", ".hprof" );
+    HEAP_DUMP( "heap_dump", ".hprof" ),
+    /**
+     * See {@link NoOpProfiler} for explanation about why this recording type is required.
+     */
+    NONE( "none", ".none" );
 
     private final String propertyKey;
     private final String defaultExtension;

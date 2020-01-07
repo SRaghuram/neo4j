@@ -13,7 +13,6 @@ import com.neo4j.bench.common.model.Benchmarks;
 import com.neo4j.bench.common.model.Metrics;
 import com.neo4j.bench.jmh.api.config.BenchmarkEnabled;
 import com.neo4j.bench.jmh.api.config.ParameterValue;
-import com.neo4j.bench.jmh.api.config.RunnerParams;
 import org.openjdk.jmh.infra.BenchmarkParams;
 import org.openjdk.jmh.util.Statistics;
 

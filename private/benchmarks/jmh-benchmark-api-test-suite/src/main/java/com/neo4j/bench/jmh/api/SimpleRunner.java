@@ -12,7 +12,6 @@ import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.util.ErrorReporter;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.jmh.api.config.BenchmarkDescription;
-import com.neo4j.bench.jmh.api.config.RunnerParams;
 import org.openjdk.jmh.runner.options.ChainedOptionsBuilder;
 import org.openjdk.jmh.runner.options.TimeValue;
 
@@ -79,7 +78,8 @@ public class SimpleRunner extends Runner
     @Override
     protected RunnerParams runnerParams( RunnerParams runnerParams )
     {
-        return runnerParams;
+        // NOTE: 'foo' is declared in BaseSimpleBenchmark
+        return runnerParams.copyWithParam( "foo", "bar" );
     }
 
     private ChainedOptionsBuilder augmentOptions( ChainedOptionsBuilder optionsBuilder )

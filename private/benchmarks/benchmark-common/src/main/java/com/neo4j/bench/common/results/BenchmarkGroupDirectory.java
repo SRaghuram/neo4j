@@ -7,6 +7,7 @@ package com.neo4j.bench.common.results;
 
 import com.neo4j.bench.common.model.Benchmark;
 import com.neo4j.bench.common.model.BenchmarkGroup;
+import com.neo4j.bench.common.profiling.NoOpProfiler;
 import com.neo4j.bench.common.profiling.RecordingType;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.JsonUtil;
@@ -15,6 +16,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -180,8 +182,15 @@ public class BenchmarkGroupDirectory
 
     public void copyProfilerRecordings( Path targetDir, Set<RecordingType> excluding )
     {
+        Set<RecordingType> excludingPlusNone = new HashSet<>( excluding );
+        /**
+         * No need to copy/keep 'none' recording type
+         * <p>
+         * See {@link NoOpProfiler} for explanation about why this profiler is required.
+         */
+        excludingPlusNone.add( RecordingType.NONE );
         BenchmarkGroup benchmarkGroup = benchmarkGroup();
-        benchmarksDirectories().forEach( benchmarkDirectory -> benchmarkDirectory.copyProfilerRecordings( benchmarkGroup, targetDir, excluding ) );
+        benchmarksDirectories().forEach( benchmarkDirectory -> benchmarkDirectory.copyProfilerRecordings( benchmarkGroup, targetDir, excludingPlusNone ) );
     }
 
     private static List<Path> findInnerDirs( Path dir )

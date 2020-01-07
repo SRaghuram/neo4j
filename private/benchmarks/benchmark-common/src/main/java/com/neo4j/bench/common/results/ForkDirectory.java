@@ -45,6 +45,12 @@ public class ForkDirectory
     private final Path dir;
     private final ForkDescription forkDescription;
 
+    static ForkDirectory findOrFailAt( Path parentDir, String name )
+    {
+        Path forkDir = parentDir.resolve( BenchmarkUtil.sanitize( name ) );
+        return openAt( forkDir );
+    }
+
     static ForkDirectory findOrCreateAt( Path parentDir, String name, List<ProfilerType> profilers )
     {
         Path dir = parentDir.resolve( BenchmarkUtil.sanitize( name ) );

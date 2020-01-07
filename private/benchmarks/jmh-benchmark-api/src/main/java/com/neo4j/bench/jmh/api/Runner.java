@@ -5,6 +5,7 @@
  */
 package com.neo4j.bench.jmh.api;
 
+import com.google.common.collect.Lists;
 import com.neo4j.bench.common.model.Benchmark;
 import com.neo4j.bench.common.model.BenchmarkGroup;
 import com.neo4j.bench.common.model.BenchmarkGroupBenchmarkMetrics;
@@ -22,10 +23,10 @@ import com.neo4j.bench.jmh.api.config.BenchmarkDescription;
 import com.neo4j.bench.jmh.api.config.BenchmarksFinder;
 import com.neo4j.bench.jmh.api.config.BenchmarksValidator.BenchmarkValidationResult;
 import com.neo4j.bench.jmh.api.config.JmhOptionsUtil;
-import com.neo4j.bench.jmh.api.config.RunnerParams;
 import com.neo4j.bench.jmh.api.config.SuiteDescription;
 import com.neo4j.bench.jmh.api.config.Validation;
 import com.neo4j.bench.jmh.api.profile.AbstractMicroProfiler;
+import com.neo4j.bench.jmh.api.profile.NoOpProfiler;
 import org.openjdk.jmh.infra.BenchmarkParams;
 import org.openjdk.jmh.results.Result;
 import org.openjdk.jmh.results.RunResult;
@@ -41,6 +42,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import static com.neo4j.bench.common.profiling.ProfilerType.NO_OP;
 import static com.neo4j.bench.common.util.BenchmarkUtil.durationToString;
 import static com.neo4j.bench.jmh.api.config.BenchmarkConfigFile.fromFile;
 import static com.neo4j.bench.jmh.api.config.JmhOptionsUtil.baseBuilder;
@@ -127,6 +129,7 @@ public abstract class Runner
             Path profilerRecordingsOutputDir )
     {
         BenchmarkUtil.assertDirectoryExists( workDir );
+        JmhLifecycleTracker.init( workDir );
         RunnerParams runnerParams = runnerParams( RunnerParams.create( workDir ) );
 
         Instant start = Instant.now();
@@ -304,15 +307,18 @@ public abstract class Runner
                     {
                         try
                         {
+                            RunnerParams finalRunnerParams = runnerParams.copyWithNewRunId()
+                                                                         .copyWithProfilerTypes( Lists.newArrayList( profilerType ) );
+
                             Class<? extends AbstractMicroProfiler> profiler = AbstractMicroProfiler.toJmhProfiler( profilerType );
 
                             ChainedOptionsBuilder builder = baseBuilder(
-                                    runnerParams.copyWithNewRunId(),
+                                    finalRunnerParams,
                                     benchmark,
                                     threadCount,
                                     jvm,
                                     jvmArgs );
-                            // profile using exactly one profiler
+                            // profile using exactly one configured profiler + fork directory creating profiler (necessary for robust fork directory creation)
                             builder = builder.addProfiler( profiler )
                                              .forks( 1 );
                             // allow Runner implementation to override/enrich JMH configuration
@@ -322,6 +328,9 @@ public abstract class Runner
                             Options options = builder.build();
                             // sanity check, make sure provided benchmarks were correctly exploded
                             JmhOptionsUtil.assertExactlyOneBenchmarkIsEnabled( options );
+
+                            // Clear the JMH lifecycle event log for every new execution
+                            JmhLifecycleTracker.load( runnerParams.workDir() ).reset();
 
                             // not interested in results from profiling run, the profiling artifacts will be generated however, and collected later
                             new org.openjdk.jmh.runner.Runner( options ).run();
@@ -360,6 +369,7 @@ public abstract class Runner
         System.out.println( "-------------------------------------------------------------------------" );
         System.out.println( "\n\n" );
 
+        RunnerParams finalRunnerParams = runnerParams.copyWithProfilerTypes( Lists.newArrayList( NO_OP ) );
         for ( int threadCount : threadCounts )
         {
             for ( BenchmarkDescription benchmark : benchmarks )
@@ -369,11 +379,13 @@ public abstract class Runner
                     try
                     {
                         ChainedOptionsBuilder builder = baseBuilder(
-                                runnerParams.copyWithNewRunId(),
+                                finalRunnerParams.copyWithNewRunId(),
                                 benchmark,
                                 threadCount,
                                 jvm,
                                 jvmArgs );
+                        // necessary for robust fork directory creation
+                        builder = builder.addProfiler( NoOpProfiler.class );
                         // allow Runner implementation to override/enrich JMH configuration
                         builder = beforeMeasurementRun( benchmark, runnerParams, builder );
                         // user provided 'additional' JMH arguments these take precedence over all other configurations. apply then last.
@@ -402,6 +414,9 @@ public abstract class Runner
             BenchmarkGroupBenchmarkMetrics metrics,
             RunnerParams runnerParams ) throws RunnerException
     {
+        // Clear the JMH lifecycle event log for every new execution
+        JmhLifecycleTracker.load( runnerParams.workDir() ).reset();
+
         for ( RunResult runResult : new org.openjdk.jmh.runner.Runner( options ).run() )
         {
             BenchmarkParams params = runResult.getParams();
