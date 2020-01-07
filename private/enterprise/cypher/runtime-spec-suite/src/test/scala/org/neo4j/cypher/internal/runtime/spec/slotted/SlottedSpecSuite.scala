@@ -9,7 +9,7 @@ import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE
 import org.neo4j.cypher.internal.runtime.spec.interpreted.LegacyDbHitsTestBase
 import org.neo4j.cypher.internal.runtime.spec.slotted.SlottedSpecSuite.SIZE_HINT
 import org.neo4j.cypher.internal.runtime.spec.tests._
-import org.neo4j.cypher.internal.{CommunityRuntimeContext, EnterpriseRuntimeContext, SlottedRuntime}
+import org.neo4j.cypher.internal.{EnterpriseRuntimeContext, SlottedRuntime}
 
 object SlottedSpecSuite {
   val SIZE_HINT = 200

@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.spec.pipelined
 
 import java.lang.System.lineSeparator
 
-import org.neo4j.cypher.internal.{CommunityRuntimeContext, EnterpriseRuntimeContext}
+import org.neo4j.cypher.internal.EnterpriseRuntimeContext
 import org.neo4j.cypher.internal.PipelinedRuntime.PIPELINED
 import org.neo4j.cypher.internal.logical.plans.Ascending
 import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE.{FUSING, MORSEL_SIZE, NO_FUSING}
