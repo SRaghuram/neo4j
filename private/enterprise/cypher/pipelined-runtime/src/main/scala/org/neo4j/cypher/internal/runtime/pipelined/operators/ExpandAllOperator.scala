@@ -42,10 +42,6 @@ class ExpandAllOperator(val workIdentity: WorkIdentity,
                         dir: SemanticDirection,
                         types: RelationshipTypes) extends StreamingOperator {
 
-  //===========================================================================
-  // Compile-time initializations
-  //===========================================================================
-
   override def toString: String = "ExpandAll"
 
   override protected def nextTasks(queryContext: QueryContext,
@@ -74,6 +70,9 @@ class ExpandAllTask(val inputMorsel: MorselExecutionContext,
 
   override def toString: String = "ExpandAllTask"
 
+  //===========================================================================
+  // Compile-time initializations
+  //===========================================================================
   protected val getFromNodeFunction: ToLongFunction[ExecutionContext] =
     makeGetPrimitiveNodeFromSlotFunctionFor(fromSlot)
 

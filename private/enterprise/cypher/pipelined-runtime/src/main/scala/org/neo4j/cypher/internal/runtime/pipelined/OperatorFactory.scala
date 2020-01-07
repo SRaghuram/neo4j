@@ -230,17 +230,22 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
                               relationshipPredicate.map(x => converters.toCommandExpression(id, x.predicate)).getOrElse(True()))
 
       case plans.OptionalExpand(_, fromName, dir, types, to, relName, plans.ExpandAll, maybePredicate) =>
-        val fromSlot = slots(fromName)
-        val relOffset = slots.getLongOffsetFor(relName)
-        val toOffset = slots.getLongOffsetFor(to)
-        val lazyTypes = RelationshipTypes(types.toArray)(semanticTable)
         new OptionalExpandAllOperator(WorkIdentity.fromPlan(plan),
-                                      fromSlot,
-                                      relOffset,
-                                      toOffset,
+                                      slots(fromName),
+                                      slots.getLongOffsetFor(relName),
+                                      slots.getLongOffsetFor(to),
                                       dir,
-                                      lazyTypes,
+                                      RelationshipTypes(types.toArray)(semanticTable),
                                       maybePredicate.map(converters.toCommandExpression(id, _)))
+
+      case plans.OptionalExpand(_, fromName, dir, types, to, relName, plans.ExpandInto, maybePredicate) =>
+        new OptionalExpandIntoOperator(WorkIdentity.fromPlan(plan),
+                                       slots(fromName),
+                                       slots.getLongOffsetFor(relName),
+                                       slots(to),
+                                       dir,
+                                       RelationshipTypes(types.toArray)(semanticTable),
+                                       maybePredicate.map(converters.toCommandExpression(id, _)))
 
       case plans.Optional(source, protectedSymbols) =>
         val argumentStateMapId = inputBuffer.variant.asInstanceOf[OptionalBufferVariant].argumentStateMapId
