@@ -804,7 +804,7 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
       // users will see all indexes and constraints for the labels which they are allowed to traverse, regardless of read and schema privileges
       nodes.map(_.getAllProperties.get("indexes").asInstanceOf[util.ArrayList[String]].asScala) should equal(List(List("prop1"), List.empty))
       nodes.map(_.getAllProperties.get("constraints").asInstanceOf[util.ArrayList[String]].asScala) should equal(
-        List(List.empty, List("CONSTRAINT ON ( b:B ) ASSERT (b.prop3) IS UNIQUE"))
+        List(List.empty, List("Constraint( id=4, name='constraint_6204dd2c', type='UNIQUENESS', schema=(:B {prop3}), ownedIndex=3 )"))
       )
 
     }) shouldBe 1

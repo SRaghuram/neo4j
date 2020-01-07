@@ -193,7 +193,7 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     failWithError(
       Configs.All,
       "CREATE CONSTRAINT ON (person:Person) ASSERT (person.name, person.surname) IS NODE KEY",
-      List(("Unable to create CONSTRAINT ON ( person:Person ) ASSERT (person.name, person.surname) IS NODE KEY:%s" +
+      List(("Unable to create Constraint( name='constraint_745a766d', type='NODE KEY', schema=(:Person {name, surname}) ):%s" +
         "Both Node(%d) and Node(%d) have the label `Person` and properties `name` = 'A', `surname` = 'B'").format(String.format("%n"), a, b))
     )
   }
@@ -205,7 +205,7 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     failWithError(
       Configs.All,
       "CREATE CONSTRAINT ON (person:Person) ASSERT (person.name) IS NODE KEY",
-      List(("Unable to create CONSTRAINT ON ( person:Person ) ASSERT (person.name) IS NODE KEY:%s" +
+      List(("Unable to create Constraint( name='constraint_9b73711d', type='NODE KEY', schema=(:Person {name}) ):%s" +
         "Both Node(%d) and Node(%d) have the label `Person` and property `name` = 'A'").format(String.format("%n"), a, b))
     )
   }
@@ -217,7 +217,7 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     failWithError(
       Configs.All,
       "CREATE CONSTRAINT person_constraint ON (person:Person) ASSERT (person.name) IS NODE KEY",
-      List(("Unable to create CONSTRAINT ON ( person:Person ) ASSERT (person.name) IS NODE KEY:%s" +
+      List(("Unable to create Constraint( name='person_constraint', type='NODE KEY', schema=(:Person {name}) ):%s" +
         "Both Node(%d) and Node(%d) have the label `Person` and property `name` = 'A'").format(String.format("%n"), a, b))
     )
   }
@@ -248,7 +248,7 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     // then
     failWithError(Configs.All,
       "CREATE CONSTRAINT ON (n:Person) ASSERT (n.firstname,n.lastname) IS NODE KEY",
-      List("There already exists an index :Person(firstname, lastname). " +
+      List("There already exists an index (:Person {firstname, lastname}). " +
                   "A constraint cannot be created until the index has been dropped."))
   }
 
@@ -259,7 +259,7 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     // then
     failWithError(Configs.All,
       "CREATE CONSTRAINT my_contraint ON (n:Person) ASSERT (n.firstname,n.lastname) IS NODE KEY",
-      List("There already exists an index :Person(firstname, lastname). " +
+      List("There already exists an index (:Person {firstname, lastname}). " +
                   "A constraint cannot be created until the index has been dropped."))
   }
 
@@ -270,7 +270,7 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     // then
     failWithError(Configs.All,
       "CREATE CONSTRAINT ON (n:Person) ASSERT (n.firstname,n.lastname) IS NODE KEY",
-      List("There already exists an index :Person(firstname, lastname). " +
+      List("There already exists an index (:Person {firstname, lastname}). " +
         "A constraint cannot be created until the index has been dropped."))
   }
 
@@ -281,7 +281,7 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     // then
     failWithError(Configs.All,
       "CREATE CONSTRAINT my_constraint ON (n:Person) ASSERT (n.firstname,n.lastname) IS NODE KEY",
-      List("There already exists an index :Person(firstname, lastname). " +
+      List("There already exists an index (:Person {firstname, lastname}). " +
                   "A constraint cannot be created until the index has been dropped."))
   }
 
@@ -313,7 +313,7 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     failWithError(
       Configs.All,
       "CREATE INDEX FOR (n:Person) ON (n.firstname, n.lastname)",
-      List("There is a uniqueness constraint on :Person(firstname, lastname), " +
+      List("There is a uniqueness constraint on (:Person {firstname, lastname}), " +
                   "so an index is already created that matches this."))
   }
 
@@ -325,7 +325,7 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     failWithError(
       Configs.All,
       "CREATE INDEX FOR (n:Person) ON (n.firstname, n.lastname)",
-      List("There is a uniqueness constraint on :Person(firstname, lastname), " +
+      List("There is a uniqueness constraint on (:Person {firstname, lastname}), " +
                   "so an index is already created that matches this."))
   }
 
@@ -337,7 +337,7 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     failWithError(
       Configs.All,
       "CREATE INDEX my_index FOR (n:Person) ON (n.firstname, n.lastname)",
-      List("There is a uniqueness constraint on :Person(firstname, lastname), " +
+      List("There is a uniqueness constraint on (:Person {firstname, lastname}), " +
                   "so an index is already created that matches this."))
   }
 
@@ -349,7 +349,7 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     failWithError(
       Configs.All,
       "CREATE INDEX my_index FOR (n:Person) ON (n.firstname, n.lastname)",
-      List("There is a uniqueness constraint on :Person(firstname, lastname), " +
+      List("There is a uniqueness constraint on (:Person {firstname, lastname}), " +
                   "so an index is already created that matches this."))
   }
 

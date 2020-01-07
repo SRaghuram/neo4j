@@ -398,7 +398,7 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
                 createConstraintInRunningTx( helper, db, tx, KEY, PROP );
                 tx.commit();
             } );
-            assertThat( e.getMessage() ).startsWith( "Unable to create CONSTRAINT" );
+            assertThat( e.getMessage() ).startsWith( "Unable to create Constraint" );
             assertThat( e ).isInstanceOfAny( ConstraintViolationException.class, QueryExecutionException.class );
         }
 
@@ -431,7 +431,7 @@ abstract class AbstractConstraintCreationIT<Constraint extends ConstraintDescrip
                 createConstraintInRunningTx( helper, db, tx, KEY, PROP );
                 tx.commit();
             } );
-            assertThat( e.getMessage() ).startsWith( "Unable to create CONSTRAINT" );
+            assertThat( e.getMessage() ).startsWith( "Unable to create Constraint" );
             assertThat( e ).isInstanceOfAny( ConstraintViolationException.class, QueryExecutionException.class );
         }
 

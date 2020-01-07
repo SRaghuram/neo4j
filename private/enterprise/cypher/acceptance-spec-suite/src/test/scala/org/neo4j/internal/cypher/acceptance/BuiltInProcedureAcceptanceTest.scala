@@ -85,7 +85,7 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     nodeState should equal(
       Set(
         ("Neo",        Set("prop1,prop2", "prop3"), Set()),
-        ("Department", Set(),                       Set("CONSTRAINT ON ( department:Department ) ASSERT (department.prop) IS UNIQUE")),
+        ("Department", Set(),                       Set("Constraint( id=4, name='constraint_c63593d6', type='UNIQUENESS', schema=(:Department {prop}), ownedIndex=3 )")),
         ("Employee",   Set(),                       Set())
       ))
 

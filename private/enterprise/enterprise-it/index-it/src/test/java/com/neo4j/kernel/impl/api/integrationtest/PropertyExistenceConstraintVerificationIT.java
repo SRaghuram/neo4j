@@ -72,7 +72,7 @@ abstract class PropertyExistenceConstraintVerificationIT
         // then
         catch ( QueryExecutionException | ConstraintViolationException e )
         {
-            assertThat( e.getMessage() ).startsWith( "Unable to create CONSTRAINT" );
+            assertThat( e.getMessage() ).startsWith( "Unable to create Constraint( type=" );
         }
     }
 
@@ -132,7 +132,7 @@ abstract class PropertyExistenceConstraintVerificationIT
         catch ( ExecutionException e )
         {
             assertThat( e.getCause() ).isInstanceOfAny( QueryExecutionException.class, ConstraintViolationException.class );
-            assertThat( e.getCause().getMessage() ).startsWith( "Unable to create CONSTRAINT" );
+            assertThat( e.getCause().getMessage() ).startsWith( "Unable to create Constraint( type=" );
         }
         // or we fail to create the offending node
         catch ( ConstraintViolationException e )

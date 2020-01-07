@@ -222,7 +222,8 @@ class SchemaAcceptanceEnterpriseTest extends SchemaAcceptanceTestBase
                 ConstraintViolationException.class );
         Class<EquivalentSchemaRuleAlreadyExistsException> expectedCause = EquivalentSchemaRuleAlreadyExistsException.class;
         assertExpectedException( exception, expectedCause,
-                "An equivalent constraint already exists, 'Constraint( ", "'name', NODE KEY, :MY_LABEL(my_property_key), ownedIndex=1 )'." );
+                "An equivalent constraint already exists, 'Constraint( ",
+                "name='name', type='NODE KEY', schema=(:MY_LABEL {my_property_key}), ownedIndex=1 )'." );
     }
 
     @ParameterizedTest()
@@ -235,7 +236,8 @@ class SchemaAcceptanceEnterpriseTest extends SchemaAcceptanceTestBase
                 ConstraintViolationException.class );
         Class<EquivalentSchemaRuleAlreadyExistsException> expectedCause = EquivalentSchemaRuleAlreadyExistsException.class;
         assertExpectedException( exception, expectedCause,
-                "An equivalent constraint already exists, 'Constraint( ", "'name', NODE PROPERTY EXISTENCE, :MY_LABEL(my_property_key) )'." );
+                "An equivalent constraint already exists, 'Constraint( ",
+                "name='name', type='NODE PROPERTY EXISTENCE', schema=(:MY_LABEL {my_property_key}) )'." );
     }
 
     @ParameterizedTest()
@@ -248,7 +250,8 @@ class SchemaAcceptanceEnterpriseTest extends SchemaAcceptanceTestBase
                 ConstraintViolationException.class );
         Class<EquivalentSchemaRuleAlreadyExistsException> expectedCause = EquivalentSchemaRuleAlreadyExistsException.class;
         assertExpectedException( exception, expectedCause,
-                "An equivalent constraint already exists, 'Constraint( ", "'name', RELATIONSHIP PROPERTY EXISTENCE, -[:relType(my_property_key)]- )'." );
+                "An equivalent constraint already exists, 'Constraint( ",
+                "name='name', type='RELATIONSHIP PROPERTY EXISTENCE', schema=-[:relType {my_property_key}]- )'." );
     }
 
     @ParameterizedTest()
@@ -260,7 +263,8 @@ class SchemaAcceptanceEnterpriseTest extends SchemaAcceptanceTestBase
                 schema1 -> schema1.constraintFor( label ).assertPropertyIsNodeKey( propertyKey ).withName( "otherName" ).create(),
                 ConstraintViolationException.class );
         Class<AlreadyIndexedException> expectedCause = AlreadyIndexedException.class;
-        String expectedMessage = "There already exists an index :MY_LABEL(my_property_key). A constraint cannot be created until the index has been dropped.";
+        String expectedMessage =
+                "There already exists an index (:MY_LABEL {my_property_key}). A constraint cannot be created until the index has been dropped.";
         assertExpectedException( exception, expectedCause, expectedMessage );
     }
 
@@ -274,7 +278,7 @@ class SchemaAcceptanceEnterpriseTest extends SchemaAcceptanceTestBase
                 ConstraintViolationException.class );
         Class<AlreadyConstrainedException> expectedCause = AlreadyConstrainedException.class;
         assertExpectedException( exception, expectedCause,
-                "Constraint already exists: Constraint( ", "'name', UNIQUENESS, :MY_LABEL(my_property_key), ownedIndex=1 )" );
+                "Constraint already exists: Constraint( ", "name='name', type='UNIQUENESS', schema=(:MY_LABEL {my_property_key}), ownedIndex=1 )" );
     }
 
     @ParameterizedTest()
@@ -286,7 +290,7 @@ class SchemaAcceptanceEnterpriseTest extends SchemaAcceptanceTestBase
                 schema1 -> schema1.indexFor( label ).on( propertyKey ).withName( "otherName" ).create(),
                 ConstraintViolationException.class );
         Class<AlreadyConstrainedException> expectedCause = AlreadyConstrainedException.class;
-        String expectedMessage = "There is a uniqueness constraint on :MY_LABEL(my_property_key), so an index is already created that matches this.";
+        String expectedMessage = "There is a uniqueness constraint on (:MY_LABEL {my_property_key}), so an index is already created that matches this.";
         assertExpectedException( exception, expectedCause, expectedMessage );
     }
 
@@ -300,7 +304,7 @@ class SchemaAcceptanceEnterpriseTest extends SchemaAcceptanceTestBase
                 ConstraintViolationException.class );
         Class<AlreadyConstrainedException> expectedCause = AlreadyConstrainedException.class;
         assertExpectedException( exception, expectedCause,
-                "Constraint already exists: Constraint( ", "'name', NODE KEY, :MY_LABEL(my_property_key), ownedIndex=1 )" );
+                "Constraint already exists: Constraint( ", "name='name', type='NODE KEY', schema=(:MY_LABEL {my_property_key}), ownedIndex=1 )" );
     }
 
     @ParameterizedTest()
@@ -313,7 +317,7 @@ class SchemaAcceptanceEnterpriseTest extends SchemaAcceptanceTestBase
                 ConstraintViolationException.class );
         Class<AlreadyConstrainedException> expectedCause = AlreadyConstrainedException.class;
         assertExpectedException( exception, expectedCause,
-                "Constraint already exists: Constraint( ", "'name', NODE KEY, :MY_LABEL(my_property_key), ownedIndex=1 )" );
+                "Constraint already exists: Constraint( ", "name='name', type='NODE KEY', schema=(:MY_LABEL {my_property_key}), ownedIndex=1 )" );
     }
 
     @ParameterizedTest()

@@ -88,9 +88,9 @@ class HalfCreatedConstraintIT
                 tx.schema().awaitIndexesOnline( 10, TimeUnit.MINUTES );
             }
         } );
-        assertThat( exception.getMessage() ).contains( "Index IndexDefinition[label:MARKER on:property] " +
-                "(Index( 1, 'constraint_952591e6', UNIQUE BTREE, :label[0](property[0]), native-btree-1.0 )) " +
-                "entered a FAILED state. Please see database logs.: Cause of failure:" );
+        assertThat( exception.getMessage() ).contains(
+                "Index IndexDefinition[label:MARKER on:property] (Index( id=1, name='constraint_952591e6', type='UNIQUE BTREE', schema=(:label[0] " +
+                        "{property[0]}), indexProvider='native-btree-1.0' )) entered a FAILED state. Please see database logs.: Cause of failure:" );
     }
 
     private static void addIndex( GraphDatabaseService database ) throws KernelException
