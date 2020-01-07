@@ -49,7 +49,7 @@ public enum Repository
             "graph-analytics",
             "neo-technology",
             "^master$",
-            "^\\d{1,2}\\.\\d{1,2}\\.\\d{1,2}\\.\\d{1,2}$" ),
+            "^\\d{1,2}\\.\\d{1,2}\\.\\d{1,2}(\\.\\d{1,2})?$" ),
 
     // -----------------------
     // --- target systems ----
@@ -69,7 +69,7 @@ public enum Repository
             "graph-analytics",
             "neo-technology",
             "^master$",
-            "^\\d{1,2}\\.\\d{1,2}\\.\\d{1,2}\\.\\d{1,2}$" );
+            "^\\d{1,2}\\.\\d{1,2}\\.\\d{1,2}(\\.\\d{1,2})?$" );
 
     public static Repository forName( String projectName )
     {

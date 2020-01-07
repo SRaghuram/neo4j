@@ -70,7 +70,6 @@ public class BranchAndVersionTest
     public void checksVersionFormat()
     {
         Arrays.stream( Repository.values() )
-              .filter( r -> r != Repository.ALGOS && r != Repository.ALGOS_JMH ) // Ignore ALGO repos, as they use a different version scheme
               .forEach( repository ->
                         {
                             assertTrue( repository.isValidVersion( "1.2.3" ) );
@@ -81,7 +80,16 @@ public class BranchAndVersionTest
 
                             assertFalse( repository.isValidVersion( "1" ) );
                             assertFalse( repository.isValidVersion( "1.2" ) );
-                            assertFalse( repository.isValidVersion( "1.2.3.4" ) );
+                            if ( repository != Repository.ALGOS && repository != Repository.ALGOS_JMH )
+                            {
+                                // ALGO repos have different version scheme and allow a fourth version number
+                                assertFalse( repository.isValidVersion( "1.2.3.4" ) );
+                            }
+                            else
+                            {
+                                assertTrue( repository.isValidVersion( "1.2.3.4" ) );
+                            }
+
                             assertFalse( repository.isValidVersion( "111.2.3" ) );
                             assertFalse( repository.isValidVersion( "1.222.3" ) );
                             assertFalse( repository.isValidVersion( "1.2.333" ) );
@@ -99,8 +107,16 @@ public class BranchAndVersionTest
                             BenchmarkUtil.assertException( RuntimeException.class,
                                                            () -> repository.assertValidVersion( "1.2" ) );
 
-                            BenchmarkUtil.assertException( RuntimeException.class,
-                                                           () -> repository.assertValidVersion( "1.2.3.4" ) );
+                            if ( repository != Repository.ALGOS && repository != Repository.ALGOS_JMH )
+                            {
+                                // ALGO repos have different version scheme and allow a fourth version number
+                                BenchmarkUtil.assertException( RuntimeException.class,
+                                                               () -> repository.assertValidVersion( "1.2.3.4" ) );
+                            }
+                            else
+                            {
+                                repository.assertValidVersion( "1.2.3.4" );
+                            }
 
                             BenchmarkUtil.assertException( RuntimeException.class,
                                                            () -> repository.assertValidVersion( "111.2.3" ) );
@@ -135,7 +151,6 @@ public class BranchAndVersionTest
     public void checksToSanitizedVersion()
     {
         Arrays.stream( Repository.values() )
-              .filter( r -> r != Repository.ALGOS && r != Repository.ALGOS_JMH ) // Ignore ALGO repos, as they use a different version scheme
               .forEach( repository ->
                         {
                             assertThat( BranchAndVersion.toSanitizeVersion( repository, "3.1.0" ), equalTo( "3.1.0" ) );
