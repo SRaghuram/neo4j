@@ -207,8 +207,7 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
   protected val relationshipsField: InstanceField = field[RelationshipSelectionCursor](codeGen.namer.nextVariableName() + "relationships")
   private val typeField = field[Array[Int]](codeGen.namer.nextVariableName() + "type",
                                                                                         if (types.isEmpty && missingTypes.isEmpty) constant(null)
-                                            else arrayOf[Int](types.map(constant):_*)
-                                                                                        )
+                                            else arrayOf[Int](types.map(constant):_*))
   private val missingTypeField: InstanceField = field[Array[String]](codeGen.namer.nextVariableName() + "missingType",
                                                                                                   arrayOf[String](missingTypes.map(constant):_*))
 

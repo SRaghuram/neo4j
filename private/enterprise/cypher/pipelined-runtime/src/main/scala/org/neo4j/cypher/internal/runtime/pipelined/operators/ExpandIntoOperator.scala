@@ -173,7 +173,7 @@ class ExpandIntoOperatorTaskTemplate(inner: OperatorTaskTemplate,
   private val nodeCursorField = field[NodeCursor](codeGen.namer.nextVariableName() + "nodeCursor")
   private val groupCursorField = field[RelationshipGroupCursor](codeGen.namer.nextVariableName() + "group")
   private val traversalCursorField = field[RelationshipTraversalCursor](codeGen.namer.nextVariableName() + "traversal")
-  private val relationshipsField = field[RelationshipSelectionCursor](codeGen.namer.nextVariableName() + "relationships")
+  protected val relationshipsField = field[RelationshipSelectionCursor](codeGen.namer.nextVariableName() + "relationships")
   private val typeField = field[Array[Int]](codeGen.namer.nextVariableName() + "type",
                                             if (types.isEmpty && missingTypes.isEmpty) constant(null)
                                             else arrayOf[Int](types.map(constant):_*)
@@ -184,7 +184,7 @@ class ExpandIntoOperatorTaskTemplate(inner: OperatorTaskTemplate,
 
   codeGen.registerCursor(relName, RelationshipCursorRepresentation(loadField(relationshipsField)))
 
-  override final def scopeId: String = "expandInto" + id.x
+  override def scopeId: String = "expandInto" + id.x
 
   override def genMoreFields: Seq[Field] = {
     val localFields =
@@ -230,22 +230,7 @@ class ExpandIntoOperatorTaskTemplate(inner: OperatorTaskTemplate,
       declareAndAssign(typeRefOf[Long], toNode, getNodeIdFromSlot(toSlot, codeGen)),
       condition(and(notEqual(load(fromNode), constant(-1L)), notEqual(load(toNode), constant(-1L)))){
         block(
-          loadTypes(types, missingTypes, typeField, missingTypeField),
-          condition(isNull(loadField(expandInto)))(
-            setField(expandInto, newInstance(constructor[CachingExpandInto, Read, Direction],
-                                             loadField(DATA_READ), directionRepresentation(dir)))),
-          allocateAndTraceCursor(nodeCursorField, executionEventField, ALLOCATE_NODE_CURSOR),
-          allocateAndTraceCursor(groupCursorField, executionEventField, ALLOCATE_GROUP_CURSOR),
-          allocateAndTraceCursor(traversalCursorField, executionEventField, ALLOCATE_TRAVERSAL_CURSOR),
-          setField(relationshipsField, invoke(loadField(expandInto),
-                                              CONNECTING_RELATIONSHIPS,
-                                              loadField(nodeCursorField),
-                                              loadField(groupCursorField),
-                                              loadField(traversalCursorField),
-                                              load(fromNode),
-                                              loadField(typeField),
-                                              load(toNode))),
-          invokeSideEffect(loadField(relationshipsField), method[RelationshipSelectionCursor, Unit, KernelReadTracer]("setTracer"), loadField(executionEventField)),
+          setUpCursors(fromNode, toNode),
           assign(resultBoolean, constant(true)),
           setField(canContinue, profilingCursorNext[RelationshipSelectionCursor](loadField(relationshipsField), id)),
           )
@@ -271,15 +256,22 @@ class ExpandIntoOperatorTaskTemplate(inner: OperatorTaskTemplate,
   override protected def genInnerLoop: IntermediateRepresentation = {
     loop(and(innermost.predicate, loadField(canContinue)))(
       block(
-        codeGen.copyFromInput(Math.min(codeGen.inputSlotConfiguration.numberOfLongs, codeGen.slots.numberOfLongs),
-                              Math.min(codeGen.inputSlotConfiguration.numberOfReferences, codeGen.slots.numberOfReferences)),
-        codeGen.setLongAt(relOffset, invoke(loadField(relationshipsField),
-                                            method[RelationshipSelectionCursor, Long]("relationshipReference"))),
+        writeRow(getRelationship),
         inner.genOperateWithExpressions,
         doIfInnerCantContinue(setField(canContinue, profilingCursorNext[RelationshipSelectionCursor](loadField(relationshipsField), id))),
         endInnerLoop
         )
       )
+  }
+
+  /**
+    * Writes the relationship
+    */
+  protected def writeRow(relationship: IntermediateRepresentation): IntermediateRepresentation = {
+    block(
+      codeGen.copyFromInput(Math.min(codeGen.inputSlotConfiguration.numberOfLongs, codeGen.slots.numberOfLongs),
+                            Math.min(codeGen.inputSlotConfiguration.numberOfReferences, codeGen.slots.numberOfReferences)),
+      codeGen.setLongAt(relOffset, relationship))
   }
 
   /**
@@ -309,13 +301,43 @@ class ExpandIntoOperatorTaskTemplate(inner: OperatorTaskTemplate,
 
   override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = {
     block(
-      condition(isNotNull(loadField(relationshipsField)))(
-        block(
-          invokeSideEffect(loadField(nodeCursorField), method[NodeCursor, Unit, KernelReadTracer]("setTracer"), loadField(executionEventField)),
-          invokeSideEffect(loadField(relationshipsField), method[RelationshipSelectionCursor, Unit, KernelReadTracer]("setTracer"), loadField(executionEventField)),
-          )
+      condition(isNotNull(loadField(groupCursorField)))(
+        invokeSideEffect(loadField(groupCursorField), method[RelationshipGroupCursor, Unit, KernelReadTracer]("setTracer"),
+                         loadField(executionEventField)),
+        ),
+      condition(isNotNull(loadField(traversalCursorField)))(
+        invokeSideEffect(loadField(traversalCursorField), method[RelationshipTraversalCursor, Unit, KernelReadTracer]("setTracer"),
+                         loadField(executionEventField)),
+        ),
+      condition(isNotNull(loadField(nodeCursorField)))(
+        invokeSideEffect(loadField(nodeCursorField), method[NodeCursor, Unit, KernelReadTracer]("setTracer"),
+                         loadField(executionEventField)),
         ),
       inner.genSetExecutionEvent(event)
+      )
+  }
+
+  protected def getRelationship: IntermediateRepresentation = invoke(loadField(relationshipsField),
+                                                                     method[RelationshipSelectionCursor, Long]("relationshipReference"))
+
+  protected def setUpCursors(fromNode: String, toNode: String): IntermediateRepresentation = {
+    block(
+      loadTypes(types, missingTypes, typeField, missingTypeField),
+      condition(isNull(loadField(expandInto)))(
+        setField(expandInto, newInstance(constructor[CachingExpandInto, Read, Direction],
+                                         loadField(DATA_READ), directionRepresentation(dir)))),
+      allocateAndTraceCursor(nodeCursorField, executionEventField, ALLOCATE_NODE_CURSOR),
+      allocateAndTraceCursor(groupCursorField, executionEventField, ALLOCATE_GROUP_CURSOR),
+      allocateAndTraceCursor(traversalCursorField, executionEventField, ALLOCATE_TRAVERSAL_CURSOR),
+      setField(relationshipsField, invoke(loadField(expandInto),
+                                          CONNECTING_RELATIONSHIPS,
+                                          loadField(nodeCursorField),
+                                          loadField(groupCursorField),
+                                          loadField(traversalCursorField),
+                                          load(fromNode),
+                                          loadField(typeField),
+                                          load(toNode))),
+      invokeSideEffect(loadField(relationshipsField), method[RelationshipSelectionCursor, Unit, KernelReadTracer]("setTracer"), loadField(executionEventField)),
       )
   }
 }
