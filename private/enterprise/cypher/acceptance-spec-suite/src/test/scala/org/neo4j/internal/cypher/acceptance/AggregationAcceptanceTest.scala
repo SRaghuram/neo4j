@@ -5,7 +5,8 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import org.neo4j.cypher.{ExecutionEngineFunSuite, SyntaxException}
+import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.exceptions.SyntaxException
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
 import org.neo4j.values.storable.DurationValue
 
@@ -254,25 +255,16 @@ class AggregationAcceptanceTest extends ExecutionEngineFunSuite with CypherCompa
                   |     head(collect(bar)) AS agg
                   |  ORDER BY foo ASC
                   |RETURN *""".stripMargin
-    executeWith(Configs.InterpretedAndSlotted, query).toList should equal(List(Map("agg" -> 2, "foo" -> 1)))
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, query).toList should equal(List(Map("agg" -> 2, "foo" -> 1)))
   }
 
-  test("should give correct scope for ORDER BY following aggregation with shadowing of variable ||") {
+  test("should give correct scope for ORDER BY following aggregation with shadowing of variable II") {
     val query = """WITH 1 AS foo, 2 AS bar
                   |WITH foo AS foo,
                   |    collect(bar) AS agg
                   |  ORDER BY foo ASC
                   |RETURN *""".stripMargin
-    executeWith(Configs.InterpretedAndSlotted, query).toList should equal(List(Map("agg" -> List(2), "foo" -> 1)))
-  }
-
-  test("foo3") {
-    executeSingle(   """
-      MATCH (owner)
-      WITH owner, count(*) AS collected
-      ORDER BY owner
-      RETURN owner
-      """).toList
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, query).toList should equal(List(Map("agg" -> List(2), "foo" -> 1)))
   }
 
   test("should give correct scope for WHERE following aggregation with shadowing of variable") {
@@ -281,7 +273,7 @@ class AggregationAcceptanceTest extends ExecutionEngineFunSuite with CypherCompa
                   |     head(collect(bar)) AS agg
                   |  WHERE foo = 1
                   |RETURN *""".stripMargin
-    executeWith(Configs.InterpretedAndSlotted, query).toList should equal(List(Map("agg" -> 2, "foo" -> 1)))
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, query).toList should equal(List(Map("agg" -> 2, "foo" -> 1)))
   }
 
   test("should give correct scope for ORDER BY following distinct with shadowing of variable") {
@@ -330,7 +322,7 @@ class AggregationAcceptanceTest extends ExecutionEngineFunSuite with CypherCompa
                   |     head(collect(bar)) AS agg
                   |  ORDER BY foobar ASC
                   |RETURN *""".stripMargin
-    executeWith(Configs.InterpretedAndSlotted, query).toList should equal(List(Map("agg" -> 2, "foobar" -> 3)))
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, query).toList should equal(List(Map("agg" -> 2, "foobar" -> 3)))
   }
 
   test("should give correct scope for ORDER BY following aggregation and distinct") {
@@ -339,7 +331,7 @@ class AggregationAcceptanceTest extends ExecutionEngineFunSuite with CypherCompa
                   |     head(collect(bar)) AS agg
                   |  ORDER BY foobar ASC
                   |RETURN *""".stripMargin
-    executeWith(Configs.InterpretedAndSlotted, query).toList should equal(List(Map("agg" -> 2, "foobar" -> 3)))
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, query).toList should equal(List(Map("agg" -> 2, "foobar" -> 3)))
   }
 
   test("should give correct scope for WHERE following aggregation") {
@@ -348,6 +340,6 @@ class AggregationAcceptanceTest extends ExecutionEngineFunSuite with CypherCompa
                   |     head(collect(bar)) AS agg
                   |  WHERE foobar = 3
                   |RETURN *""".stripMargin
-    executeWith(Configs.InterpretedAndSlotted, query).toList should equal(List(Map("agg" -> 2, "foobar" -> 3)))
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, query).toList should equal(List(Map("agg" -> 2, "foobar" -> 3)))
   }
 }
