@@ -103,7 +103,6 @@ import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
-import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
 import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
 import org.neo4j.io.pagecache.tracing.cursor.context.VersionContextSupplier;
 import org.neo4j.kernel.database.Database;
@@ -165,7 +164,6 @@ class CoreDatabaseFactory
     private final RaftMessageLogger<MemberId> raftLogger;
 
     private final PageCacheTracer pageCacheTracer;
-    private final PageCursorTracerSupplier cursorTracerSupplier;
     private final RecoveryFacade recoveryFacade;
     private final Outbound<SocketAddress,Message> raftSender;
     private final ReplicatedDatabaseEventService databaseEventService;
@@ -202,7 +200,6 @@ class CoreDatabaseFactory
         this.databaseEventService = databaseEventService;
         var tracers = globalModule.getTracers();
         this.pageCacheTracer = tracers.getPageCacheTracer();
-        this.cursorTracerSupplier = tracers.getPageCursorTracerSupplier();
     }
 
     CoreRaftContext createRaftContext( NamedDatabaseId namedDatabaseId, LifeSupport life, Monitors monitors, Dependencies dependencies,
@@ -263,7 +260,7 @@ class CoreDatabaseFactory
                 idContext.getIdGeneratorFactory(), storageEngineSupplier );
 
         ReplicatedDatabaseEventDispatch databaseEventDispatch = databaseEventService.getDatabaseEventDispatch( namedDatabaseId );
-        StateMachineCommitHelper commitHelper = new StateMachineCommitHelper( raftContext.commandIndexTracker(), cursorTracerSupplier, versionContextSupplier,
+        StateMachineCommitHelper commitHelper = new StateMachineCommitHelper( raftContext.commandIndexTracker(), versionContextSupplier,
                 databaseEventDispatch );
 
         ReplicatedTokenStateMachine labelTokenStateMachine = new ReplicatedTokenStateMachine( commitHelper, labelTokenRegistry, debugLog );

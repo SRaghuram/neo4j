@@ -227,7 +227,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
 
         // TODO: Health should be created per-db in the factory. What about other things here?
         readReplicaDatabaseFactory = new ReadReplicaDatabaseFactory( globalConfig, globalModule.getGlobalClock(), jobScheduler,
-                topologyService, myIdentity, catchupComponentsRepository, globalModule.getTracers().getPageCursorTracerSupplier(),
+                topologyService, myIdentity, catchupComponentsRepository,
                 catchupClientFactory, databaseEventService, storageFactory, panicService );
     }
 

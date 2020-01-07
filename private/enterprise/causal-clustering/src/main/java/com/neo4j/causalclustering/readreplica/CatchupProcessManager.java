@@ -23,7 +23,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionRepresentationCommitProcess;
 import org.neo4j.kernel.impl.transaction.log.TransactionAppender;
@@ -61,7 +60,6 @@ public class CatchupProcessManager extends SafeLifecycle
     private final long txPullIntervalMillis;
     private final LifeSupport txPulling;
     private final CommandIndexTracker commandIndexTracker;
-    private final PageCursorTracerSupplier pageCursorTracerSupplier;
     private final Executor executor;
     private final ReadReplicaDatabaseContext databaseContext;
     private final LogProvider logProvider;
@@ -78,11 +76,10 @@ public class CatchupProcessManager extends SafeLifecycle
     CatchupProcessManager( Executor executor, CatchupComponentsRepository catchupComponents, ReadReplicaDatabaseContext databaseContext,
             DatabasePanicker panicker, TopologyService topologyService, CatchupClientFactory catchUpClient,
             UpstreamDatabaseStrategySelector selectionStrategyPipeline, TimerService timerService, CommandIndexTracker commandIndexTracker,
-            LogProvider logProvider, PageCursorTracerSupplier pageCursorTracerSupplier, Config config, ReplicatedDatabaseEventDispatch databaseEventDispatch )
+            LogProvider logProvider, Config config, ReplicatedDatabaseEventDispatch databaseEventDispatch )
     {
         this.logProvider = logProvider;
         this.log = logProvider.getLog( this.getClass() );
-        this.pageCursorTracerSupplier = pageCursorTracerSupplier;
         this.config = config;
         this.commandIndexTracker = commandIndexTracker;
         this.timerService = timerService;
@@ -136,7 +133,7 @@ public class CatchupProcessManager extends SafeLifecycle
         int maxBatchSize = config.get( CausalClusteringSettings.read_replica_transaction_applier_batch_size );
         BatchingTxApplier batchingTxApplier = new BatchingTxApplier( maxBatchSize,
                 () -> databaseContext.database().getDependencyResolver().resolveDependency( TransactionIdStore.class ), writableCommitProcess,
-                databaseContext.monitors(), pageCursorTracerSupplier, databaseContext.database().getVersionContextSupplier(), commandIndexTracker,
+                databaseContext.monitors(), databaseContext.database().getVersionContextSupplier(), commandIndexTracker,
                 logProvider, databaseEventDispatch );
 
         CatchupPollingProcess catchupProcess = new CatchupPollingProcess( executor, databaseContext, catchupClient,

@@ -12,7 +12,6 @@ import com.neo4j.dbms.ReplicatedDatabaseEventService.ReplicatedDatabaseEventDisp
 
 import java.util.function.Supplier;
 
-import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
 import org.neo4j.io.pagecache.tracing.cursor.context.VersionContextSupplier;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionQueue;
@@ -24,6 +23,7 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.TransactionIdStore;
 
+import static org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier.TRACER_SUPPLIER;
 import static org.neo4j.kernel.impl.transaction.tracing.CommitEvent.NULL;
 import static org.neo4j.storageengine.api.TransactionApplicationMode.EXTERNAL;
 
@@ -38,7 +38,6 @@ public class BatchingTxApplier extends LifecycleAdapter
     private final VersionContextSupplier versionContextSupplier;
 
     private final PullRequestMonitor monitor;
-    private final PageCursorTracerSupplier pageCursorTracerSupplier;
     private final CommandIndexTracker commandIndexTracker;
     private final Log log;
     private final ReplicatedDatabaseEventDispatch databaseEventDispatch;
@@ -50,13 +49,12 @@ public class BatchingTxApplier extends LifecycleAdapter
     private volatile boolean stopped;
 
     BatchingTxApplier( int maxBatchSize, Supplier<TransactionIdStore> txIdStoreSupplier, Supplier<TransactionCommitProcess> commitProcessSupplier,
-            Monitors monitors, PageCursorTracerSupplier pageCursorTracerSupplier, VersionContextSupplier versionContextSupplier,
+            Monitors monitors, VersionContextSupplier versionContextSupplier,
             CommandIndexTracker commandIndexTracker, LogProvider logProvider, ReplicatedDatabaseEventDispatch databaseEventDispatch )
     {
         this.maxBatchSize = maxBatchSize;
         this.txIdStoreSupplier = txIdStoreSupplier;
         this.commitProcessSupplier = commitProcessSupplier;
-        this.pageCursorTracerSupplier = pageCursorTracerSupplier;
         this.log = logProvider.getLog( getClass() );
         this.monitor = monitors.newMonitor( PullRequestMonitor.class );
         this.versionContextSupplier = versionContextSupplier;
@@ -72,7 +70,7 @@ public class BatchingTxApplier extends LifecycleAdapter
         txQueue = new TransactionQueue( maxBatchSize, ( first, last ) ->
         {
             commitProcess.commit( first, NULL, EXTERNAL );
-            pageCursorTracerSupplier.get().reportEvents();  // Report paging metrics for the commit
+            TRACER_SUPPLIER.get().reportEvents();
             long lastAppliedRaftLogIndex = LogIndexTxHeaderEncoding.decodeLogIndexFromTxHeader( last.transactionRepresentation().additionalHeader() );
             commandIndexTracker.setAppliedCommandIndex( lastAppliedRaftLogIndex );
         } );

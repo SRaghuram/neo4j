@@ -36,7 +36,7 @@ class StateMachineCommitHelperTest
     private final VersionContextSupplier versionContextSupplier = EmptyVersionContextSupplier.EMPTY;
     private final ReplicatedDatabaseEventDispatch databaseEventDispatch = mock( ReplicatedDatabaseEventDispatch.class );
 
-    private final StateMachineCommitHelper commitHelper = new StateMachineCommitHelper( commandIndexTracker, () -> pageCursorTracer, versionContextSupplier,
+    private final StateMachineCommitHelper commitHelper = new StateMachineCommitHelper( commandIndexTracker, versionContextSupplier,
             databaseEventDispatch );
 
     @Test

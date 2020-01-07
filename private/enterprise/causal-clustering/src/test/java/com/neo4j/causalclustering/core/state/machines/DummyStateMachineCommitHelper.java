@@ -20,6 +20,6 @@ public class DummyStateMachineCommitHelper extends StateMachineCommitHelper
 
     public DummyStateMachineCommitHelper( CommandIndexTracker commandIndexTracker, PageCursorTracer pageCursorTracer )
     {
-        super( commandIndexTracker, () -> pageCursorTracer, EmptyVersionContextSupplier.EMPTY, mock( ReplicatedDatabaseEventDispatch.class ) );
+        super( commandIndexTracker, EmptyVersionContextSupplier.EMPTY, mock( ReplicatedDatabaseEventDispatch.class ) );
     }
 }

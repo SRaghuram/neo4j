@@ -33,7 +33,6 @@ import java.util.function.Supplier;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
-import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.lifecycle.LifeSupport;
@@ -55,14 +54,13 @@ class ReadReplicaDatabaseFactory
     private final TopologyService topologyService;
     private final MemberId myIdentity;
     private final CatchupComponentsRepository catchupComponentsRepository;
-    private final PageCursorTracerSupplier pageCursorTracerSupplier;
     private final CatchupClientFactory catchupClientFactory;
     private final ReplicatedDatabaseEventService databaseEventService;
     private final ClusterStateStorageFactory clusterStateFactory;
     private final PanicService panicService;
 
     ReadReplicaDatabaseFactory( Config config, SystemNanoClock clock, JobScheduler jobScheduler, TopologyService topologyService, MemberId myIdentity,
-            CatchupComponentsRepository catchupComponentsRepository, PageCursorTracerSupplier pageCursorTracerSupplier,
+            CatchupComponentsRepository catchupComponentsRepository,
             CatchupClientFactory catchupClientFactory, ReplicatedDatabaseEventService databaseEventService, ClusterStateStorageFactory clusterStateFactory,
             PanicService panicService )
     {
@@ -72,7 +70,6 @@ class ReadReplicaDatabaseFactory
         this.topologyService = topologyService;
         this.myIdentity = myIdentity;
         this.catchupComponentsRepository = catchupComponentsRepository;
-        this.pageCursorTracerSupplier = pageCursorTracerSupplier;
         this.catchupClientFactory = catchupClientFactory;
         this.databaseEventService = databaseEventService;
         this.panicService = panicService;
@@ -103,7 +100,7 @@ class ReadReplicaDatabaseFactory
         ReplicatedDatabaseEventDispatch databaseEventDispatch = databaseEventService.getDatabaseEventDispatch( namedDatabaseId );
         CatchupProcessManager catchupProcess = new CatchupProcessManager( catchupExecutor, catchupComponentsRepository, databaseContext, panicker,
                 topologyService, catchupClientFactory, upstreamDatabaseStrategySelector, timerService, commandIndexTracker, internalLogProvider,
-                pageCursorTracerSupplier, config, databaseEventDispatch );
+                config, databaseEventDispatch );
 
         var raftIdStorage = clusterStateFactory.createRaftIdStorage( databaseContext.databaseId().name(), internalLogProvider );
 
