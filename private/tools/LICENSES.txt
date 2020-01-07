@@ -2608,7 +2608,6 @@ That's all there is to it!
 
 ------------------------------------------------------------------------------
 MIT License
-  Animal Sniffer Annotations
   Checker Qual
   jersey-container-servlet
   jersey-container-servlet-core
