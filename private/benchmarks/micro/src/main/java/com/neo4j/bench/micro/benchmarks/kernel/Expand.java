@@ -157,7 +157,7 @@ public class Expand extends AbstractKernelBenchmark
             txState.edgeGroup.outgoing( txState.edge );
             while ( txState.edge.next() )
             {
-                txState.edge.neighbour( txState.node );
+                txState.edge.otherNode( txState.node );
                 txState.node.next();
                 bh.consume( txState.node.propertiesReference() );
             }
@@ -183,7 +183,7 @@ public class Expand extends AbstractKernelBenchmark
                 txState.edgeGroup.outgoing( txState.edge );
                 while ( txState.edge.next() )
                 {
-                    txState.edge.neighbour( txState.node );
+                    txState.edge.otherNode( txState.node );
                     txState.node.next();
                     bh.consume( txState.node.propertiesReference() );
                 }
@@ -204,7 +204,7 @@ public class Expand extends AbstractKernelBenchmark
 
         while ( txState.edge.next() )
         {
-            txState.edge.neighbour( txState.node );
+            txState.edge.otherNode( txState.node );
             txState.node.next();
             bh.consume( txState.node.propertiesReference() );
         }
@@ -226,7 +226,7 @@ public class Expand extends AbstractKernelBenchmark
         {
             if ( txState.edge.type() == type )
             {
-                txState.edge.neighbour( txState.node );
+                txState.edge.otherNode( txState.node );
                 txState.node.next();
                 bh.consume( txState.node.propertiesReference() );
             }
