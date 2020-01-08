@@ -30,7 +30,7 @@ public class HighLimitFormatFamily extends FormatFamily
     @Override
     public int rank()
     {
-        return 1;
+        return 2;
     }
 
 }

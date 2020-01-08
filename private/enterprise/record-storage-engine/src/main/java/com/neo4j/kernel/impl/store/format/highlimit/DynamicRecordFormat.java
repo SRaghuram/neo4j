@@ -35,7 +35,7 @@ public class DynamicRecordFormat extends BaseOneByteHeaderRecordFormat<DynamicRe
 
     public DynamicRecordFormat()
     {
-        super( INT_STORE_HEADER_READER, RECORD_HEADER_SIZE, IN_USE_BIT, HighLimitFormatSettings.DYNAMIC_MAXIMUM_ID_BITS );
+        super( INT_STORE_HEADER_READER, RECORD_HEADER_SIZE, IN_USE_BIT, HighLimitFormatSettings.DYNAMIC_MAXIMUM_ID_BITS, false );
     }
 
     @Override

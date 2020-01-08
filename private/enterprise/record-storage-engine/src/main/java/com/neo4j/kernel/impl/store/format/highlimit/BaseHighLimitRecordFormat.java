@@ -86,7 +86,7 @@ abstract class BaseHighLimitRecordFormat<RECORD extends AbstractBaseRecord>
 
     protected BaseHighLimitRecordFormat( Function<StoreHeader,Integer> recordSize, int recordHeaderSize, int maxIdBits )
     {
-        super( recordSize, recordHeaderSize, IN_USE_BIT, maxIdBits );
+        super( recordSize, recordHeaderSize, IN_USE_BIT, maxIdBits, false );
     }
 
     @Override

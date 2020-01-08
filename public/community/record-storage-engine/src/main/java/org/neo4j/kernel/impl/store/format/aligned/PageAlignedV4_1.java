@@ -1,18 +1,36 @@
 /*
  * Copyright (c) 2002-2020 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
- * This file is a commercial add-on to Neo4j Enterprise Edition.
+ *
+ * This file is part of Neo4j.
+ *
+ * Neo4j is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package com.neo4j.kernel.impl.store.format.highlimit;
+package org.neo4j.kernel.impl.store.format.aligned;
 
 import org.neo4j.kernel.impl.store.format.BaseRecordFormats;
 import org.neo4j.kernel.impl.store.format.FormatFamily;
 import org.neo4j.kernel.impl.store.format.RecordFormat;
 import org.neo4j.kernel.impl.store.format.RecordFormats;
 import org.neo4j.kernel.impl.store.format.RecordStorageCapability;
-import org.neo4j.kernel.impl.store.format.StoreVersion;
+import org.neo4j.kernel.impl.store.format.standard.DynamicRecordFormat;
 import org.neo4j.kernel.impl.store.format.standard.LabelTokenRecordFormat;
+import org.neo4j.kernel.impl.store.format.standard.NodeRecordFormat;
 import org.neo4j.kernel.impl.store.format.standard.PropertyKeyTokenRecordFormat;
+import org.neo4j.kernel.impl.store.format.standard.PropertyRecordFormat;
+import org.neo4j.kernel.impl.store.format.standard.RelationshipGroupRecordFormat;
+import org.neo4j.kernel.impl.store.format.standard.RelationshipRecordFormat;
 import org.neo4j.kernel.impl.store.format.standard.RelationshipTypeTokenRecordFormat;
 import org.neo4j.kernel.impl.store.format.standard.SchemaRecordFormat;
 import org.neo4j.kernel.impl.store.record.DynamicRecord;
@@ -26,27 +44,20 @@ import org.neo4j.kernel.impl.store.record.RelationshipTypeTokenRecord;
 import org.neo4j.kernel.impl.store.record.SchemaRecord;
 import org.neo4j.storageengine.api.IndexCapabilities;
 
-/**
- * Record format with very high limits, 50-bit per ID, while at the same time keeping store size small.
- *
- * @see BaseHighLimitRecordFormat
- */
-public class HighLimit extends BaseRecordFormats
+import static org.neo4j.kernel.impl.store.format.StoreVersion.ALIGNED_V4_1;
+
+public class PageAlignedV4_1 extends BaseRecordFormats
 {
-    public static final String STORE_VERSION = StoreVersion.HIGH_LIMIT_V4_0_0.versionString();
+    public static final RecordFormats RECORD_FORMATS = new PageAlignedV4_1();
+    public static final String NAME = "aligned";
 
-    public static final RecordFormats RECORD_FORMATS = new HighLimit();
-    public static final String NAME = "high_limit";
-
-    protected HighLimit()
+    private PageAlignedV4_1()
     {
-        super( STORE_VERSION, StoreVersion.HIGH_LIMIT_V4_0_0.introductionVersion(), 6,
-                RecordStorageCapability.DENSE_NODES,
-                RecordStorageCapability.RELATIONSHIP_TYPE_3BYTES,
+        super( ALIGNED_V4_1.versionString(), ALIGNED_V4_1.introductionVersion(), 1,
                 RecordStorageCapability.SCHEMA,
+                RecordStorageCapability.DENSE_NODES,
                 RecordStorageCapability.POINT_PROPERTIES,
                 RecordStorageCapability.TEMPORAL_PROPERTIES,
-                RecordStorageCapability.SECONDARY_RECORD_UNITS,
                 RecordStorageCapability.FLEXIBLE_SCHEMA_STORE,
                 RecordStorageCapability.INTERNAL_TOKENS,
                 RecordStorageCapability.GBPTREE_ID_FILES,
@@ -59,61 +70,61 @@ public class HighLimit extends BaseRecordFormats
     @Override
     public RecordFormat<NodeRecord> node()
     {
-        return new NodeRecordFormat();
-    }
-
-    @Override
-    public RecordFormat<RelationshipRecord> relationship()
-    {
-        return new RelationshipRecordFormat();
+        return new NodeRecordFormat( true );
     }
 
     @Override
     public RecordFormat<RelationshipGroupRecord> relationshipGroup()
     {
-        return new RelationshipGroupRecordFormat();
+        return new RelationshipGroupRecordFormat( true );
+    }
+
+    @Override
+    public RecordFormat<RelationshipRecord> relationship()
+    {
+        return new RelationshipRecordFormat( true );
     }
 
     @Override
     public RecordFormat<PropertyRecord> property()
     {
-        return new PropertyRecordFormat();
+        return new PropertyRecordFormat( true );
     }
 
     @Override
     public RecordFormat<LabelTokenRecord> labelToken()
     {
-        return new LabelTokenRecordFormat();
+        return new LabelTokenRecordFormat( true );
     }
 
     @Override
     public RecordFormat<PropertyKeyTokenRecord> propertyKeyToken()
     {
-        return new PropertyKeyTokenRecordFormat();
+        return new PropertyKeyTokenRecordFormat( true );
     }
 
     @Override
     public RecordFormat<RelationshipTypeTokenRecord> relationshipTypeToken()
     {
-        return new RelationshipTypeTokenRecordFormat( HighLimitFormatSettings.RELATIONSHIP_TYPE_TOKEN_MAXIMUM_ID_BITS, false );
+        return new RelationshipTypeTokenRecordFormat( true );
     }
 
     @Override
     public RecordFormat<DynamicRecord> dynamic()
     {
-        return new DynamicRecordFormat();
-    }
-
-    @Override
-    public FormatFamily getFormatFamily()
-    {
-        return HighLimitFormatFamily.INSTANCE;
+        return new DynamicRecordFormat( true );
     }
 
     @Override
     public RecordFormat<SchemaRecord> schema()
     {
-        return new SchemaRecordFormat();
+        return new SchemaRecordFormat( true );
+    }
+
+    @Override
+    public FormatFamily getFormatFamily()
+    {
+        return AlignedFormatFamily.INSTANCE;
     }
 
     @Override

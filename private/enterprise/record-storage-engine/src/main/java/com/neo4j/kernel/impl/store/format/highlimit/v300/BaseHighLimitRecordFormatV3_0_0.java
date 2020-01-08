@@ -76,7 +76,7 @@ abstract class BaseHighLimitRecordFormatV3_0_0<RECORD extends AbstractBaseRecord
 
     protected BaseHighLimitRecordFormatV3_0_0( Function<StoreHeader,Integer> recordSize, int recordHeaderSize )
     {
-        super( recordSize, recordHeaderSize, IN_USE_BIT, HighLimitV3_0_0.DEFAULT_MAXIMUM_BITS_PER_ID );
+        super( recordSize, recordHeaderSize, IN_USE_BIT, HighLimitV3_0_0.DEFAULT_MAXIMUM_BITS_PER_ID, false );
     }
 
     @Override
