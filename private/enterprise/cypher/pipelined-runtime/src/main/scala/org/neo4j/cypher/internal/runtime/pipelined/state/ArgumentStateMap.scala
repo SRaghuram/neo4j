@@ -20,7 +20,7 @@ trait ArgumentStateMap[S <: ArgumentState] {
 
   /**
    * Update the state for the given argument row id.
-   * Make sure that the controller exists and the state is not taken, an donly apply the function then.
+   * Make sure that the controller exists and the state is not taken, and only apply the function then.
    *
    * @param argumentRowId the argument row id.
    * @param onState the function to apply on the state.

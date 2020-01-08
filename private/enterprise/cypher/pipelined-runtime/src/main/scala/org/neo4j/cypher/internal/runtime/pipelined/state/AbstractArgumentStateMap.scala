@@ -203,11 +203,6 @@ object AbstractArgumentStateMap {
       * @return if this call succeeded in taking the controller
       */
     def tryTake(): Boolean
-
-    /**
-     * @return true if this controller was taken.
-     */
-    def isTaken: Boolean
   }
 
   /**
@@ -230,8 +225,6 @@ object AbstractArgumentStateMap {
     override def take(): Boolean = throw new IllegalStateException(s"Cannot mutate ${this.getClass.getSimpleName}")
 
     override def isZero: Boolean = true
-
-    override def isTaken: Boolean = true
 
     override def toString: String = {
       s"[immutable, state: $state]"
