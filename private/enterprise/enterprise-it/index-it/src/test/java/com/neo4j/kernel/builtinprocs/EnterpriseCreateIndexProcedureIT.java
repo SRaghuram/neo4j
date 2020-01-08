@@ -180,7 +180,7 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
 
         if ( uniquenessConstraint )
         {
-            final String schemaDescription = "(:label[0] {property[0]})";
+            final String schemaDescription = "(:Superhero {primaryPower})";
             assertEquals( "There already exists an index " + schemaDescription + ". A constraint cannot be created until the index has been dropped.",
                     e.getMessage() );
         }
