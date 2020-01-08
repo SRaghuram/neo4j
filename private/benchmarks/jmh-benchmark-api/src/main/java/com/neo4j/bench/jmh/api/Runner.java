@@ -318,7 +318,7 @@ public abstract class Runner
                                     threadCount,
                                     jvm,
                                     jvmArgs );
-                            // profile using exactly one configured profiler + fork directory creating profiler (necessary for robust fork directory creation)
+                            // profile using exactly one profiler
                             builder = builder.addProfiler( profiler )
                                              .forks( 1 );
                             // allow Runner implementation to override/enrich JMH configuration
