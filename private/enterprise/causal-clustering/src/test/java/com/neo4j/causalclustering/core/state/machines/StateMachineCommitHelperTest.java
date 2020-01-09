@@ -11,7 +11,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
-import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
 import org.neo4j.io.pagecache.tracing.cursor.context.VersionContextSupplier;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
@@ -32,7 +31,6 @@ import static org.neo4j.kernel.impl.transaction.log.Commitment.NO_COMMITMENT;
 class StateMachineCommitHelperTest
 {
     private final CommandIndexTracker commandIndexTracker = new CommandIndexTracker();
-    private final PageCursorTracer pageCursorTracer = mock( PageCursorTracer.class );
     private final VersionContextSupplier versionContextSupplier = EmptyVersionContextSupplier.EMPTY;
     private final ReplicatedDatabaseEventDispatch databaseEventDispatch = mock( ReplicatedDatabaseEventDispatch.class );
 
@@ -58,7 +56,6 @@ class StateMachineCommitHelperTest
         commitHelper.commit( commitProcess, tx );
 
         verify( commitProcess ).commit( tx, CommitEvent.NULL, TransactionApplicationMode.EXTERNAL );
-        verify( pageCursorTracer ).reportEvents();
     }
 
     @Test
@@ -72,7 +69,6 @@ class StateMachineCommitHelperTest
         var txToApplyCaptor = ArgumentCaptor.forClass( TransactionToApply.class );
         verify( commitProcess ).commit( txToApplyCaptor.capture(), eq( CommitEvent.NULL ), eq( TransactionApplicationMode.EXTERNAL ) );
         assertEquals( tx, txToApplyCaptor.getValue().transactionRepresentation() );
-        verify( pageCursorTracer ).reportEvents();
     }
 
     @Test
@@ -89,7 +85,6 @@ class StateMachineCommitHelperTest
         verify( commitProcess ).commit( tx, CommitEvent.NULL, TransactionApplicationMode.EXTERNAL );
         assertEquals( txId, committedTxId.longValue() );
         assertEquals( 15, commandIndexTracker.getAppliedCommandIndex() );
-        verify( pageCursorTracer ).reportEvents();
         verify( databaseEventDispatch ).fireTransactionCommitted( txId );
     }
 

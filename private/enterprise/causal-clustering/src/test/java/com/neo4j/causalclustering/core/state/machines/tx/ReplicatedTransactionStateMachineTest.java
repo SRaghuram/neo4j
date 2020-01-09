@@ -37,6 +37,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 
 class ReplicatedTransactionStateMachineTest
 {
@@ -53,9 +54,8 @@ class ReplicatedTransactionStateMachineTest
         ReplicatedTransaction tx = ReplicatedTransaction.from( physicalTx( leaseId ), DATABASE_ID );
 
         TransactionCommitProcess localCommitProcess = mock( TransactionCommitProcess.class );
-        PageCursorTracer cursorTracer = mock( PageCursorTracer.class );
 
-        ReplicatedTransactionStateMachine stateMachine = newTransactionStateMachine( leaseState( leaseId ), cursorTracer );
+        ReplicatedTransactionStateMachine stateMachine = newTransactionStateMachine( leaseState( leaseId ), NULL );
         stateMachine.installCommitProcess( localCommitProcess, -1L );
 
         // when
@@ -65,7 +65,6 @@ class ReplicatedTransactionStateMachineTest
         // then
         verify( localCommitProcess ).commit( any( TransactionToApply.class ), any( CommitEvent.class ),
                 any( TransactionApplicationMode.class ) );
-        verify( cursorTracer ).reportEvents();
     }
 
     @Test
@@ -190,7 +189,7 @@ class ReplicatedTransactionStateMachineTest
 
     private ReplicatedTransactionStateMachine newTransactionStateMachine( ReplicatedLeaseStateMachine leaseState )
     {
-        return newTransactionStateMachine( leaseState, PageCursorTracer.NULL );
+        return newTransactionStateMachine( leaseState, NULL );
     }
 
     private ReplicatedTransactionStateMachine newTransactionStateMachine( ReplicatedLeaseStateMachine lockState, PageCursorTracer pageCursorTracer )
