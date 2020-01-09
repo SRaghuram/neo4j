@@ -36,6 +36,7 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.GraphDatabaseSettings.LogQueryLevel;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
+import org.neo4j.graphdb.QueryExecutionException;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -63,6 +64,7 @@ import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
@@ -304,6 +306,22 @@ class QueryLoggerIT
 
         List<String> logLines = readAllLines( logFilename );
         assertEquals( 1, logLines.stream().filter( line -> line.contains( "Query started:" ) ).count() );
+    }
+
+    @Test
+    void shouldLogStartBeforeQueryParsing() throws Exception
+    {
+        databaseBuilder.setConfig( log_queries, LogQueryLevel.VERBOSE )
+                .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
+                .setConfig( GraphDatabaseSettings.log_queries_parameter_logging_enabled, false );
+        buildDatabase();
+
+        assertThrows( QueryExecutionException.class, () -> executeQuery( "Not a parsable query" ) );
+        databaseManagementService.shutdown();
+
+        List<String> logLines = readAllLines( logFilename );
+        assertEquals( 1, logLines.size() );
+        assertThat( logLines.get( 0 ), containsString( "Query started:" ) );
     }
 
     @Test
