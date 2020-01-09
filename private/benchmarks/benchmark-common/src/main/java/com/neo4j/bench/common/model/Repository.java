@@ -54,7 +54,7 @@ public enum Repository
                "quality-tasks",
                "neo-technology",
                "^master$",
-               "^\\d{1,2}\\.\\d{1,2}\\.\\d{1,2}\\.\\d{1,2}$" ),
+               "^\\d{1,2}\\.\\d{1,2}$" ),
 
     // -----------------------
     // --- target systems ----
