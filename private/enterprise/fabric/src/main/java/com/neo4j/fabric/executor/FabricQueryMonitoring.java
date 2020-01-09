@@ -9,11 +9,8 @@ import com.neo4j.fabric.localdb.FabricDatabaseManager;
 import com.neo4j.fabric.transaction.FabricTransactionInfo;
 
 import java.util.Map;
-import java.util.function.LongSupplier;
 
 import org.neo4j.common.DependencyResolver;
-import org.neo4j.internal.kernel.api.connectioninfo.ClientConnectionInfo;
-import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.api.query.ExecutingQuery;
 import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.NamedDatabaseId;
@@ -23,7 +20,6 @@ import org.neo4j.memory.OptionalMemoryTracker;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.resources.CpuClock;
 import org.neo4j.time.Clocks;
-import org.neo4j.time.SystemNanoClock;
 import org.neo4j.values.virtual.MapValue;
 
 public class FabricQueryMonitoring
@@ -77,25 +73,18 @@ public class FabricQueryMonitoring
         {
             monitor.endFailure( executingQuery, failure );
         }
+
+        ExecutingQuery getMonitoredQuery()
+        {
+            return executingQuery;
+        }
     }
 
     private ExecutingQuery executingQuery( FabricTransactionInfo transactionInfo, String statement, MapValue params, Thread thread )
     {
-        MonotonicCounter lastQueryId = MonotonicCounter.newAtomicMonotonicCounter();
-        long queryId = lastQueryId.incrementAndGet();
-        ClientConnectionInfo connectionInfo = transactionInfo.getClientConnectionInfo();
-        NamedDatabaseId namedDatabaseId = getDatabaseIdRepository().getByName( transactionInfo.getDatabaseName() ).get();
-        String username = transactionInfo.getLoginContext().subject().username();
-        Map<String,Object> annotationData = Map.of();
-        LongSupplier emptySupplier = () -> 0L;
-        PageCursorTracer cursorCounters = PageCursorTracer.NULL;
-        long threadId = thread.getId();
-        String threadName = thread.getName();
-        SystemNanoClock systemClock = Clocks.nanoClock();
-        CpuClock cpuClock = CpuClock.NOT_AVAILABLE;
 
-        return new ExecutingQuery( queryId, connectionInfo, namedDatabaseId, username, statement, params, annotationData, emptySupplier, emptySupplier,
-                emptySupplier, threadId, threadName, systemClock, cpuClock );
+        NamedDatabaseId namedDatabaseId = getDatabaseIdRepository().getByName( transactionInfo.getDatabaseName() ).get();
+        return new FabricExecutingQuery( transactionInfo, statement, params, thread, namedDatabaseId );
     }
 
     private DatabaseIdRepository getDatabaseIdRepository()
@@ -105,5 +94,37 @@ public class FabricQueryMonitoring
             databaseIdRepository = dependencyResolver.resolveDependency( FabricDatabaseManager.class ).databaseIdRepository();
         }
         return databaseIdRepository;
+    }
+
+    private static class FabricExecutingQuery extends ExecutingQuery
+    {
+        private static MonotonicCounter internalFabricQueryIdGenerator = MonotonicCounter.newAtomicMonotonicCounter();
+        private String internalFabricId;
+
+        private FabricExecutingQuery( FabricTransactionInfo transactionInfo, String statement, MapValue params, Thread thread, NamedDatabaseId namedDatabaseId )
+        {
+            super( -1, //The actual query id should never be used(leaked) to the dbms
+                    transactionInfo.getClientConnectionInfo(),
+                    namedDatabaseId,
+                    transactionInfo.getLoginContext().subject().username(),
+                    statement,
+                    params,
+                    Map.of(),
+                    () -> 0L,
+                    () -> 0L,
+                    () -> 0L,
+                    thread.getId(),
+                    thread.getName(),
+                    Clocks.nanoClock(),
+                    CpuClock.NOT_AVAILABLE
+            );
+            internalFabricId = "F" + internalFabricQueryIdGenerator.incrementAndGet();
+        }
+
+        @Override
+        public String id()
+        {
+            return internalFabricId;
+        }
     }
 }

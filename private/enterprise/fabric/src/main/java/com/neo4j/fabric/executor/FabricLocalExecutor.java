@@ -28,6 +28,7 @@ import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.kernel.GraphDatabaseQueryService;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.exceptions.Status;
+import org.neo4j.kernel.api.query.ExecutingQuery;
 import org.neo4j.kernel.availability.UnavailableException;
 import org.neo4j.kernel.impl.api.security.RestrictedAccessMode;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
@@ -71,9 +72,9 @@ public class FabricLocalExecutor
             this.transactionInfo = transactionInfo;
         }
 
-        public StatementResult run( FullyParsedQuery query, MapValue params, Flux<Record> input )
+        public StatementResult run( ExecutingQuery parentQuery, FullyParsedQuery query, MapValue params, Flux<Record> input )
         {
-            var kernelTransaction = beginKernelTransaction();
+            var kernelTransaction = beginKernelTransaction( parentQuery );
             kernelTransactions.add( kernelTransaction );
 
             try
@@ -113,7 +114,7 @@ public class FabricLocalExecutor
             kernelTransactions.forEach( SingleStatementKernelTransaction::terminate );
         }
 
-        private SingleStatementKernelTransaction beginKernelTransaction()
+        private SingleStatementKernelTransaction beginKernelTransaction( ExecutingQuery parentQuery )
         {
             String databaseName = transactionInfo.getDatabaseName();
             GraphDatabaseFacade databaseFacade;
@@ -134,7 +135,7 @@ public class FabricLocalExecutor
             var queryService = dependencyResolver.resolveDependency( GraphDatabaseQueryService.class );
             var transactionalContextFactory = Neo4jTransactionalContextFactory.create( queryService );
 
-            return new SingleStatementKernelTransaction( executionEngine, transactionalContextFactory, internalTransaction, config );
+            return new SingleStatementKernelTransaction( parentQuery,executionEngine, transactionalContextFactory, internalTransaction, config );
         }
 
         private InternalTransaction beginInternalTransaction( GraphDatabaseFacade databaseFacade, FabricTransactionInfo transactionInfo )
