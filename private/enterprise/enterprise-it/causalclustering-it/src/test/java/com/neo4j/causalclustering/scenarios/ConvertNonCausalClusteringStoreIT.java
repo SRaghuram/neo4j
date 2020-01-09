@@ -25,6 +25,7 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
+import org.neo4j.kernel.impl.store.format.aligned.PageAlignedV4_1;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
@@ -51,7 +52,7 @@ class ConvertNonCausalClusteringStoreIT
     private TestDirectory testDirectory;
 
     @ParameterizedTest( name = "Record format '{0}'" )
-    @ValueSource( strings = {Standard.LATEST_NAME, HighLimit.NAME} )
+    @ValueSource( strings = {Standard.LATEST_NAME, HighLimit.NAME, PageAlignedV4_1.NAME} )
     void shouldReplicateTransactionToCoreMembers( String recordFormat ) throws Throwable
     {
         // given

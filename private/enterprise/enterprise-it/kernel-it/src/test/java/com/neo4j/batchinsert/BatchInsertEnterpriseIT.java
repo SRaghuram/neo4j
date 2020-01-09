@@ -35,6 +35,7 @@ import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.kernel.impl.MyRelTypes;
+import org.neo4j.kernel.impl.store.format.aligned.PageAlignedV4_1;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.rule.fs.DefaultFileSystemRule;
@@ -63,7 +64,7 @@ public class BatchInsertEnterpriseIT
     @Parameters( name = "{0}" )
     public static List<String> recordFormats()
     {
-        return Arrays.asList( Standard.LATEST_NAME, HighLimit.NAME );
+        return Arrays.asList( Standard.LATEST_NAME, HighLimit.NAME, PageAlignedV4_1.NAME );
     }
 
     @Test

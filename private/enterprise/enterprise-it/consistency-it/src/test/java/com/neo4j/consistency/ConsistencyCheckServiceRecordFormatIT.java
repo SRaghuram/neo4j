@@ -22,6 +22,7 @@ import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.io.layout.DatabaseLayout;
+import org.neo4j.kernel.impl.store.format.aligned.PageAlignedV4_1;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.test.extension.Inject;
@@ -40,7 +41,7 @@ class ConsistencyCheckServiceRecordFormatIT
     private DatabaseLayout databaseLayout;
 
     @ParameterizedTest
-    @ValueSource( strings = {Standard.LATEST_NAME, HighLimit.NAME} )
+    @ValueSource( strings = {Standard.LATEST_NAME, HighLimit.NAME, PageAlignedV4_1.NAME} )
     void checkTinyConsistentStore( String recordFormat ) throws Exception
     {
         var managementService = new TestEnterpriseDatabaseManagementServiceBuilder( databaseLayout )
