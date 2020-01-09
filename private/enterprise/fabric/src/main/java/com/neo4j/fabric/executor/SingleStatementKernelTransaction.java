@@ -19,6 +19,7 @@ import org.neo4j.cypher.internal.runtime.InputDataStream;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.exceptions.Status;
+import org.neo4j.kernel.api.query.ExecutingQuery;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.query.QueryExecution;
 import org.neo4j.kernel.impl.query.QueryExecutionKernelException;
@@ -29,6 +30,7 @@ import org.neo4j.values.virtual.MapValue;
 
 public class SingleStatementKernelTransaction
 {
+    private final ExecutingQuery parentQuery;
     private final ExecutionEngine queryExecutionEngine;
     private final TransactionalContextFactory transactionalContextFactory;
     private final KernelTransaction kernelTransaction;
@@ -36,9 +38,10 @@ public class SingleStatementKernelTransaction
     private final FabricConfig config;
     private TransactionalContext executionContext;
 
-    SingleStatementKernelTransaction( ExecutionEngine queryExecutionEngine, TransactionalContextFactory transactionalContextFactory,
+    SingleStatementKernelTransaction( ExecutingQuery parentQuery, ExecutionEngine queryExecutionEngine, TransactionalContextFactory transactionalContextFactory,
             KernelTransaction kernelTransaction, InternalTransaction internalTransaction, FabricConfig config )
     {
+        this.parentQuery = parentQuery;
         this.queryExecutionEngine = queryExecutionEngine;
         this.transactionalContextFactory = transactionalContextFactory;
         this.kernelTransaction = kernelTransaction;
@@ -60,7 +63,9 @@ public class SingleStatementKernelTransaction
     {
         try
         {
-            executionContext = transactionalContextFactory.newContext( internalTransaction, "", params );
+            String queryText = "Internal query for Fabric query id:" + parentQuery.id();
+            executionContext = transactionalContextFactory.newContext( internalTransaction, queryText, params );
+            //Query is a sub-part of the parent fabric query that is already parsed and planned. The parent fabric query is monitored by the fabric executor.
             return queryExecutionEngine.executeQuery( query, params, executionContext, true, input, subscriber );
         }
         catch ( QueryExecutionKernelException e )

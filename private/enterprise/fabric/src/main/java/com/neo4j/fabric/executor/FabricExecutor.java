@@ -210,7 +210,7 @@ public class FabricExecutor
 
         Flux<Record> runLocalQuery( FabricQuery.LocalQuery query, Flux<Record> input )
         {
-            return ctx.getLocal().run( query.query(), params, input ).records();
+            return ctx.getLocal().run( queryMonitor.getMonitoredQuery(), query.query(), params, input ).records();
         }
 
         Flux<Record> runRemoteQuery( FabricQuery.RemoteQuery query, Flux<Record> input )
