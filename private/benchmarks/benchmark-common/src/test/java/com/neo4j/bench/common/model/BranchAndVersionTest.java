@@ -25,6 +25,7 @@ public class BranchAndVersionTest
         BranchAndVersion.validate( Repository.MACRO_BENCH, Repository.MACRO_BENCH.defaultOwner(), "3.4" );
         BranchAndVersion.validate( Repository.ALGOS, Repository.ALGOS.defaultOwner(), "master" );
         BranchAndVersion.validate( Repository.ALGOS_JMH, Repository.ALGOS_JMH.defaultOwner(), "master" );
+        BranchAndVersion.validate( Repository.QUALITY_TASK, Repository.QUALITY_TASK.defaultOwner(), "master" );
     }
 
     @Test
@@ -44,6 +45,9 @@ public class BranchAndVersionTest
 
         BenchmarkUtil.assertException( RuntimeException.class,
                                        () -> BranchAndVersion.validate( Repository.ALGOS_JMH, Repository.ALGOS_JMH.defaultOwner(), "3.4.5.2" ) );
+
+        BenchmarkUtil.assertException( RuntimeException.class,
+                                       () -> BranchAndVersion.validate( Repository.QUALITY_TASK, Repository.QUALITY_TASK.defaultOwner(), "1.0" ) );
     }
 
     @Test
@@ -70,6 +74,7 @@ public class BranchAndVersionTest
     public void checksVersionFormat()
     {
         Arrays.stream( Repository.values() )
+              .filter( r -> r != Repository.QUALITY_TASK ) // Ignore Quality repos, as they use a different version scheme
               .forEach( repository ->
                         {
                             assertTrue( repository.isValidVersion( "1.2.3" ) );
@@ -151,6 +156,7 @@ public class BranchAndVersionTest
     public void checksToSanitizedVersion()
     {
         Arrays.stream( Repository.values() )
+              .filter( r -> r != Repository.QUALITY_TASK ) // Ignore Quality repos, as they use a different version scheme
               .forEach( repository ->
                         {
                             assertThat( BranchAndVersion.toSanitizeVersion( repository, "3.1.0" ), equalTo( "3.1.0" ) );
