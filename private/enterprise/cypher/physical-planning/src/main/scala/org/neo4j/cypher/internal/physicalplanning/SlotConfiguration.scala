@@ -144,7 +144,7 @@ class SlotConfiguration(private val slots: mutable.Map[String, Slot],
           LongSlot(offset, nullable, newSlot.typ)
         case (RefSlot(offset, nullable, _), false, true) =>
           RefSlot(offset, nullable, newSlot.typ)
-        case config => throw new InternalException(s"Unxpected slot configuration: $config")
+        case config => throw new InternalException(s"Unexpected slot configuration: $config")
       }
       replaceExistingSlot(key, existingSlot, modifiedSlot)
     }
