@@ -266,14 +266,14 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
                                     missingTypes: Array[String])
                                    (codeGen: OperatorExpressionCompiler) extends InputLoopTaskTemplate(inner, id, innermost, codeGen, isHead) {
 
-  protected val nodeCursorField: InstanceField = field[NodeCursor](codeGen.namer.nextVariableName() + "nodeCursor")
-  private val groupCursorField = field[RelationshipGroupCursor](codeGen.namer.nextVariableName() + "group")
-  private val traversalCursorField = field[RelationshipTraversalCursor](codeGen.namer.nextVariableName() + "traversal")
-  protected val relationshipsField: InstanceField = field[RelationshipSelectionCursor](codeGen.namer.nextVariableName() + "relationships")
-  private val typeField = field[Array[Int]](codeGen.namer.nextVariableName() + "type",
+  protected val nodeCursorField: InstanceField = field[NodeCursor](codeGen.namer.nextVariableName("nodeCursor"))
+  private val groupCursorField = field[RelationshipGroupCursor](codeGen.namer.nextVariableName("group"))
+  private val traversalCursorField = field[RelationshipTraversalCursor](codeGen.namer.nextVariableName("traversal"))
+  protected val relationshipsField: InstanceField = field[RelationshipSelectionCursor](codeGen.namer.nextVariableName("relationships"))
+  private val typeField = field[Array[Int]](codeGen.namer.nextVariableName("type"),
     if (types.isEmpty && missingTypes.isEmpty) constant(null)
     else arrayOf[Int](types.map(constant):_*))
-  private val missingTypeField: InstanceField = field[Array[String]](codeGen.namer.nextVariableName() + "missingType",
+  private val missingTypeField: InstanceField = field[Array[String]](codeGen.namer.nextVariableName("missingType"),
     arrayOf[String](missingTypes.map(constant):_*))
 
   codeGen.registerCursor(relName, RelationshipCursorRepresentation(loadField(relationshipsField)))
@@ -320,7 +320,7 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
   override protected def genInitializeInnerLoop: IntermediateRepresentation = {
 
     val resultBoolean = codeGen.namer.nextVariableName()
-    val fromNode = codeGen.namer.nextVariableName() + "fromNode"
+    val fromNode = codeGen.namer.nextVariableName("fromNode")
 
     block(
       declareAndAssign(typeRefOf[Boolean], resultBoolean, constant(false)),

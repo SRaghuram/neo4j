@@ -208,9 +208,9 @@ class SerialTopLevelLimitOperatorTaskTemplate(val inner: OperatorTaskTemplate,
 
 
   private var countExpression: IntermediateExpression = _
-  private val countLeftVar: LocalVariable = variable[Long](codeGen.namer.nextVariableName() + "_countLeft", constant(0L))
-  private val reservedVar: LocalVariable = variable[Long](codeGen.namer.nextVariableName() + "_reserved", constant(0L))
-  private val limitStateField = field[SerialTopLevelLimitState](codeGen.namer.nextVariableName() + "_limitState",
+  private val countLeftVar: LocalVariable = variable[Long](codeGen.namer.nextVariableName("countLeft"), constant(0L))
+  private val reservedVar: LocalVariable = variable[Long](codeGen.namer.nextVariableName("reserved"), constant(0L))
+  private val limitStateField = field[SerialTopLevelLimitState](codeGen.namer.nextVariableName("limitState"),
     // Get the limit operator state from the ArgumentStateMaps that is passed to the constructor
     // We do not generate any checks or error handling code, so the runtime compiler is responsible for this fitting together perfectly
     cast[SerialTopLevelLimitState](

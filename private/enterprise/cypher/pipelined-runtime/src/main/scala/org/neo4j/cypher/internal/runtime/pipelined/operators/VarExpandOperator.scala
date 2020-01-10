@@ -267,12 +267,12 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
                                     maybeRelVariablePredicate: Option[VariablePredicate])
                                    (codeGen: OperatorExpressionCompiler) extends InputLoopTaskTemplate(inner, id, innermost, codeGen, isHead) {
 
-  private val typeField = field[Array[Int]](codeGen.namer.nextVariableName() + "type",
+  private val typeField = field[Array[Int]](codeGen.namer.nextVariableName("type"),
     if (types.isEmpty && missingTypes.isEmpty) constant(null)
     else arrayOf[Int](types.map(constant):_*))
-  private val missingTypeField = field[Array[String]](codeGen.namer.nextVariableName() + "missingType",
+  private val missingTypeField = field[Array[String]](codeGen.namer.nextVariableName("missingType"),
     arrayOf[String](missingTypes.map(constant):_*))
-  private val varExpandCursorField = field[VarExpandCursor](codeGen.namer.nextVariableName() + "varExpandCursor")
+  private val varExpandCursorField = field[VarExpandCursor](codeGen.namer.nextVariableName("varExpandCursor"))
   private val toOffset = toSlot.offset
   private val projectBackwards = VarLengthExpandPipe.projectBackwards(dir, projectedDir)
   private var startNodePredicate: Option[IntermediateExpression] = _
@@ -314,8 +314,8 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
    */
   override protected def genInitializeInnerLoop: IntermediateRepresentation = {
     val resultBoolean = codeGen.namer.nextVariableName()
-    val fromNode = codeGen.namer.nextVariableName() + "fromNode"
-    val toNode = codeGen.namer.nextVariableName() + "toNode"
+    val fromNode = codeGen.namer.nextVariableName("fromNode")
+    val toNode = codeGen.namer.nextVariableName("toNode")
 
     /**
      * Generate node predicate to be checked on the fromNode

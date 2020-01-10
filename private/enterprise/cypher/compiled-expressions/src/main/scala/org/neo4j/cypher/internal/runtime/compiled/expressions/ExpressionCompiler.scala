@@ -262,8 +262,14 @@ class VariableNamer {
   private var counter: Int = 0
   private val parameters = mutable.Map.empty[String, String]
   private val variables = mutable.Map.empty[String, String]
+
   def nextVariableName(): String = {
-    val nextName = s"v$counter"
+    nextVariableName("")
+  }
+
+  def nextVariableName(suffix: String): String = {
+    def maybeUnderscore = if (suffix.isEmpty) "" else "_"
+    val nextName = s"v$counter$maybeUnderscore$suffix"
     counter += 1
     nextName
   }
