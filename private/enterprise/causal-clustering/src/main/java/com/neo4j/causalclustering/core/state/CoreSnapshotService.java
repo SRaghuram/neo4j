@@ -12,9 +12,14 @@ import com.neo4j.causalclustering.core.state.snapshot.CoreSnapshot;
 import com.neo4j.dbms.DatabaseStartAborter;
 
 import java.io.IOException;
+import java.time.Clock;
+import java.time.Duration;
+import java.util.concurrent.TimeUnit;
 
 import org.neo4j.dbms.database.DatabaseStartAbortedException;
 import org.neo4j.kernel.database.NamedDatabaseId;
+import org.neo4j.logging.internal.CappedLogger;
+import org.neo4j.logging.internal.LogService;
 
 public class CoreSnapshotService
 {
@@ -25,15 +30,17 @@ public class CoreSnapshotService
     private final RaftLog raftLog;
     private final RaftMachine raftMachine;
     private final NamedDatabaseId namedDatabaseId;
+    private final CappedLogger logger;
 
-    public CoreSnapshotService( CommandApplicationProcess applicationProcess, RaftLog raftLog, CoreState coreState,
-            RaftMachine raftMachine, NamedDatabaseId namedDatabaseId )
+    public CoreSnapshotService( CommandApplicationProcess applicationProcess, RaftLog raftLog, CoreState coreState, RaftMachine raftMachine,
+            NamedDatabaseId namedDatabaseId, LogService logService, Clock clock )
     {
         this.applicationProcess = applicationProcess;
         this.coreState = coreState;
         this.raftLog = raftLog;
         this.raftMachine = raftMachine;
         this.namedDatabaseId = namedDatabaseId;
+        this.logger = new CappedLogger( logService.getInternalLog( getClass() ) ).setTimeLimit( 10, TimeUnit.SECONDS, clock );
     }
 
     public synchronized CoreSnapshot snapshot() throws Exception
@@ -70,15 +77,17 @@ public class CoreSnapshotService
         notifyAll();
     }
 
-    public synchronized void awaitState( DatabaseStartAborter startAborter ) throws InterruptedException, DatabaseStartAbortedException
+    public synchronized void awaitState( DatabaseStartAborter startAborter, Duration waitTime ) throws InterruptedException, DatabaseStartAbortedException
     {
         while ( raftMachine.state().appendIndex() < 0 )
         {
+            logger.info( "Waiting for another raft group member to publish a core state snapshot" );
+
             if ( startAborter.shouldAbort( namedDatabaseId ) )
             {
                 throw new DatabaseStartAbortedException( namedDatabaseId );
             }
-            wait();
+            wait( waitTime.toMillis() );
         }
     }
 }

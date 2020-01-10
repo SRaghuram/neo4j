@@ -19,12 +19,16 @@ import com.neo4j.dbms.DatabaseStartAborter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
+
 import org.neo4j.dbms.database.DatabaseStartAbortedException;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
@@ -98,7 +102,7 @@ class CoreBootstrapTest
     {
         // given
         when( raftBinder.bindToRaft( databaseStartAborter ) ).thenReturn( new BoundState( raftId ) );
-        doThrow( new DatabaseStartAbortedException( databaseId ) ).when( snapshotService ).awaitState( databaseStartAborter );
+        doThrow( new DatabaseStartAbortedException( databaseId ) ).when( snapshotService ).awaitState( eq( databaseStartAborter ), any( Duration.class ) );
 
         var bootstrap = createBootstrap();
 
