@@ -9,7 +9,7 @@ import org.neo4j.codegen.api.IntermediateRepresentation._
 import org.neo4j.codegen.api._
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.DbAccess
-import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler
+import org.neo4j.cypher.internal.runtime.compiled.expressions.{CompiledHelpers, ExpressionCompiler}
 import org.neo4j.cypher.internal.runtime.pipelined.execution._
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.expressions.SemanticDirection
@@ -252,6 +252,9 @@ object OperatorCodeGenHelperTemplates {
 
   def rangeBetweenSeek(prop: Int, fromInclusive: Boolean, fromExpression: IntermediateRepresentation, toInclusive: Boolean, toExpression: IntermediateRepresentation): IntermediateRepresentation =
     invokeStatic(method[IndexQuery, RangePredicate[_], Int, Value, Boolean, Value, Boolean]("range"), constant(prop), fromExpression, constant(fromInclusive), toExpression, constant(toInclusive))
+
+  def stringPrefixSeek(prop: Int, expression: IntermediateRepresentation): IntermediateRepresentation =
+    invokeStatic(method[CompiledHelpers, IndexQuery, Int, AnyValue]("stringPrefix"), constant(prop), expression)
 
   def stringContainsScan(prop: Int, expression: IntermediateRepresentation): IntermediateRepresentation =
     invokeStatic(method[IndexQuery, StringContainsPredicate, Int, TextValue]("stringContains"), constant(prop), expression)

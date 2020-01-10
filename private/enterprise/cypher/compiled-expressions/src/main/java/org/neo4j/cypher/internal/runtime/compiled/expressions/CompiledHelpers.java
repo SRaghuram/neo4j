@@ -14,6 +14,7 @@ import org.neo4j.internal.kernel.api.IndexQuery;
 import org.neo4j.util.CalledFromGeneratedCode;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.BooleanValue;
+import org.neo4j.values.storable.TextValue;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.ValueGroup;
 import org.neo4j.values.virtual.VirtualNodeValue;
@@ -24,6 +25,7 @@ import static org.neo4j.values.storable.Values.NO_VALUE;
 /**
  * Contains helper methods used from compiled expressions
  */
+@SuppressWarnings( "unused" )
 public final class CompiledHelpers
 {
     private CompiledHelpers()
@@ -66,6 +68,11 @@ public final class CompiledHelpers
     @CalledFromGeneratedCode
     public static boolean possibleRangePredicate( IndexQuery query )
     {
+        if ( query == null )
+        {
+            return false;
+         }
+
         ValueGroup valueGroup = query.valueGroup();
 
         for ( ValueGroup rangeSeekableValueGroup : RANGE_SEEKABLE_VALUE_GROUPS )
@@ -76,6 +83,23 @@ public final class CompiledHelpers
             }
         }
         return false;
+    }
+
+    @CalledFromGeneratedCode
+    public static IndexQuery stringPrefix( int property, AnyValue value )
+    {
+        if ( value == NO_VALUE )
+        {
+            return null;
+        }
+        else if ( value instanceof TextValue )
+        {
+            return IndexQuery.stringPrefix( property, (TextValue) value );
+        }
+        else
+        {
+            throw new CypherTypeException( "Expected a string value, but got " + value );
+        }
     }
 
     @CalledFromGeneratedCode

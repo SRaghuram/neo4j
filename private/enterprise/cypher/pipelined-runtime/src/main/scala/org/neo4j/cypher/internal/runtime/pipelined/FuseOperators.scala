@@ -217,6 +217,29 @@ class FuseOperators(operatorFactory: OperatorFactory,
         unhandledOutput = output)
     }
 
+    def computeRangeExpression(rangeWrapper: Expression, property: SlottedIndexedProperty): Option[(Seq[() => IntermediateExpression], Seq[IntermediateRepresentation] => IntermediateRepresentation)] = rangeWrapper match {
+      case InequalitySeekRangeWrapper(RangeLessThan(Last(bound))) =>
+        Some((Seq(compileExpression(bound.endPoint)), (in: Seq[IntermediateRepresentation]) => lessThanSeek(
+          property.propertyKeyId, bound.isInclusive, in.head)))
+
+      case InequalitySeekRangeWrapper(RangeGreaterThan(Last(bound))) =>
+        Some((Seq(compileExpression(bound.endPoint)), (in: Seq[IntermediateRepresentation]) => greaterThanSeek(
+          property.propertyKeyId, bound.isInclusive, in.head)))
+
+      case InequalitySeekRangeWrapper(
+      RangeBetween(RangeGreaterThan(Last(greaterThan)), RangeLessThan(Last(lessThan)))) =>
+        Some((Seq(compileExpression(greaterThan.endPoint), compileExpression(lessThan.endPoint)),
+               (in: Seq[IntermediateRepresentation]) =>
+                 rangeBetweenSeek(property.propertyKeyId, greaterThan.isInclusive, in.head, lessThan.isInclusive,
+                                  in.tail.head)))
+
+      case PrefixSeekRangeWrapper(range) =>
+        Some((Seq(compileExpression(range.prefix)), (in: Seq[IntermediateRepresentation]) => stringPrefixSeek(
+          property.propertyKeyId, in.head)))
+
+      case _ => None
+    }
+
     def indexSeek(node: String,
                   label: LabelToken,
                   properties: Seq[IndexedProperty],
@@ -257,24 +280,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
           require(properties.length == 1)
           //NOTE: So far we only support fusing of single-bound inequalities. Not sure if it ever makes sense to have
           //multiple bounds
-          (rangeWrapper match {
-            case InequalitySeekRangeWrapper(RangeLessThan(Last(bound))) =>
-              Some((Seq(compileExpression(bound.endPoint)), (in: Seq[IntermediateRepresentation]) => lessThanSeek(
-                property.propertyKeyId, bound.isInclusive, in.head)))
-
-            case InequalitySeekRangeWrapper(RangeGreaterThan(Last(bound))) =>
-              Some((Seq(compileExpression(bound.endPoint)), (in: Seq[IntermediateRepresentation]) => greaterThanSeek(
-                property.propertyKeyId, bound.isInclusive, in.head)))
-
-            case InequalitySeekRangeWrapper(
-            RangeBetween(RangeGreaterThan(Last(greaterThan)), RangeLessThan(Last(lessThan)))) =>
-              Some((Seq(compileExpression(greaterThan.endPoint), compileExpression(lessThan.endPoint)),
-                     (in: Seq[IntermediateRepresentation]) =>
-                       rangeBetweenSeek(property.propertyKeyId, greaterThan.isInclusive, in.head, lessThan.isInclusive,
-                                        in.tail.head)))
-            case _ => None
-
-          }).map {
+          computeRangeExpression(rangeWrapper, property).map {
             case (generateSeekValues, generatePredicate) =>
               new SingleRangeSeekQueryNodeIndexSeekTaskTemplate(acc.template,
                                                                 plan.id,
