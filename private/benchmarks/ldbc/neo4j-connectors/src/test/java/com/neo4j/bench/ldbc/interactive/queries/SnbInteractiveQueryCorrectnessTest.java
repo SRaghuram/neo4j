@@ -59,7 +59,7 @@ import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcUpdate7AddComment;
 import com.ldbc.driver.workloads.ldbc.snb.interactive.LdbcUpdate8AddFriendship;
 import com.neo4j.bench.ldbc.QueryGraphMaker;
 import com.neo4j.bench.ldbc.connection.Neo4jSchema;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.ArrayList;
