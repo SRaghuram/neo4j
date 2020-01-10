@@ -114,6 +114,19 @@ public class RaftMembershipManager extends LifecycleAdapter implements RaftMembe
 
         membershipChanger.onTargetChanged( targetMembers );
 
+        var intersection = new HashSet<>( targetMembers );
+        var votingMembers = votingMembers();
+        intersection.retainAll( votingMembers );
+
+        var majority = ( votingMembers.size() / 2 ) + 1;
+
+        if ( intersection.size() < majority )
+        {
+            log.warn( "Target membership %s does not contain a majority of existing raft members %s. " +
+                    "It is likely an operator removed too many core members too quickly. If not, this issue should be transient.",
+                    this.targetMembers, this.votingMembers );
+        }
+
         checkForStartCondition();
     }
 

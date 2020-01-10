@@ -15,6 +15,7 @@ import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
 import com.neo4j.dbms.DatabaseStartAborter;
 
+import java.time.Duration;
 import java.util.Optional;
 
 import org.neo4j.kernel.database.Database;
@@ -102,7 +103,8 @@ class CoreBootstrap
 
     private void awaitState() throws Exception
     {
-        snapshotService.awaitState( databaseStartAborter );
+        var waitTime = Duration.ofSeconds( 1 );
+        snapshotService.awaitState( databaseStartAborter, waitTime );
         Optional<JobHandle> downloadJob = downloadService.downloadJob();
         if ( downloadJob.isPresent() )
         {

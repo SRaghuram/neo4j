@@ -305,7 +305,7 @@ class CoreDatabaseFactory
                 dependencies, monitors, raftContext.progressTracker(), sessionTracker, coreState, debugLog );
 
         CoreSnapshotService snapshotService = new CoreSnapshotService( applicationProcess, raftGroup.raftLog(), coreState,
-                raftGroup.raftMachine(), namedDatabaseId );
+                raftGroup.raftMachine(), namedDatabaseId, kernelDatabase.getLogService(), clock );
         dependencies.satisfyDependencies( snapshotService );
 
         CoreDownloaderService downloadService = createDownloader( catchupComponentsProvider, panicker, jobScheduler, monitors, applicationProcess,

@@ -19,7 +19,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.util.List;
 
 import org.neo4j.kernel.lifecycle.LifeSupport;
+import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.Log;
+import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLog;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.LifeExtension;
@@ -31,12 +33,15 @@ import static com.neo4j.causalclustering.identity.RaftTestMember.member;
 import static com.neo4j.causalclustering.identity.RaftTestMemberSetBuilder.INSTANCE;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
+import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.neo4j.logging.AssertableLogProvider.inLog;
 import static org.neo4j.logging.NullLogProvider.getInstance;
 
 @ExtendWith( LifeExtension.class )
@@ -174,11 +179,54 @@ class RaftMembershipManagerTest
         verify( sendToMyself ).replicate( membersB );
     }
 
+    @Test
+    void shouldWarnIfTargetANdVotingMembersDiverge() throws Exception
+    {
+        // given
+        var warningMessage = "It is likely an operator removed too many core members too quickly";
+        var raftLog = new InMemoryRaftLog();
+        var logProvider = new AssertableLogProvider();
+        var membershipManager = life.add( raftMembershipManager( raftLog, logProvider ) );
+
+        var membersA = new RaftTestMembers( 0, 1, 2 );
+        var membersB = new RaftTestMembers( 1, 2, 3 );
+        var membersC = new RaftTestMembers( 3, 4, 5 ); // third set does not contain majority of second
+
+        var logCommandA = new AppendLogEntry( 0, new RaftLogEntry( 0, membersA ) );
+        var logCommandB = new AppendLogEntry( 1, new RaftLogEntry( 0, membersB ) );
+
+        logCommandA.applyTo( raftLog, logProvider.getLog( getClass() ) );
+
+        membershipManager.processLog( 0, List.of( logCommandA ) );
+        membershipManager.onRole( LEADER );
+
+        // when
+        membershipManager.setTargetMembershipSet( membersB.getMembers() );
+
+        // then
+        logProvider.assertNone( inLog( RaftMembershipManager.class ).warn( containsString( warningMessage ) ) );
+
+        // when
+        membershipManager.processLog( 1, List.of( logCommandB ) );
+        membershipManager.onRole( LEADER );
+        membershipManager.setTargetMembershipSet( membersC.getMembers() );
+
+        // then
+        logProvider.assertAtLeastOnce( inLog( RaftMembershipManager.class )
+                .warn( containsString( warningMessage ), membersC.getMembers(), membersB.getMembers() ) );
+
+    }
+
     private RaftMembershipManager raftMembershipManager( InMemoryRaftLog log )
+    {
+        return raftMembershipManager( log, getInstance() );
+    }
+
+    private RaftMembershipManager raftMembershipManager( InMemoryRaftLog log, LogProvider logProvider )
     {
         RaftMembershipManager raftMembershipManager = new RaftMembershipManager(
                 sendToMyself, myself, INSTANCE, log,
-                getInstance(), 3, 1000, Clocks.fakeClock(),
+                logProvider, 3, 1000, Clocks.fakeClock(),
                 1000, new InMemoryStateStorage<>( new Marshal().startState() ) );
 
         raftMembershipManager.setRecoverFromIndexSupplier( () -> 0 );
