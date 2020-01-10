@@ -5,12 +5,12 @@
  */
 package com.neo4j;
 
-import com.neo4j.fabric.driver.RemoteBookmark;
-import com.neo4j.utils.ProxyFunctions;
-import com.neo4j.utils.ShardFunctions;
 import com.neo4j.fabric.bolt.FabricBookmark;
 import com.neo4j.fabric.bolt.FabricBookmarkParser;
+import com.neo4j.fabric.driver.RemoteBookmark;
 import com.neo4j.utils.DriverUtils;
+import com.neo4j.utils.ProxyFunctions;
+import com.neo4j.utils.ShardFunctions;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -42,8 +42,8 @@ import org.neo4j.driver.Transaction;
 import org.neo4j.driver.Values;
 import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.driver.internal.InternalBookmark;
-import org.neo4j.driver.summary.ResultSummary;
 import org.neo4j.driver.summary.QueryType;
+import org.neo4j.driver.summary.ResultSummary;
 import org.neo4j.driver.types.Node;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.harness.Neo4j;
@@ -51,20 +51,12 @@ import org.neo4j.harness.Neo4jBuilders;
 import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.procedure.impl.GlobalProceduresRegistry;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.allOf;
-import static org.hamcrest.Matchers.contains;
-import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.containsStringIgnoringCase;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.greaterThanOrEqualTo;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.lessThanOrEqualTo;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.internal.helpers.Strings.joinAsLines;
+import static org.neo4j.internal.helpers.collection.Iterables.stream;
 
 class EndToEndTest
 {
@@ -176,7 +168,7 @@ class EndToEndTest
                 ).map( r -> r.get( "name" ).asString() ).collect( Collectors.toList() )
         );
 
-        assertThat( result, containsInAnyOrder( equalTo( "Anna" ), equalTo( "Bob" ), equalTo( "Carrie" ), equalTo( "Dave" ) ) );
+        assertThat( result ).contains( "Anna", "Bob", "Carrie", "Dave" );
     }
 
     @Test
@@ -189,7 +181,7 @@ class EndToEndTest
                 ).map( r -> r.get( "name" ).asString() ).collect( Collectors.toList() )
         );
 
-        assertThat( result, containsInAnyOrder( equalTo( "Anna" ), equalTo( "Bob" ), equalTo( "Carrie" ), equalTo( "Dave" ) ) );
+        assertThat( result ).contains( "Anna", "Bob", "Carrie", "Dave" );
     }
 
     @Test
@@ -206,7 +198,7 @@ class EndToEndTest
             ).map( r -> r.get( "name" ).asString() ).collect( Collectors.toList() );
         } );
 
-        assertThat( result, containsInAnyOrder( equalTo( "Anna" ), equalTo( "Bob" ), equalTo( "Carrie" ), equalTo( "Dave" ) ) );
+        assertThat( result ).contains( "Anna", "Bob", "Carrie", "Dave" );
     }
 
     @Test
@@ -219,11 +211,11 @@ class EndToEndTest
                 ).map( c -> c.get( "n" ).asNode() ).collect( Collectors.toList() )
         );
 
-        var labels = r.stream().map( Node::labels ).collect( Collectors.toList() );
-        assertThat( labels, containsInAnyOrder( contains( "Person" ), contains( "Person" ), contains( "Person" ), contains( "Person" ) ) );
+        var labels = r.stream().flatMap( n -> stream( n.labels() ) ).collect( Collectors.toSet() );
+        assertThat( labels ).contains( "Person" );
 
         var names = r.stream().map( n -> n.get( "name" ).asString() ).collect( Collectors.toList() );
-        assertThat( names, containsInAnyOrder( "Anna", "Bob", "Carrie", "Dave" ) );
+        assertThat( names ).contains( "Anna", "Bob", "Carrie", "Dave" );
     }
 
     @Test
@@ -245,10 +237,10 @@ class EndToEndTest
             ).map( c -> c.get( "c" ).asNode() ).collect( Collectors.toList() );
         } );
 
-        var labels = r.stream().map( Node::labels ).collect( Collectors.toList() );
-        assertThat( labels, containsInAnyOrder( contains( "Cat" ), contains( "Cat" ), contains( "Cat" ), contains( "Cat" ) ) );
+        var labels = r.stream().flatMap( n -> stream( n.labels() ) ).collect( Collectors.toSet() );
+        assertThat( labels ).contains( "Cat" );
         var names = r.stream().map( n -> n.get( "name" ).asString() ).collect( Collectors.toList() );
-        assertThat( names, containsInAnyOrder( "Whiskers", "Charlie", "Misty", "Cupcake" ) );
+        assertThat( names ).contains( "Whiskers", "Charlie", "Misty", "Cupcake" );
     }
 
     @Test
@@ -264,10 +256,10 @@ class EndToEndTest
             ), uid ).stream().map( c -> c.get( "n" ).asNode() ).collect( Collectors.toList() );
         } );
 
-        assertThat( r.size(), equalTo( 1 ) );
-        assertThat( r.get( 0 ).labels(), contains( equalTo( "Person" ) ) );
-        assertThat( r.get( 0 ).get( "name" ).asString(), equalTo( "Carrie" ) );
-        assertThat( r.get( 0 ).get( "uid" ).asInt(), equalTo( 100 ) );
+        assertThat( r.size() ).isEqualTo( 1 );
+        assertThat( r.get( 0 ).labels() ).contains( "Person" );
+        assertThat( r.get( 0 ).get( "name" ).asString() ).isEqualTo( "Carrie" );
+        assertThat( r.get( 0 ).get( "uid" ).asInt() ).isEqualTo( 100 );
     }
 
     @Test
@@ -281,12 +273,12 @@ class EndToEndTest
                 ) ).stream().map( c -> c.get( "n" ).asNode() ).collect( Collectors.toList() )
         );
 
-        assertThat( r.size(), equalTo( 4 ) );
+        assertThat( r.size() ).isEqualTo( 4 );
         var labels = r.stream().map( Node::labels ).collect( Collectors.toList() );
-        labels.forEach( l -> assertThat( l, contains( equalTo( "Person" ) ) ) );
+        labels.forEach( l -> assertThat( l ).contains( "Person" ) );
 
         var names = r.stream().map( n -> n.get( "name" ).asString() ).collect( Collectors.toList() );
-        assertThat( names, containsInAnyOrder( "Anna", "Bob", "Carrie", "Dave" ) );
+        assertThat( names ).contains( "Anna", "Bob", "Carrie", "Dave" );
     }
 
     @Test
@@ -300,11 +292,11 @@ class EndToEndTest
                 ) ).stream().map( c -> c.get( "n" ).asNode() ).collect( Collectors.toList() )
         );
 
-        assertThat( r.size(), equalTo( 4 ) );
+        assertThat( r.size() ).isEqualTo( 4 );
         var labels = r.stream().map( Node::labels ).collect( Collectors.toList() );
-        labels.forEach( l -> assertThat( l, contains( equalTo( "Person" ) ) ) );
+        labels.forEach( l -> assertThat( l ).contains( "Person" ) );
         var names = r.stream().map( n -> n.get( "name" ).asString() ).collect( Collectors.toList() );
-        assertThat( names, containsInAnyOrder( "Anna", "Bob", "Carrie", "Dave" ) );
+        assertThat( names ).contains( "Anna", "Bob", "Carrie", "Dave" );
     }
 
     @Test
@@ -318,7 +310,7 @@ class EndToEndTest
                 ) ).stream().map( c -> c.get( "a" ).asInt() ).collect( Collectors.toList() )
         );
 
-        assertThat( r, containsInAnyOrder( equalTo( 30 ), equalTo( 30 ), equalTo( 40 ), equalTo( 90 ) ) );
+        assertThat( r ).contains( 30, 40, 90 );
     }
 
     @Test
@@ -332,7 +324,7 @@ class EndToEndTest
                 ) ).stream().map( c -> c.get( "a" ).asInt() ).collect( Collectors.toList() )
         );
 
-        assertThat( r, containsInAnyOrder( equalTo( 30 ), equalTo( 40 ), equalTo( 90 ) ) );
+        assertThat( r ).contains( 30, 40, 90 );
     }
 
     @Test
@@ -350,8 +342,8 @@ class EndToEndTest
     {
         List<Record> r = inMegaTx( tx -> tx.run( "RETURN 1+2 AS a, 'foo' AS f" ).list() );
 
-        assertThat( r.get( 0 ).get( "a" ).asInt(), equalTo( 3 ) );
-        assertThat( r.get( 0 ).get( "f" ).asString(), equalTo( "foo" ) );
+        assertThat( r.get( 0 ).get( "a" ).asInt() ).isEqualTo( 3 );
+        assertThat( r.get( 0 ).get( "f" ).asString() ).isEqualTo( "foo" );
     }
 
     @Test
@@ -372,7 +364,7 @@ class EndToEndTest
 
         assertEquals( 4, r.size() );
         var personToSid = r.stream().collect( Collectors.toMap( e -> e.get( "Person" ).asNode().get( "name" ).asString(), e -> e.get( "Sid" ).asInt() ) );
-        assertEquals( personToSid, Map.of( "Anna", 0, "Bob", 0, "Carrie", 1, "Dave", 1 ) );
+        assertEquals( Map.of( "Anna", 0, "Bob", 0, "Carrie", 1, "Dave", 1 ), personToSid );
     }
 
     @Test
@@ -400,9 +392,9 @@ class EndToEndTest
                 .map( c -> c.get( "person" ).asNode() )
                 .collect( Collectors.toList() );
 
-        assertThat( graphIds, equalTo( List.of( 0, 0, 1, 1 ) ) );
+        assertThat( graphIds ).isEqualTo( List.of( 0, 0, 1, 1 ) );
 
-        assertThat( r.size(), equalTo( 4 ) );
+        assertThat( r.size() ).isEqualTo( 4 );
         verifyPerson( persons, 0, "Anna" );
         verifyPerson( persons, 1, "Bob" );
         verifyPerson( persons, 2, "Carrie" );
@@ -411,8 +403,8 @@ class EndToEndTest
 
     private void verifyPerson( List<Node> r, int index, String name )
     {
-        assertThat( r.get( index ).labels(), contains( equalTo( "Person" ) ) );
-        assertThat( r.get( index ).get( "name" ).asString(), equalTo( name ) );
+        assertThat( r.get( index ).labels() ).contains( "Person" );
+        assertThat( r.get( index ).get( "name" ).asString() ).isEqualTo( name );
     }
 
     @Test
@@ -435,9 +427,9 @@ class EndToEndTest
         var local = r.stream().map( c -> c.get( "local_id" ).asLong() ).distinct().count();
         var tagged = r.stream().map( c -> c.get( "tagged_id" ).asLong() ).distinct().count();
 
-        assertThat( gids, is( 2L ) );
-        assertThat( local, allOf( greaterThanOrEqualTo( 2L ), lessThanOrEqualTo( 4L ) ) );
-        assertThat( tagged, is( 4L ) );
+        assertThat( gids ).isEqualTo( 2L );
+        assertThat( local ).isGreaterThanOrEqualTo( 2L ).isLessThanOrEqualTo( 4L );
+        assertThat( tagged ).isEqualTo( 4L );
     }
 
     @Test
@@ -461,7 +453,7 @@ class EndToEndTest
                     .collect( Collectors.toList() );
         } );
 
-        assertThat( r, equalTo( List.of( "Dave", "Carrie", "Bob", "Anna" ) ) );
+        assertThat( r ).isEqualTo( List.of( "Dave", "Carrie", "Bob", "Anna" ) );
     }
 
     @Test
@@ -482,16 +474,16 @@ class EndToEndTest
             return tx.run( query ).list();
         } );
 
-        assertThat( records.size(), is( 3 ) );
-        assertThat( records.get( 0 ).keys(), contains( "age", "names" ) );
-        assertThat( records.get( 0 ).get( 0 ).asInt(), is( 90 ) );
-        assertThat( records.get( 0 ).get( 1 ).asList(), containsInAnyOrder( "Dave" ) );
-        assertThat( records.get( 1 ).keys(), contains( "age", "names" ) );
-        assertThat( records.get( 1 ).get( 0 ).asInt(), is( 40 ) );
-        assertThat( records.get( 1 ).get( 1 ).asList(), containsInAnyOrder( "Bob" ) );
-        assertThat( records.get( 2 ).keys(), contains( "age", "names" ) );
-        assertThat( records.get( 2 ).get( 0 ).asInt(), is( 30 ) );
-        assertThat( records.get( 2 ).get( 1 ).asList(), containsInAnyOrder( "Anna", "Carrie" ) );
+        assertThat( records.size() ).isEqualTo( 3 );
+        assertThat( records.get( 0 ).keys() ).containsExactly( "age", "names" );
+        assertThat( records.get( 0 ).get( 0 ).asInt() ).isEqualTo( 90 );
+        assertThat( records.get( 0 ).get( 1 ).asList() ).contains( "Dave" );
+        assertThat( records.get( 1 ).keys() ).containsExactly( "age", "names" );
+        assertThat( records.get( 1 ).get( 0 ).asInt() ).isEqualTo( 40 );
+        assertThat( records.get( 1 ).get( 1 ).asList() ).contains( "Bob" );
+        assertThat( records.get( 2 ).keys() ).containsExactly( "age", "names" );
+        assertThat( records.get( 2 ).get( 0 ).asInt() ).isEqualTo( 30 );
+        assertThat( records.get( 2 ).get( 1 ).asList() ).contains( "Anna", "Carrie" );
     }
 
     @Test
@@ -521,9 +513,9 @@ class EndToEndTest
             return tx.run( query ).list();
         } );
 
-        assertThat( r.size(), equalTo( 1 ) );
-        assertThat( r.get( 0 ).keys(), contains( "z", "w", "y", "x" ) );
-        assertThat( r.get( 0 ).values(), contains( Values.value( 3 ), Values.value( 4 ), Values.value( 2 ), Values.value( 20 ) ) );
+        assertThat( r.size() ).isEqualTo( 1 );
+        assertThat( r.get( 0 ).keys() ).containsExactly( "z", "w", "y", "x" );
+        assertThat( r.get( 0 ).values() ).containsExactly( Values.value( 3 ), Values.value( 4 ), Values.value( 2 ), Values.value( 20 ) );
     }
 
     @Test
@@ -550,7 +542,7 @@ class EndToEndTest
             tx.run( query ).consume();
         } ) );
 
-        assertThat( ex.getMessage(), containsStringIgnoringCase( "Nested subqueries in remote query-parts is not supported" ) );
+        assertThat( ex.getMessage() ).containsIgnoringCase( "Nested subqueries in remote query-parts is not supported" );
     }
 
     @Test
@@ -571,10 +563,10 @@ class EndToEndTest
             return tx.run( query ).list();
         } );
 
-        assertThat( r.size(), equalTo( 1 ) );
-        assertThat( r.get( 0 ).get( "x" ).asLong(), is( 1L ) );
-        assertThat( r.get( 0 ).get( "y" ).asNode().labels(), contains( "Foo" ) );
-        assertThat( r.get( 0 ).get( "y" ).asNode().get( "p" ).asLong(), is( 123L ) );
+        assertThat( r.size() ).isEqualTo( 1 );
+        assertThat( r.get( 0 ).get( "x" ).asLong() ).isEqualTo( 1L );
+        assertThat( r.get( 0 ).get( "y" ).asNode().labels() ).containsExactly( "Foo" );
+        assertThat( r.get( 0 ).get( "y" ).asNode().get( "p" ).asLong() ).isEqualTo( 123L );
     }
 
     @Test
@@ -596,8 +588,8 @@ class EndToEndTest
             return tx.run( query ).list();
         } );
 
-        assertThat( r.size(), is( 1 ) );
-        assertThat( r.get( 0 ).get( "y" ).asNode().get( "age" ).asLong(), is( 100L ) );
+        assertThat( r.size() ).isEqualTo( 1 );
+        assertThat( r.get( 0 ).get( "y" ).asNode().get( "age" ).asLong() ).isEqualTo( 100L );
     }
 
     @Test
@@ -621,10 +613,10 @@ class EndToEndTest
             return tx.run( query ).list();
         } );
 
-        assertThat( r.size(), is( 1 ) );
-        assertThat( r.get( 0 ).get( "x" ).asLong(), is( 1L ) );
-        assertThat( r.get( 0 ).get( "y" ).asLong(), is( 2L ) );
-        assertThat( r.get( 0 ).get( "z" ).asLong(), is( 2L ) );
+        assertThat( r.size() ).isEqualTo( 1 );
+        assertThat( r.get( 0 ).get( "x" ).asLong() ).isEqualTo( 1L );
+        assertThat( r.get( 0 ).get( "y" ).asLong() ).isEqualTo( 2L );
+        assertThat( r.get( 0 ).get( "z" ).asLong() ).isEqualTo( 2L );
     }
 
     @Test
@@ -645,9 +637,9 @@ class EndToEndTest
             return tx.run( query ).list();
         } );
 
-        assertThat( r.size(), equalTo( 1 ) );
-        assertThat( r.get( 0 ).keys(), contains( "x", "name" ) );
-        assertThat( r.get( 0 ).values(), contains( Values.value( 1 ), Values.value( "abc" ) ) );
+        assertThat( r.size() ).isEqualTo( 1 );
+        assertThat( r.get( 0 ).keys() ).containsExactly( "x", "name" );
+        assertThat( r.get( 0 ).values() ).containsExactly( Values.value( 1 ), Values.value( "abc" ) );
     }
 
     @Test
@@ -660,9 +652,9 @@ class EndToEndTest
             return tx.run( query ).list();
         } );
 
-        assertThat( r.size(), equalTo( 1 ) );
-        assertThat( r.get( 0 ).keys(), contains( "x" ) );
-        assertThat( r.get( 0 ).values(), contains( Values.value( 1 ) ) );
+        assertThat( r.size() ).isEqualTo( 1 );
+        assertThat( r.get( 0 ).keys() ).containsExactly( "x" );
+        assertThat( r.get( 0 ).values() ).containsExactly( Values.value( 1 ) );
     }
 
     @Test
@@ -683,11 +675,11 @@ class EndToEndTest
             return tx.run( query ).list();
         } );
 
-        assertThat( r.size(), equalTo( 2 ) );
-        assertThat( r.get( 0 ).keys(), contains( "x", "y" ) );
-        assertThat( r.get( 0 ).values(), contains( Values.value( 10 ), Values.value( 11 ) ) );
-        assertThat( r.get( 1 ).keys(), contains( "x", "y" ) );
-        assertThat( r.get( 1 ).values(), contains( Values.value( 20 ), Values.value( 21 ) ) );
+        assertThat( r.size() ).isEqualTo( 2 );
+        assertThat( r.get( 0 ).keys() ).containsExactly( "x", "y" );
+        assertThat( r.get( 0 ).values() ).containsExactly( Values.value( 10 ), Values.value( 11 ) );
+        assertThat( r.get( 1 ).keys() ).containsExactly( "x", "y" );
+        assertThat( r.get( 1 ).values() ).containsExactly( Values.value( 20 ), Values.value( 21 ) );
     }
 
     @Test
@@ -764,21 +756,21 @@ class EndToEndTest
             return tx.run( query ).list();
         } );
 
-        assertThat( r.size(), equalTo( 1 ) );
-        assertThat( r.get( 0 ).get( "nothing_2" ), is( Values.NULL ) );
-        assertThat( r.get( 0 ).get( "boolean_2" ), is( Values.value( true ) ) );
-        assertThat( r.get( 0 ).get( "integer_2" ), is( Values.value( 1L ) ) );
-        assertThat( r.get( 0 ).get( "float_2" ), is( Values.value( 3.14 ) ) );
-        assertThat( r.get( 0 ).get( "string_2" ), is( Values.value( "abc" ) ) );
-        assertThat( r.get( 0 ).get( "list_2" ), is( Values.value( List.of( 10L, 20L ) ) ) );
-        assertThat( r.get( 0 ).get( "map_2" ), is( Values.value( Map.of( "a", 1L, "b", 2L ) ) ) );
-        assertThat( r.get( 0 ).get( "point_2" ), is( Values.point( 7203, 1.0, 2.0 ) ) );
-        assertThat( r.get( 0 ).get( "datetime_2" ), is( Values.value( ZonedDateTime.parse( "2015-06-24T12:50:35.556+01:00" ) ) ) );
-        assertThat( r.get( 0 ).get( "localdatetime_2" ), is( Values.value( LocalDateTime.parse( "2015-07-04T19:32:24" ) ) ) );
-        assertThat( r.get( 0 ).get( "date_2" ), is( Values.value( LocalDate.parse( "2015-03-26" ) ) ) );
-        assertThat( r.get( 0 ).get( "time_2" ), is( Values.value( OffsetTime.parse( "12:50:35.556+01:00" ) ) ) );
-        assertThat( r.get( 0 ).get( "localtime_2" ), is( Values.value( LocalTime.parse( "12:50:35.556" ) ) ) );
-        assertThat( r.get( 0 ).get( "duration_2" ), is( Values.value( Duration.parse( "PT16H12M" ) ) ) );
+        assertThat( r.size() ).isEqualTo( 1 );
+        assertThat( r.get( 0 ).get( "nothing_2" ) ).isEqualTo( Values.NULL );
+        assertThat( r.get( 0 ).get( "boolean_2" ) ).isEqualTo( Values.value( true ) );
+        assertThat( r.get( 0 ).get( "integer_2" ) ).isEqualTo( Values.value( 1L ) );
+        assertThat( r.get( 0 ).get( "float_2" ) ).isEqualTo( Values.value( 3.14 ) );
+        assertThat( r.get( 0 ).get( "string_2" ) ).isEqualTo( Values.value( "abc" ) );
+        assertThat( r.get( 0 ).get( "list_2" ) ).isEqualTo( Values.value( List.of( 10L, 20L ) ) );
+        assertThat( r.get( 0 ).get( "map_2" ) ).isEqualTo( Values.value( Map.of( "a", 1L, "b", 2L ) ) );
+        assertThat( r.get( 0 ).get( "point_2" ) ).isIn( Values.point( 7203, 1.0, 2.0 ) );
+        assertThat( r.get( 0 ).get( "datetime_2" ) ).isEqualTo( Values.value( ZonedDateTime.parse( "2015-06-24T12:50:35.556+01:00" ) ) );
+        assertThat( r.get( 0 ).get( "localdatetime_2" ) ).isEqualTo( Values.value( LocalDateTime.parse( "2015-07-04T19:32:24" ) ) );
+        assertThat( r.get( 0 ).get( "date_2" ) ).isEqualTo( Values.value( LocalDate.parse( "2015-03-26" ) ) );
+        assertThat( r.get( 0 ).get( "time_2" ) ).isEqualTo( Values.value( OffsetTime.parse( "12:50:35.556+01:00" ) ) );
+        assertThat( r.get( 0 ).get( "localtime_2" ) ).isEqualTo( Values.value( LocalTime.parse( "12:50:35.556" ) ) );
+        assertThat( r.get( 0 ).get( "duration_2" ) ).isEqualTo( Values.value( Duration.parse( "PT16H12M" ) ) );
     }
 
     @Test
@@ -802,8 +794,8 @@ class EndToEndTest
             tx.run( query ).list();
         } ) );
 
-        assertThat( ex.getMessage(), containsStringIgnoringCase( "node values" ) );
-        assertThat( ex.getMessage(), containsStringIgnoringCase( "not supported" ) );
+        assertThat( ex.getMessage() ).containsIgnoringCase( "node values" );
+        assertThat( ex.getMessage() ).containsIgnoringCase( "not supported" );
     }
 
     @Test
@@ -827,8 +819,8 @@ class EndToEndTest
             tx.run( query ).list();
         } ) );
 
-        assertThat( ex.getMessage(), containsStringIgnoringCase( "relationship values" ) );
-        assertThat( ex.getMessage(), containsStringIgnoringCase( "not supported" ) );
+        assertThat( ex.getMessage() ).containsIgnoringCase( "relationship values" );
+        assertThat( ex.getMessage() ).containsIgnoringCase( "not supported" );
     }
 
     @Test
@@ -852,8 +844,8 @@ class EndToEndTest
             tx.run( query ).list();
         } ) );
 
-        assertThat( ex.getMessage(), containsStringIgnoringCase( "path values" ) );
-        assertThat( ex.getMessage(), containsStringIgnoringCase( "not supported" ) );
+        assertThat( ex.getMessage() ).containsIgnoringCase( "path values" );
+        assertThat( ex.getMessage() ).containsIgnoringCase( "not supported" );
     }
 
     @Test
@@ -870,7 +862,7 @@ class EndToEndTest
             tx.run( query ).consume();
         } ) );
 
-        assertThat( ex.getMessage(), containsStringIgnoringCase( "periodic commit" ) );
+        assertThat( ex.getMessage() ).containsIgnoringCase( "periodic commit" );
     }
 
     @Test
@@ -889,7 +881,7 @@ class EndToEndTest
             tx.run( query ).list();
         } ) );
 
-        assertThat( ex.getMessage(), containsStringIgnoringCase( "Writing in read access mode not allowed" ) );
+        assertThat( ex.getMessage() ).containsIgnoringCase( "Writing in read access mode not allowed" );
     }
 
     @Test
@@ -909,8 +901,8 @@ class EndToEndTest
             return tx.run( query ).stream().map( r -> r.get( "foo" ).asString() ).collect( Collectors.toList() );
         } );
 
-        assertThat( result.size(), is( 2 ) );
-        assertThat( result, contains( is( "read" ), is( "read" ) ) );
+        assertThat( result.size() ).isEqualTo( 2 );
+        assertThat( result ).contains( "read", "read" );
     }
 
     @Test
@@ -930,8 +922,8 @@ class EndToEndTest
             return tx.run( query ).stream().map( r -> r.get( "foo" ).asString() ).collect( Collectors.toList() );
         } );
 
-        assertThat( result.size(), is( 2 ) );
-        assertThat( result, contains( is( "read" ), is( "read" ) ) );
+        assertThat( result.size() ).isEqualTo( 2 );
+        assertThat( result ).contains( "read", "read" );
     }
 
     @Test
@@ -951,7 +943,7 @@ class EndToEndTest
             tx.run( query ).consume();
         } ) );
 
-        assertThat( ex.getMessage(), containsString( "Multi-shard writes not allowed" ) );
+        assertThat( ex.getMessage() ).contains( "Multi-shard writes not allowed" );
     }
 
     @Test
@@ -967,7 +959,7 @@ class EndToEndTest
             tx.run( query ).consume();
         } ) );
 
-        assertThat( ex.getMessage(), containsString( "Writing in read access mode not allowed" ) );
+        assertThat( ex.getMessage() ).contains( "Writing in read access mode not allowed" );
     }
 
     @Test
@@ -999,19 +991,19 @@ class EndToEndTest
             return tx.run( query ).consume();
         } );
 
-        assertThat( r.queryType(), is( QueryType.READ_WRITE ) );
-        assertThat( r.counters().containsUpdates(), is( true ) );
-        assertThat( r.counters().nodesCreated(), is( 4 ) );
-        assertThat( r.counters().nodesDeleted(), is( 1 ) );
-        assertThat( r.counters().relationshipsCreated(), is( 1 ) );
-        assertThat( r.counters().relationshipsDeleted(), is( 1 ) );
-        assertThat( r.counters().propertiesSet(), is( 5 ) );
-        assertThat( r.counters().labelsAdded(), is( 5 ) );
-        assertThat( r.counters().labelsRemoved(), is( 1 ) );
-        assertThat( r.counters().indexesAdded(), is( 0 ) );
-        assertThat( r.counters().indexesRemoved(), is( 0 ) );
-        assertThat( r.counters().constraintsAdded(), is( 0 ) );
-        assertThat( r.counters().constraintsRemoved(), is( 0 ) );
+        assertThat( r.queryType() ).isEqualTo( QueryType.READ_WRITE );
+        assertThat( r.counters().containsUpdates() ).isEqualTo( true );
+        assertThat( r.counters().nodesCreated() ).isEqualTo( 4 );
+        assertThat( r.counters().nodesDeleted() ).isEqualTo( 1 );
+        assertThat( r.counters().relationshipsCreated() ).isEqualTo( 1 );
+        assertThat( r.counters().relationshipsDeleted() ).isEqualTo( 1 );
+        assertThat( r.counters().propertiesSet() ).isEqualTo( 5 );
+        assertThat( r.counters().labelsAdded() ).isEqualTo( 5 );
+        assertThat( r.counters().labelsRemoved() ).isEqualTo( 1 );
+        assertThat( r.counters().indexesAdded() ).isEqualTo( 0 );
+        assertThat( r.counters().indexesRemoved() ).isEqualTo( 0 );
+        assertThat( r.counters().constraintsAdded() ).isEqualTo( 0 );
+        assertThat( r.counters().constraintsRemoved() ).isEqualTo( 0 );
     }
 
     @Test
@@ -1048,7 +1040,7 @@ class EndToEndTest
         var graphStates = fabricBookmark.getGraphStates();
         assertEquals(graphIds.length, graphStates.size());
         var idsFromBookmark = graphStates.stream().map( FabricBookmark.GraphState::getRemoteGraphId ).collect( Collectors.toList());
-        assertThat(idsFromBookmark, containsInAnyOrder( Arrays.stream( graphIds ).toArray(Long[]::new)));
+        assertThat( idsFromBookmark ).contains( Arrays.stream( graphIds ).toArray( Long[]::new ) );
         assertTrue( graphStates.stream()
                 .flatMap( gs -> gs.getBookmarks().stream() )
                 .flatMap( b -> b.getSerialisedState().stream() ).noneMatch( String::isEmpty ) );

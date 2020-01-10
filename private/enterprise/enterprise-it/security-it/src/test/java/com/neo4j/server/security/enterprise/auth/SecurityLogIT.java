@@ -20,10 +20,6 @@ import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
 import org.neo4j.logging.AssertableLogProvider;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.anyOf;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.core.Is.isA;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.logging.AssertableLogProvider.Level.ERROR;
@@ -53,8 +49,8 @@ class SecurityLogIT
         } );
 
         // Then
-        assertThat( runtimeException.getMessage(), equalTo( "Unable to create security log." ) );
-        assertThat( runtimeException.getCause(), anyOf( isA( IOException.class ), isA( SecurityException.class ) ) );
+        assertThat( runtimeException.getMessage() ).isEqualTo( "Unable to create security log." );
+        assertThat( runtimeException.getCause() ).isInstanceOfAny( IOException.class, SecurityException.class );
 
         assertThat( logProvider ).forClass(  EnterpriseSecurityModule.class ).forLevel( ERROR )
                 .containsMessageWithException( "Unable to create security log.", runtimeException.getCause() );

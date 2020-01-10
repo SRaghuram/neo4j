@@ -33,7 +33,6 @@ import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Path;
 import org.neo4j.graphdb.QueryExecutionException;
-import org.neo4j.graphdb.QueryExecutionType;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Result;
@@ -64,7 +63,7 @@ import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.jar.JarBuilder;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.procedure.StringMatcherIgnoresNewlines.containsStringIgnoreNewlines;
+import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
@@ -83,6 +82,8 @@ import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import static org.neo4j.configuration.GraphDatabaseSettings.plugin_dir;
 import static org.neo4j.configuration.GraphDatabaseSettings.procedure_unrestricted;
 import static org.neo4j.graphdb.Label.label;
+import static org.neo4j.graphdb.QueryExecutionType.QueryType.READ_ONLY;
+import static org.neo4j.graphdb.QueryExecutionType.QueryType.READ_WRITE;
 import static org.neo4j.internal.helpers.collection.Iterables.asList;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
 import static org.neo4j.logging.AssertableLogProvider.Level.DEBUG;
@@ -296,11 +297,11 @@ public class ProcedureIT
         try ( Transaction tx = db.beginTx() )
         {
             QueryExecutionException exception = assertThrows( QueryExecutionException.class, () -> tx.execute( "CALL com.neo4j.procedure.simpleArgument()" ) );
-            assertThat( exception.getMessage(), containsStringIgnoreNewlines(
+            assertThat( exception.getMessage() ).startsWith( format(
                     "Procedure call does not provide the required number of arguments: " +
-                    "got 0 expected at least 1 (total: 1, 0 of which have default values)." +
+                    "got 0 expected at least 1 (total: 1, 0 of which have default values).%n%n" +
                     "Procedure com.neo4j.procedure.simpleArgument has signature: " +
-                    "com.neo4j.procedure.simpleArgument(name :: INTEGER?) :: someVal :: INTEGER?" +
+                    "com.neo4j.procedure.simpleArgument(name :: INTEGER?) :: someVal :: INTEGER?%n" +
                     "meaning that it expects at least 1 argument of type INTEGER?" ) );
         }
     }
@@ -316,11 +317,11 @@ public class ProcedureIT
                     QueryExecutionException.class,
                     () -> tx.execute( "CALL com.neo4j.procedure.simpleArgument(1, 2)" )
             );
-            assertThat( exception.getMessage(), containsStringIgnoreNewlines(
-                    String.format( "Procedure call provides too many arguments: got 2 expected no more than 1.%n%n" +
+            assertThat( exception.getMessage() ).startsWith(
+                    format( "Procedure call provides too many arguments: got 2 expected no more than 1.%n%n" +
                                    "Procedure com.neo4j.procedure.simpleArgument has signature: " +
                                    "com.neo4j.procedure.simpleArgument(name :: INTEGER?) :: someVal :: INTEGER?%n" +
-                                   "meaning that it expects at least 1 argument of type INTEGER?" ) ) );
+                                   "meaning that it expects at least 1 argument of type INTEGER?" ) );
         }
     }
 
@@ -333,11 +334,11 @@ public class ProcedureIT
         {
             QueryExecutionException exception =
                     assertThrows( QueryExecutionException.class, () -> tx.execute( "CALL com.neo4j.procedure.integrationTestMe(1, 2)" ) );
-            assertThat( exception.getMessage(), containsStringIgnoreNewlines(
-                    String.format( "Procedure call provides too many arguments: got 2 expected none.%n%n" +
+            assertThat( exception.getMessage() ).startsWith(
+                    format( "Procedure call provides too many arguments: got 2 expected none.%n%n" +
                                    "Procedure com.neo4j.procedure.integrationTestMe has signature: " +
                                    "com.neo4j.procedure.integrationTestMe() :: someVal :: INTEGER?%n" +
-                                   "meaning that it expects no arguments" ) ) );
+                                   "meaning that it expects no arguments" ) );
         }
     }
 
@@ -352,12 +353,12 @@ public class ProcedureIT
                     QueryExecutionException.class,
                     () -> tx.execute( "CALL db.awaitIndex()" )
             );
-            assertThat( exception.getMessage(), containsStringIgnoreNewlines( String.format(
+            assertThat( exception.getMessage() ).startsWith( format(
                     "Procedure call does not provide the required number of arguments: " +
                     "got 0 expected at least 1 (total: 2, 1 of which have default values).%n%n" +
                     "Procedure db.awaitIndex has signature: " +
                     "db.awaitIndex(indexName :: STRING?, timeOutSeconds  =  300 :: INTEGER?) :: VOID%n" +
-                    "meaning that it expects at least 1 argument of type STRING?" ) ) );
+                    "meaning that it expects at least 1 argument of type STRING?" ) );
         }
     }
 
@@ -368,12 +369,12 @@ public class ProcedureIT
         {
             QueryExecutionException exception =
                     assertThrows( QueryExecutionException.class, () -> tx.execute( "CALL com.neo4j.procedure.sideEffectWithDefault()" ) );
-            assertThat( exception.getMessage(), containsStringIgnoreNewlines(
+            assertThat( exception.getMessage() ).startsWith( format(
                     "Procedure call does not provide the required number of arguments: " +
-                    "got 0 expected at least 2 (total: 3, 1 of which have default values)." +
+                    "got 0 expected at least 2 (total: 3, 1 of which have default values).%n%n" +
                     "Procedure com.neo4j.procedure.sideEffectWithDefault has signature: com.neo4j.procedure" +
-                    ".sideEffectWithDefault(label :: STRING?, propertyKey :: STRING?, value  =  Zhang Wei :: STRING?) :: VOID" +
-                    "meaning that it expects at least 2 arguments of types STRING?, STRING?" +
+                    ".sideEffectWithDefault(label :: STRING?, propertyKey :: STRING?, value  =  Zhang Wei :: STRING?) :: VOID%n" +
+                    "meaning that it expects at least 2 arguments of types STRING?, STRING?%n " +
                     "(line 1, column 1 (offset: 0))" ) );
         }
     }
@@ -387,12 +388,12 @@ public class ProcedureIT
                     assertThrows( QueryExecutionException.class, () -> tx.execute(
                             "CALL com.neo4j.procedure.nodeWithDescription()"
                     ) );
-            assertThat( exception.getMessage(), containsStringIgnoreNewlines(
+            assertThat( exception.getMessage() ).startsWith( format(
                     "Procedure call does not provide the required number of arguments: " +
-                    "got 0 expected at least 1 (total: 1, 0 of which have default values)." +
+                    "got 0 expected at least 1 (total: 1, 0 of which have default values).%n%n" +
                     "Procedure com.neo4j.procedure.nodeWithDescription has signature: " +
-                    "com.neo4j.procedure.nodeWithDescription(node :: NODE?) :: node :: NODE?" +
-                    "meaning that it expects at least 1 argument of type NODE?" +
+                    "com.neo4j.procedure.nodeWithDescription(node :: NODE?) :: node :: NODE?%n" +
+                    "meaning that it expects at least 1 argument of type NODE?%n" +
                     "Description: This is a description (line 1, column 1 (offset: 0))" ) );
         }
     }
@@ -794,7 +795,7 @@ public class ProcedureIT
         try ( Transaction tx = db.beginTx() )
         {
             Result result = tx.execute( "EXPLAIN CALL com.neo4j.procedure.integrationTestMe()" );
-            assertEquals( result.getQueryExecutionType().queryType(), QueryExecutionType.QueryType.READ_ONLY );
+            assertEquals( READ_ONLY, result.getQueryExecutionType().queryType() );
             tx.commit();
         }
     }
@@ -806,7 +807,7 @@ public class ProcedureIT
         try ( Transaction tx = db.beginTx() )
         {
             Result result = tx.execute( "EXPLAIN CALL com.neo4j.procedure.integrationTestMe() YIELD someVal as v RETURN v" );
-            assertEquals( result.getQueryExecutionType().queryType(), QueryExecutionType.QueryType.READ_ONLY );
+            assertEquals( READ_ONLY, result.getQueryExecutionType().queryType() );
             tx.commit();
         }
     }
@@ -818,7 +819,7 @@ public class ProcedureIT
         try ( Transaction tx = db.beginTx() )
         {
             Result result = tx.execute( "EXPLAIN CALL com.neo4j.procedure.createNode('n')" );
-            assertEquals( result.getQueryExecutionType().queryType(), QueryExecutionType.QueryType.READ_WRITE );
+            assertEquals( READ_WRITE, result.getQueryExecutionType().queryType() );
             tx.commit();
         }
     }
@@ -830,7 +831,7 @@ public class ProcedureIT
         try ( Transaction tx = db.beginTx() )
         {
             Result result = tx.execute( "EXPLAIN CALL com.neo4j.procedure.createNode('n') YIELD node as n RETURN n.prop" );
-            assertEquals( result.getQueryExecutionType().queryType(), QueryExecutionType.QueryType.READ_WRITE );
+            assertEquals( READ_WRITE, result.getQueryExecutionType().queryType() );
             tx.commit();
         }
     }

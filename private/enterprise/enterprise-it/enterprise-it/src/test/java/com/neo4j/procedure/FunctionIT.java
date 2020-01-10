@@ -42,7 +42,6 @@ import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.security.AuthorizationViolationException;
-import org.neo4j.internal.helpers.Exceptions;
 import org.neo4j.internal.helpers.collection.Iterators;
 import org.neo4j.io.fs.FileUtils;
 import org.neo4j.kernel.api.KernelTransaction;
@@ -62,15 +61,9 @@ import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.jar.JarBuilder;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.procedure.StringMatcherIgnoresNewlines.containsStringIgnoreNewlines;
+import static java.lang.String.format;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonList;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.instanceOf;
-import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.startsWith;
-import static org.hamcrest.core.IsEqual.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -116,7 +109,7 @@ class FunctionIT
                         tx.execute( "RETURN com.neo4j.procedure.simpleArgument('42')" );
                     }
                 } );
-        assertThat( exception.getMessage(), startsWith( "Type mismatch: expected Integer but was String (line 1, column 43 (offset: 42))" ) );
+        assertThat( exception ).hasMessageStartingWith( "Type mismatch: expected Integer but was String (line 1, column 43 (offset: 42))" );
     }
 
     @Test
@@ -130,11 +123,11 @@ class FunctionIT
                         tx.execute( "RETURN com.neo4j.procedure.simpleArgument()" );
                     }
                 } );
-        assertThat( exception.getMessage(), containsStringIgnoreNewlines( String.format( "Function call does not provide the " +
+        assertThat( exception.getMessage() ).startsWith( format( "Function call does not provide the " +
                 "required number of arguments: expected 1 got 0.%n%n" +
                 "Function com.neo4j.procedure.simpleArgument has signature: " +
                 "com.neo4j.procedure.simpleArgument(someValue :: INTEGER?) :: INTEGER?%n" +
-                "meaning that it expects 1 argument of type INTEGER? (line 1, column 8 (offset: 7))" ) ) );
+                "meaning that it expects 1 argument of type INTEGER? (line 1, column 8 (offset: 7))") );
     }
 
     @Test
@@ -149,12 +142,12 @@ class FunctionIT
                         tx.execute( "RETURN com.neo4j.procedure.nodeWithDescription()" );
                     }
                 } );
-        assertThat( exception.getMessage(), containsStringIgnoreNewlines( String.format( "Function call does not provide the " +
+        assertThat( exception.getMessage() ).startsWith( format( "Function call does not provide the " +
                 "required number of arguments: expected 1 got 0.%n%n" +
                 "Function com.neo4j.procedure.nodeWithDescription has signature: " +
                 "com.neo4j.procedure.nodeWithDescription(someValue :: NODE?) :: NODE?%n" +
                 "meaning that it expects 1 argument of type NODE?%n" +
-                "Description: This is a description (line 1, column 8 (offset: 7))" ) ) );
+                "Description: This is a description (line 1, column 8 (offset: 7))" ) );
     }
 
     @Test
@@ -168,7 +161,7 @@ class FunctionIT
                     map( "name", 43L ) );
 
             // Then
-            assertThat( res.next(), equalTo( map( "someVal", 43L ) ) );
+            assertThat( res.next() ).isEqualTo( map( "someVal", 43L ) );
             assertFalse( res.hasNext() );
         }
     }
@@ -183,7 +176,7 @@ class FunctionIT
             Result res = tx.execute( "RETURN com.neo4j.procedure.recursiveSum($order) AS someVal", map( "order", 10L ) );
 
             // Then
-            assertThat( res.next(), equalTo( map( "someVal", 55L ) ) );
+            assertThat( res.next() ).isEqualTo( map( "someVal", 55L ) );
             assertFalse( res.hasNext() );
         }
     }
@@ -200,7 +193,7 @@ class FunctionIT
                     "[ [[1, 2, 3]], [[4, 5]]] ) AS someVal" );
 
             // Then
-            assertThat( res.next(), equalTo( map( "someVal", 5L ) ) );
+            assertThat( res.next() ).isEqualTo( map( "someVal", 5L ) );
             assertFalse( res.hasNext() );
         }
     }
@@ -215,7 +208,7 @@ class FunctionIT
             Result res = tx.execute( "RETURN com.neo4j.procedure.mapArgument({foo: 42, bar: 'hello'}) AS someVal" );
 
             // Then
-            assertThat( res.next(), equalTo( map( "someVal", 2L ) ) );
+            assertThat( res.next() ).isEqualTo( map( "someVal", 2L ) );
             assertFalse( res.hasNext() );
         }
     }
@@ -230,7 +223,7 @@ class FunctionIT
             Result res = tx.execute( "RETURN com.neo4j.procedure.mapArgument({foo: $p}) AS someVal", map("p", null) );
 
             // Then
-            assertThat( res.next(), equalTo( map( "someVal", 1L ) ) );
+            assertThat( res.next() ).isEqualTo( map( "someVal", 1L ) );
             assertFalse( res.hasNext() );
         }
     }
@@ -245,7 +238,7 @@ class FunctionIT
             Result res = tx.execute( "RETURN com.neo4j.procedure.mapArgument(null) AS someVal" );
 
             // Then
-            assertThat( res.next(), equalTo( map( "someVal", 0L ) ) );
+            assertThat( res.next() ).isEqualTo( map( "someVal", 0L ) );
             assertFalse( res.hasNext() );
         }
     }
@@ -261,7 +254,7 @@ class FunctionIT
                     "RETURN com.neo4j.procedure.mapArgument($p) AS someVal", map("p", null) );
 
             // Then
-            assertThat( res.next(), equalTo( map( "someVal", 0L ) ) );
+            assertThat( res.next() ).isEqualTo( map( "someVal", 0L ) );
             assertFalse( res.hasNext() );
         }
     }
@@ -279,7 +272,7 @@ class FunctionIT
 
             // Then
             Node node = (Node) res.next().get( "node" );
-            assertThat( node.getId(), equalTo( nodeId ) );
+            assertThat( node.getId() ).isEqualTo( nodeId );
             assertFalse( res.hasNext() );
         }
     }
@@ -291,9 +284,9 @@ class FunctionIT
         {
             QueryExecutionException exception =
                     assertThrows( QueryExecutionException.class, () -> transaction.execute( "RETURN org.someFunctionThatDoesNotExist()" ) );
-            assertThat( exception.getMessage(), startsWith( String.format(
+            assertThat( exception ).hasMessageStartingWith( format(
                     "Unknown function 'org.someFunctionThatDoesNotExist' (line 1, column 8 (offset: 7))" + "%n" +
-                            "\"RETURN org.someFunctionThatDoesNotExist()" ) ) );
+                            "\"RETURN org.someFunctionThatDoesNotExist()" ) );
         }
     }
 
@@ -308,9 +301,9 @@ class FunctionIT
 
             // When
             QueryExecutionException exception = assertThrows( QueryExecutionException.class, result::next );
-            assertThat( exception.getMessage(), equalTo(
+            assertThat( exception ).hasMessage(
                     "Failed to invoke function `com.neo4j.procedure.throwsExceptionInStream`: Caused by: java.lang" +
-                            ".RuntimeException: Kaboom" ) );
+                            ".RuntimeException: Kaboom" );
         }
     }
 
@@ -324,9 +317,9 @@ class FunctionIT
             // When
             QueryExecutionException exception =
                     assertThrows( QueryExecutionException.class, () -> tx.execute( "RETURN com.neo4j.procedure.indexOutOfBounds()" ).next() );
-            assertThat( exception.getMessage(), startsWith(
+            assertThat( exception ).hasMessageStartingWith(
                     "Failed to invoke function `com.neo4j.procedure.indexOutOfBounds`: Caused by: java.lang" +
-                            ".ArrayIndexOutOfBoundsException" ) );
+                            ".ArrayIndexOutOfBoundsException" );
         }
     }
 
@@ -389,7 +382,7 @@ class FunctionIT
                         tx.execute( "RETURN com.neo4j.procedure.readOnlyTryingToWrite()" ).next();
                     }
                 } );
-        assertThat( exception.getMessage(), containsString( "Write operations are not allowed" ) );
+        assertThat( exception ).hasMessageContaining( "Write operations are not allowed" );
     }
 
     @Test
@@ -403,7 +396,7 @@ class FunctionIT
                         tx.execute( "RETURN com.neo4j.procedure.readOnlyCallingWriteProcedure()" ).next();
                     }
                 } ) ;
-        assertThat( exception.getMessage(), containsString( "Write operations are not allowed" ) );
+        assertThat( exception ).hasMessageContaining( "Write operations are not allowed" );
     }
 
     @Test
@@ -418,7 +411,7 @@ class FunctionIT
                         tx.execute( "RETURN com.neo4j.procedure.readOnlyTryingToWriteSchema()" ).next();
                     }
                 } );
-        assertThat( exception.getMessage(), containsString( "Schema operations are not allowed" ) );
+        assertThat( exception ).hasMessageContaining( "Schema operations are not allowed" );
     }
 
     @Test
@@ -431,7 +424,7 @@ class FunctionIT
             Result res = tx.execute( "RETURN com.neo4j.procedure.squareDouble($value) AS result", map( "value", 4L ) );
 
             // Then
-            assertThat( res.next(), equalTo( map( "result", 16.0d ) ) );
+            assertThat( res.next() ).isEqualTo( map( "result", 16.0d ) );
             assertFalse( res.hasNext() );
         }
     }
@@ -447,7 +440,7 @@ class FunctionIT
                     map( "param", Arrays.<Number>asList( 1L, 2L, 3L ) ) );
 
             // Then
-            assertThat( res.next(), equalTo( map( "result", 2.0d ) ) );
+            assertThat( res.next() ).isEqualTo( map( "result", 2.0d ) );
             assertFalse( res.hasNext() );
         }
     }
@@ -463,7 +456,7 @@ class FunctionIT
                     map( "long", 1L, "double", 2.0d ) );
 
             // Then
-            assertThat( res.next(), equalTo( map( "result", 1.5d ) ) );
+            assertThat( res.next() ).isEqualTo( map( "result", 1.5d ) );
             assertFalse( res.hasNext() );
         }
     }
@@ -478,7 +471,7 @@ class FunctionIT
             Result res = tx.execute( "RETURN com.neo4j.procedure.squareLong($value) as someVal", map( "value", 4L ) );
 
             // Then
-            assertThat( res.next(), equalTo( map( "someVal", 16L ) ) );
+            assertThat( res.next() ).isEqualTo( map( "someVal", 16L ) );
             assertFalse( res.hasNext() );
         }
     }
@@ -547,20 +540,18 @@ class FunctionIT
 
         for ( Exception exceptionInFunction : exceptionsInFunction )
         {
-            assertThat( Exceptions.stringify( exceptionInFunction ),
-                    exceptionInFunction, instanceOf( AuthorizationViolationException.class ) );
-            assertThat( Exceptions.stringify( exceptionInFunction ), exceptionInFunction.getMessage(),
-                    startsWith( "Write operations are not allowed" ) );
+            assertThat( exceptionInFunction ).isInstanceOf( AuthorizationViolationException.class )
+                    .hasMessageStartingWith( "Write operations are not allowed" );
         }
 
         try ( Transaction transaction = db.beginTx() )
         {
             try ( Result result = transaction.execute( "MATCH () RETURN count(*) as n" ) )
             {
-                assertThat( result.hasNext(), equalTo( true ) );
+                assertThat( result.hasNext() ).isTrue();
                 while ( result.hasNext() )
                 {
-                    assertThat( result.next().get( "n" ), equalTo( 0L ) );
+                    assertThat( result.next().get( "n" ) ).isEqualTo( 0L );
                 }
             }
             transaction.commit();
@@ -585,7 +576,7 @@ class FunctionIT
                     while ( result.hasNext() )
                     {
                         var row = result.next();
-                        assertThat( row.get( "n.prop" ), equalTo( counter++ ) );
+                        assertThat( row.get( "n.prop" ) ).isEqualTo( counter++ );
                     }
                     return counter;
                 } );
@@ -596,7 +587,7 @@ class FunctionIT
             //Make sure all the lines has been properly commited to the database.
             String[] dbContents =
                     transaction.execute( "MATCH (n) return n.prop" ).stream().map( m -> Long.toString( (long) m.get( "n.prop" ) ) ).toArray( String[]::new );
-            assertThat( dbContents, equalTo( lines ) );
+            assertThat( dbContents ).isEqualTo( lines );
             transaction.commit();
         }
     }
@@ -611,7 +602,7 @@ class FunctionIT
             QueryExecutionException exception = assertThrows( QueryExecutionException.class, () -> transaction.execute(
                     "USING PERIODIC COMMIT 1 " + "LOAD CSV FROM '" + url + "' AS line " +
                             "WITH com.neo4j.procedure.simpleArgument(toInteger(line[0])) AS val " + "RETURN val" ) );
-            assertThat( exception.getMessage(), startsWith( "Cannot use periodic commit in a non-updating query (line 1, column 1 (offset: 0))" ) );
+            assertThat( exception ).hasMessageStartingWith( "Cannot use periodic commit in a non-updating query (line 1, column 1 (offset: 0))" );
         }
     }
 
@@ -632,10 +623,10 @@ class FunctionIT
             assertTrue( res.hasNext() );
             Map<String,Object> value = res.next();
             Path path = (Path) value.get( "path" );
-            assertThat( path.length(), equalTo( 1 ) );
-            assertThat( path.startNode(), equalTo( node1 ) );
-            assertThat( asList( path.relationships() ), equalTo( singletonList( rel ) ) );
-            assertThat( path.endNode(), equalTo( node2 ) );
+            assertThat( path.length() ).isEqualTo( 1 );
+            assertThat( path.startNode() ).isEqualTo( node1 );
+            assertThat( asList( path.relationships() ) ).isEqualTo( singletonList( rel ) );
+            assertThat( path.endNode() ).isEqualTo( node2 );
             assertFalse( res.hasNext() );
         }
     }
@@ -652,7 +643,7 @@ class FunctionIT
             // Then
             List<Object> list =
                     Iterators.asList( res ).stream().map( m  -> m.get( "r" ) ).collect( Collectors.toList() );
-            assertThat( list, equalTo( Arrays.asList( 0L, 1L, 2L, 3L ) ) );
+            assertThat( list ).isEqualTo( Arrays.asList( 0L, 1L, 2L, 3L ) );
         }
     }
 
@@ -710,7 +701,7 @@ class FunctionIT
                     " AS someVal" );
 
             // THEN
-            assertThat( res.next().get( "someVal" ), equalTo( 2L ) );
+            assertThat( res.next().get( "someVal" ) ).isEqualTo( 2L );
         }
     }
 
@@ -731,7 +722,7 @@ class FunctionIT
             Result result = tx.execute( "RETURN com.neo4j.procedure.nodeCount() AS count" );
 
             // Then
-            assertThat( result.next().get( "count" ), equalTo( 0L ) );
+            assertThat( result.next().get( "count" ) ).isEqualTo( 0L );
             tx.commit();
         }
     }
@@ -745,7 +736,7 @@ class FunctionIT
             Result res = transaction.execute( "RETURN com.neo4j.procedure.defaultValues() AS result" );
 
             // Then
-            assertThat( res.next().get( "result" ), equalTo( "a string,42,3.14,true" ) );
+            assertThat( res.next().get( "result" ) ).isEqualTo( "a string,42,3.14,true" );
             assertFalse( res.hasNext() );
             transaction.commit();
         }
@@ -760,7 +751,7 @@ class FunctionIT
             Result res = transaction.execute( "RETURN com.neo4j.procedure.defaultValues($p) AS result", map( "p", null ) );
 
             // Then
-            assertThat( res.next().get( "result" ), equalTo( "null,42,3.14,true" ) );
+            assertThat( res.next().get( "result" ) ).isEqualTo( "null,42,3.14,true" );
             assertFalse( res.hasNext() );
             transaction.commit();
         }
@@ -775,7 +766,7 @@ class FunctionIT
             Result res = transaction.execute( "RETURN com.neo4j.procedure.defaultValues('another string') AS result" );
 
             // Then
-            assertThat( res.next().get( "result" ), equalTo( "another string,42,3.14,true" ) );
+            assertThat( res.next().get( "result" ) ).isEqualTo( "another string,42,3.14,true" );
             assertFalse( res.hasNext() );
             transaction.commit();
         }
@@ -790,7 +781,7 @@ class FunctionIT
             Result res = transaction.execute( "RETURN com.neo4j.procedure.defaultValues('another string', 1337) AS result" );
 
             // Then
-            assertThat( res.next().get( "result" ), equalTo( "another string,1337,3.14,true" ) );
+            assertThat( res.next().get( "result" ) ).isEqualTo( "another string,1337,3.14,true" );
             assertFalse( res.hasNext() );
             transaction.commit();
         }
@@ -805,7 +796,7 @@ class FunctionIT
             Result res = transaction.execute( "RETURN com.neo4j.procedure.defaultValues('another string', 1337, 2.718281828) AS result" );
 
             // Then
-            assertThat( res.next().get( "result" ), equalTo( "another string,1337,2.72,true" ) );
+            assertThat( res.next().get( "result" ) ).isEqualTo( "another string,1337,2.72,true" );
             assertFalse( res.hasNext() );
             transaction.commit();
         }
@@ -820,7 +811,7 @@ class FunctionIT
             Result res = transaction.execute( "RETURN com.neo4j.procedure.defaultValues('another string', 1337, 2.718281828, false) AS result" );
 
             // Then
-            assertThat( res.next().get( "result" ), equalTo( "another string,1337,2.72,false" ) );
+            assertThat( res.next().get( "result" ) ).isEqualTo( "another string,1337,2.72,false" );
             assertFalse( res.hasNext() );
             transaction.commit();
         }
@@ -835,7 +826,7 @@ class FunctionIT
             Result res = transaction.execute( "RETURN com.neo4j.procedure.node(-1) AS result" );
 
             // Then
-            assertThat( res.next().get( "result" ), equalTo( null ) );
+            assertThat( res.next().get( "result" ) ).isNull();
             assertFalse( res.hasNext() );
             transaction.commit();
         }
@@ -876,7 +867,7 @@ class FunctionIT
             Result res = transaction.execute( "RETURN this.is.test.only.sum([1337, 2.718281828, 3.1415]) AS result" );
 
             // Then
-            assertThat( res.next().get( "result" ), equalTo( 1337 + 2.718281828 + 3.1415 ) );
+            assertThat( res.next().get( "result" ) ).isEqualTo( 1337 + 2.718281828 + 3.1415 );
             assertFalse( res.hasNext() );
             transaction.commit();
         }
@@ -892,9 +883,9 @@ class FunctionIT
             Result res = tx.execute( "CYPHER runtime=PIPELINED RETURN com.neo4j.procedure.squareLong(2) AS someVal" );
 
             // Then
-            assertThat( res.next(), equalTo( map( "someVal", 4L ) ) );
+            assertThat( res.next() ).isEqualTo( map( "someVal", 4L ) );
             assertFalse( res.hasNext() );
-            assertThat( res.getExecutionPlanDescription().getArguments().get( "runtime" ), not( equalTo( "PIPELINED" ) ) );
+            assertThat( res.getExecutionPlanDescription().getArguments().get( "runtime" ) ).isNotEqualTo( "PIPELINED" );
         }
     }
 
@@ -955,7 +946,7 @@ class FunctionIT
                 @Name( value = "boolean", defaultValue = "true" ) boolean aBoolean
         )
         {
-            return String.format( Locale.ROOT, "%s,%d,%.2f,%b", string, integer, aFloat, aBoolean );
+            return format( Locale.ROOT, "%s,%d,%.2f,%b", string, integer, aFloat, aBoolean );
         }
 
         @UserFunction

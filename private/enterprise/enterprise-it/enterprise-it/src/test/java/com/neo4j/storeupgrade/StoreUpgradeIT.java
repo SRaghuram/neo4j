@@ -62,19 +62,15 @@ import org.neo4j.server.NeoBootstrapper;
 import org.neo4j.storageengine.api.TransactionIdStore;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.Unzip;
-import org.neo4j.test.mockito.matcher.RootCauseMatcher;
 import org.neo4j.test.rule.SuppressOutput;
 import org.neo4j.test.rule.TestDirectory;
 
 import static java.util.Arrays.stream;
 import static java.util.stream.Collectors.toSet;
 import static org.apache.commons.io.FileUtils.moveToDirectory;
-import static org.hamcrest.Matchers.emptyArray;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.not;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.allow_upgrade;
@@ -288,7 +284,7 @@ public class StoreUpgradeIT
         private static Set<String> getTransactionLogFileNames( File databaseDirectory, FileSystemAbstraction fileSystem ) throws IOException
         {
             File[] availableLogFilesBeforeMigration = getAvailableTransactionLogFiles( databaseDirectory, fileSystem );
-            assertThat( availableLogFilesBeforeMigration, not( emptyArray() ) );
+            assertThat( availableLogFilesBeforeMigration ).isNotEmpty();
 
             return stream( availableLogFilesBeforeMigration ).map( File::getName ).collect( toSet() );
         }
@@ -343,7 +339,7 @@ public class StoreUpgradeIT
                 DatabaseStateService dbStateService = database.getDependencyResolver().resolveDependency( DatabaseStateService.class );
                 var failure = dbStateService.causeOfFailure( database.databaseId() );
                 assertTrue( failure.isPresent() );
-                assertThat( failure.get(), new RootCauseMatcher<>( StoreUpgrader.UnexpectedUpgradingStoreVersionException.class ) );
+                assertThat( failure.get() ).hasRootCauseInstanceOf( StoreUpgrader.UnexpectedUpgradingStoreVersionException.class );
             }
             finally
             {
@@ -554,7 +550,7 @@ public class StoreUpgradeIT
         {
             KernelTransaction kernelTransaction = ((InternalTransaction) tx).kernelTransaction();
 
-            assertThat( kernelTransaction.dataRead().countsForNode( -1 ), is( store.expectedNodeCount ) );
+            assertThat( kernelTransaction.dataRead().countsForNode( -1 ) ).isEqualTo( store.expectedNodeCount );
         }
     }
 
@@ -564,11 +560,11 @@ public class StoreUpgradeIT
         {
             // count nodes
             long nodeCount = count( tx.getAllNodes() );
-            assertThat( nodeCount, is( store.expectedNodeCount ) );
+            assertThat( nodeCount ).isEqualTo( store.expectedNodeCount );
 
             // count indexes
             long indexCount = count( tx.schema().getIndexes() );
-            assertThat( indexCount, is( store.indexes() ) );
+            assertThat( indexCount ).isEqualTo( store.indexes() );
 
             // check last committed tx
             TransactionIdStore txIdStore = db.getDependencyResolver().resolveDependency( TransactionIdStore.class );
@@ -577,7 +573,7 @@ public class StoreUpgradeIT
             GBPTreeCountsStore countsStore = db.getDependencyResolver().resolveDependency( GBPTreeCountsStore.class );
             long countsTxId = countsStore.txId();
             assertEquals( lastCommittedTxId, countsTxId );
-            assertThat( lastCommittedTxId, is( store.lastTxId ) );
+            assertThat( lastCommittedTxId ).isEqualTo( store.lastTxId );
         }
     }
 
