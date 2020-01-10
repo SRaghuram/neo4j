@@ -385,7 +385,9 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
       logPlan(
         managementPlan("CreateRole", Seq(roleArg("foo")),
           managementPlan("DropRole", Seq(roleArg("foo")),
-            assertDbmsAdminPlan("CREATE ROLE")
+            helperPlan("CheckFrozenRole", Seq(roleArg("foo")),
+              assertDbmsAdminPlan("CREATE ROLE")
+            )
           )
         )
       ).toString

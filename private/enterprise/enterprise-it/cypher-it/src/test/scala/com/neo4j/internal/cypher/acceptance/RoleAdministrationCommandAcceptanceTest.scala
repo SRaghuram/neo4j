@@ -225,6 +225,20 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers ++ Set(role("foo").noMember().map))
   }
 
+  test("should not replace admin role") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("SHOW PRIVILEGES").toSet should be(defaultRolePrivileges)
+
+    // WHEN
+    the[AuthorizationViolationException] thrownBy {
+      execute(s"CREATE OR REPLACE ROLE ${PredefinedRoles.ADMIN}")
+    } should have message "Permission denied."
+
+    // THEN
+    execute("SHOW PRIVILEGES").toSet should be(defaultRolePrivileges)
+  }
+
   test("should fail when creating role with invalid name") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
