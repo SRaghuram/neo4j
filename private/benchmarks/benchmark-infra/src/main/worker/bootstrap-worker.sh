@@ -25,14 +25,14 @@ done
 cd /work
 
 worker_artifact=/work/benchmark-worker.jar
-work_dir=$(pwd)/macro_work_dir/
+work_dir=/work/run/
 
-rm -rf "${worker_artifact}" "${work_dir}"
+# make sure we start clean with working directory
+# and worker artifact
+rm -rf "${worker_artifact}" "${work_dir:?}/*"
 
 # download bootstrap jar
 aws --region eu-north-1 s3 cp "${workerArtifactUri}" "${worker_artifact}"
-
-mkdir "${work_dir}"
 
 # shellcheck disable=SC2086
 java ${JAVA_OPTS:+"$JAVA_OPTS"} -jar benchmark-worker.jar "${params[@]}" --workspace-dir "${work_dir}" --batch-job-id "${AWS_BATCH_JOB_ID}"
