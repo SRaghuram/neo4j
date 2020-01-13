@@ -55,11 +55,7 @@ import static com.neo4j.causalclustering.core.CausalClusteringSettings.cluster_t
 import static com.neo4j.causalclustering.discovery.IpFamily.IPV4;
 import static com.neo4j.causalclustering.discovery.IpFamily.IPV6;
 import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.online_backup_listen_address;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.containsStringIgnoringCase;
-import static org.hamcrest.Matchers.greaterThan;
-import static org.hamcrest.Matchers.not;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -182,8 +178,8 @@ class OnlineBackupCommandCcIT
         assertEquals( 0, runBackupToolAndGetExitCode( customAddress, DEFAULT_DATABASE_NAME ) );
 
         // then
-        assertThat( suppressOutput.getErrorVoice().toString(), not( containsStringIgnoringCase( "exception" ) ) );
-        assertThat( suppressOutput.getOutputVoice().toString(), not( containsStringIgnoringCase( "exception" ) ) );
+        assertThat( suppressOutput.getErrorVoice().toString() ).doesNotContain( "Exception" );
+        assertThat( suppressOutput.getOutputVoice().toString() ).doesNotContain( "Exception" );
     }
 
     @TestWithRecordFormats
@@ -200,15 +196,15 @@ class OnlineBackupCommandCcIT
         // then
         String output = suppressOutput.getOutputVoice().toString();
 
-        assertThat( output, containsString( "Start receiving store files" ) );
-        assertThat( output, containsString( "Finish receiving store files" ) );
+        assertThat( output ).contains( "Start receiving store files" );
+        assertThat( output ).contains( "Finish receiving store files" );
 
         String nodeStorePath = backupsDir.toPath().resolve( DEFAULT_DATABASE_NAME ).resolve( DatabaseFile.NODE_STORE.getName() ).toString();
-        assertThat( output, containsString( "Start receiving store file " + nodeStorePath ) );
-        assertThat( output, containsString( "Finish receiving store file " + nodeStorePath ) );
+        assertThat( output ).contains( "Start receiving store file " + nodeStorePath );
+        assertThat( output ).contains( "Finish receiving store file " + nodeStorePath );
 
-        assertThat( output, containsString( "Start receiving transactions from" ) );
-        assertThat( output, containsString( "Finish receiving transactions at" ) );
+        assertThat( output ).contains( "Start receiving transactions from" );
+        assertThat( output ).contains( "Finish receiving transactions at" );
     }
 
     @TestWithRecordFormats
@@ -291,7 +287,7 @@ class OnlineBackupCommandCcIT
                 "--fallback-to-full=false" ) );
 
         // then there has been a rotation
-        assertThat( backupLogFiles.getHighestLogVersion(), greaterThan( 0L ) );
+        assertThat( backupLogFiles.getHighestLogVersion() ).isGreaterThan( 0L );
         // and the original log has not been removed since the transactions are applied at start
         assertEquals( 0, backupLogFiles.getLowestLogVersion() );
     }
