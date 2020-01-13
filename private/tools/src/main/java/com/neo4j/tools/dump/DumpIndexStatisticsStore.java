@@ -29,6 +29,7 @@ import org.neo4j.token.TokenHolders;
 
 import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.immediate;
 import static org.neo4j.io.pagecache.impl.muninn.StandalonePageCacheFactory.createPageCache;
+import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
 
 public class DumpIndexStatisticsStore
@@ -50,6 +51,7 @@ public class DumpIndexStatisticsStore
     {
         IndexStatisticsStore indexStatisticsStore;
         SimpleSchemaRuleCache schema = null;
+        var cacheTracer = PageCacheTracer.NULL;
         try ( JobScheduler jobScheduler = createInitialisedScheduler();
                 PageCache pageCache = createPageCache( fs, jobScheduler );
                 Lifespan life = new Lifespan() )
@@ -58,7 +60,7 @@ public class DumpIndexStatisticsStore
             if ( fs.isDirectory( path ) )
             {
                 DatabaseLayout databaseLayout = DatabaseLayout.ofFlat( path );
-                indexStatisticsStore = new IndexStatisticsStore( pageCache, databaseLayout, immediate(), true );
+                indexStatisticsStore = new IndexStatisticsStore( pageCache, databaseLayout, immediate(), true, cacheTracer );
                 StoreFactory factory = new StoreFactory( databaseLayout, Config.defaults(), new DefaultIdGeneratorFactory( fs, immediate() ),
                         pageCache, fs, logProvider, PageCacheTracer.NULL );
                 NeoStores neoStores = factory.openAllNeoStores();
@@ -68,10 +70,10 @@ public class DumpIndexStatisticsStore
             }
             else
             {
-                indexStatisticsStore = new IndexStatisticsStore( pageCache, path, immediate(), true );
+                indexStatisticsStore = new IndexStatisticsStore( pageCache, path, immediate(), true, cacheTracer );
             }
             life.add( indexStatisticsStore );
-            indexStatisticsStore.visit( new IndexStatsVisitor( out, schema ) );
+            indexStatisticsStore.visit( new IndexStatsVisitor( out, schema ), NULL );
         }
     }
 
