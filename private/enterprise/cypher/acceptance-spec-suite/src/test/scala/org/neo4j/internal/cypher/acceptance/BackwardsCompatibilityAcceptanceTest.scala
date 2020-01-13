@@ -6,6 +6,7 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.exceptions.SyntaxException
 import org.neo4j.internal.cypher.acceptance.comparisonsupport._
 
 class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
@@ -107,5 +108,19 @@ class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
 
     // THEN
     result.toList should be(List(Map("len" -> 3))) // a -> b -> c, a -> c -> b, a -> c -> d
+  }
+
+  test( "should handle switch between Cypher versions" ) {
+    // run query against latest version
+    executeSingle("MATCH (n) RETURN n")
+
+    // toInt should work if compatibility mode is set to 3.5
+    executeSingle("CYPHER 3.5 RETURN toInt('1') AS one")
+
+    // toInt should fail in latest version
+    val exception = the [SyntaxException] thrownBy {
+      executeSingle("RETURN toInt('1') AS one")
+    }
+    exception.getMessage should include("The function toInt() is no longer supported. Please use toInteger() instead")
   }
 }
