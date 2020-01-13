@@ -5,7 +5,7 @@
  */
 package com.neo4j.kernel.impl.enterprise.lock.forseti;
 
-import com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder;
+import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
@@ -46,7 +46,7 @@ class ForsetiServiceLoadingTest
     private Locks getDBLocksInstance( Map<Setting<?>,Object> config )
     {
         DatabaseManagementService managementService =
-                new EnterpriseDatabaseManagementServiceBuilder( directory.homeDir() ).setConfig( config ).build();
+                new TestEnterpriseDatabaseManagementServiceBuilder( directory.homeDir() ).setConfig( config ).build();
         GraphDatabaseAPI db = (GraphDatabaseAPI) managementService.database( GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
         Locks locks = db.getDependencyResolver().resolveDependency( Locks.class );
         managementService.shutdown();
