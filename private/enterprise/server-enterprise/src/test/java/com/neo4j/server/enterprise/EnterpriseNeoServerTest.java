@@ -6,6 +6,7 @@
 package com.neo4j.server.enterprise;
 
 import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings.Mode;
+import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
@@ -18,6 +19,7 @@ import org.neo4j.configuration.connectors.HttpConnector;
 import org.neo4j.configuration.connectors.HttpsConnector;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
+import org.neo4j.io.ByteUnit;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.test.extension.Inject;
@@ -44,6 +46,10 @@ class EnterpriseNeoServerTest
                 .set( BoltConnector.listen_address, new SocketAddress( "localhost", 0 ) )
                 .set( HttpConnector.listen_address, new SocketAddress( "localhost", 0 ) )
                 .set( HttpsConnector.listen_address, new SocketAddress( "localhost", 0 ) )
+                .set( GraphDatabaseSettings.pagecache_memory, "8m" )
+                .set( OnlineBackupSettings.online_backup_listen_address, new SocketAddress( "127.0.0.1", 0 ) )
+                .set( OnlineBackupSettings.online_backup_enabled, false )
+                .set( GraphDatabaseSettings.logical_log_rotation_threshold, ByteUnit.kibiBytes( 128 ) )
                 .build();
         GraphDatabaseDependencies dependencies = GraphDatabaseDependencies.newDependencies().userLogProvider( NullLogProvider.getInstance() );
         EnterpriseNeoServer server = new EnterpriseNeoServer( config, dependencies );
