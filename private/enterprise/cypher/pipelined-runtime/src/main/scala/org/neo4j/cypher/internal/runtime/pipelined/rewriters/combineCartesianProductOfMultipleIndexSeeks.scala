@@ -1,14 +1,14 @@
 /*
- * Copyright (c) 2002-2019 "Neo4j,"
+ * Copyright (c) 2002-2020 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
 package org.neo4j.cypher.internal.runtime.pipelined.rewriters
 
-import org.neo4j.cypher.internal.logical.plans.{Argument, CartesianProduct, ErasedTwoChildrenPlan, IndexSeekLeafPlan, LogicalPlan, MultiNodeIndexSeek}
+import org.neo4j.cypher.internal.logical.plans.{CartesianProduct, ErasedTwoChildrenPlan, IndexSeekLeafPlan, LogicalPlan, MultiNodeIndexSeek}
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.RewrittenPlans
-import org.neo4j.cypher.internal.v4_0.util.attribution.SameId
-import org.neo4j.cypher.internal.v4_0.util.{Cardinality, Rewriter, bottomUp, bottomUpWithRecorder}
+import org.neo4j.cypher.internal.util.attribution.SameId
+import org.neo4j.cypher.internal.util.{Cardinality, Rewriter, bottomUpWithRecorder}
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.Cardinalities
 
 /**
