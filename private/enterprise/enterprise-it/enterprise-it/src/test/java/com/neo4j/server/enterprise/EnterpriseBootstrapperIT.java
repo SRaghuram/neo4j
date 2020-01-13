@@ -18,8 +18,11 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.facade.GraphDatabaseDependencies;
+import org.neo4j.io.ByteUnit;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.server.BaseBootstrapperIT;
 import org.neo4j.server.NeoBootstrapper;
@@ -46,7 +49,7 @@ public class EnterpriseBootstrapperIT extends BaseBootstrapperIT
     @Override
     protected NeoBootstrapper newBootstrapper()
     {
-        return new EnterpriseBootstrapper();
+        return new UncoveredEnterpriseBootstrapper();
     }
 
     @Override
@@ -134,12 +137,22 @@ public class EnterpriseBootstrapperIT extends BaseBootstrapperIT
         protected DatabaseManagementService createNeo( Config config, GraphDatabaseDependencies dependencies )
         {
             this.userLogProvider = dependencies.userLogProvider();
-            return super.createNeo( config, dependencies );
+            return super.createNeo( buildTestConfig( config ), dependencies );
         }
 
         LogProvider getUserLogProvider()
         {
             return userLogProvider;
+        }
+
+        private static Config buildTestConfig( Config fromConfig )
+        {
+            return Config.newBuilder().fromConfig( fromConfig )
+                    .set( GraphDatabaseSettings.pagecache_memory, "8m" )
+                    .set( OnlineBackupSettings.online_backup_listen_address, new SocketAddress( "127.0.0.1", 0 ) )
+                    .set( OnlineBackupSettings.online_backup_enabled, false )
+                    .set( GraphDatabaseSettings.logical_log_rotation_threshold, ByteUnit.kibiBytes( 128 ) )
+                    .build();
         }
     }
 }
