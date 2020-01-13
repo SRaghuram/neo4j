@@ -1,5 +1,10 @@
 /*jshint esversion: 6 */
 /*
+ * Copyright (c) 2002-2020 "Neo4j,"
+ * Neo4j Sweden AB [http://neo4j.com]
+ * This file is a commercial add-on to Neo4j Enterprise Edition.
+ */
+/*
 	Simple webserver for serving Grafana Simple JSON plugin (https://github.com/grafana/simple-json-datasource)
 	With inspiration from https://github.com/michaeldmoore/CSVServer
 	Reads CSV metrics files from Neo4J, converts to json and responds on web requests
