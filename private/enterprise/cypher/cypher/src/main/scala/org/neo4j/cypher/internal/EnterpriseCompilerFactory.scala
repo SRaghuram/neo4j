@@ -23,6 +23,7 @@ import org.neo4j.cypher.internal.planning.CypherPlanner
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.CodeStructure
 import org.neo4j.cypher.internal.runtime.pipelined.WorkerManagement
 import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
+import org.neo4j.exceptions.SyntaxException
 import org.neo4j.internal.kernel.api.SchemaRead
 import org.neo4j.kernel.GraphDatabaseQueryService
 import org.neo4j.kernel.impl.query.QueryEngineProvider.SPI
@@ -53,7 +54,7 @@ class EnterpriseCompilerFactory(graph: GraphDatabaseQueryService,
                               executionEngineProvider: () => ExecutionEngine): Compiler = {
 
     val compatibilityMode = cypherVersion match {
-      case CypherVersion.`v3_5` => Compatibility3_5
+      case CypherVersion.v3_5 => Compatibility3_5
       case CypherVersion.v4_0 => Compatibility4_0
       case CypherVersion.v4_1 => Compatibility4_1
     }
@@ -70,7 +71,10 @@ class EnterpriseCompilerFactory(graph: GraphDatabaseQueryService,
         compatibilityMode)
 
     val runtime = if (plannerConfig.planSystemCommands) {
-      EnterpriseAdministrationCommandRuntime(executionEngineProvider(), graph.getDependencyResolver)
+      cypherVersion match {
+        case CypherVersion.v3_5 => throw new SyntaxException("Commands towards system database are not supported in this Cypher version.")
+        case _ => EnterpriseAdministrationCommandRuntime(executionEngineProvider(), graph.getDependencyResolver)
+      }
     } else {
       EnterpriseRuntimeFactory.getRuntime(cypherRuntime, plannerConfig.useErrorsOverWarnings)
     }

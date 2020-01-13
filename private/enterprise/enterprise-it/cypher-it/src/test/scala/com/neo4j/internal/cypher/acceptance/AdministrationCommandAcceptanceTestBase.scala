@@ -17,13 +17,13 @@ import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager
 import com.neo4j.server.security.enterprise.auth.InMemoryRoleRepository
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
 import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphInitializer
-import org.neo4j.configuration.{Config, GraphDatabaseSettings}
 import org.neo4j.configuration.GraphDatabaseSettings.{DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME}
+import org.neo4j.configuration.{Config, GraphDatabaseSettings}
+import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.DatabaseStatus
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.cypher.internal.plandescription.PlanDescriptionImpl
 import org.neo4j.cypher.internal.security.SecureHasher
-import org.neo4j.cypher.{ExecutionEngineFunSuite, ExecutionEngineHelper}
 import org.neo4j.dbms.database.{DatabaseContext, DatabaseManager}
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.graphdb.{ExecutionPlanDescription, Result}
@@ -119,12 +119,6 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
   def authManager: EnterpriseAuthManager = graph.getDependencyResolver.resolveDependency(classOf[EnterpriseAuthManager])
 
   override def databaseConfig(): Map[Setting[_], Object] = Map(GraphDatabaseSettings.auth_enabled -> TRUE)
-
-  def selectDatabase(name: String): Unit = {
-    graphOps = managementService.database(name)
-    graph = new GraphDatabaseCypherService(graphOps)
-    eengine = ExecutionEngineHelper.createEngine(graph)
-  }
 
   def user(username: String, roles: Seq[String] = Seq.empty, suspended: Boolean = false, passwordChangeRequired: Boolean = true): Map[String, Any] = {
     Map("user" -> username, "roles" -> roles, "suspended" -> suspended, "passwordChangeRequired" -> passwordChangeRequired)

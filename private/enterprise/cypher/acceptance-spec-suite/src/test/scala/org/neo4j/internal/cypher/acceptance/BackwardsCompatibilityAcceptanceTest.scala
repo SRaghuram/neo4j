@@ -5,11 +5,29 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
+import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.exceptions.SyntaxException
 import org.neo4j.internal.cypher.acceptance.comparisonsupport._
+import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 
 class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
+
+  test( "should handle switch between Cypher versions" ) {
+    // run query against latest version
+    executeSingle("MATCH (n) RETURN n")
+
+    // toInt should work if compatibility mode is set to 3.5
+    executeSingle("CYPHER 3.5 RETURN toInt('1') AS one")
+
+    // toInt should fail in latest version
+    val exception = the [SyntaxException] thrownBy {
+      executeSingle("RETURN toInt('1') AS one")
+    }
+    exception.getMessage should include("The function toInt() is no longer supported. Please use toInteger() instead")
+  }
+
+  // Removals in 4.0
 
   test("query without removed syntax should work with CYPHER 3.5") {
     val result = executeSingle("CYPHER 3.5 RETURN reverse('emil') as backwards")
@@ -58,14 +76,14 @@ class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
   }
 
   test("filter should still work with CYPHER 3.5 regardless of casing") {
-    for( filter <- List("filter", "FILTER", "filTeR")) {
+    for (filter <- List("filter", "FILTER", "filTeR")) {
       val result = executeSingle(s"CYPHER 3.5 WITH [1,2,3] AS list RETURN $filter(x IN list WHERE x % 2 = 1) AS odds")
       result.toList should be(List(Map("odds" -> List(1, 3))))
     }
   }
 
   test("extract should still work with CYPHER 3.5 regardless of casing") {
-    for( extract <- List("extract", "EXTRACT", "exTraCt")) {
+    for (extract <- List("extract", "EXTRACT", "exTraCt")) {
       val result = executeSingle(s"CYPHER 3.5 WITH [1,2,3] AS list RETURN $extract(x IN list | x * 10) AS tens")
       result.toList should be(List(Map("tens" -> List(10, 20, 30))))
     }
@@ -110,17 +128,241 @@ class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
     result.toList should be(List(Map("len" -> 3))) // a -> b -> c, a -> c -> b, a -> c -> d
   }
 
-  test( "should handle switch between Cypher versions" ) {
-    // run query against latest version
-    executeSingle("MATCH (n) RETURN n")
+  // Additions in 4.0
+  test("administration commands should not work with CYPHER 3.5") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
 
-    // toInt should work if compatibility mode is set to 3.5
-    executeSingle("CYPHER 3.5 RETURN toInt('1') AS one")
-
-    // toInt should fail in latest version
-    val exception = the [SyntaxException] thrownBy {
-      executeSingle("RETURN toInt('1') AS one")
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 3.5 SHOW DATABASES")
     }
-    exception.getMessage should include("The function toInt() is no longer supported. Please use toInteger() instead")
+    exception.getMessage should include("Commands towards system database are not supported in this Cypher version.")
+  }
+
+  test("procedures towards system should not work with CYPHER 3.5") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 3.5 CALL dbms.security.createUser('Alice', '1234', true)")
+    }
+    exception.getMessage should include("Commands towards system database are not supported in this Cypher version.")
+  }
+
+  test("new create index syntax should not work with CYPHER 3.5") {
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 3.5 CREATE INDEX my_index FOR (n:Label) ON (n.prop)")
+    }
+    exception.getMessage should include("Creating index using this syntax is not supported in this Cypher version.")
+
+    // THEN
+    graph.getMaybeIndex("Label", Seq("prop")).isEmpty should be(true)
+  }
+
+  test("new drop index syntax should not work with CYPHER 3.5") {
+    // GIVEN
+    graph.createIndexWithName("my_index", "Label", "prop")
+
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 3.5 DROP INDEX my_index")
+    }
+    exception.getMessage should include("Dropping index by name is not supported in this Cypher version.")
+
+    // THEN
+    graph.getMaybeIndex("Label", Seq("prop")).isDefined should be(true)
+  }
+
+  test("create named node key constraint should not work with CYPHER 3.5") {
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 3.5 CREATE CONSTRAINT my_constraint ON (n:Label) ASSERT (n.prop) IS NODE KEY")
+    }
+    exception.getMessage should include("Creating named node key constraint is not supported in this Cypher version.")
+
+    // THEN
+    graph.getMaybeNodeConstraint("Label", Seq("prop")).isEmpty should be(true)
+  }
+
+  test("create named uniqueness constraint should not work with CYPHER 3.5") {
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 3.5 CREATE CONSTRAINT my_constraint ON (n:Label) ASSERT (n.prop) IS UNIQUE")
+    }
+    exception.getMessage should include("Creating named uniqueness constraint is not supported in this Cypher version.")
+
+    // THEN
+    graph.getMaybeNodeConstraint("Label", Seq("prop")).isEmpty should be(true)
+  }
+
+  test("create named node existence constraint should not work with CYPHER 3.5") {
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 3.5 CREATE CONSTRAINT my_constraint ON (n:Label) ASSERT EXISTS(n.prop)")
+    }
+    exception.getMessage should include("Creating named node existence constraint is not supported in this Cypher version.")
+
+    // THEN
+    graph.getMaybeNodeConstraint("Label", Seq("prop")).isEmpty should be(true)
+  }
+
+  test("create named relationship existence constraint should not work with CYPHER 3.5") {
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 3.5 CREATE CONSTRAINT my_constraint ON ()-[r:Label]-() ASSERT EXISTS(r.prop)")
+    }
+    exception.getMessage should include("Creating named relationship existence constraint is not supported in this Cypher version.")
+
+    // THEN
+    graph.getMaybeRelationshipConstraint("Label", "prop").isEmpty should be(true)
+  }
+
+  test("new drop constraint syntax should not work with CYPHER 3.5") {
+    // GIVEN
+    graph.createNodeKeyConstraintWithName("my_constraint", "Label", "prop")
+
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 3.5 DROP CONSTRAINT my_constraint")
+    }
+    exception.getMessage should include("Dropping constraint by name is not supported in this Cypher version.")
+
+    // THEN
+    graph.getMaybeNodeConstraint("Label", Seq("prop")).isDefined should be(true)
+  }
+
+  // Additions in 4.1
+
+  test("grant DEFAULT DATABASE is not supported in 3.5 or 4.0") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    executeSingle("CREATE ROLE role")
+
+    // WHEN 3.5
+    val exception_35 = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 3.5 GRANT ACCESS ON DEFAULT DATABASE TO role")
+    }
+    exception_35.getMessage should include("Commands towards system database are not supported in this Cypher version.")
+
+    // WHEN 4.0
+    val exception_40 = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 4.0 GRANT ACCESS ON DEFAULT DATABASE TO role")
+    }
+    exception_40.getMessage should include("DEFAULT DATABASE is not supported in this Cypher version.")
+
+    // THEN
+    executeSingle("SHOW ROLE role PRIVILEGES").toList should be(List.empty)
+  }
+
+  test("deny DEFAULT DATABASE is not supported in 3.5 or 4.0") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+    // WHEN 3.5
+    val exception_35 = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 3.5 DENY INDEX ON DEFAULT DATABASE TO role")
+    }
+    exception_35.getMessage should include("Commands towards system database are not supported in this Cypher version.")
+
+    // WHEN 4.0
+    val exception_40 = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 4.0 DENY INDEX ON DEFAULT DATABASE TO role")
+    }
+    exception_40.getMessage should include("DEFAULT DATABASE is not supported in this Cypher version.")
+
+    // WHEN 4.1
+    val exception_41 = the[InvalidArgumentsException] thrownBy {
+      executeSingle("DENY INDEX ON DEFAULT DATABASE TO role")
+    }
+    exception_41.getMessage should include("Failed to deny access privilege to role 'role': Role 'role' does not exist.")
+  }
+
+  test("revoke DEFAULT DATABASE is not supported in 3.5 or 4.0") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    executeSingle("CREATE ROLE role")
+    executeSingle("GRANT START ON DEFAULT DATABASE TO role")
+
+    // WHEN 3.5
+    val exception_35 = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 3.5 REVOKE START ON DEFAULT DATABASE FROM role")
+    }
+    exception_35.getMessage should include("Commands towards system database are not supported in this Cypher version.")
+
+    // WHEN 4.0
+    val exception_40 = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 4.0 REVOKE START ON DEFAULT DATABASE FROM role")
+    }
+    exception_40.getMessage should include("DEFAULT DATABASE is not supported in this Cypher version.")
+
+    // THEN
+    executeSingle("SHOW ROLE role PRIVILEGES").toList should not be List.empty
+  }
+
+  test("grant user management is not supported in 3.5 or 4.0") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    executeSingle("CREATE ROLE role")
+
+    // WHEN 3.5
+    val exception_35 = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 3.5 GRANT USER MANAGEMENT ON DBMS TO role")
+    }
+    exception_35.getMessage should include("Commands towards system database are not supported in this Cypher version.")
+
+    // WHEN 4.0
+    val exception_40 = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 4.0 GRANT USER MANAGEMENT ON DBMS TO role")
+    }
+    exception_40.getMessage should include("User administration privileges are not supported in this Cypher version.")
+
+    // THEN
+    executeSingle("SHOW ROLE role PRIVILEGES").toList should be(List.empty)
+  }
+
+  test("deny user management is not supported in 3.5 or 4.0") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    executeSingle("CREATE ROLE role")
+
+    // WHEN 3.5
+    val exception_35 = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 3.5 DENY CREATE USER ON DBMS TO role")
+    }
+    exception_35.getMessage should include("Commands towards system database are not supported in this Cypher version.")
+
+    // WHEN 4.0
+    val exception_40 = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 4.0 DENY CREATE USER ON DBMS TO role")
+    }
+    exception_40.getMessage should include("User administration privileges are not supported in this Cypher version.")
+
+    // THEN
+    executeSingle("SHOW ROLE role PRIVILEGES").toList should be(List.empty)
+  }
+
+  test("revoke user management is not supported in 3.5 or 4.0") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    executeSingle("CREATE ROLE role")
+    executeSingle("GRANT SHOW USER ON DBMS TO role")
+
+    // WHEN 3.5
+    val exception_35 = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 3.5 REVOKE SHOW USER ON DBMS FROM role")
+    }
+    exception_35.getMessage should include("Commands towards system database are not supported in this Cypher version.")
+
+    // WHEN 4.0
+    val exception_40 = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 4.0 REVOKE SHOW USER ON DBMS FROM role")
+    }
+    exception_40.getMessage should include("User administration privileges are not supported in this Cypher version.")
+
+    // THEN
+    executeSingle("SHOW ROLE role PRIVILEGES").toList should not be List.empty
   }
 }
