@@ -6,18 +6,23 @@
 package com.neo4j.enterprise.edition.factory;
 
 import com.neo4j.dbms.api.EnterpriseDatabaseManagementServiceBuilder;
+import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
 
+import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.connectors.BoltConnector;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.api.DatabaseManagementService;
+import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
+import org.neo4j.io.ByteUnit;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.Neo4jLayoutExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.online_backup_enabled;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
@@ -38,17 +43,16 @@ class EnterpriseDatabaseManagementServiceBuilderIT
     @Test
     void configuredDatabasesRootPath()
     {
-        File factoryDir = testDirectory.homeDir();
+        File homeDir = testDirectory.homeDir();
         File databasesDir = testDirectory.directory( "my_databases" );
 
-        DatabaseManagementService managementService = new EnterpriseDatabaseManagementServiceBuilder( factoryDir )
+        DatabaseManagementService managementService = createDbmsBuilder( homeDir )
                 .setConfig( databases_root_path, databasesDir.toPath() )
-                .setConfig( online_backup_enabled, false )
                 .build();
         try
         {
-            assertTrue( isEmptyOrNonExistingDirectory( fs, new File( factoryDir, DEFAULT_DATABASE_NAME ) ) );
-            assertTrue( isEmptyOrNonExistingDirectory( fs, new File( factoryDir, SYSTEM_DATABASE_NAME ) ) );
+            assertTrue( isEmptyOrNonExistingDirectory( fs, new File( homeDir, DEFAULT_DATABASE_NAME ) ) );
+            assertTrue( isEmptyOrNonExistingDirectory( fs, new File( homeDir, SYSTEM_DATABASE_NAME ) ) );
 
             assertFalse( isEmptyOrNonExistingDirectory( fs, new File( databasesDir, DEFAULT_DATABASE_NAME ) ) );
             assertFalse( isEmptyOrNonExistingDirectory( fs, new File( databasesDir, SYSTEM_DATABASE_NAME ) ) );
@@ -62,10 +66,10 @@ class EnterpriseDatabaseManagementServiceBuilderIT
     @Test
     void notConfiguredDatabasesRootPath()
     {
-        File factoryDir = testDirectory.homeDir();
+        File homeDir = testDirectory.homeDir();
         File storeDir = neo4jLayout.databasesDirectory();
 
-        DatabaseManagementService managementService = new EnterpriseDatabaseManagementServiceBuilder( factoryDir ).build();
+        DatabaseManagementService managementService = createDbmsBuilder( homeDir ).build();
         try
         {
             assertFalse( isEmptyOrNonExistingDirectory( fs, new File( storeDir, DEFAULT_DATABASE_NAME ) ) );
@@ -75,5 +79,16 @@ class EnterpriseDatabaseManagementServiceBuilderIT
         {
             managementService.shutdown();
         }
+    }
+
+    private static DatabaseManagementServiceBuilder createDbmsBuilder( File homeDirectory )
+    {
+        //TestEnterpriseDatabaseManagementServiceBuilder is not available in this module
+        return new EnterpriseDatabaseManagementServiceBuilder( homeDirectory )
+                .setConfig( OnlineBackupSettings.online_backup_listen_address, new SocketAddress( "127.0.0.1",0 ) )
+                .setConfig( OnlineBackupSettings.online_backup_enabled, false )
+                .setConfig( GraphDatabaseSettings.pagecache_memory, "8m" )
+                .setConfig( GraphDatabaseSettings.logical_log_rotation_threshold, ByteUnit.kibiBytes( 128 ) )
+                .setConfig( BoltConnector.enabled, false );
     }
 }

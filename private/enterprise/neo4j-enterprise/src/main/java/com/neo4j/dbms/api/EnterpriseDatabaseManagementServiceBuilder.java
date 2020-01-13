@@ -27,9 +27,9 @@ import static org.neo4j.graphdb.facade.GraphDatabaseDependencies.newDependencies
 @PublicApi
 public class EnterpriseDatabaseManagementServiceBuilder extends DatabaseManagementServiceBuilder
 {
-    public EnterpriseDatabaseManagementServiceBuilder( File databaseRootDir )
+    public EnterpriseDatabaseManagementServiceBuilder( File homeDirectory )
     {
-        super( databaseRootDir );
+        super( homeDirectory );
     }
 
     @Override
