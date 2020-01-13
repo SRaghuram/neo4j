@@ -101,10 +101,11 @@ public class ReplicatedTokenHolder extends AbstractTokenHolderBase
         StorageEngine storageEngine = storageEngineSupplier.get();
         Collection<StorageCommand> commands = new ArrayList<>();
         TransactionState txState = new TxState();
-        int tokenId = Math.toIntExact( idGeneratorFactory.get( tokenIdType ).nextId( TRACER_SUPPLIER.get() ) );
+        var cursorTracer = TRACER_SUPPLIER.get();
+        int tokenId = Math.toIntExact( idGeneratorFactory.get( tokenIdType ).nextId( cursorTracer ) );
         tokenCreator.createToken( txState, tokenName, internal, tokenId );
         try ( StorageReader reader = storageEngine.newReader();
-              CommandCreationContext creationContext = storageEngine.newCommandCreationContext() )
+              CommandCreationContext creationContext = storageEngine.newCommandCreationContext( cursorTracer ) )
         {
             storageEngine.createCommands( commands, txState, reader, creationContext, ResourceLocker.PREVENT, Long.MAX_VALUE, NO_DECORATION );
         }
