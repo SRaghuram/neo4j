@@ -98,7 +98,7 @@ public class FabricQueryMonitoring
 
     private static class FabricExecutingQuery extends ExecutingQuery
     {
-        private static MonotonicCounter internalFabricQueryIdGenerator = MonotonicCounter.newAtomicMonotonicCounter();
+        private static final MonotonicCounter internalFabricQueryIdGenerator = MonotonicCounter.newAtomicMonotonicCounter();
         private String internalFabricId;
 
         private FabricExecutingQuery( FabricTransactionInfo transactionInfo, String statement, MapValue params, Thread thread, NamedDatabaseId namedDatabaseId )
@@ -118,7 +118,7 @@ public class FabricQueryMonitoring
                     Clocks.nanoClock(),
                     CpuClock.NOT_AVAILABLE
             );
-            internalFabricId = "F" + internalFabricQueryIdGenerator.incrementAndGet();
+            internalFabricId = "Fabric-" + internalFabricQueryIdGenerator.incrementAndGet();
         }
 
         @Override

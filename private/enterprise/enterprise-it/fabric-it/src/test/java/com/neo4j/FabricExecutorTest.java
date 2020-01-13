@@ -647,7 +647,7 @@ class FabricExecutorTest
         List<String> logLines = readAllLines( logFile );
         assertEquals( 6, logLines.size() ); //3 queries logged, start + end of each
 
-        Pattern compile = Pattern.compile( "Query started: id:(F?[0-9]+)" );
+        Pattern compile = Pattern.compile( "Query started: id:((Fabric-)?[0-9]+)" );
         Set<String> ids = logLines.stream()
                 .map( compile::matcher )
                 .filter( Matcher::find )
