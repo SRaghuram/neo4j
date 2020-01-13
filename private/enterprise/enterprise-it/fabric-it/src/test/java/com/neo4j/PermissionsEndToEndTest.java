@@ -230,7 +230,7 @@ class PermissionsEndToEndTest
         } );
 
         assertEquals( ExecutionFailed.code().serialize(), e.code() );
-        assertEquals( "should have been rewritten away", e.getMessage() );
+        assertEquals( "`PatternComprehension` should have been rewritten away", e.getMessage() );
     }
 
     private static Driver createDriver( String user, String password, int boltPort )
