@@ -147,7 +147,7 @@ class PipelinedRuntime private(parallelExecution: Boolean,
                           warnings: Set[InternalNotification]): PipelinedExecutionPlan = {
     val batchSize = selectBatchSize(query, context)
     val rewrittenPlans = new RewrittenPlans // Used to track which plans are rewritten by the optimizing rewriter
-    val optimizedLogicalPlan = optimizingRewriter(query.logicalPlan, query.cardinalities, batchSize, rewrittenPlans)
+    val optimizedLogicalPlan = optimizingRewriter(query, batchSize, rewrittenPlans)
 
     PipelinedBlacklist.throwOnUnsupportedPlan(optimizedLogicalPlan, parallelExecution, query.providedOrders)
 

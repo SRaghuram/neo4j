@@ -34,7 +34,7 @@ object PipelinedBlacklist {
         case f: FunctionInvocation if f.function == functions.Type && parallelExecution =>
           _ + (f.functionName.name+"()")
 
-        case c: CartesianProduct if !providedOrders.getOrElse(c.left.id, ProvidedOrder.empty).isEmpty =>
+        case c: CartesianProduct if providedOrders.hasProvidedOrder(c.left.id) =>
           _ + "CartesianProduct if the LHS has a provided order"
       }
     if (unsupport.nonEmpty) {
