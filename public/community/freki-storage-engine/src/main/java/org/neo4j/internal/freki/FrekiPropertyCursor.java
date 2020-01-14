@@ -19,53 +19,109 @@
  */
 package org.neo4j.internal.freki;
 
+import org.neo4j.internal.freki.generated.PropertyValue;
+import org.neo4j.internal.freki.generated.StoreRecord;
+import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.storageengine.api.StoragePropertyCursor;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.ValueGroup;
 
 class FrekiPropertyCursor implements StoragePropertyCursor
 {
-    @Override
-    public void initNodeProperties( long reference )
+    private final Store mainStore;
+    private final Record record = new Record( 4 );
+    private StoreRecord storeRecord;
+
+    private PageCursor cursor;
+    private long nodeId;
+    private int propertyIteratorIndex;
+
+    FrekiPropertyCursor( Store mainStore )
     {
+        this.mainStore = mainStore;
+        reset();
+    }
+
+    @Override
+    public void initNodeProperties( long nodeId )
+    {
+        this.nodeId = nodeId;
     }
 
     @Override
     public void initRelationshipProperties( long reference )
     {
+        throw new UnsupportedOperationException( "Not implemented yet" );
     }
 
     @Override
     public int propertyKey()
     {
-        return 0;
+        return storeRecord.properties( propertyIteratorIndex ).key();
     }
 
     @Override
     public ValueGroup propertyType()
     {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public Value propertyValue()
     {
-        return null;
+        PropertyValue value = storeRecord.properties( propertyIteratorIndex ).value();
+        return MutableNodeRecordData.propertyValue( value );
     }
 
     @Override
     public boolean next()
     {
+        if ( nodeId != -1 || propertyIteratorIndex != -1 )
+        {
+            if ( nodeId != -1 )
+            {
+                mainStore.read( cursor(), record, nodeId );
+                storeRecord = StoreRecord.getRootAsStoreRecord( record.data );
+                nodeId = -1;
+                if ( !storeRecord.inUse() )
+                {
+                    return false;
+                }
+            }
+            propertyIteratorIndex++;
+            if ( propertyIteratorIndex >= storeRecord.propertiesLength() )
+            {
+                propertyIteratorIndex = -1;
+                return false;
+            }
+            return true;
+        }
         return false;
+    }
+
+    private PageCursor cursor()
+    {
+        if ( cursor == null )
+        {
+            cursor = mainStore.openReadCursor();
+        }
+        return cursor;
     }
 
     @Override
     public void reset()
     {
+        nodeId = -1;
+        propertyIteratorIndex = -1;
     }
 
     @Override
     public void close()
     {
+        if ( cursor != null )
+        {
+            cursor.close();
+            cursor = null;
+        }
     }
 }

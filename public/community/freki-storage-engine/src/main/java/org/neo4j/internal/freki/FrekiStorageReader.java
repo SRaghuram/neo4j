@@ -289,7 +289,7 @@ class FrekiStorageReader implements StorageReader
     @Override
     public StoragePropertyCursor allocatePropertyCursor()
     {
-        return new FrekiPropertyCursor();
+        return new FrekiPropertyCursor( stores.mainStore );
     }
 
     @Override
