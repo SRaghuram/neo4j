@@ -17,7 +17,7 @@ public class JustCreateNode
 {
     public static void main( String[] args ) throws IOException
     {
-        File homeDirectory = new File( "C:/Users/Mattias/Desktop/home" );
+        File homeDirectory = new File( "C:/Users/Matilas/Desktop/home" );
         FileUtils.deleteRecursively( homeDirectory );
         DatabaseManagementService dbms = new DatabaseManagementServiceBuilder( homeDirectory ).build();
         Label label = Label.label( "Hello token world" );
@@ -30,7 +30,10 @@ public class JustCreateNode
             {
                 for ( int i = 0; i < nodeIds.length; i++ )
                 {
-                    nodeIds[i] = tx.createNode( label, label2 ).getId();
+                    Node node = tx.createNode( label, label2 );
+                    node.setProperty( "name", "Valdemar" );
+                    node.setProperty( "number", 99 );
+                    nodeIds[i] = node.getId();
                 }
                 tx.commit();
             }
@@ -44,6 +47,7 @@ public class JustCreateNode
                     {
                         System.out.println( "  Has label '" + nodeLabel.name() + "'" );
                     }
+                    node.getProperties().forEach( ( key, value ) -> System.out.println( "  Has property " + key + "=" + value ) );
                 }
             }
         }

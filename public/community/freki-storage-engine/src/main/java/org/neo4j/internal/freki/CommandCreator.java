@@ -25,7 +25,6 @@ import org.eclipse.collections.api.map.primitive.MutableLongObjectMap;
 import org.eclipse.collections.api.set.primitive.LongSet;
 import org.eclipse.collections.impl.factory.primitive.LongObjectMaps;
 
-import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
@@ -56,9 +55,13 @@ class CommandCreator implements TxStateVisitor
     @Override
     public void visitCreatedNode( long id )
     {
-        Record after = new Record( 1, id );
-        after.flags |= Record.FLAG_IN_USE;
-        build.put( id, new FrekiCommand.Node( new Record( 1, id ), after ) );
+        Record after = new Record( 4, id );
+        after.node = new MutableNodeRecordData();
+        after.node.inUse = true;
+        Record before = new Record( 1, id );
+        before.node = new MutableNodeRecordData();
+        before.node.inUse = false;
+        build.put( id, new FrekiCommand.Node( before, after ) );
     }
 
     @Override
@@ -83,7 +86,13 @@ class CommandCreator implements TxStateVisitor
     public void visitNodePropertyChanges( long id, Iterator<StorageProperty> added, Iterator<StorageProperty> changed, IntIterable removed )
             throws ConstraintValidationException
     {
-        throw new UnsupportedOperationException( "Not implemented yet" );
+        FrekiCommand.Node command = (FrekiCommand.Node) build.get( id );
+        assertExists( command );
+        while ( added.hasNext() )
+        {
+            StorageProperty property = added.next();
+            command.after().node.properties.put( property.propertyKeyId(), new MutableNodeRecordData.Property( property.propertyKeyId(), property.value() ) );
+        }
     }
 
     @Override
@@ -97,19 +106,23 @@ class CommandCreator implements TxStateVisitor
     public void visitNodeLabelChanges( long id, LongSet added, LongSet removed ) throws ConstraintValidationException
     {
         FrekiCommand.Node command = (FrekiCommand.Node) build.get( id );
-        if ( command == null )
-        {
-            // Changed, not created
-            throw new UnsupportedOperationException( "Not implemented yet" );
-        }
+        assertExists( command );
         if ( !removed.isEmpty() )
         {
             throw new UnsupportedOperationException( "Not implemented yet" );
         }
 
         // Add the new labels into the record
-        ByteBuffer data = command.after().data;
-        data.position( StreamVByte.writeDeltas( toSortedIntArray( added ), data.array(), data.position() ) );
+        command.after().node.labels = toSortedIntArray( added );
+    }
+
+    private void assertExists( FrekiCommand.Node command )
+    {
+        if ( command == null )
+        {
+            // Changed, not created
+            throw new UnsupportedOperationException( "Not implemented yet" );
+        }
     }
 
     private static int[] toSortedIntArray( LongSet set )

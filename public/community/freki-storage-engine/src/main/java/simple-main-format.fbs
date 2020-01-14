@@ -1,0 +1,35 @@
+namespace org.neo4j.internal.freki.generated;
+
+enum Type: byte {
+    INT,
+    LONG,
+    STRING
+}
+
+table PropertyValue {
+    type:Type;
+	intValue:int;
+	longValue:long;
+	stringValue:string;
+}
+
+table Property {
+  key:int;
+  value:PropertyValue;
+}
+
+table Relationship {
+  otherNode:long;
+  type:int;
+  outgoing:bool;
+  property:[Property];
+}
+
+table StoreRecord {
+	inUse:bool;
+	labels:[int];
+	properties:[Property];
+	relationships:[Relationship];
+}
+
+root_type StoreRecord;

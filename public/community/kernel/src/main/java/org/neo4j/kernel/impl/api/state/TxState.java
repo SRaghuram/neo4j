@@ -120,6 +120,8 @@ public class TxState implements TransactionState, RelationshipVisitor.Home
     {
         if ( nodes != null )
         {
+
+
             nodes.getAdded().each( visitor::visitCreatedNode );
         }
 
