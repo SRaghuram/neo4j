@@ -111,7 +111,7 @@ public class Store extends LifecycleAdapter implements AutoCloseable
 
     public void write( PageCursor cursor, Record record ) throws IOException
     {
-        long id = record.internalId;
+        long id = record.id;
         long pageId = id / recordsPerPage;
         int offset = (int) ((id % recordsPerPage) * Record.SIZE_BASE);
         System.out.println( "Writing " + id + " " + pageId + " " + offset );
@@ -146,7 +146,7 @@ public class Store extends LifecycleAdapter implements AutoCloseable
             {
                 return false;
             }
-            record.internalId = id;
+//            record.internalId = id;
             do
             {
                 cursor.setOffset( offset );
@@ -163,10 +163,11 @@ public class Store extends LifecycleAdapter implements AutoCloseable
 
     boolean exists( long id ) throws IOException
     {
-        try ( PageCursor cursor = openReadCursor() )
-        {
-            Record record = new Record( 1 );
-            return read( cursor, record, id ) && record.hasFlag( Record.FLAG_IN_USE );
-        }
+//        try ( PageCursor cursor = openReadCursor() )
+//        {
+//            Record record = new Record( 1 );
+//            return read( cursor, record, id ) && record.hasFlag( Record.FLAG_IN_USE );
+//        }
+        return true;
     }
 }
