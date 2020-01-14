@@ -33,6 +33,7 @@ import org.neo4j.logging.Log;
 import org.neo4j.logging.NullLog;
 import org.neo4j.time.Clocks;
 
+import static org.eclipse.collections.api.factory.Sets.immutable;
 import static org.neo4j.index.internal.gbptree.GBPTree.NO_HEADER_READER;
 import static org.neo4j.index.internal.gbptree.GBPTree.NO_HEADER_WRITER;
 import static org.neo4j.index.internal.gbptree.GBPTree.NO_MONITOR;
@@ -187,7 +188,7 @@ public abstract class AbstractGBPTreeBenchmark extends BaseDatabaseBenchmark
                 NO_HEADER_READER,
                 NO_HEADER_WRITER,
                 RecoveryCleanupWorkCollector.immediate(),
-                false, PageCacheTracer.NULL );
+                false, PageCacheTracer.NULL, immutable.empty() );
     }
 
     @Override

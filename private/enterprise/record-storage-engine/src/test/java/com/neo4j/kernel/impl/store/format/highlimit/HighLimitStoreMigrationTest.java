@@ -36,6 +36,7 @@ import org.neo4j.test.extension.pagecache.PageCacheExtension;
 import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.eclipse.collections.api.factory.Sets.immutable;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -115,7 +116,8 @@ class HighLimitStoreMigrationTest
         RecordFormats recordFormats = HighLimitV3_0_0.RECORD_FORMATS;
         Config config = Config.defaults();
         IdType idType = IdType.SCHEMA;
-        try ( SchemaStore35 schemaStore35 = new SchemaStore35( store, idFile, config, idType, idGeneratorFactory, pageCache, logProvider, recordFormats ) )
+        try ( SchemaStore35 schemaStore35 = new SchemaStore35( store, idFile, config, idType, idGeneratorFactory, pageCache, logProvider, recordFormats,
+                immutable.empty() ) )
         {
             schemaStore35.initialise( true, PageCursorTracer.NULL );
         }

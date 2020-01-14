@@ -7,6 +7,7 @@ package com.neo4j;
 
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
+import org.eclipse.collections.api.set.ImmutableSet;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -553,14 +554,14 @@ class TransactionGuardIT
 
         @Override
         public IdGenerator open( PageCache pageCache, File filename, IdType idType, LongSupplier highIdSupplier, long maxId, boolean readOnly,
-                PageCursorTracer cursorTracer, OpenOption... openOptions )
+                PageCursorTracer cursorTracer, ImmutableSet<OpenOption> openOptions )
         {
-            return new TerminationIdGenerator( delegate.open( pageCache, filename, idType, highIdSupplier, maxId, readOnly, cursorTracer ) );
+            return new TerminationIdGenerator( delegate.open( pageCache, filename, idType, highIdSupplier, maxId, readOnly, cursorTracer, openOptions ) );
         }
 
         @Override
         public IdGenerator create( PageCache pageCache, File filename, IdType idType, long highId, boolean throwIfFileExists, long maxId,
-                boolean readOnly, PageCursorTracer cursorTracer, OpenOption... openOptions )
+                boolean readOnly, PageCursorTracer cursorTracer, ImmutableSet<OpenOption> openOptions )
         {
             return new TerminationIdGenerator(
                     delegate.create( pageCache, filename, idType, highId, throwIfFileExists, maxId, readOnly, cursorTracer, openOptions ) );
