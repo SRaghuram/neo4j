@@ -262,6 +262,13 @@ object OperatorCodeGenHelperTemplates {
   def stringEndsWithScan(prop: Int, expression: IntermediateRepresentation): IntermediateRepresentation =
     invokeStatic(method[IndexQuery, StringSuffixPredicate, Int, TextValue]("stringSuffix"), constant(prop), expression)
 
+  def pointDistanceSeek(prop: Int,
+                        point: IntermediateRepresentation,
+                        distance: IntermediateRepresentation,
+                        inclusive: Boolean): IntermediateRepresentation =
+    invokeStatic(method[CompiledHelpers, Array[IndexQuery], Int, AnyValue, AnyValue, Boolean]("pointRange"),
+                 constant(prop), point, distance, constant(inclusive))
+
   def singleNode(node: IntermediateRepresentation, cursor: IntermediateRepresentation): IntermediateRepresentation =
     invokeSideEffect(loadField(DATA_READ), method[Read, Unit, Long, NodeCursor]("singleNode"), node, cursor)
 

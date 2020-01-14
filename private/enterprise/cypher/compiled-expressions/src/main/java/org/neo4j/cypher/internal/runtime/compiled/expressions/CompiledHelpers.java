@@ -5,15 +5,20 @@
  */
 package org.neo4j.cypher.internal.runtime.compiled.expressions;
 
+import java.util.List;
+
 import org.neo4j.cypher.internal.runtime.DbAccess;
 import org.neo4j.cypher.internal.runtime.ExecutionContext;
 import org.neo4j.cypher.internal.runtime.KernelAPISupport$;
 import org.neo4j.exceptions.CypherTypeException;
 import org.neo4j.exceptions.ParameterWrongTypeException;
+import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.internal.kernel.api.IndexQuery;
 import org.neo4j.util.CalledFromGeneratedCode;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.BooleanValue;
+import org.neo4j.values.storable.NumberValue;
+import org.neo4j.values.storable.PointValue;
 import org.neo4j.values.storable.TextValue;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.ValueGroup;
@@ -28,6 +33,8 @@ import static org.neo4j.values.storable.Values.NO_VALUE;
 @SuppressWarnings( "unused" )
 public final class CompiledHelpers
 {
+    private static final IndexQuery[] EMPTY_PREDICATE = new IndexQuery[0];
+
     private CompiledHelpers()
     {
         throw new UnsupportedOperationException( "do not instantiate" );
@@ -99,6 +106,33 @@ public final class CompiledHelpers
         else
         {
             throw new CypherTypeException( "Expected a string value, but got " + value );
+        }
+    }
+
+    @CalledFromGeneratedCode
+    public static IndexQuery[] pointRange( int property, AnyValue point, AnyValue distance, boolean rangeIsInclusive )
+    {
+        if ( point instanceof PointValue && distance instanceof NumberValue )
+        {
+            PointValue pointValue = (PointValue) point;
+            List<Pair<PointValue,PointValue>> bboxes = pointValue
+                    .getCoordinateReferenceSystem()
+                    .getCalculator()
+                    .boundingBox( pointValue, ((NumberValue) distance).doubleValue() );
+            int size = bboxes.size();
+            boolean inclusive = size > 1 || rangeIsInclusive;
+            IndexQuery[] queries = new IndexQuery[size];
+            for ( int i = 0; i < size; i++ )
+            {
+                Pair<PointValue,PointValue> bbox = bboxes.get( i );
+                queries[i] = IndexQuery.range( property, bbox.first(), inclusive, bbox.other(), inclusive );
+            }
+
+            return queries;
+        }
+        else
+        {
+            return EMPTY_PREDICATE;
         }
     }
 

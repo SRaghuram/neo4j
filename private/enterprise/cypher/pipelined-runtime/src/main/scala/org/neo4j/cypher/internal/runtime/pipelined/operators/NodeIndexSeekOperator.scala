@@ -5,34 +5,46 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.operators
 
-import java.util
-
+import org.neo4j.codegen.api.Field
+import org.neo4j.codegen.api.InstanceField
+import org.neo4j.codegen.api.IntermediateRepresentation
 import org.neo4j.codegen.api.IntermediateRepresentation._
-import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable, Method, _}
+import org.neo4j.codegen.api.LocalVariable
+import org.neo4j.codegen.api.Method
 import org.neo4j.cypher.internal.logical.plans.QueryExpression
-import org.neo4j.cypher.internal.physicalplanning.{SlotConfiguration, SlottedIndexedProperty}
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+import org.neo4j.cypher.internal.physicalplanning.SlottedIndexedProperty
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
+import org.neo4j.cypher.internal.runtime.ExecutionContext
 import org.neo4j.cypher.internal.runtime.KernelAPISupport.RANGE_SEEKABLE_VALUE_GROUPS
+import org.neo4j.cypher.internal.runtime.NoMemoryTracker
+import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledHelpers
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
-import org.neo4j.cypher.internal.runtime.compiled.expressions.{CompiledHelpers, IntermediateExpression}
+import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes._
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{MorselExecutionContext, QueryResources, QueryState}
-import org.neo4j.cypher.internal.runtime.pipelined.operators.ManyQueriesExactNodeIndexSeekTaskTemplate.{nextMethod, queryIteratorMethod}
+import org.neo4j.cypher.internal.runtime.pipelined.NodeIndexCursorRepresentation
+import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates._
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
-import org.neo4j.cypher.internal.runtime.pipelined.{NodeIndexCursorRepresentation, OperatorExpressionCompiler}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
-import org.neo4j.cypher.internal.runtime.{ExecutionContext, NoMemoryTracker, QueryContext, makeValueNeoSafe}
 import org.neo4j.cypher.internal.util.attribution.Id
+import org.neo4j.internal.kernel.api.IndexQuery
 import org.neo4j.internal.kernel.api.IndexQuery.ExactPredicate
-import org.neo4j.internal.kernel.api._
+import org.neo4j.internal.kernel.api.IndexReadSession
+import org.neo4j.internal.kernel.api.KernelReadTracer
+import org.neo4j.internal.kernel.api.NodeValueIndexCursor
+import org.neo4j.internal.kernel.api.Read
 import org.neo4j.internal.schema.IndexOrder
-import org.neo4j.values.AnyValue
-import org.neo4j.values.storable.{FloatingPointValue, Value, Values}
-import org.neo4j.values.virtual.{ListValue, VirtualValues}
+import org.neo4j.values.storable.FloatingPointValue
+import org.neo4j.values.storable.Value
+import org.neo4j.values.storable.Values
 
 class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
                             offset: Int,
@@ -168,21 +180,20 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
 
 class NodeWithValues(val nodeId: Long, val values: Array[Value])
 
-abstract class SingleQueryNodeIndexSeekTaskTemplate(
-                                                     override val inner: OperatorTaskTemplate,
-                                                     id: Id,
-                                                     innermost: DelegateOperatorTaskTemplate,
-                                                     nodeVarName: String,
-                                                     offset: Int,
-                                                     property: SlottedIndexedProperty,
-                                                     order: IndexOrder,
-                                                     needsValues: Boolean,
-                                                     queryIndexId: Int,
-                                                     argumentSize: SlotConfiguration.Size,
-                                                     codeGen: OperatorExpressionCompiler)
+abstract class SingleQueryNodeIndexSeekTaskTemplate(override val inner: OperatorTaskTemplate,
+                                                    id: Id,
+                                                    innermost: DelegateOperatorTaskTemplate,
+                                                    nodeVarName: String,
+                                                    offset: Int,
+                                                    property: SlottedIndexedProperty,
+                                                    order: IndexOrder,
+                                                    needsValues: Boolean,
+                                                    queryIndexId: Int,
+                                                    argumentSize: SlotConfiguration.Size,
+                                                    codeGen: OperatorExpressionCompiler)
   extends InputLoopTaskTemplate(inner, id, innermost, codeGen) {
 
-  import OperatorCodeGenHelperTemplates._
+  import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates._
   protected val nodeIndexCursorField: InstanceField = field[NodeValueIndexCursor](codeGen.namer.nextVariableName())
 
   codeGen.registerCursor(nodeVarName, NodeIndexCursorRepresentation(loadField(nodeIndexCursorField)))
@@ -332,7 +343,6 @@ class SingleExactSeekQueryNodeIndexSeekTaskTemplate(inner: OperatorTaskTemplate,
   override protected def predicate: IntermediateRepresentation = exactSeek(property.propertyKeyId, load(seekValueVariable))
 }
 
-
 /**
   * Code generation template for range seeks, e.g. `n.prop < 42`, `n.prop >= 42`, and `42 < n.prop <= 43`
   */
@@ -366,61 +376,60 @@ class SingleRangeSeekQueryNodeIndexSeekTaskTemplate(inner: OperatorTaskTemplate,
   override protected def predicate: IntermediateRepresentation = load(predicateVar)
 }
 
-
 /**
   * Code generation template for index seeks of the form `MATCH (n:L) WHERE n.prop = 1 OR n.prop = 2 OR n.prop =...`
   * Generates code for first doing an exact search of the first predicate and when the result is exhausted
   * it moves on to the next predicate until all predicates have been visited.
   */
-class ManyQueriesExactNodeIndexSeekTaskTemplate(override val inner: OperatorTaskTemplate,
-                                                id: Id,
-                                                innermost: DelegateOperatorTaskTemplate,
-                                                nodeVarName: String,
-                                                offset: Int,
-                                                property: SlottedIndexedProperty,
-                                                generatePredicate: () => IntermediateExpression,
-                                                queryIndexId: Int,
-                                                argumentSize: SlotConfiguration.Size)
-                                               (codeGen: OperatorExpressionCompiler)
+class ManyQueriesNodeIndexSeekTaskTemplate(override val inner: OperatorTaskTemplate,
+                                           id: Id,
+                                           innermost: DelegateOperatorTaskTemplate,
+                                           nodeVarName: String,
+                                           offset: Int,
+                                           property: SlottedIndexedProperty,
+                                           generateSeekValues: Seq[() => IntermediateExpression],
+                                           generatePredicates: Seq[IntermediateRepresentation] => IntermediateRepresentation,
+                                           queryIndexId: Int,
+                                           order: IndexOrder,
+                                           argumentSize: SlotConfiguration.Size)
+                                          (codeGen: OperatorExpressionCompiler)
   extends InputLoopTaskTemplate(inner, id, innermost, codeGen) {
 
-  import OperatorCodeGenHelperTemplates._
-  private var queries: IntermediateExpression = _
-  private val queriesVariable = codeGen.namer.nextVariableName()
+  import org.neo4j.cypher.internal.runtime.pipelined.operators.ManyQueriesNodeIndexSeekTaskTemplate._
+  import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates._
+  private var seekValues: Seq[IntermediateExpression] = _
 
+  private val needsValues = property.getValueFromIndex
   private val nodeIndexCursorField = field[NodeValueIndexCursor](codeGen.namer.nextVariableName())
-  private val queryIteratorField = field[ExactPredicateIterator](codeGen.namer.nextVariableName())
+  private val queryIteratorField = field[ManyPredicateIterator](codeGen.namer.nextVariableName())
 
   override def genMoreFields: Seq[Field] = Seq(nodeIndexCursorField, queryIteratorField)
 
   override def genLocalVariables: Seq[LocalVariable] = Seq(CURSOR_POOL_V)
 
-  override def genExpressions: Seq[IntermediateExpression] = Seq(queries)
+  override def genExpressions: Seq[IntermediateExpression] = seekValues
 
   override protected def genInitializeInnerLoop: IntermediateRepresentation = {
-    val compiled = generatePredicate()
-    queries = compiled.copy(ir = asListValue(compiled.ir))
-
+    seekValues = generateSeekValues.map(_()).map(v => v.copy(ir = asStorableValue(nullCheckIfRequired(v))))
     /**
       * {{{
-      *   val queries = asListValue([query predicate])
-      *   queryIterator = queryIterator(property, queries)
-      *   nodeIndexCursor = resources.cursorPools.nodeValueIndexCursorPool.allocate()
+      *   this.queryIterator = queryIterator(property, ([query predicate])
+      *   this.nodeIndexCursor = resources.cursorPools.nodeValueIndexCursorPool.allocate()
       *   this.canContinue = next(indexReadSession(queryIndexId), nodeIndexCursor, queryIterator, read)
       *   true
       * }}}
       */
     block(
-      declareAndAssign(typeRefOf[ListValue], queriesVariable,
-                       nullCheckIfRequired(queries, getStatic[VirtualValues, ListValue]("EMPTY_LIST"))),
       setField(queryIteratorField,
-               invokeStatic(queryIteratorMethod, constant(property.propertyKeyId), load(queriesVariable))),
+               invokeStatic(queryIteratorMethod, constant(property.propertyKeyId), generatePredicates(seekValues.map(_.ir)))),
       setField(nodeIndexCursorField, ALLOCATE_NODE_INDEX_CURSOR),
       setField(canContinue,
                invokeStatic(nextMethod,
                             indexReadSession(queryIndexId),
                             loadField(nodeIndexCursorField),
                             loadField(queryIteratorField),
+                            indexOrder(order),
+                            constant(needsValues),
                             loadField(DATA_READ))),
       profileRow(id, loadField(canContinue)),
       constant(true))
@@ -442,11 +451,7 @@ class ManyQueriesExactNodeIndexSeekTaskTemplate(override val inner: OperatorTask
       block(
         codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),
         codeGen.setLongAt(offset, invoke(loadField(nodeIndexCursorField), method[NodeValueIndexCursor, Long]("nodeReference"))),
-        property.maybeCachedNodePropertySlot.map(codeGen.setCachedPropertyAt(_,
-                                                                             invoke(
-                                                                               loadField(queryIteratorField),
-                                                                               method[ExactPredicateIterator, Value](
-                                                                                 "current")))).getOrElse(noop()),
+        property.maybeCachedNodePropertySlot.map(codeGen.setCachedPropertyAt(_, getPropertyValueRepresentation)).getOrElse(noop()),
         inner.genOperateWithExpressions,
         doIfInnerCantContinue(
           block(setField(canContinue,
@@ -454,6 +459,8 @@ class ManyQueriesExactNodeIndexSeekTaskTemplate(override val inner: OperatorTask
                                       indexReadSession(queryIndexId),
                                       loadField(nodeIndexCursorField),
                                       loadField(queryIteratorField),
+                                      indexOrder(order),
+                                      constant(needsValues),
                                       loadField(DATA_READ))),
                 profileRow(id, loadField(canContinue))),
           ),
@@ -461,6 +468,12 @@ class ManyQueriesExactNodeIndexSeekTaskTemplate(override val inner: OperatorTask
         )
       )
   }
+
+  private def getPropertyValueRepresentation: IntermediateRepresentation =
+    invokeStatic(getPropertyMethod,
+                 loadField(queryIteratorField),
+                 loadField(nodeIndexCursorField),
+                 constant(0))
 
   override protected def genCloseInnerLoop: IntermediateRepresentation = {
     /**
@@ -479,24 +492,17 @@ class ManyQueriesExactNodeIndexSeekTaskTemplate(override val inner: OperatorTask
     block(
       condition(isNotNull(loadField(nodeIndexCursorField)))(
         invokeSideEffect(loadField(nodeIndexCursorField), method[NodeValueIndexCursor, Unit, KernelReadTracer]("setTracer"), event)
-      ),
+        ),
       inner.genSetExecutionEvent(event)
-    )
+      )
 }
 
-/**
-  * These are helper methods used by the generated code
-  */
-object ManyQueriesExactNodeIndexSeekTaskTemplate {
-
-  /**
-    * Exhausts the cursor and when that is done picks the next query and initializes the cursor for that query.
-    * Continues until the cursor has been exhausted for all provided queries.
-    * @return `true` if there is data otherwise `false`
-    */
+object ManyQueriesNodeIndexSeekTaskTemplate {
   def next(index: IndexReadSession,
            cursor: NodeValueIndexCursor,
-           queries: ExactPredicateIterator,
+           queries: ManyPredicateIterator,
+           order: IndexOrder,
+           needsValues: Boolean,
            read: Read): Boolean = {
     while (true) {
       if (cursor.next()) {
@@ -506,8 +512,8 @@ object ManyQueriesExactNodeIndexSeekTaskTemplate {
         var continue = true
         while (continue) {
           val indexQuery = queries.next()
-          if (!((indexQuery.value() eq Values.NO_VALUE) || (indexQuery.value().isInstanceOf[FloatingPointValue] && indexQuery.value().asInstanceOf[FloatingPointValue].isNaN))) {
-            read.nodeIndexSeek(index, cursor, IndexOrder.NONE, false, indexQuery)
+          if (!isImpossible(indexQuery)) {
+            read.nodeIndexSeek(index, cursor, order, needsValues, indexQuery)
             continue = false
           } else {
             continue = queries.hasNext
@@ -520,33 +526,52 @@ object ManyQueriesExactNodeIndexSeekTaskTemplate {
     throw new IllegalStateException("Unreachable code")
   }
 
-  /**
-    * Creates a specilized iterator over the queries for the seek
-    */
-  def queryIterator(propertyKey: Int, list: ListValue) = new ExactPredicateIterator(propertyKey, list)
-
-  val nextMethod: Method =
-    method[ManyQueriesExactNodeIndexSeekTaskTemplate,
-           Boolean,
-           IndexReadSession,
-           NodeValueIndexCursor,
-           ExactPredicateIterator,
-           Read]("next")
-
-  val queryIteratorMethod: Method =
-    method[ManyQueriesExactNodeIndexSeekTaskTemplate, ExactPredicateIterator, Int, ListValue]("queryIterator")
-}
-
-class ExactPredicateIterator(propertyKey: Int, list: ListValue) {
-  private val inner: util.Iterator[AnyValue] = list.distinct.iterator()
-  private var _current :Value = _
-
-  def hasNext: Boolean = inner.hasNext
-
-  def next(): ExactPredicate = {
-    _current = makeValueNeoSafe(inner.next)
-    IndexQuery.exact(propertyKey, _current)
+  def isImpossible(predicate: IndexQuery): Boolean = predicate match {
+        case p: IndexQuery.ExactPredicate => (p.value() eq Values.NO_VALUE) || (p.value().isInstanceOf[FloatingPointValue] && p.value().asInstanceOf[FloatingPointValue].isNaN)
+        case p: IndexQuery => !RANGE_SEEKABLE_VALUE_GROUPS.contains(p.valueGroup())
+        case _ => false
   }
 
-  def current: Value = _current
+  def getPropertyValue(iterator: ManyPredicateIterator, nodeCursor: NodeValueIndexCursor, offset: Int): Value =
+    iterator.previous match {
+      case exactPredicate: ExactPredicate => exactPredicate.value()
+      case _ => nodeCursor.propertyValue(offset)
+    }
+
+  def queryIterator(propertyKey: Int, predicates: Array[IndexQuery]) =
+    new ManyPredicateIterator(propertyKey, predicates)
+
+  val nextMethod: Method =
+    method[ManyQueriesNodeIndexSeekTaskTemplate,
+      Boolean,
+      IndexReadSession,
+      NodeValueIndexCursor,
+      ManyPredicateIterator,
+      IndexOrder,
+      Boolean,
+      Read]("next")
+
+  val getPropertyMethod: Method =
+    method[ManyQueriesNodeIndexSeekTaskTemplate,
+      Value,
+      ManyPredicateIterator,
+      NodeValueIndexCursor,
+      Int]("getPropertyValue")
+
+  val queryIteratorMethod: Method =
+    method[ManyQueriesNodeIndexSeekTaskTemplate, ManyPredicateIterator, Int, Array[IndexQuery]]("queryIterator")
+}
+
+class ManyPredicateIterator(propertyKey: Int, predicates: Array[IndexQuery]) {
+  private var pos = 0
+
+  def hasNext: Boolean = pos < predicates.length
+
+  def next(): IndexQuery = {
+    val current = predicates(pos)
+    pos += 1
+    current
+  }
+
+  def previous: IndexQuery = predicates(pos - 1)
 }

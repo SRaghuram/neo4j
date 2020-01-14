@@ -217,28 +217,53 @@ class FuseOperators(operatorFactory: OperatorFactory,
         unhandledOutput = output)
     }
 
-    def computeRangeExpression(rangeWrapper: Expression, property: SlottedIndexedProperty): Option[(Seq[() => IntermediateExpression], Seq[IntermediateRepresentation] => IntermediateRepresentation)] = rangeWrapper match {
-      case InequalitySeekRangeWrapper(RangeLessThan(Last(bound))) =>
-        Some((Seq(compileExpression(bound.endPoint)), (in: Seq[IntermediateRepresentation]) => lessThanSeek(
-          property.propertyKeyId, bound.isInclusive, in.head)))
+    case class RangeSeekExpression(generateSeekValues: Seq[() => IntermediateExpression],
+                                   generatePredicate: Seq[IntermediateRepresentation] => IntermediateRepresentation,
+                                   single: Boolean)
 
-      case InequalitySeekRangeWrapper(RangeGreaterThan(Last(bound))) =>
-        Some((Seq(compileExpression(bound.endPoint)), (in: Seq[IntermediateRepresentation]) => greaterThanSeek(
-          property.propertyKeyId, bound.isInclusive, in.head)))
 
-      case InequalitySeekRangeWrapper(
-      RangeBetween(RangeGreaterThan(Last(greaterThan)), RangeLessThan(Last(lessThan)))) =>
-        Some((Seq(compileExpression(greaterThan.endPoint), compileExpression(lessThan.endPoint)),
-               (in: Seq[IntermediateRepresentation]) =>
-                 rangeBetweenSeek(property.propertyKeyId, greaterThan.isInclusive, in.head, lessThan.isInclusive,
-                                  in.tail.head)))
+    def computeRangeExpression(rangeWrapper: Expression,
+                               property: SlottedIndexedProperty): Option[RangeSeekExpression] =
+      rangeWrapper match {
+        case InequalitySeekRangeWrapper(RangeLessThan(Last(bound))) =>
+          Some(
+            RangeSeekExpression(
+              Seq(compileExpression(bound.endPoint)),
+              in => lessThanSeek(property.propertyKeyId, bound.isInclusive, in.head),
+              single = true))
 
-      case PrefixSeekRangeWrapper(range) =>
-        Some((Seq(compileExpression(range.prefix)), (in: Seq[IntermediateRepresentation]) => stringPrefixSeek(
-          property.propertyKeyId, in.head)))
+        case InequalitySeekRangeWrapper(RangeGreaterThan(Last(bound))) =>
+          Some(
+            RangeSeekExpression(
+              Seq(compileExpression(bound.endPoint)),
+              in => greaterThanSeek(property.propertyKeyId, bound.isInclusive, in.head),
+              single = true))
 
-      case _ => None
-    }
+        case InequalitySeekRangeWrapper(
+        RangeBetween(RangeGreaterThan(Last(greaterThan)), RangeLessThan(Last(lessThan)))) =>
+          Some(
+            RangeSeekExpression(
+              Seq(compileExpression(greaterThan.endPoint),
+                  compileExpression(lessThan.endPoint)),
+              in => rangeBetweenSeek(property.propertyKeyId, greaterThan.isInclusive, in.head, lessThan.isInclusive, in.tail.head),
+              single = true))
+
+        case PrefixSeekRangeWrapper(range) =>
+          Some(
+            RangeSeekExpression(
+              Seq(compileExpression(range.prefix)),
+              in => stringPrefixSeek(property.propertyKeyId, in.head),
+              single = true))
+
+        case PointDistanceSeekRangeWrapper(range) =>
+          Some(
+            RangeSeekExpression(
+              Seq(compileExpression(range.point), compileExpression(range.distance)),
+              in => pointDistanceSeek(property.propertyKeyId, in.head, in.tail.head, range.inclusive),
+              single = false))
+
+        case _ => None
+      }
 
     def indexSeek(node: String,
                   label: LabelToken,
@@ -266,22 +291,25 @@ class FuseOperators(operatorFactory: OperatorFactory,
         //MATCH (n:L) WHERE n.prop = 1337 OR n.prop = 42
         case ManyQueryExpression(expr) if !needsLockingUnique =>
           require(properties.length == 1)
-          Some(new ManyQueriesExactNodeIndexSeekTaskTemplate(acc.template,
-                                                             plan.id,
-                                                             innermostTemplate,
-                                                             node,
-                                                             slots.getLongOffsetFor(node),
-                                                             property,
-                                                             compileExpression(expr),
-                                                             operatorFactory.indexRegistrator.registerQueryIndex(label, properties),
-                                                             physicalPlan.argumentSizes(id))(expressionCompiler))
+          Some(new ManyQueriesNodeIndexSeekTaskTemplate(acc.template,
+                                                        plan.id,
+                                                        innermostTemplate,
+                                                        node,
+                                                        slots.getLongOffsetFor(node),
+                                                        property,
+                                                        Seq(compileExpression(expr)),
+                                                        in => exactSeek(property.propertyKeyId, in.head),
+                                                        operatorFactory.indexRegistrator
+                                                          .registerQueryIndex(label, properties),
+                                                        IndexOrder.NONE,
+                                                        physicalPlan.argumentSizes(id))(expressionCompiler))
 
         case RangeQueryExpression(rangeWrapper) if !needsLockingUnique=>
           require(properties.length == 1)
           //NOTE: So far we only support fusing of single-bound inequalities. Not sure if it ever makes sense to have
           //multiple bounds
           computeRangeExpression(rangeWrapper, property).map {
-            case (generateSeekValues, generatePredicate) =>
+            case RangeSeekExpression(generateSeekValues, generatePredicate, true) =>
               new SingleRangeSeekQueryNodeIndexSeekTaskTemplate(acc.template,
                                                                 plan.id,
                                                                 innermostTemplate,
@@ -293,7 +321,24 @@ class FuseOperators(operatorFactory: OperatorFactory,
                                                                 operatorFactory.indexRegistrator.registerQueryIndex(label, properties),
                                                                 order,
                                                                 physicalPlan.argumentSizes(id))(expressionCompiler)
+
+            case RangeSeekExpression(generateSeekValues, generatePredicate, false) =>
+              new ManyQueriesNodeIndexSeekTaskTemplate(acc.template,
+                                                       plan.id,
+                                                       innermostTemplate,
+                                                       node,
+                                                       slots.getLongOffsetFor(node),
+                                                       property,
+                                                       generateSeekValues,
+                                                       generatePredicate,
+                                                       operatorFactory.indexRegistrator.registerQueryIndex(label, properties),
+                                                       order,
+                                                       physicalPlan.argumentSizes(id))(expressionCompiler)
           }
+
+
+        case ExistenceQueryExpression() =>
+          throw new InternalException("An ExistenceQueryExpression shouldn't be found outside of a CompositeQueryExpression")
 
         case _ => None
 
