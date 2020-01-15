@@ -53,7 +53,7 @@ class ConfiguredQueryLogger implements QueryLogger
 
             if ( !alreadyLoggedStart )
             {
-                log.info( "Query started: " + logEntry( snapshot ) );
+                log.info( "Query started: " + logEntry( snapshot, false ) );
             }
         }
     }
@@ -61,7 +61,7 @@ class ConfiguredQueryLogger implements QueryLogger
     @Override
     public void failure( ExecutingQuery query, Throwable failure )
     {
-        log.error( logEntry( query.snapshot() ), failure );
+        log.error( logEntry( query.snapshot(), true ), failure );
     }
 
     @Override
@@ -69,17 +69,20 @@ class ConfiguredQueryLogger implements QueryLogger
     {
         if ( NANOSECONDS.toMillis( query.elapsedNanos() ) >= thresholdMillis || verboseLogging )
         {
-            log.info( logEntry( query.snapshot() ) );
+            log.info( logEntry( query.snapshot(), false ) );
         }
     }
 
-    private String logEntry( QuerySnapshot query )
+    private String logEntry( QuerySnapshot query, Boolean fallbackToRaw )
     {
         String sourceString = query.clientConnection().asConnectionDetails();
         String username = query.username();
         NamedDatabaseId namedDatabaseId = query.databaseId();
-        String queryText = this.rawLogging ? query.rawQueryText()
-                                           : query.obfuscatedQueryText().get();
+
+        boolean shouldUseRawText = rawLogging || (query.obfuscatedQueryText().isEmpty() && fallbackToRaw);
+
+        String queryText = shouldUseRawText ? query.rawQueryText()
+                                            : query.obfuscatedQueryText().get();
 
         StringBuilder result = new StringBuilder();
         if ( verboseLogging )
@@ -102,8 +105,8 @@ class ConfiguredQueryLogger implements QueryLogger
         result.append( sourceString ).append( "\t" ).append( namedDatabaseId.name() ).append( " - " ).append( username ).append( " - " ).append( queryText );
         if ( logQueryParameters )
         {
-            MapValue params = this.rawLogging ? query.rawQueryParameters()
-                                              : query.obfuscatedQueryParameters().get();
+            MapValue params = shouldUseRawText ? query.rawQueryParameters()
+                                               : query.obfuscatedQueryParameters().get();
             QueryLogFormatter.formatMapValue( result.append(" - "), params );
         }
         if ( logRuntime )

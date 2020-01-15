@@ -309,7 +309,23 @@ class QueryLoggerIT
     }
 
     @Test
-    void shouldLogStartBeforeQueryParsing() throws Exception
+    void shouldLogQueryWhenItFailsToParse() throws Exception
+    {
+        databaseBuilder.setConfig( log_queries, LogQueryLevel.VERBOSE )
+                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() );
+        buildDatabase();
+
+        assertThrows( QueryExecutionException.class, () -> executeQuery( "Not a parsable query" ) );
+        databaseManagementService.shutdown();
+
+        List<String> logLines = readAllLines( logFilename );
+        assertEquals( 1, logLines.size() );
+        assertThat( logLines.get( 0 ), containsString( "ERROR" ) );
+        assertThat( logLines.get( 0 ), containsString( "Not a parsable query" ) );
+    }
+
+    @Test
+    void shouldLogStartBeforeQueryParsingIfRawLoggingEnabled() throws Exception
     {
         databaseBuilder.setConfig( log_queries, LogQueryLevel.VERBOSE )
                 .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
@@ -321,8 +337,41 @@ class QueryLoggerIT
         databaseManagementService.shutdown();
 
         List<String> logLines = readAllLines( logFilename );
-        assertEquals( 1, logLines.size() );
+        assertEquals( 2, logLines.size() );
         assertThat( logLines.get( 0 ), containsString( "Query started:" ) );
+    }
+
+    @Test
+    void shouldLogPasswordsIfRawLoggingEnabled() throws Exception
+    {
+        databaseBuilder.setConfig( log_queries, LogQueryLevel.VERBOSE )
+                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
+                       .setConfig( GraphDatabaseSettings.log_queries_early_raw_logging_enabled, true );
+        buildDatabase();
+
+        executeSystemCommandSuperUser( "CREATE USER testUser SET PASSWORD 'hello'" );
+        databaseManagementService.shutdown();
+
+        List<String> logLines = readAllLines( logFilename );
+        assertEquals( 2, logLines.size() );
+        assertThat( logLines.get( 0 ), containsString( "Query started:" ) );
+        assertThat( logLines.get( 0 ), containsString( "CREATE USER testUser SET PASSWORD 'hello'" ) );
+    }
+
+    @Test
+    void shouldNotLogPasswordsWhenSystemCommandFails() throws Exception
+    {
+        databaseBuilder.setConfig( log_queries, LogQueryLevel.VERBOSE )
+                       .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() );
+        buildDatabase();
+
+        // "This is an administration command and it should be executed against the system database: CREATE USER"
+        assertThrows( QueryExecutionException.class, () -> executeQuery( "CREATE USER testUser SET PASSWORD 'hello'" ) );
+        databaseManagementService.shutdown();
+
+        List<String> logLines = readAllLines( logFilename );
+        assertEquals( 1, logLines.size() );
+        assertThat( logLines.get( 0 ), containsString( "CREATE USER testUser SET PASSWORD '******'" ) );
     }
 
     @Test
