@@ -258,4 +258,17 @@ class StreamVByte
             return array;
         }
     }
+
+    static Target SKIP = new Target()
+    {
+        @Override
+        public void beginBlock( int size, int accumulatedSize )
+        {
+        }
+
+        @Override
+        public void accept( int i, int value )
+        {
+        }
+    };
 }

@@ -2,6 +2,7 @@ package com.neo4j.tools.util;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Map;
 
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
@@ -25,7 +26,7 @@ public class JustCreateNode
         try
         {
             GraphDatabaseService db = dbms.database( DEFAULT_DATABASE_NAME );
-            long[] nodeIds = new long[5];
+            long[] nodeIds = new long[1];
             try ( Transaction tx = db.beginTx() )
             {
                 for ( int i = 0; i < nodeIds.length; i++ )
@@ -47,7 +48,8 @@ public class JustCreateNode
                     {
                         System.out.println( "  Has label '" + nodeLabel.name() + "'" );
                     }
-                    node.getProperties().forEach( ( key, value ) -> System.out.println( "  Has property " + key + "=" + value ) );
+                    Map<String,Object> properties = node.getAllProperties();
+                    properties.forEach( ( key, value ) -> System.out.println( "  Has property " + key + "=" + value ) );
                 }
             }
         }

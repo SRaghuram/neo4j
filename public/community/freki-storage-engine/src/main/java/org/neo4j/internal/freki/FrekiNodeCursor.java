@@ -19,17 +19,18 @@
  */
 package org.neo4j.internal.freki;
 
-import org.neo4j.internal.freki.generated.StoreRecord;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.storageengine.api.AllNodeScan;
 import org.neo4j.storageengine.api.StorageNodeCursor;
 import org.neo4j.storageengine.api.StoragePropertyCursor;
 
+import static org.neo4j.internal.freki.MutableNodeRecordData.SIZE_SLOT_HEADER;
+import static org.neo4j.internal.freki.StreamVByte.readDeltas;
+
 class FrekiNodeCursor implements StorageNodeCursor
 {
     private final Store mainStore;
-    private final Record record = new Record( 4 );
-    private StoreRecord storeRecord;
+    private final Record record = new Record( 1 );
 
     private PageCursor cursor;
     private long singleId;
@@ -44,17 +45,10 @@ class FrekiNodeCursor implements StorageNodeCursor
     @Override
     public long[] labels()
     {
-        long[] labels = new long[storeRecord.labelsLength()];
-        for ( int i = 0; i < labels.length; i++ )
-        {
-            labels[i] = storeRecord.labels( i );
-        }
-        return labels;
-
-//        StreamVByte.LongArrayTarget target = new StreamVByte.LongArrayTarget();
-//        // TODO not position(), more like right after the record header, right?
-//        StreamVByte.readDeltas( target, record.data.array(), record.data.position() );
-//        return target.array();
+        StreamVByte.LongArrayTarget target = new StreamVByte.LongArrayTarget();
+        // TODO not position(), more like right after the record header, right?
+        readDeltas( target, record.data.array(), record.data.position() );
+        return target.array();
     }
 
     @Override
@@ -109,7 +103,7 @@ class FrekiNodeCursor implements StorageNodeCursor
     @Override
     public boolean hasProperties()
     {
-        return storeRecord.propertiesLength() > 0;
+        throw new UnsupportedOperationException( "Not implemented yet" );
     }
 
     @Override
@@ -136,9 +130,10 @@ class FrekiNodeCursor implements StorageNodeCursor
         if ( singleId != -1 )
         {
             mainStore.read( cursor(), record, singleId );
-            storeRecord = StoreRecord.getRootAsStoreRecord( record.data );
+            // Skip the offset header
+            record.data.position( record.data.position() + SIZE_SLOT_HEADER );
             singleId = -1;
-            return storeRecord.inUse();
+            return record.hasFlag( Record.FLAG_IN_USE );
         }
         return false;
     }
