@@ -410,7 +410,7 @@ class ManyQueriesNodeIndexSeekTaskTemplate(override val inner: OperatorTaskTempl
   override def genExpressions: Seq[IntermediateExpression] = seekValues
 
   override protected def genInitializeInnerLoop: IntermediateRepresentation = {
-    seekValues = generateSeekValues.map(_()).map(v => v.copy(ir = asStorableValue(nullCheckIfRequired(v))))
+    seekValues = generateSeekValues.map(_()).map(v => v.copy(ir = nullCheckIfRequired(v)))
     /**
       * {{{
       *   this.queryIterator = queryIterator(property, ([query predicate])

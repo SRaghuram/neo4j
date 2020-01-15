@@ -10,6 +10,7 @@ import java.util.List;
 import org.neo4j.cypher.internal.runtime.DbAccess;
 import org.neo4j.cypher.internal.runtime.ExecutionContext;
 import org.neo4j.cypher.internal.runtime.KernelAPISupport$;
+import org.neo4j.cypher.operations.CypherFunctions;
 import org.neo4j.exceptions.CypherTypeException;
 import org.neo4j.exceptions.ParameterWrongTypeException;
 import org.neo4j.internal.helpers.collection.Pair;
@@ -22,6 +23,7 @@ import org.neo4j.values.storable.PointValue;
 import org.neo4j.values.storable.TextValue;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.ValueGroup;
+import org.neo4j.values.virtual.ListValue;
 import org.neo4j.values.virtual.VirtualNodeValue;
 
 import static java.lang.String.format;
@@ -134,6 +136,19 @@ public final class CompiledHelpers
         {
             return EMPTY_PREDICATE;
         }
+    }
+
+    @CalledFromGeneratedCode
+    public static IndexQuery[] manyExactQueries( int property, AnyValue seekValues )
+    {
+        ListValue listOfSeekValues = CypherFunctions.asList( seekValues ).distinct();
+        final int size = listOfSeekValues.size();
+        IndexQuery[] predicates = new IndexQuery[size];
+        for ( int i = 0; i < size; i++ )
+        {
+            predicates[i] = IndexQuery.exact( property, listOfSeekValues.value( i ) );
+        }
+        return predicates;
     }
 
     @CalledFromGeneratedCode

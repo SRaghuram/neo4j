@@ -269,6 +269,9 @@ object OperatorCodeGenHelperTemplates {
     invokeStatic(method[CompiledHelpers, Array[IndexQuery], Int, AnyValue, AnyValue, Boolean]("pointRange"),
                  constant(prop), point, distance, constant(inclusive))
 
+  def manyExactSeek(prop: Int, expression: IntermediateRepresentation): IntermediateRepresentation =
+    invokeStatic(method[CompiledHelpers, Array[IndexQuery], Int, AnyValue]("manyExactQueries"), constant(prop), expression)
+
   def singleNode(node: IntermediateRepresentation, cursor: IntermediateRepresentation): IntermediateRepresentation =
     invokeSideEffect(loadField(DATA_READ), method[Read, Unit, Long, NodeCursor]("singleNode"), node, cursor)
 

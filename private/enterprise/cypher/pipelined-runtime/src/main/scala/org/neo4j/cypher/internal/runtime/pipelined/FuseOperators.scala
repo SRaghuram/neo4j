@@ -298,7 +298,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
                                                         slots.getLongOffsetFor(node),
                                                         property,
                                                         Seq(compileExpression(expr)),
-                                                        in => exactSeek(property.propertyKeyId, in.head),
+                                                        in => manyExactSeek(property.propertyKeyId, in.head),
                                                         operatorFactory.indexRegistrator
                                                           .registerQueryIndex(label, properties),
                                                         IndexOrder.NONE,
