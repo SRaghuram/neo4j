@@ -43,6 +43,7 @@ case class DistinctSlottedSinglePrimitivePipe(source: Pipe,
           val next = input.next()
           val id = next.getLongAt(offset)
           if (seen.add(id)) {
+            state.memoryTracker.allocated(java.lang.Long.BYTES)
             // Found something! Set it as the next element to yield, and exit
             val outputValue = expression(next, state)
             setInSlot(next, outputValue)

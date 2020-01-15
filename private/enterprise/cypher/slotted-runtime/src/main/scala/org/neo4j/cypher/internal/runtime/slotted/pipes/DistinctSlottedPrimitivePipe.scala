@@ -37,6 +37,7 @@ case class DistinctSlottedPrimitivePipe(source: Pipe,
 
           val groupingValue = buildGroupingValue(next, primitiveSlots)
           if (seen.add(groupingValue)) {
+            state.memoryTracker.allocated(groupingValue)
             // Found unseen key! Set it as the next element to yield, and exit
             val key = groupingExpression.computeGroupingKey(next, state)
             groupingExpression.project(next, key)
