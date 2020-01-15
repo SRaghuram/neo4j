@@ -313,7 +313,8 @@ class QueryLoggerIT
     {
         databaseBuilder.setConfig( log_queries, LogQueryLevel.VERBOSE )
                 .setConfig( GraphDatabaseSettings.logs_directory, logsDirectory.toPath().toAbsolutePath() )
-                .setConfig( GraphDatabaseSettings.log_queries_parameter_logging_enabled, false );
+                .setConfig( GraphDatabaseSettings.log_queries_parameter_logging_enabled, false )
+                .setConfig( GraphDatabaseSettings.log_queries_early_raw_logging_enabled, true );
         buildDatabase();
 
         assertThrows( QueryExecutionException.class, () -> executeQuery( "Not a parsable query" ) );

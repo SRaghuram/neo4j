@@ -14,6 +14,7 @@ import org.neo4j.kernel.api.query.ExecutingQuery;
 import org.neo4j.kernel.api.query.QuerySnapshot;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.Log;
+import org.neo4j.values.virtual.MapValue;
 
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
@@ -27,6 +28,7 @@ class ConfiguredQueryLogger implements QueryLogger
     private final boolean logPageDetails;
     private final boolean logRuntime;
     private final boolean verboseLogging;
+    private final boolean rawLogging;
 
     ConfiguredQueryLogger( Log log, Config config )
     {
@@ -38,6 +40,7 @@ class ConfiguredQueryLogger implements QueryLogger
         this.logPageDetails = config.get( GraphDatabaseSettings.log_queries_page_detail_logging_enabled );
         this.logRuntime = config.get( GraphDatabaseSettings.log_queries_runtime_logging_enabled );
         this.verboseLogging = config.get( GraphDatabaseSettings.log_queries ) == LogQueryLevel.VERBOSE;
+        this.rawLogging = config.get( GraphDatabaseSettings.log_queries_early_raw_logging_enabled );
     }
 
     @Override
@@ -45,7 +48,13 @@ class ConfiguredQueryLogger implements QueryLogger
     {
         if ( verboseLogging )
         {
-            log.info( "Query started: " + logEntry( query.snapshot() ) );
+            QuerySnapshot snapshot = query.snapshot();
+            boolean alreadyLoggedStart = this.rawLogging && snapshot.obfuscatedQueryText().isPresent();
+
+            if ( !alreadyLoggedStart )
+            {
+                log.info( "Query started: " + logEntry( snapshot ) );
+            }
         }
     }
 
@@ -69,7 +78,8 @@ class ConfiguredQueryLogger implements QueryLogger
         String sourceString = query.clientConnection().asConnectionDetails();
         String username = query.username();
         NamedDatabaseId namedDatabaseId = query.databaseId();
-        String queryText = query.obfuscatedQueryText().get();
+        String queryText = this.rawLogging ? query.rawQueryText()
+                                           : query.obfuscatedQueryText().get();
 
         StringBuilder result = new StringBuilder();
         if ( verboseLogging )
@@ -92,7 +102,9 @@ class ConfiguredQueryLogger implements QueryLogger
         result.append( sourceString ).append( "\t" ).append( namedDatabaseId.name() ).append( " - " ).append( username ).append( " - " ).append( queryText );
         if ( logQueryParameters )
         {
-            QueryLogFormatter.formatMapValue( result.append(" - "), query.obfuscatedQueryParameters().get() );
+            MapValue params = this.rawLogging ? query.rawQueryParameters()
+                                              : query.obfuscatedQueryParameters().get();
+            QueryLogFormatter.formatMapValue( result.append(" - "), params );
         }
         if ( logRuntime )
         {
