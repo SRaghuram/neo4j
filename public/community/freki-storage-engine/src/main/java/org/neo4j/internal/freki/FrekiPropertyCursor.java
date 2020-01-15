@@ -19,7 +19,10 @@
  */
 package org.neo4j.internal.freki;
 
+import java.nio.ByteBuffer;
+
 import org.neo4j.io.pagecache.PageCursor;
+import org.neo4j.storageengine.api.StorageNodeCursor;
 import org.neo4j.storageengine.api.StoragePropertyCursor;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.ValueGroup;
@@ -31,6 +34,8 @@ class FrekiPropertyCursor implements StoragePropertyCursor
 {
     private final Store mainStore;
     private final Record record = new Record( 1 );
+    private ByteBuffer data;
+    private boolean initializedFromNode;
 
     private PageCursor cursor;
     private long nodeId;
@@ -48,6 +53,22 @@ class FrekiPropertyCursor implements StoragePropertyCursor
     public void initNodeProperties( long nodeId )
     {
         this.nodeId = nodeId;
+    }
+
+    @Override
+    public void initNodeProperties( StorageNodeCursor nodeCursor )
+    {
+        Record nodeRecord = ((FrekiNodeCursor) nodeCursor).record;
+        if ( nodeRecord.hasFlag( Record.FLAG_IN_USE ) )
+        {
+            this.record.initializeFromWithSharedData( nodeRecord );
+            readHeader();
+            initializedFromNode = true;
+        }
+        else
+        {
+            reset();
+        }
     }
 
     @Override
@@ -71,14 +92,15 @@ class FrekiPropertyCursor implements StoragePropertyCursor
     @Override
     public Value propertyValue()
     {
-        return PropertyValueFormat.read( record.data );
+        return PropertyValueFormat.read( data );
     }
 
     @Override
     public boolean next()
     {
-        if ( nodeId != -1 || propertyKeyIndex != -1 )
+        if ( nodeId != -1 || propertyKeyIndex != -1 || initializedFromNode )
         {
+            initializedFromNode = false;
             if ( nodeId != -1 )
             {
                 mainStore.read( cursor(), record, nodeId );
@@ -87,15 +109,7 @@ class FrekiPropertyCursor implements StoragePropertyCursor
                 {
                     return false;
                 }
-
-                // Read property offset
-                int offsetsHeader = MutableNodeRecordData.readOffsetsHeader( record.data );
-                int propertyOffset = MutableNodeRecordData.propertyOffset( offsetsHeader );
-
-                // Read property keys
-                StreamVByte.IntArrayTarget target = new StreamVByte.IntArrayTarget();
-                nextPropertyValueStartOffset = readDeltas( target, record.data.array(), propertyOffset );
-                propertyKeyArray = target.array();
+                readHeader();
             }
 
             propertyKeyIndex++;
@@ -104,14 +118,27 @@ class FrekiPropertyCursor implements StoragePropertyCursor
                 propertyKeyIndex = -1;
                 return false;
             }
-            record.data.position( nextPropertyValueStartOffset );
+            data.position( nextPropertyValueStartOffset );
 
             // Calculate the position in the buffer where the next value will be.
             // If we decide to store an offset array along with the key array too then this becomes easier where we don't have to calculate it by hand.
-            nextPropertyValueStartOffset += calculatePropertyValueSizeIncludingTypeHeader( record.data );
+            nextPropertyValueStartOffset += calculatePropertyValueSizeIncludingTypeHeader( data );
             return true;
         }
         return false;
+    }
+
+    private void readHeader()
+    {
+        // Read property offset
+        data = record.dataForReading();
+        int offsetsHeader = MutableNodeRecordData.readOffsetsHeader( data );
+        int propertyOffset = MutableNodeRecordData.propertyOffset( offsetsHeader );
+
+        // Read property keys
+        StreamVByte.IntArrayTarget target = new StreamVByte.IntArrayTarget();
+        nextPropertyValueStartOffset = readDeltas( target, data.array(), propertyOffset );
+        propertyKeyArray = target.array();
     }
 
     private PageCursor cursor()
@@ -128,6 +155,8 @@ class FrekiPropertyCursor implements StoragePropertyCursor
     {
         nodeId = -1;
         propertyKeyIndex = -1;
+        initializedFromNode = false;
+        data = null;
     }
 
     @Override
