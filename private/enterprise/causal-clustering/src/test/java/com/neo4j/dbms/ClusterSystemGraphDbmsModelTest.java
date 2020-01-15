@@ -28,10 +28,12 @@ import static com.neo4j.dbms.ClusterSystemGraphDbmsModel.STORE_RANDOM_ID;
 import static com.neo4j.dbms.ClusterSystemGraphDbmsModel.STORE_VERSION;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.dbms.database.SystemGraphDbmsModel.DATABASE_LABEL;
 import static org.neo4j.dbms.database.SystemGraphDbmsModel.DATABASE_NAME_PROPERTY;
 import static org.neo4j.dbms.database.SystemGraphDbmsModel.DATABASE_STATUS_PROPERTY;
 import static org.neo4j.dbms.database.SystemGraphDbmsModel.DATABASE_UUID_PROPERTY;
+import static org.neo4j.dbms.database.SystemGraphDbmsModel.DELETED_DATABASE_LABEL;
 import static org.neo4j.kernel.impl.store.format.standard.Standard.LATEST_STORE_VERSION;
 
 @ImpermanentDbmsExtension
@@ -55,30 +57,50 @@ class ClusterSystemGraphDbmsModelTest
     void shouldReturnInitialMembersAndStoreParameters()
     {
         // given
-        NamedDatabaseId namedDatabaseId = DatabaseIdFactory.from( "foo", UUID.randomUUID() );
-        Set<UUID> expectedMembers = Set.of( UUID.randomUUID(), UUID.randomUUID() );
+        var databaseId = DatabaseIdFactory.from( "foo", UUID.randomUUID() );
+        var deletedDatabaseId = DatabaseIdFactory.from( "foo", UUID.randomUUID() );
+        var expectedMembers = Set.of( UUID.randomUUID(), UUID.randomUUID() );
 
-        StoreId expectedStoreId = new StoreId( 1, 2, MetaDataStore.versionStringToLong( LATEST_STORE_VERSION ) );
+        var storeId1 = new StoreId( 1, 2, MetaDataStore.versionStringToLong( LATEST_STORE_VERSION ) );
+        var storeId2 = new StoreId( 2, 7, MetaDataStore.versionStringToLong( LATEST_STORE_VERSION ) );
 
         try ( var tx = db.beginTx() )
         {
-            makeDatabaseNodeForCluster( tx, namedDatabaseId, expectedMembers, expectedStoreId );
+            makeDatabaseNodeForCluster( tx, databaseId, expectedMembers, storeId1, false );
+            makeDatabaseNodeForCluster( tx, deletedDatabaseId, expectedMembers, storeId2, true );
             tx.commit();
         }
 
         // when
-        Set<UUID> initialMembers = dbmsModel.getInitialMembers( namedDatabaseId );
-        StoreId storeId = dbmsModel.getStoreId( namedDatabaseId );
+        var initialMembers = dbmsModel.getInitialMembers( databaseId );
+        var deletedInitialMembers = dbmsModel.getInitialMembers( deletedDatabaseId );
+        var storeId = dbmsModel.getStoreId( databaseId );
+        var deletedStoreId = dbmsModel.getStoreId( deletedDatabaseId );
 
         // then
         assertFalse( initialMembers.isEmpty() );
+        assertFalse( deletedInitialMembers.isEmpty() );
         assertEquals( expectedMembers, initialMembers );
-        assertEquals( expectedStoreId, storeId );
+        assertEquals( expectedMembers, deletedInitialMembers );
+        assertEquals( storeId1, storeId );
+        assertEquals( storeId2, deletedStoreId );
     }
 
-    private void makeDatabaseNodeForCluster( Transaction tx, NamedDatabaseId namedDatabaseId, Set<UUID> initialMembers, StoreId storeId )
+    @Test
+    void shouldThrowIfDatabaseNodeDoesNotExist()
     {
-        Node node = tx.createNode( DATABASE_LABEL );
+        // given
+        var nonExistentDatabaseId = DatabaseIdFactory.from( "bar", UUID.randomUUID() );
+
+        // when/then
+        assertThrows( IllegalStateException.class, () -> dbmsModel.getStoreId( nonExistentDatabaseId ) );
+        assertThrows( IllegalStateException.class, () -> dbmsModel.getInitialMembers( nonExistentDatabaseId ) );
+    }
+
+    private void makeDatabaseNodeForCluster( Transaction tx, NamedDatabaseId namedDatabaseId, Set<UUID> initialMembers, StoreId storeId, boolean deleted )
+    {
+        var label = deleted ? DELETED_DATABASE_LABEL : DATABASE_LABEL;
+        Node node = tx.createNode( label );
         node.setProperty( DATABASE_NAME_PROPERTY, namedDatabaseId.name() );
         node.setProperty( DATABASE_STATUS_PROPERTY, "online" );
         node.setProperty( DATABASE_UUID_PROPERTY, namedDatabaseId.databaseId().uuid().toString() );
