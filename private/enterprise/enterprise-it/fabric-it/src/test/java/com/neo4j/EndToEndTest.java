@@ -609,8 +609,7 @@ class EndToEndTest
             return tx.run( query ).stream().map( rec -> rec.get( "age" ).asLong() ).collect( Collectors.toList() );
         } );
 
-        assertThat( r, containsInAnyOrder( 30L, 40L ) );
-
+        assertThat( r ).containsExactlyInAnyOrder( 30L, 40L );
     }
 
     @Test
