@@ -114,7 +114,6 @@ public class Store extends LifecycleAdapter implements AutoCloseable
         long id = record.id;
         long pageId = id / recordsPerPage;
         int offset = (int) ((id % recordsPerPage) * Record.SIZE_BASE);
-        System.out.println( "Writing " + id + " " + pageId + " " + offset );
         if ( !cursor.next( pageId ) )
         {
             throw new IllegalStateException( "Could not grow file?" );
@@ -146,13 +145,15 @@ public class Store extends LifecycleAdapter implements AutoCloseable
             {
                 return false;
             }
-//            record.internalId = id;
+            record.id = id;
             do
             {
                 cursor.setOffset( offset );
                 record.deserialize( cursor );
             }
             while ( cursor.shouldRetry() );
+            cursor.checkAndClearBoundsFlag();
+            cursor.checkAndClearCursorException();
         }
         catch ( IOException e )
         {
