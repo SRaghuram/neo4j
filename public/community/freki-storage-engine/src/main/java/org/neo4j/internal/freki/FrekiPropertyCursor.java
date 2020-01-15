@@ -19,22 +19,24 @@
  */
 package org.neo4j.internal.freki;
 
-import org.neo4j.internal.freki.generated.PropertyValue;
-import org.neo4j.internal.freki.generated.StoreRecord;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.storageengine.api.StoragePropertyCursor;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.ValueGroup;
 
+import static org.neo4j.internal.freki.PropertyValueFormat.calculatePropertyValueSizeIncludingTypeHeader;
+import static org.neo4j.internal.freki.StreamVByte.readDeltas;
+
 class FrekiPropertyCursor implements StoragePropertyCursor
 {
     private final Store mainStore;
-    private final Record record = new Record( 4 );
-    private StoreRecord storeRecord;
+    private final Record record = new Record( 1 );
 
     private PageCursor cursor;
     private long nodeId;
-    private int propertyIteratorIndex;
+    private int[] propertyKeyArray;
+    private int propertyKeyIndex;
+    private int nextPropertyValueStartOffset;
 
     FrekiPropertyCursor( Store mainStore )
     {
@@ -57,7 +59,7 @@ class FrekiPropertyCursor implements StoragePropertyCursor
     @Override
     public int propertyKey()
     {
-        return storeRecord.properties( propertyIteratorIndex ).key();
+        return propertyKeyArray[propertyKeyIndex];
     }
 
     @Override
@@ -69,31 +71,44 @@ class FrekiPropertyCursor implements StoragePropertyCursor
     @Override
     public Value propertyValue()
     {
-        PropertyValue value = storeRecord.properties( propertyIteratorIndex ).value();
-        return MutableNodeRecordData.propertyValue( value );
+        return PropertyValueFormat.read( record.data );
     }
 
     @Override
     public boolean next()
     {
-        if ( nodeId != -1 || propertyIteratorIndex != -1 )
+        if ( nodeId != -1 || propertyKeyIndex != -1 )
         {
             if ( nodeId != -1 )
             {
                 mainStore.read( cursor(), record, nodeId );
-                storeRecord = StoreRecord.getRootAsStoreRecord( record.data );
                 nodeId = -1;
-                if ( !storeRecord.inUse() )
+                if ( !record.hasFlag( Record.FLAG_IN_USE ) )
                 {
                     return false;
                 }
+
+                // Read property offset
+                int offsetsHeader = MutableNodeRecordData.readOffsetsHeader( record.data );
+                int propertyOffset = MutableNodeRecordData.propertyOffset( offsetsHeader );
+
+                // Read property keys
+                StreamVByte.IntArrayTarget target = new StreamVByte.IntArrayTarget();
+                nextPropertyValueStartOffset = readDeltas( target, record.data.array(), propertyOffset );
+                propertyKeyArray = target.array();
             }
-            propertyIteratorIndex++;
-            if ( propertyIteratorIndex >= storeRecord.propertiesLength() )
+
+            propertyKeyIndex++;
+            if ( propertyKeyIndex >= propertyKeyArray.length )
             {
-                propertyIteratorIndex = -1;
+                propertyKeyIndex = -1;
                 return false;
             }
+            record.data.position( nextPropertyValueStartOffset );
+
+            // Calculate the position in the buffer where the next value will be.
+            // If we decide to store an offset array along with the key array too then this becomes easier where we don't have to calculate it by hand.
+            nextPropertyValueStartOffset += calculatePropertyValueSizeIncludingTypeHeader( record.data );
             return true;
         }
         return false;
@@ -112,7 +127,7 @@ class FrekiPropertyCursor implements StoragePropertyCursor
     public void reset()
     {
         nodeId = -1;
-        propertyIteratorIndex = -1;
+        propertyKeyIndex = -1;
     }
 
     @Override

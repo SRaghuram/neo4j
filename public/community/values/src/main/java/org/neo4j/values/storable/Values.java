@@ -62,6 +62,7 @@ import static org.neo4j.values.storable.TimeValue.time;
 @SuppressWarnings( "WeakerAccess" )
 public final class Values
 {
+    public static final int[] EMPTY_PRIMITIVE_INT_ARRAY = new int[0];
 
     public static final Value NO_VALUE = NoValue.NO_VALUE;
 
@@ -83,7 +84,7 @@ public final class Values
     public static final ArrayValue EMPTY_BOOLEAN_ARRAY = Values.booleanArray( new boolean[0] );
     public static final ArrayValue EMPTY_BYTE_ARRAY = Values.byteArray( new byte[0] );
     public static final ArrayValue EMPTY_CHAR_ARRAY = Values.charArray( new char[0] );
-    public static final ArrayValue EMPTY_INT_ARRAY = Values.intArray( new int[0] );
+    public static final ArrayValue EMPTY_INT_ARRAY = Values.intArray( EMPTY_PRIMITIVE_INT_ARRAY );
     public static final ArrayValue EMPTY_LONG_ARRAY = Values.longArray( new long[0] );
     public static final ArrayValue EMPTY_FLOAT_ARRAY = Values.floatArray( new float[0] );
     public static final ArrayValue EMPTY_DOUBLE_ARRAY = Values.doubleArray( new double[0] );

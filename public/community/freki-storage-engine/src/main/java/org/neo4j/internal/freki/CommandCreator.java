@@ -39,6 +39,7 @@ import org.neo4j.storageengine.api.txstate.TxStateVisitor;
 import org.neo4j.token.api.NamedToken;
 
 import static java.lang.Math.toIntExact;
+import static org.neo4j.internal.freki.Record.FLAG_IN_USE;
 
 class CommandCreator implements TxStateVisitor
 {
@@ -55,12 +56,11 @@ class CommandCreator implements TxStateVisitor
     @Override
     public void visitCreatedNode( long id )
     {
-        Record after = new Record( 4, id );
+        Record after = new Record( 1, id );
+        after.setFlag( FLAG_IN_USE );
         after.node = new MutableNodeRecordData();
-        after.node.inUse = true;
         Record before = new Record( 1, id );
         before.node = new MutableNodeRecordData();
-        before.node.inUse = false;
         build.put( id, new FrekiCommand.Node( before, after ) );
     }
 

@@ -19,28 +19,28 @@
  */
 package org.neo4j.internal.freki;
 
-import com.google.flatbuffers.FlatBufferBuilder;
 import org.eclipse.collections.api.map.primitive.MutableIntObjectMap;
 import org.eclipse.collections.impl.factory.primitive.IntObjectMaps;
 
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 
-import org.neo4j.internal.freki.generated.PropertyValue;
-import org.neo4j.internal.freki.generated.StoreRecord;
-import org.neo4j.internal.freki.generated.Type;
-import org.neo4j.values.storable.IntValue;
-import org.neo4j.values.storable.LongValue;
-import org.neo4j.values.storable.TextValue;
 import org.neo4j.values.storable.Value;
-import org.neo4j.values.storable.Values;
 
+import static org.neo4j.internal.freki.StreamVByte.writeDeltas;
+import static org.neo4j.values.storable.Values.EMPTY_PRIMITIVE_INT_ARRAY;
+
+/**
+ * [IN_USE|OFFSETS|LABELS|PROPERTY_KEYS,PROPERTY_VALUES|RELATIONSHIPS]
+ */
 class MutableNodeRecordData
 {
-    boolean inUse;
-    int[] labels;
+    static final int SIZE_SLOT_HEADER = 3;
+
+    int[] labels = EMPTY_PRIMITIVE_INT_ARRAY;
     MutableIntObjectMap<Property> properties = IntObjectMaps.mutable.empty();
 
-    static class Property
+    static class Property implements Comparable<Property>
     {
         int key;
         Value value;
@@ -49,6 +49,12 @@ class MutableNodeRecordData
         {
             this.key = key;
             this.value = value;
+        }
+
+        @Override
+        public int compareTo( Property o )
+        {
+            return Integer.compare( key, o.key );
         }
     }
 
@@ -62,79 +68,84 @@ class MutableNodeRecordData
 
     void serialize( ByteBuffer buffer )
     {
-        FlatBufferBuilder builder = new FlatBufferBuilder( buffer );
-        int labelsOffset = labels != null ? StoreRecord.createLabelsVector( builder, labels ) : -1;
-        int[] propertyOffsets = new int[properties.size()];
-        int propertyI = 0;
-        for ( Property property : properties )
+        int offsetHeaderPosition = buffer.position();
+        int position = offsetHeaderPosition + SIZE_SLOT_HEADER;
+
+        // labels
+        position = writeDeltas( labels, buffer.array(), position );
+        int propertiesOffset = position;
+
+        // properties
+        // format being something like:
+        // - StreamVByte array of sorted keys
+        // - for each key: type/value   [externalType,internalType]
+        Property[] propertiesArray = properties.toArray( new Property[0] );
+        Arrays.sort( propertiesArray );
+        position = writeDeltas( keysOf( propertiesArray ), buffer.array(), position );
+        buffer.position( position );
+        PropertyValueFormat writer = new PropertyValueFormat( buffer );
+        for ( Property property : propertiesArray )
         {
-            Value value = property.value;
-            if ( value instanceof IntValue )
-            {
-                PropertyValue.startPropertyValue( builder );
-                PropertyValue.addIntValue( builder, ((IntValue) value).value() );
-                PropertyValue.addType( builder, Type.INT );
-            }
-            else if ( value instanceof LongValue )
-            {
-                PropertyValue.startPropertyValue( builder );
-                PropertyValue.addLongValue( builder, ((LongValue) value).longValue() );
-                PropertyValue.addType( builder, Type.LONG );
-            }
-            else
-            {
-                String string = ((TextValue) value).stringValue();
-                int stringOffset = builder.createString( string );
-                PropertyValue.startPropertyValue( builder );
-                PropertyValue.addStringValue( builder, stringOffset );
-                PropertyValue.addType( builder, Type.STRING );
-            }
-            int valueOffset = PropertyValue.endPropertyValue( builder );
-            propertyOffsets[propertyI++] = org.neo4j.internal.freki.generated.Property.createProperty( builder, property.key, valueOffset );
+            property.value.writeTo( writer );
         }
-        StoreRecord.startStoreRecord( builder );
-        StoreRecord.addInUse( builder, inUse );
-        if ( labelsOffset != -1 )
-        {
-            StoreRecord.addLabels( builder, labelsOffset );
-        }
-        for ( int propertyOffset : propertyOffsets )
-        {
-            StoreRecord.addProperties( builder, propertyOffset );
-        }
-        int finish = StoreRecord.endStoreRecord( builder );
-        builder.finish( finish );
+        int relationshipsOffset = buffer.position();
+
+        // write the 3B offset header   msb [rrrr,pppp][rrrr,rrrr][pppp,pppp] lsb
+        byte propertyOffsetBits = (byte) propertiesOffset;
+        byte relationshipOffsetBits = (byte) relationshipsOffset;
+        byte highOffsetBits = (byte) (((relationshipOffsetBits & 0xF00) >>> 4) | ((propertyOffsetBits & 0xF00) >>> 12));
+        buffer.put( offsetHeaderPosition,     propertyOffsetBits );
+        buffer.put( offsetHeaderPosition + 1, relationshipOffsetBits );
+        buffer.put( offsetHeaderPosition + 2, highOffsetBits );
     }
 
     void deserialize( ByteBuffer buffer )
     {
-        StoreRecord storeRecord = StoreRecord.getRootAsStoreRecord( buffer );
-        inUse = storeRecord.inUse();
-        labels = new int[storeRecord.labelsLength()];
-        for ( int i = 0; i < labels.length; i++ )
-        {
-            labels[i] = storeRecord.labels( i );
-        }
-        int propertiesLength = storeRecord.propertiesLength();
-        for ( int i = 0; i < propertiesLength; i++ )
-        {
-            org.neo4j.internal.freki.generated.Property property = storeRecord.properties( i );
-            properties.put( property.key(), new Property( property.key(), propertyValue( property.value() ) ) );
-        }
+        throw new UnsupportedOperationException( "Not implemented yet" );
     }
 
-    static Value propertyValue( PropertyValue value )
+    private int[] keysOf( Property[] propertiesArray )
     {
-        switch ( value.type() )
+        int[] keys = new int[propertiesArray.length];
+        for ( int i = 0; i < propertiesArray.length; i++ )
         {
-        case Type.INT:
-            return Values.intValue( value.intValue() );
-        case Type.LONG:
-            return Values.longValue( value.longValue() );
-        case Type.STRING:
-            return Values.stringValue( value.stringValue() );
-        default:
-            throw new UnsupportedOperationException();
+            keys[i] = propertiesArray[i].key;
         }
+        return keys;
     }
+
+    static int readOffsetsHeader( ByteBuffer buffer )
+    {
+        int propertyOffsetBits = buffer.get() & 0xFF;
+        int relationshipOffsetBits = buffer.get() & 0xFF;
+        int highOffsetBits = buffer.get() & 0xFF;
+        int propertyOffset = ((highOffsetBits & 0xF) << 8) | propertyOffsetBits;
+        int relationshipOffset = ((highOffsetBits & 0xF0) << 4) | relationshipOffsetBits;
+        return (relationshipOffset << 16) | propertyOffset;
+    }
+
+    static int propertyOffset( int offsetHeader )
+    {
+        return offsetHeader & 0xFFFF;
+    }
+
+    static int relationshipOffset( int offsetHeader )
+    {
+        return (offsetHeader & 0xFFFF0000) >>> 16;
+    }
+
+//    static Value propertyValue( PropertyValue value )
+//    {
+//        switch ( value.type() )
+//        {
+//        case Type.INT:
+//            return Values.intValue( value.intValue() );
+//        case Type.LONG:
+//            return Values.longValue( value.longValue() );
+//        case Type.STRING:
+//            return Values.stringValue( value.stringValue() );
+//        default:
+//            throw new UnsupportedOperationException();
+//        }
+//    }
 }
