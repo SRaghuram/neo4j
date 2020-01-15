@@ -19,6 +19,8 @@
  */
 package org.neo4j.internal.freki;
 
+import java.nio.ByteBuffer;
+
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.storageengine.api.AllNodeScan;
 import org.neo4j.storageengine.api.StorageNodeCursor;
@@ -30,7 +32,8 @@ import static org.neo4j.internal.freki.StreamVByte.readDeltas;
 class FrekiNodeCursor implements StorageNodeCursor
 {
     private final Store mainStore;
-    private final Record record = new Record( 1 );
+    Record record = new Record( 1 );
+    private ByteBuffer data;
 
     private PageCursor cursor;
     private long singleId;
@@ -47,7 +50,7 @@ class FrekiNodeCursor implements StorageNodeCursor
     {
         StreamVByte.LongArrayTarget target = new StreamVByte.LongArrayTarget();
         // TODO not position(), more like right after the record header, right?
-        readDeltas( target, record.data.array(), record.data.position() );
+        readDeltas( target, data.array(), data.position() );
         return target.array();
     }
 
@@ -130,9 +133,14 @@ class FrekiNodeCursor implements StorageNodeCursor
         if ( singleId != -1 )
         {
             mainStore.read( cursor(), record, singleId );
-            // Skip the offset header
-            record.data.position( record.data.position() + SIZE_SLOT_HEADER );
             singleId = -1;
+            if ( !record.hasFlag( Record.FLAG_IN_USE ) )
+            {
+                return false;
+            }
+            data = record.dataForReading();
+            // Skip the offset header
+            data.position( data.position() + SIZE_SLOT_HEADER );
             return record.hasFlag( Record.FLAG_IN_USE );
         }
         return false;

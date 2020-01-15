@@ -24,6 +24,7 @@ import java.nio.ByteBuffer;
 
 import org.neo4j.io.fs.WritableChannel;
 import org.neo4j.io.pagecache.PageCursor;
+import org.neo4j.util.Preconditions;
 
 class Record
 {
@@ -32,6 +33,7 @@ class Record
     public static final int SIZE_BASE = 64;
 
     // not stored
+    private int sizeMultiple;
     long id;
 
     // stored header
@@ -39,7 +41,8 @@ class Record
 
     // stored data
     // TODO this could be off-heap or something less garbagy
-    ByteBuffer data;
+    private ByteBuffer data;
+    private boolean dataIsFromShared;
 
     // temporary abstraction when trying out writes
     MutableNodeRecordData node;
@@ -51,8 +54,38 @@ class Record
 
     Record( int sizeMultiple, long internalId )
     {
+        this.sizeMultiple = sizeMultiple;
         id = internalId;
+    }
+
+    private void createNewDataBuffer( int sizeMultiple )
+    {
         data = ByteBuffer.wrap( new byte[sizeMultiple * SIZE_BASE] );
+        this.sizeMultiple = sizeMultiple;
+    }
+
+    ByteBuffer dataForReading()
+    {
+        return data;
+    }
+
+    ByteBuffer dataForWriting()
+    {
+        Preconditions.checkState( !dataIsFromShared, "Probably not wanna write with this one" );
+        if ( data == null )
+        {
+            createNewDataBuffer( sizeMultiple );
+        }
+        return data;
+    }
+
+    void initializeFromWithSharedData( Record record )
+    {
+        this.id = record.id;
+        this.flags = record.flags;
+        this.data = record.data.duplicate();
+        this.data.position( 0 );
+        this.dataIsFromShared = true;
     }
 
     void setFlag( int flag )
@@ -67,17 +100,20 @@ class Record
 
     private byte sizeMultiple()
     {
-        return (byte) (data.capacity() / SIZE_BASE);
+        return (byte) sizeMultiple;
     }
 
     void serialize( WritableChannel channel ) throws IOException
     {
-        node.serialize( data );
-        int length = data.position();
         channel.put( (byte) (flags | sizeMultiple()) );
-        // write the length so that we save on tx-log command size
-        channel.putShort( (short) length );
-        channel.put( data.array(), length );
+        if ( hasFlag( FLAG_IN_USE ) )
+        {
+            node.serialize( dataForWriting() );
+            int length = data.position();
+            // write the length so that we save on tx-log command size
+            channel.putShort( (short) length );
+            channel.put( data.array(), length );
+        }
     }
 
     // === UNIFY THESE SOMEHOW LATER ===
@@ -91,24 +127,32 @@ class Record
 
     void clear()
     {
-        data.clear();
         flags = 0;
+        if ( dataIsFromShared )
+        {
+            data = null;
+            dataIsFromShared = false;
+        }
+        else if ( data != null )
+        {
+            data.clear();
+        }
     }
 
     void deserialize( PageCursor cursor )
     {
         int flagsRaw = cursor.getByte() & 0xFF;
-        int length = (flagsRaw & 0b11) * SIZE_BASE;
+        int sizeMultiple = flagsRaw & 0b11;
+        int length = sizeMultiple * SIZE_BASE;
         flags = (byte) (flagsRaw & 0b1111_1100);
         if ( length > cursor.getCurrentPageSize() || length <= 0 )
         {
             cursor.setCursorException( "Invalid length " + length );
             return;
         }
-        if ( length > data.capacity() )
+        if ( data == null || length > data.capacity() )
         {
-//            data = ByteBuffer.wrap( new byte[length] );
-            throw new UnsupportedOperationException( "Not implemented yet" );
+            createNewDataBuffer( sizeMultiple );
         }
         cursor.getBytes( data.array(), 0, length );
     }
