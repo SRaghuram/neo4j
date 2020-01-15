@@ -16,7 +16,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -62,6 +61,8 @@ import org.neo4j.test.jar.JarBuilder;
 import org.neo4j.test.rule.TestDirectory;
 
 import static java.lang.String.format;
+import static java.lang.System.lineSeparator;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -123,7 +124,7 @@ class FunctionIT
                         tx.execute( "RETURN com.neo4j.procedure.simpleArgument()" );
                     }
                 } );
-        assertThat( exception.getMessage() ).startsWith( format( "Function call does not provide the " +
+        assertThat( normalizeString( exception.getMessage() ) ).startsWith( format( "Function call does not provide the " +
                 "required number of arguments: expected 1 got 0.%n%n" +
                 "Function com.neo4j.procedure.simpleArgument has signature: " +
                 "com.neo4j.procedure.simpleArgument(someValue :: INTEGER?) :: INTEGER?%n" +
@@ -142,7 +143,7 @@ class FunctionIT
                         tx.execute( "RETURN com.neo4j.procedure.nodeWithDescription()" );
                     }
                 } );
-        assertThat( exception.getMessage() ).startsWith( format( "Function call does not provide the " +
+        assertThat( normalizeString( exception.getMessage() ) ).startsWith( format( "Function call does not provide the " +
                 "required number of arguments: expected 1 got 0.%n%n" +
                 "Function com.neo4j.procedure.nodeWithDescription has signature: " +
                 "com.neo4j.procedure.nodeWithDescription(someValue :: NODE?) :: NODE?%n" +
@@ -651,7 +652,7 @@ class FunctionIT
     {
         File file = plugins.createFile( "test" );
 
-        try ( PrintWriter writer = FileUtils.newFilePrintWriter( file, StandardCharsets.UTF_8 ) )
+        try ( PrintWriter writer = FileUtils.newFilePrintWriter( file, UTF_8 ) )
         {
             for ( String line : lines )
             {
@@ -846,7 +847,7 @@ class FunctionIT
 
             try ( BufferedReader reader = new BufferedReader( new InputStreamReader( FunctionIT.class.getResourceAsStream( "/misc/functions" ) ) ) )
             {
-                String expected = reader.lines().collect( Collectors.joining( System.lineSeparator() ) );
+                String expected = reader.lines().collect( Collectors.joining( lineSeparator() ) );
                 String actual = res.resultAsString();
                 // Be aware that the text file "functions" must end with two newlines
                 assertEquals( expected, actual );
@@ -1143,5 +1144,10 @@ class FunctionIT
             transaction.execute( "CREATE CONSTRAINT ON (book:Book) ASSERT book.isbn IS UNIQUE" );
             return "done";
         }
+    }
+
+    private static String normalizeString( String value )
+    {
+        return value.replaceAll( "\\r?\\n", System.lineSeparator() );
     }
 }

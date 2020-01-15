@@ -297,7 +297,7 @@ public class ProcedureIT
         try ( Transaction tx = db.beginTx() )
         {
             QueryExecutionException exception = assertThrows( QueryExecutionException.class, () -> tx.execute( "CALL com.neo4j.procedure.simpleArgument()" ) );
-            assertThat( exception.getMessage() ).startsWith( format(
+            assertThat( normalizeString( exception.getMessage() ) ).startsWith( format(
                     "Procedure call does not provide the required number of arguments: " +
                     "got 0 expected at least 1 (total: 1, 0 of which have default values).%n%n" +
                     "Procedure com.neo4j.procedure.simpleArgument has signature: " +
@@ -317,7 +317,7 @@ public class ProcedureIT
                     QueryExecutionException.class,
                     () -> tx.execute( "CALL com.neo4j.procedure.simpleArgument(1, 2)" )
             );
-            assertThat( exception.getMessage() ).startsWith(
+            assertThat( normalizeString( exception.getMessage() ) ).startsWith(
                     format( "Procedure call provides too many arguments: got 2 expected no more than 1.%n%n" +
                                    "Procedure com.neo4j.procedure.simpleArgument has signature: " +
                                    "com.neo4j.procedure.simpleArgument(name :: INTEGER?) :: someVal :: INTEGER?%n" +
@@ -334,7 +334,7 @@ public class ProcedureIT
         {
             QueryExecutionException exception =
                     assertThrows( QueryExecutionException.class, () -> tx.execute( "CALL com.neo4j.procedure.integrationTestMe(1, 2)" ) );
-            assertThat( exception.getMessage() ).startsWith(
+            assertThat( normalizeString( exception.getMessage() ) ).startsWith(
                     format( "Procedure call provides too many arguments: got 2 expected none.%n%n" +
                                    "Procedure com.neo4j.procedure.integrationTestMe has signature: " +
                                    "com.neo4j.procedure.integrationTestMe() :: someVal :: INTEGER?%n" +
@@ -353,7 +353,7 @@ public class ProcedureIT
                     QueryExecutionException.class,
                     () -> tx.execute( "CALL db.awaitIndex()" )
             );
-            assertThat( exception.getMessage() ).startsWith( format(
+            assertThat( normalizeString( exception.getMessage() ) ).startsWith( format(
                     "Procedure call does not provide the required number of arguments: " +
                     "got 0 expected at least 1 (total: 2, 1 of which have default values).%n%n" +
                     "Procedure db.awaitIndex has signature: " +
@@ -369,7 +369,7 @@ public class ProcedureIT
         {
             QueryExecutionException exception =
                     assertThrows( QueryExecutionException.class, () -> tx.execute( "CALL com.neo4j.procedure.sideEffectWithDefault()" ) );
-            assertThat( exception.getMessage() ).startsWith( format(
+            assertThat( normalizeString( exception.getMessage() ) ).startsWith( format(
                     "Procedure call does not provide the required number of arguments: " +
                     "got 0 expected at least 2 (total: 3, 1 of which have default values).%n%n" +
                     "Procedure com.neo4j.procedure.sideEffectWithDefault has signature: com.neo4j.procedure" +
@@ -388,7 +388,7 @@ public class ProcedureIT
                     assertThrows( QueryExecutionException.class, () -> tx.execute(
                             "CALL com.neo4j.procedure.nodeWithDescription()"
                     ) );
-            assertThat( exception.getMessage() ).startsWith( format(
+            assertThat( normalizeString( exception.getMessage() ) ).startsWith( format(
                     "Procedure call does not provide the required number of arguments: " +
                     "got 0 expected at least 1 (total: 1, 0 of which have default values).%n%n" +
                     "Procedure com.neo4j.procedure.nodeWithDescription has signature: " +
@@ -2343,4 +2343,8 @@ public class ProcedureIT
         }
     }
 
+    private static String normalizeString( String value )
+    {
+        return value.replaceAll( "\\r?\\n", System.lineSeparator() );
+    }
 }
