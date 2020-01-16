@@ -5,8 +5,17 @@
  */
 package org.neo4j.cypher.internal.runtime.compiled.codegen.ir
 
-import org.neo4j.cypher.internal.runtime.compiled.codegen._
-import org.neo4j.cypher.internal.runtime.compiled.codegen.spi._
+import org.neo4j.cypher.internal.runtime.compiled.codegen.CodeGenContext
+import org.neo4j.cypher.internal.runtime.compiled.codegen.Variable
+import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.CountingJoinTableType
+import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.JoinTableType
+import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.LongToCountTable
+import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.LongToListTable
+import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.LongsToCountTable
+import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.LongsToListTable
+import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.MethodStructure
+import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.RecordingJoinTableType
+import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.SimpleTupleDescriptor
 
 sealed trait BuildProbeTable extends Instruction {
 
@@ -56,7 +65,7 @@ case class BuildRecordingProbeTable(id: String, name: String, nodes: IndexedSeq[
   private val tupleDescriptor = SimpleTupleDescriptor(fieldToVarName.mapValues(c => c.outgoing.codeGenType))
 
   override val tableType: RecordingJoinTableType = if (nodes.size == 1) LongToListTable(tupleDescriptor, varNameToField)
-                           else LongsToListTable(tupleDescriptor, varNameToField)
+  else LongsToListTable(tupleDescriptor, varNameToField)
 
   val joinData: JoinData = JoinData(fieldToVarName, name, tableType, id)
 }

@@ -5,7 +5,8 @@
  */
 package org.neo4j.cypher.internal.runtime.compiled.codegen.ir
 
-import org.neo4j.cypher.internal.runtime.compiled.codegen._
+import org.neo4j.cypher.internal.runtime.compiled.codegen.CodeGenContext
+import org.neo4j.cypher.internal.runtime.compiled.codegen.JoinTableMethod
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.MethodStructure
 
 case class MethodInvocation(override val operatorId: Set[String],

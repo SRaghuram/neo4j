@@ -7,7 +7,13 @@ package org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions
 
 import org.neo4j.cypher.internal.runtime.compiled.codegen.CodeGenContext
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.MethodStructure
-import org.neo4j.cypher.internal.util.symbols._
+import org.neo4j.cypher.internal.util.symbols.CTAny
+import org.neo4j.cypher.internal.util.symbols.CTBoolean
+import org.neo4j.cypher.internal.util.symbols.CTFloat
+import org.neo4j.cypher.internal.util.symbols.CTInteger
+import org.neo4j.cypher.internal.util.symbols.CTNumber
+import org.neo4j.cypher.internal.util.symbols.CypherType
+import org.neo4j.cypher.internal.util.symbols.ListType
 import org.neo4j.exceptions.CypherTypeException
 
 trait BinaryOperator {
@@ -37,17 +43,17 @@ trait BinaryOperator {
 
       case (t1, t2) if t1.isPrimitive && t2.isPrimitive =>
         generator(structure)(context)(structure.box(lhs.generateExpression(structure), lhs.codeGenType),
-                                      structure.box(rhs.generateExpression(structure), rhs.codeGenType))
+          structure.box(rhs.generateExpression(structure), rhs.codeGenType))
 
       case (t, _) if t.isPrimitive =>
         generator(structure)(context)(structure.box(lhs.generateExpression(structure), lhs.codeGenType),
-                                      rhs.generateExpression(structure))
+          rhs.generateExpression(structure))
       case (_, t) if t.isPrimitive =>
         generator(structure)(context)(lhs.generateExpression(structure),
-                                      structure.box(rhs.generateExpression(structure), rhs.codeGenType))
+          structure.box(rhs.generateExpression(structure), rhs.codeGenType))
 
       case _ => generator(structure)(context)(lhs.generateExpression(structure),
-                                              rhs.generateExpression(structure))
+        rhs.generateExpression(structure))
     }
   }
 

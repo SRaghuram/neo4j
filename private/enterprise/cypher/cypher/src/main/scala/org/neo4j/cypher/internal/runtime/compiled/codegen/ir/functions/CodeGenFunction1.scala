@@ -5,7 +5,13 @@
  */
 package org.neo4j.cypher.internal.runtime.compiled.codegen.ir.functions
 
-import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions._
+import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.CodeGenExpression
+import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.IdOf
+import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.NodeExpression
+import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.NodeProjection
+import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.RelationshipExpression
+import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.RelationshipProjection
+import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.TypeOf
 import org.neo4j.exceptions.InternalException
 
 sealed trait CodeGenFunction1 {

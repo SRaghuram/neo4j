@@ -5,12 +5,13 @@
  */
 package org.neo4j.cypher.internal.runtime.compiled.codegen.ir
 
-import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.MethodStructure
-import org.neo4j.cypher.internal.runtime.compiled.codegen.{CodeGenContext, Variable}
 import org.neo4j.cypher.internal.expressions.SemanticDirection
+import org.neo4j.cypher.internal.runtime.compiled.codegen.CodeGenContext
+import org.neo4j.cypher.internal.runtime.compiled.codegen.Variable
+import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.MethodStructure
 
 case class ExpandAllLoopDataGenerator(opName: String, fromVar: Variable, dir: SemanticDirection,
-                   types: Map[String, String], toVar: Variable, relVar: Variable)
+                                      types: Map[String, String], toVar: Variable, relVar: Variable)
   extends LoopDataGenerator {
 
   override def init[E](generator: MethodStructure[E])(implicit context: CodeGenContext) = {

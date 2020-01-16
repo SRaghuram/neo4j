@@ -7,7 +7,8 @@ package org.neo4j.cypher.internal
 
 import org.neo4j.codegen.api.CodeGeneration.CodeSaver
 import org.neo4j.cypher.internal.plandescription.Argument
-import org.neo4j.cypher.internal.plandescription.Arguments.{ByteCode, SourceCode}
+import org.neo4j.cypher.internal.plandescription.Arguments.ByteCode
+import org.neo4j.cypher.internal.plandescription.Arguments.SourceCode
 
 object CodeGenPlanDescriptionHelper {
   def metadata(saver: CodeSaver): Seq[Argument] =

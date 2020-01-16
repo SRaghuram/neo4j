@@ -5,9 +5,10 @@
  */
 package org.neo4j.cypher.internal.runtime.compiled.codegen.ir
 
-import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.MethodStructure
-import org.neo4j.cypher.internal.runtime.compiled.codegen.{CodeGenContext, Variable}
 import org.neo4j.cypher.internal.expressions.SemanticDirection
+import org.neo4j.cypher.internal.runtime.compiled.codegen.CodeGenContext
+import org.neo4j.cypher.internal.runtime.compiled.codegen.Variable
+import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.MethodStructure
 
 case class ExpandIntoLoopDataGenerator(opName: String,
                                        fromVar: Variable,
@@ -26,13 +27,13 @@ case class ExpandIntoLoopDataGenerator(opName: String,
   }
 
   override def produceLoopData[E](cursorName: String, generator: MethodStructure[E])(implicit context: CodeGenContext): Unit = {
-      generator.connectingRelationships(cursorName,
-                                        expandIntoVar,
-                                        fromVar.name,
-                                        fromVar.codeGenType,
-                                        toVar.name,
-                                        toVar.codeGenType,
-                                        types.keys.toIndexedSeq)
+    generator.connectingRelationships(cursorName,
+      expandIntoVar,
+      fromVar.name,
+      fromVar.codeGenType,
+      toVar.name,
+      toVar.codeGenType,
+      types.keys.toIndexedSeq)
     generator.incrementDbHits()
   }
 

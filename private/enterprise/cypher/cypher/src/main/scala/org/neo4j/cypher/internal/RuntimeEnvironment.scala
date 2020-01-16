@@ -5,18 +5,27 @@
  */
 package org.neo4j.cypher.internal
 
-import org.neo4j.cypher.internal.runtime.pipelined.execution._
-import org.neo4j.cypher.internal.runtime.pipelined.tracing._
-import org.neo4j.cypher.internal.runtime.pipelined.{WorkerManagement, WorkerResourceProvider}
+import org.neo4j.cypher.internal.runtime.pipelined.WorkerManagement
+import org.neo4j.cypher.internal.runtime.pipelined.WorkerResourceProvider
+import org.neo4j.cypher.internal.runtime.pipelined.execution.CallingThreadQueryExecutor
+import org.neo4j.cypher.internal.runtime.pipelined.execution.FixedWorkersQueryExecutor
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryExecutor
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
+import org.neo4j.cypher.internal.runtime.pipelined.tracing.CsvFileDataWriter
+import org.neo4j.cypher.internal.runtime.pipelined.tracing.CsvStdOutDataWriter
+import org.neo4j.cypher.internal.runtime.pipelined.tracing.DataPointSchedulerTracer
+import org.neo4j.cypher.internal.runtime.pipelined.tracing.SchedulerTracer
+import org.neo4j.cypher.internal.runtime.pipelined.tracing.SingleConsumerDataBuffers
 import org.neo4j.exceptions.InternalException
 import org.neo4j.internal.kernel.api.CursorFactory
 import org.neo4j.kernel.lifecycle.LifeSupport
-import org.neo4j.scheduler.{Group, JobScheduler}
+import org.neo4j.scheduler.Group
+import org.neo4j.scheduler.JobScheduler
 
 /**
-  * System environment in which runtimes operate. Includes access to global (per database?) resources
-  * like jobScheduler and config.
-  */
+ * System environment in which runtimes operate. Includes access to global (per database?) resources
+ * like jobScheduler and config.
+ */
 object RuntimeEnvironment {
   def of(config: CypherRuntimeConfiguration,
          jobScheduler: JobScheduler,
@@ -36,8 +45,8 @@ object RuntimeEnvironment {
   }
 
   private def createParallelQueryExecutor(cursors: CursorFactory,
-                                  lifeSupport: LifeSupport,
-                                  workerManager: WorkerManagement): QueryExecutor = {
+                                          lifeSupport: LifeSupport,
+                                          workerManager: WorkerManagement): QueryExecutor = {
     val resourceFactory = () => new QueryResources(cursors)
     val workerResourceProvider = new WorkerResourceProvider(workerManager.numberOfWorkers, resourceFactory)
     lifeSupport.add(workerResourceProvider)

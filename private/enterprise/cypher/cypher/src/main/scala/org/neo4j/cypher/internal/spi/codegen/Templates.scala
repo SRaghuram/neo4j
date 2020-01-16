@@ -7,44 +7,82 @@ package org.neo4j.cypher.internal.spi.codegen
 
 import java.util
 import java.util.Comparator
-import java.util.stream.{DoubleStream, IntStream, LongStream}
+import java.util.stream.DoubleStream
+import java.util.stream.IntStream
+import java.util.stream.LongStream
 
 import org.eclipse.collections.impl.map.mutable.primitive.LongIntHashMap
-import org.neo4j.codegen.ExpressionTemplate._
+import org.neo4j.codegen.ClassGenerator
+import org.neo4j.codegen.ClassHandle
+import org.neo4j.codegen.CodeBlock
+import org.neo4j.codegen.Expression
+import org.neo4j.codegen.ExpressionTemplate.get
+import org.neo4j.codegen.ExpressionTemplate.invoke
+import org.neo4j.codegen.ExpressionTemplate.load
+import org.neo4j.codegen.ExpressionTemplate.self
+import org.neo4j.codegen.MethodDeclaration
 import org.neo4j.codegen.MethodDeclaration.Builder
-import org.neo4j.codegen.MethodReference._
-import org.neo4j.codegen._
+import org.neo4j.codegen.MethodReference
+import org.neo4j.codegen.MethodReference.methodReference
+import org.neo4j.codegen.MethodTemplate
+import org.neo4j.codegen.Parameter
+import org.neo4j.codegen.TypeReference
 import org.neo4j.common.TokenNameLookup
-import org.neo4j.cypher.internal.codegen.{PrimitiveNodeStream, PrimitiveRelationshipStream}
+import org.neo4j.cypher.internal.codegen.PrimitiveNodeStream
+import org.neo4j.cypher.internal.codegen.PrimitiveRelationshipStream
+import org.neo4j.cypher.internal.frontend.helpers.using
 import org.neo4j.cypher.internal.javacompat.ResultRowImpl
 import org.neo4j.cypher.internal.profiling.QueryProfiler
+import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.QueryTransactionalContext
 import org.neo4j.cypher.internal.runtime.compiled.codegen.Namer
-import org.neo4j.cypher.internal.runtime.{QueryContext, QueryTransactionalContext}
-import org.neo4j.cypher.internal.spi.codegen.Methods.{newNodeEntityById, newRelationshipEntityById}
-import org.neo4j.cypher.internal.frontend.helpers.using
-import org.neo4j.exceptions.{CypherExecutionException, EntityNotFoundException, KernelException}
-import org.neo4j.graphdb.{Direction, Node, Relationship}
-import org.neo4j.internal.kernel.api._
+import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure.method
+import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure.param
+import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure.staticField
+import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure.typeRef
+import org.neo4j.cypher.internal.spi.codegen.Methods.newNodeEntityById
+import org.neo4j.cypher.internal.spi.codegen.Methods.newRelationshipEntityById
+import org.neo4j.exceptions.CypherExecutionException
+import org.neo4j.exceptions.EntityNotFoundException
+import org.neo4j.exceptions.KernelException
+import org.neo4j.graphdb.Direction
+import org.neo4j.graphdb.Node
+import org.neo4j.graphdb.Relationship
+import org.neo4j.internal.kernel.api.CursorFactory
+import org.neo4j.internal.kernel.api.NodeCursor
+import org.neo4j.internal.kernel.api.PropertyCursor
+import org.neo4j.internal.kernel.api.Read
+import org.neo4j.internal.kernel.api.RelationshipScanCursor
+import org.neo4j.internal.kernel.api.SchemaRead
+import org.neo4j.internal.kernel.api.TokenRead
 import org.neo4j.io.IOUtils
 import org.neo4j.kernel.impl.api.RelationshipDataExtractor
 import org.neo4j.kernel.impl.core.TransactionalEntityFactory
 import org.neo4j.kernel.impl.util.ValueUtils
-import org.neo4j.values.storable.{Value, ValueComparator, Values}
-import org.neo4j.values.virtual._
-import org.neo4j.values.{AnyValue, AnyValues}
+import org.neo4j.values.AnyValue
+import org.neo4j.values.AnyValues
+import org.neo4j.values.storable.Value
+import org.neo4j.values.storable.ValueComparator
+import org.neo4j.values.storable.Values
+import org.neo4j.values.virtual.ListValue
+import org.neo4j.values.virtual.MapValue
+import org.neo4j.values.virtual.NodeReference
+import org.neo4j.values.virtual.NodeValue
+import org.neo4j.values.virtual.RelationshipReference
+import org.neo4j.values.virtual.RelationshipValue
+import org.neo4j.values.virtual.VirtualValues
 
 /**
-  * Contains common code generation constructs.
-  */
+ * Contains common code generation constructs.
+ */
 object Templates {
 
-  import GeneratedQueryStructure.{method, param, staticField, typeRef}
 
   def createNewInstance(valueType: TypeReference, args: (TypeReference,Expression)*): Expression = {
     val argTypes = args.map(_._1)
     val argExpression = args.map(_._2)
     Expression.invoke(Expression.newInstance(valueType),
-                      MethodReference.constructorReference(valueType, argTypes: _*), argExpression:_*)
+      MethodReference.constructorReference(valueType, argTypes: _*), argExpression:_*)
   }
 
   val newCountingMap = createNewInstance(typeRef[LongIntHashMap])
@@ -96,15 +134,15 @@ object Templates {
     var result = null.asInstanceOf[V]
 
     generate.tryCatch((innerBody: CodeBlock) => result = happyPath(innerBody),
-                      (innerError: CodeBlock) => {
-      result = onFailure(innerError)
-      innerError.continueIfPossible()
-    }, param[EntityNotFoundException](namer.newVarName()))
+      (innerError: CodeBlock) => {
+        result = onFailure(innerError)
+        innerError.continueIfPossible()
+      }, param[EntityNotFoundException](namer.newVarName()))
     result
   }
 
   def handleKernelExceptions[V](generate: CodeBlock, fields: Fields, namer: Namer)
-                         (block: CodeBlock => V): V = {
+                               (block: CodeBlock => V): V = {
     var result = null.asInstanceOf[V]
     val e = namer.newVarName()
     generate.tryCatch((body: CodeBlock) => {
@@ -116,7 +154,7 @@ object Templates {
         Expression
           .invoke(handle.load(e), method[KernelException, String]("getUserMessage", typeRef[TokenNameLookup]),
             Expression.get(handle.self(), fields.tokenRead)), handle.load(e)
-        ))
+      ))
     }, param[KernelException](e))
 
     result
@@ -124,7 +162,7 @@ object Templates {
 
   def tryCatch(generate: CodeBlock)(tryBlock :CodeBlock => Unit)(exception: Parameter)(catchBlock :CodeBlock => Unit): Unit = {
     generate.tryCatch((body: CodeBlock) => tryBlock(body),
-                      (handle: CodeBlock) => catchBlock(handle), exception)
+      (handle: CodeBlock) => catchBlock(handle), exception)
   }
 
   val noValue = Expression.getStatic(staticField[Values, Value]("NO_VALUE"))
@@ -133,10 +171,10 @@ object Templates {
   val both = Expression.getStatic(staticField[Direction, Direction](Direction.BOTH.name()))
   val newResultRow = Expression
     .invoke(Expression.newInstance(typeRef[ResultRowImpl]),
-            MethodReference.constructorReference(typeRef[ResultRowImpl]))
+      MethodReference.constructorReference(typeRef[ResultRowImpl]))
   val newRelationshipDataExtractor = Expression
     .invoke(Expression.newInstance(typeRef[RelationshipDataExtractor]),
-            MethodReference.constructorReference(typeRef[RelationshipDataExtractor]))
+      MethodReference.constructorReference(typeRef[RelationshipDataExtractor]))
   val valueComparator = Expression.getStatic(staticField[Values, ValueComparator]("COMPARATOR"))
   val anyValueComparator = Expression.getStatic(staticField[AnyValues, Comparator[AnyValue]]("COMPARATOR"))
 
@@ -149,9 +187,9 @@ object Templates {
     put(self(classHandle), typeRef[QueryProfiler], "tracer", load("tracer", typeRef[QueryProfiler])).
     put(self(classHandle), typeRef[MapValue], "params", load("params", typeRef[MapValue])).
     put(self(classHandle), typeRef[TransactionalEntityFactory], "proxySpi",
-             invoke(load("queryContext", typeRef[QueryContext]), method[QueryContext, TransactionalEntityFactory]("entityAccessor"))).
+      invoke(load("queryContext", typeRef[QueryContext]), method[QueryContext, TransactionalEntityFactory]("entityAccessor"))).
     put(self(classHandle), typeRef[java.util.ArrayList[AutoCloseable]], "closeables",
-        createNewInstance(typeRef[java.util.ArrayList[AutoCloseable]])).
+      createNewInstance(typeRef[java.util.ArrayList[AutoCloseable]])).
     build()
 
   def getOrLoadCursors(clazz: ClassGenerator, fields: Fields) = {
@@ -163,7 +201,7 @@ object Templates {
         val cursors: MethodReference = method[QueryTransactionalContext, CursorFactory]("cursors")
         val queryContext = Expression.get(block.self(), fields.queryContext)
         block.put(block.self(), fields.cursors,
-                  Expression.invoke(Expression.invoke(queryContext, transactionalContext), cursors))
+          Expression.invoke(Expression.invoke(queryContext, transactionalContext), cursors))
       }
       generate.returns(cursors)
     }
@@ -178,7 +216,7 @@ object Templates {
         val dataRead: MethodReference = method[QueryTransactionalContext, Read]("dataRead")
         val queryContext = Expression.get(block.self(), fields.queryContext)
         block.put(block.self(), fields.dataRead,
-                  Expression.invoke(Expression.invoke(queryContext, transactionalContext), dataRead))
+          Expression.invoke(Expression.invoke(queryContext, transactionalContext), dataRead))
       }
       generate.returns(dataRead)
     }
@@ -193,7 +231,7 @@ object Templates {
         val tokenRead: MethodReference = method[QueryTransactionalContext, TokenRead]("tokenRead")
         val queryContext = Expression.get(block.self(), fields.queryContext)
         block.put(block.self(), fields.tokenRead,
-                  Expression.invoke(Expression.invoke(queryContext, transactionalContext), tokenRead))
+          Expression.invoke(Expression.invoke(queryContext, transactionalContext), tokenRead))
       }
       generate.returns(tokenRead)
     }
@@ -208,7 +246,7 @@ object Templates {
         val schemaRead: MethodReference = method[QueryTransactionalContext, SchemaRead]("schemaRead")
         val queryContext = Expression.get(block.self(), fields.queryContext)
         block.put(block.self(), fields.schemaRead,
-                  Expression.invoke(Expression.invoke(queryContext, transactionalContext), schemaRead))
+          Expression.invoke(Expression.invoke(queryContext, transactionalContext), schemaRead))
       }
       generate.returns(schemaRead)
     }
@@ -218,12 +256,12 @@ object Templates {
     val methodBuilder: Builder = MethodDeclaration.method(typeRef[NodeCursor], "nodeCursor")
     using(clazz.generate(methodBuilder)) { generate =>
       val nodeCursor = Expression.get(generate.self(), fields.nodeCursor)
-        Expression.get(generate.self(), fields.cursors)
+      Expression.get(generate.self(), fields.cursors)
       val cursors = Expression.invoke(generate.self(),
-                                      methodReference(generate.owner(), typeRef[CursorFactory], "getOrLoadCursors" ))
+        methodReference(generate.owner(), typeRef[CursorFactory], "getOrLoadCursors" ))
       using(generate.ifStatement(Expression.isNull(nodeCursor))) { block =>
         block.put(block.self(), fields.nodeCursor,
-        Expression.invoke(cursors, method[CursorFactory, NodeCursor]("allocateNodeCursor")))
+          Expression.invoke(cursors, method[CursorFactory, NodeCursor]("allocateNodeCursor")))
 
       }
       generate.returns(nodeCursor)
@@ -236,10 +274,10 @@ object Templates {
       val relationshipCursor = Expression.get(generate.self(), fields.relationshipScanCursor)
       Expression.get(generate.self(), fields.cursors)
       val cursors = Expression.invoke(generate.self(),
-                                      methodReference(generate.owner(), typeRef[CursorFactory], "getOrLoadCursors" ))
+        methodReference(generate.owner(), typeRef[CursorFactory], "getOrLoadCursors" ))
       using(generate.ifStatement(Expression.isNull(relationshipCursor))) { block =>
         block.put(block.self(), fields.relationshipScanCursor,
-                  Expression.invoke(cursors, method[CursorFactory, RelationshipScanCursor]("allocateRelationshipScanCursor")))
+          Expression.invoke(cursors, method[CursorFactory, RelationshipScanCursor]("allocateRelationshipScanCursor")))
 
       }
       generate.returns(relationshipCursor)
@@ -262,7 +300,7 @@ object Templates {
         block.expression(Expression.invoke(propertyCursor, method[PropertyCursor, Unit]("close")))
       }
       generate.expression(Expression.invoke(methodReference(typeRef[IOUtils], typeRef[Unit], "closeAllSilently",
-                                                            typeRef[util.Collection[_]]), Expression.get(generate.self(), fields.closeables)))
+        typeRef[util.Collection[_]]), Expression.get(generate.self(), fields.closeables)))
     }
   }
 
@@ -271,10 +309,10 @@ object Templates {
     using(clazz.generate(methodBuilder)) { generate =>
       val propertyCursor = Expression.get(generate.self(), fields.propertyCursor)
       val cursors = Expression.invoke(generate.self(),
-                                      methodReference(generate.owner(), typeRef[CursorFactory], "getOrLoadCursors" ))
+        methodReference(generate.owner(), typeRef[CursorFactory], "getOrLoadCursors" ))
       using(generate.ifStatement(Expression.isNull(propertyCursor))) { block =>
         block.put(block.self(), fields.propertyCursor,
-                  Expression.invoke(cursors, method[CursorFactory, PropertyCursor]("allocatePropertyCursor")))
+          Expression.invoke(cursors, method[CursorFactory, PropertyCursor]("allocatePropertyCursor")))
 
       }
       generate.returns(propertyCursor)

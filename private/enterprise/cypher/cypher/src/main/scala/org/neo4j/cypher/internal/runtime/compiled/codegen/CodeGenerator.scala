@@ -7,29 +7,42 @@ package org.neo4j.cypher.internal.runtime.compiled.codegen
 
 import java.time.Clock
 
-import org.neo4j.cypher.internal.executionplan.{GeneratedQuery, GeneratedQueryExecution}
+import org.neo4j.cypher.internal.ast.semantics.SemanticTable
+import org.neo4j.cypher.internal.executionplan.GeneratedQuery
+import org.neo4j.cypher.internal.executionplan.GeneratedQueryExecution
+import org.neo4j.cypher.internal.logical.plans.LogicalPlan
+import org.neo4j.cypher.internal.logical.plans.ProduceResult
 import org.neo4j.cypher.internal.plandescription.Argument
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.Cardinalities
 import org.neo4j.cypher.internal.planner.spi.TokenContext
-import org.neo4j.cypher.internal.runtime.compiled.codegen.ir._
-import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.{CodeStructure, CodeStructureResult}
-import org.neo4j.cypher.internal.runtime.compiled.{CompiledExecutionResult, CompiledPlan, RunnablePlan}
-import org.neo4j.cypher.internal.runtime.{ExecutionMode, QueryContext, compiled}
-import org.neo4j.cypher.internal.ast.semantics.SemanticTable
-import org.neo4j.cypher.internal.logical.plans.{LogicalPlan, ProduceResult}
-import org.neo4j.cypher.internal.profiling.{ProfilingTracer, QueryProfiler}
+import org.neo4j.cypher.internal.profiling.ProfilingTracer
+import org.neo4j.cypher.internal.profiling.QueryProfiler
+import org.neo4j.cypher.internal.runtime.ExecutionMode
+import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.compiled
+import org.neo4j.cypher.internal.runtime.compiled.CompiledExecutionResult
+import org.neo4j.cypher.internal.runtime.compiled.CompiledPlan
+import org.neo4j.cypher.internal.runtime.compiled.RunnablePlan
+import org.neo4j.cypher.internal.runtime.compiled.codegen.CodeGenerator.generateCode
+import org.neo4j.cypher.internal.runtime.compiled.codegen.LogicalPlanConverter.asCodeGenPlan
+import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.Instruction
+import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.CodeStructure
+import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.CodeStructureResult
 import org.neo4j.cypher.internal.util.Eagerly
 import org.neo4j.cypher.internal.util.attribution.Id
-import org.neo4j.cypher.result.{QueryProfile, RuntimeResult}
+import org.neo4j.cypher.result.QueryProfile
+import org.neo4j.cypher.result.RuntimeResult
 import org.neo4j.exceptions.CantCompileQueryException
 import org.neo4j.kernel.impl.query.QuerySubscriber
 import org.neo4j.values.virtual.MapValue
+
+import scala.collection.JavaConverters.mapAsJavaMapConverter
+import scala.collection.JavaConverters.seqAsJavaListConverter
 
 class CodeGenerator(val structure: CodeStructure[GeneratedQuery],
                     clock: Clock,
                     conf: CodeGenConfiguration = CodeGenConfiguration()) {
 
-  import CodeGenerator.generateCode
 
   /**
    * @param originalReturnColumns the original column names, as written in the query and without Namespacing.
@@ -59,7 +72,7 @@ class CodeGenerator(val structure: CodeStructure[GeneratedQuery],
                     subscriber: QuerySubscriber): RuntimeResult = {
 
             val execution: GeneratedQueryExecution = query.query.execute(queryContext,
-                                                                         tracer.getOrElse(QueryProfiler.NONE), params)
+              tracer.getOrElse(QueryProfiler.NONE), params)
             new CompiledExecutionResult(queryContext, execution, tracer.getOrElse(QueryProfile.NONE), prePopulateResults, subscriber, originalReturnColumns.toArray)
           }
 
@@ -77,14 +90,12 @@ class CodeGenerator(val structure: CodeStructure[GeneratedQuery],
    */
   private def generateQuery(plan: LogicalPlan, semantics: SemanticTable,
                             columns: Seq[String], conf: CodeGenConfiguration, cardinalities: Cardinalities): CodeStructureResult[GeneratedQuery] = {
-    import LogicalPlanConverter._
     val lookup = columns.indices.map(i => columns(i) -> i).toMap
     implicit val context = new CodeGenContext(semantics, lookup)
     val (_, instructions) = asCodeGenPlan(plan).produce(context, cardinalities)
     generateCode(structure)(instructions, context.operatorIds.toMap, columns, conf)
   }
 
-  import scala.collection.JavaConverters._
   private def javaValue(value: Any): Object = value match {
     case null => null
     case iter: Seq[_] => iter.map(javaValue).asJava

@@ -7,14 +7,20 @@ package org.neo4j.cypher.internal
 
 import org.neo4j.codegen.api.CodeGeneration
 import org.neo4j.cypher.internal.InterpretedRuntime.InterpretedExecutionPlan
-import org.neo4j.cypher.internal.physicalplanning._
+import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanner
 import org.neo4j.cypher.internal.plandescription.Argument
 import org.neo4j.cypher.internal.runtime.QueryIndexRegistrator
 import org.neo4j.cypher.internal.runtime.interpreted.InterpretedPipeMapper
-import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{CommunityExpressionConverter, ExpressionConverters}
-import org.neo4j.cypher.internal.runtime.interpreted.pipes._
-import org.neo4j.cypher.internal.runtime.slotted.expressions.{CompiledExpressionConverter, MaterializedEntitiesExpressionConverter, SlottedExpressionConverters}
-import org.neo4j.cypher.internal.runtime.slotted.{SlottedExecutionResultBuilderFactory, SlottedPipeMapper, SlottedPipelineBreakingPolicy}
+import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.CommunityExpressionConverter
+import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.NestedPipeExpressions
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeTreeBuilder
+import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionResultBuilderFactory
+import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper
+import org.neo4j.cypher.internal.runtime.slotted.SlottedPipelineBreakingPolicy
+import org.neo4j.cypher.internal.runtime.slotted.expressions.CompiledExpressionConverter
+import org.neo4j.cypher.internal.runtime.slotted.expressions.MaterializedEntitiesExpressionConverter
+import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionConverters
 import org.neo4j.cypher.internal.util.CypherException
 import org.neo4j.exceptions.CantCompileQueryException
 import org.neo4j.internal.kernel.api.security.SecurityContext
@@ -43,9 +49,9 @@ object SlottedRuntime extends CypherRuntime[EnterpriseRuntimeContext] with Debug
       }
 
       val physicalPlan = PhysicalPlanner.plan(context.tokenContext,
-                                              query.logicalPlan,
-                                              query.semanticTable,
-                                              SlottedPipelineBreakingPolicy)
+        query.logicalPlan,
+        query.semanticTable,
+        SlottedPipelineBreakingPolicy)
 
       if (ENABLE_DEBUG_PRINTS && PRINT_PLAN_INFO_EARLY) {
         printRewrittenPlanInfo(physicalPlan.logicalPlan)
@@ -75,16 +81,16 @@ object SlottedRuntime extends CypherRuntime[EnterpriseRuntimeContext] with Debug
       val columns = query.resultColumns
       val resultBuilderFactory =
         new SlottedExecutionResultBuilderFactory(pipe,
-                                                 queryIndexRegistrator.result(),
-                                                 physicalPlan.nExpressionSlots,
-                                                 query.readOnly,
-                                                 columns,
-                                                 physicalPlan.logicalPlan,
-                                                 physicalPlan.slotConfigurations,
-                                                 physicalPlan.parameterMapping,
-                                                 context.config.lenientCreateRelationship,
-                                                 context.config.memoryTrackingController,
-                                                 query.hasLoadCSV)
+          queryIndexRegistrator.result(),
+          physicalPlan.nExpressionSlots,
+          query.readOnly,
+          columns,
+          physicalPlan.logicalPlan,
+          physicalPlan.slotConfigurations,
+          physicalPlan.parameterMapping,
+          context.config.lenientCreateRelationship,
+          context.config.memoryTrackingController,
+          query.hasLoadCSV)
 
       if (ENABLE_DEBUG_PRINTS) {
         if (!PRINT_PLAN_INFO_EARLY) {

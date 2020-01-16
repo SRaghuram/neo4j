@@ -5,21 +5,28 @@
  */
 package org.neo4j.cypher.internal.runtime.compiled
 
-import org.neo4j.cypher.internal.logical.plans._
-import org.neo4j.cypher.internal.ast.semantics.{ExpressionTypeInfo, SemanticTable}
-import org.neo4j.cypher.internal.expressions.{CachedProperty, Property, Variable}
+import org.neo4j.cypher.internal.ast.semantics.ExpressionTypeInfo
+import org.neo4j.cypher.internal.ast.semantics.SemanticTable
+import org.neo4j.cypher.internal.expressions.CachedProperty
+import org.neo4j.cypher.internal.expressions.Property
+import org.neo4j.cypher.internal.expressions.Variable
+import org.neo4j.cypher.internal.logical.plans.IndexLeafPlan
+import org.neo4j.cypher.internal.logical.plans.LogicalPlan
+import org.neo4j.cypher.internal.logical.plans.Projection
+import org.neo4j.cypher.internal.util.InputPosition
+import org.neo4j.cypher.internal.util.Rewriter
 import org.neo4j.cypher.internal.util.attribution.SameId
 import org.neo4j.cypher.internal.util.symbols.CTNode
-import org.neo4j.cypher.internal.util.{InputPosition, Rewriter, topDown}
+import org.neo4j.cypher.internal.util.topDown
 
 /**
-  * Replace index plans that have indexed properties with `GetValue` by plans
-  * that have `DoNotGetValue` instead, with a projection to get the values on
-  * top of the index plan.
-  *
-  * Replace CachedProperties with Properties, since compiled does not support
-  * CachedProperties.
-  */
+ * Replace index plans that have indexed properties with `GetValue` by plans
+ * that have `DoNotGetValue` instead, with a projection to get the values on
+ * top of the index plan.
+ *
+ * Replace CachedProperties with Properties, since compiled does not support
+ * CachedProperties.
+ */
 case object removeCachedProperties {
 
   def apply(plan: LogicalPlan, semanticTable: SemanticTable): (LogicalPlan, SemanticTable) = {

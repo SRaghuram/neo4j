@@ -7,9 +7,26 @@ package org.neo4j.cypher.internal.runtime.compiled.helpers
 
 import org.neo4j.cypher.internal.compiler.helpers.IsList
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions
-import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.{AnyValueType, BoolType, CypherCodeGenType, ListReferenceType, LongType, ReferenceType, RepresentationType, ValueType}
+import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.AnyValueType
+import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.BoolType
+import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.CypherCodeGenType
+import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.ListReferenceType
+import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.LongType
+import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.ReferenceType
+import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.RepresentationType
+import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.ValueType
 import org.neo4j.cypher.internal.runtime.interpreted.IsMap
-import org.neo4j.cypher.internal.util.symbols._
+import org.neo4j.cypher.internal.util.symbols.CTAny
+import org.neo4j.cypher.internal.util.symbols.CTBoolean
+import org.neo4j.cypher.internal.util.symbols.CTFloat
+import org.neo4j.cypher.internal.util.symbols.CTInteger
+import org.neo4j.cypher.internal.util.symbols.CTList
+import org.neo4j.cypher.internal.util.symbols.CTMap
+import org.neo4j.cypher.internal.util.symbols.CTNode
+import org.neo4j.cypher.internal.util.symbols.CTRelationship
+import org.neo4j.cypher.internal.util.symbols.CTString
+import org.neo4j.cypher.internal.util.symbols.CypherType
+import org.neo4j.cypher.internal.util.symbols.ListType
 
 object LiteralTypeSupport {
   def deriveCypherType(obj: Any): CypherType = obj match {
@@ -41,7 +58,7 @@ object LiteralTypeSupport {
   }
 
   def selectRepresentationType(ct: CypherType, reprTypes: Seq[RepresentationType]): RepresentationType =
-    // TODO: Handle ListReferenceType(_)?
+  // TODO: Handle ListReferenceType(_)?
     reprTypes.reduce[RepresentationType]({
       case (ReferenceType, _) =>
         ReferenceType

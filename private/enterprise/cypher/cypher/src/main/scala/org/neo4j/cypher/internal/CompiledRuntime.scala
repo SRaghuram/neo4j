@@ -7,9 +7,14 @@ package org.neo4j.cypher.internal
 
 import org.neo4j.cypher.internal.plandescription.Argument
 import org.neo4j.cypher.internal.profiling.ProfilingTracer
-import org.neo4j.cypher.internal.runtime._
-import org.neo4j.cypher.internal.runtime.compiled.codegen.{CodeGenConfiguration, CodeGenerator}
-import org.neo4j.cypher.internal.runtime.compiled.{CompiledPlan, removeCachedProperties}
+import org.neo4j.cypher.internal.runtime.ExecutionMode
+import org.neo4j.cypher.internal.runtime.InputDataStream
+import org.neo4j.cypher.internal.runtime.ProfileMode
+import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.compiled.CompiledPlan
+import org.neo4j.cypher.internal.runtime.compiled.codegen.CodeGenConfiguration
+import org.neo4j.cypher.internal.runtime.compiled.codegen.CodeGenerator
+import org.neo4j.cypher.internal.runtime.compiled.removeCachedProperties
 import org.neo4j.cypher.internal.util.InternalNotification
 import org.neo4j.cypher.result.RuntimeResult
 import org.neo4j.exceptions.CantCompileQueryException
@@ -26,17 +31,17 @@ object CompiledRuntime extends CypherRuntime[EnterpriseRuntimeContext] {
 
     val codeGen = new CodeGenerator(context.codeStructure, context.clock, CodeGenConfiguration(context.debugOptions))
     val compiled: CompiledPlan = codeGen.generate(newPlan,
-                                                  context.tokenContext,
-                                                  newSemanticTable,
-                                                  query.readOnly,
-                                                  query.cardinalities,
-                                                  query.resultColumns)
+      context.tokenContext,
+      newSemanticTable,
+      query.readOnly,
+      query.cardinalities,
+      query.resultColumns)
     new CompiledExecutionPlan(compiled)
   }
 
   /**
-    * Execution plan for compiled runtime. Beware: will be cached.
-    */
+   * Execution plan for compiled runtime. Beware: will be cached.
+   */
   class CompiledExecutionPlan(val compiled: CompiledPlan) extends ExecutionPlan {
 
     override def run(queryContext: QueryContext,

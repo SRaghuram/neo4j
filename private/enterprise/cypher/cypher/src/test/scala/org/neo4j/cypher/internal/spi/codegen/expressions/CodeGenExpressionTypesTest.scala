@@ -5,9 +5,26 @@
  */
 package org.neo4j.cypher.internal.spi.codegen.expressions
 
-import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions._
-import org.neo4j.cypher.internal.runtime.compiled.codegen.{CodeGenContext, Variable}
-import org.neo4j.cypher.internal.util.symbols._
+import org.neo4j.cypher.internal.runtime.compiled.codegen.CodeGenContext
+import org.neo4j.cypher.internal.runtime.compiled.codegen.Variable
+import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.Addition
+import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.CypherCodeGenType
+import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.Division
+import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.ListLiteral
+import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.Literal
+import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.Modulo
+import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.NodeProjection
+import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.ReferenceType
+import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.RelationshipProjection
+import org.neo4j.cypher.internal.util.symbols.CTAny
+import org.neo4j.cypher.internal.util.symbols.CTFloat
+import org.neo4j.cypher.internal.util.symbols.CTInteger
+import org.neo4j.cypher.internal.util.symbols.CTList
+import org.neo4j.cypher.internal.util.symbols.CTMap
+import org.neo4j.cypher.internal.util.symbols.CTNode
+import org.neo4j.cypher.internal.util.symbols.CTNumber
+import org.neo4j.cypher.internal.util.symbols.CTRelationship
+import org.neo4j.cypher.internal.util.symbols.CTString
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 
 class CodeGenExpressionTypesTest extends CypherFunSuite {
@@ -27,11 +44,11 @@ class CodeGenExpressionTypesTest extends CypherFunSuite {
   test("collection") {
     implicit val context: CodeGenContext = null
 
-                       ListLiteral(Seq(int)).codeGenType.ct should equal(CTList(CTInteger))
-                       ListLiteral(Seq(double)).codeGenType.ct should equal(CTList(CTFloat))
-                       ListLiteral(Seq(int, double)).codeGenType.ct should equal(CTList(CTNumber))
-                       ListLiteral(Seq(string, int)).codeGenType.ct should equal(CTList(CTAny))
-                       ListLiteral(Seq(node, rel)).codeGenType.ct should equal(CTList(CTMap))
+    ListLiteral(Seq(int)).codeGenType.ct should equal(CTList(CTInteger))
+    ListLiteral(Seq(double)).codeGenType.ct should equal(CTList(CTFloat))
+    ListLiteral(Seq(int, double)).codeGenType.ct should equal(CTList(CTNumber))
+    ListLiteral(Seq(string, int)).codeGenType.ct should equal(CTList(CTAny))
+    ListLiteral(Seq(node, rel)).codeGenType.ct should equal(CTList(CTMap))
   }
 
   test("add") {

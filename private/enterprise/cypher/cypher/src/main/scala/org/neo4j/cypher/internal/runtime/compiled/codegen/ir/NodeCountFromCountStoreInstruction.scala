@@ -5,8 +5,9 @@
  */
 package org.neo4j.cypher.internal.runtime.compiled.codegen.ir
 
+import org.neo4j.cypher.internal.runtime.compiled.codegen.CodeGenContext
+import org.neo4j.cypher.internal.runtime.compiled.codegen.Variable
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.MethodStructure
-import org.neo4j.cypher.internal.runtime.compiled.codegen.{CodeGenContext, Variable}
 
 case class NodeCountFromCountStoreInstruction(opName: String, variable: Variable, labels: List[Option[(Option[Int], String)]],
                                               inner: Instruction) extends Instruction {
@@ -32,23 +33,23 @@ case class NodeCountFromCountStoreInstruction(opName: String, variable: Variable
   }
 
   private def findOps[E](label: Option[(Option[Int], String)]): MethodStructure[E] => E = label match {
-      //no label specified by the user
-      case None => (body: MethodStructure[E]) => body.nodeCountFromCountStore(body.wildCardToken)
+    //no label specified by the user
+    case None => (body: MethodStructure[E]) => body.nodeCountFromCountStore(body.wildCardToken)
 
-      // label specified and token known
-      case Some((Some(token), _)) => (body: MethodStructure[E]) => {
-        val tokenConstant = body.token(Int.box(token))
-        body.nodeCountFromCountStore(tokenConstant)
-      }
-
-      // label specified, but token did not exists at compile time
-      case Some((None, labelName)) => (body: MethodStructure[E]) => {
-        val isMissing = body.primitiveEquals(body.loadVariable(tokenVar(labelName)), body.wildCardToken)
-        val zero = body.constantExpression(0L.asInstanceOf[AnyRef])
-        val getFromCountStore = body.nodeCountFromCountStore(body.loadVariable(tokenVar(labelName)))
-        body.ternaryOperator(isMissing, zero, getFromCountStore)
-      }
+    // label specified and token known
+    case Some((Some(token), _)) => (body: MethodStructure[E]) => {
+      val tokenConstant = body.token(Int.box(token))
+      body.nodeCountFromCountStore(tokenConstant)
     }
+
+    // label specified, but token did not exists at compile time
+    case Some((None, labelName)) => (body: MethodStructure[E]) => {
+      val isMissing = body.primitiveEquals(body.loadVariable(tokenVar(labelName)), body.wildCardToken)
+      val zero = body.constantExpression(0L.asInstanceOf[AnyRef])
+      val getFromCountStore = body.nodeCountFromCountStore(body.loadVariable(tokenVar(labelName)))
+      body.ternaryOperator(isMissing, zero, getFromCountStore)
+    }
+  }
 
   override def operatorId: Set[String] = Set(opName)
 

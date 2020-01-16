@@ -5,32 +5,45 @@
  */
 package org.neo4j.cypher.internal.spi.codegen
 
+
 import java.util
 
 import org.eclipse.collections.api.iterator.LongIterator
 import org.eclipse.collections.impl.map.mutable.primitive.LongIntHashMap
 import org.neo4j.codegen.MethodReference
+import org.neo4j.cypher.internal.codegen.CompiledConversionUtils
 import org.neo4j.cypher.internal.codegen.CompiledConversionUtils.CompositeKey
-import org.neo4j.cypher.internal.codegen._
+import org.neo4j.cypher.internal.codegen.CompiledMathHelper
 import org.neo4j.cypher.internal.javacompat.ResultRecord
-import org.neo4j.cypher.internal.profiling.{OperatorProfileEvent, QueryProfiler}
+import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
+import org.neo4j.cypher.internal.profiling.QueryProfiler
 import org.neo4j.cypher.internal.runtime.RelationshipIterator
+import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure.method
+import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure.typeRef
 import org.neo4j.cypher.internal.util.attribution.Id
-import org.neo4j.cypher.result.QueryResult.{QueryResultVisitor, Record}
-import org.neo4j.graphdb.{Node, Relationship}
+import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
+import org.neo4j.cypher.result.QueryResult.Record
+import org.neo4j.graphdb.Node
+import org.neo4j.graphdb.Relationship
 import org.neo4j.internal.helpers.collection.MapUtil
-import org.neo4j.internal.kernel.api.helpers.{CachingExpandInto, RelationshipSelectionCursor}
-import org.neo4j.internal.kernel.api.{Read, TokenRead, _}
+import org.neo4j.internal.kernel.api.CursorFactory
+import org.neo4j.internal.kernel.api.NodeCursor
+import org.neo4j.internal.kernel.api.Read
+import org.neo4j.internal.kernel.api.TokenRead
+import org.neo4j.internal.kernel.api.helpers.CachingExpandInto
+import org.neo4j.internal.kernel.api.helpers.RelationshipSelectionCursor
 import org.neo4j.kernel.impl.api.RelationshipDataExtractor
 import org.neo4j.kernel.impl.core.TransactionalEntityFactory
 import org.neo4j.storageengine.api.RelationshipVisitor
 import org.neo4j.values.AnyValue
-import org.neo4j.values.storable.{Value, Values}
-import org.neo4j.values.virtual.{NodeValue, RelationshipValue, VirtualNodeValue, VirtualRelationshipValue}
+import org.neo4j.values.storable.Value
+import org.neo4j.values.storable.Values
+import org.neo4j.values.virtual.NodeValue
+import org.neo4j.values.virtual.RelationshipValue
+import org.neo4j.values.virtual.VirtualNodeValue
+import org.neo4j.values.virtual.VirtualRelationshipValue
 
 object Methods {
-
-  import GeneratedQueryStructure.{method, typeRef}
 
   val countingTableIncrement: MethodReference = method[LongIntHashMap, Int]("addToValue", typeRef[Long], typeRef[Int])
   val countingTableCompositeKeyPut: MethodReference = method[util.HashMap[CompositeKey, Integer], Object]("put", typeRef[Object], typeRef[Object])
@@ -48,11 +61,11 @@ object Methods {
   val endNode: MethodReference = method[RelationshipDataExtractor, Long]("endNode")
   val typeOf: MethodReference = method[RelationshipDataExtractor, Int]("type")
   val connectingRelationships: MethodReference = method[CachingExpandInto, RelationshipSelectionCursor]("connectingRelationships",
-                                                                                                        typeRef[CursorFactory],
-                                                                                                        typeRef[NodeCursor],
-                                                                                                        typeRef[Long],
-                                                                                                        typeRef[Array[Int]],
-                                                                                                        typeRef[Long])
+    typeRef[CursorFactory],
+    typeRef[NodeCursor],
+    typeRef[Long],
+    typeRef[Array[Int]],
+    typeRef[Long])
 
   val mathAdd: MethodReference = method[CompiledMathHelper, Object]("add", typeRef[Object], typeRef[Object])
   val mathSub: MethodReference = method[CompiledMathHelper, Object]("subtract", typeRef[Object], typeRef[Object])

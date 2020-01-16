@@ -5,17 +5,19 @@
  */
 package org.neo4j.cypher.internal
 
-import java.util.concurrent.{ThreadFactory, TimeUnit}
+import java.util.concurrent.ThreadFactory
+import java.util.concurrent.TimeUnit
 
-import org.neo4j.cypher.internal.runtime.pipelined.tracing.{DataPointFlusher, SingleConsumerDataBuffers}
+import org.neo4j.cypher.internal.runtime.pipelined.tracing.DataPointFlusher
+import org.neo4j.cypher.internal.runtime.pipelined.tracing.SingleConsumerDataBuffers
 import org.neo4j.kernel.lifecycle.LifecycleAdapter
 
 import scala.concurrent.duration.Duration
 
 /**
-  * Worker which polls scheduler tracer data and writes it to a [[DataPointFlusher]]. Makes sure to close
-  * the flusher when interrupted.
-  */
+ * Worker which polls scheduler tracer data and writes it to a [[DataPointFlusher]]. Makes sure to close
+ * the flusher when interrupted.
+ */
 class SchedulerTracerOutputWorker(dataWriter: DataPointFlusher,
                                   dataBuffers: SingleConsumerDataBuffers,
                                   threadFactory: ThreadFactory) extends LifecycleAdapter {

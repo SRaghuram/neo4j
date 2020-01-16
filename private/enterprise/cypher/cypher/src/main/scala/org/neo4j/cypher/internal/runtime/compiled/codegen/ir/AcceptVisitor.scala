@@ -27,8 +27,8 @@ case class AcceptVisitor(produceResultOpName: String, columns: Map[String, CodeG
       val variable = context.namer.newVarName()
       generator.localVariable(variable, v.generateExpression(generator), v.codeGenType)
       generator.ternaryOperator(generator.isNull(generator.loadVariable(variable), v.codeGenType),
-                                generator.noValue(),
-                                generator.toMaterializedAnyValue(generator.loadVariable(variable), v.codeGenType))
+        generator.noValue(),
+        generator.toMaterializedAnyValue(generator.loadVariable(variable), v.codeGenType))
     }
     else generator.toMaterializedAnyValue(v.generateExpression(generator), v.codeGenType)
   }

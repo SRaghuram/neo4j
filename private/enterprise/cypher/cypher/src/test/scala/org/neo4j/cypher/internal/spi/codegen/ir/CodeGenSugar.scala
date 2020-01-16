@@ -7,30 +7,45 @@ package org.neo4j.cypher.internal.spi.codegen.ir
 
 import java.util.concurrent.atomic.AtomicInteger
 
-import org.mockito.Mockito._
+import org.mockito.Mockito.doReturn
+import org.mockito.Mockito.when
 import org.neo4j.cypher.internal.RewindableExecutionResult
-import org.neo4j.cypher.internal.compiler.planner.LogicalPlanConstructionTestSupport
-import org.neo4j.cypher.internal.executionplan.{GeneratedQuery, GeneratedQueryExecution}
-import org.neo4j.cypher.internal.logical.plans.{LogicalPlan, ProduceResult}
-import org.neo4j.cypher.internal.planner.spi.{InstrumentedGraphStatistics, PlanContext}
-import org.neo4j.cypher.internal.profiling.{ProfilingTracer, QueryProfiler}
-import org.neo4j.cypher.internal.runtime._
-import org.neo4j.cypher.internal.runtime.compiled.codegen._
-import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.Instruction
-import org.neo4j.cypher.internal.runtime.compiled.{CompiledExecutionResult, CompiledPlan}
-import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext.IndexSearchMonitor
-import org.neo4j.cypher.internal.runtime.interpreted.{TransactionBoundQueryContext, TransactionalContextWrapper}
-import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
 import org.neo4j.cypher.internal.ast.AstConstructionTestSupport
 import org.neo4j.cypher.internal.ast.semantics.SemanticTable
+import org.neo4j.cypher.internal.compiler.planner.LogicalPlanConstructionTestSupport
+import org.neo4j.cypher.internal.executionplan.GeneratedQuery
+import org.neo4j.cypher.internal.executionplan.GeneratedQueryExecution
+import org.neo4j.cypher.internal.logical.plans.LogicalPlan
+import org.neo4j.cypher.internal.logical.plans.ProduceResult
+import org.neo4j.cypher.internal.planner.spi.InstrumentedGraphStatistics
+import org.neo4j.cypher.internal.planner.spi.PlanContext
+import org.neo4j.cypher.internal.profiling.ProfilingTracer
+import org.neo4j.cypher.internal.profiling.QueryProfiler
+import org.neo4j.cypher.internal.runtime.ProfileMode
+import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.compiled.CompiledExecutionResult
+import org.neo4j.cypher.internal.runtime.compiled.CompiledPlan
+import org.neo4j.cypher.internal.runtime.compiled.codegen.ByteCodeMode
+import org.neo4j.cypher.internal.runtime.compiled.codegen.CodeGenConfiguration
+import org.neo4j.cypher.internal.runtime.compiled.codegen.CodeGenContext
+import org.neo4j.cypher.internal.runtime.compiled.codegen.CodeGenerator
+import org.neo4j.cypher.internal.runtime.compiled.codegen.Namer
+import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.Instruction
+import org.neo4j.cypher.internal.runtime.compiled.codegen.setStaticField
+import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext
+import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext.IndexSearchMonitor
+import org.neo4j.cypher.internal.runtime.interpreted.TransactionalContextWrapper
+import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
 import org.neo4j.cypher.internal.util.TaskCloser
 import org.neo4j.cypher.internal.util.attribution.Id
-import org.neo4j.cypher.result.{QueryProfile, RuntimeResult}
+import org.neo4j.cypher.result.QueryProfile
+import org.neo4j.cypher.result.RuntimeResult
 import org.neo4j.kernel.GraphDatabaseQueryService
 import org.neo4j.kernel.api.KernelTransaction.Type
 import org.neo4j.kernel.api.security.AnonymousContext
+import org.neo4j.kernel.impl.query.Neo4jTransactionalContextFactory
 import org.neo4j.kernel.impl.query.QuerySubscriber.DO_NOTHING_SUBSCRIBER
-import org.neo4j.kernel.impl.query.{Neo4jTransactionalContextFactory, RecordingQuerySubscriber}
+import org.neo4j.kernel.impl.query.RecordingQuerySubscriber
 import org.neo4j.time.Clocks
 import org.neo4j.values.virtual.MapValue
 import org.neo4j.values.virtual.VirtualValues.EMPTY_MAP
@@ -59,7 +74,7 @@ trait CodeGenSugar extends MockitoSugar with LogicalPlanConstructionTestSupport 
       val queryContext = new TransactionBoundQueryContext(transactionalContext)(mock[IndexSearchMonitor])
       val tracer = Some(new ProfilingTracer(queryContext.transactionalContext.kernelStatisticProvider))
       val result = compile(plan).executionResultBuilder(queryContext, ProfileMode, tracer, EMPTY_MAP,
-                                                        prePopulateResults = false, DO_NOTHING_SUBSCRIBER)
+        prePopulateResults = false, DO_NOTHING_SUBSCRIBER)
       result.consumeAll()
       transactionalContext.close()
       result
@@ -95,12 +110,12 @@ trait CodeGenSugar extends MockitoSugar with LogicalPlanConstructionTestSupport 
                   params: MapValue = EMPTY_MAP): RewindableExecutionResult = {
 
     val generated = clazz.execute(queryContext,
-                                  tracer.getOrElse(QueryProfiler.NONE),
-                                  params)
+      tracer.getOrElse(QueryProfiler.NONE),
+      params)
 
     val subscriber = new RecordingQuerySubscriber
     val runtimeResult = new CompiledExecutionResult(queryContext, generated, tracer.getOrElse(QueryProfile.NONE),
-                                                    prePopulateResults = false, subscriber = subscriber, generated.fieldNames())
+      prePopulateResults = false, subscriber = subscriber, generated.fieldNames())
     RewindableExecutionResult(runtimeResult, queryContext, subscriber)
   }
 

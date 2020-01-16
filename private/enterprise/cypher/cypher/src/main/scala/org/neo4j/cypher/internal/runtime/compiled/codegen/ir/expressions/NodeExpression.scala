@@ -5,8 +5,9 @@
  */
 package org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions
 
+import org.neo4j.cypher.internal.runtime.compiled.codegen.CodeGenContext
+import org.neo4j.cypher.internal.runtime.compiled.codegen.Variable
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.MethodStructure
-import org.neo4j.cypher.internal.runtime.compiled.codegen.{CodeGenContext, Variable}
 
 case class NodeExpression(nodeIdVar: Variable) extends CodeGenExpression {
 
@@ -15,7 +16,7 @@ case class NodeExpression(nodeIdVar: Variable) extends CodeGenExpression {
   override def init[E](generator: MethodStructure[E])(implicit context: CodeGenContext): Unit = {}
 
   override def generateExpression[E](structure: MethodStructure[E])(implicit context: CodeGenContext): E =
-    // Nullable primitive variables already have their nullValue (-1L) in the same domain as their possible values and do not need a null check
+  // Nullable primitive variables already have their nullValue (-1L) in the same domain as their possible values and do not need a null check
     structure.node(nodeIdVar.name, nodeIdVar.codeGenType)
 
   override def nullable(implicit context: CodeGenContext): Boolean = nodeIdVar.nullable

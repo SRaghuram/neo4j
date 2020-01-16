@@ -5,7 +5,8 @@
  */
 package org.neo4j.cypher.internal.runtime.compiled.codegen.spi
 
-import org.neo4j.cypher.internal.runtime.compiled.codegen.{CodeGenConfiguration, CodeGenContext}
+import org.neo4j.cypher.internal.runtime.compiled.codegen.CodeGenConfiguration
+import org.neo4j.cypher.internal.runtime.compiled.codegen.CodeGenContext
 import org.neo4j.cypher.internal.util.attribution.Id
 
 /**

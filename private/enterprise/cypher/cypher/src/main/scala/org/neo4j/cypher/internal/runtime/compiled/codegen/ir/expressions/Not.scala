@@ -19,7 +19,7 @@ case class Not(inner: CodeGenExpression) extends CodeGenExpression {
     if (!nullable) inner.codeGenType match {
       case t if t.isPrimitive => structure.notExpression (inner.generateExpression (structure) )
       case _ => structure.unbox(structure.threeValuedNotExpression(structure.box(inner.generateExpression(structure), inner.codeGenType)),
-                                CodeGenType.primitiveBool)
+        CodeGenType.primitiveBool)
     }
     else structure.threeValuedNotExpression(structure.box(inner.generateExpression(structure), inner.codeGenType))
 

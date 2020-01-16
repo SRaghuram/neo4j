@@ -6,7 +6,8 @@
 package org.neo4j.cypher.internal
 
 import org.mockito.Mockito.verify
-import org.neo4j.cypher.internal.runtime.pipelined.tracing.{DataPointFlusher, SingleConsumerDataBuffers}
+import org.neo4j.cypher.internal.runtime.pipelined.tracing.DataPointFlusher
+import org.neo4j.cypher.internal.runtime.pipelined.tracing.SingleConsumerDataBuffers
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 
 class SchedulerTracerOutputWorkerTest extends CypherFunSuite {
@@ -16,8 +17,8 @@ class SchedulerTracerOutputWorkerTest extends CypherFunSuite {
     val dataBuffers = new SingleConsumerDataBuffers()
 
     val tracerWorker = new SchedulerTracerOutputWorker(dataPointFlusher,
-                                                       dataBuffers,
-                                                       runnable => new Thread(runnable))
+      dataBuffers,
+      runnable => new Thread(runnable))
     tracerWorker.start()
     tracerWorker.stop()
     verify(dataPointFlusher).close()

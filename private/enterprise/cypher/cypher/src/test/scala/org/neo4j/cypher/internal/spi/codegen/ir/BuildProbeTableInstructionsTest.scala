@@ -10,28 +10,50 @@ import java.util.concurrent.atomic.AtomicInteger
 
 import org.eclipse.collections.api.iterator.LongIterator
 import org.mockito.ArgumentMatchers.any
-import org.mockito.Mockito._
+import org.mockito.Mockito.when
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
-import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.compiled.codegen.ir._
-import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.{CodeGenType, NodeProjection}
-import org.neo4j.cypher.internal.runtime.compiled.codegen.{CodeGenContext, JoinTableMethod, Variable}
-import org.neo4j.cypher.internal.runtime.interpreted.TransactionalContextWrapper
 import org.neo4j.cypher.internal.ast.semantics.SemanticTable
+import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.compiled.codegen.CodeGenContext
+import org.neo4j.cypher.internal.runtime.compiled.codegen.JoinTableMethod
+import org.neo4j.cypher.internal.runtime.compiled.codegen.Variable
+import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.AcceptVisitor
+import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.BuildCountingProbeTable
+import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.BuildProbeTable
+import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.BuildRecordingProbeTable
+import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.GetMatchesFromProbeTable
+import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.Instruction
+import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.MethodInvocation
+import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.ScanAllNodes
+import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.WhileLoop
+import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.CodeGenType
+import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.NodeProjection
+import org.neo4j.cypher.internal.runtime.interpreted.TransactionalContextWrapper
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 import org.neo4j.function.ThrowingBiConsumer
 import org.neo4j.graphdb.Node
-import org.neo4j.internal.kernel.api._
+import org.neo4j.internal.kernel.api.CursorFactory
+import org.neo4j.internal.kernel.api.NodeCursor
+import org.neo4j.internal.kernel.api.Read
 import org.neo4j.internal.kernel.api.helpers.StubNodeCursor
-import org.neo4j.kernel.impl.core.{NodeEntity, TransactionalEntityFactory}
+import org.neo4j.kernel.impl.core.NodeEntity
+import org.neo4j.kernel.impl.core.TransactionalEntityFactory
 import org.neo4j.values.AnyValue
-import org.neo4j.values.storable._
+import org.neo4j.values.storable.BooleanValue
+import org.neo4j.values.storable.FloatingPointValue
+import org.neo4j.values.storable.IntegralValue
+import org.neo4j.values.storable.TextValue
+import org.neo4j.values.storable.Values
+import org.neo4j.values.virtual.ListValue
+import org.neo4j.values.virtual.MapValue
+import org.neo4j.values.virtual.NodeValue
 import org.neo4j.values.virtual.VirtualValues.EMPTY_MAP
-import org.neo4j.values.virtual.{ListValue, MapValue, NodeValue}
 
-import scala.collection.{JavaConverters, mutable}
+import scala.collection.JavaConverters
+import scala.collection.JavaConverters.asScalaIteratorConverter
+import scala.collection.mutable
 
 class BuildProbeTableInstructionsTest extends CypherFunSuite with CodeGenSugar {
 
@@ -73,8 +95,8 @@ class BuildProbeTableInstructionsTest extends CypherFunSuite with CodeGenSugar {
     val nodes = IndexedSeq(Variable(nodeVar, CodeGenType.primitiveNode))
 
     val buildInstruction = BuildCountingProbeTable(id = "countingTable",
-                                                   name = tableVarName,
-                                                   nodes = nodes)
+      name = tableVarName,
+      nodes = nodes)
 
     // When
     val results = runTest(buildInstruction, nodes)
@@ -92,8 +114,8 @@ class BuildProbeTableInstructionsTest extends CypherFunSuite with CodeGenSugar {
     setUpNodeMocks(1, 2)
     val nodes = IndexedSeq(Variable("node1",CodeGenType.primitiveNode), Variable("node2", CodeGenType.primitiveNode))
     val buildInstruction = BuildCountingProbeTable(id = "countingTable",
-                                                   name = tableVarName,
-                                                   nodes = nodes)
+      name = tableVarName,
+      nodes = nodes)
 
     // When
     val results = runTest(buildInstruction, nodes)
@@ -113,9 +135,9 @@ class BuildProbeTableInstructionsTest extends CypherFunSuite with CodeGenSugar {
     val nodeVar = "node"
     val nodes = IndexedSeq(Variable(nodeVar,CodeGenType.primitiveNode))
     val buildInstruction = BuildRecordingProbeTable(id = "recordingTable",
-                                                    name = tableVarName,
-                                                    nodes = nodes,
-                                                    valueSymbols = Map(nodeVar -> Variable(nodeVar, CodeGenType.primitiveNode)))
+      name = tableVarName,
+      nodes = nodes,
+      valueSymbols = Map(nodeVar -> Variable(nodeVar, CodeGenType.primitiveNode)))
 
     // When
     val results = runTest(buildInstruction, nodes)
@@ -162,7 +184,6 @@ class BuildProbeTableInstructionsTest extends CypherFunSuite with CodeGenSugar {
       toObjectConverter(invocationOnMock.getArguments()(0))
   })
 
-  import JavaConverters._
   private def toObjectConverter(a: AnyRef): AnyRef = a match {
     case Values.NO_VALUE => null
     case n: NodeValue =>
@@ -214,9 +235,9 @@ class BuildProbeTableInstructionsTest extends CypherFunSuite with CodeGenSugar {
     }
 
     val buildProbeTableMethod = MethodInvocation(operatorId = Set.empty,
-                                                 symbol = JoinTableMethod(tableVarName, buildInstruction.tableType),
-                                                 methodName = buildTableMethodName,
-                                                 statements = Seq(buildWhileLoop))
+      symbol = JoinTableMethod(tableVarName, buildInstruction.tableType),
+      methodName = buildTableMethodName,
+      statements = Seq(buildWhileLoop))
 
     val probeVars = nodes.map(n => n.copy(name = s"probe" + n.name))
     //just put one node in the actual result
@@ -225,8 +246,8 @@ class BuildProbeTableInstructionsTest extends CypherFunSuite with CodeGenSugar {
     val acceptVisitor = AcceptVisitor("visitorOp", Map(resultRowKey -> NodeProjection(resultVar)))
 
     val probeTheTable = GetMatchesFromProbeTable(keys = probeVars,
-                                                 code = buildInstruction.joinData,
-                                                 action = acceptVisitor)
+      code = buildInstruction.joinData,
+      action = acceptVisitor)
 
     val probeTheTableWhileLoop = probeVars.foldRight[Instruction](probeTheTable){
       case (variable, instruction) => WhileLoop(variable, ScanAllNodes("scanOp" + counter.incrementAndGet()), instruction)

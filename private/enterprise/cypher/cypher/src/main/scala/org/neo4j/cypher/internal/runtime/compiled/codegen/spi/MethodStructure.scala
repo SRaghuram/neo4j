@@ -6,24 +6,24 @@
 package org.neo4j.cypher.internal.runtime.compiled.codegen.spi
 
 import org.neo4j.codegen.Expression
+import org.neo4j.cypher.internal.expressions.SemanticDirection
 import org.neo4j.cypher.internal.runtime.compiled.codegen.Variable
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.CodeGenType
-import org.neo4j.cypher.internal.expressions.SemanticDirection
 
 /**
-  * Describes the SPI for generating a method.
-  *
-  * In principle you can think of it as you have a method, e.g.
-  *
-  * {{{
-  *   public void foo
-  *   {
-  *   ...
-  *   }
-  * }}}
-  *
-  * This SPI describes the operations that can be put in that method.
-  */
+ * Describes the SPI for generating a method.
+ *
+ * In principle you can think of it as you have a method, e.g.
+ *
+ * {{{
+ *   public void foo
+ *   {
+ *   ...
+ *   }
+ * }}}
+ *
+ * This SPI describes the operations that can be put in that method.
+ */
 trait MethodStructure[E] {
 
 
@@ -230,12 +230,12 @@ case object Descending extends SortOrder
 case class SortItem(fieldName: String, sortOrder: SortOrder)
 
 /**
-  * What we call tuple here is a fixed length collection of query variable values,
-  * e.g. a result row (or intermediate row).
-  * The TupleDescriptor carries type information used to generate a materialization of this,
-  * e.g. a class with fields.
-  * The order of individual fields is not specified, but is left as an implementation detail.
-  */
+ * What we call tuple here is a fixed length collection of query variable values,
+ * e.g. a result row (or intermediate row).
+ * The TupleDescriptor carries type information used to generate a materialization of this,
+ * e.g. a class with fields.
+ * The order of individual fields is not specified, but is left as an implementation detail.
+ */
 sealed trait TupleDescriptor {
   val structure: Map[String, CodeGenType]
 }

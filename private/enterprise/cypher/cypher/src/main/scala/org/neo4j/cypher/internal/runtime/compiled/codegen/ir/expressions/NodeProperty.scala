@@ -5,8 +5,9 @@
  */
 package org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions
 
+import org.neo4j.cypher.internal.runtime.compiled.codegen.CodeGenContext
+import org.neo4j.cypher.internal.runtime.compiled.codegen.Variable
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.MethodStructure
-import org.neo4j.cypher.internal.runtime.compiled.codegen.{CodeGenContext, Variable}
 
 abstract class ElementProperty(token: Option[Int], propName: String, elementIdVar: String, propKeyVar: String)
   extends CodeGenExpression {
@@ -65,10 +66,10 @@ case class RelProperty(token: Option[Int], propName: String, relIdVar: Variable,
       body.relationshipGetPropertyForVar(relIdVar.name, relIdVar.codeGenType, propKeyVar, localName)
 
   override def propertyById[E](body: MethodStructure[E], localName: String) =
-  if (relIdVar.nullable)
-    body.ifNotStatement(body.isNull(relIdVar.name, CodeGenType.primitiveRel)) { ifBody =>
-      ifBody.relationshipGetPropertyById(relIdVar.name, relIdVar.codeGenType, token.get, localName)
-    }
+    if (relIdVar.nullable)
+      body.ifNotStatement(body.isNull(relIdVar.name, CodeGenType.primitiveRel)) { ifBody =>
+        ifBody.relationshipGetPropertyById(relIdVar.name, relIdVar.codeGenType, token.get, localName)
+      }
     else
       body.relationshipGetPropertyById(relIdVar.name, relIdVar.codeGenType, token.get, localName)
 

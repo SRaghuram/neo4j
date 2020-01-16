@@ -6,23 +6,22 @@
 package org.neo4j.cypher.internal.runtime.compiled.codegen.ir.functions
 
 import org.neo4j.cypher.internal.runtime.compiled.codegen.CodeGenContext
-import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions._
-import org.neo4j.cypher.internal.expressions.{functions => astFunctions}
-import org.neo4j.cypher.internal.{expressions => ast}
+import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.CodeGenExpression
 import org.neo4j.exceptions.CantCompileQueryException
+import org.neo4j.cypher.internal
 
 object functionConverter {
 
-  def apply(fcn: ast.FunctionInvocation, callback: ast.Expression => CodeGenExpression)
+  def apply(fcn: internal.expressions.FunctionInvocation, callback: internal.expressions.Expression => CodeGenExpression)
            (implicit context: CodeGenContext): CodeGenExpression = fcn.function match {
 
     // id(n)
-    case astFunctions.Id =>
+    case internal.expressions.functions.Id =>
       require(fcn.args.size == 1)
       IdCodeGenFunction(callback(fcn.args(0)))
 
     // type(r)
-    case astFunctions.Type =>
+    case internal.expressions.functions.Type =>
       require(fcn.args.size == 1)
       TypeCodeGenFunction(callback(fcn.args(0)))
 

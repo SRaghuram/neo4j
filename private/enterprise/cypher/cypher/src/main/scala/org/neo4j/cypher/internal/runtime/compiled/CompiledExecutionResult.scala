@@ -9,15 +9,20 @@ import java.lang
 import java.util.Optional
 
 import org.neo4j.cypher.internal.executionplan.GeneratedQueryExecution
-import org.neo4j.cypher.internal.runtime._
+import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.QueryStatistics
+import org.neo4j.cypher.internal.runtime.ValuePopulation
+import org.neo4j.cypher.result.NaiveQuerySubscription
+import org.neo4j.cypher.result.QueryProfile
+import org.neo4j.cypher.result.QueryResult
 import org.neo4j.cypher.result.QueryResult.QueryResultVisitor
+import org.neo4j.cypher.result.RuntimeResult
 import org.neo4j.cypher.result.RuntimeResult.ConsumptionState
-import org.neo4j.cypher.result.{NaiveQuerySubscription, QueryProfile, QueryResult, RuntimeResult}
 import org.neo4j.kernel.impl.query.QuerySubscriber
 
 /**
-  * Main class for compiled runtime results.
-  */
+ * Main class for compiled runtime results.
+ */
 class CompiledExecutionResult(context: QueryContext,
                               compiledCode: GeneratedQueryExecution,
                               override val queryProfile: QueryProfile,

@@ -5,14 +5,22 @@
  */
 package org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions
 
+import org.neo4j.cypher.internal.logical.plans.CoerceToPredicate
 import org.neo4j.cypher.internal.runtime.compiled.codegen.CodeGenContext
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.functions.functionConverter
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.MethodStructure
-import org.neo4j.cypher.internal.logical.plans.CoerceToPredicate
-import org.neo4j.cypher.internal.util.symbols._
-import org.neo4j.cypher.internal.{expressions => ast}
+import org.neo4j.cypher.internal.util.symbols.CTAny
+import org.neo4j.cypher.internal.util.symbols.CTBoolean
+import org.neo4j.cypher.internal.util.symbols.CTFloat
+import org.neo4j.cypher.internal.util.symbols.CTInteger
+import org.neo4j.cypher.internal.util.symbols.CTMap
+import org.neo4j.cypher.internal.util.symbols.CTNode
+import org.neo4j.cypher.internal.util.symbols.CTRelationship
+import org.neo4j.cypher.internal.util.symbols.CTString
+import org.neo4j.cypher.internal.util.symbols.ListType
 import org.neo4j.exceptions.CantCompileQueryException
+import org.neo4j.cypher.internal
 
 object ExpressionConverter {
 
@@ -35,30 +43,30 @@ object ExpressionConverter {
     }
   }
 
-  def createPredicate(expression: ast.Expression)
+  def createPredicate(expression: internal.expressions.Expression)
                      (implicit context: CodeGenContext): CodeGenExpression = expression match {
-    case ast.HasLabels(x:ast.LogicalVariable, label :: Nil) =>
+    case internal.expressions.HasLabels(x:internal.expressions.LogicalVariable, label :: Nil) =>
       val labelIdVariable = context.namer.newVarName()
       val nodeVariable = context.getVariable(x.name)
       HasLabel(nodeVariable, labelIdVariable, label.name).asPredicate
 
-    case exp@ast.Property(x:ast.LogicalVariable, propKey) if context.semanticTable.isNode(x) =>
+    case exp@internal.expressions.Property(x:internal.expressions.LogicalVariable, propKey) if context.semanticTable.isNode(x) =>
       createExpression(exp).asPredicate
 
-    case exp@ast.Property(x:ast.LogicalVariable, propKey) if context.semanticTable.isRelationship(x) =>
+    case exp@internal.expressions.Property(x:internal.expressions.LogicalVariable, propKey) if context.semanticTable.isRelationship(x) =>
       createExpression(exp).asPredicate
 
-    case ast.Not(e) => Not(createExpression(e)).asPredicate
+    case internal.expressions.Not(e) => Not(createExpression(e)).asPredicate
 
-    case ast.Equals(lhs, rhs) => Equals(createExpression(lhs), createExpression(rhs)).asPredicate
+    case internal.expressions.Equals(lhs, rhs) => Equals(createExpression(lhs), createExpression(rhs)).asPredicate
 
-    case ast.Or(lhs, rhs) => Or(createExpression(lhs), createExpression(rhs)).asPredicate
+    case internal.expressions.Or(lhs, rhs) => Or(createExpression(lhs), createExpression(rhs)).asPredicate
 
-    case exp: ast.LogicalVariable =>
+    case exp: internal.expressions.LogicalVariable =>
       createExpression(exp).asPredicate
 
-    case _:ast.False => False
-    case _:ast.True => True
+    case _:internal.expressions.False => False
+    case _:internal.expressions.True => True
 
     case CoerceToPredicate(inner) => createPredicate(inner)
 
@@ -67,7 +75,7 @@ object ExpressionConverter {
 
   }
 
-  def createExpression(expression: ast.Expression)
+  def createExpression(expression: internal.expressions.Expression)
                       (implicit context: CodeGenContext): CodeGenExpression = expressionConverter(expression, createExpression)
 
   def createMaterializeExpressionForVariable(variableQueryVariable: String)
@@ -104,92 +112,92 @@ object ExpressionConverter {
     }
   }
 
-  private def expressionConverter(expression: ast.Expression, callback: ast.Expression => CodeGenExpression)
-                      (implicit context: CodeGenContext): CodeGenExpression = {
+  private def expressionConverter(expression: internal.expressions.Expression, callback: internal.expressions.Expression => CodeGenExpression)
+                                 (implicit context: CodeGenContext): CodeGenExpression = {
 
     expression match {
-      case node:ast.LogicalVariable if context.semanticTable.isNode(node) =>
+      case node:internal.expressions.LogicalVariable if context.semanticTable.isNode(node) =>
         NodeExpression(context.getVariable(node.name))
 
-      case rel:ast.LogicalVariable if context.semanticTable.isRelationship(rel) =>
+      case rel:internal.expressions.LogicalVariable if context.semanticTable.isRelationship(rel) =>
         RelationshipExpression(context.getVariable(rel.name))
 
-      case ast.Property(node:ast.LogicalVariable, propKey) if context.semanticTable.isNode(node) =>
+      case internal.expressions.Property(node:internal.expressions.LogicalVariable, propKey) if context.semanticTable.isNode(node) =>
         val token = context.semanticTable.id(propKey).map(_.id)
         NodeProperty(token, propKey.name, context.getVariable(node.name), context.namer.newVarName())
 
-      case ast.Property(rel:ast.LogicalVariable, propKey) if context.semanticTable.isRelationship(rel) =>
+      case internal.expressions.Property(rel:internal.expressions.LogicalVariable, propKey) if context.semanticTable.isRelationship(rel) =>
         val token = context.semanticTable.id(propKey).map(_.id)
         RelProperty(token, propKey.name, context.getVariable(rel.name), context.namer.newVarName())
 
-      case ast.Property(mapExpression, ast.PropertyKeyName(propKeyName)) =>
+      case internal.expressions.Property(mapExpression, internal.expressions.PropertyKeyName(propKeyName)) =>
         MapProperty(callback(mapExpression), propKeyName)
 
-      case ast.Parameter(name, cypherType) =>
+      case internal.expressions.Parameter(name, cypherType) =>
         // Parameters always comes as AnyValue
         expressions.Parameter(name, context.namer.newVarName(), CypherCodeGenType(cypherType, AnyValueType))
 
-      case lit: ast.IntegerLiteral => Literal(lit.value)
+      case lit: internal.expressions.IntegerLiteral => Literal(lit.value)
 
-      case lit: ast.DoubleLiteral => Literal(lit.value)
+      case lit: internal.expressions.DoubleLiteral => Literal(lit.value)
 
-      case lit: ast.StringLiteral => Literal(lit.value)
+      case lit: internal.expressions.StringLiteral => Literal(lit.value)
 
-      case lit: ast.Literal => Literal(lit.value)
+      case lit: internal.expressions.Literal => Literal(lit.value)
 
-      case ast.ListLiteral(exprs) =>
+      case internal.expressions.ListLiteral(exprs) =>
         expressions.ListLiteral(exprs.map(e => callback(e)))
 
-      case ast.Add(lhs, rhs) =>
+      case internal.expressions.Add(lhs, rhs) =>
         val leftOp = callback(lhs)
         val rightOp = callback(rhs)
         Addition(leftOp, rightOp)
 
-      case ast.Subtract(lhs, rhs) =>
+      case internal.expressions.Subtract(lhs, rhs) =>
         val leftOp = callback(lhs)
         val rightOp = callback(rhs)
         Subtraction(leftOp, rightOp)
 
-      case ast.Multiply(lhs, rhs) =>
+      case internal.expressions.Multiply(lhs, rhs) =>
         val leftOp = callback(lhs)
         val rightOp = callback(rhs)
         Multiplication(leftOp, rightOp)
 
-      case ast.Divide(lhs, rhs) =>
+      case internal.expressions.Divide(lhs, rhs) =>
         val leftOp = callback(lhs)
         val rightOp = callback(rhs)
         Division(leftOp, rightOp)
 
-      case ast.Modulo(lhs, rhs) =>
+      case internal.expressions.Modulo(lhs, rhs) =>
         val leftOp = callback(lhs)
         val rightOp = callback(rhs)
         Modulo(leftOp, rightOp)
 
-      case ast.Pow(lhs, rhs) =>
+      case internal.expressions.Pow(lhs, rhs) =>
         val leftOp = callback(lhs)
         val rightOp = callback(rhs)
         Pow(leftOp, rightOp)
 
-      case ast.MapExpression(items) =>
+      case internal.expressions.MapExpression(items) =>
         val map = items.map {
           case (key, expr) => (key.name, callback(expr))
         }.toMap
         MyMap(map)
 
-      case ast.HasLabels(x:ast.LogicalVariable, label :: Nil) =>
+      case internal.expressions.HasLabels(x:internal.expressions.LogicalVariable, label :: Nil) =>
         val labelIdVariable = context.namer.newVarName()
         val nodeVariable = context.getVariable(x.name)
         HasLabel(nodeVariable, labelIdVariable, label.name)
 
-      case ast.Equals(lhs, rhs) => Equals(callback(lhs), callback(rhs))
+      case internal.expressions.Equals(lhs, rhs) => Equals(callback(lhs), callback(rhs))
 
-      case ast.Or(lhs, rhs) => Or(callback(lhs), callback(rhs))
+      case internal.expressions.Or(lhs, rhs) => Or(callback(lhs), callback(rhs))
 
-      case ast.Not(inner) => Not(callback(inner))
+      case internal.expressions.Not(inner) => Not(callback(inner))
 
-      case f: ast.FunctionInvocation => functionConverter(f, callback)
+      case f: internal.expressions.FunctionInvocation => functionConverter(f, callback)
 
-      case x: ast.LogicalVariable => LoadVariable(context.getVariable(x.name))
+      case x: internal.expressions.LogicalVariable => LoadVariable(context.getVariable(x.name))
 
       case other => throw new CantCompileQueryException(s"Expression of $other not yet supported")
     }

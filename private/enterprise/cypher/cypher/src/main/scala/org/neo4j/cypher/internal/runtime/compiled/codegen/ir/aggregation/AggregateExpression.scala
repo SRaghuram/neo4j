@@ -5,11 +5,14 @@
  */
 package org.neo4j.cypher.internal.runtime.compiled.codegen.ir.aggregation
 
+import org.neo4j.cypher.internal.runtime.compiled.codegen.CodeGenContext
+import org.neo4j.cypher.internal.runtime.compiled.codegen.Variable
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.Instruction
-import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions._
+import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.CodeGenExpression
+import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.CodeGenType
+import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.NodeExpression
+import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.RelationshipExpression
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.MethodStructure
-import org.neo4j.cypher.internal.runtime.compiled.codegen.{CodeGenContext, Variable}
-
 
 trait AggregateExpression {
 
@@ -27,18 +30,18 @@ trait AggregateExpression {
 
     override def body[E](generator: MethodStructure[E])(implicit context: CodeGenContext): Unit = {
       generator.trace(opName) { inner =>
-          inner.incrementRows()
-          instruction.body(inner)
+        inner.incrementRows()
+        instruction.body(inner)
       }
     }
   }
 }
 
 /**
-  * Base class for aggregate expressions
-  * @param expression the expression to aggregate
-  * @param distinct is the aggregation distinct or not
-  */
+ * Base class for aggregate expressions
+ * @param expression the expression to aggregate
+ * @param distinct is the aggregation distinct or not
+ */
 abstract class BaseAggregateExpression(expression: CodeGenExpression, distinct: Boolean) extends AggregateExpression {
 
 
@@ -46,7 +49,7 @@ abstract class BaseAggregateExpression(expression: CodeGenExpression, distinct: 
                           (implicit context: CodeGenContext)
 
   protected def ifNotNull[E](structure: MethodStructure[E])(block: MethodStructure[E] => Unit)
-                          (implicit context: CodeGenContext) = {
+                            (implicit context: CodeGenContext) = {
     expression match {
       case NodeExpression(v) => primitiveIfNot(v, structure)(block(_))
       case RelationshipExpression(v) => primitiveIfNot(v, structure)(block(_))
@@ -72,8 +75,8 @@ abstract class BaseAggregateExpression(expression: CodeGenExpression, distinct: 
   private def primitiveIfNot[E](v: Variable, structure: MethodStructure[E])(block: MethodStructure[E] => Unit)
                                (implicit context: CodeGenContext) = {
     structure.ifNotStatement(structure.equalityExpression(structure.loadVariable(v.name),
-                                                          structure.constantExpression(Long.box(-1)),
-                                                          CodeGenType.primitiveInt)) { body =>
+      structure.constantExpression(Long.box(-1)),
+      CodeGenType.primitiveInt)) { body =>
       if (distinct) {
         distinctCondition(structure.loadVariable(v.name), CodeGenType.primitiveInt, body) { inner =>
           block(inner)

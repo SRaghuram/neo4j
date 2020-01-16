@@ -9,29 +9,59 @@ import java.lang
 import java.util.Optional
 
 import org.neo4j.codegen.api.CodeGeneration
+import org.neo4j.cypher.CypherInterpretedPipesFallbackOption
+import org.neo4j.cypher.CypherOperatorEngineOption
 import org.neo4j.cypher.internal.PipelinedRuntime.CODE_GEN_FAILED_MESSAGE
-import org.neo4j.cypher.internal.compiler.{CodeGenerationFailedNotification, ExperimentalFeatureNotification}
+import org.neo4j.cypher.internal.compiler.CodeGenerationFailedNotification
+import org.neo4j.cypher.internal.compiler.ExperimentalFeatureNotification
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
-import org.neo4j.cypher.internal.physicalplanning._
+import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
+import org.neo4j.cypher.internal.physicalplanning.OperatorFusionPolicy
+import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanner
+import org.neo4j.cypher.internal.physicalplanning.PipelineBuilder
 import org.neo4j.cypher.internal.plandescription.Argument
-import org.neo4j.cypher.internal.runtime._
+import org.neo4j.cypher.internal.runtime.ExecutionMode
+import org.neo4j.cypher.internal.runtime.InputDataStream
+import org.neo4j.cypher.internal.runtime.MemoryTracking
+import org.neo4j.cypher.internal.runtime.MemoryTrackingController
+import org.neo4j.cypher.internal.runtime.ParameterMapping
+import org.neo4j.cypher.internal.runtime.ProfileMode
+import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.QueryIndexRegistrator
+import org.neo4j.cypher.internal.runtime.QueryIndexes
+import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
+import org.neo4j.cypher.internal.runtime.QueryStatistics
+import org.neo4j.cypher.internal.runtime.ThreadSafeResourceManager
+import org.neo4j.cypher.internal.runtime.createParameterArray
 import org.neo4j.cypher.internal.runtime.debug.DebugLog
 import org.neo4j.cypher.internal.runtime.interpreted.InterpretedPipeMapper
-import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{CommunityExpressionConverter, ExpressionConverters}
-import org.neo4j.cypher.internal.runtime.pipelined.{ExecutablePipeline, _}
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{ExecutionGraphSchedulingPolicy, LazyScheduling, ProfiledQuerySubscription, QueryExecutor}
+import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.CommunityExpressionConverter
+import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
+import org.neo4j.cypher.internal.runtime.pipelined.ExecutablePipeline
+import org.neo4j.cypher.internal.runtime.pipelined.FuseOperators
+import org.neo4j.cypher.internal.runtime.pipelined.InterpretedPipesFallbackPolicy
+import org.neo4j.cypher.internal.runtime.pipelined.OperatorFactory
+import org.neo4j.cypher.internal.runtime.pipelined.PipelinedPipelineBreakingPolicy
+import org.neo4j.cypher.internal.runtime.pipelined.execution.ExecutionGraphSchedulingPolicy
+import org.neo4j.cypher.internal.runtime.pipelined.execution.LazyScheduling
+import org.neo4j.cypher.internal.runtime.pipelined.execution.ProfiledQuerySubscription
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryExecutor
 import org.neo4j.cypher.internal.runtime.pipelined.expressions.PipelinedBlacklist
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.SchedulerTracer
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper
-import org.neo4j.cypher.internal.runtime.slotted.expressions.{CompiledExpressionConverter, SlottedExpressionConverters}
-import org.neo4j.cypher.internal.util.{CypherException, InternalNotification}
+import org.neo4j.cypher.internal.runtime.slotted.expressions.CompiledExpressionConverter
+import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionConverters
+import org.neo4j.cypher.internal.util.CypherException
+import org.neo4j.cypher.internal.util.InternalNotification
+import org.neo4j.cypher.result.QueryProfile
+import org.neo4j.cypher.result.RuntimeResult
 import org.neo4j.cypher.result.RuntimeResult.ConsumptionState
-import org.neo4j.cypher.result.{QueryProfile, RuntimeResult}
-import org.neo4j.cypher.{CypherInterpretedPipesFallbackOption, CypherOperatorEngineOption}
 import org.neo4j.exceptions.CantCompileQueryException
+import org.neo4j.internal.kernel.api.CursorFactory
+import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.internal.kernel.api.security.SecurityContext
-import org.neo4j.internal.kernel.api.{CursorFactory, IndexReadSession}
-import org.neo4j.kernel.impl.query.{QuerySubscriber, QuerySubscription}
+import org.neo4j.kernel.impl.query.QuerySubscriber
+import org.neo4j.kernel.impl.query.QuerySubscription
 import org.neo4j.values.AnyValue
 import org.neo4j.values.virtual.MapValue
 
@@ -75,10 +105,10 @@ class PipelinedRuntime private(parallelExecution: Boolean,
       val operatorFusionPolicy = OperatorFusionPolicy(shouldFuseOperators, fusionOverPipelinesEnabled = !parallelExecution)
 
       compilePlan(operatorFusionPolicy,
-                  query,
-                  context,
-                  new QueryIndexRegistrator(context.schemaRead),
-                  Set.empty)
+        query,
+        context,
+        new QueryIndexRegistrator(context.schemaRead),
+        Set.empty)
     } catch {
       case e: CypherException if ENABLE_DEBUG_PRINTS =>
         printFailureStackTrace(e)
@@ -90,7 +120,7 @@ class PipelinedRuntime private(parallelExecution: Boolean,
   }
 
   private def selectBatchSize(query: LogicalQuery,
-                               context: EnterpriseRuntimeContext): Int = {
+                              context: EnterpriseRuntimeContext): Int = {
     val maxCardinality = query.logicalPlan.flatten.map(plan => query.cardinalities.get(plan.id)).max
     val batchSize = if (maxCardinality.amount.toLong > context.config.pipelinedBatchSizeBig) context.config.pipelinedBatchSizeBig else context.config.pipelinedBatchSizeSmall
     batchSize
@@ -108,10 +138,10 @@ class PipelinedRuntime private(parallelExecution: Boolean,
     val breakingPolicy = PipelinedPipelineBreakingPolicy(operatorFusionPolicy, interpretedPipesFallbackPolicy)
 
     val physicalPlan = PhysicalPlanner.plan(context.tokenContext,
-                                            query.logicalPlan,
-                                            query.semanticTable,
-                                            breakingPolicy,
-                                            allocateArgumentSlots = true)
+      query.logicalPlan,
+      query.semanticTable,
+      breakingPolicy,
+      allocateArgumentSlots = true)
 
     if (ENABLE_DEBUG_PRINTS && PRINT_PLAN_INFO_EARLY) {
       printRewrittenPlanInfo(physicalPlan.logicalPlan)
@@ -149,12 +179,12 @@ class PipelinedRuntime private(parallelExecution: Boolean,
     val readOnly = interpretedPipesFallbackPolicy.readOnly
 
     val operatorFactory = new OperatorFactory(executionGraphDefinition,
-                                              converters,
-                                              readOnly = readOnly,
-                                              queryIndexRegistrator,
-                                              query.semanticTable,
-                                              interpretedPipesFallbackPolicy,
-                                              slottedPipeBuilder)
+      converters,
+      readOnly = readOnly,
+      queryIndexRegistrator,
+      query.semanticTable,
+      interpretedPipesFallbackPolicy,
+      slottedPipeBuilder)
 
     DebugLog.logDiff("PipelineBuilder")
     //=======================================================
@@ -197,20 +227,20 @@ class PipelinedRuntime private(parallelExecution: Boolean,
       }
 
       new PipelinedExecutionPlan(executablePipelines,
-                                 executionGraphDefinition,
-                                 queryIndexRegistrator.result(),
-                                 physicalPlan.nExpressionSlots,
-                                 physicalPlan.logicalPlan,
-                                 physicalPlan.parameterMapping,
-                                 query.resultColumns,
-                                 executor,
-                                 context.runtimeEnvironment.tracer,
-                                 batchSize,
-                                 context.config.memoryTrackingController,
-                                 maybeThreadSafeExecutionResources,
-                                 metadata,
-                                 warnings,
-                                 executionGraphSchedulingPolicy)
+        executionGraphDefinition,
+        queryIndexRegistrator.result(),
+        physicalPlan.nExpressionSlots,
+        physicalPlan.logicalPlan,
+        physicalPlan.parameterMapping,
+        query.resultColumns,
+        executor,
+        context.runtimeEnvironment.tracer,
+        batchSize,
+        context.config.memoryTrackingController,
+        maybeThreadSafeExecutionResources,
+        metadata,
+        warnings,
+        executionGraphSchedulingPolicy)
     } catch {
       case e:Exception if operatorFusionPolicy.fusionEnabled =>
         // We failed to compile all the pipelines. Retry physical planning with fusing disabled.
@@ -221,10 +251,10 @@ class PipelinedRuntime private(parallelExecution: Boolean,
 
         val nextOperatorFusionPolicy =
           if (operatorFusionPolicy.fusionOverPipelineEnabled)
-            // Try again with fusion within pipeline enabled
+          // Try again with fusion within pipeline enabled
             OperatorFusionPolicy(fusionEnabled = true, fusionOverPipelinesEnabled = false)
           else
-            // Try again with fusion disabled
+          // Try again with fusion disabled
             OperatorFusionPolicy(fusionEnabled = false, fusionOverPipelinesEnabled = false)
 
         compilePlan(nextOperatorFusionPolicy, query, context, queryIndexRegistrator, warnings + warning)
@@ -255,22 +285,22 @@ class PipelinedRuntime private(parallelExecution: Boolean,
                      subscriber: QuerySubscriber): RuntimeResult = {
 
       new PipelinedRuntimeResult(executablePipelines,
-                                 executionGraphDefinition,
-                                 queryIndexes.initiateLabelAndSchemaIndexes(queryContext),
-                                 nExpressionSlots,
-                                 prePopulateResults,
-                                 inputDataStream,
-                                 logicalPlan,
-                                 queryContext,
-                                 createParameterArray(params, parameterMapping),
-                                 fieldNames,
-                                 queryExecutor,
-                                 schedulerTracer,
-                                 subscriber,
-                                 executionMode == ProfileMode,
-                                 batchSize,
-                                 memoryTrackingController.memoryTracking,
-                                 executionGraphSchedulingPolicy)
+        executionGraphDefinition,
+        queryIndexes.initiateLabelAndSchemaIndexes(queryContext),
+        nExpressionSlots,
+        prePopulateResults,
+        inputDataStream,
+        logicalPlan,
+        queryContext,
+        createParameterArray(params, parameterMapping),
+        fieldNames,
+        queryExecutor,
+        schedulerTracer,
+        subscriber,
+        executionMode == ProfileMode,
+        batchSize,
+        memoryTrackingController.memoryTracking,
+        executionGraphSchedulingPolicy)
     }
 
     override def runtimeName: RuntimeName = PipelinedRuntime.this.runtimeName

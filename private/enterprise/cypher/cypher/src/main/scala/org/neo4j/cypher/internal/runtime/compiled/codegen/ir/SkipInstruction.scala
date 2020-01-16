@@ -5,11 +5,14 @@
  */
 package org.neo4j.cypher.internal.runtime.compiled.codegen.ir
 
-import org.neo4j.codegen.Expression.{constant, invoke, newInstance}
+import org.neo4j.codegen.Expression.constant
+import org.neo4j.codegen.Expression.invoke
+import org.neo4j.codegen.Expression.newInstance
 import org.neo4j.codegen.MethodReference
 import org.neo4j.cypher.internal.runtime.compiled.codegen.CodeGenContext
 import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.CodeGenExpression
-import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.{LessThan, MethodStructure}
+import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.LessThan
+import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.MethodStructure
 import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure.typeRef
 import org.neo4j.exceptions.InvalidArgumentException
 

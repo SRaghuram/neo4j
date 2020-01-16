@@ -5,7 +5,14 @@
  */
 package org.neo4j.cypher.internal
 
-import org.bitbucket.inkytonik.kiama.output.PrettyPrinter._
+import org.bitbucket.inkytonik.kiama.output.PrettyPrinter.any
+import org.bitbucket.inkytonik.kiama.output.PrettyPrinter.link
+import org.bitbucket.inkytonik.kiama.output.PrettyPrinter.list
+import org.bitbucket.inkytonik.kiama.output.PrettyPrinter.nest
+import org.bitbucket.inkytonik.kiama.output.PrettyPrinter.pretty
+import org.bitbucket.inkytonik.kiama.output.PrettyPrinter.Doc
+import org.bitbucket.inkytonik.kiama.output.PrettyPrinter.line
+import org.bitbucket.inkytonik.kiama.output.PrettyPrinter.text
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.SlotConfigurations
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe

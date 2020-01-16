@@ -36,5 +36,5 @@ case class Or(lhs: CodeGenExpression, rhs: CodeGenExpression) extends CodeGenExp
           CypherCodeGenType(CTBoolean, ReferenceType))
     }
     else structure.threeValuedOrExpression(structure.box(lhs.generateExpression(structure), lhs.codeGenType),
-                                           structure.box(rhs.generateExpression(structure), rhs.codeGenType))
+      structure.box(rhs.generateExpression(structure), rhs.codeGenType))
 }

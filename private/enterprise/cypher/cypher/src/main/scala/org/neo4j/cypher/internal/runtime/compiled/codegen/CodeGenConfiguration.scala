@@ -5,32 +5,33 @@
  */
 package org.neo4j.cypher.internal.runtime.compiled.codegen
 
-import java.nio.file.{Path, Paths}
+import java.nio.file.Path
+import java.nio.file.Paths
 
 import org.neo4j.exceptions.InternalException
 
 /**
-  * Configuration modes for code generation
-  */
+ * Configuration modes for code generation
+ */
 sealed trait CodeGenMode
 
 /**
-  * Produces source code
-  */
+ * Produces source code
+ */
 case object SourceCodeMode extends CodeGenMode
 
 /**
-  * Produce byte code directly
-  */
+ * Produce byte code directly
+ */
 case object ByteCodeMode extends CodeGenMode
 
 /**
-  * Configuration class for code generation
+ * Configuration class for code generation
  *
-  * @param mode The mode of code generation
-  * @param showSource if `true` source code is stored and returned
-  * @param packageName The name of the v4_0 the produced code should belong to
-  */
+ * @param mode The mode of code generation
+ * @param showSource if `true` source code is stored and returned
+ * @param packageName The name of the v4_0 the produced code should belong to
+ */
 case class CodeGenConfiguration(mode: CodeGenMode = CodeGenMode.default,
                                 showSource: Boolean = false,
                                 showByteCode: Boolean = false,

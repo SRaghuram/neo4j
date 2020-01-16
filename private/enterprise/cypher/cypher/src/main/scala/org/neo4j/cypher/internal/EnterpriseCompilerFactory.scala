@@ -7,7 +7,12 @@ package org.neo4j.cypher.internal
 
 import java.time.Clock
 
-import org.neo4j.cypher._
+import org.neo4j.cypher.CypherInterpretedPipesFallbackOption
+import org.neo4j.cypher.CypherOperatorEngineOption
+import org.neo4j.cypher.CypherPlannerOption
+import org.neo4j.cypher.CypherRuntimeOption
+import org.neo4j.cypher.CypherUpdateStrategy
+import org.neo4j.cypher.CypherVersion
 import org.neo4j.cypher.internal.compiler.CypherPlannerConfiguration
 import org.neo4j.cypher.internal.executionplan.GeneratedQuery
 import org.neo4j.cypher.internal.planner.spi.TokenContext
@@ -75,9 +80,9 @@ class EnterpriseCompilerFactory(graph: GraphDatabaseQueryService,
 }
 
 /**
-  * Enterprise runtime context. Enriches the community runtime context with infrastructure needed for
-  * query compilation and parallel execution.
-  */
+ * Enterprise runtime context. Enriches the community runtime context with infrastructure needed for
+ * query compilation and parallel execution.
+ */
 case class EnterpriseRuntimeContext(tokenContext: TokenContext,
                                     schemaRead: SchemaRead,
                                     codeStructure: CodeStructure[GeneratedQuery],
@@ -92,8 +97,8 @@ case class EnterpriseRuntimeContext(tokenContext: TokenContext,
                                     interpretedPipesFallback: CypherInterpretedPipesFallbackOption) extends RuntimeContext
 
 /**
-  * Manager of EnterpriseRuntimeContexts.
-  */
+ * Manager of EnterpriseRuntimeContexts.
+ */
 case class EnterpriseRuntimeContextManager(codeStructure: CodeStructure[GeneratedQuery],
                                            log: Log,
                                            config: CypherRuntimeConfiguration,
@@ -109,17 +114,17 @@ case class EnterpriseRuntimeContextManager(codeStructure: CodeStructure[Generate
                       operatorEngine: CypherOperatorEngineOption,
                       interpretedPipesFallback: CypherInterpretedPipesFallbackOption): EnterpriseRuntimeContext =
     EnterpriseRuntimeContext(tokenContext,
-                             schemaRead,
-                             codeStructure,
-                             log,
-                             clock,
-                             debugOptions,
-                             config,
-                             runtimeEnvironment,
-                             compileExpressions,
-                             materializedEntitiesMode,
-                             operatorEngine,
-                             interpretedPipesFallback)
+      schemaRead,
+      codeStructure,
+      log,
+      clock,
+      debugOptions,
+      config,
+      runtimeEnvironment,
+      compileExpressions,
+      materializedEntitiesMode,
+      operatorEngine,
+      interpretedPipesFallback)
 
   override def assertAllReleased(): Unit = {
     // This is for test assertions only, and should run on the parallel executor.
