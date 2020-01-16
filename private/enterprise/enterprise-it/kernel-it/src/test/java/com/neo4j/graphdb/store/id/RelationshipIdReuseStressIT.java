@@ -6,7 +6,6 @@
 package com.neo4j.graphdb.store.id;
 
 import com.neo4j.test.extension.EnterpriseDbmsExtension;
-import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 
@@ -39,7 +38,7 @@ import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
 
 import static java.lang.System.currentTimeMillis;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 @EnterpriseDbmsExtension
@@ -99,9 +98,9 @@ class RelationshipIdReuseStressIT
         completeFutures( futures );
 
         long highestPossibleIdInUse = getHighestUsedIdForRelationships();
-        assertThat( "Number of created relationships should be higher then highest possible id, since those are " +
-                    "reused.", relationshipsCreator.getCreatedRelationships(),
-                Matchers.greaterThan( highestPossibleIdInUse ) );
+        assertThat( relationshipsCreator.getCreatedRelationships() ).as(
+                "Number of created relationships should be higher then highest possible id, since those are " + "reused." ).isGreaterThan(
+                highestPossibleIdInUse );
     }
 
     private long getHighestUsedIdForRelationships()

@@ -28,8 +28,7 @@ import org.neo4j.driver.reactive.RxTransaction;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.procedure.impl.GlobalProceduresRegistry;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
+import static org.assertj.core.api.Assertions.assertThat;
 
 class BoltLocalResultStreamTest
 {
@@ -83,7 +82,7 @@ class BoltLocalResultStreamTest
                         .collect( Collectors.toList() )
         );
 
-        assertThat( result, equalTo( List.of( "r0", "r1", "r2", "r3", "r4" ) ) );
+        assertThat( result ).isEqualTo( List.of( "r0", "r1", "r2", "r3", "r4" ) );
     }
 
     @Test
@@ -101,7 +100,7 @@ class BoltLocalResultStreamTest
                     .collect( Collectors.toList() );
         } );
 
-        assertThat( result, equalTo( List.of( "r0", "r1", "r2", "r3", "r4" ) ) );
+        assertThat( result ).isEqualTo( List.of( "r0", "r1", "r2", "r3", "r4" ) );
     }
 
     @Test
@@ -120,7 +119,7 @@ class BoltLocalResultStreamTest
                     .collect( Collectors.toList() );
         } );
 
-        assertThat( result, equalTo( List.of( "r0", "r1" ) ) );
+        assertThat( result ).isEqualTo( List.of( "r0", "r1" ) );
     }
 
     private <T> T inMegaTx( Function<Transaction,T> workload )

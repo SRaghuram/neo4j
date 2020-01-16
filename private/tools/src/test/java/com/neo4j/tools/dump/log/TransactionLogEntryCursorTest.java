@@ -16,9 +16,7 @@ import java.util.stream.Stream;
 import org.neo4j.kernel.impl.transaction.log.ArrayIOCursor;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntry;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.arrayWithSize;
-import static org.hamcrest.Matchers.equalTo;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -88,8 +86,8 @@ class TransactionLogEntryCursorTest
         for ( int i = 0; i < 4; i++ )
         {
             assertTrue( transactionCursor.next() );
-            assertThat( transactionCursor.get(), arrayWithSize( 1 ) );
-            assertThat( transactionCursor.get()[0].getType(), equalTo( CHECK_POINT ) );
+            assertThat( transactionCursor.get() ).hasSize( 1 );
+            assertThat( transactionCursor.get()[0].getType() ).isEqualTo( CHECK_POINT );
         }
     }
 

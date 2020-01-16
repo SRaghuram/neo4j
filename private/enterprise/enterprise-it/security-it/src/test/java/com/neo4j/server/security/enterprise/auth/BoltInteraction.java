@@ -48,7 +48,7 @@ import org.neo4j.values.virtual.ListValue;
 import org.neo4j.values.virtual.MapValue;
 
 import static io.netty.channel.local.LocalAddress.ANY;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
@@ -163,7 +163,7 @@ class BoltInteraction implements NeoInteractionLevel<BoltInteraction.BoltSubject
         subject.client.connect( server.lookupDefaultConnector() )
                 .send( util.defaultAcceptedVersions() )
                 .send( util.defaultAuth( map( REALM_KEY, NATIVE_REALM, PRINCIPAL, username, CREDENTIALS, password, SCHEME_KEY, BASIC_SCHEME ) ) );
-        assertThat( subject.client, util.eventuallyReceivesSelectedProtocolVersion() );
+        assertThat( subject.client ).satisfies( util.eventuallyReceivesSelectedProtocolVersion() );
         subject.setLoginResult( util.receiveOneResponseMessage( subject.client ) );
         return subject;
     }

@@ -23,11 +23,9 @@ import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.values.virtual.MapValue;
 import org.neo4j.values.virtual.VirtualValues;
 
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.CoreMatchers.not;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.neo4j.bolt.runtime.statemachine.StatementProcessor.EMPTY;
-import static org.neo4j.bolt.testing.BoltMatchers.containsRecord;
+import static org.neo4j.bolt.testing.BoltConditions.containsRecord;
 import static org.neo4j.kernel.api.exceptions.Status.Statement.SyntaxError;
 import static org.neo4j.kernel.api.exceptions.Status.Transaction.Terminated;
 
@@ -56,7 +54,7 @@ abstract class MultiDatabaseBoltStateMachineTestBase
         var machine = newStateMachineInReadyState();
 
         RecordedBoltResponse response = sessionRun( "Unwind [1, 2, 3] as n return n", machine );
-        assertThat( response, containsRecord( 1L ) );
+        assertThat( response ).satisfies( containsRecord( 1L ) );
         reset( machine );
     }
 
@@ -66,7 +64,7 @@ abstract class MultiDatabaseBoltStateMachineTestBase
         var machine = newStateMachineInReadyState();
 
         RecordedBoltResponse response = txRun( "Unwind [1, 2, 3] as n return n", machine );
-        assertThat( response, containsRecord( 1L ) );
+        assertThat( response ).satisfies( containsRecord( 1L ) );
         reset( machine );
     }
 
@@ -82,7 +80,7 @@ abstract class MultiDatabaseBoltStateMachineTestBase
 
         // Then
         RecordedBoltResponse second = sessionRun( "Unwind [4, 5] as n return n", machine );
-        assertThat( second, containsRecord( 4L ) );
+        assertThat( second ).satisfies( containsRecord( 4L ) );
         reset( machine );
     }
 
@@ -98,7 +96,7 @@ abstract class MultiDatabaseBoltStateMachineTestBase
 
         // Then
         RecordedBoltResponse second = txRun( "Unwind [4, 5] as n return n", machine );
-        assertThat( second, containsRecord( 4L ) );
+        assertThat( second ).satisfies( containsRecord( 4L ) );
         reset( machine );
     }
 
@@ -210,7 +208,7 @@ abstract class MultiDatabaseBoltStateMachineTestBase
      */
     protected static void verifyStatementProcessorIsEmpty( AbstractBoltStateMachine machine )
     {
-        assertThat( machine.connectionState().getStatementProcessor(), equalTo( EMPTY ) );
+        assertThat( machine.connectionState().getStatementProcessor() ).isEqualTo( EMPTY );
     }
 
     /**
@@ -219,7 +217,7 @@ abstract class MultiDatabaseBoltStateMachineTestBase
     protected static void verifyStatementProcessorNotEmpty( AbstractBoltStateMachine machine )
     {
         StatementProcessor processor = machine.connectionState().getStatementProcessor();
-        assertThat( processor, not( EMPTY ) );
+        assertThat( processor ).isNotEqualTo( EMPTY );
     }
 
     protected static HelloMessage newHelloMessage()

@@ -36,8 +36,7 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.RandomExtension;
 import org.neo4j.test.rule.RandomRule;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -409,8 +408,8 @@ class SchemaAcceptanceEnterpriseTest extends SchemaAcceptanceTestBase
         }
         try ( Transaction tx = db.beginTx() )
         {
-            assertThat( count( tx.schema().getIndexes() ), is( 0L ) );
-            assertThat( count( tx.schema().getConstraints() ), is( 0L ) );
+            assertThat( count( tx.schema().getIndexes() ) ).isEqualTo( 0L );
+            assertThat( count( tx.schema().getConstraints() ) ).isEqualTo( 0L );
             tx.commit();
         }
     }
@@ -424,13 +423,13 @@ class SchemaAcceptanceEnterpriseTest extends SchemaAcceptanceTestBase
             ConstraintDefinition constraint = tx.schema().constraintFor( label ).assertPropertyIsNodeKey( propertyKey ).create();
             name = constraint.getName();
             IndexDefinition index = tx.schema().getIndexByName( name );
-            assertThat( index.getIndexType(), is( BTREE ) );
+            assertThat( index.getIndexType() ).isEqualTo( BTREE );
             tx.commit();
         }
         try ( Transaction tx = db.beginTx() )
         {
             IndexDefinition index = tx.schema().getIndexByName( name );
-            assertThat( index.getIndexType(), is( BTREE ) );
+            assertThat( index.getIndexType() ).isEqualTo( BTREE );
         }
     }
 
@@ -443,13 +442,13 @@ class SchemaAcceptanceEnterpriseTest extends SchemaAcceptanceTestBase
             ConstraintDefinition constraint = tx.schema().constraintFor( label ).assertPropertyIsNodeKey( propertyKey ).withIndexType( BTREE ).create();
             name = constraint.getName();
             IndexDefinition index = tx.schema().getIndexByName( name );
-            assertThat( index.getIndexType(), is( BTREE ) );
+            assertThat( index.getIndexType() ).isEqualTo( BTREE );
             tx.commit();
         }
         try ( Transaction tx = db.beginTx() )
         {
             IndexDefinition index = tx.schema().getIndexByName( name );
-            assertThat( index.getIndexType(), is( BTREE ) );
+            assertThat( index.getIndexType() ).isEqualTo( BTREE );
         }
     }
 

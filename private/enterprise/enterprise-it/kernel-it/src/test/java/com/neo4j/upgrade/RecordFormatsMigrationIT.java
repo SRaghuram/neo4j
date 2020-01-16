@@ -44,8 +44,7 @@ import org.neo4j.test.extension.Neo4jLayoutExtension;
 import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 
 import static org.apache.commons.lang3.exception.ExceptionUtils.getRootCause;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.instanceOf;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -106,8 +105,8 @@ class RecordFormatsMigrationIT
         {
             DatabaseStateService dbStateService = database.getDependencyResolver().resolveDependency( DatabaseStateService.class );
             assertTrue( dbStateService.causeOfFailure( database.databaseId() ).isPresent() );
-            assertThat( getRootCause( dbStateService.causeOfFailure( database.databaseId() ).get() ),
-                    instanceOf( UnexpectedUpgradingStoreFormatException.class ) );
+            assertThat( getRootCause( dbStateService.causeOfFailure( database.databaseId() ).get() ) ).isInstanceOf(
+                    UnexpectedUpgradingStoreFormatException.class );
         }
         finally
         {

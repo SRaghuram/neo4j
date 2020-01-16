@@ -23,8 +23,7 @@ import org.neo4j.kernel.impl.api.KernelTransactions;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 
 import static com.neo4j.utils.DriverUtils.doInMegaTx;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsString;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -94,8 +93,8 @@ class ErrorsEndToEndTest
         var e = run( "Some Garbage"  );
 
         assertEquals( SyntaxError.code().serialize(), e.code() );
-        assertThat( e.getMessage(), containsString( "Invalid input 'o'" ) );
-        assertThat( e.getMessage(), containsString( "\"Some Garbage\"" ) );
+        assertThat( e.getMessage() ).contains( "Invalid input 'o'" );
+        assertThat( e.getMessage() ).contains( "\"Some Garbage\"" );
 
         verifyCleanUp();
     }
@@ -108,8 +107,8 @@ class ErrorsEndToEndTest
         // even though this error is reported as Syntax error to the user,
         // it is created during semantic analysis phase of query processing
         assertEquals( SyntaxError.code().serialize(), e.code() );
-        assertThat( e.getMessage(), containsString( "Variable `b` not defined" ) );
-        assertThat( e.getMessage(), containsString( "\"UNWIND[1, 0] AS a RETURN b\"" ) );
+        assertThat( e.getMessage() ).contains( "Variable `b` not defined" );
+        assertThat( e.getMessage() ).contains( "\"UNWIND[1, 0] AS a RETURN b\"" );
     }
 
     @Test
@@ -128,8 +127,8 @@ class ErrorsEndToEndTest
         var e = run( "USE mega.graph0 CREATE USER me SET PASSWORD 'secret1234'" );
 
         assertEquals( SyntaxError.code().serialize(), e.code() );
-        assertThat( e.getMessage(), containsString( "Invalid input ' '" ) );
-        assertThat( e.getMessage(), containsString( "\"USE mega.graph0 CREATE USER me SET PASSWORD 'secret1234'\"" ) );
+        assertThat( e.getMessage() ).contains( "Invalid input ' '" );
+        assertThat( e.getMessage() ).contains( "\"USE mega.graph0 CREATE USER me SET PASSWORD 'secret1234'\"" );
     }
 
     @Test
@@ -148,8 +147,8 @@ class ErrorsEndToEndTest
         var e = run( "USE mega.graph0 CREATE INDEX ON :Person(firstname)" );
 
         assertEquals( SyntaxError.code().serialize(), e.code() );
-        assertThat( e.getMessage(), containsString( "Invalid input 'N'" ) );
-        assertThat( e.getMessage(), containsString( "\"USE mega.graph0 CREATE INDEX ON :Person(firstname)\"" ) );
+        assertThat( e.getMessage() ).contains( "Invalid input 'N'" );
+        assertThat( e.getMessage() ).contains( "\"USE mega.graph0 CREATE INDEX ON :Person(firstname)\"" );
     }
 
     @Test
@@ -165,8 +164,8 @@ class ErrorsEndToEndTest
         var e = run( query );
 
         assertEquals( SyntaxError.code().serialize(), e.code() );
-        assertThat( e.getMessage(), containsString( "USE can only appear at the beginning of a (sub-)query" ) );
-        assertThat( e.getMessage(), containsString( "\"USE mega.graph1\"" ) );
+        assertThat( e.getMessage() ).contains( "USE can only appear at the beginning of a (sub-)query" );
+        assertThat( e.getMessage() ).contains( "\"USE mega.graph1\"" );
     }
 
     @Test
@@ -181,8 +180,8 @@ class ErrorsEndToEndTest
         var e = run( query );
 
         assertEquals( SyntaxError.code().serialize(), e.code() );
-        assertThat( e.getMessage(), containsString( "USE can only appear at the beginning of a (sub-)query" ) );
-        assertThat( e.getMessage(), containsString( "\"USE mega.graph0\"" ) );
+        assertThat( e.getMessage() ).contains( "USE can only appear at the beginning of a (sub-)query" );
+        assertThat( e.getMessage() ).contains( "\"USE mega.graph0\"" );
     }
 
     @Test
@@ -264,8 +263,8 @@ class ErrorsEndToEndTest
         var e = run( "USE mega.graph(somewhere.nonExistentFunction()) RETURN 1" );
 
         assertEquals( SyntaxError.code().serialize(), e.code() );
-        assertThat( e.getMessage(), containsString( "Unknown function 'somewhere.nonExistentFunction'" ) );
-        assertThat( e.getMessage(), containsString( "\"USE mega.graph(somewhere.nonExistentFunction()) RETURN 1\"" ) );
+        assertThat( e.getMessage() ).contains( "Unknown function 'somewhere.nonExistentFunction'" );
+        assertThat( e.getMessage() ).contains( "\"USE mega.graph(somewhere.nonExistentFunction()) RETURN 1\"" );
     }
 
     @Test

@@ -45,8 +45,7 @@ import org.neo4j.kernel.impl.api.KernelTransactions;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.procedure.impl.GlobalProceduresRegistry;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsString;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -263,7 +262,7 @@ class TransactionIntegrationTest
         }
         catch ( Exception e )
         {
-            assertThat( e.getMessage(), containsString( "/ by zero" ) );
+            assertThat( e.getMessage() ).contains( "/ by zero" );
         }
 
         verifyNoOpenTransactions();
@@ -301,7 +300,7 @@ class TransactionIntegrationTest
         }
         catch ( Exception e )
         {
-            assertThat( e.getMessage(), containsString( "/ by zero" ) );
+            assertThat( e.getMessage() ).contains( "/ by zero" );
         }
 
         verifyNoOpenTransactions();
@@ -414,7 +413,7 @@ class TransactionIntegrationTest
                 .collectList()
                 .block() );
 
-        assertThat( exception.getMessage(), containsString( "/ by zero" ) );
+        assertThat( exception.getMessage() ).contains( "/ by zero" );
 
         verifyNoOpenTransactions();
     }

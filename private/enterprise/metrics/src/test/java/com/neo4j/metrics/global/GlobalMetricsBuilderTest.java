@@ -8,6 +8,7 @@ package com.neo4j.metrics.global;
 import com.codahale.metrics.MetricRegistry;
 import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
 import com.neo4j.metrics.source.server.ServerMetrics;
+import org.assertj.core.api.Condition;
 import org.junit.jupiter.api.Test;
 
 import org.neo4j.common.DependencySatisfier;
@@ -21,10 +22,7 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.hasItem;
-import static org.hamcrest.Matchers.instanceOf;
-import static org.hamcrest.Matchers.not;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.neo4j.kernel.impl.factory.DatabaseInfo.COMMUNITY;
 
@@ -57,13 +55,14 @@ class GlobalMetricsBuilderTest
 
         exporter.export();
 
+        var containsServerMetrics = new Condition<>( item -> item instanceof ServerMetrics, "instance of ServerMetrics" );
         if ( serverMetricsEnabled )
         {
-            assertThat( life.getLifecycleInstances(), hasItem( instanceOf( ServerMetrics.class ) ) );
+            assertThat( life.getLifecycleInstances() ).haveAtLeastOne( containsServerMetrics );
         }
         else
         {
-            assertThat( life.getLifecycleInstances(), not( hasItem( instanceOf( ServerMetrics.class ) ) ) );
+            assertThat( life.getLifecycleInstances() ).doesNotHave( containsServerMetrics );
         }
     }
 

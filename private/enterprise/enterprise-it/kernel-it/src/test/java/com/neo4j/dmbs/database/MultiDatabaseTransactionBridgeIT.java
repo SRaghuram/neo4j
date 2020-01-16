@@ -17,9 +17,7 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.internal.helpers.collection.Iterators.count;
@@ -47,7 +45,7 @@ class MultiDatabaseTransactionBridgeIT
             NotInTransactionException exception =
                     assertThrows( NotInTransactionException.class,
                             () -> systemNode.createRelationshipTo( systemNode, RelationshipType.withName( "any" ) ) );
-            assertThat( exception.getMessage(), containsString( "The transaction has been closed." ) );
+            assertThat( exception.getMessage() ).contains( "The transaction has been closed." );
         }
     }
 
@@ -57,7 +55,7 @@ class MultiDatabaseTransactionBridgeIT
         GraphDatabaseService systemDb = managementService.database( SYSTEM_DATABASE_NAME );
         try ( Transaction transaction = systemDb.beginTx() )
         {
-            assertThat( count( transaction.execute( "SHOW DATABASES" ) ), greaterThanOrEqualTo( 2L ) );
+            assertThat( count( transaction.execute( "SHOW DATABASES" ) ) ).isGreaterThanOrEqualTo( 2L );
         }
     }
 }

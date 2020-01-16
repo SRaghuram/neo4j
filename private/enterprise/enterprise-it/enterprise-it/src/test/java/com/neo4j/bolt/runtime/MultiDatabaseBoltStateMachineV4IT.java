@@ -33,15 +33,12 @@ import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.impl.util.ValueUtils;
 import org.neo4j.values.AnyValue;
 
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.hamcrest.CoreMatchers.not;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.neo4j.bolt.runtime.statemachine.StatementProcessor.EMPTY;
-import static org.neo4j.bolt.testing.BoltMatchers.containsRecord;
-import static org.neo4j.bolt.testing.BoltMatchers.failedWithStatus;
-import static org.neo4j.bolt.testing.BoltMatchers.succeeded;
-import static org.neo4j.bolt.testing.BoltMatchers.wasIgnored;
+import static org.neo4j.bolt.testing.BoltConditions.containsRecord;
+import static org.neo4j.bolt.testing.BoltConditions.failedWithStatus;
+import static org.neo4j.bolt.testing.BoltConditions.succeeded;
+import static org.neo4j.bolt.testing.BoltConditions.wasIgnored;
 import static org.neo4j.bolt.testing.NullResponseHandler.nullResponseHandler;
 import static org.neo4j.bolt.v3.messaging.request.CommitMessage.COMMIT_MESSAGE;
 import static org.neo4j.bolt.v4.messaging.AbstractStreamingMessage.STREAM_LIMIT_UNLIMITED;
@@ -63,12 +60,12 @@ class MultiDatabaseBoltStateMachineV4IT extends MultiDatabaseBoltStateMachineTes
 
         // When
         RecordedBoltResponse first = sessionRun( "Unwind [1, 2, 3] as n return n", machine, "first" );
-        assertThat( first, containsRecord( 1L ) );
+        assertThat( first ).satisfies( containsRecord( 1L ) );
         reset( machine );
 
         // Then
         RecordedBoltResponse second = sessionRun( "Unwind [4, 5] as n return n", machine, "second" );
-        assertThat( second, containsRecord( 4L ) );
+        assertThat( second ).satisfies( containsRecord( 4L ) );
         reset( machine );
     }
 
@@ -83,12 +80,12 @@ class MultiDatabaseBoltStateMachineV4IT extends MultiDatabaseBoltStateMachineTes
 
         // When
         RecordedBoltResponse first = txRun( "Unwind [1, 2, 3] as n return n", machine, "first" );
-        assertThat( first, containsRecord( 1L ) );
+        assertThat( first ).satisfies( containsRecord( 1L ) );
         reset( machine );
 
         // Then
         RecordedBoltResponse second = txRun( "Unwind [4, 5] as n return n", machine, "second" );
-        assertThat( second, containsRecord( 4L ) );
+        assertThat( second ).satisfies( containsRecord( 4L ) );
         reset( machine );
     }
 
@@ -99,9 +96,9 @@ class MultiDatabaseBoltStateMachineV4IT extends MultiDatabaseBoltStateMachineTes
         machine.interrupt();
         machine.process( ResetMessage.INSTANCE, recorder );
         RecordedBoltResponse response = recorder.nextResponse();
-        assertThat( response, succeeded() );
-        assertThat( machine.state(), instanceOf( ReadyState.class ) );
-        assertThat( machine.connectionState().getStatementProcessor(), equalTo( EMPTY ) );
+        assertThat( response ).satisfies( succeeded() );
+        assertThat( machine.state() ).isInstanceOf( ReadyState.class );
+        assertThat( machine.connectionState().getStatementProcessor() ).isEqualTo( EMPTY );
     }
 
     @Override
@@ -116,8 +113,8 @@ class MultiDatabaseBoltStateMachineV4IT extends MultiDatabaseBoltStateMachineTes
         BoltResponseRecorder recorder = new BoltResponseRecorder();
         // BEGIN
         machine.process( new BeginMessage(), recorder );
-        assertThat( recorder.nextResponse(), succeeded() );
-        assertThat( machine.state(), instanceOf( InTransactionState.class ) );
+        assertThat( recorder.nextResponse() ).satisfies( succeeded() );
+        assertThat( machine.state() ).isInstanceOf( InTransactionState.class );
         verifyStatementProcessorNotEmpty( machine );
     }
 
@@ -133,15 +130,15 @@ class MultiDatabaseBoltStateMachineV4IT extends MultiDatabaseBoltStateMachineTes
         BoltResponseRecorder recorder = new BoltResponseRecorder();
         // RUN
         machine.process( new RunMessage( query ), recorder );
-        assertThat( recorder.nextResponse(), failedWithStatus( status ) );
-        assertThat( machine.state(), instanceOf( FailedState.class ) );
+        assertThat( recorder.nextResponse() ).satisfies( failedWithStatus( status ) );
+        assertThat( machine.state() ).isInstanceOf( FailedState.class );
         verifyStatementProcessor( machine, isEmpty );
 
         // PULL_ALL
         machine.process( newPullAll(), recorder );
         RecordedBoltResponse response = recorder.nextResponse();
-        assertThat( response, wasIgnored() );
-        assertThat( machine.state(), instanceOf( FailedState.class ) );
+        assertThat( response ).satisfies( wasIgnored() );
+        assertThat( machine.state() ).isInstanceOf( FailedState.class );
         verifyStatementProcessor( machine, isEmpty );
     }
 
@@ -158,15 +155,15 @@ class MultiDatabaseBoltStateMachineV4IT extends MultiDatabaseBoltStateMachineTes
         BoltResponseRecorder recorder = new BoltResponseRecorder();
         // RUN
         machine.process( new RunMessage( query, EMPTY_PARAMS, EMPTY_PARAMS, List.of(), null, AccessMode.WRITE, Map.of(), databaseName ), recorder );
-        assertThat( recorder.nextResponse(), succeeded() );
-        assertThat( machine.state(), instanceOf( AutoCommitState.class ) );
+        assertThat( recorder.nextResponse() ).satisfies( succeeded() );
+        assertThat( machine.state() ).isInstanceOf( AutoCommitState.class );
         verifyStatementProcessorNotEmpty( machine, databaseName );
 
         // PULL_ALL
         machine.process( newPullAll(), recorder );
         RecordedBoltResponse response = recorder.nextResponse();
-        assertThat( response, succeeded() );
-        assertThat( machine.state(), instanceOf( ReadyState.class ) );
+        assertThat( response ).satisfies( succeeded() );
+        assertThat( machine.state() ).isInstanceOf( ReadyState.class );
         verifyStatementProcessorIsEmpty( machine );
         return response;
     }
@@ -177,25 +174,25 @@ class MultiDatabaseBoltStateMachineV4IT extends MultiDatabaseBoltStateMachineTes
         // BEGIN
         var beginMetadata = map( new String[]{DB_NAME_KEY}, new AnyValue[]{stringValue( databaseName )} );
         machine.process( new BeginMessage( beginMetadata, List.of(), null, AccessMode.WRITE, Map.of(), databaseName ), recorder );
-        assertThat( recorder.nextResponse(), succeeded() );
-        assertThat( machine.state(), instanceOf( InTransactionState.class ) );
+        assertThat( recorder.nextResponse() ).satisfies( succeeded() );
+        assertThat( machine.state() ).isInstanceOf( InTransactionState.class );
         verifyStatementProcessorNotEmpty( machine, databaseName );
 
         // RUN
         machine.process( new RunMessage( query, EMPTY_PARAMS ), recorder );
-        assertThat( recorder.nextResponse(), succeeded() );
+        assertThat( recorder.nextResponse() ).satisfies( succeeded() );
         // PULL_ALL
         machine.process( newPullAll(), recorder );
         RecordedBoltResponse response = recorder.nextResponse();
-        assertThat( response, succeeded() );
+        assertThat( response ).satisfies( succeeded() );
 
-        assertThat( machine.state(), instanceOf( InTransactionState.class ) );
+        assertThat( machine.state() ).isInstanceOf( InTransactionState.class );
         verifyStatementProcessorNotEmpty( machine, databaseName );
 
         // COMMIT
         machine.process( COMMIT_MESSAGE, recorder );
-        assertThat( recorder.nextResponse(), succeeded() );
-        assertThat( machine.state(), instanceOf( ReadyState.class ) );
+        assertThat( recorder.nextResponse() ).satisfies( succeeded() );
+        assertThat( machine.state() ).isInstanceOf( ReadyState.class );
         verifyStatementProcessorIsEmpty( machine );
         return response;
     }
@@ -208,11 +205,11 @@ class MultiDatabaseBoltStateMachineV4IT extends MultiDatabaseBoltStateMachineTes
         StatementProcessor processor = machine.connectionState().getStatementProcessor();
         if ( !Objects.equals( databaseName, ABSENT_DB_NAME ) )
         {
-            assertThat( processor.databaseName(), equalTo( databaseName ) );
+            assertThat( processor.databaseName() ).isEqualTo( databaseName );
         }
         else
         {
-            assertThat( processor, not( EMPTY ) );
+            assertThat( processor ).isNotEqualTo( EMPTY );
         }
     }
 

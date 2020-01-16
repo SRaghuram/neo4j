@@ -57,8 +57,7 @@ import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.scheduler.JobHandle;
 import org.neo4j.scheduler.JobScheduler;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsString;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -272,7 +271,7 @@ class RemoteTransactionTest
         } ) );
 
         assertEquals( "Neo.DatabaseError.Statement.ExecutionFailed", e.code() );
-        assertThat( e.getMessage(), containsString( "Begin failed on shard 1" ) );
+        assertThat( e.getMessage() ).contains( "Begin failed on shard 1" );
 
         waitForDriverRelease( 3 );
         verifyDriverReturned( shard1Driver, shard2Driver, shard3Driver );
@@ -291,7 +290,7 @@ class RemoteTransactionTest
         } ) );
 
         assertEquals( "Neo.DatabaseError.Transaction.TransactionCommitFailed", e.code() );
-        assertThat( e.getMessage(), containsString( "Failed to commit remote transaction" ) );
+        assertThat( e.getMessage() ).contains( "Failed to commit remote transaction" );
 
         waitForDriverRelease( 3 );
         verifyCommitted( tx1 );
@@ -312,7 +311,7 @@ class RemoteTransactionTest
         } ) );
 
         assertEquals( "Neo.DatabaseError.Transaction.TransactionRollbackFailed", e.code() );
-        assertThat( e.getMessage(), containsString( "Failed to rollback remote transaction" ) );
+        assertThat( e.getMessage() ).contains( "Failed to rollback remote transaction" );
 
         waitForDriverRelease( 3 );
         verifyRolledBack( tx1 );
@@ -333,7 +332,7 @@ class RemoteTransactionTest
         } );
 
         assertEquals( "Neo.DatabaseError.Statement.ExecutionFailed", e.code() );
-        assertThat( e.getMessage(), containsString( "Query on shard 3 failed" ) );
+        assertThat( e.getMessage() ).contains( "Query on shard 3 failed" );
 
         waitForDriverRelease( 3 );
         verifyRolledBack( tx1 );
@@ -357,7 +356,7 @@ class RemoteTransactionTest
         } ) );
 
         assertEquals( "Neo.DatabaseError.Statement.ExecutionFailed", e.code() );
-        assertThat( e.getMessage(), containsString( "Result stream from shard 3 failed" ) );
+        assertThat( e.getMessage() ).contains( "Result stream from shard 3 failed" );
 
         waitForDriverRelease( 3 );
         verifyRolledBack( tx1 );
@@ -398,7 +397,7 @@ class RemoteTransactionTest
         } ) );
 
         assertEquals( "Neo.ClientError.Transaction.TransactionTimedOut", e.code() );
-        assertThat( e.getMessage(), containsString( "Trying to execute query in a terminated transaction" ) );
+        assertThat( e.getMessage() ).contains( "Trying to execute query in a terminated transaction" );
 
         verifyRolledBack( tx1 );
         verifyDriverReturned( shard1Driver, shard2Driver );

@@ -20,8 +20,7 @@ import org.neo4j.test.extension.testdirectory.EphemeralTestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.online_backup_enabled;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.internal.helpers.collection.Iterables.count;
 
@@ -58,8 +57,8 @@ class TokensRecoveryIT
         try ( Transaction tx = db.beginTx() )
         {
             // Now we should see our index still being there and healthy.
-            assertThat( count( tx.schema().getIndexes() ), is( 1L ) );
-            assertThat( count( tx.schema().getIndexes( LABEL ) ), is( 1L ) );
+            assertThat( count( tx.schema().getIndexes() ) ).isEqualTo( 1L );
+            assertThat( count( tx.schema().getIndexes( LABEL ) ) ).isEqualTo( 1L );
             tx.commit();
         }
         managementService.shutdown();
@@ -87,8 +86,8 @@ class TokensRecoveryIT
         try ( Transaction tx = db.beginTx() )
         {
             // Now we should see our index still being there and healthy.
-            assertThat( count( tx.schema().getIndexes() ), is( 1L ) );
-            assertThat( count( tx.schema().getIndexes( LABEL ) ), is( 1L ) );
+            assertThat( count( tx.schema().getIndexes() ) ).isEqualTo( 1L );
+            assertThat( count( tx.schema().getIndexes( LABEL ) ) ).isEqualTo( 1L );
             tx.commit();
         }
         managementService.shutdown();

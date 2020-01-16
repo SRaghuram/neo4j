@@ -21,8 +21,7 @@ import org.neo4j.test.extension.pagecache.PageCacheExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsString;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 
 @PageCacheExtension
@@ -52,7 +51,7 @@ class GBPTreeDumpToolTest
         String output = new String( baos.toByteArray(), UTF_8 );
 
         // Then should print stuff to print stream
-        assertThat( output, containsString( "Dump tree " + file.getAbsolutePath() ) );
-        assertThat( output, containsString( "Level 0" ) );
+        assertThat( output ).contains( "Dump tree " + file.getAbsolutePath() );
+        assertThat( output ).contains( "Level 0" );
     }
 }

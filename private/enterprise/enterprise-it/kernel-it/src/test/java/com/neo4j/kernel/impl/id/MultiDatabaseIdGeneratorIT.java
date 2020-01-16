@@ -23,8 +23,7 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
@@ -93,7 +92,7 @@ class MultiDatabaseIdGeneratorIT
         int idsToReuse = 10;
 
         IdRange batch = firstNodeIdGenerator.nextIdBatch( (int) requestedSize, NULL );
-        assertThat( firstNodeIdGenerator.getNumberOfIdsInUse(), greaterThanOrEqualTo( requestedSize ) );
+        assertThat( firstNodeIdGenerator.getNumberOfIdsInUse() ).isGreaterThanOrEqualTo( requestedSize );
         for ( long idToReuse = batch.getRangeStart(); idToReuse < batch.getRangeStart() + idsToReuse; idToReuse++ )
         {
             try ( Marker marker = firstNodeIdGenerator.marker( NULL ) )

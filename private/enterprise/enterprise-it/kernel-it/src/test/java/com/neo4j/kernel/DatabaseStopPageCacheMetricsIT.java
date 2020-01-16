@@ -13,8 +13,7 @@ import org.neo4j.io.pagecache.monitoring.PageCacheCounters;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.greaterThan;
+import static org.assertj.core.api.Assertions.assertThat;
 
 @EnterpriseDbmsExtension
 class DatabaseStopPageCacheMetricsIT
@@ -33,6 +32,6 @@ class DatabaseStopPageCacheMetricsIT
 
         long pinsBeforeShutdown = cacheCounters.pins();
         managementService.shutdownDatabase( databaseName );
-        assertThat( cacheCounters.pins(), greaterThan( pinsBeforeShutdown ) ) ;
+        assertThat( cacheCounters.pins() ).isGreaterThan( pinsBeforeShutdown );
     }
 }

@@ -13,8 +13,7 @@ import org.neo4j.kernel.database.DatabaseStartupController;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.instanceOf;
+import static org.assertj.core.api.Assertions.assertThat;
 
 @EnterpriseDbmsExtension
 public class EnterpriseDatabaseStartupControllerIT
@@ -26,6 +25,6 @@ public class EnterpriseDatabaseStartupControllerIT
     void enterpriseDatabaseUseCorrectStartupController()
     {
         var startupController = databaseAPI.getDependencyResolver().resolveDependency( DatabaseStartupController.class );
-        assertThat( startupController, instanceOf( DatabaseStartAborter.class ) );
+        assertThat( startupController ).isInstanceOf( DatabaseStartAborter.class );
     }
 }

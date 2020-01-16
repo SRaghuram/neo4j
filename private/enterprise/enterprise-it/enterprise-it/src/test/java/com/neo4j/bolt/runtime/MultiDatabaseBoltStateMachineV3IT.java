@@ -21,13 +21,11 @@ import org.neo4j.bolt.v3.runtime.TransactionReadyState;
 import org.neo4j.bolt.v3.runtime.TransactionStreamingState;
 import org.neo4j.kernel.api.exceptions.Status;
 
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.neo4j.bolt.runtime.statemachine.StatementProcessor.EMPTY;
-import static org.neo4j.bolt.testing.BoltMatchers.failedWithStatus;
-import static org.neo4j.bolt.testing.BoltMatchers.succeeded;
-import static org.neo4j.bolt.testing.BoltMatchers.wasIgnored;
+import static org.neo4j.bolt.testing.BoltConditions.failedWithStatus;
+import static org.neo4j.bolt.testing.BoltConditions.succeeded;
+import static org.neo4j.bolt.testing.BoltConditions.wasIgnored;
 import static org.neo4j.bolt.testing.NullResponseHandler.nullResponseHandler;
 import static org.neo4j.bolt.v3.messaging.request.CommitMessage.COMMIT_MESSAGE;
 
@@ -40,9 +38,9 @@ class MultiDatabaseBoltStateMachineV3IT extends MultiDatabaseBoltStateMachineTes
         machine.interrupt();
         machine.process( ResetMessage.INSTANCE, recorder );
         RecordedBoltResponse response = recorder.nextResponse();
-        assertThat( response, succeeded() );
-        assertThat( machine.state(), instanceOf( ReadyState.class ) );
-        assertThat( machine.connectionState().getStatementProcessor(), equalTo( EMPTY ) );
+        assertThat( response ).satisfies( succeeded() );
+        assertThat( machine.state() ).isInstanceOf( ReadyState.class );
+        assertThat( machine.connectionState().getStatementProcessor() ).isEqualTo( EMPTY );
     }
 
     @Override
@@ -51,15 +49,15 @@ class MultiDatabaseBoltStateMachineV3IT extends MultiDatabaseBoltStateMachineTes
         BoltResponseRecorder recorder = new BoltResponseRecorder();
         // RUN
         machine.process( new RunMessage( query ), recorder );
-        assertThat( recorder.nextResponse(), succeeded() );
-        assertThat( machine.state(), instanceOf( StreamingState.class ) );
+        assertThat( recorder.nextResponse() ).satisfies( succeeded() );
+        assertThat( machine.state() ).isInstanceOf( StreamingState.class );
         verifyStatementProcessorNotEmpty( machine );
 
         // PULL_ALL
         machine.process( PullAllMessage.INSTANCE, recorder );
         RecordedBoltResponse response = recorder.nextResponse();
-        assertThat( response, succeeded() );
-        assertThat( machine.state(), instanceOf( ReadyState.class ) );
+        assertThat( response ).satisfies( succeeded() );
+        assertThat( machine.state() ).isInstanceOf( ReadyState.class );
         verifyStatementProcessorIsEmpty( machine );
         return response;
     }
@@ -70,15 +68,15 @@ class MultiDatabaseBoltStateMachineV3IT extends MultiDatabaseBoltStateMachineTes
         BoltResponseRecorder recorder = new BoltResponseRecorder();
         // RUN
         machine.process( new RunMessage( query ), recorder );
-        assertThat( recorder.nextResponse(), failedWithStatus( status ) );
-        assertThat( machine.state(), instanceOf( FailedState.class ) );
+        assertThat( recorder.nextResponse() ).satisfies( failedWithStatus( status ) );
+        assertThat( machine.state() ).isInstanceOf( FailedState.class );
         verifyStatementProcessor( machine, isEmpty );
 
         // PULL_ALL
         machine.process( PullAllMessage.INSTANCE, recorder );
         RecordedBoltResponse response = recorder.nextResponse();
-        assertThat( response, wasIgnored() );
-        assertThat( machine.state(), instanceOf( FailedState.class ) );
+        assertThat( response ).satisfies( wasIgnored() );
+        assertThat( machine.state() ).isInstanceOf( FailedState.class );
         verifyStatementProcessor( machine, isEmpty );
     }
 
@@ -91,21 +89,21 @@ class MultiDatabaseBoltStateMachineV3IT extends MultiDatabaseBoltStateMachineTes
         // RUN
         BoltResponseRecorder recorder = new BoltResponseRecorder();
         machine.process( new RunMessage( query ), recorder );
-        assertThat( recorder.nextResponse(), succeeded() );
-        assertThat( machine.state(), instanceOf( TransactionStreamingState.class ) );
+        assertThat( recorder.nextResponse() ).satisfies( succeeded() );
+        assertThat( machine.state() ).isInstanceOf( TransactionStreamingState.class );
         verifyStatementProcessorNotEmpty( machine );
 
         // PULL_ALL
         machine.process( PullAllMessage.INSTANCE, recorder );
         RecordedBoltResponse response = recorder.nextResponse();
-        assertThat( response, succeeded() );
-        assertThat( machine.state(), instanceOf( TransactionReadyState.class ) );
+        assertThat( response ).satisfies( succeeded() );
+        assertThat( machine.state() ).isInstanceOf( TransactionReadyState.class );
         verifyStatementProcessorNotEmpty( machine );
 
         // COMMIT
         machine.process( COMMIT_MESSAGE, recorder );
-        assertThat( recorder.nextResponse(), succeeded() );
-        assertThat( machine.state(), instanceOf( ReadyState.class ) );
+        assertThat( recorder.nextResponse() ).satisfies( succeeded() );
+        assertThat( machine.state() ).isInstanceOf( ReadyState.class );
         verifyStatementProcessorIsEmpty( machine );
         return response;
     }
@@ -115,8 +113,8 @@ class MultiDatabaseBoltStateMachineV3IT extends MultiDatabaseBoltStateMachineTes
     {
         BoltResponseRecorder recorder = new BoltResponseRecorder();
         machine.process( new BeginMessage(), recorder );
-        assertThat( recorder.nextResponse(), succeeded() );
-        assertThat( machine.state(), instanceOf( TransactionReadyState.class ) );
+        assertThat( recorder.nextResponse() ).satisfies( succeeded() );
+        assertThat( machine.state() ).isInstanceOf( TransactionReadyState.class );
         verifyStatementProcessorNotEmpty( machine );
     }
 

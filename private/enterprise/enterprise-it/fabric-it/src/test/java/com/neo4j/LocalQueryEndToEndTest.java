@@ -27,8 +27,7 @@ import org.neo4j.harness.Neo4j;
 import org.neo4j.harness.Neo4jBuilders;
 import org.neo4j.procedure.impl.GlobalProceduresRegistry;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.neo4j.internal.helpers.Strings.joinAsLines;
 
 class LocalQueryEndToEndTest
@@ -106,7 +105,7 @@ class LocalQueryEndToEndTest
                     .collect( Collectors.toList() );
         } );
 
-        assertThat( r, equalTo( List.of( "Dave" ) ) );
+        assertThat( r ).isEqualTo( List.of( "Dave" ) );
     }
 
     // AndedInequalities is a special AST construct that works with properties
@@ -131,7 +130,7 @@ class LocalQueryEndToEndTest
                     .collect( Collectors.toList() );
         } );
 
-        assertThat( r, equalTo( List.of( "Dave" ) ) );
+        assertThat( r ).isEqualTo( List.of( "Dave" ) );
     }
 
     @Test
@@ -155,7 +154,7 @@ class LocalQueryEndToEndTest
                     .collect( Collectors.toList() );
         } );
 
-        assertThat( r, equalTo( List.of( "Bob" ) ) );
+        assertThat( r ).isEqualTo( List.of( "Bob" ) );
     }
 
     @Test
@@ -180,7 +179,7 @@ class LocalQueryEndToEndTest
                     .collect( Collectors.toList() );
         } );
 
-        assertThat( r, equalTo( List.of( "Bob", "Carrie" ) ) );
+        assertThat( r ).isEqualTo( List.of( "Bob", "Carrie" ) );
     }
 
     @Test
@@ -204,7 +203,7 @@ class LocalQueryEndToEndTest
                     .collect( Collectors.toList() );
         } );
 
-        assertThat( r, equalTo( List.of( "Dave" ) ) );
+        assertThat( r ).isEqualTo( List.of( "Dave" ) );
     }
 
     @Test
@@ -228,7 +227,7 @@ class LocalQueryEndToEndTest
                     .collect( Collectors.toList() );
         } );
 
-        assertThat( r, equalTo( List.of( "Carrie" ) ) );
+        assertThat( r ).isEqualTo( List.of( "Carrie" ) );
     }
 
     @Test
@@ -254,7 +253,7 @@ class LocalQueryEndToEndTest
                     .collect( Collectors.toList() );
         } );
 
-        assertThat( r, equalTo( List.of( "age", "name", "uid" ) ) );
+        assertThat( r ).isEqualTo( List.of( "age", "name", "uid" ) );
     }
 
     @Test
@@ -279,7 +278,7 @@ class LocalQueryEndToEndTest
                     .collect( Collectors.toList() );
         } );
 
-        assertThat( r, equalTo( List.of( "dummyMarker", "since" ) ) );
+        assertThat( r ).isEqualTo( List.of( "dummyMarker", "since" ) );
     }
 
     private <T> T inMegaTx( Function<Transaction, T> workload )

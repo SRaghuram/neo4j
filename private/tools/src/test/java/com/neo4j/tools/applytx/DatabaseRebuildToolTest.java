@@ -40,8 +40,7 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.tools.input.ConsoleUtil.NULL_PRINT_STREAM;
 import static java.lang.String.format;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsString;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.graphdb.RelationshipType.withName;
@@ -175,7 +174,7 @@ class DatabaseRebuildToolTest
         String dump = new String( byteArrayOut.toByteArray() );
         for ( String string : expectedResultContaining )
         {
-            assertThat( "dump from command '" + command + "'", dump, containsString( string ) );
+            assertThat( dump ).as( "dump from command '" + command + "'" ).contains( string );
         }
     }
 

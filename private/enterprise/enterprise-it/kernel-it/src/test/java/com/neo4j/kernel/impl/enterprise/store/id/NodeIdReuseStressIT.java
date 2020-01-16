@@ -24,10 +24,7 @@ import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.Race;
 import org.neo4j.test.extension.Inject;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.greaterThan;
-import static org.hamcrest.Matchers.lessThan;
+import static org.assertj.core.api.Assertions.assertThat;
 
 @EnterpriseDbmsExtension
 class NodeIdReuseStressIT
@@ -42,10 +39,10 @@ class NodeIdReuseStressIT
     @BeforeEach
     void verifyParams()
     {
-        assertThat( CONTESTANTS_COUNT, greaterThan( 0 ) );
-        assertThat( CONTESTANTS_COUNT % 2, equalTo( 0 ) );
-        assertThat( INITIAL_NODE_COUNT, greaterThan( 0 ) );
-        assertThat( OPERATIONS_COUNT, greaterThan( 1_000 ) );
+        assertThat( CONTESTANTS_COUNT ).isGreaterThan( 0 );
+        assertThat( CONTESTANTS_COUNT % 2 ).isEqualTo( 0 );
+        assertThat( INITIAL_NODE_COUNT ).isGreaterThan( 0 );
+        assertThat( OPERATIONS_COUNT ).isGreaterThan( 1_000 );
     }
 
     @Test
@@ -76,7 +73,7 @@ class NodeIdReuseStressIT
 
         long currentHighestNodeId = highestNodeId( db );
 
-        assertThat( currentHighestNodeId, lessThan( highestNodeIdWithoutReuse ) );
+        assertThat( currentHighestNodeId ).isLessThan( highestNodeIdWithoutReuse );
     }
 
     private static void createInitialNodes( GraphDatabaseService db )

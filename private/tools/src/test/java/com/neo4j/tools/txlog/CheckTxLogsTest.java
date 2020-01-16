@@ -53,8 +53,7 @@ import static com.neo4j.tools.txlog.checktypes.CheckTypes.NODE;
 import static com.neo4j.tools.txlog.checktypes.CheckTypes.PROPERTY;
 import static com.neo4j.tools.txlog.checktypes.CheckTypes.RELATIONSHIP;
 import static com.neo4j.tools.txlog.checktypes.CheckTypes.RELATIONSHIP_GROUP;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.lessThan;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -687,7 +686,7 @@ class CheckTxLogsTest
 
         assertEquals( 1, handler.checkPointInconsistencies.get( 0 ).logVersion );
         assertEquals( new LogPosition( 2, CURRENT_FORMAT_LOG_HEADER_SIZE ), handler.checkPointInconsistencies.get( 0 ).logPosition );
-        assertThat( handler.checkPointInconsistencies.get( 0 ).size, lessThan( 0L ) );
+        assertThat( handler.checkPointInconsistencies.get( 0 ).size ).isLessThan( 0L );
     }
 
     @Test

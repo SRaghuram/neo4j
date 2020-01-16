@@ -22,8 +22,7 @@ import org.neo4j.internal.id.IdController;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
@@ -65,7 +64,7 @@ class IdReuseTest
         }
 
         // Then
-        assertThat( reusedNodeId, equalTo( rolledBackNodeId ) );
+        assertThat( reusedNodeId ).isEqualTo( rolledBackNodeId );
     }
 
     @Test
@@ -113,7 +112,7 @@ class IdReuseTest
         }
 
         // Then
-        assertThat( reusedRelationshipId, equalTo( rolledBackRelationshipId ) );
+        assertThat( reusedRelationshipId ).isEqualTo( rolledBackRelationshipId );
     }
 
     @Test

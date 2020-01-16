@@ -18,8 +18,7 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.contains;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 
@@ -38,8 +37,8 @@ class StartingDatabaseEventsIT
 
         List<String> startedDatabases = eventListener.getStartedDatabases();
         List<String> shutdownDatabases = eventListener.getShutdownDatabases();
-        assertThat( startedDatabases, contains( SYSTEM_DATABASE_NAME, DEFAULT_DATABASE_NAME ) );
-        assertThat( shutdownDatabases, contains( DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME ) );
+        assertThat( startedDatabases ).containsExactly( SYSTEM_DATABASE_NAME, DEFAULT_DATABASE_NAME );
+        assertThat( shutdownDatabases ).containsExactly( DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME );
     }
 
     private static class AllDatabasesEventListener extends DatabaseEventListenerAdapter

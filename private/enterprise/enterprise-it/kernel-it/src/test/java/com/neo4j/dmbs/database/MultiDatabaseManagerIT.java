@@ -26,9 +26,7 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings.maxNumberOfDatabases;
 import static org.apache.commons.lang3.exception.ExceptionUtils.getRootCause;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.contains;
-import static org.hamcrest.Matchers.containsString;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -76,9 +74,9 @@ class MultiDatabaseManagerIT
         }
         DatabaseLimitReachedException exception = assertThrows( DatabaseLimitReachedException.class,
                 () -> managementService.createDatabase( "any" ) );
-        assertThat( getRootCause( exception ).getMessage(),
-                containsString( "The total limit of databases is already reached. To create more you need to either drop databases or change the" +
-                        " limit via the config setting 'dbms.max_databases'" ) );
+        assertThat( getRootCause( exception ).getMessage() ).contains(
+                "The total limit of databases is already reached. To create more you need to either drop databases or change the" +
+                        " limit via the config setting 'dbms.max_databases'" );
     }
 
     @Test
@@ -93,7 +91,7 @@ class MultiDatabaseManagerIT
                     .build();
         } );
 
-        assertThat( exception.getMessage(), containsString( "Error evaluating value for setting 'dbms.max_databases'. minimum allowed value is 2" ) );
+        assertThat( exception.getMessage() ).contains( "Error evaluating value for setting 'dbms.max_databases'. minimum allowed value is 2" );
     }
 
     @Test
@@ -353,6 +351,6 @@ class MultiDatabaseManagerIT
         var postCreationDatabases = managementService.listDatabases();
         assertEquals( 4, postCreationDatabases.size() );
 
-        assertThat( postCreationDatabases, contains( aMyAnotherDatabase, CUSTOM_DATABASE_NAME, myAnotherDatabase, SYSTEM_DATABASE_NAME ) );
+        assertThat( postCreationDatabases ).containsExactly( aMyAnotherDatabase, CUSTOM_DATABASE_NAME, myAnotherDatabase, SYSTEM_DATABASE_NAME );
     }
 }

@@ -21,8 +21,7 @@ import org.neo4j.test.extension.SuppressOutputExtension;
 import org.neo4j.test.extension.pagecache.PageCacheExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsString;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.immediate;
 import static org.neo4j.internal.counts.CountsBuilder.EMPTY;
 import static org.neo4j.internal.counts.CountsKey.nodeKey;
@@ -67,9 +66,9 @@ class DumpCountsStoreTest
 
         // then
         String output = out.toString();
-        assertThat( output, containsString( nodeKey( 0 ) + " = 4" ) );
-        assertThat( output, containsString( nodeKey( 1 ) + " = 5" ) );
-        assertThat( output, containsString( nodeKey( -1 ) + " = 9" ) );
-        assertThat( output, containsString( relationshipKey( 0, 4, 1 ) + " = 67" ) );
+        assertThat( output ).contains( nodeKey( 0 ) + " = 4" );
+        assertThat( output ).contains( nodeKey( 1 ) + " = 5" );
+        assertThat( output ).contains( nodeKey( -1 ) + " = 9" );
+        assertThat( output ).contains( relationshipKey( 0, 4, 1 ) + " = 67" );
     }
 }

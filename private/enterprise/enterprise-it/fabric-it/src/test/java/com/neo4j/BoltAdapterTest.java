@@ -52,8 +52,7 @@ import org.neo4j.values.storable.Values;
 
 import static com.neo4j.utils.DriverUtils.doInMegaSession;
 import static com.neo4j.utils.DriverUtils.doInMegaTx;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsString;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -228,7 +227,7 @@ class BoltAdapterTest
                 verifyDefaultResult( result );
             } ) );
 
-            assertThat( e.getMessage(), containsString( "Something went wrong" ) );
+            assertThat( e.getMessage() ).contains( "Something went wrong" );
 
             latch.countDown();
         } );
@@ -257,7 +256,7 @@ class BoltAdapterTest
                 verifyDefaultResult( result );
             } ) );
 
-            assertThat( e.getMessage(), containsString( "Something went wrong" ) );
+            assertThat( e.getMessage() ).contains( "Something went wrong" );
 
             latch.countDown();
         } );
@@ -284,7 +283,7 @@ class BoltAdapterTest
                 verifyDefaultResult( result );
             } ) );
 
-            assertThat( e.getMessage(), containsString( "Something went wrong" ) );
+            assertThat( e.getMessage() ).contains( "Something went wrong" );
 
             latch.countDown();
         } );
@@ -315,7 +314,7 @@ class BoltAdapterTest
                 verifyDefaultResult( result );
             } ) );
 
-            assertThat( e.getMessage(), containsString( "Something went wrong" ) );
+            assertThat( e.getMessage() ).contains( "Something went wrong" );
 
             latch.countDown();
         } );

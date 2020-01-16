@@ -22,8 +22,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.neo4j.kernel.impl.query.QueryExecution;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.core.StringContains.containsString;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -72,7 +71,7 @@ class Cypher2RxStreamTest
         assertTrue(completionLatch.await( 5, TimeUnit.SECONDS ));
         assertEquals( 2, requestingThreads.size() );
         assertSame( requestingThreads.get( 0 ), requestingThreads.get( 1 ) );
-        assertThat(requestingThreads.get( 0 ).getName(), containsString( "requester" ) );
+        assertThat(requestingThreads.get( 0 ).getName() ).contains( "requester" );
     }
 
     private class ConcurrentSubscriber implements Subscriber<Record>

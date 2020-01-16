@@ -6,7 +6,7 @@
 package com.neo4j.procedure.enterprise.builtin;
 
 import com.neo4j.test.rule.EnterpriseDbmsRule;
-import org.hamcrest.Matcher;
+import org.assertj.core.api.Condition;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.RuleChain;
@@ -33,23 +33,12 @@ import org.neo4j.test.rule.concurrent.ThreadingRule;
 
 import static java.util.Collections.singletonMap;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.hamcrest.Matchers.allOf;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.greaterThan;
-import static org.hamcrest.Matchers.greaterThanOrEqualTo;
-import static org.hamcrest.Matchers.hasEntry;
-import static org.hamcrest.Matchers.hasKey;
-import static org.hamcrest.Matchers.lessThan;
-import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.notNullValue;
-import static org.hamcrest.Matchers.nullValue;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.cypher_hints_error;
 import static org.neo4j.configuration.GraphDatabaseSettings.track_query_allocation;
@@ -69,11 +58,11 @@ public class ListQueriesProcedureTest
 
     @Rule
     public final RuleChain chain = RuleChain.outerRule( db ).around( threads );
-
-    private static final int SECONDS_TIMEOUT = 240;
-
     @Rule
     public VerboseTimeout timeout = VerboseTimeout.builder().withTimeout( SECONDS_TIMEOUT - 2, TimeUnit.SECONDS ).build();
+
+    private static final int SECONDS_TIMEOUT = 240;
+    private static final Condition<Object> LONG_VALUE = new Condition<>( value -> value instanceof Long, "long value" );
 
     @Test
     public void shouldContainTheQueryItself()
@@ -105,8 +94,8 @@ public class ListQueriesProcedureTest
 
             // then
             Map<String,Object> row = result.next();
-            assertThat( row, not( hasKey( "elapsedTime" ) ) );
-            assertThat( row, not( hasKey( "connectionDetails" ) ) );
+            assertThat( row ).doesNotContainKey( "elapsedTime" );
+            assertThat( row ).doesNotContainKey( "connectionDetails" );
             transaction.commit();
         }
     }
@@ -122,53 +111,51 @@ public class ListQueriesProcedureTest
             Map<String,Object> data = getQueryListing( query );
 
             // then
-            assertThat( data, hasKey( "elapsedTimeMillis" ) );
+            assertThat( data ).containsKey( "elapsedTimeMillis" );
             Object elapsedTime = data.get( "elapsedTimeMillis" );
-            assertThat( elapsedTime, instanceOf( Long.class ) );
-            assertThat( data, hasKey( "cpuTimeMillis" ) );
+            assertThat( elapsedTime ).isInstanceOf( Long.class );
+            assertThat( data ).containsKey( "cpuTimeMillis" );
             Object cpuTime1 = data.get( "cpuTimeMillis" );
-            assertThat( cpuTime1, instanceOf( Long.class ) );
-            assertThat( data, hasKey( "resourceInformation" ) );
+            assertThat( cpuTime1 ).isInstanceOf( Long.class );
+            assertThat( data ).containsKey( "resourceInformation" );
             Object ri = data.get( "resourceInformation" );
-            assertThat( ri, instanceOf( Map.class ) );
+            assertThat( ri ).isInstanceOf( Map.class );
             @SuppressWarnings( "unchecked" )
             Map<String,Object> resourceInformation = (Map<String,Object>) ri;
             assertEquals( "waiting", data.get( "status" ) );
             assertEquals( "EXCLUSIVE", resourceInformation.get( "lockMode" ) );
             assertEquals( "NODE", resourceInformation.get( "resourceType" ) );
             assertArrayEquals( new long[] {test.resource().getId()}, (long[]) resourceInformation.get( "resourceIds" ) );
-            assertThat( data, hasKey( "waitTimeMillis" ) );
+            assertThat( data ).containsKey( "waitTimeMillis" );
             Object waitTime1 = data.get( "waitTimeMillis" );
-            assertThat( waitTime1, instanceOf( Long.class ) );
+            assertThat( waitTime1 ).isInstanceOf( Long.class );
 
             // when
             data = getQueryListing( query );
 
             // then
             Long cpuTime2 = (Long) data.get( "cpuTimeMillis" );
-            assertThat( cpuTime2, greaterThanOrEqualTo( (Long) cpuTime1 ) );
+            assertThat( cpuTime2 ).isGreaterThanOrEqualTo( (Long) cpuTime1 );
             Long waitTime2 = (Long) data.get( "waitTimeMillis" );
-            assertThat( waitTime2, greaterThanOrEqualTo( (Long) waitTime1 ) );
+            assertThat( waitTime2 ).isGreaterThanOrEqualTo( (Long) waitTime1 );
 
             // ListPlannerAndRuntimeUsed
             // then
-            assertThat( data, hasKey( "planner" ) );
-            assertThat( data, hasKey( "runtime" ) );
-            assertThat( data.get( "planner" ), instanceOf( String.class ) );
-            assertThat( data.get( "runtime" ), instanceOf( String.class ) );
+            assertThat( data ).containsKey( "planner" );
+            assertThat( data ).containsKey( "runtime" );
+            assertThat( data.get( "planner" ) ).isInstanceOf( String.class );
+            assertThat( data.get( "runtime" ) ).isInstanceOf( String.class );
 
             // SpecificConnectionDetails
 
             // then
-            assertThat( data, hasKey( "protocol" ) );
-            assertThat( data, hasKey( "connectionId" ) );
-            assertThat( data, hasKey( "clientAddress" ) );
-            assertThat( data, hasKey( "requestUri" ) );
+            assertThat( data ).containsKey( "protocol" );
+            assertThat( data ).containsKey( "connectionId" );
+            assertThat( data ).containsKey( "clientAddress" );
+            assertThat( data ).containsKey( "requestUri" );
 
-            //ContainPageHitsAndPageFaults
-            // then
-            assertThat( data, hasEntry( equalTo( "pageHits" ), instanceOf( Long.class ) ) );
-            assertThat( data, hasEntry( equalTo( "pageFaults" ), instanceOf( Long.class ) ) );
+            assertThat( data ).hasEntrySatisfying( "pageHits", LONG_VALUE );
+            assertThat( data ).hasEntrySatisfying( "pageFaults", LONG_VALUE );
         }
     }
 
@@ -186,9 +173,9 @@ public class ListQueriesProcedureTest
             Map<String,Object> data = getQueryListing( query );
 
             // then
-            assertThat( data, hasKey( "allocatedBytes" ) );
+            assertThat( data ).containsKey( "allocatedBytes" );
             allocatedBytes = data.get( "allocatedBytes" );
-            assertThat( allocatedBytes, (Matcher) allOf( instanceOf( Long.class ), greaterThan( 0L ) ) );
+            assertThat( allocatedBytes ).isInstanceOf( Long.class ).satisfies( value -> assertThat( (Long) value ).isGreaterThan( 0 ) );
         }
 
         try ( Resource<Node> test = test( tx -> node, query ) )
@@ -196,8 +183,8 @@ public class ListQueriesProcedureTest
             // when
             Map<String,Object> data = getQueryListing( query );
 
-            assertThat( data, hasKey( "allocatedBytes" ) );
-            assertThat( data.get( "allocatedBytes" ), equalTo( allocatedBytes ) );
+            assertThat( data ).containsKey( "allocatedBytes" );
+            assertThat( data.get( "allocatedBytes" ) ).isEqualTo( allocatedBytes );
             assertSame( node, test.resource() );
         }
     }
@@ -240,7 +227,7 @@ public class ListQueriesProcedureTest
                         Object activeLockCount = row.get( "activeLockCount" );
                         if ( lockCount == null )
                         {
-                            assertThat( "activeLockCount", activeLockCount, instanceOf( Long.class ) );
+                            assertThat( activeLockCount ).as( "activeLockCount" ).isInstanceOf( Long.class );
                             lockCount = (Long) activeLockCount;
                         }
                         else
@@ -299,9 +286,9 @@ public class ListQueriesProcedureTest
                     Object activeLockCount = row.get( "activeLockCount" );
                     Object allLocks = row.get( "allLocks" );
                     assertFalse( "should have at most one row", rows.hasNext() );
-                    assertThat( "activeLockCount", activeLockCount, instanceOf( Long.class ) );
-                    assertThat( "allLocks", allLocks, instanceOf( Long.class ) );
-                    assertThat( (Long) activeLockCount, lessThan( (Long) allLocks ) );
+                    assertThat( activeLockCount ).as( "activeLockCount" ).isInstanceOf( Long.class );
+                    assertThat( allLocks ).as( "allLocks" ).isInstanceOf( Long.class );
+                    assertThat( (Long) activeLockCount ).isLessThan( (Long) allLocks );
                 }
                 transaction.commit();
             }
@@ -315,10 +302,10 @@ public class ListQueriesProcedureTest
         Map<String,Object> data = getQueryListing( "CALL dbms.listQueries" );
 
         // then
-        assertThat( data, hasKey( "protocol" ) );
-        assertThat( data, hasKey( "connectionId" ) );
-        assertThat( data, hasKey( "clientAddress" ) );
-        assertThat( data, hasKey( "requestUri" ) );
+        assertThat( data ).containsKey( "protocol" );
+        assertThat( data ).containsKey( "connectionId" );
+        assertThat( data ).containsKey( "clientAddress" );
+        assertThat( data ).containsKey( "requestUri" );
     }
 
     @Test
@@ -332,8 +319,8 @@ public class ListQueriesProcedureTest
             Map<String,Object> data = getQueryListing( query );
 
             // then
-            assertThat( data, hasEntry( equalTo( "pageHits" ), instanceOf( Long.class ) ) );
-            assertThat( data, hasEntry( equalTo( "pageFaults" ), instanceOf( Long.class ) ) );
+            assertThat( data ).hasEntrySatisfying( "pageHits", LONG_VALUE );
+            assertThat( data ).hasEntrySatisfying( "pageFaults", LONG_VALUE );
         }
     }
 
@@ -398,14 +385,14 @@ public class ListQueriesProcedureTest
             Map<String,Object> data = getQueryListing( QUERY );
 
             // then
-            assertThat( data, hasEntry( equalTo( "indexes" ), instanceOf( List.class ) ) );
+            assertThat( data ).hasEntrySatisfying( "indexes", value -> assertThat( value ).isInstanceOf( List.class ) );
             @SuppressWarnings( "unchecked" )
             List<Map<String,Object>> indexes = (List<Map<String,Object>>) data.get( "indexes" );
             assertEquals( "number of indexes used", 1, indexes.size() );
             Map<String,Object> index = indexes.get( 0 );
-            assertThat( index, hasEntry( "identifier", "n" ) );
-            assertThat( index, hasEntry( "label", "Node" ) );
-            assertThat( index, hasEntry( "propertyKey", "value" ) );
+            assertThat( index ).containsEntry( "identifier", "n" );
+            assertThat( index ).containsEntry( "label", "Node" );
+            assertThat( index ).containsEntry( "propertyKey", "value" );
         }
     }
 
@@ -424,7 +411,7 @@ public class ListQueriesProcedureTest
         }
 
         // then
-        assertThat( data, hasEntry( equalTo( "cpuTimeMillis" ), nullValue() ) );
+        assertThat( data ).hasEntrySatisfying( "cpuTimeMillis",  value -> assertThat( value ).isNull() );
     }
 
     @Test
@@ -440,7 +427,7 @@ public class ListQueriesProcedureTest
             data = getQueryListing( query );
         }
         // then
-        assertThat( data, hasEntry( equalTo( "cpuTimeMillis" ), notNullValue() ) );
+        assertThat( data ).hasEntrySatisfying( "cpuTimeMillis", value -> assertThat( value ).isNotNull() );
 
         // when
         db.executeTransactionally( "call dbms.setConfigValue('" + track_query_cpu_time.name() + "', 'false')" );
@@ -449,7 +436,7 @@ public class ListQueriesProcedureTest
             data = getQueryListing( query );
         }
         // then
-        assertThat( data, hasEntry( equalTo( "cpuTimeMillis" ), nullValue() ) );
+        assertThat( data ).hasEntrySatisfying( "cpuTimeMillis", value -> assertThat( value ).isNull() );
 
         // when
         db.executeTransactionally( "call dbms.setConfigValue('" + track_query_cpu_time.name() + "', 'true')" );
@@ -458,7 +445,7 @@ public class ListQueriesProcedureTest
             data = getQueryListing( query );
         }
         // then
-        assertThat( data, hasEntry( equalTo( "cpuTimeMillis" ), notNullValue() ) );
+        assertThat( data ).hasEntrySatisfying( "cpuTimeMillis", value -> assertThat( value ).isNotNull() );
     }
 
     @Test
@@ -476,7 +463,7 @@ public class ListQueriesProcedureTest
         }
 
         // then
-        assertThat( data, hasEntry( equalTo( "allocatedBytes" ), nullValue() ) );
+        assertThat( data ).hasEntrySatisfying( "allocatedBytes", value -> assertThat( value ).isNull() );
     }
 
     @SuppressWarnings( "unchecked" )
@@ -493,8 +480,8 @@ public class ListQueriesProcedureTest
             data = getQueryListing( query );
         }
         // then
-        assertThat( data, hasEntry( equalTo( "allocatedBytes" ), (Matcher) allOf(
-                instanceOf( Long.class ), greaterThan( 0L ) ) ) );
+        assertThat( data ).hasEntrySatisfying( "allocatedBytes",
+                value -> assertThat( value ).isInstanceOf( Long.class ).satisfies( v -> assertThat( (Long) v ).isGreaterThan( 0 ) ) );
 
         // when
         db.executeTransactionally( "call dbms.setConfigValue('" + track_query_allocation.name() + "', 'false')" );
@@ -503,7 +490,7 @@ public class ListQueriesProcedureTest
             data = getQueryListing( query );
         }
         // then
-        assertThat( data, hasEntry( equalTo( "allocatedBytes" ), nullValue() ) );
+        assertThat( data ).hasEntrySatisfying( "allocatedBytes", value -> assertThat( value ).isNull() );
 
         // when
         db.executeTransactionally( "call dbms.setConfigValue('" + track_query_allocation.name() + "', 'true')" );
@@ -512,8 +499,8 @@ public class ListQueriesProcedureTest
             data = getQueryListing( query );
         }
         // then
-        assertThat( data, hasEntry( equalTo( "allocatedBytes" ), (Matcher) allOf(
-                instanceOf( Long.class ), greaterThan( 0L ) ) ) );
+        assertThat( data ).hasEntrySatisfying( "allocatedBytes",
+                value -> assertThat( value ).isInstanceOf( Long.class ).satisfies( v -> assertThat( (Long) v ).isGreaterThan( 0 ) ) );
     }
 
     private void shouldListUsedIndexes( String label, String property ) throws Exception
@@ -532,14 +519,14 @@ public class ListQueriesProcedureTest
             Map<String,Object> data = getQueryListing( QUERY1 );
 
             // then
-            assertThat( data, hasEntry( equalTo( "indexes" ), instanceOf( List.class ) ) );
+            assertThat( data ).hasEntrySatisfying( "indexes", value -> assertThat( value ).isInstanceOf( List.class ) );
             @SuppressWarnings( "unchecked" )
             List<Map<String,Object>> indexes = (List<Map<String,Object>>) data.get( "indexes" );
             assertEquals( "number of indexes used", 1, indexes.size() );
             Map<String,Object> index = indexes.get( 0 );
-            assertThat( index, hasEntry( "identifier", "n" ) );
-            assertThat( index, hasEntry( "label", label ) );
-            assertThat( index, hasEntry( "propertyKey", property ) );
+            assertThat( index ).containsEntry( "identifier", "n" );
+            assertThat( index ).containsEntry( "label", label );
+            assertThat( index ).containsEntry( "propertyKey", property );
         }
 
         // given
@@ -557,20 +544,20 @@ public class ListQueriesProcedureTest
             Map<String,Object> data = getQueryListing( QUERY2 );
 
             // then
-            assertThat( data, hasEntry( equalTo( "indexes" ), instanceOf( List.class ) ) );
+            assertThat( data ).hasEntrySatisfying( "indexes", value -> assertThat( value ).isInstanceOf( List.class ) );
             @SuppressWarnings( "unchecked" )
             List<Map<String,Object>> indexes = (List<Map<String,Object>>) data.get( "indexes" );
             assertEquals( "number of indexes used", 2, indexes.size() );
 
             Map<String,Object> index1 = indexes.get( 0 );
-            assertThat( index1, hasEntry( "identifier", "n" ) );
-            assertThat( index1, hasEntry( "label", label ) );
-            assertThat( index1, hasEntry( "propertyKey", property ) );
+            assertThat( index1 ).containsEntry( "identifier", "n" );
+            assertThat( index1 ).containsEntry( "label", label );
+            assertThat( index1 ).containsEntry( "propertyKey", property );
 
             Map<String,Object> index2 = indexes.get( 1 );
-            assertThat( index2, hasEntry( "identifier", "u" ) );
-            assertThat( index2, hasEntry( "label", label ) );
-            assertThat( index2, hasEntry( "propertyKey", property ) );
+            assertThat( index2 ).containsEntry( "identifier", "u" );
+            assertThat( index2 ).containsEntry( "label", label );
+            assertThat( index2 ).containsEntry( "propertyKey", property );
         }
     }
 

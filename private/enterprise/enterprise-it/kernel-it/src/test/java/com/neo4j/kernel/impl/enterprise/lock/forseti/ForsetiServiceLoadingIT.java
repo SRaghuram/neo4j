@@ -20,8 +20,7 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.core.IsInstanceOf.instanceOf;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.neo4j.configuration.GraphDatabaseSettings.lock_manager;
 
 @TestDirectoryExtension
@@ -33,14 +32,14 @@ class ForsetiServiceLoadingTest
     @Test
     void shouldUseForsetiAsDefaultLockManager()
     {
-        assertThat( getDBLocksInstance( Map.of() ), instanceOf( ForsetiLockManager.class ) );
+        assertThat( getDBLocksInstance( Map.of() ) ).isInstanceOf( ForsetiLockManager.class );
     }
 
     @Test
     void shouldAllowUsingCommunityLockManager()
     {
         var cfg = getDBLocksInstance( Map.of( lock_manager, "community" ) );
-        assertThat( cfg, instanceOf( CommunityLockManger.class ) );
+        assertThat( cfg ).isInstanceOf( CommunityLockManger.class );
     }
 
     private Locks getDBLocksInstance( Map<Setting<?>,Object> config )

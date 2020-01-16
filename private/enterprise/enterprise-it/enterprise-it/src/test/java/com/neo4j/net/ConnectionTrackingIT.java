@@ -6,6 +6,7 @@
 package com.neo4j.net;
 
 import com.neo4j.harness.internal.EnterpriseInProcessNeo4jBuilder;
+import org.assertj.core.api.Condition;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -54,7 +55,6 @@ import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
-import org.neo4j.values.storable.Value;
 
 import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.online_backup_enabled;
 import static com.neo4j.net.ConnectionTrackingIT.TestConnector.BOLT;
@@ -66,17 +66,13 @@ import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.stream.Collectors.toList;
 import static javax.ws.rs.core.HttpHeaders.AUTHORIZATION;
 import static javax.ws.rs.core.HttpHeaders.USER_AGENT;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.any;
-import static org.hamcrest.Matchers.equalTo;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.instanceOf;
-import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.neo4j.bolt.testing.MessageMatchers.msgRecord;
-import static org.neo4j.bolt.testing.MessageMatchers.msgSuccess;
-import static org.neo4j.bolt.testing.StreamMatchers.eqRecord;
+import static org.neo4j.bolt.testing.MessageConditions.msgRecord;
+import static org.neo4j.bolt.testing.MessageConditions.msgSuccess;
+import static org.neo4j.bolt.testing.StreamConditions.eqRecord;
 import static org.neo4j.configuration.GraphDatabaseSettings.auth_enabled;
 import static org.neo4j.configuration.GraphDatabaseSettings.neo4j_home;
 import static org.neo4j.internal.helpers.collection.Iterators.single;
@@ -404,11 +400,11 @@ class ConnectionTrackingIT
                     matchingRecords.add( record );
                 }
 
-                assertThat( record.get( "connectionId" ).toString(), startsWith( actualConnector ) );
+                assertThat( record.get( "connectionId" ).toString() ).startsWith( actualConnector );
                 OffsetDateTime connectTime = ISO_OFFSET_DATE_TIME.parse( record.get( "connectTime" ).toString(), OffsetDateTime::from );
                 assertNotNull( connectTime );
-                assertThat( record.get( "serverAddress" ), instanceOf( String.class ) );
-                assertThat( record.get( "clientAddress" ), instanceOf( String.class ) );
+                assertThat( record.get( "serverAddress" ) ).isInstanceOf( String.class );
+                assertThat( record.get( "clientAddress" ) ).isInstanceOf( String.class );
             }
             transaction.commit();
         }
@@ -547,11 +543,13 @@ class ConnectionTrackingIT
                     .send( auth( "neo4j", NEO4J_USER_PWD ) )
                     .send( util.defaultRunAutoCommitTx( "CALL dbms.killConnection('" + id + "')" ) );
 
-            assertThat( connection, util.eventuallyReceivesSelectedProtocolVersion() );
-            assertThat( connection, util.eventuallyReceives(
+            assertThat( connection ).satisfies( util.eventuallyReceivesSelectedProtocolVersion() );
+            assertThat( connection ).satisfies( util.eventuallyReceives(
                     msgSuccess(),
                     msgSuccess(),
-                    msgRecord( eqRecord( any( Value.class ), equalTo( stringOrNoValue( user ) ), equalTo( stringValue( "Connection found" ) ) ) ),
+                    msgRecord( eqRecord( new Condition<>( anyValue -> true, "any value" ),
+                                         new Condition<>( v -> v.equals( stringOrNoValue( user ) ) , "user value" ),
+                                         new Condition<>( v -> v.equals( stringValue( "Connection found" ) ), "connection" ) ) ),
                     msgSuccess() ) );
         }
         finally

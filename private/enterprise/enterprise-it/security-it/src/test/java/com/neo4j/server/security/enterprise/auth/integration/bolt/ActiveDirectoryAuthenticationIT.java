@@ -7,7 +7,6 @@ package com.neo4j.server.security.enterprise.auth.integration.bolt;
 
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
-import org.hamcrest.MatcherAssert;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -31,8 +30,10 @@ import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.string.SecureString;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 
-import static org.neo4j.bolt.testing.MessageMatchers.msgFailure;
-import static org.neo4j.bolt.testing.MessageMatchers.msgSuccess;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.neo4j.bolt.testing.MessageConditions.msgFailure;
+import static org.neo4j.bolt.testing.MessageConditions.msgSuccess;
+import static org.neo4j.bolt.testing.TransportTestUtil.eventuallyReceives;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
 
 /*
@@ -266,8 +267,8 @@ public class ActiveDirectoryAuthenticationIT
                 .send( util.defaultAcceptedVersions() )
                 .send( util.defaultAuth( authToken( username, password, realm ) ) );
 
-        MatcherAssert.assertThat( client, TransportTestUtil.eventuallyReceives( new byte[]{0, 0, 0, 1} ) );
-        MatcherAssert.assertThat( client, util.eventuallyReceives( msgSuccess() ) );
+        assertThat( client ).satisfies( eventuallyReceives( new byte[]{0, 0, 0, 1} ) );
+        assertThat( client ).satisfies( util.eventuallyReceives( msgSuccess() ) );
     }
 
     private Map<String,Object> authToken( String username, String password, String realm )
@@ -288,8 +289,8 @@ public class ActiveDirectoryAuthenticationIT
                 .send( util.defaultAcceptedVersions() )
                 .send( util.defaultAuth( map( "principal", username, "credentials", password, "scheme", "basic" ) ) );
 
-        MatcherAssert.assertThat( client, util.eventuallyReceivesSelectedProtocolVersion() );
-        MatcherAssert.assertThat( client, util.eventuallyReceives( msgFailure( Status.Security.Unauthorized,
+        assertThat( client ).satisfies( util.eventuallyReceivesSelectedProtocolVersion() );
+        assertThat( client ).satisfies( util.eventuallyReceives( msgFailure( Status.Security.Unauthorized,
                 "The client is unauthorized due to authentication failure." ) ) );
     }
 
@@ -299,7 +300,7 @@ public class ActiveDirectoryAuthenticationIT
         client.send( util.defaultRunAutoCommitTx( "MATCH (n) RETURN n" ) );
 
         // Then
-        MatcherAssert.assertThat( client, util.eventuallyReceives( msgSuccess(), msgSuccess() ) );
+        assertThat( client ).satisfies( util.eventuallyReceives( msgSuccess(), msgSuccess() ) );
     }
 
     protected void assertReadFails( String username ) throws Exception
@@ -308,7 +309,7 @@ public class ActiveDirectoryAuthenticationIT
         client.send( util.defaultRunAutoCommitTx( "MATCH (n) RETURN n" ) );
 
         // Then
-        MatcherAssert.assertThat( client, util.eventuallyReceives(
+        assertThat( client ).satisfies( util.eventuallyReceives(
                 msgFailure( Status.Security.Forbidden,
                         String.format( "Read operations are not allowed for user %s.", username ) ) ) );
     }
@@ -319,7 +320,7 @@ public class ActiveDirectoryAuthenticationIT
         client.send( util.defaultRunAutoCommitTx( "CREATE ()" ) );
 
         // Then
-        MatcherAssert.assertThat( client, util.eventuallyReceives( msgSuccess(), msgSuccess() ) );
+        assertThat( client ).satisfies( util.eventuallyReceives( msgSuccess(), msgSuccess() ) );
     }
 
     protected void assertWriteFails( String username ) throws Exception
@@ -328,7 +329,7 @@ public class ActiveDirectoryAuthenticationIT
         client.send( util.defaultRunAutoCommitTx( "CREATE ()" ) );
 
         // Then
-        MatcherAssert.assertThat( client, util.eventuallyReceives(
+        assertThat( client ).satisfies( util.eventuallyReceives(
                 msgFailure( Status.Security.Forbidden,
                         String.format( "Write operations are not allowed for user %s.", username ) ) ) );
     }

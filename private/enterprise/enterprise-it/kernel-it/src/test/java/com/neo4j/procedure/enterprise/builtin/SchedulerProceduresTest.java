@@ -13,9 +13,7 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.greaterThan;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @EnterpriseDbmsExtension
@@ -34,7 +32,7 @@ class SchedulerProceduresTest
                 assertTrue( result.hasNext() );
                 while ( result.hasNext() )
                 {
-                    assertThat( (Long) result.next().get( "threads" ), greaterThan( 0L ) );
+                    assertThat( (Long) result.next().get( "threads" ) ).isGreaterThan( 0L );
                 }
             }
             tx.commit();
@@ -47,7 +45,7 @@ class SchedulerProceduresTest
         try ( Transaction tx = db.beginTx() )
         {
             String result = tx.execute( "CALL dbms.scheduler.profile('sample', 'CypherWorker', '5s')" ).resultAsString();
-            assertThat( result, containsString( "pipelined.Worker.run" ) );
+            assertThat( result ).contains( "pipelined.Worker.run" );
             tx.commit();
         }
     }

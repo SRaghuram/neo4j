@@ -33,8 +33,7 @@ import org.neo4j.graphdb.Result;
 import org.neo4j.kernel.impl.query.QueryExecution;
 import org.neo4j.kernel.impl.query.QuerySubscriber;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
@@ -316,6 +315,6 @@ class BookmarkEndToEndTest
     private void verifyBookmarks( ArgumentCaptor<List<Bookmark>> submittedBookmarks, List<Long> expectedTxIds )
     {
         var txIds = submittedBookmarks.getValue().stream().map( Bookmark::txId ).collect( Collectors.toList() );
-        assertThat( txIds, containsInAnyOrder( expectedTxIds.toArray( Long[]::new ) ) );
+        assertThat( txIds ).contains( expectedTxIds.toArray( Long[]::new ) );
     }
 }
