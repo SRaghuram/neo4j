@@ -6,11 +6,9 @@
 package org.neo4j.cypher.internal.runtime.pipelined.state.buffers
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
-import org.neo4j.cypher.internal.physicalplanning.PipelineId
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentCountUpdater
-import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.PerArgument
@@ -18,10 +16,9 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMapWithout
 import org.neo4j.cypher.internal.runtime.pipelined.state.QueryCompletionTracker
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatingBuffer
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.DataHolder
-import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.SinkByOrigin
 
 /**
- * Morsel buffer that groups incoming rows by argumentRowId by delegating to an [[ArgumentStateMap]].
+ * Morsel buffer that groups incoming rows by argumentRowId by delegating to an [[org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap]].
  *
  * This buffer sits before a pipeline that starts with a reducer. It accumulates the state into the
  * ArgumentStateMap.
@@ -39,14 +36,11 @@ class MorselArgumentStateBuffer[DATA <: AnyRef,
    with AccumulatingBuffer
    with Sink[IndexedSeq[PerArgument[DATA]]]
    with Source[ACC]
-   with SinkByOrigin
    with DataHolder {
 
   private val argumentStateMap: ArgumentStateMapWithoutArgumentIdCounter[ACC] = argumentStateMaps(argumentStateMapId).asInstanceOf[ArgumentStateMapWithoutArgumentIdCounter[ACC]]
 
   override val argumentSlotOffset: Int = argumentStateMap.argumentSlotOffset
-
-  override def sinkFor[T <: AnyRef](fromPipeline: PipelineId): Sink[T] = this.asInstanceOf[Sink[T]]
 
   override def put(data: IndexedSeq[PerArgument[DATA]]): Unit = {
     if (DebugSupport.BUFFERS.enabled) {

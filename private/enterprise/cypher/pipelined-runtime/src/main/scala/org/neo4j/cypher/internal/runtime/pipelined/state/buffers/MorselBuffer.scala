@@ -9,7 +9,6 @@ import java.util
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.BufferId
-import org.neo4j.cypher.internal.physicalplanning.PipelineId
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.execution.FilteringMorselExecutionContext
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
@@ -21,7 +20,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.pipelined.state.QueryCompletionTracker
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatingBuffer
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.DataHolder
-import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.SinkByOrigin
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.MorselBuffer.INVALID_ARG_ROW_ID
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.MorselBuffer.INVALID_ARG_SLOT_OFFSET
 import org.neo4j.util.Preconditions
@@ -47,7 +45,6 @@ class MorselBuffer(id: BufferId,
                   ) extends ArgumentCountUpdater
                     with Sink[MorselExecutionContext]
                     with Source[MorselParallelizer]
-                    with SinkByOrigin
                     with DataHolder {
 
   private val cancellerASMs = {
@@ -59,8 +56,6 @@ class MorselBuffer(id: BufferId,
     }
     x
   }
-
-  override def sinkFor[T <: AnyRef](fromPipeline: PipelineId): Sink[T] = this.asInstanceOf[Sink[T]]
 
   override def put(morsel: MorselExecutionContext): Unit = {
     if (DebugSupport.BUFFERS.enabled) {

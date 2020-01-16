@@ -6,14 +6,12 @@
 package org.neo4j.cypher.internal.runtime.pipelined.state.buffers
 
 import org.neo4j.cypher.internal.physicalplanning.BufferId
-import org.neo4j.cypher.internal.physicalplanning.PipelineId
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.execution.FilteringMorselExecutionContext
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
-import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.SinkByOrigin
 
 /**
  * A buffer which groups input morsels by argument row id. For each view  a new morsel is created and the view is "attached" to the new morsel.
@@ -37,10 +35,7 @@ class MorselAttachBuffer(id: BufferId,
                          argumentSlotOffset: Int,
                          argumentNumLongs: Int,
                          argumentNumRefs: Int
-                        ) extends SinkByOrigin
-                          with Sink[MorselExecutionContext] {
-
-  override def sinkFor[T <: AnyRef](fromPipeline: PipelineId): Sink[T] = this.asInstanceOf[Sink[T]]
+                        ) extends Sink[MorselExecutionContext] {
 
   def put(morsel: MorselExecutionContext): Unit = {
     if (DebugSupport.BUFFERS.enabled) {

@@ -18,14 +18,12 @@ import org.neo4j.cypher.internal.physicalplanning.PipelineId
 import org.neo4j.cypher.internal.physicalplanning.RegularBufferVariant
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
-import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.pipelined.state.QueryCompletionTracker
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatingBuffer
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.DataHolder
-import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.SinkByOrigin
 
 /**
  * Container for all buffers of the execution state.
@@ -284,22 +282,6 @@ class Buffers(numBuffers: Int,
 object Buffers {
 
   /**
-   * Trait to implement by all buffers. They must be able to provide a sink, depending
-   * on where the data to insert comes from.
-   */
-  trait SinkByOrigin {
-    /**
-     * Get the [[Sink]] for the given data origin. This is usually the buffer itself,
-     * but buffers that accept input from two sides will differentiate depending on the given
-     * PipelineId.
-     *
-     * @param fromPipeline the pipeline that wants to obtain the sink, to put data into it.
-     * @return the Sink.
-     */
-    def sinkFor[T <: AnyRef](fromPipeline: PipelineId): Sink[T]
-  }
-
-  /**
    * Since some buffers merely augment and pass on data (e.g. [[MorselApplyBuffer]]), this trait
    * distinguishes the buffers that actually hold onto data.
    */
@@ -319,7 +301,7 @@ object Buffers {
   trait AccumulatingBuffer {
 
     /**
-     * @return the offset of the argument slots for the used [[ArgumentStateMap]]
+     * @return the offset of the argument slots for the used [[org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap]]
      */
     def argumentSlotOffset: Int
 

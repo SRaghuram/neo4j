@@ -38,10 +38,7 @@ class MorselApplyBuffer(id: BufferId,
                         idAllocator: IdAllocator,
                         delegates: IndexedSeq[MorselBuffer]
                        ) extends ArgumentCountUpdater
-                         with SinkByOrigin
                          with Sink[MorselExecutionContext] {
-
-  override def sinkFor[T <: AnyRef](fromPipeline: PipelineId): Sink[T] = this.asInstanceOf[Sink[T]]
 
   def put(morsel: MorselExecutionContext): Unit = {
     if (DebugSupport.BUFFERS.enabled) {

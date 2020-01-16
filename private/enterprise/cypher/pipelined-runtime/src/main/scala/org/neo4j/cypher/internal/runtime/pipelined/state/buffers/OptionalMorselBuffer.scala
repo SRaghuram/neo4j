@@ -9,7 +9,6 @@ import java.util
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.BufferId
-import org.neo4j.cypher.internal.physicalplanning.PipelineId
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentCountUpdater
@@ -23,7 +22,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.QueryCompletionTracker
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatingBuffer
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.DataHolder
-import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.SinkByOrigin
 import org.neo4j.exceptions.InternalException
 
 import scala.collection.mutable.ArrayBuffer
@@ -46,14 +44,11 @@ class OptionalMorselBuffer(id: BufferId,
   with AccumulatingBuffer
   with Sink[IndexedSeq[PerArgument[MorselExecutionContext]]]
   with ClosingSource[MorselData]
-  with SinkByOrigin
   with DataHolder {
 
   private val argumentStateMap: ArgumentStateMapWithArgumentIdCounter[OptionalArgumentStateBuffer] = argumentStateMaps(argumentStateMapId).asInstanceOf[ArgumentStateMapWithArgumentIdCounter[OptionalArgumentStateBuffer]]
 
   override val argumentSlotOffset: Int = argumentStateMap.argumentSlotOffset
-
-  override def sinkFor[T <: AnyRef](fromPipeline: PipelineId): Sink[T] = this.asInstanceOf[Sink[T]]
 
   override def take(): MorselData = {
     // To achieve streaming behavior, we peek at the data, even if it is not completed yet.
