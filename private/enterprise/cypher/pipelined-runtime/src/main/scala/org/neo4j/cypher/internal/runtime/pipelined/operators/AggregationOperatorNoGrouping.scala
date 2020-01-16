@@ -321,10 +321,9 @@ class AggregationMapperOperatorNoGroupingTaskTemplate(val inner: OperatorTaskTem
   override protected def genCreateState: IntermediateRepresentation = {
     block(
       setField(sinkField,
-        invoke(EXECUTION_STATE,
-          method[ExecutionState, Sink[_], Int, Int]("getSinkInt"),
-          PIPELINE_ID,
-          loadField(bufferIdField)))
+               invoke(EXECUTION_STATE,
+                      method[ExecutionState, Sink[_], Int, Int]("getSinkInt"),
+                      loadField(bufferIdField)))
     )
   }
 

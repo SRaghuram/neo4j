@@ -495,8 +495,7 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
     block(
       setField(sinkField,
         invoke(EXECUTION_STATE,
-          method[ExecutionState, Sink[_], Int, Int]("getSinkInt"),
-          PIPELINE_ID,
+          method[ExecutionState, Sink[_], Int]("getSinkInt"),
           loadField(bufferIdField)))
     )
   }

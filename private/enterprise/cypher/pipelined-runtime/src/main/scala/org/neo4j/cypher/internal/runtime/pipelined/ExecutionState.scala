@@ -7,7 +7,6 @@ package org.neo4j.cypher.internal.runtime.pipelined
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.BufferId
-import org.neo4j.cypher.internal.physicalplanning.PipelineId
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
@@ -46,7 +45,7 @@ trait ExecutionState extends ArgumentStateMapCreator {
   def pipelineStates: Array[PipelineState]
 
   @CalledFromGeneratedCode
-  def getSinkInt[T <: AnyRef](fromPipeline: Int, bufferId: Int): Sink[T] = getSink(BufferId(bufferId))
+  def getSinkInt[T <: AnyRef](bufferId: Int): Sink[T] = getSink(BufferId(bufferId))
 
   /**
    * The sink with id `bufferId`
@@ -162,7 +161,6 @@ trait ExecutionState extends ArgumentStateMapCreator {
   def filterCancelledArguments(pipeline: ExecutablePipeline,
                                inputMorsel: MorselExecutionContext,
                                accumulator: MorselAccumulator[_]): Boolean
-
 
   /**
    * Checks if there is room in buffers to accept morsels
