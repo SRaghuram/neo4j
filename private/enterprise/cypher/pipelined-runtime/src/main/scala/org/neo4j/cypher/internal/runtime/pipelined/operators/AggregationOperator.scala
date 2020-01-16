@@ -123,7 +123,7 @@ case class AggregationOperator(workIdentity: WorkIdentity,
 
     override def createState(executionState: ExecutionState,
                              pipelineId: PipelineId): OutputOperatorState =
-      new State(executionState.getSink[IndexedSeq[PerArgument[AggPreMap]]](pipelineId, outputBufferId))
+      new State(executionState.getSink[IndexedSeq[PerArgument[AggPreMap]]](outputBufferId))
 
     class State(sink: Sink[IndexedSeq[PerArgument[AggPreMap]]]) extends OutputOperatorState {
 

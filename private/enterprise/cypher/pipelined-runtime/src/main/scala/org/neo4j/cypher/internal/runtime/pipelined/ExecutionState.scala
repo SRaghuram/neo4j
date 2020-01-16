@@ -20,6 +20,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.Accumul
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.LHSAccumulatingRHSStreamingSource
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.OptionalMorselBuffer
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Sink
+import org.neo4j.util.CalledFromGeneratedCode
 
 /**
  * Creator of [[ArgumentStateMap]].
@@ -44,12 +45,13 @@ trait ExecutionState extends ArgumentStateMapCreator {
    */
   def pipelineStates: Array[PipelineState]
 
-  def getSinkInt[T <: AnyRef](fromPipeline: Int, bufferId: Int): Sink[T] = getSink(PipelineId(fromPipeline), BufferId(bufferId))
+  @CalledFromGeneratedCode
+  def getSinkInt[T <: AnyRef](fromPipeline: Int, bufferId: Int): Sink[T] = getSink(BufferId(bufferId))
 
   /**
-   * The sink with id `bufferId` of the pipeline with id `fromPipeline`.
+   * The sink with id `bufferId`
    */
-  def getSink[T <: AnyRef](fromPipeline: PipelineId, bufferId: BufferId): Sink[T]
+  def getSink[T <: AnyRef](bufferId: BufferId): Sink[T]
 
   /**
    * Put a morsel into the buffer with id `bufferId`.

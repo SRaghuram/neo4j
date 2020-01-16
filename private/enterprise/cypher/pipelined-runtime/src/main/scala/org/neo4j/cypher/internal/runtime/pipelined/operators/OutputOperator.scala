@@ -124,7 +124,7 @@ case class MorselArgumentStateBufferOutputOperator(bufferId: BufferId, argumentS
   override val workIdentity: WorkIdentity = WorkIdentityImpl(nextPipelineHeadPlanId, s"Output morsel grouped by argumentSlot $argumentSlotOffset to $bufferId")
   override def createState(executionState: ExecutionState, pipelineId: PipelineId): OutputOperatorState =
     MorselArgumentStateBufferOutputState(workIdentity,
-      executionState.getSink[IndexedSeq[PerArgument[MorselExecutionContext]]](pipelineId, bufferId),
+      executionState.getSink[IndexedSeq[PerArgument[MorselExecutionContext]]](bufferId),
       argumentSlotOffset)
 }
 case class MorselArgumentStateBufferOutputState(override val workIdentity: WorkIdentity,

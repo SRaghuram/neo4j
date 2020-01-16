@@ -162,16 +162,12 @@ class Buffers(numBuffers: Int,
   // Public methods
 
   /**
-   * Get the [[Sink]] for the given buffer id. This is usually the buffer itself,
-   * but buffers that accept input from two sides will differentiate depending on the given
-   * PipelineId.
+    * Get the [[Sink]] for the given buffer id.
    *
-   * @param fromPipeline the pipeline that wants to obtain the sink, to put data into it.
    * @param bufferId     the buffer
-   * @return the Sink.
-   */
-    // TODO remove fromPipeline
-  def sink[T <: AnyRef](fromPipeline: PipelineId, bufferId: BufferId): Sink[T] =
+    * @return the Sink.
+    */
+  def sink[T <: AnyRef](bufferId: BufferId): Sink[T] =
     buffers(bufferId.x).asInstanceOf[Sink[T]]
 
   /**

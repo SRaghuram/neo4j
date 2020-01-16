@@ -120,16 +120,15 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
 
   // Methods
 
-  override def getSink[T <: AnyRef](fromPipeline: PipelineId,
-                                    bufferId: BufferId): Sink[T] = {
-    new AlarmSink(buffers.sink[T](fromPipeline, bufferId), workerWaker, queryStatus)
+  override def getSink[T <: AnyRef](bufferId: BufferId): Sink[T] = {
+    new AlarmSink(buffers.sink[T](bufferId), workerWaker, queryStatus)
   }
 
   override def putMorsel(fromPipeline: PipelineId,
                          bufferId: BufferId,
                          output: MorselExecutionContext): Unit = {
     if (!queryStatus.cancelled) {
-      buffers.sink[MorselExecutionContext](fromPipeline, bufferId).put(output)
+      buffers.sink[MorselExecutionContext](bufferId).put(output)
       workerWaker.wakeOne()
     } else {
       DebugSupport.ERROR_HANDLING.log("Dropped morsel %s because of query cancellation", output)
@@ -221,7 +220,7 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
   override def canPut(pipeline: ExecutablePipeline): Boolean = {
     pipeline.outputOperator.outputBuffer match {
       case None => true
-      case Some(bufferId) => buffers.sink(pipeline.id, bufferId).canPut
+      case Some(bufferId) => buffers.sink(bufferId).canPut
     }
   }
 

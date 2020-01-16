@@ -98,7 +98,7 @@ case class AggregationOperatorNoGrouping(workIdentity: WorkIdentity,
 
     override def createState(executionState: ExecutionState,
                              pipelineId: PipelineId): OutputOperatorState =
-      new State(executionState.getSink[IndexedSeq[PerArgument[Array[Updater]]]](pipelineId, outputBufferId))
+      new State(executionState.getSink[IndexedSeq[PerArgument[Array[Updater]]]](outputBufferId))
 
     class State(sink: Sink[IndexedSeq[PerArgument[Array[Updater]]]]) extends OutputOperatorState {
 

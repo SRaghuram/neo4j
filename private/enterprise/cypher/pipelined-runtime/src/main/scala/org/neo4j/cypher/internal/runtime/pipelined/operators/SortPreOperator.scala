@@ -31,7 +31,7 @@ class SortPreOperator(val workIdentity: WorkIdentity,
 
   override def createState(executionState: ExecutionState,
                            pipelineId: PipelineId): OutputOperatorState =
-    new State(executionState.getSink[IndexedSeq[PerArgument[MorselExecutionContext]]](pipelineId, outputBufferId))
+    new State(executionState.getSink[IndexedSeq[PerArgument[MorselExecutionContext]]](outputBufferId))
 
   class State(sink: Sink[IndexedSeq[PerArgument[MorselExecutionContext]]]) extends OutputOperatorState {
 
