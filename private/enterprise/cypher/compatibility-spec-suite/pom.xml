@@ -25,6 +25,7 @@
 
     <properties>
         <moduleName>com.neo4j.internal.enterprise.cypher.compatibility.spec.suite</moduleName>
+        <skip-scalastyle>false</skip-scalastyle>
     </properties>
 
     <dependencies>

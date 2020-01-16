@@ -8,9 +8,13 @@ package cypher.features
 import java.util
 
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder
-import cypher.features.ScenarioTestHelper.{createTests, printComputedBlacklist}
+import cypher.features.ScenarioTestHelper.createTests
+import cypher.features.ScenarioTestHelper.printComputedBlacklist
 import org.junit.jupiter.api.Assertions.fail
-import org.junit.jupiter.api.{Disabled, DynamicTest, Test, TestFactory}
+import org.junit.jupiter.api.Disabled
+import org.junit.jupiter.api.DynamicTest
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestFactory
 
 class CompiledTCKTests extends EnterpriseBaseTCKTests {
 
