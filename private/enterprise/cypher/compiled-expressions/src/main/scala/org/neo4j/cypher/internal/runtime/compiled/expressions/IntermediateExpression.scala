@@ -5,17 +5,20 @@
  */
 package org.neo4j.cypher.internal.runtime.compiled.expressions
 
-import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable}
+import org.neo4j.codegen.api.Field
+import org.neo4j.codegen.api.IntermediateRepresentation
+import org.neo4j.codegen.api.LocalVariable
 
 /**
-  * Describes a compiled expression
-  * @param ir The actual instructions to perform
-  * @param fields The fields necessary for performing instructions
-  * @param variables The top-level variables necessary for performing instructions
-  * @param nullChecks Instructions for null-checking, if any of the instructions are null the whole expression will be null
-  * @param requireNullCheck If `true` it is required to perform null-checking before evaluating the instructions, if `false`
-  *                         the expression might still be null but it will not fail when the instructions are performed.
-  */
+ * Describes a compiled expression
+ *
+ * @param ir The actual instructions to perform
+ * @param fields The fields necessary for performing instructions
+ * @param variables The top-level variables necessary for performing instructions
+ * @param nullChecks Instructions for null-checking, if any of the instructions are null the whole expression will be null
+ * @param requireNullCheck If `true` it is required to perform null-checking before evaluating the instructions, if `false`
+ *                         the expression might still be null but it will not fail when the instructions are performed.
+ */
 case class IntermediateExpression(ir: IntermediateRepresentation,
                                   fields: Seq[Field],
                                   variables: Seq[LocalVariable],

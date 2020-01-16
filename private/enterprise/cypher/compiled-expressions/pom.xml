@@ -17,6 +17,7 @@
 
     <properties>
         <moduleName>com.neo4j.cypher.internal.runtime.compiled.expressions</moduleName>
+        <skip-scalastyle>false</skip-scalastyle>
     </properties>
 
     <scm>

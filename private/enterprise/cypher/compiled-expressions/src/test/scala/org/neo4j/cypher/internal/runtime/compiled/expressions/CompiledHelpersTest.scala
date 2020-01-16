@@ -5,10 +5,13 @@
  */
 package org.neo4j.cypher.internal.runtime.compiled.expressions
 
-import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledHelpers._
+import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledHelpers.assertBooleanOrNoValue
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 import org.neo4j.exceptions.CypherTypeException
-import org.neo4j.values.storable.Values._
+import org.neo4j.values.storable.Values.FALSE
+import org.neo4j.values.storable.Values.NO_VALUE
+import org.neo4j.values.storable.Values.PI
+import org.neo4j.values.storable.Values.TRUE
 
 class CompiledHelpersTest extends CypherFunSuite {
 
