@@ -67,12 +67,12 @@ class TreeBuilderTest extends CypherFunSuite {
     val treeBuilder = new TestTreeBuilder
     val logicalPlan =
       branch("a",
-             branch("b",
-                    link("d", leaf("h")),
-                    leaf("e")),
-             branch("c",
-                    leaf("f"),
-                    leaf("g")))
+        branch("b",
+          link("d", leaf("h")),
+          leaf("e")),
+        branch("c",
+          leaf("f"),
+          leaf("g")))
 
 
     // when
@@ -91,7 +91,7 @@ class TreeBuilderTest extends CypherFunSuite {
       OnLeaf("g", Some("argC")),
       OnTwoChildPlanComingFromRight("c", "F", "G", Some("argC")),
       OnTwoChildPlanComingFromRight("a", "B", "C", Some("argA"))
-      )
+    )
   }
 
   test("fail gracefully on invalid plans") {
@@ -99,12 +99,12 @@ class TreeBuilderTest extends CypherFunSuite {
     val treeBuilder = new TestTreeBuilder
     val logicalPlan =
       branch("a",
-             branch("b",
-                    link("d", leaf("h")),
-                    leaf("e")),
-             branch("INVALID",
-                    leaf("f"),
-                    leaf("g")))
+        branch("b",
+          link("d", leaf("h")),
+          leaf("e")),
+        branch("INVALID",
+          leaf("f"),
+          leaf("g")))
 
 
     // when

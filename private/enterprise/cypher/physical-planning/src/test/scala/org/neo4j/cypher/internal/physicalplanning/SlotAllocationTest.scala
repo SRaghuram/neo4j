@@ -5,18 +5,60 @@
  */
 package org.neo4j.cypher.internal.physicalplanning
 
+import org.neo4j.cypher.internal.ast.ASTAnnotationMap
+import org.neo4j.cypher.internal.ast.semantics.ExpressionTypeInfo
+import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.compiler.planner.LogicalPlanningTestSupport2
 import org.neo4j.cypher.internal.compiler.planner.logical.PlanMatchHelp
-import org.neo4j.cypher.internal.ir.{CreateNode, VarPatternLength}
-import org.neo4j.cypher.internal.logical.plans._
-import org.neo4j.cypher.internal.logical.{plans => logicalPlans}
+import org.neo4j.cypher.internal.expressions.CountStar
+import org.neo4j.cypher.internal.expressions.SemanticDirection
+import org.neo4j.cypher.internal.ir.CreateNode
+import org.neo4j.cypher.internal.ir.VarPatternLength
+import org.neo4j.cypher.internal.logical.plans.AbstractSemiApply
+import org.neo4j.cypher.internal.logical.plans.Aggregation
+import org.neo4j.cypher.internal.logical.plans.AllNodesScan
+import org.neo4j.cypher.internal.logical.plans.AntiSemiApply
+import org.neo4j.cypher.internal.logical.plans.Apply
+import org.neo4j.cypher.internal.logical.plans.Argument
+import org.neo4j.cypher.internal.logical.plans.Ascending
+import org.neo4j.cypher.internal.logical.plans.CartesianProduct
+import org.neo4j.cypher.internal.logical.plans.Create
+import org.neo4j.cypher.internal.logical.plans.Distinct
+import org.neo4j.cypher.internal.logical.plans.DoNotGetValue
+import org.neo4j.cypher.internal.logical.plans.DoNotIncludeTies
+import org.neo4j.cypher.internal.logical.plans.Expand
+import org.neo4j.cypher.internal.logical.plans.ExpandAll
+import org.neo4j.cypher.internal.logical.plans.ExpandInto
+import org.neo4j.cypher.internal.logical.plans.ForeachApply
+import org.neo4j.cypher.internal.logical.plans.GetValue
+import org.neo4j.cypher.internal.logical.plans.IndexSeek
+import org.neo4j.cypher.internal.logical.plans.LeftOuterHashJoin
+import org.neo4j.cypher.internal.logical.plans.LogicalPlan
+import org.neo4j.cypher.internal.logical.plans.NestedPlanExpression
+import org.neo4j.cypher.internal.logical.plans.NodeByLabelScan
+import org.neo4j.cypher.internal.logical.plans.NodeHashJoin
+import org.neo4j.cypher.internal.logical.plans.Optional
+import org.neo4j.cypher.internal.logical.plans.OptionalExpand
+import org.neo4j.cypher.internal.logical.plans.Projection
+import org.neo4j.cypher.internal.logical.plans.RightOuterHashJoin
+import org.neo4j.cypher.internal.logical.plans.RollUpApply
+import org.neo4j.cypher.internal.logical.plans.Selection
+import org.neo4j.cypher.internal.logical.plans.SemiApply
+import org.neo4j.cypher.internal.logical.plans.Union
+import org.neo4j.cypher.internal.logical.plans.UnwindCollection
+import org.neo4j.cypher.internal.logical.plans.ValueHashJoin
+import org.neo4j.cypher.internal.logical.plans.VarExpand
+import org.neo4j.cypher.internal.logical.plans.VariablePredicate
+import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.physicalplanning.PipelineBreakingPolicy.breakFor
 import org.neo4j.cypher.internal.runtime.ast.ExpressionVariable
 import org.neo4j.cypher.internal.runtime.expressionVariableAllocation.AvailableExpressionVariables
-import org.neo4j.cypher.internal.ast.ASTAnnotationMap
-import org.neo4j.cypher.internal.ast.semantics.{ExpressionTypeInfo, SemanticTable}
-import org.neo4j.cypher.internal.expressions._
-import org.neo4j.cypher.internal.util.symbols._
+import org.neo4j.cypher.internal.util.symbols.CTAny
+import org.neo4j.cypher.internal.util.symbols.CTInteger
+import org.neo4j.cypher.internal.util.symbols.CTList
+import org.neo4j.cypher.internal.util.symbols.CTNode
+import org.neo4j.cypher.internal.util.symbols.CTRelationship
+import org.neo4j.cypher.internal.util.symbols.ListType
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 
 //noinspection NameBooleanParameters
@@ -70,7 +112,7 @@ class SlotAllocationTest extends CypherFunSuite with LogicalPlanningTestSupport2
 
   test("limit should not introduce slots") {
     // given
-    val plan = logicalPlans.Limit(AllNodesScan("x", Set.empty), literalInt(1), DoNotIncludeTies)
+    val plan = plans.Limit(AllNodesScan("x", Set.empty), literalInt(1), DoNotIncludeTies)
 
     // when
     val allocations = SlotAllocation.allocateSlots(plan, semanticTable, BREAK_FOR_LEAFS, NO_EXPR_VARS).slotConfigurations
@@ -273,7 +315,7 @@ class SlotAllocationTest extends CypherFunSuite with LogicalPlanningTestSupport2
   test("let's skip this one") {
     // given
     val allNodesScan = AllNodesScan("x", Set.empty)
-    val skip = logicalPlans.Skip(allNodesScan, literalInt(42))
+    val skip = plans.Skip(allNodesScan, literalInt(42))
 
     // when
     val allocations = SlotAllocation.allocateSlots(skip, semanticTable, BREAK_FOR_LEAFS, NO_EXPR_VARS).slotConfigurations
@@ -532,11 +574,11 @@ class SlotAllocationTest extends CypherFunSuite with LogicalPlanningTestSupport2
     )))
     allocations(hashJoin.id) should equal(SlotConfiguration(numberOfLongs = 4, numberOfReferences = 0, slots =
       Map(
-      "x" -> LongSlot(0, nullable = false, CTNode),
-      "r" -> LongSlot(1, nullable = false, CTRelationship),
-      "y" -> LongSlot(2, nullable = false, CTNode),
-      "r2" -> LongSlot(3, nullable = false, CTRelationship)
-    )))
+        "x" -> LongSlot(0, nullable = false, CTNode),
+        "r" -> LongSlot(1, nullable = false, CTRelationship),
+        "y" -> LongSlot(2, nullable = false, CTNode),
+        "r2" -> LongSlot(3, nullable = false, CTRelationship)
+      )))
   }
 
   test("joins should remember cached node properties from both sides") {
@@ -579,7 +621,7 @@ class SlotAllocationTest extends CypherFunSuite with LogicalPlanningTestSupport2
         NodeHashJoin(Set("x"), lhs, rhs),
         LeftOuterHashJoin(Set("x"), lhs, rhs),
         RightOuterHashJoin(Set("x"), lhs, rhs),
-        logicalPlans.ValueHashJoin(lhs, rhs, equals(varFor("x"), varFor("x")))
+        plans.ValueHashJoin(lhs, rhs, equals(varFor("x"), varFor("x")))
       )
 
     for (join <- joins) {
@@ -631,7 +673,7 @@ class SlotAllocationTest extends CypherFunSuite with LogicalPlanningTestSupport2
     // given UNWIND [1,2,3] as x RETURN x
     val leaf = Argument()
     val unwind = UnwindCollection(leaf, "x", listOfInt(1, 2, 3))
-    val produceResult = logicalPlans.ProduceResult(unwind, Seq("x"))
+    val produceResult = plans.ProduceResult(unwind, Seq("x"))
 
     // when
     val allocations = SlotAllocation.allocateSlots(produceResult, semanticTable, breakFor(unwind), NO_EXPR_VARS).slotConfigurations
@@ -651,8 +693,8 @@ class SlotAllocationTest extends CypherFunSuite with LogicalPlanningTestSupport2
     // given UNWIND [1,2,3] as x RETURN x ORDER BY x
     val leaf = Argument()
     val unwind = UnwindCollection(leaf, "x", listOfInt(1, 2, 3))
-    val sort = logicalPlans.Sort(unwind, List(Ascending("x")))
-    val produceResult = logicalPlans.ProduceResult(sort, Seq("x"))
+    val sort = plans.Sort(unwind, List(Ascending("x")))
+    val produceResult = plans.ProduceResult(sort, Seq("x"))
 
     // when
     val allocations = SlotAllocation.allocateSlots(produceResult, semanticTable, breakFor(unwind), NO_EXPR_VARS).slotConfigurations

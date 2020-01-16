@@ -5,17 +5,37 @@
  */
 package org.neo4j.cypher.internal.physicalplanning
 
-import org.mockito.Mockito._
-import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.SlotConfigurations
-import org.neo4j.cypher.internal.physicalplanning.ast._
-import org.neo4j.cypher.internal.planner.spi.TokenContext
-import org.neo4j.cypher.internal.logical.{plans => logicalPlans}
-import org.neo4j.cypher.internal.logical.plans._
-import org.neo4j.cypher.internal.ast._
+import org.mockito.Mockito.when
+import org.neo4j.cypher.internal.ast.AstConstructionTestSupport
 import org.neo4j.cypher.internal.expressions.AndedPropertyInequalities
+import org.neo4j.cypher.internal.logical.plans.AllNodesScan
+import org.neo4j.cypher.internal.logical.plans.Apply
+import org.neo4j.cypher.internal.logical.plans.Argument
+import org.neo4j.cypher.internal.logical.plans.NodeByLabelScan
+import org.neo4j.cypher.internal.logical.plans.ProduceResult
+import org.neo4j.cypher.internal.logical.plans.Projection
+import org.neo4j.cypher.internal.logical.plans.Selection
+import org.neo4j.cypher.internal.logical.plans.ValueHashJoin
+import org.neo4j.cypher.internal.logical.plans
+import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.SlotConfigurations
+import org.neo4j.cypher.internal.physicalplanning.ast.IdFromSlot
+import org.neo4j.cypher.internal.physicalplanning.ast.IsPrimitiveNull
+import org.neo4j.cypher.internal.physicalplanning.ast.NodeFromSlot
+import org.neo4j.cypher.internal.physicalplanning.ast.NodeProperty
+import org.neo4j.cypher.internal.physicalplanning.ast.NodePropertyExistsLate
+import org.neo4j.cypher.internal.physicalplanning.ast.NodePropertyLate
+import org.neo4j.cypher.internal.physicalplanning.ast.NullCheck
+import org.neo4j.cypher.internal.physicalplanning.ast.NullCheckProperty
+import org.neo4j.cypher.internal.physicalplanning.ast.NullCheckVariable
+import org.neo4j.cypher.internal.physicalplanning.ast.PrimitiveEquals
+import org.neo4j.cypher.internal.physicalplanning.ast.ReferenceFromSlot
+import org.neo4j.cypher.internal.physicalplanning.ast.RelationshipPropertyLate
+import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.util.NonEmptyList
 import org.neo4j.cypher.internal.util.attribution.SequentialIdGen
-import org.neo4j.cypher.internal.util.symbols._
+import org.neo4j.cypher.internal.util.symbols.CTAny
+import org.neo4j.cypher.internal.util.symbols.CTNode
+import org.neo4j.cypher.internal.util.symbols.CTRelationship
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 
 class SlottedRewriterTest extends CypherFunSuite with AstConstructionTestSupport {
@@ -169,7 +189,7 @@ class SlottedRewriterTest extends CypherFunSuite with AstConstructionTestSupport
 
     val newPredicate = greaterThan(NodeProperty(offset, tokenId, "x.prop")(xProp), literalInt(42))
 
-    result should equal(logicalPlans.ProduceResult(Selection(Seq(newPredicate), allNodes), Seq("x")))
+    result should equal(plans.ProduceResult(Selection(Seq(newPredicate), allNodes), Seq("x")))
     lookup(result.id) should equal(slots)
   }
 
@@ -308,7 +328,7 @@ class SlottedRewriterTest extends CypherFunSuite with AstConstructionTestSupport
     val allNodes = AllNodesScan("x", Set.empty)
     val predicate = greaterThan(xProp, literalInt(42))
     val selection = Selection(Seq(predicate), allNodes)
-    val produceResult = logicalPlans.ProduceResult(selection, Seq("x"))
+    val produceResult = plans.ProduceResult(selection, Seq("x"))
     val offset = 0
     val slots = SlotConfiguration.empty.
       newLong("x", nullable = false, CTNode)
@@ -323,7 +343,7 @@ class SlottedRewriterTest extends CypherFunSuite with AstConstructionTestSupport
 
     val newPredicate = greaterThan(NodePropertyLate(offset, "prop", "x.prop")(xProp), literalInt(42))
 
-    result should equal(logicalPlans.ProduceResult(Selection(Seq(newPredicate), allNodes), Seq("x")))
+    result should equal(plans.ProduceResult(Selection(Seq(newPredicate), allNodes), Seq("x")))
     lookup(result.id) should equal(slots)
   }
 
@@ -528,7 +548,7 @@ class SlottedRewriterTest extends CypherFunSuite with AstConstructionTestSupport
     val allNodes = AllNodesScan("x", Set.empty)
     val predicate = isNull(varFor("x"))
     val selection = Selection(Seq(predicate), allNodes)
-    val produceResult = logicalPlans.ProduceResult(selection, Seq("x"))
+    val produceResult = plans.ProduceResult(selection, Seq("x"))
 
     val offset = 0
     val slots = SlotConfiguration.empty.
@@ -545,7 +565,7 @@ class SlottedRewriterTest extends CypherFunSuite with AstConstructionTestSupport
 
     // then
     val newPredicate = IsPrimitiveNull(offset)
-    result should equal(logicalPlans.ProduceResult(Selection(Seq(newPredicate), allNodes), Seq("x")))
+    result should equal(plans.ProduceResult(Selection(Seq(newPredicate), allNodes), Seq("x")))
     lookup(result.id) should equal(slots)
   }
 
@@ -555,7 +575,7 @@ class SlottedRewriterTest extends CypherFunSuite with AstConstructionTestSupport
     val predicate1 = equals(varFor("x"), varFor("z"))
     val predicate2 = not(equals(varFor("x"), varFor("z")))
     val selection = Selection(Seq(predicate1, predicate2), arg)
-    val produceResult = logicalPlans.ProduceResult(selection, Seq("x", "z"))
+    val produceResult = plans.ProduceResult(selection, Seq("x", "z"))
 
     val offsetX = 0
     val offsetZ = 1
@@ -575,7 +595,7 @@ class SlottedRewriterTest extends CypherFunSuite with AstConstructionTestSupport
     // then
     val newPred1 = equals(ReferenceFromSlot(offsetX, "x"), ReferenceFromSlot(offsetZ, "z"))
     val newPred2 = not(equals(ReferenceFromSlot(offsetX, "x"), ReferenceFromSlot(offsetZ, "z")))
-    result should equal(logicalPlans.ProduceResult(Selection(Seq(newPred1, newPred2), arg), Seq("x", "z")))
+    result should equal(plans.ProduceResult(Selection(Seq(newPred1, newPred2), arg), Seq("x", "z")))
     lookup(result.id) should equal(slots)
   }
 

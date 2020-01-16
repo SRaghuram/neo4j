@@ -5,14 +5,27 @@
  */
 package org.neo4j.cypher.internal.physicalplanning
 
+import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.compiler.planner.LogicalPlanningTestSupport2
+import org.neo4j.cypher.internal.expressions.SemanticDirection.INCOMING
 import org.neo4j.cypher.internal.ir.CreateNode
-import org.neo4j.cypher.internal.logical.plans._
+import org.neo4j.cypher.internal.logical.plans.Aggregation
+import org.neo4j.cypher.internal.logical.plans.AllNodesScan
+import org.neo4j.cypher.internal.logical.plans.Apply
+import org.neo4j.cypher.internal.logical.plans.Argument
+import org.neo4j.cypher.internal.logical.plans.Create
+import org.neo4j.cypher.internal.logical.plans.Distinct
+import org.neo4j.cypher.internal.logical.plans.Eager
+import org.neo4j.cypher.internal.logical.plans.Expand
+import org.neo4j.cypher.internal.logical.plans.ExpandAll
+import org.neo4j.cypher.internal.logical.plans.LogicalPlan
+import org.neo4j.cypher.internal.logical.plans.Optional
+import org.neo4j.cypher.internal.logical.plans.SemiApply
+import org.neo4j.cypher.internal.logical.plans.UnwindCollection
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.Size
 import org.neo4j.cypher.internal.runtime.expressionVariableAllocation.AvailableExpressionVariables
-import org.neo4j.cypher.internal.ast.semantics.SemanticTable
-import org.neo4j.cypher.internal.expressions.SemanticDirection.INCOMING
-import org.neo4j.cypher.internal.util.symbols._
+import org.neo4j.cypher.internal.util.symbols.CTAny
+import org.neo4j.cypher.internal.util.symbols.CTNode
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 
 //noinspection NameBooleanParameters
@@ -244,13 +257,13 @@ class SlotAllocationArgumentsTest extends CypherFunSuite with LogicalPlanningTes
 
     // then
     slots(distinct.id) should be(SlotConfiguration.empty
-                                   .newLong("lhsLong0", false, CTNode)
-                                   .newLong("rhsLong0", false, CTNode)
-                                   .newLong("rhsLong1", false, CTNode) // kept because we don't break pipeline on distinct
-                                   .newReference("lhsRef0", true, CTAny)
-                                   .newReference("lhsRef1", true, CTAny)
-                                   .newReference("rhsRef0", true, CTAny) // kept because we don't break pipeline on distinct
-                                   .newReference("rhsRef1", true, CTAny)
+      .newLong("lhsLong0", false, CTNode)
+      .newLong("rhsLong0", false, CTNode)
+      .newLong("rhsLong1", false, CTNode) // kept because we don't break pipeline on distinct
+      .newReference("lhsRef0", true, CTAny)
+      .newReference("lhsRef1", true, CTAny)
+      .newReference("rhsRef0", true, CTAny) // kept because we don't break pipeline on distinct
+      .newReference("rhsRef1", true, CTAny)
     )
   }
 
@@ -277,11 +290,11 @@ class SlotAllocationArgumentsTest extends CypherFunSuite with LogicalPlanningTes
 
     // then
     slots(aggregation.id) should be(SlotConfiguration.empty
-                                   .newLong("lhsLong0", false, CTNode)
-                                   .newLong("rhsLong0", false, CTNode)
-                                   .newReference("lhsRef0", true, CTAny)
-                                   .newReference("lhsRef1", true, CTAny)
-                                   .newReference("rhsRef1", true, CTAny)
+      .newLong("lhsLong0", false, CTNode)
+      .newLong("rhsLong0", false, CTNode)
+      .newReference("lhsRef0", true, CTAny)
+      .newReference("lhsRef1", true, CTAny)
+      .newReference("rhsRef1", true, CTAny)
     )
   }
 

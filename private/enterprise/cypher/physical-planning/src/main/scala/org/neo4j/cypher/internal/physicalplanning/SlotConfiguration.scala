@@ -5,15 +5,17 @@
  */
 package org.neo4j.cypher.internal.physicalplanning
 
-import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.Size
-import org.neo4j.cypher.internal.runtime.{EntityById, ExecutionContext}
 import org.neo4j.cypher.internal.expressions.ASTCachedProperty
+import org.neo4j.cypher.internal.runtime.EntityById
+import org.neo4j.cypher.internal.runtime.ExecutionContext
 import org.neo4j.cypher.internal.util.attribution.Id
-import org.neo4j.cypher.internal.util.symbols.{CTAny, CypherType}
+import org.neo4j.cypher.internal.util.symbols.CTAny
+import org.neo4j.cypher.internal.util.symbols.CypherType
 import org.neo4j.exceptions.InternalException
 import org.neo4j.values.AnyValue
 
-import scala.collection.{immutable, mutable}
+import scala.collection.immutable
+import scala.collection.mutable
 
 object SlotConfiguration {
   def empty = new SlotConfiguration(mutable.Map.empty, mutable.Map.empty, mutable.Map.empty, 0, 0)
@@ -40,13 +42,13 @@ object SlotConfiguration {
 }
 
 /**
-  * A configuration which maps variables to slots. Two types of slot exists: LongSlot and RefSlot. In LongSlots we
-  * store nodes and relationships, represented by their ids, and in RefSlots everything else, represented as AnyValues.
-  *
-  * @param slots the slots of the configuration.
-  * @param numberOfLongs the number of long slots.
-  * @param numberOfReferences the number of ref slots.
-  */
+ * A configuration which maps variables to slots. Two types of slot exists: LongSlot and RefSlot. In LongSlots we
+ * store nodes and relationships, represented by their ids, and in RefSlots everything else, represented as AnyValues.
+ *
+ * @param slots the slots of the configuration.
+ * @param numberOfLongs the number of long slots.
+ * @param numberOfReferences the number of ref slots.
+ */
 class SlotConfiguration(private val slots: mutable.Map[String, Slot],
                         private val cachedProperties: mutable.Map[ASTCachedProperty, RefSlot],
                         private val applyPlans: mutable.Map[Id, Int],
@@ -97,10 +99,10 @@ class SlotConfiguration(private val slots: mutable.Map[String, Slot],
 
   def copy(): SlotConfiguration = {
     val newPipeline = new SlotConfiguration(this.slots.clone(),
-                                            this.cachedProperties.clone(),
-                                            this.applyPlans.clone(),
-                                            numberOfLongs,
-                                            numberOfReferences)
+      this.cachedProperties.clone(),
+      this.applyPlans.clone(),
+      numberOfLongs,
+      numberOfReferences)
     newPipeline.aliases ++= aliases
     newPipeline.slotAliases ++= slotAliases
     newPipeline
@@ -235,7 +237,7 @@ class SlotConfiguration(private val slots: mutable.Map[String, Slot],
       TopLevelArgument.SLOT_OFFSET
     } else {
       applyPlans.getOrElse(applyPlanId,
-                           throw new InternalException(s"No argument slot allocated for plan with $applyPlanId"))
+        throw new InternalException(s"No argument slot allocated for plan with $applyPlanId"))
     }
   }
 
@@ -286,7 +288,7 @@ class SlotConfiguration(private val slots: mutable.Map[String, Slot],
   def foreachSlotOrdered(onVariable: (String, Slot) => Unit,
                          onCachedProperty: ASTCachedProperty => Unit,
                          onApplyPlan: Id => Unit = _ => (),
-                         skipFirst: Size = Size.zero
+                         skipFirst: SlotConfiguration.Size = SlotConfiguration.Size.zero
                         ): Unit = {
     val (longs, refs) = slots.toSeq.partition(_._2.isLongSlot)
 
@@ -367,24 +369,24 @@ class SlotConfiguration(private val slots: mutable.Map[String, Slot],
   override def toString = s"SlotConfiguration(longs=$numberOfLongs, refs=$numberOfReferences, slots=$slots, cachedProperties=$cachedProperties)"
 
   /**
-    * NOTE: Only use for debugging
-    */
+   * NOTE: Only use for debugging
+   */
   def getLongSlots: immutable.IndexedSeq[SlotWithAliases] =
     slotAliases.toIndexedSeq.collect {
       case (slot: LongSlot, aliasesForSlot) => LongSlotWithAliases(slot, aliasesForSlot.toSet)
     }.sorted(SlotWithAliasesOrdering)
 
   /**
-    * NOTE: Only use for debugging
-    */
+   * NOTE: Only use for debugging
+   */
   def getRefSlots: immutable.IndexedSeq[SlotWithAliases] =
     slotAliases.toIndexedSeq.collect {
       case (slot: RefSlot, aliasesForSlot) => RefSlotWithAliases(slot, aliasesForSlot.toSet)
     }.sorted(SlotWithAliasesOrdering)
 
   /**
-    * NOTE: Only use for debugging
-    */
+   * NOTE: Only use for debugging
+   */
   def getCachedPropertySlots: immutable.IndexedSeq[SlotWithAliases] =
     cachedProperties.toIndexedSeq.map {
       case (cachedNodeProperty, slot) => RefSlotWithAliases(slot, Set(cachedNodeProperty.asCanonicalStringVal))

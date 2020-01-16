@@ -7,7 +7,8 @@ package org.neo4j.cypher.internal.physicalplanning
 
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.Size
-import org.neo4j.cypher.internal.util.attribution.{Attribute, Id}
+import org.neo4j.cypher.internal.util.attribution.Attribute
+import org.neo4j.cypher.internal.util.attribution.Id
 
 object PhysicalPlanningAttributes {
   class SlotConfigurations extends Attribute[LogicalPlan, SlotConfiguration]

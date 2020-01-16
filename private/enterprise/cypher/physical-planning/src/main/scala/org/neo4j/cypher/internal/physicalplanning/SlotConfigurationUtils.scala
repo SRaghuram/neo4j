@@ -7,13 +7,19 @@ package org.neo4j.cypher.internal.physicalplanning
 
 import java.util.function.ToLongFunction
 
-import org.neo4j.cypher.internal.runtime.{EntityById, ExecutionContext}
+import org.neo4j.cypher.internal.runtime.EntityById
+import org.neo4j.cypher.internal.runtime.ExecutionContext
 import org.neo4j.cypher.internal.util.AssertionUtils
-import org.neo4j.cypher.internal.util.symbols.{CTNode, CTRelationship, CypherType}
-import org.neo4j.exceptions.{InternalException, ParameterWrongTypeException}
+import org.neo4j.cypher.internal.util.symbols.CTNode
+import org.neo4j.cypher.internal.util.symbols.CTRelationship
+import org.neo4j.cypher.internal.util.symbols.CypherType
+import org.neo4j.exceptions.InternalException
+import org.neo4j.exceptions.ParameterWrongTypeException
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
-import org.neo4j.values.virtual.{VirtualNodeValue, VirtualRelationshipValue, VirtualValues}
+import org.neo4j.values.virtual.VirtualNodeValue
+import org.neo4j.values.virtual.VirtualRelationshipValue
+import org.neo4j.values.virtual.VirtualValues
 
 object SlotConfigurationUtils {
   // TODO: Check if having try/catch blocks inside some of these generated functions prevents inlining or other JIT optimizations
@@ -22,9 +28,9 @@ object SlotConfigurationUtils {
   val PRIMITIVE_NULL: Long = -1L
 
   /**
-    * Use this to make a specialized getter function for a slot,
-    * that given an ExecutionContext returns an AnyValue.
-    */
+   * Use this to make a specialized getter function for a slot,
+   * that given an ExecutionContext returns an AnyValue.
+   */
   def makeGetValueFromSlotFunctionFor(slot: Slot): ExecutionContext => AnyValue =
     slot match {
       case LongSlot(offset, false, CTNode) =>
@@ -60,9 +66,9 @@ object SlotConfigurationUtils {
     }
 
   /**
-    * Use this to make a specialized getter function for a slot and a primitive return type (i.e. CTNode or CTRelationship),
-    * that given an ExecutionContext returns a long.
-    */
+   * Use this to make a specialized getter function for a slot and a primitive return type (i.e. CTNode or CTRelationship),
+   * that given an ExecutionContext returns a long.
+   */
   def makeGetPrimitiveFromSlotFunctionFor(slot: Slot, returnType: CypherType, throwOfTypeError: Boolean = true): ToLongFunction[ExecutionContext] =
     (slot, returnType, throwOfTypeError) match {
       case (LongSlot(offset, _, _), CTNode | CTRelationship, _) =>
@@ -134,25 +140,25 @@ object SlotConfigurationUtils {
     }
 
   /**
-    * Use this to make a specialized getter function for a slot that is expected to contain a node
-    * that given an ExecutionContext returns a long with the node id.
-    */
+   * Use this to make a specialized getter function for a slot that is expected to contain a node
+   * that given an ExecutionContext returns a long with the node id.
+   */
   def makeGetPrimitiveNodeFromSlotFunctionFor(slot: Slot, throwOnTypeError: Boolean = true): ToLongFunction[ExecutionContext] =
     makeGetPrimitiveFromSlotFunctionFor(slot, CTNode, throwOnTypeError)
 
   /**
-    * Use this to make a specialized getter function for a slot that is expected to contain a node
-    * that given an ExecutionContext returns a long with the relationship id.
-    */
+   * Use this to make a specialized getter function for a slot that is expected to contain a node
+   * that given an ExecutionContext returns a long with the relationship id.
+   */
   def makeGetPrimitiveRelationshipFromSlotFunctionFor(slot: Slot, throwOfTypeError: Boolean = true): ToLongFunction[ExecutionContext] =
     makeGetPrimitiveFromSlotFunctionFor(slot, CTRelationship, throwOfTypeError)
 
   val NO_ENTITY_FUNCTION: ToLongFunction[ExecutionContext] = (value: ExecutionContext) => PRIMITIVE_NULL
 
   /**
-    * Use this to make a specialized setter function for a slot,
-    * that takes as input an ExecutionContext and an AnyValue.
-    */
+   * Use this to make a specialized setter function for a slot,
+   * that takes as input an ExecutionContext and an AnyValue.
+   */
   def makeSetValueInSlotFunctionFor(slot: Slot): (ExecutionContext, AnyValue) => Unit =
     slot match {
       case LongSlot(offset, false, CTNode) =>
@@ -208,9 +214,9 @@ object SlotConfigurationUtils {
     }
 
   /**
-    * Use this to make a specialized setter function for a slot,
-    * that takes as input an ExecutionContext and a primitive long value.
-    */
+   * Use this to make a specialized setter function for a slot,
+   * that takes as input an ExecutionContext and a primitive long value.
+   */
   def makeSetPrimitiveInSlotFunctionFor(slot: Slot, valueType: CypherType): (ExecutionContext, Long, EntityById) => Unit =
     (slot, valueType) match {
       case (LongSlot(offset, nullable, CTNode), CTNode) =>
@@ -254,8 +260,8 @@ object SlotConfigurationUtils {
         if (AssertionUtils.assertionsEnabled) {
           (context: ExecutionContext, value: Long, entityById: EntityById) =>
             if (value == -1L)
-            if (value == PRIMITIVE_NULL)
-              throw new ParameterWrongTypeException(s"Cannot assign null to a non-nullable slot")
+              if (value == PRIMITIVE_NULL)
+                throw new ParameterWrongTypeException(s"Cannot assign null to a non-nullable slot")
             context.setRefAt(offset, entityById.relationshipById(value))
         }
         else {
@@ -283,22 +289,22 @@ object SlotConfigurationUtils {
     }
 
   /**
-    * Use this to make a specialized getter function for a slot that is expected to contain a node
-    * that given an ExecutionContext returns a long with the node id.
-    */
+   * Use this to make a specialized getter function for a slot that is expected to contain a node
+   * that given an ExecutionContext returns a long with the node id.
+   */
   def makeSetPrimitiveNodeInSlotFunctionFor(slot: Slot): (ExecutionContext, Long, EntityById) => Unit =
     makeSetPrimitiveInSlotFunctionFor(slot, CTNode)
 
   /**
-    * Use this to make a specialized getter function for a slot that is expected to contain a node
-    * that given an ExecutionContext returns a long with the relationship id.
-    */
+   * Use this to make a specialized getter function for a slot that is expected to contain a node
+   * that given an ExecutionContext returns a long with the relationship id.
+   */
   def makeSetPrimitiveRelationshipInSlotFunctionFor(slot: Slot): (ExecutionContext, Long, EntityById) => Unit =
     makeSetPrimitiveInSlotFunctionFor(slot, CTRelationship)
 
   /**
-    * Generate and update accessors for all slots in a SlotConfiguration
-    */
+   * Generate and update accessors for all slots in a SlotConfiguration
+   */
   def generateSlotAccessorFunctions(slots: SlotConfiguration): Unit = {
     slots.foreachSlot({
       case (key, slot) =>

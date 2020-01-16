@@ -5,28 +5,76 @@
  */
 package org.neo4j.cypher.internal.physicalplanning
 
-import org.neo4j.cypher.internal.logical.plans._
+import org.neo4j.cypher.internal.expressions
+import org.neo4j.cypher.internal.expressions.And
+import org.neo4j.cypher.internal.expressions.CachedProperty
+import org.neo4j.cypher.internal.expressions.Equals
+import org.neo4j.cypher.internal.expressions.False
+import org.neo4j.cypher.internal.expressions.FunctionInvocation
+import org.neo4j.cypher.internal.expressions.GetDegree
+import org.neo4j.cypher.internal.expressions.HasLabels
+import org.neo4j.cypher.internal.expressions.IsNotNull
+import org.neo4j.cypher.internal.expressions.IsNull
+import org.neo4j.cypher.internal.expressions.LabelName
+import org.neo4j.cypher.internal.expressions.LogicalProperty
+import org.neo4j.cypher.internal.expressions.NODE_TYPE
+import org.neo4j.cypher.internal.expressions.RELATIONSHIP_TYPE
+import org.neo4j.cypher.internal.expressions.Not
+import org.neo4j.cypher.internal.expressions.Or
+import org.neo4j.cypher.internal.expressions.Property
+import org.neo4j.cypher.internal.expressions.PropertyKeyName
+import org.neo4j.cypher.internal.expressions.True
+import org.neo4j.cypher.internal.expressions.Variable
+import org.neo4j.cypher.internal.logical.plans.AggregatingPlan
+import org.neo4j.cypher.internal.logical.plans.LogicalPlan
+import org.neo4j.cypher.internal.logical.plans.NestedPlanExpression
+import org.neo4j.cypher.internal.logical.plans.Projection
+import org.neo4j.cypher.internal.logical.plans.ValueHashJoin
+import org.neo4j.cypher.internal.logical.plans.VarExpand
+import org.neo4j.cypher.internal.logical.plans.VariablePredicate
 import org.neo4j.cypher.internal.macros.AssertMacros.checkOnlyWhenAssertionsAreEnabled
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.SlotConfigurations
-import org.neo4j.cypher.internal.physicalplanning.ast._
+import org.neo4j.cypher.internal.physicalplanning.ast.GetDegreePrimitive
+import org.neo4j.cypher.internal.physicalplanning.ast.HasLabelsFromSlot
+import org.neo4j.cypher.internal.physicalplanning.ast.IdFromSlot
+import org.neo4j.cypher.internal.physicalplanning.ast.IsPrimitiveNull
+import org.neo4j.cypher.internal.physicalplanning.ast.LabelsFromSlot
+import org.neo4j.cypher.internal.physicalplanning.ast.NodeFromSlot
+import org.neo4j.cypher.internal.physicalplanning.ast.NodeProperty
+import org.neo4j.cypher.internal.physicalplanning.ast.NodePropertyExists
+import org.neo4j.cypher.internal.physicalplanning.ast.NodePropertyExistsLate
+import org.neo4j.cypher.internal.physicalplanning.ast.NodePropertyLate
+import org.neo4j.cypher.internal.physicalplanning.ast.NullCheck
+import org.neo4j.cypher.internal.physicalplanning.ast.NullCheckProperty
+import org.neo4j.cypher.internal.physicalplanning.ast.NullCheckVariable
+import org.neo4j.cypher.internal.physicalplanning.ast.PrimitiveEquals
+import org.neo4j.cypher.internal.physicalplanning.ast.ReferenceFromSlot
+import org.neo4j.cypher.internal.physicalplanning.ast.RelationshipFromSlot
+import org.neo4j.cypher.internal.physicalplanning.ast.RelationshipProperty
+import org.neo4j.cypher.internal.physicalplanning.ast.RelationshipPropertyExists
+import org.neo4j.cypher.internal.physicalplanning.ast.RelationshipPropertyExistsLate
+import org.neo4j.cypher.internal.physicalplanning.ast.RelationshipPropertyLate
+import org.neo4j.cypher.internal.physicalplanning.ast.RelationshipTypeFromSlot
 import org.neo4j.cypher.internal.planner.spi.TokenContext
-import org.neo4j.cypher.internal.runtime.ast.{RuntimeProperty, RuntimeVariable}
+import org.neo4j.cypher.internal.runtime.ast.RuntimeProperty
+import org.neo4j.cypher.internal.runtime.ast.RuntimeVariable
 import org.neo4j.cypher.internal.expressions
-import org.neo4j.cypher.internal.expressions.{FunctionInvocation, functions => frontendFunctions, _}
-import org.neo4j.cypher.internal.util.Foldable._
+import org.neo4j.cypher.internal.util.Rewriter
 import org.neo4j.cypher.internal.util.attribution.SameId
-import org.neo4j.cypher.internal.util.symbols._
-import org.neo4j.cypher.internal.util.{Rewriter, topDown}
-import org.neo4j.exceptions.{CantCompileQueryException, InternalException}
+import org.neo4j.cypher.internal.util.symbols.CTNode
+import org.neo4j.cypher.internal.util.symbols.CTRelationship
+import org.neo4j.cypher.internal.util.topDown
+import org.neo4j.exceptions.CantCompileQueryException
+import org.neo4j.exceptions.InternalException
 
 /**
-  * This class rewrites logical plans so they use slotted variable access instead of using key-based. It will also
-  * rewrite the slot configurations so that the new plans can be found in there.
-  *
-  * // TODO: Not too sure about that rewrite comment. Revisit here when cleaning up rewriting.
-  *
-  * @param tokenContext the token context used to map between token ids and names.
-  */
+ * This class rewrites logical plans so they use slotted variable access instead of using key-based. It will also
+ * rewrite the slot configurations so that the new plans can be found in there.
+ *
+ * // TODO: Not too sure about that rewrite comment. Revisit here when cleaning up rewriting.
+ *
+ * @param tokenContext the token context used to map between token ids and names.
+ */
 class SlottedRewriter(tokenContext: TokenContext) {
 
   private def rewriteUsingIncoming(oldPlan: LogicalPlan): Boolean = oldPlan match {
@@ -195,7 +243,7 @@ class SlottedRewriter(tokenContext: TokenContext) {
             throw new CantCompileQueryException("Did not find `" + k + "` in the slot configuration")
         }
 
-      case idFunction: FunctionInvocation if idFunction.function == frontendFunctions.Id =>
+      case idFunction: FunctionInvocation if idFunction.function == expressions.functions.Id =>
         idFunction.args.head match {
           case Variable(key) =>
             val slot = slotConfiguration(key)
@@ -207,7 +255,7 @@ class SlottedRewriter(tokenContext: TokenContext) {
           case _ => idFunction // Don't know how to specialize this
         }
 
-      case existsFunction: FunctionInvocation if existsFunction.function == frontendFunctions.Exists =>
+      case existsFunction: FunctionInvocation if existsFunction.function == expressions.functions.Exists =>
         existsFunction.args.head match {
           case prop@Property(Variable(key), PropertyKeyName(propKey)) =>
             val slot = slotConfiguration(key)
@@ -221,7 +269,7 @@ class SlottedRewriter(tokenContext: TokenContext) {
           case _ => existsFunction // Don't know how to specialize this
         }
 
-      case labels: FunctionInvocation if labels.function == frontendFunctions.Labels =>
+      case labels: FunctionInvocation if labels.function == expressions.functions.Labels =>
         labels.args.head match {
           case Variable(key) =>
             val slot = slotConfiguration(key)
@@ -233,7 +281,7 @@ class SlottedRewriter(tokenContext: TokenContext) {
           case _ => labels // Don't know how to specialize this
         }
 
-      case relType: FunctionInvocation if relType.function == frontendFunctions.Type =>
+      case relType: FunctionInvocation if relType.function == expressions.functions.Type =>
         relType.args.head match {
           case Variable(key) =>
             val slot = slotConfiguration(key)
@@ -245,7 +293,7 @@ class SlottedRewriter(tokenContext: TokenContext) {
           case _ => relType // Don't know how to specialize this
         }
 
-      case count: FunctionInvocation if count.function == frontendFunctions.Count =>
+      case count: FunctionInvocation if count.function == expressions.functions.Count =>
         // Specialize counting of primitive nodes/relationships to avoid unnecessarily creating NodeValue/RelationshipValue objects
         count.args.head match {
           case v @ Variable(key) =>

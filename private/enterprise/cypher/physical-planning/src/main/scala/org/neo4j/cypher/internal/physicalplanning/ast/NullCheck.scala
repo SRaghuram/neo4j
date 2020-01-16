@@ -5,8 +5,12 @@
  */
 package org.neo4j.cypher.internal.physicalplanning.ast
 
-import org.neo4j.cypher.internal.runtime.ast.{RuntimeExpression, RuntimeProperty, RuntimeVariable}
-import org.neo4j.cypher.internal.expressions.{Expression, LogicalProperty, LogicalVariable}
+import org.neo4j.cypher.internal.expressions.Expression
+import org.neo4j.cypher.internal.expressions.LogicalProperty
+import org.neo4j.cypher.internal.expressions.LogicalVariable
+import org.neo4j.cypher.internal.runtime.ast.RuntimeExpression
+import org.neo4j.cypher.internal.runtime.ast.RuntimeProperty
+import org.neo4j.cypher.internal.runtime.ast.RuntimeVariable
 
 case class NullCheck(offset: Int, inner: Expression) extends RuntimeExpression
 

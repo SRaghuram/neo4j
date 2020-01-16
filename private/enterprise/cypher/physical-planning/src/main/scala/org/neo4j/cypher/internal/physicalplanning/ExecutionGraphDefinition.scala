@@ -5,23 +5,23 @@
  */
 package org.neo4j.cypher.internal.physicalplanning
 
-import org.neo4j.cypher.internal.logical.plans.{LogicalPlan, ProduceResult}
+import org.neo4j.cypher.internal.logical.plans.LogicalPlan
+import org.neo4j.cypher.internal.logical.plans.ProduceResult
 import org.neo4j.cypher.internal.util.attribution.Id
 
-
 /**
-  * Per query unique buffer id
-  */
+ * Per query unique buffer id
+ */
 case class BufferId(x: Int) extends AnyVal
 
 /**
-  * Per query unique pipeline id
-  */
+ * Per query unique pipeline id
+ */
 case class PipelineId(x: Int) extends AnyVal
 
 /**
-  * per query unique argument state map id
-  */
+ * per query unique argument state map id
+ */
 case class ArgumentStateMapId(x: Int) extends AnyVal
 
 object PipelineId {
@@ -53,8 +53,8 @@ case class PipelineDefinition(id: PipelineId,
                               serial: Boolean)
 
 /**
-  * Maps to one ArgumentStateMap.
-  */
+ * Maps to one ArgumentStateMap.
+ */
 case class ArgumentStateDefinition(id: ArgumentStateMapId,
                                    planId: Id,
                                    argumentSlotOffset: Int)
@@ -63,8 +63,8 @@ case class ArgumentStateDefinition(id: ArgumentStateMapId,
 // -- BUFFERS
 
 /**
-  * A buffer between two pipelines, or a delegate after an ApplyBuffer. Maps to a PipelinedBuffer.
-  */
+ * A buffer between two pipelines, or a delegate after an ApplyBuffer. Maps to a PipelinedBuffer.
+ */
 case class BufferDefinition(id: BufferId,
                             // We need multiple reducers because a buffer might need to
                             // reference count for multiple downstream reduce operators,
@@ -99,28 +99,28 @@ case class BufferDefinition(id: BufferId,
 }
 
 /**
-  * Common superclass of all buffer variants.
-  */
+ * Common superclass of all buffer variants.
+ */
 sealed trait BufferVariant
 
 /**
-  * Regular pipelined buffer.
-  */
+ * Regular pipelined buffer.
+ */
 case object RegularBufferVariant extends BufferVariant
 
 /**
-  * A buffer between two pipelines before an Optional operator, or a delegate after an ApplyBuffer. Maps to an OptionalPipelinedBuffer.
-  */
+ * A buffer between two pipelines before an Optional operator, or a delegate after an ApplyBuffer. Maps to an OptionalPipelinedBuffer.
+ */
 case class OptionalBufferVariant(argumentStateMapId: ArgumentStateMapId) extends BufferVariant
 
 /**
-  * Sits between the LHS and RHS of an apply.
-  * This acts as a multiplexer. It receives input and copies it into
-  *
-  * @param reducersOnRHSReversed ArgumentStates of reducers on the RHS of this Apply, in downstream -> upstream order.
-  *                              This order is convenient since upstream reducers possibly need to increment counts on
-  *                              their downstreams, which have to be initialized first in order to do that.
-  */
+ * Sits between the LHS and RHS of an apply.
+ * This acts as a multiplexer. It receives input and copies it into
+ *
+ * @param reducersOnRHSReversed ArgumentStates of reducers on the RHS of this Apply, in downstream -> upstream order.
+ *                              This order is convenient since upstream reducers possibly need to increment counts on
+ *                              their downstreams, which have to be initialized first in order to do that.
+ */
 case class ApplyBufferVariant(argumentSlotOffset: Int,
                               reducersOnRHSReversed: Array[ArgumentStateMapId],
                               delegates: Array[BufferId]) extends BufferVariant {
@@ -150,14 +150,14 @@ case class AttachBufferVariant(applyBuffer: BufferDefinition,
                                argumentSize: SlotConfiguration.Size) extends BufferVariant
 
 /**
-  * This buffer groups data by argument row and sits between a pre-reduce and a reduce operator.
-  * Maps to a PipelinedArgumentStateBuffer.
-  */
+ * This buffer groups data by argument row and sits between a pre-reduce and a reduce operator.
+ * Maps to a PipelinedArgumentStateBuffer.
+ */
 case class ArgumentStateBufferVariant(argumentStateMapId: ArgumentStateMapId) extends BufferVariant
 
 /**
-  * This buffer maps to a LHSAccumulatingRHSStreamingBuffer. It sits before a hash join.
-  */
+ * This buffer maps to a LHSAccumulatingRHSStreamingBuffer. It sits before a hash join.
+ */
 case class LHSAccumulatingRHSStreamingBufferVariant(lhsPipelineId: PipelineId,
                                                     rhsPipelineId: PipelineId,
                                                     lhsArgumentStateMapId: ArgumentStateMapId,

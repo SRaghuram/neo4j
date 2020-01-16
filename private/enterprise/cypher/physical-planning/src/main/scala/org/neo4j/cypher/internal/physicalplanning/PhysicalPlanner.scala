@@ -5,12 +5,18 @@
  */
 package org.neo4j.cypher.internal.physicalplanning
 
-import org.neo4j.cypher.internal.logical.plans.LogicalPlan
-import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.{ApplyPlans, ArgumentSizes, NestedPlanArgumentConfigurations, SlotConfigurations}
-import org.neo4j.cypher.internal.planner.spi.TokenContext
-import org.neo4j.cypher.internal.runtime.expressionVariableAllocation.{AvailableExpressionVariables, Result}
-import org.neo4j.cypher.internal.runtime.{ParameterMapping, expressionVariableAllocation, slottedParameters}
 import org.neo4j.cypher.internal.ast.semantics.SemanticTable
+import org.neo4j.cypher.internal.logical.plans.LogicalPlan
+import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.ApplyPlans
+import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.ArgumentSizes
+import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.NestedPlanArgumentConfigurations
+import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.SlotConfigurations
+import org.neo4j.cypher.internal.planner.spi.TokenContext
+import org.neo4j.cypher.internal.runtime.ParameterMapping
+import org.neo4j.cypher.internal.runtime.expressionVariableAllocation
+import org.neo4j.cypher.internal.runtime.expressionVariableAllocation.AvailableExpressionVariables
+import org.neo4j.cypher.internal.runtime.expressionVariableAllocation.Result
+import org.neo4j.cypher.internal.runtime.slottedParameters
 
 object PhysicalPlanner {
 
@@ -25,13 +31,13 @@ object PhysicalPlanner {
     val slottedRewriter = new SlottedRewriter(tokenContext)
     val finalLogicalPlan = slottedRewriter(withSlottedParameters, slotMetaData.slotConfigurations)
     PhysicalPlan(finalLogicalPlan,
-                 nExpressionSlots,
-                 slotMetaData.slotConfigurations,
-                 slotMetaData.argumentSizes,
-                 slotMetaData.applyPlans,
-                 slotMetaData.nestedPlanArgumentConfigurations,
-                 availableExpressionVars,
-                 parameterMapping)
+      nExpressionSlots,
+      slotMetaData.slotConfigurations,
+      slotMetaData.argumentSizes,
+      slotMetaData.applyPlans,
+      slotMetaData.nestedPlanArgumentConfigurations,
+      availableExpressionVars,
+      parameterMapping)
   }
 }
 

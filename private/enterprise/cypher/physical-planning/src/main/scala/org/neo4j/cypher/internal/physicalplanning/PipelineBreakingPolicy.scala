@@ -5,27 +5,52 @@
  */
 package org.neo4j.cypher.internal.physicalplanning
 
-import org.neo4j.cypher.internal.logical.plans._
+import org.neo4j.cypher.internal.logical.plans.AggregatingPlan
+import org.neo4j.cypher.internal.logical.plans.AllNodesScan
+import org.neo4j.cypher.internal.logical.plans.Apply
+import org.neo4j.cypher.internal.logical.plans.Argument
+import org.neo4j.cypher.internal.logical.plans.CacheProperties
+import org.neo4j.cypher.internal.logical.plans.DirectedRelationshipByIdSeek
+import org.neo4j.cypher.internal.logical.plans.Expand
+import org.neo4j.cypher.internal.logical.plans.Input
+import org.neo4j.cypher.internal.logical.plans.Limit
+import org.neo4j.cypher.internal.logical.plans.LogicalLeafPlan
+import org.neo4j.cypher.internal.logical.plans.LogicalPlan
+import org.neo4j.cypher.internal.logical.plans.NodeByIdSeek
+import org.neo4j.cypher.internal.logical.plans.NodeByLabelScan
+import org.neo4j.cypher.internal.logical.plans.NodeCountFromCountStore
+import org.neo4j.cypher.internal.logical.plans.NodeIndexContainsScan
+import org.neo4j.cypher.internal.logical.plans.NodeIndexEndsWithScan
+import org.neo4j.cypher.internal.logical.plans.NodeIndexScan
+import org.neo4j.cypher.internal.logical.plans.NodeIndexSeek
+import org.neo4j.cypher.internal.logical.plans.NodeUniqueIndexSeek
+import org.neo4j.cypher.internal.logical.plans.OptionalExpand
+import org.neo4j.cypher.internal.logical.plans.Projection
+import org.neo4j.cypher.internal.logical.plans.RelationshipCountFromCountStore
+import org.neo4j.cypher.internal.logical.plans.Selection
+import org.neo4j.cypher.internal.logical.plans.UndirectedRelationshipByIdSeek
+import org.neo4j.cypher.internal.logical.plans.UnwindCollection
+import org.neo4j.cypher.internal.logical.plans.VarExpand
 import org.neo4j.cypher.internal.util.attribution.Id
 
 /**
-  * Policy that determines what parts of an operator tree belong together.
-  *
-  * One such part is called a Pipeline, and will have one shared slot configuration.
-  */
+ * Policy that determines what parts of an operator tree belong together.
+ *
+ * One such part is called a Pipeline, and will have one shared slot configuration.
+ */
 trait PipelineBreakingPolicy {
 
   /**
-    * True if the an operator should be the start of a new pipeline.
-    */
+   * True if the an operator should be the start of a new pipeline.
+   */
   def breakOn(lp: LogicalPlan): Boolean
 
   /**
-    * A nested operator is always the start of a new pipeline. This callback
-    * simply gives the breaking policy a possibility to throw if this is not
-    * acceptable. And it's nice that the [[PipelineBreakingPolicy]] gets notified
-    * of all breaks.
-    */
+   * A nested operator is always the start of a new pipeline. This callback
+   * simply gives the breaking policy a possibility to throw if this is not
+   * acceptable. And it's nice that the [[PipelineBreakingPolicy]] gets notified
+   * of all breaks.
+   */
   def onNestedPlanBreak(): Unit
 
   def invoke(lp: LogicalPlan, slots: SlotConfiguration, argumentSlots: SlotConfiguration): SlotConfiguration =
@@ -38,8 +63,8 @@ trait PipelineBreakingPolicy {
 }
 
 /**
-  * Policy that determines if a plan can be fused or not.
-  */
+ * Policy that determines if a plan can be fused or not.
+ */
 sealed trait OperatorFusionPolicy {
   /**
    * @return `true` if any fusion at all is enabled with this policy, otherwise `false`
@@ -52,18 +77,18 @@ sealed trait OperatorFusionPolicy {
   def fusionOverPipelineEnabled: Boolean
 
   /**
-    * `true` if plan is fusable otherwise `false`
-    * @param lp the plan to check
-    * @return `true` if plan is fusable otherwise `false`
-    */
+   * `true` if plan is fusable otherwise `false`
+   * @param lp the plan to check
+   * @return `true` if plan is fusable otherwise `false`
+   */
   def canFuse(lp: LogicalPlan): Boolean
 
 
   /**
-    * `true` if plan is can be fused over pipeline break otherwise `false`
-    * @param lp the plan to check
-    * @return `true` if plan is fusable otherwise `false`
-    */
+   * `true` if plan is can be fused over pipeline break otherwise `false`
+   * @param lp the plan to check
+   * @return `true` if plan is fusable otherwise `false`
+   */
   def canFuseOverPipeline(lp: LogicalPlan): Boolean
 }
 

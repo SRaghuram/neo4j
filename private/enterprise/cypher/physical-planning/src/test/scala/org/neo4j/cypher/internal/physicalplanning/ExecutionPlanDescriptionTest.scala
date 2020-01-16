@@ -6,10 +6,16 @@
 package org.neo4j.cypher.internal.physicalplanning
 
 import org.neo4j.cypher.internal.physicalplanning.ast.ReferenceFromSlot
-import org.neo4j.cypher.internal.plandescription.Arguments.{Rows => ArgumentRows, _}
-import org.neo4j.cypher.internal.plandescription.{NoChildren, PlanDescriptionImpl, renderAsTreeTable}
+import org.neo4j.cypher.internal.plandescription.Arguments
+import org.neo4j.cypher.internal.plandescription.Arguments.DbHits
+import org.neo4j.cypher.internal.plandescription.Arguments.EstimatedRows
+import org.neo4j.cypher.internal.plandescription.Arguments.Expression
+import org.neo4j.cypher.internal.plandescription.NoChildren
+import org.neo4j.cypher.internal.plandescription.PlanDescriptionImpl
+import org.neo4j.cypher.internal.plandescription.renderAsTreeTable
 import org.neo4j.cypher.internal.util.attribution.Id
-import org.neo4j.cypher.internal.util.test_helpers.{CypherFunSuite, WindowsStringSafe}
+import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
+import org.neo4j.cypher.internal.util.test_helpers.WindowsStringSafe
 
 class ExecutionPlanDescriptionTest extends CypherFunSuite {
   implicit val windowsSafe = WindowsStringSafe
@@ -17,7 +23,7 @@ class ExecutionPlanDescriptionTest extends CypherFunSuite {
   test("use variable name instead of ReferenceFromSlot") {
 
     val arguments = Seq(
-      ArgumentRows(42),
+      Arguments.Rows(42),
       DbHits(33),
       Expression(ReferenceFromSlot(42, "  id@23")),
       EstimatedRows(1))

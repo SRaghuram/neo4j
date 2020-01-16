@@ -11,53 +11,53 @@ import org.neo4j.exceptions.InternalException
 import scala.collection.mutable
 
 /**
-  * Traverses the logical plan tree structure and builds up the corresponding output structure.
-  * The traversal order is a kind of depth-first combined in/post-order (left first), in that
-  * we visit (1) the left subtree, (2) the root, (3) the right subtree, and then (4) revisit the root.
-  *
-  * In addition to traversing the tree, this class keeps track of the right hand side
-  * nesting (`ARGUMENT`s) of all plans. This is done by stacking the generic `ARGUMENT` for
-  * every binary operator (returned at (2)), and passing the top `ARGUMENT` into all plan callbacks.
-  *
-  * We model the whole plan tree as being encompassed by an implicit outer apply which is executed
-  * with a single row. This lets us avoid specializing reducing operators that are not on the rhs of an apply.
-  * This single argument is constructed using the [[TreeBuilder#initialArgument]] callback.
-  *
-  * The argument handling can be used to flatten the output structure, e.g. an Apply plan `a` can be turned into:
-  *
-  *   a              a
-  *  / \    ===>    /
-  * b   c          c
-  *               /
-  *              b
-  *
-  * Given a logical plan such as:
-  *
-  *           a
-  *        /    \
-  *       b      c
-  *      / \    / \
-  *     d   e  f   g
-  *     |
-  *     h
-  *
-  * The virtual method callbacks will be called in the following sequence:
-  *
-  * H      = onLeaf(h, initialArgument)
-  * D      = onOneChildPlan(d, H, initialArgument)
-  * argB   = onTwoChildPlanComingFromLeft(b, D, initialArgument)
-  * E      = onLeaf(e, argB)
-  * B      = onTwoChildPlanComingFromRight(b, D, E, argB)
-  * argA   = onTwoChildPlanComingFromLeft(a, B, initialArgument)
-  * F      = onLeaf(f, argA)
-  * argC   = onTwoChildPlanComingFromLeft(c, F, argA)
-  * G      = onLeaf(g, argC)
-  * C      = onTwoChildPlanComingFromRight(c, F, G, argC)
-  * A      = onTwoChildPlanComingFromRight(a, B, C, argA)
-  *
-  * @tparam T type of build output
-  * @tparam ARGUMENT type of argument
-  */
+ * Traverses the logical plan tree structure and builds up the corresponding output structure.
+ * The traversal order is a kind of depth-first combined in/post-order (left first), in that
+ * we visit (1) the left subtree, (2) the root, (3) the right subtree, and then (4) revisit the root.
+ *
+ * In addition to traversing the tree, this class keeps track of the right hand side
+ * nesting (`ARGUMENT`s) of all plans. This is done by stacking the generic `ARGUMENT` for
+ * every binary operator (returned at (2)), and passing the top `ARGUMENT` into all plan callbacks.
+ *
+ * We model the whole plan tree as being encompassed by an implicit outer apply which is executed
+ * with a single row. This lets us avoid specializing reducing operators that are not on the rhs of an apply.
+ * This single argument is constructed using the [[TreeBuilder#initialArgument]] callback.
+ *
+ * The argument handling can be used to flatten the output structure, e.g. an Apply plan `a` can be turned into:
+ *
+ *   a              a
+ *  / \    ===>    /
+ * b   c          c
+ *               /
+ *              b
+ *
+ * Given a logical plan such as:
+ *
+ *           a
+ *        /    \
+ *       b      c
+ *      / \    / \
+ *     d   e  f   g
+ *     |
+ *     h
+ *
+ * The virtual method callbacks will be called in the following sequence:
+ *
+ * H      = onLeaf(h, initialArgument)
+ * D      = onOneChildPlan(d, H, initialArgument)
+ * argB   = onTwoChildPlanComingFromLeft(b, D, initialArgument)
+ * E      = onLeaf(e, argB)
+ * B      = onTwoChildPlanComingFromRight(b, D, E, argB)
+ * argA   = onTwoChildPlanComingFromLeft(a, B, initialArgument)
+ * F      = onLeaf(f, argA)
+ * argC   = onTwoChildPlanComingFromLeft(c, F, argA)
+ * G      = onLeaf(g, argC)
+ * C      = onTwoChildPlanComingFromRight(c, F, G, argC)
+ * A      = onTwoChildPlanComingFromRight(a, B, C, argA)
+ *
+ * @tparam T type of build output
+ * @tparam ARGUMENT type of argument
+ */
 trait TreeBuilder[T, ARGUMENT] {
 
   protected def initialArgument(leftLeaf: LogicalPlan): ARGUMENT
@@ -75,8 +75,8 @@ trait TreeBuilder[T, ARGUMENT] {
     var comingFrom = plan
 
     /**
-      * Eagerly populate the stack using all the lhs children.
-      */
+     * Eagerly populate the stack using all the lhs children.
+     */
     def populate(plan: LogicalPlan): Unit = {
       var current = plan
       while (!current.isLeaf) {
