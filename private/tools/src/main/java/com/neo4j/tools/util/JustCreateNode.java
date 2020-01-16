@@ -1,7 +1,6 @@
 package com.neo4j.tools.util;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.Map;
 
 import org.neo4j.dbms.api.DatabaseManagementService;
@@ -16,13 +15,21 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 
 public class JustCreateNode
 {
-    public static void main( String[] args ) throws IOException
+    public static void main( String[] args ) throws Exception
     {
         File homeDirectory = new File( "C:/Users/Matilas/Desktop/home" );
         FileUtils.deleteRecursively( homeDirectory );
         DatabaseManagementService dbms = new DatabaseManagementServiceBuilder( homeDirectory ).build();
         Label label = Label.label( "Hello token world" );
         Label label2 = Label.label( "Indeed coolness" );
+        Map<String, Object> properties = Map.of(
+                "name", "Valdemar",
+                "scalar_huge", 1L << 48,
+                 "scalar_medium", 1 << 24,
+                 "scalar_small", 1 << 12,
+                 "scalar_minimal", 1L << 4,
+                 "number", 9.9
+        );
         try
         {
             GraphDatabaseService db = dbms.database( DEFAULT_DATABASE_NAME );
@@ -32,8 +39,7 @@ public class JustCreateNode
                 for ( int i = 0; i < nodeIds.length; i++ )
                 {
                     Node node = tx.createNode( label, label2 );
-                    node.setProperty( "name", "Valdemar" );
-                    node.setProperty( "number", 99 );
+                    properties.forEach( node::setProperty );
                     nodeIds[i] = node.getId();
                 }
                 tx.commit();
@@ -48,7 +54,13 @@ public class JustCreateNode
                     {
                         System.out.println( "  Has label '" + nodeLabel.name() + "'" );
                     }
-                    Map<String,Object> properties = node.getAllProperties();
+                    Map<String,Object> readProperties = node.getAllProperties();
+                    if ( !properties.equals( readProperties ) )
+                    {
+                        System.out.println( properties );
+                        System.out.println( readProperties );
+                        throw new Exception("Wrong properties");
+                    }
                     properties.forEach( ( key, value ) -> System.out.println( "  Has property " + key + "=" + value ) );
                 }
             }
