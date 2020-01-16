@@ -56,7 +56,7 @@ trait ExecutionState extends ArgumentStateMapCreator {
   /**
    * Put a morsel into the buffer with id `bufferId`.
    */
-  def putMorsel(fromPipeline: PipelineId, bufferId: BufferId, morsel: MorselExecutionContext): Unit
+  def putMorsel(bufferId: BufferId, morsel: MorselExecutionContext): Unit
 
   /**
    * Take a morsel from the buffer with id `bufferId`.

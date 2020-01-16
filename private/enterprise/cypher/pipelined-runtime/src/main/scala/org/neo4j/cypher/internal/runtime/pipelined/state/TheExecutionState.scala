@@ -115,7 +115,7 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
 
   override def initializeState(): Unit = {
     // Assumption: Buffer with ID 0 is the initial buffer
-    putMorsel(NO_PIPELINE, BufferId(0), MorselExecutionContext.createInitialRow())
+    putMorsel(BufferId(0), MorselExecutionContext.createInitialRow())
   }
 
   // Methods
@@ -124,8 +124,7 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
     new AlarmSink(buffers.sink[T](bufferId), workerWaker, queryStatus)
   }
 
-  override def putMorsel(fromPipeline: PipelineId,
-                         bufferId: BufferId,
+  override def putMorsel(bufferId: BufferId,
                          output: MorselExecutionContext): Unit = {
     if (!queryStatus.cancelled) {
       buffers.sink[MorselExecutionContext](bufferId).put(output)

@@ -112,7 +112,7 @@ case class MorselBufferPreparedOutput(bufferId: BufferId,
                                       pipelineId: PipelineId,
                                       outputMorsel: MorselExecutionContext) extends PreparedOutput {
   override def produce(): Unit =
-    executionState.putMorsel(pipelineId, bufferId, outputMorsel)
+    executionState.putMorsel(bufferId, outputMorsel)
 }
 
 // PIPELINED ARGUMENT STATE BUFFER OUTPUT
