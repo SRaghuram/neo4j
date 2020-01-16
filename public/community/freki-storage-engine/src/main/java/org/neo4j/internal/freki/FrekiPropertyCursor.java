@@ -28,7 +28,7 @@ import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.ValueGroup;
 
 import static org.neo4j.internal.freki.PropertyValueFormat.calculatePropertyValueSizeIncludingTypeHeader;
-import static org.neo4j.internal.freki.StreamVByte.readDeltas;
+import static org.neo4j.internal.freki.StreamVByte.readIntDeltas;
 
 class FrekiPropertyCursor implements StoragePropertyCursor
 {
@@ -62,8 +62,14 @@ class FrekiPropertyCursor implements StoragePropertyCursor
         if ( nodeRecord.hasFlag( Record.FLAG_IN_USE ) )
         {
             this.record.initializeFromWithSharedData( nodeRecord );
-            readHeader();
-            initializedFromNode = true;
+            if ( readHeader() )
+            {
+                initializedFromNode = true;
+            }
+            else
+            {
+                reset();
+            }
         }
         else
         {
@@ -109,7 +115,10 @@ class FrekiPropertyCursor implements StoragePropertyCursor
                 {
                     return false;
                 }
-                readHeader();
+                if ( !readHeader() )
+                {
+                    return false;
+                }
             }
 
             propertyKeyIndex++;
@@ -128,17 +137,24 @@ class FrekiPropertyCursor implements StoragePropertyCursor
         return false;
     }
 
-    private void readHeader()
+    private boolean readHeader()
     {
         // Read property offset
         data = record.dataForReading();
         int offsetsHeader = MutableNodeRecordData.readOffsetsHeader( data );
         int propertyOffset = MutableNodeRecordData.propertyOffset( offsetsHeader );
+        if ( propertyOffset == 0 )
+        {
+            return false;
+        }
 
         // Read property keys
+        data.position( propertyOffset );
         StreamVByte.IntArrayTarget target = new StreamVByte.IntArrayTarget();
-        nextPropertyValueStartOffset = readDeltas( target, data.array(), propertyOffset );
+        readIntDeltas( target, data );
+        nextPropertyValueStartOffset = data.position();
         propertyKeyArray = target.array();
+        return true;
     }
 
     private PageCursor cursor()

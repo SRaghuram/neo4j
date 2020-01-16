@@ -19,6 +19,7 @@
  */
 package org.neo4j.internal.freki;
 
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 
 import static java.lang.Integer.min;
@@ -27,15 +28,17 @@ class StreamVByte
 {
     private static final int MASK_SQUASHED_BLOCK = 0b1000_0000;
     private static final int SHIFT_SQUASHED_BLOCK_LENGTH = 5;
+    private static final int[] LONG_SIZES = {3, 4, 5, 7};
 
-    static int writeDeltas( int[] source, byte[] serialized, int serializedOffset )
+    static void writeIntDeltas( int[] source, ByteBuffer buffer )
     {
-        return writeDeltas( new IntArraySource( source ), serialized, serializedOffset );
+        writeIntDeltas( new IntArraySource( source ), buffer );
     }
 
-    static int writeDeltas( Source source, byte[] serialized, int serializedOffset )
+    static void writeIntDeltas( Source source, ByteBuffer buffer )
     {
-        int offset = serializedOffset;
+        byte[] serialized = buffer.array();
+        int offset = buffer.position();
         int length = source.length();
         for ( int i = 0, prev = 0; i < length; )
         {
@@ -58,7 +61,7 @@ class StreamVByte
                 for ( int j = 0; j < blockSize; j++, i++, c++ )
                 {
                     int value = source.valueAt( i );
-                    offset = writeValue( serialized, offset, headerOffset, j, value - prev );
+                    offset = writeIntValue( serialized, offset, headerOffset, j, value - prev );
                     prev = value;
                 }
                 if ( blockSize == 4 )
@@ -71,10 +74,10 @@ class StreamVByte
         {
             serialized[offset++] = (byte) MASK_SQUASHED_BLOCK;
         }
-        return offset;
+        buffer.position( offset );
     }
 
-    private static int writeValue( byte[] serialized, int offset, int headerOffset, int j, int value )
+    private static int writeIntValue( byte[] serialized, int offset, int headerOffset, int j, int value )
     {
         if ( (value & 0xFF000000) != 0 )
         {
@@ -105,9 +108,10 @@ class StreamVByte
         return offset;
     }
 
-    static int readDeltas( Target target, byte[] serialized, int serializedOffset )
+    static void readIntDeltas( Target target, ByteBuffer buffer )
     {
-        int offset = serializedOffset;
+        byte[] serialized = buffer.array();
+        int offset = buffer.position();
         int currentBlockValueLength = Byte.MAX_VALUE;
         for ( int i = 0, prev = 0; currentBlockValueLength == Byte.MAX_VALUE; )
         {
@@ -131,7 +135,7 @@ class StreamVByte
                 for ( int j = 0; j < blockSize; j++, i++, c++ )
                 {
                     int size = (headerByte >>> (j * 2)) & 0b11;
-                    int readValue = readValue( serialized, offset, size );
+                    int readValue = readIntValue( serialized, offset, size );
                     int value = prev + readValue;
                     target.accept( i, value );
                     offset += size + 1; // because e.g. size==0 uses 1B, size==1 uses 2B a.s.o.
@@ -143,10 +147,10 @@ class StreamVByte
                 }
             }
         }
-        return offset;
+        buffer.position( offset );
     }
 
-    private static int readValue( byte[] serialized, int offset, int size )
+    private static int readIntValue( byte[] serialized, int offset, int size )
     {
         if ( size == 3 )
         {
@@ -169,7 +173,209 @@ class StreamVByte
         return unsigned( serialized[offset] );
     }
 
+    // =========== LONGS =============
+
+    static void writeLongs( long[] source, ByteBuffer buffer )
+    {
+        byte[] serialized = buffer.array();
+        int offset = buffer.position();
+        int length = source.length;
+        for ( int i = 0; i < length; )
+        {
+            int headerOffset = offset;
+            int currentBlockValueLength = min( Byte.MAX_VALUE, length - i );
+            if ( currentBlockValueLength <= 2 )
+            {
+                // If block size is 0..2 then count and header bytes can be squashed into a single byte
+                serialized[headerOffset] = (byte) (MASK_SQUASHED_BLOCK | (currentBlockValueLength << SHIFT_SQUASHED_BLOCK_LENGTH));
+            }
+            else
+            {
+                serialized[headerOffset++] = (byte) currentBlockValueLength;
+            }
+
+            offset = headerOffset + 1;
+            for ( int c = 0; c < currentBlockValueLength; )
+            {
+                int blockSize = min( 4, currentBlockValueLength - c );
+                for ( int j = 0; j < blockSize; j++, i++, c++ )
+                {
+                    offset = writeLongValue( serialized, offset, headerOffset, j, source[i] );
+                }
+                if ( blockSize == 4 )
+                {
+                    headerOffset = offset++;
+                }
+            }
+        }
+        if ( length == 0 )
+        {
+            serialized[offset++] = (byte) MASK_SQUASHED_BLOCK;
+        }
+        buffer.position( offset );
+    }
+
+    static int calculateLongsSize( long[] source )
+    {
+        int size = 0;
+        int length = source.length;
+        for ( int i = 0; i < length; )
+        {
+            int currentBlockValueLength = min( Byte.MAX_VALUE, length - i );
+            size += (currentBlockValueLength <= 2 ? 1 : 2);
+            for ( int c = 0; c < currentBlockValueLength; )
+            {
+                int blockSize = min( 4, currentBlockValueLength - c );
+                for ( int j = 0; j < blockSize; j++, i++, c++ )
+                {
+                    size += calculateLongSize( source[i] );
+                }
+                if ( blockSize == 4 )
+                {
+                    size++;
+                }
+            }
+        }
+        return length == 0 ? size + 1 : size;
+    }
+
+    private static int calculateLongSize( long value )
+    {
+        if ( (value & 0xFFFF00_00000000L) != 0 )
+        {
+            return LONG_SIZES[3];
+        }
+        else if ( (value & 0xFF_00000000L) != 0 )
+        {
+            return LONG_SIZES[2];
+        }
+        else if ( (value & 0xFF000000L) != 0 )
+        {
+            return LONG_SIZES[1];
+        }
+        return LONG_SIZES[0];
+    }
+
+    static long[] readLongs( ByteBuffer buffer )
+    {
+        byte[] serialized = buffer.array();
+        int offset = buffer.position();
+        int currentBlockValueLength = Byte.MAX_VALUE;
+        long[] target = null;
+        for ( int i = 0; currentBlockValueLength == Byte.MAX_VALUE; )
+        {
+            int headerByte = unsigned( serialized[offset++] );
+            if ( (headerByte & MASK_SQUASHED_BLOCK) != 0 )
+            {
+                // The special 0-2 header and count squashed byte
+                currentBlockValueLength = ((headerByte & 0b0110_0000) >>> SHIFT_SQUASHED_BLOCK_LENGTH) & 0b11;
+                headerByte &= 0b1111;
+            }
+            else
+            {
+                currentBlockValueLength = headerByte;
+                headerByte = unsigned( serialized[offset++] );
+            }
+
+            target = target == null ? new long[currentBlockValueLength] : Arrays.copyOf( target, i + currentBlockValueLength );
+            for ( int c = 0; c < currentBlockValueLength; )
+            {
+                int blockSize = min( 4, currentBlockValueLength - c );
+                for ( int j = 0; j < blockSize; j++, i++, c++ )
+                {
+                    int size = (headerByte >>> (j * 2)) & 0b11;
+                    long readValue = readLongValue( serialized, offset, size );
+                    target[i] = readValue;
+                    offset += LONG_SIZES[size];
+                }
+                if ( blockSize == 4 )
+                {
+                    headerByte = unsigned( serialized[offset++] );
+                }
+            }
+        }
+        buffer.position( offset );
+        return target;
+    }
+
+    private static int writeLongValue( byte[] serialized, int offset, int headerOffset, int j, long value )
+    {
+        if ( (value & 0xFFFF00_00000000L) != 0 )
+        {
+            serialized[headerOffset] |= 0b11 << (j * 2);
+            serialized[offset++] = (byte) value;
+            serialized[offset++] = (byte) (value >>> 8);
+            serialized[offset++] = (byte) (value >>> 16);
+            serialized[offset++] = (byte) (value >>> 24);
+            serialized[offset++] = (byte) (value >>> 32);
+            serialized[offset++] = (byte) (value >>> 40);
+            serialized[offset++] = (byte) (value >>> 48);
+        }
+        else if ( (value & 0xFF_00000000L) != 0 )
+        {
+            serialized[headerOffset] |= 0b10 << (j * 2);
+            serialized[offset++] = (byte) value;
+            serialized[offset++] = (byte) (value >>> 8);
+            serialized[offset++] = (byte) (value >>> 16);
+            serialized[offset++] = (byte) (value >>> 24);
+            serialized[offset++] = (byte) (value >>> 32);
+        }
+        else if ( (value & 0xFF000000L) != 0 )
+        {
+            serialized[headerOffset] |= 0b01 << (j * 2);
+            serialized[offset++] = (byte) value;
+            serialized[offset++] = (byte) (value >>> 8);
+            serialized[offset++] = (byte) (value >>> 16);
+            serialized[offset++] = (byte) (value >>> 24);
+        }
+        else
+        {
+            // header 2b not set, leaving it as 0b00
+            serialized[offset++] = (byte) value;
+            serialized[offset++] = (byte) (value >>> 8);
+            serialized[offset++] = (byte) (value >>> 16);
+        }
+        return offset;
+    }
+
+    private static long readLongValue( byte[] serialized, int offset, int size )
+    {
+        if ( size == 3 )
+        {
+            return unsigned( serialized[offset] ) |
+                    (unsignedLong( serialized[offset + 1] ) << 8) |
+                    (unsignedLong( serialized[offset + 2] ) << 16) |
+                    (unsignedLong( serialized[offset + 3] ) << 24) |
+                    (unsignedLong( serialized[offset + 4] ) << 32) |
+                    (unsignedLong( serialized[offset + 5] ) << 40) |
+                    (unsignedLong( serialized[offset + 6] ) << 48);
+        }
+        else if ( size == 2 )
+        {
+            return unsignedLong( serialized[offset] ) |
+                    (unsignedLong( serialized[offset + 1] ) << 8) |
+                    (unsignedLong( serialized[offset + 2] ) << 16) |
+                    (unsignedLong( serialized[offset + 3] ) << 24) |
+                    (unsignedLong( serialized[offset + 4] ) << 32);
+        }
+        else if ( size == 1 )
+        {
+            return unsignedLong( serialized[offset] ) |
+                    (unsignedLong( serialized[offset + 1] ) << 8) |
+                    (unsignedLong( serialized[offset + 2] ) << 16) |
+                    (unsignedLong( serialized[offset + 3] ) << 24);
+        }
+        return unsignedLong( serialized[offset] ) |
+                (unsignedLong( serialized[offset + 1] ) << 8) |
+                (unsignedLong( serialized[offset + 2] ) << 16);
+    }
+
     private static int unsigned( byte value )
+    {
+        return value & 0xFF;
+    }
+
+    private static long unsignedLong( byte value )
     {
         return value & 0xFF;
     }
