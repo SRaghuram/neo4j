@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2019 "Neo4j,"
+ * Copyright (c) 2002-2020 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  *
  * This file is part of Neo4j.
@@ -138,6 +138,8 @@ class FrekiStorageEngine implements StorageEngine
         {
             mainStore = new Store( fs, databaseLayout.file( "main-store" ), pageCache, idGeneratorFactory, IdType.NODE, false, createStoreIfNotExists,
                     cursorTracerSupplier );
+            idGeneratorFactory.create( pageCache, databaseLayout.relationshipStore(), IdType.RELATIONSHIP, 0, false, Long.MAX_VALUE, false,
+                    cursorTracerSupplier.get() );
             PageCursorTracer cursorTracer = cursorTracerSupplier.get();
             metaDataStore = new GBPTreeMetaDataStore( pageCache, databaseLayout.file( "meta-data-store" ), 123456789, false, pageCacheTracer, cursorTracer );
             countsStore = new GBPTreeCountsStore( pageCache, databaseLayout.countStore(), recoveryCleanupWorkCollector,

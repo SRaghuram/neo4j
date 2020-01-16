@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2019 "Neo4j,"
+ * Copyright (c) 2002-2020 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  *
  * This file is part of Neo4j.
@@ -20,7 +20,9 @@
 package org.neo4j.internal.freki;
 
 import org.eclipse.collections.api.map.primitive.MutableIntObjectMap;
+import org.eclipse.collections.api.map.primitive.MutableLongObjectMap;
 import org.eclipse.collections.impl.factory.primitive.IntObjectMaps;
+import org.eclipse.collections.impl.factory.primitive.LongObjectMaps;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -28,6 +30,7 @@ import java.util.Arrays;
 import org.neo4j.values.storable.Value;
 
 import static org.neo4j.internal.freki.StreamVByte.writeDeltas;
+import static org.neo4j.internal.helpers.Numbers.safeCastIntToUnsignedByte;
 import static org.neo4j.values.storable.Values.EMPTY_PRIMITIVE_INT_ARRAY;
 
 /**
@@ -39,6 +42,7 @@ class MutableNodeRecordData
 
     int[] labels = EMPTY_PRIMITIVE_INT_ARRAY;
     MutableIntObjectMap<Property> properties = IntObjectMaps.mutable.empty();
+    MutableLongObjectMap<Relationship> relationships = LongObjectMaps.mutable.empty();
 
     static class Property implements Comparable<Property>
     {
@@ -63,7 +67,14 @@ class MutableNodeRecordData
         long otherNode;
         int type;
         boolean outgoing;
-        MutableIntObjectMap<Property> properties = IntObjectMaps.mutable.empty();
+        //MutableIntObjectMap<Property> properties = IntObjectMaps.mutable.empty();
+
+        Relationship( long otherNode, int type, boolean outgoing ){
+
+            this.otherNode = otherNode;
+            this.type = type;
+            this.outgoing = outgoing;
+        }
     }
 
     void serialize( ByteBuffer buffer )
@@ -97,6 +108,18 @@ class MutableNodeRecordData
         buffer.put( offsetHeaderPosition,     propertyOffsetBits );
         buffer.put( offsetHeaderPosition + 1, relationshipOffsetBits );
         buffer.put( offsetHeaderPosition + 2, highOffsetBits );
+
+        // relationships
+        // Number of relationships
+        // Rel1 (type+dir)
+        //      otherNode
+        // repeat...
+        buffer.put( safeCastIntToUnsignedByte( relationships.size() ) );
+        for ( Relationship relationship : relationships )
+        {
+            buffer.putInt( relationship.type | ((relationship.outgoing ? 1 : 0 ) << 31 ));
+            buffer.putLong( relationship.otherNode );
+        }
     }
 
     void deserialize( ByteBuffer buffer )

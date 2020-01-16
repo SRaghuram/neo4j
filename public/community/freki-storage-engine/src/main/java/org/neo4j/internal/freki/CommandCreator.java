@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2019 "Neo4j,"
+ * Copyright (c) 2002-2020 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  *
  * This file is part of Neo4j.
@@ -73,7 +73,18 @@ class CommandCreator implements TxStateVisitor
     @Override
     public void visitCreatedRelationship( long id, int type, long startNode, long endNode ) throws ConstraintValidationException
     {
-        throw new UnsupportedOperationException( "Not implemented yet" );
+        //TODO use the ID for something useful!
+        createRelationship( id, type, startNode, endNode, true );
+        if ( startNode != endNode )
+        {
+            createRelationship( id, type, endNode, startNode, false );
+        }
+    }
+
+    private void createRelationship( long id, int type, long firstNode, long secondNode, boolean outgoing )
+    {
+        FrekiCommand.Node startCommand = (FrekiCommand.Node) build.get( firstNode );
+        startCommand.after().node.relationships.put( id, new MutableNodeRecordData.Relationship( secondNode, type, outgoing ) );
     }
 
     @Override
@@ -99,7 +110,7 @@ class CommandCreator implements TxStateVisitor
     public void visitRelPropertyChanges( long id, Iterator<StorageProperty> added, Iterator<StorageProperty> changed, IntIterable removed )
             throws ConstraintValidationException
     {
-        throw new UnsupportedOperationException( "Not implemented yet" );
+//        throw new UnsupportedOperationException( "Not implemented yet" );
     }
 
     @Override

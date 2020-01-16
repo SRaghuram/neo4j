@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2019 "Neo4j,"
+ * Copyright (c) 2002-2020 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  *
  * This file is part of Neo4j.
@@ -25,6 +25,8 @@ import org.neo4j.string.UTF8;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.Values;
 import org.neo4j.values.utils.TemporalValueWriterAdapter;
+
+import static org.neo4j.internal.helpers.Numbers.safeCastIntToUnsignedByte;
 
 class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
 {
@@ -121,12 +123,8 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
     public void writeString( String value )
     {
         byte[] bytes = UTF8.encode( value );
-        if ( bytes.length > 255 )
-        {
-            throw new UnsupportedOperationException( "Not implemented yet" );
-        }
         buffer.put( EXTERNAL_TYPE_STRING );
-        buffer.put( (byte) bytes.length );
+        buffer.put( safeCastIntToUnsignedByte( bytes.length ) );
         buffer.put( bytes );
     }
 
