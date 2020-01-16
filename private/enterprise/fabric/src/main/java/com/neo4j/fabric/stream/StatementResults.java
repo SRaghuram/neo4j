@@ -169,8 +169,55 @@ public class StatementResults
             Subscription subscription = new Subscription()
             {
 
+                private final Object requestLock = new Object();
+                private long pendingRequests;
+                // a flag indicating if there is a thread requesting from upstream
+                private boolean producing;
+
                 @Override
                 public void request( long size )
+                {
+                    synchronized ( requestLock )
+                    {
+                        pendingRequests += size;
+                        // check if another thread is already requesting
+                        if ( producing )
+                        {
+                            return;
+                        }
+
+                        producing = true;
+                    }
+
+                    try
+                    {
+                        while ( true )
+                        {
+                            long toRequest;
+                            synchronized ( requestLock )
+                            {
+                                toRequest = pendingRequests;
+                                if ( toRequest == 0 )
+                                {
+                                    return;
+                                }
+
+                                pendingRequests = 0;
+                            }
+
+                            doRequest( toRequest );
+                        }
+                    }
+                    finally
+                    {
+                        synchronized ( requestLock )
+                        {
+                            producing = false;
+                        }
+                    }
+                }
+
+                private void doRequest( long size )
                 {
                     maybeSendCachedError();
                     try
