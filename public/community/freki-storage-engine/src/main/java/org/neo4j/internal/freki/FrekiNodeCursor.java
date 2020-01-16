@@ -27,7 +27,7 @@ import org.neo4j.storageengine.api.StorageNodeCursor;
 import org.neo4j.storageengine.api.StoragePropertyCursor;
 
 import static org.neo4j.internal.freki.MutableNodeRecordData.SIZE_SLOT_HEADER;
-import static org.neo4j.internal.freki.StreamVByte.readDeltas;
+import static org.neo4j.internal.freki.StreamVByte.readIntDeltas;
 
 class FrekiNodeCursor implements StorageNodeCursor
 {
@@ -50,7 +50,7 @@ class FrekiNodeCursor implements StorageNodeCursor
     {
         StreamVByte.LongArrayTarget target = new StreamVByte.LongArrayTarget();
         // TODO not position(), more like right after the record header, right?
-        readDeltas( target, data.array(), data.position() );
+        readIntDeltas( target, data );
         return target.array();
     }
 

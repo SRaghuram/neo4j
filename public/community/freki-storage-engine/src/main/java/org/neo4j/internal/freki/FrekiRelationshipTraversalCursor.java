@@ -20,6 +20,7 @@
 package org.neo4j.internal.freki;
 
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.storageengine.api.RelationshipDirection;
@@ -37,15 +38,24 @@ public class FrekiRelationshipTraversalCursor implements StorageRelationshipTrav
     private ByteBuffer data;
 
     private PageCursor cursor;
-    boolean loadedCorrectNode;
+    private boolean loadedCorrectNode;
     private long nodeId;
     private int expectedType;
     private RelationshipDirection expectedDirection;
-    private int numRelationships;
-    private int currentRelationshipIndex;
-    private int currentRelationshipType;
-    private RelationshipDirection currentRelationshipDirection;
+
+    private int[] typesInNode;
+    private int[] typeOffsets;
+    private long[] currentTypeData;
+    private int currentTypeIndex;
+    private int currentTypeDataIndex;
+    private int currentTypePropertiesIndex;
+    private long currentTypePropertiesOffset;
+
+    // accidental state
     private long currentRelationshipOtherNode;
+    private RelationshipDirection currentRelationshipDirection;
+    private boolean currentRelationshipHasProperties;
+    private int currentRelationshipPropertiesIndex; //Index in types property list where current
 
     FrekiRelationshipTraversalCursor( Store mainStore )
     {
@@ -56,7 +66,7 @@ public class FrekiRelationshipTraversalCursor implements StorageRelationshipTrav
     @Override
     public boolean hasProperties()
     {
-        throw new UnsupportedOperationException( "Not implemented yet" );
+        return currentRelationshipHasProperties;
     }
 
     @Override
@@ -68,6 +78,8 @@ public class FrekiRelationshipTraversalCursor implements StorageRelationshipTrav
     @Override
     public void properties( StoragePropertyCursor propertyCursor )
     {
+        long offsetInPropCursor = currentTypePropertiesOffset;
+        long indexInTypePropertiesForCurrentRelationship = currentTypePropertiesIndex;
         throw new UnsupportedOperationException( "Not implemented yet" );
     }
 
@@ -80,56 +92,109 @@ public class FrekiRelationshipTraversalCursor implements StorageRelationshipTrav
     @Override
     public boolean next()
     {
-        if ( !loadedCorrectNode || currentRelationshipIndex != -1 )
+        if ( !loadedCorrectNode || currentTypeIndex != -1 )
         {
             if ( !loadedCorrectNode )
             {
                 mainStore.read( cursor(), record, nodeId );
                 loadedCorrectNode = true;
-                currentRelationshipIndex = 0;
+                currentTypeIndex = 0;
                 if ( !record.hasFlag( Record.FLAG_IN_USE ) )
                 {
                     return false;
                 }
-                readHeaderAndPrepareBuffer();
+                if ( !readHeaderAndPrepareBuffer() )
+                {
+                    return false;
+                }
+
+                if ( expectedType != -1 )
+                {
+                    int foundIndex = Arrays.binarySearch( typesInNode, expectedType );
+                    if ( foundIndex < 0 )
+                    {
+                        return false;
+                    }
+                    currentTypeIndex = foundIndex;
+                    data.position( typeOffsets[currentTypeIndex] );
+                }
             }
 
-            while ( currentRelationshipIndex < numRelationships )
+            while ( currentTypeIndex < typesInNode.length )
             {
-                currentRelationshipIndex++;
+                if ( currentTypeDataIndex == -1 || currentTypeDataIndex >= currentTypeData.length )
+                {
+                    if ( expectedType != -1 && typesInNode[currentTypeIndex] != expectedType )
+                    {
+                        break;
+                    }
 
-                int relHeader = data.getInt();
-                currentRelationshipType = relHeader & 0x7FFFFFFF;
-                currentRelationshipOtherNode = data.getLong();
-                if ( currentRelationshipOtherNode == nodeId )
-                {
-                    currentRelationshipDirection = LOOP;
-                }
-                else
-                {
-                    boolean outgoing = (relHeader & 0x80000000) != 0;
-                    currentRelationshipDirection = outgoing ? OUTGOING : INCOMING;
+                    currentTypeData = StreamVByte.readLongs( data );
+                    currentTypePropertiesOffset = data.position();
+                    currentTypeDataIndex = 0;
+                    currentTypePropertiesIndex = 0;
                 }
 
-                boolean matchesType = expectedType == -1 || currentRelationshipType == expectedType;
-                boolean matchesDirection = expectedDirection == null || currentRelationshipDirection.equals( expectedDirection );
-                if ( matchesType && matchesDirection )
+                while ( currentTypeDataIndex < currentTypeData.length )
                 {
-                    return true;
+                    long currentRelationshipOtherNodeRaw = currentTypeData[currentTypeDataIndex++];
+                    currentRelationshipOtherNode = currentRelationshipOtherNodeRaw >>> 2;
+                    if ( currentRelationshipOtherNode == nodeId )
+                    {
+                        currentRelationshipDirection = LOOP;
+                    }
+                    else
+                    {
+                        boolean outgoing = (currentRelationshipOtherNodeRaw & 0b10) != 0;
+                        currentRelationshipDirection = outgoing ? OUTGOING : INCOMING;
+                    }
+                    currentRelationshipHasProperties = (currentRelationshipOtherNodeRaw & 0b01) != 0;
+                    if ( currentRelationshipHasProperties )
+                    {
+                        currentRelationshipPropertiesIndex = currentTypePropertiesIndex;
+                        currentTypePropertiesIndex++;
+
+                    }
+
+                    boolean matchesDirection = expectedDirection == null || currentRelationshipDirection.equals( expectedDirection );
+                    if ( matchesDirection )
+                    {
+                        return true;
+                    }
+                }
+                currentTypeIndex++;
+                if ( currentTypePropertiesIndex > 0 && currentTypeIndex < typesInNode.length )
+                {
+                    //Skipping the properties
+                    data.position( typeOffsets[currentTypeIndex] );
                 }
             }
         }
         return false;
     }
 
-    private void readHeaderAndPrepareBuffer()
+    private boolean readHeaderAndPrepareBuffer()
     {
         // Read property offset
         data = record.dataForReading();
         int offsetsHeader = MutableNodeRecordData.readOffsetsHeader( data );
-        int offset = MutableNodeRecordData.relationshipOffset( offsetsHeader );
-        data.position( offset );
-        numRelationships = (data.get() & 0xFF);
+        int relationshipsOffset = MutableNodeRecordData.relationshipOffset( offsetsHeader );
+
+        if ( relationshipsOffset == 0 )
+        {
+            return false;
+        }
+
+        data.position( relationshipsOffset );
+        StreamVByte.IntArrayTarget typesTarget = new StreamVByte.IntArrayTarget();
+        StreamVByte.readIntDeltas( typesTarget, data );
+        typesInNode = typesTarget.array();
+
+        StreamVByte.IntArrayTarget offsetTarget = new StreamVByte.IntArrayTarget();
+        StreamVByte.readIntDeltas( offsetTarget, data );
+        typeOffsets = offsetTarget.array();
+
+        return true;
     }
 
     private PageCursor cursor()
@@ -147,9 +212,17 @@ public class FrekiRelationshipTraversalCursor implements StorageRelationshipTrav
         nodeId = -1;
         expectedType = -1;
         expectedDirection = null;
-        numRelationships = -1;
-        currentRelationshipIndex = -1;
+        typeOffsets = null;
+        typesInNode = null;
+        currentTypeIndex = -1;
+        currentTypeDataIndex = -1;
         loadedCorrectNode = false;
+        currentRelationshipOtherNode = -1;
+        currentRelationshipHasProperties = false;
+        currentRelationshipPropertiesIndex = -1;
+        currentTypePropertiesIndex = -1;
+        currentTypePropertiesOffset = -1;
+        currentRelationshipDirection = null;
     }
 
     @Override
@@ -165,7 +238,7 @@ public class FrekiRelationshipTraversalCursor implements StorageRelationshipTrav
     @Override
     public int type()
     {
-        return currentRelationshipType;
+        return typesInNode[currentTypeIndex];
     }
 
     @Override

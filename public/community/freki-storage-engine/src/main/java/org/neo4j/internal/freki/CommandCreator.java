@@ -73,7 +73,6 @@ class CommandCreator implements TxStateVisitor
     @Override
     public void visitCreatedRelationship( long id, int type, long startNode, long endNode ) throws ConstraintValidationException
     {
-        //TODO use the ID for something useful!
         createRelationship( id, type, startNode, endNode, true );
         if ( startNode != endNode )
         {
@@ -84,7 +83,8 @@ class CommandCreator implements TxStateVisitor
     private void createRelationship( long id, int type, long firstNode, long secondNode, boolean outgoing )
     {
         FrekiCommand.Node startCommand = (FrekiCommand.Node) build.get( firstNode );
-        startCommand.after().node.relationships.put( id, new MutableNodeRecordData.Relationship( secondNode, type, outgoing ) );
+        startCommand.after().node.relationships.getIfAbsentPut( type,
+                () -> new MutableNodeRecordData.Relationships( type ) ).add( id, secondNode, type, outgoing );
     }
 
     @Override
