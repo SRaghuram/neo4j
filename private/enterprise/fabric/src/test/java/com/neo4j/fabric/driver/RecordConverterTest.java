@@ -26,6 +26,7 @@ import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Result;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.Value;
+import org.neo4j.driver.internal.InternalNode;
 import org.neo4j.harness.Neo4j;
 import org.neo4j.harness.Neo4jBuilders;
 import org.neo4j.values.AnyValue;
@@ -82,7 +83,7 @@ class RecordConverterTest
     void testNull()
     {
         AnyValue value = executeAndConvert( "RETURN null" );
-        assertEquals( NO_VALUE, value);
+        assertEquals( NO_VALUE, value );
     }
 
     @Test
@@ -205,6 +206,24 @@ class RecordConverterTest
         assertEquals( n1a, n1b );
         assertNotEquals( n1a, n2 );
         assertNotEquals( n1b, n2 );
+    }
+
+    @Test
+    void testNodeWithLargeSourceTag()
+    {
+        Value n = new org.neo4j.driver.internal.value.NodeValue( new InternalNode( 1L ) );
+        RecordConverter c = new RecordConverter( 0x3FFF );
+        NodeValue nv = (NodeValue) c.convertValue( n );
+        assertEquals( 0xFFFC000000000001L, nv.id() );
+    }
+
+    @Test
+    void testNodeWithSourceTagAndLargeId()
+    {
+        Value n = new org.neo4j.driver.internal.value.NodeValue( new InternalNode( 1L << 49 ) );
+        RecordConverter c = new RecordConverter( 1 );
+        NodeValue nv = (NodeValue) c.convertValue( n );
+        assertEquals( 0x0006000000000000L, nv.id() );
     }
 
     @Test
