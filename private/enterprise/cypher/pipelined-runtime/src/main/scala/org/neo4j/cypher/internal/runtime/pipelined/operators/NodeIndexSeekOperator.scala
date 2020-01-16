@@ -564,6 +564,35 @@ object ManyQueriesNodeIndexSeekTaskTemplate {
     throw new IllegalStateException("Unreachable code")
   }
 
+  def next(index: IndexReadSession,
+           cursor: NodeValueIndexCursor,
+           queries: CompositePredicateIterator,
+           order: IndexOrder,
+           needsValues: Boolean,
+           read: Read): Boolean = {
+    while (true) {
+      if (cursor.next()) {
+        return true
+      }
+      else if (queries.hasNext) {
+        var continue = true
+        while (continue) {
+          val indexQuery = queries.next()
+          if (!isImpossible(indexQuery)) {
+            val reallyNeedsValues = needsValues && !indexQuery.isInstanceOf[ExactPredicate]
+            read.nodeIndexSeek(index, cursor, order, reallyNeedsValues, indexQuery)
+            continue = false
+          } else {
+            continue = queries.hasNext
+          }
+        }
+      } else {
+        return false
+      }
+    }
+    throw new IllegalStateException("Unreachable code")
+  }
+
   def isImpossible(predicate: IndexQuery): Boolean = predicate match {
         case p: IndexQuery.ExactPredicate => (p.value() eq Values.NO_VALUE) || (p.value().isInstanceOf[FloatingPointValue] && p.value().asInstanceOf[FloatingPointValue].isNaN)
         case p: IndexQuery => !RANGE_SEEKABLE_VALUE_GROUPS.contains(p.valueGroup())
@@ -612,4 +641,18 @@ class ManyPredicateIterator(propertyKey: Int, predicates: Array[IndexQuery]) {
   }
 
   def previous: IndexQuery = predicates(pos - 1)
+}
+
+class CompositePredicateIterator(propertyKey: Int, predicates: Array[Array[IndexQuery]]) {
+  private var pos = 0
+
+  def hasNext: Boolean = pos < predicates.length
+
+  def next(): Array[IndexQuery] = {
+    val current = predicates(pos)
+    pos += 1
+    current
+  }
+
+  def previous: Array[IndexQuery] = predicates(pos - 1)
 }
