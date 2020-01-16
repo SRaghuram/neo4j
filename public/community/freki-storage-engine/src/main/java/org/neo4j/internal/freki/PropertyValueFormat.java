@@ -96,7 +96,7 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
         {
         case PropertyValueFormat.EXTERNAL_TYPE_INT:
         case PropertyValueFormat.EXTERNAL_TYPE_LONG:
-            return 1 + 1 << (PropertyValueFormat.internalType( typeByte ) + 1); //Type + Scalar
+            return 1 + (1 << PropertyValueFormat.internalType( typeByte )); //Type + Scalar
         case PropertyValueFormat.EXTERNAL_TYPE_STRING:
             int propertyLength = buffer.get( buffer.position() + 1 );
             return 1 + 1 + propertyLength; // Type + length + data
