@@ -121,8 +121,7 @@ case class AggregationOperator(workIdentity: WorkIdentity,
 
     override def outputBuffer: Option[BufferId] = Some(outputBufferId)
 
-    override def createState(executionState: ExecutionState,
-                             pipelineId: PipelineId): OutputOperatorState =
+    override def createState(executionState: ExecutionState): OutputOperatorState =
       new State(executionState.getSink[IndexedSeq[PerArgument[AggPreMap]]](outputBufferId))
 
     class State(sink: Sink[IndexedSeq[PerArgument[AggPreMap]]]) extends OutputOperatorState {

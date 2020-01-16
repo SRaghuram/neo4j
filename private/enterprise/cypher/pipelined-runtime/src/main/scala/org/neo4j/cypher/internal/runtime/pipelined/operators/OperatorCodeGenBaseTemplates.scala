@@ -230,9 +230,8 @@ trait CompiledTask extends ContinuableOperatorTaskWithMorsel
   /**
    * Method of [[OutputOperator]] trait. Implementing this allows the same [[CompiledTask]] instance to also act as an [[OutputOperatorState]].
    */
-  override final def createState(executionState: ExecutionState,
-                                 pipelineId: PipelineId): OutputOperatorState = {
-    compiledCreateState(executionState, pipelineId.x)
+  override final def createState(executionState: ExecutionState): OutputOperatorState = {
+    compiledCreateState(executionState)
     this
   }
 
@@ -290,13 +289,11 @@ trait CompiledTask extends ContinuableOperatorTaskWithMorsel
   def compiledProduce(): Unit
 
   /**
-   * Generated code that performs the initialization necessary for performing [[PreparedOutput.produce()]].
-   * E.g., retrieving [[org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Sink]] from [[ExecutionState]].
-   * Note, <code>pipelineId</code> parameter is [[Int]] because [[PipelineId]] extends [[AnyVal]]
-   */
+    * Generated code that performs the initialization necessary for performing [[PreparedOutput.produce()]].
+    * E.g., retrieving [[org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Sink]] from [[ExecutionState]].
+    */
   @throws[Exception]
-  def compiledCreateState(executionState: ExecutionState,
-                          pipelineId: Int): Unit
+  def compiledCreateState(executionState: ExecutionState): Unit
 
   /**
    * Generated code for [[OutputOperator.outputBuffer]]. Return [[BufferId]] or null.
@@ -442,8 +439,7 @@ trait OperatorTaskTemplate {
   /**
    * Responsible for generating the body of [[OutputOperator]] method (but is not expected to return anything):
    * {{{
-   *     def createState(executionState: ExecutionState,
-   *                     pipelineId: PipelineId): OutputOperatorState
+   *     def createState(executionState: ExecutionState): OutputOperatorState
    * }}}
    */
   protected def genCreateState: IntermediateRepresentation = inner.genCreateState

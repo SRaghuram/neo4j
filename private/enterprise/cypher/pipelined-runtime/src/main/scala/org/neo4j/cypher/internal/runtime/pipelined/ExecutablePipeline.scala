@@ -58,9 +58,9 @@ case class ExecutablePipeline(id: PipelineId,
     // when a pipeline is fully fused (including output operator) the CompiledTask acts as OutputOperator
     def outputOperatorStateFor(operatorTask: OperatorTask): OutputOperatorState = (operatorTask, outputOperator) match {
       case (compiledTask: CompiledTask, NoOutputOperator) if middleOperators.isEmpty =>
-        compiledTask.createState(executionState, id)
+        compiledTask.createState(executionState)
       case _ =>
-        outputOperator.createState(executionState, id)
+        outputOperator.createState(executionState)
     }
 
     val middleTasks = new Array[OperatorTask](middleOperators.length)

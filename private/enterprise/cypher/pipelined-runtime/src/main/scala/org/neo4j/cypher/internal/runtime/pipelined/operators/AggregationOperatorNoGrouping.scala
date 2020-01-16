@@ -96,8 +96,7 @@ case class AggregationOperatorNoGrouping(workIdentity: WorkIdentity,
 
     override def outputBuffer: Option[BufferId] = Some(outputBufferId)
 
-    override def createState(executionState: ExecutionState,
-                             pipelineId: PipelineId): OutputOperatorState =
+    override def createState(executionState: ExecutionState): OutputOperatorState =
       new State(executionState.getSink[IndexedSeq[PerArgument[Array[Updater]]]](outputBufferId))
 
     class State(sink: Sink[IndexedSeq[PerArgument[Array[Updater]]]]) extends OutputOperatorState {
@@ -322,7 +321,7 @@ class AggregationMapperOperatorNoGroupingTaskTemplate(val inner: OperatorTaskTem
     block(
       setField(sinkField,
                invoke(EXECUTION_STATE,
-                      method[ExecutionState, Sink[_], Int, Int]("getSinkInt"),
+                      method[ExecutionState, Sink[_], Int]("getSinkInt"),
                       loadField(bufferIdField)))
     )
   }

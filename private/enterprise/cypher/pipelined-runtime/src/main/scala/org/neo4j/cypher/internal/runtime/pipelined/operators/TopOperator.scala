@@ -64,8 +64,7 @@ case class TopOperator(workIdentity: WorkIdentity,
 
     override def outputBuffer: Option[BufferId] = Some(outputBufferId)
 
-    override def createState(executionState: ExecutionState,
-                             pipelineId: PipelineId): OutputOperatorState =
+    override def createState(executionState: ExecutionState): OutputOperatorState =
       new State(executionState.getSink[IndexedSeq[PerArgument[MorselExecutionContext]]](outputBufferId))
 
     class State(sink: Sink[IndexedSeq[PerArgument[MorselExecutionContext]]]) extends OutputOperatorState {

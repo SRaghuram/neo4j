@@ -147,7 +147,7 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
     override def produce(): Unit = {}
   }
 
-  override def createState(executionState: ExecutionState, pipelineId: PipelineId): OutputOperatorState = new OutputOOperatorState
+  override def createState(executionState: ExecutionState): OutputOperatorState = new OutputOOperatorState
 
   //==========================================================================
 
