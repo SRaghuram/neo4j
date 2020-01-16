@@ -5,14 +5,17 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import org.neo4j.graphdb.{Label, Node, Relationship}
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
+import org.neo4j.graphdb.Label
+import org.neo4j.graphdb.Node
+import org.neo4j.graphdb.Relationship
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 import org.neo4j.internal.helpers.collection.Iterators
 import org.neo4j.internal.schema.SchemaDescriptor
 import org.neo4j.kernel.impl.index.schema.GenericNativeIndexProvider
 import org.scalatest.exceptions.TestFailedException
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters.iterableAsScalaIterableConverter
 
 class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with CypherComparisonSupport {
 
@@ -72,14 +75,14 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
     // And then nodes
     val nodes = result.head("nodes").asInstanceOf[Seq[Node]]
 
-    val labels = nodes.map( n => n.getLabels.toList).toSet
+    val labels = nodes.map( n => n.getLabels.asScala.toList).toSet
     labels should equal(Set(List(Label.label("Neo")), List(Label.label("Department")), List(Label.label("Employee"))))
 
     val nodeState: Set[(String, Set[String], Set[String])] =
       nodes.map(n => (
         n.getAllProperties.get("name").asInstanceOf[String],
-        n.getAllProperties.get("indexes").asInstanceOf[java.util.ArrayList[String]].toSet,
-        n.getAllProperties.get("constraints").asInstanceOf[java.util.ArrayList[String]].toSet
+        n.getAllProperties.get("indexes").asInstanceOf[java.util.ArrayList[String]].asScala.toSet,
+        n.getAllProperties.get("constraints").asInstanceOf[java.util.ArrayList[String]].asScala.toSet
       )).toSet
 
     nodeState should equal(
@@ -400,8 +403,8 @@ class BuiltInProcedureAcceptanceTest extends ProcedureCallAcceptanceTest with Cy
 
   test("yield from void procedure should return correct error msg") {
     failWithError(Configs.All,
-                  "CALL db.createLabel('Label') yield node",
-                  List("Cannot yield value from void procedure."))
+      "CALL db.createLabel('Label') yield node",
+      List("Cannot yield value from void procedure."))
   }
 
   test("should create index from built-in-procedure") {

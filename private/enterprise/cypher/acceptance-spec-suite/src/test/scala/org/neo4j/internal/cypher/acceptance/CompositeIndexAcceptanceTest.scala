@@ -5,24 +5,31 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import java.time.{LocalDate, LocalTime, OffsetTime, ZoneOffset}
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.OffsetTime
+import java.time.ZoneOffset
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.graphdb.Node
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithAssertion, Configs, CypherComparisonSupport}
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.ComparePlansWithAssertion
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 import org.neo4j.kernel.GraphDatabaseQueryService
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
-import org.neo4j.values.storable.{CoordinateReferenceSystem, DurationValue, Values}
+import org.neo4j.values.storable.CoordinateReferenceSystem
+import org.neo4j.values.storable.DurationValue
+import org.neo4j.values.storable.Values
 import org.scalatest.exceptions.TestFailedException
-import org.scalatest.matchers.{MatchResult, Matcher}
-
-import scala.collection.JavaConverters._
+import org.scalatest.matchers.MatchResult
+import org.scalatest.matchers.Matcher
+import scala.collection.JavaConverters.iterableAsScalaIterableConverter
 
 /**
-  * These tests are testing the actual index implementation, thus they should all check the actual result.
-  * If you only want to verify that plans using indexes are actually planned, please use
-  * [[org.neo4j.cypher.internal.compiler.planner.logical.LeafPlanningIntegrationTest]]
-  */
+ * These tests are testing the actual index implementation, thus they should all check the actual result.
+ * If you only want to verify that plans using indexes are actually planned, please use
+ * [[org.neo4j.cypher.internal.compiler.planner.logical.LeafPlanningIntegrationTest]]
+ */
 class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
 
   test("should succeed in creating and deleting composite index") {
@@ -374,8 +381,8 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
           )
           .withRHS(
             includeSomewhere.aPlan("NodeUniqueIndexSeek(Locking)(equality,equality)")
-                .containingArgument(":User(name,surname)")
-                .withRows(2)
+              .containingArgument(":User(name,surname)")
+              .withRows(2)
               .withExactVariables("s", "n")
           )
       }))
@@ -446,7 +453,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
                     )
                 )
             )
-          and (
+            and (
             includeSomewhere.aPlan("AntiConditionalApply")
               .withLHS(
                 includeSomewhere.aPlan("Expand(Into)")
@@ -464,19 +471,19 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
                     )
                   )
               )
-            or
-            includeSomewhere.aPlan("AntiConditionalApply")
-              .withLHS(
-                includeSomewhere.aPlan("Expand(All)")
-                  .onTopOf(
-                    includeSomewhere.aPlan("NodeUniqueIndexSeek(Locking)(equality,equality)")
-                      .containingArgument(":User(name,surname), cache[n.name], cache[n.surname]")
-                      .withRows(0)
-                      .withExactVariables("n")
-                  )
-              )
+              or
+              includeSomewhere.aPlan("AntiConditionalApply")
+                .withLHS(
+                  includeSomewhere.aPlan("Expand(All)")
+                    .onTopOf(
+                      includeSomewhere.aPlan("NodeUniqueIndexSeek(Locking)(equality,equality)")
+                        .containingArgument(":User(name,surname), cache[n.name], cache[n.surname]")
+                        .withRows(0)
+                        .withExactVariables("n")
+                    )
+                )
             )
-        )
+          )
       }))
 
     result.toComparableResult should equal(Seq(Map("sname" -> "Joe Smoke", "nname" -> "Jake Soap")))
@@ -621,12 +628,12 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
     // When
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
-                             """MATCH (n:Foo)
+      """MATCH (n:Foo)
         |WHERE n.bar IN [0,1,2,3,4,5,6,7,8,9]
         |  AND n.baz IN [0,1,2,3,4,5,6,7,8,9]
         |RETURN n.idx as x
         |ORDER BY x""".stripMargin,
-                             planComparisonStrategy = ComparePlansWithAssertion(plan => {
+      planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
         plan should includeSomewhere.aPlan("NodeIndexSeek(equality,equality)").containingArgument(":Foo(bar,baz)")
       }))
@@ -768,7 +775,7 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
     // When
     val exception = the[TestFailedException] thrownBy {
-    executeWith(Configs.All, "CREATE INDEX my_index FOR (n:Person) ON (n.name, n.age)")
+      executeWith(Configs.All, "CREATE INDEX my_index FOR (n:Person) ON (n.name, n.age)")
     }
 
     // Then (gets wrapped to TestFailedException)
@@ -1528,8 +1535,8 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
         plan should includeSomewhere.aPlan("NodeIndexSeek(range,exists)")
-            .containingArgument(":Awesome(prop1,prop2), cache[n.prop1], cache[n.prop2]")
-            .withExactVariables("n")
+          .containingArgument(":Awesome(prop1,prop2), cache[n.prop1], cache[n.prop2]")
+          .withExactVariables("n")
       }))
 
     val expected = Set(
@@ -1548,19 +1555,19 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
     // Add nodes not in index
     graph.withTx( tx =>
-    tx.execute(
-      """
-        |CREATE (:Awesome)
-        |CREATE (:Awesome)
-        |CREATE (:Awesome)
-        |CREATE (:Awesome)
-        |CREATE (:Awesome)
-        |
-        |CREATE (:NotAwesome {prop1: 'footurama', prop2: 'bar'})
-        |CREATE (:NotAwesome {prop1: 'fooism', prop2: 'rab'})
-        |CREATE (:NotAwesome {prop1: 'aismfama', prop2: 'rab'})
+      tx.execute(
+        """
+          |CREATE (:Awesome)
+          |CREATE (:Awesome)
+          |CREATE (:Awesome)
+          |CREATE (:Awesome)
+          |CREATE (:Awesome)
+          |
+          |CREATE (:NotAwesome {prop1: 'footurama', prop2: 'bar'})
+          |CREATE (:NotAwesome {prop1: 'fooism', prop2: 'rab'})
+          |CREATE (:NotAwesome {prop1: 'aismfama', prop2: 'rab'})
       """.stripMargin
-    ) )
+      ) )
     resampleIndexes()
 
     val result = executeWith(Configs.CachedProperty,
@@ -1587,19 +1594,19 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
     // Add nodes not in index
     graph.withTx( tx =>
-    tx.execute(
-      """
-        |CREATE (:Awesome)
-        |CREATE (:Awesome)
-        |CREATE (:Awesome)
-        |CREATE (:Awesome)
-        |CREATE (:Awesome)
-        |
-        |CREATE (:NotAwesome {prop1: 'footurama', prop2: 'bar'})
-        |CREATE (:NotAwesome {prop1: 'fooism', prop2: 'rab'})
-        |CREATE (:NotAwesome {prop1: 'aismfama', prop2: 'rab'})
+      tx.execute(
+        """
+          |CREATE (:Awesome)
+          |CREATE (:Awesome)
+          |CREATE (:Awesome)
+          |CREATE (:Awesome)
+          |CREATE (:Awesome)
+          |
+          |CREATE (:NotAwesome {prop1: 'footurama', prop2: 'bar'})
+          |CREATE (:NotAwesome {prop1: 'fooism', prop2: 'rab'})
+          |CREATE (:NotAwesome {prop1: 'aismfama', prop2: 'rab'})
       """.stripMargin
-    ) )
+      ) )
     resampleIndexes()
 
     val result = executeWith(Configs.CachedProperty,
@@ -1626,19 +1633,19 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
     // Add nodes not in index
     graph.withTx( tx =>
-    tx.execute(
-      """
-        |CREATE (:Awesome)
-        |CREATE (:Awesome)
-        |CREATE (:Awesome)
-        |CREATE (:Awesome)
-        |CREATE (:Awesome)
-        |
-        |CREATE (:NotAwesome {prop1: 'footurama', prop2: 'bar'})
-        |CREATE (:NotAwesome {prop1: 'fooism', prop2: 'rab'})
-        |CREATE (:NotAwesome {prop1: 'aismfama', prop2: 'rab'})
+      tx.execute(
+        """
+          |CREATE (:Awesome)
+          |CREATE (:Awesome)
+          |CREATE (:Awesome)
+          |CREATE (:Awesome)
+          |CREATE (:Awesome)
+          |
+          |CREATE (:NotAwesome {prop1: 'footurama', prop2: 'bar'})
+          |CREATE (:NotAwesome {prop1: 'fooism', prop2: 'rab'})
+          |CREATE (:NotAwesome {prop1: 'aismfama', prop2: 'rab'})
       """.stripMargin
-    ) )
+      ) )
     resampleIndexes()
 
     val result = executeWith(Configs.CachedProperty,
@@ -1760,9 +1767,9 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     )
 
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
-                             "MATCH (n:Awesome) WHERE n.prop1 > 44 AND exists(n.prop2) RETURN COUNT(n) as c",
-                             executeBefore = createMe,
-                             planComparisonStrategy = ComparePlansWithAssertion(plan => {
+      "MATCH (n:Awesome) WHERE n.prop1 > 44 AND exists(n.prop2) RETURN COUNT(n) as c",
+      executeBefore = createMe,
+      planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
         plan should includeSomewhere.aPlan("NodeIndexSeek(range,exists)")
           .containingArgument(":Awesome(prop1,prop2)")
@@ -1788,9 +1795,9 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     )
 
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
-                             "MATCH (n:Awesome) WHERE n.prop1 = 45 AND n.prop2 STARTS WITH 'h' RETURN COUNT(n) as c",
-                             executeBefore = createMe,
-                             planComparisonStrategy = ComparePlansWithAssertion(plan => {
+      "MATCH (n:Awesome) WHERE n.prop1 = 45 AND n.prop2 STARTS WITH 'h' RETURN COUNT(n) as c",
+      executeBefore = createMe,
+      planComparisonStrategy = ComparePlansWithAssertion(plan => {
         //THEN
         plan should includeSomewhere.aPlan("NodeIndexSeek(equality,range)")
           .containingArgument(":Awesome(prop1,prop2)")
@@ -1818,17 +1825,17 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
   private def createNodes(): Unit =
     graph.withTx( tx =>
-    tx.execute(
-      """
-        |CREATE (:Awesome {prop1: 40, prop2: 5})
-        |CREATE (:Awesome {prop1: 41, prop2: 2})
-        |CREATE (:Awesome {prop1: 42, prop2: 3})
-        |CREATE (:Awesome {prop1: 43, prop2: 1})
-        |CREATE (:Awesome {prop1: 44, prop2: 3})
-        |
-        |CREATE (:Awesome {prop1: 'footurama', prop2: 'bar'})
-        |CREATE (:Awesome {prop1: 'fooism', prop2: 'rab'})
-        |CREATE (:Awesome {prop1: 'aismfama', prop2: 'rab'})
+      tx.execute(
+        """
+          |CREATE (:Awesome {prop1: 40, prop2: 5})
+          |CREATE (:Awesome {prop1: 41, prop2: 2})
+          |CREATE (:Awesome {prop1: 42, prop2: 3})
+          |CREATE (:Awesome {prop1: 43, prop2: 1})
+          |CREATE (:Awesome {prop1: 44, prop2: 3})
+          |
+          |CREATE (:Awesome {prop1: 'footurama', prop2: 'bar'})
+          |CREATE (:Awesome {prop1: 'fooism', prop2: 'rab'})
+          |CREATE (:Awesome {prop1: 'aismfama', prop2: 'rab'})
       """.stripMargin )
     )
 

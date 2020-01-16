@@ -5,10 +5,12 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
+import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.cypher.PatternGen
 import org.neo4j.cypher.internal.RewindableExecutionResult
 import org.neo4j.cypher.internal.expressions.SemanticDirection
-import org.neo4j.cypher.{ExecutionEngineFunSuite, PatternGen}
-import org.scalacheck.{Gen, Shrink}
+import org.scalacheck.Gen
+import org.scalacheck.Shrink
 
 /*
  * Creates a random pattern, matches on it and deletes all variables

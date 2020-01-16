@@ -6,7 +6,10 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithAssertion, Configs, CypherComparisonSupport, TestConfiguration}
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.ComparePlansWithAssertion
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.TestConfiguration
 
 class TriadicSelectionAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
 
@@ -78,10 +81,10 @@ class TriadicSelectionAcceptanceTest extends ExecutionEngineFunSuite with Cypher
 
     // when
     val queryWithPredicates = """
-               |MATCH (a:Person)-[:FRIEND]->(b:Person)-[:FRIEND]->(c:Person)
-               |USING INDEX a:Person(name)
-               |WHERE a.name = 'a' AND b.age = 39 AND exists(c.name) AND (a)-[:FRIEND]->(c)
-               |RETURN a.name AS l, b.name as m, c.name AS r""".stripMargin
+                                |MATCH (a:Person)-[:FRIEND]->(b:Person)-[:FRIEND]->(c:Person)
+                                |USING INDEX a:Person(name)
+                                |WHERE a.name = 'a' AND b.age = 39 AND exists(c.name) AND (a)-[:FRIEND]->(c)
+                                |RETURN a.name AS l, b.name as m, c.name AS r""".stripMargin
     val result = executeWith(Configs.InterpretedAndSlotted, queryWithPredicates, planComparisonStrategy = noTriadic)
 
     // then
@@ -181,15 +184,15 @@ class TriadicSelectionAcceptanceTest extends ExecutionEngineFunSuite with Cypher
 
     // FOR QUERIES
     val queries = List(
-        Query("non-triadic1", Configs.ExpandInto, usesExpandInto,    3, "MATCH (u:User)-[:POSTED]->(q:Post)-[:ANSWER]->(a:Post)<-[:POSTED]-(u) RETURN u, a"),
-        Query("non-triadic2", Configs.ExpandInto, usesExpandInto,    3, "MATCH (u:User)-[:POSTED]->(q)-[:ANSWER]->(a)<-[:POSTED]-(u) RETURN u, a"),
-        Query("triadic-neg1", Configs.InterpretedAndSlotted,     usesTriadic,       7, "MATCH (u:User)-[:POSTED]->(q:Post)-[:ANSWER]->(a:Post) WHERE NOT (u)-[:POSTED]->(a) RETURN u, a"),
-        Query("triadic-neg2", Configs.InterpretedAndSlotted,     usesTriadic,       7, "MATCH (u:User)-[:POSTED]->(q)-[:ANSWER]->(a) WHERE NOT (u)-[:POSTED]->(a) RETURN u, a"),
-        Query("triadic-neg3", Configs.InterpretedAndSlotted,     usesTriadic,       7, "MATCH (u:User)-[:POSTED]->(q)-[:ANSWER]->(a:Post) WHERE NOT (u)-[:POSTED]->(a) RETURN u, a"),
-        Query("triadic-neg4", Configs.InterpretedAndSlotted,  usesAntiSemiApply, 7, "MATCH (u:User)-[:POSTED]->(q:Post)-[:ANSWER]->(a) WHERE NOT (u)-[:POSTED]->(a) RETURN u, a"),
-        Query("triadic-pos1", Configs.InterpretedAndSlotted,     usesTriadic,       3, "MATCH (u:User)-[:POSTED]->(q:Post)-[:ANSWER]->(a:Post) WHERE (u)-[:POSTED]->(a) RETURN u, a"),
-        Query("triadic-pos2", Configs.InterpretedAndSlotted,     usesTriadic,       3, "MATCH (u:User)-[:POSTED]->(q)-[:ANSWER]->(a) WHERE (u)-[:POSTED]->(a) RETURN u, a")
-      )
+      Query("non-triadic1", Configs.ExpandInto, usesExpandInto,    3, "MATCH (u:User)-[:POSTED]->(q:Post)-[:ANSWER]->(a:Post)<-[:POSTED]-(u) RETURN u, a"),
+      Query("non-triadic2", Configs.ExpandInto, usesExpandInto,    3, "MATCH (u:User)-[:POSTED]->(q)-[:ANSWER]->(a)<-[:POSTED]-(u) RETURN u, a"),
+      Query("triadic-neg1", Configs.InterpretedAndSlotted,     usesTriadic,       7, "MATCH (u:User)-[:POSTED]->(q:Post)-[:ANSWER]->(a:Post) WHERE NOT (u)-[:POSTED]->(a) RETURN u, a"),
+      Query("triadic-neg2", Configs.InterpretedAndSlotted,     usesTriadic,       7, "MATCH (u:User)-[:POSTED]->(q)-[:ANSWER]->(a) WHERE NOT (u)-[:POSTED]->(a) RETURN u, a"),
+      Query("triadic-neg3", Configs.InterpretedAndSlotted,     usesTriadic,       7, "MATCH (u:User)-[:POSTED]->(q)-[:ANSWER]->(a:Post) WHERE NOT (u)-[:POSTED]->(a) RETURN u, a"),
+      Query("triadic-neg4", Configs.InterpretedAndSlotted,  usesAntiSemiApply, 7, "MATCH (u:User)-[:POSTED]->(q:Post)-[:ANSWER]->(a) WHERE NOT (u)-[:POSTED]->(a) RETURN u, a"),
+      Query("triadic-pos1", Configs.InterpretedAndSlotted,     usesTriadic,       3, "MATCH (u:User)-[:POSTED]->(q:Post)-[:ANSWER]->(a:Post) WHERE (u)-[:POSTED]->(a) RETURN u, a"),
+      Query("triadic-pos2", Configs.InterpretedAndSlotted,     usesTriadic,       3, "MATCH (u:User)-[:POSTED]->(q)-[:ANSWER]->(a) WHERE (u)-[:POSTED]->(a) RETURN u, a")
+    )
 
     // THEN
     for ( Query(name, configs, operator, count, query) <- queries ) {

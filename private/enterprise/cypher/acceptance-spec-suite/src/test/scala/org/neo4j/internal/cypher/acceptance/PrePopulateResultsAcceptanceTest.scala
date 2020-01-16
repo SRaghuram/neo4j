@@ -6,11 +6,19 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
-import org.neo4j.kernel.impl.query.{QuerySubscriber, QuerySubscriberAdapter}
-import org.neo4j.kernel.impl.util.{NodeEntityWrappingNodeValue, RelationshipEntityWrappingValue}
+import org.neo4j.kernel.impl.query.QuerySubscriber
+import org.neo4j.kernel.impl.query.QuerySubscriberAdapter
+import org.neo4j.kernel.impl.util.NodeEntityWrappingNodeValue
+import org.neo4j.kernel.impl.util.RelationshipEntityWrappingValue
 import org.neo4j.values.AnyValue
+import org.neo4j.values.virtual.ListValue
+import org.neo4j.values.virtual.MapValue
+import org.neo4j.values.virtual.NodeReference
+import org.neo4j.values.virtual.NodeValue
+import org.neo4j.values.virtual.PathValue
+import org.neo4j.values.virtual.RelationshipReference
+import org.neo4j.values.virtual.RelationshipValue
 import org.neo4j.values.virtual.VirtualValues.EMPTY_MAP
-import org.neo4j.values.virtual._
 
 class PrePopulateResultsAcceptanceTest extends ExecutionEngineFunSuite {
 

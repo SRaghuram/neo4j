@@ -7,7 +7,9 @@ package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.plandescription.InternalPlanDescription
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithAssertion, Configs, CypherComparisonSupport}
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.ComparePlansWithAssertion
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 
 class QueryPlanCompatibilityTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
 
@@ -31,7 +33,7 @@ class QueryPlanCompatibilityTest extends ExecutionEngineFunSuite with CypherComp
       """.stripMargin
     val expectedPlan = generateExpectedPlan(query)
     executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
-                planComparisonStrategy = ComparePlansWithAssertion(assertSimilarPlans(_, expectedPlan)))
+      planComparisonStrategy = ComparePlansWithAssertion(assertSimilarPlans(_, expectedPlan)))
   }
 
   test("should produce compatible plans with unwind") {
@@ -44,7 +46,7 @@ class QueryPlanCompatibilityTest extends ExecutionEngineFunSuite with CypherComp
       """.stripMargin
     val expectedPlan = generateExpectedPlan(query)
     executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
-                planComparisonStrategy = ComparePlansWithAssertion(assertSimilarPlans(_, expectedPlan)))
+      planComparisonStrategy = ComparePlansWithAssertion(assertSimilarPlans(_, expectedPlan)))
   }
 
   test("should produce compatible plans for complex query") {

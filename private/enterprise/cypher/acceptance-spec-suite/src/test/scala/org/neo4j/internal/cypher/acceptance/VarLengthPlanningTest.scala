@@ -5,11 +5,15 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
+import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.cypher.QueryStatisticsTestSupport
 import org.neo4j.cypher.internal.plandescription.InternalPlanDescription
-import org.neo4j.cypher.{ExecutionEngineFunSuite, QueryStatisticsTestSupport}
-import org.neo4j.graphdb.Direction._
-import org.neo4j.graphdb.{Direction, Node}
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
+import org.neo4j.graphdb.Direction
+import org.neo4j.graphdb.Direction.INCOMING
+import org.neo4j.graphdb.Direction.OUTGOING
+import org.neo4j.graphdb.Node
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 import org.scalatest.matchers.Matcher
 
 import scala.collection.mutable

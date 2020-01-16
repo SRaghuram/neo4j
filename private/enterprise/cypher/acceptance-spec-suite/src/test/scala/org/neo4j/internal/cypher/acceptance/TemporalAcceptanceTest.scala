@@ -5,13 +5,21 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import java.time.{LocalDate, LocalTime}
+import java.time.LocalDate
+import java.time.LocalTime
 import java.util
 
-import org.neo4j.cypher._
+import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.cypher.QueryStatisticsTestSupport
 import org.neo4j.graphdb.QueryExecutionException
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithAssertion, Configs, CypherComparisonSupport}
-import org.neo4j.values.storable.{DateValue, DurationValue}
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.ComparePlansWithAssertion
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
+import org.neo4j.values.storable.DateValue
+import org.neo4j.values.storable.DurationValue
+import scala.collection.JavaConverters.asScalaBufferConverter
+import scala.collection.JavaConverters.mapAsJavaMapConverter
+import scala.collection.JavaConverters.mapAsScalaMapConverter
 
 class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport {
 
@@ -75,8 +83,6 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
 
   test("should handle temporal list parameter") {
 
-    import scala.collection.JavaConverters._
-
     val javaDateList = new util.ArrayList[LocalDate](2)
     javaDateList.add( LocalDate.of(2018, 5, 5) )
     javaDateList.add( LocalDate.of(2018, 3, 3) )
@@ -93,8 +99,6 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
 
   test("should handle temporal map parameter") {
 
-    import scala.collection.JavaConverters._
-
     val dateMap = new util.HashMap[String,Any]
     dateMap.put("a", LocalDate.of(2018, 5, 5))
     dateMap.put("b", LocalTime.of(10, 3, 5))
@@ -108,8 +112,6 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
   }
 
   test("should return temporal map parameter") {
-
-    import scala.collection.JavaConverters._
 
     val dateMap = new util.HashMap[String,Any]
     dateMap.put("a", LocalDate.of(2018, 5, 5))
@@ -132,12 +134,12 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
         |RETURN o.timeSpan as timeSpan""".stripMargin)
 
     val result = executeWith(Configs.CachedProperty + Configs.Compiled,
-                             "MATCH (o:Occasion) WHERE o.timeSpan = $param RETURN o.timeSpan as timeSpan",
-                             planComparisonStrategy = ComparePlansWithAssertion({ plan =>
-                               plan should includeSomewhere.aPlan("Projection").containingArgumentRegex(cached("timeSpan", "o.timeSpan"))
-                                 .onTopOf(aPlan("NodeIndexSeek").containingArgumentRegex("\\:Occasion\\(timeSpan\\).*".r))
+      "MATCH (o:Occasion) WHERE o.timeSpan = $param RETURN o.timeSpan as timeSpan",
+      planComparisonStrategy = ComparePlansWithAssertion({ plan =>
+        plan should includeSomewhere.aPlan("Projection").containingArgumentRegex(cached("timeSpan", "o.timeSpan"))
+          .onTopOf(aPlan("NodeIndexSeek").containingArgumentRegex("\\:Occasion\\(timeSpan\\).*".r))
       }),
-                             params = Map("param" ->
+      params = Map("param" ->
         Array(LocalDate.of(2018, 4, 1))))
 
     // Then
@@ -155,12 +157,12 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
         |RETURN o.timeSpan as timeSpan""".stripMargin)
 
     val result = executeWith(Configs.CachedProperty + Configs.Compiled,
-                             "MATCH (o:Occasion) WHERE o.timeSpan = $param RETURN o.timeSpan as timeSpan",
-                             planComparisonStrategy = ComparePlansWithAssertion({ plan =>
-                               plan should includeSomewhere.aPlan("Projection").containingArgumentRegex(cached("timeSpan", "o.timeSpan"))
-                                 .onTopOf(aPlan("NodeIndexSeek").containingArgumentRegex("\\:Occasion\\(timeSpan\\).*".r))
+      "MATCH (o:Occasion) WHERE o.timeSpan = $param RETURN o.timeSpan as timeSpan",
+      planComparisonStrategy = ComparePlansWithAssertion({ plan =>
+        plan should includeSomewhere.aPlan("Projection").containingArgumentRegex(cached("timeSpan", "o.timeSpan"))
+          .onTopOf(aPlan("NodeIndexSeek").containingArgumentRegex("\\:Occasion\\(timeSpan\\).*".r))
       }),
-                             params = Map("param" ->
+      params = Map("param" ->
         List(LocalDate.of(2018, 4, 1))))
 
     // Then
@@ -179,12 +181,12 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
         |RETURN o.timeSpan as timeSpan""".stripMargin)
 
     val result = executeWith(Configs.CachedProperty + Configs.Compiled,
-                             "MATCH (o:Occasion) WHERE o.timeSpan = $param RETURN o.timeSpan as timeSpan",
-                             planComparisonStrategy = ComparePlansWithAssertion({ plan =>
-                               plan should includeSomewhere.aPlan("Projection").containingArgumentRegex(cached("timeSpan", "o.timeSpan"))
-                                 .onTopOf(aPlan("NodeIndexSeek").containingArgumentRegex("\\:Occasion\\(timeSpan\\).*".r))
+      "MATCH (o:Occasion) WHERE o.timeSpan = $param RETURN o.timeSpan as timeSpan",
+      planComparisonStrategy = ComparePlansWithAssertion({ plan =>
+        plan should includeSomewhere.aPlan("Projection").containingArgumentRegex(cached("timeSpan", "o.timeSpan"))
+          .onTopOf(aPlan("NodeIndexSeek").containingArgumentRegex("\\:Occasion\\(timeSpan\\).*".r))
       }),
-                             params = Map("param" ->
+      params = Map("param" ->
         Array(LocalDate.of(2018, 4, 1), LocalDate.of(2018, 4, 2))))
 
     // Then
@@ -204,12 +206,12 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
         |RETURN o.timeSpan as timeSpan""".stripMargin)
 
     val result = executeWith(Configs.CachedProperty + Configs.Compiled,
-                             "MATCH (o:Occasion) WHERE o.timeSpan = $param RETURN o.timeSpan as timeSpan",
-                             planComparisonStrategy = ComparePlansWithAssertion({ plan =>
-                               plan should includeSomewhere.aPlan("Projection").containingArgumentRegex(cached("timeSpan", "o.timeSpan"))
-                                 .onTopOf(aPlan("NodeIndexSeek").containingArgumentRegex("\\:Occasion\\(timeSpan\\).*".r))
+      "MATCH (o:Occasion) WHERE o.timeSpan = $param RETURN o.timeSpan as timeSpan",
+      planComparisonStrategy = ComparePlansWithAssertion({ plan =>
+        plan should includeSomewhere.aPlan("Projection").containingArgumentRegex(cached("timeSpan", "o.timeSpan"))
+          .onTopOf(aPlan("NodeIndexSeek").containingArgumentRegex("\\:Occasion\\(timeSpan\\).*".r))
       }),
-                             params = Map("param" ->
+      params = Map("param" ->
         List(LocalDate.of(2018, 4, 1), LocalDate.of(2018, 4, 2))))
 
     // Then
@@ -713,11 +715,11 @@ class TemporalAcceptanceTest extends ExecutionEngineFunSuite with QueryStatistic
   }
 
   /**
-    *  Truncating with default argument
-    *
-    *  These tests are relying on that the default clock is per statement and are run with
-    *  executeSingle() to safeguard against that different configurations are executed at different instances.
-    */
+   *  Truncating with default argument
+   *
+   *  These tests are relying on that the default clock is per statement and are run with
+   *  executeSingle() to safeguard against that different configurations are executed at different instances.
+   */
 
   test("truncate to millennium without parameter should truncate to current millennium") {
     List("datetime", "localdatetime", "date").foreach { temporal =>

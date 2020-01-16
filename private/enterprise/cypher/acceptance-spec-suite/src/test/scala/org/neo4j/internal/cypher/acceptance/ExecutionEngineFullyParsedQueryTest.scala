@@ -6,16 +6,17 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
-import org.neo4j.cypher.internal.runtime.{InputDataStreamTestSupport, NoInput}
 import org.neo4j.cypher.internal.ast.AstConstructionTestSupport
+import org.neo4j.cypher.internal.runtime.InputDataStreamTestSupport
+import org.neo4j.cypher.internal.runtime.NoInput
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 
 class ExecutionEngineFullyParsedQueryTest
   extends ExecutionEngineFunSuite
-    with CypherComparisonSupport
-    with AstConstructionTestSupport
-    with InputDataStreamTestSupport
-    with FullyParsedQueryTestSupport {
+  with CypherComparisonSupport
+  with AstConstructionTestSupport
+  with InputDataStreamTestSupport
+  with FullyParsedQueryTestSupport {
 
   // Using these just to get a sample of queries
   LdbcQueries.LDBC_QUERIES.foreach { query =>

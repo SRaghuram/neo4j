@@ -8,9 +8,11 @@ package org.neo4j.internal.cypher.acceptance
 import java.lang.Boolean.TRUE
 
 import org.neo4j.configuration.GraphDatabaseSettings
-import org.neo4j.cypher.{ExecutionEngineFunSuite, QueryStatisticsTestSupport}
+import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.cypher.QueryStatisticsTestSupport
 import org.neo4j.graphdb.config.Setting
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 
 class LenientCreateRelationshipAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport {
 
@@ -24,10 +26,10 @@ class LenientCreateRelationshipAcceptanceTest extends ExecutionEngineFunSuite wi
 
 
     val result = executeWith(Configs.InterpretedAndSlotted, """MATCH (a), (b)
-                                       |WHERE id(a)=0 AND id(b)=1
-                                       |OPTIONAL MATCH (b)-[:LINK_TO]->(c)
-                                       |CREATE (b)-[:LINK_TO]->(a)
-                                       |CREATE (c)-[r:MISSING_C]->(a)""".stripMargin)
+                                                              |WHERE id(a)=0 AND id(b)=1
+                                                              |OPTIONAL MATCH (b)-[:LINK_TO]->(c)
+                                                              |CREATE (b)-[:LINK_TO]->(a)
+                                                              |CREATE (c)-[r:MISSING_C]->(a)""".stripMargin)
 
     assertStats(result, relationshipsCreated = 1)
   }
@@ -37,10 +39,10 @@ class LenientCreateRelationshipAcceptanceTest extends ExecutionEngineFunSuite wi
     graph.withTx( tx => tx.execute("CREATE (a), (b)"))
 
     val result = executeWith(Configs.InterpretedAndSlotted, """MATCH (a), (b)
-                                       |WHERE id(a)=0 AND id(b)=1
-                                       |OPTIONAL MATCH (b)-[:LINK_TO]->(c)
-                                       |CREATE (b)-[:LINK_TO]->(a)
-                                       |CREATE (a)-[r:MISSING_C]->(c)""".stripMargin)
+                                                              |WHERE id(a)=0 AND id(b)=1
+                                                              |OPTIONAL MATCH (b)-[:LINK_TO]->(c)
+                                                              |CREATE (b)-[:LINK_TO]->(a)
+                                                              |CREATE (a)-[r:MISSING_C]->(c)""".stripMargin)
 
     assertStats(result, relationshipsCreated = 1)
   }

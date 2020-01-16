@@ -9,7 +9,8 @@ import java.time.LocalDate
 import java.util
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 import org.neo4j.internal.helpers.collection.MapUtil
 
 class UnwindAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {

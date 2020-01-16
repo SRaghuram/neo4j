@@ -8,14 +8,15 @@ package org.neo4j.internal.cypher.acceptance
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.plandescription.Arguments.EstimatedRows
 import org.neo4j.cypher.internal.plandescription.InternalPlanDescription
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
+import org.neo4j.internal.cypher.acceptance.LdbcQueries.LDBC_QUERIES
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 
 /**
-  * Runs the 14 LDBC queries and checks so that the result is what is expected.
-  */
+ * Runs the 14 LDBC queries and checks so that the result is what is expected.
+ */
 class LdbcAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
 
-  import LdbcQueries._
 
   LDBC_QUERIES.foreach { ldbcQuery =>
     test(ldbcQuery.name) {

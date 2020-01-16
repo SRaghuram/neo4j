@@ -6,7 +6,8 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 
 class PruningVarExpandAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
 
@@ -17,8 +18,8 @@ class PruningVarExpandAcceptanceTest extends ExecutionEngineFunSuite with Cypher
 
     // When
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
-                             """MATCH (:Scaffold)-[:REL*3]->(m:Molecule)
-         |RETURN DISTINCT m""".stripMargin)
+      """MATCH (:Scaffold)-[:REL*3]->(m:Molecule)
+        |RETURN DISTINCT m""".stripMargin)
 
     // Then
     result.toList should be(empty)
@@ -31,7 +32,7 @@ class PruningVarExpandAcceptanceTest extends ExecutionEngineFunSuite with Cypher
 
     // When
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
-                             """MATCH ()-[:REL*2 {prop:42}]->(m) RETURN DISTINCT m""")
+      """MATCH ()-[:REL*2 {prop:42}]->(m) RETURN DISTINCT m""")
 
     // Then
     result.toList should have size 1

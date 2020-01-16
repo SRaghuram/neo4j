@@ -7,11 +7,14 @@ package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.graphdb.Node
 import org.neo4j.graphdb.spatial.Point
-import org.neo4j.internal.cypher.acceptance.comparisonsupport._
-import org.neo4j.values.storable.{CoordinateReferenceSystem, PointValue, Values}
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.ComparePlansWithAssertion
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
+import org.neo4j.values.storable.CoordinateReferenceSystem
+import org.neo4j.values.storable.PointValue
+import org.neo4j.values.storable.Values
 
 import scala.collection.Map
-import scala.collection.immutable.{Map => ImmutableMap}
+import scala.collection.immutable
 
 class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
 
@@ -71,7 +74,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
           .onTopOf(aPlan("NodeIndexSeek").containingArgumentRegex("\\:Place\\(location\\).*".r))
 
       }),
-      params = ImmutableMap("param" -> wgsPoint(12.78, 56.7)))
+      params = immutable.Map("param" -> wgsPoint(12.78, 56.7)))
 
     // Then
     val point = result.columnAs("point").toList.head.asInstanceOf[Point]
@@ -93,7 +96,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
           .aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)
           .onTopOf(aPlan("NodeIndexSeek").containingArgumentRegex("\\:Place\\(location\\).*".r))
       }),
-      params = ImmutableMap("param" -> Array(wgsPoint(12.78, 56.7))))
+      params = immutable.Map("param" -> Array(wgsPoint(12.78, 56.7))))
 
     // Then
     val pointList = result.columnAs("point").toList.head.asInstanceOf[Iterable[PointValue]].toList
@@ -119,7 +122,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
           .aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)
           .onTopOf(aPlan("NodeIndexSeek").containingArgumentRegex("\\:Place\\(location\\).*".r))
       }),
-      params = ImmutableMap("param" ->
+      params = immutable.Map("param" ->
         Array(wgsPoint(12.78, 56.7),
           wgsPoint(13.78, 56.7))))
 
@@ -151,7 +154,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
           .aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r)
           .onTopOf(aPlan("NodeIndexSeek").containingArgumentRegex("\\:Place\\(location\\).*".r))
       }),
-      params = ImmutableMap("param" ->
+      params = immutable.Map("param" ->
         List(wgsPoint(12.78, 56.7),
           wgsPoint(13.78, 56.7))))
 
@@ -678,7 +681,7 @@ class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {
         query,
         planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexSeekByRange")
           .containingArgument(s":$LABEL($PROPERTY) > point({x: min.x, y: min.y}) AND :$LABEL($PROPERTY) < max"))
-        )
+      )
     val nodes = result.columnAs[Node]("p").toSet
     expected.foreach(p => assert(nodes.contains(p)))
     nodes.size should be(expected.size)

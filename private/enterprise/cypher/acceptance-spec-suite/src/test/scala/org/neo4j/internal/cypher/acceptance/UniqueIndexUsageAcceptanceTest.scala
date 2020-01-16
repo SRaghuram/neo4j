@@ -9,7 +9,9 @@ import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext.IndexSearchMonitor
 import org.neo4j.graphdb.config.Setting
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithAssertion, Configs, CypherComparisonSupport}
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.ComparePlansWithAssertion
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 import org.neo4j.internal.schema.IndexDescriptor
 
 import scala.collection.Map
@@ -50,7 +52,7 @@ class UniqueIndexUsageAcceptanceTest extends ExecutionEngineFunSuite with Cypher
 
     // When
     val result = executeWith(Configs.CachedProperty + Configs.Compiled,
-                             "MATCH (n:Crew) WHERE n.name = 'Neo' AND n.name = 'Morpheus' RETURN n",
+      "MATCH (n:Crew) WHERE n.name = 'Neo' AND n.name = 'Morpheus' RETURN n",
       planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
         planDescription.toString should include("NodeUniqueIndexSeek")
       }))
@@ -130,8 +132,8 @@ class UniqueIndexUsageAcceptanceTest extends ExecutionEngineFunSuite with Cypher
 
     val query =
       """|MATCH (m:MyNodes)
-        |WHERE m.a = m.b
-        |RETURN m""".stripMargin
+         |WHERE m.a = m.b
+         |RETURN m""".stripMargin
 
     // When
     val result = executeWith(Configs.CachedProperty, query)

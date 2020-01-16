@@ -8,11 +8,13 @@ package org.neo4j.internal.cypher.acceptance
 import java.io.PrintWriter
 
 import org.apache.commons.lang3.exception.ExceptionUtils
-import org.neo4j.cypher._
+import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.runtime.CreateTempFileTestSupport
 import org.neo4j.exceptions.CypherExecutionException
-import org.neo4j.graphdb.{QueryExecutionException, TransactionFailureException}
-import org.neo4j.internal.cypher.acceptance.TestResourceProcedure._
+import org.neo4j.graphdb.QueryExecutionException
+import org.neo4j.graphdb.TransactionFailureException
+import org.neo4j.internal.cypher.acceptance.TestResourceProcedure.SimulateFailureException
+import org.neo4j.internal.cypher.acceptance.TestResourceProcedure.SimulateFailureOnCloseException
 import org.neo4j.internal.kernel.api.security.LoginContext
 import org.neo4j.kernel.api.KernelTransaction
 import org.neo4j.kernel.api.KernelTransaction.Type
@@ -24,16 +26,16 @@ class ReflectiveProcedureCallAcceptanceTest extends ExecutionEngineFunSuite with
 
   def query(resultCount: Long, failCount: Long) =
     s"""
-      |CALL org.neo4j.test.testOnCloseFailingResourceProcedure($resultCount) YIELD value as v1
-      |WITH v1
-      |CALL org.neo4j.test.testResourceProcedure($resultCount) YIELD value as v2
-      |WITH v1, v2
-      |CALL org.neo4j.test.testOnCloseFailingResourceProcedure($resultCount) YIELD value as v3
-      |WITH v1, v2, v3
-      |CALL org.neo4j.test.testFailingResourceProcedure($failCount) YIELD value as v4
-      |WITH v1, v2, v3, v4
-      |CALL org.neo4j.test.testResourceProcedure($resultCount) YIELD value as v5
-      |RETURN v1, v2, v3, v4, v5
+       |CALL org.neo4j.test.testOnCloseFailingResourceProcedure($resultCount) YIELD value as v1
+       |WITH v1
+       |CALL org.neo4j.test.testResourceProcedure($resultCount) YIELD value as v2
+       |WITH v1, v2
+       |CALL org.neo4j.test.testOnCloseFailingResourceProcedure($resultCount) YIELD value as v3
+       |WITH v1, v2, v3
+       |CALL org.neo4j.test.testFailingResourceProcedure($failCount) YIELD value as v4
+       |WITH v1, v2, v3, v4
+       |CALL org.neo4j.test.testResourceProcedure($resultCount) YIELD value as v5
+       |RETURN v1, v2, v3, v4, v5
     """.stripMargin
 
   val defaultQuery = query(resultCount = 4, failCount = 3)

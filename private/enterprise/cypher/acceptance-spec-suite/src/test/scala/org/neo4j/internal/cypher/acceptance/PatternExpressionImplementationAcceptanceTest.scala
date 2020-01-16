@@ -6,11 +6,14 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
-import org.neo4j.cypher.internal.plandescription.Arguments.{EstimatedRows, ExpandExpression}
-import org.neo4j.cypher.internal.runtime.PathImpl
 import org.neo4j.cypher.internal.expressions.SemanticDirection
+import org.neo4j.cypher.internal.plandescription.Arguments.EstimatedRows
+import org.neo4j.cypher.internal.plandescription.Arguments.ExpandExpression
+import org.neo4j.cypher.internal.runtime.PathImpl
 import org.neo4j.graphdb.Node
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithAssertion, Configs, CypherComparisonSupport}
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.ComparePlansWithAssertion
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 import org.scalatest.Matchers
 
 class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSuite with Matchers with CypherComparisonSupport {
@@ -64,9 +67,9 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
 
     val result = executeWith(Configs.NestedPlan, "match (n) return case when n:A then (n)-->(:C) when n:B then (n)-->(:D) else 42 end as p")
       .toList.map(_.mapValues {
-        case l: Seq[Any] => l.toSet
-        case x => x
-      }).toSet
+      case l: Seq[Any] => l.toSet
+      case x => x
+    }).toSet
 
     result should equal(Set(
       Map("p" -> Set(PathImpl(start, rel2, c), PathImpl(start, rel1, c))),
@@ -116,9 +119,9 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
 
     val result = executeWith(Configs.NestedPlan, "match (n) with case when n:A then (n)-->(:C) when n:B then (n)-->(:D) else 42 end as p, count(n) as c return p, c")
       .toList.map(_.mapValues {
-        case l: Seq[Any] => l.toSet
-        case x => x
-      }).toSet
+      case l: Seq[Any] => l.toSet
+      case x => x
+    }).toSet
 
     result should equal(Set(
       Map("c" -> 1, "p" -> Set(PathImpl(start, rel2, c), PathImpl(start, rel1, c))),
@@ -133,7 +136,7 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
     relate(start, createNode())
 
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "match (n) where (case when id(n) >= 0 then size((n)-->()) else 42 end) > 0 return n",
-                             planComparisonStrategy = ComparePlansWithAssertion(_ shouldNot includeSomewhere.aPlan("RollUpApply")))
+      planComparisonStrategy = ComparePlansWithAssertion(_ shouldNot includeSomewhere.aPlan("RollUpApply")))
 
     result.toList should equal(List(
       Map("n" -> start)
@@ -358,28 +361,28 @@ class PatternExpressionImplementationAcceptanceTest extends ExecutionEngineFunSu
     setup()
 
     executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n:X) WHERE size((n)-->()) > 2 RETURN n",
-                planComparisonStrategy = ComparePlansWithAssertion(_ shouldNot includeSomewhere.aPlan("RollUpApply")))
+      planComparisonStrategy = ComparePlansWithAssertion(_ shouldNot includeSomewhere.aPlan("RollUpApply")))
   }
 
   test("use getDegree for simple pattern expression with size clause, incoming") {
     setup()
 
     executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n:X) WHERE size((n)<--()) > 2 RETURN n",
-                planComparisonStrategy = ComparePlansWithAssertion(_ shouldNot includeSomewhere.aPlan("RollUpApply")))
+      planComparisonStrategy = ComparePlansWithAssertion(_ shouldNot includeSomewhere.aPlan("RollUpApply")))
   }
 
   test("use getDegree for simple pattern expression with size clause, both") {
     setup()
 
     executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n:X) WHERE size((n)--()) > 2 RETURN n",
-                planComparisonStrategy = ComparePlansWithAssertion(_ shouldNot includeSomewhere.aPlan("RollUpApply")))
+      planComparisonStrategy = ComparePlansWithAssertion(_ shouldNot includeSomewhere.aPlan("RollUpApply")))
   }
 
   test("use getDegree for simple pattern expression with rel-type ORs") {
     setup()
 
     executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n) WHERE size((n)-[:X|Y]->()) > 2 RETURN n",
-                planComparisonStrategy = ComparePlansWithAssertion(_ shouldNot includeSomewhere.aPlan("RollUpApply")))
+      planComparisonStrategy = ComparePlansWithAssertion(_ shouldNot includeSomewhere.aPlan("RollUpApply")))
   }
 
   test("use getDegree for pattern expression predicate on var-length pattern") {

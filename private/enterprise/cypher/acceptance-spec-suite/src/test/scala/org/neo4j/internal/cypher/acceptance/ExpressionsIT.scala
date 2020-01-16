@@ -5,54 +5,161 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import java.lang.Math.{PI, sin}
-import java.time.{Clock, Duration}
+import java.lang.Math.PI
+import java.lang.Math.sin
+import java.time.Clock
+import java.time.Duration
 import java.util.concurrent.ThreadLocalRandom
 
-import org.neo4j.codegen.api.CodeGeneration.{ByteCodeGeneration, CodeSaver}
+import org.neo4j.codegen.api.CodeGeneration.ByteCodeGeneration
+import org.neo4j.codegen.api.CodeGeneration.CodeSaver
 import org.neo4j.cypher.ExecutionEngineFunSuite
-import org.neo4j.cypher.internal.logical.plans._
-import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.{ApplyPlans, ArgumentSizes, NestedPlanArgumentConfigurations, SlotConfigurations}
-import org.neo4j.cypher.internal.physicalplanning.ast._
-import org.neo4j.cypher.internal.physicalplanning.{ast, _}
-import org.neo4j.cypher.internal.runtime._
-import org.neo4j.cypher.internal.runtime.ast.{ExpressionVariable, ParameterFromSlot, RuntimeExpression, RuntimeProperty}
-import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.defaultGenerator
-import org.neo4j.cypher.internal.runtime.compiled.expressions._
-import org.neo4j.cypher.internal.runtime.expressionVariableAllocation.AvailableExpressionVariables
-import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext.IndexSearchMonitor
-import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{CommunityExpressionConverter, ExpressionConverters}
-import org.neo4j.cypher.internal.runtime.interpreted.{TransactionBoundQueryContext, TransactionalContextWrapper}
-import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionConverters
-import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionConverters.orderGroupingKeyExpressions
-import org.neo4j.cypher.internal.runtime.slotted.{SlottedExecutionContext, SlottedQueryState}
 import org.neo4j.cypher.internal.ast.AstConstructionTestSupport
 import org.neo4j.cypher.internal.expressions
-import org.neo4j.cypher.internal.expressions.SemanticDirection.{BOTH, INCOMING, OUTGOING}
-import org.neo4j.cypher.internal.expressions._
-import org.neo4j.cypher.internal.util._
+import org.neo4j.cypher.internal.expressions.CaseExpression
+import org.neo4j.cypher.internal.expressions.DesugaredMapProjection
+import org.neo4j.cypher.internal.expressions.EntityType
+import org.neo4j.cypher.internal.expressions.Expression
+import org.neo4j.cypher.internal.expressions.LiteralEntry
+import org.neo4j.cypher.internal.expressions.MultiRelationshipPathStep
+import org.neo4j.cypher.internal.expressions.NODE_TYPE
+import org.neo4j.cypher.internal.expressions.NilPathStep
+import org.neo4j.cypher.internal.expressions.NodePathStep
+import org.neo4j.cypher.internal.expressions.PathExpression
+import org.neo4j.cypher.internal.expressions.PathStep
+import org.neo4j.cypher.internal.expressions.PropertyKeyName
+import org.neo4j.cypher.internal.expressions.RELATIONSHIP_TYPE
+import org.neo4j.cypher.internal.expressions.SemanticDirection.BOTH
+import org.neo4j.cypher.internal.expressions.SemanticDirection.INCOMING
+import org.neo4j.cypher.internal.expressions.SemanticDirection.OUTGOING
+import org.neo4j.cypher.internal.expressions.SingleRelationshipPathStep
+import org.neo4j.cypher.internal.expressions.Variable
+import org.neo4j.cypher.internal.logical.plans.CoerceToPredicate
+import org.neo4j.cypher.internal.logical.plans.CypherValue
+import org.neo4j.cypher.internal.logical.plans.FieldSignature
+import org.neo4j.cypher.internal.logical.plans.QualifiedName
+import org.neo4j.cypher.internal.logical.plans.ResolvedFunctionInvocation
+import org.neo4j.cypher.internal.logical.plans.UserFunctionSignature
+import org.neo4j.cypher.internal.physicalplanning.LongSlot
+import org.neo4j.cypher.internal.physicalplanning.PhysicalPlan
+import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.ApplyPlans
+import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.ArgumentSizes
+import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.NestedPlanArgumentConfigurations
+import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.SlotConfigurations
+import org.neo4j.cypher.internal.physicalplanning.RefSlot
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils
+import org.neo4j.cypher.internal.physicalplanning.ast
+import org.neo4j.cypher.internal.physicalplanning.ast.GetDegreePrimitive
+import org.neo4j.cypher.internal.physicalplanning.ast.HasLabelsFromSlot
+import org.neo4j.cypher.internal.physicalplanning.ast.IdFromSlot
+import org.neo4j.cypher.internal.physicalplanning.ast.IsPrimitiveNull
+import org.neo4j.cypher.internal.physicalplanning.ast.LabelsFromSlot
+import org.neo4j.cypher.internal.physicalplanning.ast.NodeFromSlot
+import org.neo4j.cypher.internal.physicalplanning.ast.NodeProperty
+import org.neo4j.cypher.internal.physicalplanning.ast.NodePropertyExists
+import org.neo4j.cypher.internal.physicalplanning.ast.NodePropertyExistsLate
+import org.neo4j.cypher.internal.physicalplanning.ast.NodePropertyLate
+import org.neo4j.cypher.internal.physicalplanning.ast.NullCheck
+import org.neo4j.cypher.internal.physicalplanning.ast.NullCheckVariable
+import org.neo4j.cypher.internal.physicalplanning.ast.PrimitiveEquals
+import org.neo4j.cypher.internal.physicalplanning.ast.ReferenceFromSlot
+import org.neo4j.cypher.internal.physicalplanning.ast.RelationshipFromSlot
+import org.neo4j.cypher.internal.physicalplanning.ast.RelationshipProperty
+import org.neo4j.cypher.internal.physicalplanning.ast.RelationshipPropertyExists
+import org.neo4j.cypher.internal.physicalplanning.ast.RelationshipPropertyExistsLate
+import org.neo4j.cypher.internal.physicalplanning.ast.RelationshipPropertyLate
+import org.neo4j.cypher.internal.physicalplanning.ast.RelationshipTypeFromSlot
+import org.neo4j.cypher.internal.runtime.DbAccess
+import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.ExpressionCursors
+import org.neo4j.cypher.internal.runtime.MapExecutionContext
+import org.neo4j.cypher.internal.runtime.NoMemoryTracker
+import org.neo4j.cypher.internal.runtime.ParameterMapping
+import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.ast.ExpressionVariable
+import org.neo4j.cypher.internal.runtime.ast.ParameterFromSlot
+import org.neo4j.cypher.internal.runtime.ast.RuntimeExpression
+import org.neo4j.cypher.internal.runtime.ast.RuntimeProperty
+import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledExpression
+import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledGroupingExpression
+import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledProjection
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.defaultGenerator
+import org.neo4j.cypher.internal.runtime.expressionVariableAllocation.AvailableExpressionVariables
+import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext
+import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext.IndexSearchMonitor
+import org.neo4j.cypher.internal.runtime.interpreted.TransactionalContextWrapper
+import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.CommunityExpressionConverter
+import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
+import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
+import org.neo4j.cypher.internal.runtime.slotted.SlottedQueryState
+import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionConverters
+import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionConverters.orderGroupingKeyExpressions
 import org.neo4j.cypher.internal.util.attribution.Id
-import org.neo4j.cypher.internal.util.symbols.{CTAny, CypherType, ListType}
+import org.neo4j.cypher.internal.util.symbols
+import org.neo4j.cypher.internal.util.symbols.CTAny
+import org.neo4j.cypher.internal.util.symbols.CypherType
+import org.neo4j.cypher.internal.util.symbols.ListType
 import org.neo4j.exceptions
-import org.neo4j.exceptions.{CypherTypeException, InvalidArgumentException, InvalidSemanticsException, ParameterWrongTypeException}
-import org.neo4j.graphdb.{Entity, Node, Relationship}
-import org.neo4j.internal.kernel.api.procs.{Neo4jTypes, QualifiedName => KernelQualifiedName}
+import org.neo4j.exceptions.CypherTypeException
+import org.neo4j.exceptions.InvalidArgumentException
+import org.neo4j.exceptions.InvalidSemanticsException
+import org.neo4j.exceptions.ParameterWrongTypeException
+import org.neo4j.graphdb.Entity
+import org.neo4j.graphdb.Node
+import org.neo4j.graphdb.Relationship
+import org.neo4j.internal.kernel.api.procs
+import org.neo4j.internal.kernel.api.procs.Neo4jTypes
 import org.neo4j.internal.kernel.api.security.LoginContext
 import org.neo4j.kernel.api.KernelTransaction.Type
 import org.neo4j.kernel.api.procedure.CallableUserFunction.BasicUserFunction
 import org.neo4j.kernel.api.procedure.Context
+import org.neo4j.kernel.impl.query.Neo4jTransactionalContextFactory
 import org.neo4j.kernel.impl.query.QuerySubscriber.DO_NOTHING_SUBSCRIBER
-import org.neo4j.kernel.impl.query.{Neo4jTransactionalContextFactory, TransactionalContext}
+import org.neo4j.kernel.impl.query.TransactionalContext
 import org.neo4j.kernel.impl.util.ValueUtils
-import org.neo4j.values.storable.CoordinateReferenceSystem.{Cartesian, WGS84}
+import org.neo4j.values.AnyValue
+import org.neo4j.values.AnyValues
+import org.neo4j.values.VirtualValue
+import org.neo4j.values.storable.BooleanValue
+import org.neo4j.values.storable.CoordinateReferenceSystem.Cartesian
+import org.neo4j.values.storable.CoordinateReferenceSystem.WGS84
+import org.neo4j.values.storable.DateTimeValue
+import org.neo4j.values.storable.DateValue
+import org.neo4j.values.storable.DoubleValue
+import org.neo4j.values.storable.LocalDateTimeValue
+import org.neo4j.values.storable.LocalTimeValue
 import org.neo4j.values.storable.LocalTimeValue.localTime
-import org.neo4j.values.storable.Values._
-import org.neo4j.values.storable._
-import org.neo4j.values.virtual.VirtualValues.{EMPTY_LIST, EMPTY_MAP, list}
-import org.neo4j.values.virtual._
-import org.neo4j.values.{AnyValue, AnyValues, VirtualValue}
-import org.scalatest.matchers.{MatchResult, Matcher}
+import org.neo4j.values.storable.PointValue
+import org.neo4j.values.storable.TimeValue
+import org.neo4j.values.storable.Value
+import org.neo4j.values.storable.Values
+import org.neo4j.values.storable.Values.EMPTY_STRING
+import org.neo4j.values.storable.Values.FALSE
+import org.neo4j.values.storable.Values.NO_VALUE
+import org.neo4j.values.storable.Values.booleanValue
+import org.neo4j.values.storable.Values.charValue
+import org.neo4j.values.storable.Values.doubleValue
+import org.neo4j.values.storable.Values.durationValue
+import org.neo4j.values.storable.Values.intArray
+import org.neo4j.values.storable.Values.intValue
+import org.neo4j.values.storable.Values.longArray
+import org.neo4j.values.storable.Values.longValue
+import org.neo4j.values.storable.Values.pointValue
+import org.neo4j.values.storable.Values.stringValue
+import org.neo4j.values.storable.Values.temporalValue
+import org.neo4j.values.virtual.ListValue
+import org.neo4j.values.virtual.MapValue
+import org.neo4j.values.virtual.NodeValue
+import org.neo4j.values.virtual.RelationshipValue
+import org.neo4j.values.virtual.VirtualValues
+import org.neo4j.values.virtual.VirtualValues.EMPTY_LIST
+import org.neo4j.values.virtual.VirtualValues.EMPTY_MAP
+import org.neo4j.values.virtual.VirtualValues.list
+import org.scalatest.matchers.MatchResult
+import org.scalatest.matchers.Matcher
 
+import scala.collection.JavaConverters.mapAsJavaMapConverter
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
@@ -252,7 +359,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   test("range function with no step") {
     val range = function("range", literalInt(5), literalInt(9))
     evaluate(compile(range)) should equal(list(longValue(5), longValue(6), longValue(7),
-                                               longValue(8), longValue(9)))
+      longValue(8), longValue(9)))
   }
 
   test("range function with step") {
@@ -275,11 +382,11 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   test("distance function") {
     val compiled = compile(function("distance", parameter(0), parameter(1)))
     evaluate(compiled, params(pointValue(Cartesian, 0.0, 0.0),
-                                 pointValue(Cartesian, 1.0, 1.0))) should equal(doubleValue(Math.sqrt(2)))
+      pointValue(Cartesian, 1.0, 1.0))) should equal(doubleValue(Math.sqrt(2)))
     evaluate(compiled, params(pointValue(Cartesian, 0.0, 0.0),
-                                 NO_VALUE)) should equal(NO_VALUE)
+      NO_VALUE)) should equal(NO_VALUE)
     evaluate(compiled, params(pointValue(Cartesian, 0.0, 0.0),
-                                 pointValue(WGS84, 1.0, 1.0))) should equal(NO_VALUE)
+      pointValue(WGS84, 1.0, 1.0))) should equal(NO_VALUE)
 
   }
 
@@ -315,8 +422,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val compiled = compile(function("exists", prop(parameter(0), "prop")))
 
     val rel = relationshipValue(nodeValue(),
-                                nodeValue(),
-                                VirtualValues.map(Array("prop"), Array(stringValue("hello"))))
+      nodeValue(),
+      VirtualValues.map(Array("prop"), Array(stringValue("hello"))))
     evaluate(compiled, params(NO_VALUE)) should equal(NO_VALUE)
     evaluate(compiled, params(rel)) should equal(Values.TRUE)
   }
@@ -357,7 +464,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     evaluate(compiled, params(NO_VALUE, intValue(4))) should equal(NO_VALUE)
 
     an[IndexOutOfBoundsException] should be thrownBy evaluate(compiled,
-                                                              params(stringValue("HELLO"), intValue(-1)))
+      params(stringValue("HELLO"), intValue(-1)))
   }
 
   test("ltrim function") {
@@ -388,17 +495,17 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val compiled = compile(function("replace", parameter(0), parameter(1), parameter(2)))
 
     evaluate(compiled, params(stringValue("HELLO"),
-                                 stringValue("LL"),
-                                 stringValue("R"))) should equal(stringValue("HERO"))
+      stringValue("LL"),
+      stringValue("R"))) should equal(stringValue("HERO"))
     evaluate(compiled, params(NO_VALUE,
-                                 stringValue("LL"),
-                                 stringValue("R"))) should equal(NO_VALUE)
+      stringValue("LL"),
+      stringValue("R"))) should equal(NO_VALUE)
     evaluate(compiled, params(stringValue("HELLO"),
-                                 NO_VALUE,
-                                 stringValue("R"))) should equal(NO_VALUE)
+      NO_VALUE,
+      stringValue("R"))) should equal(NO_VALUE)
     evaluate(compiled, params(stringValue("HELLO"),
-                                 stringValue("LL"),
-                                 NO_VALUE)) should equal(NO_VALUE)
+      stringValue("LL"),
+      NO_VALUE)) should equal(NO_VALUE)
   }
 
   test("reverse function") {
@@ -453,9 +560,9 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
   test("substring function with length") {
     evaluate(compile(function("substring", parameter(0), parameter(1), parameter(2))),
-             params(stringValue("HELLO"), intValue(1), intValue(2))) should equal(stringValue("EL"))
+      params(stringValue("HELLO"), intValue(1), intValue(2))) should equal(stringValue("EL"))
     evaluate(compile(function("substring", parameter(0), parameter(1))),
-             params(NO_VALUE, intValue(1))) should equal(NO_VALUE)
+      params(NO_VALUE, intValue(1))) should equal(NO_VALUE)
   }
 
   test("toLower function") {
@@ -531,7 +638,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val compiled = compile(function("point", parameter(0)))
 
     val pointMap = VirtualValues.map(Array("x", "y", "crs"),
-                       Array(doubleValue(1.0), doubleValue(2.0), stringValue("cartesian")))
+      Array(doubleValue(1.0), doubleValue(2.0), stringValue("cartesian")))
     val node = nodeValue(pointMap)
 
     evaluate(compiled, params(NO_VALUE)) should equal(NO_VALUE)
@@ -542,7 +649,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val compiled = compile(function("point", parameter(0)))
 
     val pointMap = VirtualValues.map(Array("x", "y", "crs"),
-                       Array(doubleValue(1.0), doubleValue(2.0), stringValue("cartesian")))
+      Array(doubleValue(1.0), doubleValue(2.0), stringValue("cartesian")))
     val rel = relationshipValue(nodeValue(), nodeValue(), pointMap)
 
     evaluate(compiled, params(NO_VALUE)) should equal(NO_VALUE)
@@ -553,7 +660,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val compiled = compile(function("point", parameter(0)))
 
     val pointMap = VirtualValues.map(Array("x", "y", "crs"),
-                       Array(doubleValue(1.0), doubleValue(2.0), stringValue("cartesian")))
+      Array(doubleValue(1.0), doubleValue(2.0), stringValue("cartesian")))
     evaluate(compiled, params(NO_VALUE)) should equal(NO_VALUE)
     evaluate(compiled, params(pointMap)) should equal(PointValue.fromMap(pointMap))
   }
@@ -570,8 +677,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val compiled = compile(function("keys", parameter(0)))
 
     val rel = relationshipValue(nodeValue(), nodeValue(),
-                                VirtualValues.map(Array("A", "B", "C"),
-                                    Array(stringValue("a"), stringValue("b"), stringValue("c"))))
+      VirtualValues.map(Array("A", "B", "C"),
+        Array(stringValue("a"), stringValue("b"), stringValue("c"))))
 
     evaluate(compiled, params(NO_VALUE)) should equal(NO_VALUE)
     evaluate(compiled, params(rel)) should equal(Values.stringArray("A", "B", "C"))
@@ -581,7 +688,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val compiled = compile(function("keys", parameter(0)))
 
     val mapValue = VirtualValues.map(Array("x", "y", "crs"),
-                       Array(doubleValue(1.0), doubleValue(2.0), stringValue("cartesian")))
+      Array(doubleValue(1.0), doubleValue(2.0), stringValue("cartesian")))
     evaluate(compiled, params(NO_VALUE)) should equal(NO_VALUE)
     evaluate(compiled, params(mapValue)) should equal(mapValue.keys())
   }
@@ -606,7 +713,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val compiled = compile(function("tail", parameter(0)))
 
     evaluate(compiled,
-             params(list(intValue(1), intValue(2), intValue(3)))) should equal(list(intValue(2), intValue(3)))
+      params(list(intValue(1), intValue(2), intValue(3)))) should equal(list(intValue(2), intValue(3)))
     evaluate(compiled, params(NO_VALUE)) should equal(NO_VALUE)
   }
 
@@ -669,7 +776,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val compiled = compile(function("properties", parameter(0)))
     val mapValue = VirtualValues.map(Array("prop"), Array(longValue(42)))
     val rel = relationshipValue(nodeValue(),
-                                nodeValue(), mapValue)
+      nodeValue(), mapValue)
     evaluate(compiled, params(rel)) should equal(mapValue)
     evaluate(compiled, params(NO_VALUE)) should equal(NO_VALUE)
   }
@@ -698,17 +805,17 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
     // temporal + duration
     evaluate(compiled, params(temporalValue(localTime(0)),
-                                    durationValue(Duration.ofHours(10)))) should
+      durationValue(Duration.ofHours(10)))) should
       equal(localTime(10, 0, 0, 0))
 
     // duration + temporal
     evaluate(compiled, params(durationValue(Duration.ofHours(10)),
-                                    temporalValue(localTime(0)))) should
+      temporalValue(localTime(0)))) should
       equal(localTime(10, 0, 0, 0))
 
     //duration + duration
     evaluate(compiled, params(durationValue(Duration.ofHours(10)),
-                                    durationValue(Duration.ofHours(10)))) should
+      durationValue(Duration.ofHours(10)))) should
       equal(durationValue(Duration.ofHours(20)))
   }
 
@@ -749,7 +856,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
     // Then
     evaluate(compiled, params(longArray(Array(42, 43)),
-                                    longArray(Array(44, 45)))) should
+      longArray(Array(44, 45)))) should
       equal(list(longValue(42), longValue(43), longValue(44), longValue(45)))
   }
 
@@ -759,7 +866,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
     // [a1,a2 ..] + [b1,b2 ..]
     evaluate(compiled, params(list(longValue(42), longValue(43)),
-                                    list(longValue(44), longValue(45)))) should
+      list(longValue(44), longValue(45)))) should
       equal(list(longValue(42), longValue(43), longValue(44), longValue(45)))
 
     // [a1,a2 ..] + b
@@ -768,7 +875,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
     // a + [b1,b2 ..]
     evaluate(compiled, params(longValue(43),
-                                    list(longValue(44), longValue(45)))) should
+      list(longValue(44), longValue(45)))) should
       equal(list(longValue(43), longValue(44), longValue(45)))
   }
 
@@ -811,12 +918,12 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
     // temporal - duration
     evaluate(compiled, params(temporalValue(localTime(20, 0, 0, 0)),
-                                    durationValue(Duration.ofHours(10)))) should
+      durationValue(Duration.ofHours(10)))) should
       equal(localTime(10, 0, 0, 0))
 
     //duration - duration
     evaluate(compiled, params(durationValue(Duration.ofHours(10)),
-                                    durationValue(Duration.ofHours(10)))) should
+      durationValue(Duration.ofHours(10)))) should
       equal(durationValue(Duration.ofHours(0)))
   }
 
@@ -981,7 +1088,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     evaluate(compiled, params(intValue(42), Values.FALSE, Values.TRUE, Values.FALSE, Values.FALSE)) should equal(Values.TRUE)
 
     a [CypherTypeException] should be thrownBy evaluate(compiled,
-                                                        params(intValue(42), Values.FALSE, Values.FALSE, Values.FALSE, Values.FALSE))
+      params(intValue(42), Values.FALSE, Values.FALSE, Values.FALSE, Values.FALSE))
   }
 
   test("ORS should handle coercion") {
@@ -1012,8 +1119,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
   test("AND should handle coercion") {
     val expression =  compile(and(parameter(0), parameter(1)))
-   evaluate(expression, params(Values.TRUE, EMPTY_LIST)) should equal(Values.FALSE)
-   evaluate(expression, params(Values.TRUE, list(stringValue("hello")))) should equal(Values.TRUE)
+    evaluate(expression, params(Values.TRUE, EMPTY_LIST)) should equal(Values.FALSE)
+    evaluate(expression, params(Values.TRUE, list(stringValue("hello")))) should equal(Values.TRUE)
   }
 
   test("ANDS") {
@@ -1032,8 +1139,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     evaluate(compiled, params(intValue(42), Values.TRUE, Values.FALSE, Values.TRUE, Values.TRUE)) should equal(Values.FALSE)
 
     a [CypherTypeException] should be thrownBy evaluate(compiled,
-                                                        params(intValue(42), Values.TRUE, Values.TRUE,
-                                                               Values.TRUE, Values.TRUE))
+      params(intValue(42), Values.TRUE, Values.TRUE,
+        Values.TRUE, Values.TRUE))
   }
 
   test("ANDS should handle coercion") {
@@ -1094,9 +1201,9 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     evaluate(compiled, params(stringValue("helo"), stringValue("hell.*"))) should equal(Values.FALSE)
     evaluate(compiled, params(Values.NO_VALUE, stringValue("hell.*"))) should equal(Values.NO_VALUE)
     a [CypherTypeException] should be thrownBy evaluate(compiled,
-                                                        params(stringValue("forty-two"), longValue(42)))
+      params(stringValue("forty-two"), longValue(42)))
     an [InvalidSemanticsException] should be thrownBy evaluate(compiled,
-                                                               params(stringValue("hello"), stringValue("[")))
+      params(stringValue("hello"), stringValue("[")))
   }
 
   test("startsWith") {
@@ -1140,7 +1247,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
   test("in with literal list not containing null") {
     val compiled = compile(in(parameter(0),
-                              listOfString("a", "b", "c")))
+      listOfString("a", "b", "c")))
 
     evaluate(compiled, params(stringValue("a"))) should equal(Values.TRUE)
     evaluate(compiled, params(stringValue("b"))) should equal(Values.TRUE)
@@ -1151,7 +1258,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
   test("in with literal list containing null") {
     val compiled = compile(in(parameter(0),
-                              listOf(literalString("a"), nullLiteral, literalString("c"))))
+      listOf(literalString("a"), nullLiteral, literalString("c"))))
 
     evaluate(compiled, params(stringValue("a"))) should equal(Values.TRUE)
     evaluate(compiled, params(stringValue("c"))) should equal(Values.TRUE)
@@ -1499,7 +1606,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val nullOffset = 0
     val offset = 1
     val slots = SlotConfiguration(Map("n1" -> LongSlot(0, nullable = true, symbols.CTNode),
-                                      "n2" -> LongSlot(1, nullable = true, symbols.CTNode)), 2, 0)
+      "n2" -> LongSlot(1, nullable = true, symbols.CTNode)), 2, 0)
     val context = SlottedExecutionContext(slots)
     context.setLongAt(nullOffset, -1L)
     context.setLongAt(offset, 42L)
@@ -1550,8 +1657,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
   test("containerIndex on relationship") {
     val rel = relationshipValue(nodeValue(),
-                                nodeValue(),
-                                VirtualValues.map(Array("prop"), Array(stringValue("hello"))))
+      nodeValue(),
+      VirtualValues.map(Array("prop"), Array(stringValue("hello"))))
     val compiled = compile(containerIndex(parameter(0), literalString("prop")))
 
     evaluate(compiled, params(rel)) should equal(stringValue("hello"))
@@ -1590,7 +1697,6 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
     val compiled = compile(literal)
 
-    import scala.collection.JavaConverters._
     evaluate(compiled) should equal(ValueUtils.asMapValue(Map("foo" -> 1, "bar" -> 2, "baz" -> 3).asInstanceOf[Map[String, AnyRef]].asJava))
   }
 
@@ -1599,7 +1705,6 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
     val compiled = compile(literal)
 
-    import scala.collection.JavaConverters._
     evaluate(compiled) should equal(ValueUtils.asMapValue(Map("foo" -> 1, "bar" -> null, "baz" -> "three").asInstanceOf[Map[String, AnyRef]].asJava))
   }
 
@@ -1683,10 +1788,10 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     case class Generator(generator: Clock => AnyValue, ct: CypherType)
     val generators: List[Generator] =
       List(Generator(DateValue.now, symbols.CTDate),
-           Generator(TimeValue.now, symbols.CTTime),
-           Generator(LocalTimeValue.now, symbols.CTLocalTime),
-           Generator(DateTimeValue.now, symbols.CTDateTime),
-           Generator(LocalDateTimeValue.now, symbols.CTLocalDateTime))
+        Generator(TimeValue.now, symbols.CTTime),
+        Generator(LocalTimeValue.now, symbols.CTLocalTime),
+        Generator(DateTimeValue.now, symbols.CTDateTime),
+        Generator(LocalDateTimeValue.now, symbols.CTLocalDateTime))
 
     generators.foreach{ generator =>
       val now = generator.generator(Clock.systemUTC())
@@ -1718,11 +1823,11 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val relationshipValues = list(relationshipValue(), relationshipValue())
     coerce(relationshipValues, ListType(symbols.CTRelationship)) should equal(relationshipValues)
     coerce(list(doubleValue(1.2), longValue(2), doubleValue(3.1)),
-           ListType(symbols.CTInteger)) should equal(list(longValue(1), longValue(2), longValue(3)))
+      ListType(symbols.CTInteger)) should equal(list(longValue(1), longValue(2), longValue(3)))
     coerce(list(doubleValue(1.2), longValue(2), doubleValue(3.1)),
-           ListType(symbols.CTFloat)) should equal(list(doubleValue(1.2), doubleValue(2), doubleValue(3.1)))
+      ListType(symbols.CTFloat)) should equal(list(doubleValue(1.2), doubleValue(2), doubleValue(3.1)))
     coerce(list(list(doubleValue(1.2), longValue(2)), list(doubleValue(3.1))),
-           ListType(ListType(symbols.CTInteger))) should equal(list(list(longValue(1), longValue(2)), list(longValue(3))))
+      ListType(ListType(symbols.CTInteger))) should equal(list(list(longValue(1), longValue(2)), list(longValue(3))))
     coerce(list(longValue(42), NO_VALUE, longValue(43)), ListType(symbols.CTInteger)) should equal(
       list(longValue(42), NO_VALUE, longValue(43)))
 
@@ -1742,7 +1847,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   test("coerceTo unhappy path") {
     val all = types()
     for {value <- all.keys
-          typ <- all.values} {
+         typ <- all.values} {
       if (all(value) == typ) coerce(value, typ) should equal(value)
       else a [CypherTypeException] should be thrownBy coerce(value, typ)
     }
@@ -1809,7 +1914,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   test("should project") {
     //given
     val slots = SlotConfiguration(Map("a" -> RefSlot(0, nullable = true, symbols.CTAny),
-                                      "b" -> RefSlot(1, nullable = true, symbols.CTAny)), 0, 2)
+      "b" -> RefSlot(1, nullable = true, symbols.CTAny)), 0, 2)
     val context = new SlottedExecutionContext(slots)
     val projections = Map("a" -> literal("hello"), "b" -> function("sin", parameter(0)))
     val compiled = compileProjection(projections, slots)
@@ -1870,7 +1975,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     //When, single(bar IN null WHERE bar = foo)
     val bar = ExpressionVariable(0, "bar")
     val compiled = compile(singleInList(bar, nullLiteral,
-                                        equals(bar, varFor("foo"))))
+      equals(bar, varFor("foo"))))
 
     //Then
     evaluate(compiled, 1) should equal(NO_VALUE)
@@ -1892,7 +1997,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     //When, single(bar IN foo WHERE size(bar) = size(foo))
     val bar = ExpressionVariable(0, "bar")
     val compiled = compile(singleInList(bar, varFor("foo"),
-                                        equals(function("size", bar), function("size", varFor("foo")))))
+      equals(function("size", bar), function("size", varFor("foo")))))
 
     //Then
     evaluate(compiled, 1, Array.empty, context) should equal(Values.TRUE)
@@ -1905,7 +2010,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     //When, single(bar IN $a WHERE size(bar) = size($a))
     val bar = ExpressionVariable(0, "bar")
     val compiled = compile(singleInList(bar, parameter(0),
-                                        equals(function("size", bar), function("size", parameter(0)))))
+      equals(function("size", bar), function("size", parameter(0)))))
 
     //Then
     evaluate(compiled, 1, params(list)) should equal(Values.TRUE)
@@ -1979,7 +2084,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     //When,  none(bar IN foo WHERE size(bar) = size(foo))
     val bar = ExpressionVariable(0, "bar")
     val compiled = compile(noneInList(bar, varFor("foo"),
-                                      equals(function("size", bar), function("size", varFor("foo")))))
+      equals(function("size", bar), function("size", varFor("foo")))))
 
     //Then
     evaluate(compiled, 1, Array.empty, context) should equal(FALSE)
@@ -1991,7 +2096,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     //When,  none(bar IN $a WHERE size(bar) = size($a))
     val bar = ExpressionVariable(0, "bar")
     val compiled = compile(noneInList(bar, parameter(0),
-                                      equals(function("size", bar), function("size", parameter(0)))))
+      equals(function("size", bar), function("size", parameter(0)))))
 
     //Then
     evaluate(compiled, 1, params(list)) should equal(FALSE)
@@ -2001,7 +2106,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     //When, none(bar IN [] WHERE bar = 42)
     val bar = ExpressionVariable(0, "bar")
     val compiled = compile(noneInList(bar, listOf(),
-                                      equals(bar, literalInt(42))))
+      equals(bar, literalInt(42))))
 
     //Then
     evaluate(compiled, 1) should equal(Values.TRUE)
@@ -2065,7 +2170,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     //When,  any(bar IN foo WHERE size(bar) = size(foo))
     val bar = ExpressionVariable(0, "bar")
     val compiled = compile(anyInList(bar, varFor("foo"),
-                                     equals(function("size", bar), function("size", varFor("foo")))))
+      equals(function("size", bar), function("size", varFor("foo")))))
 
     //Then
     evaluate(compiled, 1, Array.empty, context) should equal(Values.TRUE)
@@ -2077,7 +2182,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     //When,  any(bar IN $a WHERE size(bar) = size($a))
     val bar = ExpressionVariable(0, "bar")
     val compiled = compile(anyInList(bar, parameter(0),
-                                     equals(function("size", bar), function("size", parameter(0)))))
+      equals(function("size", bar), function("size", parameter(0)))))
 
     //Then
     evaluate(compiled, 1, params(list)) should equal(Values.TRUE)
@@ -2150,7 +2255,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     //When, all(bar IN foo WHERE size(bar) = size(foo))
     val bar = ExpressionVariable(0, "bar")
     val compiled = compile(allInList(bar, varFor("foo"),
-                                     equals(function("size", bar), function("size", varFor("foo")))))
+      equals(function("size", bar), function("size", varFor("foo")))))
 
     //Then
     evaluate(compiled, 1, Array.empty, context) should equal(FALSE)
@@ -2162,7 +2267,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     //When,  all(bar IN $a WHERE size(bar) = size($a))
     val bar = ExpressionVariable(0, "bar")
     val compiled = compile(allInList(bar, parameter(0),
-                                     equals(function("size", bar), function("size", parameter(0)))))
+      equals(function("size", bar), function("size", parameter(0)))))
 
     //Then
     evaluate(compiled, 1, params(list)) should equal(Values.FALSE)
@@ -2465,8 +2570,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val count = ExpressionVariable(0, "count")
     val bar = ExpressionVariable(1, "bar")
     val compiled = compile(reduce(count, literalInt(0), bar,
-                                  listOfInt(1, 2, 3),
-                                  add(add(varFor("foo"), bar), count)))
+      listOfInt(1, 2, 3),
+      add(add(varFor("foo"), bar), count)))
 
     //Then
     evaluate(compiled, 2, Array.empty, context) should equal(intValue(36))
@@ -2477,7 +2582,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val count = ExpressionVariable(0, "count")
     val bar = ExpressionVariable(1, "bar")
     val compiled = compile(reduce(count, literalInt(0), bar, nullLiteral,
-                                  add(function("size", bar), count)))
+      add(function("size", bar), count)))
 
     //Then
     evaluate(compiled, 2) should equal(NO_VALUE)
@@ -2491,7 +2596,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val count = ExpressionVariable(0, "count")
     val bar = ExpressionVariable(1, "bar")
     val compiled = compile(reduce(count, literalInt(0), bar, varFor("foo"),
-                                  add(function("size", varFor("foo")), count)))
+      add(function("size", varFor("foo")), count)))
 
     //Then
     evaluate(compiled, 2, Array.empty, context) should equal(intValue(9))
@@ -2502,7 +2607,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val count = ExpressionVariable(0, "count")
     val bar = ExpressionVariable(1, "bar")
     val compiled = compile(reduce(count, literalInt(0), bar, parameter(0),
-                                  add(function("size", parameter(0)), count)))
+      add(function("size", parameter(0)), count)))
 
     //Then
     val list = VirtualValues.list(intValue(1), intValue(2), intValue(3))
@@ -2514,7 +2619,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val count = ExpressionVariable(0, "count")
     val bar = ExpressionVariable(1, "bar")
     val compiled = compile(reduce(count, literalInt(42), bar, listOf(),
-                                  add(literalInt(3), count)))
+      add(literalInt(3), count)))
 
     //Then
     evaluate(compiled, 2) should equal(Values.intValue(42))
@@ -2524,8 +2629,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     //When, [bar IN ["a", "aa", "aaa"] WHERE bar STARTS WITH 'aa' | bar + 'A']
     val bar = ExpressionVariable(0, "bar")
     val compiled = compile(listComprehension(bar, listOfString("a", "aa", "aaa"),
-                                             predicate = Some(startsWith(bar, literalString("aa"))),
-                                             extractExpression = Some(add(bar, literalString("A")))))
+      predicate = Some(startsWith(bar, literalString("aa"))),
+      extractExpression = Some(add(bar, literalString("A")))))
 
     //Then
     evaluate(compiled, 1) should equal(list(stringValue("aaA"), stringValue("aaaA")))
@@ -2535,8 +2640,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     //When, [bar IN ["a", "aa", "aaa"] | bar + 'A']
     val bar = ExpressionVariable(0, "bar")
     val compiled = compile(listComprehension(bar, listOfString("a", "aa", "aaa"),
-                                             predicate = None,
-                                             extractExpression = Some(add(bar, literalString("A")))))
+      predicate = None,
+      extractExpression = Some(add(bar, literalString("A")))))
 
     //Then
     evaluate(compiled, 1) should equal(list(stringValue("aA"), stringValue("aaA"), stringValue("aaaA")))
@@ -2546,8 +2651,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     //When, [bar IN ["a", "aa", "aaa"] WHERE bar STARTS WITH 'aa']
     val bar = ExpressionVariable(0, "bar")
     val compiled = compile(listComprehension(bar, listOfString("a", "aa", "aaa"),
-                                             predicate = Some(startsWith(bar, literalString("aa"))),
-                                             extractExpression = None))
+      predicate = Some(startsWith(bar, literalString("aa"))),
+      extractExpression = None))
 
     //Then
     evaluate(compiled, 1) should equal(list(stringValue("aa"), stringValue("aaa")))
@@ -2557,8 +2662,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     //When, [bar IN ["a", "aa", "aaa"]]
     val bar = ExpressionVariable(0, "bar")
     val compiled = compile(listComprehension(bar, listOfString("a", "aa", "aaa"),
-                                             predicate = None,
-                                             extractExpression = None))
+      predicate = None,
+      extractExpression = None))
 
     //Then
     evaluate(compiled, 1) should equal(list(stringValue("a"), stringValue("aa"), stringValue("aaa")))
@@ -2568,35 +2673,35 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val alts = List(literalInt(42) -> literalString("42"), literalInt(1337) -> literalString("1337"))
 
     evaluate(compile(simpleCase(parameter(0), alts)),
-             parameters("a" -> intValue(42))) should equal(stringValue("42"))
+      parameters("a" -> intValue(42))) should equal(stringValue("42"))
     evaluate(compile(simpleCase(parameter(0), alts)),
-             parameters("a" -> intValue(1337))) should equal(stringValue("1337"))
+      parameters("a" -> intValue(1337))) should equal(stringValue("1337"))
     evaluate(compile(simpleCase(parameter(0), alts)),
-             parameters("a" -> intValue(-1))) should equal(NO_VALUE)
+      parameters("a" -> intValue(-1))) should equal(NO_VALUE)
     evaluate(compile(simpleCase(parameter(0), alts, Some(literalString("THIS IS THE DEFAULT")))),
-             parameters("a" -> intValue(-1))) should equal(stringValue("THIS IS THE DEFAULT"))
+      parameters("a" -> intValue(-1))) should equal(stringValue("THIS IS THE DEFAULT"))
   }
 
   test("generic case expressions") {
     evaluate(compile(genericCase(List(falseLiteral -> literalString("no"), trueLiteral -> literalString("yes"))))
-      ) should equal(stringValue("yes"))
+    ) should equal(stringValue("yes"))
     evaluate(compile(genericCase(List(trueLiteral -> literalString("no"), falseLiteral -> literalString("yes"))))
-      ) should equal(stringValue("no"))
+    ) should equal(stringValue("no"))
     evaluate(compile(genericCase(List(falseLiteral -> literalString("no"), falseLiteral -> literalString("yes"))))
-      ) should equal(NO_VALUE)
+    ) should equal(NO_VALUE)
     evaluate(compile(genericCase(List(falseLiteral -> literalString("no"), falseLiteral -> literalString("yes")), Some(literalString("default"))))
-      ) should equal(stringValue("default"))
+    ) should equal(stringValue("default"))
   }
 
   test("map projection node with map context") {
-      val propertyMap = VirtualValues.map(Array("prop"), Array(stringValue("hello")))
-      val node = nodeValue(propertyMap)
-      val context = new MapExecutionContext(mutable.Map("n" -> node))
+    val propertyMap = VirtualValues.map(Array("prop"), Array(stringValue("hello")))
+    val node = nodeValue(propertyMap)
+    val context = new MapExecutionContext(mutable.Map("n" -> node))
 
-      evaluate(compile(mapProjection("n", includeAllProps = true, "foo" -> literalString("projected"))),
-         context) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
-      evaluate(compile(mapProjection("n", includeAllProps = false, "foo" -> literalString("projected"))),
-         context) should equal(VirtualValues.map(Array("foo"), Array(stringValue("projected"))))
+    evaluate(compile(mapProjection("n", includeAllProps = true, "foo" -> literalString("projected"))),
+      context) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
+    evaluate(compile(mapProjection("n", includeAllProps = false, "foo" -> literalString("projected"))),
+      context) should equal(VirtualValues.map(Array("foo"), Array(stringValue("projected"))))
   }
 
   test("map projection node from long slot") {
@@ -2610,9 +2715,9 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       val context = SlottedExecutionContext(slots)
       context.setLongAt(offset, node.id())
       evaluate(compile(mapProjection("n", includeAllProps = true, "foo" -> literalString("projected")), slots),
-         context) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
+        context) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
       evaluate(compile(mapProjection("n", includeAllProps = false, "foo" -> literalString("projected")), slots),
-         context) should equal(VirtualValues.map(Array("foo"), Array(stringValue("projected"))))
+        context) should equal(VirtualValues.map(Array("foo"), Array(stringValue("projected"))))
     }
   }
 
@@ -2627,28 +2732,28 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       val context = SlottedExecutionContext(slots)
       context.setRefAt(offset, node)
       evaluate(compile(mapProjection("n", includeAllProps = true, "foo" -> literalString("projected")), slots),
-         context) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
+        context) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
       evaluate(compile(mapProjection("n", includeAllProps = false, "foo" -> literalString("projected")), slots),
-         context) should equal(VirtualValues.map(Array("foo"), Array(stringValue("projected"))))
+        context) should equal(VirtualValues.map(Array("foo"), Array(stringValue("projected"))))
     }
   }
 
   test("map projection relationship with map context") {
     val propertyMap = VirtualValues.map(Array("prop"), Array(stringValue("hello")))
     val relationship = relationshipValue(nodeValue(),
-                                         nodeValue(), propertyMap)
+      nodeValue(), propertyMap)
     val context = new MapExecutionContext(mutable.Map("r" -> relationship))
     evaluate(compile(mapProjection("r", includeAllProps = true, "foo" -> literalString("projected"))),
-       context) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
+      context) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
     evaluate(compile(mapProjection("r", includeAllProps = false, "foo" -> literalString("projected"))),
-       context) should equal(VirtualValues.map(Array("foo"), Array(stringValue("projected"))))
+      context) should equal(VirtualValues.map(Array("foo"), Array(stringValue("projected"))))
   }
 
   test("map projection relationship from long slot") {
     val propertyMap = VirtualValues.map(Array("prop"), Array(stringValue("hello")))
     val offset = 0
     val relationship = relationshipValue(nodeValue(),
-                                         nodeValue(), propertyMap)
+      nodeValue(), propertyMap)
 
     for (nullable <- List(true, false)) {
       val slots = SlotConfiguration(Map("r" -> LongSlot(offset, nullable, symbols.CTRelationship)), 1, 0)
@@ -2657,9 +2762,9 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       val context = SlottedExecutionContext(slots)
       context.setLongAt(offset, relationship.id())
       evaluate(compile(mapProjection("r", includeAllProps = true, "foo" -> literalString("projected")), slots),
-         context) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
+        context) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
       evaluate(compile(mapProjection("r", includeAllProps = false, "foo" -> literalString("projected")), slots),
-         context) should equal(VirtualValues.map(Array("foo"), Array(stringValue("projected"))))
+        context) should equal(VirtualValues.map(Array("foo"), Array(stringValue("projected"))))
     }
   }
 
@@ -2667,7 +2772,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val propertyMap = VirtualValues.map(Array("prop"), Array(stringValue("hello")))
     val offset = 0
     val relationship = relationshipValue(nodeValue(),
-                                         nodeValue(), propertyMap)
+      nodeValue(), propertyMap)
     for (nullable <- List(true, false)) {
       val slots = SlotConfiguration(Map("r" -> RefSlot(offset, nullable, symbols.CTRelationship)), 0, 1)
       //needed for interpreted
@@ -2675,9 +2780,9 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       val context = SlottedExecutionContext(slots)
       context.setRefAt(offset, relationship)
       evaluate(compile(mapProjection("r", includeAllProps = true, "foo" -> literalString("projected")), slots),
-         context) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
+        context) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
       evaluate(compile(mapProjection("r", includeAllProps = false, "foo" -> literalString("projected")), slots),
-         context) should equal(VirtualValues.map(Array("foo"), Array(stringValue("projected"))))
+        context) should equal(VirtualValues.map(Array("foo"), Array(stringValue("projected"))))
     }
   }
 
@@ -2686,9 +2791,9 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val context = new MapExecutionContext(mutable.Map("map" -> propertyMap))
 
     evaluate(compile(mapProjection("map", includeAllProps = true, "foo" -> literalString("projected"))),
-       context) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
+      context) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
     evaluate(compile(mapProjection("map", includeAllProps = false, "foo" -> literalString("projected"))),
-       context) should equal(VirtualValues.map(Array("foo"), Array(stringValue("projected"))))
+      context) should equal(VirtualValues.map(Array("foo"), Array(stringValue("projected"))))
   }
 
   test("map projection mapValue from ref slot") {
@@ -2701,9 +2806,9 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       val context = SlottedExecutionContext(slots)
       context.setRefAt(offset, propertyMap)
       evaluate(compile(mapProjection("n", includeAllProps = true, "foo" -> literalString("projected")), slots),
-         context) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
+        context) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
       evaluate(compile(mapProjection("n", includeAllProps = false, "foo" -> literalString("projected")), slots),
-         context) should equal(VirtualValues.map(Array("foo"), Array(stringValue("projected"))))
+        context) should equal(VirtualValues.map(Array("foo"), Array(stringValue("projected"))))
     }
   }
 
@@ -2767,7 +2872,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val outgoing = SlottedExecutionContext(slots)
     incoming.setLongAt(0, node.id())
     val projections = Map("a" -> literal("hello"),
-                          "b" -> NodeFromSlot(0, "node"))
+      "b" -> NodeFromSlot(0, "node"))
     val compiled: CompiledGroupingExpression = compileGroupingExpression(projections, slots)
 
     //when
@@ -2792,7 +2897,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     incoming.setLongAt(1, node.id())
     val outgoing = SlottedExecutionContext(slots)
     val projections = Map("rel" -> RelationshipFromSlot(0, "rel"),
-                          "node" -> NodeFromSlot(1, "node"))
+      "node" -> NodeFromSlot(1, "node"))
     val compiled: CompiledGroupingExpression = compileGroupingExpression(projections, slots)
 
     //when
@@ -2811,9 +2916,9 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val n2 = NodeAt(nodeValue(), 1)
     val r = RelAt(relationshipValue(n1.node, n2.node, EMPTY_MAP), 2)
     val slots = SlotConfiguration(Map("n1" -> LongSlot(n1.slot, nullable = true, symbols.CTNode),
-                                      "n2" -> LongSlot(n2.slot, nullable = true, symbols.CTNode),
-                                      "r" -> LongSlot(r.slot, nullable = true, symbols.CTRelationship)
-                                      ), 3, 0)
+      "n2" -> LongSlot(n2.slot, nullable = true, symbols.CTNode),
+      "r" -> LongSlot(r.slot, nullable = true, symbols.CTRelationship)
+    ), 3, 0)
     val context = SlottedExecutionContext(slots)
     addNodes(context, n1, n2)
     addRelationships(context, r)
@@ -2821,8 +2926,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     //when
     //p = (n1)-[r]->(n2)
     val p = pathExpression(NodePathStep(NodeFromSlot(n1.slot, "n1"),
-                                        SingleRelationshipPathStep(RelationshipFromSlot(r.slot, "r"), OUTGOING, Some(NodeFromSlot(n2.slot, "n2")),
-                                                                   NilPathStep)))
+      SingleRelationshipPathStep(RelationshipFromSlot(r.slot, "r"), OUTGOING, Some(NodeFromSlot(n2.slot, "n2")),
+        NilPathStep)))
     //then
     evaluate(compile(p, slots), context) should equal(VirtualValues.path(Array(n1.node, n2.node), Array(r.rel)))
   }
@@ -2833,8 +2938,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val n2 = NodeAt(nodeValue(), 1)
     val r = RelAt(relationshipValue(n1.node, n2.node, EMPTY_MAP), 2)
     val slots = SlotConfiguration(Map("n1" -> LongSlot(n1.slot, nullable = true, symbols.CTNode),
-                                      "n2" -> LongSlot(n2.slot, nullable = true, symbols.CTNode),
-                                      "r" -> LongSlot(r.slot, nullable = true, symbols.CTRelationship)
+      "n2" -> LongSlot(n2.slot, nullable = true, symbols.CTNode),
+      "r" -> LongSlot(r.slot, nullable = true, symbols.CTRelationship)
     ), 3, 0)
     val context = SlottedExecutionContext(slots)
     addNodes(context, n1, n2)
@@ -2843,8 +2948,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     //when
     //p = (n1)-[r]->(n2)
     val p = pathExpression(NodePathStep(NodeFromSlot(n1.slot, "n1"),
-                                        SingleRelationshipPathStep(RelationshipFromSlot(r.slot, "r"), OUTGOING, None,
-                                                                   NilPathStep)))
+      SingleRelationshipPathStep(RelationshipFromSlot(r.slot, "r"), OUTGOING, None,
+        NilPathStep)))
     //then
     evaluate(compile(p, slots), context) should equal(VirtualValues.path(Array(n1.node, n2.node), Array(r.rel)))
   }
@@ -2870,8 +2975,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val n2 = NodeAt(nodeValue(), 1)
     val r = RelAt(relationshipValue(n1.node, n2.node, EMPTY_MAP), 2)
     val slots = SlotConfiguration(Map("n1" -> LongSlot(n1.slot, nullable = true, symbols.CTNode),
-                                      "n2" -> LongSlot(n2.slot, nullable = true, symbols.CTNode),
-                                      "r" -> LongSlot(r.slot, nullable = true, symbols.CTRelationship)
+      "n2" -> LongSlot(n2.slot, nullable = true, symbols.CTNode),
+      "r" -> LongSlot(r.slot, nullable = true, symbols.CTRelationship)
     ), 3, 0)
     val context = SlottedExecutionContext(slots)
     addNodes(context, n1, n2)
@@ -2880,8 +2985,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     //when
     //p = (n1)<-[r]-(n2)
     val p = pathExpression(NodePathStep(NodeFromSlot(n1.slot, "n1"),
-                                        SingleRelationshipPathStep(RelationshipFromSlot(r.slot, "r"),
-                                                                   INCOMING, Some(NodeFromSlot(n2.slot, "n2")), NilPathStep)))
+      SingleRelationshipPathStep(RelationshipFromSlot(r.slot, "r"),
+        INCOMING, Some(NodeFromSlot(n2.slot, "n2")), NilPathStep)))
 
     //then
     evaluate(compile(p, slots), context) should equal(VirtualValues.path(Array(n1.node, n2.node), Array(r.rel)))
@@ -2893,8 +2998,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val n2 = NodeAt(nodeValue(), 1)
     val r = RelAt(relationshipValue(n2.node, n1.node, EMPTY_MAP), 2)
     val slots = SlotConfiguration(Map("n1" -> LongSlot(n1.slot, nullable = true, symbols.CTNode),
-                                      "n2" -> LongSlot(n2.slot, nullable = true, symbols.CTNode),
-                                      "r" -> LongSlot(r.slot, nullable = true, symbols.CTRelationship)
+      "n2" -> LongSlot(n2.slot, nullable = true, symbols.CTNode),
+      "r" -> LongSlot(r.slot, nullable = true, symbols.CTRelationship)
     ), 3, 0)
     val context = SlottedExecutionContext(slots)
     addNodes(context, n1, n2)
@@ -2903,7 +3008,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     //when
     //p = (n1)<-[r]-(n2)
     val p = pathExpression(NodePathStep(NodeFromSlot(n1.slot, "n1"),
-                                        SingleRelationshipPathStep(RelationshipFromSlot(r.slot, "r"), INCOMING, None, NilPathStep)))
+      SingleRelationshipPathStep(RelationshipFromSlot(r.slot, "r"), INCOMING, None, NilPathStep)))
 
     //then
     evaluate(compile(p, slots), context) should equal(VirtualValues.path(Array(n1.node, n2.node), Array(r.rel)))
@@ -2915,8 +3020,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val n2 = NodeAt(nodeValue(), 1)
     val r = RelAt(relationshipValue(n1.node, n2.node, EMPTY_MAP), 2)
     val slots = SlotConfiguration(Map("n1" -> LongSlot(n1.slot, nullable = true, symbols.CTNode),
-                                      "n2" -> LongSlot(n2.slot, nullable = true, symbols.CTNode),
-                                      "r" -> LongSlot(r.slot, nullable = true, symbols.CTRelationship)
+      "n2" -> LongSlot(n2.slot, nullable = true, symbols.CTNode),
+      "r" -> LongSlot(r.slot, nullable = true, symbols.CTRelationship)
     ), 3, 0)
     val context = SlottedExecutionContext(slots)
     addNodes(context, n1, n2)
@@ -2924,13 +3029,13 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
     //when
     val p1 = compile(pathExpression(NodePathStep(NodeFromSlot(n1.slot, "n1"),
-                                                 SingleRelationshipPathStep(RelationshipFromSlot(r.slot, "r"),
-                                                                            BOTH, Some(NodeFromSlot(n2.slot, "n2")),
-                                                                            NilPathStep))), slots)
+      SingleRelationshipPathStep(RelationshipFromSlot(r.slot, "r"),
+        BOTH, Some(NodeFromSlot(n2.slot, "n2")),
+        NilPathStep))), slots)
     val p2 = compile(pathExpression(NodePathStep(NodeFromSlot(n2.slot, "n2"),
-                                                 SingleRelationshipPathStep(RelationshipFromSlot(r.slot, "r"),
-                                                                            BOTH, Some(NodeFromSlot(n1.slot, "n1")),
-                                                                            NilPathStep))), slots)
+      SingleRelationshipPathStep(RelationshipFromSlot(r.slot, "r"),
+        BOTH, Some(NodeFromSlot(n1.slot, "n1")),
+        NilPathStep))), slots)
     //then
     evaluate(p1, context) should equal(VirtualValues.path(Array(n1.node, n2.node), Array(r.rel)))
     evaluate(p2, context) should equal(VirtualValues.path(Array(n2.node, n1.node), Array(r.rel)))
@@ -2942,8 +3047,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val n2 = NodeAt(nodeValue(), 1)
     val r = RelAt(relationshipValue(n1.node, n2.node, EMPTY_MAP), 2)
     val slots = SlotConfiguration(Map("n1" -> LongSlot(n1.slot, nullable = true, symbols.CTNode),
-                                      "n2" -> LongSlot(n2.slot, nullable = true, symbols.CTNode),
-                                      "r" -> LongSlot(r.slot, nullable = true, symbols.CTRelationship)
+      "n2" -> LongSlot(n2.slot, nullable = true, symbols.CTNode),
+      "r" -> LongSlot(r.slot, nullable = true, symbols.CTRelationship)
     ), 3, 0)
     val context = SlottedExecutionContext(slots)
     addNodes(context, n1, n2)
@@ -2951,13 +3056,13 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
     //when
     val p1 = compile(pathExpression(NodePathStep(NodeFromSlot(n1.slot, "n1"),
-                                                 SingleRelationshipPathStep(RelationshipFromSlot(r.slot, "r"),
-                                                                            BOTH, None,
-                                                                            NilPathStep))), slots)
+      SingleRelationshipPathStep(RelationshipFromSlot(r.slot, "r"),
+        BOTH, None,
+        NilPathStep))), slots)
     val p2 = compile(pathExpression(NodePathStep(NodeFromSlot(n2.slot, "n2"),
-                                                 SingleRelationshipPathStep(RelationshipFromSlot(r.slot, "r"),
-                                                                            BOTH, None,
-                                                                            NilPathStep))), slots)
+      SingleRelationshipPathStep(RelationshipFromSlot(r.slot, "r"),
+        BOTH, None,
+        NilPathStep))), slots)
     //then
     evaluate(p1, context) should equal(VirtualValues.path(Array(n1.node, n2.node), Array(r.rel)))
     evaluate(p2, context) should equal(VirtualValues.path(Array(n2.node, n1.node), Array(r.rel)))
@@ -2968,8 +3073,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val n1 = NodeAt(nodeValue(), 0)
     val n2 = NodeAt(nodeValue(), 1)
     val slots = SlotConfiguration(Map("n1" -> LongSlot(n1.slot, nullable = true, symbols.CTNode),
-                                      "n2" -> LongSlot(n2.slot, nullable = true, symbols.CTNode),
-                                      "r" -> LongSlot(2, nullable = true, symbols.CTRelationship)
+      "n2" -> LongSlot(n2.slot, nullable = true, symbols.CTNode),
+      "r" -> LongSlot(2, nullable = true, symbols.CTRelationship)
     ), 3, 0)
     val context = SlottedExecutionContext(slots)
 
@@ -2979,8 +3084,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     //when
     //p = (n1)-[r]->(n2)
     val p = pathExpression(NodePathStep(NodeFromSlot(n1.slot, "n1"),
-                                        SingleRelationshipPathStep(NullCheckVariable(2, RelationshipFromSlot(2, "r")),
-                                                                   OUTGOING,  Some(NodeFromSlot(n2.slot, "n2")), NilPathStep)))
+      SingleRelationshipPathStep(NullCheckVariable(2, RelationshipFromSlot(2, "r")),
+        OUTGOING,  Some(NodeFromSlot(n2.slot, "n2")), NilPathStep)))
     //then
     evaluate(compile(p, slots), context) should be(NO_VALUE)
   }
@@ -2991,8 +3096,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val n2 = NodeAt(nodeValue(), 1)
     val r = RelAt(relationshipValue(n1.node, n2.node, EMPTY_MAP), 2)
     val slots = SlotConfiguration(Map("n1" -> RefSlot(n1.slot, nullable = true, symbols.CTAny),
-                                      "n2" -> RefSlot(n2.slot, nullable = true, symbols.CTAny),
-                                      "r" -> RefSlot(r.slot, nullable = true, symbols.CTAny)
+      "n2" -> RefSlot(n2.slot, nullable = true, symbols.CTAny),
+      "r" -> RefSlot(r.slot, nullable = true, symbols.CTAny)
     ), 0, 3)
     val context = SlottedExecutionContext(slots)
     context.setRefAt(n1.slot, n1.node)
@@ -3002,8 +3107,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     //when
     //p = (n1)-[r]->(n2)
     val p = pathExpression(NodePathStep(ReferenceFromSlot(n1.slot, "n1"),
-                                        SingleRelationshipPathStep(ReferenceFromSlot(r.slot, "r"),
-                                                                   OUTGOING, Some(ReferenceFromSlot(n2.slot, "n2")), NilPathStep)))
+      SingleRelationshipPathStep(ReferenceFromSlot(r.slot, "r"),
+        OUTGOING, Some(ReferenceFromSlot(n2.slot, "n2")), NilPathStep)))
     //then
     evaluate(compile(p, slots), context) should equal(VirtualValues.path(Array(n1.node, n2.node), Array(r.rel)))
   }
@@ -3018,12 +3123,12 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val r2 =  RelAt(relationshipValue(n3.node, n2.node, EMPTY_MAP), 5)
     val r3 =  RelAt(relationshipValue(n3.node, n4.node, EMPTY_MAP), 6)
     val slots = SlotConfiguration(Map("n1" -> LongSlot(n1.slot, nullable = true, symbols.CTNode),
-                                      "n2" -> LongSlot(n2.slot, nullable = true, symbols.CTNode),
-                                      "n3" -> LongSlot(n3.slot, nullable = true, symbols.CTNode),
-                                      "n4" -> LongSlot(n4.slot, nullable = true, symbols.CTNode),
-                                      "r1" -> LongSlot(r1.slot, nullable = true, symbols.CTRelationship),
-                                      "r2" -> LongSlot(r2.slot, nullable = true, symbols.CTRelationship),
-                                      "r3" -> LongSlot(r3.slot, nullable = true, symbols.CTRelationship)), 7, 0)
+      "n2" -> LongSlot(n2.slot, nullable = true, symbols.CTNode),
+      "n3" -> LongSlot(n3.slot, nullable = true, symbols.CTNode),
+      "n4" -> LongSlot(n4.slot, nullable = true, symbols.CTNode),
+      "r1" -> LongSlot(r1.slot, nullable = true, symbols.CTRelationship),
+      "r2" -> LongSlot(r2.slot, nullable = true, symbols.CTRelationship),
+      "r3" -> LongSlot(r3.slot, nullable = true, symbols.CTRelationship)), 7, 0)
     val context = SlottedExecutionContext(slots)
     addNodes(context, n1, n2, n3, n4)
     addRelationships(context, r1, r2, r3)
@@ -3031,9 +3136,9 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     //when
     //p = (n1)-[r1]->(n2)<-[r2]-(n3)-[r3]-(n4)
     val p = pathExpression(NodePathStep(NodeFromSlot(n1.slot, "n1"),
-                                        SingleRelationshipPathStep(RelationshipFromSlot(r1.slot, "r1"), OUTGOING, Some(NodeFromSlot(n2.slot, "n2")),
-                                                                   SingleRelationshipPathStep(RelationshipFromSlot(r2.slot, "r2"), INCOMING, Some(NodeFromSlot(n3.slot, "n3")),
-                                                                                              SingleRelationshipPathStep(RelationshipFromSlot(r3.slot, "r3"), BOTH, Some(NodeFromSlot(n4.slot, "n4")), NilPathStep)))))
+      SingleRelationshipPathStep(RelationshipFromSlot(r1.slot, "r1"), OUTGOING, Some(NodeFromSlot(n2.slot, "n2")),
+        SingleRelationshipPathStep(RelationshipFromSlot(r2.slot, "r2"), INCOMING, Some(NodeFromSlot(n3.slot, "n3")),
+          SingleRelationshipPathStep(RelationshipFromSlot(r3.slot, "r3"), BOTH, Some(NodeFromSlot(n4.slot, "n4")), NilPathStep)))))
 
     // then
     evaluate(compile(p, slots), context) should equal(VirtualValues.path(Array(n1.node, n2.node, n3.node, n4.node), Array(r1.rel, r2.rel, r3.rel)))
@@ -3049,13 +3154,13 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val r2 =  RelAt(relationshipValue(n2.node, n3.node, EMPTY_MAP), 5)
     val r3 =  RelAt(relationshipValue(n3.node, n4.node, EMPTY_MAP), 6)
     val slots = SlotConfiguration(Map("n1" -> LongSlot(n1.slot, nullable = true, symbols.CTNode),
-                                      "n2" -> LongSlot(n2.slot, nullable = true, symbols.CTNode),
-                                      "n3" -> LongSlot(n3.slot, nullable = true, symbols.CTNode),
-                                      "n4" -> LongSlot(n4.slot, nullable = true, symbols.CTNode),
-                                      "r1" -> LongSlot(r1.slot, nullable = true, symbols.CTRelationship),
-                                      "r2" -> LongSlot(r2.slot, nullable = true, symbols.CTRelationship),
-                                      "r3" -> LongSlot(r3.slot, nullable = true, symbols.CTRelationship),
-                                      "r" -> RefSlot(0, nullable = true, symbols.CTList(symbols.CTRelationship))), 7, 1)
+      "n2" -> LongSlot(n2.slot, nullable = true, symbols.CTNode),
+      "n3" -> LongSlot(n3.slot, nullable = true, symbols.CTNode),
+      "n4" -> LongSlot(n4.slot, nullable = true, symbols.CTNode),
+      "r1" -> LongSlot(r1.slot, nullable = true, symbols.CTRelationship),
+      "r2" -> LongSlot(r2.slot, nullable = true, symbols.CTRelationship),
+      "r3" -> LongSlot(r3.slot, nullable = true, symbols.CTRelationship),
+      "r" -> RefSlot(0, nullable = true, symbols.CTList(symbols.CTRelationship))), 7, 1)
     val context = SlottedExecutionContext(slots)
     addNodes(context, n1, n2, n3, n4)
     addRelationships(context, r1, r2, r3)
@@ -3064,8 +3169,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     //when
     //p = (n1)-[r*]->(n4)
     val p = pathExpression(NodePathStep(NodeFromSlot(n1.slot, "n1"),
-                                        MultiRelationshipPathStep(ReferenceFromSlot(0, "r"),
-                                                                  OUTGOING, Some(NodeFromSlot(n4.slot, "n4")), NilPathStep)))
+      MultiRelationshipPathStep(ReferenceFromSlot(0, "r"),
+        OUTGOING, Some(NodeFromSlot(n4.slot, "n4")), NilPathStep)))
 
     //then
     evaluate(compile(p, slots), context) should equal(
@@ -3082,13 +3187,13 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val r2 =  RelAt(relationshipValue(n2.node, n3.node, EMPTY_MAP), 5)
     val r3 =  RelAt(relationshipValue(n3.node, n4.node, EMPTY_MAP), 6)
     val slots = SlotConfiguration(Map("n1" -> LongSlot(n1.slot, nullable = true, symbols.CTNode),
-                                      "n2" -> LongSlot(n2.slot, nullable = true, symbols.CTNode),
-                                      "n3" -> LongSlot(n3.slot, nullable = true, symbols.CTNode),
-                                      "n4" -> LongSlot(n4.slot, nullable = true, symbols.CTNode),
-                                      "r1" -> LongSlot(r1.slot, nullable = true, symbols.CTRelationship),
-                                      "r2" -> LongSlot(r2.slot, nullable = true, symbols.CTRelationship),
-                                      "r3" -> LongSlot(r3.slot, nullable = true, symbols.CTRelationship),
-                                      "r" -> RefSlot(0, nullable = true, symbols.CTList(symbols.CTRelationship))), 7, 1)
+      "n2" -> LongSlot(n2.slot, nullable = true, symbols.CTNode),
+      "n3" -> LongSlot(n3.slot, nullable = true, symbols.CTNode),
+      "n4" -> LongSlot(n4.slot, nullable = true, symbols.CTNode),
+      "r1" -> LongSlot(r1.slot, nullable = true, symbols.CTRelationship),
+      "r2" -> LongSlot(r2.slot, nullable = true, symbols.CTRelationship),
+      "r3" -> LongSlot(r3.slot, nullable = true, symbols.CTRelationship),
+      "r" -> RefSlot(0, nullable = true, symbols.CTList(symbols.CTRelationship))), 7, 1)
     val context = SlottedExecutionContext(slots)
     addNodes(context, n1, n2, n3, n4)
     addRelationships(context, r1, r2, r3)
@@ -3097,8 +3202,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     //when
     //p = (n1)-[r*]->(n4)
     val p = pathExpression(NodePathStep(NodeFromSlot(n1.slot, "n1"),
-                                        MultiRelationshipPathStep(ReferenceFromSlot(0, "r"),
-                                                                  OUTGOING, None, NilPathStep)))
+      MultiRelationshipPathStep(ReferenceFromSlot(0, "r"),
+        OUTGOING, None, NilPathStep)))
 
     //then
     evaluate(compile(p, slots), context) should equal(
@@ -3115,13 +3220,13 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val r2 = RelAt(relationshipValue(n2.node, n3.node, EMPTY_MAP), 5)
     val r3 = RelAt(relationshipValue(n3.node, n4.node, EMPTY_MAP), 6)
     val slots = SlotConfiguration(Map("n1" -> LongSlot(n1.slot, nullable = true, symbols.CTNode),
-                                      "n2" -> LongSlot(n2.slot, nullable = true, symbols.CTNode),
-                                      "n3" -> LongSlot(n3.slot, nullable = true, symbols.CTNode),
-                                      "n4" -> LongSlot(n4.slot, nullable = true, symbols.CTNode),
-                                      "r1" -> LongSlot(r1.slot, nullable = true, symbols.CTRelationship),
-                                      "r2" -> LongSlot(r2.slot, nullable = true, symbols.CTRelationship),
-                                      "r3" -> LongSlot(r3.slot, nullable = true, symbols.CTRelationship),
-                                      "r" -> RefSlot(0, nullable = true, symbols.CTList(symbols.CTRelationship))), 7, 1)
+      "n2" -> LongSlot(n2.slot, nullable = true, symbols.CTNode),
+      "n3" -> LongSlot(n3.slot, nullable = true, symbols.CTNode),
+      "n4" -> LongSlot(n4.slot, nullable = true, symbols.CTNode),
+      "r1" -> LongSlot(r1.slot, nullable = true, symbols.CTRelationship),
+      "r2" -> LongSlot(r2.slot, nullable = true, symbols.CTRelationship),
+      "r3" -> LongSlot(r3.slot, nullable = true, symbols.CTRelationship),
+      "r" -> RefSlot(0, nullable = true, symbols.CTList(symbols.CTRelationship))), 7, 1)
     val context = SlottedExecutionContext(slots)
     addNodes(context, n1, n2, n3, n4)
     addRelationships(context, r1, r2, r3)
@@ -3130,8 +3235,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     //when
     //p = (n4)<-[r*]-(n1)
     val p = pathExpression(NodePathStep(NodeFromSlot(n4.slot, "n4"),
-                                        MultiRelationshipPathStep(ReferenceFromSlot(0, "r"),
-                                                                  INCOMING, Some(NodeFromSlot(n1.slot, "n1")), NilPathStep)))
+      MultiRelationshipPathStep(ReferenceFromSlot(0, "r"),
+        INCOMING, Some(NodeFromSlot(n1.slot, "n1")), NilPathStep)))
 
     //then
     evaluate(compile(p, slots), context) should equal(
@@ -3148,13 +3253,13 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val r2 = RelAt(relationshipValue(n2.node, n3.node, EMPTY_MAP), 5)
     val r3 = RelAt(relationshipValue(n3.node, n4.node, EMPTY_MAP), 6)
     val slots = SlotConfiguration(Map("n1" -> LongSlot(n1.slot, nullable = true, symbols.CTNode),
-                                      "n2" -> LongSlot(n2.slot, nullable = true, symbols.CTNode),
-                                      "n3" -> LongSlot(n3.slot, nullable = true, symbols.CTNode),
-                                      "n4" -> LongSlot(n4.slot, nullable = true, symbols.CTNode),
-                                      "r1" -> LongSlot(r1.slot, nullable = true, symbols.CTRelationship),
-                                      "r2" -> LongSlot(r2.slot, nullable = true, symbols.CTRelationship),
-                                      "r3" -> LongSlot(r3.slot, nullable = true, symbols.CTRelationship),
-                                      "r" -> RefSlot(0, nullable = true, symbols.CTList(symbols.CTRelationship))), 7, 1)
+      "n2" -> LongSlot(n2.slot, nullable = true, symbols.CTNode),
+      "n3" -> LongSlot(n3.slot, nullable = true, symbols.CTNode),
+      "n4" -> LongSlot(n4.slot, nullable = true, symbols.CTNode),
+      "r1" -> LongSlot(r1.slot, nullable = true, symbols.CTRelationship),
+      "r2" -> LongSlot(r2.slot, nullable = true, symbols.CTRelationship),
+      "r3" -> LongSlot(r3.slot, nullable = true, symbols.CTRelationship),
+      "r" -> RefSlot(0, nullable = true, symbols.CTList(symbols.CTRelationship))), 7, 1)
     val context = SlottedExecutionContext(slots)
     addNodes(context, n1, n2, n3, n4)
     addRelationships(context, r1, r2, r3)
@@ -3163,8 +3268,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     //when
     //p = (n4)<-[r*]-(n1)
     val p = pathExpression(NodePathStep(NodeFromSlot(n4.slot, "n4"),
-                                        MultiRelationshipPathStep(ReferenceFromSlot(0, "r"),
-                                                                  INCOMING, None, NilPathStep)))
+      MultiRelationshipPathStep(ReferenceFromSlot(0, "r"),
+        INCOMING, None, NilPathStep)))
 
     //then
     evaluate(compile(p, slots), context) should equal(
@@ -3181,13 +3286,13 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val r2 = RelAt(relationshipValue(n2.node, n3.node, EMPTY_MAP), 5)
     val r3 = RelAt(relationshipValue(n3.node, n4.node, EMPTY_MAP), 6)
     val slots = SlotConfiguration(Map("n1" -> LongSlot(n1.slot, nullable = true, symbols.CTNode),
-                                      "n2" -> LongSlot(n2.slot, nullable = true, symbols.CTNode),
-                                      "n3" -> LongSlot(n3.slot, nullable = true, symbols.CTNode),
-                                      "n4" -> LongSlot(n4.slot, nullable = true, symbols.CTNode),
-                                      "r1" -> LongSlot(r1.slot, nullable = true, symbols.CTRelationship),
-                                      "r2" -> LongSlot(r2.slot, nullable = true, symbols.CTRelationship),
-                                      "r3" -> LongSlot(r3.slot, nullable = true, symbols.CTRelationship),
-                                      "r" -> RefSlot(0, nullable = true, symbols.CTList(symbols.CTRelationship))), 7, 1)
+      "n2" -> LongSlot(n2.slot, nullable = true, symbols.CTNode),
+      "n3" -> LongSlot(n3.slot, nullable = true, symbols.CTNode),
+      "n4" -> LongSlot(n4.slot, nullable = true, symbols.CTNode),
+      "r1" -> LongSlot(r1.slot, nullable = true, symbols.CTRelationship),
+      "r2" -> LongSlot(r2.slot, nullable = true, symbols.CTRelationship),
+      "r3" -> LongSlot(r3.slot, nullable = true, symbols.CTRelationship),
+      "r" -> RefSlot(0, nullable = true, symbols.CTList(symbols.CTRelationship))), 7, 1)
     val context = SlottedExecutionContext(slots)
     addNodes(context, n1, n2, n3, n4)
     addRelationships(context, r1, r2, r3)
@@ -3196,8 +3301,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     //when
     //p = (n4)<-[r*]-(n1)
     val p = pathExpression(NodePathStep(NodeFromSlot(n4.slot, "n4"),
-                                        MultiRelationshipPathStep(ReferenceFromSlot(0, "r"),
-                                                                  BOTH, Some(NodeFromSlot(n1.slot, "n1")), NilPathStep)))
+      MultiRelationshipPathStep(ReferenceFromSlot(0, "r"),
+        BOTH, Some(NodeFromSlot(n1.slot, "n1")), NilPathStep)))
 
     //then
     evaluate(compile(p, slots), context) should equal(
@@ -3214,13 +3319,13 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val r2 = RelAt(relationshipValue(n2.node, n3.node, EMPTY_MAP), 5)
     val r3 = RelAt(relationshipValue(n3.node, n4.node, EMPTY_MAP), 6)
     val slots = SlotConfiguration(Map("n1" -> LongSlot(n1.slot, nullable = true, symbols.CTNode),
-                                      "n2" -> LongSlot(n2.slot, nullable = true, symbols.CTNode),
-                                      "n3" -> LongSlot(n3.slot, nullable = true, symbols.CTNode),
-                                      "n4" -> LongSlot(n4.slot, nullable = true, symbols.CTNode),
-                                      "r1" -> LongSlot(r1.slot, nullable = true, symbols.CTRelationship),
-                                      "r2" -> LongSlot(r2.slot, nullable = true, symbols.CTRelationship),
-                                      "r3" -> LongSlot(r3.slot, nullable = true, symbols.CTRelationship),
-                                      "r" -> RefSlot(0, nullable = true, symbols.CTList(symbols.CTRelationship))), 7, 1)
+      "n2" -> LongSlot(n2.slot, nullable = true, symbols.CTNode),
+      "n3" -> LongSlot(n3.slot, nullable = true, symbols.CTNode),
+      "n4" -> LongSlot(n4.slot, nullable = true, symbols.CTNode),
+      "r1" -> LongSlot(r1.slot, nullable = true, symbols.CTRelationship),
+      "r2" -> LongSlot(r2.slot, nullable = true, symbols.CTRelationship),
+      "r3" -> LongSlot(r3.slot, nullable = true, symbols.CTRelationship),
+      "r" -> RefSlot(0, nullable = true, symbols.CTList(symbols.CTRelationship))), 7, 1)
     val context = SlottedExecutionContext(slots)
     addNodes(context, n1, n2, n3, n4)
     addRelationships(context, r1, r2, r3)
@@ -3229,8 +3334,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     //when
     //p = (n4)<-[r*]-(n1)
     val p = pathExpression(NodePathStep(NodeFromSlot(n4.slot, "n4"),
-                                        MultiRelationshipPathStep(ReferenceFromSlot(0, "r"),
-                                                                  BOTH, None, NilPathStep)))
+      MultiRelationshipPathStep(ReferenceFromSlot(0, "r"),
+        BOTH, None, NilPathStep)))
 
     //then
     evaluate(compile(p, slots), context) should equal(
@@ -3247,13 +3352,13 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val r2 = RelAt(relationshipValue(n2.node, n3.node, EMPTY_MAP), 5)
     val r3 = RelAt(relationshipValue(n3.node, n4.node, EMPTY_MAP), 6)
     val slots = SlotConfiguration(Map("n1" -> LongSlot(n1.slot, nullable = true, symbols.CTNode),
-                                      "n2" -> LongSlot(n2.slot, nullable = true, symbols.CTNode),
-                                      "n3" -> LongSlot(n3.slot, nullable = true, symbols.CTNode),
-                                      "n4" -> LongSlot(n4.slot, nullable = true, symbols.CTNode),
-                                      "r1" -> LongSlot(r1.slot, nullable = true, symbols.CTRelationship),
-                                      "r2" -> LongSlot(r2.slot, nullable = true, symbols.CTRelationship),
-                                      "r3" -> LongSlot(r3.slot, nullable = true, symbols.CTRelationship),
-                                      "r" -> RefSlot(0, nullable = true, symbols.CTList(symbols.CTRelationship))), 7, 1)
+      "n2" -> LongSlot(n2.slot, nullable = true, symbols.CTNode),
+      "n3" -> LongSlot(n3.slot, nullable = true, symbols.CTNode),
+      "n4" -> LongSlot(n4.slot, nullable = true, symbols.CTNode),
+      "r1" -> LongSlot(r1.slot, nullable = true, symbols.CTRelationship),
+      "r2" -> LongSlot(r2.slot, nullable = true, symbols.CTRelationship),
+      "r3" -> LongSlot(r3.slot, nullable = true, symbols.CTRelationship),
+      "r" -> RefSlot(0, nullable = true, symbols.CTList(symbols.CTRelationship))), 7, 1)
     val context = SlottedExecutionContext(slots)
     addNodes(context, n1, n2, n3, n4)
     addRelationships(context, r1, r2, r3)
@@ -3262,8 +3367,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     //when
     //p = (n1)-[r*]->(n4)
     val p = pathExpression(NodePathStep(NodeFromSlot(n1.slot, "n1"),
-                                        MultiRelationshipPathStep(ReferenceFromSlot(0, "r"),
-                                                                  OUTGOING, Some(NodeFromSlot(n4.slot, "n4")), NilPathStep)))
+      MultiRelationshipPathStep(ReferenceFromSlot(0, "r"),
+        OUTGOING, Some(NodeFromSlot(n4.slot, "n4")), NilPathStep)))
 
     //then
     evaluate(compile(p, slots), context) should be(NO_VALUE)
@@ -3274,8 +3379,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val n1 = NodeAt(nodeValue(), 0)
     val n2 = NodeAt(nodeValue(), 1)
     val slots = SlotConfiguration(Map("n1" -> LongSlot(n1.slot, nullable = true, symbols.CTNode),
-                                      "n2" -> LongSlot(n2.slot, nullable = true, symbols.CTNode),
-                                      "r" -> RefSlot(0, nullable = true, symbols.CTList(symbols.CTRelationship))), 2, 1)
+      "n2" -> LongSlot(n2.slot, nullable = true, symbols.CTNode),
+      "r" -> RefSlot(0, nullable = true, symbols.CTList(symbols.CTRelationship))), 2, 1)
     val context = SlottedExecutionContext(slots)
     context.setRefAt(0, NO_VALUE)
     addNodes(context, n1, n2)
@@ -3283,8 +3388,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     //when
     //p = (n1)-[r*]->(n2)
     val p = pathExpression(NodePathStep(NodeFromSlot(n1.slot, "n1"),
-                                        MultiRelationshipPathStep(ReferenceFromSlot(0, "r"),
-                                                                  OUTGOING, Some(NodeFromSlot(n2.slot, "n2")), NilPathStep)))
+      MultiRelationshipPathStep(ReferenceFromSlot(0, "r"),
+        OUTGOING, Some(NodeFromSlot(n2.slot, "n2")), NilPathStep)))
 
     //then
     evaluate(compile(p, slots), context) should be(NO_VALUE)
@@ -3313,25 +3418,25 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       PropertyTest("node",
         prop => createNode("prop" -> prop),
         () => createNode(),
-                   symbols.CTNode,
-                   NODE_TYPE,
-                   VirtualValues.node,
+        symbols.CTNode,
+        NODE_TYPE,
+        VirtualValues.node,
         token => NodeProperty(0, token, "prop")(null),
         _ => NodePropertyLate(0, "prop", "prop")(null),
         (pkn, token, cachedPropertyOffset, offsetIsForLongSlot) => ast.SlottedCachedPropertyWithPropertyToken("n", pkn, 0, offsetIsForLongSlot, token, cachedPropertyOffset, NODE_TYPE),
         (pkn, _, cachedPropertyOffset, offsetIsForLongSlot) => ast.SlottedCachedPropertyWithoutPropertyToken("n", pkn, 0, offsetIsForLongSlot, "prop", cachedPropertyOffset, NODE_TYPE),
-                   _.invalidateCachedNodeProperties(_)),
+        _.invalidateCachedNodeProperties(_)),
       PropertyTest("relationship",
         prop => relate(createNode(), createNode(), "prop" -> prop),
         () => relate(createNode(), createNode()),
-                   symbols.CTRelationship,
-                   RELATIONSHIP_TYPE,
-                   VirtualValues.relationship,
+        symbols.CTRelationship,
+        RELATIONSHIP_TYPE,
+        VirtualValues.relationship,
         token => RelationshipProperty(0, token, "prop")(null),
         _ => RelationshipPropertyLate(0, "prop", "prop")(null),
         (pkn, token, cachedPropertyOffset, offsetIsForLongSlot) => ast.SlottedCachedPropertyWithPropertyToken("n", pkn, 0, offsetIsForLongSlot, token, cachedPropertyOffset, RELATIONSHIP_TYPE),
         (pkn, _, cachedPropertyOffset, offsetIsForLongSlot) => ast.SlottedCachedPropertyWithoutPropertyToken("n", pkn, 0, offsetIsForLongSlot, "prop", cachedPropertyOffset, RELATIONSHIP_TYPE),
-                   _.invalidateCachedRelationshipProperties(_))
+        _.invalidateCachedRelationshipProperties(_))
     )
     RuntimeAccess(time, expression, cachedExpression) <- Seq(
       RuntimeAccess("early", earlyExpression, earlyCachedExpression),
@@ -3807,12 +3912,12 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   }
 
   private def relationshipValue(from: NodeValue, to: NodeValue, properties: MapValue): RelationshipValue = {
-      val r: Relationship = relate(tx.getNodeById(from.id()), tx.getNodeById(to.id()))
-      properties.foreach((t: String, u: AnyValue) => {
-        r.setProperty(t, u.asInstanceOf[Value].asObject())
-      })
-      ValueUtils.fromRelationshipEntity(r)
-}
+    val r: Relationship = relate(tx.getNodeById(from.id()), tx.getNodeById(to.id()))
+    properties.foreach((t: String, u: AnyValue) => {
+      r.setProperty(t, u.asInstanceOf[Value].asObject())
+    })
+    ValueUtils.fromRelationshipEntity(r)
+  }
 
   def compile(e: Expression, slots: SlotConfiguration = SlotConfiguration.empty): CompiledExpression
 
@@ -3849,14 +3954,14 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   private def callFunction(ufs: UserFunctionSignature, args: Expression*) =
     ResolvedFunctionInvocation(ufs.name, Some(ufs), args.toIndexedSeq)(pos)
 
-  private def signature(name: KernelQualifiedName, id: Int, field: FieldSignature = fieldSignature("foo")) =
+  private def signature(name: procs.QualifiedName, id: Int, field: FieldSignature = fieldSignature("foo")) =
     UserFunctionSignature(QualifiedName(Seq.empty, name.name()), IndexedSeq(field), symbols.CTAny, None,
-                          Array.empty, None, isAggregate = false, id = id)
+      Array.empty, None, isAggregate = false, id = id)
 
   private def fieldSignature(name: String, cypherType: CypherType = symbols.CTAny, default: Option[AnyRef] = None) =
     FieldSignature(name, cypherType, default = default.map(CypherValue(_, cypherType)))
 
-  private def qualifiedName(name: String) = new KernelQualifiedName(Array.empty[String], name)
+  private def qualifiedName(name: String) = new procs.QualifiedName(Array.empty[String], name)
 
   private val numericalValues: Seq[AnyRef] = Seq[Number](
     Double.NegativeInfinity,
@@ -3970,10 +4075,10 @@ class CompiledExpressionsIT extends ExpressionsIT {
   private val codeGenerationMode = ByteCodeGeneration(new CodeSaver(false, false))
 
   override def compile(e: Expression, slots: SlotConfiguration = SlotConfiguration.empty): CompiledExpression =
-       defaultGenerator(slots, readOnly = false, codeGenerationMode).compileExpression(e).getOrElse(fail(s"Failed to compile expression $e"))
+    defaultGenerator(slots, readOnly = false, codeGenerationMode).compileExpression(e).getOrElse(fail(s"Failed to compile expression $e"))
 
   override def compileProjection(projections: Map[String, Expression], slots: SlotConfiguration = SlotConfiguration.empty): CompiledProjection =
-       defaultGenerator(slots, readOnly = false, codeGenerationMode).compileProjection(projections).getOrElse(fail(s"Failed to compile projection $projections"))
+    defaultGenerator(slots, readOnly = false, codeGenerationMode).compileProjection(projections).getOrElse(fail(s"Failed to compile projection $projections"))
 
   override def compileGroupingExpression(projections: Map[String, Expression], slots: SlotConfiguration = SlotConfiguration.empty): CompiledGroupingExpression =
     defaultGenerator(slots, readOnly = false, codeGenerationMode).compileGrouping(orderGroupingKeyExpressions(projections, orderToLeverage = Seq.empty))
@@ -3988,7 +4093,7 @@ class InterpretedExpressionIT extends ExpressionsIT {
   }
 
   override  def compileProjection(projections: Map[String, Expression],
-                                          slots: SlotConfiguration): CompiledProjection = {
+                                  slots: SlotConfiguration): CompiledProjection = {
     val projector = converter(slots, (converter, id) => converter.toCommandProjection(id, projections))
     (context: ExecutionContext, dbAccess: DbAccess, params: Array[AnyValue], cursors: ExpressionCursors,
      expressionVariables: Array[AnyValue]) => projector
@@ -3996,7 +4101,7 @@ class InterpretedExpressionIT extends ExpressionsIT {
   }
 
   override  def compileGroupingExpression(projections: Map[String, Expression],
-                                                  slots: SlotConfiguration): CompiledGroupingExpression = {
+                                          slots: SlotConfiguration): CompiledGroupingExpression = {
     val grouping = converter(slots, (converter, id) => converter.toGroupingExpression(id, projections, Seq.empty))
     new CompiledGroupingExpression {
 
@@ -4018,27 +4123,27 @@ class InterpretedExpressionIT extends ExpressionsIT {
 
   private def state(dbAccess: DbAccess, params: Array[AnyValue], cursors: ExpressionCursors, expressionVariables: Array[AnyValue]) =
     new SlottedQueryState(dbAccess.asInstanceOf[QueryContext],
-                          null,
-                          params,
-                          cursors,
-                          Array.empty,
-                          expressionVariables,
-                          DO_NOTHING_SUBSCRIBER,
-                          NoMemoryTracker)
+      null,
+      params,
+      cursors,
+      Array.empty,
+      expressionVariables,
+      DO_NOTHING_SUBSCRIBER,
+      NoMemoryTracker)
 
   private def converter[T](slots: SlotConfiguration, producer: (ExpressionConverters, Id) => T): T = {
     val plan = PhysicalPlan(null,
-                            0,
-                            new SlotConfigurations,
-                            new ArgumentSizes,
-                            new ApplyPlans,
-                            new NestedPlanArgumentConfigurations,
-                            new AvailableExpressionVariables,
-                            ParameterMapping.empty)
+      0,
+      new SlotConfigurations,
+      new ArgumentSizes,
+      new ApplyPlans,
+      new NestedPlanArgumentConfigurations,
+      new AvailableExpressionVariables,
+      ParameterMapping.empty)
     val id = Id(0)
     plan.slotConfigurations.set(id, slots)
     val converters = new ExpressionConverters(SlottedExpressionConverters(plan),
-                                             CommunityExpressionConverter(query))
+      CommunityExpressionConverter(query))
     producer(converters, id)
   }
 }

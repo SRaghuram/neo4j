@@ -6,7 +6,9 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
-import org.neo4j.cypher.internal.{CompiledRuntimeOption, InterpretedRuntimeOption, SlottedRuntimeOption}
+import org.neo4j.cypher.internal.CompiledRuntimeOption
+import org.neo4j.cypher.internal.InterpretedRuntimeOption
+import org.neo4j.cypher.internal.SlottedRuntimeOption
 import org.neo4j.graphdb.Result
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
 import org.neo4j.kernel.impl.query.QuerySubscriber.DO_NOTHING_SUBSCRIBER
@@ -18,7 +20,7 @@ class ExecutionResultAcceptanceTest extends ExecutionEngineFunSuite{
     val query = "UNWIND [1, 2, 3] as x RETURN x"
 
     Configs.All.scenarios.map(s =>
-    s"CYPHER ${s.preparserOptions} $query").foreach(q => {
+      s"CYPHER ${s.preparserOptions} $query").foreach(q => {
       graph.withTx { tx =>
         val result = eengine.execute(q,
           EMPTY_MAP,

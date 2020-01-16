@@ -8,7 +8,8 @@ package org.neo4j.internal.cypher.acceptance
 import java.time.ZonedDateTime
 import java.util.TimeZone
 
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, TestConfiguration}
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.TestConfiguration
 
 /**
  * These are the 14 LDBC stream that runs in the LDBC projects. The stream are (semi-)generated so the idea is rather
@@ -731,19 +732,19 @@ object LdbcQueries {
       Map("content" -> "[s7Post2] content", "id" -> 11L, "creationDate" -> 946854000000L, "browserUsed" -> "browser7", "locationIP" -> "ip7", "imageFile" -> "image7", "language" -> "language7"), "f4" ->
       Map("id" -> 4L, "languages" -> Seq("language4"), "birthday" -> 4L, "creationDate" -> 4L, "lastName" -> "last4", "browserUsed" -> "browser4", "email" -> Seq("f4@email.com"), "locationIP" -> "ip4", "gender" -> "gender4", "firstName" -> "f4"))
 
-   val query = """|MATCH (knownTag:Tag {name:$2})
-                  |MATCH (person:Person {id:$1})-[:KNOWS*1..2]-(friend)
-                  |WHERE NOT person=friend
-                  |WITH DISTINCT friend, knownTag
-                  |MATCH (friend)<-[:POST_HAS_CREATOR]-(post)
-                  |WHERE (post)-[:POST_HAS_TAG]->(knownTag)
-                  |WITH post, knownTag
-                  |MATCH (post)-[:POST_HAS_TAG]->(commonTag)
-                  |WHERE NOT commonTag=knownTag
-                  |WITH commonTag, count(post) AS postCount
-                  |RETURN commonTag.name AS tagName, postCount
-                  |ORDER BY postCount DESC, tagName ASC
-                  |LIMIT $3""".stripMargin
+    val query = """|MATCH (knownTag:Tag {name:$2})
+                   |MATCH (person:Person {id:$1})-[:KNOWS*1..2]-(friend)
+                   |WHERE NOT person=friend
+                   |WITH DISTINCT friend, knownTag
+                   |MATCH (friend)<-[:POST_HAS_CREATOR]-(post)
+                   |WHERE (post)-[:POST_HAS_TAG]->(knownTag)
+                   |WITH post, knownTag
+                   |MATCH (post)-[:POST_HAS_TAG]->(commonTag)
+                   |WHERE NOT commonTag=knownTag
+                   |WITH commonTag, count(post) AS postCount
+                   |RETURN commonTag.name AS tagName, postCount
+                   |ORDER BY postCount DESC, tagName ASC
+                   |LIMIT $3""".stripMargin
 
     def params = Map("1" -> 1, "2" -> "tag3-ᚠさ丵פش", "3" -> 4)
 
@@ -1187,28 +1188,28 @@ object LdbcQueries {
       Map("name" -> "uncommon tag 2"), "post113" ->
       Map("content" -> "P113", "id" -> 113L))
 
-   val query = """MATCH (person:Person {id:$1})-[:KNOWS*2..2]-(friend),
-                 |       (friend)-[:PERSON_IS_LOCATED_IN]->(city)
-                 |WHERE NOT friend=person AND
-                 |      NOT (friend)-[:KNOWS]-(person) AND
-                 |      ( (friend.birthday_month=$2 AND friend.birthday_day>=21) OR
-                 |        (friend.birthday_month=($2%12)+1 AND friend.birthday_day<22) )
-                 |WITH DISTINCT friend, city, person
-                 |OPTIONAL MATCH (friend)<-[:POST_HAS_CREATOR]-(post)
-                 |WITH friend, city, collect(post) AS posts, person
-                 |WITH friend,
-                 |     city,
-                 |     size(posts) AS postCount,
-                 |     size([p IN posts WHERE (p)-[:POST_HAS_TAG]->()<-[:HAS_INTEREST]-(person)]) AS commonPostCount
-                 |RETURN friend.id AS personId,
-                 |       friend.firstName AS personFirstName,
-                 |       friend.lastName AS personLastName,
-                 |       friend.gender AS personGender,
-                 |       city.name AS personCityName,
-                 |       commonPostCount - (postCount - commonPostCount) AS commonInterestScore
-                 |ORDER BY commonInterestScore DESC, personId ASC
-                 |LIMIT $4
-                 |""".stripMargin
+    val query = """MATCH (person:Person {id:$1})-[:KNOWS*2..2]-(friend),
+                  |       (friend)-[:PERSON_IS_LOCATED_IN]->(city)
+                  |WHERE NOT friend=person AND
+                  |      NOT (friend)-[:KNOWS]-(person) AND
+                  |      ( (friend.birthday_month=$2 AND friend.birthday_day>=21) OR
+                  |        (friend.birthday_month=($2%12)+1 AND friend.birthday_day<22) )
+                  |WITH DISTINCT friend, city, person
+                  |OPTIONAL MATCH (friend)<-[:POST_HAS_CREATOR]-(post)
+                  |WITH friend, city, collect(post) AS posts, person
+                  |WITH friend,
+                  |     city,
+                  |     size(posts) AS postCount,
+                  |     size([p IN posts WHERE (p)-[:POST_HAS_TAG]->()<-[:HAS_INTEREST]-(person)]) AS commonPostCount
+                  |RETURN friend.id AS personId,
+                  |       friend.firstName AS personFirstName,
+                  |       friend.lastName AS personLastName,
+                  |       friend.gender AS personGender,
+                  |       city.name AS personCityName,
+                  |       commonPostCount - (postCount - commonPostCount) AS commonInterestScore
+                  |ORDER BY commonInterestScore DESC, personId ASC
+                  |LIMIT $4
+                  |""".stripMargin
 
     def params = Map("1" -> 0, "2" -> 1, "4" -> 7)
 

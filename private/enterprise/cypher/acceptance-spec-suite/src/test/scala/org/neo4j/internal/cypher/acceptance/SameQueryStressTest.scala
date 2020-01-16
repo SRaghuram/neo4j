@@ -5,7 +5,9 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import java.util.concurrent.{Callable, Executors, Future}
+import java.util.concurrent.Callable
+import java.util.concurrent.Executors
+import java.util.concurrent.Future
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
 
@@ -57,7 +59,7 @@ class SameQueryStressTest extends ExecutionEngineFunSuite {
       // Then no crashes...
       for (futureResult: Future[Array[String]] <- futureResultsAsExpected;
            result: String <- futureResult.get
-      ) {
+           ) {
         // ...and correct results
         result should equal(expected)
       }

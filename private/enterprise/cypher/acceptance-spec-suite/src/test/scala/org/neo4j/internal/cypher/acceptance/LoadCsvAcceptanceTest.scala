@@ -5,33 +5,43 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import java.io.{File, PrintWriter}
+import java.io.File
+import java.io.PrintWriter
 import java.lang.Boolean.FALSE
-import java.net.{URL, URLConnection, URLStreamHandler, URLStreamHandlerFactory}
+import java.net.URL
+import java.net.URLConnection
+import java.net.URLStreamHandler
+import java.net.URLStreamHandlerFactory
 import java.nio.file.Files
 import java.util.Collections.emptyMap
 
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
-import org.neo4j.cypher._
+import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.cypher.HttpServerTestSupport
+import org.neo4j.cypher.HttpServerTestSupportBuilder
+import org.neo4j.cypher.QueryStatisticsTestSupport
 import org.neo4j.cypher.internal.runtime.CreateTempFileTestSupport
 import org.neo4j.cypher.internal.util.helpers.StringHelper.RichString
 import org.neo4j.graphdb.QueryExecutionException
 import org.neo4j.graphdb.config.Configuration
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithAssertion, Configs, CypherComparisonSupport}
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.ComparePlansWithAssertion
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 import org.scalatest.BeforeAndAfterAll
 
-import scala.collection.JavaConverters._
+import scala.collection.JavaConverters.asScalaIteratorConverter
+import scala.collection.JavaConverters.mapAsScalaMapConverter
 
 class LoadCsvAcceptanceTest
   extends ExecutionEngineFunSuite
-    with BeforeAndAfterAll
-    with QueryStatisticsTestSupport
-    with CreateTempFileTestSupport
-    with CypherComparisonSupport
-    with com.neo4j.cypher.RunWithConfigTestSupport
-    with ResourceTracking {
+  with BeforeAndAfterAll
+  with QueryStatisticsTestSupport
+  with CreateTempFileTestSupport
+  with CypherComparisonSupport
+  with com.neo4j.cypher.RunWithConfigTestSupport
+  with ResourceTracking {
 
   override protected def initTest(): Unit = {
     super.initTest()
@@ -56,10 +66,10 @@ class LoadCsvAcceptanceTest
 
     executeSingle(
       s"""LOAD CSV WITH HEADERS FROM '${urls.head}' AS row
-          | CREATE (user:User{userID: row.USERID})
-          | CREATE (order:Order{orderID: row.OrderId})
-          | CREATE (user)-[acc:ORDERED]->(order)
-          | RETURN count(*)""".stripMargin
+         | CREATE (user:User{userID: row.USERID})
+         | CREATE (order:Order{orderID: row.OrderId})
+         | CREATE (user)-[acc:ORDERED]->(order)
+         | RETURN count(*)""".stripMargin
     )
 
     resourceMonitor.assertClosedAndClear(1)
@@ -70,12 +80,12 @@ class LoadCsvAcceptanceTest
     for (url <- urls) {
       val result = executeWith(Configs.InterpretedAndSlotted,
         s"""LOAD CSV WITH HEADERS FROM '$url' AS row
-            | MATCH (user:User{userID: row.USERID}) USING INDEX user:User(userID)
-            | MATCH (order:Order{orderID: row.OrderId})
-            | MATCH (user)-[acc:ORDERED]->(order)
-            | SET acc.field1=row.field1,
-            | acc.field2=row.field2
-            | RETURN count(*); """.stripMargin,
+           | MATCH (user:User{userID: row.USERID}) USING INDEX user:User(userID)
+           | MATCH (order:Order{orderID: row.OrderId})
+           | MATCH (user)-[acc:ORDERED]->(order)
+           | SET acc.field1=row.field1,
+           | acc.field2=row.field2
+           | RETURN count(*); """.stripMargin,
         planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek").containingVariables("user"))))
 
       resourceMonitor.assertClosedAndClear(1)
@@ -443,8 +453,8 @@ class LoadCsvAcceptanceTest
 
   test("should be able to open relative paths with dot") {
     val url = createCSVTempFileURL(filename = "cypher", dir = "./")(
-        writer =>
-            writer.println("something")
+      writer =>
+        writer.println("something")
     ).cypherEscape
 
     val result = executeWith(Configs.InterpretedAndSlotted, s"LOAD CSV FROM '$url' AS line CREATE (a {name: line[0]}) RETURN a.name")
@@ -454,8 +464,8 @@ class LoadCsvAcceptanceTest
 
   test("should be able to open relative paths with dotdot") {
     val url = createCSVTempFileURL(filename = "cypher", dir = "../")(
-        writer =>
-            writer.println("something")
+      writer =>
+        writer.println("something")
     ).cypherEscape
 
     val result = executeWith(Configs.InterpretedAndSlotted, s"LOAD CSV FROM '$url' AS line CREATE (a {name: line[0]}) RETURN a.name")
@@ -726,10 +736,10 @@ class LoadCsvAcceptanceTest
         writer.println("10")
     }).cypherEscape
     val query  = s"""LOAD CSV FROM '$url' as row
-                   |WITH row where row[0] = 10
-                   |WITH distinct toInteger(row[0]) as data
-                   |MERGE (c:City {data:data})
-                   |RETURN count(*) as c""".stripMargin
+                    |WITH row where row[0] = 10
+                    |WITH distinct toInteger(row[0]) as data
+                    |MERGE (c:City {data:data})
+                    |RETURN count(*) as c""".stripMargin
 
     val result = executeWith(Configs.InterpretedAndSlotted, query)
     resourceMonitor.assertClosedAndClear(1)
@@ -750,7 +760,7 @@ class LoadCsvAcceptanceTest
 
   test("should give nice error message when overflowing the buffer") {
     runWithConfig(GraphDatabaseSettings.csv_buffer_size -> java.lang.Long.valueOf(1 * 1024 * 1024),
-                  GraphDatabaseSettings.cypher_enable_runtime_monitors -> java.lang.Boolean.TRUE) { db =>
+      GraphDatabaseSettings.cypher_enable_runtime_monitors -> java.lang.Boolean.TRUE) { db =>
 
       trackResources(db)
 
@@ -775,7 +785,7 @@ class LoadCsvAcceptanceTest
 
   test("should be able to configure db to handle huge fields") {
     runWithConfig(GraphDatabaseSettings.csv_buffer_size -> java.lang.Long.valueOf(4 * 1024 * 1024),
-                  GraphDatabaseSettings.cypher_enable_runtime_monitors -> java.lang.Boolean.TRUE)  { db =>
+      GraphDatabaseSettings.cypher_enable_runtime_monitors -> java.lang.Boolean.TRUE)  { db =>
 
       trackResources(db)
 

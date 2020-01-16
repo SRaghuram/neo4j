@@ -6,8 +6,10 @@
 package org.neo4j.internal.cypher.acceptance
 
 import com.neo4j.cypher.EnterpriseGraphDatabaseTestSupport
-import org.neo4j.cypher.{ExecutionEngineFunSuite, GraphIcing}
-import org.neo4j.internal.collector.DataCollectorMatchers._
+import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.cypher.GraphIcing
+import org.neo4j.internal.collector.DataCollectorMatchers.beListWithoutOrder
+import org.neo4j.internal.collector.DataCollectorMatchers.beMapContaining
 
 class DataCollectorEnterpriseAcceptanceTest extends ExecutionEngineFunSuite with GraphIcing with EnterpriseGraphDatabaseTestSupport {
 

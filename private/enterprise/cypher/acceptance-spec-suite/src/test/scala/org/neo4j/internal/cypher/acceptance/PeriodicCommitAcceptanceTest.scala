@@ -8,13 +8,21 @@ package org.neo4j.internal.cypher.acceptance
 import java.io.PrintWriter
 
 import org.apache.commons.lang3.exception.ExceptionUtils
-import org.neo4j.cypher._
-import org.neo4j.cypher.internal.plandescription.Arguments.{PageCacheHits, PageCacheMisses, PlannerImpl}
+import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.cypher.QueryStatisticsTestSupport
+import org.neo4j.cypher.TxCounts
+import org.neo4j.cypher.TxCountsTrackingTestSupport
+import org.neo4j.cypher.internal.plandescription.Arguments.PageCacheHits
+import org.neo4j.cypher.internal.plandescription.Arguments.PageCacheMisses
+import org.neo4j.cypher.internal.plandescription.Arguments.PlannerImpl
 import org.neo4j.cypher.internal.runtime.CreateTempFileTestSupport
 import org.neo4j.cypher.internal.util.helpers.StringHelper.RichString
 import org.neo4j.exceptions
-import org.neo4j.exceptions.{Neo4jException, PeriodicCommitInOpenTransactionException, SyntaxException}
-import org.neo4j.graphdb.{Node, QueryExecutionException}
+import org.neo4j.exceptions.Neo4jException
+import org.neo4j.exceptions.PeriodicCommitInOpenTransactionException
+import org.neo4j.exceptions.SyntaxException
+import org.neo4j.graphdb.Node
+import org.neo4j.graphdb.QueryExecutionException
 import org.neo4j.storageengine.api.TransactionIdStore
 
 class PeriodicCommitAcceptanceTest extends ExecutionEngineFunSuite
@@ -92,8 +100,8 @@ class PeriodicCommitAcceptanceTest extends ExecutionEngineFunSuite
     val url = createTempCSVFile(5)
     val queryText =
       "USING PERIODIC COMMIT 2 " +
-      s"LOAD CSV FROM '$url' AS line " +
-      "CREATE ()"
+        s"LOAD CSV FROM '$url' AS line " +
+        "CREATE ()"
 
     // when
     val (result, txCounts) = executeAndTrackTxCounts(queryText)
@@ -111,8 +119,8 @@ class PeriodicCommitAcceptanceTest extends ExecutionEngineFunSuite
     val url = createTempCSVFile(4)
     val queryText =
       "USING PERIODIC COMMIT 3 " +
-      s"LOAD CSV FROM '$url' AS line " +
-      "CREATE ()"
+        s"LOAD CSV FROM '$url' AS line " +
+        "CREATE ()"
 
     // when
     val (result, txCounts) = executeAndTrackTxCounts(queryText)
@@ -240,14 +248,14 @@ class PeriodicCommitAcceptanceTest extends ExecutionEngineFunSuite
     val url = createFile(writer => writer.print(csvFile))
 
     val query = s"""CYPHER runtime=interpreted USING PERIODIC COMMIT 2 LOAD CSV WITH HEADERS FROM '$url' AS row
-                  |MERGE (n {name: row.name})
-                  |ON CREATE SET
-                  |n.flows = toInteger(row.flows),
-                  |n.kbytes = toFloat(row.kbytes)
-                  |
-                  |ON MATCH SET
-                  |n.flows = n.flows + toInteger(row.flows),
-                  |n.kbytes = n.kbytes + toFloat(row.kbytes)""".stripMargin
+                   |MERGE (n {name: row.name})
+                   |ON CREATE SET
+                   |n.flows = toInteger(row.flows),
+                   |n.kbytes = toFloat(row.kbytes)
+                   |
+                   |ON MATCH SET
+                   |n.flows = n.flows + toInteger(row.flows),
+                   |n.kbytes = n.kbytes + toFloat(row.kbytes)""".stripMargin
 
     def nodesWithFlow(i: Int) = s"MATCH (n {flows: $i}) RETURN count(*)"
 

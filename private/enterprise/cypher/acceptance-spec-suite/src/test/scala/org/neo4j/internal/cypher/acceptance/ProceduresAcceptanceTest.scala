@@ -6,7 +6,8 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 import org.neo4j.kernel.api.procedure.GlobalProcedures
 
 class ProceduresAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
@@ -102,7 +103,7 @@ class ProceduresAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
         |""".stripMargin)
 
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
-                             "MATCH (s:Start),(e:End) CALL org.neo4j.graphAlgosDijkstra( s, e, 'Rel', 'weight' ) YIELD node RETURN node")
+      "MATCH (s:Start),(e:End) CALL org.neo4j.graphAlgosDijkstra( s, e, 'Rel', 'weight' ) YIELD node RETURN node")
 
     result.size should equal(5) // s -> n3 -> n4 -> n5 -> e
   }
@@ -117,7 +118,7 @@ class ProceduresAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
     // When
     val result = executeWith(Configs.ProcedureCall,
       """MATCH (k:Person {name:'Keanu Reeves'})
-                 |CALL org.neo4j.movieTraversal(k) YIELD path RETURN last(nodes(path)).name AS name""".stripMargin)
+        |CALL org.neo4j.movieTraversal(k) YIELD path RETURN last(nodes(path)).name AS name""".stripMargin)
 
     // Then
     result.toList should equal(List(Map("name" -> "Clint Eastwood")))
@@ -147,11 +148,11 @@ class ProceduresAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
     registerTestProcedures()
 
     executeWith(Configs.ProcedureCall,
-                "CALL org.neo4j.internalTypes()").toList should equal(List(Map("textValue" -> "Dog", "mapValue" -> Map("key" -> 1337))))
+      "CALL org.neo4j.internalTypes()").toList should equal(List(Map("textValue" -> "Dog", "mapValue" -> Map("key" -> 1337))))
     executeWith(Configs.ProcedureCall,
-                "CALL org.neo4j.internalTypes('Cat')").toList should equal(List(Map("textValue" -> "Cat", "mapValue" -> Map("key" -> 1337))))
+      "CALL org.neo4j.internalTypes('Cat')").toList should equal(List(Map("textValue" -> "Cat", "mapValue" -> Map("key" -> 1337))))
     executeWith(Configs.ProcedureCall,
-                "CALL org.neo4j.internalTypes('Cat', {key: 42})").toList should equal(List(Map("textValue" -> "Cat", "mapValue" -> Map("key" -> 42))))
+      "CALL org.neo4j.internalTypes('Cat', {key: 42})").toList should equal(List(Map("textValue" -> "Cat", "mapValue" -> Map("key" -> 42))))
   }
 
   private def registerTestProcedures(): Unit = {

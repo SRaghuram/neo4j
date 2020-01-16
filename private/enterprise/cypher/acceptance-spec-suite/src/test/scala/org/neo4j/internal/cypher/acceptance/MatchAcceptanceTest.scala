@@ -5,13 +5,17 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import org.neo4j.cypher._
+import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.cypher.QueryStatisticsTestSupport
 import org.neo4j.cypher.internal.runtime.PathImpl
-import org.neo4j.graphdb._
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport, TestConfiguration}
+import org.neo4j.graphdb.Node
+import org.neo4j.graphdb.Path
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.TestConfiguration
 import org.neo4j.internal.helpers.collection.Iterators.single
 
-import scala.collection.JavaConverters._
+import scala.collection.JavaConverters.asScalaIteratorConverter
 import scala.collection.mutable.ArrayBuffer
 
 class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport {
@@ -277,7 +281,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     val r = relate(a, b, "X")
 
     executeWith(Configs.InterpretedAndSlottedAndPipelined,
-                """
+      """
     match (a {name:'A'}), (x) where x.name in ['B', 'C']
     optional match p = shortestPath((a)-[*]->(x))
     return x, p""", resultAssertionInTx = Some(result => {
@@ -379,7 +383,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
     // when
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
-                             "MATCH (n:Person)-->() USING INDEX n:Person(name) WHERE n.name STARTS WITH 'Jac' RETURN n")
+      "MATCH (n:Person)-->() USING INDEX n:Person(name) WHERE n.name STARTS WITH 'Jac' RETURN n")
 
     // then
     result.toList should equal(List(Map("n" -> jake)))
@@ -1035,19 +1039,19 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     val realm = createLabeledNode(Map("id" -> "def"), "REALM")
     val q =
       """MATCH (role:ROLE)
-              |WHERE role.id = "abc"
-              |WITH role
-              |UNWIND [{realmId: "def", rights: ["read"]}] AS permission
-              |MATCH (realm:REALM)
-              |WHERE realm.id = permission.realmId
-              |RETURN realm""".stripMargin
+        |WHERE role.id = "abc"
+        |WITH role
+        |UNWIND [{realmId: "def", rights: ["read"]}] AS permission
+        |MATCH (realm:REALM)
+        |WHERE realm.id = permission.realmId
+        |RETURN realm""".stripMargin
 
     val res = executeWith(Configs.InterpretedAndSlottedAndPipelined + TestConfiguration(
       """4.0 runtime=legacy_compiled debug=generate_java_source
         |3.5 runtime=legacy_compiled debug=generate_java_source
       """.stripMargin), q)
     res.toList should equal(List(Map("realm" -> realm)))
-    }
+  }
 
   test("ambiguous variable name inside property gh #10444") {
     val query =
@@ -1089,7 +1093,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
     //When
     val result = executeWith(Configs.ExpandInto,
-                             "WITH $a AS a, $b AS b MATCH (a)-[r:T1]->(b) RETURN r", params = Map("a" -> a, "b"-> b))
+      "WITH $a AS a, $b AS b MATCH (a)-[r:T1]->(b) RETURN r", params = Map("a" -> a, "b"-> b))
 
     //Then
     result.toList should equal(List(Map("r" -> r)))
@@ -1105,7 +1109,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
     //When
     val result = executeWith(Configs.ExpandInto,
-                             "WITH $a AS a, $b AS b MATCH (a)-[r:T1]->(b) RETURN r", params = Map("a" -> a, "b"-> b))
+      "WITH $a AS a, $b AS b MATCH (a)-[r:T1]->(b) RETURN r", params = Map("a" -> a, "b"-> b))
 
     //Then
     result.toList should equal(List(Map("r" -> r)))
@@ -1121,7 +1125,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
     //When
     val result = executeWith(Configs.ExpandInto,
-                             "WITH $a AS a, $b AS b MATCH (a)-[r:T1]->(b) RETURN r", params = Map("a" -> a, "b"-> b))
+      "WITH $a AS a, $b AS b MATCH (a)-[r:T1]->(b) RETURN r", params = Map("a" -> a, "b"-> b))
 
     //Then
     result.toList should equal(List(Map("r" -> r)))
@@ -1140,7 +1144,7 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
     //When
     val result = executeWith(Configs.ExpandInto,
-                             "WITH $a AS a, $b AS b MATCH (a)-[r:T1]->(b) RETURN r", params = Map("a" -> a, "b"-> b))
+      "WITH $a AS a, $b AS b MATCH (a)-[r:T1]->(b) RETURN r", params = Map("a" -> a, "b"-> b))
 
     //Then
     result.toList should equal(List(Map("r" -> r)))

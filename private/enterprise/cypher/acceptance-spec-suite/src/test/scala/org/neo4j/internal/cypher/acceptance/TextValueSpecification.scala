@@ -8,13 +8,16 @@ package org.neo4j.internal.cypher.acceptance
 import java.nio.charset.StandardCharsets
 
 import org.neo4j.values.storable.TextValue
-import org.neo4j.values.storable.Values.{stringArray, stringValue, utf8Value}
-import org.scalacheck.{Properties, _}
+import org.neo4j.values.storable.Values.stringArray
+import org.neo4j.values.storable.Values.stringValue
+import org.neo4j.values.storable.Values.utf8Value
+import org.scalacheck.Arbitrary
+import org.scalacheck.Gen
+import org.scalacheck.Prop.forAll
+import org.scalacheck.Properties
 import org.scalatest.prop.Configuration
 
 object TextValueSpecification extends Properties("TextValue") with Configuration {
-
-  import Prop.forAll
 
   private val substringGen = for {
     string <- Arbitrary.arbitrary[String]
@@ -75,8 +78,8 @@ object TextValueSpecification extends Properties("TextValue") with Configuration
   }}
 
   private val replaceGen = for {x <- Arbitrary.arbitrary[String]
-                              find <-Gen.alphaStr
-                              replace <- Arbitrary.arbitrary[String]} yield (x,find, replace)
+                                find <-Gen.alphaStr
+                                replace <- Arbitrary.arbitrary[String]} yield (x,find, replace)
   property("replace") = forAll(replaceGen) {
     case (x: String, find: String, replace: String) =>
       val value = stringValue(x)
@@ -128,7 +131,7 @@ object TextValueSpecification extends Properties("TextValue") with Configuration
   property("substring") = forAll(substringGen) {
     case (string, start, length) =>
       equivalent(stringValue(string).substring(start, length),
-                 utf8Value(string.getBytes(StandardCharsets.UTF_8)).substring(start, length))
+        utf8Value(string.getBytes(StandardCharsets.UTF_8)).substring(start, length))
   }
 
   implicit override val generatorDrivenConfig: TextValueSpecification.PropertyCheckConfiguration =

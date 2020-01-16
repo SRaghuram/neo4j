@@ -5,10 +5,19 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import java.time._
+import java.time.ZoneId
+import java.time.ZoneOffset
 
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithAssertion, Configs}
-import org.neo4j.values.storable._
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.ComparePlansWithAssertion
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
+import org.neo4j.values.storable.DateTimeValue
+import org.neo4j.values.storable.DateValue
+import org.neo4j.values.storable.DurationValue
+import org.neo4j.values.storable.LocalDateTimeValue
+import org.neo4j.values.storable.LocalTimeValue
+import org.neo4j.values.storable.TimeValue
+import org.neo4j.values.storable.Value
+import org.neo4j.values.storable.Values
 
 class TemporalIndexAcceptanceTest extends IndexingTestSupport {
 
@@ -37,22 +46,22 @@ class TemporalIndexAcceptanceTest extends IndexingTestSupport {
 
     // Length 2
     assertSeek(Values.dateArray(Array(DateValue.epochDate(10000).asObjectCopy(),
-                                      DateValue.epochDate(20000).asObjectCopy())))
+      DateValue.epochDate(20000).asObjectCopy())))
 
     assertSeek(Values.dateTimeArray(Array(DateTimeValue.datetime(10000, 100, ZoneOffset.UTC).asObjectCopy(),
-                                           DateTimeValue.datetime(10000, 200, ZoneOffset.UTC).asObjectCopy())))
+      DateTimeValue.datetime(10000, 200, ZoneOffset.UTC).asObjectCopy())))
 
     assertSeek(Values.localDateTimeArray(Array(LocalDateTimeValue.localDateTime(10000, 100).asObjectCopy(),
-                                               LocalDateTimeValue.localDateTime(10000, 200).asObjectCopy())))
+      LocalDateTimeValue.localDateTime(10000, 200).asObjectCopy())))
 
     assertSeek(Values.timeArray(Array(TimeValue.time(101010, ZoneOffset.UTC).asObjectCopy(),
-                                      TimeValue.time(202020, ZoneOffset.UTC).asObjectCopy())))
+      TimeValue.time(202020, ZoneOffset.UTC).asObjectCopy())))
 
     assertSeek(Values.localTimeArray(Array(LocalTimeValue.localTime(12345).asObjectCopy(),
-                                           LocalTimeValue.localTime(23456).asObjectCopy())))
+      LocalTimeValue.localTime(23456).asObjectCopy())))
 
     assertSeek(Values.durationArray(Array(DurationValue.duration(41, 32, 23, 14).asObjectCopy(),
-                                          DurationValue.duration(12, 34, 56, 78).asObjectCopy())))
+      DurationValue.duration(12, 34, 56, 78).asObjectCopy())))
   }
 
   test("should distinguish between duration array and string array") {

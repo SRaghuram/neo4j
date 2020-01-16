@@ -5,7 +5,11 @@
  */
 package org.neo4j.internal.cypher.acceptance.comparisonsupport
 
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.Runtimes.{CompiledBytecode, CompiledSource, Interpreted, SlottedWithCompiledExpressions, SlottedWithInterpretedExpressions}
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Runtimes.CompiledBytecode
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Runtimes.CompiledSource
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Runtimes.Interpreted
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Runtimes.SlottedWithCompiledExpressions
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Runtimes.SlottedWithInterpretedExpressions
 
 object Configs {
 
@@ -29,10 +33,10 @@ object Configs {
   def PipelinedSingleThreadedFull: TestConfiguration = TestConfiguration(Planners.all, Runtimes(Runtimes.PipelinedFull))
 
   /**
-    * These are all configurations that will be executed even if not explicitly expected to succeed or fail.
-    * Even if not explicitly requested, they are executed to check if they unexpectedly succeed to make sure that
-    * test coverage is kept up-to-date with new features.
-    */
+   * These are all configurations that will be executed even if not explicitly expected to succeed or fail.
+   * Even if not explicitly requested, they are executed to check if they unexpectedly succeed to make sure that
+   * test coverage is kept up-to-date with new features.
+   */
   def All: TestConfiguration = {
     val all = TestConfiguration(Planners.all, Runtimes.all)
     if (runOnlySafeScenarios) {
@@ -43,9 +47,9 @@ object Configs {
   }
 
   /**
-    * These experimental configurations will only be executed if you explicitly specify them in the test expectation.
-    * I.e. there will be no check to see if they unexpectedly succeed on tests where they were not explicitly requested.
-    */
+   * These experimental configurations will only be executed if you explicitly specify them in the test expectation.
+   * I.e. there will be no check to see if they unexpectedly succeed on tests where they were not explicitly requested.
+   */
   def Experimental: TestConfiguration = PipelinedSingleThreadedFull
 
   def Empty: TestConfiguration = TestConfiguration.empty

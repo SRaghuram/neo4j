@@ -4,14 +4,18 @@
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
 package org.neo4j.internal.cypher.acceptance
-import java.time.{LocalDate, LocalDateTime}
 
-import org.neo4j.cypher.{ExecutionEngineFunSuite, QueryStatisticsTestSupport}
+import java.time.LocalDate
+import java.time.LocalDateTime
+
+import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.cypher.QueryStatisticsTestSupport
 import org.neo4j.exceptions.CypherExecutionException
-import org.neo4j.graphdb.{ConstraintViolationException, Label}
+import org.neo4j.graphdb.ConstraintViolationException
+import org.neo4j.graphdb.Label
 import org.neo4j.internal.kernel.api.exceptions.schema.CreateConstraintFailureException
 
-import scala.collection.JavaConverters._
+import scala.collection.JavaConverters.iterableAsScalaIterableConverter
 
 class UniqueConstraintVerificationAcceptanceTest
   extends ExecutionEngineFunSuite with QueryStatisticsTestSupport {
@@ -81,13 +85,12 @@ class UniqueConstraintVerificationAcceptanceTest
     execute("create (a:Person{id:1}), (b:Person{id:1})")
 
     // WHEN
-    try
-    {
-      execute("create constraint on (n:Person) assert n.id is unique")
+    try {
+        execute("create constraint on (n:Person) assert n.id is unique")
 
-      fail("expected exception")
-    }
-    // THEN
+        fail("expected exception")
+      }
+      // THEN
     catch
       {
         case ex: CypherExecutionException =>

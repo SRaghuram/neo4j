@@ -8,13 +8,16 @@ package org.neo4j.internal.cypher.acceptance
 import java.time.LocalDate
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithAssertion, Configs, CypherComparisonSupport}
-import org.neo4j.values.storable.{CoordinateReferenceSystem, Values}
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.ComparePlansWithAssertion
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
+import org.neo4j.values.storable.CoordinateReferenceSystem
+import org.neo4j.values.storable.Values
 
 import scala.collection.Map
 
 class HintAcceptanceTest
-    extends ExecutionEngineFunSuite with CypherComparisonSupport {
+  extends ExecutionEngineFunSuite with CypherComparisonSupport {
 
   test("should use a simple hint") {
     val query = "MATCH (a)--(b)--(c) USING JOIN ON b RETURN a,b,c"
@@ -35,9 +38,9 @@ class HintAcceptanceTest
 
     executeWith(Configs.InterpretedAndSlotted, query,
       planComparisonStrategy = ComparePlansWithAssertion( p => {
-      p should includeSomewhere.aPlan("NodeLeftOuterHashJoin")
-      p should not(includeSomewhere.aPlan("NodeHashJoin"))
-    }))
+        p should includeSomewhere.aPlan("NodeLeftOuterHashJoin")
+        p should not(includeSomewhere.aPlan("NodeHashJoin"))
+      }))
   }
 
   test("should not plan multiple joins for one hint - right outer join") {
@@ -86,7 +89,7 @@ class HintAcceptanceTest
       """.stripMargin
 
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
-                             planComparisonStrategy = ComparePlansWithAssertion(_  should includeSomewhere.aPlan("NodeHashJoin")))
+      planComparisonStrategy = ComparePlansWithAssertion(_  should includeSomewhere.aPlan("NodeHashJoin")))
 
     result.toList should be(List(Map("r" -> rel)))
   }

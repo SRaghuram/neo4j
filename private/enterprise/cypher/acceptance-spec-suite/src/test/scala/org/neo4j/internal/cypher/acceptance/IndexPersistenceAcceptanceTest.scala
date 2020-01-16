@@ -14,7 +14,15 @@ import org.neo4j.graphdb.config.Setting
 import org.neo4j.io.fs.FileUtils
 import org.neo4j.kernel.impl.index.schema.config.CrsConfig
 import org.neo4j.test.rule.TestDirectory
-import org.neo4j.values.storable._
+import org.neo4j.values.storable.CoordinateReferenceSystem
+import org.neo4j.values.storable.DateTimeValue
+import org.neo4j.values.storable.DateValue
+import org.neo4j.values.storable.DurationValue
+import org.neo4j.values.storable.LocalDateTimeValue
+import org.neo4j.values.storable.LocalTimeValue
+import org.neo4j.values.storable.TimeValue
+import org.neo4j.values.storable.Value
+import org.neo4j.values.storable.Values
 
 import scala.collection.Map
 

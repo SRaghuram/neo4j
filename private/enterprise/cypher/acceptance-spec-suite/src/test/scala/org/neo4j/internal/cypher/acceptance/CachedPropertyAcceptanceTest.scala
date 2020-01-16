@@ -6,8 +6,11 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
-import org.neo4j.graphdb.{Node, Relationship}
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithAssertion, Configs, CypherComparisonSupport}
+import org.neo4j.graphdb.Node
+import org.neo4j.graphdb.Relationship
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.ComparePlansWithAssertion
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 
 class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
 
@@ -76,12 +79,12 @@ class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     createLabeledNode(Map("prop" -> 4), "M")
     val q ="PROFILE MATCH (n:N), (m:M) WHERE n.prop <> m.prop WITH n AS m, m AS x, sum(m.prop) AS whoCares RETURN m.prop, x.prop"
     val res = executeWith(Configs.InterpretedAndSlottedAndPipelined, q,
-                          planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.
         aPlan("Projection")
         .containingArgument("{m.prop : cache[m.prop], x.prop : cache[x.prop]}")
         // As long as aggregation deleted all cached properties, we cannot assert on getting 0 DB hits here)
       )
-                          )
+    )
 
     res.toList should contain theSameElementsAs List(
       Map("m.prop" -> 1, "x.prop" -> 3),

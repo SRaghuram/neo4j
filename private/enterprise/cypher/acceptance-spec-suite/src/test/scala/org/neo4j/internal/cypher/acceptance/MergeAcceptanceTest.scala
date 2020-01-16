@@ -5,9 +5,11 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import org.neo4j.cypher.{ExecutionEngineFunSuite, QueryStatisticsTestSupport}
+import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.cypher.QueryStatisticsTestSupport
 import org.neo4j.graphdb.Relationship
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 
 class MergeAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport
                           with CypherComparisonSupport {
@@ -114,9 +116,9 @@ class MergeAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
     // When
     val result = executeWith(Configs.InterpretedAndSlotted,
-                             """MATCH (n:L) WHERE n.prop=42
-                               |WITH DISTINCT n.prop + 3 AS w
-                               |MERGE (m:M) ON CREATE SET m.prop=1337 ON MATCH SET m.prop=13337""".stripMargin)
+      """MATCH (n:L) WHERE n.prop=42
+        |WITH DISTINCT n.prop + 3 AS w
+        |MERGE (m:M) ON CREATE SET m.prop=1337 ON MATCH SET m.prop=13337""".stripMargin)
 
     // Then
     assertStats(result, nodesCreated = 1, labelsAdded = 1, propertiesWritten = 1)

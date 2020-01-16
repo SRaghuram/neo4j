@@ -13,12 +13,18 @@ import org.neo4j.cypher.internal.expressions.SemanticDirection
 import org.neo4j.graphdb.Node
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
-import org.scalacheck.{Arbitrary, Gen, Shrink}
+import org.scalacheck.Arbitrary
+import org.scalacheck.Gen
+import org.scalacheck.Shrink
 import org.scalatest.prop.PropertyChecks
 
+import scala.concurrent.Await
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.TimeoutException
 import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, TimeoutException}
-import scala.util.{Failure, Success, Try}
+import scala.util.Failure
+import scala.util.Success
+import scala.util.Try
 
 /*
  * Tests so that the compiled runtime behaves in the same way as the interpreted runtime for randomized Cypher
@@ -144,10 +150,10 @@ class GrammarStressIT extends ExecutionEngineFunSuite with PropertyChecks with C
   }
 
   case class RelPattern private (
-                         name:Option[String],
-                         relType:Set[String],
-                         properties:Map[String, Any],
-                         length:LengthPattern ) {
+                                  name:Option[String],
+                                  relType:Set[String],
+                                  properties:Map[String, Any],
+                                  length:LengthPattern ) {
 
     def identifier:Option[Identifier] =
       name.map(Identifier(_, isSingleEntity))
@@ -195,7 +201,7 @@ class GrammarStressIT extends ExecutionEngineFunSuite with PropertyChecks with C
   }
 
   def patterns:Gen[Pattern] = Gen.choose(1, NUM_LAYERS)
-                                  .flatMap(depth => patternGen(depth, Gen.const(Set("L"+depth))))
+    .flatMap(depth => patternGen(depth, Gen.const(Set("L"+depth))))
 
   def patternGen(d:Int, labelGen:Gen[Set[String]]):Gen[Pattern] =
     for {
@@ -231,22 +237,22 @@ class GrammarStressIT extends ExecutionEngineFunSuite with PropertyChecks with C
 
   override protected def initTest(): Unit = {
     super.initTest()
-      val nodes: Seq[IndexedSeq[Node]] =
-        for (i <- 1 to NUM_LAYERS) yield {
-          for (j <- 1 to NODES_PER_LAYER) yield {
-            val node = createLabeledNode(Map("p" + i -> j), "L" + i)
-            node
-          }
+    val nodes: Seq[IndexedSeq[Node]] =
+      for (i <- 1 to NUM_LAYERS) yield {
+        for (j <- 1 to NODES_PER_LAYER) yield {
+          val node = createLabeledNode(Map("p" + i -> j), "L" + i)
+          node
         }
-      for (i <- 1 until NUM_LAYERS) {
-        val thisLayer = nodes(i-1)
-        val nextLayer = nodes(i)
-        for {
-          n1 <- thisLayer
-          n2 <- nextLayer
-        } {
-          relate(n1, n2, s"T$i", Map("p"+i -> i))
-        }
+      }
+    for (i <- 1 until NUM_LAYERS) {
+      val thisLayer = nodes(i-1)
+      val nextLayer = nodes(i)
+      for {
+        n1 <- thisLayer
+        n2 <- nextLayer
+      } {
+        relate(n1, n2, s"T$i", Map("p"+i -> i))
+      }
     }
   }
 
@@ -297,9 +303,9 @@ class GrammarStressIT extends ExecutionEngineFunSuite with PropertyChecks with C
     runWithTimeout(TIMEOUT_MS) {
       //this is an optimization just so that we only compare results when we have to
       val runtimeUsed = graph.withTx { tx =>
-          tx.execute(s"EXPLAIN CYPHER runtime=legacy_compiled $query")
-            .getExecutionPlanDescription.getArguments.get("runtime").asInstanceOf[String]
-        }
+        tx.execute(s"EXPLAIN CYPHER runtime=legacy_compiled $query")
+          .getExecutionPlanDescription.getArguments.get("runtime").asInstanceOf[String]
+      }
       if (runtimeUsed == "LEGACY_COMPILED") {
         // We resort to using internals of CypherComparisonSupport,
         // since with randomized patterns we cannot know at compile time, for which
@@ -314,14 +320,13 @@ class GrammarStressIT extends ExecutionEngineFunSuite with PropertyChecks with C
   }
 
   def runWithTimeout[T](timeoutMs: Long)(f: => T) : Option[T] = {
-    import scala.concurrent.ExecutionContext.Implicits.global
     val res = Try(Await.result(scala.concurrent.Future(f), Duration.apply(timeoutMs, "ms")))
     res match {
       case Failure(_: TimeoutException) => None
       case Failure(e) => throw e
       case Success(r) => Some(r)
-      }
     }
+  }
 
   def literal(implicit d: Int = NESTING_DEPTH): Gen[String] =
     if (d == 0) Gen.oneOf(floatLiteral, stringLiteral, intLiteral, boolLiteral)

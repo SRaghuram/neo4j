@@ -5,10 +5,11 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import org.hamcrest.CoreMatchers._
-import org.junit.Assert._
+import org.hamcrest.CoreMatchers.containsString
+import org.junit.Assert.assertThat
+import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.cypher.QueryStatisticsTestSupport
 import org.neo4j.cypher.internal.compiler.helpers.ListSupport
-import org.neo4j.cypher.{ExecutionEngineFunSuite, QueryStatisticsTestSupport}
 import org.neo4j.exceptions.CypherExecutionException
 
 class UniqueConstraintValidationAcceptanceTest
@@ -26,10 +27,10 @@ class UniqueConstraintValidationAcceptanceTest
       fail("should have thrown exception")
     }
     catch
-    {
-      case e: CypherExecutionException =>
-        assertThat(e.getMessage, containsString( "`key1` = 'value1'" ))
-    }
+      {
+        case e: CypherExecutionException =>
+          assertThat(e.getMessage, containsString( "`key1` = 'value1'" ))
+      }
   }
 
   test("should enforce uniqueness constraint on set property") {
@@ -44,10 +45,10 @@ class UniqueConstraintValidationAcceptanceTest
       fail("should have thrown exception")
     }
     catch
-    {
-      case e: CypherExecutionException =>
-        assertThat(e.getMessage, containsString( "`key1` = 'value1'" ))
-    }
+      {
+        case e: CypherExecutionException =>
+          assertThat(e.getMessage, containsString( "`key1` = 'value1'" ))
+      }
   }
 
   test("should enforce uniqueness constraint on add label") {
@@ -62,10 +63,10 @@ class UniqueConstraintValidationAcceptanceTest
       fail("should have thrown exception")
     }
     catch
-    {
-      case e: CypherExecutionException =>
-        assertThat(e.getMessage, containsString( "`key1` = 'value1'" ))
-    }
+      {
+        case e: CypherExecutionException =>
+          assertThat(e.getMessage, containsString( "`key1` = 'value1'" ))
+      }
   }
 
   test("should enforce uniqueness constraint on conflicting data in same statement") {
@@ -79,10 +80,10 @@ class UniqueConstraintValidationAcceptanceTest
       fail("should have thrown exception")
     }
     catch
-    {
-      case e: CypherExecutionException =>
-        assertThat(e.getMessage, containsString( "`key1` = 'value1'" ))
-    }
+      {
+        case e: CypherExecutionException =>
+          assertThat(e.getMessage, containsString( "`key1` = 'value1'" ))
+      }
   }
 
   test("should allow remove and add conflicting data in one statement") {
@@ -127,3 +128,4 @@ class UniqueConstraintValidationAcceptanceTest
     result.columnAs[Int]("nodeCount").toList should equal(List(4))
   }
 }
+

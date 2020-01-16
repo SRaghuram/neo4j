@@ -7,15 +7,26 @@ package org.neo4j.internal.cypher.debug
 
 import java.io.File
 
-import org.neo4j.cypher.internal.util.symbols._
 import org.json4s.DefaultFormats
 import org.json4s.native.Serialization
-import org.neo4j.cypher.internal.logical.plans.{CypherValue, FieldSignature, QualifiedName, UserFunctionSignature}
+import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.cypher.QueryStatisticsTestSupport
+import org.neo4j.cypher.internal.frontend.phases.InternalNotificationLogger
+import org.neo4j.cypher.internal.logical.plans.CypherValue
+import org.neo4j.cypher.internal.logical.plans.FieldSignature
+import org.neo4j.cypher.internal.logical.plans.QualifiedName
+import org.neo4j.cypher.internal.logical.plans.UserFunctionSignature
 import org.neo4j.cypher.internal.planning.CypherPlanner
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionalContextWrapper
-import org.neo4j.cypher.internal.frontend.phases.InternalNotificationLogger
-import org.neo4j.cypher.{ExecutionEngineFunSuite, QueryStatisticsTestSupport}
-import org.neo4j.internal.collector.DataCollectorMatchers._
+import org.neo4j.cypher.internal.util.symbols.CTAny
+import org.neo4j.cypher.internal.util.symbols.CTDate
+import org.neo4j.cypher.internal.util.symbols.CTDateTime
+import org.neo4j.cypher.internal.util.symbols.CTDuration
+import org.neo4j.cypher.internal.util.symbols.CTLocalDateTime
+import org.neo4j.cypher.internal.util.symbols.CTLocalTime
+import org.neo4j.cypher.internal.util.symbols.CTTime
+import org.neo4j.internal.collector.DataCollectorMatchers.beListWithoutOrder
+import org.neo4j.internal.collector.DataCollectorMatchers.beMapContaining
 import org.neo4j.internal.collector.SampleGraphs
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 import org.neo4j.logging.Log
@@ -116,22 +127,22 @@ class GraphCountAcceptanceTest extends ExecutionEngineFunSuite
     val json = Serialization.write(List(res("section"), res("data")))
     // Put Rest API stuff around it
     val restJson = s"""
-      |{
-      |  "results": [
-      |    {
-      |      "columns": [
-      |        "section",
-      |        "data"
-      |      ],
-      |      "data": [
-      |        {
-      |          "row": $json
-      |        }
-      |      ]
-      |    }
-      |  ],
-      |  "errors": []
-      |}
+                      |{
+                      |  "results": [
+                      |    {
+                      |      "columns": [
+                      |        "section",
+                      |        "data"
+                      |      ],
+                      |      "data": [
+                      |        {
+                      |          "row": $json
+                      |        }
+                      |      ]
+                      |    }
+                      |  ],
+                      |  "errors": []
+                      |}
     """.stripMargin
 
     // When
@@ -161,7 +172,7 @@ class GraphCountAcceptanceTest extends ExecutionEngineFunSuite
       beMapContaining(
         "labelsOrTypes" -> List("User"),
         "properties" -> List("lastName"),
-          "type" -> "BTREE"
+        "type" -> "BTREE"
       ),
       beMapContaining(
         "labelsOrTypes" -> List("User"),

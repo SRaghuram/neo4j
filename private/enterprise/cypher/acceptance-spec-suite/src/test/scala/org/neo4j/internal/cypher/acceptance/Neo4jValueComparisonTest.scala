@@ -6,7 +6,8 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
-import org.scalacheck._
+import org.scalacheck.Arbitrary
+import org.scalacheck.Gen
 
 class Neo4jValueComparisonTest extends CypherFunSuite {
 

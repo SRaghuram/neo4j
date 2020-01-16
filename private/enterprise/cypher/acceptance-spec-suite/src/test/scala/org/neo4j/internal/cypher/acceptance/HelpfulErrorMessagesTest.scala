@@ -7,7 +7,8 @@ package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.exceptions.SyntaxException
-import org.neo4j.internal.cypher.acceptance.comparisonsupport._
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 
 class HelpfulErrorMessagesTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
 
@@ -23,7 +24,7 @@ class HelpfulErrorMessagesTest extends ExecutionEngineFunSuite with CypherCompar
     failWithError(Configs.All,
       "CREATE (a)-[:ASSOCIATED_WITH|:KNOWS]->(b)",
       Seq("A single relationship type must be specified for CREATE",
-          "The given query is not currently supported in the selected cost-based planner" ))
+        "The given query is not currently supported in the selected cost-based planner" ))
   }
 
   test("should provide sensible error message when omitting colon before relationship type on merge") {
@@ -36,7 +37,7 @@ class HelpfulErrorMessagesTest extends ExecutionEngineFunSuite with CypherCompar
     failWithError(Configs.All,
       "MERGE (a)-[:ASSOCIATED_WITH|:KNOWS]->(b)",
       Seq("A single relationship type must be specified for MERGE",
-      "The given query is not currently supported in the selected cost-based planner"))
+        "The given query is not currently supported in the selected cost-based planner"))
   }
 
   test("should provide sensible error message for invalid regex syntax together with index") {

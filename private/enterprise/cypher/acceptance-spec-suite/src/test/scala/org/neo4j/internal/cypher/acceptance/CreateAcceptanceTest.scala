@@ -5,16 +5,18 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
+import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.cypher.QueryStatisticsTestSupport
 import org.neo4j.cypher.internal.runtime.CreateTempFileTestSupport
-import org.neo4j.cypher.{ExecutionEngineFunSuite, QueryStatisticsTestSupport}
-import org.neo4j.internal.cypher.acceptance.comparisonsupport._
-
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.Await
+import scala.concurrent.Future
+import scala.concurrent.duration.DurationInt
 
 class CreateAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport
-  with CreateTempFileTestSupport {
+                           with CreateTempFileTestSupport {
 
   private val BIG_TIMEOUT = 15 minutes
   private val BIG_N = 1000
@@ -195,10 +197,10 @@ class CreateAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsT
   }
 
   val MISSING_NODE_ERRORS = List("Failed to create relationship `r`, node `c` is missing. If you prefer to simply ignore rows " +
-                                 "where a relationship node is missing, set 'cypher.lenient_create_relationship = true' in neo4j.conf",
-                                 "Expected to find a node, but found instead: null",
-                                 "Expected to find a node at c but found nothing Some(null)",
-                                 "Other node is null")
+    "where a relationship node is missing, set 'cypher.lenient_create_relationship = true' in neo4j.conf",
+    "Expected to find a node, but found instead: null",
+    "Expected to find a node at c but found nothing Some(null)",
+    "Other node is null")
 
   // No CLG decision on this AFAIK, so not TCK material
   test("should throw on CREATE relationship if start-point is missing") {

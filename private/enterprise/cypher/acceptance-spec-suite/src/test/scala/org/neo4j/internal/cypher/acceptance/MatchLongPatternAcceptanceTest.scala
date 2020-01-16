@@ -9,9 +9,14 @@ import java.lang.Boolean.TRUE
 import java.time.Duration
 import java.util
 
-import org.neo4j.configuration.GraphDatabaseSettings.{DEFAULT_DATABASE_NAME, cypher_idp_solver_duration_threshold, cypher_idp_solver_table_threshold}
-import org.neo4j.configuration.{GraphDatabaseSettings, SettingImpl}
-import org.neo4j.cypher._
+import org.neo4j.configuration.GraphDatabaseSettings
+import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
+import org.neo4j.configuration.GraphDatabaseSettings.cypher_idp_solver_duration_threshold
+import org.neo4j.configuration.GraphDatabaseSettings.cypher_idp_solver_table_threshold
+import org.neo4j.configuration.SettingImpl
+import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.cypher.ExecutionEngineHelper
+import org.neo4j.cypher.QueryStatisticsTestSupport
 import org.neo4j.cypher.internal.ExecutionEngine
 import org.neo4j.cypher.internal.compiler.planner.logical.idp.IDPSolverMonitor
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
@@ -21,7 +26,7 @@ import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSu
 import org.neo4j.monitoring.Monitors
 import org.neo4j.test.TestDatabaseManagementServiceBuilder
 
-import scala.collection.JavaConverters._
+import scala.collection.JavaConverters.mapAsJavaMapConverter
 import scala.collection.mutable
 
 class MatchLongPatternAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport {

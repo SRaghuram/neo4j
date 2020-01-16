@@ -5,12 +5,15 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import org.neo4j.cypher.{ExecutionEngineFunSuite, QueryStatisticsTestSupport}
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithAssertion, Configs, CypherComparisonSupport}
+import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.cypher.QueryStatisticsTestSupport
 import org.neo4j.cypher.internal.util.test_helpers.WindowsStringSafe
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.ComparePlansWithAssertion
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 
 class QueryPlanCompactionAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport
-  with CypherComparisonSupport {
+                                        with CypherComparisonSupport {
 
   val shouldCompact = ComparePlansWithAssertion(_.toString.split("\\n").exists(line => line.contains("Create") && line.contains("...")) should be(true))
   val shouldNotCompact = ComparePlansWithAssertion(_.toString.split("\\n").exists(line => line.contains("Create") && line.contains("...")) should be(false))
@@ -534,22 +537,22 @@ class QueryPlanCompactionAcceptanceTest extends ExecutionEngineFunSuite with Que
 
   test("Compact smaller, but still long and compactable query"){
     val query = """CREATE (TheMatrix:Movie {title:'The Matrix', released:2001, tagline:'Welcome to the Real World3'})
-        |CREATE (Keanu:Person {name:'Keanu Reeves', born:1964})
-        |CREATE (Carrie:Person {name:'Carrie-Anne Moss', born:1967})
-        |CREATE (Laurence:Person {name:'Laurence Fishburne', born:1961})
-        |CREATE (Hugo:Person {name:'Hugo Weaving', born:1960})
-        |CREATE (AndyW:Person {name:'Andy Wachowski', born:1967})
-        |CREATE (LanaW:Person {name:'Lana Wachowski', born:1965})
-        |CREATE (JoelS:Person {name:'Joel Silver', born:1952})
-        |CREATE
-        |  (Keanu)-[:ACTED_IN {roles:['Neo']}]->(TheMatrix),
-        |  (Carrie)-[:ACTED_IN {roles:['Trinity']}]->(TheMatrix),
-        |  (Laurence)-[:ACTED_IN {roles:['Morpheus']}]->(TheMatrix),
-        |  (Hugo)-[:ACTED_IN {roles:['Agent Smith']}]->(TheMatrix),
-        |  (AndyW)-[:DIRECTED]->(TheMatrix),
-        |  (LanaW)-[:DIRECTED]->(TheMatrix),
-        |  (JoelS)-[:PRODUCED]->(TheMatrix)
-        |""".stripMargin
+                  |CREATE (Keanu:Person {name:'Keanu Reeves', born:1964})
+                  |CREATE (Carrie:Person {name:'Carrie-Anne Moss', born:1967})
+                  |CREATE (Laurence:Person {name:'Laurence Fishburne', born:1961})
+                  |CREATE (Hugo:Person {name:'Hugo Weaving', born:1960})
+                  |CREATE (AndyW:Person {name:'Andy Wachowski', born:1967})
+                  |CREATE (LanaW:Person {name:'Lana Wachowski', born:1965})
+                  |CREATE (JoelS:Person {name:'Joel Silver', born:1952})
+                  |CREATE
+                  |  (Keanu)-[:ACTED_IN {roles:['Neo']}]->(TheMatrix),
+                  |  (Carrie)-[:ACTED_IN {roles:['Trinity']}]->(TheMatrix),
+                  |  (Laurence)-[:ACTED_IN {roles:['Morpheus']}]->(TheMatrix),
+                  |  (Hugo)-[:ACTED_IN {roles:['Agent Smith']}]->(TheMatrix),
+                  |  (AndyW)-[:DIRECTED]->(TheMatrix),
+                  |  (LanaW)-[:DIRECTED]->(TheMatrix),
+                  |  (JoelS)-[:PRODUCED]->(TheMatrix)
+                  |""".stripMargin
 
     val result = executeWith(Configs.InterpretedAndSlotted, query, planComparisonStrategy = shouldCompact)
     assertStats(result, nodesCreated = 8, relationshipsCreated = 7, propertiesWritten = 21, labelsAdded = 8)

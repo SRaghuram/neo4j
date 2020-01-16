@@ -16,12 +16,12 @@ import org.neo4j.internal.helpers.collection.Pair
 import org.neo4j.monitoring.Monitors
 
 /**
-  * These tests are similar with the tests in LeafPlanningIntegrationTest, but
-  * instead test with an actual database to make sure they work with the whole stack
-  * including settings in the database configuration.
-  * For more light-weight testing please use
-  * [[org.neo4j.cypher.internal.compiler.planner.logical.LeafPlanningIntegrationTest]]
-  */
+ * These tests are similar with the tests in LeafPlanningIntegrationTest, but
+ * instead test with an actual database to make sure they work with the whole stack
+ * including settings in the database configuration.
+ * For more light-weight testing please use
+ * [[org.neo4j.cypher.internal.compiler.planner.logical.LeafPlanningIntegrationTest]]
+ */
 class CostPlannerAcceptanceTest extends ExecutionEngineFunSuite {
 
   private var missCounter: MissCounter = _

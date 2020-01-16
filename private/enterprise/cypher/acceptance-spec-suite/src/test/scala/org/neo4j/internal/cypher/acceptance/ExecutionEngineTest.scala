@@ -5,25 +5,33 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import java.io.{File, PrintWriter}
+import java.io.File
+import java.io.PrintWriter
 import java.lang.Boolean.TRUE
 import java.time.Duration
 
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
+import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.ExecutionEngineHelper.createEngine
-import org.neo4j.cypher._
+import org.neo4j.cypher.QueryStatisticsTestSupport
 import org.neo4j.cypher.internal.ExecutionEngine
+import org.neo4j.cypher.internal.frontend.phases.CompilationPhaseTracer.CompilationPhase
 import org.neo4j.cypher.internal.runtime.CreateTempFileTestSupport
 import org.neo4j.cypher.internal.tracing.TimingCompilationTracer
 import org.neo4j.cypher.internal.tracing.TimingCompilationTracer.QueryEvent
-import org.neo4j.cypher.internal.frontend.phases.CompilationPhaseTracer.CompilationPhase
 import org.neo4j.cypher.internal.util.test_helpers.WindowsStringSafe
 import org.neo4j.exceptions.SyntaxException
-import org.neo4j.graphdb._
+import org.neo4j.graphdb.GraphDatabaseService
+import org.neo4j.graphdb.Label
+import org.neo4j.graphdb.Node
+import org.neo4j.graphdb.QueryExecutionException
+import org.neo4j.graphdb.Relationship
 import org.neo4j.graphdb.config.Setting
-import org.neo4j.internal.cypher.acceptance.comparisonsupport._
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.TestConfiguration
 import org.neo4j.io.fs.FileUtils
 import org.neo4j.kernel.api.KernelTransaction.Type
 import org.neo4j.kernel.api.security.AnonymousContext
@@ -31,7 +39,9 @@ import org.neo4j.kernel.database.Database
 import org.neo4j.kernel.impl.coreapi.TransactionImpl
 import org.neo4j.test.TestDatabaseManagementServiceBuilder
 
-import scala.collection.JavaConverters._
+import scala.collection.JavaConverters.asJavaIterableConverter
+import scala.collection.JavaConverters.iterableAsScalaIterableConverter
+import scala.collection.JavaConverters.asScalaIteratorConverter
 import scala.collection.mutable
 
 class ExecutionEngineTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CreateTempFileTestSupport with CypherComparisonSupport {
@@ -57,8 +67,8 @@ class ExecutionEngineTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     createNode(Map("name" -> "Jim"))
 
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
-                             s"match(node) where node.name =~ 'And.*' return node"
-                             )
+      s"match(node) where node.name =~ 'And.*' return node"
+    )
     result.columnAs[Node]("node").toList should equal(List(n1))
   }
 
@@ -134,8 +144,8 @@ class ExecutionEngineTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     val n2 = createNode(Map("name" -> "girl"))
 
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
-                             s"match (n) where id(n) in [${n1.getId}, ${n2.getId}] and (n.name = 'boy' OR n.name = 'girl') return n"
-                             )
+      s"match (n) where id(n) in [${n1.getId}, ${n2.getId}] and (n.name = 'boy' OR n.name = 'girl') return n"
+    )
 
     result.columnAs[Node]("n").toList should equal(List(n1, n2))
   }
@@ -646,7 +656,7 @@ order by a.COL1""".format(a, b))
 
     // WHEN
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "MATCH (n) WHERE id(n) in [%d, %d, %d] AND n:foo:bar RETURN n"
-        .format(a.getId, b.getId, c.getId))
+      .format(a.getId, b.getId, c.getId))
 
     // THEN
     result.toList should equal(List(Map("n" -> b)))

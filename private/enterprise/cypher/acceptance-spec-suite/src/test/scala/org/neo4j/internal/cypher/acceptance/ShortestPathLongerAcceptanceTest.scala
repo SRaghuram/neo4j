@@ -14,12 +14,17 @@ import org.neo4j.cypher.internal.RewindableExecutionResult
 import org.neo4j.cypher.internal.plandescription.InternalPlanDescription
 import org.neo4j.graphalgo.impl.path.ShortestPath
 import org.neo4j.graphalgo.impl.path.ShortestPath.DataMonitor
-import org.neo4j.graphdb.{Node, Path}
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithAssertion, Configs, CypherComparisonSupport}
+import org.neo4j.graphdb.Node
+import org.neo4j.graphdb.Path
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.ComparePlansWithAssertion
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 import org.neo4j.monitoring.Monitors
 import org.scalatest.matchers.Matcher
 
-import scala.collection.JavaConverters._
+import scala.collection.JavaConverters.iterableAsScalaIterableConverter
+import scala.collection.JavaConverters.collectionAsScalaIterableConverter
+import scala.collection.JavaConverters.asScalaSetConverter
 import scala.collection.mutable
 
 /*
@@ -85,7 +90,7 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
     dprintln(results.executionPlanDescription())
 
     val result = results.columnAs[List[Node]]("nodes").toList
-    debugResults(result.head.asJava.asScala.toList)
+    debugResults(result.head)
 
     // Then
     result.length should equal(1)
@@ -105,7 +110,7 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
     dprintln(results.executionPlanDescription())
 
     val result = results.columnAs[List[Node]]("nodes").toList
-    debugResults(result.head.asJava.asScala.toList)
+    debugResults(result.head)
 
     // Then
     result.length should equal(1)
@@ -118,14 +123,14 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
     val start = System.currentTimeMillis
     val results = executeUsingCostPlannerOnly(
       s"""PROFILE MATCH p = shortestPath((src:$topLeft)-[*]-(dst:$topLeft))
-        |WHERE ANY(n in nodes(p) WHERE n:$topRight)
-        |RETURN nodes(p) AS nodes""".stripMargin)
+         |WHERE ANY(n in nodes(p) WHERE n:$topRight)
+         |RETURN nodes(p) AS nodes""".stripMargin)
 
     dprintln(s"Query took ${(System.currentTimeMillis - start)/1000.0}s")
     dprintln(results.executionPlanDescription())
 
     val result = results.columnAs[List[Node]]("nodes").toList
-    debugResults(result.head.asJava.asScala.toList)
+    debugResults(result.head)
 
     // Then
     result.length should equal(1)
@@ -771,9 +776,9 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
                     connectingNode: Node) {
       count = count + 1
       dprintln(s"""------------------------------------------------------------
-                 |Iteration $count
-                 |--------------
-                 |From start:""".stripMargin)
+                  |Iteration $count
+                  |--------------
+                  |From start:""".stripMargin)
       debug(dim, theseVisitedNodes, theseNextNodes, connectingNode)
       dprintln("From end:")
       debug(dim, thoseVisitedNodes, thoseNextNodes, connectingNode)
@@ -796,13 +801,12 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
     // of the connecting node (where the two sides made a connection).
     def debug(dim: Int, visitedNodes: util.Map[Node, ShortestPath.LevelData],
               nextNodes: util.Collection[Node], connectingNode: Node) {
-      import scala.collection.JavaConversions._
       val matrix: mutable.Map[String, String] = mutable.Map[String, String]()
       var cellSize: Int = 0
-      for (node <- nextNodes) {
+      for (node <- nextNodes.asScala) {
         cellSize = debugNode(dim, matrix, cellSize, node, if (node == connectingNode) "(@)" else "(*)")
       }
-      for (entry <- visitedNodes.entrySet) {
+      for (entry <- visitedNodes.entrySet.asScala) {
         cellSize = debugNode(dim, matrix, cellSize, entry.getKey, entry.getKey.getId.toString + "[" + entry.getValue.depth + "]")
       }
       0 until dim foreach { row =>

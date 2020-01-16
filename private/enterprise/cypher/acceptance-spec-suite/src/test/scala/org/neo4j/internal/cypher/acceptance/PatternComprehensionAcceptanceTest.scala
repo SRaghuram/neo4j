@@ -7,7 +7,9 @@ package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.runtime.PathImpl
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithAssertion, Configs, CypherComparisonSupport}
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.ComparePlansWithAssertion
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 import org.neo4j.kernel.api.procedure.GlobalProcedures
 
 class PatternComprehensionAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
@@ -26,8 +28,8 @@ class PatternComprehensionAcceptanceTest extends ExecutionEngineFunSuite with Cy
       """.stripMargin
 
     val result = executeWith(Configs.InterpretedAndSlotted, query, planComparisonStrategy =
-        ComparePlansWithAssertion(_ should includeSomewhere.aPlan("RollUpApply")
-                                           .withRHS(includeSomewhere.aPlan("NodeUniqueIndexSeek")))
+      ComparePlansWithAssertion(_ should includeSomewhere.aPlan("RollUpApply")
+        .withRHS(includeSomewhere.aPlan("NodeUniqueIndexSeek")))
     )
 
     result.toList should equal(List(Map("result" -> List(ends.head))))
@@ -108,8 +110,8 @@ class PatternComprehensionAcceptanceTest extends ExecutionEngineFunSuite with Cy
     relate(n2, n1, "POSTED")
 
     val query = """MATCH(t:Tweet) WITH t LIMIT 1
-               |WITH collect(t) AS tweets
-               |RETURN test.toSet([ tweet IN tweets | [ (tweet)<-[:POSTED]-(user) | user] ]) AS users""".stripMargin
+                  |WITH collect(t) AS tweets
+                  |RETURN test.toSet([ tweet IN tweets | [ (tweet)<-[:POSTED]-(user) | user] ]) AS users""".stripMargin
 
     val result = executeWith(Configs.InterpretedAndSlotted, query)
     result.toList should equal(List(Map("users" -> List(List(n2)))))
@@ -549,14 +551,14 @@ class PatternComprehensionAcceptanceTest extends ExecutionEngineFunSuite with Cy
 
   test("should handle pattern comprehension within map projection followed by ORDER BY") {
     relate(createLabeledNode(Map("name" -> "a"), "Thing"),
-           createLabeledNode(Map("name" -> "item1"), "Thing2"), "Has")
+      createLabeledNode(Map("name" -> "item1"), "Thing2"), "Has")
     relate(createLabeledNode(Map("name" -> "b"), "Thing"),
-           createLabeledNode(Map("name" -> "item2"), "Thing2"), "Has")
+      createLabeledNode(Map("name" -> "item2"), "Thing2"), "Has")
 
     val result = executeWith(Configs.RollUpApply,
-                             """MATCH (n:`Thing`) WITH n
-                               |RETURN n{.name, Thing_Has_Thing2:[ (n)-[:Has]->(thing2:Thing2)| thing2.name ]}
-                               |ORDER BY n.name""".stripMargin)
+      """MATCH (n:`Thing`) WITH n
+        |RETURN n{.name, Thing_Has_Thing2:[ (n)-[:Has]->(thing2:Thing2)| thing2.name ]}
+        |ORDER BY n.name""".stripMargin)
 
     //then
     result.toList should equal(List(

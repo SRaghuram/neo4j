@@ -6,12 +6,20 @@
 package org.neo4j.internal.cypher.acceptance
 
 import java.io.ByteArrayOutputStream
-import java.net.{InetAddress, InetSocketAddress}
-import java.util.zip.{DeflaterOutputStream, GZIPOutputStream}
+import java.net.InetAddress
+import java.net.InetSocketAddress
+import java.util.zip.DeflaterOutputStream
+import java.util.zip.GZIPOutputStream
 
-import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
-import org.eclipse.jetty.server.handler.{AbstractHandler, ContextHandler, ContextHandlerCollection}
-import org.eclipse.jetty.server.{Handler, Request, Server, ServerConnector}
+import javax.servlet.http.HttpServletRequest
+import javax.servlet.http.HttpServletResponse
+import org.eclipse.jetty.server.Handler
+import org.eclipse.jetty.server.Request
+import org.eclipse.jetty.server.Server
+import org.eclipse.jetty.server.ServerConnector
+import org.eclipse.jetty.server.handler.AbstractHandler
+import org.eclipse.jetty.server.handler.ContextHandler
+import org.eclipse.jetty.server.handler.ContextHandlerCollection
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.exceptions.LoadExternalResourceException
 import org.scalatest.BeforeAndAfterAll
@@ -53,7 +61,7 @@ class LoadCsvCompressionAcceptanceTest extends ExecutionEngineFunSuite with Befo
     result.toList should equal(List(
       Map("lines" -> Seq("a1", "b1", "c1", "d1")),
       Map("lines" -> Seq("a2", "b2", "c2", "d2"))
-      ))
+    ))
   }
 
   test("should handle gzipped csv over http") {
@@ -74,44 +82,44 @@ class LoadCsvCompressionAcceptanceTest extends ExecutionEngineFunSuite with Befo
     ))
   }
 
-   /*
-    * Simple server that handles csv requests in plain text, gzip and deflate
-    */
+  /*
+   * Simple server that handles csv requests in plain text, gzip and deflate
+   */
   private class TestServer {
 
-     //assign the correct port when server has started.
-     private var _port = -1
-     private val _host = InetAddress.getLoopbackAddress.getHostAddress
-     //let bind() pick a random available port for us
-     private val server: Server = new Server(new InetSocketAddress(_host, 0))
-     private val handlers = new ContextHandlerCollection()
-     addHandler("/csv", new CsvHandler)
-     addHandler("/gzip", new GzipCsvHandler)
-     addHandler("/deflate", new DeflateCsvHandler)
-     server.setHandler(handlers)
+    //assign the correct port when server has started.
+    private var _port = -1
+    private val _host = InetAddress.getLoopbackAddress.getHostAddress
+    //let bind() pick a random available port for us
+    private val server: Server = new Server(new InetSocketAddress(_host, 0))
+    private val handlers = new ContextHandlerCollection()
+    addHandler("/csv", new CsvHandler)
+    addHandler("/gzip", new GzipCsvHandler)
+    addHandler("/deflate", new DeflateCsvHandler)
+    server.setHandler(handlers)
 
-     def start(): Unit = {
-       server.start()
-       //find the port that we're using.
-       _port = server.getConnectors()(0).asInstanceOf[ServerConnector].getLocalPort
-       assert(_port > 0)
-       if (!server.isRunning) throw new IllegalStateException("Started server is not running: " + server.getState)
-     }
+    def start(): Unit = {
+      server.start()
+      //find the port that we're using.
+      _port = server.getConnectors()(0).asInstanceOf[ServerConnector].getLocalPort
+      assert(_port > 0)
+      if (!server.isRunning) throw new IllegalStateException("Started server is not running: " + server.getState)
+    }
 
-     def stop(): Unit = server.stop()
+    def stop(): Unit = server.stop()
 
-     def port: Int = _port
+    def port: Int = _port
 
-     def host: String = _host
+    def host: String = _host
 
-     def restartIfNotRunning(): Unit = {
-       if (!server.isRunning) {
-         stop()
-         start()
-       }
-     }
+    def restartIfNotRunning(): Unit = {
+      if (!server.isRunning) {
+        stop()
+        start()
+      }
+    }
 
-     private def addHandler(path: String, handler: Handler): Unit = {
+    private def addHandler(path: String, handler: Handler): Unit = {
       val contextHandler = new ContextHandler()
       contextHandler.setContextPath(path)
       contextHandler.setHandler(handler)

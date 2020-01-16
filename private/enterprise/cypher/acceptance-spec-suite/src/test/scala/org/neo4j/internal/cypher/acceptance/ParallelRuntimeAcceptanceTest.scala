@@ -16,6 +16,7 @@ import org.neo4j.graphdb.Result.ResultVisitor
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.internal.cypher.acceptance.ParallelRuntimeAcceptanceTest.MORSEL_SIZE
 
+import scala.collection.JavaConverters.iterableAsScalaIterableConverter
 import scala.collection.Map
 
 object ParallelRuntimeAcceptanceTest {
@@ -28,7 +29,7 @@ class ParallelRuntimeAcceptanceTest extends ExecutionEngineFunSuite with Enterpr
     GraphDatabaseSettings.cypher_hints_error -> TRUE,
     GraphDatabaseSettings.cypher_pipelined_batch_size_small -> Integer.valueOf(MORSEL_SIZE),
     GraphDatabaseSettings.cypher_pipelined_batch_size_big -> Integer.valueOf(MORSEL_SIZE),
-    )
+  )
 
   test("should produce results non-concurrently") {
     // Given a big network
@@ -68,7 +69,6 @@ class ParallelRuntimeAcceptanceTest extends ExecutionEngineFunSuite with Enterpr
 
   test("should warn that runtime=parallel is experimental") {
     //Given
-    import scala.collection.JavaConverters._
 
     val result = graph.withTx( tx => tx.execute("CYPHER runtime=parallel EXPLAIN MATCH (n) RETURN n"))
 

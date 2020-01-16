@@ -5,8 +5,10 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import org.neo4j.cypher._
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport, TestConfiguration}
+import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.TestConfiguration
 
 class ExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
 
@@ -98,7 +100,7 @@ class ExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
     relate(actor, createLabeledNode(Map("title" -> "Movie 2"), "Movie"))
 
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, """MATCH (actor:Actor)-->(movie:Movie)
-            |RETURN actor{ .name, movies: collect(movie{.title}) }""".stripMargin)
+                                                                          |RETURN actor{ .name, movies: collect(movie{.title}) }""".stripMargin)
     result.toList should equal(
       List(Map("actor" ->
         Map("name" -> "Actor 1", "movies" -> Seq(

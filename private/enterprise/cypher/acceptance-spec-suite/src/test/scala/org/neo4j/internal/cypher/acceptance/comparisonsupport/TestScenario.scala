@@ -5,17 +5,20 @@
  */
 package org.neo4j.internal.cypher.acceptance.comparisonsupport
 
-import cypher.features.{Phase, ScenarioTestHelper}
+import cypher.features.Phase
+import cypher.features.ScenarioTestHelper
 import org.neo4j.cypher.internal.RewindableExecutionResult
 import org.neo4j.cypher.internal.plandescription.Argument
-import org.neo4j.cypher.internal.plandescription.Arguments.{Planner => IPDPlanner, Runtime => IPDRuntime}
+import org.neo4j.cypher.internal.plandescription.Arguments
 import org.scalatest.Assertions
 
-import scala.util.{Failure, Success, Try}
+import scala.util.Failure
+import scala.util.Success
+import scala.util.Try
 
 /**
-  * A single scenario, which can be composed to configurations.
-  */
+ * A single scenario, which can be composed to configurations.
+ */
 case class TestScenario(planner: Planner, runtime: Runtime) extends Assertions {
 
   override def toString: String = name
@@ -41,9 +44,9 @@ case class TestScenario(planner: Planner, runtime: Runtime) extends Assertions {
   def checkResultForFailure(query: String, internalExecutionResult: Try[RewindableExecutionResult], maybePhase: Option[String], silentUnexpectedSuccess: Boolean): Unit = {
     internalExecutionResult match {
       case Failure(_) if maybePhase.contains(Phase.compile) =>
-        // A compile-time failure is expected and ok
+      // A compile-time failure is expected and ok
       case Failure(_) if maybePhase.isEmpty =>
-        // Not executed is also expected and ok
+      // Not executed is also expected and ok
       case Failure(e) =>
         val phase = maybePhase.get
         fail(s"""Failed at $phase using $name for query:
@@ -77,10 +80,10 @@ case class TestScenario(planner: Planner, runtime: Runtime) extends Assertions {
 
   private def extractConfiguration(arguments: Seq[Argument]): ScenarioConfig = {
     val reportedRuntime = arguments.collectFirst {
-      case IPDRuntime(reported) => reported
+      case Arguments.Runtime(reported) => reported
     }
     val reportedPlanner = arguments.collectFirst {
-      case IPDPlanner(reported) => reported
+      case Arguments.Planner(reported) => reported
     }
     ScenarioConfig(reportedRuntime.get, reportedPlanner.get)
   }

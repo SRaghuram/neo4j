@@ -8,9 +8,12 @@ package cypher.features
 import java.util
 
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder
-import cypher.features.ScenarioTestHelper.{createTests, printComputedBlacklist}
+import cypher.features.ScenarioTestHelper.createTests
+import cypher.features.ScenarioTestHelper.printComputedBlacklist
 import org.junit.jupiter.api.Assertions.fail
-import org.junit.jupiter.api.{Disabled, DynamicTest, TestFactory}
+import org.junit.jupiter.api.Disabled
+import org.junit.jupiter.api.DynamicTest
+import org.junit.jupiter.api.TestFactory
 
 class PipelinedAcceptanceTests extends EnterpriseBaseAcceptanceTest {
 
@@ -18,7 +21,7 @@ class PipelinedAcceptanceTests extends EnterpriseBaseAcceptanceTest {
 
   @TestFactory
   def runPipelined(): util.Collection[DynamicTest] = {
-      createTests(scenarios, PipelinedTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder())
+    createTests(scenarios, PipelinedTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder())
   }
 
   @Disabled

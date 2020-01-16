@@ -5,14 +5,15 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import org.neo4j.cypher._
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
+import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 
 class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
 
   test("should reduce on values") {
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
-                             query = "RETURN" +
+      query = "RETURN" +
         " reduce(acc=0, s IN ['1','22','1','333'] | acc + size(s)) AS result," +
         " reduce(acc=0, s IN ['1','22','1','333'] | acc + null) AS nullExpression," +
         " reduce(acc=0, s IN ['1',null,'1','333'] | acc + size(s)) AS nullElement," +
@@ -50,7 +51,7 @@ class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
   test("should perform extracting list comprehension on values") {
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
-                             query = "RETURN" +
+      query = "RETURN" +
         " [s IN ['1','22','1','333'] | size(s)] AS result," +
         " [s IN ['1','22','1','333'] | null] AS nullExpression," +
         " [s IN ['1',null,'1','333'] | size(s)] AS nullElement," +
@@ -86,7 +87,7 @@ class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
   test("should perform filtering list comprehension on values") {
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
-                             query = "RETURN" +
+      query = "RETURN" +
         " [s IN ['1','22','1','333'] WHERE s STARTS WITH '1'] AS result," +
         " [s IN ['1','22','1','333'] WHERE null] AS nullPredicate," +
         " [s IN ['1',null,'1','333'] WHERE size(s)>1] AS nullElement," +
@@ -123,21 +124,21 @@ class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
   test("should perform list comprehension on values") {
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
-                             query = "RETURN [s IN ['1','22','1','333']] AS result")
+      query = "RETURN [s IN ['1','22','1','333']] AS result")
 
     result.toList.head should equal(Map("result" -> List("1", "22", "1", "333")))
   }
 
   test("should perform list comprehension on values, with predicate") {
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
-                             query = "RETURN [s IN ['1','22','1','333'] WHERE s STARTS WITH '1'] AS result")
+      query = "RETURN [s IN ['1','22','1','333'] WHERE s STARTS WITH '1'] AS result")
 
     result.toList.head should equal(Map("result" -> List("1", "1")))
   }
 
   test("should perform comprehension on values, with predicate and extract") {
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
-                             query = "RETURN" +
+      query = "RETURN" +
         " [s IN ['1','22','1','333'] WHERE s STARTS WITH '1' | size(s)] AS result," +
         " [s IN ['1','22','1','333'] WHERE null | size(s)] AS nullPredicate," +
         " [s IN ['1',null,'1','333'] WHERE size(s)>0 | size(s)] AS nullElement," +
@@ -195,7 +196,7 @@ class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
   test("should all predicate on values") {
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
-                             query = "RETURN " +
+      query = "RETURN " +
         " all(s IN ['1','22','1','333'] WHERE size(s) > 0) AS allTrue, " +
         " all(s IN ['1','22','1','333'] WHERE size(s) > 1) AS someFalse, " +
         " all(s IN ['1','22','1','333'] WHERE null) AS nullPredicate," +
@@ -239,7 +240,7 @@ class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
   test("should any predicate on values") {
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
-                             query = "RETURN " +
+      query = "RETURN " +
         " any(s IN ['1','22','1','333'] WHERE size(s) = 1) AS someTrue, " +
         " any(s IN ['1','22','1','333'] WHERE size(s) = 0) AS allFalse, " +
         " any(s IN ['1','22','1','333'] WHERE null) AS nullPredicate," +
@@ -283,7 +284,7 @@ class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
   test("should none predicate on values") {
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
-                             query = "RETURN" +
+      query = "RETURN" +
         " none(s IN ['1','22','1','333'] WHERE size(s) = 0) AS allFalse," +
         " none(s IN ['1','22','1','333'] WHERE size(s) = 1) AS someTrue," +
         " none(s IN ['1','22','1','333'] WHERE null) AS nullPredicate," +
@@ -329,7 +330,7 @@ class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
   test("should single predicate on values") {
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
-                             query = "RETURN " +
+      query = "RETURN " +
         " single(s IN ['1','22','1','333'] WHERE s = '0') AS noneTrue," +
         " single(s IN ['1','22','1','333'] WHERE s = '333') AS oneTrue," +
         " single(s IN ['1','22','1','333'] WHERE s = '1') AS twoTrue," +
@@ -351,7 +352,7 @@ class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
   // NOTE: should be merged with above test, but older Cypher versions fail on ONLY this case. it would be a shame to remove asserts on all other cases.
   test("should single predicate on values -- multiple true with null case") {
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
-                             query = "RETURN " +
+      query = "RETURN " +
         " single(s IN ['1',null,'1','333'] WHERE s = '1') AS twoTrueWithNull")
 
     result.toList.head should equal(Map(
@@ -389,7 +390,7 @@ class ListExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
 
   test("should handle nested reduce") {
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
-                             query = "RETURN reduce(acc=0, s IN [reduce(acc=3, s IN [1,-1,1] | acc + s), 3] | acc + s) AS result")
+      query = "RETURN reduce(acc=0, s IN [reduce(acc=3, s IN [1,-1,1] | acc + s), 3] | acc + s) AS result")
 
     result.toList should equal(List(Map("result" -> 7)))
   }

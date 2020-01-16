@@ -5,13 +5,16 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import org.neo4j.cypher._
-import org.neo4j.graphdb._
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
+import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.cypher.QueryStatisticsTestSupport
+import org.neo4j.graphdb.Node
+import org.neo4j.graphdb.NotFoundException
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 import org.neo4j.kernel.api.KernelTransaction.Type
 import org.neo4j.kernel.api.security.AnonymousContext
 
-import scala.collection.JavaConverters._
+import scala.collection.JavaConverters.iterableAsScalaIterableConverter
 
 class MutatingIntegrationTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport {
 
@@ -130,7 +133,7 @@ class MutatingIntegrationTest extends ExecutionEngineFunSuite with QueryStatisti
       nodesCreated = 1
     )
 
-      result.toComparableResult should equal(List(Map("m.name" -> List("Andres", "Michael", "Peter"))))
+    result.toComparableResult should equal(List(Map("m.name" -> List("Andres", "Michael", "Peter"))))
   }
 
   test("set a property to an empty collection") {
@@ -233,11 +236,11 @@ class MutatingIntegrationTest extends ExecutionEngineFunSuite with QueryStatisti
 
   test("create node and rel in foreach") {
     executeWith(Configs.InterpretedAndSlotted, """
-      |create (center {name: "center"})
-      |foreach(x in range(1,10) |
-      |  create (leaf1 {number : x}) , (center)-[:X]->(leaf1)
-      |)
-      |return distinct center.name""".stripMargin)
+                                                 |create (center {name: "center"})
+                                                 |foreach(x in range(1,10) |
+                                                 |  create (leaf1 {number : x}) , (center)-[:X]->(leaf1)
+                                                 |)
+                                                 |return distinct center.name""".stripMargin)
   }
 
   test("delete optionals") {

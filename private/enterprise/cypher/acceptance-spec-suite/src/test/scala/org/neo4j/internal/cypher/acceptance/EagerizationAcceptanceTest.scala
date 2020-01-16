@@ -6,14 +6,22 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.collection.RawIterator
-import org.neo4j.cypher.internal.runtime.{Counter, CreateTempFileTestSupport}
-import org.neo4j.cypher.{ExecutionEngineFunSuite, QueryStatisticsTestSupport}
+import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.cypher.QueryStatisticsTestSupport
+import org.neo4j.cypher.internal.runtime.Counter
+import org.neo4j.cypher.internal.runtime.CreateTempFileTestSupport
 import org.neo4j.graphdb.Node
-import org.neo4j.internal.cypher.acceptance.comparisonsupport._
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.ComparePlansWithAssertion
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.PlanComparisonStrategy
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.TestConfiguration
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException
-import org.neo4j.internal.kernel.api.helpers.{RelationshipSelectionCursor, RelationshipSelections}
+import org.neo4j.internal.kernel.api.helpers.RelationshipSelectionCursor
+import org.neo4j.internal.kernel.api.helpers.RelationshipSelections
 import org.neo4j.internal.kernel.api.procs
-import org.neo4j.internal.kernel.api.procs.{Neo4jTypes, ProcedureSignature}
+import org.neo4j.internal.kernel.api.procs.Neo4jTypes
+import org.neo4j.internal.kernel.api.procs.ProcedureSignature
 import org.neo4j.kernel.api.ResourceTracker
 import org.neo4j.kernel.api.procedure.CallableProcedure.BasicProcedure
 import org.neo4j.kernel.api.procedure.Context
@@ -28,10 +36,10 @@ import scala.util.matching.Regex
 
 class EagerizationAcceptanceTest
   extends ExecutionEngineFunSuite
-    with TableDrivenPropertyChecks
-    with QueryStatisticsTestSupport
-    with CypherComparisonSupport
-    with CreateTempFileTestSupport {
+  with TableDrivenPropertyChecks
+  with QueryStatisticsTestSupport
+  with CypherComparisonSupport
+  with CreateTempFileTestSupport {
 
   val EagerRegEx: Regex = "Eager(?!(Aggregation))".r
 
@@ -202,8 +210,8 @@ class EagerizationAcceptanceTest
 
     // Correct! Eagerization happens as part of query context operation
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
-                             executeBefore = tx => counter.reset(),
-                             planComparisonStrategy = testEagerPlanComparisonStrategy(0))
+      executeBefore = tx => counter.reset(),
+      planComparisonStrategy = testEagerPlanComparisonStrategy(0))
 
     result.toSet should equal(Set(Map("rel.foo" -> 0), Map("rel.foo" -> 1), Map("rel.foo" -> 2), Map("rel.foo" -> 3)))
   }
@@ -239,8 +247,8 @@ class EagerizationAcceptanceTest
 
     // Correct! Eagerization happens as part of query context operation
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
-                             executeBefore = tx => counter.reset(),
-                             planComparisonStrategy = testEagerPlanComparisonStrategy(0))
+      executeBefore = tx => counter.reset(),
+      planComparisonStrategy = testEagerPlanComparisonStrategy(0))
 
     counter.counted should equal(4)
     result.toSet should equal(Set(Map("rel.foo" -> 0), Map("rel.foo" -> 1), Map("rel.foo" -> 2), Map("rel.foo" -> 3)))
@@ -293,7 +301,7 @@ class EagerizationAcceptanceTest
 
     // Correct! No eagerization necessary
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
-                             planComparisonStrategy = testEagerPlanComparisonStrategy(0))
+      planComparisonStrategy = testEagerPlanComparisonStrategy(0))
 
     result.size should equal(2)
   }
@@ -343,8 +351,8 @@ class EagerizationAcceptanceTest
 
     // Correct! No eagerization necessary
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
-                             executeBefore = _ => counter.reset(),
-                             planComparisonStrategy = testEagerPlanComparisonStrategy(0))
+      executeBefore = _ => counter.reset(),
+      planComparisonStrategy = testEagerPlanComparisonStrategy(0))
 
     result.size should equal(2)
     counter.counted should equal(2)
@@ -2031,7 +2039,7 @@ class EagerizationAcceptanceTest
 
     val query = "MATCH ()-[r]-() WHERE exists(r.prop) SET r.prop = $null RETURN count(*)"
     val result = executeWith(Configs.InterpretedAndSlotted, query, params = Map("null" -> null),
-                             planComparisonStrategy = testEagerPlanComparisonStrategy(1))
+      planComparisonStrategy = testEagerPlanComparisonStrategy(1))
 
     result.columnAs[Long]("count(*)").next shouldBe 2
     //we are "smart" enough to only remove property once
@@ -2044,7 +2052,7 @@ class EagerizationAcceptanceTest
 
     val query = "MATCH ()-[r]-() WHERE exists(r.prop) REMOVE r.prop  RETURN count(*)"
     val result = executeWith(Configs.InterpretedAndSlotted, query, params = Map("null" -> null),
-                             planComparisonStrategy = testEagerPlanComparisonStrategy(1))
+      planComparisonStrategy = testEagerPlanComparisonStrategy(1))
 
     result.columnAs[Long]("count(*)").next shouldBe 2
     //we are "smart" enough to only remove property once
@@ -2058,7 +2066,7 @@ class EagerizationAcceptanceTest
     val query = "MATCH ()-[r]-() WHERE r.prop = 42 SET r.prop = 'foo' RETURN count(*)"
 
     val result = executeWith(Configs.InterpretedAndSlotted, query,
-                             planComparisonStrategy = testEagerPlanComparisonStrategy(1))
+      planComparisonStrategy = testEagerPlanComparisonStrategy(1))
 
     result.columnAs[Long]("count(*)").next shouldBe 2
     assertStats(result, propertiesWritten = 2)
@@ -2892,178 +2900,178 @@ class EagerizationAcceptanceTest
     result.toList should equal(List(Map("b.prop" -> 2)))
   }
 
-    test("matching node property using integer equality and writing other node should be eager") {
-      relate(createNode(Map("prop" -> 5)), createNode())
-      val query = "MATCH (n)-[r]-(m) WHERE n.prop = 5 SET m.prop = 5 RETURN count(*)"
-      val result = executeWith(Configs.InterpretedAndSlotted, query,
-                               planComparisonStrategy = testEagerPlanComparisonStrategy(1))
-      assertStats(result, propertiesWritten = 1)
-      result.toList should equal(List(Map("count(*)" -> 1)))
-    }
+  test("matching node property using integer equality and writing other node should be eager") {
+    relate(createNode(Map("prop" -> 5)), createNode())
+    val query = "MATCH (n)-[r]-(m) WHERE n.prop = 5 SET m.prop = 5 RETURN count(*)"
+    val result = executeWith(Configs.InterpretedAndSlotted, query,
+      planComparisonStrategy = testEagerPlanComparisonStrategy(1))
+    assertStats(result, propertiesWritten = 1)
+    result.toList should equal(List(Map("count(*)" -> 1)))
+  }
 
-    test("matching node property using string equality and writing other node should be eager") {
-      relate(createNode(Map("prop" -> "5")), createNode())
-      val query = "MATCH (n)-[r]-(m) WHERE n.prop = '5' SET m.prop = '5' RETURN count(*)"
-      val result = executeWith(Configs.InterpretedAndSlotted, query,
-                               planComparisonStrategy = testEagerPlanComparisonStrategy(1))
-      result.toList should equal(List(Map("count(*)" -> 1)))
-    }
+  test("matching node property using string equality and writing other node should be eager") {
+    relate(createNode(Map("prop" -> "5")), createNode())
+    val query = "MATCH (n)-[r]-(m) WHERE n.prop = '5' SET m.prop = '5' RETURN count(*)"
+    val result = executeWith(Configs.InterpretedAndSlotted, query,
+      planComparisonStrategy = testEagerPlanComparisonStrategy(1))
+    result.toList should equal(List(Map("count(*)" -> 1)))
+  }
 
-    test("matching node property using or'd string equality and writing other node should be eager 2") {
-      relate(createNode(Map("prop" -> "5")), createNode())
-      val query = "MATCH (n)-[r]-(m) WHERE n.prop = '5' OR n.prop = '6' SET m.prop = '5' RETURN count(*)"
-      val result = executeWith(Configs.InterpretedAndSlotted, query,
-                               planComparisonStrategy = testEagerPlanComparisonStrategy(1))
-      assertStats(result, propertiesWritten = 1)
-      result.toList should equal(List(Map("count(*)" -> 1)))
-    }
+  test("matching node property using or'd string equality and writing other node should be eager 2") {
+    relate(createNode(Map("prop" -> "5")), createNode())
+    val query = "MATCH (n)-[r]-(m) WHERE n.prop = '5' OR n.prop = '6' SET m.prop = '5' RETURN count(*)"
+    val result = executeWith(Configs.InterpretedAndSlotted, query,
+      planComparisonStrategy = testEagerPlanComparisonStrategy(1))
+    assertStats(result, propertiesWritten = 1)
+    result.toList should equal(List(Map("count(*)" -> 1)))
+  }
 
-    test(
-      "matching node property using string equality anded with other predicate and writing other node should be eager 2")
-    {
-      relate(createNode(Map("prop" -> "5")), createNode())
-      val query = "MATCH (n)-[r]-(m) WHERE n.prop = '5' AND n.prop <> '6' SET m.prop = '5' RETURN count(*)"
-      val result = executeWith(Configs.InterpretedAndSlotted, query,
-                               planComparisonStrategy = testEagerPlanComparisonStrategy(1))
-      assertStats(result, propertiesWritten = 1)
-      result.toList should equal(List(Map("count(*)" -> 1)))
-    }
+  test(
+    "matching node property using string equality anded with other predicate and writing other node should be eager 2")
+  {
+    relate(createNode(Map("prop" -> "5")), createNode())
+    val query = "MATCH (n)-[r]-(m) WHERE n.prop = '5' AND n.prop <> '6' SET m.prop = '5' RETURN count(*)"
+    val result = executeWith(Configs.InterpretedAndSlotted, query,
+      planComparisonStrategy = testEagerPlanComparisonStrategy(1))
+    assertStats(result, propertiesWritten = 1)
+    result.toList should equal(List(Map("count(*)" -> 1)))
+  }
 
-    test("matching node property using string unequality and writing other node should be eager") {
-      relate(createNode(Map("prop" -> "5")), createNode())
-      val query = "MATCH (n)-[r]-(m) WHERE n.prop <> '6' SET m.prop = '5' RETURN count(*)"
-      val result = executeWith(Configs.InterpretedAndSlotted, query,
-                               planComparisonStrategy = testEagerPlanComparisonStrategy(1))
-      assertStats(result, propertiesWritten = 1)
-      result.toList should equal(List(Map("count(*)" -> 1)))
-    }
+  test("matching node property using string unequality and writing other node should be eager") {
+    relate(createNode(Map("prop" -> "5")), createNode())
+    val query = "MATCH (n)-[r]-(m) WHERE n.prop <> '6' SET m.prop = '5' RETURN count(*)"
+    val result = executeWith(Configs.InterpretedAndSlotted, query,
+      planComparisonStrategy = testEagerPlanComparisonStrategy(1))
+    assertStats(result, propertiesWritten = 1)
+    result.toList should equal(List(Map("count(*)" -> 1)))
+  }
 
-    test("matching node property using string prefix and writing other node should be eager") {
-      relate(createNode(Map("prop" -> "5")), createNode())
-      val query = "MATCH (n)-[r]-(m) WHERE n.prop STARTS WITH '5' SET m.prop = '5' RETURN count(*)"
-      val result = executeWith(Configs.InterpretedAndSlotted, query,
-                               planComparisonStrategy = testEagerPlanComparisonStrategy(1))
-      assertStats(result, propertiesWritten = 1)
-      result.toList should equal(List(Map("count(*)" -> 1)))
-    }
+  test("matching node property using string prefix and writing other node should be eager") {
+    relate(createNode(Map("prop" -> "5")), createNode())
+    val query = "MATCH (n)-[r]-(m) WHERE n.prop STARTS WITH '5' SET m.prop = '5' RETURN count(*)"
+    val result = executeWith(Configs.InterpretedAndSlotted, query,
+      planComparisonStrategy = testEagerPlanComparisonStrategy(1))
+    assertStats(result, propertiesWritten = 1)
+    result.toList should equal(List(Map("count(*)" -> 1)))
+  }
 
-    test("matching node property using string postfix and writing other node should be eager") {
-      relate(createNode(Map("prop" -> "5")), createNode())
-      val query = "MATCH (n)-[r]-(m) WHERE n.prop ENDS WITH '5' SET m.prop = '5' RETURN count(*)"
-      val result = executeWith(Configs.InterpretedAndSlotted, query,
-                               planComparisonStrategy = testEagerPlanComparisonStrategy(1))
-      assertStats(result, propertiesWritten = 1)
-      result.toList should equal(List(Map("count(*)" -> 1)))
-    }
+  test("matching node property using string postfix and writing other node should be eager") {
+    relate(createNode(Map("prop" -> "5")), createNode())
+    val query = "MATCH (n)-[r]-(m) WHERE n.prop ENDS WITH '5' SET m.prop = '5' RETURN count(*)"
+    val result = executeWith(Configs.InterpretedAndSlotted, query,
+      planComparisonStrategy = testEagerPlanComparisonStrategy(1))
+    assertStats(result, propertiesWritten = 1)
+    result.toList should equal(List(Map("count(*)" -> 1)))
+  }
 
-    test("matching node property using string contains and writing other node should be eager") {
-      relate(createNode(Map("prop" -> "5")), createNode())
-      val query = "MATCH (n)-[r]-(m) WHERE n.prop CONTAINS '5' SET m.prop = '5' RETURN count(*)"
-      val result = executeWith(Configs.InterpretedAndSlotted, query,
-                               planComparisonStrategy = testEagerPlanComparisonStrategy(1))
-      assertStats(result, propertiesWritten = 1)
-      result.toList should equal(List(Map("count(*)" -> 1)))
-    }
+  test("matching node property using string contains and writing other node should be eager") {
+    relate(createNode(Map("prop" -> "5")), createNode())
+    val query = "MATCH (n)-[r]-(m) WHERE n.prop CONTAINS '5' SET m.prop = '5' RETURN count(*)"
+    val result = executeWith(Configs.InterpretedAndSlotted, query,
+      planComparisonStrategy = testEagerPlanComparisonStrategy(1))
+    assertStats(result, propertiesWritten = 1)
+    result.toList should equal(List(Map("count(*)" -> 1)))
+  }
 
-    test("matching node property using IS NULL and writing other node should be eager") {
-      relate(createNode(), createNode(Map("prop" -> "5")))
-      val query = "MATCH (n)-[r]-(m) WHERE n.prop IS NULL REMOVE m.prop RETURN count(*)"
-      val result = executeWith(Configs.InterpretedAndSlotted, query,
-                               planComparisonStrategy = testEagerPlanComparisonStrategy(1))
-      assertStats(result, propertiesWritten = 1)
-      result.toList should equal(List(Map("count(*)" -> 1)))
-    }
+  test("matching node property using IS NULL and writing other node should be eager") {
+    relate(createNode(), createNode(Map("prop" -> "5")))
+    val query = "MATCH (n)-[r]-(m) WHERE n.prop IS NULL REMOVE m.prop RETURN count(*)"
+    val result = executeWith(Configs.InterpretedAndSlotted, query,
+      planComparisonStrategy = testEagerPlanComparisonStrategy(1))
+    assertStats(result, propertiesWritten = 1)
+    result.toList should equal(List(Map("count(*)" -> 1)))
+  }
 
-    test("matching node property using IS NOT NULL and writing other node should be eager") {
-      relate(createNode(Map("prop" -> "5")), createNode())
-      val query = "MATCH (n)-[r]-(m) WHERE n.prop IS NOT NULL SET m.prop='5' RETURN count(*)"
-      val result = executeWith(Configs.InterpretedAndSlotted, query,
-                               planComparisonStrategy = testEagerPlanComparisonStrategy(1))
-      assertStats(result, propertiesWritten = 1)
-      result.toList should equal(List(Map("count(*)" -> 1)))
-    }
+  test("matching node property using IS NOT NULL and writing other node should be eager") {
+    relate(createNode(Map("prop" -> "5")), createNode())
+    val query = "MATCH (n)-[r]-(m) WHERE n.prop IS NOT NULL SET m.prop='5' RETURN count(*)"
+    val result = executeWith(Configs.InterpretedAndSlotted, query,
+      planComparisonStrategy = testEagerPlanComparisonStrategy(1))
+    assertStats(result, propertiesWritten = 1)
+    result.toList should equal(List(Map("count(*)" -> 1)))
+  }
 
-    test("matching node property using EXISTS and writing other node should be eager") {
-      relate(createNode(Map("prop" -> "5")), createNode())
-      val query = "MATCH (n)-[r]-(m) WHERE exists(n.prop) SET m.prop='5' RETURN count(*)"
-      val result = executeWith(Configs.InterpretedAndSlotted, query,
-                               planComparisonStrategy = testEagerPlanComparisonStrategy(1))
-      assertStats(result, propertiesWritten = 1)
-      result.toList should equal(List(Map("count(*)" -> 1)))
-    }
+  test("matching node property using EXISTS and writing other node should be eager") {
+    relate(createNode(Map("prop" -> "5")), createNode())
+    val query = "MATCH (n)-[r]-(m) WHERE exists(n.prop) SET m.prop='5' RETURN count(*)"
+    val result = executeWith(Configs.InterpretedAndSlotted, query,
+      planComparisonStrategy = testEagerPlanComparisonStrategy(1))
+    assertStats(result, propertiesWritten = 1)
+    result.toList should equal(List(Map("count(*)" -> 1)))
+  }
 
-    test("matching node property using less than operator and writing other node should be eager") {
-      relate(createNode(Map("prop" -> 5)), createNode())
-      val query = "MATCH (n)-[r]-(m) WHERE n.prop < 6 SET m.prop = 5 RETURN count(*)"
-      val result = executeWith(Configs.InterpretedAndSlotted, query,
-                               planComparisonStrategy = testEagerPlanComparisonStrategy(1))
-      assertStats(result, propertiesWritten = 1)
-      result.toList should equal(List(Map("count(*)" -> 1)))
-    }
+  test("matching node property using less than operator and writing other node should be eager") {
+    relate(createNode(Map("prop" -> 5)), createNode())
+    val query = "MATCH (n)-[r]-(m) WHERE n.prop < 6 SET m.prop = 5 RETURN count(*)"
+    val result = executeWith(Configs.InterpretedAndSlotted, query,
+      planComparisonStrategy = testEagerPlanComparisonStrategy(1))
+    assertStats(result, propertiesWritten = 1)
+    result.toList should equal(List(Map("count(*)" -> 1)))
+  }
 
-    test("matching node property using less than or equal operator and writing other node should be eager") {
-      relate(createNode(Map("prop" -> 5)), createNode())
-      val query = "MATCH (n)-[r]-(m) WHERE n.prop <= 6 SET m.prop = 5 RETURN count(*)"
-      val result = executeWith(Configs.InterpretedAndSlotted, query,
-                               planComparisonStrategy = testEagerPlanComparisonStrategy(1))
-      assertStats(result, propertiesWritten = 1)
-      result.toList should equal(List(Map("count(*)" -> 1)))
-    }
+  test("matching node property using less than or equal operator and writing other node should be eager") {
+    relate(createNode(Map("prop" -> 5)), createNode())
+    val query = "MATCH (n)-[r]-(m) WHERE n.prop <= 6 SET m.prop = 5 RETURN count(*)"
+    val result = executeWith(Configs.InterpretedAndSlotted, query,
+      planComparisonStrategy = testEagerPlanComparisonStrategy(1))
+    assertStats(result, propertiesWritten = 1)
+    result.toList should equal(List(Map("count(*)" -> 1)))
+  }
 
-    test("matching node property using greater than operator and writing other node should be eager") {
-      relate(createNode(Map("prop" -> 5)), createNode())
-      val query = "MATCH (n)-[r]-(m) WHERE n.prop > 4 SET m.prop = 5 RETURN count(*)"
-      val result = executeWith(Configs.InterpretedAndSlotted, query,
-                               planComparisonStrategy = testEagerPlanComparisonStrategy(1))
-      assertStats(result, propertiesWritten = 1)
-      result.toList should equal(List(Map("count(*)" -> 1)))
-    }
+  test("matching node property using greater than operator and writing other node should be eager") {
+    relate(createNode(Map("prop" -> 5)), createNode())
+    val query = "MATCH (n)-[r]-(m) WHERE n.prop > 4 SET m.prop = 5 RETURN count(*)"
+    val result = executeWith(Configs.InterpretedAndSlotted, query,
+      planComparisonStrategy = testEagerPlanComparisonStrategy(1))
+    assertStats(result, propertiesWritten = 1)
+    result.toList should equal(List(Map("count(*)" -> 1)))
+  }
 
-    test("matching node property using greater than or equal operator and writing other node should be eager") {
-      relate(createNode(Map("prop" -> 5)), createNode())
-      val query = "MATCH (n)-[r]-(m) WHERE n.prop >= 4 SET m.prop = 5 RETURN count(*)"
-      val result = executeWith(Configs.InterpretedAndSlotted, query,
-                               planComparisonStrategy = testEagerPlanComparisonStrategy(1))
-      assertStats(result, propertiesWritten = 1)
-      result.toList should equal(List(Map("count(*)" -> 1)))
-    }
+  test("matching node property using greater than or equal operator and writing other node should be eager") {
+    relate(createNode(Map("prop" -> 5)), createNode())
+    val query = "MATCH (n)-[r]-(m) WHERE n.prop >= 4 SET m.prop = 5 RETURN count(*)"
+    val result = executeWith(Configs.InterpretedAndSlotted, query,
+      planComparisonStrategy = testEagerPlanComparisonStrategy(1))
+    assertStats(result, propertiesWritten = 1)
+    result.toList should equal(List(Map("count(*)" -> 1)))
+  }
 
-    test("matching node property using greater than or equal operator and creating other node should be eager") {
-      relate(createNode(Map("prop" -> 5)), createNode())
-      val query = "MATCH (n)-[r]-(m) WHERE n.prop >= 4 CREATE ({prop:5})-[:R]->(m) RETURN count(*)"
-      val result = executeWith(Configs.InterpretedAndSlotted, query,
-                               planComparisonStrategy = testEagerPlanComparisonStrategy(1))
-      assertStats(result, propertiesWritten = 1, nodesCreated = 1, relationshipsCreated = 1)
-      result.toList should equal(List(Map("count(*)" -> 1)))
-    }
+  test("matching node property using greater than or equal operator and creating other node should be eager") {
+    relate(createNode(Map("prop" -> 5)), createNode())
+    val query = "MATCH (n)-[r]-(m) WHERE n.prop >= 4 CREATE ({prop:5})-[:R]->(m) RETURN count(*)"
+    val result = executeWith(Configs.InterpretedAndSlotted, query,
+      planComparisonStrategy = testEagerPlanComparisonStrategy(1))
+    assertStats(result, propertiesWritten = 1, nodesCreated = 1, relationshipsCreated = 1)
+    result.toList should equal(List(Map("count(*)" -> 1)))
+  }
 
-    test("unstable iterator and property predicates followed by set must be eager") {
-      createLabeledNode(Map("prop" -> 42), "L")
-      createLabeledNode("L")
-      createNode()
-      val query = "MATCH (m1:L), (m2:L) WHERE m1.prop < 43 SET m2.prop = 42 RETURN count(*)"
-      val result = executeWith(Configs.InterpretedAndSlotted, query,
-                               planComparisonStrategy = testEagerPlanComparisonStrategy(1))
-      assertStats(result, propertiesWritten = 2)
-      result.toList should equal(List(Map("count(*)" -> 2)))
-    }
+  test("unstable iterator and property predicates followed by set must be eager") {
+    createLabeledNode(Map("prop" -> 42), "L")
+    createLabeledNode("L")
+    createNode()
+    val query = "MATCH (m1:L), (m2:L) WHERE m1.prop < 43 SET m2.prop = 42 RETURN count(*)"
+    val result = executeWith(Configs.InterpretedAndSlotted, query,
+      planComparisonStrategy = testEagerPlanComparisonStrategy(1))
+    assertStats(result, propertiesWritten = 2)
+    result.toList should equal(List(Map("count(*)" -> 2)))
+  }
 
-    test("unstable iterator and property predicates followed by CREATE must be eager") {
-      createLabeledNode(Map("prop" -> 42), "L")
-      createLabeledNode("L")
-      createNode()
-      val query = "MATCH (m1:L), (m2:L) WHERE m1.prop < 43 CREATE (:L {prop: 42}) RETURN count(*)"
-      val result = executeWith(Configs.InterpretedAndSlotted, query,
-                               planComparisonStrategy = testEagerPlanComparisonStrategy(1))
-      assertStats(result, propertiesWritten = 2, labelsAdded = 2, nodesCreated = 2)
-      result.toList should equal(List(Map("count(*)" -> 2)))
-    }
+  test("unstable iterator and property predicates followed by CREATE must be eager") {
+    createLabeledNode(Map("prop" -> 42), "L")
+    createLabeledNode("L")
+    createNode()
+    val query = "MATCH (m1:L), (m2:L) WHERE m1.prop < 43 CREATE (:L {prop: 42}) RETURN count(*)"
+    val result = executeWith(Configs.InterpretedAndSlotted, query,
+      planComparisonStrategy = testEagerPlanComparisonStrategy(1))
+    assertStats(result, propertiesWritten = 2, labelsAdded = 2, nodesCreated = 2)
+    result.toList should equal(List(Map("count(*)" -> 2)))
+  }
 
-    private def testEagerPlanComparisonStrategy(expectedEagerCount: Int,
-                                                expectPlansToFailPredicate: TestConfiguration = TestConfiguration.empty,
-                                                optimalEagerCount: Int = -1): PlanComparisonStrategy = {
-      ComparePlansWithAssertion(plan => plan should includeSomewhere.nTimes(expectedEagerCount, aPlan().withName(EagerRegEx)), expectPlansToFailPredicate)
-    }
+  private def testEagerPlanComparisonStrategy(expectedEagerCount: Int,
+                                              expectPlansToFailPredicate: TestConfiguration = TestConfiguration.empty,
+                                              optimalEagerCount: Int = -1): PlanComparisonStrategy = {
+    ComparePlansWithAssertion(plan => plan should includeSomewhere.nTimes(expectedEagerCount, aPlan().withName(EagerRegEx)), expectPlansToFailPredicate)
+  }
 
 
 }

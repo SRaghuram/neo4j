@@ -6,8 +6,8 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 import org.neo4j.cypher.internal.util.test_helpers.WindowsStringSafe
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 
 class DumpToStringAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
 
@@ -49,13 +49,13 @@ class DumpToStringAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
     relate(createNode(), createNode(), "T", Map("prop" -> "A"))
 
     dumpToString("match ()-[r]->() return r") should
-        equal("""+-----------------+
-                || r               |
-                |+-----------------+
-                || :T[0]{prop:"A"} |
-                |+-----------------+
-                |1 row
-                |""".stripMargin)
+      equal("""+-----------------+
+              || r               |
+              |+-----------------+
+              || :T[0]{prop:"A"} |
+              |+-----------------+
+              |1 row
+              |""".stripMargin)
 
   }
 

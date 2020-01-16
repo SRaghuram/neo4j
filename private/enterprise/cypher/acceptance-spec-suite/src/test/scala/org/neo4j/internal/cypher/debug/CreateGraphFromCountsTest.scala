@@ -6,7 +6,8 @@
 package org.neo4j.internal.cypher.debug
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
-import org.neo4j.internal.collector.DataCollectorMatchers._
+import org.neo4j.internal.collector.DataCollectorMatchers.beListInOrder
+import org.neo4j.internal.collector.DataCollectorMatchers.beMapContaining
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 
 class CreateGraphFromCountsTest extends ExecutionEngineFunSuite with CypherComparisonSupport with CreateGraphFromCounts {

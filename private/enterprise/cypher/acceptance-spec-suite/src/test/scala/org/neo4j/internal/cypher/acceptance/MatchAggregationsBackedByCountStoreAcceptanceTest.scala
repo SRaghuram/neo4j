@@ -5,9 +5,14 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
+import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.cypher.QueryPlanTestSupport
+import org.neo4j.cypher.QueryStatisticsTestSupport
 import org.neo4j.cypher.internal.RewindableExecutionResult
-import org.neo4j.cypher.{ExecutionEngineFunSuite, QueryPlanTestSupport, QueryStatisticsTestSupport}
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithAssertion, Configs, CypherComparisonSupport, TestConfiguration}
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.ComparePlansWithAssertion
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.TestConfiguration
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 
 class MatchAggregationsBackedByCountStoreAcceptanceTest
@@ -407,7 +412,7 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
       resultAssertionInTx = resultAssertionInTx)
   }
 
-//  MATCH (n:X)-[r:Y]->() WITH count(r) as rcount MATCH (n)-[r:Y]->() WHERE count(r) = rcount RETURN rcount, labels(n)
+  //  MATCH (n:X)-[r:Y]->() WITH count(r) as rcount MATCH (n)-[r:Y]->() WHERE count(r) = rcount RETURN rcount, labels(n)
   test("counts relationships with type using count store considering transaction state and multiple types in model") {
     // Given
     def executeBefore(tx: InternalTransaction):Unit = inTXModification(tx, type2 = "FOLLOWS")
@@ -614,8 +619,8 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
 
   private def setupModel(tx: InternalTransaction,
                          label1: String = "User",
-                 label2: String = "User",
-                 type1: String = "KNOWS"): Unit = {
+                         label2: String = "User",
+                         type1: String = "KNOWS"): Unit = {
     tx.execute(
       s"""
          |CREATE (p:$label1 {name: 'Petra'})
@@ -626,8 +631,8 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
   }
 
   private def setupBigModel(label1: String = "User",
-                    label2: String = "User",
-                    type1: String = "KNOWS"): Unit = {
+                            label2: String = "User",
+                            type1: String = "KNOWS"): Unit = {
     executeSingle(
       s"""
          |CREATE (m:X {name: 'Mats'})
@@ -640,10 +645,10 @@ class MatchAggregationsBackedByCountStoreAcceptanceTest
 
   private def inTXModification(tx: InternalTransaction,
                                label1: String = "User",
-                       label2: String = "User",
-                       label3: String = "User",
-                       type2: String = "KNOWS",
-                       type3: String = "KNOWS"): Unit = {
+                               label2: String = "User",
+                               label3: String = "User",
+                               type2: String = "KNOWS",
+                               type3: String = "KNOWS"): Unit = {
     tx.execute("MATCH (m:X)-[r]->() DELETE m, r")
     tx.execute(
       s"""

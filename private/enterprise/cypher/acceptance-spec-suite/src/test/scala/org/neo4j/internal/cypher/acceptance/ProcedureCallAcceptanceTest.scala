@@ -6,11 +6,13 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.collection.RawIterator
-import org.neo4j.cypher._
+import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException
+import org.neo4j.internal.kernel.api.procs.Neo4jTypes
+import org.neo4j.internal.kernel.api.procs.ProcedureSignature
 import org.neo4j.internal.kernel.api.procs.ProcedureSignature.procedureSignature
+import org.neo4j.internal.kernel.api.procs.UserAggregator
 import org.neo4j.internal.kernel.api.procs.UserFunctionSignature.functionSignature
-import org.neo4j.internal.kernel.api.procs.{Neo4jTypes, ProcedureSignature, UserAggregator}
 import org.neo4j.kernel.api.ResourceTracker
 import org.neo4j.kernel.api.procedure.CallableProcedure.BasicProcedure
 import org.neo4j.kernel.api.procedure.CallableUserAggregationFunction.BasicUserAggregationFunction
@@ -35,7 +37,7 @@ abstract class ProcedureCallAcceptanceTest extends ExecutionEngineFunSuite {
                            resourceTracker: ResourceTracker): RawIterator[Array[AnyValue], ProcedureException] =
           RawIterator.of[Array[AnyValue], ProcedureException](input)
       }
-  }
+    }
 
   protected def registerProcedureReturningSingleValue(value: AnyRef) =
     registerProcedure("my.first.value") { _ =>

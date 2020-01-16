@@ -5,15 +5,17 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import org.neo4j.cypher._
+import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.cypher.QueryStatisticsTestSupport
 import org.neo4j.cypher.internal.runtime.CreateTempFileTestSupport
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 
 import scala.collection.immutable
 
 class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport
-  with CypherComparisonSupport with CreateTempFileTestSupport {
+                                          with CypherComparisonSupport with CreateTempFileTestSupport {
 
   override def beforeEach(): Unit = {
     super.beforeEach()
@@ -48,7 +50,7 @@ class AggregationWithValuesAcceptanceTest extends ExecutionEngineFunSuite with Q
            (8, "count", "n.prop1", "n.prop1", true, true, true),
            (9, "count", "DISTINCT n.prop2", "n.prop2", true, true, true)
          )
-  ) {
+       ) {
     // Simple aggregation functions implicitly gives exists
 
     val configsWithWrongResult = if (correctResultFromPipelinedSingle) Configs.Empty else Configs.Pipelined

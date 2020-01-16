@@ -65,7 +65,7 @@ class MergeIntoPlanningAcceptanceTest extends ExecutionEngineFunSuite{
 
     //when
     val update = execute("""MATCH (a {name:'A'}), (b {name:'B'})
-      |MERGE (a)-[r:TYPE]->(b) ON CREATE SET r += {foo: 'bar', bar: 'baz'}""".stripMargin)
+                           |MERGE (a)-[r:TYPE]->(b) ON CREATE SET r += {foo: 'bar', bar: 'baz'}""".stripMargin)
 
     //then
     update.executionPlanDescription() should includeSomewhere.aPlan("Expand(Into)")

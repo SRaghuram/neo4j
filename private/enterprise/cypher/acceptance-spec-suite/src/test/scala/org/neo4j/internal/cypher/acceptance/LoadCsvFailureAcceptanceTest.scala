@@ -5,15 +5,18 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import org.neo4j.cypher._
+import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.cypher.HttpServerTestSupport
+import org.neo4j.cypher.HttpServerTestSupportBuilder
 import org.neo4j.cypher.internal.runtime.CreateTempFileTestSupport
 import org.neo4j.exceptions
-import org.neo4j.exceptions.{LoadCsvStatusWrapCypherException, LoadExternalResourceException}
+import org.neo4j.exceptions.LoadCsvStatusWrapCypherException
+import org.neo4j.exceptions.LoadExternalResourceException
 import org.scalatest.BeforeAndAfterAll
 
 class LoadCsvFailureAcceptanceTest extends ExecutionEngineFunSuite
-  with BeforeAndAfterAll
-  with CreateTempFileTestSupport {
+                                   with BeforeAndAfterAll
+                                   with CreateTempFileTestSupport {
 
   for (runtime <- Seq("interpreted", "slotted")) {
     test(s"correct error message with file name and line number on MERGE with $runtime") {
@@ -297,12 +300,12 @@ class LoadCsvFailureAcceptanceTest extends ExecutionEngineFunSuite
 
       val query3 =
         s"""
-          |CYPHER runtime=$runtime LOAD CSV WITH HEADERS FROM '$url1' as row1
-          |MATCH (o:Order) WHERE o.OrderId = row1.OrderId
-          |WITH o.OrderId AS order
-          |LOAD CSV WITH HEADERS FROM '$url2' as row2
-          |MATCH (x:Order) WHERE x.OrderId = order AND x.field1 = 1/toInteger(row2.field1)
-          |RETURN x
+           |CYPHER runtime=$runtime LOAD CSV WITH HEADERS FROM '$url1' as row1
+           |MATCH (o:Order) WHERE o.OrderId = row1.OrderId
+           |WITH o.OrderId AS order
+           |LOAD CSV WITH HEADERS FROM '$url2' as row2
+           |MATCH (x:Order) WHERE x.OrderId = order AND x.field1 = 1/toInteger(row2.field1)
+           |RETURN x
         """.stripMargin
       val e3 = intercept[exceptions.LoadCsvStatusWrapCypherException](execute(query3))
       e3.getMessage should include regex """/ by zero.+fields-\d+\.csv' on line 3.+"""

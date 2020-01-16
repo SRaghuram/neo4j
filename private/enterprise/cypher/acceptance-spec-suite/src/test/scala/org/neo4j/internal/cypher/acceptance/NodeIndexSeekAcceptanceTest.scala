@@ -6,7 +6,9 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
-import org.neo4j.internal.cypher.acceptance.comparisonsupport._
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.ComparePlansWithAssertion
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 
 /**
  * These tests are testing the actual index implementation, thus they should all check the actual result.
@@ -63,7 +65,7 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         plan should includeSomewhere.nTimes(2, aPlan("NodeIndexSeek"))
         plan should includeSomewhere.aPlan("Union")
-    }))
+      }))
 
     result.columnAs("c").toSet should be(Set(nodes(1), nodes(11)))
   }
@@ -86,7 +88,7 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
       planComparisonStrategy = ComparePlansWithAssertion(plan => {
         plan should includeSomewhere.nTimes(2, aPlan("NodeIndexSeek"))
         plan should includeSomewhere.aPlan("Union")
-    }))
+      }))
 
     result.columnAs("c").toSet should be(Set(nodes(1), nodes(11)))
   }
@@ -234,7 +236,7 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
     // create many nodes with label 'Place' to make sure index seek is planned
     (1 to 100).foreach(i => createLabeledNode(Map("name" -> s"Area $i"), "Place"))
 
-   graph.createIndex("Place", "name")
+    graph.createIndex("Place", "name")
 
     // When
     val result = executeWith(Configs.Optional,
@@ -262,12 +264,12 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
 
     val query =
       """|MATCH (m:MyNodes)
-        |WHERE m.a = coalesce(m.b, 0)
-        |RETURN m""".stripMargin
+         |WHERE m.a = coalesce(m.b, 0)
+         |RETURN m""".stripMargin
 
     // When
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
-                             planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
+      planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
         planDescription.toString shouldNot include("index")
       }))
 
@@ -289,8 +291,8 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
 
     val query =
       """|MATCH (m:MyNodes)
-        |WHERE m.a > coalesce(m.b, 0)
-        |RETURN m""".stripMargin
+         |WHERE m.a > coalesce(m.b, 0)
+         |RETURN m""".stripMargin
 
     // When
     val result = executeWith(Configs.CachedProperty, query,
@@ -440,7 +442,7 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
 
     // When
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
-                             planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexSeek")))
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexSeek")))
 
     // Then
     result.toList should equal(List(Map("n" -> node1), Map("n" -> node2)))
@@ -466,7 +468,7 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
 
     // When
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
-                             planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexSeekByRange").containingArgument(":L1(prop3) < m.prop4")))
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexSeekByRange").containingArgument(":L1(prop3) < m.prop4")))
 
     // Then
     result.toList should equal(List(Map("n" -> node1), Map("n" -> node2)))

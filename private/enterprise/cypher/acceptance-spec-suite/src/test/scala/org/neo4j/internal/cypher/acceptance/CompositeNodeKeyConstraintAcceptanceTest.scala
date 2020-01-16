@@ -5,12 +5,15 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import java.time.{LocalDate, LocalDateTime}
+import java.time.LocalDate
+import java.time.LocalDateTime
 
-import org.neo4j.cypher._
-import org.neo4j.cypher.internal.util.helpers.StringHelper._
+import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.cypher.internal.util.helpers.StringHelper.RichString
+import org.neo4j.cypher.QueryStatisticsTestSupport
 import org.neo4j.graphdb.ConstraintViolationException
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 
 import scala.collection.Map
 
@@ -249,7 +252,7 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     failWithError(Configs.All,
       "CREATE CONSTRAINT ON (n:Person) ASSERT (n.firstname,n.lastname) IS NODE KEY",
       List("There already exists an index (:Person {firstname, lastname}). " +
-                  "A constraint cannot be created until the index has been dropped."))
+        "A constraint cannot be created until the index has been dropped."))
   }
 
   test("should give appropriate error message when there is already an index (named constraint)") {
@@ -260,7 +263,7 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     failWithError(Configs.All,
       "CREATE CONSTRAINT my_contraint ON (n:Person) ASSERT (n.firstname,n.lastname) IS NODE KEY",
       List("There already exists an index (:Person {firstname, lastname}). " +
-                  "A constraint cannot be created until the index has been dropped."))
+        "A constraint cannot be created until the index has been dropped."))
   }
 
   test("should give appropriate error message when there is already an named index") {
@@ -282,7 +285,7 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
     failWithError(Configs.All,
       "CREATE CONSTRAINT my_constraint ON (n:Person) ASSERT (n.firstname,n.lastname) IS NODE KEY",
       List("There already exists an index (:Person {firstname, lastname}). " +
-                  "A constraint cannot be created until the index has been dropped."))
+        "A constraint cannot be created until the index has been dropped."))
   }
 
   test("should give appropriate error message when there is already an named index (same name and schema for constraint)") {
@@ -314,7 +317,7 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
       Configs.All,
       "CREATE INDEX FOR (n:Person) ON (n.firstname, n.lastname)",
       List("There is a uniqueness constraint on (:Person {firstname, lastname}), " +
-                  "so an index is already created that matches this."))
+        "so an index is already created that matches this."))
   }
 
   test("should give appropriate error message when there is already a named NODE KEY constraint") {
@@ -326,7 +329,7 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
       Configs.All,
       "CREATE INDEX FOR (n:Person) ON (n.firstname, n.lastname)",
       List("There is a uniqueness constraint on (:Person {firstname, lastname}), " +
-                  "so an index is already created that matches this."))
+        "so an index is already created that matches this."))
   }
 
   test("should give appropriate error message when there is already a NODE KEY constraint (named index)") {
@@ -338,7 +341,7 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
       Configs.All,
       "CREATE INDEX my_index FOR (n:Person) ON (n.firstname, n.lastname)",
       List("There is a uniqueness constraint on (:Person {firstname, lastname}), " +
-                  "so an index is already created that matches this."))
+        "so an index is already created that matches this."))
   }
 
   test("should give appropriate error message when there is already a named NODE KEY constraint (named index)") {
@@ -350,7 +353,7 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
       Configs.All,
       "CREATE INDEX my_index FOR (n:Person) ON (n.firstname, n.lastname)",
       List("There is a uniqueness constraint on (:Person {firstname, lastname}), " +
-                  "so an index is already created that matches this."))
+        "so an index is already created that matches this."))
   }
 
   test("should give appropriate error message when there is already a named NODE KEY constraint (same name and schema for index)") {
@@ -428,16 +431,16 @@ class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite w
   }
 
   test("Should handle temporal with node key constraint") {
-      // When
-      executeSingle("CREATE CONSTRAINT ON (n:User) ASSERT (n.birthday) IS NODE KEY")
+    // When
+    executeSingle("CREATE CONSTRAINT ON (n:User) ASSERT (n.birthday) IS NODE KEY")
 
-      // Then
+    // Then
+    createLabeledNode(Map("birthday" -> LocalDate.of(1991, 10, 18)), "User")
+    createLabeledNode(Map("birthday" -> LocalDateTime.of(1991, 10, 18, 0, 0, 0, 0)), "User")
+    createLabeledNode(Map("birthday" -> "1991-10-18"), "User")
+    a[ConstraintViolationException] should be thrownBy {
       createLabeledNode(Map("birthday" -> LocalDate.of(1991, 10, 18)), "User")
-      createLabeledNode(Map("birthday" -> LocalDateTime.of(1991, 10, 18, 0, 0, 0, 0)), "User")
-      createLabeledNode(Map("birthday" -> "1991-10-18"), "User")
-      a[ConstraintViolationException] should be thrownBy {
-        createLabeledNode(Map("birthday" -> LocalDate.of(1991, 10, 18)), "User")
-      }
+    }
   }
 
   test("Should handle temporal with composite node key constraint") {

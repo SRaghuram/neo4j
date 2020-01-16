@@ -6,7 +6,9 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithAssertion, Configs, CypherComparisonSupport}
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.ComparePlansWithAssertion
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 
 /**
  * These tests are testing the actual index implementation, thus they should all check the actual result.
@@ -31,7 +33,7 @@ class NodeIndexContainsScanAcceptanceTest extends ExecutionEngineFunSuite with C
     val query = "MATCH (l:Location) WHERE l.name CONTAINS 'ondo' AND l.country = 'UK' RETURN l"
 
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
-                             planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexContainsScan")))
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexContainsScan")))
 
     result.toList should equal(List(Map("l" -> london)))
   }
@@ -52,7 +54,7 @@ class NodeIndexContainsScanAcceptanceTest extends ExecutionEngineFunSuite with C
     val query = "MATCH (l:Location) WHERE l.name CONTAINS 'ondo' AND l.country = 'UK' RETURN l"
 
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
-                             planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexContainsScan")))
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexContainsScan")))
 
     result.toList should equal(List(Map("l" -> london)))
   }
@@ -73,7 +75,7 @@ class NodeIndexContainsScanAcceptanceTest extends ExecutionEngineFunSuite with C
     val query = "MATCH (l:Location) WHERE l.name CONTAINS 'ondo' AND l.country = 'UK' RETURN l"
 
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
-                             planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexSeek")))
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexSeek")))
 
     result.toList should equal(List(Map("l" -> london)))
   }
@@ -113,8 +115,8 @@ class NodeIndexContainsScanAcceptanceTest extends ExecutionEngineFunSuite with C
     val query = "MATCH (l:Location) WHERE l.name CONTAINS $param RETURN l"
 
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
-                             planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexContainsScan")),
-                             params = Map("param" -> null))
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan("NodeIndexContainsScan")),
+      params = Map("param" -> null))
 
     result.toList should equal(List.empty)
   }
@@ -134,7 +136,7 @@ class NodeIndexContainsScanAcceptanceTest extends ExecutionEngineFunSuite with C
     val query = "MATCH (l:Location) WHERE l.name CONTAINS $param RETURN l"
 
     failWithError(Configs.InterpretedAndSlottedAndPipelined,
-                  query, message = List("Expected a string value, but got 42","Expected a string value, but got Int(42)","Expected two strings, but got London and 42"),
-                  params = Map("param" -> 42))
+      query, message = List("Expected a string value, but got 42","Expected a string value, but got Int(42)","Expected two strings, but got London and 42"),
+      params = Map("param" -> 42))
   }
 }

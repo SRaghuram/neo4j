@@ -5,11 +5,14 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
+import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.cypher.PatternGen
+import org.neo4j.cypher.QueryStatisticsTestSupport
 import org.neo4j.cypher.internal.RewindableExecutionResult
 import org.neo4j.cypher.internal.expressions.SemanticDirection
-import org.neo4j.cypher.{ExecutionEngineFunSuite, PatternGen, QueryStatisticsTestSupport}
 import org.neo4j.graphdb.ResourceIterator
-import org.scalacheck.{Gen, Shrink}
+import org.scalacheck.Gen
+import org.scalacheck.Shrink
 
 /*
  * Tests merge on random patterns.

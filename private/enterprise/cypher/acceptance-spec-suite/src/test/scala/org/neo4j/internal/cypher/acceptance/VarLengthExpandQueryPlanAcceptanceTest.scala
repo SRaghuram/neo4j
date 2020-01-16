@@ -7,7 +7,9 @@ package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.graphdb.Path
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithAssertion, Configs, CypherComparisonSupport}
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.ComparePlansWithAssertion
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 
 class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
 
@@ -430,9 +432,9 @@ class VarLengthExpandQueryPlanAcceptanceTest extends ExecutionEngineFunSuite wit
 
     val result = executeWith(Configs.InterpretedAndSlotted, query,
       planComparisonStrategy =
-      ComparePlansWithAssertion( plan => {
-        plan shouldNot includeSomewhere.aPlan("RollUpApply")
-      }))
+        ComparePlansWithAssertion( plan => {
+          plan shouldNot includeSomewhere.aPlan("RollUpApply")
+        }))
     result.toList should have size 1
   }
 

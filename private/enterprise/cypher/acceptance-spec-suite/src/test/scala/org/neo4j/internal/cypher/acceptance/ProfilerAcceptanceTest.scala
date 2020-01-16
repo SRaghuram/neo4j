@@ -6,16 +6,24 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.configuration.GraphDatabaseSettings
+import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.cypher.TxCounts
 import org.neo4j.cypher.internal.RewindableExecutionResult
-import org.neo4j.cypher.internal.plandescription.Arguments.{DbHits, Rows}
+import org.neo4j.cypher.internal.plandescription.Arguments.DbHits
+import org.neo4j.cypher.internal.plandescription.Arguments.Rows
 import org.neo4j.cypher.internal.plandescription.InternalPlanDescription
 import org.neo4j.cypher.internal.plandescription.InternalPlanDescription.TotalHits
-import org.neo4j.cypher.internal.runtime.{CreateTempFileTestSupport, ProfileMode}
+import org.neo4j.cypher.internal.runtime.CreateTempFileTestSupport
+import org.neo4j.cypher.internal.runtime.ProfileMode
 import org.neo4j.cypher.internal.util.helpers.StringHelper.RichString
-import org.neo4j.cypher.{ExecutionEngineFunSuite, TxCounts}
 import org.neo4j.exceptions.ProfilerStatisticsNotReadyException
 import org.neo4j.graphdb.QueryExecutionException
-import org.neo4j.internal.cypher.acceptance.comparisonsupport._
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.ComparePlansWithAssertion
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Planners
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Runtimes
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.TestConfiguration
 
 class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFileTestSupport with CypherComparisonSupport {
 
@@ -134,16 +142,16 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     createLabeledNode("Animal")
 
     profile(Configs.InterpretedAndSlottedAndPipelined,
-            "MATCH (n:Person) CALL db.labels() YIELD label RETURN *",
+      "MATCH (n:Person) CALL db.labels() YIELD label RETURN *",
       plan => {
         plan should includeSomewhere.aPlan("ProcedureCall")
           .withRows(2)
           .withExactVariables("n", "label")
           .containingArgument("db.labels() :: (label :: String)")
-            .onTopOf(aPlan("NodeByLabelScan").withRows(1).withDBHits(2))
+          .onTopOf(aPlan("NodeByLabelScan").withRows(1).withDBHits(2))
         plan.totalDbHits shouldBe TotalHits(2, uncertain = true)
       }
-            )
+    )
   }
 
   test("MATCH (n) WHERE (n)-[:FOO]->() RETURN *") {
@@ -152,8 +160,8 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
 
     //WHEN
     profile(Configs.InterpretedAndSlottedAndPipelined,
-            "MATCH (n) WHERE (n)-[:FOO]->() RETURN *",
-            _ should (
+      "MATCH (n) WHERE (n)-[:FOO]->() RETURN *",
+      _ should (
         includeSomewhere.aPlan("Filter").withRows(1).withDBHitsBetween(2, 4) and
           includeSomewhere.aPlan("AllNodesScan").withRows(2).withDBHits(3)
         ))
@@ -180,8 +188,8 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
 
     //WHEN
     profile(Configs.InterpretedAndSlottedAndPipelined,
-            "MATCH (n) WHERE NOT (n)-[:FOO]->() RETURN *",
-            _ should (
+      "MATCH (n) WHERE NOT (n)-[:FOO]->() RETURN *",
+      _ should (
         includeSomewhere.aPlan("Filter").withRows(1).withDBHitsBetween(2, 4) and
           includeSomewhere.aPlan("AllNodesScan").withRows(2).withDBHits(3)
         ))
@@ -352,8 +360,8 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
 
   test("should not have a problem profiling empty results") {
     profile(Configs.InterpretedAndSlottedAndPipelined,
-            "MATCH (n) WHERE (n)-->() RETURN n",
-            _ should includeSomewhere.aPlan("AllNodesScan"))
+      "MATCH (n) WHERE (n)-->() RETURN n",
+      _ should includeSomewhere.aPlan("AllNodesScan"))
   }
 
   test("reports COST planner when showing plan description") {
@@ -423,11 +431,11 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
 
   test("should report correct dbhits and rows for literal addition") {
     profile(Configs.All,
-            "RETURN 5 + 3",
-            _ should (
-                         includeSomewhere.aPlan("Projection").withDBHits(0) and
-                           includeSomewhere.aPlan("ProduceResults").withRows(1).withDBHits(0)
-                         ))
+      "RETURN 5 + 3",
+      _ should (
+        includeSomewhere.aPlan("Projection").withDBHits(0) and
+          includeSomewhere.aPlan("ProduceResults").withRows(1).withDBHits(0)
+        ))
   }
 
   test("should report correct dbhits and rows for property addition") {
@@ -523,11 +531,11 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
 
     // when
     profile(Configs.All,
-            """MATCH (n:Glass {name: 'Seymour'})-[:R1]->(o)-[:R2]->(p)
-              |  USING INDEX n:Glass(name)
-              |  WHERE p.name = 'Franny'
-              |RETURN p.name""".stripMargin,
-            _ should includeSomewhere.aPlan("Filter").withDBHitsBetween(4, 6))
+      """MATCH (n:Glass {name: 'Seymour'})-[:R1]->(o)-[:R2]->(p)
+        |  USING INDEX n:Glass(name)
+        |  WHERE p.name = 'Franny'
+        |RETURN p.name""".stripMargin,
+      _ should includeSomewhere.aPlan("Filter").withDBHitsBetween(4, 6))
   }
 
   test("joins with identical scans") {

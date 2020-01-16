@@ -9,10 +9,13 @@ import java.util.stream.Collectors
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.graphdb.Node
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithAssertion, Configs, CypherComparisonSupport, TestConfiguration}
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.ComparePlansWithAssertion
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.TestConfiguration
 import org.neo4j.values.storable.Value
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters.mapAsJavaMapConverter
 
 trait IndexingTestSupport extends ExecutionEngineFunSuite with CypherComparisonSupport {
 
@@ -85,12 +88,12 @@ trait IndexingTestSupport extends ExecutionEngineFunSuite with CypherComparisonS
           params = params,
           planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.aPlan(wantedOperator))
         )
-      val nodes = result.columnAs("n").toSet
+      val nodes = result.columnAs[Node]("n").toSet
       expected.foreach(p => assert(nodes.contains(p)))
-      nodes.size() should be(expected.size)
+      nodes.size should be(expected.size)
     } else {
       graph.withTx( tx => {
-        val result = tx.execute("CYPHER runtime=slotted "+query, params)
+        val result = tx.execute("CYPHER runtime=slotted "+query, params.asJava)
         val nodes = result.columnAs("n").stream().collect(Collectors.toSet)
         expected.foreach(p => assert(nodes.contains(p)))
         nodes.size() should be(expected.size)

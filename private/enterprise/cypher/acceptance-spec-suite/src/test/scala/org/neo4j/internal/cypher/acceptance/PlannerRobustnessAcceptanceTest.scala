@@ -15,7 +15,7 @@ class PlannerRobustnessAcceptanceTest extends ExecutionEngineFunSuite with Cyphe
   test("should plan query of 100 patterns in reasonable time") {
     val query =
       "MATCH " + (1 to 100).map(i => s"(user$i:User {userId:$i})").mkString(", ") +
-      "RETURN count(*)"
+        "RETURN count(*)"
 
     graph.withTx( tx => tx.execute("""FOREACH (n IN range(1, 100) | CREATE (:User {userId: n}))"""))
     graph.createIndex("User", "userId")

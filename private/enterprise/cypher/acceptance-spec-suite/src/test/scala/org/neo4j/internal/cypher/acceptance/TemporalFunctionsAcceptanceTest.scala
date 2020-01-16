@@ -5,11 +5,18 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import java.time._
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.OffsetTime
+import java.time.ZoneId
+import java.time.ZonedDateTime
 
-import org.neo4j.cypher.{ExecutionEngineFunSuite, FakeClock}
+import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.cypher.FakeClock
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 import org.neo4j.values.storable.DurationValue
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
 
 class TemporalFunctionsAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport with FakeClock {
 
@@ -70,7 +77,7 @@ class TemporalFunctionsAcceptanceTest extends ExecutionEngineFunSuite with Cyphe
 
   test("timestamp should not be case sensitive") {
     val past = ZonedDateTime.of(1980, 3, 11, 0, 0, 0, 0,
-                                ZoneId.systemDefault())
+      ZoneId.systemDefault())
     //older versions don't use the clock which we fake in this test
     val result = executeSingle("RETURN timeStamP() AS t").toList
 

@@ -13,7 +13,8 @@ import org.neo4j.internal.kernel.api.procs.Neo4jTypes
 import org.neo4j.kernel.api.procedure.GlobalProcedures
 import org.neo4j.kernel.impl.util.ValueUtils
 
-import scala.collection.JavaConverters._
+import scala.collection.JavaConverters.asScalaBufferConverter
+import scala.collection.JavaConverters.mapAsJavaMapConverter
 
 class FunctionCallSupportAcceptanceTest extends ProcedureCallAcceptanceTest {
 
@@ -35,8 +36,8 @@ class FunctionCallSupportAcceptanceTest extends ProcedureCallAcceptanceTest {
 
     // We just want to make sure that running the query does not throw exceptions
     graph.withTx( tx =>
-    tx.execute("return round(0.4 * test.sum(collect(toInteger('12'))) / 12)")
-      .stream().toArray.length should equal(1))
+      tx.execute("return round(0.4 * test.sum(collect(toInteger('12'))) / 12)")
+        .stream().toArray.length should equal(1))
   }
 
   test("should return correctly typed list result (even if converting to and from scala representation internally)") {

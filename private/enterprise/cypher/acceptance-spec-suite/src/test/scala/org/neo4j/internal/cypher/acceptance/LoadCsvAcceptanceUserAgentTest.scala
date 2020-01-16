@@ -5,10 +5,13 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import org.neo4j.cypher._
+import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.cypher.HttpServerTestSupport
+import org.neo4j.cypher.HttpServerTestSupportBuilder
 import org.neo4j.cypher.internal.runtime.interpreted.CSVResources
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
 import org.neo4j.cypher.internal.util.helpers.StringHelper.RichString
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 import org.scalatest.BeforeAndAfterAll
 import sun.net.www.protocol.http.HttpURLConnection
 

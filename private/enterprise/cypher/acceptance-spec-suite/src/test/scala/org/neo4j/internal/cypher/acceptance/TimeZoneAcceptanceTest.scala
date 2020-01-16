@@ -6,15 +6,22 @@
 package org.neo4j.internal.cypher.acceptance
 
 import java.lang.Boolean.TRUE
-import java.time.{ZoneId, ZonedDateTime}
+import java.time.ZoneId
+import java.time.ZonedDateTime
 
 import org.neo4j.configuration.GraphDatabaseSettings
-import org.neo4j.cypher._
+import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.cypher.GraphIcing
+import org.neo4j.cypher.QueryStatisticsTestSupport
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 import org.neo4j.graphdb.config.Setting
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 import org.neo4j.test.TestDatabaseManagementServiceBuilder
-import org.neo4j.values.storable.{DateTimeValue, DurationValue}
+import org.neo4j.values.storable.DateTimeValue
+import org.neo4j.values.storable.DurationValue
+
+import scala.collection.JavaConverters.mapAsJavaMapConverter
 
 abstract class TimeZoneAcceptanceTest(timezone: String) extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport {
 
@@ -91,8 +98,6 @@ class NamedTimeZoneAcceptanceTest extends TimeZoneAcceptanceTest("Europe/Berlin"
 class OffsetTimeZoneAcceptanceTest extends TimeZoneAcceptanceTest("+03:00")
 
 class InvalidTimeZoneConfigTest extends CypherFunSuite with GraphIcing {
-
-  import scala.collection.JavaConverters._
 
   test("invalid timezone should fail startup") {
     val invalidConfig: Map[String, String] = Map(GraphDatabaseSettings.db_temporal_timezone.name() -> "Europe/Satia")

@@ -5,11 +5,21 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import org.neo4j.cypher.{ExecutionEngineFunSuite, QueryStatisticsTestSupport}
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
+import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.cypher.QueryStatisticsTestSupport
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
+
+import scala.Array.emptyBooleanArray
+import scala.Array.emptyByteArray
+import scala.Array.emptyDoubleArray
+import scala.Array.emptyFloatArray
+import scala.Array.emptyIntArray
+import scala.Array.emptyLongArray
+import scala.Array.emptyShortArray
 
 class ParameterValuesAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport
-  with QueryStatisticsTestSupport {
+                                    with QueryStatisticsTestSupport {
 
   test("should be able to send in an array of nodes via parameter") {
     // given
@@ -32,7 +42,6 @@ class ParameterValuesAcceptanceTest extends ExecutionEngineFunSuite with CypherC
   }
 
   test("should not erase the type of an empty array sent as parameter") {
-    import Array._
 
     Seq(emptyLongArray, emptyShortArray, emptyByteArray, emptyIntArray,
       emptyDoubleArray, emptyFloatArray,

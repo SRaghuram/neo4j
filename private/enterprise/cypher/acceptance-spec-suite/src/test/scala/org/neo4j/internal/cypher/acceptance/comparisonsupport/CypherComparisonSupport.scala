@@ -8,34 +8,47 @@ package org.neo4j.internal.cypher.acceptance.comparisonsupport
 import java.lang.Boolean.TRUE
 
 import com.neo4j.cypher.EnterpriseGraphDatabaseTestSupport
-import cypher.features.{Phase, ScenarioTestHelper}
+import cypher.features.Phase
+import cypher.features.ScenarioTestHelper
 import org.apache.commons.lang3.exception.ExceptionUtils
 import org.neo4j.configuration.GraphDatabaseSettings
-import org.neo4j.cypher._
+import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.cypher.ExecutionEngineHelper
 import org.neo4j.cypher.internal.RewindableExecutionResult
+import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext.IndexSearchMonitor
-import org.neo4j.cypher.internal.runtime.interpreted.{TransactionBoundQueryContext, TransactionalContextWrapper}
+import org.neo4j.cypher.internal.runtime.interpreted.TransactionalContextWrapper
 import org.neo4j.cypher.internal.util.Eagerly
-import org.neo4j.cypher.internal.util.test_helpers.{CypherFunSuite, CypherTestSupport}
+import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
+import org.neo4j.cypher.internal.util.test_helpers.CypherTestSupport
 import org.neo4j.graphdb.Result
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
-import org.neo4j.kernel.impl.query.{QueryExecution, QuerySubscriber, RecordingQuerySubscriber, TransactionalContext}
+import org.neo4j.kernel.impl.query.QueryExecution
+import org.neo4j.kernel.impl.query.QuerySubscriber
+import org.neo4j.kernel.impl.query.RecordingQuerySubscriber
+import org.neo4j.kernel.impl.query.TransactionalContext
 import org.neo4j.monitoring.Monitors
 import org.neo4j.values.virtual.MapValue
 
-import scala.util.{Failure, Success, Try}
+import scala.util.Failure
+import scala.util.Success
+import scala.util.Try
+
+
+import scala.collection.JavaConverters.mapAsScalaMapConverter
+import scala.collection.JavaConverters.iterableAsScalaIterableConverter
 
 /**
-  * Will run a query across configurations, making sure they all agree on the results and/or errors.
-  *
-  * For every query tested using `executeWith`, the query will be run against all configurations. Every configuration
-  * is expected to either succeed or fail. When new features are added that enable queries in new configurations,
-  * acceptance tests will start failing because now a configuration is succeeding that was not successful before.
-  *
-  * This is expected and useful - it let's us know how a change impacts how many acceptance tests now start
-  * succeeding where they weren't earlier.
-  */
+ * Will run a query across configurations, making sure they all agree on the results and/or errors.
+ *
+ * For every query tested using `executeWith`, the query will be run against all configurations. Every configuration
+ * is expected to either succeed or fail. When new features are added that enable queries in new configurations,
+ * acceptance tests will start failing because now a configuration is succeeding that was not successful before.
+ *
+ * This is expected and useful - it let's us know how a change impacts how many acceptance tests now start
+ * succeeding where they weren't earlier.
+ */
 trait CypherComparisonSupport extends AbstractCypherComparisonSupport {
   self: ExecutionEngineFunSuite =>
 
@@ -45,9 +58,9 @@ trait CypherComparisonSupport extends AbstractCypherComparisonSupport {
   }
 
   override def eengineExecute(query: String,
-                     params: MapValue,
-                     context: TransactionalContext,
-                     subscriber: QuerySubscriber): QueryExecution = {
+                              params: MapValue,
+                              context: TransactionalContext,
+                              subscriber: QuerySubscriber): QueryExecution = {
     eengine.execute(query, params, context, profile = false, prePopulate = false, subscriber)
   }
 
@@ -61,10 +74,10 @@ trait CypherComparisonSupport extends AbstractCypherComparisonSupport {
 
   override def databaseConfig(): collection.Map[Setting[_], Object] = {
     Map(GraphDatabaseSettings.cypher_hints_error -> TRUE,
-        GraphDatabaseSettings.cypher_pipelined_batch_size_small -> Integer.valueOf(4),
-        GraphDatabaseSettings.cypher_pipelined_batch_size_big -> Integer.valueOf(4),
-        GraphDatabaseSettings.cypher_worker_count -> Integer.valueOf(0)
-        )
+      GraphDatabaseSettings.cypher_pipelined_batch_size_small -> Integer.valueOf(4),
+      GraphDatabaseSettings.cypher_pipelined_batch_size_big -> Integer.valueOf(4),
+      GraphDatabaseSettings.cypher_worker_count -> Integer.valueOf(0)
+    )
   }
 }
 
@@ -91,8 +104,8 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
   // Concrete stuff
 
   /**
-    * Get rid of Arrays and java.util.Map to make it easier to compare results by equality.
-    */
+   * Get rid of Arrays and java.util.Map to make it easier to compare results by equality.
+   */
   implicit class RichInternalExecutionResults(res: RewindableExecutionResult) {
     def toComparableResultWithOptions(replaceNaNs: Boolean): Seq[Map[String, Any]] = res.toList.toComparableSeq(replaceNaNs)
 
@@ -100,8 +113,6 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
   }
 
   implicit class RichMapSeq(res: Seq[Map[String, Any]]) {
-
-    import scala.collection.JavaConverters._
 
     object NanReplacement
 
@@ -168,8 +179,8 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
   }
 
   /**
-    * Execute query and dump the result into a string.
-    */
+   * Execute query and dump the result into a string.
+   */
   protected def dumpToString(query: String,
                              params: Map[String, Any] = Map.empty): String = {
     inTx({ tx =>
@@ -182,20 +193,20 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
   }
 
   /**
-    * Execute a query with different pre-parser options and
-    * assert which configurations should success and which ones should fail.
-    *
-    * @param expectSucceed the scenarios that are expected to support this query
-    * @param query the query
-    * @param expectedDifferentResults Scenarios which are expected to work, but return different results. This is often the case for bugfixes that have not been
-    *                                 backported to older versions.
-    * @param planComparisonStrategy a strategy how to compare the execution plans. Disabled by default.
-    * @param resultAssertionInTx if `Some(...)` this will execute the given assertions inside of the transaction. That can be helpful is the assertions rely on
-    *                            being executed in the same transaction as the query.
-    * @param executeBefore This will be executed before each scenario.
-    * @param executeExpectedFailures if you set this to `false`, queries that expect an error won't even be run.
-    * @param params query parameters
-    */
+   * Execute a query with different pre-parser options and
+   * assert which configurations should success and which ones should fail.
+   *
+   * @param expectSucceed the scenarios that are expected to support this query
+   * @param query the query
+   * @param expectedDifferentResults Scenarios which are expected to work, but return different results. This is often the case for bugfixes that have not been
+   *                                 backported to older versions.
+   * @param planComparisonStrategy a strategy how to compare the execution plans. Disabled by default.
+   * @param resultAssertionInTx if `Some(...)` this will execute the given assertions inside of the transaction. That can be helpful is the assertions rely on
+   *                            being executed in the same transaction as the query.
+   * @param executeBefore This will be executed before each scenario.
+   * @param executeExpectedFailures if you set this to `false`, queries that expect an error won't even be run.
+   * @param params query parameters
+   */
   protected def executeWith(expectSucceed: TestConfiguration,
                             query: String,
                             expectedDifferentResults: TestConfiguration = Configs.Empty,
@@ -254,11 +265,11 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
       baseResult
     } else {
       /**
-        * If we are ending up here we don't expect any config to succeed i.e. Configs.Empty was used.
-        * Currently this only happens when we use a[xxxException] should be thrownBy...
-        * Consider to not allow this, but always use failWithError instead.
-        * For now, don't support plan comparisons and only run som default config without a transaction to get a result.
-        */
+       * If we are ending up here we don't expect any config to succeed i.e. Configs.Empty was used.
+       * Currently this only happens when we use a[xxxException] should be thrownBy...
+       * Consider to not allow this, but always use failWithError instead.
+       * For now, don't support plan comparisons and only run som default config without a transaction to get a result.
+       */
       if (planComparisonStrategy != DoNotComparePlans) {
         fail("At least one scenario must be expected to succeed to be able to compare plans")
       }
@@ -275,8 +286,8 @@ trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupp
     assertResultsSame(result1, result2, queryText, errorMsg, replaceNaNs)
 
   /**
-    * Execute a single CYPHER query (without multiple different pre-parser options). Obtain a RewindableExecutionResult.
-    */
+   * Execute a single CYPHER query (without multiple different pre-parser options). Obtain a RewindableExecutionResult.
+   */
   protected def executeSingle(queryText: String, params: Map[String, Any] = Map.empty): RewindableExecutionResult =
     innerExecuteTransactionally(queryText, params)
 

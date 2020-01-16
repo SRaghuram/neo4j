@@ -12,14 +12,39 @@ import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.javacompat.DeprecationAcceptanceTest.ChangedResults
 import org.neo4j.graphdb
 import org.neo4j.graphdb.config.Setting
-import org.neo4j.graphdb.impl.notification.NotificationCode._
-import org.neo4j.graphdb.impl.notification.NotificationDetail.Factory._
-import org.neo4j.graphdb.impl.notification.{NotificationCode, NotificationDetail}
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
+import org.neo4j.graphdb.impl.notification.NotificationCode
+import org.neo4j.graphdb.impl.notification.NotificationCode.CARTESIAN_PRODUCT
+import org.neo4j.graphdb.impl.notification.NotificationCode.DEPRECATED_BINDING_VAR_LENGTH_RELATIONSHIP
+import org.neo4j.graphdb.impl.notification.NotificationCode.DEPRECATED_COMPILED_RUNTIME
+import org.neo4j.graphdb.impl.notification.NotificationCode.DEPRECATED_PROCEDURE
+import org.neo4j.graphdb.impl.notification.NotificationCode.DEPRECATED_PROCEDURE_RETURN_FIELD
+import org.neo4j.graphdb.impl.notification.NotificationCode.DEPRECATED_RELATIONSHIP_TYPE_SEPARATOR
+import org.neo4j.graphdb.impl.notification.NotificationCode.INDEX_HINT_UNFULFILLABLE
+import org.neo4j.graphdb.impl.notification.NotificationCode.INDEX_LOOKUP_FOR_DYNAMIC_PROPERTY
+import org.neo4j.graphdb.impl.notification.NotificationCode.MISSING_LABEL
+import org.neo4j.graphdb.impl.notification.NotificationCode.MISSING_PROPERTY_NAME
+import org.neo4j.graphdb.impl.notification.NotificationCode.MISSING_REL_TYPE
+import org.neo4j.graphdb.impl.notification.NotificationCode.RUNTIME_UNSUPPORTED
+import org.neo4j.graphdb.impl.notification.NotificationCode.SUBOPTIMAL_INDEX_FOR_CONTAINS_QUERY
+import org.neo4j.graphdb.impl.notification.NotificationCode.SUBOPTIMAL_INDEX_FOR_ENDS_WITH_QUERY
+import org.neo4j.graphdb.impl.notification.NotificationCode.UNBOUNDED_SHORTEST_PATH
+import org.neo4j.graphdb.impl.notification.NotificationDetail
+import org.neo4j.graphdb.impl.notification.NotificationDetail.Factory.bindingVarLengthRelationship
+import org.neo4j.graphdb.impl.notification.NotificationDetail.Factory.cartesianProduct
+import org.neo4j.graphdb.impl.notification.NotificationDetail.Factory.deprecatedField
+import org.neo4j.graphdb.impl.notification.NotificationDetail.Factory.deprecatedName
+import org.neo4j.graphdb.impl.notification.NotificationDetail.Factory.index
+import org.neo4j.graphdb.impl.notification.NotificationDetail.Factory.indexSeekOrScan
+import org.neo4j.graphdb.impl.notification.NotificationDetail.Factory.label
+import org.neo4j.graphdb.impl.notification.NotificationDetail.Factory.propertyName
+import org.neo4j.graphdb.impl.notification.NotificationDetail.Factory.relationshipType
+import org.neo4j.graphdb.impl.notification.NotificationDetail.Factory.suboptimalIndex
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 import org.neo4j.kernel.api.procedure.GlobalProcedures
 import org.neo4j.procedure.Procedure
 
-import scala.collection.JavaConverters._
+import scala.collection.JavaConverters.setAsJavaSetConverter
 
 class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
 
@@ -69,7 +94,7 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
 
     res1.notifications should contain(
       DEPRECATED_BINDING_VAR_LENGTH_RELATIONSHIP.notification(new graphdb.InputPosition(16, 1, 17),
-                                                              bindingVarLengthRelationship("rs")))
+        bindingVarLengthRelationship("rs")))
 
     val res2 = executeSingle("explain MATCH p = ()-[*]-() RETURN relationships(p) AS rs", Map.empty)
 
@@ -97,7 +122,7 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
     result.notifications.toList should equal(
       List(
         DEPRECATED_PROCEDURE_RETURN_FIELD.notification(new graphdb.InputPosition(33, 1, 34),
-                                                       deprecatedField("changedProc", "oldField"))))
+          deprecatedField("changedProc", "oldField"))))
   }
 
   test("Warn for cartesian product") {
@@ -194,8 +219,8 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
     val result = executeSingle("EXPLAIN MATCH (n:Person) WHERE n['key-' + n.name] = 'value' RETURN n", Map.empty)
 
     result.notifications should equal(Set(INDEX_LOOKUP_FOR_DYNAMIC_PROPERTY.notification(graphdb.InputPosition.empty,
-                                                                                         indexSeekOrScan(
-                                                                                           Set("Person").asJava))))
+      indexSeekOrScan(
+        Set("Person").asJava))))
   }
 
   test("warn for unfulfillable index seek when using dynamic property lookup with explicit label check") {
@@ -204,8 +229,8 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
     val result = executeSingle("EXPLAIN MATCH (n) WHERE n['key-' + n.name] = 'value' AND (n:Person) RETURN n", Map.empty)
 
     result.notifications should equal(Set(INDEX_LOOKUP_FOR_DYNAMIC_PROPERTY.notification(graphdb.InputPosition.empty,
-                                                                                         indexSeekOrScan(
-                                                                                           Set("Person").asJava))
+      indexSeekOrScan(
+        Set("Person").asJava))
     ))
   }
 
@@ -224,8 +249,8 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
     val result = executeSingle("EXPLAIN MATCH (n:Person) WHERE n['key-' + n.name] > 10 RETURN n", Map.empty)
 
     result.notifications should equal(Set(INDEX_LOOKUP_FOR_DYNAMIC_PROPERTY.notification(graphdb.InputPosition.empty,
-                                                                                         indexSeekOrScan(
-                                                                                           Set("Person").asJava))))
+      indexSeekOrScan(
+        Set("Person").asJava))))
   }
 
   test("warn for unfulfillable index seek when using dynamic property lookup with range seek (reverse)") {
@@ -234,8 +259,8 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
     val result = executeSingle("EXPLAIN MATCH (n:Person) WHERE 10 > n['key-' + n.name] RETURN n", Map.empty)
 
     result.notifications should equal(Set(INDEX_LOOKUP_FOR_DYNAMIC_PROPERTY.notification(graphdb.InputPosition.empty,
-                                                                                         indexSeekOrScan(
-                                                                                           Set("Person").asJava))))
+      indexSeekOrScan(
+        Set("Person").asJava))))
   }
 
   test(
@@ -246,8 +271,8 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
     val result = executeSingle("EXPLAIN MATCH (n:Person) WHERE exists(n['na' + 'me']) RETURN n", Map.empty)
 
     result.notifications should equal(Set(INDEX_LOOKUP_FOR_DYNAMIC_PROPERTY.notification(graphdb.InputPosition.empty,
-                                                                                         indexSeekOrScan(
-                                                                                           Set("Person").asJava))))
+      indexSeekOrScan(
+        Set("Person").asJava))))
   }
 
   test("warn for unfulfillable index seek when using dynamic property lookup with a single label and starts with") {
@@ -256,8 +281,8 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
     val result = executeSingle("EXPLAIN MATCH (n:Person) WHERE n['key-' + n.name] STARTS WITH 'Foo' RETURN n", Map.empty)
 
     result.notifications should equal(Set(INDEX_LOOKUP_FOR_DYNAMIC_PROPERTY.notification(graphdb.InputPosition.empty,
-                                                                                         indexSeekOrScan(
-                                                                                           Set("Person").asJava))))
+      indexSeekOrScan(
+        Set("Person").asJava))))
   }
 
   test("warn for unfulfillable index seek when using dynamic property lookup with a single label and regex") {
@@ -266,8 +291,8 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
     val result = executeSingle("EXPLAIN MATCH (n:Person) WHERE n['key-' + n.name] =~ 'Foo*' RETURN n", Map.empty)
 
     result.notifications should equal(Set(INDEX_LOOKUP_FOR_DYNAMIC_PROPERTY.notification(graphdb.InputPosition.empty,
-                                                                                         indexSeekOrScan(
-                                                                                           Set("Person").asJava))))
+      indexSeekOrScan(
+        Set("Person").asJava))))
   }
 
   test("warn for unfulfillable index seek when using dynamic property lookup with a single label and IN") {
@@ -276,8 +301,8 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
     val result = executeSingle("EXPLAIN MATCH (n:Person) WHERE n['key-' + n.name] IN ['Foo', 'Bar'] RETURN n", Map.empty)
 
     result.notifications should equal(Set(INDEX_LOOKUP_FOR_DYNAMIC_PROPERTY.notification(graphdb.InputPosition.empty,
-                                                                                         indexSeekOrScan(
-                                                                                           Set("Person").asJava))))
+      indexSeekOrScan(
+        Set("Person").asJava))))
   }
 
   test("warn for unfulfillable index seek when using dynamic property lookup with multiple labels") {
@@ -286,8 +311,8 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
     val result = executeSingle("EXPLAIN MATCH (n:Person:Foo) WHERE n['key-' + n.name] = 'value' RETURN n", Map.empty)
 
     result.notifications should contain(INDEX_LOOKUP_FOR_DYNAMIC_PROPERTY.notification(graphdb.InputPosition.empty,
-                                                                                       indexSeekOrScan(
-                                                                                         Set("Person").asJava)))
+      indexSeekOrScan(
+        Set("Person").asJava)))
   }
 
   test("warn for unfulfillable index seek when using dynamic property lookup with multiple indexed labels") {
@@ -297,8 +322,8 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
     val result = executeSingle("EXPLAIN MATCH (n:Person:Jedi) WHERE n['key-' + n.name] = 'value' RETURN n", Map.empty)
 
     result.notifications should equal(Set(INDEX_LOOKUP_FOR_DYNAMIC_PROPERTY.notification(graphdb.InputPosition.empty,
-                                                                                         indexSeekOrScan(
-                                                                                           Set("Person", "Jedi").asJava))))
+      indexSeekOrScan(
+        Set("Person", "Jedi").asJava))))
   }
 
   test("should not warn when using dynamic property lookup with no labels") {
@@ -316,8 +341,8 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
       "EXPLAIN MATCH (n:Person) WHERE n.name = 'Tobias' AND n['key-' + n.name] = 'value' RETURN n", Map.empty)
 
     result.notifications should equal(Set(INDEX_LOOKUP_FOR_DYNAMIC_PROPERTY.notification(graphdb.InputPosition.empty,
-                                                                                         indexSeekOrScan(
-                                                                                           Set("Person").asJava))))
+      indexSeekOrScan(
+        Set("Person").asJava))))
   }
 
   test("should not warn when using dynamic property lookup with a label having no index") {

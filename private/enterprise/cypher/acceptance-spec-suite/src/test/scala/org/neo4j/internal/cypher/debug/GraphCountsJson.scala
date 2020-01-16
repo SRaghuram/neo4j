@@ -7,20 +7,25 @@ package org.neo4j.internal.cypher.debug
 
 import java.io.File
 
-import org.json4s._
+import org.json4s.JArray
+import org.json4s.CustomSerializer
+import org.json4s.DefaultFormats
+import org.json4s.FileInput
+import org.json4s.Formats
+import org.json4s.StringInput
 import org.json4s.native.JsonMethods
 
 object GraphCountsJson {
 
   /**
-    * Given a JSON file obtained from the data collector, e.g. via
-    * `curl -H accept:application/json -H content-type:application/json -d '{"statements":[{"statement":"CALL db.stats.retrieve(\"GRAPH COUNTS\")"}]}' http://_________:7474/db/neo4j/tx/commit > graphCounts.json`,
-    * return a 1-1 representation of the
-    * JSON structure in Scala case classes.
-    *
-    * @param file the file with the JSON contents
-    * @return the scala representation
-    */
+   * Given a JSON file obtained from the data collector, e.g. via
+   * `curl -H accept:application/json -H content-type:application/json -d '{"statements":[{"statement":"CALL db.stats.retrieve(\"GRAPH COUNTS\")"}]}' http://_________:7474/db/neo4j/tx/commit > graphCounts.json`,
+   * return a 1-1 representation of the
+   * JSON structure in Scala case classes.
+   *
+   * @param file the file with the JSON contents
+   * @return the scala representation
+   */
   def parseAsGraphCountData(file: File): GraphCountData = {
     implicit val formats: Formats = DefaultFormats + RowSerializer
     JsonMethods.parse(FileInput(file)).extract[GraphCountData]
@@ -75,9 +80,9 @@ case class RelationshipCount(count: Long,
                              endLabel: Option[String])
 
 /**
-  * This custom serializer is needed because the format of Row is such that offsets in an array
-  * map to particular columns.
-  */
+ * This custom serializer is needed because the format of Row is such that offsets in an array
+ * map to particular columns.
+ */
 case object RowSerializer extends CustomSerializer[Row](format => (
   {
     case JArray(arr) =>

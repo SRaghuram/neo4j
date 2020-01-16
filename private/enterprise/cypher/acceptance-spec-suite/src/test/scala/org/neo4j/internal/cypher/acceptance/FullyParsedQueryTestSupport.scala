@@ -5,16 +5,22 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
+import org.neo4j.cypher.internal.FullyParsedQuery
+import org.neo4j.cypher.internal.QueryOptions
+import org.neo4j.cypher.internal.ast.Statement
+import org.neo4j.cypher.internal.ast.semantics.SemanticFeature.Cypher9Comparability
+import org.neo4j.cypher.internal.ast.semantics.SemanticFeature.MultipleDatabases
+import org.neo4j.cypher.internal.ast.semantics.SemanticState
 import org.neo4j.cypher.internal.compiler.phases.CompilationPhases
 import org.neo4j.cypher.internal.compiler.test_helpers.ContextHelper
+import org.neo4j.cypher.internal.frontend.phases.AstRewriting
+import org.neo4j.cypher.internal.frontend.phases.BaseContains
+import org.neo4j.cypher.internal.frontend.phases.InitialState
+import org.neo4j.cypher.internal.frontend.phases.SemanticAnalysis
 import org.neo4j.cypher.internal.planner.spi.PlannerNameFor
-import org.neo4j.cypher.internal.ast.Statement
-import org.neo4j.cypher.internal.ast.semantics.SemanticFeature.{Cypher9Comparability, MultipleDatabases}
-import org.neo4j.cypher.internal.ast.semantics.SemanticState
-import org.neo4j.cypher.internal.frontend.phases.{AstRewriting, BaseContains, InitialState, SemanticAnalysis}
 import org.neo4j.cypher.internal.rewriting.RewriterStepSequencer
-import org.neo4j.cypher.internal.rewriting.rewriters.{GeneratingNamer, IfNoParameter}
-import org.neo4j.cypher.internal.{FullyParsedQuery, QueryOptions}
+import org.neo4j.cypher.internal.rewriting.rewriters.GeneratingNamer
+import org.neo4j.cypher.internal.rewriting.rewriters.IfNoParameter
 
 trait FullyParsedQueryTestSupport {
 

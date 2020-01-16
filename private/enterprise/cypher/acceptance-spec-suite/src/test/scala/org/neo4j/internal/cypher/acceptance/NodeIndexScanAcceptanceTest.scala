@@ -6,7 +6,9 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithAssertion, Configs, CypherComparisonSupport}
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.ComparePlansWithAssertion
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 
 /**
  * These tests are testing the actual index implementation, thus they should all check the actual result.
@@ -59,8 +61,8 @@ class NodeIndexScanAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
 
     // When
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
-                             "MATCH (p:Person) WHERE exists(p.name) RETURN p",
-                             planComparisonStrategy = ComparePlansWithAssertion( plan => {
+      "MATCH (p:Person) WHERE exists(p.name) RETURN p",
+      planComparisonStrategy = ComparePlansWithAssertion( plan => {
         //THEN
         plan should includeSomewhere.aPlan("NodeIndexScan")
       }))

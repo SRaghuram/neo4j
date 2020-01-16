@@ -5,17 +5,20 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import java.lang.Boolean.{FALSE, TRUE}
+import java.lang.Boolean.FALSE
+import java.lang.Boolean.TRUE
 
 import com.neo4j.cypher.RunWithConfigTestSupport
 import org.neo4j.configuration.GraphDatabaseSettings
-import org.neo4j.configuration.GraphDatabaseSettings.CypherParserVersion.{V_35, V_40, V_41}
+import org.neo4j.configuration.GraphDatabaseSettings.CypherParserVersion.V_35
+import org.neo4j.configuration.GraphDatabaseSettings.CypherParserVersion.V_40
+import org.neo4j.configuration.GraphDatabaseSettings.CypherParserVersion.V_41
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.graphdb.QueryExecutionException
 import org.neo4j.kernel.api.exceptions.Status
 
-import scala.collection.JavaConverters._
+import scala.collection.JavaConverters.asScalaIteratorConverter
 
 class CypherCompatibilityTest extends ExecutionEngineFunSuite with RunWithConfigTestSupport {
 

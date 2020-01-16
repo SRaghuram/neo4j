@@ -5,14 +5,18 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import java.lang.Boolean.{FALSE, TRUE}
+import java.lang.Boolean.FALSE
+import java.lang.Boolean.TRUE
 
 import com.neo4j.cypher.RunWithConfigTestSupport
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.graphdb.Node
+import org.neo4j.graphdb.QueryExecutionException
 import org.neo4j.graphdb.config.Setting
-import org.neo4j.graphdb.{Node, QueryExecutionException}
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithAssertion, Configs, CypherComparisonSupport}
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.ComparePlansWithAssertion
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 import org.neo4j.kernel.api.exceptions.Status
 
 class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTestSupport with CypherComparisonSupport {
@@ -187,8 +191,8 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
         graph.withTx( tx => tx.execute("CREATE INDEX FOR (n:Person) ON (n.name)"))
         graph.withTx( tx => tx.execute("CALL db.awaitIndexes()"))
         db.withTx( tx => shouldHaveNoWarnings(
-            tx.execute(s"EXPLAIN MATCH (n:Person) USING INDEX n:Person(name) WHERE n.name = 'John' RETURN n")
-          )
+          tx.execute(s"EXPLAIN MATCH (n:Person) USING INDEX n:Person(name) WHERE n.name = 'John' RETURN n")
+        )
         )
     }
   }
@@ -199,8 +203,8 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
         graph.withTx( tx => tx.execute("CREATE INDEX my_index FOR (n:Person) ON (n.name)"))
         graph.withTx( tx => tx.execute("CALL db.awaitIndex('my_index')"))
         db.withTx( tx => shouldHaveNoWarnings(
-            tx.execute(s"EXPLAIN MATCH (n:Person) USING INDEX n:Person(name) WHERE n.name = 'John' RETURN n")
-          )
+          tx.execute(s"EXPLAIN MATCH (n:Person) USING INDEX n:Person(name) WHERE n.name = 'John' RETURN n")
+        )
         )
     }
   }
@@ -387,7 +391,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
         "USING INDEX n:Entity(first_name) " +
         "WHERE n.first_name = \"John\" AND n.source = \"form1\" " +
         "RETURN n;",
-     List("Multiple hints for same variable are not supported", "Multiple hints for same identifier are not supported"))
+      List("Multiple hints for same variable are not supported", "Multiple hints for same identifier are not supported"))
   }
 
   test("scan hint must fail if using a variable not used in the query") {
@@ -401,8 +405,8 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
     // GIVEN
 
     // WHEN
-   failWithError(Configs.All, "MATCH n-->() USING SCAN n:Person return n",
-     List("Cannot use label scan hint in this context.", "Parentheses are required to identify nodes in patterns, i.e. (n)"))
+    failWithError(Configs.All, "MATCH n-->() USING SCAN n:Person return n",
+      List("Cannot use label scan hint in this context.", "Parentheses are required to identify nodes in patterns, i.e. (n)"))
   }
 
   test("should succeed (i.e. no warnings or errors) if executing a query using a 'USING SCAN'") {
@@ -422,8 +426,8 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
         engine.withTx( tx => tx.execute("CREATE INDEX FOR (n:Person) ON (n.name)"))
         engine.withTx( tx => tx.execute("CALL db.awaitIndexes()"))
         engine.withTx( tx => shouldHaveNoWarnings(
-            tx.execute(s"EXPLAIN MATCH (n:Person), (c:Company) USING INDEX n:Person(name) USING SCAN c:Company WHERE n.name = 'John' RETURN n")
-          ))
+          tx.execute(s"EXPLAIN MATCH (n:Person), (c:Company) USING INDEX n:Person(name) USING SCAN c:Company WHERE n.name = 'John' RETURN n")
+        ))
     }
   }
 
@@ -433,8 +437,8 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
         engine.withTx( tx => tx.execute("CREATE INDEX my_index FOR (n:Person) ON (n.name)"))
         engine.withTx( tx => tx.execute("CALL db.awaitIndex('my_index')"))
         engine.withTx( tx => shouldHaveNoWarnings(
-            tx.execute(s"EXPLAIN MATCH (n:Person), (c:Company) USING INDEX n:Person(name) USING SCAN c:Company WHERE n.name = 'John' RETURN n")
-          ))
+          tx.execute(s"EXPLAIN MATCH (n:Person), (c:Company) USING INDEX n:Person(name) USING SCAN c:Company WHERE n.name = 'John' RETURN n")
+        ))
     }
   }
 
@@ -473,7 +477,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
          |RETURN a.prop AS res""".stripMargin
 
     val result = executeWith(Configs.All, query,
-                             planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.nTimes(1, aPlan("NodeHashJoin").containingArgument("a"))))
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.nTimes(1, aPlan("NodeHashJoin").containingArgument("a"))))
 
     result.toList should equal (List(Map("res" -> "foo")))
   }
@@ -484,12 +488,12 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
 
     val query =
       s"""
-          |MATCH (a:A)-->(b:B)
-          |USING JOIN ON b
-          |RETURN b.prop AS res""".stripMargin
+         |MATCH (a:A)-->(b:B)
+         |USING JOIN ON b
+         |RETURN b.prop AS res""".stripMargin
 
     val result = executeWith(Configs.All, query,
-                             planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.nTimes(1, aPlan("NodeHashJoin").containingArgument("b"))))
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.nTimes(1, aPlan("NodeHashJoin").containingArgument("b"))))
 
     result.toList should equal (List(Map("res" -> "bar")))
   }
@@ -510,293 +514,293 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
          |USING JOIN ON a
          |RETURN a.prop""".stripMargin,
       List("Cannot use join hint for single node pattern"))
-    }
+  }
 
   test("should fail when join hint is applied to a relationship") {
-      failWithError(Configs.All,
-        s"""
-           |MATCH (a:A)-[r1]->(b:B)-[r2]->(c:C)
-           |USING JOIN ON r1
-           |RETURN a.prop""".stripMargin,
-        List("Type mismatch: expected Node but was Relationship"))
-    }
+    failWithError(Configs.All,
+      s"""
+         |MATCH (a:A)-[r1]->(b:B)-[r2]->(c:C)
+         |USING JOIN ON r1
+         |RETURN a.prop""".stripMargin,
+      List("Type mismatch: expected Node but was Relationship"))
+  }
 
   test("should fail when join hint is applied to a path") {
-      failWithError(Configs.All,
-        s"""
-           |MATCH p=(a:A)-->(b:B)-->(c:C)
-           |USING JOIN ON p
-           |RETURN a.prop""".stripMargin,
-        List("Type mismatch: expected Node but was Path"))
-    }
+    failWithError(Configs.All,
+      s"""
+         |MATCH p=(a:A)-->(b:B)-->(c:C)
+         |USING JOIN ON p
+         |RETURN a.prop""".stripMargin,
+      List("Type mismatch: expected Node but was Path"))
+  }
 
   test("should be able to use join hints for multiple hop pattern") {
-      val a = createNode(("prop", "foo"))
-      val b = createNode()
-      val c = createNode()
-      val d = createNode()
-      val e = createNode(("prop", "foo"))
+    val a = createNode(("prop", "foo"))
+    val b = createNode()
+    val c = createNode()
+    val d = createNode()
+    val e = createNode(("prop", "foo"))
 
-      relate(a, b, "X")
-      relate(b, c, "X")
-      relate(c, d, "X")
-      relate(d, e, "X")
+    relate(a, b, "X")
+    relate(b, c, "X")
+    relate(c, d, "X")
+    relate(d, e, "X")
 
-      val result = executeWith(Configs.All,
-        s"""
-           |MATCH (a)-[:X]->(b)-[:X]->(c)-[:X]->(d)-[:X]->(e)
-           |USING JOIN ON c
-           |WHERE a.prop = e.prop
-           |RETURN c""".stripMargin,
-        planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.nTimes(1, aPlan("NodeHashJoin").containingArgument("c"))))
+    val result = executeWith(Configs.All,
+      s"""
+         |MATCH (a)-[:X]->(b)-[:X]->(c)-[:X]->(d)-[:X]->(e)
+         |USING JOIN ON c
+         |WHERE a.prop = e.prop
+         |RETURN c""".stripMargin,
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.nTimes(1, aPlan("NodeHashJoin").containingArgument("c"))))
 
-      result.toList should equal(List(Map("c" -> c)))
-    }
+    result.toList should equal(List(Map("c" -> c)))
+  }
 
   test("should be able to use join hints for queries with var length pattern") {
-      val a = createLabeledNode(Map("prop" -> "foo"), "Foo")
-      val b = createNode()
-      val c = createNode()
-      val d = createNode()
-      val e = createLabeledNode(Map("prop" -> "foo"), "Bar")
+    val a = createLabeledNode(Map("prop" -> "foo"), "Foo")
+    val b = createNode()
+    val c = createNode()
+    val d = createNode()
+    val e = createLabeledNode(Map("prop" -> "foo"), "Bar")
 
-      relate(a, b, "X")
-      relate(b, c, "X")
-      relate(c, d, "X")
-      relate(e, d, "Y")
+    relate(a, b, "X")
+    relate(b, c, "X")
+    relate(c, d, "X")
+    relate(e, d, "Y")
 
-      val result = executeWith(Configs.VarExpand,
-        s"""
-           |MATCH (a:Foo)-[:X*]->(b)<-[:Y]->(c:Bar)
-           |USING JOIN ON b
-           |WHERE a.prop = c.prop
-           |RETURN c""".stripMargin,
-        planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.nTimes(1, aPlan("NodeHashJoin").containingArgument("b"))))
+    val result = executeWith(Configs.VarExpand,
+      s"""
+         |MATCH (a:Foo)-[:X*]->(b)<-[:Y]->(c:Bar)
+         |USING JOIN ON b
+         |WHERE a.prop = c.prop
+         |RETURN c""".stripMargin,
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.nTimes(1, aPlan("NodeHashJoin").containingArgument("b"))))
 
-      result.toList should equal(List(Map("c" -> e)))
-    }
+    result.toList should equal(List(Map("c" -> e)))
+  }
 
   test("should be able to use multiple join hints") {
-      val a = createNode(("prop", "foo"))
-      val b = createNode()
-      val c = createNode()
-      val d = createNode()
-      val e = createNode(("prop", "foo"))
+    val a = createNode(("prop", "foo"))
+    val b = createNode()
+    val c = createNode()
+    val d = createNode()
+    val e = createNode(("prop", "foo"))
 
-      relate(a, b, "X")
-      relate(b, c, "X")
-      relate(c, d, "X")
-      relate(d, e, "X")
+    relate(a, b, "X")
+    relate(b, c, "X")
+    relate(c, d, "X")
+    relate(d, e, "X")
 
     executeWith(Configs.All,
-        s"""
-           |MATCH (a)-[:X]->(b)-[:X]->(c)-[:X]->(d)-[:X]->(e)
-           |USING JOIN ON b
-           |USING JOIN ON c
-           |USING JOIN ON d
-           |WHERE a.prop = e.prop
-           |RETURN b, d""".stripMargin,
-        planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
-          planDescription should includeSomewhere.nTimes(1, aPlan("NodeHashJoin").containingArgument("b"))
-          planDescription should includeSomewhere.nTimes(1, aPlan("NodeHashJoin").containingArgument("c"))
-          planDescription should includeSomewhere.nTimes(1, aPlan("NodeHashJoin").containingArgument("d"))
-        }))
-    }
+      s"""
+         |MATCH (a)-[:X]->(b)-[:X]->(c)-[:X]->(d)-[:X]->(e)
+         |USING JOIN ON b
+         |USING JOIN ON c
+         |USING JOIN ON d
+         |WHERE a.prop = e.prop
+         |RETURN b, d""".stripMargin,
+      planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
+        planDescription should includeSomewhere.nTimes(1, aPlan("NodeHashJoin").containingArgument("b"))
+        planDescription should includeSomewhere.nTimes(1, aPlan("NodeHashJoin").containingArgument("c"))
+        planDescription should includeSomewhere.nTimes(1, aPlan("NodeHashJoin").containingArgument("d"))
+      }))
+  }
 
   test("should work when join hint is applied to x in (a)-->(x)<--(b)") {
-      val a = createNode()
-      val b = createNode()
-      val x = createNode()
+    val a = createNode()
+    val b = createNode()
+    val x = createNode()
 
-      relate(a, x)
-      relate(b, x)
+    relate(a, x)
+    relate(b, x)
 
-      val query =
-        s"""
-            |MATCH (a)-->(x)<--(b)
-            |USING JOIN ON x
-            |RETURN x""".stripMargin
+    val query =
+      s"""
+         |MATCH (a)-->(x)<--(b)
+         |USING JOIN ON x
+         |RETURN x""".stripMargin
 
-      executeWith(Configs.All, query,
-        planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.nTimes(1, aPlan("NodeHashJoin").containingArgument("x"))))
-    }
+    executeWith(Configs.All, query,
+      planComparisonStrategy = ComparePlansWithAssertion(_ should includeSomewhere.nTimes(1, aPlan("NodeHashJoin").containingArgument("x"))))
+  }
 
   test("should work when join hint is applied to x in (a)-->(x)<--(b) where a and b can use an index") {
-      graph.createIndex("Person", "name")
+    graph.createIndex("Person", "name")
 
-      val tom = createLabeledNode(Map("name" -> "Tom Hanks"), "Person")
-      val meg = createLabeledNode(Map("name" -> "Meg Ryan"), "Person")
+    val tom = createLabeledNode(Map("name" -> "Tom Hanks"), "Person")
+    val meg = createLabeledNode(Map("name" -> "Meg Ryan"), "Person")
 
-      val harrysally = createLabeledNode(Map("title" -> "When Harry Met Sally"), "Movie")
+    val harrysally = createLabeledNode(Map("title" -> "When Harry Met Sally"), "Movie")
 
-      relate(tom, harrysally, "ACTS_IN")
-      relate(meg, harrysally, "ACTS_IN")
+    relate(tom, harrysally, "ACTS_IN")
+    relate(meg, harrysally, "ACTS_IN")
 
-      1 until 10 foreach { i =>
-        createLabeledNode(Map("name" -> s"Person $i"), "Person")
-      }
-
-      1 until 90 foreach { _ =>
-        createLabeledNode("Person")
-      }
-
-      1 until 20 foreach { _ =>
-        createLabeledNode("Movie")
-      }
-
-      val query =
-        s"""
-            |MATCH (a:Person {name:"Tom Hanks"})-[:ACTS_IN]->(x)<-[:ACTS_IN]-(b:Person {name:"Meg Ryan"})
-            |USING JOIN ON x
-            |RETURN x""".stripMargin
-
-      executeWith(Configs.All, query)
+    1 until 10 foreach { i =>
+      createLabeledNode(Map("name" -> s"Person $i"), "Person")
     }
+
+    1 until 90 foreach { _ =>
+      createLabeledNode("Person")
+    }
+
+    1 until 20 foreach { _ =>
+      createLabeledNode("Movie")
+    }
+
+    val query =
+      s"""
+         |MATCH (a:Person {name:"Tom Hanks"})-[:ACTS_IN]->(x)<-[:ACTS_IN]-(b:Person {name:"Meg Ryan"})
+         |USING JOIN ON x
+         |RETURN x""".stripMargin
+
+    executeWith(Configs.All, query)
+  }
 
   test("should work when join hint is applied to x in (a)-->(x)<--(b) where a and b are labeled") {
-      val tom = createLabeledNode(Map("name" -> "Tom Hanks"), "Person")
-      val meg = createLabeledNode(Map("name" -> "Meg Ryan"), "Person")
+    val tom = createLabeledNode(Map("name" -> "Tom Hanks"), "Person")
+    val meg = createLabeledNode(Map("name" -> "Meg Ryan"), "Person")
 
-      val harrysally = createLabeledNode(Map("title" -> "When Harry Met Sally"), "Movie")
+    val harrysally = createLabeledNode(Map("title" -> "When Harry Met Sally"), "Movie")
 
-      relate(tom, harrysally, "ACTS_IN")
-      relate(meg, harrysally, "ACTS_IN")
+    relate(tom, harrysally, "ACTS_IN")
+    relate(meg, harrysally, "ACTS_IN")
 
-      1 until 10 foreach { i =>
-        createLabeledNode(Map("name" -> s"Person $i"), "Person")
-      }
-
-      1 until 90 foreach { _ =>
-        createLabeledNode("Person")
-      }
-
-      1 until 20 foreach { _ =>
-        createLabeledNode("Movie")
-      }
-
-      val query =
-        s"""
-            |MATCH (a:Person {name:"Tom Hanks"})-[:ACTS_IN]->(x)<-[:ACTS_IN]-(b:Person {name:"Meg Ryan"})
-            |USING JOIN ON x
-            |RETURN x""".stripMargin
-
-      executeWith(Configs.All, query,
-        planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
-          planDescription should includeSomewhere.nTimes(1, aPlan("NodeHashJoin").containingArgument("x"))
-          planDescription.toString should not include "AllNodesScan"
-        }))
+    1 until 10 foreach { i =>
+      createLabeledNode(Map("name" -> s"Person $i"), "Person")
     }
+
+    1 until 90 foreach { _ =>
+      createLabeledNode("Person")
+    }
+
+    1 until 20 foreach { _ =>
+      createLabeledNode("Movie")
+    }
+
+    val query =
+      s"""
+         |MATCH (a:Person {name:"Tom Hanks"})-[:ACTS_IN]->(x)<-[:ACTS_IN]-(b:Person {name:"Meg Ryan"})
+         |USING JOIN ON x
+         |RETURN x""".stripMargin
+
+    executeWith(Configs.All, query,
+      planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
+        planDescription should includeSomewhere.nTimes(1, aPlan("NodeHashJoin").containingArgument("x"))
+        planDescription.toString should not include "AllNodesScan"
+      }))
+  }
 
   test("should work when join hint is applied to x in (a)-->(x)<--(b) where using index hints on a and b") {
-      graph.createIndex("Person", "name")
+    graph.createIndex("Person", "name")
 
-      val tom = createLabeledNode(Map("name" -> "Tom Hanks"), "Person")
-      val meg = createLabeledNode(Map("name" -> "Meg Ryan"), "Person")
+    val tom = createLabeledNode(Map("name" -> "Tom Hanks"), "Person")
+    val meg = createLabeledNode(Map("name" -> "Meg Ryan"), "Person")
 
-      val harrysally = createLabeledNode(Map("title" -> "When Harry Met Sally"), "Movie")
+    val harrysally = createLabeledNode(Map("title" -> "When Harry Met Sally"), "Movie")
 
-      relate(tom, harrysally, "ACTS_IN")
-      relate(meg, harrysally, "ACTS_IN")
+    relate(tom, harrysally, "ACTS_IN")
+    relate(meg, harrysally, "ACTS_IN")
 
-      1 until 10 foreach { i =>
-        createLabeledNode(Map("name" -> s"Person $i"), "Person")
-      }
-
-      1 until 90 foreach { _ =>
-        createLabeledNode("Person")
-      }
-
-      1 until 20 foreach { _ =>
-        createLabeledNode("Movie")
-      }
-
-      val query =
-        s"""
-            |MATCH (a:Person {name:"Tom Hanks"})-[:ACTS_IN]->(x)<-[:ACTS_IN]-(b:Person {name:"Meg Ryan"})
-            |USING INDEX a:Person(name)
-            |USING INDEX b:Person(name)
-            |USING JOIN ON x
-            |RETURN x""".stripMargin
-
-      executeWith(Configs.All, query,
-        planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
-          planDescription should includeSomewhere.nTimes(1, aPlan("NodeHashJoin").containingArgument("x"))
-          planDescription.toString should not include "AllNodesScan"
-        }))
+    1 until 10 foreach { i =>
+      createLabeledNode(Map("name" -> s"Person $i"), "Person")
     }
+
+    1 until 90 foreach { _ =>
+      createLabeledNode("Person")
+    }
+
+    1 until 20 foreach { _ =>
+      createLabeledNode("Movie")
+    }
+
+    val query =
+      s"""
+         |MATCH (a:Person {name:"Tom Hanks"})-[:ACTS_IN]->(x)<-[:ACTS_IN]-(b:Person {name:"Meg Ryan"})
+         |USING INDEX a:Person(name)
+         |USING INDEX b:Person(name)
+         |USING JOIN ON x
+         |RETURN x""".stripMargin
+
+    executeWith(Configs.All, query,
+      planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
+        planDescription should includeSomewhere.nTimes(1, aPlan("NodeHashJoin").containingArgument("x"))
+        planDescription.toString should not include "AllNodesScan"
+      }))
+  }
 
   test("should work when join hint is applied to x in (a)-->(x)<--(b) where using index hints on a and b (named index)") {
-      graph.createIndexWithName("my_index", "Person", "name")
+    graph.createIndexWithName("my_index", "Person", "name")
 
-      val tom = createLabeledNode(Map("name" -> "Tom Hanks"), "Person")
-      val meg = createLabeledNode(Map("name" -> "Meg Ryan"), "Person")
+    val tom = createLabeledNode(Map("name" -> "Tom Hanks"), "Person")
+    val meg = createLabeledNode(Map("name" -> "Meg Ryan"), "Person")
 
-      val harrysally = createLabeledNode(Map("title" -> "When Harry Met Sally"), "Movie")
+    val harrysally = createLabeledNode(Map("title" -> "When Harry Met Sally"), "Movie")
 
-      relate(tom, harrysally, "ACTS_IN")
-      relate(meg, harrysally, "ACTS_IN")
+    relate(tom, harrysally, "ACTS_IN")
+    relate(meg, harrysally, "ACTS_IN")
 
-      1 until 10 foreach { i =>
-        createLabeledNode(Map("name" -> s"Person $i"), "Person")
-      }
-
-      1 until 90 foreach { _ =>
-        createLabeledNode("Person")
-      }
-
-      1 until 20 foreach { _ =>
-        createLabeledNode("Movie")
-      }
-
-      val query =
-        s"""
-            |MATCH (a:Person {name:"Tom Hanks"})-[:ACTS_IN]->(x)<-[:ACTS_IN]-(b:Person {name:"Meg Ryan"})
-            |USING INDEX a:Person(name)
-            |USING INDEX b:Person(name)
-            |USING JOIN ON x
-            |RETURN x""".stripMargin
-
-      executeWith(Configs.All, query,
-        planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
-          planDescription should includeSomewhere.nTimes(1, aPlan("NodeHashJoin").containingArgument("x"))
-          planDescription.toString should not include "AllNodesScan"
-        }))
+    1 until 10 foreach { i =>
+      createLabeledNode(Map("name" -> s"Person $i"), "Person")
     }
 
+    1 until 90 foreach { _ =>
+      createLabeledNode("Person")
+    }
+
+    1 until 20 foreach { _ =>
+      createLabeledNode("Movie")
+    }
+
+    val query =
+      s"""
+         |MATCH (a:Person {name:"Tom Hanks"})-[:ACTS_IN]->(x)<-[:ACTS_IN]-(b:Person {name:"Meg Ryan"})
+         |USING INDEX a:Person(name)
+         |USING INDEX b:Person(name)
+         |USING JOIN ON x
+         |RETURN x""".stripMargin
+
+    executeWith(Configs.All, query,
+      planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
+        planDescription should includeSomewhere.nTimes(1, aPlan("NodeHashJoin").containingArgument("x"))
+        planDescription.toString should not include "AllNodesScan"
+      }))
+  }
+
   test("should work when join hint is applied to x in (a)-->(x)<--(b) where x can use an index") {
-      graph.createIndex("Movie", "title")
+    graph.createIndex("Movie", "title")
 
-      val tom = createLabeledNode(Map("name" -> "Tom Hanks"), "Person")
-      val meg = createLabeledNode(Map("name" -> "Meg Ryan"), "Person")
+    val tom = createLabeledNode(Map("name" -> "Tom Hanks"), "Person")
+    val meg = createLabeledNode(Map("name" -> "Meg Ryan"), "Person")
 
-      val harrysally = createLabeledNode(Map("title" -> "When Harry Met Sally"), "Movie")
+    val harrysally = createLabeledNode(Map("title" -> "When Harry Met Sally"), "Movie")
 
-      relate(tom, harrysally, "ACTS_IN")
-      relate(meg, harrysally, "ACTS_IN")
+    relate(tom, harrysally, "ACTS_IN")
+    relate(meg, harrysally, "ACTS_IN")
 
-      1 until 10 foreach { i =>
-        createLabeledNode(Map("name" -> s"Person $i"), "Person")
-      }
+    1 until 10 foreach { i =>
+      createLabeledNode(Map("name" -> s"Person $i"), "Person")
+    }
 
-      1 until 90 foreach { _ =>
-        createLabeledNode("Person")
-      }
+    1 until 90 foreach { _ =>
+      createLabeledNode("Person")
+    }
 
-      1 until 20 foreach { i =>
-        createLabeledNode(Map("title" -> s"Movie $i"), "Movie")
-      }
+    1 until 20 foreach { i =>
+      createLabeledNode(Map("title" -> s"Movie $i"), "Movie")
+    }
 
-      val query =
-        s"""
-            |MATCH (a:Person)-[:ACTS_IN]->(x:Movie {title: "When Harry Met Sally"})<-[:ACTS_IN]-(b:Person)
-            |USING JOIN ON x
-            |RETURN x""".stripMargin
+    val query =
+      s"""
+         |MATCH (a:Person)-[:ACTS_IN]->(x:Movie {title: "When Harry Met Sally"})<-[:ACTS_IN]-(b:Person)
+         |USING JOIN ON x
+         |RETURN x""".stripMargin
 
-      executeWith(Configs.All, query,
-        planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
-          planDescription should includeSomewhere.nTimes(1, aPlan("NodeHashJoin").containingArgument("x"))
-          planDescription should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek").containingVariables("x"))
-        }))
+    executeWith(Configs.All, query,
+      planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
+        planDescription should includeSomewhere.nTimes(1, aPlan("NodeHashJoin").containingArgument("x"))
+        planDescription should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek").containingVariables("x"))
+      }))
   }
 
   test("should handle using index hint on both ends of pattern") {
@@ -906,7 +910,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
       planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
         planDescription should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek").containingVariables("a"))
         planDescription should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek").containingVariables("b"))
-    }))
+      }))
 
     result.toList should equal(List(Map("a" -> startNode, "b" -> endNode)))
   }
@@ -918,13 +922,13 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
 
     val query =
       s"""MATCH (a:Node)-->(b:Node)-->(c:Node)
-          |USING INDEX a:Node(prop)
-          |USING INDEX b:Node(prop)
-          |WHERE a.prop = 'foo' and b.prop = 'bar'
-          |RETURN b.prop AS res""".stripMargin
+         |USING INDEX a:Node(prop)
+         |USING INDEX b:Node(prop)
+         |WHERE a.prop = 'foo' and b.prop = 'bar'
+         |RETURN b.prop AS res""".stripMargin
 
     val result = executeWith(Configs.All - Configs.Pipelined, query,
-                             planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
+      planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
         planDescription should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek").containingVariables("a"))
         planDescription should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek").containingVariables("b"))
       }))
@@ -943,7 +947,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
         | RETURN f
       """.stripMargin
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
-                             planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
+      planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
         planDescription should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek(equality,equality)").containingVariables("f"))
       }))
 
@@ -961,7 +965,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
         | RETURN f
       """.stripMargin
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query,
-                             planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
+      planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
         planDescription should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek(equality,equality)")
           .containingVariables("f").containingArgument(":Foo(bar,baz)"))
       }))

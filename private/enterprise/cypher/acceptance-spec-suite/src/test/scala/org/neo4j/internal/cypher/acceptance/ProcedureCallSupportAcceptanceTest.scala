@@ -11,14 +11,15 @@ import org.neo4j.collection.RawIterator
 import org.neo4j.graphdb.QueryExecutionException
 import org.neo4j.internal.helpers.collection.MapUtil.map
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException
-import org.neo4j.internal.kernel.api.procs.{FieldSignature, Neo4jTypes}
+import org.neo4j.internal.kernel.api.procs.FieldSignature
+import org.neo4j.internal.kernel.api.procs.Neo4jTypes
 import org.neo4j.kernel.api.ResourceTracker
 import org.neo4j.kernel.api.procedure.CallableProcedure.BasicProcedure
 import org.neo4j.kernel.api.procedure.Context
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values.stringValue
 
-import scala.collection.JavaConverters._
+import scala.collection.JavaConverters.mapAsJavaMapConverter
 
 class ProcedureCallSupportAcceptanceTest extends ProcedureCallAcceptanceTest {
 
@@ -32,8 +33,8 @@ class ProcedureCallSupportAcceptanceTest extends ProcedureCallAcceptanceTest {
     // Using graph execute to get a Java value
     graph.withTx( tx => {
       tx.execute("CALL my.first.value() YIELD out RETURN * LIMIT 1").stream().toArray.toList should equal(List(
-      java.util.Collections.singletonMap("out", value)
-    ))})
+        java.util.Collections.singletonMap("out", value)
+      ))})
   }
 
   test("procedure calls and pattern comprehensions with complex query") {
@@ -44,8 +45,8 @@ class ProcedureCallSupportAcceptanceTest extends ProcedureCallAcceptanceTest {
     // Using graph execute to get a Java value
     graph.withTx( tx => {
       tx.execute("CALL my.first.proc([reduce(sum=0, x IN [(a)-->(b) | b.age] | sum + x)]) YIELD out0 UNWIND out0 AS result RETURN result").stream().toArray.toList should equal(List(
-      java.util.Collections.singletonMap("result", 18L)
-    ))})
+        java.util.Collections.singletonMap("result", 18L)
+      ))})
   }
 
   test("should return correctly typed list result (even if converting to and from scala representation internally)") {
@@ -58,8 +59,8 @@ class ProcedureCallSupportAcceptanceTest extends ProcedureCallAcceptanceTest {
     // Using graph execute to get a Java value
     graph.withTx( tx => {
       tx.execute("CALL my.first.value() YIELD out RETURN * LIMIT 1").stream().toArray.toList should equal(List(
-      java.util.Collections.singletonMap("out", value)
-    ))})
+        java.util.Collections.singletonMap("out", value)
+      ))})
   }
 
   test("should return correctly typed stream result (even if converting to and from scala representation internally)") {
@@ -72,9 +73,9 @@ class ProcedureCallSupportAcceptanceTest extends ProcedureCallAcceptanceTest {
 
     // Using graph execute to get a Java value
     graph.withTx( tx => {
-    tx.execute("CALL my.first.value() YIELD out RETURN * LIMIT 1").stream().toArray.toList should equal(List(
-      java.util.Collections.singletonMap("out", value)
-    ))})
+      tx.execute("CALL my.first.value() YIELD out RETURN * LIMIT 1").stream().toArray.toList should equal(List(
+        java.util.Collections.singletonMap("out", value)
+      ))})
   }
 
   test("should not yield deprecated fields") {
@@ -94,9 +95,9 @@ class ProcedureCallSupportAcceptanceTest extends ProcedureCallAcceptanceTest {
 
     // then
     graph.withTx( tx => {
-    tx.execute("CALL something.with.deprecated.output()").stream().toArray.toList should equal(List(
-      map("one", "alpha", "newTwo", "beta")
-    ))})
+      tx.execute("CALL something.with.deprecated.output()").stream().toArray.toList should equal(List(
+        map("one", "alpha", "newTwo", "beta")
+      ))})
   }
 
   test("should be able to execute union of multiple token accessing procedures") {
@@ -106,12 +107,12 @@ class ProcedureCallSupportAcceptanceTest extends ProcedureCallAcceptanceTest {
 
     val query =
       "CALL db.labels() YIELD label RETURN label as result " +
-      "UNION " +
-      "CALL db.relationshipTypes() YIELD relationshipType RETURN relationshipType as result " +
-      "UNION " +
-      "CALL db.propertyKeys() YIELD propertyKey RETURN propertyKey as result " +
-      "UNION " +
-      "CALL db.labels() YIELD label RETURN label as result"
+        "UNION " +
+        "CALL db.relationshipTypes() YIELD relationshipType RETURN relationshipType as result " +
+        "UNION " +
+        "CALL db.propertyKeys() YIELD propertyKey RETURN propertyKey as result " +
+        "UNION " +
+        "CALL db.labels() YIELD label RETURN label as result"
     val transaction = graphOps.beginTx()
     try {
       val result = transaction.execute(query)

@@ -12,8 +12,10 @@ import java.lang.Long
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.runtime.PathImpl
-import org.neo4j.graphdb.{Node, Path}
-import org.neo4j.internal.cypher.acceptance.comparisonsupport._
+import org.neo4j.graphdb.Node
+import org.neo4j.graphdb.Path
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 
 class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
 
@@ -141,10 +143,10 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
     relate(nodeA, nodeC)
 
     val result = executeWith(Configs.ShortestPath /\ Configs.CartesianProduct,
-    """MATCH p = shortestPath((src:A)-[r*]->(dest:C))
-      | WITH p
-      | WHERE length(p) > 1
-      | RETURN nodes(p) as nodes
+      """MATCH p = shortestPath((src:A)-[r*]->(dest:C))
+        | WITH p
+        | WHERE length(p) > 1
+        | RETURN nodes(p) as nodes
     """.stripMargin)
 
     result.columnAs[List[Node]]("nodes").toList.size should equal(0)
@@ -721,8 +723,8 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
     relate(b, c)
 
     val query = s"""MATCH (a), (c)
-                  |WHERE id(a) = ${a.getId} AND id(c) = ${c.getId}
-                  |RETURN shortestPath((a)-[*]->(c)) AS p
+                   |WHERE id(a) = ${a.getId} AND id(c) = ${c.getId}
+                   |RETURN shortestPath((a)-[*]->(c)) AS p
                   """.stripMargin
 
     val result = executeWith(Configs.ShortestPath /\ Configs.CartesianProduct, query).columnAs[Path]("p").toList.head
@@ -759,7 +761,7 @@ class ShortestPathAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
 
     // When
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
-                             """MATCH (person1:Person {id:1}), (person2:Person {id:2})
+      """MATCH (person1:Person {id:1}), (person2:Person {id:2})
         |OPTIONAL MATCH path = shortestPath((person1)-[k:KNOWS*0..]-(person2))
         |WHERE all(r in k WHERE r.prop IN [42])
         |RETURN length(path)""".stripMargin)

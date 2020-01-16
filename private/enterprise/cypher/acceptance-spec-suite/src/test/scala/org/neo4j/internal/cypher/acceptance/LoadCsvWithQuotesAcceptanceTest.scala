@@ -6,7 +6,8 @@
 package org.neo4j.internal.cypher.acceptance
 
 import java.io.PrintWriter
-import java.lang.Boolean.{FALSE, TRUE}
+import java.lang.Boolean.FALSE
+import java.lang.Boolean.TRUE
 
 import com.neo4j.cypher.RunWithConfigTestSupport
 import org.neo4j.configuration.GraphDatabaseSettings

@@ -6,7 +6,10 @@
 package org.neo4j.internal.cypher.debug
 
 import org.neo4j.cypher.GraphDatabaseTestSupport
-import org.neo4j.graphdb.{ConstraintViolationException, Label, Node, RelationshipType}
+import org.neo4j.graphdb.ConstraintViolationException
+import org.neo4j.graphdb.Label
+import org.neo4j.graphdb.Node
+import org.neo4j.graphdb.RelationshipType
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -14,13 +17,13 @@ trait CreateGraphFromCounts {
   self : GraphDatabaseTestSupport =>
 
   /**
-    * Creates a graph that is somewhat similar to the statistics given.
-    *
-    * It creates constraints, indexes and nodes. It guarantees that there are nodes
-    * for each label and unlabelled nodes, but it does not guarantee that any count is correct.
-    *
-    * Currently, no relationships are created.
-    */
+   * Creates a graph that is somewhat similar to the statistics given.
+   *
+   * It creates constraints, indexes and nodes. It guarantees that there are nodes
+   * for each label and unlabelled nodes, but it does not guarantee that any count is correct.
+   *
+   * Currently, no relationships are created.
+   */
   def createGraph(graphCountData: GraphCountData): Unit = {
     graph.withTx( tx => {
       for (constraint <- graphCountData.constraints) {
@@ -111,6 +114,6 @@ trait CreateGraphFromCounts {
   }
 
   private def propertiesString(properties: Seq[String]): String = {
-   properties.map(p => s"n.$p").mkString("(", ",", ")")
+    properties.map(p => s"n.$p").mkString("(", ",", ")")
   }
 }

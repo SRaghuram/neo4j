@@ -6,8 +6,11 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
-import org.neo4j.cypher.internal.helpers.{NodeKeyConstraintCreator, UniquenessConstraintCreator}
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithAssertion, Configs, CypherComparisonSupport}
+import org.neo4j.cypher.internal.helpers.NodeKeyConstraintCreator
+import org.neo4j.cypher.internal.helpers.UniquenessConstraintCreator
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.ComparePlansWithAssertion
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 
 class UniqueIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
 
@@ -105,7 +108,7 @@ class UniqueIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCompa
         params = Map("coll" -> List("Jacob")))
     }
 
-     test(s"$constraintCreator: should use locking unique index for merge node queries") {
+    test(s"$constraintCreator: should use locking unique index for merge node queries") {
       //GIVEN
       createLabeledNode(Map("name" -> "Andres"), "Person")
       constraintCreator.createConstraint(graph, "Person", "name")

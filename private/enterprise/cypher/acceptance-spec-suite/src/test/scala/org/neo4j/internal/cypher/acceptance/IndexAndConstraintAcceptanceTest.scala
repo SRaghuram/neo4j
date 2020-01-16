@@ -5,10 +5,15 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import org.neo4j.cypher._
-import org.neo4j.exceptions.{CypherExecutionException, SyntaxException}
-import org.neo4j.graphdb.{Label, RelationshipType}
-import org.neo4j.internal.cypher.acceptance.comparisonsupport._
+import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.cypher.QueryStatisticsTestSupport
+import org.neo4j.exceptions.CypherExecutionException
+import org.neo4j.exceptions.SyntaxException
+import org.neo4j.graphdb.Label
+import org.neo4j.graphdb.RelationshipType
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
+
+import scala.collection.JavaConverters.iterableAsScalaIterableConverter
 
 class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport {
 
@@ -1188,7 +1193,6 @@ class IndexAndConstraintAcceptanceTest extends ExecutionEngineFunSuite with Quer
   // Combination
 
   test("should create unrelated indexes and constraints") {
-    import scala.collection.JavaConverters._
 
     // WHEN
     executeSingle("CREATE INDEX FOR (n:Label) ON (n.prop1)")

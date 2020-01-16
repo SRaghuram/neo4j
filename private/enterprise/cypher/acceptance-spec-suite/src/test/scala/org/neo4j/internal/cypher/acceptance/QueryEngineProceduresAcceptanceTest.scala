@@ -8,7 +8,7 @@ package org.neo4j.internal.cypher.acceptance
 import java.io.File
 
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
-import org.neo4j.cypher._
+import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.logging.AssertableLogProvider
 import org.neo4j.logging.LogAssertions.assertThat
 

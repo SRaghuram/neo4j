@@ -8,8 +8,12 @@ package org.neo4j.internal.cypher.acceptance
 import java.util
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
-import org.neo4j.cypher.internal.{CompiledRuntimeName, InterpretedRuntimeName, SlottedRuntimeName}
+import org.neo4j.cypher.internal.CompiledRuntimeName
+import org.neo4j.cypher.internal.InterpretedRuntimeName
+import org.neo4j.cypher.internal.SlottedRuntimeName
 import org.neo4j.graphdb.QueryExecutionException
+import org.neo4j.cypher.internal.util.helpers.StringHelper.RichString
+import scala.collection.JavaConverters.asScalaIteratorConverter
 
 class SemanticErrorAcceptanceTest extends ExecutionEngineFunSuite {
 
@@ -283,7 +287,7 @@ class SemanticErrorAcceptanceTest extends ExecutionEngineFunSuite {
     executeAndEnsureError(
       "MATCH (n) USING INDEX n:Person(name) where n.name = \"Johan\" return n",
       "Cannot use index hint in this context. Must use label on node that hint is referring to. " +
-      "(line 1, column 11 (offset: 10))"
+        "(line 1, column 11 (offset: 10))"
     )
   }
 
@@ -389,9 +393,9 @@ class SemanticErrorAcceptanceTest extends ExecutionEngineFunSuite {
 
   test("give a nice error message when using unknown arguments in point") {
     executeAndEnsureError("RETURN point({xxx: 2.3, yyy: 4.5}) as point",
-                          "A map with keys 'xxx', 'yyy' is not describing a valid point, a point is described either by " +
-                            "using cartesian coordinates e.g. {x: 2.3, y: 4.5, crs: 'cartesian'} or using geographic " +
-                            "coordinates e.g. {latitude: 12.78, longitude: 56.7, crs: 'WGS-84'}. (line 1, column 14 (offset: 13))")
+      "A map with keys 'xxx', 'yyy' is not describing a valid point, a point is described either by " +
+        "using cartesian coordinates e.g. {x: 2.3, y: 4.5, crs: 'cartesian'} or using geographic " +
+        "coordinates e.g. {latitude: 12.78, longitude: 56.7, crs: 'WGS-84'}. (line 1, column 14 (offset: 13))")
   }
 
   // Below follows tests on integer overflow errors. Not sure if integers have bounds from a language POV -- is this TCK material?
@@ -492,8 +496,6 @@ class SemanticErrorAcceptanceTest extends ExecutionEngineFunSuite {
   }
 
   private def executeAndEnsureError(query: String, expected: Seq[String], params: (String,Any)*) {
-    import org.neo4j.cypher.internal.util.helpers.StringHelper._
-    import scala.collection.JavaConverters._
 
     val expectedErrorString = expected.map(e => s"'$e'").mkString(" or ")
     graph.withTx( tx =>

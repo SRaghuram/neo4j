@@ -5,13 +5,16 @@
  */
 package org.neo4j.internal.cypher.acceptance
 
-import org.neo4j.cypher._
-import org.neo4j.cypher.internal.ir.ProvidedOrder
+import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.cypher.QueryStatisticsTestSupport
 import org.neo4j.cypher.internal.ast.AstConstructionTestSupport
+import org.neo4j.cypher.internal.ir.ProvidedOrder
 import org.neo4j.graphdb.Node
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.{Configs, CypherComparisonSupport}
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 
-import scala.collection.{Map, mutable}
+import scala.collection.Map
+import scala.collection.mutable
 
 class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport with AstConstructionTestSupport {
 
@@ -35,7 +38,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
   test("should sort first unaliased and then aliased columns in the right order") {
     val result = executeWith(Configs.CachedProperty, "MATCH (a:A) WITH a, EXISTS(a.born) AS bday ORDER BY a.name, bday RETURN a.name, bday")
     result.executionPlanDescription() should includeSomewhere
-        .aPlan("Sort")
+      .aPlan("Sort")
       .withOrder(ProvidedOrder.asc(prop("a", "name")).asc(varFor("bday")))
 
     result.toList should equal(List(
@@ -550,7 +553,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
   test("ORDER BY previously unprojected AGGREGATING column in WITH and project and return it") {
     // sum is not supported in compiled
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
-                             """
+      """
       MATCH (a:A)
       WITH a.name AS name, sum(a.age) AS age
       ORDER BY age
@@ -579,7 +582,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
   test("ORDER BY previously unprojected GROUPING column in WITH and project and return it") {
     // sum is not supported in compiled
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
-                             """
+      """
       MATCH (a:A)
       WITH a.name AS name, sum(a.age) AS age
       ORDER BY name
@@ -631,7 +634,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
   test("Should fail when accessing undefined variable after WITH ORDER BY") {
     failWithError(Configs.All, "MATCH (a) WITH a.name AS n ORDER BY a.foo RETURN a.x",
-                            errorType = Seq("SyntaxException"))
+      errorType = Seq("SyntaxException"))
   }
 
   test("Should be able to reuse unprojected node variable after WITH ORDER BY") {
@@ -676,10 +679,10 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     result.executionPlanDescription() should includeSomewhere
       .aPlan("Sort").withOrder(ProvidedOrder.asc(varFor("n.age"))).onTopOf(
       includeSomewhere.aPlan("Projection").containingArgument("{name : `n`.name}")
-          .onTopOf(aPlan("Sort").withOrder(ProvidedOrder.asc(prop("n", "foo")))
-            .onTopOf(aPlan("Projection").containingArgument("{  n@7.foo : `n`.foo}"))
-          )
-      )
+        .onTopOf(aPlan("Sort").withOrder(ProvidedOrder.asc(prop("n", "foo")))
+          .onTopOf(aPlan("Projection").containingArgument("{  n@7.foo : `n`.foo}"))
+        )
+    )
 
     // First MATCH gives two rows
     result.toList should equal(List(

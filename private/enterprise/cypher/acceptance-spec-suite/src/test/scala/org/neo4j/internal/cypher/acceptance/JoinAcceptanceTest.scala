@@ -6,7 +6,9 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithAssertion, Configs, CypherComparisonSupport}
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.ComparePlansWithAssertion
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 
 class JoinAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
   test("find friends of others") {
@@ -119,7 +121,7 @@ class JoinAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSu
     graph.withTx( tx => tx.execute(query).close()) // should not crash
   }
 
-test("larger optional match join should not crash") {
+  test("larger optional match join should not crash") {
     val query =
       """MATCH (b:B)-->(c:C)
         |OPTIONAL MATCH (c)<--(d:D)
@@ -187,44 +189,44 @@ test("larger optional match join should not crash") {
     // Search for 3x3 matrix matching the setup
     // LIMIT is needed to trigger the (previously) faulty plan
     val query =
-      """
-        |MATCH (b:Board)
-        |WITH b, 1 AS ignore
-        |MATCH
-        |(b)-[b_fields_0_field11:fields]->(field11:Field),
-        |(b)-[b_fields_1_field12:fields]->(field12:Field),
-        |(b)-[b_fields_2_field13:fields]->(field13:Field),
-        |(b)-[b_fields_3_field21:fields]->(field21:Field),
-        |(b)-[b_fields_4_field22:fields]->(field22:Field),
-        |(b)-[b_fields_5_field23:fields]->(field23:Field),
-        |(b)-[b_fields_6_field31:fields]->(field31:Field),
-        |(b)-[b_fields_7_field32:fields]->(field32:Field),
-        |(b)-[b_fields_8_field33:fields]->(field33:Field),
-        |(field11)-[field11_right_0_field12:right]->(field12), (field11)-[field11_bottom_1_field21:bottom]->(field21),
-        |(field12)-[field12_right_0_field13:right]->(field13), (field12)-[field12_bottom_1_field22:bottom]->(field22),
-        |(field13)-[field13_bottom_0_field23:bottom]->(field23),
-        |(field21)-[field21_right_0_field22:right]->(field22), (field21)-[field21_bottom_1_field31:bottom]->(field31),
-        |(field22)-[field22_right_0_field23:right]->(field23), (field22)-[field22_bottom_1_field32:bottom]->(field32),
-        |(field23)-[field23_bottom_0_field33:bottom]->(field33),
-        |(field31)-[field31_right_0_field32:right]->(field32),
-        |(field32)-[field32_right_0_field33:right]->(field33)
-        |WHERE NOT id(field11) = id(field12) AND NOT id(field11) = id(field13) AND NOT id(field11) = id(field21) AND NOT id(field11) = id(field22)
-        |   AND NOT id(field11) = id(field23) AND NOT id(field11) = id(field31) AND NOT id(field11) = id(field32) AND NOT id(field11) = id(field33)
-        | AND NOT id(field12) = id(field13) AND NOT id(field12) = id(field21) AND NOT id(field12) = id(field22) AND NOT id(field12) = id(field23)
-        |   AND NOT id(field12) = id(field31) AND NOT id(field12) = id(field32) AND NOT id(field12) = id(field33)
-        | AND NOT id(field13) = id(field21) AND NOT id(field13) = id(field22) AND NOT id(field13) = id(field23) AND NOT id(field13) = id(field31)
-        |   AND NOT id(field13) = id(field32) AND NOT id(field13) = id(field33)
-        | AND NOT id(field21) = id(field22) AND NOT id(field21) = id(field23) AND NOT id(field21) = id(field31) AND NOT id(field21) = id(field32)
-        |   AND NOT id(field21) = id(field33)
-        | AND NOT id(field22) = id(field23) AND NOT id(field22) = id(field31) AND NOT id(field22) = id(field32) AND NOT id(field22) = id(field33)
-        | AND NOT id(field23) = id(field31) AND NOT id(field23) = id(field32) AND NOT id(field23) = id(field33)
-        | AND NOT id(field31) = id(field32) AND NOT id(field31) = id(field33)
-        | AND NOT id(field32) = id(field33)
-        |RETURN
-        |b_fields_0_field11.name AS b_field11, b_fields_1_field12.name AS b_field12, b_fields_2_field13.name AS b_field13,
-        |b_fields_3_field21.name AS b_field21, b_fields_4_field22.name AS b_field22, b_fields_5_field23.name AS b_field23,
-        |b_fields_6_field31.name AS b_field31, b_fields_7_field32.name AS b_field32, b_fields_8_field33.name AS b_field33
-        |LIMIT 1
+    """
+      |MATCH (b:Board)
+      |WITH b, 1 AS ignore
+      |MATCH
+      |(b)-[b_fields_0_field11:fields]->(field11:Field),
+      |(b)-[b_fields_1_field12:fields]->(field12:Field),
+      |(b)-[b_fields_2_field13:fields]->(field13:Field),
+      |(b)-[b_fields_3_field21:fields]->(field21:Field),
+      |(b)-[b_fields_4_field22:fields]->(field22:Field),
+      |(b)-[b_fields_5_field23:fields]->(field23:Field),
+      |(b)-[b_fields_6_field31:fields]->(field31:Field),
+      |(b)-[b_fields_7_field32:fields]->(field32:Field),
+      |(b)-[b_fields_8_field33:fields]->(field33:Field),
+      |(field11)-[field11_right_0_field12:right]->(field12), (field11)-[field11_bottom_1_field21:bottom]->(field21),
+      |(field12)-[field12_right_0_field13:right]->(field13), (field12)-[field12_bottom_1_field22:bottom]->(field22),
+      |(field13)-[field13_bottom_0_field23:bottom]->(field23),
+      |(field21)-[field21_right_0_field22:right]->(field22), (field21)-[field21_bottom_1_field31:bottom]->(field31),
+      |(field22)-[field22_right_0_field23:right]->(field23), (field22)-[field22_bottom_1_field32:bottom]->(field32),
+      |(field23)-[field23_bottom_0_field33:bottom]->(field33),
+      |(field31)-[field31_right_0_field32:right]->(field32),
+      |(field32)-[field32_right_0_field33:right]->(field33)
+      |WHERE NOT id(field11) = id(field12) AND NOT id(field11) = id(field13) AND NOT id(field11) = id(field21) AND NOT id(field11) = id(field22)
+      |   AND NOT id(field11) = id(field23) AND NOT id(field11) = id(field31) AND NOT id(field11) = id(field32) AND NOT id(field11) = id(field33)
+      | AND NOT id(field12) = id(field13) AND NOT id(field12) = id(field21) AND NOT id(field12) = id(field22) AND NOT id(field12) = id(field23)
+      |   AND NOT id(field12) = id(field31) AND NOT id(field12) = id(field32) AND NOT id(field12) = id(field33)
+      | AND NOT id(field13) = id(field21) AND NOT id(field13) = id(field22) AND NOT id(field13) = id(field23) AND NOT id(field13) = id(field31)
+      |   AND NOT id(field13) = id(field32) AND NOT id(field13) = id(field33)
+      | AND NOT id(field21) = id(field22) AND NOT id(field21) = id(field23) AND NOT id(field21) = id(field31) AND NOT id(field21) = id(field32)
+      |   AND NOT id(field21) = id(field33)
+      | AND NOT id(field22) = id(field23) AND NOT id(field22) = id(field31) AND NOT id(field22) = id(field32) AND NOT id(field22) = id(field33)
+      | AND NOT id(field23) = id(field31) AND NOT id(field23) = id(field32) AND NOT id(field23) = id(field33)
+      | AND NOT id(field31) = id(field32) AND NOT id(field31) = id(field33)
+      | AND NOT id(field32) = id(field33)
+      |RETURN
+      |b_fields_0_field11.name AS b_field11, b_fields_1_field12.name AS b_field12, b_fields_2_field13.name AS b_field13,
+      |b_fields_3_field21.name AS b_field21, b_fields_4_field22.name AS b_field22, b_fields_5_field23.name AS b_field23,
+      |b_fields_6_field31.name AS b_field31, b_fields_7_field32.name AS b_field32, b_fields_8_field33.name AS b_field33
+      |LIMIT 1
       """.stripMargin
 
     // WHEN
@@ -270,42 +272,42 @@ test("larger optional match join should not crash") {
     // Search for 3x3 matrix matching the setup
     // LIMIT is needed to trigger the (previously) faulty plan
     val query =
-      """
-        |MATCH (b:Board),
-        |(b)-[b_fields_0_field11:fields]->(field11:Field),
-        |(b)-[b_fields_1_field12:fields]->(field12:Field),
-        |(b)-[b_fields_2_field13:fields]->(field13:Field),
-        |(b)-[b_fields_3_field21:fields]->(field21:Field),
-        |(b)-[b_fields_4_field22:fields]->(field22:Field),
-        |(b)-[b_fields_5_field23:fields]->(field23:Field),
-        |(b)-[b_fields_6_field31:fields]->(field31:Field),
-        |(b)-[b_fields_7_field32:fields]->(field32:Field),
-        |(b)-[b_fields_8_field33:fields]->(field33:Field),
-        |(field11)-[field11_right_0_field12:right]->(field12), (field11)-[field11_bottom_1_field21:bottom]->(field21),
-        |(field12)-[field12_right_0_field13:right]->(field13), (field12)-[field12_bottom_1_field22:bottom]->(field22),
-        |(field13)-[field13_bottom_0_field23:bottom]->(field23),
-        |(field21)-[field21_right_0_field22:right]->(field22), (field21)-[field21_bottom_1_field31:bottom]->(field31),
-        |(field22)-[field22_right_0_field23:right]->(field23), (field22)-[field22_bottom_1_field32:bottom]->(field32),
-        |(field23)-[field23_bottom_0_field33:bottom]->(field33),
-        |(field31)-[field31_right_0_field32:right]->(field32),
-        |(field32)-[field32_right_0_field33:right]->(field33)
-        |WHERE NOT id(field11) = id(field12) AND NOT id(field11) = id(field13) AND NOT id(field11) = id(field21) AND NOT id(field11) = id(field22)
-        |   AND NOT id(field11) = id(field23) AND NOT id(field11) = id(field31) AND NOT id(field11) = id(field32) AND NOT id(field11) = id(field33)
-        | AND NOT id(field12) = id(field13) AND NOT id(field12) = id(field21) AND NOT id(field12) = id(field22) AND NOT id(field12) = id(field23)
-        |   AND NOT id(field12) = id(field31) AND NOT id(field12) = id(field32) AND NOT id(field12) = id(field33)
-        | AND NOT id(field13) = id(field21) AND NOT id(field13) = id(field22) AND NOT id(field13) = id(field23) AND NOT id(field13) = id(field31)
-        |   AND NOT id(field13) = id(field32) AND NOT id(field13) = id(field33)
-        | AND NOT id(field21) = id(field22) AND NOT id(field21) = id(field23) AND NOT id(field21) = id(field31) AND NOT id(field21) = id(field32)
-        |   AND NOT id(field21) = id(field33)
-        | AND NOT id(field22) = id(field23) AND NOT id(field22) = id(field31) AND NOT id(field22) = id(field32) AND NOT id(field22) = id(field33)
-        | AND NOT id(field23) = id(field31) AND NOT id(field23) = id(field32) AND NOT id(field23) = id(field33)
-        | AND NOT id(field31) = id(field32) AND NOT id(field31) = id(field33)
-        | AND NOT id(field32) = id(field33)
-        |RETURN
-        |b_fields_0_field11.name AS b_field11, b_fields_1_field12.name AS b_field12, b_fields_2_field13.name AS b_field13,
-        |b_fields_3_field21.name AS b_field21, b_fields_4_field22.name AS b_field22, b_fields_5_field23.name AS b_field23,
-        |b_fields_6_field31.name AS b_field31, b_fields_7_field32.name AS b_field32, b_fields_8_field33.name AS b_field33
-        |LIMIT 1
+    """
+      |MATCH (b:Board),
+      |(b)-[b_fields_0_field11:fields]->(field11:Field),
+      |(b)-[b_fields_1_field12:fields]->(field12:Field),
+      |(b)-[b_fields_2_field13:fields]->(field13:Field),
+      |(b)-[b_fields_3_field21:fields]->(field21:Field),
+      |(b)-[b_fields_4_field22:fields]->(field22:Field),
+      |(b)-[b_fields_5_field23:fields]->(field23:Field),
+      |(b)-[b_fields_6_field31:fields]->(field31:Field),
+      |(b)-[b_fields_7_field32:fields]->(field32:Field),
+      |(b)-[b_fields_8_field33:fields]->(field33:Field),
+      |(field11)-[field11_right_0_field12:right]->(field12), (field11)-[field11_bottom_1_field21:bottom]->(field21),
+      |(field12)-[field12_right_0_field13:right]->(field13), (field12)-[field12_bottom_1_field22:bottom]->(field22),
+      |(field13)-[field13_bottom_0_field23:bottom]->(field23),
+      |(field21)-[field21_right_0_field22:right]->(field22), (field21)-[field21_bottom_1_field31:bottom]->(field31),
+      |(field22)-[field22_right_0_field23:right]->(field23), (field22)-[field22_bottom_1_field32:bottom]->(field32),
+      |(field23)-[field23_bottom_0_field33:bottom]->(field33),
+      |(field31)-[field31_right_0_field32:right]->(field32),
+      |(field32)-[field32_right_0_field33:right]->(field33)
+      |WHERE NOT id(field11) = id(field12) AND NOT id(field11) = id(field13) AND NOT id(field11) = id(field21) AND NOT id(field11) = id(field22)
+      |   AND NOT id(field11) = id(field23) AND NOT id(field11) = id(field31) AND NOT id(field11) = id(field32) AND NOT id(field11) = id(field33)
+      | AND NOT id(field12) = id(field13) AND NOT id(field12) = id(field21) AND NOT id(field12) = id(field22) AND NOT id(field12) = id(field23)
+      |   AND NOT id(field12) = id(field31) AND NOT id(field12) = id(field32) AND NOT id(field12) = id(field33)
+      | AND NOT id(field13) = id(field21) AND NOT id(field13) = id(field22) AND NOT id(field13) = id(field23) AND NOT id(field13) = id(field31)
+      |   AND NOT id(field13) = id(field32) AND NOT id(field13) = id(field33)
+      | AND NOT id(field21) = id(field22) AND NOT id(field21) = id(field23) AND NOT id(field21) = id(field31) AND NOT id(field21) = id(field32)
+      |   AND NOT id(field21) = id(field33)
+      | AND NOT id(field22) = id(field23) AND NOT id(field22) = id(field31) AND NOT id(field22) = id(field32) AND NOT id(field22) = id(field33)
+      | AND NOT id(field23) = id(field31) AND NOT id(field23) = id(field32) AND NOT id(field23) = id(field33)
+      | AND NOT id(field31) = id(field32) AND NOT id(field31) = id(field33)
+      | AND NOT id(field32) = id(field33)
+      |RETURN
+      |b_fields_0_field11.name AS b_field11, b_fields_1_field12.name AS b_field12, b_fields_2_field13.name AS b_field13,
+      |b_fields_3_field21.name AS b_field21, b_fields_4_field22.name AS b_field22, b_fields_5_field23.name AS b_field23,
+      |b_fields_6_field31.name AS b_field31, b_fields_7_field32.name AS b_field32, b_fields_8_field33.name AS b_field33
+      |LIMIT 1
       """.stripMargin
 
     // WHEN

@@ -6,15 +6,19 @@
 package org.neo4j.internal.cypher.acceptance
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
-import org.neo4j.internal.cypher.acceptance.comparisonsupport.{ComparePlansWithAssertion, Configs, CypherComparisonSupport, TestConfiguration}
-import org.neo4j.values.storable.{CoordinateReferenceSystem, Values}
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.ComparePlansWithAssertion
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.TestConfiguration
+import org.neo4j.values.storable.CoordinateReferenceSystem
+import org.neo4j.values.storable.Values
 
 class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
 
   test("distance function should work on co-located points") {
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
-                             "WITH point({latitude: 12.78, longitude: 56.7}) as point RETURN distance(point,point) as dist",
-                             planComparisonStrategy = ComparePlansWithAssertion(_ should
+      "WITH point({latitude: 12.78, longitude: 56.7}) as point RETURN distance(point,point) as dist",
+      planComparisonStrategy = ComparePlansWithAssertion(_ should
         includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{dist : .*\\}".r)
           .onTopOf(includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r))))
 
@@ -23,8 +27,8 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
 
   test("distance function should work on co-located points in 3D") {
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
-                             "WITH point({latitude: 12.78, longitude: 56.7, height: 198.2}) as point RETURN distance(point,point) as dist",
-                             planComparisonStrategy = ComparePlansWithAssertion(_ should
+      "WITH point({latitude: 12.78, longitude: 56.7, height: 198.2}) as point RETURN distance(point,point) as dist",
+      planComparisonStrategy = ComparePlansWithAssertion(_ should
         includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{dist : .*\\}".r)
           .onTopOf(includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{point : .*\\}".r))))
 
@@ -33,11 +37,11 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
 
   test("distance function should work on nearby cartesian points") {
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
-                             """
+      """
         |WITH point({x: 2.3, y: 4.5, crs: 'cartesian'}) as p1, point({x: 1.1, y: 5.4, crs: 'cartesian'}) as p2
         |RETURN distance(p1,p2) as dist
       """.stripMargin,
-                             planComparisonStrategy = ComparePlansWithAssertion(_ should
+      planComparisonStrategy = ComparePlansWithAssertion(_ should
         includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{dist : .*\\}".r)
           .onTopOf(includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{p1 : .*, p2 : .*\\}".r))))
 
@@ -46,11 +50,11 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
 
   test("distance function should work on nearby points") {
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
-                             """
+      """
         |WITH point({longitude: 12.78, latitude: 56.7}) as p1, point({latitude: 56.71, longitude: 12.79}) as p2
         |RETURN distance(p1,p2) as dist
       """.stripMargin,
-                             planComparisonStrategy = ComparePlansWithAssertion(_ should
+      planComparisonStrategy = ComparePlansWithAssertion(_ should
         includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{dist : .*\\}".r)
           .onTopOf(includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{p1 : .*, p2 : .*\\}".r))))
 
@@ -59,11 +63,11 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
 
   test("distance function should work on nearby points in 3D") {
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
-                             """
+      """
         |WITH point({longitude: 12.78, latitude: 56.7, height: 100}) as p1, point({latitude: 56.71, longitude: 12.79, height: 100}) as p2
         |RETURN distance(p1,p2) as dist
       """.stripMargin,
-                             planComparisonStrategy = ComparePlansWithAssertion(_ should
+      planComparisonStrategy = ComparePlansWithAssertion(_ should
         includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{dist : .*\\}".r)
           .onTopOf(includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{p1 : .*, p2 : .*\\}".r))))
 
@@ -72,11 +76,11 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
 
   test("distance function should work on distant points") {
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
-                             """
+      """
         |WITH point({latitude: 56.7, longitude: 12.78}) as p1, point({longitude: -51.9, latitude: -16.7}) as p2
         |RETURN distance(p1,p2) as dist
       """.stripMargin,
-                             planComparisonStrategy = ComparePlansWithAssertion(_ should
+      planComparisonStrategy = ComparePlansWithAssertion(_ should
         includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{dist : .*\\}".r)
           .onTopOf(includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{p1 : .*, p2 : .*\\}".r))))
 
@@ -85,11 +89,11 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
 
   test("distance function should work on distant points in 3D") {
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
-                             """
+      """
         |WITH point({latitude: 56.7, longitude: 12.78, height: 100}) as p1, point({longitude: -51.9, latitude: -16.7, height: 100}) as p2
         |RETURN distance(p1,p2) as dist
       """.stripMargin,
-                             planComparisonStrategy = ComparePlansWithAssertion(_ should
+      planComparisonStrategy = ComparePlansWithAssertion(_ should
         includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{dist : .*\\}".r)
           .onTopOf(includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{p1 : .*, p2 : .*\\}".r))))
 
@@ -98,11 +102,11 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
 
   test("distance function should work on 3D cartesian points") {
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
-                             """
+      """
         |WITH point({x: 1.2, y: 3.4, z: 5.6}) as p1, point({x: 1.2, y: 3.4, z: 6.6}) as p2
         |RETURN distance(p1,p2) as dist
       """.stripMargin,
-                             planComparisonStrategy = ComparePlansWithAssertion(_ should
+      planComparisonStrategy = ComparePlansWithAssertion(_ should
         includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{dist : .*\\}".r)
           .onTopOf(includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{p1 : .*, p2 : .*\\}".r))))
 
@@ -112,14 +116,14 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
   test("distance function should not fail if provided with points from different CRS") {
     val localConfig = Configs.InterpretedAndSlottedAndPipelined
     val res = executeWith(localConfig,
-        """WITH point({x: 2.3, y: 4.5, crs: 'cartesian'}) as p1, point({longitude: 1.1, latitude: 5.4, crs: 'WGS-84'}) as p2
+      """WITH point({x: 2.3, y: 4.5, crs: 'cartesian'}) as p1, point({longitude: 1.1, latitude: 5.4, crs: 'WGS-84'}) as p2
         |RETURN distance(p1,p2) as dist""".stripMargin)
     res.columnAs[AnyRef]("dist").next() should be (null)
   }
 
   test("distance function should return null if provided with points with different dimensions") {
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
-                             """WITH point({x: 2.3, y: 4.5}) as p1, point({x: 1.2, y: 3.4, z: 5.6}) as p2
+      """WITH point({x: 2.3, y: 4.5}) as p1, point({x: 1.2, y: 3.4, z: 5.6}) as p2
         |RETURN distance(p1,p2) as dist""".stripMargin)
     val dist = result.columnAs[Any]("dist").next()
     assert(dist == null)
@@ -127,11 +131,11 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
 
   test("distance function should measure distance from Copenhagen train station to Neo4j in Malmö") {
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
-                             """
+      """
         |WITH point({latitude: 55.672874, longitude: 12.564590}) as p1, point({latitude: 55.611784, longitude: 12.994341}) as p2
         |RETURN distance(p1,p2) as dist
       """.stripMargin,
-                             planComparisonStrategy = ComparePlansWithAssertion(_ should
+      planComparisonStrategy = ComparePlansWithAssertion(_ should
         includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{dist : .*\\}".r)
           .onTopOf(includeSomewhere.aPlan("Projection").containingArgumentRegex("\\{p1 : .*, p2 : .*\\}".r))))
 
@@ -145,7 +149,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
 
   test("distance function should return null with lhs null input") {
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
-                             """
+      """
         |WITH point({latitude: 55.672874, longitude: 12.564590}) as p1
         |RETURN distance(null, p1) as dist
       """.stripMargin)
@@ -154,7 +158,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
 
   test("distance function should return null with rhs null input") {
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
-                             """
+      """
         |WITH point({latitude: 55.672874, longitude: 12.564590}) as p1
         |RETURN distance(p1, null) as dist
       """.stripMargin)
@@ -163,25 +167,25 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
 
   test("distance function should return null if a point is null") {
     var result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
-                             "RETURN distance(point({latitude:3,longitude:7}),point({latitude:null, longitude:3})) as dist;")
+      "RETURN distance(point({latitude:3,longitude:7}),point({latitude:null, longitude:3})) as dist;")
     result.toList should equal(List(Map("dist" -> null)))
 
     result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
-                         "RETURN distance(point({latitude:3,longitude:null}),point({latitude:7, longitude:3})) as dist;")
+      "RETURN distance(point({latitude:3,longitude:null}),point({latitude:7, longitude:3})) as dist;")
     result.toList should equal(List(Map("dist" -> null)))
 
     result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
-                         "RETURN distance(point({x:3,y:7}),point({x:null, y:3})) as dist;")
+      "RETURN distance(point({x:3,y:7}),point({x:null, y:3})) as dist;")
     result.toList should equal(List(Map("dist" -> null)))
 
     result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
-                         "RETURN distance(point({x:3,y:null}),point({x:7, y:3})) as dist;")
+      "RETURN distance(point({x:3,y:null}),point({x:7, y:3})) as dist;")
     result.toList should equal(List(Map("dist" -> null)))
   }
 
   test("distance function should work for points with different aliases") {
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
-                             """
+      """
         |WITH point({latitude: 12, longitude: 55.1, srid: 4326}) as p1
         |RETURN distance(point({x:55, y:12, srid: 4326}), p1) as dist
       """.stripMargin)
@@ -190,7 +194,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
 
   test("distance function should work for points with and without explicit srid") {
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
-                             """
+      """
         |WITH point({latitude: 12, longitude: 55.1, srid: 4326}) as p1
         |RETURN distance(point({latitude: 12, longitude: 55}), p1) as dist
       """.stripMargin)
@@ -199,7 +203,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
 
   test("distance function should work for points with and without explicit crs") {
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
-                             """
+      """
         |WITH point({x: 0, y: 0}) as p1
         |RETURN distance(point({x: 3, y: 4, crs:'cartesian'}), p1) as dist
       """.stripMargin)
@@ -208,7 +212,7 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
 
   test("distance function should work for points in same coordinate system") {
     val result = executeWith(Configs.InterpretedAndSlottedAndPipelined,
-                             """
+      """
         |WITH point({latitude: 12, longitude: 55.1, srid: 4326}) as p1
         |RETURN distance(point({latitude: 12, longitude: 55, crs: 'WGS-84'}), p1) as dist
       """.stripMargin)
@@ -243,8 +247,8 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
       // When
       val query =
         s"""MATCH (p:Place)
-          |WHERE distance(p.location, $point) < $distance
-          |RETURN p.location as point
+           |WHERE distance(p.location, $point) < $distance
+           |RETURN p.location as point
         """.stripMargin
       val result = executeWith(Configs.CachedProperty, query)
 
@@ -754,8 +758,8 @@ class SpatialDistanceAcceptanceTest extends ExecutionEngineFunSuite with CypherC
 
     val query =
       """MATCH (p:Place)
-         |WHERE distance(p.location, $poi) <= 10
-         |RETURN p.location as point
+        |WHERE distance(p.location, $poi) <= 10
+        |RETURN p.location as point
         """.stripMargin
     // When
     val result = executeWith(Configs.CachedProperty, query, params = Map("poi" -> 5))
