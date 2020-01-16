@@ -19,7 +19,8 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.SinkByO
  * A buffer which groups input morsels by argument row id. For each view  a new morsel is created and the view is "attached" to the new morsel.
  * This Buffer is used for CartesianProduct. A Morsel allows to attach another morsel as form of communication, for this particular case.
  *
- * The new morsel is given to an ApplyBuffer which has the a [[org.neo4j.cypher.internal.runtime.pipelined.operators.CartesianProductOperator.LHSMorsel]]
+ * TODO revise all this text
+ * The new morsel is given to an ApplyBuffer which has a [[org.neo4j.cypher.internal.runtime.pipelined.operators.CartesianProductOperator.LHSMorsel]]
  * as one delegate (this is the LHS of the MrBuff that sits before the CartesianProduct) and the RHS leaf/leaves as more delegates.
  *
  * The LHSMorsel will detach the attachment morsel. The RHS operates on the new morsel, which consists of a single row. The CartesianProduct operator

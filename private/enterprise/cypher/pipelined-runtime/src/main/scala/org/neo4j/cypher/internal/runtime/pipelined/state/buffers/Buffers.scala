@@ -40,7 +40,8 @@ class Buffers(numBuffers: Int,
               argumentStateMaps: ArgumentStateMaps,
               stateFactory: StateFactory) {
 
-  private val buffers: Array[SinkByOrigin] = new Array[SinkByOrigin](numBuffers)
+  // TODO comment about Sources, Sinks, Buffers, and why this is a mess
+  private val buffers: Array[Any] = new Array[Any](numBuffers)
 
   // Constructor code
 
@@ -69,10 +70,10 @@ class Buffers(numBuffers: Int,
     var j = initialIndex + 1
     while (j < buffers.length) {
       buffers(j) match {
-        case x: LHSAccumulatingRHSStreamingBuffer[_, _] if x.lhsArgumentStateMapId == argumentStateMapId =>
-          return x.LHSSink
-        case x: LHSAccumulatingRHSStreamingBuffer[_, _] if x.rhsArgumentStateMapId == argumentStateMapId =>
-          return x.RHSSink
+        case x: LHSAccumulatingSink[_, _] if x.argumentStateMapId == argumentStateMapId =>
+          return x
+        case x: RHSStreamingSink if x.argumentStateMapId == argumentStateMapId =>
+          return x
         case x: MorselArgumentStateBuffer[_, _] if x.argumentStateMapId == argumentStateMapId =>
           return x
         case x: OptionalMorselBuffer if x.argumentStateMapId == argumentStateMapId =>
@@ -101,6 +102,7 @@ class Buffers(numBuffers: Int,
     buffers(i) =
       bufferDefinition.variant match {
         case x: AttachBufferVariant =>
+          // TODO comment about why this is needed
           constructBuffer(x.applyBuffer)
           new MorselAttachBuffer(bufferDefinition.id,
             applyBuffer(x.applyBuffer.id),
@@ -127,14 +129,24 @@ class Buffers(numBuffers: Int,
             argumentStateMaps,
             x.argumentStateMapId)
 
+        case x: LHSAccumulatingBufferVariant =>
+          new LHSAccumulatingSink(x.lhsArgumentStateMapId,
+                                  reducers,
+                                  argumentStateMaps)
+        case x: RHSStreamingBufferVariant =>
+          new RHSStreamingSink(x.rhsArgumentStateMapId,
+                               reducers,
+                               argumentStateMaps,
+                               tracker)
         case x: LHSAccumulatingRHSStreamingBufferVariant =>
-          new LHSAccumulatingRHSStreamingBuffer(tracker,
-            reducers,
-            argumentStateMaps,
-            x.lhsArgumentStateMapId,
-            x.rhsArgumentStateMapId,
-            x.lhsPipelineId,
-            x.rhsPipelineId,
+          // TODO comment about why this is needed
+          constructBuffer(x.lhsSink)
+          constructBuffer(x.rhsSink)
+          new LHSAccumulatingRHSStreamingSource(tracker,
+                                                reducers,
+                                                argumentStateMaps,
+                                                x.lhsArgumentStateMapId,
+                                                x.rhsArgumentStateMapId,
             stateFactory)
 
         case x: OptionalBufferVariant =>
@@ -160,8 +172,9 @@ class Buffers(numBuffers: Int,
    * @param bufferId     the buffer
    * @return the Sink.
    */
+    // TODO remove fromPipeline
   def sink[T <: AnyRef](fromPipeline: PipelineId, bufferId: BufferId): Sink[T] =
-    buffers(bufferId.x).sinkFor[T](fromPipeline)
+    buffers(bufferId.x).asInstanceOf[Sink[T]]
 
   /**
    * Get the buffer with the given id casted as a [[Source]].
@@ -200,10 +213,11 @@ class Buffers(numBuffers: Int,
     buffers(bufferId.x).asInstanceOf[MorselArgumentStateBuffer[_, _]]
 
   /**
-   * Get the buffer with the given id casted as a [[LHSAccumulatingRHSStreamingBuffer]].
+   * Get the buffer with the given id casted as a [[LHSAccumulatingRHSStreamingSource]].
    */
-  def lhsAccumulatingRhsStreamingBuffer(bufferId: BufferId): LHSAccumulatingRHSStreamingBuffer[_, _] =
-    buffers(bufferId.x).asInstanceOf[LHSAccumulatingRHSStreamingBuffer[_, _]]
+    // TODO can this simply return a Source?
+  def lhsAccumulatingRhsStreamingBuffer(bufferId: BufferId): LHSAccumulatingRHSStreamingSource[_, _] =
+    buffers(bufferId.x).asInstanceOf[LHSAccumulatingRHSStreamingSource[_, _]]
 
   /**
    * Clear all data from all buffers.

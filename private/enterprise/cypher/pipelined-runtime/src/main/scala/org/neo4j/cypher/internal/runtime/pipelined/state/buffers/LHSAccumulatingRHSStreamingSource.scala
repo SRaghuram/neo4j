@@ -67,31 +67,22 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.SinkByO
  * ............\__/
  **/
 class LHSAccumulatingRHSStreamingBuffer[DATA <: AnyRef,
-  LHS_ACC <: MorselAccumulator[DATA]
-](tracker: QueryCompletionTracker,
-  downstreamArgumentReducers: IndexedSeq[AccumulatingBuffer],
-  override val argumentStateMaps: ArgumentStateMaps,
-  val lhsArgumentStateMapId: ArgumentStateMapId,
-  val rhsArgumentStateMapId: ArgumentStateMapId,
-  lhsPipelineId: PipelineId,
-  rhsPipelineId: PipelineId,
-  stateFactory: StateFactory
- ) extends ArgumentCountUpdater
-   with Source[AccumulatorAndMorsel[DATA, LHS_ACC]]
-   with SinkByOrigin
-   with DataHolder {
+                                        LHS_ACC <: MorselAccumulator[DATA]
+                                       ](tracker: QueryCompletionTracker,
+                                         downstreamArgumentReducers: IndexedSeq[AccumulatingBuffer],
+                                         override val argumentStateMaps: ArgumentStateMaps,
+                                         val lhsArgumentStateMapId: ArgumentStateMapId,
+                                         val rhsArgumentStateMapId: ArgumentStateMapId,
+                                         lhsPipelineId: PipelineId,
+                                         rhsPipelineId: PipelineId,
+                                         stateFactory: StateFactory
+                                       ) extends ArgumentCountUpdater
+                                            with Source[AccumulatorAndMorsel[DATA, LHS_ACC]]
+                                            with SinkByOrigin
+                                            with DataHolder {
 
   private val lhsArgumentStateMap = argumentStateMaps(lhsArgumentStateMapId).asInstanceOf[ArgumentStateMap[LHS_ACC]]
   private val rhsArgumentStateMap = argumentStateMaps(rhsArgumentStateMapId).asInstanceOf[ArgumentStateMap[ArgumentStateBuffer]]
-
-  override def sinkFor[T <: AnyRef](fromPipeline: PipelineId): Sink[T] =
-    if (fromPipeline == lhsPipelineId) {
-      LHSSink.asInstanceOf[Sink[T]]
-    } else if (fromPipeline == rhsPipelineId) {
-      RHSSink.asInstanceOf[Sink[T]]
-    } else {
-      throw new IllegalStateException(s"Requesting sink from unexpected pipeline.")
-    }
 
   // TODO optimization: if RHS has completed with no rows, cancel building of the accumulator and vice versa
 
@@ -166,90 +157,105 @@ class LHSAccumulatingRHSStreamingBuffer[DATA <: AnyRef,
     tracker.decrement()
   }
 
-  // The LHS does not need any reference counting, because no tasks
-  // will ever be produced from the LHS
-  object LHSSink extends Sink[IndexedSeq[PerArgument[DATA]]] with AccumulatingBuffer {
-    override val argumentSlotOffset: Int = lhsArgumentStateMap.argumentSlotOffset
+}
 
-    override def put(data: IndexedSeq[PerArgument[DATA]]): Unit = {
-      if (DebugSupport.BUFFERS.enabled) {
-        DebugSupport.BUFFERS.log(s"[put]   $this <- ${data.mkString(", ")}")
-      }
-      var i = 0
-      while (i < data.length) {
-        lhsArgumentStateMap.update(data(i).argumentRowId, acc => acc.update(data(i).value))
-        i += 1
-      }
+// The LHS does not need any reference counting, because no tasks
+// will ever be produced from the LHS
+class LHSAccumulatingSink[DATA <: AnyRef, LHS_ACC <: MorselAccumulator[DATA]](val argumentStateMapId: ArgumentStateMapId,
+                                                                              downstreamArgumentReducers: IndexedSeq[AccumulatingBuffer],
+                                                                              override val argumentStateMaps: ArgumentStateMaps)
+  extends ArgumentCountUpdater
+  with Sink[IndexedSeq[PerArgument[DATA]]]
+  with AccumulatingBuffer {
+
+  private val argumentStateMap = argumentStateMaps(argumentStateMapId).asInstanceOf[ArgumentStateMap[LHS_ACC]]
+
+  override val argumentSlotOffset: Int = argumentStateMap.argumentSlotOffset
+
+  override def put(data: IndexedSeq[PerArgument[DATA]]): Unit = {
+    if (DebugSupport.BUFFERS.enabled) {
+      DebugSupport.BUFFERS.log(s"[put]   $this <- ${data.mkString(", ")}")
     }
-
-    override def canPut: Boolean = true
-
-    override def initiate(argumentRowId: Long, argumentMorsel: MorselExecutionContext): Unit = {
-      if (DebugSupport.BUFFERS.enabled) {
-        DebugSupport.BUFFERS.log(s"[init]  $this <- argumentRowId=$argumentRowId from $argumentMorsel")
-      }
-      val argumentRowIdsForReducers: Array[Long] = forAllArgumentReducersAndGetArgumentRowIds(downstreamArgumentReducers, argumentMorsel, (_, _) => Unit)
-      lhsArgumentStateMap.initiate(argumentRowId, argumentMorsel, argumentRowIdsForReducers)
-    }
-
-    override def increment(argumentRowId: Long): Unit = {
-      lhsArgumentStateMap.increment(argumentRowId)
-    }
-
-    override def decrement(argumentRowId: Long): Unit = {
-      lhsArgumentStateMap.decrement(argumentRowId)
+    var i = 0
+    while (i < data.length) {
+      argumentStateMap.update(data(i).argumentRowId, acc => acc.update(data(i).value))
+      i += 1
     }
   }
 
-  // We need to reference count both tasks and argument IDs on the RHS.
-  // Tasks need to be tracked since the RHS accumulator's Buffer is used multiple times
-  // to spawn tasks, unlike in the MorselArgumentStateBuffer where you only take the accumulator once.
-  object RHSSink extends Sink[IndexedSeq[PerArgument[MorselExecutionContext]]] with AccumulatingBuffer {
-    override val argumentSlotOffset: Int = rhsArgumentStateMap.argumentSlotOffset
+  override def canPut: Boolean = true
 
-    override def put(data: IndexedSeq[PerArgument[MorselExecutionContext]]): Unit = {
-      if (DebugSupport.BUFFERS.enabled) {
-        DebugSupport.BUFFERS.log(s"[put]   $this <- ${data.mkString(", ")}")
-      }
-      // there is no need to take a lock in this case, because we are sure the argument state is thread safe when needed (is created by state factory)
-      var i = 0
-      while (i < data.length) {
-        val argumentValue = data(i)
-        rhsArgumentStateMap.update(argumentValue.argumentRowId, acc => {
-          acc.put(argumentValue.value)
-          // Increment for a morsel in the RHS buffer
-          forAllArgumentReducers(downstreamArgumentReducers, acc.argumentRowIdsForReducers, _.increment(_))
-        })
-        tracker.increment()
-        i += 1
-      }
+  override def initiate(argumentRowId: Long, argumentMorsel: MorselExecutionContext): Unit = {
+    if (DebugSupport.BUFFERS.enabled) {
+      DebugSupport.BUFFERS.log(s"[init]  $this <- argumentRowId=$argumentRowId from $argumentMorsel")
     }
+    val argumentRowIdsForReducers: Array[Long] = forAllArgumentReducersAndGetArgumentRowIds(downstreamArgumentReducers, argumentMorsel, (_, _) => Unit)
+    argumentStateMap.initiate(argumentRowId, argumentMorsel, argumentRowIdsForReducers)
+  }
 
-    override def canPut: Boolean = true
+  override def increment(argumentRowId: Long): Unit = {
+    argumentStateMap.increment(argumentRowId)
+  }
 
-    override def initiate(argumentRowId: Long, argumentMorsel: MorselExecutionContext): Unit = {
-      if (DebugSupport.BUFFERS.enabled) {
-        DebugSupport.BUFFERS.log(s"[init]  $this <- argumentRowId=$argumentRowId from $argumentMorsel")
-      }
-      // Increment for an ArgumentID in RHS's accumulator
-      val argumentRowIdsForReducers: Array[Long] = forAllArgumentReducersAndGetArgumentRowIds(downstreamArgumentReducers, argumentMorsel, _.increment(_))
-      rhsArgumentStateMap.initiate(argumentRowId, argumentMorsel, argumentRowIdsForReducers)
+  override def decrement(argumentRowId: Long): Unit = {
+    argumentStateMap.decrement(argumentRowId)
+  }
+}
+
+// We need to reference count both tasks and argument IDs on the RHS.
+// Tasks need to be tracked since the RHS accumulator's Buffer is used multiple times
+// to spawn tasks, unlike in the MorselArgumentStateBuffer where you only take the accumulator once.
+class RHSStreamingSink(val argumentStateMapId: ArgumentStateMapId,
+                       downstreamArgumentReducers: IndexedSeq[AccumulatingBuffer],
+                       override val argumentStateMaps: ArgumentStateMaps,
+                       tracker: QueryCompletionTracker) extends ArgumentCountUpdater
+                                               with Sink[IndexedSeq[PerArgument[MorselExecutionContext]]]
+                                               with AccumulatingBuffer {
+  private val argumentStateMap = argumentStateMaps(argumentStateMapId).asInstanceOf[ArgumentStateMap[ArgumentStateBuffer]]
+
+  override val argumentSlotOffset: Int = argumentStateMap.argumentSlotOffset
+
+  override def put(data: IndexedSeq[PerArgument[MorselExecutionContext]]): Unit = {
+    if (DebugSupport.BUFFERS.enabled) {
+      DebugSupport.BUFFERS.log(s"[put]   $this <- ${data.mkString(", ")}")
+    }
+    // there is no need to take a lock in this case, because we are sure the argument state is thread safe when needed (is created by state factory)
+    var i = 0
+    while (i < data.length) {
+      val argumentValue = data(i)
+      argumentStateMap.update(argumentValue.argumentRowId, acc => {
+        acc.put(argumentValue.value)
+        // Increment for a morsel in the RHS buffer
+        forAllArgumentReducers(downstreamArgumentReducers, acc.argumentRowIdsForReducers, _.increment(_))
+      })
       tracker.increment()
-    }
-
-    override def increment(argumentRowId: Long): Unit = {
-      rhsArgumentStateMap.increment(argumentRowId)
-    }
-
-    override def decrement(argumentRowId: Long): Unit = {
-      val maybeBuffer = rhsArgumentStateMap.decrement(argumentRowId)
-      if (maybeBuffer != null) {
-        // Decrement for an ArgumentID in RHS's accumulator
-        val argumentRowIdsForReducers = maybeBuffer.argumentRowIdsForReducers
-        forAllArgumentReducers(downstreamArgumentReducers, argumentRowIdsForReducers, _.decrement(_))
-        tracker.decrement()
-      }
+      i += 1
     }
   }
 
+  override def canPut: Boolean = true
+
+  override def initiate(argumentRowId: Long, argumentMorsel: MorselExecutionContext): Unit = {
+    if (DebugSupport.BUFFERS.enabled) {
+      DebugSupport.BUFFERS.log(s"[init]  $this <- argumentRowId=$argumentRowId from $argumentMorsel")
+    }
+    // Increment for an ArgumentID in RHS's accumulator
+    val argumentRowIdsForReducers: Array[Long] = forAllArgumentReducersAndGetArgumentRowIds(downstreamArgumentReducers, argumentMorsel, _.increment(_))
+    argumentStateMap.initiate(argumentRowId, argumentMorsel, argumentRowIdsForReducers)
+    tracker.increment()
+  }
+
+  override def increment(argumentRowId: Long): Unit = {
+    argumentStateMap.increment(argumentRowId)
+  }
+
+  override def decrement(argumentRowId: Long): Unit = {
+    val maybeBuffer = argumentStateMap.decrement(argumentRowId)
+    if (maybeBuffer != null) {
+      // Decrement for an ArgumentID in RHS's accumulator
+      val argumentRowIdsForReducers = maybeBuffer.argumentRowIdsForReducers
+      forAllArgumentReducers(downstreamArgumentReducers, argumentRowIdsForReducers, _.decrement(_))
+      tracker.decrement()
+    }
+  }
 }

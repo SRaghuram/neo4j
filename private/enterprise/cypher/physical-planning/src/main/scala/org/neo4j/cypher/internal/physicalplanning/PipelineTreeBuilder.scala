@@ -144,12 +144,29 @@ object PipelineTreeBuilder {
                                            val argumentStateMapId: ArgumentStateMapId,
                                            bufferSlotConfiguration: SlotConfiguration) extends MorselBufferDefinitionBuild(id, producingPipelineId, bufferSlotConfiguration)
 
+
+  /**
+   * Builder for [[LHSAccumulatingBufferVariant]]
+   */
+  class LHSAccumulatingBufferDefinitionBuild(id: BufferId,
+                                             val argumentStateMapId: ArgumentStateMapId,
+                                             val producingPipelineId: PipelineId,
+                                             bufferSlotConfiguration: SlotConfiguration) extends BufferDefinitionBuild(id, bufferSlotConfiguration)
+
+  /**
+   * Builder for [[RHSStreamingBufferVariant]]
+   */
+  class RHSStreamingBufferDefinitionBuild(id: BufferId,
+                                          val argumentStateMapId: ArgumentStateMapId,
+                                          val producingPipelineId: PipelineId,
+                                          bufferSlotConfiguration: SlotConfiguration) extends BufferDefinitionBuild(id, bufferSlotConfiguration)
+
   /**
    * Builder for [[LHSAccumulatingRHSStreamingBufferVariant]]
    */
   class LHSAccumulatingRHSStreamingBufferDefinitionBuild(id: BufferId,
-                                                         val lhsPipelineId: PipelineId,
-                                                         val rhsPipelineId: PipelineId,
+                                                         val lhsSink: LHSAccumulatingBufferDefinitionBuild,
+                                                         val rhsSink: RHSStreamingBufferDefinitionBuild,
                                                          val lhsArgumentStateMapId: ArgumentStateMapId,
                                                          val rhsArgumentStateMapId: ArgumentStateMapId,
                                                          bufferSlotConfiguration: SlotConfiguration) extends BufferDefinitionBuild(id, bufferSlotConfiguration)
@@ -227,11 +244,30 @@ object PipelineTreeBuilder {
 
     def newLhsAccumulatingRhsStreamingBuffer(lhsProducingPipelineId: PipelineId,
                                              rhsProducingPipelineId: PipelineId,
-                                             lhsargumentStateMapId: ArgumentStateMapId,
-                                             rhsargumentStateMapId: ArgumentStateMapId,
+                                             lhsArgumentStateMapId: ArgumentStateMapId,
+                                             rhsArgumentStateMapId: ArgumentStateMapId,
                                              bufferSlotConfiguration: SlotConfiguration): LHSAccumulatingRHSStreamingBufferDefinitionBuild = {
+      val lhsAccId = BufferId(buffers.size)
+      val lhsAcc = new LHSAccumulatingBufferDefinitionBuild(lhsAccId,
+                                                            lhsArgumentStateMapId,
+                                                            lhsProducingPipelineId,
+                                                            bufferSlotConfiguration = null) // left null because buffer is never used as source
+      buffers += lhsAcc
+
+      val rhsAccId = BufferId(buffers.size)
+      val rhsAcc: RHSStreamingBufferDefinitionBuild = new RHSStreamingBufferDefinitionBuild(rhsAccId,
+                                                         rhsArgumentStateMapId,
+                                                         rhsProducingPipelineId,
+                                                         bufferSlotConfiguration = null) // left null because buffer is never used as source
+      buffers += rhsAcc
+
       val x = buffers.size
-      val buffer = new LHSAccumulatingRHSStreamingBufferDefinitionBuild(BufferId(x), lhsProducingPipelineId, rhsProducingPipelineId, lhsargumentStateMapId, rhsargumentStateMapId, bufferSlotConfiguration)
+      val buffer = new LHSAccumulatingRHSStreamingBufferDefinitionBuild(BufferId(x),
+                                                                        lhsAcc,
+                                                                        rhsAcc,
+                                                                        lhsArgumentStateMapId,
+                                                                        rhsArgumentStateMapId,
+                                                                        bufferSlotConfiguration)
       buffers += buffer
       buffer
     }
@@ -255,8 +291,9 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
   private def newPipeline(plan: LogicalPlan): PipelineDefinitionBuild = {
     val pipeline = new PipelineDefinitionBuild(PipelineId(pipelines.size), plan)
     pipelines += pipeline
-    if (operatorFusionPolicy.canFuse(plan))
+    if (operatorFusionPolicy.canFuse(plan)) {
       pipeline.fusedPlans += plan
+    }
     pipeline
   }
 
@@ -315,14 +352,14 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
     val rhsAsm = stateDefinition.newArgumentStateMap(planId, argumentSlotOffset)
     val output = stateDefinition.newLhsAccumulatingRhsStreamingBuffer(lhs.id, rhs.id, lhsAsm.id, rhsAsm.id, slotConfigurations(rhs.headPlan.id))
     if (lhs != NO_PIPELINE_BUILD) {
-      lhs.outputDefinition = MorselArgumentStateBufferOutput(output.id, argumentSlotOffset, planId)
+      lhs.outputDefinition = MorselArgumentStateBufferOutput(output.lhsSink.id, argumentSlotOffset, planId)
       markReducerInUpstreamBuffers(lhs.inputBuffer, applyBuffer, lhsAsm)
     } else {
       // The LHS argument state map has to be initiated by the apply even if there is no pipeline
       // connecting them. Otherwise the LhsAccumulatingRhsStreamingBuffer can never output anything.
       applyBuffer.reducersOnRHS += lhsAsm
     }
-    rhs.outputDefinition = MorselArgumentStateBufferOutput(output.id, argumentSlotOffset, planId)
+    rhs.outputDefinition = MorselArgumentStateBufferOutput(output.rhsSink.id, argumentSlotOffset, planId)
     markReducerInUpstreamBuffers(rhs.inputBuffer, applyBuffer, rhsAsm)
     output
   }
@@ -460,9 +497,13 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
     plan match {
       case apply: plans.Apply =>
         //This is a little complicated: rhs.middlePlans can be empty because we have fused plans
-        val applyRhsPlan = if (rhs.middlePlans.isEmpty && rhs.fusedPlans.size <= 1) rhs.headPlan
-        else if (rhs.middlePlans.isEmpty) rhs.fusedPlans.last
-        else rhs.middlePlans.last
+        val applyRhsPlan = if (rhs.middlePlans.isEmpty && rhs.fusedPlans.size <= 1) {
+          rhs.headPlan
+        } else if (rhs.middlePlans.isEmpty) {
+          rhs.fusedPlans.last
+        } else {
+          rhs.middlePlans.last
+        }
         applyRhsPlans(apply.id.x) = applyRhsPlan.id.x
         rhs
 
@@ -525,7 +566,12 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
     traverseBuffers(buffer,
       applyBuffer,
       inputBuffer => inputBuffer.downstreamStates += downstreamReduce,
-      lHSAccumulatingRHSStreamingBufferDefinition => lHSAccumulatingRHSStreamingBufferDefinition.downstreamStates += downstreamReduce,
+      lHSAccumulatingRHSStreamingBufferDefinition => {
+        // REVIEWER: this feels a bit bad, should it be necessary to add downstream states to LHS?
+        lHSAccumulatingRHSStreamingBufferDefinition.lhsSink.downstreamStates += downstreamReduce
+        lHSAccumulatingRHSStreamingBufferDefinition.rhsSink.downstreamStates += downstreamReduce
+        lHSAccumulatingRHSStreamingBufferDefinition.downstreamStates += downstreamReduce
+      },
       delegateBuffer => {
         val b = delegateBuffer.applyBuffer
         b.downstreamStates += downstreamReduce
@@ -545,7 +591,12 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
     traverseBuffers(buffer,
       applyBuffer,
       inputBuffer => inputBuffer.downstreamStates += downstreamState,
-      lHSAccumulatingRHSStreamingBufferDefinition => lHSAccumulatingRHSStreamingBufferDefinition.downstreamStates += downstreamState,
+      lHSAccumulatingRHSStreamingBufferDefinition => {
+        // REVIEWER: this feels a bit bad, should it be necessary to add downstream states to LHS?
+        lHSAccumulatingRHSStreamingBufferDefinition.lhsSink.downstreamStates += downstreamState
+        lHSAccumulatingRHSStreamingBufferDefinition.rhsSink.downstreamStates += downstreamState
+        lHSAccumulatingRHSStreamingBufferDefinition.downstreamStates += downstreamState
+      },
       delegateBuffer => delegateBuffer.downstreamStates += downstreamState,
       lastDelegateBuffer => {
         val b = lastDelegateBuffer.applyBuffer
@@ -586,7 +637,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
           onLHSAccumulatingRHSStreamingBuffer(b)
           // We only add the RHS since the LHS is not streaming through the join
           // Therefore it needs to finish before the join can even start
-          upstreams += pipelines(b.rhsPipelineId.x).inputBuffer
+          upstreams += pipelines(b.rhsSink.producingPipelineId.x).inputBuffer
         case d: DelegateBufferDefinitionBuild =>
           onDelegateBuffer(d)
           upstreams += pipelines(d.applyBuffer.producingPipelineId.x).inputBuffer

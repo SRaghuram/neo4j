@@ -15,7 +15,9 @@ import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.Downstream
 import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.DownstreamState
 import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.DownstreamWorkCanceller
 import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.ExecutionStateDefinitionBuild
+import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.LHSAccumulatingBufferDefinitionBuild
 import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.LHSAccumulatingRHSStreamingBufferDefinitionBuild
+import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.RHSStreamingBufferDefinitionBuild
 import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.MorselBufferDefinitionBuild
 import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.OptionalMorselBufferDefinitionBuild
 import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.PipelineDefinitionBuild
@@ -79,8 +81,19 @@ object PipelineBuilder {
       case b: DelegateBufferDefinitionBuild =>
         RegularBufferVariant
 
+      case b: LHSAccumulatingBufferDefinitionBuild =>
+        LHSAccumulatingBufferVariant(b.id,
+                                     b.argumentStateMapId)
+
+      case b: RHSStreamingBufferDefinitionBuild =>
+        RHSStreamingBufferVariant(b.id,
+                                  b.argumentStateMapId)
+
       case b: LHSAccumulatingRHSStreamingBufferDefinitionBuild =>
-        LHSAccumulatingRHSStreamingBufferVariant(b.lhsPipelineId, b.rhsPipelineId, b.lhsArgumentStateMapId, b.rhsArgumentStateMapId)
+        LHSAccumulatingRHSStreamingBufferVariant(mapBuffer(b.lhsSink),
+                                                 mapBuffer(b.rhsSink),
+                                                 b.lhsArgumentStateMapId,
+                                                 b.rhsArgumentStateMapId)
 
       case _ =>
         throw new IllegalStateException(s"Unexpected type of BufferDefinitionBuild: $bufferDefinition")
