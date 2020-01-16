@@ -87,7 +87,7 @@ class PipelineBuilderTest extends CypherFunSuite {
         .applyBuffer(0, TopLevelArgument.SLOT_OFFSET)
         .delegateToMorselBuffer(1)
         .pipeline(0, Seq(classOf[AllNodesScan]))
-        .leftOfJoinBuffer(3, TopLevelArgument.SLOT_OFFSET, 0, 1)
+        .leftOfJoinBuffer(lhsId = 3, rhsId = 4, sourceId = 5, TopLevelArgument.SLOT_OFFSET, 0, 1)
         .pipeline(2, Seq(classOf[NodeHashJoin], classOf[ProduceResult]), serial = true)
         .end
 
@@ -95,7 +95,7 @@ class PipelineBuilderTest extends CypherFunSuite {
         .applyBuffer(0)
         .delegateToMorselBuffer(2)
         .pipeline(1, Seq(classOf[NodeByLabelScan]))
-        .rightOfJoinBuffer(3, TopLevelArgument.SLOT_OFFSET)
+        .rightOfJoinBuffer(lhsId = 3, rhsId = 4, sourceId = 5, TopLevelArgument.SLOT_OFFSET)
 
       start(graph).applyBuffer(0).reducerOnRHS(0, 1, TopLevelArgument.SLOT_OFFSET)
       start(graph).morselBuffer(1).reducer(0)

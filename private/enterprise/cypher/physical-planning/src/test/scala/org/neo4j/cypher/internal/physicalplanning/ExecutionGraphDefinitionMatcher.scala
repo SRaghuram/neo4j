@@ -262,48 +262,72 @@ class ExecutionGraphDefinitionMatcher() extends Matcher[ExecutionGraphDefinition
       new ApplyBufferSequence(bd)
     }
 
-    def leftOfJoinBuffer(id: Int, argumentSlotOffset: Int, lhsAsmId: Int = -1, rhsAsmId: Int = -1): JoinBufferSequence = {
-      val out = MorselArgumentStateBufferOutput(BufferId(id), argumentSlotOffset)
+    def leftOfJoinBuffer(lhsId: Int, rhsId: Int, sourceId: Int, argumentSlotOffset: Int, lhsAsmId: Int = -1, rhsAsmId: Int = -1): JoinBufferSequence = {
+      val out = MorselArgumentStateBufferOutput(BufferId(lhsId), argumentSlotOffset)
       pipelines(matchablePipeline.id.x) = matchablePipeline.copy(outputDefinition = out)
-      val bd = buffers.getOrElseUpdate(id,
+      val lhsSink: BufferDefinition = buffers.getOrElseUpdate(lhsId,
         BufferDefinition(
-          BufferId(id),
+          BufferId(lhsId),
           NO_ARGUMENT_STATE_MAPS,
           NO_ARGUMENT_STATE_MAPS,
           NO_ARGUMENT_STATE_MAPS,
-          LHSAccumulatingRHSStreamingBufferVariant(
-            PipelineId(-1),
-            PipelineId(-1),
+          variant = LHSAccumulatingBufferVariant(BufferId(lhsId), ArgumentStateMapId(lhsAsmId)),
+        )(SlotConfiguration.empty))
+      val rhsSink: BufferDefinition = buffers.getOrElseUpdate(rhsId,
+        BufferDefinition(
+          BufferId(rhsId),
+          NO_ARGUMENT_STATE_MAPS,
+          NO_ARGUMENT_STATE_MAPS,
+          NO_ARGUMENT_STATE_MAPS,
+          variant = RHSStreamingBufferVariant(BufferId(rhsId), ArgumentStateMapId(rhsAsmId)),
+        )(SlotConfiguration.empty))
+      val bd: BufferDefinition = buffers.getOrElseUpdate(sourceId,
+                                       BufferDefinition(
+                                         BufferId(sourceId),
+                                         NO_ARGUMENT_STATE_MAPS,
+                                         NO_ARGUMENT_STATE_MAPS,
+                                         NO_ARGUMENT_STATE_MAPS,
+                                         LHSAccumulatingRHSStreamingBufferVariant(
+                                           lhsSink,
+                                           rhsSink,
             ArgumentStateMapId(lhsAsmId),
-            ArgumentStateMapId(rhsAsmId)))(SlotConfiguration.empty))
-      val variant = bd.variant.asInstanceOf[LHSAccumulatingRHSStreamingBufferVariant]
-      val updatedBD = bd.copy(variant = variant.copy(lhsPipelineId = matchablePipeline.id))(SlotConfiguration.empty)
-
-      // Update lhs pipeline ID
-      buffers.update(id, updatedBD)
-      new JoinBufferSequence(updatedBD)
+            ArgumentStateMapId(rhsAsmId))
+                                       )(SlotConfiguration.empty))
+      new JoinBufferSequence(bd)
     }
 
-    def rightOfJoinBuffer(id: Int, argumentSlotOffset: Int, lhsAsmId: Int = -1, rhsAsmId: Int = -1): JoinBufferSequence = {
-      val out = MorselArgumentStateBufferOutput(BufferId(id), argumentSlotOffset)
+    def rightOfJoinBuffer(lhsId: Int, rhsId: Int, sourceId: Int, argumentSlotOffset: Int, lhsAsmId: Int = -1, rhsAsmId: Int = -1): JoinBufferSequence = {
+      val out = MorselArgumentStateBufferOutput(BufferId(rhsId), argumentSlotOffset)
       pipelines(matchablePipeline.id.x) = matchablePipeline.copy(outputDefinition = out)
-      val bd = buffers.getOrElseUpdate(id,
+      val lhsSink: BufferDefinition = buffers.getOrElseUpdate(lhsId,
         BufferDefinition(
-          BufferId(id),
+          BufferId(lhsId),
           NO_ARGUMENT_STATE_MAPS,
           NO_ARGUMENT_STATE_MAPS,
           NO_ARGUMENT_STATE_MAPS,
-          LHSAccumulatingRHSStreamingBufferVariant(
-            PipelineId(-1),
-            PipelineId(-1),
+          variant = LHSAccumulatingBufferVariant(BufferId(lhsId), ArgumentStateMapId(lhsAsmId)),
+        )(SlotConfiguration.empty))
+      val rhsSink: BufferDefinition = buffers.getOrElseUpdate(rhsId,
+        BufferDefinition(
+          BufferId(rhsId),
+          NO_ARGUMENT_STATE_MAPS,
+          NO_ARGUMENT_STATE_MAPS,
+          NO_ARGUMENT_STATE_MAPS,
+          variant = RHSStreamingBufferVariant(BufferId(rhsId), ArgumentStateMapId(rhsAsmId)),
+        )(SlotConfiguration.empty))
+      val bd: BufferDefinition = buffers.getOrElseUpdate(sourceId,
+                                       BufferDefinition(
+                                         BufferId(sourceId),
+                                         NO_ARGUMENT_STATE_MAPS,
+                                         NO_ARGUMENT_STATE_MAPS,
+                                         NO_ARGUMENT_STATE_MAPS,
+                                         LHSAccumulatingRHSStreamingBufferVariant(
+                                           lhsSink,
+                                           rhsSink,
             ArgumentStateMapId(lhsAsmId),
-            ArgumentStateMapId(rhsAsmId)))(SlotConfiguration.empty))
-      val variant = bd.variant.asInstanceOf[LHSAccumulatingRHSStreamingBufferVariant]
-      val updatedBD = bd.copy(variant = variant.copy(rhsPipelineId = matchablePipeline.id))(SlotConfiguration.empty)
-
-      // Update rhs pipeline ID
-      buffers.update(id, updatedBD)
-      new JoinBufferSequence(updatedBD)
+            ArgumentStateMapId(rhsAsmId))
+                                       )(SlotConfiguration.empty))
+      new JoinBufferSequence(bd)
     }
 
     def end: ExecutionGraphDefinitionMatcher = {
