@@ -6,11 +6,12 @@
 package org.neo4j.cypher.internal.runtime.pipelined
 
 import org.neo4j.codegen.api.CodeGeneration
-import org.neo4j.codegen.api.IntermediateRepresentation
+import org.neo4j.codegen.api.IntermediateRepresentation.arrayOf
 import org.neo4j.cypher.internal.expressions.Expression
 import org.neo4j.cypher.internal.expressions.LabelToken
 import org.neo4j.cypher.internal.expressions.ListLiteral
 import org.neo4j.cypher.internal.logical.plans
+import org.neo4j.cypher.internal.logical.plans.CompositeQueryExpression
 import org.neo4j.cypher.internal.logical.plans.Distinct
 import org.neo4j.cypher.internal.logical.plans.DoNotIncludeTies
 import org.neo4j.cypher.internal.logical.plans.ExistenceQueryExpression
@@ -54,6 +55,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.AggregationMapperOp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.AggregationMapperOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ArgumentOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CachePropertiesOperatorTemplate
+import org.neo4j.cypher.internal.runtime.pipelined.operators.CompositeNodeIndexSeekTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ContinuableOperatorTaskWithMorselGenerator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ContinuableOperatorTaskWithMorselTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.DelegateOperatorTaskTemplate
@@ -68,10 +70,11 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeCountFromCountS
 import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeIndexScanTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeIndexStringSearchScanTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.Operator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.exactSeek
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.greaterThanSeek
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.lessThanSeek
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.pointDistanceSeek
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.manyExactSeek
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.pointDistanceSeek
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.rangeBetweenSeek
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.stringContainsScan
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.stringEndsWithScan
@@ -83,6 +86,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.ProduceResultOperat
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ProjectOperatorTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.RelationshipByIdSeekOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.RelationshipCountFromCountStoreOperatorTemplate
+import org.neo4j.cypher.internal.runtime.pipelined.operators.SeekExpression
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelLimitOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelLimitOperatorTaskTemplate.SerialTopLevelLimitStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SingleExactSeekQueryNodeIndexSeekTaskTemplate
@@ -104,6 +108,7 @@ import org.neo4j.cypher.internal.util.ZeroOneOrMany
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.CantCompileQueryException
 import org.neo4j.exceptions.InternalException
+import org.neo4j.internal.kernel.api.IndexQuery
 import org.neo4j.internal.schema.IndexOrder
 
 class FuseOperators(operatorFactory: OperatorFactory,
@@ -295,53 +300,70 @@ class FuseOperators(operatorFactory: OperatorFactory,
         unhandledOutput = output)
     }
 
-    case class RangeSeekExpression(generateSeekValues: Seq[() => IntermediateExpression],
-                                   generatePredicate: Seq[IntermediateRepresentation] => IntermediateRepresentation,
-                                   single: Boolean)
-
-
     def computeRangeExpression(rangeWrapper: Expression,
-                               property: SlottedIndexedProperty): Option[RangeSeekExpression] =
+                               property: SlottedIndexedProperty): Option[SeekExpression] =
       rangeWrapper match {
         case InequalitySeekRangeWrapper(RangeLessThan(Last(bound))) =>
           Some(
-            RangeSeekExpression(
+            SeekExpression(
               Seq(compileExpression(bound.endPoint)),
               in => lessThanSeek(property.propertyKeyId, bound.isInclusive, in.head),
               single = true))
 
         case InequalitySeekRangeWrapper(RangeGreaterThan(Last(bound))) =>
           Some(
-            RangeSeekExpression(
+            SeekExpression(
               Seq(compileExpression(bound.endPoint)),
               in => greaterThanSeek(property.propertyKeyId, bound.isInclusive, in.head),
               single = true))
 
-        case InequalitySeekRangeWrapper(
-        RangeBetween(RangeGreaterThan(Last(greaterThan)), RangeLessThan(Last(lessThan)))) =>
+        case InequalitySeekRangeWrapper(RangeBetween(RangeGreaterThan(Last(greaterThan)), RangeLessThan(Last(lessThan)))) =>
           Some(
-            RangeSeekExpression(Seq(compileExpression(greaterThan.endPoint), compileExpression(lessThan.endPoint)),
-          in =>
-            rangeBetweenSeek(property.propertyKeyId, greaterThan.isInclusive, in.head, lessThan.isInclusive,
-              in.tail.head),
+            SeekExpression(
+              Seq(compileExpression(greaterThan.endPoint),
+                  compileExpression(lessThan.endPoint)),
+              in => rangeBetweenSeek(property.propertyKeyId, greaterThan.isInclusive, in.head, lessThan.isInclusive, in.tail.head),
               single = true))
 
         case PrefixSeekRangeWrapper(range) =>
           Some(
-            RangeSeekExpression(
+            SeekExpression(
               Seq(compileExpression(range.prefix)),
               in => stringPrefixSeek(property.propertyKeyId, in.head),
               single = true))
 
         case PointDistanceSeekRangeWrapper(range) =>
           Some(
-            RangeSeekExpression(
+            SeekExpression(
               Seq(compileExpression(range.point), compileExpression(range.distance)),
-              in => pointDistanceSeek(property.propertyKeyId, in.head, in.tail.head, range.inclusive),
-              single = false))
+              in => pointDistanceSeek(property.propertyKeyId, in.head, in.tail.head, range.inclusive)
+              ))
 
         case _ => None
       }
+
+    def computeCompositeQueries(query: QueryExpression[Expression], property: SlottedIndexedProperty): Option[SeekExpression]  =
+      query match {
+      case SingleQueryExpression(inner) =>
+        Some(SeekExpression(Seq(compileExpression(inner)),
+                            in => arrayOf[IndexQuery](exactSeek(property.propertyKeyId, in.head))))
+
+      case ManyQueryExpression(expr) =>
+        Some(SeekExpression(Seq(compileExpression(expr)),
+                            in => manyExactSeek(property.propertyKeyId, in.head)))
+
+      case RangeQueryExpression(rangeWrapper) =>
+        computeRangeExpression(rangeWrapper, property).map {
+          case seek if seek.single => seek
+            .copy(generatePredicate = in => arrayOf[IndexQuery](seek.generatePredicate(in)))
+          case seek => seek
+        }
+
+      case CompositeQueryExpression(_) =>
+        throw new InternalException("A CompositeQueryExpression can't be nested in a CompositeQueryExpression")
+
+      case _ => None
+    }
 
     def indexSeek(node: String,
                   label: LabelToken,
@@ -352,7 +374,8 @@ class FuseOperators(operatorFactory: OperatorFactory,
                   plan: LogicalPlan,
                   acc: FusionPlan): Option[InputLoopTaskTemplate] = {
       val needsLockingUnique = !operatorFactory.readOnly && unique
-      val property = SlottedIndexedProperty(node, properties.head, slots)
+      val slottedIndexedProperties = properties.map(SlottedIndexedProperty(node, _, slots))
+      val property = slottedIndexedProperties.head
       valueExpr match {
         case SingleQueryExpression(expr) if !needsLockingUnique =>
           require(properties.length == 1)
@@ -370,48 +393,68 @@ class FuseOperators(operatorFactory: OperatorFactory,
         case ManyQueryExpression(expr) if !needsLockingUnique =>
           require(properties.length == 1)
           Some(new ManyQueriesNodeIndexSeekTaskTemplate(acc.template,
-            plan.id,
-            innermostTemplate,
-            node,
-            slots.getLongOffsetFor(node),
-            property,
-            Seq(compileExpression(expr)),
-                                                        in => manyExactSeek(property.propertyKeyId, in.head),
-            operatorFactory.indexRegistrator.registerQueryIndex(label, properties),IndexOrder.NONE,
-            physicalPlan.argumentSizes(id))(expressionCompiler))
+                                                        plan.id,
+                                                        innermostTemplate,
+                                                        node,
+                                                        slots.getLongOffsetFor(node),
+                                                        property,
+                                                        SeekExpression(Seq(compileExpression(expr)), in => manyExactSeek(property.propertyKeyId, in.head)),
+                                                        operatorFactory.indexRegistrator
+                                                          .registerQueryIndex(label, properties),
+                                                        IndexOrder.NONE,
+                                                        physicalPlan.argumentSizes(id))(expressionCompiler))
 
-        case RangeQueryExpression(rangeWrapper) if !needsLockingUnique=>
+        case RangeQueryExpression(rangeWrapper) if !needsLockingUnique =>
           require(properties.length == 1)
           //NOTE: So far we only support fusing of single-bound inequalities. Not sure if it ever makes sense to have
           //multiple bounds
           computeRangeExpression(rangeWrapper, property).map {
-            case RangeSeekExpression(generateSeekValues, generatePredicate, true) =>
+            case seek if seek.single =>
               new SingleRangeSeekQueryNodeIndexSeekTaskTemplate(acc.template,
-                plan.id,
-                innermostTemplate,
-                node,
-                slots.getLongOffsetFor(node),
-                property,
-                generateSeekValues,
-                generatePredicate,
-                operatorFactory.indexRegistrator.registerQueryIndex(label, properties),
-                order,
-                physicalPlan.argumentSizes(id))(expressionCompiler)
+                                                                plan.id,
+                                                                innermostTemplate,
+                                                                node,
+                                                                slots.getLongOffsetFor(node),
+                                                                property,
+                                                                seek,
+                                                                operatorFactory.indexRegistrator.registerQueryIndex(label, properties),
+                                                                order,
+                                                                physicalPlan.argumentSizes(id))(expressionCompiler)
 
-            case RangeSeekExpression(generateSeekValues, generatePredicate, false) =>
+            case seek =>
               new ManyQueriesNodeIndexSeekTaskTemplate(acc.template,
                                                        plan.id,
                                                        innermostTemplate,
                                                        node,
                                                        slots.getLongOffsetFor(node),
                                                        property,
-                                                       generateSeekValues,
-                                                       generatePredicate,
+                                                       seek,
                                                        operatorFactory.indexRegistrator.registerQueryIndex(label, properties),
                                                        order,
                                                        physicalPlan.argumentSizes(id))(expressionCompiler)
           }
 
+
+        case CompositeQueryExpression(inner) if !needsLockingUnique =>
+          require(inner.lengthCompare(properties.length) == 0)
+          val predicates = inner.zip(slottedIndexedProperties).flatMap {
+            case (e, p) => computeCompositeQueries(e, p)
+          }
+
+          if (predicates.size != properties.length) None
+          else {
+            Some(new CompositeNodeIndexSeekTaskTemplate(acc.template,
+                                                        plan.id,
+                                                        innermostTemplate,
+                                                        node,
+                                                        slots.getLongOffsetFor(node),
+                                                        slottedIndexedProperties,
+                                                        predicates,
+                                                        operatorFactory.indexRegistrator.registerQueryIndex(label, properties),
+                                                        order,
+                                                        physicalPlan.argumentSizes(id))(expressionCompiler))
+          }
+          None
 
         case ExistenceQueryExpression() =>
           throw new InternalException("An ExistenceQueryExpression shouldn't be found outside of a CompositeQueryExpression")

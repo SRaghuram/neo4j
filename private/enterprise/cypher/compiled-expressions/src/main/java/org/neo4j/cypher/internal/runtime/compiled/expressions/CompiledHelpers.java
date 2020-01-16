@@ -27,6 +27,7 @@ import org.neo4j.values.virtual.ListValue;
 import org.neo4j.values.virtual.VirtualNodeValue;
 
 import static java.lang.String.format;
+import static org.neo4j.cypher.operations.CypherCoercions.asStorableValue;
 import static org.neo4j.values.storable.Values.NO_VALUE;
 
 /**
@@ -94,6 +95,32 @@ public final class CompiledHelpers
         return false;
     }
 
+
+    @CalledFromGeneratedCode
+    public static IndexQuery exactSeek( int property, AnyValue value )
+    {
+        return IndexQuery.exact( property, asStorableValue( value ) );
+    }
+
+    @CalledFromGeneratedCode
+    public static IndexQuery lessThanSeek(int property, AnyValue value, boolean inclusive )
+    {
+        return IndexQuery.range( property, null, false, asStorableValue( value ), inclusive );
+    }
+
+    @CalledFromGeneratedCode
+    public static IndexQuery greaterThanSeek(int property, AnyValue value, boolean inclusive )
+    {
+        return IndexQuery.range( property, asStorableValue( value ), inclusive, null, false );
+    }
+
+    @CalledFromGeneratedCode
+    public static IndexQuery rangeBetweenSeek( int property, AnyValue from, boolean fromInclusive, AnyValue to,
+            boolean toInclusive )
+    {
+        return IndexQuery.range( property, asStorableValue( from ), fromInclusive,  asStorableValue( to ), toInclusive );
+    }
+
     @CalledFromGeneratedCode
     public static IndexQuery stringPrefix( int property, AnyValue value )
     {
@@ -148,7 +175,7 @@ public final class CompiledHelpers
         IndexQuery[] predicates = new IndexQuery[size];
         for ( int i = 0; i < size; i++ )
         {
-            predicates[i] = IndexQuery.exact( property, listOfSeekValues.value( i ) );
+            predicates[i] = IndexQuery.exact( property, asStorableValue( listOfSeekValues.value( i ) ) );
         }
         return predicates;
     }

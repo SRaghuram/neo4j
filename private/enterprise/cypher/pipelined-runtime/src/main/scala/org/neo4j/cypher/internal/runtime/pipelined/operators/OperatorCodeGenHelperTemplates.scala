@@ -36,6 +36,7 @@ import org.neo4j.codegen.api.IntermediateRepresentation.variable
 import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.codegen.api.Method
 import org.neo4j.codegen.api.Parameter
+
 import org.neo4j.cypher.internal.expressions.SemanticDirection
 import org.neo4j.cypher.internal.expressions.SemanticDirection.BOTH
 import org.neo4j.cypher.internal.expressions.SemanticDirection.INCOMING
@@ -291,35 +292,63 @@ object OperatorCodeGenHelperTemplates {
   }
 
   def exactSeek(prop: Int, expression: IntermediateRepresentation): IntermediateRepresentation =
-    invokeStatic(method[IndexQuery, ExactPredicate, Int, Object]("exact"), constant(prop), expression)
+    invokeStatic(method[CompiledHelpers, IndexQuery, Int, AnyValue]("exactSeek"),
+                 constant(prop),
+                 expression )
 
   def lessThanSeek(prop: Int, inclusive: Boolean, expression: IntermediateRepresentation): IntermediateRepresentation =
-    invokeStatic(method[IndexQuery, RangePredicate[_], Int, Value, Boolean, Value, Boolean]("range"), constant(prop), constant(null), constant(false), expression, constant(inclusive))
+    invokeStatic(method[CompiledHelpers, IndexQuery, Int, AnyValue, Boolean]("lessThanSeek"),
+                 constant(prop),
+                 expression,
+                 constant(inclusive))
 
   def greaterThanSeek(prop: Int, inclusive: Boolean, expression: IntermediateRepresentation): IntermediateRepresentation =
-    invokeStatic(method[IndexQuery, RangePredicate[_], Int, Value, Boolean, Value, Boolean]("range"), constant(prop), expression, constant(inclusive), constant(null), constant(false))
+    invokeStatic(method[CompiledHelpers, IndexQuery, Int, AnyValue, Boolean]("greaterThanSeek"),
+                 constant(prop),
+                 expression,
+                 constant(inclusive))
 
-  def rangeBetweenSeek(prop: Int, fromInclusive: Boolean, fromExpression: IntermediateRepresentation, toInclusive: Boolean, toExpression: IntermediateRepresentation): IntermediateRepresentation =
-    invokeStatic(method[IndexQuery, RangePredicate[_], Int, Value, Boolean, Value, Boolean]("range"), constant(prop), fromExpression, constant(fromInclusive), toExpression, constant(toInclusive))
+  def rangeBetweenSeek(prop: Int,
+                       fromInclusive: Boolean,
+                       fromExpression: IntermediateRepresentation,
+                       toInclusive: Boolean,
+                       toExpression: IntermediateRepresentation): IntermediateRepresentation =
+    invokeStatic(method[CompiledHelpers, IndexQuery, Int, Value, Boolean, Value, Boolean]("rangeBetweenSeek"),
+                 constant(prop),
+                 fromExpression,
+                 constant(fromInclusive),
+                 toExpression,
+                 constant(toInclusive))
 
   def stringPrefixSeek(prop: Int, expression: IntermediateRepresentation): IntermediateRepresentation =
-    invokeStatic(method[CompiledHelpers, IndexQuery, Int, AnyValue]("stringPrefix"), constant(prop), expression)
+    invokeStatic(method[CompiledHelpers, IndexQuery, Int, AnyValue]("stringPrefix"),
+                 constant(prop),
+                 expression)
 
   def stringContainsScan(prop: Int, expression: IntermediateRepresentation): IntermediateRepresentation =
-    invokeStatic(method[IndexQuery, StringContainsPredicate, Int, TextValue]("stringContains"), constant(prop), expression)
+    invokeStatic(method[IndexQuery, StringContainsPredicate, Int, TextValue]("stringContains"),
+                 constant(prop),
+                 expression)
 
   def stringEndsWithScan(prop: Int, expression: IntermediateRepresentation): IntermediateRepresentation =
-    invokeStatic(method[IndexQuery, StringSuffixPredicate, Int, TextValue]("stringSuffix"), constant(prop), expression)
+    invokeStatic(method[IndexQuery, StringSuffixPredicate, Int, TextValue]("stringSuffix"),
+                 constant(prop),
+                 expression)
 
   def pointDistanceSeek(prop: Int,
                         point: IntermediateRepresentation,
                         distance: IntermediateRepresentation,
                         inclusive: Boolean): IntermediateRepresentation =
     invokeStatic(method[CompiledHelpers, Array[IndexQuery], Int, AnyValue, AnyValue, Boolean]("pointRange"),
-                 constant(prop), point, distance, constant(inclusive))
+                 constant(prop),
+                 point,
+                 distance,
+                 constant(inclusive))
 
   def manyExactSeek(prop: Int, expression: IntermediateRepresentation): IntermediateRepresentation =
-    invokeStatic(method[CompiledHelpers, Array[IndexQuery], Int, AnyValue]("manyExactQueries"), constant(prop), expression)
+    invokeStatic(method[CompiledHelpers, Array[IndexQuery], Int, AnyValue]("manyExactQueries"),
+                 constant(prop),
+                 expression)
 
   def singleNode(node: IntermediateRepresentation, cursor: IntermediateRepresentation): IntermediateRepresentation =
     invokeSideEffect(loadField(DATA_READ), method[Read, Unit, Long, NodeCursor]("singleNode"), node, cursor)
