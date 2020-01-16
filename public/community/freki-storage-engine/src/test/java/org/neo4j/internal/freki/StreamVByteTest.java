@@ -22,6 +22,8 @@ package org.neo4j.internal.freki;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import java.nio.ByteBuffer;
+
 import org.neo4j.internal.freki.StreamVByte.IntArrayTarget;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.RandomExtension;
@@ -51,12 +53,15 @@ class StreamVByteTest
         }
 
         // when
-        byte[] data = new byte[10_000];
-        int writeOffset = StreamVByte.writeDeltas( values, data, 0 );
+        ByteBuffer data = ByteBuffer.wrap( new byte[10_000] );
+        StreamVByte.writeIntDeltas( values, data );
+        int writeOffset = data.position();
 
         // then
+        data.position( 0 );
         IntArrayTarget target = intArrayTarget();
-        int readOffset = StreamVByte.readDeltas( target, data, 0 );
+        StreamVByte.readIntDeltas( target, data );
+        int readOffset = data.position();
         assertArrayEquals( values, target.array() );
         assertEquals( writeOffset, readOffset );
     }
@@ -74,14 +79,41 @@ class StreamVByteTest
         }
 
         // when
-        byte[] data = new byte[50];
-        int writeOffset = StreamVByte.writeDeltas( values, data, 0 );
+        ByteBuffer data = ByteBuffer.wrap( new byte[50] );
+        StreamVByte.writeIntDeltas( values, data );
+        int writeOffset = data.position();
 
         // then
+        data.position( 0 );
         IntArrayTarget target = intArrayTarget();
-        int readOffset = StreamVByte.readDeltas( target, data, 0 );
+        StreamVByte.readIntDeltas( target, data );
+        int readOffset = data.position();
         assertArrayEquals( values, target.array() );
         assertEquals( writeOffset, readOffset );
         assertEquals( values.length + 1, writeOffset );
+    }
+
+    @Test
+    void shouldWriteAndReadLongs()
+    {
+        // given
+        long[] values = new long[random.nextInt( 0, 1_000 )];
+        long[] sizes = {0xFFFFFF, 0xFFFFFFFF, 0xFFFFFFFFFFL};
+        for ( int i = 0; i < values.length; i++ )
+        {
+            values[i] = random.nextLong( 0, sizes[random.nextInt( sizes.length )] + 1 );
+        }
+
+        // when
+        ByteBuffer data = ByteBuffer.wrap( new byte[50_000] );
+        StreamVByte.writeLongs( values, data );
+        int writeOffset = data.position();
+
+        // then
+        data.position( 0 );
+        long[] readValues = StreamVByte.readLongs( data );
+        assertArrayEquals( values, readValues );
+        int readOffset = data.position();
+        assertEquals( writeOffset, readOffset );
     }
 }
