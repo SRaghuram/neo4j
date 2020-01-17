@@ -295,7 +295,7 @@ class FrekiStorageReader implements StorageReader
     @Override
     public StorageRelationshipGroupCursor allocateRelationshipGroupCursor()
     {
-        return null;
+        return new FrekiRelationshipGroupCursor( stores.mainStore );
     }
 
     @Override

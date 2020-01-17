@@ -19,39 +19,27 @@
  */
 package org.neo4j.internal.freki;
 
-import java.nio.ByteBuffer;
-
-import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.storageengine.api.AllNodeScan;
 import org.neo4j.storageengine.api.StorageNodeCursor;
 import org.neo4j.storageengine.api.StoragePropertyCursor;
 
-import static org.neo4j.internal.freki.MutableNodeRecordData.SIZE_SLOT_HEADER;
 import static org.neo4j.internal.freki.StreamVByte.readIntDeltas;
 
-class FrekiNodeCursor implements StorageNodeCursor
+class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
 {
-    private final Store mainStore;
-    Record record = new Record( 1 );
-    private ByteBuffer data;
-
-    private PageCursor cursor;
     private long singleId;
     private long scanId;
 
     FrekiNodeCursor( Store mainStore )
     {
-        this.mainStore = mainStore;
-        reset();
+        super( mainStore );
     }
 
     @Override
     public long[] labels()
     {
-        StreamVByte.LongArrayTarget target = new StreamVByte.LongArrayTarget();
-        // TODO not position(), more like right after the record header, right?
-        readIntDeltas( target, data );
-        return target.array();
+        data.position( labelsOffset );
+        return readIntDeltas( new StreamVByte.LongArrayTarget(), data ).array();
     }
 
     @Override
@@ -82,7 +70,7 @@ class FrekiNodeCursor implements StorageNodeCursor
     @Override
     public boolean isDense()
     {
-        return false;
+        return true;
     }
 
     @Override
@@ -132,43 +120,18 @@ class FrekiNodeCursor implements StorageNodeCursor
     {
         if ( singleId != -1 )
         {
-            mainStore.read( cursor(), record, singleId );
+            loadMainRecord( singleId );
             singleId = -1;
-            if ( !record.hasFlag( Record.FLAG_IN_USE ) )
-            {
-                return false;
-            }
-            data = record.dataForReading();
-            // Skip the offset header
-            data.position( data.position() + SIZE_SLOT_HEADER );
             return record.hasFlag( Record.FLAG_IN_USE );
         }
         return false;
     }
 
-    private PageCursor cursor()
-    {
-        if ( cursor == null )
-        {
-            cursor = mainStore.openReadCursor();
-        }
-        return cursor;
-    }
-
     @Override
     public void reset()
     {
+        super.reset();
         singleId = -1;
         scanId = -1;
-    }
-
-    @Override
-    public void close()
-    {
-        if ( cursor != null )
-        {
-            cursor.close();
-            cursor = null;
-        }
     }
 }

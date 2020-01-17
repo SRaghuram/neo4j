@@ -108,7 +108,7 @@ class StreamVByte
         return offset;
     }
 
-    static void readIntDeltas( Target target, ByteBuffer buffer )
+    static <TARGET extends Target> TARGET readIntDeltas( TARGET target, ByteBuffer buffer )
     {
         byte[] serialized = buffer.array();
         int offset = buffer.position();
@@ -148,6 +148,7 @@ class StreamVByte
             }
         }
         buffer.position( offset );
+        return target;
     }
 
     private static int readIntValue( byte[] serialized, int offset, int size )
