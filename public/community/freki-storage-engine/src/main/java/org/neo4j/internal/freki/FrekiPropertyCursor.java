@@ -19,9 +19,6 @@
  */
 package org.neo4j.internal.freki;
 
-import java.nio.ByteBuffer;
-
-import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.storageengine.api.StorageNodeCursor;
 import org.neo4j.storageengine.api.StoragePropertyCursor;
 import org.neo4j.values.storable.Value;
@@ -30,14 +27,9 @@ import org.neo4j.values.storable.ValueGroup;
 import static org.neo4j.internal.freki.PropertyValueFormat.calculatePropertyValueSizeIncludingTypeHeader;
 import static org.neo4j.internal.freki.StreamVByte.readIntDeltas;
 
-class FrekiPropertyCursor implements StoragePropertyCursor
+class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropertyCursor
 {
-    private final Store mainStore;
-    private final Record record = new Record( 1 );
-    private ByteBuffer data;
     private boolean initializedFromNode;
-
-    private PageCursor cursor;
     private long nodeId;
     private int[] propertyKeyArray;
     private int propertyKeyIndex;
@@ -45,31 +37,23 @@ class FrekiPropertyCursor implements StoragePropertyCursor
 
     FrekiPropertyCursor( Store mainStore )
     {
-        this.mainStore = mainStore;
-        reset();
+        super( mainStore );
     }
 
     @Override
     public void initNodeProperties( long nodeId )
     {
+        // Setting this field will tell make record loading happen in next() later
         this.nodeId = nodeId;
+        reset();
     }
 
     @Override
     public void initNodeProperties( StorageNodeCursor nodeCursor )
     {
-        Record nodeRecord = ((FrekiNodeCursor) nodeCursor).record;
-        if ( nodeRecord.hasFlag( Record.FLAG_IN_USE ) )
+        if ( useSharedRecordFrom( (FrekiNodeCursor) nodeCursor ) && readPropertyKeys() )
         {
-            this.record.initializeFromWithSharedData( nodeRecord );
-            if ( readHeader() )
-            {
-                initializedFromNode = true;
-            }
-            else
-            {
-                reset();
-            }
+            initializedFromNode = true;
         }
         else
         {
@@ -109,13 +93,9 @@ class FrekiPropertyCursor implements StoragePropertyCursor
             initializedFromNode = false;
             if ( nodeId != -1 )
             {
-                mainStore.read( cursor(), record, nodeId );
+                loadMainRecord( nodeId );
                 nodeId = -1;
-                if ( !record.hasFlag( Record.FLAG_IN_USE ) )
-                {
-                    return false;
-                }
-                if ( !readHeader() )
+                if ( !record.hasFlag( Record.FLAG_IN_USE ) || !readPropertyKeys() )
                 {
                     return false;
                 }
@@ -137,51 +117,25 @@ class FrekiPropertyCursor implements StoragePropertyCursor
         return false;
     }
 
-    private boolean readHeader()
+    private boolean readPropertyKeys()
     {
-        // Read property offset
-        data = record.dataForReading();
-        int offsetsHeader = MutableNodeRecordData.readOffsetsHeader( data );
-        int propertyOffset = MutableNodeRecordData.propertyOffset( offsetsHeader );
-        if ( propertyOffset == 0 )
+        if ( propertiesOffset == 0 )
         {
             return false;
         }
 
-        // Read property keys
-        data.position( propertyOffset );
-        StreamVByte.IntArrayTarget target = new StreamVByte.IntArrayTarget();
-        readIntDeltas( target, data );
+        data.position( propertiesOffset );
+        propertyKeyArray = readIntDeltas( new StreamVByte.IntArrayTarget(), data ).array();
         nextPropertyValueStartOffset = data.position();
-        propertyKeyArray = target.array();
         return true;
-    }
-
-    private PageCursor cursor()
-    {
-        if ( cursor == null )
-        {
-            cursor = mainStore.openReadCursor();
-        }
-        return cursor;
     }
 
     @Override
     public void reset()
     {
+        super.reset();
         nodeId = -1;
         propertyKeyIndex = -1;
         initializedFromNode = false;
-        data = null;
-    }
-
-    @Override
-    public void close()
-    {
-        if ( cursor != null )
-        {
-            cursor.close();
-            cursor = null;
-        }
     }
 }
