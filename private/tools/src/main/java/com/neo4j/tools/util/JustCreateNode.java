@@ -23,7 +23,7 @@ public class JustCreateNode
 {
     public static void main( String[] args ) throws Exception
     {
-        File homeDirectory = new File( "C:/Users/Matilas/Desktop/home" );
+        File homeDirectory = new File( "C:/Users/Mattias/Desktop/home" );
         FileUtils.deleteRecursively( homeDirectory );
         DatabaseManagementService dbms = new DatabaseManagementServiceBuilder( homeDirectory ).build();
         Label label = Label.label( "Hello token world" );

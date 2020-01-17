@@ -19,25 +19,21 @@
  */
 package org.neo4j.internal.freki;
 
-import java.nio.ByteBuffer;
 import java.util.Arrays;
 
-import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.storageengine.api.RelationshipDirection;
+import org.neo4j.storageengine.api.StorageNodeCursor;
 import org.neo4j.storageengine.api.StoragePropertyCursor;
+import org.neo4j.storageengine.api.StorageRelationshipGroupCursor;
 import org.neo4j.storageengine.api.StorageRelationshipTraversalCursor;
 
+import static org.neo4j.internal.freki.Record.FLAG_IN_USE;
 import static org.neo4j.storageengine.api.RelationshipDirection.INCOMING;
 import static org.neo4j.storageengine.api.RelationshipDirection.LOOP;
 import static org.neo4j.storageengine.api.RelationshipDirection.OUTGOING;
 
-public class FrekiRelationshipTraversalCursor implements StorageRelationshipTraversalCursor
+public class FrekiRelationshipTraversalCursor extends FrekiMainStoreCursor implements StorageRelationshipTraversalCursor
 {
-    private final Store mainStore;
-    Record record = new Record( 1 );
-    private ByteBuffer data;
-
-    private PageCursor cursor;
     private boolean loadedCorrectNode;
     private long nodeId;
     private int expectedType;
@@ -59,8 +55,7 @@ public class FrekiRelationshipTraversalCursor implements StorageRelationshipTrav
 
     FrekiRelationshipTraversalCursor( Store mainStore )
     {
-        this.mainStore = mainStore;
-        reset();
+        super( mainStore );
     }
 
     @Override
@@ -86,6 +81,7 @@ public class FrekiRelationshipTraversalCursor implements StorageRelationshipTrav
     @Override
     public long entityReference()
     {
+        // TODO implement when we have internal relationship IDs (coupled with source node this is yey)
         return 0;
     }
 
@@ -96,18 +92,12 @@ public class FrekiRelationshipTraversalCursor implements StorageRelationshipTrav
         {
             if ( !loadedCorrectNode )
             {
-                mainStore.read( cursor(), record, nodeId );
-                loadedCorrectNode = true;
-                currentTypeIndex = 0;
-                if ( !record.hasFlag( Record.FLAG_IN_USE ) )
+                loadMainRecord( nodeId );
+                if ( !readHeader() )
                 {
                     return false;
                 }
-                if ( !readHeaderAndPrepareBuffer() )
-                {
-                    return false;
-                }
-
+                readRelationshipTypeGroups();
                 if ( expectedType != -1 )
                 {
                     int foundIndex = Arrays.binarySearch( typesInNode, expectedType );
@@ -173,42 +163,24 @@ public class FrekiRelationshipTraversalCursor implements StorageRelationshipTrav
         return false;
     }
 
-    private boolean readHeaderAndPrepareBuffer()
+    private boolean readHeader()
     {
-        // Read property offset
-        data = record.dataForReading();
-        int offsetsHeader = MutableNodeRecordData.readOffsetsHeader( data );
-        int relationshipsOffset = MutableNodeRecordData.relationshipOffset( offsetsHeader );
-
-        if ( relationshipsOffset == 0 )
-        {
-            return false;
-        }
-
-        data.position( relationshipsOffset );
-        StreamVByte.IntArrayTarget typesTarget = new StreamVByte.IntArrayTarget();
-        StreamVByte.readIntDeltas( typesTarget, data );
-        typesInNode = typesTarget.array();
-
-        StreamVByte.IntArrayTarget offsetTarget = new StreamVByte.IntArrayTarget();
-        StreamVByte.readIntDeltas( offsetTarget, data );
-        typeOffsets = offsetTarget.array();
-
-        return true;
+        loadedCorrectNode = true;
+        currentTypeIndex = 0;
+        return !record.hasFlag( FLAG_IN_USE ) && relationshipsOffset > 0;
     }
 
-    private PageCursor cursor()
+    private void readRelationshipTypeGroups()
     {
-        if ( cursor == null )
-        {
-            cursor = mainStore.openReadCursor();
-        }
-        return cursor;
+        data.position( relationshipsOffset );
+        typesInNode = StreamVByte.readIntDeltas( new StreamVByte.IntArrayTarget(), data ).array();
+        typeOffsets = StreamVByte.readIntDeltas( new StreamVByte.IntArrayTarget(), data ).array();
     }
 
     @Override
     public void reset()
     {
+        super.reset();
         nodeId = -1;
         expectedType = -1;
         expectedDirection = null;
@@ -223,16 +195,6 @@ public class FrekiRelationshipTraversalCursor implements StorageRelationshipTrav
         currentTypePropertiesIndex = -1;
         currentTypePropertiesOffset = -1;
         currentRelationshipDirection = null;
-    }
-
-    @Override
-    public void close()
-    {
-        if ( cursor != null )
-        {
-            cursor.close();
-            cursor = null;
-        }
     }
 
     @Override
@@ -273,10 +235,36 @@ public class FrekiRelationshipTraversalCursor implements StorageRelationshipTrav
     }
 
     @Override
+    public void init( StorageNodeCursor nodeCursor )
+    {
+        init( nodeCursor.entityReference(), nodeCursor.allRelationshipsReference(), nodeCursor.isDense() );
+        useSharedRecordFrom( (FrekiNodeCursor) nodeCursor );
+        readHeader();
+        readRelationshipTypeGroups();
+    }
+
+    @Override
     public void init( long nodeId, long reference, int type, RelationshipDirection direction, boolean nodeIsDense )
     {
         init( nodeId, reference, nodeIsDense );
         this.expectedType = type;
         this.expectedDirection = direction;
+    }
+
+    @Override
+    public void init( StorageRelationshipGroupCursor groupCursor, long reference, int type, RelationshipDirection direction, boolean nodeIsDense )
+    {
+        init( groupCursor.getOwningNode(), reference, nodeIsDense );
+        useSharedRecordFrom( (FrekiRelationshipGroupCursor) groupCursor );
+        readHeader();
+        expectedType = type;
+        expectedDirection = direction;
+
+        // Here we come from a place where the relationship data is already loaded in the FrekiRelationshipGroupCursor so we don't have to
+        // read it again... merely initialize the state in here to make it look like it has one group (this type) and let next() enjoy this data.
+        // The reference is the data buffer offset, so just go there.
+        typesInNode = new int[]{type};
+        data.position( (int) reference );
+        currentTypeIndex = 0;
     }
 }
