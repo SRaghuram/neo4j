@@ -122,6 +122,8 @@ public final class CompiledHelpers
                     .getCalculator()
                     .boundingBox( pointValue, ((NumberValue) distance).doubleValue() );
             int size = bboxes.size();
+            // The geographic calculator pads the range to avoid numerical errors, which means we rely more on post-filtering
+            // This also means we can fix the date-line '<' case by simply being inclusive
             boolean inclusive = size > 1 || rangeIsInclusive;
             IndexQuery[] queries = new IndexQuery[size];
             for ( int i = 0; i < size; i++ )
