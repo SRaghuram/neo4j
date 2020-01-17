@@ -36,7 +36,6 @@ import org.neo4j.codegen.api.IntermediateRepresentation.variable
 import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.codegen.api.Method
 import org.neo4j.codegen.api.Parameter
-
 import org.neo4j.cypher.internal.expressions.SemanticDirection
 import org.neo4j.cypher.internal.expressions.SemanticDirection.BOTH
 import org.neo4j.cypher.internal.expressions.SemanticDirection.INCOMING
@@ -59,8 +58,7 @@ import org.neo4j.cypher.operations.CypherFunctions
 import org.neo4j.graphdb.Direction
 import org.neo4j.internal.kernel.api.Cursor
 import org.neo4j.internal.kernel.api.IndexQuery
-import org.neo4j.internal.kernel.api.IndexQuery.ExactPredicate
-import org.neo4j.internal.kernel.api.IndexQuery.RangePredicate
+import org.neo4j.internal.kernel.api.IndexQuery.ExistsPredicate
 import org.neo4j.internal.kernel.api.IndexQuery.StringContainsPredicate
 import org.neo4j.internal.kernel.api.IndexQuery.StringSuffixPredicate
 import org.neo4j.internal.kernel.api.IndexReadSession
@@ -324,6 +322,10 @@ object OperatorCodeGenHelperTemplates {
     invokeStatic(method[CompiledHelpers, IndexQuery, Int, AnyValue]("stringPrefix"),
                  constant(prop),
                  expression)
+
+  def existsSeek(prop: Int): IntermediateRepresentation =
+    invokeStatic(method[IndexQuery, ExistsPredicate, Int]("exists"),
+                 constant(prop))
 
   def stringContainsScan(prop: Int, expression: IntermediateRepresentation): IntermediateRepresentation =
     invokeStatic(method[IndexQuery, StringContainsPredicate, Int, TextValue]("stringContains"),

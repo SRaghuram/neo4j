@@ -344,26 +344,29 @@ class FuseOperators(operatorFactory: OperatorFactory,
 
     def computeCompositeQueries(query: QueryExpression[Expression], property: SlottedIndexedProperty): Option[SeekExpression]  =
       query match {
-      case SingleQueryExpression(inner) =>
-        Some(SeekExpression(Seq(compileExpression(inner)),
-                            in => arrayOf[IndexQuery](exactSeek(property.propertyKeyId, in.head))))
+        case SingleQueryExpression(inner) =>
+          Some(SeekExpression(Seq(compileExpression(inner)),
+                              in => arrayOf[IndexQuery](exactSeek(property.propertyKeyId, in.head))))
 
-      case ManyQueryExpression(expr) =>
-        Some(SeekExpression(Seq(compileExpression(expr)),
-                            in => manyExactSeek(property.propertyKeyId, in.head)))
+        case ManyQueryExpression(expr) =>
+          Some(SeekExpression(Seq(compileExpression(expr)),
+                              in => manyExactSeek(property.propertyKeyId, in.head)))
 
-      case RangeQueryExpression(rangeWrapper) =>
-        computeRangeExpression(rangeWrapper, property).map {
-          case seek if seek.single => seek
-            .copy(generatePredicate = in => arrayOf[IndexQuery](seek.generatePredicate(in)))
-          case seek => seek
-        }
+        case RangeQueryExpression(rangeWrapper) =>
+          computeRangeExpression(rangeWrapper, property).map {
+            case seek if seek.single => seek.copy(generatePredicate = in => arrayOf[IndexQuery](seek.generatePredicate(in)))
+            case seek => seek
+          }
 
-      case CompositeQueryExpression(_) =>
-        throw new InternalException("A CompositeQueryExpression can't be nested in a CompositeQueryExpression")
+        case ExistenceQueryExpression() =>
+          Some(SeekExpression(Seq.empty,
+                              _ => arrayOf[IndexQuery](existsSeek(property.propertyKeyId))))
 
-      case _ => None
-    }
+        case CompositeQueryExpression(_) =>
+          throw new InternalException("A CompositeQueryExpression can't be nested in a CompositeQueryExpression")
+
+        case _ => None
+      }
 
     def indexSeek(node: String,
                   label: LabelToken,
