@@ -7,6 +7,7 @@ package com.neo4j.internal.cypher.acceptance
 
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
 import org.neo4j.configuration.GraphDatabaseSettings
+import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticError
 import org.neo4j.exceptions.{DatabaseAdministrationException, InvalidArgumentException, SyntaxException}
 import org.neo4j.graphdb.security.AuthorizationViolationException
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
@@ -75,6 +76,19 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
     // THEN
     result.toSet should be(defaultRoles ++ Set(role("foo").map))
+  }
+
+  test("should not create role with reserved name") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+    // WHEN
+    val exception = the[SyntaxException] thrownBy execute("CREATE ROLE PUBLIC")
+    exception.getMessage should startWith("Failed to create the specified role 'PUBLIC': 'PUBLIC' is a reserved role name and cannot be created.")
+
+    // THEN
+    val result = execute("SHOW ROLES")
+    result.toSet should be(defaultRoles)
   }
 
   test("should show populated roles") {
@@ -499,6 +513,19 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("SHOW ROLES").toSet should be(defaultRoles ++ Set.empty)
   }
 
+  test("should not drop role with reserved name") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+    // WHEN
+    val exception = the[SyntaxException] thrownBy execute("DROP ROLE PUBLIC")
+    exception.getMessage should startWith("Failed to drop the specified role 'PUBLIC': 'PUBLIC' is a reserved role and cannot be dropped.")
+
+    // THEN
+    val result = execute("SHOW ROLES")
+    result.toSet should be(defaultRoles)
+  }
+
   test("should drop existing role using if exists") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -605,6 +632,19 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
     // THEN
     execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers + Map("role" -> "custom", "isBuiltIn" -> false, "member" -> "user"))
+  }
+
+  test("should not grant reserved role to user") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE USER user SET PASSWORD 'neo'")
+
+    // WHEN
+    val exception = the[SyntaxException] thrownBy execute("GRANT ROLE PUBLIC TO user")
+    // THEN
+    exception.getMessage should startWith("Failed to grant the specified role 'PUBLIC': 'PUBLIC' is a reserved role and cannot be granted.")
+
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("user"))
   }
 
   test("should grant roles and list users with roles") {
@@ -822,6 +862,17 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
     // THEN
     execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers + Map("role" -> "custom", "isBuiltIn" -> false, "member" -> null))
+  }
+
+  test("should not revoke reserved role from user") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE USER user SET PASSWORD 'neo'")
+
+    // WHEN
+    val exception = the[SyntaxException] thrownBy execute("REVOKE ROLE PUBLIC FROM user")
+    // THEN
+    exception.getMessage should startWith("Failed to revoke the specified role 'PUBLIC': 'PUBLIC' is a reserved role and cannot be revoked.")
   }
 
   test("should revoke role from several users") {
