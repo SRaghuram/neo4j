@@ -88,76 +88,72 @@ public class FrekiRelationshipTraversalCursor extends FrekiMainStoreCursor imple
     @Override
     public boolean next()
     {
-        if ( !loadedCorrectNode || currentTypeIndex != -1 )
+        if ( !loadedCorrectNode )
         {
-            if ( !loadedCorrectNode )
+            loadMainRecord( nodeId );
+            if ( !readHeader() )
             {
-                loadMainRecord( nodeId );
-                if ( !readHeader() )
+                return false;
+            }
+            readRelationshipTypeGroups();
+            if ( expectedType != -1 )
+            {
+                int foundIndex = Arrays.binarySearch( typesInNode, expectedType );
+                if ( foundIndex < 0 )
                 {
                     return false;
                 }
-                readRelationshipTypeGroups();
-                if ( expectedType != -1 )
+                currentTypeIndex = foundIndex - 1;
+                data.position( typeOffsets[currentTypeIndex] );
+            }
+        }
+
+        while ( true )
+        {
+            if ( currentTypeDataIndex == -1 || currentTypeDataIndex >= currentTypeData.length )
+            {
+                currentTypeIndex++;
+                if ( (expectedType != -1 && typesInNode[currentTypeIndex] != expectedType) || currentTypeIndex >= typesInNode.length )
                 {
-                    int foundIndex = Arrays.binarySearch( typesInNode, expectedType );
-                    if ( foundIndex < 0 )
-                    {
-                        return false;
-                    }
-                    currentTypeIndex = foundIndex;
-                    data.position( typeOffsets[currentTypeIndex] );
+                    break;
                 }
+
+                currentTypeData = StreamVByte.readLongs( data );
+                currentTypePropertiesOffset = data.position();
+                currentTypeDataIndex = 0;
+                currentTypePropertiesIndex = 0;
             }
 
-            while ( currentTypeIndex < typesInNode.length )
+            while ( currentTypeDataIndex < currentTypeData.length )
             {
-                if ( currentTypeDataIndex == -1 || currentTypeDataIndex >= currentTypeData.length )
+                long currentRelationshipOtherNodeRaw = currentTypeData[currentTypeDataIndex++];
+                currentRelationshipOtherNode = currentRelationshipOtherNodeRaw >>> 2;
+                if ( currentRelationshipOtherNode == nodeId )
                 {
-                    if ( expectedType != -1 && typesInNode[currentTypeIndex] != expectedType )
-                    {
-                        break;
-                    }
-
-                    currentTypeData = StreamVByte.readLongs( data );
-                    currentTypePropertiesOffset = data.position();
-                    currentTypeDataIndex = 0;
-                    currentTypePropertiesIndex = 0;
+                    currentRelationshipDirection = LOOP;
+                }
+                else
+                {
+                    boolean outgoing = (currentRelationshipOtherNodeRaw & 0b10) != 0;
+                    currentRelationshipDirection = outgoing ? OUTGOING : INCOMING;
+                }
+                currentRelationshipHasProperties = (currentRelationshipOtherNodeRaw & 0b01) != 0;
+                if ( currentRelationshipHasProperties )
+                {
+                    currentRelationshipPropertiesIndex = currentTypePropertiesIndex;
+                    currentTypePropertiesIndex++;
                 }
 
-                while ( currentTypeDataIndex < currentTypeData.length )
+                boolean matchesDirection = expectedDirection == null || currentRelationshipDirection.equals( expectedDirection );
+                if ( matchesDirection )
                 {
-                    long currentRelationshipOtherNodeRaw = currentTypeData[currentTypeDataIndex++];
-                    currentRelationshipOtherNode = currentRelationshipOtherNodeRaw >>> 2;
-                    if ( currentRelationshipOtherNode == nodeId )
-                    {
-                        currentRelationshipDirection = LOOP;
-                    }
-                    else
-                    {
-                        boolean outgoing = (currentRelationshipOtherNodeRaw & 0b10) != 0;
-                        currentRelationshipDirection = outgoing ? OUTGOING : INCOMING;
-                    }
-                    currentRelationshipHasProperties = (currentRelationshipOtherNodeRaw & 0b01) != 0;
-                    if ( currentRelationshipHasProperties )
-                    {
-                        currentRelationshipPropertiesIndex = currentTypePropertiesIndex;
-                        currentTypePropertiesIndex++;
-
-                    }
-
-                    boolean matchesDirection = expectedDirection == null || currentRelationshipDirection.equals( expectedDirection );
-                    if ( matchesDirection )
-                    {
-                        return true;
-                    }
+                    return true;
                 }
-                currentTypeIndex++;
-                if ( currentTypePropertiesIndex > 0 && currentTypeIndex < typesInNode.length )
-                {
-                    //Skipping the properties
-                    data.position( typeOffsets[currentTypeIndex] );
-                }
+            }
+            if ( currentTypePropertiesIndex > 0 && currentTypeIndex < typesInNode.length )
+            {
+                //Skipping the properties
+                data.position( typeOffsets[currentTypeIndex] );
             }
         }
         return false;
@@ -166,7 +162,7 @@ public class FrekiRelationshipTraversalCursor extends FrekiMainStoreCursor imple
     private boolean readHeader()
     {
         loadedCorrectNode = true;
-        currentTypeIndex = 0;
+        currentTypeIndex = -1;
         return !record.hasFlag( FLAG_IN_USE ) && relationshipsOffset > 0;
     }
 
