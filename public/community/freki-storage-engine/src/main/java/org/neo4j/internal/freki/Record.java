@@ -24,7 +24,6 @@ import java.nio.ByteBuffer;
 
 import org.neo4j.io.fs.WritableChannel;
 import org.neo4j.io.pagecache.PageCursor;
-import org.neo4j.util.Preconditions;
 
 class Record
 {
@@ -42,7 +41,6 @@ class Record
     // stored data
     // TODO this could be off-heap or something less garbagy
     private ByteBuffer data;
-    private boolean dataIsFromShared;
 
     // temporary abstraction when trying out writes
     MutableNodeRecordData node;
@@ -71,7 +69,6 @@ class Record
 
     ByteBuffer dataForWriting()
     {
-        Preconditions.checkState( !dataIsFromShared, "Probably not wanna write with this one" );
         if ( data == null )
         {
             createNewDataBuffer( sizeMultiple );
@@ -83,9 +80,15 @@ class Record
     {
         this.id = record.id;
         this.flags = record.flags;
-        this.data = record.data.duplicate();
-        this.data.position( 0 );
-        this.dataIsFromShared = true;
+        if ( data == null || data.capacity() < record.data.capacity() )
+        {
+            createNewDataBuffer( record.sizeMultiple );
+        }
+        else
+        {
+            data.clear();
+        }
+        System.arraycopy( record.data.array(), 0, data.array(), 0, data.capacity() );
     }
 
     void setFlag( int flag )
@@ -128,12 +131,7 @@ class Record
     void clear()
     {
         flags = 0;
-        if ( dataIsFromShared )
-        {
-            data = null;
-            dataIsFromShared = false;
-        }
-        else if ( data != null )
+        if ( data != null )
         {
             data.clear();
         }
@@ -154,6 +152,7 @@ class Record
         {
             createNewDataBuffer( sizeMultiple );
         }
+
         cursor.getBytes( data.array(), 0, length );
     }
 }
