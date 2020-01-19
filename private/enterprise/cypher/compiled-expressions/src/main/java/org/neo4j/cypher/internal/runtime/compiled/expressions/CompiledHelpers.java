@@ -95,7 +95,6 @@ public final class CompiledHelpers
         return false;
     }
 
-
     @CalledFromGeneratedCode
     public static IndexQuery exactSeek( int property, AnyValue value )
     {
@@ -103,13 +102,13 @@ public final class CompiledHelpers
     }
 
     @CalledFromGeneratedCode
-    public static IndexQuery lessThanSeek(int property, AnyValue value, boolean inclusive )
+    public static IndexQuery lessThanSeek( int property, AnyValue value, boolean inclusive )
     {
         return IndexQuery.range( property, null, false, asStorableValue( value ), inclusive );
     }
 
     @CalledFromGeneratedCode
-    public static IndexQuery greaterThanSeek(int property, AnyValue value, boolean inclusive )
+    public static IndexQuery greaterThanSeek( int property, AnyValue value, boolean inclusive )
     {
         return IndexQuery.range( property, asStorableValue( value ), inclusive, null, false );
     }
