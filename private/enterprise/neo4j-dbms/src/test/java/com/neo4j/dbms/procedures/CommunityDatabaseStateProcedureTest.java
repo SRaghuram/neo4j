@@ -58,7 +58,7 @@ class CommunityDatabaseStateProcedureTest
         when( stateService.causeOfFailure( any( NamedDatabaseId.class ) ) ).thenReturn( Optional.empty() );
         var existing = idRepository.getRaw( "existing" );
         var nonExisting = idRepository.getRaw( "nonExisting" );
-        idRepository.filter( nonExisting );
+        idRepository.filter( nonExisting.name() );
 
         // when/then
 
