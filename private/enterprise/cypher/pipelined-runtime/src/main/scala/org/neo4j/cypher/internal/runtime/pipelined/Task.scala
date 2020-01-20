@@ -11,26 +11,26 @@ import org.neo4j.cypher.internal.runtime.pipelined.tracing.WorkUnitEvent
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 
 /**
-  * A single task
-  */
+ * A single task
+ */
 trait Task[THREAD_LOCAL_RESOURCE] extends WorkIdentity {
 
   /**
-    * Execute the next work-unit of this task. After the first call, [[executeWorkUnit]] will be
-    * called again iff [[canContinue]] returns `true`.
-    *
-    * @param threadLocalResource resources to use for execution
-    * @param workUnitEvent the current tracing even
-    */
+   * Execute the next work-unit of this task. After the first call, [[executeWorkUnit]] will be
+   * called again iff [[canContinue]] returns `true`.
+   *
+   * @param threadLocalResource resources to use for execution
+   * @param workUnitEvent the current tracing even
+   */
   def executeWorkUnit(threadLocalResource: THREAD_LOCAL_RESOURCE,
                       workUnitEvent: WorkUnitEvent,
                       queryProfiler: QueryProfiler): PreparedOutput
 
   /**
-    * Returns true if there is another work unit to execute.
-    *
-    * @return true if there is another work unit to execute.
-    */
+   * Returns true if there is another work unit to execute.
+   *
+   * @return true if there is another work unit to execute.
+   */
   def canContinue: Boolean
 
   override def toString: String = s"${getClass.getSimpleName}[$workId]($workDescription)"

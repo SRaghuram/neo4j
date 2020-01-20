@@ -6,14 +6,15 @@
 package org.neo4j.cypher.internal.runtime.pipelined.execution
 
 import org.neo4j.cypher.internal.runtime.ExpressionCursors
-import org.neo4j.internal.kernel.api.{CursorFactory, KernelReadTracer}
+import org.neo4j.internal.kernel.api.CursorFactory
+import org.neo4j.internal.kernel.api.KernelReadTracer
 import org.neo4j.io.IOUtils
 import org.neo4j.values.AnyValue
 
 /**
-  * Resources used by the pipelined runtime for query execution.
-  * Each worker has its own resources and they are valid for multiple queries.
-  */
+ * Resources used by the pipelined runtime for query execution.
+ * Each worker has its own resources and they are valid for multiple queries.
+ */
 class QueryResources(cursorFactory: CursorFactory) extends AutoCloseable {
 
   val expressionCursors: ExpressionCursors = new ExpressionCursors(cursorFactory)

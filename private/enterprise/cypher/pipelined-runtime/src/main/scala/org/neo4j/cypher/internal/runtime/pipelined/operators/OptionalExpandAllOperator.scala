@@ -5,25 +5,52 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.operators
 
-import org.neo4j.codegen.api.IntermediateRepresentation._
-import org.neo4j.codegen.api.{Field, IntermediateRepresentation}
+import org.neo4j.codegen.api.Field
+import org.neo4j.codegen.api.IntermediateRepresentation
+import org.neo4j.codegen.api.IntermediateRepresentation.and
+import org.neo4j.codegen.api.IntermediateRepresentation.assign
+import org.neo4j.codegen.api.IntermediateRepresentation.block
+import org.neo4j.codegen.api.IntermediateRepresentation.condition
+import org.neo4j.codegen.api.IntermediateRepresentation.constant
+import org.neo4j.codegen.api.IntermediateRepresentation.declareAndAssign
+import org.neo4j.codegen.api.IntermediateRepresentation.equal
+import org.neo4j.codegen.api.IntermediateRepresentation.field
+import org.neo4j.codegen.api.IntermediateRepresentation.getStatic
+import org.neo4j.codegen.api.IntermediateRepresentation.ifElse
+import org.neo4j.codegen.api.IntermediateRepresentation.load
+import org.neo4j.codegen.api.IntermediateRepresentation.loadField
+import org.neo4j.codegen.api.IntermediateRepresentation.loop
+import org.neo4j.codegen.api.IntermediateRepresentation.noop
+import org.neo4j.codegen.api.IntermediateRepresentation.not
+import org.neo4j.codegen.api.IntermediateRepresentation.notEqual
+import org.neo4j.codegen.api.IntermediateRepresentation.or
+import org.neo4j.codegen.api.IntermediateRepresentation.setField
+import org.neo4j.codegen.api.IntermediateRepresentation.trueValue
+import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
+import org.neo4j.cypher.internal.expressions.SemanticDirection
 import org.neo4j.cypher.internal.physicalplanning.Slot
+import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.NoMemoryTracker
+import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.RelationshipTypes
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{CursorPools, MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.pipelined.execution.CursorPools
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandAllOperatorTaskTemplate.getNodeIdFromSlot
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.cursorNext
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profileRow
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.SlottedQueryState
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
-import org.neo4j.cypher.internal.runtime.{ExecutionContext, NoMemoryTracker, QueryContext}
-import org.neo4j.cypher.internal.expressions.SemanticDirection
 import org.neo4j.cypher.internal.util.attribution.Id
-import org.neo4j.internal.kernel.api._
+import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.internal.kernel.api.helpers.RelationshipSelectionCursor
 import org.neo4j.values.storable.Values
 
@@ -52,20 +79,20 @@ class OptionalExpandAllOperator(val workIdentity: WorkIdentity,
   }
 
   class OptionalExpandAllTask(inputMorsel: MorselExecutionContext) extends ExpandAllTask(inputMorsel,
-                                                                                         workIdentity,
-                                                                                         fromSlot,
-                                                                                         relOffset,
-                                                                                         toOffset,
-                                                                                         dir,
-                                                                                         types) {
+    workIdentity,
+    fromSlot,
+    relOffset,
+    toOffset,
+    dir,
+    types) {
 
     override def toString: String = "OptionalExpandAllTask"
 
     protected var hasWritten = false
 
     protected def setUp(context: QueryContext,
-                                 state: QueryState,
-                                 resources: QueryResources): Unit = {
+                        state: QueryState,
+                        resources: QueryResources): Unit = {
 
     }
 
@@ -92,8 +119,8 @@ class OptionalExpandAllOperator(val workIdentity: WorkIdentity,
 
       while (outputRow.isValidRow && relationships.next()) {
         hasWritten = writeRow(outputRow,
-                              relationships.relationshipReference(),
-                              relationships.otherNodeReference())
+          relationships.relationshipReference(),
+          relationships.otherNodeReference())
       }
       if (outputRow.isValidRow && !hasWritten) {
         writeNullRow(outputRow)
@@ -127,13 +154,13 @@ class OptionalExpandAllOperator(val workIdentity: WorkIdentity,
                                  state: QueryState,
                                  resources: QueryResources): Unit = {
       expressionState = new SlottedQueryState(context,
-                                              resources = null,
-                                              params = state.params,
-                                              resources.expressionCursors,
-                                              Array.empty[IndexReadSession],
-                                              resources.expressionVariables(state.nExpressionSlots),
-                                              state.subscriber,
-                                              NoMemoryTracker)
+        resources = null,
+        params = state.params,
+        resources.expressionCursors,
+        Array.empty[IndexReadSession],
+        resources.expressionVariables(state.nExpressionSlots),
+        state.subscriber,
+        NoMemoryTracker)
     }
 
     override protected def writeRow(outputRow: MorselExecutionContext,
@@ -168,19 +195,18 @@ class OptionalExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
                                             generatePredicate: Option[() => IntermediateExpression])
                                            (codeGen: OperatorExpressionCompiler)
   extends ExpandAllOperatorTaskTemplate(inner,
-                                        id,
-                                        innermost,
-                                        isHead,
-                                        fromName,
-                                        fromSlot,
-                                        relName,
-                                        relOffset,
-                                        toOffset,
-                                        dir,
-                                        types,
-                                        missingTypes)(codeGen) {
+    id,
+    innermost,
+    isHead,
+    fromName,
+    fromSlot,
+    relName,
+    relOffset,
+    toOffset,
+    dir,
+    types,
+    missingTypes)(codeGen) {
 
-  import OperatorCodeGenHelperTemplates._
 
   private val hasWritten = field[Boolean](codeGen.namer.nextVariableName())
   private lazy val predicate: Option[IntermediateExpression] = generatePredicate.map(_())
@@ -190,15 +216,15 @@ class OptionalExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
   override def genExpressions: Seq[IntermediateExpression] = super.genExpressions ++ predicate
 
   /**
-    * {{{
-    *    val fromNode = [get from slot]
-    *    this.hasWritten = false
-    *    if (fromNode != -1L) {
-    *      [setUpCursors]
-    *    }
-    *    true
-    * }}}
-    */
+   * {{{
+   *    val fromNode = [get from slot]
+   *    this.hasWritten = false
+   *    if (fromNode != -1L) {
+   *      [setUpCursors]
+   *    }
+   *    true
+   * }}}
+   */
   override protected def genInitializeInnerLoop: IntermediateRepresentation = {
     val fromNode = codeGen.namer.nextVariableName() + "fromNode"
     block(
@@ -208,35 +234,35 @@ class OptionalExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
         block(
           setUpCursors(fromNode),
           setField(canContinue, cursorNext[RelationshipSelectionCursor](loadField(relationshipsField))),
-          )
+        )
       }{//else
         setField(relationshipsField,
-                 getStatic[RelationshipSelectionCursor, RelationshipSelectionCursor]("EMPTY"))
+          getStatic[RelationshipSelectionCursor, RelationshipSelectionCursor]("EMPTY"))
       },
       constant(true))
   }
 
   /**
-    *{{{
-    *   val shouldWriteRow = false
-    *   while (!this.hasWritten || (hasDemand && this.canContinue) ) {
-    *     if (!this.hasWritten && !this.canContinue) {
-    *       rel = -1L
-    *       node = -1L
-    *       shouldWriteRow = true
-    *     } else {
-    *       [rel = getRel]
-    *       [node = getNode]
-    *       shouldWriteRow = [evaluate predicate]
-    *     }
-    *     if (shouldWriteRow) {
-    *        <<< inner.genOperate() >>>
-    *       this.hasWritten = true
-    *      }
-    *     this.canContinue = this.canContinue && relationship.next()
-    *   }
-    *}}}
-    */
+   *{{{
+   *   val shouldWriteRow = false
+   *   while (!this.hasWritten || (hasDemand && this.canContinue) ) {
+   *     if (!this.hasWritten && !this.canContinue) {
+   *       rel = -1L
+   *       node = -1L
+   *       shouldWriteRow = true
+   *     } else {
+   *       [rel = getRel]
+   *       [node = getNode]
+   *       shouldWriteRow = [evaluate predicate]
+   *     }
+   *     if (shouldWriteRow) {
+   *        <<< inner.genOperate() >>>
+   *       this.hasWritten = true
+   *      }
+   *     this.canContinue = this.canContinue && relationship.next()
+   *   }
+   *}}}
+   */
   override protected def genInnerLoop: IntermediateRepresentation = {
     def doIfPredicateOrElse(onPredicate: => IntermediateRepresentation)(orElse: => IntermediateRepresentation): IntermediateRepresentation =
       if (generatePredicate.isEmpty) orElse else onPredicate
@@ -245,7 +271,7 @@ class OptionalExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
       setField(hasWritten, constant(true)),
       profileRow(id),
       inner.genOperateWithExpressions,
-      )
+    )
 
     val shouldWriteRow = codeGen.namer.nextVariableName()
     block(
@@ -257,14 +283,14 @@ class OptionalExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
               writeRow(constant(-1L), constant(-1L)),
               doIfPredicate(assign(shouldWriteRow, constant(true)))))
           (/*else*/
-           block(
+            block(
               writeRow(getRelationship, getOtherNode),
               doIfPredicate(assign(shouldWriteRow, predicate.map(p => equal(nullCheckIfRequired(p), trueValue)).getOrElse(constant(true))))
-           )),
+            )),
           doIfPredicateOrElse(condition(load(shouldWriteRow))(innerBlock))(innerBlock),
           doIfInnerCantContinue(
             setField(canContinue, and(loadField(canContinue),
-                                      cursorNext[RelationshipSelectionCursor](loadField(relationshipsField))))),
+              cursorNext[RelationshipSelectionCursor](loadField(relationshipsField))))),
           endInnerLoop
         )))
   }

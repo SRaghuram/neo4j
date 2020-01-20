@@ -11,12 +11,13 @@ import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.pipelined.state.AbstractArgumentStateMap.ImmutableStateController
-import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory}
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.ConcurrentArgumentStateMap.ConcurrentStateController
 
 /**
-  * Concurrent and quite naive implementation of ArgumentStateMap. Also JustGetItWorking(tm)
-  */
+ * Concurrent and quite naive implementation of ArgumentStateMap. Also JustGetItWorking(tm)
+ */
 class ConcurrentArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId: ArgumentStateMapId,
                                                          val argumentSlotOffset: Int,
                                                          factory: ArgumentStateFactory[STATE])
@@ -57,14 +58,14 @@ class ConcurrentArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId:
 
 object ConcurrentArgumentStateMap {
   /**
-    * CAS the count to this value once taken.
-    */
+   * CAS the count to this value once taken.
+   */
   private val TAKEN = -1000000
 
   /**
-    * Controller which knows when an [[ArgumentState]] is complete,
-    * and protects it from concurrent access.
-    */
+   * Controller which knows when an [[ArgumentState]] is complete,
+   * and protects it from concurrent access.
+   */
   private[state] class ConcurrentStateController[STATE <: ArgumentState](override val state: STATE)
     extends AbstractArgumentStateMap.StateController[STATE] {
 

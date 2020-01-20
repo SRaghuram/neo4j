@@ -5,18 +5,52 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.operators
 
-import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable}
-import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot, Slot, SlotConfiguration, _}
-import org.neo4j.cypher.internal.profiling.{OperatorProfileEvent, QueryProfiler}
+import org.neo4j.codegen.api.Field
+import org.neo4j.codegen.api.IntermediateRepresentation
+import org.neo4j.codegen.api.IntermediateRepresentation.ternary
+import org.neo4j.codegen.api.IntermediateRepresentation.invokeStatic
+import org.neo4j.codegen.api.IntermediateRepresentation.method
+import org.neo4j.codegen.api.IntermediateRepresentation.invoke
+import org.neo4j.codegen.api.IntermediateRepresentation.block
+import org.neo4j.codegen.api.IntermediateRepresentation.invokeSideEffect
+import org.neo4j.codegen.api.IntermediateRepresentation.load
+import org.neo4j.codegen.api.IntermediateRepresentation.assign
+import org.neo4j.codegen.api.IntermediateRepresentation.add
+import org.neo4j.codegen.api.IntermediateRepresentation.equal
+import org.neo4j.codegen.api.IntermediateRepresentation.constant
+import org.neo4j.codegen.api.IntermediateRepresentation.noValue
+import org.neo4j.codegen.api.LocalVariable
+import org.neo4j.cypher.internal.physicalplanning.BufferId
+import org.neo4j.cypher.internal.physicalplanning.LongSlot
+import org.neo4j.cypher.internal.physicalplanning.PipelineId
+import org.neo4j.cypher.internal.physicalplanning.RefSlot
+import org.neo4j.cypher.internal.physicalplanning.Slot
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
+import org.neo4j.cypher.internal.profiling.QueryProfiler
+import org.neo4j.cypher.internal.runtime.DbAccess
+import org.neo4j.cypher.internal.runtime.NoMemoryTracker
+import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.ValuePopulation
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.pipelined.ExecutionState
+import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.PRE_POPULATE_RESULTS
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.DB_ACCESS
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.SUBSCRIBER
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.SERVED
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.DEMAND
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profileRow
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.PRE_POPULATE_RESULTS_V
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.SUBSCRIPTION
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
-import org.neo4j.cypher.internal.runtime.pipelined.{ExecutionState, OperatorExpressionCompiler}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
-import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
-import org.neo4j.cypher.internal.runtime.{DbAccess, NoMemoryTracker, QueryContext, ValuePopulation}
+import org.neo4j.cypher.internal.runtime.slotted.SlottedQueryState
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.internal.util.symbols
 import org.neo4j.cypher.result.QueryResult
@@ -24,17 +58,18 @@ import org.neo4j.exceptions.InternalException
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.kernel.impl.query.QuerySubscriber
 import org.neo4j.values.AnyValue
-import org.neo4j.values.virtual.{NodeValue, RelationshipValue}
+import org.neo4j.values.virtual.NodeValue
+import org.neo4j.values.virtual.RelationshipValue
 
 /**
-  * This operator implements both [[StreamingOperator]] and [[OutputOperator]] because it
-  * can occur both as the start of a pipeline, and as the final operator of a pipeline.
-  */
+ * This operator implements both [[StreamingOperator]] and [[OutputOperator]] because it
+ * can occur both as the start of a pipeline, and as the final operator of a pipeline.
+ */
 class ProduceResultOperator(val workIdentity: WorkIdentity,
                             slots: SlotConfiguration,
                             columns: Seq[(String, Expression)])
   extends StreamingOperator
-     with OutputOperator {
+  with OutputOperator {
 
   private val expressions: Array[Expression] = columns.map(_._2).toArray
 
@@ -132,15 +167,15 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
                               state: QueryState,
                               resources: QueryResources): Int = {
     //TODO this is not really needed since all we are doing in the expressions is accessing the ExecutionContext
-    val queryState = new OldQueryState(context,
-                                       resources = null,
-                                       params = state.params,
-                                       resources.expressionCursors,
-                                       Array.empty[IndexReadSession],
-                                       resources.expressionVariables(state.nExpressionSlots),
-                                       state.subscriber,
-                                       NoMemoryTracker,
-                                       prePopulateResults = state.prepopulateResults)
+    val queryState = new SlottedQueryState(context,
+      resources = null,
+      params = state.params,
+      resources.expressionCursors,
+      Array.empty[IndexReadSession],
+      resources.expressionVariables(state.nExpressionSlots),
+      state.subscriber,
+      NoMemoryTracker,
+      prePopulateResults = state.prepopulateResults)
 
     val subscriber: QuerySubscriber = state.subscriber
     var served = 0
@@ -172,13 +207,11 @@ class ProduceResultOperatorTaskTemplate(val inner: OperatorTaskTemplate,
                                         columns: Seq[String],
                                         slots: SlotConfiguration)
                                        (protected val codeGen: OperatorExpressionCompiler) extends OperatorTaskTemplate {
-  import OperatorCodeGenHelperTemplates._
-  import org.neo4j.codegen.api.IntermediateRepresentation._
 
   override def toString: String = "ProduceResultTaskTemplate"
 
   override def genInit: IntermediateRepresentation = {
-   inner.genInit
+    inner.genInit
   }
 
   // This operates on a single row only
@@ -187,67 +220,67 @@ class ProduceResultOperatorTaskTemplate(val inner: OperatorTaskTemplate,
     def getRefAt(offset: Int) = {
       val notPopulated = codeGen.getRefAt(offset)
       ternary(PRE_POPULATE_RESULTS,
-              invokeStatic(method[ValuePopulation, AnyValue, AnyValue]("populate"),
-                           notPopulated), notPopulated)
+        invokeStatic(method[ValuePopulation, AnyValue, AnyValue]("populate"),
+          notPopulated), notPopulated)
     }
     def nodeFromSlot(offset: Int) = {
       val notPopulated = invoke(DB_ACCESS, method[DbAccess, NodeValue, Long]("nodeById"), getLongAt(offset))
       ternary(PRE_POPULATE_RESULTS,
-              invokeStatic(method[ValuePopulation, NodeValue, NodeValue]("populate"),
-                           notPopulated), notPopulated)
+        invokeStatic(method[ValuePopulation, NodeValue, NodeValue]("populate"),
+          notPopulated), notPopulated)
     }
     def relFromSlot(offset: Int) = {
       val notPopulated = invoke(DB_ACCESS, method[DbAccess, RelationshipValue, Long]("relationshipById"), getLongAt(offset))
       ternary(PRE_POPULATE_RESULTS,
-              invokeStatic(method[ValuePopulation, RelationshipValue, RelationshipValue]("populate"),
-                           notPopulated), notPopulated)
+        invokeStatic(method[ValuePopulation, RelationshipValue, RelationshipValue]("populate"),
+          notPopulated), notPopulated)
     }
 
     //figures out how to get a reference to project from a slot, e.g if we have a longSlot that is a node,
     // we create a node, and if it is a relationship we create a relationship and so on
     def getFromSlot(slot: Slot) = slot match {
-        case LongSlot(offset, true, symbols.CTNode) =>
-          ternary(equal(getLongAt(offset), constant(-1L)), noValue, nodeFromSlot(offset))
-        case LongSlot(offset, false, symbols.CTNode) =>
-          nodeFromSlot(offset)
-        case LongSlot(offset, true, symbols.CTRelationship) =>
-          ternary(equal(getLongAt(offset), constant(-1L)), noValue, relFromSlot(offset))
-        case LongSlot(offset, false, symbols.CTRelationship) =>
-          relFromSlot(offset)
-        case RefSlot(offset, _, _) =>
-          getRefAt(offset)
+      case LongSlot(offset, true, symbols.CTNode) =>
+        ternary(equal(getLongAt(offset), constant(-1L)), noValue, nodeFromSlot(offset))
+      case LongSlot(offset, false, symbols.CTNode) =>
+        nodeFromSlot(offset)
+      case LongSlot(offset, true, symbols.CTRelationship) =>
+        ternary(equal(getLongAt(offset), constant(-1L)), noValue, relFromSlot(offset))
+      case LongSlot(offset, false, symbols.CTRelationship) =>
+        relFromSlot(offset)
+      case RefSlot(offset, _, _) =>
+        getRefAt(offset)
 
-        case _ =>
-          throw new InternalException(s"Do not know how to project $slot")
-      }
+      case _ =>
+        throw new InternalException(s"Do not know how to project $slot")
+    }
 
     /**
-      * For each column to project we generate
-      * {{{
-      *   subscriber.onField(0, getFromSlot)
-      *   subscriber.onField(1, getFromSlot)
-      *   ....
-      * }}}
+     * For each column to project we generate
+     * {{{
+     *   subscriber.onField(0, getFromSlot)
+     *   subscriber.onField(1, getFromSlot)
+     *   ....
+     * }}}
      */
     val project = block(columns.zipWithIndex.map {
       case (name, index) =>
         val slot = slots.get(name).getOrElse(
           throw new InternalException(s"Did not find `$name` in the slot configuration")
-          )
+        )
         invokeSideEffect(load(SUBSCRIBER), method[QuerySubscriber, Unit, Int, AnyValue]("onField"),
-                         constant(index), getFromSlot(slot))
+          constant(index), getFromSlot(slot))
     }:_ *)
 
     /**
-      * Generates:
-      * {{{
-      *   subscriber.onRecord()
-      *   [[project]]
-      *   subscriber.onRecordCompleted()
-      *   served += 1L
-      *   [[inner]]]
-      * }}}
-      */
+     * Generates:
+     * {{{
+     *   subscriber.onRecord()
+     *   [[project]]
+     *   subscriber.onRecordCompleted()
+     *   served += 1L
+     *   [[inner]]]
+     * }}}
+     */
     block(
       invokeSideEffect(load(SUBSCRIBER), method[QuerySubscriber, Unit]("onRecord")),
       project,

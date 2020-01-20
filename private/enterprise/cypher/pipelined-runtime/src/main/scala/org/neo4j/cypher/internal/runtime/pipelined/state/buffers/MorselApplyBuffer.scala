@@ -5,26 +5,30 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.state.buffers
 
-import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, BufferId, PipelineId}
+import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
+import org.neo4j.cypher.internal.physicalplanning.BufferId
+import org.neo4j.cypher.internal.physicalplanning.PipelineId
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentCountUpdater
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
-import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.{AccumulatingBuffer, SinkByOrigin}
-import org.neo4j.cypher.internal.runtime.pipelined.state.{ArgumentCountUpdater, IdAllocator}
+import org.neo4j.cypher.internal.runtime.pipelined.state.IdAllocator
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatingBuffer
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.SinkByOrigin
 
 /**
-  * This buffer connects the LHS input of an Apply to all its RHS leafs.
-  * Multiplexer to a set of [[MorselBuffer]].
-  * To allow tracking the data from a
-  * particular argument rows, this buffer generates and writes argument row ids into a given `argumentSlotOffset`.
-  *
-  * @param argumentStatesOnRHSOfThisApply   these are not reducers, so argument states like the one from Limit, which are
-  *                                         not directly related to a Buffer. They live on the RHS of the Apply
-  * @param argumentSlotOffset               slot to which argument row ids are written.
-  * @param argumentReducersOnRHSOfThisApply ids of downstream logical plans which keep argument state for this apply.
-  *                                         These are on the RHS of the Apply this Buffer is for.
-  * @param argumentReducersOnTopOfThisApply ids of reducers _after_ the Apply this Buffer is for.
-  */
+ * This buffer connects the LHS input of an Apply to all its RHS leafs.
+ * Multiplexer to a set of [[MorselBuffer]].
+ * To allow tracking the data from a
+ * particular argument rows, this buffer generates and writes argument row ids into a given `argumentSlotOffset`.
+ *
+ * @param argumentStatesOnRHSOfThisApply   these are not reducers, so argument states like the one from Limit, which are
+ *                                         not directly related to a Buffer. They live on the RHS of the Apply
+ * @param argumentSlotOffset               slot to which argument row ids are written.
+ * @param argumentReducersOnRHSOfThisApply ids of downstream logical plans which keep argument state for this apply.
+ *                                         These are on the RHS of the Apply this Buffer is for.
+ * @param argumentReducersOnTopOfThisApply ids of reducers _after_ the Apply this Buffer is for.
+ */
 class MorselApplyBuffer(id: BufferId,
                         argumentStatesOnRHSOfThisApply: IndexedSeq[ArgumentStateMapId],
                         argumentReducersOnRHSOfThisApply: IndexedSeq[AccumulatingBuffer],

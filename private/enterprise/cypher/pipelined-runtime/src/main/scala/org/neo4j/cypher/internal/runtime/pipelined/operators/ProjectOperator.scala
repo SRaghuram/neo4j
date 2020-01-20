@@ -5,17 +5,22 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.operators
 
+import org.neo4j.codegen.api.Field
+import org.neo4j.codegen.api.IntermediateRepresentation
 import org.neo4j.codegen.api.IntermediateRepresentation.block
-import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable}
+import org.neo4j.codegen.api.LocalVariable
+import org.neo4j.cypher.internal.expressions.Expression
+import org.neo4j.cypher.internal.runtime.NoMemoryTracker
+import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.CommandProjection
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profileRow
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
-import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
-import org.neo4j.cypher.internal.runtime.{NoMemoryTracker, QueryContext}
-import org.neo4j.cypher.internal.expressions.Expression
+import org.neo4j.cypher.internal.runtime.slotted.SlottedQueryState
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.CantCompileQueryException
 import org.neo4j.internal.kernel.api.IndexReadSession
@@ -28,14 +33,14 @@ class ProjectOperator(val workIdentity: WorkIdentity,
                        state: QueryState,
                        resources: QueryResources): Unit = {
 
-    val queryState = new OldQueryState(context,
-                                       resources = null,
-                                       params = state.params,
-                                       resources.expressionCursors,
-                                       Array.empty[IndexReadSession],
-                                       resources.expressionVariables(state.nExpressionSlots),
-                                       state.subscriber,
-                                       NoMemoryTracker)
+    val queryState = new SlottedQueryState(context,
+      resources = null,
+      params = state.params,
+      resources.expressionCursors,
+      Array.empty[IndexReadSession],
+      resources.expressionVariables(state.nExpressionSlots),
+      state.subscriber,
+      NoMemoryTracker)
 
     while (currentRow.isValidRow) {
       projectionOps.project(currentRow, queryState)
@@ -59,7 +64,7 @@ class ProjectOperatorTemplate(override val inner: OperatorTaskTemplate,
       projections.ir,
       inner.genOperateWithExpressions,
       doIfInnerCantContinue(profileRow(id)),
-      )
+    )
   }
 
   override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation =

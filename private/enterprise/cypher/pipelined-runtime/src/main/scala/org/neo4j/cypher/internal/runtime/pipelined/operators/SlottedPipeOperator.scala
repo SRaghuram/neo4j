@@ -5,18 +5,34 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.operators
 
-import org.neo4j.cypher.internal.profiling.{OperatorProfileEvent, QueryProfiler}
-import org.neo4j.cypher.internal.runtime._
-import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.{InCheckContainer, SingleThreadedLRUCache}
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.{ExternalCSVResource, NullPipeDecorator, Pipe, PipeDecorator}
-import org.neo4j.cypher.internal.runtime.interpreted.profiler.{InterpretedProfileInformation, Profiler}
-import org.neo4j.cypher.internal.runtime.interpreted.{CSVResources, pipes}
+import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
+import org.neo4j.cypher.internal.profiling.QueryProfiler
+import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.ExpressionCursors
+import org.neo4j.cypher.internal.runtime.InputDataStream
+import org.neo4j.cypher.internal.runtime.NoInput
+import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
+import org.neo4j.cypher.internal.runtime.interpreted.CSVResources
+import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.InCheckContainer
+import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.SingleThreadedLRUCache
+import org.neo4j.cypher.internal.runtime.interpreted.pipes
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.ExternalCSVResource
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.NullPipeDecorator
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeDecorator
+import org.neo4j.cypher.internal.runtime.interpreted.profiler.InterpretedProfileInformation
+import org.neo4j.cypher.internal.runtime.interpreted.profiler.Profiler
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{MorselExecutionContext, QueryResources, QueryState}
-import org.neo4j.cypher.internal.runtime.pipelined.operators.SlottedPipeOperator.{createFeedPipeQueryState, updateProfileEvent}
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
+import org.neo4j.cypher.internal.runtime.pipelined.operators.SlottedPipeOperator.createFeedPipeQueryState
+import org.neo4j.cypher.internal.runtime.pipelined.operators.SlottedPipeOperator.updateProfileEvent
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
-import org.neo4j.cypher.internal.runtime.scheduling.{WorkIdentity, WorkIdentityMutableDescription}
+import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
+import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentityMutableDescription
 import org.neo4j.cypher.internal.runtime.slotted.SlottedQueryState
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.internal.kernel.api.IndexReadSession
@@ -209,16 +225,16 @@ object SlottedPipeOperator {
 
     val externalResource: ExternalCSVResource = new CSVResources(queryContext.resources)
     new FeedPipeQueryState(queryContext,
-                           externalResource,
-                           morselQueryState.params,
-                           resources.expressionCursors,
-                           morselQueryState.queryIndexes,
-                           resources.expressionVariables(morselQueryState.nExpressionSlots),
-                           morselQueryState.subscriber,
-                           memoryTracker,
-                           pipeDecorator,
-                           profileInformation = profileInformation,
-                           morsel = inputMorsel)
+      externalResource,
+      morselQueryState.params,
+      resources.expressionCursors,
+      morselQueryState.queryIndexes,
+      resources.expressionVariables(morselQueryState.nExpressionSlots),
+      morselQueryState.subscriber,
+      memoryTracker,
+      pipeDecorator,
+      profileInformation = profileInformation,
+      morsel = inputMorsel)
   }
 
   def updateProfileEvent(profileEvent: OperatorProfileEvent, profileInformation: InterpretedProfileInformation): Unit = {
@@ -246,22 +262,22 @@ class FeedPipeQueryState(query: QueryContext,
                          val profileInformation: InterpretedProfileInformation = null,
                          var morsel: MorselExecutionContext = null)
   extends SlottedQueryState(query, resources, params, cursors, queryIndexes, expressionVariables, subscriber, memoryTracker, decorator, initialContext,
-                            cachedIn, lenientCreateRelationship, prePopulateResults, input) {
+    cachedIn, lenientCreateRelationship, prePopulateResults, input) {
 
   override def withDecorator(decorator: PipeDecorator): FeedPipeQueryState = {
     new FeedPipeQueryState(query, resources, params, cursors, queryIndexes, expressionVariables, subscriber, memoryTracker, decorator,
-                           initialContext, cachedIn, lenientCreateRelationship, prePopulateResults, input, profileInformation, morsel)
+      initialContext, cachedIn, lenientCreateRelationship, prePopulateResults, input, profileInformation, morsel)
   }
 
   override def withInitialContext(initialContext: ExecutionContext): FeedPipeQueryState = {
     new FeedPipeQueryState(query, resources, params, cursors, queryIndexes, expressionVariables, subscriber, memoryTracker, decorator, Some(initialContext),
-                           cachedIn, lenientCreateRelationship, prePopulateResults, input, profileInformation, morsel)
+      cachedIn, lenientCreateRelationship, prePopulateResults, input, profileInformation, morsel)
   }
 
 
   override def withQueryContext(query: QueryContext): FeedPipeQueryState = {
     new FeedPipeQueryState(query, resources, params, cursors, queryIndexes, expressionVariables, subscriber, memoryTracker, decorator,
-                           initialContext, cachedIn, lenientCreateRelationship, prePopulateResults, input, profileInformation, morsel)
+      initialContext, cachedIn, lenientCreateRelationship, prePopulateResults, input, profileInformation, morsel)
   }
 }
 

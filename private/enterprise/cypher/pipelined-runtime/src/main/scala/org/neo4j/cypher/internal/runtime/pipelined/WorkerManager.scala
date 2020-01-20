@@ -5,12 +5,14 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined
 
+import java.util.concurrent.ThreadFactory
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.LockSupport
-import java.util.concurrent.{ThreadFactory, TimeUnit}
 
 import org.neo4j.cypher.internal.RuntimeResourceLeakException
 import org.neo4j.cypher.internal.runtime.debug.DebugLog
-import org.neo4j.cypher.internal.runtime.pipelined.execution._
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryManager
+import org.neo4j.cypher.internal.runtime.pipelined.execution.WorkerWaker
 import org.neo4j.kernel.lifecycle.Lifecycle
 
 import scala.concurrent.duration.Duration

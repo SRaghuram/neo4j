@@ -5,25 +5,77 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.operators
 
-import org.neo4j.codegen.api.IntermediateRepresentation._
-import org.neo4j.codegen.api._
+import org.neo4j.codegen.api.GetStatic
+import org.neo4j.codegen.api.InstanceField
+import org.neo4j.codegen.api.IntermediateRepresentation
+import org.neo4j.codegen.api.IntermediateRepresentation.arrayLoad
+import org.neo4j.codegen.api.IntermediateRepresentation.arrayOf
+import org.neo4j.codegen.api.IntermediateRepresentation.assign
+import org.neo4j.codegen.api.IntermediateRepresentation.block
+import org.neo4j.codegen.api.IntermediateRepresentation.condition
+import org.neo4j.codegen.api.IntermediateRepresentation.constant
+import org.neo4j.codegen.api.IntermediateRepresentation.declareAndAssign
+import org.neo4j.codegen.api.IntermediateRepresentation.field
+import org.neo4j.codegen.api.IntermediateRepresentation.getStatic
+import org.neo4j.codegen.api.IntermediateRepresentation.greaterThan
+import org.neo4j.codegen.api.IntermediateRepresentation.invoke
+import org.neo4j.codegen.api.IntermediateRepresentation.invokeSideEffect
+import org.neo4j.codegen.api.IntermediateRepresentation.invokeStatic
+import org.neo4j.codegen.api.IntermediateRepresentation.isNotNull
+import org.neo4j.codegen.api.IntermediateRepresentation.isNull
+import org.neo4j.codegen.api.IntermediateRepresentation.lessThan
+import org.neo4j.codegen.api.IntermediateRepresentation.load
+import org.neo4j.codegen.api.IntermediateRepresentation.loadField
+import org.neo4j.codegen.api.IntermediateRepresentation.method
+import org.neo4j.codegen.api.IntermediateRepresentation.param
+import org.neo4j.codegen.api.IntermediateRepresentation.self
+import org.neo4j.codegen.api.IntermediateRepresentation.setField
+import org.neo4j.codegen.api.IntermediateRepresentation.subtract
+import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
+import org.neo4j.codegen.api.IntermediateRepresentation.variable
+import org.neo4j.codegen.api.LocalVariable
+import org.neo4j.codegen.api.Method
+import org.neo4j.codegen.api.Parameter
+import org.neo4j.cypher.internal.expressions.SemanticDirection
+import org.neo4j.cypher.internal.expressions.SemanticDirection.BOTH
+import org.neo4j.cypher.internal.expressions.SemanticDirection.INCOMING
+import org.neo4j.cypher.internal.expressions.SemanticDirection.OUTGOING
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.DbAccess
-import org.neo4j.cypher.internal.runtime.compiled.expressions.{CompiledHelpers, ExpressionCompiler}
-import org.neo4j.cypher.internal.runtime.pipelined.execution._
+import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledHelpers
+import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler
+import org.neo4j.cypher.internal.runtime.pipelined.execution.CursorPool
+import org.neo4j.cypher.internal.runtime.pipelined.execution.CursorPools
+import org.neo4j.cypher.internal.runtime.pipelined.execution.FlowControl
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
-import org.neo4j.cypher.internal.expressions.SemanticDirection
-import org.neo4j.cypher.internal.expressions.SemanticDirection.{BOTH, INCOMING, OUTGOING}
 import org.neo4j.cypher.internal.util.attribution.Id
-import org.neo4j.cypher.operations.{CursorUtils, CypherCoercions, CypherFunctions}
+import org.neo4j.cypher.operations.CursorUtils
+import org.neo4j.cypher.operations.CypherCoercions
+import org.neo4j.cypher.operations.CypherFunctions
 import org.neo4j.graphdb.Direction
-import org.neo4j.internal.kernel.api.IndexQuery.{ExactPredicate, RangePredicate, StringContainsPredicate, StringSuffixPredicate}
-import org.neo4j.internal.kernel.api._
+import org.neo4j.internal.kernel.api.Cursor
+import org.neo4j.internal.kernel.api.IndexQuery
+import org.neo4j.internal.kernel.api.IndexQuery.ExactPredicate
+import org.neo4j.internal.kernel.api.IndexQuery.RangePredicate
+import org.neo4j.internal.kernel.api.IndexQuery.StringContainsPredicate
+import org.neo4j.internal.kernel.api.IndexQuery.StringSuffixPredicate
+import org.neo4j.internal.kernel.api.IndexReadSession
+import org.neo4j.internal.kernel.api.KernelReadTracer
+import org.neo4j.internal.kernel.api.NodeCursor
+import org.neo4j.internal.kernel.api.NodeLabelIndexCursor
+import org.neo4j.internal.kernel.api.NodeValueIndexCursor
+import org.neo4j.internal.kernel.api.PropertyCursor
+import org.neo4j.internal.kernel.api.Read
+import org.neo4j.internal.kernel.api.RelationshipScanCursor
 import org.neo4j.internal.schema.IndexOrder
 import org.neo4j.kernel.impl.query.QuerySubscriber
 import org.neo4j.token.api.TokenConstants
 import org.neo4j.values.AnyValue
-import org.neo4j.values.storable.{TextValue, Value}
+import org.neo4j.values.storable.TextValue
+import org.neo4j.values.storable.Value
 import org.neo4j.values.virtual.ListValue
 
 object OperatorCodeGenHelperTemplates {
@@ -75,8 +127,8 @@ object OperatorCodeGenHelperTemplates {
 
   val CURSOR_POOL_V: LocalVariable =
     variable[CursorPools]("cursorPools",
-                          invoke(QUERY_RESOURCES,
-                                 method[QueryResources, CursorPools]("cursorPools")))
+      invoke(QUERY_RESOURCES,
+        method[QueryResources, CursorPools]("cursorPools")))
   val CURSOR_POOL: IntermediateRepresentation =
     load(CURSOR_POOL_V)
 
@@ -105,11 +157,11 @@ object OperatorCodeGenHelperTemplates {
     load("pipelineId")
 
   val SUBSCRIBER: LocalVariable = variable[QuerySubscriber]("subscriber",
-                                                            invoke(QUERY_STATE, method[QueryState, QuerySubscriber]("subscriber")))
+    invoke(QUERY_STATE, method[QueryState, QuerySubscriber]("subscriber")))
   val SUBSCRIPTION: LocalVariable = variable[FlowControl]("subscription",
-                                                          invoke(QUERY_STATE, method[QueryState, FlowControl]("flowControl")))
+    invoke(QUERY_STATE, method[QueryState, FlowControl]("flowControl")))
   val DEMAND: LocalVariable = variable[Long]("demand",
-                                             invoke(load(SUBSCRIPTION), method[FlowControl, Long]("getDemand")))
+    invoke(load(SUBSCRIPTION), method[FlowControl, Long]("getDemand")))
 
   val SERVED: LocalVariable = variable[Long]("served", constant(0L))
 
@@ -117,8 +169,8 @@ object OperatorCodeGenHelperTemplates {
 
   val PRE_POPULATE_RESULTS_V: LocalVariable =
     variable[Boolean]("prePopulateResults",
-                      invoke(QUERY_STATE,
-                             method[QueryState, Boolean]("prepopulateResults")))
+      invoke(QUERY_STATE,
+        method[QueryState, Boolean]("prepopulateResults")))
 
   val PRE_POPULATE_RESULTS: IntermediateRepresentation =
     load(PRE_POPULATE_RESULTS_V)
@@ -158,14 +210,14 @@ object OperatorCodeGenHelperTemplates {
   def allocateCursor(cursorPools: CursorPoolsType): IntermediateRepresentation =
     invoke(
       invoke(CURSOR_POOL, method[CursorPools, CursorPool[_]](cursorPools.name)),
-    method[CursorPool[_], Cursor]("allocate"))
+      method[CursorPool[_], Cursor]("allocate"))
 
   def allNodeScan(cursor: IntermediateRepresentation): IntermediateRepresentation =
     invokeSideEffect(loadField(DATA_READ), method[Read, Unit, NodeCursor]("allNodesScan"), cursor)
 
   def nodeLabelScan(label: IntermediateRepresentation, cursor: IntermediateRepresentation): IntermediateRepresentation =
     invokeSideEffect(loadField(DATA_READ), method[Read, Unit, Int, NodeLabelIndexCursor]("nodeLabelScan"), label,
-                     cursor)
+      cursor)
 
   def nodeHasLabel(node: IntermediateRepresentation, labelToken: IntermediateRepresentation): IntermediateRepresentation = {
     invokeStatic(
@@ -217,8 +269,8 @@ object OperatorCodeGenHelperTemplates {
                     order: IndexOrder,
                     needsValues: Boolean): IntermediateRepresentation =
     invokeSideEffect(loadField(DATA_READ),
-                     method[Read, Unit, IndexReadSession, NodeValueIndexCursor, IndexOrder, Boolean]("nodeIndexScan"),
-                     indexReadSession, cursor, indexOrder(order), constant(needsValues))
+      method[Read, Unit, IndexReadSession, NodeValueIndexCursor, IndexOrder, Boolean]("nodeIndexScan"),
+      indexReadSession, cursor, indexOrder(order), constant(needsValues))
 
   def nodeIndexSeek(indexReadSession: IntermediateRepresentation,
                     cursor: IntermediateRepresentation,
@@ -226,13 +278,13 @@ object OperatorCodeGenHelperTemplates {
                     order: IndexOrder,
                     needsValues: Boolean): IntermediateRepresentation = {
     invokeSideEffect(loadField(DATA_READ),
-                     method[Read, Unit, IndexReadSession, NodeValueIndexCursor, IndexOrder, Boolean, Array[IndexQuery]](
-                       "nodeIndexSeek"),
-                     indexReadSession,
-                     cursor,
-                     indexOrder(order),
-                     constant(needsValues),
-                     arrayOf[IndexQuery](query))
+      method[Read, Unit, IndexReadSession, NodeValueIndexCursor, IndexOrder, Boolean, Array[IndexQuery]](
+        "nodeIndexSeek"),
+      indexReadSession,
+      cursor,
+      indexOrder(order),
+      constant(needsValues),
+      arrayOf[IndexQuery](query))
   }
 
   def indexOrder(indexOrder: IndexOrder): IntermediateRepresentation = indexOrder match {
@@ -281,9 +333,9 @@ object OperatorCodeGenHelperTemplates {
   def allocateAndTraceCursor(cursorField: InstanceField, executionEventField: InstanceField, allocate: IntermediateRepresentation): IntermediateRepresentation =
     condition(isNull(loadField(cursorField)))(
       block(
-      setField(cursorField, allocate),
-      invokeSideEffect(loadField(cursorField), SET_TRACER, loadField(executionEventField))
-    ))
+        setField(cursorField, allocate),
+        invokeSideEffect(loadField(cursorField), SET_TRACER, loadField(executionEventField))
+      ))
 
   def freeCursor[CURSOR](cursor: IntermediateRepresentation, cursorPools: CursorPoolsType)(implicit out: Manifest[CURSOR]): IntermediateRepresentation =
     invokeSideEffect(
@@ -301,21 +353,21 @@ object OperatorCodeGenHelperTemplates {
   private def event(id: Id) = loadField(field[OperatorProfileEvent]("operatorExecutionEvent_" + id.x))
   def profilingCursorNext[CURSOR](cursor: IntermediateRepresentation, id: Id)(implicit out: Manifest[CURSOR]): IntermediateRepresentation = {
     /**
-      * {{{
-      *   val tmp = cursor.next()
-      *   event.row(tmp)
-      *   tmp
-      * }}}
-      */
+     * {{{
+     *   val tmp = cursor.next()
+     *   event.row(tmp)
+     *   tmp
+     * }}}
+     */
     val hasNext = "tmp_" + id.x
     block(
       declareAndAssign(typeRefOf[Boolean], hasNext, invoke(cursor, method[CURSOR, Boolean]("next"))),
       condition(isNotNull(event(id))) {
         invokeSideEffect(event(id),
-                         method[OperatorProfileEvent, Unit, Boolean]("row"), load(hasNext))
+          method[OperatorProfileEvent, Unit, Boolean]("row"), load(hasNext))
       },
       load(hasNext)
-      )
+    )
   }
   def profileRow(id: Id): IntermediateRepresentation = {
     condition(isNotNull(event(id)))(invokeSideEffect(event(id), method[OperatorProfileEvent, Unit]("row")))

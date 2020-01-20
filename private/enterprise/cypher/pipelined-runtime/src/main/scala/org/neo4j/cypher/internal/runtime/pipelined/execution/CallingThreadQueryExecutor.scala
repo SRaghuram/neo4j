@@ -6,21 +6,32 @@
 package org.neo4j.cypher.internal.runtime.pipelined.execution
 
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
+import org.neo4j.cypher.internal.runtime.InputDataStream
+import org.neo4j.cypher.internal.runtime.MEMORY_BOUND
+import org.neo4j.cypher.internal.runtime.MEMORY_TRACKING
+import org.neo4j.cypher.internal.runtime.MemoryTracking
+import org.neo4j.cypher.internal.runtime.NO_TRACKING
+import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.debug.DebugLog
-import org.neo4j.cypher.internal.runtime.pipelined.state.{MemoryTrackingStandardStateFactory, StandardStateFactory, TheExecutionState}
+import org.neo4j.cypher.internal.runtime.pipelined.ExecutablePipeline
+import org.neo4j.cypher.internal.runtime.pipelined.Sleeper
+import org.neo4j.cypher.internal.runtime.pipelined.Worker
+import org.neo4j.cypher.internal.runtime.pipelined.WorkerResourceProvider
+import org.neo4j.cypher.internal.runtime.pipelined.state.MemoryTrackingStandardStateFactory
+import org.neo4j.cypher.internal.runtime.pipelined.state.StandardStateFactory
+import org.neo4j.cypher.internal.runtime.pipelined.state.TheExecutionState
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.SchedulerTracer
-import org.neo4j.cypher.internal.runtime.pipelined.{ExecutablePipeline, Sleeper, Worker, WorkerResourceProvider}
-import org.neo4j.cypher.internal.runtime.{InputDataStream, QueryContext, _}
 import org.neo4j.cypher.result.QueryProfile
-import org.neo4j.internal.kernel.api.{CursorFactory, IndexReadSession}
+import org.neo4j.internal.kernel.api.CursorFactory
+import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.kernel.impl.query.QuerySubscriber
 import org.neo4j.values.AnyValue
 
 /**
-  * Single threaded implementation of [[QueryExecutor]]. Executes the query on
-  * the thread which calls execute, without any synchronization with other queries
-  * or any parallel execution.
-  */
+ * Single threaded implementation of [[QueryExecutor]]. Executes the query on
+ * the thread which calls execute, without any synchronization with other queries
+ * or any parallel execution.
+ */
 class CallingThreadQueryExecutor(cursors: CursorFactory) extends QueryExecutor with WorkerWaker {
 
   override def wakeOne(): Unit = ()
@@ -57,24 +68,24 @@ class CallingThreadQueryExecutor(cursors: CursorFactory) extends QueryExecutor w
     val tracer = schedulerTracer.traceQuery()
     val tracker = stateFactory.newTracker(subscriber, queryContext, tracer)
     val queryState = QueryState(params,
-                                subscriber,
-                                tracker,
-                                morselSize,
-                                queryIndexes,
-                                numberOfWorkers = 1,
-                                nExpressionSlots,
-                                prePopulateResults,
-                                doProfile,
-                                inputDataStream)
+      subscriber,
+      tracker,
+      morselSize,
+      queryIndexes,
+      numberOfWorkers = 1,
+      nExpressionSlots,
+      prePopulateResults,
+      doProfile,
+      inputDataStream)
 
     val executionState = new TheExecutionState(executionGraphDefinition,
-                                               executablePipelines,
-                                               stateFactory,
-                                               this,
-                                               queryContext,
-                                               queryState,
-                                               resources,
-                                               tracker)
+      executablePipelines,
+      stateFactory,
+      this,
+      queryContext,
+      queryState,
+      resources,
+      tracker)
 
     executionState.initializeState()
 
@@ -89,13 +100,13 @@ class CallingThreadQueryExecutor(cursors: CursorFactory) extends QueryExecutor w
     val worker = new Worker(0, null, Sleeper.noSleep)
     val workerResourceProvider = new WorkerResourceProvider(1, () => resources)
     val executingQuery = new CallingThreadExecutingQuery(executionState,
-                                                         queryContext,
-                                                         queryState,
-                                                         tracer,
-                                                         workersProfiler,
-                                                         worker,
-                                                         workerResourceProvider,
-                                                         executionGraphSchedulingPolicy)
+      queryContext,
+      queryState,
+      tracer,
+      workersProfiler,
+      worker,
+      workerResourceProvider,
+      executionGraphSchedulingPolicy)
     ProfiledQuerySubscription(executingQuery, queryProfile, stateFactory.memoryTracker)
   }
 }

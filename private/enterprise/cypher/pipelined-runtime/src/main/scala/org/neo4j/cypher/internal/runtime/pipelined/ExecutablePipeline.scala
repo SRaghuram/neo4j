@@ -6,16 +6,34 @@
 package org.neo4j.cypher.internal.runtime.pipelined
 
 import org.neo4j.cypher.internal.NonFatalCypherError
-import org.neo4j.cypher.internal.physicalplanning.{BufferDefinition, PipelineId, SlotConfiguration}
+import org.neo4j.cypher.internal.physicalplanning.BufferDefinition
+import org.neo4j.cypher.internal.physicalplanning.PipelineId
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
-import org.neo4j.cypher.internal.runtime.pipelined.execution._
-import org.neo4j.cypher.internal.runtime.pipelined.operators.{Operator, OperatorState, _}
+import org.neo4j.cypher.internal.runtime.pipelined.execution.FilteringMorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
+import org.neo4j.cypher.internal.runtime.pipelined.operators.CompiledTask
+import org.neo4j.cypher.internal.runtime.pipelined.operators.ContinuableOperatorTask
+import org.neo4j.cypher.internal.runtime.pipelined.operators.MiddleOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.NoOutputOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.Operator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCloser
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorInput
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorState
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorTask
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OutputOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OutputOperatorState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
+import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
+import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatorAndMorsel
-import org.neo4j.cypher.internal.runtime.pipelined.state.{MorselParallelizer, StateFactory}
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.WorkUnitEvent
-import org.neo4j.cypher.internal.runtime.scheduling.{HasWorkIdentity, WorkIdentity}
+import org.neo4j.cypher.internal.runtime.scheduling.HasWorkIdentity
+import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.util.Preconditions
 
@@ -53,11 +71,11 @@ case class ExecutablePipeline(id: PipelineId,
     }
 
     new PipelineState(this,
-                      start.createState(executionState, stateFactory, queryContext, queryState, resources),
-                      middleTasks,
-                      outputOperatorStateFor,
-                      executionState)
-    }
+      start.createState(executionState, stateFactory, queryContext, queryState, resources),
+      middleTasks,
+      outputOperatorStateFor,
+      executionState)
+  }
 
   override val workId: Id = start.workIdentity.workId
   override val workDescription: String = composeWorkDescriptions(start, middleOperators, outputOperator)
@@ -77,13 +95,13 @@ class PipelineState(val pipeline: ExecutablePipeline,
                     executionState: ExecutionState) extends OperatorInput with OperatorCloser {
 
   /**
-    * Returns the next task for this pipeline, or `null` if no task is available.
-    *
-    * If a continuation of a previous task is available, that will be returned.
-    * Otherwise, the start operator of the pipeline will look for new input from
-    * which to generate tasks. If the start operator find input and generates tasks,
-    * one of these will be returned, and the rest stored as continuations.
-    */
+   * Returns the next task for this pipeline, or `null` if no task is available.
+   *
+   * If a continuation of a previous task is available, that will be returned.
+   * Otherwise, the start operator of the pipeline will look for new input from
+   * which to generate tasks. If the start operator find input and generates tasks,
+   * one of these will be returned, and the rest stored as continuations.
+   */
   def nextTask(context: QueryContext,
                state: QueryState,
                resources: QueryResources): SchedulingResult[PipelineTask] = {
@@ -110,7 +128,7 @@ class PipelineState(val pipeline: ExecutablePipeline,
             }
             t
           } else {
-             null
+            null
           }
         } else {
           innerNextTask(context, state, resources)
@@ -130,31 +148,31 @@ class PipelineState(val pipeline: ExecutablePipeline,
   }
 
   def allocateMorsel(producingWorkUnitEvent: WorkUnitEvent, state: QueryState): MorselExecutionContext = {
-      // TODO: Change pipeline.needsMorsel and needsFilteringMorsel into an Option[MorselFactory]
-      //       The MorselFactory should probably originate from the MorselBuffer to play well with reuse/pooling
-      if (pipeline.needsMorsel) {
-        val slots = pipeline.slots
-        val morsel = Morsel.create(slots, state.morselSize)
-        if (pipeline.needsFilteringMorsel) {
-          new FilteringMorselExecutionContext(
-            morsel,
-            slots,
-            state.morselSize,
-            0,
-            0,
-            state.morselSize,
-            producingWorkUnitEvent)
-        } else {
-          new MorselExecutionContext(
-            morsel,
-            slots,
-            state.morselSize,
-            currentRow = 0,
-            startRow = 0,
-            endRow = state.morselSize,
-            producingWorkUnitEvent)
-        }
-      } else MorselExecutionContext.empty
+    // TODO: Change pipeline.needsMorsel and needsFilteringMorsel into an Option[MorselFactory]
+    //       The MorselFactory should probably originate from the MorselBuffer to play well with reuse/pooling
+    if (pipeline.needsMorsel) {
+      val slots = pipeline.slots
+      val morsel = Morsel.create(slots, state.morselSize)
+      if (pipeline.needsFilteringMorsel) {
+        new FilteringMorselExecutionContext(
+          morsel,
+          slots,
+          state.morselSize,
+          0,
+          0,
+          state.morselSize,
+          producingWorkUnitEvent)
+      } else {
+        new MorselExecutionContext(
+          morsel,
+          slots,
+          state.morselSize,
+          currentRow = 0,
+          startRow = 0,
+          endRow = state.morselSize,
+          producingWorkUnitEvent)
+      }
+    } else MorselExecutionContext.empty
   }
 
   private def innerNextTask(context: QueryContext,
@@ -175,12 +193,12 @@ class PipelineState(val pipeline: ExecutablePipeline,
 
       def asPipelineTask(startTask: ContinuableOperatorTask): PipelineTask =
         PipelineTask(startTask,
-                     middleTasks,
-                     // output operator state may be stateful, should not be shared across tasks
-                     outputOperatorStateCreator(startTask),
-                     context,
-                     state,
-                     this)
+          middleTasks,
+          // output operator state may be stateful, should not be shared across tasks
+          outputOperatorStateCreator(startTask),
+          context,
+          state,
+          this)
 
       var i = 1
       while (i < startTasks.size) {
@@ -195,13 +213,13 @@ class PipelineState(val pipeline: ExecutablePipeline,
   }
 
   /**
-    * If a task can continue, or multiple parallel tasks for a pipeline are obtained at once,
-    * this method it will be placed in the continuation queue for this pipeline.
-    *
-    * @param task the task that can be executed (again)
-    * @param wakeUp `true` if a worker should be woken because of this put
-    * @param resources resources used for closing this task if the query is failed
-    */
+   * If a task can continue, or multiple parallel tasks for a pipeline are obtained at once,
+   * this method it will be placed in the continuation queue for this pipeline.
+   *
+   * @param task the task that can be executed (again)
+   * @param wakeUp `true` if a worker should be woken because of this put
+   * @param resources resources used for closing this task if the query is failed
+   */
   def putContinuation(task: PipelineTask, wakeUp: Boolean, resources: QueryResources): Unit = {
     executionState.putContinuation(task, wakeUp, resources)
   }

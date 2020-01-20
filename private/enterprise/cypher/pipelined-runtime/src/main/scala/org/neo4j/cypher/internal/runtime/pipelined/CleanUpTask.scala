@@ -7,14 +7,15 @@ package org.neo4j.cypher.internal.runtime.pipelined
 
 import org.neo4j.cypher.internal.profiling.QueryProfiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
-import org.neo4j.cypher.internal.runtime.pipelined.operators.{NoOutputOperator, PreparedOutput}
+import org.neo4j.cypher.internal.runtime.pipelined.operators.NoOutputOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.PreparedOutput
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.WorkUnitEvent
 import org.neo4j.cypher.internal.util.attribution.Id
 
 /**
-  * A task that is scheduled to clean up the execution state in case of cancellation
-  * in parallel.
-  */
+ * A task that is scheduled to clean up the execution state in case of cancellation
+ * in parallel.
+ */
 class CleanUpTask(executionState: ExecutionState) extends Task[QueryResources] {
   override def executeWorkUnit(resources: QueryResources,
                                workUnitEvent: WorkUnitEvent,

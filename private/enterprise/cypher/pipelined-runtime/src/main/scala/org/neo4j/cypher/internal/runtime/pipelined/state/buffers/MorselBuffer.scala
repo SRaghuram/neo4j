@@ -7,13 +7,23 @@ package org.neo4j.cypher.internal.runtime.pipelined.state.buffers
 
 import java.util
 
-import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, BufferId, PipelineId}
+import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
+import org.neo4j.cypher.internal.physicalplanning.BufferId
+import org.neo4j.cypher.internal.physicalplanning.PipelineId
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{FilteringMorselExecutionContext, MorselExecutionContext}
-import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.{ArgumentStateMaps, WorkCanceller}
-import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.{AccumulatingBuffer, DataHolder, SinkByOrigin}
-import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.MorselBuffer._
-import org.neo4j.cypher.internal.runtime.pipelined.state.{ArgumentCountUpdater, ArgumentStateMap, MorselParallelizer, QueryCompletionTracker}
+import org.neo4j.cypher.internal.runtime.pipelined.execution.FilteringMorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentCountUpdater
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.WorkCanceller
+import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
+import org.neo4j.cypher.internal.runtime.pipelined.state.QueryCompletionTracker
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatingBuffer
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.DataHolder
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.SinkByOrigin
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.MorselBuffer.INVALID_ARG_ROW_ID
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.MorselBuffer.INVALID_ARG_SLOT_OFFSET
 import org.neo4j.util.Preconditions
 
 object MorselBuffer {
@@ -22,12 +32,12 @@ object MorselBuffer {
 }
 
 /**
-  * Morsel buffer which adds reference counting of arguments to the regular buffer semantics.
-  *
-  * This buffer sits between two pipelines in the normal case.
-  *
-  * @param inner inner buffer to delegate real buffer work to
-  */
+ * Morsel buffer which adds reference counting of arguments to the regular buffer semantics.
+ *
+ * This buffer sits between two pipelines in the normal case.
+ *
+ * @param inner inner buffer to delegate real buffer work to
+ */
 class MorselBuffer(id: BufferId,
                    tracker: QueryCompletionTracker,
                    downstreamArgumentReducers: IndexedSeq[AccumulatingBuffer],
@@ -67,10 +77,10 @@ class MorselBuffer(id: BufferId,
   override def canPut: Boolean = inner.canPut
 
   /**
-    * This is essentially the same as [[put]], except that no argument counts are incremented.
-    * The reason is that if this is one of the delegates of a [[MorselApplyBuffer]], that
-    * buffer took care of incrementing the right ones already.
-    */
+   * This is essentially the same as [[put]], except that no argument counts are incremented.
+   * The reason is that if this is one of the delegates of a [[MorselApplyBuffer]], that
+   * buffer took care of incrementing the right ones already.
+   */
   def putInDelegate(morsel: MorselExecutionContext): Unit = {
     if (DebugSupport.BUFFERS.enabled) {
       DebugSupport.BUFFERS.log(s"[putInDelegate] $this <- $morsel")
@@ -115,7 +125,7 @@ class MorselBuffer(id: BufferId,
       val currentRow = morsel.getCurrentRow // Save current row
 
       Preconditions.checkArgument(morsel.isInstanceOf[FilteringMorselExecutionContext],
-                                  s"Expected filtering morsel for filterCancelledArguments in buffer $id, but got ${morsel.getClass}")
+        s"Expected filtering morsel for filterCancelledArguments in buffer $id, but got ${morsel.getClass}")
 
       val filteringMorsel = morsel.asInstanceOf[FilteringMorselExecutionContext]
       filteringMorsel.resetToFirstRow()
@@ -218,8 +228,8 @@ class MorselBuffer(id: BufferId,
   }
 
   /**
-    * Decrement reference counters attached to `morsel`.
-    */
+   * Decrement reference counters attached to `morsel`.
+   */
   def close(morsel: MorselExecutionContext): Unit = {
     if (DebugSupport.BUFFERS.enabled) {
       DebugSupport.BUFFERS.log(s"[close] $this -X- $morsel")
@@ -231,8 +241,8 @@ class MorselBuffer(id: BufferId,
   override def toString: String = s"MorselBuffer($id, $inner)"
 
   /**
-    * Implementation of [[MorselParallelizer]] that ensures correct reference counting.
-    */
+   * Implementation of [[MorselParallelizer]] that ensures correct reference counting.
+   */
   class Parallelizer(original: MorselExecutionContext) extends MorselParallelizer {
     private var usedOriginal = false
 

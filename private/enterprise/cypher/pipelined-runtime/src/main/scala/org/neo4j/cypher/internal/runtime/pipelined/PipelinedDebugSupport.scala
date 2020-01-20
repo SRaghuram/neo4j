@@ -6,8 +6,14 @@
 package org.neo4j.cypher.internal.runtime.pipelined
 
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
-import org.neo4j.cypher.internal.runtime.pipelined.operators._
-import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.{EndOfEmptyStream, EndOfNonEmptyStream, MorselData, NotTheEnd}
+import org.neo4j.cypher.internal.runtime.pipelined.operators.ContinuableOperatorTask
+import org.neo4j.cypher.internal.runtime.pipelined.operators.ContinuableOperatorTaskWithAccumulator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.ContinuableOperatorTaskWithMorsel
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OptionalOperatorTask
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.EndOfEmptyStream
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.EndOfNonEmptyStream
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.MorselData
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.NotTheEnd
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 
 object PipelinedDebugSupport {
@@ -24,9 +30,9 @@ object PipelinedDebugSupport {
       case task:OptionalOperatorTask =>
         Array("INPUT:") ++
           prettyStreamedData(task.morselData) ++
-        Array(
-          workIdentity.toString
-        )
+          Array(
+            workIdentity.toString
+          )
       case withAccumulator: ContinuableOperatorTaskWithAccumulator[_, _] =>
         Seq("INPUT:", withAccumulator.accumulator.toString, withAccumulator.workIdentity.toString)
     }
@@ -55,8 +61,8 @@ object PipelinedDebugSupport {
   def prettyMorselWithHeader(header: String, morsel: MorselExecutionContext): Seq[String] = {
     (
       Array(header) ++
-      morsel.prettyString
-    ).map(row => MORSEL_INDENT+row)
+        morsel.prettyString
+      ).map(row => MORSEL_INDENT+row)
   }
 
   def prettyWorkDone: Seq[String] = {

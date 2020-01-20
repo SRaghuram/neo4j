@@ -7,24 +7,35 @@ package org.neo4j.cypher.internal.runtime.pipelined.state.buffers
 
 import java.util
 
-import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, BufferId, PipelineId}
+import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
+import org.neo4j.cypher.internal.physicalplanning.BufferId
+import org.neo4j.cypher.internal.physicalplanning.PipelineId
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
-import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap._
-import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.{AccumulatingBuffer, DataHolder, SinkByOrigin}
-import org.neo4j.cypher.internal.runtime.pipelined.state.{ArgumentCountUpdater, ArgumentStateMapWithArgumentIdCounter, QueryCompletionTracker, StateFactory}
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentCountUpdater
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateWithCompleted
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.PerArgument
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMapWithArgumentIdCounter
+import org.neo4j.cypher.internal.runtime.pipelined.state.QueryCompletionTracker
+import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatingBuffer
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.DataHolder
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.SinkByOrigin
 import org.neo4j.exceptions.InternalException
 
 import scala.collection.mutable.ArrayBuffer
 
 /**
-  * Extension of Morsel buffer that also holds an argument state map in order to track
-  * argument rows that do not result in any output rows, i.e. gets filtered out.
-  *
-  * This is used in front of a pipeline with an OptionalOperator.
-  *
-  * This buffer sits between two pipeline.
-  */
+ * Extension of Morsel buffer that also holds an argument state map in order to track
+ * argument rows that do not result in any output rows, i.e. gets filtered out.
+ *
+ * This is used in front of a pipeline with an OptionalOperator.
+ *
+ * This buffer sits between two pipeline.
+ */
 class OptionalMorselBuffer(id: BufferId,
                            tracker: QueryCompletionTracker,
                            downstreamArgumentReducers: IndexedSeq[AccumulatingBuffer],
@@ -143,13 +154,13 @@ class OptionalMorselBuffer(id: BufferId,
       DebugSupport.BUFFERS.log(s"[close] $this -X- $data")
     }
 
-   data.argumentStream match {
+    data.argumentStream match {
       case _:EndOfStream =>
         // Decrement that corresponds to the increment in initiate
         tracker.decrement()
         forAllArgumentReducers(downstreamArgumentReducers, data.argumentRowIdsForReducers, _.decrement(_))
       case _ =>
-       // Do nothing
+      // Do nothing
     }
 
     // Decrement that corresponds to the increment in put
@@ -174,8 +185,8 @@ class OptionalMorselBuffer(id: BufferId,
 // --- Messaging protocol ---
 
 /**
-  * Some Morsels for one argument row id. Depending on the [[ArgumentStream]] there might be more data for this argument row id.
-  */
+ * Some Morsels for one argument row id. Depending on the [[ArgumentStream]] there might be more data for this argument row id.
+ */
 case class MorselData(morsels: IndexedSeq[MorselExecutionContext],
                       argumentStream: ArgumentStream,
                       argumentRowIdsForReducers: Array[Long])
@@ -184,51 +195,51 @@ trait ArgumentStream
 trait EndOfStream extends ArgumentStream
 
 /**
-  * The end of data for one argument row id, when there was actually no data (i.e. everything was filtered out).
-  * @param viewOfArgumentRow the argument row for the id, as obtained from the [[MorselApplyBuffer]]
-  */
+ * The end of data for one argument row id, when there was actually no data (i.e. everything was filtered out).
+ * @param viewOfArgumentRow the argument row for the id, as obtained from the [[MorselApplyBuffer]]
+ */
 case class EndOfEmptyStream(viewOfArgumentRow: MorselExecutionContext) extends EndOfStream
 
 /**
-  * The end of data for one argument row id, when there was data.
-  */
+ * The end of data for one argument row id, when there was data.
+ */
 case object EndOfNonEmptyStream extends EndOfStream
 
 /**
-  * There will be more data for this argument row id.
-  */
+ * There will be more data for this argument row id.
+ */
 case object NotTheEnd extends ArgumentStream
 
 // --- Inner Buffer ---
 
 /**
-  * For Optional, we need to keep track whether the Buffer held data at any point in time.
-  */
+ * For Optional, we need to keep track whether the Buffer held data at any point in time.
+ */
 trait OptionalBuffer {
   self: Buffer[_] =>
   /**
-    * @return `true` if this buffer held data at any point in time, `false` if it was always empty.
-    */
+   * @return `true` if this buffer held data at any point in time, `false` if it was always empty.
+   */
   def didReceiveData: Boolean
 }
 
 /**
-  * Delegating [[Buffer]] used in argument state maps.
-  * Holds data for one argument row id in an [[OptionalBuffer]].
-  */
+ * Delegating [[Buffer]] used in argument state maps.
+ * Holds data for one argument row id in an [[OptionalBuffer]].
+ */
 class OptionalArgumentStateBuffer(argumentRowId: Long,
                                   val argumentMorsel: MorselExecutionContext,
                                   inner: Buffer[MorselExecutionContext] with OptionalBuffer,
                                   argumentRowIdsForReducers: Array[Long]) extends ArgumentStateBuffer(argumentRowId, inner, argumentRowIdsForReducers) {
   /**
-    * @return `true` if this buffer held data at any point in time, `false` if it was always empty.
-    */
+   * @return `true` if this buffer held data at any point in time, `false` if it was always empty.
+   */
   def didReceiveData: Boolean = inner.didReceiveData
 
   /**
-    * Given the whole argument morsel, this creates a view of just the one argument row with [[argumentRowId]].
-    * @param argumentSlotOffset the offset at which to look for the [[argumentRowId]]
-    */
+   * Given the whole argument morsel, this creates a view of just the one argument row with [[argumentRowId]].
+   * @param argumentSlotOffset the offset at which to look for the [[argumentRowId]]
+   */
   def viewOfArgumentRow(argumentSlotOffset: Int): MorselExecutionContext = {
     val view = argumentMorsel.shallowCopy()
     view.resetToFirstRow()
@@ -245,8 +256,8 @@ class OptionalArgumentStateBuffer(argumentRowId: Long,
   }
 
   /**
-    * Take all morsels from the buffer that are currently available.
-    */
+   * Take all morsels from the buffer that are currently available.
+   */
   def takeAll(): IndexedSeq[MorselExecutionContext] = {
     var morsel = take()
     if (morsel != null) {

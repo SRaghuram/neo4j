@@ -12,16 +12,16 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Sink
 trait WorkerWaker {
 
   /**
-    * Wake up an idle worker.
-    */
+   * Wake up an idle worker.
+   */
   def wakeOne(): Unit
 }
 
 class AlarmSink[-T <: AnyRef](inner: Sink[T], waker: WorkerWaker, queryStatus: QueryStatus) extends Sink[T] {
 
   /**
-    * Put an element in this sink
-    */
+   * Put an element in this sink
+   */
   override def put(t: T): Unit = {
     if (!queryStatus.cancelled) {
       inner.put(t)

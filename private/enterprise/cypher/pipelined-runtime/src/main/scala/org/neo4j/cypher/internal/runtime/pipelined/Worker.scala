@@ -5,21 +5,26 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined
 
-import org.neo4j.cypher.internal.runtime.debug.{DebugLog, DebugSupport}
-import org.neo4j.cypher.internal.runtime.pipelined.execution._
+import org.neo4j.cypher.internal.NonFatalCypherError
+import org.neo4j.cypher.internal.RuntimeResourceLeakException
+import org.neo4j.cypher.internal.runtime.debug.DebugLog
+import org.neo4j.cypher.internal.runtime.debug.DebugSupport
+import org.neo4j.cypher.internal.runtime.pipelined.execution.ExecutingQuery
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryManager
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QuerySchedulingPolicy
 import org.neo4j.cypher.internal.runtime.pipelined.operators.PreparedOutput
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.WorkUnitEvent
-import org.neo4j.cypher.internal.{NonFatalCypherError, RuntimeResourceLeakException}
 
 /**
-  * Worker which executes query work, one task at a time. Asks [[QueryManager]] for the
-  * next [[ExecutingQuery]] to work on. Then asks [[QuerySchedulingPolicy]] for a suitable
-  * task to perform on that query.
-  *
-  * A worker has it's own [[QueryResources]] which it will use to execute tasks.
-  */
+ * Worker which executes query work, one task at a time. Asks [[QueryManager]] for the
+ * next [[ExecutingQuery]] to work on. Then asks [[QuerySchedulingPolicy]] for a suitable
+ * task to perform on that query.
+ *
+ * A worker has it's own [[QueryResources]] which it will use to execute tasks.
+ */
 class Worker(val workerId: Int,
              queryManager: QueryManager,
              val sleeper: Sleeper) extends Runnable {
@@ -63,12 +68,12 @@ class Worker(val workerId: Int,
   }
 
   /**
-    * Try to obtain a task for a given query and work on it.
-    *
-    * @param executingQuery the query
-    * @param resources      the query resources for this worker
-    * @return `true` if some work was performed or cancelled, otherwise `false`
-    */
+   * Try to obtain a task for a given query and work on it.
+   *
+   * @param executingQuery the query
+   * @param resources      the query resources for this worker
+   * @return `true` if some work was performed or cancelled, otherwise `false`
+   */
   def workOnQuery(executingQuery: ExecutingQuery, resources: QueryResources): Boolean = {
     val schedulingResult = scheduleNextTask(executingQuery, resources)
     if (schedulingResult.task == null) {

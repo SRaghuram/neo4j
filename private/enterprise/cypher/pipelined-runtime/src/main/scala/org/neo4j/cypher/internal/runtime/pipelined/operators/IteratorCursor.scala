@@ -8,10 +8,10 @@ package org.neo4j.cypher.internal.runtime.pipelined.operators
 import org.neo4j.values.AnyValue
 
 /**
-  * Helper class that turns an iterator into a cursor.
-  *
-  * @param iterator the iterator over the data
-  */
+ * Helper class that turns an iterator into a cursor.
+ *
+ * @param iterator the iterator over the data
+ */
 class IteratorCursor(iterator: java.util.Iterator[AnyValue]) {
 
   private var _value: AnyValue = _

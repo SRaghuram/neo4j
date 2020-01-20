@@ -11,14 +11,14 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
-import org.neo4j.values.virtual.{ListValue, VirtualValues}
+import org.neo4j.values.virtual.ListValue
+import org.neo4j.values.virtual.VirtualValues
 
 import scala.collection.mutable.ArrayBuffer
 
-
 /**
-  * Aggregator for collect(...).
-  */
+ * Aggregator for collect(...).
+ */
 case object CollectAggregator extends Aggregator {
 
   override def newUpdater: Updater = new CollectUpdater

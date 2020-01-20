@@ -5,9 +5,13 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.state.buffers
 
-import org.neo4j.cypher.internal.physicalplanning.{BufferId, PipelineId, SlotConfiguration}
+import org.neo4j.cypher.internal.physicalplanning.BufferId
+import org.neo4j.cypher.internal.physicalplanning.PipelineId
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{FilteringMorselExecutionContext, Morsel, MorselExecutionContext}
+import org.neo4j.cypher.internal.runtime.pipelined.execution.FilteringMorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.SinkByOrigin
 
@@ -32,8 +36,8 @@ class MorselAttachBuffer(id: BufferId,
                          argumentSlotOffset: Int,
                          argumentNumLongs: Int,
                          argumentNumRefs: Int
-                       ) extends SinkByOrigin
-                            with Sink[MorselExecutionContext] {
+                        ) extends SinkByOrigin
+                          with Sink[MorselExecutionContext] {
 
   override def sinkFor[T <: AnyRef](fromPipeline: PipelineId): Sink[T] = this.asInstanceOf[Sink[T]]
 

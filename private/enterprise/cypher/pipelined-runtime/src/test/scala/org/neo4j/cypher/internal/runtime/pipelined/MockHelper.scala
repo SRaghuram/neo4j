@@ -6,13 +6,16 @@
 package org.neo4j.cypher.internal.runtime.pipelined
 
 import org.mockito.ArgumentMatchers.any
-import org.mockito.Mockito._
+import org.mockito.Mockito.RETURNS_DEEP_STUBS
+import org.mockito.Mockito.when
 import org.mockito.invocation.InvocationOnMock
 import org.neo4j.cypher.internal.physicalplanning.PipelineId
 import org.neo4j.cypher.internal.physicalplanning.PipelineId.NO_PIPELINE
 import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{QueryResources, QueryState}
-import org.neo4j.cypher.internal.runtime.pipelined.operators.{Operator, OutputOperator}
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
+import org.neo4j.cypher.internal.runtime.pipelined.operators.Operator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OutputOperator
 import org.scalatest.mockito.MockitoSugar
 
 object MockHelper extends MockitoSugar {

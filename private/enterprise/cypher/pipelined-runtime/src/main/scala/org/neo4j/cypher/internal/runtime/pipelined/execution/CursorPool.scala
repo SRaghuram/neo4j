@@ -8,7 +8,17 @@ package org.neo4j.cypher.internal.runtime.pipelined.execution
 import org.neo4j.cypher.internal.RuntimeResourceLeakException
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.util.AssertionRunner
-import org.neo4j.internal.kernel.api._
+import org.neo4j.internal.kernel.api.Cursor
+import org.neo4j.internal.kernel.api.CursorFactory
+import org.neo4j.internal.kernel.api.KernelReadTracer
+import org.neo4j.internal.kernel.api.NodeCursor
+import org.neo4j.internal.kernel.api.NodeLabelIndexCursor
+import org.neo4j.internal.kernel.api.NodeValueIndexCursor
+import org.neo4j.internal.kernel.api.PropertyCursor
+import org.neo4j.internal.kernel.api.RelationshipGroupCursor
+import org.neo4j.internal.kernel.api.RelationshipIndexCursor
+import org.neo4j.internal.kernel.api.RelationshipScanCursor
+import org.neo4j.internal.kernel.api.RelationshipTraversalCursor
 import org.neo4j.io.IOUtils
 
 class CursorPools(cursorFactory: CursorFactory) extends CursorFactory with AutoCloseable {
@@ -37,11 +47,11 @@ class CursorPools(cursorFactory: CursorFactory) extends CursorFactory with AutoC
 
   override def close(): Unit = {
     IOUtils.closeAll(nodeCursorPool,
-                     relationshipGroupCursorPool,
-                     relationshipTraversalCursorPool,
-                     relationshipScanCursorPool,
-                     nodeValueIndexCursorPool,
-                     nodeLabelIndexCursorPool)
+      relationshipGroupCursorPool,
+      relationshipTraversalCursorPool,
+      relationshipScanCursorPool,
+      nodeValueIndexCursorPool,
+      nodeLabelIndexCursorPool)
   }
 
   def collectLiveCounts(liveCounts: LiveCounts): Unit = {
@@ -139,8 +149,8 @@ class CursorPool[CURSOR <: Cursor](cursorFactory: () => CURSOR) extends AutoClos
   }
 
   /**
-    * Allocate and trace a cursor of type `CURSOR`.
-    */
+   * Allocate and trace a cursor of type `CURSOR`.
+   */
   def allocateAndTrace(): CURSOR = {
     val cursor = allocateCursor()
     cursor.setTracer(tracer)
@@ -148,13 +158,13 @@ class CursorPool[CURSOR <: Cursor](cursorFactory: () => CURSOR) extends AutoClos
   }
 
   /**
-    * Allocate a cursor of type `CURSOR`.
-    */
+   * Allocate a cursor of type `CURSOR`.
+   */
   def allocate(): CURSOR = allocateCursor()
 
   /**
-    * Free the given cursor. NOOP if `null`.
-    */
+   * Free the given cursor. NOOP if `null`.
+   */
   def free(cursor: CURSOR): Unit = {
     if (cursor != null) {
       if (DebugSupport.CURSORS.enabled) {
@@ -195,11 +205,11 @@ class CursorPool[CURSOR <: Cursor](cursorFactory: () => CURSOR) extends AutoClos
   def getLiveCount: Long = throw new UnsupportedOperationException("use TrackingCursorPool")
 
   /**
-    * Collect a slice of the current stack trace.
-    *
-    * @param from first included stack trace frame, counting from the inner most nesting
-    * @param to first excluded stack trace frame, counting from the inner most nesting
-    */
+   * Collect a slice of the current stack trace.
+   *
+   * @param from first included stack trace frame, counting from the inner most nesting
+   * @param to first excluded stack trace frame, counting from the inner most nesting
+   */
   private def stackTraceSlice(from: Int, to: Int): Seq[String] = {
     new Exception().getStackTrace.slice(from, to).map(traceElement => "\tat "+traceElement)
   }

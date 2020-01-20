@@ -33,24 +33,24 @@ case class DataPoint(id: Long,
 }
 
 /**
-  * Write data points to somewhere.
-  */
+ * Write data points to somewhere.
+ */
 trait DataPointWriter {
 
   /**
-    * Write (e.g., log) this tracing data point
-    */
+   * Write (e.g., log) this tracing data point
+   */
   def write(dataPoint: DataPoint): Unit
 }
 
 /**
-  * Write data points to somewhere.
-  */
+ * Write data points to somewhere.
+ */
 trait DataPointFlusher extends DataPointWriter with Closeable {
 
   /**
-    * Flush buffered data points
-    */
+   * Flush buffered data points
+   */
   def flush(): Unit
 
 }

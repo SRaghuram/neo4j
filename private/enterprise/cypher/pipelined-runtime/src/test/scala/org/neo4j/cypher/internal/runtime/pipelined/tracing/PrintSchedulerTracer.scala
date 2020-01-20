@@ -5,14 +5,14 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.tracing
 
-import org.neo4j.cypher.internal.runtime.scheduling._
+import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 
 /**
-  * This class simply prints information to stdout. It uses `print` instead of `println`
-  * to avoid any synchronization between Threads as part of tracing. This can be useful
-  * to uncover concurrency issues that would disappear with a Tracer that synchronizes
-  * between Threads.
-  */
+ * This class simply prints information to stdout. It uses `print` instead of `println`
+ * to avoid any synchronization between Threads as part of tracing. This can be useful
+ * to uncover concurrency issues that would disappear with a Tracer that synchronizes
+ * between Threads.
+ */
 class PrintSchedulerTracer() extends SchedulerTracer {
   override def traceQuery(): QueryExecutionTracer = QueryTracer()
 
@@ -40,10 +40,10 @@ class PrintSchedulerTracer() extends SchedulerTracer {
     override def start(): WorkUnitEvent = {
 
       val wu = WorkUnit(
-          upstreamWorkUnitIds,
-          schedulingThreadId,
-          Thread.currentThread().getId,
-          workId)
+        upstreamWorkUnitIds,
+        schedulingThreadId,
+        Thread.currentThread().getId,
+        workId)
       print(s"START $wu\n")
       wu
     }

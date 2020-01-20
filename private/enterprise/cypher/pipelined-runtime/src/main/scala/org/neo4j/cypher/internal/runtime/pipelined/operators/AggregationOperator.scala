@@ -7,24 +7,73 @@ package org.neo4j.cypher.internal.runtime.pipelined.operators
 
 import java.util.concurrent.ConcurrentHashMap
 
-import org.neo4j.codegen.api.IntermediateRepresentation.{arrayLoad, arrayOf, getStatic, invoke, method}
-import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable}
-import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, BufferId, PipelineId}
+import org.neo4j.codegen.api.Field
+import org.neo4j.codegen.api.IntermediateRepresentation
+import org.neo4j.codegen.api.IntermediateRepresentation.field
+import org.neo4j.codegen.api.IntermediateRepresentation.variable
+import org.neo4j.codegen.api.IntermediateRepresentation.constant
+import org.neo4j.codegen.api.IntermediateRepresentation.block
+import org.neo4j.codegen.api.IntermediateRepresentation.setField
+import org.neo4j.codegen.api.IntermediateRepresentation.newInstance
+import org.neo4j.codegen.api.IntermediateRepresentation.declareAndAssign
+import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
+import org.neo4j.codegen.api.IntermediateRepresentation.constructor
+import org.neo4j.codegen.api.IntermediateRepresentation.condition
+import org.neo4j.codegen.api.IntermediateRepresentation.notEqual
+import org.neo4j.codegen.api.IntermediateRepresentation.load
+import org.neo4j.codegen.api.IntermediateRepresentation.assign
+import org.neo4j.codegen.api.IntermediateRepresentation.invokeSideEffect
+import org.neo4j.codegen.api.IntermediateRepresentation.loadField
+import org.neo4j.codegen.api.IntermediateRepresentation.isNull
+import org.neo4j.codegen.api.IntermediateRepresentation.cast
+import org.neo4j.codegen.api.IntermediateRepresentation.arrayLoad
+import org.neo4j.codegen.api.IntermediateRepresentation.arrayOf
+import org.neo4j.codegen.api.IntermediateRepresentation.getStatic
+import org.neo4j.codegen.api.IntermediateRepresentation.invoke
+import org.neo4j.codegen.api.IntermediateRepresentation.method
+import org.neo4j.codegen.api.LocalVariable
+import org.neo4j.cypher.internal.expressions
+import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
+import org.neo4j.cypher.internal.physicalplanning.BufferId
+import org.neo4j.cypher.internal.physicalplanning.PipelineId
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
+import org.neo4j.cypher.internal.runtime.NoMemoryTracker
+import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
-import org.neo4j.cypher.internal.runtime.pipelined.aggregators._
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{MorselExecutionContext, QueryResources, QueryState}
-import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.{ArgumentStateFactory, MorselAccumulator, PerArgument}
+import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
+import org.neo4j.cypher.internal.runtime.pipelined.ExecutionState
+import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
+import org.neo4j.cypher.internal.runtime.pipelined.aggregators.Aggregator
+import org.neo4j.cypher.internal.runtime.pipelined.aggregators.Aggregators
+import org.neo4j.cypher.internal.runtime.pipelined.aggregators.AvgAggregator
+import org.neo4j.cypher.internal.runtime.pipelined.aggregators.CollectAggregator
+import org.neo4j.cypher.internal.runtime.pipelined.aggregators.CountAggregator
+import org.neo4j.cypher.internal.runtime.pipelined.aggregators.CountDistinctAggregator
+import org.neo4j.cypher.internal.runtime.pipelined.aggregators.CountStarAggregator
+import org.neo4j.cypher.internal.runtime.pipelined.aggregators.MaxAggregator
+import org.neo4j.cypher.internal.runtime.pipelined.aggregators.MinAggregator
+import org.neo4j.cypher.internal.runtime.pipelined.aggregators.Reducer
+import org.neo4j.cypher.internal.runtime.pipelined.aggregators.SumAggregator
+import org.neo4j.cypher.internal.runtime.pipelined.aggregators.Updater
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
+import org.neo4j.cypher.internal.runtime.pipelined.operators.AggregationMapperOperatorTaskTemplate.createAggregators
+import org.neo4j.cypher.internal.runtime.pipelined.operators.AggregationMapperOperatorTaskTemplate.createUpdaters
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.EXECUTION_STATE
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.PIPELINE_ID
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.PerArgument
+import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Sink
-import org.neo4j.cypher.internal.runtime.pipelined.state.{ArgumentStateMap, StateFactory}
-import org.neo4j.cypher.internal.runtime.pipelined.{ArgumentStateMapCreator, ExecutionState, OperatorExpressionCompiler}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
-import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
-import org.neo4j.cypher.internal.runtime.{NoMemoryTracker, QueryContext, QueryMemoryTracker}
-import org.neo4j.cypher.internal.expressions.{Expression => AstExpression}
+import org.neo4j.cypher.internal.runtime.slotted.SlottedQueryState
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.SyntaxException
 import org.neo4j.internal.kernel.api.IndexReadSession
@@ -33,14 +82,14 @@ import org.neo4j.values.AnyValue
 import scala.collection.mutable.ArrayBuffer
 
 /**
-  * General purpose aggregation operator, supporting clauses like
-  *
-  * {{{
-  *   WITH key1, key2, key3, sum(..) AS aggr1, count(..) AS aggr2, avg(..) AS aggr3
-  * }}}
-  *
-  * The implementation composes an [[AggregationMapperOperator]], an [[AggregatingAccumulator]] and an [[AggregationReduceOperator]].
-  */
+ * General purpose aggregation operator, supporting clauses like
+ *
+ * {{{
+ *   WITH key1, key2, key3, sum(..) AS aggr1, count(..) AS aggr2, avg(..) AS aggr3
+ * }}}
+ *
+ * The implementation composes an [[AggregationMapperOperator]], an [[AggregatingAccumulator]] and an [[AggregationReduceOperator]].
+ */
 case class AggregationOperator(workIdentity: WorkIdentity,
                                aggregations: Array[Aggregator],
                                groupings: GroupingExpression) {
@@ -60,10 +109,10 @@ case class AggregationOperator(workIdentity: WorkIdentity,
     new AggregationReduceOperator(argumentStateMapId, reducerOutputSlots)
 
   /**
-    * Pre-operator for aggregations with grouping. This performs local aggregation of the
-    * data in a single morsel at a time, before putting these local aggregations into the
-    * [[ExecutionState]] buffer which perform the final global aggregation.
-    */
+   * Pre-operator for aggregations with grouping. This performs local aggregation of the
+   * data in a single morsel at a time, before putting these local aggregations into the
+   * [[ExecutionState]] buffer which perform the final global aggregation.
+   */
   class AggregationMapperOperator(argumentSlotOffset: Int,
                                   outputBufferId: BufferId,
                                   expressionValues: Array[Expression]) extends OutputOperator {
@@ -86,23 +135,23 @@ case class AggregationOperator(workIdentity: WorkIdentity,
                                  resources: QueryResources,
                                  operatorExecutionEvent: OperatorProfileEvent): PreAggregatedOutput = {
 
-        val queryState = new OldQueryState(context,
-                                           resources = null,
-                                           params = state.params,
-                                           resources.expressionCursors,
-                                           Array.empty[IndexReadSession],
-                                           resources.expressionVariables(state.nExpressionSlots),
-                                           state.subscriber,
-                                           NoMemoryTracker)
+        val queryState = new SlottedQueryState(context,
+          resources = null,
+          params = state.params,
+          resources.expressionCursors,
+          Array.empty[IndexReadSession],
+          resources.expressionVariables(state.nExpressionSlots),
+          state.subscriber,
+          NoMemoryTracker)
 
         val preAggregated = ArgumentStateMap.map(argumentSlotOffset,
-                                             morsel,
-                                             preAggregate(queryState))
+          morsel,
+          preAggregate(queryState))
 
         new PreAggregatedOutput(preAggregated, sink)
       }
 
-      private def preAggregate(queryState: OldQueryState)
+      private def preAggregate(queryState: SlottedQueryState)
                               (morsel: MorselExecutionContext): AggPreMap = {
 
         val result = new AggPreMap()
@@ -130,12 +179,12 @@ case class AggregationOperator(workIdentity: WorkIdentity,
   }
 
   /**
-    * Accumulator that compacts input data using some [[Reducer]]s.
-    */
+   * Accumulator that compacts input data using some [[Reducer]]s.
+   */
   abstract class AggregatingAccumulator extends MorselAccumulator[AggPreMap] {
     /**
-      * Return the result of the reducer.
-      */
+     * Return the result of the reducer.
+     */
     def result(): java.util.Iterator[java.util.Map.Entry[groupings.KeyType, Array[Reducer]]]
   }
 
@@ -178,11 +227,11 @@ case class AggregationOperator(workIdentity: WorkIdentity,
       while (iterator.hasNext) {
         val entry = iterator.next()
         val reducers = reducerMap.computeIfAbsent(entry.getKey, key => aggregators.map(_.newConcurrentReducer))
-          var i = 0
-          while (i < reducers.length) {
-            reducers(i).update(entry.getValue()(i))
-            i += 1
-          }
+        var i = 0
+        while (i < reducers.length) {
+          reducers(i).update(entry.getValue()(i))
+          i += 1
+        }
       }
     }
 
@@ -201,12 +250,12 @@ case class AggregationOperator(workIdentity: WorkIdentity,
   }
 
   /**
-    * Operator which streams aggregated data, built by [[AggregationMapperOperator]] and [[AggregatingAccumulator]].
-    */
+   * Operator which streams aggregated data, built by [[AggregationMapperOperator]] and [[AggregatingAccumulator]].
+   */
   class AggregationReduceOperator(val argumentStateMapId: ArgumentStateMapId,
                                   reducerOutputSlots: Array[Int])
     extends Operator
-      with ReduceOperatorState[AggPreMap, AggregatingAccumulator] {
+    with ReduceOperatorState[AggPreMap, AggregatingAccumulator] {
 
     override def workIdentity: WorkIdentity = AggregationOperator.this.workIdentity
 
@@ -291,11 +340,8 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
                                             outputBufferId: BufferId,
                                             aggregationExpressionsCreator : () => Array[IntermediateExpression],
                                             groupingKeyExpressionCreator: () => IntermediateExpression,
-                                            aggregationExpressions: Array[AstExpression])
+                                            aggregationExpressions: Array[expressions.Expression])
                                            (protected val codeGen: OperatorExpressionCompiler) extends OperatorTaskTemplate {
-  import OperatorCodeGenHelperTemplates._
-  import org.neo4j.codegen.api.IntermediateRepresentation._
-  import org.neo4j.cypher.internal.runtime.pipelined.operators.AggregationMapperOperatorTaskTemplate._
 
   type AggMap = java.util.LinkedHashMap[AnyValue, Array[Any]]
   type AggOut = scala.collection.mutable.ArrayBuffer[PerArgument[AggMap]]
@@ -330,51 +376,51 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
     }
 
     /**
-      *
-      * // this is the final result: a list of pre-aggregations, one per argument
-      * val perArgs = new ArrayList<PerArgument<AggPreMap>>()
-      *
-      * // last seen argument
-      * long arg = -1
-      *
-      * // map of key <--> aggregations
-      * val aggPreMap = null
-      *
-      * {{{
-      *
-      *   // ----- track when argument changes -----
-      *
-      *   val currentArg = getFromLongSlot(argumentSlotOffset)
-      *   if (currentArg != arg) {
-      *     arg = currentArg
-      *     aggPreMap = new AggPreMap()
-      *     val perArg = new PerArgument<AggPreMap>(arg, aggPreMap)
-      *     perArgs.add(perArg)
-      *   }
-      *
-      *   // ----- create updaters group for each new grouping -----
-      *
-      *   val groupingValue: AnyValue = {compiledGroupingExpression.ir}
-      *   val updaters: Updater[] = aggPreMap.get(groupingValue)
-      *   if (updaters == null){
-      *    updaters = new Updater[]{ aggregations[0].newUpdater,
-      *                              aggregations[1].newUpdater,
-      *                              ...
-      *                              aggregations[n-1].newUpdater}
-      *     aggPreMap.put(groupingValue, updaters)
-      *   }
-      *
-      *   // ----- aggregate -----
-      *
-      *   {
-      *     updaters[0].update(aggregationExpression[0]())
-      *     updaters[1].update(aggregationExpression[1]())
-      *     ...
-      *     updaters[n-1].update(aggregationExpression[n-1]())
-      *   }
-      * }}}
-      *
-      */
+     *
+     * // this is the final result: a list of pre-aggregations, one per argument
+     * val perArgs = new ArrayList<PerArgument<AggPreMap>>()
+     *
+     * // last seen argument
+     * long arg = -1
+     *
+     * // map of key <--> aggregations
+     * val aggPreMap = null
+     *
+     * {{{
+     *
+     *   // ----- track when argument changes -----
+     *
+     *   val currentArg = getFromLongSlot(argumentSlotOffset)
+     *   if (currentArg != arg) {
+     *     arg = currentArg
+     *     aggPreMap = new AggPreMap()
+     *     val perArg = new PerArgument<AggPreMap>(arg, aggPreMap)
+     *     perArgs.add(perArg)
+     *   }
+     *
+     *   // ----- create updaters group for each new grouping -----
+     *
+     *   val groupingValue: AnyValue = {compiledGroupingExpression.ir}
+     *   val updaters: Updater[] = aggPreMap.get(groupingValue)
+     *   if (updaters == null){
+     *    updaters = new Updater[]{ aggregations[0].newUpdater,
+     *                              aggregations[1].newUpdater,
+     *                              ...
+     *                              aggregations[n-1].newUpdater}
+     *     aggPreMap.put(groupingValue, updaters)
+     *   }
+     *
+     *   // ----- aggregate -----
+     *
+     *   {
+     *     updaters[0].update(aggregationExpression[0]())
+     *     updaters[1].update(aggregationExpression[1]())
+     *     ...
+     *     updaters[n-1].update(aggregationExpression[n-1]())
+     *   }
+     * }}}
+     *
+     */
 
     // argument of current morsel row
     val currentArg = codeGen.namer.nextVariableName()
@@ -397,8 +443,8 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
           assign(argVar, load(currentArg)),
           assign(aggPreMapVar, newInstance(constructor[AggMap])),
           invokeSideEffect(loadField(perArgsField),
-                           method[ArrayBuffer[_], ArrayBuffer[_], Any]("$plus$eq"),
-                           newInstance(constructor[PerArgument[AggMap], Long, Any], load(argVar), load(aggPreMapVar)))
+            method[ArrayBuffer[_], ArrayBuffer[_], Any]("$plus$eq"),
+            newInstance(constructor[PerArgument[AggMap], Long, Any], load(argVar), load(aggPreMapVar)))
         )),
 
       /*
@@ -413,18 +459,18 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
        * }
        */
       declareAndAssign(typeRefOf[AnyValue],
-                       groupingValue,
-                       compiledGroupingExpression.ir),
+        groupingValue,
+        compiledGroupingExpression.ir),
       declareAndAssign(typeRefOf[Array[Any]],
-                       updaters,
-                       invoke(load(aggPreMapVar), method[AggMap, Any, Any]("get"), load(groupingValue))),
+        updaters,
+        invoke(load(aggPreMapVar), method[AggMap, Any, Any]("get"), load(groupingValue))),
       condition(isNull(load(updaters)))(
         block(
           assign(updaters, createUpdaters(aggregators, load(aggregatorsVar))),
           invokeSideEffect(load(aggPreMapVar),
-                           method[AggMap, Any, Any, Any]("put"),
-                           load(groupingValue),
-                           load(updaters))
+            method[AggMap, Any, Any, Any]("put"),
+            load(groupingValue),
+            load(updaters))
         )
       ),
 
@@ -437,7 +483,7 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
       block(
         compiledAggregationExpressions.indices.map(i => {
           invokeSideEffect(arrayLoad(cast[Array[Updater]](load(updaters)), i), method[Updater, Unit, AnyValue]("update"),
-                           nullCheckIfRequired(compiledAggregationExpressions(i)))
+            nullCheckIfRequired(compiledAggregationExpressions(i)))
         }): _ *
       ),
 
@@ -448,18 +494,18 @@ class AggregationMapperOperatorTaskTemplate(val inner: OperatorTaskTemplate,
   override protected def genCreateState: IntermediateRepresentation = {
     block(
       setField(sinkField,
-               invoke(EXECUTION_STATE,
-                      method[ExecutionState, Sink[_], Int, Int]("getSinkInt"),
-                      PIPELINE_ID,
-                      loadField(bufferIdField)))
+        invoke(EXECUTION_STATE,
+          method[ExecutionState, Sink[_], Int, Int]("getSinkInt"),
+          PIPELINE_ID,
+          loadField(bufferIdField)))
     )
   }
 
   override protected def genProduce: IntermediateRepresentation = {
     block(
       invokeSideEffect(loadField(sinkField),
-                       method[Sink[_], Unit, Any]("put"),
-                       loadField(perArgsField)),
+        method[Sink[_], Unit, Any]("put"),
+        loadField(perArgsField)),
       setField(perArgsField, newInstance(constructor[AggOut]))
     )
   }

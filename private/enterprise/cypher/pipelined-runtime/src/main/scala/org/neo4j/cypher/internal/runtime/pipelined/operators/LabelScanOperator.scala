@@ -5,21 +5,54 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.operators
 
-import org.neo4j.codegen.api.IntermediateRepresentation._
-import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable}
+import org.neo4j.codegen.api.Field
+import org.neo4j.codegen.api.IntermediateRepresentation
+import org.neo4j.codegen.api.IntermediateRepresentation.and
+import org.neo4j.codegen.api.IntermediateRepresentation.block
+import org.neo4j.codegen.api.IntermediateRepresentation.condition
+import org.neo4j.codegen.api.IntermediateRepresentation.constant
+import org.neo4j.codegen.api.IntermediateRepresentation.declareAndAssign
+import org.neo4j.codegen.api.IntermediateRepresentation.equal
+import org.neo4j.codegen.api.IntermediateRepresentation.field
+import org.neo4j.codegen.api.IntermediateRepresentation.invoke
+import org.neo4j.codegen.api.IntermediateRepresentation.invokeSideEffect
+import org.neo4j.codegen.api.IntermediateRepresentation.isNotNull
+import org.neo4j.codegen.api.IntermediateRepresentation.load
+import org.neo4j.codegen.api.IntermediateRepresentation.loadField
+import org.neo4j.codegen.api.IntermediateRepresentation.loop
+import org.neo4j.codegen.api.IntermediateRepresentation.method
+import org.neo4j.codegen.api.IntermediateRepresentation.notEqual
+import org.neo4j.codegen.api.IntermediateRepresentation.setField
+import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
+import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
+import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyLabel
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyLabel.UNKNOWN
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.pipelined.NodeLabelCursorRepresentation
+import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.ALLOCATE_NODE_LABEL_CURSOR
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.CURSOR_POOL_V
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.NO_TOKEN
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.NodeLabelIndexCursorPool
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.allocateAndTraceCursor
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.freeCursor
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.nodeLabelId
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.nodeLabelScan
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profilingCursorNext
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
-import org.neo4j.cypher.internal.runtime.pipelined.{NodeLabelCursorRepresentation, OperatorExpressionCompiler}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
-import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
 import org.neo4j.cypher.internal.util.attribution.Id
-import org.neo4j.internal.kernel.api.{KernelReadTracer, NodeLabelIndexCursor}
+import org.neo4j.internal.kernel.api.KernelReadTracer
+import org.neo4j.internal.kernel.api.NodeLabelIndexCursor
+
 
 class LabelScanOperator(val workIdentity: WorkIdentity,
                         offset: Int,
@@ -39,10 +72,10 @@ class LabelScanOperator(val workIdentity: WorkIdentity,
   }
 
   /**
-    * A [[SingleThreadedScanTask]] will iterate over all inputRows and do a full scan for each of them.
-    *
-    * @param inputMorsel the input row, pointing to the beginning of the input morsel
-    */
+   * A [[SingleThreadedScanTask]] will iterate over all inputRows and do a full scan for each of them.
+   *
+   * @param inputMorsel the input row, pointing to the beginning of the input morsel
+   */
   class SingleThreadedScanTask(val inputMorsel: MorselExecutionContext) extends InputLoopTask {
 
     override def workIdentity: WorkIdentity = LabelScanOperator.this.workIdentity
@@ -97,7 +130,6 @@ class SingleThreadedLabelScanTaskTemplate(inner: OperatorTaskTemplate,
                                           argumentSize: SlotConfiguration.Size)
                                          (codeGen: OperatorExpressionCompiler) extends InputLoopTaskTemplate(inner, id, innermost, codeGen) {
 
-  import OperatorCodeGenHelperTemplates._
 
   private val nodeLabelCursorField = field[NodeLabelIndexCursor](codeGen.namer.nextVariableName())
   private val labelField = field[Int](codeGen.namer.nextVariableName(), NO_TOKEN)
@@ -123,15 +155,15 @@ class SingleThreadedLabelScanTaskTemplate(inner: OperatorTaskTemplate,
       case Some(labelId) =>
 
         /**
-          * {{{
-          *   this.nodeLabelCursor = resources.cursorPools.nodeLabelIndexCursorPool.allocate()
-          *   context.transactionalContext.dataRead.nodeLabelScan(id, cursor)
-          *   val tmp = nodeLabelCursor.next()
-          *   profileRow(tmp)
-          *   this.canContinue = tmp
-          *   true
-          * }}}
-          */
+         * {{{
+         *   this.nodeLabelCursor = resources.cursorPools.nodeLabelIndexCursorPool.allocate()
+         *   context.transactionalContext.dataRead.nodeLabelScan(id, cursor)
+         *   val tmp = nodeLabelCursor.next()
+         *   profileRow(tmp)
+         *   this.canContinue = tmp
+         *   true
+         * }}}
+         */
         block(
           allocateAndTraceCursor(nodeLabelCursorField, executionEventField, ALLOCATE_NODE_LABEL_CURSOR),
           nodeLabelScan(constant(labelId), loadField(nodeLabelCursorField)),
@@ -142,21 +174,21 @@ class SingleThreadedLabelScanTaskTemplate(inner: OperatorTaskTemplate,
       case None =>
         val hasInnerLoop = codeGen.namer.nextVariableName()
         /**
-          * {{{
-          *   if (this.label == NO_TOKEN) {
-          *     this.label = nodeLabelId(labelName)
-          *   }
-          *   val hasInnerLoop = this.label != NO_TOKEN
-          *   if (hasInnerLoop) {
-          *     this.nodeLabelCursor = resources.cursorPools.nodeLabelIndexCursorPool.allocate()
-          *     context.transactionalContext.dataRead.nodeLabelScan(id, cursor)
-          *     val tmp = nodeLabelCursor.next()
-          *     profileRow(tmp)
-          *     this.canContinue = tmp
-          *   }
-          *   hasInnerLoop
-          * }}}
-          */
+         * {{{
+         *   if (this.label == NO_TOKEN) {
+         *     this.label = nodeLabelId(labelName)
+         *   }
+         *   val hasInnerLoop = this.label != NO_TOKEN
+         *   if (hasInnerLoop) {
+         *     this.nodeLabelCursor = resources.cursorPools.nodeLabelIndexCursorPool.allocate()
+         *     context.transactionalContext.dataRead.nodeLabelScan(id, cursor)
+         *     val tmp = nodeLabelCursor.next()
+         *     profileRow(tmp)
+         *     this.canContinue = tmp
+         *   }
+         *   hasInnerLoop
+         * }}}
+         */
         block(
           condition(equal(loadField(labelField), NO_TOKEN)) {
             setField(labelField, nodeLabelId(labelName))
@@ -177,17 +209,17 @@ class SingleThreadedLabelScanTaskTemplate(inner: OperatorTaskTemplate,
 
   override protected def genInnerLoop: IntermediateRepresentation = {
     /**
-      * {{{
-      *   while (hasDemand && this.canContinue) {
-      *     ...
-      *     setLongAt(offset, nodeLabelCursor.nodeReference())
-      *     << inner.genOperate >>
-      *     val tmp = nodeLabelCursor.next()
-      *     profileRow(tmp)
-      *     this.canContinue = tmp
-      *   }
-      * }}}
-      */
+     * {{{
+     *   while (hasDemand && this.canContinue) {
+     *     ...
+     *     setLongAt(offset, nodeLabelCursor.nodeReference())
+     *     << inner.genOperate >>
+     *     val tmp = nodeLabelCursor.next()
+     *     profileRow(tmp)
+     *     this.canContinue = tmp
+     *   }
+     * }}}
+     */
     loop(and(innermost.predicate, loadField(canContinue)))(
       block(
         codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),
@@ -201,11 +233,11 @@ class SingleThreadedLabelScanTaskTemplate(inner: OperatorTaskTemplate,
 
   override protected def genCloseInnerLoop: IntermediateRepresentation = {
     /**
-      * {{{
-      *   resources.cursorPools.nodeLabelIndexCursorPool.free(nodeLabelCursor)
-      *   nodeLabelCursor = null
-      * }}}
-      */
+     * {{{
+     *   resources.cursorPools.nodeLabelIndexCursorPool.free(nodeLabelCursor)
+     *   nodeLabelCursor = null
+     * }}}
+     */
     block(
       freeCursor[NodeLabelIndexCursor](loadField(nodeLabelCursorField), NodeLabelIndexCursorPool),
       setField(nodeLabelCursorField, constant(null))

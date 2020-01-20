@@ -8,13 +8,13 @@ package org.neo4j.cypher.internal.runtime.pipelined.aggregators
 import java.util.concurrent.atomic.AtomicReference
 
 import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
+import org.neo4j.values.AnyValue
+import org.neo4j.values.AnyValues
 import org.neo4j.values.storable.Values
-import org.neo4j.values.{AnyValue, AnyValues}
-
 
 /**
-  * Aggregator for min(...).
-  */
+ * Aggregator for min(...).
+ */
 case object MinAggregator extends Aggregator {
 
   override def newUpdater: Updater = new MinUpdater

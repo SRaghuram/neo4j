@@ -5,27 +5,34 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.operators
 
-import org.neo4j.cypher.internal.physicalplanning.{BufferId, PipelineId}
-import org.neo4j.cypher.internal.profiling.{OperatorProfileEvent, QueryProfiler}
+import org.neo4j.cypher.internal.physicalplanning.BufferId
+import org.neo4j.cypher.internal.physicalplanning.PipelineId
+import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
+import org.neo4j.cypher.internal.profiling.QueryProfiler
 import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.pipelined.ExecutionState
+import org.neo4j.cypher.internal.runtime.pipelined.Task
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.PerArgument
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Sink
-import org.neo4j.cypher.internal.runtime.pipelined.{ExecutionState, Task}
-import org.neo4j.cypher.internal.runtime.scheduling.{HasWorkIdentity, WorkIdentity, WorkIdentityImpl}
+import org.neo4j.cypher.internal.runtime.scheduling.HasWorkIdentity
+import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
+import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentityImpl
 import org.neo4j.cypher.internal.util.attribution.Id
 
 /**
-  * Operator which ends a pipeline, and thus prepares the computed output.
-  *
-  *    [[OutputOperator]]       immutable and cacheable
-  *    [[OutputOperatorState]]  created for every query invocation. References [[ExecutionState]].
-  *    [[PreparedOutput]]       the prepared output for a specific [[Task]]. The purpose of this class is
-  *                             to encapsulate the result just before we put it in an output-buffer, meaning
-  *                             that it could be just the output morsel, or also have intermediate aggregation
-  *                             data for example.
-  */
+ * Operator which ends a pipeline, and thus prepares the computed output.
+ *
+ *    [[OutputOperator]]       immutable and cacheable
+ *    [[OutputOperatorState]]  created for every query invocation. References [[ExecutionState]].
+ *    [[PreparedOutput]]       the prepared output for a specific [[Task]]. The purpose of this class is
+ *                             to encapsulate the result just before we put it in an output-buffer, meaning
+ *                             that it could be just the output morsel, or also have intermediate aggregation
+ *                             data for example.
+ */
 trait OutputOperator extends HasWorkIdentity {
   def outputBuffer: Option[BufferId]
   def createState(executionState: ExecutionState, pipelineId: PipelineId): OutputOperatorState
@@ -117,8 +124,8 @@ case class MorselArgumentStateBufferOutputOperator(bufferId: BufferId, argumentS
   override val workIdentity: WorkIdentity = WorkIdentityImpl(nextPipelineHeadPlanId, s"Output morsel grouped by argumentSlot $argumentSlotOffset to $bufferId")
   override def createState(executionState: ExecutionState, pipelineId: PipelineId): OutputOperatorState =
     MorselArgumentStateBufferOutputState(workIdentity,
-                                         executionState.getSink[IndexedSeq[PerArgument[MorselExecutionContext]]](pipelineId, bufferId),
-                                         argumentSlotOffset)
+      executionState.getSink[IndexedSeq[PerArgument[MorselExecutionContext]]](pipelineId, bufferId),
+      argumentSlotOffset)
 }
 case class MorselArgumentStateBufferOutputState(override val workIdentity: WorkIdentity,
                                                 sink: Sink[IndexedSeq[PerArgument[MorselExecutionContext]]],

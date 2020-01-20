@@ -11,39 +11,41 @@ import java.util.concurrent.atomic.AtomicReference
 import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
 import org.neo4j.exceptions.CypherTypeException
 import org.neo4j.values.AnyValue
-import org.neo4j.values.storable.{DurationValue, NumberValue, Values}
+import org.neo4j.values.storable.DurationValue
+import org.neo4j.values.storable.NumberValue
+import org.neo4j.values.storable.Values
 import org.neo4j.values.utils.ValueMath.overflowSafeAdd
 
 /**
-  * Aggregator for avg(...).
-  *
-  * To make this work efficiently we had to generalize the cumulative moving average approach
-  * to work with batched updates in the reducer. The algebraic derivations used are listed below,
-  * for the simple value at a time formulae, see https://en.wikipedia.org/wiki/Moving_average#Cumulative_moving_average.
-  *
-  *   n: cumulative count
-  *   CMA: cumulative moving average
-  *
-  *   m: updated count
-  *   UA: updater average
-  *   US: updater sum
-  *
-  *     # this is the standard algebraic way to compute a joint average from two precomputed averages.
-  *   CMA = (m * UA +          n  * CMA) / (n + m)
-  *
-  *     # analogous to CMA
-  *   CMA = (m * UA + (n + m - m) * CMA) / (n + m)
-  *   CMA = ((n + m) * CMA + m * UA - (m * CMA)) / (n + m)
-  *   CMA =  CMA +          (m * UA - (m * CMA)) / (n + m)
-  *
-  *    # for numbers we derive an overflow-safe formulation using batch averages
-  *   CMA =  CMA +          (m * (UA - CMA)) / (n + m)
-  *   CMA =  CMA +          ((UA - CMA) * m) / (n + m)
-  *   CMA =  CMA +           (UA - CMA) * (m / (n + m))
-  *
-  *    # for durations we derive a faster formulation using batch sums, because we won't overflow
-  *   CMA =  CMA +              (US - (m * CMA)) / n + m
-  */
+ * Aggregator for avg(...).
+ *
+ * To make this work efficiently we had to generalize the cumulative moving average approach
+ * to work with batched updates in the reducer. The algebraic derivations used are listed below,
+ * for the simple value at a time formulae, see https://en.wikipedia.org/wiki/Moving_average#Cumulative_moving_average.
+ *
+ *   n: cumulative count
+ *   CMA: cumulative moving average
+ *
+ *   m: updated count
+ *   UA: updater average
+ *   US: updater sum
+ *
+ *     # this is the standard algebraic way to compute a joint average from two precomputed averages.
+ *   CMA = (m * UA +          n  * CMA) / (n + m)
+ *
+ *     # analogous to CMA
+ *   CMA = (m * UA + (n + m - m) * CMA) / (n + m)
+ *   CMA = ((n + m) * CMA + m * UA - (m * CMA)) / (n + m)
+ *   CMA =  CMA +          (m * UA - (m * CMA)) / (n + m)
+ *
+ *    # for numbers we derive an overflow-safe formulation using batch averages
+ *   CMA =  CMA +          (m * (UA - CMA)) / (n + m)
+ *   CMA =  CMA +          ((UA - CMA) * m) / (n + m)
+ *   CMA =  CMA +           (UA - CMA) * (m / (n + m))
+ *
+ *    # for durations we derive a faster formulation using batch sums, because we won't overflow
+ *   CMA =  CMA +              (US - (m * CMA)) / n + m
+ */
 case object AvgAggregator extends Aggregator {
 
   override def newUpdater: Updater = new AvgUpdater
@@ -194,10 +196,10 @@ case object AvgAggregator extends Aggregator {
             duration.updateAndGet(old => {
               val newCount = old.count + u.count
               AvgDuration(newCount,
-                          old.monthsRunningAvg  + (u.sumMonths -   old.monthsRunningAvg * u.count) / newCount,
-                          old.daysRunningAvg    + (u.sumDays -       old.daysRunningAvg * u.count) / newCount,
-                          old.secondsRunningAvg + (u.sumSeconds - old.secondsRunningAvg * u.count) / newCount,
-                          old.nanosRunningAvg   + (u.sumNanos -     old.nanosRunningAvg * u.count) / newCount)
+                old.monthsRunningAvg  + (u.sumMonths -   old.monthsRunningAvg * u.count) / newCount,
+                old.daysRunningAvg    + (u.sumDays -       old.daysRunningAvg * u.count) / newCount,
+                old.secondsRunningAvg + (u.sumSeconds - old.secondsRunningAvg * u.count) / newCount,
+                old.nanosRunningAvg   + (u.sumNanos -     old.nanosRunningAvg * u.count) / newCount)
             })
           }
       }
@@ -206,9 +208,9 @@ case object AvgAggregator extends Aggregator {
       if (seenDuration) {
         val x = duration.get()
         DurationValue.approximate(x.monthsRunningAvg,
-                                  x.daysRunningAvg,
-                                  x.secondsRunningAvg,
-                                  x.nanosRunningAvg).normalize()
+          x.daysRunningAvg,
+          x.secondsRunningAvg,
+          x.nanosRunningAvg).normalize()
 
       } else if (seenNumber) {
         val x = number.get()

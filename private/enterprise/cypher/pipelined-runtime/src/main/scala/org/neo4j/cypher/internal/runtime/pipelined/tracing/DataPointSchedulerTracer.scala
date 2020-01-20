@@ -11,8 +11,8 @@ import java.util.function.Supplier
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 
 /**
-  * Scheduler tracer that collect times and thread ids of events and report them as DataPoints.
-  */
+ * Scheduler tracer that collect times and thread ids of events and report them as DataPoints.
+ */
 class DataPointSchedulerTracer(dataPointWriter: DataPointWriter) extends SchedulerTracer {
 
   private val queryCounter = new AtomicInteger()
@@ -49,13 +49,13 @@ class DataPointSchedulerTracer(dataPointWriter: DataPointWriter) extends Schedul
     override def start(): WorkUnitEvent = {
       val startTime = currentTime()
       WorkUnit(workUnitId,
-               upstreamWorkUnitIds,
-               queryId,
-               schedulingThreadId,
-               scheduledTime,
-               Thread.currentThread().getId,
-               startTime,
-               workId)
+        upstreamWorkUnitIds,
+        queryId,
+        schedulingThreadId,
+        scheduledTime,
+        Thread.currentThread().getId,
+        startTime,
+        workId)
     }
   }
 

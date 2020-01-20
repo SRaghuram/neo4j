@@ -8,7 +8,29 @@ package org.neo4j.cypher.internal.runtime.pipelined.operators
 import org.neo4j.codegen.api.Field
 import org.neo4j.codegen.api.InstanceField
 import org.neo4j.codegen.api.IntermediateRepresentation
-import org.neo4j.codegen.api.IntermediateRepresentation._
+import org.neo4j.codegen.api.IntermediateRepresentation.and
+import org.neo4j.codegen.api.IntermediateRepresentation.assign
+import org.neo4j.codegen.api.IntermediateRepresentation.block
+import org.neo4j.codegen.api.IntermediateRepresentation.condition
+import org.neo4j.codegen.api.IntermediateRepresentation.constant
+import org.neo4j.codegen.api.IntermediateRepresentation.declareAndAssign
+import org.neo4j.codegen.api.IntermediateRepresentation.field
+import org.neo4j.codegen.api.IntermediateRepresentation.invoke
+import org.neo4j.codegen.api.IntermediateRepresentation.invokeSideEffect
+import org.neo4j.codegen.api.IntermediateRepresentation.invokeStatic
+import org.neo4j.codegen.api.IntermediateRepresentation.isNaN
+import org.neo4j.codegen.api.IntermediateRepresentation.isNotNull
+import org.neo4j.codegen.api.IntermediateRepresentation.load
+import org.neo4j.codegen.api.IntermediateRepresentation.loadField
+import org.neo4j.codegen.api.IntermediateRepresentation.loop
+import org.neo4j.codegen.api.IntermediateRepresentation.method
+import org.neo4j.codegen.api.IntermediateRepresentation.noValue
+import org.neo4j.codegen.api.IntermediateRepresentation.noop
+import org.neo4j.codegen.api.IntermediateRepresentation.not
+import org.neo4j.codegen.api.IntermediateRepresentation.notEqual
+import org.neo4j.codegen.api.IntermediateRepresentation.setField
+import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
+import org.neo4j.codegen.api.IntermediateRepresentation.variable
 import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.codegen.api.Method
 import org.neo4j.cypher.internal.logical.plans.QueryExpression
@@ -23,17 +45,34 @@ import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledHelpers
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
-import org.neo4j.cypher.internal.runtime.interpreted.pipes._
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.IndexSeek
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.IndexSeekMode
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.NodeIndexSeeker
 import org.neo4j.cypher.internal.runtime.pipelined.NodeIndexCursorRepresentation
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates._
+import org.neo4j.cypher.internal.runtime.pipelined.operators.ManyQueriesNodeIndexSeekTaskTemplate.getPropertyMethod
+import org.neo4j.cypher.internal.runtime.pipelined.operators.ManyQueriesNodeIndexSeekTaskTemplate.nextMethod
+import org.neo4j.cypher.internal.runtime.pipelined.operators.ManyQueriesNodeIndexSeekTaskTemplate.queryIteratorMethod
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.ALLOCATE_NODE_INDEX_CURSOR
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.CURSOR_POOL_V
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.DATA_READ
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.NodeValueIndexCursorPool
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.allocateAndTraceCursor
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.asStorableValue
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.exactSeek
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.freeCursor
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.indexOrder
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.indexReadSession
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.nodeIndexSeek
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profileRow
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profilingCursorNext
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
-import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
+import org.neo4j.cypher.internal.runtime.slotted.SlottedQueryState
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.internal.kernel.api.IndexQuery
 import org.neo4j.internal.kernel.api.IndexQuery.ExactPredicate
@@ -87,14 +126,14 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
                                                resources: QueryResources,
                                                initExecutionContext: ExecutionContext): Boolean = {
 
-      val queryState = new OldQueryState(context,
-                                           resources = null,
-                                           params = state.params,
-                                           resources.expressionCursors,
-                                           Array.empty[IndexReadSession],
-                                           resources.expressionVariables(state.nExpressionSlots),
-                                           state.subscriber,
-                                           NoMemoryTracker)
+      val queryState = new SlottedQueryState(context,
+        resources = null,
+        params = state.params,
+        resources.expressionCursors,
+        Array.empty[IndexReadSession],
+        resources.expressionVariables(state.nExpressionSlots),
+        state.subscriber,
+        NoMemoryTracker)
       initExecutionContext.copyFrom(inputMorsel, argumentSize.nLongs, argumentSize.nReferences)
       indexQueries = computeIndexQueries(queryState, initExecutionContext).toIterator
       nodeCursor = resources.cursorPools.nodeValueIndexCursorPool.allocateAndTrace()
@@ -193,40 +232,39 @@ abstract class SingleQueryNodeIndexSeekTaskTemplate(override val inner: Operator
                                                     codeGen: OperatorExpressionCompiler)
   extends InputLoopTaskTemplate(inner, id, innermost, codeGen) {
 
-  import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates._
   protected val nodeIndexCursorField: InstanceField = field[NodeValueIndexCursor](codeGen.namer.nextVariableName())
 
   codeGen.registerCursor(nodeVarName, NodeIndexCursorRepresentation(loadField(nodeIndexCursorField)))
 
   /**
-    * Return the value of the property if we need to cache it.
-    *
-    * This value is either provided by the index in the case of a range seek,
-    * or we already have the value in the case of an exact seek.
-    */
+   * Return the value of the property if we need to cache it.
+   *
+   * This value is either provided by the index in the case of a range seek,
+   * or we already have the value in the case of an exact seek.
+   */
   protected def getPropertyValue: IntermediateRepresentation
 
   /**
-    * Extension point called at the start of inner-loop initializaton
-    */
+   * Extension point called at the start of inner-loop initializaton
+   */
   protected def beginInnerLoop: IntermediateRepresentation
 
   /**
-    * Checks whether the predicate is possible.
-    *
-    * Examples of impossible predicates is doing an exact seek for NO_VALUE
-    * or a range seek for some types where range seeks are not supported. In
-    * these cases we don't set up cursors etc but we'll just return no results
-    * @return `true` if the predicate is possible otherwise `false`
-    */
+   * Checks whether the predicate is possible.
+   *
+   * Examples of impossible predicates is doing an exact seek for NO_VALUE
+   * or a range seek for some types where range seeks are not supported. In
+   * these cases we don't set up cursors etc but we'll just return no results
+   * @return `true` if the predicate is possible otherwise `false`
+   */
   protected def isPredicatePossible: IntermediateRepresentation
 
   /**
-    * Returns the predicate used in `Read::nodeIndexSeek`
-    *
-    * The predicate is for example an exact seek or a range seek
-    * @return The predicate used in the seek query
-    */
+   * Returns the predicate used in `Read::nodeIndexSeek`
+   *
+   * The predicate is for example an exact seek or a range seek
+   * @return The predicate used in the seek query
+   */
   protected def predicate: IntermediateRepresentation
 
   override def genMoreFields: Seq[Field] = Seq(nodeIndexCursorField)
@@ -234,19 +272,19 @@ abstract class SingleQueryNodeIndexSeekTaskTemplate(override val inner: Operator
   override protected def genInitializeInnerLoop: IntermediateRepresentation = {
     val hasInnerLoopVar = codeGen.namer.nextVariableName()
     /**
-      * {{{
-      *   [extension point]
-      *   val hasInnerLoop = [isPredicatePossible]
-      *   if (hasInnerLoop) {
-      *     nodeIndexCursor = resources.cursorPools.nodeValueIndexCursorPool.allocate()
-      *     context.transactionalContext.dataRead.nodeIndexSeek(indexReadSession(queryIndexId),
-      *                                                         nodeIndexCursor,
-      *                                                         [predicate])
-      *     this.canContinue = nodeLabelCursor.next()
-      *    }
-      *    hasInnerLoop
-      * }}}
-      */
+     * {{{
+     *   [extension point]
+     *   val hasInnerLoop = [isPredicatePossible]
+     *   if (hasInnerLoop) {
+     *     nodeIndexCursor = resources.cursorPools.nodeValueIndexCursorPool.allocate()
+     *     context.transactionalContext.dataRead.nodeIndexSeek(indexReadSession(queryIndexId),
+     *                                                         nodeIndexCursor,
+     *                                                         [predicate])
+     *     this.canContinue = nodeLabelCursor.next()
+     *    }
+     *    hasInnerLoop
+     * }}}
+     */
     block(
       beginInnerLoop,
       declareAndAssign(typeRefOf[Boolean], hasInnerLoopVar, isPredicatePossible),
@@ -256,23 +294,23 @@ abstract class SingleQueryNodeIndexSeekTaskTemplate(override val inner: Operator
           allocateAndTraceCursor(nodeIndexCursorField, executionEventField, ALLOCATE_NODE_INDEX_CURSOR),
           nodeIndexSeek(indexReadSession(queryIndexId), loadField(nodeIndexCursorField), predicate, order, needsValues),
           setField(canContinue, profilingCursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField), id))
-          )),
+        )),
       load(hasInnerLoopVar)
-      )
+    )
   }
 
   override protected def genInnerLoop: IntermediateRepresentation = {
     /**
-      * {{{
-      *   while (hasDemand && this.canContinue) {
-      *     ...
-      *     setLongAt(offset, nodeIndexCursor.nodeReference())
-      *     setCachedPropertyAt(offset, [getPropertyValue])
-      *     << inner.genOperate >>
-      *     this.canContinue = this.nodeIndexCursor.next()
-      *   }
-      * }}}
-      */
+     * {{{
+     *   while (hasDemand && this.canContinue) {
+     *     ...
+     *     setLongAt(offset, nodeIndexCursor.nodeReference())
+     *     setCachedPropertyAt(offset, [getPropertyValue])
+     *     << inner.genOperate >>
+     *     this.canContinue = this.nodeIndexCursor.next()
+     *   }
+     * }}}
+     */
     loop(and(innermost.predicate, loadField(canContinue)))(
       block(
         codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),
@@ -287,15 +325,15 @@ abstract class SingleQueryNodeIndexSeekTaskTemplate(override val inner: Operator
 
   override protected def genCloseInnerLoop: IntermediateRepresentation = {
     /**
-      * {{{
-      *   resources.cursorPools.nodeValueIndexCursorPool.free(nodeIndexCursor)
-      *   nodeIndexCursor = null
-      * }}}
-      */
+     * {{{
+     *   resources.cursorPools.nodeValueIndexCursorPool.free(nodeIndexCursor)
+     *   nodeIndexCursor = null
+     * }}}
+     */
     block(
       freeCursor[NodeValueIndexCursor](loadField(nodeIndexCursorField), NodeValueIndexCursorPool),
       setField(nodeIndexCursorField, constant(null))
-      )
+    )
   }
 
   override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation =
@@ -308,8 +346,8 @@ abstract class SingleQueryNodeIndexSeekTaskTemplate(override val inner: Operator
 }
 
 /**
-  * Code generation template for index seeks of the form `MATCH (n:L) WHERE n.prop = 42`
-  */
+ * Code generation template for index seeks of the form `MATCH (n:L) WHERE n.prop = 42`
+ */
 class SingleExactSeekQueryNodeIndexSeekTaskTemplate(inner: OperatorTaskTemplate,
                                                     id: Id,
                                                     innermost: DelegateOperatorTaskTemplate,
@@ -320,8 +358,8 @@ class SingleExactSeekQueryNodeIndexSeekTaskTemplate(inner: OperatorTaskTemplate,
                                                     queryIndexId: Int,
                                                     argumentSize: SlotConfiguration.Size)
                                                    (codeGen: OperatorExpressionCompiler) extends
-  SingleQueryNodeIndexSeekTaskTemplate(inner, id, innermost, nodeVarName, offset, property, IndexOrder.NONE, false, queryIndexId,
-                                       argumentSize, codeGen) {
+                                                                                         SingleQueryNodeIndexSeekTaskTemplate(inner, id, innermost, nodeVarName, offset, property, IndexOrder.NONE, false, queryIndexId,
+                                                                                           argumentSize, codeGen) {
 
   private var seekValue: IntermediateExpression = _
   private val seekValueVariable = variable[Value](codeGen.namer.nextVariableName(), constant(null))
@@ -344,8 +382,8 @@ class SingleExactSeekQueryNodeIndexSeekTaskTemplate(inner: OperatorTaskTemplate,
 }
 
 /**
-  * Code generation template for range seeks, e.g. `n.prop < 42`, `n.prop >= 42`, and `42 < n.prop <= 43`
-  */
+ * Code generation template for range seeks, e.g. `n.prop < 42`, `n.prop >= 42`, and `42 < n.prop <= 43`
+ */
 class SingleRangeSeekQueryNodeIndexSeekTaskTemplate(inner: OperatorTaskTemplate,
                                                     id: Id,
                                                     innermost: DelegateOperatorTaskTemplate,
@@ -358,8 +396,8 @@ class SingleRangeSeekQueryNodeIndexSeekTaskTemplate(inner: OperatorTaskTemplate,
                                                     order: IndexOrder,
                                                     argumentSize: SlotConfiguration.Size)
                                                    (codeGen: OperatorExpressionCompiler) extends
-  SingleQueryNodeIndexSeekTaskTemplate(inner, id, innermost, nodeVarName, offset, property, order, property.getValueFromIndex, queryIndexId,
-                                       argumentSize, codeGen) {
+                                                                                         SingleQueryNodeIndexSeekTaskTemplate(inner, id, innermost, nodeVarName, offset, property, order, property.getValueFromIndex, queryIndexId,
+                                                                                           argumentSize, codeGen) {
   private var seekValues: Seq[IntermediateExpression] = _
   private val predicateVar = variable[IndexQuery](codeGen.namer.nextVariableName(), constant(null))
 
@@ -377,10 +415,10 @@ class SingleRangeSeekQueryNodeIndexSeekTaskTemplate(inner: OperatorTaskTemplate,
 }
 
 /**
-  * Code generation template for index seeks of the form `MATCH (n:L) WHERE n.prop = 1 OR n.prop = 2 OR n.prop =...`
-  * Generates code for first doing an exact search of the first predicate and when the result is exhausted
-  * it moves on to the next predicate until all predicates have been visited.
-  */
+ * Code generation template for index seeks of the form `MATCH (n:L) WHERE n.prop = 1 OR n.prop = 2 OR n.prop =...`
+ * Generates code for first doing an exact search of the first predicate and when the result is exhausted
+ * it moves on to the next predicate until all predicates have been visited.
+ */
 class ManyQueriesNodeIndexSeekTaskTemplate(override val inner: OperatorTaskTemplate,
                                            id: Id,
                                            innermost: DelegateOperatorTaskTemplate,
@@ -395,8 +433,7 @@ class ManyQueriesNodeIndexSeekTaskTemplate(override val inner: OperatorTaskTempl
                                           (codeGen: OperatorExpressionCompiler)
   extends InputLoopTaskTemplate(inner, id, innermost, codeGen) {
 
-  import org.neo4j.cypher.internal.runtime.pipelined.operators.ManyQueriesNodeIndexSeekTaskTemplate._
-  import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates._
+
   private var seekValues: Seq[IntermediateExpression] = _
 
   private val needsValues = property.getValueFromIndex
@@ -412,23 +449,23 @@ class ManyQueriesNodeIndexSeekTaskTemplate(override val inner: OperatorTaskTempl
   override protected def genInitializeInnerLoop: IntermediateRepresentation = {
     seekValues = generateSeekValues.map(_()).map(v => v.copy(ir = nullCheckIfRequired(v)))
     /**
-      * {{{
-      *   this.queryIterator = queryIterator(property, ([query predicate])
-      *   this.nodeIndexCursor = resources.cursorPools.nodeValueIndexCursorPool.allocate()
-      *   this.canContinue = next(indexReadSession(queryIndexId), nodeIndexCursor, queryIterator, read)
-      *   true
-      * }}}
-      */
+     * {{{
+     *   this.queryIterator = queryIterator(property, ([query predicate])
+     *   this.nodeIndexCursor = resources.cursorPools.nodeValueIndexCursorPool.allocate()
+     *   this.canContinue = next(indexReadSession(queryIndexId), nodeIndexCursor, queryIterator, read)
+     *   true
+     * }}}
+     */
     block(
       setField(queryIteratorField,
-               invokeStatic(queryIteratorMethod, constant(property.propertyKeyId), generatePredicates(seekValues.map(_.ir)))),
+        invokeStatic(queryIteratorMethod, constant(property.propertyKeyId), generatePredicates(seekValues.map(_.ir)))),
       setField(nodeIndexCursorField, ALLOCATE_NODE_INDEX_CURSOR),
       setField(canContinue,
-               invokeStatic(nextMethod,
-                            indexReadSession(queryIndexId),
-                            loadField(nodeIndexCursorField),
-                            loadField(queryIteratorField),
-                            indexOrder(order),
+        invokeStatic(nextMethod,
+          indexReadSession(queryIndexId),
+          loadField(nodeIndexCursorField),
+          loadField(queryIteratorField),
+          indexOrder(order),
                             constant(needsValues),
                             loadField(DATA_READ))),
       profileRow(id, loadField(canContinue)),
@@ -437,36 +474,36 @@ class ManyQueriesNodeIndexSeekTaskTemplate(override val inner: OperatorTaskTempl
 
   override protected def genInnerLoop: IntermediateRepresentation = {
     /**
-      * {{{
-      *   while (hasDemand && this.canContinue) {
-      *     ...
-      *     setLongAt(offset, nodeIndexCursor.nodeReference())
-      *     setCachedPropertyAt(offset, queryIterator.current)//only if applicable
-      *     << inner.genOperate >>
-      *     this.canContinue = next(indexReadSession(queryIndexId), nodeIndexCursor, queryIterator, read)
-      *   }
-      * }}}
-      */
+     * {{{
+     *   while (hasDemand && this.canContinue) {
+     *     ...
+     *     setLongAt(offset, nodeIndexCursor.nodeReference())
+     *     setCachedPropertyAt(offset, queryIterator.current)//only if applicable
+     *     << inner.genOperate >>
+     *     this.canContinue = next(indexReadSession(queryIndexId), nodeIndexCursor, queryIterator, read)
+     *   }
+     * }}}
+     */
     loop(and(innermost.predicate, loadField(canContinue)))(
       block(
         codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),
         codeGen.setLongAt(offset, invoke(loadField(nodeIndexCursorField), method[NodeValueIndexCursor, Long]("nodeReference"))),
-        property.maybeCachedNodePropertySlot.map(codeGen.setCachedPropertyAt(_, getPropertyValueRepresentation)).getOrElse(noop()),
+        property.maybeCachedNodePropertySlot.map(codeGen.setCachedPropertyAt(_,
+          getPropertyValueRepresentation)).getOrElse(noop()),
         inner.genOperateWithExpressions,
         doIfInnerCantContinue(
           block(setField(canContinue,
-                         invokeStatic(nextMethod,
-                                      indexReadSession(queryIndexId),
-                                      loadField(nodeIndexCursorField),
-                                      loadField(queryIteratorField),
-                                      indexOrder(order),
-                                      constant(needsValues),
-                                      loadField(DATA_READ))),
-                profileRow(id, loadField(canContinue))),
-          ),
+            invokeStatic(nextMethod,
+              indexReadSession(queryIndexId),
+              loadField(nodeIndexCursorField),
+              loadField(queryIteratorField),
+              indexOrder(order),
+                                      constant(needsValues),loadField(DATA_READ))),
+            profileRow(id, loadField(canContinue))),
+        ),
         endInnerLoop
-        )
       )
+    )
   }
 
   private def getPropertyValueRepresentation: IntermediateRepresentation =
@@ -477,15 +514,15 @@ class ManyQueriesNodeIndexSeekTaskTemplate(override val inner: OperatorTaskTempl
 
   override protected def genCloseInnerLoop: IntermediateRepresentation = {
     /**
-      * {{{
-      *   resources.cursorPools.nodeValueIndexCursorPool.free(nodeIndexCursor)
-      *   nodeIndexCursor = null
-      * }}}
-      */
+     * {{{
+     *   resources.cursorPools.nodeValueIndexCursorPool.free(nodeIndexCursor)
+     *   nodeIndexCursor = null
+     * }}}
+     */
     block(
       freeCursor[NodeValueIndexCursor](loadField(nodeIndexCursorField), NodeValueIndexCursorPool),
       setField(nodeIndexCursorField, constant(null))
-      )
+    )
   }
 
   override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation =

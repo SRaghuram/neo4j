@@ -8,8 +8,10 @@ package org.neo4j.cypher.internal.runtime.pipelined.operators
 import java.util.Comparator
 
 import org.neo4j.cypher.internal.macros.AssertMacros.checkOnlyWhenAssertionsAreEnabled
-import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot}
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{Morsel, MorselExecutionContext}
+import org.neo4j.cypher.internal.physicalplanning.LongSlot
+import org.neo4j.cypher.internal.physicalplanning.RefSlot
+import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.slotted.ColumnOrder
 import org.neo4j.values.AnyValue
 
@@ -68,16 +70,16 @@ object MorselSorting {
 
 
   /**
-    * Sorts the morsel data from array of ordered indices.
-    *
-    * Does this by sorting into a temp morsel first and then copying back the sorted data.
-    */
+   * Sorts the morsel data from array of ordered indices.
+   *
+   * Does this by sorting into a temp morsel first and then copying back the sorted data.
+   */
   def createSortedMorselData(inputRow: MorselExecutionContext, outputToInputIndexes: Array[Integer]): Unit = {
     val numInputRows = inputRow.getValidRows
     // Create a temporary morsel
     // TODO: Do this without creating extra arrays
     val tempMorsel = new Morsel(new Array[Long](numInputRows * inputRow.getLongsPerRow),
-                                new Array[AnyValue](numInputRows * inputRow.getRefsPerRow))
+      new Array[AnyValue](numInputRows * inputRow.getRefsPerRow))
     val outputRow = MorselExecutionContext(tempMorsel, inputRow.slots, numInputRows)
 
     while (outputRow.isValidRow) {

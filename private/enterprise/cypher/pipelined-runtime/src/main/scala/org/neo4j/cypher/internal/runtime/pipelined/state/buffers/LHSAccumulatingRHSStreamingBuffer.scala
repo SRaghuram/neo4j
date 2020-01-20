@@ -5,72 +5,81 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.state.buffers
 
-import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, PipelineId}
+import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
+import org.neo4j.cypher.internal.physicalplanning.PipelineId
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.PipelinedDebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
-import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.{ArgumentStateMaps, MorselAccumulator, PerArgument}
-import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.{AccumulatingBuffer, AccumulatorAndMorsel, DataHolder, SinkByOrigin}
-import org.neo4j.cypher.internal.runtime.pipelined.state.{ArgumentCountUpdater, ArgumentStateMap, QueryCompletionTracker, StateFactory}
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentCountUpdater
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.PerArgument
+import org.neo4j.cypher.internal.runtime.pipelined.state.QueryCompletionTracker
+import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatingBuffer
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatorAndMorsel
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.DataHolder
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.SinkByOrigin
 
 /**
-  * This buffer receives data from two sides. It will accumulate the data from the LHS using an [[ArgumentStateMap]].
-  * The data from the RHS is dealt with in a streaming fashion, but still grouped by argument id.
-  * The buffer has data available when, for an argument id, all the LHS data is accumulated and some RHS data is available.
-  *
-  * After all RHS data has arrived and was processed, both the LHS and the RHS state in the ArgumentStateMaps are cleaned up.
-  * This Buffer usually sits before a hash join.
-  *
-  * This buffer is also known as Mr Buff
-  * ..................,#####,
-  * ..................#_..._#
-  * ..................|e`.`e|
-  * ..................|..u..|
-  * ..................\..=../
-  * ..................|\___/|
-  * .........___.____/:.....:\____.___
-  * ........'...`.-===-\.../-===-.`...'.
-  * ....../.......-"""""-.-"""""-.......\
-  * ...../'.............=:=.............'\
-  * ....'..'..:....o...-=:=-...o....:..'..`.
-  * ...(.'.../'..'-.....-'-.....-'..'\...'.)
-  * .../'.._/..."......--:--......"...\_..'\
-  * ..|...'|......"...---:---..."......|'...|
-  * ..|..:.|.......|..---:---..|.......|.:..|
-  * ...\.:.|.......|_____._____|.......|.:./
-  * .../...(.......|----|------|.......)...\
-  * ../.....|......|....|......|......|.....\
-  * .|::::/''...../.....|.......\.....''\::::|
-  * .'""""......./'.....L_......`\.......""""'
-  * ............/'-.,__/`.`\__..-'\
-  * ...........;....../.....\......;
-  * ...........:...../.......\.....|
-  * ...........|..../.........\....|
-  * ...........|`../...........|..,/
-  * ...........(._.)...........|.._)
-  * ...........|...|...........|...|
-  * ...........|___|...........\___|
-  * ...........:===|............|==|
-  * ............\../............|__|
-  * ............/\/\.........../"""`8.__
-  * ............|oo|...........\__.//___)
-  * ............|==|
-  * ............\__/
-  **/
+ * This buffer receives data from two sides. It will accumulate the data from the LHS using an [[ArgumentStateMap]].
+ * The data from the RHS is dealt with in a streaming fashion, but still grouped by argument id.
+ * The buffer has data available when, for an argument id, all the LHS data is accumulated and some RHS data is available.
+ *
+ * After all RHS data has arrived and was processed, both the LHS and the RHS state in the ArgumentStateMaps are cleaned up.
+ * This Buffer usually sits before a hash join.
+ *
+ * This buffer is also known as Mr Buff
+ * ..................,#####,
+ * ..................#_..._#
+ * ..................|e`.`e|
+ * ..................|..u..|
+ * ..................\..=../
+ * ..................|\___/|
+ * .........___.____/:.....:\____.___
+ * ........'...`.-===-\.../-===-.`...'.
+ * ....../.......-"""""-.-"""""-.......\
+ * ...../'.............=:=.............'\
+ * ....'..'..:....o...-=:=-...o....:..'..`.
+ * ...(.'.../'..'-.....-'-.....-'..'\...'.)
+ * .../'.._/..."......--:--......"...\_..'\
+ * ..|...'|......"...---:---..."......|'...|
+ * ..|..:.|.......|..---:---..|.......|.:..|
+ * ...\.:.|.......|_____._____|.......|.:./
+ * .../...(.......|----|------|.......)...\
+ * ../.....|......|....|......|......|.....\
+ * .|::::/''...../.....|.......\.....''\::::|
+ * .'""""......./'.....L_......`\.......""""'
+ * ............/'-.,__/`.`\__..-'\
+ * ...........;....../.....\......;
+ * ...........:...../.......\.....|
+ * ...........|..../.........\....|
+ * ...........|`../...........|..,/
+ * ...........(._.)...........|.._)
+ * ...........|...|...........|...|
+ * ...........|___|...........\___|
+ * ...........:===|............|==|
+ * ............\../............|__|
+ * ............/\/\.........../"""`8.__
+ * ............|oo|...........\__.//___)
+ * ............|==|
+ * ............\__/
+ **/
 class LHSAccumulatingRHSStreamingBuffer[DATA <: AnyRef,
-                                        LHS_ACC <: MorselAccumulator[DATA]
-                                       ](tracker: QueryCompletionTracker,
-                                         downstreamArgumentReducers: IndexedSeq[AccumulatingBuffer],
-                                         override val argumentStateMaps: ArgumentStateMaps,
-                                         val lhsArgumentStateMapId: ArgumentStateMapId,
-                                         val rhsArgumentStateMapId: ArgumentStateMapId,
-                                         lhsPipelineId: PipelineId,
-                                         rhsPipelineId: PipelineId,
-                                         stateFactory: StateFactory
-                                       ) extends ArgumentCountUpdater
-                                            with Source[AccumulatorAndMorsel[DATA, LHS_ACC]]
-                                            with SinkByOrigin
-                                            with DataHolder {
+  LHS_ACC <: MorselAccumulator[DATA]
+](tracker: QueryCompletionTracker,
+  downstreamArgumentReducers: IndexedSeq[AccumulatingBuffer],
+  override val argumentStateMaps: ArgumentStateMaps,
+  val lhsArgumentStateMapId: ArgumentStateMapId,
+  val rhsArgumentStateMapId: ArgumentStateMapId,
+  lhsPipelineId: PipelineId,
+  rhsPipelineId: PipelineId,
+  stateFactory: StateFactory
+ ) extends ArgumentCountUpdater
+   with Source[AccumulatorAndMorsel[DATA, LHS_ACC]]
+   with SinkByOrigin
+   with DataHolder {
 
   private val lhsArgumentStateMap = argumentStateMaps(lhsArgumentStateMapId).asInstanceOf[ArgumentStateMap[LHS_ACC]]
   private val rhsArgumentStateMap = argumentStateMaps(rhsArgumentStateMapId).asInstanceOf[ArgumentStateMap[ArgumentStateBuffer]]
@@ -112,13 +121,13 @@ class LHSAccumulatingRHSStreamingBuffer[DATA <: AnyRef,
   }
 
   /**
-    * Remove all rows related to cancelled argumentRowIds from `morsel`.
-    * Remove the state of the accumulator, if it is related to a cancelled argumentRowId.
-    *
-    * @param rhsMorsel   the input morsel from the RHS
-    * @param accumulator the accumulator
-    * @return `true` iff both the morsel and the accumulator are cancelled
-    */
+   * Remove all rows related to cancelled argumentRowIds from `morsel`.
+   * Remove the state of the accumulator, if it is related to a cancelled argumentRowId.
+   *
+   * @param rhsMorsel   the input morsel from the RHS
+   * @param accumulator the accumulator
+   * @return `true` iff both the morsel and the accumulator are cancelled
+   */
   def filterCancelledArguments(accumulator: MorselAccumulator[_], rhsMorsel: MorselExecutionContext): Boolean = {
     // TODO
     false

@@ -8,12 +8,13 @@ package org.neo4j.cypher.internal.runtime.pipelined.state
 import org.neo4j.cypher.internal.physicalplanning.TopLevelArgument
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
-import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.{ArgumentState, ArgumentStateWithCompleted}
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateWithCompleted
 
 /**
-  * A singleton argument state map, where singleton means it will only ever hold one STATE, of the argument 0. This is the
-  * case for all argument state maps that are not on the RHS of any apply.
-  */
+ * A singleton argument state map, where singleton means it will only ever hold one STATE, of the argument 0. This is the
+ * case for all argument state maps that are not on the RHS of any apply.
+ */
 abstract class AbstractSingletonArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: AbstractArgumentStateMap.StateController[STATE]]
   extends ArgumentStateMapWithArgumentIdCounter[STATE] with ArgumentStateMapWithoutArgumentIdCounter[STATE] {
 
@@ -22,21 +23,21 @@ abstract class AbstractSingletonArgumentStateMap[STATE <: ArgumentState, CONTROL
   // ABSTRACT STUFF
 
   /**
-    * The only controller.
-    */
+   * The only controller.
+   */
   protected var controller: CONTROLLER
 
   protected var hasController: Boolean
 
   // Not assigned here since the Concurrent implementation needs to declare this volatile
   /**
-    * A private counter for the methods [[takeNextIfCompletedOrElsePeek()]], [[nextArgumentStateIsCompletedOr()]], and [[peekNext()]]. Will only be -1 or 0.
-    */
+   * A private counter for the methods [[takeNextIfCompletedOrElsePeek()]], [[nextArgumentStateIsCompletedOr()]], and [[peekNext()]]. Will only be -1 or 0.
+   */
   protected var lastCompletedArgumentId: Long
 
   /**
-    * Create a new state controller
-    */
+   * Create a new state controller
+   */
   protected def newStateController(argument: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): CONTROLLER
 
   // ARGUMENT STATE MAP FUNCTIONALITY
@@ -59,7 +60,7 @@ abstract class AbstractSingletonArgumentStateMap[STATE <: ArgumentState, CONTROL
                          onRow: (U, MorselExecutionContext) => Boolean): Unit = {
     val filterState = onArgument(controller.state, morsel.getValidRows)
     ArgumentStateMap.filter(morsel,
-                            row => onRow(filterState, row))
+      row => onRow(filterState, row))
   }
 
   override def takeOneCompleted(): STATE = {

@@ -8,17 +8,17 @@ package org.neo4j.cypher.internal.runtime.pipelined.state
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
 
 /**
-  * Allows executing over the same input morsel in parallel.
-  */
+ * Allows executing over the same input morsel in parallel.
+ */
 trait MorselParallelizer {
 
   /**
-    * Return the original morsel holding the data of this parallelizer.
-    */
+   * Return the original morsel holding the data of this parallelizer.
+   */
   def originalForClosing: MorselExecutionContext
 
   /**
-    * Return the next shallow copy of the underlying morsel.
-    */
+   * Return the next shallow copy of the underlying morsel.
+   */
   def nextCopy: MorselExecutionContext
 }

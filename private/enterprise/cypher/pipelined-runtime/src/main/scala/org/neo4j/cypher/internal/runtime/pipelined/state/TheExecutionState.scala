@@ -7,20 +7,35 @@ package org.neo4j.cypher.internal.runtime.pipelined.state
 
 import org.neo4j.cypher.internal.RuntimeResourceLeakException
 import org.neo4j.cypher.internal.macros.AssertMacros.checkOnlyWhenAssertionsAreEnabled
+import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
+import org.neo4j.cypher.internal.physicalplanning.BufferId
+import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
+import org.neo4j.cypher.internal.physicalplanning.PipelineId
 import org.neo4j.cypher.internal.physicalplanning.PipelineId.NO_PIPELINE
-import org.neo4j.cypher.internal.physicalplanning._
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
-import org.neo4j.cypher.internal.runtime.pipelined._
-import org.neo4j.cypher.internal.runtime.pipelined.execution._
-import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory, MorselAccumulator}
+import org.neo4j.cypher.internal.runtime.pipelined.CleanUpTask
+import org.neo4j.cypher.internal.runtime.pipelined.ExecutablePipeline
+import org.neo4j.cypher.internal.runtime.pipelined.ExecutionState
+import org.neo4j.cypher.internal.runtime.pipelined.PipelineState
+import org.neo4j.cypher.internal.runtime.pipelined.PipelineTask
+import org.neo4j.cypher.internal.runtime.pipelined.execution.AlarmSink
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
+import org.neo4j.cypher.internal.runtime.pipelined.execution.WorkerWaker
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffer
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatorAndMorsel
-import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.{Buffer, Buffers, Sink}
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Sink
 import org.neo4j.util.Preconditions
 
 /**
-  * Implementation of [[ExecutionState]].
-  */
+ * Implementation of [[ExecutionState]].
+ */
 class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
                         pipelines: Seq[ExecutablePipeline],
                         stateFactory: StateFactory,
@@ -49,9 +64,9 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
   private val argumentStateMapHolder = new Array[ArgumentStateMap[_ <: ArgumentState]](executionGraphDefinition.argumentStateMaps.size)
   override val argumentStateMaps: ArgumentStateMap.ArgumentStateMaps = id => argumentStateMapHolder(id.x)
   private val buffers: Buffers = new Buffers(executionGraphDefinition.buffers.size,
-                                             tracker,
-                                             argumentStateMaps,
-                                             stateFactory)
+    tracker,
+    argumentStateMaps,
+    stateFactory)
 
 
   // This can hold a CleanUpTask if the query was cancelled. It will get scheduled before anything else.
@@ -63,7 +78,7 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
     while (i >= 0) {
       val pipeline = pipelines(i)
       pipeline.outputOperator.outputBuffer.foreach(bufferId =>
-                                                   buffers.constructBuffer(executionGraphDefinition.buffers(bufferId.x)))
+        buffers.constructBuffer(executionGraphDefinition.buffers(bufferId.x)))
       states(i) = pipeline.createState(this, queryContext, queryState, initializationResources, stateFactory)
       buffers.constructBuffer(pipeline.inputBuffer)
       i -= 1
@@ -232,10 +247,10 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
   }
 
   /**
-    * Mark this query as failed, and close any outstanding work.
-    *
-    * @param throwable the observed exception
-    */
+   * Mark this query as failed, and close any outstanding work.
+   *
+   * @param throwable the observed exception
+   */
   override def failQuery(throwable: Throwable,
                          resources: QueryResources,
                          failedPipeline: ExecutablePipeline): Unit = {
@@ -247,8 +262,8 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
   }
 
   /**
-    * Cancel this query, and close any outstanding work.
-    */
+   * Cancel this query, and close any outstanding work.
+   */
   override def cancelQuery(resources: QueryResources): Unit = {
     closeOutstandingWork(resources, failedPipeline = null)
   }
@@ -262,20 +277,20 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
   }
 
   /**
-    * To achieve a clean shut-down, we
-    *
-    *  - close any new continuations being put into the execution state
-    *  - drop any new data being put into the execution state
-    *  - take and close all continuations and data we find in the execution state
-    *
-    *  This method is intended to be called only once, but written in a way that allows
-    *  multiple calls to it that behave idempotent. This is needed if several threads encounter
-    *  Exceptions simultaneously.
-    *
-    * @param resources      resources where to hand-back any open cursors
-    * @param failedPipeline pipeline that was executing while the failure occurred, or `null` if
-    *                       the failure happened outside of pipeline execution
-    */
+   * To achieve a clean shut-down, we
+   *
+   *  - close any new continuations being put into the execution state
+   *  - drop any new data being put into the execution state
+   *  - take and close all continuations and data we find in the execution state
+   *
+   *  This method is intended to be called only once, but written in a way that allows
+   *  multiple calls to it that behave idempotent. This is needed if several threads encounter
+   *  Exceptions simultaneously.
+   *
+   * @param resources      resources where to hand-back any open cursors
+   * @param failedPipeline pipeline that was executing while the failure occurred, or `null` if
+   *                       the failure happened outside of pipeline execution
+   */
   private def closeOutstandingWork(resources: QueryResources, failedPipeline: ExecutablePipeline): Unit = {
     queryStatus.cancelled = true
 
@@ -302,8 +317,8 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
   }
 
   /**
-    * Assert that all buffers, continuations and argument state maps are empty.
-    */
+   * Assert that all buffers, continuations and argument state maps are empty.
+   */
   private def assertEmpty(): Unit = {
     buffers.assertAllEmpty()
     var i = 0

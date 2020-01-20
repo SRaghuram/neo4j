@@ -5,35 +5,77 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.operators
 
-import org.neo4j.codegen.api.IntermediateRepresentation._
-import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable, Method}
-import org.neo4j.cypher.internal.physicalplanning.{SlotConfiguration, SlottedIndexedProperty}
+import org.neo4j.codegen.api.Field
+import org.neo4j.codegen.api.IntermediateRepresentation
+import org.neo4j.codegen.api.IntermediateRepresentation.and
+import org.neo4j.codegen.api.IntermediateRepresentation.assign
+import org.neo4j.codegen.api.IntermediateRepresentation.block
+import org.neo4j.codegen.api.IntermediateRepresentation.cast
+import org.neo4j.codegen.api.IntermediateRepresentation.condition
+import org.neo4j.codegen.api.IntermediateRepresentation.constant
+import org.neo4j.codegen.api.IntermediateRepresentation.declareAndAssign
+import org.neo4j.codegen.api.IntermediateRepresentation.field
+import org.neo4j.codegen.api.IntermediateRepresentation.invoke
+import org.neo4j.codegen.api.IntermediateRepresentation.invokeSideEffect
+import org.neo4j.codegen.api.IntermediateRepresentation.invokeStatic
+import org.neo4j.codegen.api.IntermediateRepresentation.isNotNull
+import org.neo4j.codegen.api.IntermediateRepresentation.load
+import org.neo4j.codegen.api.IntermediateRepresentation.loadField
+import org.neo4j.codegen.api.IntermediateRepresentation.loop
+import org.neo4j.codegen.api.IntermediateRepresentation.method
+import org.neo4j.codegen.api.IntermediateRepresentation.noop
+import org.neo4j.codegen.api.IntermediateRepresentation.setField
+import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
+import org.neo4j.codegen.api.IntermediateRepresentation.variable
+import org.neo4j.codegen.api.LocalVariable
+import org.neo4j.codegen.api.Method
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+import org.neo4j.cypher.internal.physicalplanning.SlottedIndexedProperty
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
+import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.IsNoValue
+import org.neo4j.cypher.internal.runtime.NoMemoryTracker
+import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.pipelined.NodeIndexCursorRepresentation
+import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeIndexStringSearchScanOperator.isValidOrThrowMethod
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.CURSOR_POOL_V
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.allocateAndTraceCursor
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.ALLOCATE_NODE_INDEX_CURSOR
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.nodeIndexSeek
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.indexReadSession
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profilingCursorNext
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.freeCursor
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.NodeValueIndexCursorPool
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
-import org.neo4j.cypher.internal.runtime.pipelined.{NodeIndexCursorRepresentation, OperatorExpressionCompiler}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
-import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
-import org.neo4j.cypher.internal.runtime.{ExecutionContext, IsNoValue, NoMemoryTracker, QueryContext}
+import org.neo4j.cypher.internal.runtime.slotted.SlottedQueryState
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.CypherTypeException
-import org.neo4j.internal.kernel.api._
+import org.neo4j.internal.kernel.api.IndexQuery
+import org.neo4j.internal.kernel.api.IndexReadSession
+import org.neo4j.internal.kernel.api.KernelReadTracer
+import org.neo4j.internal.kernel.api.NodeValueIndexCursor
 import org.neo4j.internal.schema.IndexOrder
 import org.neo4j.values.AnyValue
-import org.neo4j.values.storable.{TextValue, Value}
+import org.neo4j.values.storable.TextValue
+import org.neo4j.values.storable.Value
+
 
 abstract class NodeIndexStringSearchScanOperator(val workIdentity: WorkIdentity,
-                                        nodeOffset: Int,
-                                        property: SlottedIndexedProperty,
-                                        queryIndexId: Int,
-                                        indexOrder: IndexOrder,
-                                        valueExpr: Expression,
-                                        argumentSize: SlotConfiguration.Size)
+                                                 nodeOffset: Int,
+                                                 property: SlottedIndexedProperty,
+                                                 queryIndexId: Int,
+                                                 indexOrder: IndexOrder,
+                                                 valueExpr: Expression,
+                                                 argumentSize: SlotConfiguration.Size)
   extends NodeIndexOperatorWithValues[NodeValueIndexCursor](nodeOffset, Array(property)) {
 
   override def nextTasks(queryContext: QueryContext,
@@ -61,14 +103,14 @@ abstract class NodeIndexStringSearchScanOperator(val workIdentity: WorkIdentity,
                                                initExecutionContext: ExecutionContext): Boolean = {
 
       val read = context.transactionalContext.dataRead
-      val queryState = new OldQueryState(context,
-                                           resources = null,
-                                           params = state.params,
-                                           resources.expressionCursors,
-                                           Array.empty[IndexReadSession],
-                                           resources.expressionVariables(state.nExpressionSlots),
-                                           state.subscriber,
-                                           NoMemoryTracker)
+      val queryState = new SlottedQueryState(context,
+        resources = null,
+        params = state.params,
+        resources.expressionCursors,
+        Array.empty[IndexReadSession],
+        resources.expressionVariables(state.nExpressionSlots),
+        state.subscriber,
+        NoMemoryTracker)
 
       initExecutionContext.copyFrom(inputMorsel, argumentSize.nLongs, argumentSize.nReferences)
       val value = valueExpr(initExecutionContext, queryState)
@@ -122,12 +164,12 @@ class NodeIndexContainsScanOperator(workIdentity: WorkIdentity,
                                     valueExpr: Expression,
                                     argumentSize: SlotConfiguration.Size)
   extends NodeIndexStringSearchScanOperator(workIdentity,
-                                            nodeOffset,
-                                            property,
-                                            queryIndexId,
-                                            indexOrder,
-                                            valueExpr,
-                                            argumentSize) {
+    nodeOffset,
+    property,
+    queryIndexId,
+    indexOrder,
+    valueExpr,
+    argumentSize) {
 
   override def computeIndexQuery(property: Int,
                                  value: TextValue): IndexQuery = IndexQuery.stringContains(property, value)
@@ -141,12 +183,12 @@ class NodeIndexEndsWithScanOperator(workIdentity: WorkIdentity,
                                     valueExpr: Expression,
                                     argumentSize: SlotConfiguration.Size)
   extends NodeIndexStringSearchScanOperator(workIdentity,
-                                            nodeOffset,
-                                            property,
-                                            queryIndexId,
-                                            indexOrder,
-                                            valueExpr,
-                                            argumentSize) {
+    nodeOffset,
+    property,
+    queryIndexId,
+    indexOrder,
+    valueExpr,
+    argumentSize) {
 
   override def computeIndexQuery(property: Int,
                                  value: TextValue): IndexQuery = IndexQuery.stringSuffix(property, value)
@@ -166,7 +208,6 @@ class NodeIndexStringSearchScanTaskTemplate(inner: OperatorTaskTemplate,
                                            (codeGen: OperatorExpressionCompiler)
   extends InputLoopTaskTemplate(inner, id, innermost, codeGen) {
 
-  import OperatorCodeGenHelperTemplates._
 
   private val nodeIndexCursorField = field[NodeValueIndexCursor](codeGen.namer.nextVariableName())
   private val needsValues = property.getValueFromIndex
@@ -183,9 +224,9 @@ class NodeIndexStringSearchScanTaskTemplate(inner: OperatorTaskTemplate,
     block(
       condition(isNotNull(loadField(nodeIndexCursorField)))(
         invokeSideEffect(loadField(nodeIndexCursorField), method[NodeValueIndexCursor, Unit, KernelReadTracer]("setTracer"), event)
-        ),
+      ),
       inner.genSetExecutionEvent(event)
-      )
+    )
 
   override def genExpressions: Seq[IntermediateExpression] = Seq(seekExpression)
 
@@ -193,13 +234,13 @@ class NodeIndexStringSearchScanTaskTemplate(inner: OperatorTaskTemplate,
     seekExpression = generateExpression()
     val hasInnerLoop = codeGen.namer.nextVariableName()
     /**
-      * {{{
-      *   this.nodeIndexCursor = resources.cursorPools.nodeValueIndexCursorPool.allocate()
-      *   context.transactionalContext.dataRead.nodeIndexSeek(session, cursor, indexOrder, needsValues, searchPredicate)
-      *   this.canContinue = nodeIndexCursor.next()
-      *   true
-      * }}}
-      */
+     * {{{
+     *   this.nodeIndexCursor = resources.cursorPools.nodeValueIndexCursorPool.allocate()
+     *   context.transactionalContext.dataRead.nodeIndexSeek(session, cursor, indexOrder, needsValues, searchPredicate)
+     *   this.canContinue = nodeIndexCursor.next()
+     *   true
+     * }}}
+     */
     block(
       assign(seekVariable, nullCheckIfRequired(seekExpression)),
       declareAndAssign(typeRefOf[Boolean], hasInnerLoop, constant(false)),
@@ -211,53 +252,53 @@ class NodeIndexStringSearchScanTaskTemplate(inner: OperatorTaskTemplate,
             indexReadSession(queryIndexId),
             loadField(nodeIndexCursorField),
             searchPredicate(property.propertyKeyId,
-                            cast[TextValue](load(seekVariable))), indexOrder, needsValues),
+              cast[TextValue](load(seekVariable))), indexOrder, needsValues),
           setField(canContinue, profilingCursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField), id)),
           assign(hasInnerLoop, loadField(canContinue))
         )
-       ),
+      ),
       load(hasInnerLoop))
   }
 
   override protected def genInnerLoop: IntermediateRepresentation = {
     /**
-      * {{{
-      *   while (hasDemand && this.canContinue) {
-      *     setLongAt(offset, nodeIndexCursor.nodeReference())
-      *     setCachedPropertyAt(cacheOffset, nodeCursor.propertyValue(0))
-      *     ...
-      *     << inner.genOperate >>
-      *     this.canContinue = this.nodeIndexCursor.next()
-      *   }
-      * }}}
-      */
+     * {{{
+     *   while (hasDemand && this.canContinue) {
+     *     setLongAt(offset, nodeIndexCursor.nodeReference())
+     *     setCachedPropertyAt(cacheOffset, nodeCursor.propertyValue(0))
+     *     ...
+     *     << inner.genOperate >>
+     *     this.canContinue = this.nodeIndexCursor.next()
+     *   }
+     * }}}
+     */
     loop(and(innermost.predicate, loadField(canContinue)))(
       block(
         codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),
         codeGen.setLongAt(offset, invoke(loadField(nodeIndexCursorField), method[NodeValueIndexCursor, Long]("nodeReference"))),
         property.maybeCachedNodePropertySlot.map(
           codeGen.setCachedPropertyAt(_,
-                                      invoke(loadField(nodeIndexCursorField),
-                                             method[NodeValueIndexCursor, Value, Int]("propertyValue"),
-                                             constant(0) ))
-          ).getOrElse(noop()),
+            invoke(loadField(nodeIndexCursorField),
+              method[NodeValueIndexCursor, Value, Int]("propertyValue"),
+              constant(0) ))
+        ).getOrElse(noop()),
         inner.genOperateWithExpressions,
         doIfInnerCantContinue(setField(canContinue, profilingCursorNext[NodeValueIndexCursor](loadField(nodeIndexCursorField), id)))
-        )
       )
+    )
   }
 
   override protected def genCloseInnerLoop: IntermediateRepresentation = {
     /**
-      * {{{
-      *   resources.cursorPools.nodeValueIndexCursorPool.free(nodeIndexCursor)
-      *   nodeIndexCursor = null
-      * }}}
-      */
+     * {{{
+     *   resources.cursorPools.nodeValueIndexCursorPool.free(nodeIndexCursor)
+     *   nodeIndexCursor = null
+     * }}}
+     */
     block(
       freeCursor[NodeValueIndexCursor](loadField(nodeIndexCursorField), NodeValueIndexCursorPool),
       setField(nodeIndexCursorField, constant(null))
-      )
+    )
   }
 }
 

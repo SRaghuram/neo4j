@@ -5,20 +5,25 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.aggregators
 
-import org.neo4j.cypher.internal.physicalplanning.PhysicalPlan
+import org.neo4j.cypher.internal.expressions.CountStar
+import org.neo4j.cypher.internal.expressions.FunctionInvocation
+import org.neo4j.cypher.internal.expressions.Null
+import org.neo4j.cypher.internal.expressions.functions
+import org.neo4j.cypher.internal.expressions
 import org.neo4j.cypher.internal.expressions.functions.AggregatingFunction
-import org.neo4j.cypher.internal.expressions.{CountStar, FunctionInvocation, Null, functions, Expression => AstExpression}
-import org.neo4j.exceptions.{CantCompileQueryException, SyntaxException}
+import org.neo4j.cypher.internal.physicalplanning.PhysicalPlan
+import org.neo4j.exceptions.CantCompileQueryException
+import org.neo4j.exceptions.SyntaxException
 
 case class AggregatorFactory(physicalPlan: PhysicalPlan) {
 
   /**
-    * Creates a new [[Aggregator]] from an input AST Expression. Will also return the command [[AstExpression]]
-    * required to compute the aggregator input value.
-    */
-  def newAggregator(expression: AstExpression): (Aggregator, AstExpression) =
+   * Creates a new [[Aggregator]] from an input AST Expression. Will also return the command [[expressions.Expression]]
+   * required to compute the aggregator input value.
+   */
+  def newAggregator(expression: expressions.Expression): (Aggregator, expressions.Expression) =
     expression match {
-        // TODO move somewhere else
+      // TODO move somewhere else
       case e if e.arguments.exists(_.containsAggregate) =>
         throw new SyntaxException("Can't use aggregate functions inside of aggregate functions.")
       case e if !e.isDeterministic =>

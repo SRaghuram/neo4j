@@ -10,13 +10,14 @@ import java.util.concurrent.atomic.AtomicReference
 import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
 import org.neo4j.exceptions.CypherTypeException
 import org.neo4j.values.AnyValue
-import org.neo4j.values.storable.{DurationValue, NumberValue, Values}
+import org.neo4j.values.storable.DurationValue
+import org.neo4j.values.storable.NumberValue
+import org.neo4j.values.storable.Values
 import org.neo4j.values.utils.ValueMath.overflowSafeAdd
 
-
 /**
-  * Aggregator for sum(...).
-  */
+ * Aggregator for sum(...).
+ */
 case object SumAggregator extends Aggregator {
 
   override def newUpdater: Updater = new SumUpdater

@@ -5,13 +5,14 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.operators
 
-import org.neo4j.cypher.internal.physicalplanning.{SlotConfiguration, SlottedIndexedProperty}
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+import org.neo4j.cypher.internal.physicalplanning.SlottedIndexedProperty
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
 import org.neo4j.internal.kernel.api.NodeValueIndexCursor
 
 /**
-  * For index operators that get nodes together with actual property values.
-  */
+ * For index operators that get nodes together with actual property values.
+ */
 abstract class NodeIndexOperatorWithValues[CURSOR <: NodeValueIndexCursor](nodeOffset: Int, properties: Array[SlottedIndexedProperty])
   extends StreamingOperator {
 

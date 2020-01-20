@@ -5,15 +5,22 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.operators
 
-import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, SlotConfiguration}
+import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{MorselExecutionContext, QueryResources, QueryState}
-import org.neo4j.cypher.internal.runtime.pipelined.operators.CartesianProductOperator.LHSMorsel
-import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.{ArgumentStateFactory, ArgumentStateMaps, MorselAccumulator}
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
-import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.{ArgumentStateBuffer, MorselAttachBuffer}
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.ArgumentStateBuffer
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.MorselAttachBuffer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
-import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
+import org.neo4j.cypher.internal.runtime.pipelined.operators.CartesianProductOperator.LHSMorsel
 
 class CartesianProductOperator(val workIdentity: WorkIdentity,
                                lhsArgumentStateMapId: ArgumentStateMapId,
@@ -49,7 +56,7 @@ class CartesianProductOperator(val workIdentity: WorkIdentity,
   // Extending InputLoopTask first to get the correct producingWorkUnitEvent implementation
   class OTask(override val accumulator: LHSMorsel, rhsRow: MorselExecutionContext)
     extends InputLoopTask
-      with ContinuableOperatorTaskWithMorselAndAccumulator[MorselExecutionContext, LHSMorsel] {
+    with ContinuableOperatorTaskWithMorselAndAccumulator[MorselExecutionContext, LHSMorsel] {
 
     override def workIdentity: WorkIdentity = CartesianProductOperator.this.workIdentity
 
@@ -77,10 +84,10 @@ class CartesianProductOperator(val workIdentity: WorkIdentity,
         rhsRow.moveToNextRow()
         inputMorsel.copyTo(outputRow) // lhs
         rhsRow.copyTo(outputRow,
-                      sourceLongOffset = argumentSize.nLongs, // Skip over arguments since they should be identical to lhsCtx
-                      sourceRefOffset = argumentSize.nReferences,
-                      targetLongOffset = lhsSlots.numberOfLongs,
-                      targetRefOffset = lhsSlots.numberOfReferences)
+          sourceLongOffset = argumentSize.nLongs, // Skip over arguments since they should be identical to lhsCtx
+          sourceRefOffset = argumentSize.nReferences,
+          targetLongOffset = lhsSlots.numberOfLongs,
+          targetRefOffset = lhsSlots.numberOfReferences)
         outputRow.moveToNextRow()
       }
     }

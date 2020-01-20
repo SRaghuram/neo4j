@@ -10,27 +10,27 @@ import java.util.concurrent.atomic.AtomicBoolean
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 
 /**
-  * Basic lock.
-  */
+ * Basic lock.
+ */
 trait Lock {
   /**
-    * Try to acquire this lock.
-    * @return true iff the lock was acquired
-    */
+   * Try to acquire this lock.
+   * @return true iff the lock was acquired
+   */
   def tryLock(): Boolean
 
   /**
-    * Release this lock.
-    */
+   * Release this lock.
+   */
   def unlock(): Unit
 }
 
 /**
-  * Dummy implementation of [[Lock]] which can be used to catch
-  * trivial bugs in single threaded execution.
-  *
-  * @param id some id that can be used to identify this lock instance
-  */
+ * Dummy implementation of [[Lock]] which can be used to catch
+ * trivial bugs in single threaded execution.
+ *
+ * @param id some id that can be used to identify this lock instance
+ */
 class NoLock(val id: String) extends Lock {
 
   private var isLocked = false
@@ -59,10 +59,10 @@ class NoLock(val id: String) extends Lock {
 }
 
 /**
-  * Proper concurrent implementation of [[Lock]] based on [[AtomicBoolean]].
-  *
-  * @param id some id that can be used to identify this lock instance
-  */
+ * Proper concurrent implementation of [[Lock]] based on [[AtomicBoolean]].
+ *
+ * @param id some id that can be used to identify this lock instance
+ */
 class ConcurrentLock(val id: String) extends Lock {
   private val isLocked = new AtomicBoolean(false)
 

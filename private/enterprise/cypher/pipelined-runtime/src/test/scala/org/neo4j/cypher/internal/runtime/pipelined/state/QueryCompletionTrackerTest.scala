@@ -5,24 +5,30 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.state
 
-import org.mockito.ArgumentMatchers._
-import org.mockito.Mockito._
+import org.mockito.ArgumentMatchers.any
+import org.mockito.Mockito.RETURNS_DEEP_STUBS
+import org.mockito.Mockito.never
+import org.mockito.Mockito.times
+import org.mockito.Mockito.verify
+import org.mockito.Mockito.when
+import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.QueryStatistics
+import org.neo4j.cypher.internal.runtime.QueryTransactionalContext
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.QueryExecutionTracer
-import org.neo4j.cypher.internal.runtime.{QueryContext, QueryStatistics, QueryTransactionalContext}
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 import org.neo4j.kernel.api.KernelTransaction
 import org.neo4j.kernel.impl.query.QuerySubscriber
 
 class StandardQueryCompletionTrackerTest extends QueryCompletionTrackerTest(false) {
   override def newTracker(): QueryCompletionTracker = new StandardQueryCompletionTracker(subscriber,
-                                                                                         queryContext,
-                                                                                         tracer)
+    queryContext,
+    tracer)
 }
 
 class ConcurrentQueryCompletionTrackerTest extends QueryCompletionTrackerTest(true) {
   override def newTracker(): QueryCompletionTracker = new ConcurrentQueryCompletionTracker(subscriber,
-                                                                                           queryContext,
-                                                                                           tracer)
+    queryContext,
+    tracer)
 }
 
 abstract class QueryCompletionTrackerTest(shouldThawLocks: Boolean) extends CypherFunSuite {

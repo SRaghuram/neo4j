@@ -5,16 +5,24 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.state
 
-import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, TopLevelArgument}
-import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory}
-import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.{Buffer, ConcurrentBuffer, ConcurrentSingletonBuffer, SingletonBuffer}
+import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
+import org.neo4j.cypher.internal.physicalplanning.TopLevelArgument
+import org.neo4j.cypher.internal.runtime.NoMemoryTracker
+import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
+import org.neo4j.cypher.internal.runtime.WithHeapUsageEstimation
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffer
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.ConcurrentBuffer
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.ConcurrentSingletonBuffer
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.SingletonBuffer
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.QueryExecutionTracer
-import org.neo4j.cypher.internal.runtime.{NoMemoryTracker, QueryContext, QueryMemoryTracker, WithHeapUsageEstimation}
 import org.neo4j.kernel.impl.query.QuerySubscriber
 
 /**
-  * Implementation of [[StateFactory]] which constructs concurrent state management classes.
-  */
+ * Implementation of [[StateFactory]] which constructs concurrent state management classes.
+ */
 class ConcurrentStateFactory extends StateFactory {
   override def newBuffer[T <: WithHeapUsageEstimation](): Buffer[T] = new ConcurrentBuffer[T]
 

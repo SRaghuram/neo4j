@@ -4,6 +4,7 @@
  * This file is a commercial add-on to Neo4j Enterprise Edition.
  */
 package org.neo4j.cypher.internal.runtime.pipelined.aggregators
+
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 
@@ -11,10 +12,9 @@ import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
 
-
 /**
-  * Aggregator for count(...).
-  */
+ * Aggregator for count(...).
+ */
 case object CountAggregator extends Aggregator {
 
   override def newUpdater: Updater = new CountUpdater
@@ -29,8 +29,8 @@ case object CountAggregator extends Aggregator {
 }
 
 /**
-  * Aggregator for count(DISTINCT..).
-  */
+ * Aggregator for count(DISTINCT..).
+ */
 case object CountDistinctAggregator extends Aggregator {
 
   override def newUpdater: Updater = new CountDistinctUpdater
@@ -46,8 +46,8 @@ class CountDistinctUpdater() extends Updater {
     }
 }
 /**
-  * Aggregator for count(*).
-  */
+ * Aggregator for count(*).
+ */
 case object CountStarAggregator extends Aggregator {
 
   override def newUpdater: Updater = new CountStarUpdater

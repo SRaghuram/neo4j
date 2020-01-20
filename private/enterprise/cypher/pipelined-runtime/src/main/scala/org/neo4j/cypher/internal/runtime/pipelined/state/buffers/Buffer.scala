@@ -48,36 +48,35 @@ trait Sink[-T <: AnyRef] {
     * Put an element in this sink
     */
   def put(t: T): Unit
-
   /**
-    * Checks if there is room in the sink
-    * @return `true` if there is room in the sink, otherwise `false`
-    */
+   * Checks if there is room in the sink
+   * @return `true` if there is room in the sink, otherwise `false`
+   */
   def canPut: Boolean
 
 }
 
 /**
-  * Place where you take things of type `T`.
-  */
+ * Place where you take things of type `T`.
+ */
 trait Source[+T <: AnyRef] {
 
   /**
-    * @return `true` if this source has data
-    */
+   * @return `true` if this source has data
+   */
   def hasData: Boolean
 
   /**
-    * This modifies the source and removes the returned element.
-    *
-    * @return the T to take, or `null` if nothing is available
-    */
+   * This modifies the source and removes the returned element.
+   *
+   * @return the T to take, or `null` if nothing is available
+   */
   def take(): T
 }
 
 /**
-  * A source where you can also close the things you take.
-  */
+ * A source where you can also close the things you take.
+ */
 trait ClosingSource[T <: AnyRef] extends Source[T] {
 
   def close(data: T): Unit

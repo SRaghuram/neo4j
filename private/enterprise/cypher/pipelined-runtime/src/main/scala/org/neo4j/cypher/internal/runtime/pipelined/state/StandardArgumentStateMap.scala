@@ -8,12 +8,13 @@ package org.neo4j.cypher.internal.runtime.pipelined.state
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.pipelined.state.AbstractArgumentStateMap.ImmutableStateController
-import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory}
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.StandardArgumentStateMap.StandardStateController
 
 /**
-  * Not thread-safe and quite naive implementation of ArgumentStateMap. JustGetItWorking(tm)
-  */
+ * Not thread-safe and quite naive implementation of ArgumentStateMap. JustGetItWorking(tm)
+ */
 class StandardArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId: ArgumentStateMapId,
                                                        val argumentSlotOffset: Int,
                                                        factory: ArgumentStateFactory[STATE])
@@ -36,9 +37,9 @@ class StandardArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId: A
 
 object StandardArgumentStateMap {
 
- /**
-  * Controller which knows when an [[ArgumentState]] is complete.
-  */
+  /**
+   * Controller which knows when an [[ArgumentState]] is complete.
+   */
   private[state] class StandardStateController[STATE <: ArgumentState](override val state: STATE)
     extends AbstractArgumentStateMap.StateController[STATE] {
 
@@ -62,7 +63,7 @@ object StandardArgumentStateMap {
     // No actual "taking" in single threaded
     override def take(): Boolean = true
 
-   override def toString: String = {
+    override def toString: String = {
       s"[count: ${_count}, state: $state]"
     }
   }

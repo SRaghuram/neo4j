@@ -8,13 +8,13 @@ package org.neo4j.cypher.internal.runtime.pipelined.aggregators
 import java.util.concurrent.atomic.AtomicReference
 
 import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
+import org.neo4j.values.AnyValue
+import org.neo4j.values.AnyValues
 import org.neo4j.values.storable.Values
-import org.neo4j.values.{AnyValue, AnyValues}
-
 
 /**
-  * Aggregator for max(...).
-  */
+ * Aggregator for max(...).
+ */
 case object MaxAggregator extends Aggregator {
 
   override def newUpdater: Updater = new MaxUpdater

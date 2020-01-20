@@ -6,19 +6,25 @@
 package org.neo4j.cypher.internal.runtime.pipelined
 
 import org.neo4j.cypher.internal.profiling.QueryProfiler
+import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.WithHeapUsageEstimation
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{MorselExecutionContext, QueryResources, QueryState}
-import org.neo4j.cypher.internal.runtime.pipelined.operators.{ContinuableOperatorTask, OperatorTask, OutputOperatorState, PreparedOutput}
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
+import org.neo4j.cypher.internal.runtime.pipelined.operators.ContinuableOperatorTask
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorTask
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OutputOperatorState
+import org.neo4j.cypher.internal.runtime.pipelined.operators.PreparedOutput
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.WorkUnitEvent
-import org.neo4j.cypher.internal.runtime.{QueryContext, WithHeapUsageEstimation}
 import org.neo4j.cypher.internal.util.attribution.Id
 
 /**
-  * The [[Task]] of executing an [[ExecutablePipeline]] once.
-  *
-  * @param startTask  task for executing the start operator
-  * @param state  the current QueryState
-  */
+ * The [[Task]] of executing an [[ExecutablePipeline]] once.
+ *
+ * @param startTask  task for executing the start operator
+ * @param state  the current QueryState
+ */
 case class PipelineTask(startTask: ContinuableOperatorTask,
                         middleTasks: Array[OperatorTask],
                         outputOperatorState: OutputOperatorState,
@@ -28,21 +34,21 @@ case class PipelineTask(startTask: ContinuableOperatorTask,
   extends Task[QueryResources] with WithHeapUsageEstimation {
 
   /**
-    * This _output reference is needed to support reactive results in produce results,
-    * and in particular for ProduceResultsOperator to leave continuations. So if all
-    * demand is met before we have produces all output, the _output morsel will be != null,
-    * and the next work unit of this task will continue produce output off that _output,
-    * and not do any other work.
-    *
-    * It is important the all previous output is produced before continuing on any input,
-    * in order to retain the produced row order. Also we can never cancel a task with
-    * unprocessed _output.
-    */
+   * This _output reference is needed to support reactive results in produce results,
+   * and in particular for ProduceResultsOperator to leave continuations. So if all
+   * demand is met before we have produces all output, the _output morsel will be != null,
+   * and the next work unit of this task will continue produce output off that _output,
+   * and not do any other work.
+   *
+   * It is important the all previous output is produced before continuing on any input,
+   * in order to retain the produced row order. Also we can never cancel a task with
+   * unprocessed _output.
+   */
   private var _output: MorselExecutionContext = _
 
   override def executeWorkUnit(resources: QueryResources,
-                                     workUnitEvent: WorkUnitEvent,
-                                     queryProfiler: QueryProfiler): PreparedOutput = {
+                               workUnitEvent: WorkUnitEvent,
+                               queryProfiler: QueryProfiler): PreparedOutput = {
     if (_output == null) {
       _output = pipelineState.allocateMorsel(workUnitEvent, state)
       executeOperators(resources, queryProfiler)
@@ -81,10 +87,10 @@ case class PipelineTask(startTask: ContinuableOperatorTask,
   }
 
   /**
-    * Remove everything related to cancelled argumentRowIds from to the task's input.
-    *
-    * @return `true` if the task has become obsolete.
-    */
+   * Remove everything related to cancelled argumentRowIds from to the task's input.
+   *
+   * @return `true` if the task has become obsolete.
+   */
   def filterCancelledArguments(resources: QueryResources): Boolean = {
     if (_output == null) {
       val isCancelled = startTask.filterCancelledArguments(pipelineState)
@@ -98,8 +104,8 @@ case class PipelineTask(startTask: ContinuableOperatorTask,
   }
 
   /**
-    * Close resources related to this task and update relevant counts.
-    */
+   * Close resources related to this task and update relevant counts.
+   */
   def close(resources: QueryResources): Unit = {
     startTask.close(pipelineState, resources)
   }

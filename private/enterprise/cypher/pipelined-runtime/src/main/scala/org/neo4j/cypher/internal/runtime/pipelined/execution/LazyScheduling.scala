@@ -8,10 +8,12 @@ package org.neo4j.cypher.internal.runtime.pipelined.execution
 import java.util
 
 import org.eclipse.collections.impl.factory.primitive.IntStacks
-import org.neo4j.cypher.internal.physicalplanning.PipelineId.NO_PIPELINE
-import org.neo4j.cypher.internal.physicalplanning.{ExecutionGraphDefinition, PipelineId}
+import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
+import org.neo4j.cypher.internal.physicalplanning.PipelineId
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
-import org.neo4j.cypher.internal.runtime.pipelined.{SchedulingResult, Task}
+import org.neo4j.cypher.internal.runtime.pipelined.SchedulingResult
+import org.neo4j.cypher.internal.runtime.pipelined.Task
+import org.neo4j.cypher.internal.physicalplanning.PipelineId.NO_PIPELINE
 
 object LazyScheduling extends SchedulingPolicy {
   def executionGraphSchedulingPolicy(executionGraphDefinition: ExecutionGraphDefinition): ExecutionGraphSchedulingPolicy = {

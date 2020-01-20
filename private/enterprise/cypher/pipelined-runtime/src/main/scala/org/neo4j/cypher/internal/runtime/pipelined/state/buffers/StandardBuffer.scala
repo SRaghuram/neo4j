@@ -7,14 +7,15 @@ package org.neo4j.cypher.internal.runtime.pipelined.state.buffers
 
 import java.util
 
-import org.neo4j.cypher.internal.runtime.{QueryMemoryTracker, WithHeapUsageEstimation}
+import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
+import org.neo4j.cypher.internal.runtime.WithHeapUsageEstimation
 
-import scala.collection.JavaConverters._
+import scala.collection.JavaConverters.asJavaIteratorConverter
 import scala.collection.mutable.ArrayBuffer
 
 /**
-  * Implementation of a standard non-Thread-safe buffer of elements of type T.
-  */
+ * Implementation of a standard non-Thread-safe buffer of elements of type T.
+ */
 class StandardBuffer[T <: AnyRef] extends Buffer[T] {
   private val data = new ArrayBuffer[T]
 

@@ -5,19 +5,45 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.operators
 
-import org.neo4j.codegen.api.IntermediateRepresentation._
-import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable}
+import org.neo4j.codegen.api.Field
+import org.neo4j.codegen.api.IntermediateRepresentation
+import org.neo4j.codegen.api.IntermediateRepresentation.and
+import org.neo4j.codegen.api.IntermediateRepresentation.block
+import org.neo4j.codegen.api.IntermediateRepresentation.condition
+import org.neo4j.codegen.api.IntermediateRepresentation.constant
+import org.neo4j.codegen.api.IntermediateRepresentation.field
+import org.neo4j.codegen.api.IntermediateRepresentation.invoke
+import org.neo4j.codegen.api.IntermediateRepresentation.invokeSideEffect
+import org.neo4j.codegen.api.IntermediateRepresentation.isNotNull
+import org.neo4j.codegen.api.IntermediateRepresentation.loadField
+import org.neo4j.codegen.api.IntermediateRepresentation.loop
+import org.neo4j.codegen.api.IntermediateRepresentation.method
+import org.neo4j.codegen.api.IntermediateRepresentation.setField
+import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
+import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.pipelined.NodeCursorRepresentation
+import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.CURSOR_POOL_V
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.allocateAndTraceCursor
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.ALLOCATE_NODE_CURSOR
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.allNodeScan
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profilingCursorNext
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.freeCursor
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.NodeCursorPool
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
-import org.neo4j.cypher.internal.runtime.pipelined.{NodeCursorRepresentation, OperatorExpressionCompiler}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
-import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
 import org.neo4j.cypher.internal.util.attribution.Id
-import org.neo4j.internal.kernel.api.{KernelReadTracer, NodeCursor, Scan}
+import org.neo4j.internal.kernel.api.KernelReadTracer
+import org.neo4j.internal.kernel.api.NodeCursor
+import org.neo4j.internal.kernel.api.Scan
 
 class AllNodeScanOperator(val workIdentity: WorkIdentity,
                           offset: Int,
@@ -50,10 +76,10 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
   }
 
   /**
-    * A [[SingleThreadedScanTask]] will iterate over all inputRows and do a full scan for each of them.
-    *
-    * @param inputMorsel the input row, pointing to the beginning of the input morsel
-    */
+   * A [[SingleThreadedScanTask]] will iterate over all inputRows and do a full scan for each of them.
+   *
+   * @param inputMorsel the input row, pointing to the beginning of the input morsel
+   */
   class SingleThreadedScanTask(val inputMorsel: MorselExecutionContext) extends InputLoopTask {
 
     override def workIdentity: WorkIdentity = AllNodeScanOperator.this.workIdentity
@@ -92,11 +118,11 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
   }
 
   /**
-    * A [[ParallelScanTask]] reserves new batches from the Scan, until there are no more batches. It competes for these batches with other
-    * concurrently running [[ParallelScanTask]]s.
-    *
-    * For each batch, it process all the nodes and combines them with each input row.
-    */
+   * A [[ParallelScanTask]] reserves new batches from the Scan, until there are no more batches. It competes for these batches with other
+   * concurrently running [[ParallelScanTask]]s.
+   *
+   * For each batch, it process all the nodes and combines them with each input row.
+   */
   class ParallelScanTask(val inputMorsel: MorselExecutionContext,
                          scan: Scan[NodeCursor],
                          var cursor: NodeCursor,
@@ -110,8 +136,8 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
     private var deferredRow: Boolean = false
 
     /**
-      * These 2 lines make sure that the first call to [[next]] is correct.
-      */
+     * These 2 lines make sure that the first call to [[next]] is correct.
+     */
     scan.reserveBatch(cursor, batchSizeHint)
     inputMorsel.setToAfterLastRow()
 
@@ -179,7 +205,6 @@ class SingleThreadedAllNodeScanTaskTemplate(inner: OperatorTaskTemplate,
                                             val offset: Int,
                                             val argumentSize: SlotConfiguration.Size)
                                            (codeGen: OperatorExpressionCompiler) extends InputLoopTaskTemplate(inner, id, innermost, codeGen) {
-  import OperatorCodeGenHelperTemplates._
 
   private val nodeCursorField = field[NodeCursor](codeGen.namer.nextVariableName())
 
@@ -195,15 +220,15 @@ class SingleThreadedAllNodeScanTaskTemplate(inner: OperatorTaskTemplate,
 
   override protected def genInitializeInnerLoop: IntermediateRepresentation = {
     /**
-      * {{{
-      *   this.nodeCursor = resources.cursorPools.nodeCursorPool.allocate()
-      *   context.transactionalContext.dataRead.allNodesScan(cursor)
-      *   val tmp = nodeCursor.next()
-      *   profileRow(tmp)
-      *   this.canContinue = tmp
-      *   true
-      * }}}
-      */
+     * {{{
+     *   this.nodeCursor = resources.cursorPools.nodeCursorPool.allocate()
+     *   context.transactionalContext.dataRead.allNodesScan(cursor)
+     *   val tmp = nodeCursor.next()
+     *   profileRow(tmp)
+     *   this.canContinue = tmp
+     *   true
+     * }}}
+     */
     block(
       allocateAndTraceCursor(nodeCursorField, executionEventField, ALLOCATE_NODE_CURSOR),
       allNodeScan(loadField(nodeCursorField)),
@@ -214,16 +239,16 @@ class SingleThreadedAllNodeScanTaskTemplate(inner: OperatorTaskTemplate,
 
   override protected def genInnerLoop: IntermediateRepresentation = {
     /**
-      * {{{
-      *   while (hasDemand && this.canContinue) {
-      *     ...
-      *     << inner.genOperate >>
-      *   val tmp = nodeCursor.next()
-      *   profileRow(tmp)
-      *   this.canContinue = tmp
-      *   }
-      * }}}
-      */
+     * {{{
+     *   while (hasDemand && this.canContinue) {
+     *     ...
+     *     << inner.genOperate >>
+     *   val tmp = nodeCursor.next()
+     *   profileRow(tmp)
+     *   this.canContinue = tmp
+     *   }
+     * }}}
+     */
     loop(and(innermost.predicate, loadField(canContinue)))(
       block(
         // If the pipeline ends with a ProduceResult, the prefix range array copy could be skipped entirely
@@ -233,8 +258,8 @@ class SingleThreadedAllNodeScanTaskTemplate(inner: OperatorTaskTemplate,
         inner.genOperateWithExpressions,
         doIfInnerCantContinue(setField(canContinue, profilingCursorNext[NodeCursor](loadField(nodeCursorField), id))),
         endInnerLoop
-        )
       )
+    )
   }
 
   override protected def genCloseInnerLoop: IntermediateRepresentation = {

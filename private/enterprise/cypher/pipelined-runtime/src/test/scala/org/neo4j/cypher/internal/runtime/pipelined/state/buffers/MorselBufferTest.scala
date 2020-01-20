@@ -5,11 +5,17 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.state.buffers
 
-import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, BufferId, SlotConfiguration}
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{FilteringMorselExecutionContext, Morsel, MorselExecutionContext}
+import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
+import org.neo4j.cypher.internal.physicalplanning.BufferId
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+import org.neo4j.cypher.internal.runtime.pipelined.execution.FilteringMorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.pipelined.operators.MorselUnitTest
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.WorkCanceller
-import org.neo4j.cypher.internal.runtime.pipelined.state.{ArgumentStateMap, QueryCompletionTracker, StandardArgumentStateMap}
+import org.neo4j.cypher.internal.runtime.pipelined.state.QueryCompletionTracker
+import org.neo4j.cypher.internal.runtime.pipelined.state.StandardArgumentStateMap
 import org.neo4j.cypher.internal.util.symbols
 
 import scala.collection.mutable

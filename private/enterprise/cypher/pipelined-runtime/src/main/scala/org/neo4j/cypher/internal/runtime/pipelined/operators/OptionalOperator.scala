@@ -5,16 +5,25 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.operators
 
-import org.neo4j.cypher.internal.physicalplanning._
+import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
+import org.neo4j.cypher.internal.physicalplanning.LongSlot
+import org.neo4j.cypher.internal.physicalplanning.RefSlot
+import org.neo4j.cypher.internal.physicalplanning.Slot
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
+import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
-import org.neo4j.cypher.internal.runtime.pipelined.state.buffers._
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.EndOfEmptyStream
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.MorselData
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.OptionalArgumentStateBuffer
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.WorkUnitEvent
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
-import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
 import org.neo4j.values.storable.Values
 
 class OptionalOperator(val workIdentity: WorkIdentity,
@@ -29,12 +38,12 @@ class OptionalOperator(val workIdentity: WorkIdentity,
   // Compile-time initializations
   //===========================================================================
   private val setNullableSlotToNullFunctions: Seq[ExecutionContext => Unit] =
-    nullableSlots.map {
-      case LongSlot(offset, _, _) =>
-        (context: ExecutionContext) => context.setLongAt(offset, -1L)
-      case RefSlot(offset, _, _) =>
-        (context: ExecutionContext) => context.setRefAt(offset, Values.NO_VALUE)
-    }
+  nullableSlots.map {
+    case LongSlot(offset, _, _) =>
+      (context: ExecutionContext) => context.setLongAt(offset, -1L)
+    case RefSlot(offset, _, _) =>
+      (context: ExecutionContext) => context.setRefAt(offset, Values.NO_VALUE)
+  }
 
   //===========================================================================
   // Runtime code
@@ -114,8 +123,8 @@ class OptionalOperator(val workIdentity: WorkIdentity,
 
     override def canContinue: Boolean =
       (currentMorsel != null && currentMorsel.isValidRow) ||
-      morselIterator.hasNext ||
-      !consumedArgumentStream
+        morselIterator.hasNext ||
+        !consumedArgumentStream
 
     override protected def closeInput(operatorCloser: OperatorCloser): Unit = {
       operatorCloser.closeData(morselData)

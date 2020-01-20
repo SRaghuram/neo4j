@@ -5,20 +5,28 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.execution
 
-import org.neo4j.cypher.internal.macros.AssertMacros.checkOnlyWhenAssertionsAreEnabled
-import org.neo4j.cypher.internal.physicalplanning.SlotAllocation.INITIAL_SLOT_CONFIGURATION
-import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot, SlotConfiguration, TopLevelArgument}
-import org.neo4j.cypher.internal.runtime.pipelined.tracing.WorkUnitEvent
-import org.neo4j.cypher.internal.runtime.slotted.{SlottedCompatible, SlottedExecutionContext}
-import org.neo4j.cypher.internal.runtime.{EntityById, ExecutionContext, ResourceLinenumber}
 import org.neo4j.cypher.internal.expressions.ASTCachedProperty
-import org.neo4j.cypher.internal.util.symbols.{CTNode, CTRelationship}
+import org.neo4j.cypher.internal.macros.AssertMacros.checkOnlyWhenAssertionsAreEnabled
+import org.neo4j.cypher.internal.physicalplanning.LongSlot
+import org.neo4j.cypher.internal.physicalplanning.RefSlot
+import org.neo4j.cypher.internal.physicalplanning.SlotAllocation.INITIAL_SLOT_CONFIGURATION
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+import org.neo4j.cypher.internal.physicalplanning.TopLevelArgument
+import org.neo4j.cypher.internal.runtime.EntityById
+import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.ResourceLinenumber
+import org.neo4j.cypher.internal.runtime.pipelined.tracing.WorkUnitEvent
+import org.neo4j.cypher.internal.runtime.slotted.SlottedCompatible
+import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
+import org.neo4j.cypher.internal.util.symbols.CTNode
+import org.neo4j.cypher.internal.util.symbols.CTRelationship
 import org.neo4j.exceptions.InternalException
 import org.neo4j.graphdb.NotFoundException
 import org.neo4j.util.Preconditions
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Value
-import org.neo4j.values.virtual.{VirtualNodeValue, VirtualRelationshipValue}
+import org.neo4j.values.virtual.VirtualNodeValue
+import org.neo4j.values.virtual.VirtualRelationshipValue
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
@@ -113,24 +121,24 @@ class MorselExecutionContext(private[execution] final val morsel: Morsel,
   @inline def hasNextRow: Boolean = currentRow < endRow - 1
 
   /**
-    * Check if there is at least one valid row of data
-    */
+   * Check if there is at least one valid row of data
+   */
   @inline def hasData: Boolean = getValidRows > 0
 
   /**
-    * Check if the morsel is empty
-    */
+   * Check if the morsel is empty
+   */
   @inline def isEmpty: Boolean = !hasData
 
   /**
-    * Adapt the valid rows of the morsel so that the last valid row is the previous one according to the current position.
-    * This usually happens after one operator finishes writing to a morsel.
-    */
+   * Adapt the valid rows of the morsel so that the last valid row is the previous one according to the current position.
+   * This usually happens after one operator finishes writing to a morsel.
+   */
   @inline def finishedWriting(): Unit = endRow = currentRow
 
   /**
-    * Set the valid rows of the morsel to the current position of another morsel
-    */
+   * Set the valid rows of the morsel to the current position of another morsel
+   */
   def finishedWritingUsing(otherContext: MorselExecutionContext): Unit = {
     if (this.startRow != otherContext.startRow) {
       throw new IllegalStateException("Cannot write to a context from a context with a different first row.")
@@ -139,10 +147,10 @@ class MorselExecutionContext(private[execution] final val morsel: Morsel,
   }
 
   /**
-    * @param start first index of the view (inclusive start)
-    * @param end first index after the view (exclusive end)
-    * @return a shallow copy that is configured to only see the configured view.
-    */
+   * @param start first index of the view (inclusive start)
+   * @param end first index after the view (exclusive end)
+   * @return a shallow copy that is configured to only see the configured view.
+   */
   def view(start: Int, end: Int): MorselExecutionContext = {
     val view = shallowCopy()
     view.startRow = start
@@ -152,24 +160,24 @@ class MorselExecutionContext(private[execution] final val morsel: Morsel,
   }
 
   /**
-    * Copies from input to the beginning of this morsel. Input is assumed not to contain any cancelledRows
-    */
+   * Copies from input to the beginning of this morsel. Input is assumed not to contain any cancelledRows
+   */
   def compactRowsFrom(input: MorselExecutionContext): Unit = {
-      checkOnlyWhenAssertionsAreEnabled(!input.isInstanceOf[FilteringMorselExecutionContext] && numberOfRows >= input.numberOfRows)
+    checkOnlyWhenAssertionsAreEnabled(!input.isInstanceOf[FilteringMorselExecutionContext] && numberOfRows >= input.numberOfRows)
 
     if (longsPerRow > 0) {
       System.arraycopy(input.morsel.longs,
-                       input.startRow * input.longsPerRow,
-                       morsel.longs,
-                       startRow * longsPerRow,
-                       input.numberOfRows * longsPerRow)
+        input.startRow * input.longsPerRow,
+        morsel.longs,
+        startRow * longsPerRow,
+        input.numberOfRows * longsPerRow)
     }
     if (refsPerRow > 0) {
       System.arraycopy(input.morsel.refs,
-                       input.startRow * input.refsPerRow,
-                       morsel.refs,
-                       startRow * refsPerRow,
-                       input.numberOfRows * refsPerRow)
+        input.startRow * input.refsPerRow,
+        morsel.refs,
+        startRow * refsPerRow,
+        input.numberOfRows * refsPerRow)
     }
   }
 
@@ -265,8 +273,8 @@ class MorselExecutionContext(private[execution] final val morsel: Morsel,
   protected def addPrettyRowMarker(sb: mutable.StringBuilder, row: Int): Unit = {}
 
   /**
-    * Copies the whole row from input to this.
-    */
+   * Copies the whole row from input to this.
+   */
   def copyFrom(input: MorselExecutionContext): Unit = copyFrom(input, input.longsPerRow, input.refsPerRow)
 
   override def setLongAt(offset: Int, value: Long): Unit = morsel.longs(currentRow * longsPerRow + offset) = value
@@ -338,10 +346,10 @@ class MorselExecutionContext(private[execution] final val morsel: Morsel,
   }
 
   /**
-    * Total heap usage of all valid rows (can be a view, so might not be the whole morsel).
-    * The reasoning behind this is that the other parts of the morsel would be part of other views in other buffers/argument states and will
-    * also be accounted for.
-    */
+   * Total heap usage of all valid rows (can be a view, so might not be the whole morsel).
+   * The reasoning behind this is that the other parts of the morsel would be part of other views in other buffers/argument states and will
+   * also be accounted for.
+   */
   override def estimatedHeapUsage: Long = {
     var usage = longsPerRow * maxNumberOfRows * 8L
     var i = startRow * refsPerRow
@@ -390,7 +398,7 @@ class MorselExecutionContext(private[execution] final val morsel: Morsel,
           case None =>
             // This case should not be possible to reach. It is harmless though if it does, which is why no Exception is thrown unless Assertions are enabled
             require(false,
-                    s"Tried to invalidate a cached property $cnp but no slot was found for the entity name in $slots.")
+              s"Tried to invalidate a cached property $cnp but no slot was found for the entity name in $slots.")
         }
     }
   }
@@ -410,7 +418,7 @@ class MorselExecutionContext(private[execution] final val morsel: Morsel,
           case None =>
             // This case should not be possible to reach. It is harmless though if it does, which is why no Exception is thrown unless Assertions are enabled
             require(false,
-                    s"Tried to invalidate a cached property $crp but no slot was found for the entity name in $slots.")
+              s"Tried to invalidate a cached property $crp but no slot was found for the entity name in $slots.")
         }
     }
   }

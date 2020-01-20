@@ -7,11 +7,14 @@ package org.neo4j.cypher.internal.runtime.pipelined.operators
 
 import java.util.Comparator
 
-import org.neo4j.cypher.internal.physicalplanning.{BufferId, PipelineId}
+import org.neo4j.cypher.internal.physicalplanning.BufferId
+import org.neo4j.cypher.internal.physicalplanning.PipelineId
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.pipelined.ExecutionState
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.PerArgument
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Sink
@@ -46,8 +49,8 @@ class SortPreOperator(val workIdentity: WorkIdentity,
         .reduce((a, b) => a.thenComparing(b))
 
       val preSorted = ArgumentStateMap.map(argumentSlotOffset,
-                                           morsel,
-                                           morselView => sortInPlace(morselView, comparator))
+        morsel,
+        morselView => sortInPlace(morselView, comparator))
 
       new PreSortedOutput(preSorted, sink)
     }

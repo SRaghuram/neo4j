@@ -6,21 +6,30 @@
 package org.neo4j.cypher.internal.runtime.pipelined.operators
 
 import java.util
-import java.util.concurrent.{ConcurrentHashMap, ConcurrentLinkedQueue}
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentLinkedQueue
 
 import org.eclipse.collections.impl.factory.primitive.LongObjectMaps
 import org.eclipse.collections.impl.list.mutable.FastList
-import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, SlotConfiguration}
+import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{MorselExecutionContext, QueryResources, QueryState}
-import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeHashJoinSingleNodeOperator.{HashTable, HashTableFactory}
-import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.{ArgumentStateFactory, ArgumentStateMaps, MorselAccumulator}
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
+import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeHashJoinSingleNodeOperator.HashTable
+import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeHashJoinSingleNodeOperator.HashTableFactory
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.ArgumentStateBuffer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe
-import org.neo4j.cypher.internal.runtime.{ExecutionContext, PrefetchingIterator, QueryContext, QueryMemoryTracker}
 
 class NodeHashJoinSingleNodeOperator(val workIdentity: WorkIdentity,
                                      lhsArgumentStateMapId: ArgumentStateMapId,
@@ -64,7 +73,7 @@ class NodeHashJoinSingleNodeOperator(val workIdentity: WorkIdentity,
   // Extending InputLoopTask first to get the correct producingWorkUnitEvent implementation
   class OTask(override val accumulator: HashTable, rhsRow: MorselExecutionContext)
     extends InputLoopTask
-      with ContinuableOperatorTaskWithMorselAndAccumulator[MorselExecutionContext, HashTable] {
+    with ContinuableOperatorTaskWithMorselAndAccumulator[MorselExecutionContext, HashTable] {
 
     override def workIdentity: WorkIdentity = NodeHashJoinSingleNodeOperator.this.workIdentity
 
@@ -109,8 +118,8 @@ object NodeHashJoinSingleNodeOperator {
   }
 
   /**
-    * MorselAccumulator which groups rows by a tuple of node ids.
-    */
+   * MorselAccumulator which groups rows by a tuple of node ids.
+   */
   abstract class HashTable extends MorselAccumulator[MorselExecutionContext] {
     def lhsRows(nodeId: Long): java.util.Iterator[MorselExecutionContext]
 

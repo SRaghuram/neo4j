@@ -5,24 +5,25 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined
 
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{LiveCounts, QueryResources}
+import org.neo4j.cypher.internal.runtime.pipelined.execution.LiveCounts
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.kernel.lifecycle.Lifecycle
 
 /**
-  * Get the resources for a worker by its id. The resources are bound to a Database, while a worker can work for different databases in a DBMS.
-  */
+ * Get the resources for a worker by its id. The resources are bound to a Database, while a worker can work for different databases in a DBMS.
+ */
 class WorkerResourceProvider(numberOfWorkers: Int,
                              newWorkerResources: () => QueryResources) extends Lifecycle {
   private val queryResourcesForWorkers = Array.fill(numberOfWorkers)(newWorkerResources())
 
   /**
-    * Get the resources for the worker with the given id.
-    */
+   * Get the resources for the worker with the given id.
+   */
   def resourcesForWorker(workerId: Int): QueryResources = queryResourcesForWorkers(workerId)
 
   /**
-    * Assert that all resources are released
-    */
+   * Assert that all resources are released
+   */
   def assertAllReleased(): Boolean = {
     val liveCounts = new LiveCounts()
     for (q <- queryResourcesForWorkers) {

@@ -7,12 +7,14 @@ package org.neo4j.cypher.internal.runtime.pipelined.tracing
 
 import java.util.concurrent.TimeUnit
 
+import org.neo4j.cypher.internal.runtime.pipelined.tracing.CsvDataWriter.HEADER
+import org.neo4j.cypher.internal.runtime.pipelined.tracing.CsvDataWriter.SEPARATOR
+
 /**
-  * DataPointWriter which accepts DataPoints and formats as CSV.
-  */
+ * DataPointWriter which accepts DataPoints and formats as CSV.
+ */
 abstract class CsvDataWriter extends DataPointFlusher {
 
-  import CsvDataWriter._
 
   override final def write(dp: DataPoint): Unit = writeRow(serialize(dp))
 
@@ -39,13 +41,13 @@ object CsvDataWriter {
   private val SEPARATOR = ","
   private val VERSION = "1.0"
   private val HEADER = Array(s"id_$VERSION",
-                             "upstreamIds",
-                             "queryId",
-                             "schedulingThreadId",
-                             "schedulingTime(us)",
-                             "executionThreadId",
-                             "startTime(us)",
-                             "stopTime(us)",
-                             "pipelineId",
-                             "pipelineDescription").mkString(SEPARATOR) + System.lineSeparator()
+    "upstreamIds",
+    "queryId",
+    "schedulingThreadId",
+    "schedulingTime(us)",
+    "executionThreadId",
+    "startTime(us)",
+    "stopTime(us)",
+    "pipelineId",
+    "pipelineDescription").mkString(SEPARATOR) + System.lineSeparator()
 }

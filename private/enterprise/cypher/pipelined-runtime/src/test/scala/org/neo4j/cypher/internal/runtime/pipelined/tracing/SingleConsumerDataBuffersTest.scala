@@ -5,7 +5,9 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.tracing
 
-import java.util.concurrent.{CountDownLatch, ThreadLocalRandom, TimeUnit}
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.ThreadLocalRandom
+import java.util.concurrent.TimeUnit
 
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 
@@ -80,8 +82,8 @@ class SingleConsumerDataBuffersTest extends CypherFunSuite {
   }
 
   class ConsumeThread(latch: CountDownLatch,
-                           dataBuffers: SingleConsumerDataBuffers,
-                           inner: DataPointFlusher) extends Thread {
+                      dataBuffers: SingleConsumerDataBuffers,
+                      inner: DataPointFlusher) extends Thread {
 
     override def run(): Unit = {
       while (latch.getCount > 0) {

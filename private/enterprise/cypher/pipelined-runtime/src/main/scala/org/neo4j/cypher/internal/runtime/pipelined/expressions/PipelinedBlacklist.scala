@@ -5,11 +5,14 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.expressions
 
-import org.neo4j.cypher.internal.ir.ProvidedOrder
-import org.neo4j.cypher.internal.logical.plans.{CartesianProduct, LogicalPlan, NestedPlanExpression, ResolvedFunctionInvocation}
-import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.ProvidedOrders
 import org.neo4j.cypher.internal.expressions.FunctionInvocation
-import org.neo4j.cypher.internal.expressions.functions.{File, Linenumber, Type}
+import org.neo4j.cypher.internal.expressions.functions
+import org.neo4j.cypher.internal.ir.ProvidedOrder
+import org.neo4j.cypher.internal.logical.plans.CartesianProduct
+import org.neo4j.cypher.internal.logical.plans.LogicalPlan
+import org.neo4j.cypher.internal.logical.plans.NestedPlanExpression
+import org.neo4j.cypher.internal.logical.plans.ResolvedFunctionInvocation
+import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.ProvidedOrders
 import org.neo4j.exceptions.CantCompileQueryException
 
 object PipelinedBlacklist {
@@ -24,11 +27,11 @@ object PipelinedBlacklist {
         case _: ResolvedFunctionInvocation if parallelExecution =>
           _ + "User-defined functions"
 
-        case f: FunctionInvocation if f.function == Linenumber || f.function == File =>
+        case f: FunctionInvocation if f.function == functions.Linenumber || f.function == functions.File =>
           _ + (f.functionName.name+"()")
 
         // type() uses thread-unsafe RelationshipEntity.type()
-        case f: FunctionInvocation if f.function == Type && parallelExecution =>
+        case f: FunctionInvocation if f.function == functions.Type && parallelExecution =>
           _ + (f.functionName.name+"()")
 
         case c: CartesianProduct if !providedOrders.getOrElse(c.left.id, ProvidedOrder.empty).isEmpty =>

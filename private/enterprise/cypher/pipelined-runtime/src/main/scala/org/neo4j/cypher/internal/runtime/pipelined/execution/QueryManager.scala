@@ -10,9 +10,9 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 
 /**
-  * The [[QueryManager]] keeps track of currently executing queries
-  * and selects the next one to work on.
-  */
+ * The [[QueryManager]] keeps track of currently executing queries
+ * and selects the next one to work on.
+ */
 class QueryManager {
 
   private val runningQueries = new ConcurrentLinkedQueue[ExecutingQuery]()
@@ -23,9 +23,9 @@ class QueryManager {
   }
 
   /**
-    * Select the next query to work on. As a side effect, we also remove queries
-    * which have ended (successfully or not) from the set of running queries.
-    */
+   * Select the next query to work on. As a side effect, we also remove queries
+   * which have ended (successfully or not) from the set of running queries.
+   */
   def nextQueryToWorkOn(workerId: Int): ExecutingQuery = {
     var query = runningQueries.peek()
     while (query != null && query.executionState.hasEnded) {

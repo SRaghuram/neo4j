@@ -5,7 +5,9 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.state
 
-import java.util.concurrent._
+import java.util.concurrent.ArrayBlockingQueue
+import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.atomic.AtomicBoolean
 
 import org.mockito.Mockito.RETURNS_DEEP_STUBS
@@ -30,7 +32,7 @@ class ConcurrentQueryCompletionTrackerStressTest extends CypherFunSuite {
         _ <- 0 until THREAD_PAIRS
         ongoingWork = new ArrayBlockingQueue[QueryCompletionTracker](8)
         runnable <- List(new QueryRunner(ongoingWork, stopSignal),
-                         new Worker(ongoingWork))
+          new Worker(ongoingWork))
       } yield {
         val thread = new Thread(runnable)
         thread.setName(runnable.getClass.getSimpleName)
@@ -80,8 +82,8 @@ class ConcurrentQueryCompletionTrackerStressTest extends CypherFunSuite {
         while (!stopSignal.get()) {
 
           val newQuery = new ConcurrentQueryCompletionTracker(querySubscriber,
-                                                              context,
-                                                              executionTracer)
+            context,
+            executionTracer)
 
           newQuery.increment()
           ongoingWork.put(newQuery)

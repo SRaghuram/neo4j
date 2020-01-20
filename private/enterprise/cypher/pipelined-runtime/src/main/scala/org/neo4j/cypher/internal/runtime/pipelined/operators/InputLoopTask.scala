@@ -5,39 +5,58 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.operators
 
-import org.neo4j.codegen.api.IntermediateRepresentation._
-import org.neo4j.codegen.api.{Field, InstanceField, IntermediateRepresentation}
+import org.neo4j.codegen.api.Field
+import org.neo4j.codegen.api.InstanceField
+import org.neo4j.codegen.api.IntermediateRepresentation
+import org.neo4j.codegen.api.IntermediateRepresentation.and
+import org.neo4j.codegen.api.IntermediateRepresentation.block
+import org.neo4j.codegen.api.IntermediateRepresentation.condition
+import org.neo4j.codegen.api.IntermediateRepresentation.constant
+import org.neo4j.codegen.api.IntermediateRepresentation.field
+import org.neo4j.codegen.api.IntermediateRepresentation.ifElse
+import org.neo4j.codegen.api.IntermediateRepresentation.labeledLoop
+import org.neo4j.codegen.api.IntermediateRepresentation.loadField
+import org.neo4j.codegen.api.IntermediateRepresentation.loop
+import org.neo4j.codegen.api.IntermediateRepresentation.not
+import org.neo4j.codegen.api.IntermediateRepresentation.or
+import org.neo4j.codegen.api.IntermediateRepresentation.setField
+import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{MorselExecutionContext, QueryResources, QueryState}
-import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryContext}
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.OUTER_LOOP_LABEL_NAME
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_ROW_IS_VALID
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_ROW_MOVE_TO_NEXT
 import org.neo4j.cypher.internal.util.attribution.Id
 
 /**
-  * Operator task which takes an input morsel and produces one or many output rows
-  * for each input row, and might require several operate calls to be fully executed.
-  */
+ * Operator task which takes an input morsel and produces one or many output rows
+ * for each input row, and might require several operate calls to be fully executed.
+ */
 abstract class InputLoopTask extends ContinuableOperatorTaskWithMorsel {
 
   /**
-    * Initialize the inner loop for the current input row.
-    *
-    * @return true iff the inner loop might result in output rows
-    */
+   * Initialize the inner loop for the current input row.
+   *
+   * @return true iff the inner loop might result in output rows
+   */
   protected def initializeInnerLoop(context: QueryContext,
                                     state: QueryState,
                                     resources: QueryResources,
                                     initExecutionContext: ExecutionContext): Boolean
 
   /**
-    * Execute the inner loop for the current input row, and write results to the output.
-    */
+   * Execute the inner loop for the current input row, and write results to the output.
+   */
   protected def innerLoop(outputRow: MorselExecutionContext,
                           context: QueryContext,
                           state: QueryState): Unit
 
   /**
-    * Close any resources used by the inner loop.
-    */
+   * Close any resources used by the inner loop.
+   */
   protected def closeInnerLoop(resources: QueryResources): Unit
 
   protected def enterOperate(context: QueryContext, state: QueryState, resources: QueryResources): Unit = {}
@@ -103,7 +122,6 @@ abstract class InputLoopTaskTemplate(override val inner: OperatorTaskTemplate,
                                      innermost: DelegateOperatorTaskTemplate,
                                      protected val codeGen: OperatorExpressionCompiler,
                                      override val isHead: Boolean = true) extends ContinuableOperatorTaskWithMorselTemplate {
-  import OperatorCodeGenHelperTemplates._
 
   protected val canContinue: InstanceField = field[Boolean](scopeId + "CanContinue")
 
@@ -199,25 +217,25 @@ abstract class InputLoopTaskTemplate(override val inner: OperatorTaskTemplate,
 
   final override protected def genOperateMiddle: IntermediateRepresentation = {
     /**
-      * This is called when the loop is used as a middle operator,
-      * Here we should act as an inner loop and not advance the input
-      * morsel
-      * {{{
-      *   this.canContinue = input.isValid
-      *   while ( (this.canContinue || this.innerLoop) && hasDemand) {
-      *     if (!this.innerLoop) {
-      *       this.innerLoop = [genInitializeInnerLoop]
-      *     }
-      *     if (this.innerLoop) {
-      *       [genInnerLoop]
-      *       if (!this.canContinue) {
-      *         [genCloseInnerLoop]
-      *         this.innerLoop = false
-      *       }
-      *     }
-      *   }
-      * }}}
-      */
+     * This is called when the loop is used as a middle operator,
+     * Here we should act as an inner loop and not advance the input
+     * morsel
+     * {{{
+     *   this.canContinue = input.isValid
+     *   while ( (this.canContinue || this.innerLoop) && hasDemand) {
+     *     if (!this.innerLoop) {
+     *       this.innerLoop = [genInitializeInnerLoop]
+     *     }
+     *     if (this.innerLoop) {
+     *       [genInnerLoop]
+     *       if (!this.canContinue) {
+     *         [genCloseInnerLoop]
+     *         this.innerLoop = false
+     *       }
+     *     }
+     *   }
+     * }}}
+     */
     block(
       setField(canContinue, INPUT_ROW_IS_VALID),
       loop(and(or(loadField(canContinue), loadField(innerLoop)), innermost.predicate))(
@@ -264,40 +282,40 @@ abstract class InputLoopTaskTemplate(override val inner: OperatorTaskTemplate,
   }
 
   /**
-    * Responsible for generating method:
-    * {{{
-    *   def initializeInnerLoop(context: QueryContext,
-    *                           state: QueryState,
-    *                           resources: QueryResources): Boolean
-    * }}}
-    */
+   * Responsible for generating method:
+   * {{{
+   *   def initializeInnerLoop(context: QueryContext,
+   *                           state: QueryState,
+   *                           resources: QueryResources): Boolean
+   * }}}
+   */
   protected def genInitializeInnerLoop: IntermediateRepresentation
 
   /**
-    * Execute the inner loop for the current input row, and write results to the output.
-    *
-    * Responsible for generating:
-    * {{{
-    *   def innerLoop(outputRow: MorselExecutionContext,
-    *                 context: QueryContext,
-    *                 state: QueryState): Unit
-    * }}}
-    */
+   * Execute the inner loop for the current input row, and write results to the output.
+   *
+   * Responsible for generating:
+   * {{{
+   *   def innerLoop(outputRow: MorselExecutionContext,
+   *                 context: QueryContext,
+   *                 state: QueryState): Unit
+   * }}}
+   */
   protected def genInnerLoop: IntermediateRepresentation
 
   /**
-    * Close any resources used by the inner loop.
-    *
-    * Responsible for generating:
-    * {{{
-    *    def closeInnerLoop(resources: QueryResources): Unit
-    * }}}
-    */
+   * Close any resources used by the inner loop.
+   *
+   * Responsible for generating:
+   * {{{
+   *    def closeInnerLoop(resources: QueryResources): Unit
+   * }}}
+   */
   protected def genCloseInnerLoop: IntermediateRepresentation
 
   /**
-    * Closes the inner loop, allows the input loop to update variables before going
-    * into next iteration of inner loop
-    */
+   * Closes the inner loop, allows the input loop to update variables before going
+   * into next iteration of inner loop
+   */
   protected def endInnerLoop: IntermediateRepresentation = innermost.resetCachedPropertyVariables
 }

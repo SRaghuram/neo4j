@@ -18,7 +18,7 @@ class PipelinedPipelineBreakingPolicyTest  extends CypherFunSuite {
 
     // when
     val policy = PipelinedPipelineBreakingPolicy(OperatorFusionPolicy(fusionEnabled = true, fusionOverPipelinesEnabled = true),
-                                                 InterpretedPipesFallbackPolicy(disabled, parallelExecution = false))
+      InterpretedPipesFallbackPolicy(disabled, parallelExecution = false))
 
     //then
     policy.breakOn(plan) shouldBe false
@@ -30,7 +30,7 @@ class PipelinedPipelineBreakingPolicyTest  extends CypherFunSuite {
 
     // when
     val policy = PipelinedPipelineBreakingPolicy(OperatorFusionPolicy(fusionEnabled = true, fusionOverPipelinesEnabled = false),
-                                                 InterpretedPipesFallbackPolicy(disabled, parallelExecution = true))
+      InterpretedPipesFallbackPolicy(disabled, parallelExecution = true))
 
     //then
     policy.breakOn(plan) shouldBe true
@@ -39,15 +39,15 @@ class PipelinedPipelineBreakingPolicyTest  extends CypherFunSuite {
   test("should not fuse expand over pipeline if head operator in pipeline is non-fusable") {
     // given
     val plan = given(_
-                       .expand("(a)-->(c)")
-                       .filter("true")
-                       .aggregation(Seq("a AS a"), Seq("collect(b) AS bs"))
-                       .expand("(a)-[r1]->(b)")
-                       .allNodeScan("a"))
+      .expand("(a)-->(c)")
+      .filter("true")
+      .aggregation(Seq("a AS a"), Seq("collect(b) AS bs"))
+      .expand("(a)-[r1]->(b)")
+      .allNodeScan("a"))
 
     // when
     val policy = PipelinedPipelineBreakingPolicy(OperatorFusionPolicy(fusionEnabled = true, fusionOverPipelinesEnabled = true),
-                                                 InterpretedPipesFallbackPolicy(disabled, parallelExecution = false))
+      InterpretedPipesFallbackPolicy(disabled, parallelExecution = false))
 
     //then
     policy.breakOn(plan) shouldBe true
@@ -56,16 +56,16 @@ class PipelinedPipelineBreakingPolicyTest  extends CypherFunSuite {
   test("should fuse expand over pipeline if head operator in pipeline is fusable") {
     // given
     val plan = given(_
-                       .expand("(c)-->(b)")
-                       .expand("(a)-->(c)")
-                       .filter("true")
-                       .aggregation(Seq("a AS a"), Seq("collect(b) AS bs"))
-                       .expand("(a)-[r1]->(b)")
-                       .allNodeScan("a"))
+      .expand("(c)-->(b)")
+      .expand("(a)-->(c)")
+      .filter("true")
+      .aggregation(Seq("a AS a"), Seq("collect(b) AS bs"))
+      .expand("(a)-[r1]->(b)")
+      .allNodeScan("a"))
 
     // when
     val policy = PipelinedPipelineBreakingPolicy(OperatorFusionPolicy(fusionEnabled = true, fusionOverPipelinesEnabled = true),
-                                                 InterpretedPipesFallbackPolicy(disabled, parallelExecution = false))
+      InterpretedPipesFallbackPolicy(disabled, parallelExecution = false))
 
     //then
     policy.breakOn(plan) shouldBe false

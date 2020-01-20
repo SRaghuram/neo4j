@@ -6,17 +6,18 @@
 package org.neo4j.cypher.internal.runtime.pipelined.state.buffers
 
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
-import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.{ArgumentStateFactory, MorselAccumulator}
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 
 /**
-  * Delegating [[Buffer]] used in argument state maps.
-  */
+ * Delegating [[Buffer]] used in argument state maps.
+ */
 class ArgumentStateBuffer(override val argumentRowId: Long,
                           inner: Buffer[MorselExecutionContext],
                           override val argumentRowIdsForReducers: Array[Long])
   extends MorselAccumulator[MorselExecutionContext]
-     with Buffer[MorselExecutionContext] {
+  with Buffer[MorselExecutionContext] {
 
   // MorselAccumulator
   override def update(morsel: MorselExecutionContext): Unit = put(morsel)

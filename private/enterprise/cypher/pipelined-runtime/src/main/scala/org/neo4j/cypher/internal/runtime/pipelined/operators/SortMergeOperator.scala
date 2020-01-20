@@ -5,29 +5,32 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.operators
 
-import java.util.{Comparator, PriorityQueue}
+import java.util.Comparator
+import java.util.PriorityQueue
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.ArgumentStateBuffer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.ColumnOrder
 
 /**
-  * Reducing operator which collects pre-sorted input morsels until it
-  * has seen all, and then streams the rows from these morsels in
-  * sorted order. Like all reducing operators, [[SortMergeOperator]]
-  * collects and streams grouped by argument rows ids.
-  */
+ * Reducing operator which collects pre-sorted input morsels until it
+ * has seen all, and then streams the rows from these morsels in
+ * sorted order. Like all reducing operators, [[SortMergeOperator]]
+ * collects and streams grouped by argument rows ids.
+ */
 class SortMergeOperator(val argumentStateMapId: ArgumentStateMapId,
                         val workIdentity: WorkIdentity,
                         orderBy: Seq[ColumnOrder],
                         argumentSlotOffset: Int)
   extends Operator
-     with ReduceOperatorState[MorselExecutionContext, ArgumentStateBuffer] {
+  with ReduceOperatorState[MorselExecutionContext, ArgumentStateBuffer] {
 
   override def toString: String = "SortMerge"
 

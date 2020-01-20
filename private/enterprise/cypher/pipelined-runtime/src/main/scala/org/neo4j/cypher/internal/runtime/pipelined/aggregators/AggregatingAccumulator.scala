@@ -7,12 +7,13 @@ package org.neo4j.cypher.internal.runtime.pipelined.aggregators
 
 import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
-import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.{ArgumentStateFactory, MorselAccumulator}
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.values.AnyValue
 
 /**
-  * Accumulator that compacts input data using some [[Reducer]]s.
-  */
+ * Accumulator that compacts input data using some [[Reducer]]s.
+ */
 class AggregatingAccumulator(override val argumentRowId: Long,
                              reducers: Array[Reducer],
                              override val argumentRowIdsForReducers: Array[Long]) extends MorselAccumulator[Array[Updater]] {
@@ -26,8 +27,8 @@ class AggregatingAccumulator(override val argumentRowId: Long,
   }
 
   /**
-    * Return the result of the reducer at constructor offset `offset`.
-    */
+   * Return the result of the reducer at constructor offset `offset`.
+   */
   def result(offset: Int): AnyValue = reducers(offset).result
 }
 
@@ -43,13 +44,13 @@ object AggregatingAccumulator {
 }
 
 /**
-  * Computational parallel primitive which allows aggregating data
-  * over many input rows. Creates [[Updater]], which performs initial
-  * parts of the computations that can be done without synchronization.
-  *
-  * Also creates [[Reducer]], which performs the final parts of the
-  * aggregations. In the reducer synchronization is required.
-  */
+ * Computational parallel primitive which allows aggregating data
+ * over many input rows. Creates [[Updater]], which performs initial
+ * parts of the computations that can be done without synchronization.
+ *
+ * Also creates [[Reducer]], which performs the final parts of the
+ * aggregations. In the reducer synchronization is required.
+ */
 trait Aggregator {
   def newUpdater: Updater
   def newStandardReducer(memoryTracker: QueryMemoryTracker): Reducer
@@ -57,17 +58,17 @@ trait Aggregator {
 }
 
 /**
-  * Performs the initial parts of an aggregation that can be done
-  * without synchronization.
-  */
+ * Performs the initial parts of an aggregation that can be done
+ * without synchronization.
+ */
 trait Updater {
   def update(value: AnyValue): Unit
 }
 
 /**
-  * Performs the final parts of an aggregation that migth require
-  * synchronization.
-  */
+ * Performs the final parts of an aggregation that migth require
+ * synchronization.
+ */
 trait Reducer {
   def update(updater: Updater): Unit
   def result: AnyValue

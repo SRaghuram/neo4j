@@ -5,11 +5,13 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.tracing
 
-import java.io.{BufferedWriter, File, FileWriter}
+import java.io.BufferedWriter
+import java.io.File
+import java.io.FileWriter
 
 /**
-  * DataPointWriter which accepts DataPoints, formats as CSV, and prints to file.
-  */
+ * DataPointWriter which accepts DataPoints, formats as CSV, and prints to file.
+ */
 class CsvFileDataWriter(file: File) extends CsvDataWriter {
 
   private val out = new BufferedWriter(new FileWriter(file))

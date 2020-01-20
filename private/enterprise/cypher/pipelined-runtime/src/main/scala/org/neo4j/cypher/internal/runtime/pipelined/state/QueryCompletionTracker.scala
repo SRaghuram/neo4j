@@ -5,14 +5,16 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.state
 
+import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicLong
-import java.util.concurrent.{ConcurrentLinkedQueue, CountDownLatch}
 
 import org.neo4j.cypher.internal.NonFatalCypherError
+import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.QueryStatistics
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.execution.FlowControl
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.QueryExecutionTracer
-import org.neo4j.cypher.internal.runtime.{QueryContext, QueryStatistics}
 import org.neo4j.cypher.internal.util.AssertionRunner
 import org.neo4j.cypher.internal.util.AssertionRunner.Thunk
 import org.neo4j.internal.kernel.api.exceptions.LocksNotFrozenException
@@ -21,45 +23,45 @@ import org.neo4j.kernel.impl.query.QuerySubscriber
 import scala.collection.mutable.ArrayBuffer
 
 /**
-  * A [[QueryCompletionTracker]] tracks the progress of a query. This is done by keeping an internal
-  * count of events. When the count is zero the query has completed.
-  */
+ * A [[QueryCompletionTracker]] tracks the progress of a query. This is done by keeping an internal
+ * count of events. When the count is zero the query has completed.
+ */
 trait QueryCompletionTracker extends FlowControl {
   /**
-    * Increment the tracker count.
-    */
+   * Increment the tracker count.
+   */
   def increment(): Unit
 
   /**
-    * Increment by n
-    */
+   * Increment by n
+   */
   def incrementBy(n: Long): Unit
 
   /**
-    * Decrement the tracker count.
-    */
+   * Decrement the tracker count.
+   */
   def decrement(): Unit
 
   /**
-    * Decrement by n
-    */
+   * Decrement by n
+   */
   def decrementBy(n: Long): Unit
 
   /**
-    * Error!
-    */
+   * Error!
+   */
   def error(throwable: Throwable): Unit
 
   /**
-    * Checks if the query has ended. Non-blocking. This method can return
-    * true if all query work is done, if the query was cancelled, or if
-    * an exception occurred.
-    */
+   * Checks if the query has ended. Non-blocking. This method can return
+   * true if all query work is done, if the query was cancelled, or if
+   * an exception occurred.
+   */
   def hasEnded: Boolean
 
   /**
-    * Add an assertion to be run when the query is completed.
-    */
+   * Add an assertion to be run when the query is completed.
+   */
   def addCompletionAssertion(assertion: Thunk): Unit = {
     if (AssertionRunner.ASSERTIONS_ENABLED) {
       assertions += assertion
@@ -101,8 +103,8 @@ trait QueryCompletionTracker extends FlowControl {
 }
 
 /**
-  * Not thread-safe implementation of [[QueryCompletionTracker]].
-  */
+ * Not thread-safe implementation of [[QueryCompletionTracker]].
+ */
 class StandardQueryCompletionTracker(subscriber: QuerySubscriber,
                                      queryContext: QueryContext,
                                      tracer: QueryExecutionTracer) extends QueryCompletionTracker {
@@ -222,8 +224,8 @@ class StandardQueryCompletionTracker(subscriber: QuerySubscriber,
 }
 
 /**
-  * Concurrent implementation of [[QueryCompletionTracker]].
-  */
+ * Concurrent implementation of [[QueryCompletionTracker]].
+ */
 class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
                                        queryContext: QueryContext,
                                        tracer: QueryExecutionTracer) extends QueryCompletionTracker {
@@ -304,7 +306,7 @@ class ConcurrentQueryCompletionTracker(subscriber: QuerySubscriber,
       queryContext.transactionalContext.transaction.thawLocks()
     } catch {
       case _: LocksNotFrozenException =>
-        // locks are already thawed, nothing more to do
+      // locks are already thawed, nothing more to do
       case thawException: Exception => // unexpected, stash and continue
         errors.add(thawException)
     }

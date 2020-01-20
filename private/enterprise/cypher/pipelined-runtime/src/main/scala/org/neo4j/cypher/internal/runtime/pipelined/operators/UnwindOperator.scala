@@ -5,20 +5,39 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.operators
 
-import org.neo4j.codegen.api.IntermediateRepresentation._
-import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable}
+import org.neo4j.codegen.api.Field
+import org.neo4j.codegen.api.IntermediateRepresentation
+import org.neo4j.codegen.api.IntermediateRepresentation.and
+import org.neo4j.codegen.api.IntermediateRepresentation.block
+import org.neo4j.codegen.api.IntermediateRepresentation.constant
+import org.neo4j.codegen.api.IntermediateRepresentation.field
+import org.neo4j.codegen.api.IntermediateRepresentation.invoke
+import org.neo4j.codegen.api.IntermediateRepresentation.invokeStatic
+import org.neo4j.codegen.api.IntermediateRepresentation.loadField
+import org.neo4j.codegen.api.IntermediateRepresentation.loop
+import org.neo4j.codegen.api.IntermediateRepresentation.method
+import org.neo4j.codegen.api.IntermediateRepresentation.noop
+import org.neo4j.codegen.api.IntermediateRepresentation.setField
+import org.neo4j.codegen.api.LocalVariable
+import org.neo4j.cypher.internal.expressions
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
+import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.ListSupport
+import org.neo4j.cypher.internal.runtime.NoMemoryTracker
+import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.CURSOR_POOL_V
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profilingCursorNext
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
-import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => InterpretedQueryState}
-import org.neo4j.cypher.internal.runtime.{ExecutionContext, ListSupport, NoMemoryTracker, QueryContext}
-import org.neo4j.cypher.internal.expressions
+import org.neo4j.cypher.internal.runtime.slotted.SlottedQueryState
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.operations.CypherFunctions
 import org.neo4j.exceptions.CantCompileQueryException
@@ -51,14 +70,14 @@ class UnwindOperator(val workIdentity: WorkIdentity,
                                                resources: QueryResources,
                                                initExecutionContext: ExecutionContext): Boolean = {
 
-      val queryState = new InterpretedQueryState(context,
-                                                 resources = null,
-                                                 params = state.params,
-                                                 resources.expressionCursors,
-                                                 Array.empty[IndexReadSession],
-                                                 resources.expressionVariables(state.nExpressionSlots),
-                                                 state.subscriber,
-                                                 NoMemoryTracker)
+      val queryState = new SlottedQueryState(context,
+        resources = null,
+        params = state.params,
+        resources.expressionCursors,
+        Array.empty[IndexReadSession],
+        resources.expressionVariables(state.nExpressionSlots),
+        state.subscriber,
+        NoMemoryTracker)
 
       initExecutionContext.copyFrom(inputMorsel, inputMorsel.getLongsPerRow, inputMorsel.getRefsPerRow)
       val value = collection(initExecutionContext, queryState)
@@ -96,7 +115,6 @@ class UnwindOperatorTaskTemplate(inner: OperatorTaskTemplate,
                                 (codeGen: OperatorExpressionCompiler)
   extends InputLoopTaskTemplate(inner, id, innermost, codeGen, isHead) {
 
-  import OperatorCodeGenHelperTemplates._
 
   private val cursorField = field[IteratorCursor](codeGen.namer.nextVariableName())
   private var listExpression: IntermediateExpression = _
@@ -115,47 +133,47 @@ class UnwindOperatorTaskTemplate(inner: OperatorTaskTemplate,
     listExpression = codeGen.intermediateCompileExpression(rawListExpression).getOrElse(throw new CantCompileQueryException(s"The expression compiler could not compile $rawListExpression"))
 
     /**
-      * {{{
-      *   this.cursor = IteratorCursor(asList([expression]).iterator())
-      *   this.canContinue = this.cursor.next()
-      *   true
-      * }}}
-      */
+     * {{{
+     *   this.cursor = IteratorCursor(asList([expression]).iterator())
+     *   this.canContinue = this.cursor.next()
+     *   true
+     * }}}
+     */
     block(
       setField(cursorField,
         invokeStatic(method[IteratorCursor, IteratorCursor, java.util.Iterator[_]]("apply"),
-               invoke(
-                 invokeStatic(method[CypherFunctions, ListValue, AnyValue]("asList"),
-                              nullCheckIfRequired(listExpression)),
-                 method[ListValue, java.util.Iterator[AnyValue]]("iterator")))),
+          invoke(
+            invokeStatic(method[CypherFunctions, ListValue, AnyValue]("asList"),
+              nullCheckIfRequired(listExpression)),
+            method[ListValue, java.util.Iterator[AnyValue]]("iterator")))),
       setField(canContinue, profilingCursorNext[IteratorCursor](loadField(cursorField), id)),
       constant(true)
-      )
+    )
   }
 
   override protected def genInnerLoop: IntermediateRepresentation = {
     /**
-      * {{{
-      *   while (hasDemand && this.canContinue) {
-      *     setRefAt(offset, cursor.value)
-      *     << inner.genOperate >>
-      *     this.canContinue = cursor.next()
-      *   }
-      * }}}
-      */
+     * {{{
+     *   while (hasDemand && this.canContinue) {
+     *     setRefAt(offset, cursor.value)
+     *     << inner.genOperate >>
+     *     this.canContinue = cursor.next()
+     *   }
+     * }}}
+     */
     block(
       loop(and(innermost.predicate, loadField(canContinue)))(
         block(
           codeGen.copyFromInput(codeGen.inputSlotConfiguration.numberOfLongs,
-                                codeGen.inputSlotConfiguration.numberOfReferences),
+            codeGen.inputSlotConfiguration.numberOfReferences),
           codeGen.setRefAt(offset,
             invoke(loadField(cursorField), method[IteratorCursor, AnyValue]("value"))),
           inner.genOperateWithExpressions,
           doIfInnerCantContinue(setField(canContinue, profilingCursorNext[IteratorCursor](loadField(cursorField), id))),
           endInnerLoop
-          )
         )
       )
+    )
   }
 
   override protected def genCloseInnerLoop: IntermediateRepresentation = {

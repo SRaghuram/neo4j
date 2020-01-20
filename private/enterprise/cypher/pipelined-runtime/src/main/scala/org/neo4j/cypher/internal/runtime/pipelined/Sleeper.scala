@@ -9,7 +9,10 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.LockSupport
 
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
-import org.neo4j.cypher.internal.runtime.pipelined.Sleeper.{ACTIVE, SLEEPING, Status, WORKING}
+import org.neo4j.cypher.internal.runtime.pipelined.Sleeper.ACTIVE
+import org.neo4j.cypher.internal.runtime.pipelined.Sleeper.SLEEPING
+import org.neo4j.cypher.internal.runtime.pipelined.Sleeper.Status
+import org.neo4j.cypher.internal.runtime.pipelined.Sleeper.WORKING
 
 import scala.concurrent.duration.Duration
 

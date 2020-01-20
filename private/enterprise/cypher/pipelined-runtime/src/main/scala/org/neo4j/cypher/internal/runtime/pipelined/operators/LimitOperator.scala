@@ -7,21 +7,54 @@ package org.neo4j.cypher.internal.runtime.pipelined.operators
 
 import java.util.concurrent.atomic.AtomicLong
 
-import org.neo4j.codegen.api.IntermediateRepresentation._
-import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable}
-import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, TopLevelArgument}
+import org.neo4j.codegen.api.Field
+import org.neo4j.codegen.api.IntermediateRepresentation
+import org.neo4j.codegen.api.IntermediateRepresentation.assign
+import org.neo4j.codegen.api.IntermediateRepresentation.block
+import org.neo4j.codegen.api.IntermediateRepresentation.break
+import org.neo4j.codegen.api.IntermediateRepresentation.cast
+import org.neo4j.codegen.api.IntermediateRepresentation.condition
+import org.neo4j.codegen.api.IntermediateRepresentation.constant
+import org.neo4j.codegen.api.IntermediateRepresentation.field
+import org.neo4j.codegen.api.IntermediateRepresentation.invoke
+import org.neo4j.codegen.api.IntermediateRepresentation.invokeStatic
+import org.neo4j.codegen.api.IntermediateRepresentation.lessThanOrEqual
+import org.neo4j.codegen.api.IntermediateRepresentation.load
+import org.neo4j.codegen.api.IntermediateRepresentation.loadField
+import org.neo4j.codegen.api.IntermediateRepresentation.method
+import org.neo4j.codegen.api.IntermediateRepresentation.subtract
+import org.neo4j.codegen.api.IntermediateRepresentation.variable
+import org.neo4j.codegen.api.LocalVariable
+import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
+import org.neo4j.cypher.internal.physicalplanning.TopLevelArgument
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
+import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.NoMemoryTracker
+import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
-import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.{Expression, NumericHelper}
-import org.neo4j.cypher.internal.runtime.pipelined._
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{MorselExecutionContext, QueryResources, QueryState}
-import org.neo4j.cypher.internal.runtime.pipelined.operators.LimitOperator.{LimitState, LimitStateFactory, evaluateCountValue}
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates._
-import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.{ArgumentState, ArgumentStateFactory, ArgumentStateMaps, WorkCanceller}
-import org.neo4j.cypher.internal.runtime.pipelined.state.{ArgumentStateMap, StateFactory}
+import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
+import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.NumericHelper
+import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
+import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
+import org.neo4j.cypher.internal.runtime.pipelined.operators.LimitOperator.LimitState
+import org.neo4j.cypher.internal.runtime.pipelined.operators.LimitOperator.evaluateCountValue
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.OUTER_LOOP_LABEL_NAME
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.OUTPUT_COUNTER
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.OUTPUT_ROW
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profileRows
+import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelLimitOperatorTaskTemplate.SerialTopLevelLimitState
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.WorkCanceller
+import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
-import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
-import org.neo4j.cypher.internal.runtime.{ExecutionContext, NoMemoryTracker, QueryContext}
+import org.neo4j.cypher.internal.runtime.slotted.SlottedQueryState
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.InvalidArgumentException
 import org.neo4j.internal.kernel.api.IndexReadSession
@@ -34,7 +67,7 @@ object LimitOperator {
                          state: QueryState,
                          resources: QueryResources,
                          countExpression: Expression): Long = {
-    val queryState = new OldQueryState(queryContext,
+    val queryState = new SlottedQueryState(queryContext,
       resources = null,
       params = state.params,
       resources.expressionCursors,
@@ -117,8 +150,8 @@ object LimitOperator {
 }
 
 /**
-  * Limit the number of rows to `countExpression` per argument.
-  */
+ * Limit the number of rows to `countExpression` per argument.
+ */
 class LimitOperator(argumentStateMapId: ArgumentStateMapId,
                     val workIdentity: WorkIdentity,
                     countExpression: Expression) extends MiddleOperator {
@@ -126,7 +159,7 @@ class LimitOperator(argumentStateMapId: ArgumentStateMapId,
   override def createTask(argumentStateCreator: ArgumentStateMapCreator, stateFactory: StateFactory, queryContext: QueryContext, state: QueryState, resources: QueryResources): OperatorTask = {
     val limit = evaluateCountValue(queryContext, state, resources, countExpression)
     new LimitOperatorTask(argumentStateCreator.createArgumentStateMap(argumentStateMapId,
-                                                                      new LimitStateFactory(limit)))
+      new LimitOperator.LimitStateFactory(limit)))
   }
 
   class LimitOperatorTask(argumentStateMap: ArgumentStateMap[LimitState]) extends OperatorTask {
@@ -139,16 +172,16 @@ class LimitOperator(argumentStateMapId: ArgumentStateMapId,
                          resources: QueryResources): Unit = {
 
       argumentStateMap.filter[FilterState](output,
-                                           (rowCount, nRows) => new FilterState(rowCount.reserve(nRows)),
-                                           (x, _) => x.next())
+        (rowCount, nRows) => new FilterState(rowCount.reserve(nRows)),
+        (x, _) => x.next())
     }
 
     override def setExecutionEvent(event: OperatorProfileEvent): Unit = {}
   }
 
   /**
-    * Filter state for the rows from one argumentRowId within one morsel.
-    */
+   * Filter state for the rows from one argumentRowId within one morsel.
+   */
   class FilterState(var countLeft: Long) {
     def next(): Boolean = {
       if (countLeft > 0) {
@@ -173,7 +206,6 @@ class SerialTopLevelLimitOperatorTaskTemplate(val inner: OperatorTaskTemplate,
                                               generateCountExpression: () => IntermediateExpression)
                                              (protected val codeGen: OperatorExpressionCompiler) extends OperatorTaskTemplate {
 
-  import SerialTopLevelLimitOperatorTaskTemplate._
 
   private var countExpression: IntermediateExpression = _
   private val countLeftVar: LocalVariable = variable[Long](codeGen.namer.nextVariableName() + "_countLeft", constant(0L))
@@ -184,7 +216,7 @@ class SerialTopLevelLimitOperatorTaskTemplate(val inner: OperatorTaskTemplate,
     cast[SerialTopLevelLimitState](
       invoke(
         invoke(load(ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER.name), method[ArgumentStateMaps, ArgumentStateMap[_ <: ArgumentState], Int]("applyByIntId"),
-               constant(argumentStateMapId.x)),
+          constant(argumentStateMapId.x)),
         method[ArgumentStateMap[_ <: ArgumentState], ArgumentState, Long]("peek"),
         constant(TopLevelArgument.VALUE)
       )
@@ -259,26 +291,26 @@ class SerialTopLevelLimitOperatorTaskTemplate(val inner: OperatorTaskTemplate,
 object SerialTopLevelLimitOperatorTaskTemplate {
 
   /**
-    * This LimitState is intended for use with `SerialTopLevelLimitOperatorTaskTemplate`.
-    *
-    * The SerialTopLevelLimitState (x) while be used in the following way from compiled code:
-    *
-    * {{{
-    *   def operate() {
-    *     if (x.isUnitialized) x.setCount(<THE_LIMIT_COUNT>) // setCount happens once
-    *     val reserved = x.reserve(<RESERVE_NBR>) // we don't know how many rows we'll get yet, so just
-    *                                             // reserve some number. Note that reserve itself does
-    *                                             // not modify the state, that only happens on update.
-    *
-    *     val countLeft = reserved
-    *     ...
-    *       countLeft -= 1
-    *     ...
-    *
-    *     x.update(reserved - countLeft) // Before returning we update the state.
-    *   }
-    * }}}
-    */
+   * This LimitState is intended for use with `SerialTopLevelLimitOperatorTaskTemplate`.
+   *
+   * The SerialTopLevelLimitState (x) while be used in the following way from compiled code:
+   *
+   * {{{
+   *   def operate() {
+   *     if (x.isUnitialized) x.setCount(<THE_LIMIT_COUNT>) // setCount happens once
+   *     val reserved = x.reserve(<RESERVE_NBR>) // we don't know how many rows we'll get yet, so just
+   *                                             // reserve some number. Note that reserve itself does
+   *                                             // not modify the state, that only happens on update.
+   *
+   *     val countLeft = reserved
+   *     ...
+   *       countLeft -= 1
+   *     ...
+   *
+   *     x.update(reserved - countLeft) // Before returning we update the state.
+   *   }
+   * }}}
+   */
   abstract class SerialTopLevelLimitState extends LimitState {
 
     protected def getCount: Long
@@ -331,10 +363,10 @@ object SerialTopLevelLimitOperatorTaskTemplate {
   }
 
   /**
-    * The SerialTopLevelLimitState intended for use with `SerialTopLevelLimitOperatorTaskTemplate` when used
-    * in `ParallelRuntime`. It provides thread-safe calls of `isCancelled`, while all other methods have
-    * to be accessed in serial.
-    */
+   * The SerialTopLevelLimitState intended for use with `SerialTopLevelLimitOperatorTaskTemplate` when used
+   * in `ParallelRuntime`. It provides thread-safe calls of `isCancelled`, while all other methods have
+   * to be accessed in serial.
+   */
   class VolatileSerialTopLevelLimitState(override val argumentRowId: Long,
                                          override val argumentRowIdsForReducers: Array[Long]) extends SerialTopLevelLimitState {
 

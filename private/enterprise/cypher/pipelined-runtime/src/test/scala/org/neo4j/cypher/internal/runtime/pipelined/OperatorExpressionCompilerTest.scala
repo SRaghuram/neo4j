@@ -5,21 +5,40 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined
 
-import org.neo4j.codegen.api.CodeGeneration.{ByteCodeGeneration, CodeGenerationMode, CodeSaver}
-import org.neo4j.codegen.api.IntermediateRepresentation._
-import org.neo4j.codegen.api.{IntermediateRepresentation, Load}
+import org.neo4j.codegen.api.CodeGeneration.ByteCodeGeneration
+import org.neo4j.codegen.api.CodeGeneration.CodeGenerationMode
+import org.neo4j.codegen.api.CodeGeneration.CodeSaver
+import org.neo4j.codegen.api.IntermediateRepresentation
+import org.neo4j.codegen.api.IntermediateRepresentation.assign
+import org.neo4j.codegen.api.IntermediateRepresentation.block
+import org.neo4j.codegen.api.IntermediateRepresentation.cast
+import org.neo4j.codegen.api.IntermediateRepresentation.constant
+import org.neo4j.codegen.api.IntermediateRepresentation.load
+import org.neo4j.codegen.api.IntermediateRepresentation.loadField
+import org.neo4j.codegen.api.IntermediateRepresentation.print
+import org.neo4j.codegen.api.IntermediateRepresentation.variable
+import org.neo4j.codegen.api.Load
+import org.neo4j.cypher.internal.expressions.NODE_TYPE
+import org.neo4j.cypher.internal.expressions.PropertyKeyName
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
-import org.neo4j.cypher.internal.physicalplanning.ast.{SlottedCachedProperty, SlottedCachedPropertyWithoutPropertyToken}
+import org.neo4j.cypher.internal.physicalplanning.ast.SlottedCachedProperty
+import org.neo4j.cypher.internal.physicalplanning.ast.SlottedCachedPropertyWithoutPropertyToken
 import org.neo4j.cypher.internal.runtime.compiled.expressions.VariableNamer
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompilerTest.matchIR
 import org.neo4j.cypher.internal.runtime.pipelined.operators.MorselUnitTest
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.{INPUT_MORSEL, UNINITIALIZED_LONG_SLOT_VALUE, UNINITIALIZED_REF_SLOT_VALUE}
-import org.neo4j.cypher.internal.expressions.{NODE_TYPE, PropertyKeyName}
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_MORSEL
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.UNINITIALIZED_LONG_SLOT_VALUE
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.UNINITIALIZED_REF_SLOT_VALUE
 import org.neo4j.cypher.internal.util.InputPosition.NONE
-import org.neo4j.cypher.internal.util.symbols.{CTAny, CTInteger, CTNode, CTRelationship, CTString}
+import org.neo4j.cypher.internal.util.symbols.CTAny
+import org.neo4j.cypher.internal.util.symbols.CTInteger
+import org.neo4j.cypher.internal.util.symbols.CTNode
+import org.neo4j.cypher.internal.util.symbols.CTRelationship
+import org.neo4j.cypher.internal.util.symbols.CTString
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Value
-import org.scalatest.matchers.{MatchResult, Matcher}
+import org.scalatest.matchers.MatchResult
+import org.scalatest.matchers.Matcher
 
 class OperatorExpressionCompilerTest extends MorselUnitTest {
 

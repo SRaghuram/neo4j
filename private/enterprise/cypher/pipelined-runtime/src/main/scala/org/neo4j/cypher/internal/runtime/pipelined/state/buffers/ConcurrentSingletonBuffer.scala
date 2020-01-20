@@ -11,8 +11,8 @@ import java.util.concurrent.atomic.AtomicReference
 import org.neo4j.internal.helpers.collection.Iterators
 
 /**
-  * Implementation of a concurrent singleton [[Buffer]] of elements of type `T`.
-  */
+ * Implementation of a concurrent singleton [[Buffer]] of elements of type `T`.
+ */
 class ConcurrentSingletonBuffer[T <: AnyRef] extends SingletonBuffer[T] {
   private val datum = new AtomicReference[T]()
 

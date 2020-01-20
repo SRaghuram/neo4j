@@ -6,11 +6,24 @@
 package org.neo4j.cypher.internal.runtime.pipelined.execution
 
 import org.mockito.ArgumentMatchers.any
-import org.mockito.Mockito._
-import org.neo4j.cypher.internal.physicalplanning.{ExecutionGraphDefinition, PipelineDefinition, PipelineId}
+import org.mockito.Mockito.doReturn
+import org.mockito.Mockito.never
+import org.mockito.Mockito.times
+import org.mockito.Mockito.verify
+import org.mockito.Mockito.when
+import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
+import org.neo4j.cypher.internal.physicalplanning.PipelineDefinition
+import org.neo4j.cypher.internal.physicalplanning.PipelineId
 import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.pipelined.ExecutablePipeline
+import org.neo4j.cypher.internal.runtime.pipelined.ExecutionState
 import org.neo4j.cypher.internal.runtime.pipelined.MockHelper.pipelineState
-import org.neo4j.cypher.internal.runtime.pipelined._
+import org.neo4j.cypher.internal.runtime.pipelined.PipelineTask
+import org.neo4j.cypher.internal.runtime.pipelined.SchedulingResult
+import org.neo4j.cypher.internal.runtime.pipelined.Sleeper
+import org.neo4j.cypher.internal.runtime.pipelined.Task
+import org.neo4j.cypher.internal.runtime.pipelined.Worker
+import org.neo4j.cypher.internal.runtime.pipelined.WorkerResourceProvider
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.QueryExecutionTracer
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 

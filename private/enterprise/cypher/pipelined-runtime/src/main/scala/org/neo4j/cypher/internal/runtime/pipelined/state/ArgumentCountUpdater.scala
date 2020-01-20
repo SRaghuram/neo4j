@@ -13,13 +13,13 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Argume
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatingBuffer
 
 /**
-  * Helper class for updating argument counts.
-  */
+ * Helper class for updating argument counts.
+ */
 abstract class ArgumentCountUpdater {
 
   /**
-    * Get ArgumentStateMaps by ID.
-    */
+   * Get ArgumentStateMaps by ID.
+   */
   def argumentStateMaps: ArgumentStateMaps
 
   private def morselLoop(downstreamAccumulatingBuffers: IndexedSeq[AccumulatingBuffer],
@@ -76,14 +76,14 @@ abstract class ArgumentCountUpdater {
   }
 
   /**
-    * Initiates argument state maps.
-    *
-    * In practice, this is only called for Limit.
-    *
-    * @param argumentStates all argument state maps must be at the same apply nesting level
-    * @param argumentRowId argument row at the same apply nesting level as the argument states expect
-    * @param morsel must point at the row of `argumentRowId`
-    */
+   * Initiates argument state maps.
+   *
+   * In practice, this is only called for Limit.
+   *
+   * @param argumentStates all argument state maps must be at the same apply nesting level
+   * @param argumentRowId argument row at the same apply nesting level as the argument states expect
+   * @param morsel must point at the row of `argumentRowId`
+   */
   protected def initiateArgumentStatesHere(argumentStates: IndexedSeq[ArgumentStateMapId],
                                            argumentRowId: Long,
                                            morsel: MorselExecutionContext): Unit = {
@@ -91,12 +91,12 @@ abstract class ArgumentCountUpdater {
   }
 
   /**
-    * Initiates accumulating buffers.
-    *
-    * @param accumulatingBuffers all argument state maps must be at the same apply nesting level
-    * @param argumentRowId argument row at the same apply nesting level as the argument states expect
-    * @param morsel must point at the row of `argumentRowId`
-    */
+   * Initiates accumulating buffers.
+   *
+   * @param accumulatingBuffers all argument state maps must be at the same apply nesting level
+   * @param argumentRowId argument row at the same apply nesting level as the argument states expect
+   * @param morsel must point at the row of `argumentRowId`
+   */
   protected def initiateArgumentReducersHere(accumulatingBuffers: IndexedSeq[AccumulatingBuffer],
                                              argumentRowId: Long,
                                              morsel: MorselExecutionContext): Unit = {
@@ -104,13 +104,13 @@ abstract class ArgumentCountUpdater {
   }
 
   /**
-    * Apply function on each accumulating buffer, and returns the argument row id for each of them.
-    *
-    * @param accumulatingBuffers buffers to apply function to
-    * @param morsel must point at the row of `argumentRowId`
-    * @param fun function to invoke on buffers
-    * @return array of argument row ids
-    */
+   * Apply function on each accumulating buffer, and returns the argument row id for each of them.
+   *
+   * @param accumulatingBuffers buffers to apply function to
+   * @param morsel must point at the row of `argumentRowId`
+   * @param fun function to invoke on buffers
+   * @return array of argument row ids
+   */
   protected def forAllArgumentReducersAndGetArgumentRowIds(accumulatingBuffers: IndexedSeq[AccumulatingBuffer],
                                                            morsel: MorselExecutionContext,
                                                            fun: (AccumulatingBuffer, Long) => Unit): Array[Long] = {
@@ -128,12 +128,12 @@ abstract class ArgumentCountUpdater {
   }
 
   /**
-    * Apply function on each accumulating buffer
-    *
-    * @param accumulatingBuffers buffers to apply function to
-    * @param argumentRowIds argument row ids for the provided buffers, buffers may be at different apply nesting levels
-    * @param fun function to invoke on buffers
-    */
+   * Apply function on each accumulating buffer
+   *
+   * @param accumulatingBuffers buffers to apply function to
+   * @param argumentRowIds argument row ids for the provided buffers, buffers may be at different apply nesting levels
+   * @param fun function to invoke on buffers
+   */
   protected def forAllArgumentReducers(accumulatingBuffers: IndexedSeq[AccumulatingBuffer],
                                        argumentRowIds: Array[Long],
                                        fun: (AccumulatingBuffer, Long) => Unit ): Unit = {
@@ -147,24 +147,24 @@ abstract class ArgumentCountUpdater {
   }
 
   /**
-    * Increment each accumulating buffer for all argument row id in the given morsel.
-    */
+   * Increment each accumulating buffer for all argument row id in the given morsel.
+   */
   protected def incrementArgumentCounts(accumulatingBuffers: IndexedSeq[AccumulatingBuffer],
                                         morsel: MorselExecutionContext): Unit = {
     morselLoop(accumulatingBuffers, morsel, _.increment(_))
   }
 
   /**
-    * Decrement each accumulating buffer for all argument row id in the given morsel.
-    */
+   * Decrement each accumulating buffer for all argument row id in the given morsel.
+   */
   protected def decrementArgumentCounts(accumulatingBuffers: IndexedSeq[AccumulatingBuffer],
                                         morsel: MorselExecutionContext): Unit = {
     morselLoop(accumulatingBuffers, morsel, _.decrement(_))
   }
 
   /**
-    * Decrement each accumulating buffer for all given argument row ids
-    */
+   * Decrement each accumulating buffer for all given argument row ids
+   */
   protected def decrementArgumentCounts(accumulatingBuffers: IndexedSeq[AccumulatingBuffer],
                                         argumentRowIds: IndexedSeq[Long]): Unit = {
     argumentCountLoop(accumulatingBuffers, argumentRowIds, _.decrement(_))

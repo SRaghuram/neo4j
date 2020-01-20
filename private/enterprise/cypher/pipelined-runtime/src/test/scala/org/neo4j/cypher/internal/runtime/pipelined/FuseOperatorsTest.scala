@@ -6,34 +6,87 @@
 package org.neo4j.cypher.internal.runtime.pipelined
 
 import org.mockito.Mockito.RETURNS_DEEP_STUBS
-import org.neo4j.codegen.api.CodeGeneration.{ByteCodeGeneration, CodeSaver}
-import org.neo4j.cypher.internal.ir.{LazyMode, StrictnessMode}
-import org.neo4j.cypher.internal.logical.plans._
-import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.{ApplyPlans, ArgumentSizes, NestedPlanArgumentConfigurations, SlotConfigurations}
-import org.neo4j.cypher.internal.physicalplanning.PipelineId.NO_PIPELINE
-import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.PipelineDefinitionBuild
-import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.Size
-import org.neo4j.cypher.internal.physicalplanning._
-import org.neo4j.cypher.internal.planner.spi.TokenContext
-import org.neo4j.cypher.internal.runtime.expressionVariableAllocation.AvailableExpressionVariables
-import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{CommunityExpressionConverter, ExpressionConverters}
-import org.neo4j.cypher.internal.runtime.interpreted.pipes._
-import org.neo4j.cypher.internal.runtime.pipelined.InterpretedPipesFallbackPolicy.INTERPRETED_PIPES_FALLBACK_DISABLED
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{QueryResources, QueryState}
-import org.neo4j.cypher.internal.runtime.pipelined.operators._
-import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
-import org.neo4j.cypher.internal.runtime.scheduling.{WorkIdentity, WorkIdentityImpl}
-import org.neo4j.cypher.internal.runtime.slotted.expressions.{CompiledExpressionConverter, SlottedExpressionConverters}
-import org.neo4j.cypher.internal.runtime.{ParameterMapping, ProcedureCallMode, QueryContext, QueryIndexRegistrator}
+import org.neo4j.codegen.api.CodeGeneration.ByteCodeGeneration
+import org.neo4j.codegen.api.CodeGeneration.CodeSaver
 import org.neo4j.cypher.internal.ast.AstConstructionTestSupport
 import org.neo4j.cypher.internal.ast.semantics.SemanticTable
-import org.neo4j.cypher.internal.expressions.{Expression, SemanticDirection}
-import org.neo4j.cypher.internal.util.attribution.{Id, SameId}
+import org.neo4j.cypher.internal.expressions.Expression
+import org.neo4j.cypher.internal.expressions.SemanticDirection
+import org.neo4j.cypher.internal.ir.LazyMode
+import org.neo4j.cypher.internal.ir.StrictnessMode
+import org.neo4j.cypher.internal.logical.plans.Aggregation
+import org.neo4j.cypher.internal.logical.plans.AllNodesScan
+import org.neo4j.cypher.internal.logical.plans.Argument
+import org.neo4j.cypher.internal.logical.plans.DropResult
+import org.neo4j.cypher.internal.logical.plans.ExpandAll
+import org.neo4j.cypher.internal.logical.plans.LogicalPlan
+import org.neo4j.cypher.internal.logical.plans.OptionalExpand
+import org.neo4j.cypher.internal.logical.plans.ProcedureCall
+import org.neo4j.cypher.internal.logical.plans.ProcedureSignature
+import org.neo4j.cypher.internal.logical.plans.ProduceResult
+import org.neo4j.cypher.internal.logical.plans.Selection
+import org.neo4j.cypher.internal.physicalplanning.BufferDefinition
+import org.neo4j.cypher.internal.physicalplanning.BufferId
+import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
+import org.neo4j.cypher.internal.physicalplanning.LongSlot
+import org.neo4j.cypher.internal.physicalplanning.OperatorFusionPolicy
+import org.neo4j.cypher.internal.physicalplanning.PhysicalPlan
+import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.ApplyPlans
+import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.ArgumentSizes
+import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.NestedPlanArgumentConfigurations
+import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.SlotConfigurations
+import org.neo4j.cypher.internal.physicalplanning.PipelineDefinition
+import org.neo4j.cypher.internal.physicalplanning.PipelineId
+import org.neo4j.cypher.internal.physicalplanning.PipelineId.NO_PIPELINE
+import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.PipelineDefinitionBuild
+import org.neo4j.cypher.internal.physicalplanning.ProduceResultOutput
+import org.neo4j.cypher.internal.physicalplanning.ReduceOutput
+import org.neo4j.cypher.internal.physicalplanning.RefSlot
+import org.neo4j.cypher.internal.physicalplanning.Slot
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.Size
+import org.neo4j.cypher.internal.planner.spi.TokenContext
+import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
+import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
+import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentityImpl
+import org.neo4j.cypher.internal.runtime.slotted.expressions.CompiledExpressionConverter
+import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionConverters
+import org.neo4j.cypher.internal.runtime.ParameterMapping
+import org.neo4j.cypher.internal.runtime.ProcedureCallMode
+import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.QueryIndexRegistrator
+import org.neo4j.cypher.internal.runtime.expressionVariableAllocation.AvailableExpressionVariables
+import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.CommunityExpressionConverter
+import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.DropResultPipe
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.FlatMapAndAppendToRow
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.NonFilteringOptionalExpandAllPipe
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.OptionalExpandAllPipe
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeMapper
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.ProcedureCallPipe
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.RelationshipTypes
+import org.neo4j.cypher.internal.runtime.pipelined.InterpretedPipesFallbackPolicy.INTERPRETED_PIPES_FALLBACK_DISABLED
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
+import org.neo4j.cypher.internal.runtime.pipelined.operators.CompiledStreamingOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.MiddleOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.MorselFeedPipe
+import org.neo4j.cypher.internal.runtime.pipelined.operators.NoOutputOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.Operator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorTask
+import org.neo4j.cypher.internal.runtime.pipelined.operators.ProduceResultOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.SlottedPipeHeadOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.SlottedPipeMiddleOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.SlottedPipeOperator
+import org.neo4j.cypher.internal.util.attribution.Id
+import org.neo4j.cypher.internal.util.attribution.SameId
 import org.neo4j.cypher.internal.util.symbols
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 import org.neo4j.exceptions.CantCompileQueryException
 import org.neo4j.logging.NullLog
-import org.scalatest.matchers.{BeMatcher, MatchResult}
+import org.scalatest.matchers.BeMatcher
+import org.scalatest.matchers.MatchResult
 
 import scala.collection.mutable
 
@@ -56,7 +109,7 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
 
   test("should fuse full pipeline, ending in produce results") {
     // given
-   val pipeline = allNodes("x") ~> filter(trueLiteral) ~> produceResult("x")
+    val pipeline = allNodes("x") ~> filter(trueLiteral) ~> produceResult("x")
 
     // when
     val compiled = fuse(pipeline)
@@ -392,18 +445,18 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
 
     override def apply(left: Operator): MatchResult =
       MatchResult(left.isInstanceOf[CompiledStreamingOperator],
-                  s"Expected $left to have been fused", "")
+        s"Expected $left to have been fused", "")
   }
 
   private def fuse(pipelineBuilder: PipelineBuilder): ExecutablePipeline = {
     val physicalPlan = PhysicalPlan(null,
-                                    0,
-                                    new SlotConfigurations,
-                                    new ArgumentSizes,
-                                    pipelineBuilder.applyPlans,
-                                    new NestedPlanArgumentConfigurations,
-                                    new AvailableExpressionVariables,
-                                    ParameterMapping.empty)
+      0,
+      new SlotConfigurations,
+      new ArgumentSizes,
+      pipelineBuilder.applyPlans,
+      new NestedPlanArgumentConfigurations,
+      new AvailableExpressionVariables,
+      ParameterMapping.empty)
 
     physicalPlan.slotConfigurations.set(theId, pipelineBuilder.slotConfiguration)
     physicalPlan.argumentSizes.set(theId, Size.zero)
@@ -416,24 +469,24 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
       neverFail = false)
 
     val expressionConverters = new ExpressionConverters(converter,
-                                                        SlottedExpressionConverters(physicalPlan),
-                                                        CommunityExpressionConverter(TokenContext.EMPTY))
+      SlottedExpressionConverters(physicalPlan),
+      CommunityExpressionConverter(TokenContext.EMPTY))
 
     val executionGraphDefinition = ExecutionGraphDefinition(physicalPlan, null, null, null, Map.empty)
     val operatorFactory = new DummyOperatorFactory(executionGraphDefinition, expressionConverters)
     val fuser = new FuseOperators(operatorFactory,
-                                  tokenContext = TokenContext.EMPTY,
-                                  parallelExecution = true,
-                                  codeGenerationMode = ByteCodeGeneration(new CodeSaver(false, false)))
+      tokenContext = TokenContext.EMPTY,
+      parallelExecution = true,
+      codeGenerationMode = ByteCodeGeneration(new CodeSaver(false, false)))
     val pipeline = PipelineDefinition(pipelineBuilder.pipeline.id,
-                                      NO_PIPELINE,
-                                      NO_PIPELINE,
-                                      pipelineBuilder.pipeline.headPlan,
-                                      pipelineBuilder.pipeline.fusedPlans,
-                                      mock[BufferDefinition](RETURNS_DEEP_STUBS),
-                                      pipelineBuilder.pipeline.outputDefinition,
-                                      pipelineBuilder.pipeline.middlePlans,
-                                      serial = false)
+      NO_PIPELINE,
+      NO_PIPELINE,
+      pipelineBuilder.pipeline.headPlan,
+      pipelineBuilder.pipeline.fusedPlans,
+      mock[BufferDefinition](RETURNS_DEEP_STUBS),
+      pipelineBuilder.pipeline.outputDefinition,
+      pipelineBuilder.pipeline.middlePlans,
+      serial = false)
     fuser.compilePipeline(pipeline, false)._1
   }
 
@@ -462,12 +515,12 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
   class DummyOperatorFactory(executionGraphDefinition: ExecutionGraphDefinition,
                              converters: ExpressionConverters)
     extends OperatorFactory(executionGraphDefinition,
-                            converters,
-                            readOnly = true,
-                            indexRegistrator = mock[QueryIndexRegistrator],
-                            semanticTable = mock[SemanticTable],
-                            INTERPRETED_PIPES_FALLBACK_DISABLED,
-                            slottedPipeBuilder = Some(new DummySlottedPipeBuilder)) {
+      converters,
+      readOnly = true,
+      indexRegistrator = mock[QueryIndexRegistrator],
+      semanticTable = mock[SemanticTable],
+      INTERPRETED_PIPES_FALLBACK_DISABLED,
+      slottedPipeBuilder = Some(new DummySlottedPipeBuilder)) {
 
     override def create(plan: LogicalPlan,
                         inputBuffer: BufferDefinition): Operator =

@@ -8,10 +8,15 @@ package org.neo4j.cypher.internal.runtime.pipelined.execution
 import org.neo4j.cypher.internal.macros.AssertMacros.checkOnlyWhenAssertionsAreEnabled
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
 import org.neo4j.cypher.internal.runtime.debug.DebugLog
-import org.neo4j.cypher.internal.runtime.pipelined.state.{ConcurrentStateFactory, TheExecutionState}
+import org.neo4j.cypher.internal.runtime.pipelined.state.ConcurrentStateFactory
+import org.neo4j.cypher.internal.runtime.pipelined.state.TheExecutionState
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.SchedulerTracer
-import org.neo4j.cypher.internal.runtime.pipelined.{ExecutablePipeline, WorkerManagement, WorkerResourceProvider}
-import org.neo4j.cypher.internal.runtime.{InputDataStream, MemoryTracking, QueryContext}
+import org.neo4j.cypher.internal.runtime.pipelined.ExecutablePipeline
+import org.neo4j.cypher.internal.runtime.pipelined.WorkerManagement
+import org.neo4j.cypher.internal.runtime.pipelined.WorkerResourceProvider
+import org.neo4j.cypher.internal.runtime.InputDataStream
+import org.neo4j.cypher.internal.runtime.MemoryTracking
+import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.result.QueryProfile
 import org.neo4j.exceptions.RuntimeUnsupportedException
 import org.neo4j.internal.kernel.api.IndexReadSession

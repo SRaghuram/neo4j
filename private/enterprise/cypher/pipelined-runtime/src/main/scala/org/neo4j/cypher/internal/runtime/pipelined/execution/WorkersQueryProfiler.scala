@@ -5,13 +5,17 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.execution
 
-import org.neo4j.cypher.internal.profiling.{NoKernelStatisticProvider, ProfilingTracer, ProfilingTracerData, QueryProfiler}
-import org.neo4j.cypher.result.{OperatorProfile, QueryProfile}
+import org.neo4j.cypher.internal.profiling.NoKernelStatisticProvider
+import org.neo4j.cypher.internal.profiling.ProfilingTracer
+import org.neo4j.cypher.internal.profiling.ProfilingTracerData
+import org.neo4j.cypher.internal.profiling.QueryProfiler
+import org.neo4j.cypher.result.OperatorProfile
+import org.neo4j.cypher.result.QueryProfile
 
 /**
-  * Keeps track of one [[QueryProfiler]] per worker, which means that we do not need
-  * any synchronization during query execution.
-  */
+ * Keeps track of one [[QueryProfiler]] per worker, which means that we do not need
+ * any synchronization during query execution.
+ */
 trait WorkersQueryProfiler {
   def queryProfiler(workerId: Int): QueryProfiler
 }
@@ -23,12 +27,12 @@ object WorkersQueryProfiler {
 }
 
 /**
-  * @param numberOfWorkers number of worker that can execute this query
-  * @param applyRhsPlans maps all apply ids to their corresponding rhs operator id. This is needed because the apply
-  *                      operator is not an executable operator in pipelined, and thus there is no place to inject code
-  *                      for counting apply rows. Instead we return the rhs operator rows, as these are guaranteed to
-  *                      be identical.
-  */
+ * @param numberOfWorkers number of worker that can execute this query
+ * @param applyRhsPlans maps all apply ids to their corresponding rhs operator id. This is needed because the apply
+ *                      operator is not an executable operator in pipelined, and thus there is no place to inject code
+ *                      for counting apply rows. Instead we return the rhs operator rows, as these are guaranteed to
+ *                      be identical.
+ */
 class FixedWorkersQueryProfiler(numberOfWorkers: Int, applyRhsPlans: Map[Int, Int]) extends WorkersQueryProfiler {
 
   private val profilers: Array[ProfilingTracer] =
@@ -39,8 +43,8 @@ class FixedWorkersQueryProfiler(numberOfWorkers: Int, applyRhsPlans: Map[Int, In
   }
 
   /**
-    * The Profile that this profiler creates.
-    */
+   * The Profile that this profiler creates.
+   */
   object Profile extends QueryProfile {
     override def operatorProfile(operatorId: Int): OperatorProfile = {
       applyRhsPlans.get(operatorId) match {

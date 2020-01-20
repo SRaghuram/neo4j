@@ -7,31 +7,32 @@ package org.neo4j.cypher.internal.runtime.pipelined.state
 
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
-import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.{ArgumentState, ArgumentStateWithCompleted}
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateWithCompleted
 import org.neo4j.util.Preconditions
 
-import scala.collection.JavaConverters._
+import scala.collection.JavaConverters.asScalaIteratorConverter
 
 /**
-  * All functionality of either standard or concurrent ASM that can be written without knowing the concrete Map type.
-  */
+ * All functionality of either standard or concurrent ASM that can be written without knowing the concrete Map type.
+ */
 abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: AbstractArgumentStateMap.StateController[STATE]]
   extends ArgumentStateMapWithArgumentIdCounter[STATE] with ArgumentStateMapWithoutArgumentIdCounter[STATE] {
 
   /**
-    * A Map of the controllers.
-    */
+   * A Map of the controllers.
+   */
   protected val controllers: java.util.Map[Long, CONTROLLER]
 
   // Not assigned here since the Concurrent implementation needs to declare this volatile
   /**
-    * A private counter for the methods [[takeNextIfCompletedOrElsePeek()]], [[nextArgumentStateIsCompletedOr()]], and [[peekNext()]]
-    */
+   * A private counter for the methods [[takeNextIfCompletedOrElsePeek()]], [[nextArgumentStateIsCompletedOr()]], and [[peekNext()]]
+   */
   protected var lastCompletedArgumentId: Long
 
   /**
-    * Create a new state controller
-    */
+   * Create a new state controller
+   */
   protected def newStateController(argument: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): CONTROLLER
 
   override def update(argumentRowId: Long, onState: STATE => Unit): Unit = {
@@ -171,37 +172,37 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
 object AbstractArgumentStateMap {
   trait StateController[STATE <: ArgumentState] {
     /**
-      * The state the controller is holding.
-      */
+     * The state the controller is holding.
+     */
     def state: STATE
 
     /**
-      * Increment the count.
-      * @return the new count
-      */
+     * Increment the count.
+     * @return the new count
+     */
     def increment(): Long
 
     /**
-      * Decrement the count.
-      * @return the new count
-      */
+     * Decrement the count.
+     * @return the new count
+     */
     def decrement(): Long
 
     /**
-      * @return if the count is zero.
-      */
+     * @return if the count is zero.
+     */
     def isZero: Boolean
 
     /**
-      * Atomically tries to take the controller. The implementation must guarantee that taking can only happen once.
-      * @return if this call succeeded in taking the controller
-      */
+     * Atomically tries to take the controller. The implementation must guarantee that taking can only happen once.
+     * @return if this call succeeded in taking the controller
+     */
     def take(): Boolean
 
     /**
-      * Atomically tries to take the controller if the count is zero. The implementation must guarantee that taking can only happen once.
-      * @return if this call succeeded in taking the controller
-      */
+     * Atomically tries to take the controller if the count is zero. The implementation must guarantee that taking can only happen once.
+     * @return if this call succeeded in taking the controller
+     */
     def tryTake(): Boolean
   }
 

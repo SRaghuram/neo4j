@@ -5,34 +5,42 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.state.buffers
 
-import org.neo4j.cypher.internal.physicalplanning.{ArgumentStateMapId, PipelineId}
+import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
+import org.neo4j.cypher.internal.physicalplanning.PipelineId
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
-import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.{ArgumentStateMaps, MorselAccumulator, PerArgument}
-import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.{AccumulatingBuffer, DataHolder, SinkByOrigin}
-import org.neo4j.cypher.internal.runtime.pipelined.state.{ArgumentCountUpdater, ArgumentStateMap, ArgumentStateMapWithoutArgumentIdCounter, QueryCompletionTracker}
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentCountUpdater
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.PerArgument
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMapWithoutArgumentIdCounter
+import org.neo4j.cypher.internal.runtime.pipelined.state.QueryCompletionTracker
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatingBuffer
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.DataHolder
+import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.SinkByOrigin
 
 /**
-  * Morsel buffer that groups incoming rows by argumentRowId by delegating to an [[ArgumentStateMap]].
-  *
-  * This buffer sits before a pipeline that starts with a reducer. It accumulates the state into the
-  * ArgumentStateMap.
-  *
-  * @param argumentStateMapId id of the argument state map to reduce data into.
-  */
+ * Morsel buffer that groups incoming rows by argumentRowId by delegating to an [[ArgumentStateMap]].
+ *
+ * This buffer sits before a pipeline that starts with a reducer. It accumulates the state into the
+ * ArgumentStateMap.
+ *
+ * @param argumentStateMapId id of the argument state map to reduce data into.
+ */
 class MorselArgumentStateBuffer[DATA <: AnyRef,
-                                ACC <: MorselAccumulator[DATA]
-                               ](
-                                 tracker: QueryCompletionTracker,
-                                 downstreamArgumentReducers: IndexedSeq[AccumulatingBuffer],
-                                 override val argumentStateMaps: ArgumentStateMaps,
-                                 val argumentStateMapId: ArgumentStateMapId
-                               ) extends ArgumentCountUpdater
-                                    with AccumulatingBuffer
-                                    with Sink[IndexedSeq[PerArgument[DATA]]]
-                                    with Source[ACC]
-                                    with SinkByOrigin
-                                    with DataHolder {
+  ACC <: MorselAccumulator[DATA]
+](
+   tracker: QueryCompletionTracker,
+   downstreamArgumentReducers: IndexedSeq[AccumulatingBuffer],
+   override val argumentStateMaps: ArgumentStateMaps,
+   val argumentStateMapId: ArgumentStateMapId
+ ) extends ArgumentCountUpdater
+   with AccumulatingBuffer
+   with Sink[IndexedSeq[PerArgument[DATA]]]
+   with Source[ACC]
+   with SinkByOrigin
+   with DataHolder {
 
   private val argumentStateMap: ArgumentStateMapWithoutArgumentIdCounter[ACC] = argumentStateMaps(argumentStateMapId).asInstanceOf[ArgumentStateMapWithoutArgumentIdCounter[ACC]]
 
@@ -89,8 +97,8 @@ class MorselArgumentStateBuffer[DATA <: AnyRef,
   }
 
   /**
-    * Decrement reference counters attached to `accumulator`.
-    */
+   * Decrement reference counters attached to `accumulator`.
+   */
   def close(accumulator: MorselAccumulator[_]): Unit = {
     if (DebugSupport.BUFFERS.enabled) {
       DebugSupport.BUFFERS.log(s"[close] $this -X- $accumulator")
@@ -100,11 +108,11 @@ class MorselArgumentStateBuffer[DATA <: AnyRef,
   }
 
   /**
-    * Remove the state of the accumulator, if it is related to a cancelled argumentRowId.
-    *
-    * @param accumulator the accumulator
-    * @return `true` iff the accumulator is cancelled
-    */
+   * Remove the state of the accumulator, if it is related to a cancelled argumentRowId.
+   *
+   * @param accumulator the accumulator
+   * @return `true` iff the accumulator is cancelled
+   */
   def filterCancelledArguments(accumulator: MorselAccumulator[_]): Boolean = {
     false
   }

@@ -5,34 +5,104 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined
 
+import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.logical.plans
-import org.neo4j.cypher.internal.logical.plans.{DoNotIncludeTies, ExpandAll, LogicalPlan}
+import org.neo4j.cypher.internal.logical.plans.DoNotIncludeTies
+import org.neo4j.cypher.internal.logical.plans.LogicalPlan
+import org.neo4j.cypher.internal.physicalplanning.ArgumentStateBufferVariant
+import org.neo4j.cypher.internal.physicalplanning.BufferDefinition
+import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
+import org.neo4j.cypher.internal.physicalplanning.LHSAccumulatingRHSStreamingBufferVariant
+import org.neo4j.cypher.internal.physicalplanning.LongSlot
+import org.neo4j.cypher.internal.physicalplanning.MorselArgumentStateBufferOutput
+import org.neo4j.cypher.internal.physicalplanning.MorselBufferOutput
+import org.neo4j.cypher.internal.physicalplanning.NoOutput
 import org.neo4j.cypher.internal.physicalplanning.OperatorFusionPolicy.OPERATOR_FUSION_DISABLED
+import org.neo4j.cypher.internal.physicalplanning.OptionalBufferVariant
+import org.neo4j.cypher.internal.physicalplanning.OutputDefinition
+import org.neo4j.cypher.internal.physicalplanning.ProduceResultOutput
+import org.neo4j.cypher.internal.physicalplanning.ReduceOutput
+import org.neo4j.cypher.internal.physicalplanning.RefSlot
+import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.isRefSlotAndNotAlias
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.generateSlotAccessorFunctions
+import org.neo4j.cypher.internal.physicalplanning.SlottedIndexedProperty
 import org.neo4j.cypher.internal.physicalplanning.VariablePredicates.expressionSlotForPredicate
-import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot, SlottedIndexedProperty, _}
 import org.neo4j.cypher.internal.runtime.KernelAPISupport.asKernelIndexOrder
 import org.neo4j.cypher.internal.runtime.QueryIndexRegistrator
 import org.neo4j.cypher.internal.runtime.interpreted.CommandProjection
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.True
-import org.neo4j.cypher.internal.runtime.interpreted.pipes._
-import org.neo4j.cypher.internal.runtime.pipelined.aggregators.{Aggregator, AggregatorFactory}
-import org.neo4j.cypher.internal.runtime.pipelined.operators._
-import org.neo4j.cypher.internal.runtime.scheduling.{WorkIdentity, WorkIdentityMutableDescription, WorkIdentityMutableDescriptionImpl}
-import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.{createProjectionsForResult, translateColumnOrder}
-import org.neo4j.cypher.internal.ast.semantics.SemanticTable
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.DropResultPipe
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.IndexSeekModeFactory
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyLabel
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.LockingUniqueIndexSeek
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeMapper
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeWithSource
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.RelationshipTypes
+import org.neo4j.cypher.internal.runtime.pipelined.aggregators.Aggregator
+import org.neo4j.cypher.internal.runtime.pipelined.aggregators.AggregatorFactory
+import org.neo4j.cypher.internal.runtime.pipelined.operators.AggregationOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.AggregationOperatorNoGrouping
+import org.neo4j.cypher.internal.runtime.pipelined.operators.AllNodeScanOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.ArgumentOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.CachePropertiesOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.CartesianProductOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.DirectedRelationshipByIdSeekOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.DistinctOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandAllOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandIntoOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.FilterOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.InputOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.LabelScanOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.LimitOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.MiddleOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.MorselArgumentStateBufferOutputOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.MorselBufferOutputOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.MorselFeedPipe
+import org.neo4j.cypher.internal.runtime.pipelined.operators.NoOutputOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeByIdSeekOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeCountFromCountStoreOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeHashJoinOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeHashJoinSingleNodeOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeIndexContainsScanOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeIndexEndsWithScanOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeIndexScanOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeIndexSeekOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.Operator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OptionalExpandAllOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OptionalExpandIntoOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OptionalOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OutputOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.ProduceResultOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.ProjectOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.RelationshipCountFromCountStoreOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.SlottedPipeHeadOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.SlottedPipeMiddleOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.SlottedPipeOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.SortMergeOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.SortPreOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.TopOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.UndirectedRelationshipByIdSeekOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.UnwindOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.VarExpandOperator
+import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
+import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentityMutableDescription
+import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentityMutableDescriptionImpl
+import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.createProjectionsForResult
+import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.translateColumnOrder
 import org.neo4j.cypher.internal.util.attribution.Id
-import org.neo4j.exceptions.{CantCompileQueryException, InternalException}
+import org.neo4j.exceptions.CantCompileQueryException
+import org.neo4j.exceptions.InternalException
 
 import scala.annotation.tailrec
 import scala.collection.mutable.ArrayBuffer
 
 /**
-  * Responsible for a mapping from LogicalPlans to Operators.
-  */
+ * Responsible for a mapping from LogicalPlans to Operators.
+ */
 class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
                       val converters: ExpressionConverters,
                       val readOnly: Boolean,
@@ -55,23 +125,23 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
     plan match {
       case plans.Input(nodes, relationships, variables, _) =>
         new InputOperator(WorkIdentity.fromPlan(plan),
-                          nodes.map(v => slots.getLongOffsetFor(v)).toArray,
-                          relationships.map(v => slots.getLongOffsetFor(v)).toArray,
-                          variables.map(v => slots.getReferenceOffsetFor(v)).toArray)
+          nodes.map(v => slots.getLongOffsetFor(v)).toArray,
+          relationships.map(v => slots.getLongOffsetFor(v)).toArray,
+          variables.map(v => slots.getReferenceOffsetFor(v)).toArray)
 
       case plans.AllNodesScan(column, _) =>
         val argumentSize = physicalPlan.argumentSizes(id)
         new AllNodeScanOperator(WorkIdentity.fromPlan(plan),
-                                slots.getLongOffsetFor(column),
-                                argumentSize)
+          slots.getLongOffsetFor(column),
+          argumentSize)
 
       case plans.NodeByLabelScan(column, label, _) =>
         val argumentSize = physicalPlan.argumentSizes(id)
         indexRegistrator.registerLabelScan()
         new LabelScanOperator(WorkIdentity.fromPlan(plan),
-                              slots.getLongOffsetFor(column),
-                              LazyLabel(label)(semanticTable),
-                              argumentSize)
+          slots.getLongOffsetFor(column),
+          LazyLabel(label)(semanticTable),
+          argumentSize)
 
       case plans.NodeIndexSeek(column, label, properties, valueExpr, _,  indexOrder) =>
         val argumentSize = physicalPlan.argumentSizes(id)
@@ -81,94 +151,94 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         }
 
         new NodeIndexSeekOperator(WorkIdentity.fromPlan(plan),
-                                  slots.getLongOffsetFor(column),
-                                  properties.map(SlottedIndexedProperty(column, _, slots)).toArray,
-                                  indexRegistrator.registerQueryIndex(label, properties),
-                                  asKernelIndexOrder(indexOrder),
-                                  argumentSize,
-                                  valueExpr.map(converters.toCommandExpression(id, _)),
-                                  indexSeekMode)
+          slots.getLongOffsetFor(column),
+          properties.map(SlottedIndexedProperty(column, _, slots)).toArray,
+          indexRegistrator.registerQueryIndex(label, properties),
+          asKernelIndexOrder(indexOrder),
+          argumentSize,
+          valueExpr.map(converters.toCommandExpression(id, _)),
+          indexSeekMode)
 
       case plans.NodeUniqueIndexSeek(column, label, properties, valueExpr, _, indexOrder) =>
         val argumentSize = physicalPlan.argumentSizes(id)
         val indexSeekMode = IndexSeekModeFactory(unique = true, readOnly = readOnly).fromQueryExpression(valueExpr)
         new NodeIndexSeekOperator(WorkIdentity.fromPlan(plan),
-                                  slots.getLongOffsetFor(column),
-                                  properties.map(SlottedIndexedProperty(column, _, slots)).toArray,
-                                  indexRegistrator.registerQueryIndex(label, properties),
-                                  asKernelIndexOrder(indexOrder),
-                                  argumentSize,
-                                  valueExpr.map(converters.toCommandExpression(id, _)),
-                                  indexSeekMode)
+          slots.getLongOffsetFor(column),
+          properties.map(SlottedIndexedProperty(column, _, slots)).toArray,
+          indexRegistrator.registerQueryIndex(label, properties),
+          asKernelIndexOrder(indexOrder),
+          argumentSize,
+          valueExpr.map(converters.toCommandExpression(id, _)),
+          indexSeekMode)
 
       case plans.NodeIndexScan(column, labelToken, properties, _, indexOrder) =>
         val argumentSize = physicalPlan.argumentSizes(id)
         new NodeIndexScanOperator(WorkIdentity.fromPlan(plan),
-                                  slots.getLongOffsetFor(column),
-                                  properties.map(SlottedIndexedProperty(column, _, slots)).toArray,
-                                  indexRegistrator.registerQueryIndex(labelToken, properties),
-                                  asKernelIndexOrder(indexOrder),
-                                  argumentSize)
+          slots.getLongOffsetFor(column),
+          properties.map(SlottedIndexedProperty(column, _, slots)).toArray,
+          indexRegistrator.registerQueryIndex(labelToken, properties),
+          asKernelIndexOrder(indexOrder),
+          argumentSize)
 
       case plans.NodeIndexContainsScan(column, labelToken, property, valueExpr, _, indexOrder) =>
         val argumentSize = physicalPlan.argumentSizes(id)
         new NodeIndexContainsScanOperator(WorkIdentity.fromPlan(plan),
-                                          slots.getLongOffsetFor(column),
-                                          SlottedIndexedProperty(column, property, slots),
-                                          indexRegistrator.registerQueryIndex(labelToken, property),
-                                          asKernelIndexOrder(indexOrder),
-                                          converters.toCommandExpression(id, valueExpr),
-                                          argumentSize)
+          slots.getLongOffsetFor(column),
+          SlottedIndexedProperty(column, property, slots),
+          indexRegistrator.registerQueryIndex(labelToken, property),
+          asKernelIndexOrder(indexOrder),
+          converters.toCommandExpression(id, valueExpr),
+          argumentSize)
 
       case plans.NodeIndexEndsWithScan(column, labelToken, property, valueExpr, _, indexOrder) =>
         val argumentSize = physicalPlan.argumentSizes(id)
         new NodeIndexEndsWithScanOperator(WorkIdentity.fromPlan(plan),
-                                          slots.getLongOffsetFor(column),
-                                          SlottedIndexedProperty(column, property, slots),
-                                          indexRegistrator.registerQueryIndex(labelToken, property),
-                                          asKernelIndexOrder(indexOrder),
-                                          converters.toCommandExpression(id, valueExpr),
-                                          argumentSize)
+          slots.getLongOffsetFor(column),
+          SlottedIndexedProperty(column, property, slots),
+          indexRegistrator.registerQueryIndex(labelToken, property),
+          asKernelIndexOrder(indexOrder),
+          converters.toCommandExpression(id, valueExpr),
+          argumentSize)
 
       case plans.NodeByIdSeek(column, nodeIds, _) =>
         new NodeByIdSeekOperator(WorkIdentity.fromPlan(plan),
-                                 slots.getLongOffsetFor(column),
-                                 converters.toCommandSeekArgs(id, nodeIds),
-                                 physicalPlan.argumentSizes(id))
+          slots.getLongOffsetFor(column),
+          converters.toCommandSeekArgs(id, nodeIds),
+          physicalPlan.argumentSizes(id))
 
       case plans.DirectedRelationshipByIdSeek(column, relIds, startNode, endNode, _) =>
         new DirectedRelationshipByIdSeekOperator(WorkIdentity.fromPlan(plan),
-                                         slots.getLongOffsetFor(column),
-                                         slots.getLongOffsetFor(startNode),
-                                         slots.getLongOffsetFor(endNode),
-                                         converters.toCommandSeekArgs(id, relIds),
-                                         physicalPlan.argumentSizes(id))
+          slots.getLongOffsetFor(column),
+          slots.getLongOffsetFor(startNode),
+          slots.getLongOffsetFor(endNode),
+          converters.toCommandSeekArgs(id, relIds),
+          physicalPlan.argumentSizes(id))
 
       case plans.UndirectedRelationshipByIdSeek(column, relIds, startNode, endNode, _) =>
         new UndirectedRelationshipByIdSeekOperator(WorkIdentity.fromPlan(plan),
-                                                 slots.getLongOffsetFor(column),
-                                                 slots.getLongOffsetFor(startNode),
-                                                 slots.getLongOffsetFor(endNode),
-                                                 converters.toCommandSeekArgs(id, relIds),
-                                                 physicalPlan.argumentSizes(id))
+          slots.getLongOffsetFor(column),
+          slots.getLongOffsetFor(startNode),
+          slots.getLongOffsetFor(endNode),
+          converters.toCommandSeekArgs(id, relIds),
+          physicalPlan.argumentSizes(id))
 
       case plans.NodeCountFromCountStore(idName, labelNames, _) =>
         val labels = labelNames.map(label => label.map(LazyLabel(_)(semanticTable)))
         new NodeCountFromCountStoreOperator(WorkIdentity.fromPlan(plan),
-                                            slots.getReferenceOffsetFor(idName),
-                                            labels,
-                                            physicalPlan.argumentSizes(id))
+          slots.getReferenceOffsetFor(idName),
+          labels,
+          physicalPlan.argumentSizes(id))
 
       case plans.RelationshipCountFromCountStore(idName, startLabel, typeNames, endLabel, _) =>
         val maybeStartLabel = startLabel.map(label => LazyLabel(label)(semanticTable))
         val relationshipTypes = RelationshipTypes(typeNames.toArray)(semanticTable)
         val maybeEndLabel = endLabel.map(label => LazyLabel(label)(semanticTable))
         new RelationshipCountFromCountStoreOperator(WorkIdentity.fromPlan(plan),
-                                                    slots.getReferenceOffsetFor(idName),
-                                                    maybeStartLabel,
-                                                    relationshipTypes,
-                                                    maybeEndLabel,
-                                                    physicalPlan.argumentSizes(id))
+          slots.getReferenceOffsetFor(idName),
+          maybeStartLabel,
+          relationshipTypes,
+          maybeEndLabel,
+          physicalPlan.argumentSizes(id))
 
       case plans.Expand(_, fromName, dir, types, to, relName, plans.ExpandAll) =>
         val fromSlot = slots(fromName)
@@ -176,11 +246,11 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         val toOffset = slots.getLongOffsetFor(to)
         val lazyTypes = RelationshipTypes(types.toArray)(semanticTable)
         new ExpandAllOperator(WorkIdentity.fromPlan(plan),
-                              fromSlot,
-                              relOffset,
-                              toOffset,
-                              dir,
-                              lazyTypes)
+          fromSlot,
+          relOffset,
+          toOffset,
+          dir,
+          lazyTypes)
 
       case plans.Expand(_, fromName, dir, types, to, relName, plans.ExpandInto) =>
         val fromSlot = slots(fromName)
@@ -188,23 +258,23 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         val toSlot = slots(to)
         val lazyTypes = RelationshipTypes(types.toArray)(semanticTable)
         new ExpandIntoOperator(WorkIdentity.fromPlan(plan),
-                               fromSlot,
-                               relOffset,
-                               toSlot,
-                               dir,
-                               lazyTypes)
+          fromSlot,
+          relOffset,
+          toSlot,
+          dir,
+          lazyTypes)
 
       case plans.VarExpand(_,
-                           fromName,
-                           dir,
-                           projectedDir,
-                           types,
-                           toName,
-                           relName,
-                           length,
-                           mode,
-                           nodePredicate,
-                           relationshipPredicate) =>
+      fromName,
+      dir,
+      projectedDir,
+      types,
+      toName,
+      relName,
+      length,
+      mode,
+      nodePredicate,
+      relationshipPredicate) =>
 
         val fromSlot = slots(fromName)
         val relOffset = slots.getReferenceOffsetFor(relName)
@@ -215,37 +285,37 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         val tempRelationshipOffset = expressionSlotForPredicate(relationshipPredicate)
 
         new VarExpandOperator(WorkIdentity.fromPlan(plan),
-                              fromSlot,
-                              relOffset,
-                              toSlot,
-                              dir,
-                              projectedDir,
-                              lazyTypes,
-                              length.min,
-                              length.max.getOrElse(Int.MaxValue),
-                              mode == ExpandAll,
-                              tempNodeOffset,
-                              tempRelationshipOffset,
-                              nodePredicate.map(x => converters.toCommandExpression(id, x.predicate)).getOrElse(True()),
-                              relationshipPredicate.map(x => converters.toCommandExpression(id, x.predicate)).getOrElse(True()))
+          fromSlot,
+          relOffset,
+          toSlot,
+          dir,
+          projectedDir,
+          lazyTypes,
+          length.min,
+          length.max.getOrElse(Int.MaxValue),
+          mode == plans.ExpandAll,
+          tempNodeOffset,
+          tempRelationshipOffset,
+          nodePredicate.map(x => converters.toCommandExpression(id, x.predicate)).getOrElse(True()),
+          relationshipPredicate.map(x => converters.toCommandExpression(id, x.predicate)).getOrElse(True()))
 
       case plans.OptionalExpand(_, fromName, dir, types, to, relName, plans.ExpandAll, maybePredicate) =>
         new OptionalExpandAllOperator(WorkIdentity.fromPlan(plan),
-                                      slots(fromName),
-                                      slots.getLongOffsetFor(relName),
-                                      slots.getLongOffsetFor(to),
-                                      dir,
-                                      RelationshipTypes(types.toArray)(semanticTable),
-                                      maybePredicate.map(converters.toCommandExpression(id, _)))
+          slots(fromName),
+          slots.getLongOffsetFor(relName),
+          slots.getLongOffsetFor(to),
+          dir,
+          RelationshipTypes(types.toArray)(semanticTable),
+          maybePredicate.map(converters.toCommandExpression(id, _)))
 
       case plans.OptionalExpand(_, fromName, dir, types, to, relName, plans.ExpandInto, maybePredicate) =>
         new OptionalExpandIntoOperator(WorkIdentity.fromPlan(plan),
-                                       slots(fromName),
-                                       slots.getLongOffsetFor(relName),
-                                       slots(to),
-                                       dir,
-                                       RelationshipTypes(types.toArray)(semanticTable),
-                                       maybePredicate.map(converters.toCommandExpression(id, _)))
+          slots(fromName),
+          slots.getLongOffsetFor(relName),
+          slots(to),
+          dir,
+          RelationshipTypes(types.toArray)(semanticTable),
+          maybePredicate.map(converters.toCommandExpression(id, _)))
 
       case plans.Optional(source, protectedSymbols) =>
         val argumentStateMapId = inputBuffer.variant.asInstanceOf[OptionalBufferVariant].argumentStateMapId
@@ -340,16 +410,16 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         val argumentSlot = slots.getArgumentLongOffsetFor(argumentDepth)
         val argumentStateMapId = inputBuffer.variant.asInstanceOf[ArgumentStateBufferVariant].argumentStateMapId
         new SortMergeOperator(argumentStateMapId,
-                              WorkIdentity.fromPlan(plan),
-                              ordering,
-                              argumentSlot)
+          WorkIdentity.fromPlan(plan),
+          ordering,
+          argumentSlot)
 
       case plans.Top(_, sortItems, limit) =>
         val ordering = sortItems.map(translateColumnOrder(slots, _))
         val argumentStateMapId = inputBuffer.variant.asInstanceOf[ArgumentStateBufferVariant].argumentStateMapId
         TopOperator(WorkIdentity.fromPlan(plan),
-                    ordering,
-                    converters.toCommandExpression(plan.id, limit)).reducer(argumentStateMapId)
+          ordering,
+          converters.toCommandExpression(plan.id, limit)).reducer(argumentStateMapId)
 
       case plans.Aggregation(_, groupingExpressions, aggregationExpression) if groupingExpressions.isEmpty =>
         val argumentStateMapId = inputBuffer.variant.asInstanceOf[ArgumentStateBufferVariant].argumentStateMapId
@@ -364,9 +434,9 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
             outputSlots += outputSlot.offset
         }
         AggregationOperatorNoGrouping(WorkIdentity.fromPlan(plan),
-                                      aggregators.result())
-            .reducer(argumentStateMapId,
-                     outputSlots.result())
+          aggregators.result())
+          .reducer(argumentStateMapId,
+            outputSlots.result())
 
       case plans.Aggregation(_, groupingExpressions, aggregationExpression) =>
         val argumentStateMapId = inputBuffer.variant.asInstanceOf[ArgumentStateBufferVariant].argumentStateMapId
@@ -389,7 +459,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
 
       case _: plans.Argument =>
         new ArgumentOperator(WorkIdentity.fromPlan(plan),
-                             physicalPlan.argumentSizes(id))
+          physicalPlan.argumentSizes(id))
 
       case _ if slottedPipeBuilder.isDefined =>
         // Validate that we support fallback for this plan (throws CantCompileQueryException otherwise)
@@ -475,7 +545,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         val propertyOps = properties.toArray.map(converters.toCommandExpression(id, _))
         Some(new CachePropertiesOperator(WorkIdentity.fromPlan(plan), propertyOps))
 
-        case _: plans.Argument => None
+      case _: plans.Argument => None
 
       case _ if slottedPipeBuilder.isDefined =>
         // Validate that we support fallback for this plan (throws CantCompileQueryException)
@@ -495,8 +565,8 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
     val slots = physicalPlan.slotConfigurations(plan.id)
     val runtimeColumns = createProjectionsForResult(plan.columns, slots)
     new ProduceResultOperator(WorkIdentity.fromPlan(plan),
-                              slots,
-                              runtimeColumns)
+      slots,
+      runtimeColumns)
   }
 
   def createOutput(outputDefinition: OutputDefinition): OutputOperator = {
@@ -521,8 +591,8 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
           case plans.Top(_, sortItems, limit) =>
             val ordering = sortItems.map(translateColumnOrder(slots, _))
             TopOperator(WorkIdentity.fromPlan(plan, "Pre"),
-                        ordering,
-                        converters.toCommandExpression(plan.id, limit)).mapper(argumentSlot, bufferId)
+              ordering,
+              converters.toCommandExpression(plan.id, limit)).mapper(argumentSlot, bufferId)
 
           case plans.Aggregation(_, groupingExpressions, aggregationExpression) if groupingExpressions.isEmpty =>
             val aggregators = Array.newBuilder[Aggregator]
@@ -532,13 +602,13 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
                 val (aggregator, expression) = aggregatorFactory.newAggregator(astExpression)
                 aggregators += aggregator
                 expressions += converters.toCommandExpression(id, expression)
-              }
+            }
 
             AggregationOperatorNoGrouping(WorkIdentity.fromPlan(plan, "Pre"),
-                                          aggregators.result())
+              aggregators.result())
               .mapper(argumentSlot,
-                      bufferId,
-                      expressions.result())
+                bufferId,
+                expressions.result())
 
           case plans.Aggregation(_, groupingExpressions, aggregationExpression) =>
             val groupings = converters.toGroupingExpression(id, groupingExpressions, Seq.empty)

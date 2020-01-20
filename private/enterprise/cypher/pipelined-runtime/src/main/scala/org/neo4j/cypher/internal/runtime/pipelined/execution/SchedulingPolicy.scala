@@ -6,7 +6,8 @@
 package org.neo4j.cypher.internal.runtime.pipelined.execution
 
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
-import org.neo4j.cypher.internal.runtime.pipelined.{SchedulingResult, Task}
+import org.neo4j.cypher.internal.runtime.pipelined.SchedulingResult
+import org.neo4j.cypher.internal.runtime.pipelined.Task
 
 /**
  * Gives scheduling policies for execution graphs.
@@ -23,8 +24,8 @@ trait ExecutionGraphSchedulingPolicy {
 }
 
 /**
-  * Policy which selects the next task to execute. Must be thread-safe.
-  */
+ * Policy which selects the next task to execute. Must be thread-safe.
+ */
 trait QuerySchedulingPolicy {
   /**
    * Return the next task (together with the information if some task was cancelled), if there was any work to be done.

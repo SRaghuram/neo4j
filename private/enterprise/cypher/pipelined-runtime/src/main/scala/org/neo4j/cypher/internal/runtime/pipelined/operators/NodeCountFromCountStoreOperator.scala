@@ -5,24 +5,53 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.operators
 
-import org.neo4j.codegen.api.IntermediateRepresentation._
-import org.neo4j.codegen.api.{Field, IntermediateRepresentation, LocalVariable}
+import org.neo4j.codegen.api.Field
+import org.neo4j.codegen.api.IntermediateRepresentation
+import org.neo4j.codegen.api.IntermediateRepresentation.assign
+import org.neo4j.codegen.api.IntermediateRepresentation.block
+import org.neo4j.codegen.api.IntermediateRepresentation.condition
+import org.neo4j.codegen.api.IntermediateRepresentation.constant
+import org.neo4j.codegen.api.IntermediateRepresentation.declareAndAssign
+import org.neo4j.codegen.api.IntermediateRepresentation.equal
+import org.neo4j.codegen.api.IntermediateRepresentation.field
+import org.neo4j.codegen.api.IntermediateRepresentation.ifElse
+import org.neo4j.codegen.api.IntermediateRepresentation.invoke
+import org.neo4j.codegen.api.IntermediateRepresentation.invokeStatic
+import org.neo4j.codegen.api.IntermediateRepresentation.load
+import org.neo4j.codegen.api.IntermediateRepresentation.loadField
+import org.neo4j.codegen.api.IntermediateRepresentation.method
+import org.neo4j.codegen.api.IntermediateRepresentation.multiply
+import org.neo4j.codegen.api.IntermediateRepresentation.noop
+import org.neo4j.codegen.api.IntermediateRepresentation.setField
+import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
+import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
+import org.neo4j.cypher.internal.runtime.DbAccess
+import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyLabel
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.NO_TOKEN
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.CURSOR_POOL_V
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.DB_ACCESS
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profileRow
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.nodeLabelId
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.dbHit
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.dbHits
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
-import org.neo4j.cypher.internal.runtime.{DbAccess, ExecutionContext, QueryContext}
 import org.neo4j.cypher.internal.util.NameId
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.internal.kernel.api.NodeLabelIndexCursor
 import org.neo4j.util.Preconditions
-import org.neo4j.values.storable.{LongValue, Values}
-
+import org.neo4j.values.storable.LongValue
+import org.neo4j.values.storable.Values
 
 class NodeCountFromCountStoreOperator(val workIdentity: WorkIdentity,
                                       offset: Int,
@@ -115,7 +144,6 @@ class NodeCountFromCountStoreOperatorTemplate(override val inner: OperatorTaskTe
                                              (codeGen: OperatorExpressionCompiler)
   extends InputLoopTaskTemplate(inner, id, innermost, codeGen) {
 
-  import OperatorCodeGenHelperTemplates._
 
   private val wildCards: Int = labels.count(_.isEmpty)
   private val knownLabels = labels.flatten.collect {
@@ -140,40 +168,40 @@ class NodeCountFromCountStoreOperatorTemplate(override val inner: OperatorTaskTe
       case (name, field) => condition(equal(loadField(field), NO_TOKEN))(setField(field, nodeLabelId(name)))
     }
     block(setLabelIds ++
-            Seq(setField(canContinue, constant(true)),
-            constant(true)):_*)
+      Seq(setField(canContinue, constant(true)),
+        constant(true)):_*)
   }
 
   /**
-    *{{{
-    *  var count = 1L
-    *  //for the labels not known at compile time
-    *  if (this.labelField1 == -1) {
-    *    count = 0L
-    *  } else {
-    *    count = count * dbAccess.nodeCountByCountStore(this.labelField1)
-    *  }
-    *  if (this.labelField2 == -1) {
-    *      count = 0L
-    *    } else {
-    *      count = count * dbAccess.nodeCountByCountStore(this.labelField2)
-    *  }
-    *  ...
-    *  //for labels known at compile time
-    *  count = count * dbAccess.nodeCountByCountStore(11)
-    *  count = count * dbAccess.nodeCountByCountStore(1337)
-    *  ...
-    *  //for wild card labels
-    *  val wildCardCount = dbAccess.nodeCountByCountStore(-1)
-    *  count = count * wildCardCount
-    *  count = count * wildCardCount
-    *  count = count * wildCardCount
-    *  ...
-    *  setRefAt(offset, Values.longValue(count))
-    *  << inner.genOperate >>
-    *  this.canContinue = false
-    *}}}
-    */
+   *{{{
+   *  var count = 1L
+   *  //for the labels not known at compile time
+   *  if (this.labelField1 == -1) {
+   *    count = 0L
+   *  } else {
+   *    count = count * dbAccess.nodeCountByCountStore(this.labelField1)
+   *  }
+   *  if (this.labelField2 == -1) {
+   *      count = 0L
+   *    } else {
+   *      count = count * dbAccess.nodeCountByCountStore(this.labelField2)
+   *  }
+   *  ...
+   *  //for labels known at compile time
+   *  count = count * dbAccess.nodeCountByCountStore(11)
+   *  count = count * dbAccess.nodeCountByCountStore(1337)
+   *  ...
+   *  //for wild card labels
+   *  val wildCardCount = dbAccess.nodeCountByCountStore(-1)
+   *  count = count * wildCardCount
+   *  count = count * wildCardCount
+   *  count = count * wildCardCount
+   *  ...
+   *  setRefAt(offset, Values.longValue(count))
+   *  << inner.genOperate >>
+   *  this.canContinue = false
+   *}}}
+   */
   override protected def genInnerLoop: IntermediateRepresentation = {
     val countVar = codeGen.namer.nextVariableName()
     //takes care of the labels we don't know at compile time
@@ -189,8 +217,8 @@ class NodeCountFromCountStoreOperatorTemplate(override val inner: OperatorTaskTe
 
     //takes care of the labels we do know at compile time
     val knownLabelOps = block(knownLabels.map(token =>
-        assign(countVar, multiply(load(countVar), invoke(DB_ACCESS, method[DbAccess, Long, Int]("nodeCountByCountStore"), constant(token))))) :+
-        dbHits(loadField(executionEventField), constant(knownLabels.size)) :_*)
+      assign(countVar, multiply(load(countVar), invoke(DB_ACCESS, method[DbAccess, Long, Int]("nodeCountByCountStore"), constant(token))))) :+
+      dbHits(loadField(executionEventField), constant(knownLabels.size)) :_*)
 
     //take care of all wildcard labels
     val wildCardOps = if (wildCards > 0) {
