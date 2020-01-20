@@ -87,15 +87,15 @@ class PipelineBuilderTest extends CypherFunSuite {
         .applyBuffer(0, TopLevelArgument.SLOT_OFFSET)
         .delegateToMorselBuffer(1)
         .pipeline(0, Seq(classOf[AllNodesScan]))
-        .leftOfJoinBuffer(lhsId = 3, rhsId = 4, sourceId = 5, TopLevelArgument.SLOT_OFFSET, 0, 1)
-        .pipeline(2, Seq(classOf[NodeHashJoin], classOf[ProduceResult]), serial = true)
-        .end
+        .leftOfJoinBuffer(id = 3, TopLevelArgument.SLOT_OFFSET, asmId = 0)
 
       start(graph)
         .applyBuffer(0)
         .delegateToMorselBuffer(2)
         .pipeline(1, Seq(classOf[NodeByLabelScan]))
-        .rightOfJoinBuffer(lhsId = 3, rhsId = 4, sourceId = 5, TopLevelArgument.SLOT_OFFSET)
+        .rightOfJoinBuffer(lhsId = 3, rhsId = 4, sourceId = 5, TopLevelArgument.SLOT_OFFSET, rhsAsmId = 1)
+        .pipeline(2, Seq(classOf[NodeHashJoin], classOf[ProduceResult]), serial = true)
+        .end
 
       start(graph).applyBuffer(0).reducerOnRHS(0, 1, TopLevelArgument.SLOT_OFFSET)
       start(graph).morselBuffer(1).reducer(0)
@@ -162,10 +162,14 @@ class PipelineBuilderTest extends CypherFunSuite {
         .delegateToMorselBuffer(1)
         .pipeline(0, Seq(classOf[AllNodesScan]))
         .attachBuffer(2, slots = SlotConfiguration.empty.newArgument(Id(1)).newLong("m", nullable = false, CTNode))
+        .lhsJoinSinkForAttach(lhsSinkId = 5, lhsAsmId = 0) // returns attach buffer
         .delegateToApplyBuffer(3, 0)
         .delegateToMorselBuffer(4)
+
+      start(graph)
+        .morselBuffer(4)
         .pipeline(1, Seq(classOf[NodeByLabelScan]))
-        .rightOfJoinBuffer(5, 0, 0, 1)
+        .rightOfJoinBuffer(lhsId = 5, rhsId = 6, sourceId = 7, argumentSlotOffset = 0, rhsAsmId = 1)
         .pipeline(2, Seq(classOf[CartesianProduct], classOf[ProduceResult]), serial = true)
         .end
 

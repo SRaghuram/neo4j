@@ -128,11 +128,11 @@ class Buffers(numBuffers: Int,
             x.argumentStateMapId)
 
         case x: LHSAccumulatingBufferVariant =>
-          new LHSAccumulatingSink(x.lhsArgumentStateMapId,
+          new LHSAccumulatingSink(x.argumentStateMapId,
                                   reducers,
                                   argumentStateMaps)
         case x: RHSStreamingBufferVariant =>
-          new RHSStreamingSink(x.rhsArgumentStateMapId,
+          new RHSStreamingSink(x.argumentStateMapId,
                                reducers,
                                argumentStateMaps,
                                tracker)
