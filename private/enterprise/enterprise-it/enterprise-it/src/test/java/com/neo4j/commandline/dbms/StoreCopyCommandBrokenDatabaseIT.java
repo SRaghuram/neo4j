@@ -19,6 +19,7 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.id.ScanOnOpenReadOnlyIdGeneratorFactory;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.impl.store.IdUpdateListener;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.NodeStore;
@@ -66,7 +67,7 @@ class StoreCopyCommandBrokenDatabaseIT extends AbstractCommandIT
             NodeRecord nodeRecord = nodeStore.newRecord();
             nodeRecord.setId( 1 );
             nodeRecord.setInUse( false );
-            nodeStore.updateRecord( nodeRecord, IdUpdateListener.IGNORE );
+            nodeStore.updateRecord( nodeRecord, IdUpdateListener.IGNORE, PageCursorTracer.NULL );
         }
 
         copyDatabase( "--from-database=" + databaseName, "--to-database=" + copyName );

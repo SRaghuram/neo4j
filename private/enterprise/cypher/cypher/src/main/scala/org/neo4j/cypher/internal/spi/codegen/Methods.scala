@@ -32,6 +32,7 @@ import org.neo4j.internal.kernel.api.Read
 import org.neo4j.internal.kernel.api.TokenRead
 import org.neo4j.internal.kernel.api.helpers.CachingExpandInto
 import org.neo4j.internal.kernel.api.helpers.RelationshipSelectionCursor
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer
 import org.neo4j.kernel.impl.api.RelationshipDataExtractor
 import org.neo4j.kernel.impl.core.TransactionalEntityFactory
 import org.neo4j.storageengine.api.RelationshipVisitor
@@ -65,7 +66,9 @@ object Methods {
     typeRef[NodeCursor],
     typeRef[Long],
     typeRef[Array[Int]],
-    typeRef[Long])
+    typeRef[Long],
+    typeRef[PageCursorTracer]
+  )
 
   val mathAdd: MethodReference = method[CompiledMathHelper, Object]("add", typeRef[Object], typeRef[Object])
   val mathSub: MethodReference = method[CompiledMathHelper, Object]("subtract", typeRef[Object], typeRef[Object])

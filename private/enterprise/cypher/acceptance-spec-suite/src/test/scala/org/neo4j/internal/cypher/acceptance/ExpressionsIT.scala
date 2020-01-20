@@ -111,6 +111,7 @@ import org.neo4j.graphdb.Relationship
 import org.neo4j.internal.kernel.api.procs
 import org.neo4j.internal.kernel.api.procs.Neo4jTypes
 import org.neo4j.internal.kernel.api.security.LoginContext
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer
 import org.neo4j.kernel.api.KernelTransaction.Type
 import org.neo4j.kernel.api.procedure.CallableUserFunction.BasicUserFunction
 import org.neo4j.kernel.api.procedure.Context
@@ -192,7 +193,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     beginTransaction(Type.EXPLICIT, LoginContext.AUTH_DISABLED)
     context = Neo4jTransactionalContextFactory.create(graph).newContext(tx, "X", EMPTY_MAP)
     query = new TransactionBoundQueryContext(TransactionalContextWrapper(context))(mock[IndexSearchMonitor])
-    cursors = new ExpressionCursors(TransactionalContextWrapper(context).cursors)
+    cursors = new ExpressionCursors(TransactionalContextWrapper(context).cursors, PageCursorTracer.NULL)
   }
 
   override protected def stopTest(): Unit = {

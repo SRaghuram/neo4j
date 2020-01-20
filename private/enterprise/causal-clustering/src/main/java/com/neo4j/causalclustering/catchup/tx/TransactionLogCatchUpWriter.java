@@ -38,6 +38,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.logical_log_rotation
 import static org.neo4j.configuration.GraphDatabaseSettings.preallocate_logical_logs;
 import static org.neo4j.configuration.GraphDatabaseSettings.transaction_logs_root_path;
 import static org.neo4j.io.pagecache.tracing.PageCacheTracer.NULL;
+import static org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier.TRACER_SUPPLIER;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogHeaderReader.readLogHeader;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogVersions.CURRENT_FORMAT_LOG_HEADER_SIZE;
 
@@ -211,7 +212,7 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
             // impossible for recovery process to restore the store
             TransactionId lastCommittedTx = metaDataStore.getLastCommittedTransaction();
             metaDataStore.setLastCommittedAndClosedTransactionId( lastCommittedTx.transactionId(), lastCommittedTx.checksum(),
-                    lastCommittedTx.commitTimestamp(), checkPointPosition.getByteOffset(), logVersion );
+                    lastCommittedTx.commitTimestamp(), checkPointPosition.getByteOffset(), logVersion, TRACER_SUPPLIER.get() );
         }
 
         lifespan.close();
@@ -220,7 +221,7 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
         {
             metaDataStore.setLastCommittedAndClosedTransactionId( lastTxId,
                     0, currentTimeMillis(), // <-- we don't seem to care about these fields anymore
-                    logPositionMarker.getByteOffset(), logPositionMarker.getLogVersion() );
+                    logPositionMarker.getByteOffset(), logPositionMarker.getLogVersion(), TRACER_SUPPLIER.get() );
         }
         metaDataStore.close();
         databasePageCache.close();

@@ -28,6 +28,7 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.memory.ByteBuffers;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.impl.store.InvalidRecordException;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.RecordStore;
@@ -40,6 +41,7 @@ import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.string.HexString;
 
 import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.immediate;
+import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 import static org.neo4j.kernel.impl.pagecache.ConfigurableStandalonePageCacheFactory.createPageCache;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
 import static org.neo4j.kernel.impl.store.record.RecordLoad.CHECK;
@@ -227,7 +229,7 @@ public class RsdrMain
 
                 try
                 {
-                    AbstractBaseRecord record = store.getRecord( i, store.newRecord(), CHECK );
+                    AbstractBaseRecord record = store.getRecord( i, store.newRecord(), CHECK, NULL );
                     use = record.inUse() ? "+" : "-";
                     str = record.toString();
                 }

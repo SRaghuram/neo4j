@@ -18,6 +18,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.tracing.SchedulerTracer
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.SingleConsumerDataBuffers
 import org.neo4j.exceptions.InternalException
 import org.neo4j.internal.kernel.api.CursorFactory
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer
 import org.neo4j.kernel.lifecycle.LifeSupport
 import org.neo4j.scheduler.Group
 import org.neo4j.scheduler.JobScheduler
@@ -47,7 +48,7 @@ object RuntimeEnvironment {
   private def createParallelQueryExecutor(cursors: CursorFactory,
                                           lifeSupport: LifeSupport,
                                           workerManager: WorkerManagement): QueryExecutor = {
-    val resourceFactory = () => new QueryResources(cursors)
+    val resourceFactory = () => new QueryResources(cursors, PageCursorTracer.NULL)
     val workerResourceProvider = new WorkerResourceProvider(workerManager.numberOfWorkers, resourceFactory)
     lifeSupport.add(workerResourceProvider)
     val queryExecutor = new FixedWorkersQueryExecutor( workerResourceProvider, workerManager)

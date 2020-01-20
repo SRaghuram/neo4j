@@ -91,9 +91,9 @@ class TransactionLogEntryCursorTest
         }
     }
 
-    private TransactionLogEntryCursor getTransactionLogEntryCursor( List<LogEntry>...txEntries )
+    private TransactionLogEntryCursor getTransactionLogEntryCursor( List<LogEntry>... txEntries )
     {
-        return new TransactionLogEntryCursor( new ArrayIOCursor( transactionsAsArray( txEntries ) ) );
+        return new TransactionLogEntryCursor( new ArrayIOCursor<>( transactionsAsArray( txEntries ) ) );
     }
 
     private LogEntry[] transactionsAsArray( List<LogEntry>... transactions )

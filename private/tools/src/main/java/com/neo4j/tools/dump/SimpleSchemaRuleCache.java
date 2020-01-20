@@ -19,6 +19,7 @@ import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.token.api.NamedToken;
 
 import static org.neo4j.internal.kernel.api.TokenRead.ANY_LABEL;
+import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 
 class SimpleSchemaRuleCache
 {
@@ -30,9 +31,9 @@ class SimpleSchemaRuleCache
     SimpleSchemaRuleCache( NeoStores neoStores, SchemaRuleAccess schemaRuleAccess )
     {
         indexes = getAllIndexesFrom( schemaRuleAccess );
-        labelTokens = tokens( neoStores.getLabelTokenStore().getTokens() );
-        relationshipTypeTokens = tokens( neoStores.getRelationshipTypeTokenStore().getTokens() );
-        propertyKeyTokens = tokens( neoStores.getPropertyKeyTokenStore().getTokens() );
+        labelTokens = tokens( neoStores.getLabelTokenStore().getTokens( NULL ) );
+        relationshipTypeTokens = tokens( neoStores.getRelationshipTypeTokenStore().getTokens( NULL ) );
+        propertyKeyTokens = tokens( neoStores.getPropertyKeyTokenStore().getTokens( NULL ) );
     }
 
     String tokens( IntObjectMap<NamedToken> tokens, String type, int[] ids )
@@ -73,7 +74,7 @@ class SimpleSchemaRuleCache
     private static LongObjectMap<IndexDescriptor> getAllIndexesFrom( SchemaRuleAccess schemaRuleAccess )
     {
         LongObjectHashMap<IndexDescriptor> indexes = new LongObjectHashMap<>();
-        Iterator<IndexDescriptor> indexRules = schemaRuleAccess.indexesGetAll();
+        Iterator<IndexDescriptor> indexRules = schemaRuleAccess.indexesGetAll( NULL );
         while ( indexRules.hasNext() )
         {
             IndexDescriptor rule = indexRules.next();

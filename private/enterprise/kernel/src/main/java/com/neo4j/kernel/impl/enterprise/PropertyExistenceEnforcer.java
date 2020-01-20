@@ -34,6 +34,7 @@ import org.neo4j.internal.schema.RelationTypeSchemaDescriptor;
 import org.neo4j.internal.schema.SchemaDescriptor;
 import org.neo4j.internal.schema.SchemaProcessor;
 import org.neo4j.io.IOUtils;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.api.exceptions.schema.NodePropertyExistenceException;
 import org.neo4j.kernel.api.exceptions.schema.RelationshipPropertyExistenceException;
 import org.neo4j.storageengine.api.StorageProperty;
@@ -94,16 +95,16 @@ class PropertyExistenceEnforcer
         return values;
     }
 
-    TxStateVisitor decorate( TxStateVisitor visitor, Read read, CursorFactory cursorFactory )
+    TxStateVisitor decorate( TxStateVisitor visitor, Read read, CursorFactory cursorFactory, PageCursorTracer pageCursorTracer )
     {
-        return new Decorator( visitor, read, cursorFactory );
+        return new Decorator( visitor, read, cursorFactory, pageCursorTracer );
     }
 
     private static final PropertyExistenceEnforcer NO_CONSTRAINTS = new PropertyExistenceEnforcer(
             emptyList(), emptyList(), null /*not used when there are no constraints*/ )
     {
         @Override
-        TxStateVisitor decorate( TxStateVisitor visitor, Read read, CursorFactory cursorFactory )
+        TxStateVisitor decorate( TxStateVisitor visitor, Read read, CursorFactory cursorFactory, PageCursorTracer pageCursorTracer )
         {
             return visitor;
         }
@@ -154,13 +155,13 @@ class PropertyExistenceEnforcer
         private final PropertyCursor propertyCursor;
         private final RelationshipScanCursor relationshipCursor;
 
-        Decorator( TxStateVisitor next, Read read, CursorFactory cursorFactory )
+        Decorator( TxStateVisitor next, Read read, CursorFactory cursorFactory, PageCursorTracer cursorTracer )
         {
             super( next );
             this.read = read;
-            this.nodeCursor = cursorFactory.allocateFullAccessNodeCursor();
-            this.propertyCursor = cursorFactory.allocateFullAccessPropertyCursor();
-            this.relationshipCursor = cursorFactory.allocateRelationshipScanCursor();
+            this.nodeCursor = cursorFactory.allocateFullAccessNodeCursor( cursorTracer );
+            this.propertyCursor = cursorFactory.allocateFullAccessPropertyCursor( cursorTracer );
+            this.relationshipCursor = cursorFactory.allocateRelationshipScanCursor( cursorTracer );
         }
 
         @Override

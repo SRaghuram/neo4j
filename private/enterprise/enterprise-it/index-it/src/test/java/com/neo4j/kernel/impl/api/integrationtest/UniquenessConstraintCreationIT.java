@@ -52,6 +52,7 @@ import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 import static org.neo4j.internal.helpers.collection.Iterators.single;
 import static org.neo4j.internal.schema.IndexPrototype.uniqueForSchema;
+import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 
 class UniquenessConstraintCreationIT extends AbstractConstraintCreationIT<ConstraintDescriptor, LabelSchemaDescriptor>
 {
@@ -243,9 +244,9 @@ class UniquenessConstraintCreationIT extends AbstractConstraintCreationIT<Constr
         // then
         SchemaRuleAccess schemaRuleAccess = SchemaRuleAccess.getSchemaRuleAccess( neoStores().getSchemaStore(), tokenHolders() );
         IndexDescriptor indexRule = ArrayUtil.single( schemaRuleAccess.indexGetForSchema( TestIndexDescriptorFactory
-                .uniqueForLabel( typeId, propertyKeyId ) ) );
+                .uniqueForLabel( typeId, propertyKeyId ), NULL ) );
         ConstraintDescriptor constraintRule = schemaRuleAccess.constraintsGetSingle(
-                ConstraintDescriptorFactory.uniqueForLabel( typeId, propertyKeyId ) );
+                ConstraintDescriptorFactory.uniqueForLabel( typeId, propertyKeyId ), NULL );
         OptionalLong owningConstraintId = indexRule.getOwningConstraintId();
         assertTrue( owningConstraintId.isPresent() );
         assertEquals( constraintRule.getId(), owningConstraintId.getAsLong() );

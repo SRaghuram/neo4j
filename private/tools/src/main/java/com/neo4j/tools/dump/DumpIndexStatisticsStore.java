@@ -64,7 +64,7 @@ public class DumpIndexStatisticsStore
                 StoreFactory factory = new StoreFactory( databaseLayout, Config.defaults(), new DefaultIdGeneratorFactory( fs, immediate() ),
                         pageCache, fs, logProvider, PageCacheTracer.NULL );
                 NeoStores neoStores = factory.openAllNeoStores();
-                TokenHolders tokenHolders = StoreTokens.readOnlyTokenHolders( neoStores );
+                TokenHolders tokenHolders = StoreTokens.readOnlyTokenHolders( neoStores, NULL );
                 SchemaRuleAccess schemaStorage = SchemaRuleAccess.getSchemaRuleAccess( neoStores.getSchemaStore(), tokenHolders );
                 schema = new SimpleSchemaRuleCache( neoStores, schemaStorage );
             }

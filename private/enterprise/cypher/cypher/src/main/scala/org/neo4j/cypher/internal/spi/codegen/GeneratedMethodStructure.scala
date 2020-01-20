@@ -148,6 +148,7 @@ import org.neo4j.internal.kernel.api.TokenRead
 import org.neo4j.internal.kernel.api.helpers.CachingExpandInto
 import org.neo4j.internal.kernel.api.helpers.RelationshipSelectionCursor
 import org.neo4j.internal.schema.IndexDescriptor
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer
 import org.neo4j.kernel.impl.util.ValueUtils
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.BooleanValue
@@ -241,7 +242,8 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
   }
 
   override def allNodesScan(cursorName: String): Unit = {
-    generator.assign(typeRef[NodeCursor], cursorName, invoke(cursors, method[CursorFactory, NodeCursor]("allocateNodeCursor")))
+    generator.assign(typeRef[NodeCursor], cursorName, invoke(cursors, method[CursorFactory, NodeCursor]("allocateNodeCursor", typeRef[PageCursorTracer]),
+      get(generator.self(), fields.cursorTracer)))
     generator.expression(pop(invoke(get(generator.self(), fields.closeables), Methods.listAdd, generator.load(cursorName))))
     generator.expression(invoke(dataRead, method[Read, Unit]("allNodesScan", typeRef[NodeCursor]), generator.load(cursorName) ))
   }
@@ -681,8 +683,8 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
       invoke(
         methodReference(typeRef[CursorUtils], typeRef[RelationshipSelectionCursor],
           "nodeGetRelationships", typeRef[Read], typeRef[CursorFactory],
-          typeRef[NodeCursor], typeRef[Long], typeRef[Direction]),
-        dataRead, cursors, nodeCursor, forceLong(nodeVar, nodeVarType), dir(direction))
+          typeRef[NodeCursor], typeRef[Long], typeRef[Direction], typeRef[PageCursorTracer]),
+        dataRead, cursors, nodeCursor, forceLong(nodeVar, nodeVarType), dir(direction), get(generator.self(), fields.cursorTracer))
     )
     generator.expression(pop(invoke(get(generator.self(), fields.closeables), Methods.listAdd, generator.load(iterVar))))
   }
@@ -695,9 +697,9 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
       invoke(
         methodReference(typeRef[CursorUtils], typeRef[RelationshipSelectionCursor],
           "nodeGetRelationships", typeRef[Read], typeRef[CursorFactory],
-          typeRef[NodeCursor], typeRef[Long], typeRef[Direction], typeRef[Array[Int]]),
+          typeRef[NodeCursor], typeRef[Long], typeRef[Direction], typeRef[Array[Int]], typeRef[PageCursorTracer]),
         dataRead, cursors, nodeCursor, forceLong(nodeVar, nodeVarType), dir(direction),
-        newInitializedArray(typeRef[Int], typeVars.map(generator.load): _*)) )
+        newInitializedArray(typeRef[Int], typeVars.map(generator.load): _*), get(generator.self(), fields.cursorTracer)) )
     generator.expression(pop(invoke(get(generator.self(), fields.closeables), Methods.listAdd, generator.load(iterVar))))
   }
 
@@ -731,7 +733,8 @@ class GeneratedMethodStructure(val fields: Fields, val generator: CodeBlock, aux
         nodeCursor,
         forceLong(fromNode, fromNodeType),
         typesRep,
-        forceLong(toNode, toNodeType)))
+        forceLong(toNode, toNodeType),
+        get(generator.self(), fields.cursorTracer)))
     generator.expression(pop(invoke(get(generator.self(), fields.closeables), Methods.listAdd, generator.load(iterVar))))
   }
 

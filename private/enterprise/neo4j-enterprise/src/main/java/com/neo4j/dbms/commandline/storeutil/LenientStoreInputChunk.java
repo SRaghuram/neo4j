@@ -21,6 +21,8 @@ import org.neo4j.token.TokenHolders;
 import org.neo4j.token.api.TokenNotFoundException;
 import org.neo4j.values.storable.Value;
 
+import static org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier.TRACER_SUPPLIER;
+
 public abstract class LenientStoreInputChunk implements InputChunk
 {
     private final PropertyStore propertyStore;
@@ -77,7 +79,7 @@ public abstract class LenientStoreInputChunk implements InputChunk
     }
 
     @Override
-    public void close() throws IOException
+    public void close()
     {
         cursor.close();
     }
@@ -99,24 +101,26 @@ public abstract class LenientStoreInputChunk implements InputChunk
             }
 
             long nextProp = record.getNextProp();
+            var cursorTracer = TRACER_SUPPLIER.get();
             while ( !Record.NO_NEXT_PROPERTY.is( nextProp ) )
             {
-                PropertyRecord propertyRecord = propertyStore.getRecord( nextProp, propertyStore.newRecord(), RecordLoad.NORMAL );
+                PropertyRecord propertyRecord = propertyStore.getRecord( nextProp, propertyStore.newRecord(), RecordLoad.NORMAL, cursorTracer );
                 for ( PropertyBlock propBlock : propertyRecord )
                 {
-                    propertyStore.ensureHeavy( propBlock );
+                    propertyStore.ensureHeavy( propBlock, cursorTracer );
                     if ( storeCopyFilter.shouldKeepProperty( propBlock.getKeyIndexId() ) )
                     {
                         try
                         {
                             String key = tokenHolders.propertyKeyTokens().getTokenById( propBlock.getKeyIndexId() ).name();
-                            Value propertyValue = propBlock.newPropertyValue( propertyStore );
+                            Value propertyValue = propBlock.newPropertyValue( propertyStore, cursorTracer );
 
                             visitor.property( key, propertyValue.asObject() );
                         }
                         catch ( TokenNotFoundException ignored )
                         {
-                            stats.brokenPropertyToken( recordType(), record, propBlock.newPropertyValue( propertyStore ), propBlock.getKeyIndexId() );
+                            stats.brokenPropertyToken( recordType(), record, propBlock.newPropertyValue( propertyStore, cursorTracer ),
+                                    propBlock.getKeyIndexId() );
                         }
                     }
                 }

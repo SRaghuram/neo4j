@@ -36,6 +36,7 @@ import static com.neo4j.bench.micro.benchmarks.core.Expand.NODE_COUNT;
 import static com.neo4j.bench.micro.benchmarks.core.Expand.RELATIONSHIP_DEFINITIONS;
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
 import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
+import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 
 @BenchmarkEnabled( true )
 @OutputTimeUnit( MICROSECONDS )
@@ -115,9 +116,9 @@ public class Expand extends AbstractKernelBenchmark
         public void setUp( Expand benchmark ) throws Exception
         {
             initializeTx( benchmark );
-            node = kernelTx.cursors.allocateNodeCursor();
-            edge = kernelTx.cursors.allocateRelationshipTraversalCursor();
-            edgeGroup = kernelTx.cursors.allocateRelationshipGroupCursor();
+            node = kernelTx.cursors.allocateNodeCursor( NULL );
+            edge = kernelTx.cursors.allocateRelationshipTraversalCursor( NULL );
+            edgeGroup = kernelTx.cursors.allocateRelationshipGroupCursor( NULL );
 
             relationshipTypeIds = Stream.of( RELATIONSHIP_DEFINITIONS )
                                         .mapToInt( this::relationshipTypeToId )

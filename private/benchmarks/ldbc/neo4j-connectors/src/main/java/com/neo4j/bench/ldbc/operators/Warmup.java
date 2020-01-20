@@ -70,7 +70,7 @@ public class Warmup
         {
             CursorFactory cursors = tx.cursors();
             Read read = tx.dataRead();
-            try ( NodeCursor nodeCursor = cursors.allocateNodeCursor() )
+            try ( NodeCursor nodeCursor = cursors.allocateNodeCursor( tx.pageCursorTracer() ) )
             {
                 for ( int i = 0; i <= highestNodeKey; i = i + nodesPerPage )
                 {
@@ -95,7 +95,7 @@ public class Warmup
         {
             CursorFactory cursors = tx.cursors();
             Read read = tx.dataRead();
-            try ( RelationshipScanCursor relationshipCursor = cursors.allocateRelationshipScanCursor() )
+            try ( RelationshipScanCursor relationshipCursor = cursors.allocateRelationshipScanCursor( tx.pageCursorTracer() ) )
             {
                 for ( int i = 0; i <= highestRelationshipKey; i = i + relationshipsPerPage )
                 {

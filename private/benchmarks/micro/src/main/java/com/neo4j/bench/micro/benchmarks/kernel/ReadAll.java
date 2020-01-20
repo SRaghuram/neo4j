@@ -31,6 +31,7 @@ import static com.neo4j.bench.micro.benchmarks.core.ReadAll.NODE_COUNT;
 import static com.neo4j.bench.micro.benchmarks.core.ReadAll.RELATIONSHIP_COUNT;
 import static com.neo4j.bench.micro.benchmarks.core.ReadAll.RELATIONSHIP_DEFINITION;
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
+import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 import static org.openjdk.jmh.annotations.Mode.SampleTime;
 
 @BenchmarkEnabled( true )
@@ -89,9 +90,9 @@ public class ReadAll extends AbstractKernelBenchmark
         public void setUp( ReadAll benchmark ) throws Exception
         {
             initializeTx( benchmark );
-            node = kernelTx.cursors.allocateNodeCursor();
+            node = kernelTx.cursors.allocateNodeCursor( NULL );
             nodeByLabel = kernelTx.cursors.allocateNodeLabelIndexCursor();
-            edge = kernelTx.cursors.allocateRelationshipScanCursor();
+            edge = kernelTx.cursors.allocateRelationshipScanCursor( NULL );
             read = kernelTx.read;
             labelId = labelToId( LABEL );
         }

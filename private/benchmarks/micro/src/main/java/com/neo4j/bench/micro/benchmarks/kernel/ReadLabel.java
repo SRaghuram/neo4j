@@ -33,6 +33,7 @@ import static com.neo4j.bench.micro.Main.run;
 import static com.neo4j.bench.micro.benchmarks.core.ReadLabel.NODE_COUNT;
 import static com.neo4j.bench.micro.benchmarks.core.ReadLabel.labels;
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
+import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 
 @BenchmarkEnabled( true )
 @OutputTimeUnit( MICROSECONDS )
@@ -106,7 +107,7 @@ public class ReadLabel extends AbstractKernelBenchmark
         public void setUp( ReadLabel benchmark ) throws Exception
         {
             initializeTx( benchmark );
-            node = kernelTx.cursors.allocateNodeCursor();
+            node = kernelTx.cursors.allocateNodeCursor( NULL );
             read = kernelTx.read;
             labels = Stream.of( labels( benchmark.count ) )
                            .mapToInt( this::labelToId )

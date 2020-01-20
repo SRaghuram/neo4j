@@ -20,17 +20,19 @@ import org.neo4j.internal.kernel.api.RelationshipIndexCursor
 import org.neo4j.internal.kernel.api.RelationshipScanCursor
 import org.neo4j.internal.kernel.api.RelationshipTraversalCursor
 import org.neo4j.io.IOUtils
+import org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier.TRACER_SUPPLIER
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer
 
-class CursorPools(cursorFactory: CursorFactory) extends CursorFactory with AutoCloseable {
+class CursorPools(cursorFactory: CursorFactory, pageCursorTracer: PageCursorTracer) extends CursorFactory with AutoCloseable {
 
   val nodeCursorPool: CursorPool[NodeCursor] = CursorPool[NodeCursor](
-    () => cursorFactory.allocateNodeCursor())
+    () => cursorFactory.allocateNodeCursor(pageCursorTracer))
   val relationshipGroupCursorPool: CursorPool[RelationshipGroupCursor] = CursorPool[RelationshipGroupCursor](
-    () => cursorFactory.allocateRelationshipGroupCursor())
+    () => cursorFactory.allocateRelationshipGroupCursor(pageCursorTracer))
   val relationshipTraversalCursorPool: CursorPool[RelationshipTraversalCursor] = CursorPool[RelationshipTraversalCursor](
-    () => cursorFactory.allocateRelationshipTraversalCursor())
+    () => cursorFactory.allocateRelationshipTraversalCursor(pageCursorTracer))
   val relationshipScanCursorPool: CursorPool[RelationshipScanCursor] = CursorPool[RelationshipScanCursor](
-    () => cursorFactory.allocateRelationshipScanCursor())
+    () => cursorFactory.allocateRelationshipScanCursor(pageCursorTracer))
   val nodeValueIndexCursorPool: CursorPool[NodeValueIndexCursor] = CursorPool[NodeValueIndexCursor](
     () => cursorFactory.allocateNodeValueIndexCursor())
   val nodeLabelIndexCursorPool: CursorPool[NodeLabelIndexCursor] = CursorPool[NodeLabelIndexCursor](
@@ -63,21 +65,21 @@ class CursorPools(cursorFactory: CursorFactory) extends CursorFactory with AutoC
     liveCounts.nodeLabelIndexCursorPool += nodeLabelIndexCursorPool.getLiveCount
   }
 
-  override def allocateNodeCursor(): NodeCursor = nodeCursorPool.allocate()
+  override def allocateNodeCursor(cursorTracer: PageCursorTracer): NodeCursor = nodeCursorPool.allocate()
 
-  override def allocateFullAccessNodeCursor(): NodeCursor = fail("FullAccessNodeCursor")
+  override def allocateFullAccessNodeCursor(cursorTracer: PageCursorTracer): NodeCursor = fail("FullAccessNodeCursor")
 
-  override def allocateRelationshipScanCursor(): RelationshipScanCursor = relationshipScanCursorPool.allocate()
+  override def allocateRelationshipScanCursor(cursorTracer: PageCursorTracer): RelationshipScanCursor = relationshipScanCursorPool.allocate()
 
-  override def allocateFullAccessRelationshipScanCursor(): RelationshipScanCursor = fail("FullAccessRelationshipScanCursor")
+  override def allocateFullAccessRelationshipScanCursor(cursorTracer: PageCursorTracer): RelationshipScanCursor = fail("FullAccessRelationshipScanCursor")
 
-  override def allocateRelationshipTraversalCursor(): RelationshipTraversalCursor = relationshipTraversalCursorPool.allocate()
+  override def allocateRelationshipTraversalCursor(cursorTracer: PageCursorTracer): RelationshipTraversalCursor = relationshipTraversalCursorPool.allocate()
 
-  override def allocatePropertyCursor(): PropertyCursor = fail("PropertyCursor")
+  override def allocatePropertyCursor(cursorTracer: PageCursorTracer): PropertyCursor = fail("PropertyCursor")
 
-  override def allocateFullAccessPropertyCursor(): PropertyCursor = fail("FullAccessPropertyCursor")
+  override def allocateFullAccessPropertyCursor(cursorTracer: PageCursorTracer): PropertyCursor = fail("FullAccessPropertyCursor")
 
-  override def allocateRelationshipGroupCursor(): RelationshipGroupCursor = relationshipGroupCursorPool.allocate()
+  override def allocateRelationshipGroupCursor(cursorTracer: PageCursorTracer): RelationshipGroupCursor = relationshipGroupCursorPool.allocate()
 
   override def allocateNodeValueIndexCursor(): NodeValueIndexCursor = nodeValueIndexCursorPool.allocate()
 

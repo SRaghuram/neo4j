@@ -103,7 +103,7 @@ class ExecutionEngineIT extends CypherFunSuite with GraphIcing {
                        resourceTracker: ResourceTracker): RawIterator[Array[AnyValue], ProcedureException] = {
       val ktx = context.internalTransaction().kernelTransaction()
       val nodeBuffer = new ArrayBuffer[Long]()
-      val cursor = ktx.cursors().allocateNodeCursor()
+      val cursor = ktx.cursors().allocateNodeCursor( ktx.pageCursorTracer() )
       ktx.dataRead().allNodesScan(cursor)
       while (cursor.next()) nodeBuffer.append(cursor.nodeReference())
       cursor.close()

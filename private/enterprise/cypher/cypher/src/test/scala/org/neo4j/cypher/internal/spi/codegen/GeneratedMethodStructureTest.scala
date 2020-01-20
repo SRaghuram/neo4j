@@ -44,6 +44,7 @@ import org.neo4j.internal.kernel.api.SchemaRead
 import org.neo4j.internal.kernel.api.TokenRead
 import org.neo4j.internal.kernel.api.helpers.CachingExpandInto
 import org.neo4j.internal.kernel.api.helpers.RelationshipSelectionCursor
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer
 import org.neo4j.kernel.impl.core.TransactionalEntityFactory
 
 /**
@@ -194,7 +195,8 @@ class GeneratedMethodStructureTest extends CypherFunSuite {
         Expression.get(m.generator.self(), m.fields.nodeCursor),
         m.generator.load("from"),
         Expression.constant(null),
-        m.generator.load("to")))
+        m.generator.load("to"),
+        Expression.get(m.generator.self(), m.fields.cursorTracer)))
     }),
     Operation("expand into with types", m => {
       m.declareAndInitialize("from", CodeGenType.primitiveNode)
@@ -213,7 +215,8 @@ class GeneratedMethodStructureTest extends CypherFunSuite {
         Expression.get(m.generator.self(), m.fields.nodeCursor),
         m.generator.load("from"),
         Expression.newInitializedArray(typeRef[Int], Expression.constant(1)),
-        m.generator.load("to")))
+        m.generator.load("to"),
+        Expression.get(m.generator.self(), m.fields.cursorTracer)))
     }),
     Operation("expand from all node", m => {
       m.allNodesScan("nodeIter")
@@ -247,6 +250,7 @@ class GeneratedMethodStructureTest extends CypherFunSuite {
       val fields = Fields(
         entityAccessor = body.field(typeRef[TransactionalEntityFactory], "proxySpi"),
         tracer = body.field(typeRef[QueryProfiler], "tracer"),
+        cursorTracer = body.field(typeRef[PageCursorTracer], "cursorTracer"),
         params = body.field(typeRef[util.Map[String, Object]], "params"),
         queryContext = body.field(typeRef[QueryContext], "queryContext"),
         cursors = body.field(typeRef[CursorFactory], "cursors"),

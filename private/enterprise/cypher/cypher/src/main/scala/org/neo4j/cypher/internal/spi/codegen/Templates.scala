@@ -56,6 +56,8 @@ import org.neo4j.internal.kernel.api.RelationshipScanCursor
 import org.neo4j.internal.kernel.api.SchemaRead
 import org.neo4j.internal.kernel.api.TokenRead
 import org.neo4j.io.IOUtils
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer
+import org.neo4j.kernel.api.KernelTransaction
 import org.neo4j.kernel.impl.api.RelationshipDataExtractor
 import org.neo4j.kernel.impl.core.TransactionalEntityFactory
 import org.neo4j.kernel.impl.util.ValueUtils
@@ -186,6 +188,13 @@ object Templates {
     put(self(classHandle), typeRef[QueryContext], "queryContext", load("queryContext", typeRef[QueryContext])).
     put(self(classHandle), typeRef[QueryProfiler], "tracer", load("tracer", typeRef[QueryProfiler])).
     put(self(classHandle), typeRef[MapValue], "params", load("params", typeRef[MapValue])).
+    put(self(classHandle), typeRef[PageCursorTracer], "cursorTracer",
+      invoke(
+          invoke(
+            invoke(load("queryContext", typeRef[QueryContext]), method[QueryContext, QueryTransactionalContext]("transactionalContext")),
+          method[QueryTransactionalContext, KernelTransaction]("transaction")),
+      method[KernelTransaction, PageCursorTracer]("pageCursorTracer")
+    )).
     put(self(classHandle), typeRef[TransactionalEntityFactory], "proxySpi",
       invoke(load("queryContext", typeRef[QueryContext]), method[QueryContext, TransactionalEntityFactory]("entityAccessor"))).
     put(self(classHandle), typeRef[java.util.ArrayList[AutoCloseable]], "closeables",
@@ -261,8 +270,9 @@ object Templates {
         methodReference(generate.owner(), typeRef[CursorFactory], "getOrLoadCursors" ))
       using(generate.ifStatement(Expression.isNull(nodeCursor))) { block =>
         block.put(block.self(), fields.nodeCursor,
-          Expression.invoke(cursors, method[CursorFactory, NodeCursor]("allocateNodeCursor")))
-
+          Expression.invoke(cursors, method[CursorFactory, NodeCursor]("allocateNodeCursor", typeRef[PageCursorTracer]),
+            Expression.get(generate.self(), fields.cursorTracer))
+        )
       }
       generate.returns(nodeCursor)
     }
@@ -277,8 +287,9 @@ object Templates {
         methodReference(generate.owner(), typeRef[CursorFactory], "getOrLoadCursors" ))
       using(generate.ifStatement(Expression.isNull(relationshipCursor))) { block =>
         block.put(block.self(), fields.relationshipScanCursor,
-          Expression.invoke(cursors, method[CursorFactory, RelationshipScanCursor]("allocateRelationshipScanCursor")))
-
+          Expression.invoke(cursors, method[CursorFactory, RelationshipScanCursor]("allocateRelationshipScanCursor", typeRef[PageCursorTracer]),
+            Expression.get(generate.self(), fields.cursorTracer))
+        )
       }
       generate.returns(relationshipCursor)
     }
@@ -312,8 +323,9 @@ object Templates {
         methodReference(generate.owner(), typeRef[CursorFactory], "getOrLoadCursors" ))
       using(generate.ifStatement(Expression.isNull(propertyCursor))) { block =>
         block.put(block.self(), fields.propertyCursor,
-          Expression.invoke(cursors, method[CursorFactory, PropertyCursor]("allocatePropertyCursor")))
-
+          Expression.invoke(cursors, method[CursorFactory, PropertyCursor]("allocatePropertyCursor", typeRef[PageCursorTracer]),
+            Expression.get(generate.self(), fields.cursorTracer))
+        )
       }
       generate.returns(propertyCursor)
     }

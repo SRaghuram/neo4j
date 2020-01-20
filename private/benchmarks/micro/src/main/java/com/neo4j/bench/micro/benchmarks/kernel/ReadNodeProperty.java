@@ -50,6 +50,7 @@ import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML_ARR;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.TIME;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.randPropertyFor;
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
+import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 
 @BenchmarkEnabled( true )
 @OutputTimeUnit( MICROSECONDS )
@@ -123,8 +124,8 @@ public class ReadNodeProperty extends AbstractKernelBenchmark
         public void setUp( ReadNodeProperty benchmark ) throws Exception
         {
             initializeTx( benchmark );
-            node = kernelTx.cursors.allocateNodeCursor();
-            property = kernelTx.cursors.allocatePropertyCursor();
+            node = kernelTx.cursors.allocateNodeCursor( NULL );
+            property = kernelTx.cursors.allocatePropertyCursor( NULL );
             read = kernelTx.read;
             propertyKeyId = propertyKeyToId( randPropertyFor( benchmark.type ) );
         }

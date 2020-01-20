@@ -38,6 +38,8 @@ import org.neo4j.internal.kernel.api.CursorFactory
 import org.neo4j.internal.kernel.api.NodeCursor
 import org.neo4j.internal.kernel.api.Read
 import org.neo4j.internal.kernel.api.helpers.StubNodeCursor
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer
+import org.neo4j.kernel.api.KernelTransaction
 import org.neo4j.kernel.impl.core.NodeEntity
 import org.neo4j.kernel.impl.core.TransactionalEntityFactory
 import org.neo4j.values.AnyValue
@@ -51,7 +53,6 @@ import org.neo4j.values.virtual.MapValue
 import org.neo4j.values.virtual.NodeValue
 import org.neo4j.values.virtual.VirtualValues.EMPTY_MAP
 
-import scala.collection.JavaConverters
 import scala.collection.JavaConverters.asScalaIteratorConverter
 import scala.collection.mutable
 
@@ -64,6 +65,7 @@ class BuildProbeTableInstructionsTest extends CypherFunSuite with CodeGenSugar {
   private val entityAccessor = mock[TransactionalEntityFactory]
   private val queryContext = mock[QueryContext]
   private val transactionalContext = mock[TransactionalContextWrapper]
+  private val transaction = mock[KernelTransaction]
   private val dataRead = mock[Read]
   private val cursors = mock[CursorFactory]
   private def nodeCursor = {
@@ -78,9 +80,9 @@ class BuildProbeTableInstructionsTest extends CypherFunSuite with CodeGenSugar {
   // used by instructions that generate probe tables
   private implicit val codeGenContext = new CodeGenContext(SemanticTable(), Map.empty)
   when(queryContext.transactionalContext).thenReturn(transactionalContext)
-  when(cursors.allocateNodeCursor()).thenAnswer(new Answer[NodeCursor] {
-    override def answer(invocation: InvocationOnMock): NodeCursor = nodeCursor
-  })
+  when(transactionalContext.transaction).thenReturn(transaction)
+  when(transaction.pageCursorTracer()).thenReturn(PageCursorTracer.NULL)
+  when(cursors.allocateNodeCursor(any())).thenAnswer((_: InvocationOnMock) => nodeCursor)
   when(transactionalContext.dataRead).thenReturn(dataRead)
   when(transactionalContext.cursors).thenReturn(cursors)
   when(queryContext.entityAccessor).thenReturn(entityAccessor)

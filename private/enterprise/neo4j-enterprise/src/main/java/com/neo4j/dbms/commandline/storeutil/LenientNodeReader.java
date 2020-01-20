@@ -16,6 +16,7 @@ import org.neo4j.kernel.impl.store.record.RecordLoad;
 import org.neo4j.token.TokenHolders;
 import org.neo4j.token.api.TokenHolder;
 
+import static org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier.TRACER_SUPPLIER;
 import static org.neo4j.kernel.impl.store.NodeLabelsField.parseLabelsField;
 
 class LenientNodeReader extends LenientStoreInputChunk
@@ -26,7 +27,7 @@ class LenientNodeReader extends LenientStoreInputChunk
 
     LenientNodeReader( StoreCopyStats stats, NodeStore nodeStore, PropertyStore propertyStore, TokenHolders tokenHolders, StoreCopyFilter storeCopyFilter )
     {
-        super( stats, propertyStore, tokenHolders, nodeStore.openPageCursorForReading( 0 ), storeCopyFilter );
+        super( stats, propertyStore, tokenHolders, nodeStore.openPageCursorForReading( 0, TRACER_SUPPLIER.get() ), storeCopyFilter );
         this.nodeStore = nodeStore;
         this.record = nodeStore.newRecord();
         TokenHolder tokenHolder = tokenHolders.labelTokens();
@@ -39,8 +40,8 @@ class LenientNodeReader extends LenientStoreInputChunk
         nodeStore.getRecordByCursor( id, record, RecordLoad.NORMAL, cursor );
         if ( record.inUse() )
         {
-            nodeStore.ensureHeavy( record );
-            long[] labelIds = parseLabelsField( record ).get( nodeStore );
+            nodeStore.ensureHeavy( record, TRACER_SUPPLIER.get() );
+            long[] labelIds = parseLabelsField( record ).get( nodeStore, TRACER_SUPPLIER.get() );
             if ( !storeCopyFilter.shouldDeleteNode( labelIds ) )
             {
                 String[] labels = storeCopyFilter.filterLabels( labelIds, tokenLookup );

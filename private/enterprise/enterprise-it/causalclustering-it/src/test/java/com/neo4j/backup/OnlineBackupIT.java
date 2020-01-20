@@ -50,6 +50,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.graphdb.Label.label;
+import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 import static org.neo4j.kernel.impl.store.MetaDataStore.Position.RANDOM_NUMBER;
 import static org.neo4j.kernel.impl.store.MetaDataStore.Position.TIME;
 
@@ -178,9 +179,9 @@ class OnlineBackupIT
         nodeStore.scanAllRecords( record ->
         {
             record.setInUse( false );
-            nodeStore.updateRecord( record );
+            nodeStore.updateRecord( record, NULL );
             return false;
-        } );
+        }, NULL );
     }
 
     private void corruptStoreIdInBackup() throws IOException

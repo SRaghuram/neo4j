@@ -16,6 +16,8 @@ import org.neo4j.kernel.impl.store.record.RelationshipRecord;
 import org.neo4j.token.TokenHolders;
 import org.neo4j.token.api.TokenHolder;
 
+import static org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier.TRACER_SUPPLIER;
+
 class LenientRelationshipReader extends LenientStoreInputChunk
 {
     private final RelationshipStore relationshipStore;
@@ -25,7 +27,7 @@ class LenientRelationshipReader extends LenientStoreInputChunk
     LenientRelationshipReader( StoreCopyStats stats, RelationshipStore relationshipStore, PropertyStore propertyStore, TokenHolders tokenHolders,
             StoreCopyFilter storeCopyFilter )
     {
-        super( stats, propertyStore, tokenHolders, relationshipStore.openPageCursorForReading( 0 ), storeCopyFilter );
+        super( stats, propertyStore, tokenHolders, relationshipStore.openPageCursorForReading( 0, TRACER_SUPPLIER.get() ), storeCopyFilter );
         this.relationshipStore = relationshipStore;
         this.record = relationshipStore.newRecord();
         TokenHolder tokenHolder = tokenHolders.relationshipTypeTokens();
@@ -38,7 +40,7 @@ class LenientRelationshipReader extends LenientStoreInputChunk
         relationshipStore.getRecordByCursor( id, record, RecordLoad.NORMAL, cursor );
         if ( record.inUse() )
         {
-            relationshipStore.ensureHeavy( record );
+            relationshipStore.ensureHeavy( record, TRACER_SUPPLIER.get() );
             int relType = record.getType();
             String relName = storeCopyFilter.filterRelationship( relType, tokenLookup );
             if ( relName != null )

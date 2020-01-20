@@ -43,6 +43,7 @@ import org.neo4j.token.TokenHolders;
 import static java.lang.Long.parseLong;
 import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.immediate;
 import static org.neo4j.io.pagecache.impl.muninn.StandalonePageCacheFactory.createPageCache;
+import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
 import static org.neo4j.kernel.impl.store.record.RecordLoad.FORCE;
 
@@ -218,8 +219,8 @@ public class DumpStore<RECORD extends AbstractBaseRecord, STORE extends RecordSt
                 {
                     if ( record.inUse() )
                     {
-                        store.ensureHeavy( record );
-                        return record.getId() + ": \"" + store.getStringFor( record ) + "\": " + record;
+                        store.ensureHeavy( record, NULL );
+                        return record.getId() + ": \"" + store.getStringFor( record, NULL ) + "\": " + record;
                     }
                     return null;
                 }
@@ -250,14 +251,14 @@ public class DumpStore<RECORD extends AbstractBaseRecord, STORE extends RecordSt
     {
         try ( SchemaStore store = neoStores.getSchemaStore() )
         {
-            TokenHolders tokenHolders = StoreTokens.readOnlyTokenHolders( neoStores );
+            TokenHolders tokenHolders = StoreTokens.readOnlyTokenHolders( neoStores, NULL );
             final SchemaRuleAccess schemaRuleAccess = SchemaRuleAccess.getSchemaRuleAccess( store, tokenHolders );
             new DumpStore<SchemaRecord,SchemaStore>( System.out )
             {
                 @Override
                 protected Object transform( SchemaRecord record ) throws Exception
                 {
-                    return record.inUse() ? schemaRuleAccess.loadSingleSchemaRule( record.getId() ) : null;
+                    return record.inUse() ? schemaRuleAccess.loadSingleSchemaRule( record.getId(), NULL ) : null;
                 }
             }.dump( store, ids );
         }
@@ -325,7 +326,7 @@ public class DumpStore<RECORD extends AbstractBaseRecord, STORE extends RecordSt
 
     private boolean dumpRecord( STORE store, int size, long id ) throws Exception
     {
-        RECORD record = store.getRecord( id, store.newRecord(), FORCE );
+        RECORD record = store.getRecord( id, store.newRecord(), FORCE, NULL );
         Object transform = transform( record );
         if ( transform != null )
         {
@@ -338,7 +339,7 @@ public class DumpStore<RECORD extends AbstractBaseRecord, STORE extends RecordSt
         {
             out.print( record );
             // TODO Hmm, please don't do this
-            byte[] rawRecord = ((CommonAbstractStore)store).getRawRecordData( id );
+            byte[] rawRecord = ((CommonAbstractStore)store).getRawRecordData( id, NULL );
             dumpHex( record, ByteBuffer.wrap( rawRecord ), id, size );
         }
         return record.inUse();

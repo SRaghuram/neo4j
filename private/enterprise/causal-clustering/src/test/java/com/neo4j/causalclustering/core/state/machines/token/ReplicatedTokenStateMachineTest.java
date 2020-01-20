@@ -27,6 +27,8 @@ import org.neo4j.internal.recordstorage.NeoStoreTransactionApplier;
 import org.neo4j.internal.schema.SchemaRule;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.io.pagecache.tracing.PageCacheTracer;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
@@ -64,7 +66,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.immediate;
-import static org.neo4j.io.pagecache.tracing.PageCacheTracer.NULL;
 import static org.neo4j.lock.LockService.NO_LOCK_SERVICE;
 import static org.neo4j.logging.NullLogProvider.nullLogProvider;
 import static org.neo4j.storageengine.api.CommandVersion.AFTER;
@@ -199,7 +200,7 @@ public class ReplicatedTokenStateMachineTest
         Config config = Config.defaults();
         PageCache pageCache = pageCacheRule.getPageCache( fs );
         IdGeneratorFactory idFactory = new DefaultIdGeneratorFactory( fs, immediate() );
-        StoreFactory storeFactory = new StoreFactory( layout, config, idFactory, pageCache, fs, logProvider, NULL );
+        StoreFactory storeFactory = new StoreFactory( layout, config, idFactory, pageCache, fs, logProvider, PageCacheTracer.NULL );
         NeoStores stores = cleanupRule.add( storeFactory.openAllNeoStores( true ) );
         TransactionCommitProcess commitProcess = mock( TransactionCommitProcess.class );
         when( commitProcess.commit( any( TransactionToApply.class ), any( CommitEvent.class ), eq( EXTERNAL ) ) ).then( inv ->
@@ -234,8 +235,9 @@ public class ReplicatedTokenStateMachineTest
                 }
             };
             tta.accept( new HighIdTransactionApplier( stores ) );
-            tta.accept( new NeoStoreTransactionApplier( AFTER, stores, backdoor, NO_LOCK_SERVICE, 13, new LockGroup(), IdUpdateListener.DIRECT ) );
-            tta.accept( new CacheInvalidationTransactionApplier( stores, backdoor ) );
+            tta.accept( new NeoStoreTransactionApplier( AFTER, stores, backdoor, NO_LOCK_SERVICE, 13, new LockGroup(), IdUpdateListener.DIRECT,
+                    PageCursorTracer.NULL ) );
+            tta.accept( new CacheInvalidationTransactionApplier( stores, backdoor, PageCursorTracer.NULL ) );
             return 13L;
         } );
         return commitProcess;

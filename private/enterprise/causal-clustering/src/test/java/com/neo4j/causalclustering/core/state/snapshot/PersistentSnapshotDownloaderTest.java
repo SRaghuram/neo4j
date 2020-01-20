@@ -43,6 +43,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 
 class PersistentSnapshotDownloaderTest
 {
@@ -127,7 +128,7 @@ class PersistentSnapshotDownloaderTest
 
         PersistentSnapshotDownloader persistentSnapshotDownloader = createDownloader();
         long txIdAfterDownload = 79;
-        txIdStore.setLastCommittedAndClosedTransactionId( txIdAfterDownload, 0, 0, 0, 0 );
+        txIdStore.setLastCommittedAndClosedTransactionId( txIdAfterDownload, 0, 0, 0, 0, NULL );
 
         // when
         persistentSnapshotDownloader.run();

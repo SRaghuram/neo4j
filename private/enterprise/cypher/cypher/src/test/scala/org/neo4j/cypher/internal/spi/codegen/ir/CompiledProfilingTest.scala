@@ -5,6 +5,7 @@
  */
 package org.neo4j.cypher.internal.spi.codegen.ir
 
+import org.mockito.ArgumentMatchers.any
 import org.mockito.ArgumentMatchers.anyLong
 import org.mockito.Mockito.when
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
@@ -28,8 +29,8 @@ import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 import org.neo4j.internal.kernel.api.CursorFactory
 import org.neo4j.internal.kernel.api.helpers.StubNodeCursor
 import org.neo4j.internal.kernel.api.helpers.StubRead
-import org.neo4j.io.pagecache.tracing.DefaultPageCacheTracer
-import org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracer
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer
+import org.neo4j.kernel.api.KernelTransaction
 import org.neo4j.kernel.api.KernelTransaction.Type
 import org.neo4j.kernel.api.security.AnonymousContext
 import org.neo4j.kernel.impl.core.NodeEntity
@@ -54,15 +55,19 @@ class CompiledProfilingTest extends CypherFunSuite with CodeGenSugar {
     val nodeCursor = new StubNodeCursor
     nodeCursor.withNode(1)
     nodeCursor.withNode(2)
-    when(cursors.allocateNodeCursor()).thenReturn(nodeCursor)
+    when(cursors.allocateNodeCursor(any())).thenReturn(nodeCursor)
+    val kernelTransaction = mock[KernelTransaction]
     val transaction = mock[InternalTransaction]
     val queryContext = mock[QueryContext]
     val transactionalContext = mock[TransactionalContextWrapper]
+    transactionalContext.transaction
     when(queryContext.entityAccessor).thenReturn(transaction)
     when(queryContext.transactionalContext).thenReturn(transactionalContext.asInstanceOf[QueryTransactionalContext])
-    when(transactionalContext.kernelStatisticProvider).thenReturn(new DelegatingKernelStatisticProvider(new DefaultPageCursorTracer(DefaultPageCacheTracer.TRACER, "test")))
+    when(transactionalContext.kernelStatisticProvider).thenReturn(new DelegatingKernelStatisticProvider(PageCursorTracer.NULL))
     when(transactionalContext.cursors).thenReturn(cursors)
     when(transactionalContext.dataRead).thenReturn(dataRead)
+    when(transactionalContext.transaction).thenReturn(kernelTransaction)
+    when(kernelTransaction.pageCursorTracer()).thenReturn(PageCursorTracer.NULL)
     when(transaction.newNodeEntity(anyLong())).thenReturn(mock[NodeEntity])
 
     // when
@@ -104,7 +109,7 @@ class CompiledProfilingTest extends CypherFunSuite with CodeGenSugar {
     }
   }
 
-  class DelegatingKernelStatisticProvider(tracer: DefaultPageCursorTracer) extends KernelStatisticProvider {
+  class DelegatingKernelStatisticProvider(tracer: PageCursorTracer) extends KernelStatisticProvider {
 
     override def getPageCacheHits: Long = tracer.hits()
 

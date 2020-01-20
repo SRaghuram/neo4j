@@ -265,7 +265,7 @@ class EagerizationAcceptanceTest
                            resourceTracker: ResourceTracker): RawIterator[Array[AnyValue], ProcedureException] = {
           val transaction = ctx.internalTransaction().kernelTransaction()
           val cursors = transaction.cursors()
-          val nodeCursor = cursors.allocateNodeCursor()
+          val nodeCursor = cursors.allocateNodeCursor( transaction.pageCursorTracer() )
           var relCursor: RelationshipSelectionCursor = null
           try {
             val idX = input(0).asInstanceOf[NodeValue].id()
@@ -273,7 +273,7 @@ class EagerizationAcceptanceTest
             transaction.dataRead().singleNode(idX, nodeCursor)
             val result = Array.newBuilder[Array[AnyValue]]
             if (nodeCursor.next()) {
-              relCursor = RelationshipSelections.outgoingCursor(cursors, nodeCursor, null)
+              relCursor = RelationshipSelections.outgoingCursor(cursors, nodeCursor, null, transaction.pageCursorTracer())
               while (relCursor.next()) {
                 if (relCursor.targetNodeReference() == idY) {
                   result += Array(Values.longValue(relCursor.relationshipReference()))
@@ -319,7 +319,7 @@ class EagerizationAcceptanceTest
                            resourceTracker: ResourceTracker): RawIterator[Array[AnyValue], ProcedureException] = {
           val transaction = ctx.internalTransaction().kernelTransaction()
           val cursors = transaction.cursors()
-          val nodeCursor = cursors.allocateNodeCursor()
+          val nodeCursor = cursors.allocateNodeCursor( transaction.pageCursorTracer() )
           var relCursor: RelationshipSelectionCursor = null
 
           try {
@@ -327,7 +327,7 @@ class EagerizationAcceptanceTest
             val idY = input(1).asInstanceOf[NodeValue].id()
             transaction.dataRead().singleNode(idX, nodeCursor)
             if (nodeCursor.next()) {
-              relCursor = RelationshipSelections.outgoingCursor(cursors, nodeCursor, null)
+              relCursor = RelationshipSelections.outgoingCursor(cursors, nodeCursor, null, transaction.pageCursorTracer())
               while (relCursor.next()) if (relCursor.targetNodeReference() == idY) counter += 1
             }
             RawIterator.empty()

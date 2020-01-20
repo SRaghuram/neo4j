@@ -31,7 +31,7 @@ class SlottedExecutionResultBuilderFactory(pipe: Pipe,
 
   case class SlottedExecutionResultBuilder(queryContext: QueryContext) extends BaseExecutionResultBuilder {
 
-    val cursors = new ExpressionCursors(queryContext.transactionalContext.cursors)
+    val cursors = new ExpressionCursors(queryContext.transactionalContext.cursors, queryContext.transactionalContext.transaction.pageCursorTracer())
     queryContext.resources.trace(cursors)
     override protected def createQueryState(params: MapValue,
                                             prePopulateResults: Boolean,

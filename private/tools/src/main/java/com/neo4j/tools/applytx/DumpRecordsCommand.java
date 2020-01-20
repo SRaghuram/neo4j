@@ -15,6 +15,7 @@ import io.airlift.airline.Cli.CliBuilder;
 import java.io.PrintStream;
 import java.util.function.Supplier;
 
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.impl.store.LabelTokenStore;
 import org.neo4j.kernel.impl.store.PropertyKeyTokenStore;
 import org.neo4j.kernel.impl.store.RecordStore;
@@ -27,6 +28,7 @@ import org.neo4j.kernel.impl.store.record.RelationshipGroupRecord;
 import org.neo4j.kernel.impl.store.record.RelationshipRecord;
 import org.neo4j.token.api.NamedToken;
 
+import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 import static org.neo4j.kernel.impl.store.record.RecordLoad.NORMAL;
 
 /**
@@ -91,7 +93,7 @@ public class DumpRecordsCommand implements Command
             PropertyRecord record = propertyStore.newRecord();
             while ( propId != Record.NO_NEXT_PROPERTY.intValue() )
             {
-                propertyStore.getRecord( propId, record, NORMAL );
+                propertyStore.getRecord( propId, record, NORMAL, NULL );
                 // We rely on this method having the side-effect of loading the property blocks:
                 record.numberOfProperties();
                 out.println( record );
@@ -107,7 +109,7 @@ public class DumpRecordsCommand implements Command
         protected long firstPropId( StoreAccess access )
         {
             RecordStore<NodeRecord> nodeStore = access.getNodeStore();
-            return nodeStore.getRecord( id, nodeStore.newRecord(), NORMAL ).getNextProp();
+            return nodeStore.getRecord( id, nodeStore.newRecord(), NORMAL, NULL ).getNextProp();
         }
     }
 
@@ -118,7 +120,7 @@ public class DumpRecordsCommand implements Command
         protected long firstPropId( StoreAccess access )
         {
             RecordStore<RelationshipRecord> relationshipStore = access.getRelationshipStore();
-            return relationshipStore.getRecord( id, relationshipStore.newRecord(), NORMAL ).getNextProp();
+            return relationshipStore.getRecord( id, relationshipStore.newRecord(), NORMAL, NULL ).getNextProp();
         }
     }
 
@@ -132,12 +134,12 @@ public class DumpRecordsCommand implements Command
         public void run( StoreAccess store, PrintStream out )
         {
             RecordStore<NodeRecord> nodeStore = store.getNodeStore();
-            NodeRecord node = nodeStore.getRecord( id, nodeStore.newRecord(), NORMAL );
+            NodeRecord node = nodeStore.getRecord( id, nodeStore.newRecord(), NORMAL, NULL );
             if ( node.isDense() )
             {
                 RecordStore<RelationshipGroupRecord> relationshipGroupStore = store.getRelationshipGroupStore();
                 RelationshipGroupRecord group = relationshipGroupStore.newRecord();
-                relationshipGroupStore.getRecord( node.getNextRel(), group, NORMAL );
+                relationshipGroupStore.getRecord( node.getNextRel(), group, NORMAL, NULL );
                 do
                 {
                     out.println( "group " + group );
@@ -148,7 +150,7 @@ public class DumpRecordsCommand implements Command
                     out.println( "loop:" );
                     printRelChain( store, out, group.getFirstLoop() );
                     group = group.getNext() != -1 ?
-                            relationshipGroupStore.getRecord( group.getNext(), group, NORMAL ) : null;
+                            relationshipGroupStore.getRecord( group.getNext(), group, NORMAL, NULL ) : null;
                 } while ( group != null );
             }
             else
@@ -162,7 +164,7 @@ public class DumpRecordsCommand implements Command
             for ( long rel = firstRelId; rel != Record.NO_NEXT_RELATIONSHIP.intValue(); )
             {
                 RecordStore<RelationshipRecord> relationshipStore = access.getRelationshipStore();
-                RelationshipRecord record = relationshipStore.getRecord( rel, relationshipStore.newRecord(), NORMAL );
+                RelationshipRecord record = relationshipStore.getRecord( rel, relationshipStore.newRecord(), NORMAL, NULL );
                 out.println( rel + "\t" + record );
                 if ( record.getFirstNode() == id )
                 {
@@ -183,7 +185,7 @@ public class DumpRecordsCommand implements Command
         public void run( StoreAccess store, PrintStream out )
         {
             for ( NamedToken token : ((RelationshipTypeTokenStore)
-                    store.getRelationshipTypeTokenStore()).getTokens() )
+                    store.getRelationshipTypeTokenStore()).getTokens( NULL ) )
             {
                 out.println( token );
             }
@@ -197,7 +199,7 @@ public class DumpRecordsCommand implements Command
         public void run( StoreAccess store, PrintStream out )
         {
             for ( NamedToken token : ((LabelTokenStore)
-                    store.getLabelTokenStore()).getTokens() )
+                    store.getLabelTokenStore()).getTokens( NULL ) )
             {
                 out.println( token );
             }
@@ -211,7 +213,7 @@ public class DumpRecordsCommand implements Command
         public void run( StoreAccess store, PrintStream out )
         {
             for ( NamedToken token : ((PropertyKeyTokenStore)
-                    store.getPropertyKeyTokenStore()).getTokens() )
+                    store.getPropertyKeyTokenStore()).getTokens( NULL ) )
             {
                 out.println( token );
             }

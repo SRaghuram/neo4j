@@ -13,6 +13,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.WorkerResourceProvider
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 import org.neo4j.internal.kernel.api.Cursor
 import org.neo4j.internal.kernel.api.CursorFactory
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer
 
 import scala.util.Random
 
@@ -122,7 +123,7 @@ class FixedWorkersQueryExecutorTest extends CypherFunSuite {
   }
 
   class RandomExecutor extends FixedWorkersQueryExecutor(
-    new WorkerResourceProvider(3, () => new QueryResources(mock[CursorFactory](RETURNS_DEEP_STUBS))),
+    new WorkerResourceProvider(3, () => new QueryResources(mock[CursorFactory](RETURNS_DEEP_STUBS), PageCursorTracer.NULL)),
     new WorkerManager(3, null)) {
 
     private val random = new Random()

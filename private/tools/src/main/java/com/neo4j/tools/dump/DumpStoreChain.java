@@ -18,6 +18,7 @@ import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.NodeStore;
 import org.neo4j.kernel.impl.store.PropertyStore;
@@ -36,6 +37,7 @@ import org.neo4j.logging.NullLogProvider;
 
 import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.immediate;
 import static org.neo4j.io.pagecache.impl.muninn.StandalonePageCacheFactory.createPageCache;
+import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
 import static org.neo4j.kernel.impl.store.record.RecordLoad.FORCE;
 
@@ -119,7 +121,7 @@ public abstract class DumpStoreChain<RECORD extends AbstractBaseRecord>
                 RECORD record = store.newRecord();
                 for ( long next = firstRecord; next != -1; )
                 {
-                    store.getRecord( next, record, RecordLoad.FORCE );
+                    store.getRecord( next, record, RecordLoad.FORCE, NULL );
                     System.out.println( record );
                     next = next( record );
                 }
@@ -188,7 +190,7 @@ public abstract class DumpStoreChain<RECORD extends AbstractBaseRecord>
     private static NodeRecord nodeRecord( NeoStores neoStores, long id )
     {
         NodeStore nodeStore = neoStores.getNodeStore();
-        return nodeStore.getRecord( id, nodeStore.newRecord(), FORCE );
+        return nodeStore.getRecord( id, nodeStore.newRecord(), FORCE, NULL );
     }
 
     private static void verifyFilesExists( File... files )

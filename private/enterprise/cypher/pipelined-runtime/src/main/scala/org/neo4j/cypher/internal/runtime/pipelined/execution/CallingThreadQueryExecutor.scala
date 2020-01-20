@@ -64,7 +64,7 @@ class CallingThreadQueryExecutor(cursors: CursorFactory) extends QueryExecutor w
         case MEMORY_BOUND(maxAllocatedBytes) => new MemoryTrackingStandardStateFactory(maxAllocatedBytes)
       }
 
-    val resources = new QueryResources(cursors: CursorFactory)
+    val resources = new QueryResources(cursors: CursorFactory, queryContext.transactionalContext.transaction.pageCursorTracer())
     val tracer = schedulerTracer.traceQuery()
     val tracker = stateFactory.newTracker(subscriber, queryContext, tracer)
     val queryState = QueryState(params,

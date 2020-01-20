@@ -74,6 +74,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.logs_directory;
 import static org.neo4j.internal.batchimport.ImportLogic.NO_MONITOR;
 import static org.neo4j.internal.recordstorage.StoreTokens.readOnlyTokenHolders;
 import static org.neo4j.io.pagecache.tracing.PageCacheTracer.NULL;
+import static org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier.TRACER_SUPPLIER;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
 import static org.neo4j.logging.Level.DEBUG;
 import static org.neo4j.logging.Level.INFO;
@@ -136,7 +137,7 @@ public class StoreCopy
                 nodeStore = neoStores.getNodeStore();
                 propertyStore = neoStores.getPropertyStore();
                 relationshipStore = neoStores.getRelationshipStore();
-                tokenHolders = readOnlyTokenHolders( neoStores );
+                tokenHolders = readOnlyTokenHolders( neoStores, TRACER_SUPPLIER.get() );
                 stats = new StoreCopyStats( log );
                 SchemaStore schemaStore = neoStores.getSchemaStore();
 
@@ -189,8 +190,8 @@ public class StoreCopy
         SchemaRuleAccess schemaRuleAccess = SchemaRuleAccess.getSchemaRuleAccess( schemaStore, tokenHolders );
         Map<String,IndexDescriptor> indexes = new HashMap<>();
         List<ConstraintDescriptor> constraints = new ArrayList<>();
-        schemaRuleAccess.indexesGetAll().forEachRemaining( i -> indexes.put( i.getName(), i ) );
-        schemaRuleAccess.constraintsGetAllIgnoreMalformed().forEachRemaining(constraints::add );
+        schemaRuleAccess.indexesGetAll( TRACER_SUPPLIER.get() ).forEachRemaining( i -> indexes.put( i.getName(), i ) );
+        schemaRuleAccess.constraintsGetAllIgnoreMalformed( TRACER_SUPPLIER.get() ).forEachRemaining(constraints::add );
 
         Map<String,String> schemaStatements = new HashMap<>();
         for ( var entry : indexes.entrySet() )
