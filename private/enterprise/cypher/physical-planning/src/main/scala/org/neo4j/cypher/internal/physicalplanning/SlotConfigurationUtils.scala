@@ -7,6 +7,9 @@ package org.neo4j.cypher.internal.physicalplanning
 
 import java.util.function.ToLongFunction
 
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.ApplyPlanSlot
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.CachedPropertySlot
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.VariableSlot
 import org.neo4j.cypher.internal.runtime.EntityById
 import org.neo4j.cypher.internal.runtime.ExecutionContext
 import org.neo4j.cypher.internal.util.AssertionUtils
@@ -307,7 +310,7 @@ object SlotConfigurationUtils {
    */
   def generateSlotAccessorFunctions(slots: SlotConfiguration): Unit = {
     slots.foreachSlot({
-      case (key, slot) =>
+      case (VariableSlot(key), slot) =>
         val getter = SlotConfigurationUtils.makeGetValueFromSlotFunctionFor(slot)
         val setter = SlotConfigurationUtils.makeSetValueInSlotFunctionFor(slot)
         val primitiveNodeSetter =
@@ -322,6 +325,8 @@ object SlotConfigurationUtils {
             None
 
         slots.updateAccessorFunctions(key, getter, setter, primitiveNodeSetter, primitiveRelationshipSetter)
-    }, notDoingForCachedNodePropertiesYet => {})
+      case (_: CachedPropertySlot, _) => // do nothing
+      case (_: ApplyPlanSlot, _) => // do nothing
+    })
   }
 }

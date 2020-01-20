@@ -5,6 +5,9 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted.pipes
 
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.ApplyPlanSlot
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.CachedPropertySlot
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.VariableSlot
 import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot, SlotConfiguration}
 import org.neo4j.cypher.internal.runtime.ExecutionContext
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
@@ -16,9 +19,11 @@ trait SlottedPipeTestHelper extends CypherFunSuite {
     list1 map { in =>
       val build = scala.collection.mutable.HashMap.empty[String, Any]
       slots.foreachSlot({
-        case (column, LongSlot(offset, _, _)) => build.put(column, in.getLongAt(offset))
-        case (column, RefSlot(offset, _, _)) => build.put(column, in.getRefAt(offset))
-      }, cachedNodeProp => {})
+        case (VariableSlot(column), LongSlot(offset, _, _)) => build.put(column, in.getLongAt(offset))
+        case (VariableSlot(column), RefSlot(offset, _, _)) => build.put(column, in.getRefAt(offset))
+        case (_: CachedPropertySlot, _) => // no help here
+        case (_: ApplyPlanSlot, _) => // or here
+      })
       build.toMap
     }
   }

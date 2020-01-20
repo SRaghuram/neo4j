@@ -44,17 +44,11 @@ import org.neo4j.cypher.internal.physicalplanning.ReduceOutput
 import org.neo4j.cypher.internal.physicalplanning.RefSlot
 import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.ApplyPlanSlot
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.Size
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.SlotKey
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.VariableSlot
 import org.neo4j.cypher.internal.planner.spi.TokenContext
-import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
-import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
-import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentityImpl
-import org.neo4j.cypher.internal.runtime.slotted.expressions.CompiledExpressionConverter
-import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionConverters
-import org.neo4j.cypher.internal.runtime.ParameterMapping
-import org.neo4j.cypher.internal.runtime.ProcedureCallMode
-import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.QueryIndexRegistrator
 import org.neo4j.cypher.internal.runtime.expressionVariableAllocation.AvailableExpressionVariables
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.CommunityExpressionConverter
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
@@ -79,6 +73,15 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.ProduceResultOperat
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SlottedPipeHeadOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SlottedPipeMiddleOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SlottedPipeOperator
+import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
+import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
+import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentityImpl
+import org.neo4j.cypher.internal.runtime.slotted.expressions.CompiledExpressionConverter
+import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionConverters
+import org.neo4j.cypher.internal.runtime.ParameterMapping
+import org.neo4j.cypher.internal.runtime.ProcedureCallMode
+import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.QueryIndexRegistrator
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.internal.util.attribution.SameId
 import org.neo4j.cypher.internal.util.symbols
@@ -386,12 +389,12 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
   private val fusionPolicy = OperatorFusionPolicy(fusionEnabled = true, fusionOverPipelinesEnabled = true)
 
   class PipelineBuilder(head: LogicalPlan) {
-    private val slots = mutable.Map.empty[String, Slot]
-    private var longCount = 0
+    private val slots = mutable.Map.empty[SlotKey, Slot]
+    slots += ApplyPlanSlot(Id(0)) -> LongSlot(0, false, symbols.CTAny)
+    private var longCount = 0 // TODO: shouldn't this be 1 because of the apply plan slot?
     private var refCount = 0
     private var current = head
     private var bufferId = 0
-    private val applyPlansOffsets = mutable.Map[Id, Int](Id(0) -> 0)
     val applyPlans = new ApplyPlans()
     val pipeline = new PipelineDefinitionBuild(PipelineId(3), head)
     if (fusionPolicy.canFuse(head)) {
@@ -424,21 +427,21 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
     }
 
     def addNode(node: String): Unit = {
-      slots += node -> LongSlot(longCount, nullable = false, symbols.CTNode)
+      slots += VariableSlot(node) -> LongSlot(longCount, nullable = false, symbols.CTNode)
       longCount += 1
     }
 
     def addRelationship(relationship: String): Unit = {
-      slots += relationship -> LongSlot(longCount, nullable = false, symbols.CTRelationship)
+      slots += VariableSlot(relationship) -> LongSlot(longCount, nullable = false, symbols.CTRelationship)
       longCount += 1
     }
 
     def addReference(ref: String): Unit = {
-      slots += ref -> RefSlot(refCount, nullable = true, symbols.CTAny)
+      slots += VariableSlot(ref) -> RefSlot(refCount, nullable = true, symbols.CTAny)
       refCount += 1
     }
 
-    def slotConfiguration = new SlotConfiguration(slots, mutable.Map.empty, applyPlansOffsets, longCount, refCount)
+    def slotConfiguration = new SlotConfiguration(slots, longCount, refCount)
 
   }
   private object fused extends BeMatcher[Operator] {

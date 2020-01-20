@@ -19,6 +19,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.{Aggre
 import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.True
 import org.neo4j.cypher.internal.runtime.interpreted.commands.{expressions => commandExpressions}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.{DropResultPipe, _}
+import org.neo4j.cypher.internal.runtime.slotted
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.{createProjectionForIdentifier, createProjectionsForResult}
 import org.neo4j.cypher.internal.runtime.slotted.aggregation._
 import org.neo4j.cypher.internal.runtime.slotted.pipes.UnionSlottedPipe.RowMapping
@@ -27,6 +28,9 @@ import org.neo4j.cypher.internal.runtime.slotted.{expressions => slottedExpressi
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryIndexRegistrator}
 import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.expressions.{Equals, SignedDecimalIntegerLiteral}
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.CachedPropertySlot
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.VariableSlot
+import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.translateColumnOrder
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.internal.util.symbols._
 import org.neo4j.cypher.internal.{expressions => frontEndAst}
@@ -340,20 +344,6 @@ class SlottedPipeMapper(fallback: PipeMapper,
     pipe
   }
 
-  private def translateColumnOrder(slots: SlotConfiguration, s: plans.ColumnOrder): ColumnOrder = s match {
-    case plans.Ascending(name) =>
-      slots.get(name) match {
-        case Some(slot) => Ascending(slot)
-        case None => throw new InternalException(s"Did not find `$name` in the slot configuration")
-      }
-
-    case plans.Descending(name) =>
-      slots.get(name) match {
-        case Some(slot) => Descending(slot)
-        case None => throw new InternalException(s"Did not find `$name` in the slot configuration")
-      }
-  }
-
   override def onTwoChildPlan(plan: LogicalPlan, lhs: Pipe, rhs: Pipe): Pipe = {
 
     val slotConfigs = physicalPlan.slotConfigurations
@@ -475,16 +465,16 @@ class SlottedPipeMapper(fallback: PipeMapper,
     // When executing, the LHS will be copied to the first slots in the produced row, and any additional RHS columns that are not
     // part of the join comparison
     rhsSlots.foreachSlotOrdered({
-      case (key, LongSlot(offset, _, _)) if offset >= argumentSize.nLongs =>
+      case (VariableSlot(key), LongSlot(offset, _, _)) if offset >= argumentSize.nLongs =>
         copyLongsFromRHS += ((offset, slots.getLongOffsetFor(key)))
-      case (key, RefSlot(offset, _, _)) if offset >= argumentSize.nReferences =>
+      case (VariableSlot(key), RefSlot(offset, _, _)) if offset >= argumentSize.nReferences =>
         copyRefsFromRHS += ((offset, slots.getReferenceOffsetFor(key)))
-      case _ => // do nothing, already added by lhs
-    }, { cnp =>
-      val offset = rhsSlots.getCachedPropertyOffsetFor(cnp)
-      if (offset >= argumentSize.nReferences) {
-        copyCachedPropertiesFromRHS += offset -> slots.getCachedPropertyOffsetFor(cnp)
-      }
+      case (_: VariableSlot, _) => // do nothing, already added by lhs
+      case (CachedPropertySlot(cnp), _) =>
+        val offset = rhsSlots.getCachedPropertyOffsetFor(cnp)
+        if (offset >= argumentSize.nReferences) {
+          copyCachedPropertiesFromRHS += offset -> slots.getCachedPropertyOffsetFor(cnp)
+        }
     })
 
     (copyLongsFromRHS.result().toArray, copyRefsFromRHS.result().toArray, copyCachedPropertiesFromRHS.result().toArray)
@@ -585,11 +575,10 @@ class SlottedPipeMapper(fallback: PipeMapper,
     val rhsPlan = plan.rhs.get
     val lhsSlots = physicalPlan.slotConfigurations(lhsPlan.id)
     val rhsSlots = physicalPlan.slotConfigurations(rhsPlan.id)
-    val sharedSlots = rhsSlots.filterSlots(
-      onVariable = {
-        case (k, _) =>  lhsSlots.get(k).isDefined
-      }, onCachedProperty = {
-        case (k, slot) => slot.offset < argumentSize.nReferences && lhsSlots.hasCachedPropertySlot(k)
+    val sharedSlots =
+      rhsSlots.filterSlots({
+        case (VariableSlot(k), _) =>  lhsSlots.get(k).isDefined
+        case (CachedPropertySlot(k), slot) => slot.offset < argumentSize.nReferences && lhsSlots.hasCachedPropertySlot(k)
       })
 
     val (sharedLongSlots, sharedRefSlots) = sharedSlots.partition(_.isLongSlot)
@@ -631,28 +620,26 @@ class SlottedPipeMapper(fallback: PipeMapper,
     val lhsArgRefSlots = mutable.ArrayBuffer.empty[(String, Slot)]
     val rhsArgLongSlots = mutable.ArrayBuffer.empty[(String, Slot)]
     val rhsArgRefSlots = mutable.ArrayBuffer.empty[(String, Slot)]
-    lhsSlots.foreachSlot(onVariable = {
-      case (key, slot)  =>
-       if (slot.isLongSlot && slot.offset < argumentSize.nLongs) {
-         lhsArgLongSlots += (key -> slot)
-       }  else if (!slot.isLongSlot && slot.offset < argumentSize.nReferences) {
-         lhsArgRefSlots += (key -> slot)
-       }
-    }, onCachedProperty = {
-      case (key, slot)  =>
+    lhsSlots.foreachSlot({
+      case (VariableSlot(key), slot)  =>
+        if (slot.isLongSlot && slot.offset < argumentSize.nLongs) {
+          lhsArgLongSlots += (key -> slot)
+        }  else if (!slot.isLongSlot && slot.offset < argumentSize.nReferences) {
+          lhsArgRefSlots += (key -> slot)
+        }
+      case (CachedPropertySlot(key), slot)  =>
         if (slot.offset < argumentSize.nReferences) {
           lhsArgRefSlots += (key.asCanonicalStringVal -> slot)
         }
     })
-    rhsSlots.foreachSlot(onVariable = {
-      case (key, slot)  =>
+    rhsSlots.foreachSlot({
+      case (VariableSlot(key), slot)  =>
         if (slot.isLongSlot && slot.offset < argumentSize.nLongs) {
           rhsArgLongSlots += (key -> slot)
         }  else if (!slot.isLongSlot && slot.offset < argumentSize.nReferences) {
           rhsArgRefSlots += (key -> slot)
         }
-    }, onCachedProperty = {
-      case (key, slot) =>
+      case (CachedPropertySlot(key), slot) =>
         if (slot.offset < argumentSize.nReferences) {
           rhsArgRefSlots += (key.asCanonicalStringVal -> slot)
         }
@@ -753,15 +740,15 @@ object SlottedPipeMapper {
     }
   }
 
-  def translateColumnOrder(slots: SlotConfiguration, s: plans.ColumnOrder): ColumnOrder = s match {
+  def translateColumnOrder(slots: SlotConfiguration, s: plans.ColumnOrder): slotted.ColumnOrder = s match {
     case plans.Ascending(name) =>
       slots.get(name) match {
-        case Some(slot) => Ascending(slot)
+        case Some(slot) => slotted.Ascending(slot)
         case None => throw new InternalException(s"Did not find `$name` in the pipeline information")
       }
     case plans.Descending(name) =>
       slots.get(name) match {
-        case Some(slot) => Descending(slot)
+        case Some(slot) => slotted.Descending(slot)
         case None => throw new InternalException(s"Did not find `$name` in the pipeline information")
       }
   }
