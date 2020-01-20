@@ -38,7 +38,6 @@ class Buffers(numBuffers: Int,
               argumentStateMaps: ArgumentStateMaps,
               stateFactory: StateFactory) {
 
-  // TODO comment about Sources, Sinks, Buffers, and why this is a mess
   private val buffers: Array[Any] = new Array[Any](numBuffers)
 
   // Constructor code
@@ -100,7 +99,11 @@ class Buffers(numBuffers: Int,
     buffers(i) =
       bufferDefinition.variant match {
         case x: AttachBufferVariant =>
-          // TODO comment about why this is needed
+          /*
+          Explicit construction of Apply Buffer is necessary here due to the combination of:
+          (1) during Execution State initialization only the buffers that are pipeline outputs are initialized
+          (2) when solving Cartesian Product, the delegating Apply Buffer used by Attach Buffer is not an output of any pipeline, so would never be initialized
+           */
           constructBuffer(x.applyBuffer)
           new MorselAttachBuffer(bufferDefinition.id,
             applyBuffer(x.applyBuffer.id),
@@ -137,7 +140,11 @@ class Buffers(numBuffers: Int,
                                argumentStateMaps,
                                tracker)
         case x: LHSAccumulatingRHSStreamingBufferVariant =>
-          // TODO comment about why this is needed
+          /*
+          Explicit construction of sinks is necessary due to the combination of:
+          (1) pipelines (and their output buffers) are initialized in reverse order
+          (2) when solving Cartesian Product, LHS Sink of Join Buffer is not an output of any pipeline, so would never be initialized
+           */
           constructBuffer(x.lhsSink)
           constructBuffer(x.rhsSink)
           new LHSAccumulatingRHSStreamingSource(tracker,
@@ -209,7 +216,6 @@ class Buffers(numBuffers: Int,
   /**
    * Get the buffer with the given id casted as a [[LHSAccumulatingRHSStreamingSource]].
    */
-    // TODO can this simply return a Source?
   def lhsAccumulatingRhsStreamingBuffer(bufferId: BufferId): LHSAccumulatingRHSStreamingSource[_, _] =
     buffers(bufferId.x).asInstanceOf[LHSAccumulatingRHSStreamingSource[_, _]]
 

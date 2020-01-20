@@ -567,7 +567,6 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
       applyBuffer,
       inputBuffer => inputBuffer.downstreamStates += downstreamReduce,
       lHSAccumulatingRHSStreamingBufferDefinition => {
-        // REVIEWER: this feels a bit bad, should it be necessary to add downstream states to LHS?
         lHSAccumulatingRHSStreamingBufferDefinition.lhsSink.downstreamStates += downstreamReduce
         lHSAccumulatingRHSStreamingBufferDefinition.rhsSink.downstreamStates += downstreamReduce
         lHSAccumulatingRHSStreamingBufferDefinition.downstreamStates += downstreamReduce
@@ -592,7 +591,6 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
       applyBuffer,
       inputBuffer => inputBuffer.downstreamStates += downstreamState,
       lHSAccumulatingRHSStreamingBufferDefinition => {
-        // REVIEWER: this feels a bit bad, should it be necessary to add downstream states to LHS?
         lHSAccumulatingRHSStreamingBufferDefinition.lhsSink.downstreamStates += downstreamState
         lHSAccumulatingRHSStreamingBufferDefinition.rhsSink.downstreamStates += downstreamState
         lHSAccumulatingRHSStreamingBufferDefinition.downstreamStates += downstreamState
