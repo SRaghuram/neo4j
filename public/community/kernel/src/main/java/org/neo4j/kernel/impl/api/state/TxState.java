@@ -124,8 +124,6 @@ public class TxState implements TransactionState, RelationshipVisitor.Home
     {
         if ( nodes != null )
         {
-
-
             nodes.getAdded().each( visitor::visitCreatedNode );
         }
 
@@ -135,7 +133,8 @@ public class TxState implements TransactionState, RelationshipVisitor.Home
             while ( added.hasNext() )
             {
                 final long relId = added.next();
-                if ( !relationshipVisit( relId, visitor::visitCreatedRelationship ) )
+                if ( !relationshipVisit( relId, ( id, type, startNode, endNode ) ->
+                        visitor.visitCreatedRelationship( id, type, startNode, endNode, relationshipStatesMap.get( id ).addedProperties() ) ) )
                 {
                     throw new IllegalStateException( "No RelationshipState for added relationship!" );
                 }

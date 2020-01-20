@@ -508,7 +508,7 @@ public final class UTF8StringValue extends StringValue
         return byteArrayCompare( bytes, offset, byteLength, otherUTF8.bytes, otherUTF8.offset, otherUTF8.byteLength );
     }
 
-    private static int byteArrayCompare( byte[] value1, int value1Offset, int value1Length,
+    public static int byteArrayCompare( byte[] value1, int value1Offset, int value1Length,
             byte[] value2, int value2Offset, int value2Length )
     {
         int lim = Math.min( value1Length, value2Length );

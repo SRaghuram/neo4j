@@ -27,6 +27,7 @@ import org.neo4j.internal.kernel.api.exceptions.schema.ConstraintValidationExcep
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.storageengine.api.CountsDelta;
 import org.neo4j.storageengine.api.StorageNodeCursor;
+import org.neo4j.storageengine.api.StorageProperty;
 import org.neo4j.storageengine.api.StorageReader;
 import org.neo4j.storageengine.api.StorageRelationshipScanCursor;
 import org.neo4j.storageengine.util.EagerDegrees;
@@ -94,11 +95,11 @@ public class TransactionCountingStateVisitor extends TxStateVisitor.Delegator
     }
 
     @Override
-    public void visitCreatedRelationship( long id, int type, long startNode, long endNode )
+    public void visitCreatedRelationship( long id, int type, long startNode, long endNode, Iterable<StorageProperty> addedProperties )
             throws ConstraintValidationException
     {
         updateRelationshipCount( startNode, type, endNode, 1 );
-        super.visitCreatedRelationship( id, type, startNode, endNode );
+        super.visitCreatedRelationship( id, type, startNode, endNode, addedProperties );
     }
 
     @Override

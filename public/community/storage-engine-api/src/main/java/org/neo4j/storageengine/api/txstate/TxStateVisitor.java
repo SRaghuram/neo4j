@@ -22,7 +22,6 @@ package org.neo4j.storageengine.api.txstate;
 import org.eclipse.collections.api.IntIterable;
 import org.eclipse.collections.api.set.primitive.LongSet;
 
-import java.util.Iterator;
 import java.util.function.Function;
 
 import org.neo4j.exceptions.KernelException;
@@ -40,15 +39,15 @@ public interface TxStateVisitor extends AutoCloseable
 
     void visitDeletedNode( long id );
 
-    void visitCreatedRelationship( long id, int type, long startNode, long endNode ) throws
-            ConstraintValidationException;
+    void visitCreatedRelationship( long id, int type, long startNode, long endNode, Iterable<StorageProperty> addedProperties )
+            throws ConstraintValidationException;
 
     void visitDeletedRelationship( long id );
 
-    void visitNodePropertyChanges( long id, Iterator<StorageProperty> added, Iterator<StorageProperty> changed,
+    void visitNodePropertyChanges( long id, Iterable<StorageProperty> added, Iterable<StorageProperty> changed,
             IntIterable removed ) throws ConstraintValidationException;
 
-    void visitRelPropertyChanges( long id, Iterator<StorageProperty> added, Iterator<StorageProperty> changed,
+    void visitRelPropertyChanges( long id, Iterable<StorageProperty> added, Iterable<StorageProperty> changed,
             IntIterable removed ) throws ConstraintValidationException;
 
     void visitNodeLabelChanges( long id, LongSet added, LongSet removed ) throws ConstraintValidationException;
@@ -83,7 +82,7 @@ public interface TxStateVisitor extends AutoCloseable
         }
 
         @Override
-        public void visitCreatedRelationship( long id, int type, long startNode, long endNode )
+        public void visitCreatedRelationship( long id, int type, long startNode, long endNode, Iterable<StorageProperty> addedProperties )
         {
         }
 
@@ -93,14 +92,14 @@ public interface TxStateVisitor extends AutoCloseable
         }
 
         @Override
-        public void visitNodePropertyChanges( long id, Iterator<StorageProperty> added,
-                Iterator<StorageProperty> changed, IntIterable removed )
+        public void visitNodePropertyChanges( long id, Iterable<StorageProperty> added,
+                Iterable<StorageProperty> changed, IntIterable removed )
         {
         }
 
         @Override
-        public void visitRelPropertyChanges( long id, Iterator<StorageProperty> added,
-                Iterator<StorageProperty> changed, IntIterable removed )
+        public void visitRelPropertyChanges( long id, Iterable<StorageProperty> added,
+                Iterable<StorageProperty> changed, IntIterable removed )
         {
         }
 
@@ -175,10 +174,10 @@ public interface TxStateVisitor extends AutoCloseable
         }
 
         @Override
-        public void visitCreatedRelationship( long id, int type, long startNode, long endNode )
+        public void visitCreatedRelationship( long id, int type, long startNode, long endNode, Iterable<StorageProperty> addedProperties )
                 throws ConstraintValidationException
         {
-            actual.visitCreatedRelationship( id, type, startNode, endNode );
+            actual.visitCreatedRelationship( id, type, startNode, endNode, addedProperties );
         }
 
         @Override
@@ -188,15 +187,15 @@ public interface TxStateVisitor extends AutoCloseable
         }
 
         @Override
-        public void visitNodePropertyChanges( long id, Iterator<StorageProperty> added,
-                Iterator<StorageProperty> changed, IntIterable removed ) throws ConstraintValidationException
+        public void visitNodePropertyChanges( long id, Iterable<StorageProperty> added,
+                Iterable<StorageProperty> changed, IntIterable removed ) throws ConstraintValidationException
         {
             actual.visitNodePropertyChanges( id, added, changed, removed );
         }
 
         @Override
-        public void visitRelPropertyChanges( long id, Iterator<StorageProperty> added,
-                Iterator<StorageProperty> changed, IntIterable removed )
+        public void visitRelPropertyChanges( long id, Iterable<StorageProperty> added,
+                Iterable<StorageProperty> changed, IntIterable removed )
                         throws ConstraintValidationException
         {
             actual.visitRelPropertyChanges( id, added, changed, removed );

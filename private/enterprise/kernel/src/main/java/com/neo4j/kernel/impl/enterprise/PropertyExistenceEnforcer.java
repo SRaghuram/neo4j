@@ -168,7 +168,7 @@ class PropertyExistenceEnforcer
 
         @Override
         public void visitNodePropertyChanges(
-                long id, Iterator<StorageProperty> added, Iterator<StorageProperty> changed,
+                long id, Iterable<StorageProperty> added, Iterable<StorageProperty> changed,
                 IntIterable removed ) throws ConstraintValidationException
         {
             validateNode( id );
@@ -184,16 +184,16 @@ class PropertyExistenceEnforcer
         }
 
         @Override
-        public void visitCreatedRelationship( long id, int type, long startNode, long endNode )
+        public void visitCreatedRelationship( long id, int type, long startNode, long endNode, Iterable<StorageProperty> addedProperties )
                 throws ConstraintValidationException
         {
             validateRelationship( id );
-            super.visitCreatedRelationship( id, type, startNode, endNode );
+            super.visitCreatedRelationship( id, type, startNode, endNode, addedProperties );
         }
 
         @Override
         public void visitRelPropertyChanges(
-                long id, Iterator<StorageProperty> added, Iterator<StorageProperty> changed,
+                long id, Iterable<StorageProperty> added, Iterable<StorageProperty> changed,
                 IntIterable removed ) throws ConstraintValidationException
         {
             validateRelationship( id );

@@ -27,7 +27,6 @@ import org.eclipse.collections.impl.iterator.ImmutableEmptyLongIterator;
 
 import java.util.Collections;
 import java.util.IdentityHashMap;
-import java.util.Iterator;
 import java.util.Set;
 
 import org.neo4j.graphdb.Direction;
@@ -42,7 +41,7 @@ import org.neo4j.storageengine.api.txstate.LongDiffSets;
 import org.neo4j.storageengine.api.txstate.NodeState;
 import org.neo4j.values.storable.Value;
 
-import static java.util.Collections.emptyIterator;
+import static java.util.Collections.emptyList;
 import static org.neo4j.kernel.impl.api.state.RelationshipChangesForNode.createRelationshipChangesForNode;
 import static org.neo4j.kernel.impl.util.diffsets.TrackableDiffSets.newMutableLongDiffSets;
 
@@ -53,15 +52,15 @@ class NodeStateImpl extends EntityStateImpl implements NodeState
     static final NodeState EMPTY = new NodeState()
     {
         @Override
-        public Iterator<StorageProperty> addedProperties()
+        public Iterable<StorageProperty> addedProperties()
         {
-            return emptyIterator();
+            return emptyList();
         }
 
         @Override
-        public Iterator<StorageProperty> changedProperties()
+        public Iterable<StorageProperty> changedProperties()
         {
-            return emptyIterator();
+            return emptyList();
         }
 
         @Override
@@ -71,9 +70,9 @@ class NodeStateImpl extends EntityStateImpl implements NodeState
         }
 
         @Override
-        public Iterator<StorageProperty> addedAndChangedProperties()
+        public Iterable<StorageProperty> addedAndChangedProperties()
         {
-            return emptyIterator();
+            return emptyList();
         }
 
         @Override

@@ -27,31 +27,34 @@ import org.neo4j.storageengine.api.StoragePropertyCursor;
 import org.neo4j.storageengine.api.StorageRelationshipGroupCursor;
 import org.neo4j.storageengine.api.StorageRelationshipTraversalCursor;
 
+import static org.neo4j.internal.freki.MutableNodeRecordData.ARRAY_ENTRIES_PER_RELATIONSHIP;
+import static org.neo4j.internal.freki.MutableNodeRecordData.externalRelationshipId;
+import static org.neo4j.internal.freki.MutableNodeRecordData.otherNodeOf;
+import static org.neo4j.internal.freki.MutableNodeRecordData.relationshipHasProperties;
+import static org.neo4j.internal.freki.MutableNodeRecordData.relationshipIsOutgoing;
 import static org.neo4j.internal.freki.Record.FLAG_IN_USE;
 import static org.neo4j.storageengine.api.RelationshipDirection.INCOMING;
 import static org.neo4j.storageengine.api.RelationshipDirection.LOOP;
 import static org.neo4j.storageengine.api.RelationshipDirection.OUTGOING;
 
-public class FrekiRelationshipTraversalCursor extends FrekiMainStoreCursor implements StorageRelationshipTraversalCursor
+public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor implements StorageRelationshipTraversalCursor
 {
     private boolean loadedCorrectNode;
     private long nodeId;
     private int expectedType;
     private RelationshipDirection expectedDirection;
 
-    private int[] typesInNode;
-    private int[] typeOffsets;
     private long[] currentTypeData;
     private int currentTypeIndex;
-    private int currentTypeDataIndex;
+    private int currentTypeRelationshipIndex;
     private int currentTypePropertiesIndex;
-    private long currentTypePropertiesOffset;
+    private int currentTypePropertiesOffset;
 
-    // accidental state
+    // Accidental state from currentTypeData
     private long currentRelationshipOtherNode;
     private RelationshipDirection currentRelationshipDirection;
     private boolean currentRelationshipHasProperties;
-    private int currentRelationshipPropertiesIndex; //Index in types property list where current
+    private long currentRelationshipInternalId;
 
     FrekiRelationshipTraversalCursor( Store mainStore )
     {
@@ -67,22 +70,32 @@ public class FrekiRelationshipTraversalCursor extends FrekiMainStoreCursor imple
     @Override
     public long propertiesReference()
     {
-        return -1;
+        return currentRelationshipHasProperties ? entityReference() : -1;
     }
 
     @Override
     public void properties( StoragePropertyCursor propertyCursor )
     {
-        long offsetInPropCursor = currentTypePropertiesOffset;
-        long indexInTypePropertiesForCurrentRelationship = currentTypePropertiesIndex;
-        throw new UnsupportedOperationException( "Not implemented yet" );
+        if ( !hasProperties() )
+        {
+            propertyCursor.reset();
+            return;
+        }
+
+        FrekiPropertyCursor frekiPropertyCursor = (FrekiPropertyCursor) propertyCursor;
+        frekiPropertyCursor.initRelationshipProperties( this );
+    }
+
+    @Override
+    int currentRelationshipPropertiesOffset()
+    {
+        return relationshipPropertiesOffset( currentTypePropertiesOffset, currentTypePropertiesIndex );
     }
 
     @Override
     public long entityReference()
     {
-        // TODO implement when we have internal relationship IDs (coupled with source node this is yey)
-        return 0;
+        return externalRelationshipId( record.id, currentRelationshipInternalId, currentRelationshipOtherNode, currentRelationshipDirection.isOutgoing() );
     }
 
     @Override
@@ -103,44 +116,45 @@ public class FrekiRelationshipTraversalCursor extends FrekiMainStoreCursor imple
                 {
                     return false;
                 }
-                currentTypeIndex = foundIndex - 1;
-                data.position( typeOffsets[currentTypeIndex] );
+                currentTypeIndex = foundIndex;
+                data.position( relationshipTypeOffset( foundIndex ) );
             }
         }
 
-        while ( true )
+        while ( currentTypeIndex < typesInNode.length )
         {
-            if ( currentTypeDataIndex == -1 || currentTypeDataIndex >= currentTypeData.length )
+            if ( currentTypeRelationshipIndex == -1 )
             {
-                currentTypeIndex++;
-                if ( (expectedType != -1 && typesInNode[currentTypeIndex] != expectedType) || currentTypeIndex >= typesInNode.length )
+                if ( (expectedType != -1 && typesInNode[currentTypeIndex] != expectedType) )
                 {
                     break;
                 }
 
                 currentTypeData = StreamVByte.readLongs( data );
                 currentTypePropertiesOffset = data.position();
-                currentTypeDataIndex = 0;
-                currentTypePropertiesIndex = 0;
+                currentTypeRelationshipIndex = 0;
+                currentTypePropertiesIndex = -1;
             }
 
-            while ( currentTypeDataIndex < currentTypeData.length )
+            while ( currentTypeRelationshipIndex * ARRAY_ENTRIES_PER_RELATIONSHIP < currentTypeData.length )
             {
-                long currentRelationshipOtherNodeRaw = currentTypeData[currentTypeDataIndex++];
-                currentRelationshipOtherNode = currentRelationshipOtherNodeRaw >>> 2;
+                int index = currentTypeRelationshipIndex++;
+                int dataArrayIndex = index * ARRAY_ENTRIES_PER_RELATIONSHIP; // because of two longs per relationship
+                long currentRelationshipOtherNodeRaw = currentTypeData[dataArrayIndex];
+                currentRelationshipInternalId = currentTypeData[dataArrayIndex + 1];
+                currentRelationshipOtherNode = otherNodeOf( currentRelationshipOtherNodeRaw );
                 if ( currentRelationshipOtherNode == nodeId )
                 {
                     currentRelationshipDirection = LOOP;
                 }
                 else
                 {
-                    boolean outgoing = (currentRelationshipOtherNodeRaw & 0b10) != 0;
+                    boolean outgoing = relationshipIsOutgoing( currentRelationshipOtherNodeRaw );
                     currentRelationshipDirection = outgoing ? OUTGOING : INCOMING;
                 }
-                currentRelationshipHasProperties = (currentRelationshipOtherNodeRaw & 0b01) != 0;
+                currentRelationshipHasProperties = relationshipHasProperties( currentRelationshipOtherNodeRaw );
                 if ( currentRelationshipHasProperties )
                 {
-                    currentRelationshipPropertiesIndex = currentTypePropertiesIndex;
                     currentTypePropertiesIndex++;
                 }
 
@@ -150,10 +164,12 @@ public class FrekiRelationshipTraversalCursor extends FrekiMainStoreCursor imple
                     return true;
                 }
             }
-            if ( currentTypePropertiesIndex > 0 && currentTypeIndex < typesInNode.length )
+            currentTypeIndex++;
+            currentTypeRelationshipIndex = -1;
+            if ( currentTypePropertiesIndex >= 0 && currentTypeIndex < typesInNode.length )
             {
                 //Skipping the properties
-                data.position( typeOffsets[currentTypeIndex] );
+                data.position( relationshipTypeOffset( currentTypeIndex ) );
             }
         }
         return false;
@@ -162,15 +178,8 @@ public class FrekiRelationshipTraversalCursor extends FrekiMainStoreCursor imple
     private boolean readHeader()
     {
         loadedCorrectNode = true;
-        currentTypeIndex = -1;
+        currentTypeIndex = 0;
         return !record.hasFlag( FLAG_IN_USE ) && relationshipsOffset > 0;
-    }
-
-    private void readRelationshipTypeGroups()
-    {
-        data.position( relationshipsOffset );
-        typesInNode = StreamVByte.readIntDeltas( new StreamVByte.IntArrayTarget(), data ).array();
-        typeOffsets = StreamVByte.readIntDeltas( new StreamVByte.IntArrayTarget(), data ).array();
     }
 
     @Override
@@ -180,17 +189,15 @@ public class FrekiRelationshipTraversalCursor extends FrekiMainStoreCursor imple
         nodeId = -1;
         expectedType = -1;
         expectedDirection = null;
-        typeOffsets = null;
-        typesInNode = null;
         currentTypeIndex = -1;
-        currentTypeDataIndex = -1;
+        currentTypeRelationshipIndex = -1;
         loadedCorrectNode = false;
         currentRelationshipOtherNode = -1;
         currentRelationshipHasProperties = false;
-        currentRelationshipPropertiesIndex = -1;
         currentTypePropertiesIndex = -1;
         currentTypePropertiesOffset = -1;
         currentRelationshipDirection = null;
+        currentRelationshipInternalId = -1;
     }
 
     @Override
