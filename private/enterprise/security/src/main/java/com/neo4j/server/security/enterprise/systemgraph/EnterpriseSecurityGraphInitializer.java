@@ -112,11 +112,23 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
                 migrateFromFlatFileRealm( tx );
             }
 
+            if ( roleNodes.stream().anyMatch( node -> node.getProperty( "name" ).equals( PredefinedRoles.PUBLIC ) ) )
+            {
+                throw logAndCreateException( "Startup of system graph failed because there exists a role named 'PUBLIC'. " +
+                                             "Please remove or rename that role and start again." );
+            }
+
             // If no users or roles were migrated we setup the
             // default predefined roles and user and make sure we have an admin user
             ensureDefaultUserAndRoles( tx );
             tx.commit();
         }
+    }
+
+    private InvalidArgumentsException logAndCreateException( String message )
+    {
+        log.error( message );
+        return new InvalidArgumentsException( message );
     }
 
     private void setupConstraints()
@@ -145,23 +157,15 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
     {
         if ( userNodes.isEmpty() )
         {
+            // This happens at startup of a new instance
             addDefaultUser( tx );
             ensureDefaultRolesAndPrivileges( tx, INITIAL_USER_NAME );
         }
         else if ( roleNodes.isEmpty() )
         {
             // This will be the case when upgrading from community to enterprise system-graph
-            try
-            {
-                String newAdmin = ensureAdmin();
-                ensureDefaultRolesAndPrivileges( tx, newAdmin );
-            }
-            catch ( InvalidArgumentsException e )
-            {
-                // Should still add users even if failed to decide who should be admin
-                tx.commit();
-                throw e;
-            }
+            String newAdmin = ensureAdmin();
+            ensureDefaultRolesAndPrivileges( tx, newAdmin );
         }
 
         // If applicable, give the default user the password set by set-initial-password command
@@ -178,7 +182,7 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
         final int numberOfDefaultAdmins = defaultAdminRepository.numberOfUsers();
         if ( numberOfDefaultAdmins > 1 )
         {
-            throw new InvalidArgumentsException( "No roles defined, and multiple users defined as default admin user. " + "Please use " +
+            throw logAndCreateException( "No roles defined, and multiple users defined as default admin user. " + "Please use " +
                     "`neo4j-admin set-default-admin` to select a valid admin." );
         }
         else if ( numberOfDefaultAdmins == 1 )
@@ -193,8 +197,8 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
             // We currently support only one default admin
             if ( !usernames.contains( newAdmin ) )
             {
-                throw new InvalidArgumentsException( "No roles defined, and default admin user '" + newAdmin + "' does not exist. " + "Please use " +
-                        "`neo4j-admin set-default-admin` to select a valid admin." );
+                throw logAndCreateException( "No roles defined, and default admin user '" + newAdmin + "' does not exist. " +
+                                             "Please use `neo4j-admin set-default-admin` to select a valid admin." );
             }
             return newAdmin;
         }
@@ -210,8 +214,8 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
         }
         else
         {
-            throw new InvalidArgumentsException(
-                    "No roles defined, and cannot determine which user should be admin. " + "Please use `neo4j-admin set-default-admin` to select an admin. " );
+            throw logAndCreateException( "No roles defined, and cannot determine which user should be admin. " +
+                                         "Please use `neo4j-admin set-default-admin` to select an admin. " );
         }
     }
 
@@ -367,12 +371,16 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
     {
         startUserRepository( migrationUserRepository );
         startRoleRepository( migrationRoleRepository );
+        if ( migrationRoleRepository.getRoleByName( PredefinedRoles.PUBLIC ) != null )
+        {
+            throw logAndCreateException( "Automatic migration of users and roles into system graph failed because 'PUBLIC' role exists. " +
+                                         "Please remove or rename that role and start again." );
+        }
         doMigrateUsers( tx, migrationUserRepository );
         boolean migrateOk = doMigrateRoles( tx, migrationUserRepository, migrationRoleRepository );
         if ( !migrateOk )
         {
-            throw new InvalidArgumentsException(
-                    "Automatic migration of users and roles into system graph failed because repository files are inconsistent. " );
+            throw logAndCreateException( "Automatic migration of users and roles into system graph failed because repository files are inconsistent. " );
         }
 
         stopUserRepository( migrationUserRepository );
@@ -484,7 +492,7 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
 
         if ( user == null )
         {
-            throw new InvalidArgumentsException( String.format( "User %s did not exist", username ) );
+            throw logAndCreateException( String.format( "User %s did not exist", username ) );
         }
 
         user.createRelationshipTo( role, USER_TO_ROLE );
@@ -497,7 +505,7 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
 
         if ( role == null )
         {
-            throw new InvalidArgumentsException( "Role did not eixst" );
+            throw logAndCreateException( "Role did not exist" );
         }
 
         final Iterable<Relationship> relationships = role.getRelationships( Direction.INCOMING );

@@ -128,6 +128,25 @@ class SystemGraphRealmIT
     }
 
     @Test
+    void shouldHaltMigrationWhenPublicRoleExists() throws Throwable
+    {
+        oldUsers.create( createUser( "alice", "foo", false ) );
+        oldUsers.create( createUser( "bob", "bar", true ) );
+
+        oldRoles.create( new RoleRecord( PredefinedRoles.ADMIN, "alice" ) );
+        oldRoles.create( new RoleRecord( "PUBLIC", "bob" ) );
+
+        Exception exception = assertThrows( InvalidArgumentsException.class, this::startSystemGraphRealm );
+        assertThat( exception.getMessage(), startsWith( "Automatic migration of users and roles into system graph failed because 'PUBLIC' role exists." +
+                                                        " Please remove or rename that role and start again." ) );
+
+        logProvider.assertExactly(
+                error( "Automatic migration of users and roles into system graph failed because 'PUBLIC' role exists. " +
+                       "Please remove or rename that role and start again." )
+        );
+    }
+
+    @Test
     void shouldCreateDefaultAdminWithPredefinedUsername() throws Throwable
     {
         SystemGraphRealm realm = startSystemGraphRealm();
@@ -215,7 +234,7 @@ class SystemGraphRealmIT
         IllegalStateException wrongUsernameException = assertThrows( IllegalStateException.class, this::startSystemGraphRealm );
         String wrongUsernameErrorMessage = "Invalid `auth.ini` file: the user in the file is not named " + INITIAL_USER_NAME;
         assertThat( wrongUsernameException.getMessage(), equalTo( wrongUsernameErrorMessage ) );
-        logProvider.assertAtLeastOnce( inLog( this.getClass() ).error( containsString( wrongUsernameErrorMessage ) ) );
+        logProvider.assertAtLeastOnce( error( wrongUsernameErrorMessage ) );
 
         // Given
         initialPassword.clear();
@@ -229,7 +248,7 @@ class SystemGraphRealmIT
         IllegalStateException multipleUsersErrorException = assertThrows( IllegalStateException.class, this::startSystemGraphRealm );
         String multipleUsersErrorMessage = "Invalid `auth.ini` file: the file contains more than one user";
         assertThat( multipleUsersErrorException.getMessage(), equalTo(  multipleUsersErrorMessage) );
-        logProvider.assertAtLeastOnce( inLog( this.getClass() ).error( containsString( multipleUsersErrorMessage ) ) );
+        logProvider.assertAtLeastOnce( error( multipleUsersErrorMessage ) );
     }
 
     @Test
@@ -286,7 +305,13 @@ class SystemGraphRealmIT
         // Given existing users but no admin
         InvalidArgumentsException exception = assertThrows( InvalidArgumentsException.class, this::startSystemGraphRealm );
         assertThat( exception.getMessage(), startsWith( "No roles defined, and cannot determine which user should be admin" ) );
+        logProvider.assertExactly(
+                info( "Completed migration of %s %s into system graph.", "3", "users" ),
+                info( "Completed migration of %s %s into system graph.", "0", "roles" ),
+                error( "No roles defined, and cannot determine which user should be admin" )
+        );
 
+        logProvider.clear();
         // When a default admin is set by command
         defaultAdmin.create( createUser( "trinity", "ignored", false ) );
 
@@ -450,6 +475,11 @@ class SystemGraphRealmIT
             return inLog( this.getClass() ).info( message );
         }
         return inLog( this.getClass() ).info( message, (Object[]) arguments );
+    }
+
+    private AssertableLogProvider.LogMatcher error( String message )
+    {
+        return inLog( this.getClass() ).error( containsString( message ) );
     }
 
     private static class TestDatabaseManager extends BasicSystemGraphRealmTestHelper.TestDatabaseManager

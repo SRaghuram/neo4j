@@ -26,6 +26,7 @@ import org.neo4j.commandline.admin.security.SetInitialPasswordCommand;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
@@ -47,6 +48,7 @@ import static org.hamcrest.Matchers.oneOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
+import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.kernel.api.security.AuthManager.INITIAL_PASSWORD;
 import static org.neo4j.kernel.api.security.AuthManager.INITIAL_USER_NAME;
 
@@ -251,6 +253,30 @@ class SystemGraphRealmUpgradeIT
         );
         assertLogin( database, "Alice", DEFAULT_PASSWORD );
         assertLogin( database, INITIAL_USER_NAME, INITIAL_PASSWORD );
+    }
+
+    @Test
+    void shouldNotAllowStartingWithPublicRole()
+    {
+        // GIVEN
+        enterpriseDbms = getEnterpriseManagementService();
+        GraphDatabaseService database = enterpriseDbms.database( SYSTEM_DATABASE_NAME );
+
+        try ( Transaction tx = database.beginTx() )
+        {
+            // Manually create the 'PUBLIC' role
+            Node role = tx.createNode( label( "Role" ) );
+            role.setProperty( "name", "PUBLIC" );
+            tx.commit();
+        }
+        enterpriseDbms.shutdown();
+
+        // WHEN
+        RuntimeException exception = assertThrows( RuntimeException.class, this::getEnterpriseManagementService );
+
+        // THEN
+        assertThat( exception.getCause().getMessage(), containsString( "Startup of system graph failed because there exists a role named 'PUBLIC'. " +
+                                                                       "Please remove or rename that role and start again." ) );
     }
 
     private void assertLogin( GraphDatabaseAPI database, String username, String password ) throws InvalidAuthTokenException
