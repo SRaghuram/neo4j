@@ -36,7 +36,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.NavigableMap;
 import java.util.Set;
 import java.util.TreeMap;
@@ -620,7 +619,7 @@ abstract class TxStateTest
         state.accept( new TxStateVisitor.Adapter()
         {
             @Override
-            public void visitCreatedRelationship( long id, int type, long startNode, long endNode )
+            public void visitCreatedRelationship( long id, int type, long startNode, long endNode, Iterable<StorageProperty> addedProperties )
             {
                 assertEquals( 1, id, "Should not create any other relationship than 1" );
             }
@@ -651,7 +650,7 @@ abstract class TxStateTest
             }
 
             @Override
-            public void visitNodePropertyChanges( long id, Iterator<StorageProperty> added, Iterator<StorageProperty> changed, IntIterable removed )
+            public void visitNodePropertyChanges( long id, Iterable<StorageProperty> added, Iterable<StorageProperty> changed, IntIterable removed )
             {
                 fail( "Properties were not changed." );
             }
@@ -673,13 +672,13 @@ abstract class TxStateTest
             }
 
             @Override
-            public void visitNodePropertyChanges( long id, Iterator<StorageProperty> added, Iterator<StorageProperty> changed, IntIterable removed )
+            public void visitNodePropertyChanges( long id, Iterable<StorageProperty> added, Iterable<StorageProperty> changed, IntIterable removed )
             {
                 propertiesChecked.setTrue();
                 assertEquals( 1, id );
-                assertFalse( changed.hasNext() );
+                assertFalse( changed.iterator().hasNext() );
                 assertTrue( removed.isEmpty() );
-                assertEquals( 1, Iterators.count( added, Predicates.alwaysTrue() ) );
+                assertEquals( 1, Iterators.count( added.iterator(), Predicates.alwaysTrue() ) );
             }
         } );
         assertTrue( propertiesChecked.booleanValue() );
@@ -804,7 +803,7 @@ abstract class TxStateTest
             }
 
             @Override
-            public void visitCreatedRelationship( long id, int type, long startNode, long endNode )
+            public void visitCreatedRelationship( long id, int type, long startNode, long endNode, Iterable<StorageProperty> addedProperties )
             {
                 visitLate();
             }
@@ -839,7 +838,7 @@ abstract class TxStateTest
 
             // then
             @Override
-            public void visitCreatedRelationship( long id, int type, long startNode, long endNode )
+            public void visitCreatedRelationship( long id, int type, long startNode, long endNode, Iterable<StorageProperty> addedProperties )
             {
                 visitEarly();
             }

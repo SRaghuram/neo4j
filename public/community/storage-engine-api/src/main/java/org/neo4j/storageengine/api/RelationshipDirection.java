@@ -39,10 +39,22 @@ package org.neo4j.storageengine.api;
  */
 public enum RelationshipDirection
 {
-    OUTGOING,
-    INCOMING,
-    LOOP,
-    ERROR;
+    OUTGOING( true ),
+    INCOMING( false ),
+    LOOP( true ),
+    ERROR( false );
+
+    private final boolean outgoing;
+
+    RelationshipDirection( boolean outgoing )
+    {
+        this.outgoing = outgoing;
+    }
+
+    public boolean isOutgoing()
+    {
+        return outgoing;
+    }
 
     public static RelationshipDirection directionOfStrict( long nodeReference, long sourceNodeReference, long targetNodeReference )
     {

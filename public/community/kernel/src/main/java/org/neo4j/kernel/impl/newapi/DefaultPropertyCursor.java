@@ -75,7 +75,7 @@ public class DefaultPropertyCursor extends TraceableCursor implements PropertyCu
         initializeNodeTransactionState( nodeReference, read );
     }
 
-    void initNode( DefaultNodeCursor nodeCursor, long reference, Read read, AssertOpen assertOpen )
+    void initNode( DefaultNodeCursor nodeCursor, Read read, AssertOpen assertOpen )
     {
         assert nodeReference != NO_ID;
 
@@ -92,7 +92,7 @@ public class DefaultPropertyCursor extends TraceableCursor implements PropertyCu
         if ( read.hasTxStateWithChanges() )
         {
             this.propertiesState = read.txState().getNodeState( nodeReference );
-            this.txStateChangedProperties = this.propertiesState.addedAndChangedProperties();
+            this.txStateChangedProperties = this.propertiesState.addedAndChangedProperties().iterator();
         }
         else
         {
@@ -112,7 +112,7 @@ public class DefaultPropertyCursor extends TraceableCursor implements PropertyCu
         initializeRelationshipTransactionState( relationshipReference, read );
     }
 
-    void initRelationship( DefaultRelationshipCursor<?> relationshipCursor, long reference, Read read, AssertOpen assertOpen )
+    void initRelationship( DefaultRelationshipCursor<?> relationshipCursor, Read read, AssertOpen assertOpen )
     {
         assert relationshipReference != NO_ID;
 
@@ -130,7 +130,7 @@ public class DefaultPropertyCursor extends TraceableCursor implements PropertyCu
         if ( read.hasTxStateWithChanges() )
         {
             this.propertiesState = read.txState().getRelationshipState( relationshipReference );
-            this.txStateChangedProperties = this.propertiesState.addedAndChangedProperties();
+            this.txStateChangedProperties = this.propertiesState.addedAndChangedProperties().iterator();
         }
         else
         {

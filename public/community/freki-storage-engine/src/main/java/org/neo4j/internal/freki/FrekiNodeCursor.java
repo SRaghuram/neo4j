@@ -70,7 +70,7 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
     @Override
     public boolean isDense()
     {
-        return true;
+        return false;
     }
 
     @Override
@@ -100,7 +100,7 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
     @Override
     public long propertiesReference()
     {
-        return record.id;
+        return entityReference();
     }
 
     @Override

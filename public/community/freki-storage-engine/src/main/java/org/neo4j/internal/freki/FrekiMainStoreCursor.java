@@ -34,6 +34,7 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
     int labelsOffset;
     int propertiesOffset;
     int relationshipsOffset;
+    int endOffset;
 
     FrekiMainStoreCursor( Store mainStore )
     {
@@ -41,7 +42,7 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
         reset();
     }
 
-    void reset()
+    public void reset()
     {
         data = null;
     }
@@ -86,6 +87,7 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
         labelsOffset = data.position();
         relationshipsOffset = MutableNodeRecordData.relationshipOffset( offsetsHeader );
         propertiesOffset = MutableNodeRecordData.propertyOffset( offsetsHeader );
+        endOffset = MutableNodeRecordData.endOffset( offsetsHeader );
     }
 
     @Override

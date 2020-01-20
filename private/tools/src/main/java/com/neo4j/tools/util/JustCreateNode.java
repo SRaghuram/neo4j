@@ -13,6 +13,7 @@ import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.io.fs.FileUtils;
@@ -23,18 +24,26 @@ public class JustCreateNode
 {
     public static void main( String[] args ) throws Exception
     {
-        File homeDirectory = new File( "C:/Users/Mattias/Desktop/home" );
+        File homeDirectory = new File( "C:/Users/Matilas/Desktop/home" );
         FileUtils.deleteRecursively( homeDirectory );
         DatabaseManagementService dbms = new DatabaseManagementServiceBuilder( homeDirectory ).build();
         Label label = Label.label( "Hello token world" );
         Label label2 = Label.label( "Indeed coolness" );
-        Map<String, Object> properties = Map.of(
+        Map<String, Object> nodeProperties = Map.of(
 //                "name", "Valdemar",
 //                "scalar_huge", 1L << 48,
 //                 "scalar_medium", 1 << 24,
 //                 "scalar_small", 1 << 12,
                  "scalar_minimal", 1L << 4
 //                 "number", 9.9
+        );
+        Map<String, Object> relationshipProperties = Map.of(
+//                "name", "Mattias",
+//                "scalar_huge", 1L << 47,
+//                 "scalar_medium", 1 << 23,
+//                 "scalar_small", 1 << 11,
+                 "scalar_minimal", 1L << 3
+//                 "number", 8.8
         );
         try
         {
@@ -45,10 +54,13 @@ public class JustCreateNode
                 for ( int i = 0; i < nodeIds.length; i++ )
                 {
                     Node node = tx.createNode( label, label2 );
-                    properties.forEach( node::setProperty );
+                    nodeProperties.forEach( node::setProperty );
                     nodeIds[i] = node.getId();
 
-                    node.createRelationshipTo( tx.getNodeById( nodeIds[Math.max( i-1,0)]), RelationshipType.withName( "likes" ) );
+                    Relationship relationship =
+                            node.createRelationshipTo( tx.getNodeById( nodeIds[Math.max( i - 1, 0 )] ), RelationshipType.withName( "likes" ) );
+                    relationshipProperties.forEach( relationship::setProperty );
+                    node.createRelationshipTo( tx.getNodeById( nodeIds[Math.max( i - 1, 0 )] ), RelationshipType.withName( "knows" ) );
                 }
                 tx.commit();
             }
@@ -58,20 +70,17 @@ public class JustCreateNode
                 {
                     Node node = tx.getNodeById( nodeId );
                     System.out.println( node );
-                    node.getRelationships().forEach( System.out::println );
-
                     for ( Label nodeLabel : node.getLabels() )
                     {
-                        System.out.println( "  Has label '" + nodeLabel.name() + "'" );
+                        System.out.println( "  :'" + nodeLabel.name() + "'" );
                     }
-                    Map<String,Object> readProperties = node.getAllProperties();
-                    if ( !properties.equals( readProperties ) )
+                    printProperties( "  ", node.getAllProperties() );
+
+                    for ( Relationship relationship : node.getRelationships() )
                     {
-                        System.out.println( properties );
-                        System.out.println( readProperties );
-                        throw new Exception("Wrong properties");
+                        System.out.println( "  " + relationship );
+                        printProperties( "    ", relationship.getAllProperties() );
                     }
-                    properties.forEach( ( key, value ) -> System.out.println( "  Has property " + key + "=" + value ) );
                 }
             }
         }
@@ -84,5 +93,10 @@ public class JustCreateNode
         {
             dbms.shutdown();
         }
+    }
+
+    private static void printProperties( String prefix, Map<String,Object> readProperties )
+    {
+        readProperties.forEach( ( key, value ) -> System.out.println( prefix + key + "=" + value ) );
     }
 }
