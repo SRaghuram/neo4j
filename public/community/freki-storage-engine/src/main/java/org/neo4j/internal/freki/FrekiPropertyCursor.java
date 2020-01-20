@@ -21,6 +21,7 @@ package org.neo4j.internal.freki;
 
 import org.neo4j.storageengine.api.StorageNodeCursor;
 import org.neo4j.storageengine.api.StoragePropertyCursor;
+import org.neo4j.storageengine.api.StorageRelationshipCursor;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.ValueGroup;
 
@@ -29,8 +30,8 @@ import static org.neo4j.internal.freki.StreamVByte.readIntDeltas;
 
 class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropertyCursor
 {
-    private boolean initializedFromNode;
-    private long nodeId;
+    private boolean initializedFromEntity;
+    private long entityId;
     private int[] propertyKeyArray;
     private int propertyKeyIndex;
     private int nextPropertyValueStartOffset;
@@ -44,16 +45,16 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
     public void initNodeProperties( long nodeId )
     {
         // Setting this field will tell make record loading happen in next() later
-        this.nodeId = nodeId;
+        this.entityId = nodeId;
         reset();
     }
 
     @Override
     public void initNodeProperties( StorageNodeCursor nodeCursor )
     {
-        if ( useSharedRecordFrom( (FrekiNodeCursor) nodeCursor ) && readPropertyKeys() )
+        if ( useSharedRecordFrom( (FrekiNodeCursor) nodeCursor ) && readNodePropertyKeys() )
         {
-            initializedFromNode = true;
+            initializedFromEntity = true;
         }
         else
         {
@@ -64,7 +65,23 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
     @Override
     public void initRelationshipProperties( long reference )
     {
-        throw new UnsupportedOperationException( "Not implemented yet" );
+    }
+
+    @Override
+    public void initRelationshipProperties( StorageRelationshipCursor relationshipCursor )
+    {
+        FrekiRelationshipCursor relCursor = (FrekiRelationshipCursor) relationshipCursor;
+        if ( useSharedRecordFrom( relCursor ) )
+        {
+            int offset = relCursor.currentRelationshipPropertiesOffset();
+            if ( offset != -1 )
+            {
+                readPropertyKeys( offset );
+                initializedFromEntity = true;
+                return;
+            }
+        }
+        reset();
     }
 
     @Override
@@ -88,14 +105,14 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
     @Override
     public boolean next()
     {
-        if ( nodeId != -1 || propertyKeyIndex != -1 || initializedFromNode )
+        if ( entityId != -1 || propertyKeyIndex != -1 || initializedFromEntity )
         {
-            initializedFromNode = false;
-            if ( nodeId != -1 )
+            initializedFromEntity = false;
+            if ( entityId != -1 )
             {
-                loadMainRecord( nodeId );
-                nodeId = -1;
-                if ( !record.hasFlag( Record.FLAG_IN_USE ) || !readPropertyKeys() )
+                loadMainRecord( entityId );
+                entityId = -1;
+                if ( !record.hasFlag( Record.FLAG_IN_USE ) || !readNodePropertyKeys() )
                 {
                     return false;
                 }
@@ -117,14 +134,19 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
         return false;
     }
 
-    private boolean readPropertyKeys()
+    private boolean readNodePropertyKeys()
     {
-        if ( propertiesOffset == 0 )
+        return readPropertyKeys( propertiesOffset );
+    }
+
+    private boolean readPropertyKeys( int offset )
+    {
+        if ( offset == 0 )
         {
             return false;
         }
 
-        data.position( propertiesOffset );
+        data.position( offset );
         propertyKeyArray = readIntDeltas( new StreamVByte.IntArrayTarget(), data ).array();
         nextPropertyValueStartOffset = data.position();
         return true;
@@ -134,8 +156,8 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
     public void reset()
     {
         super.reset();
-        nodeId = -1;
+        entityId = -1;
         propertyKeyIndex = -1;
-        initializedFromNode = false;
+        initializedFromEntity = false;
     }
 }

@@ -122,7 +122,7 @@ class SchemaLayout extends Layout.Adapter<SchemaKey,SchemaValue>
         }
         if ( o1.nameBytes != null && o2.nameBytes != null )
         {
-            return byteArrayCompare( o1.nameBytes, o2.nameBytes );
+            return byteArrayCompare( o1.nameBytes, 0, o1.nameBytes.length, o2.nameBytes, 0, o2.nameBytes.length );
         }
         return Boolean.compare( o1.nameBytes != null, o2.nameBytes != null );
     }

@@ -27,9 +27,9 @@ import org.eclipse.collections.impl.factory.primitive.LongObjectMaps;
 
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Iterator;
 
 import org.neo4j.exceptions.KernelException;
+import org.neo4j.internal.freki.MutableNodeRecordData.Relationship;
 import org.neo4j.internal.kernel.api.exceptions.schema.ConstraintValidationException;
 import org.neo4j.internal.schema.ConstraintDescriptor;
 import org.neo4j.internal.schema.IndexDescriptor;
@@ -58,9 +58,9 @@ class CommandCreator implements TxStateVisitor
     {
         Record after = new Record( 1, id );
         after.setFlag( FLAG_IN_USE );
-        after.node = new MutableNodeRecordData();
+        after.node = new MutableNodeRecordData( id );
         Record before = new Record( 1, id );
-        before.node = new MutableNodeRecordData();
+        before.node = new MutableNodeRecordData( id );
         build.put( id, new FrekiCommand.Node( before, after ) );
     }
 
@@ -71,20 +71,31 @@ class CommandCreator implements TxStateVisitor
     }
 
     @Override
-    public void visitCreatedRelationship( long id, int type, long startNode, long endNode ) throws ConstraintValidationException
+    public void visitCreatedRelationship( long id, int type, long startNode, long endNode, Iterable<StorageProperty> addedProperties )
     {
-        createRelationship( id, type, startNode, endNode, true );
+        // TODO we cannot use the provided id since it comes from kernel which generated a relationship ID from an IdGenerator.
+        //      The actual ID that this relationship will get is something else, something based on the node ID and other data found in the node itself.
+        //      This is going to require some changes in the kernel, or at least some restrictions on how the Core API can expect to make use of
+        //      relationship IDs that gets created inside a transaction (the ID of the relationship read from the store later on will be different.
+
+        Relationship relationshipAtStartNode = createRelationship( null, type, startNode, endNode, addedProperties, true );
         if ( startNode != endNode )
         {
-            createRelationship( id, type, endNode, startNode, false );
+            createRelationship( relationshipAtStartNode, type, endNode, startNode, addedProperties, false );
         }
     }
 
-    private void createRelationship( long id, int type, long firstNode, long secondNode, boolean outgoing )
+    private Relationship createRelationship( Relationship sourceNodeRelationship, int type, long firstNode, long secondNode,
+            Iterable<StorageProperty> addedProperties, boolean outgoing )
     {
         FrekiCommand.Node startCommand = (FrekiCommand.Node) build.get( firstNode );
-        startCommand.after().node.relationships.getIfAbsentPut( type,
-                () -> new MutableNodeRecordData.Relationships( type ) ).add( id, secondNode, type, outgoing );
+        Relationship relationship = startCommand.after().node.createRelationship( sourceNodeRelationship, secondNode, type, outgoing );
+        // created id != the id that kernel generated for this relationship <-- IMPORTANT
+        for ( StorageProperty property : addedProperties )
+        {
+            relationship.properties.put( property.propertyKeyId(), new MutableNodeRecordData.Property( property.propertyKeyId(), property.value() ) );
+        }
+        return relationship;
     }
 
     @Override
@@ -94,20 +105,19 @@ class CommandCreator implements TxStateVisitor
     }
 
     @Override
-    public void visitNodePropertyChanges( long id, Iterator<StorageProperty> added, Iterator<StorageProperty> changed, IntIterable removed )
+    public void visitNodePropertyChanges( long id, Iterable<StorageProperty> added, Iterable<StorageProperty> changed, IntIterable removed )
             throws ConstraintValidationException
     {
         FrekiCommand.Node command = (FrekiCommand.Node) build.get( id );
         assertExists( command );
-        while ( added.hasNext() )
+        for ( StorageProperty property : added )
         {
-            StorageProperty property = added.next();
             command.after().node.properties.put( property.propertyKeyId(), new MutableNodeRecordData.Property( property.propertyKeyId(), property.value() ) );
         }
     }
 
     @Override
-    public void visitRelPropertyChanges( long id, Iterator<StorageProperty> added, Iterator<StorageProperty> changed, IntIterable removed )
+    public void visitRelPropertyChanges( long id, Iterable<StorageProperty> added, Iterable<StorageProperty> changed, IntIterable removed )
             throws ConstraintValidationException
     {
 //        throw new UnsupportedOperationException( "Not implemented yet" );

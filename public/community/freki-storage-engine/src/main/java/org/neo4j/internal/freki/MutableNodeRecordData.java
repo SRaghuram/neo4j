@@ -32,6 +32,9 @@ import javax.annotation.Nonnull;
 import org.neo4j.values.storable.Value;
 
 import static org.neo4j.internal.freki.StreamVByte.writeIntDeltas;
+import static org.neo4j.internal.freki.StreamVByte.writeLongs;
+import static org.neo4j.internal.helpers.Numbers.safeCastIntToUnsignedByte;
+import static org.neo4j.util.Preconditions.checkState;
 import static org.neo4j.values.storable.Values.EMPTY_PRIMITIVE_INT_ARRAY;
 
 /**
@@ -39,11 +42,20 @@ import static org.neo4j.values.storable.Values.EMPTY_PRIMITIVE_INT_ARRAY;
  */
 class MutableNodeRecordData
 {
-    static final int SIZE_SLOT_HEADER = 3;
+    static final int ARTIFICIAL_MAX_RELATIONSHIP_COUNTER = 0xFFFFFF;
+    static final int SIZE_SLOT_HEADER = 4;
+    static final int ARRAY_ENTRIES_PER_RELATIONSHIP = 2;
 
+    private final long id;
     int[] labels = EMPTY_PRIMITIVE_INT_ARRAY;
     MutableIntObjectMap<Property> properties = IntObjectMaps.mutable.empty();
     MutableIntObjectMap<Relationships> relationships = IntObjectMaps.mutable.empty();
+    private long internalRelationshipIdCounter;
+
+    MutableNodeRecordData( long id )
+    {
+        this.id = id;
+    }
 
     static class Property implements Comparable<Property>
     {
@@ -65,15 +77,19 @@ class MutableNodeRecordData
 
     static class Relationship
     {
-        // TODO also store the ID
-        long id;
+        // These two combined makes up the actual external relationship ID
+        long internalId;
+        long sourceNodeId;
+
         long otherNode;
         int type;
         boolean outgoing;
         MutableIntObjectMap<Property> properties = IntObjectMaps.mutable.empty();
 
-        Relationship( long id, long otherNode, int type, boolean outgoing )
+        Relationship( long internalId, long sourceNodeId, long otherNode, int type, boolean outgoing )
         {
+            this.internalId = internalId;
+            this.sourceNodeId = sourceNodeId;
             this.otherNode = otherNode;
             this.type = type;
             this.outgoing = outgoing;
@@ -90,9 +106,11 @@ class MutableNodeRecordData
             this.type = type;
         }
 
-        void add( long id, long otherNode, int type, boolean outgoing )
+        Relationship add( long id, long sourceNode, long otherNode, int type, boolean outgoing )
         {
-            relationships.add( new Relationship( id, otherNode, type, outgoing ) );
+            Relationship relationship = new Relationship( id, sourceNode, otherNode, type, outgoing );
+            relationships.add( relationship );
+            return relationship;
         }
 
         @Nonnull
@@ -110,17 +128,29 @@ class MutableNodeRecordData
 
         long[] packIntoLongArray()
         {
-            long[] array = new long[relationships.size()];
-            for ( int i = 0; i < relationships.size(); i++ )
+            int numRelationships = relationships.size();
+            long[] array = new long[numRelationships * ARRAY_ENTRIES_PER_RELATIONSHIP];
+            for ( int i = 0; i < numRelationships; i++ )
             {
                 Relationship relationship = relationships.get( i );
+                int arrayIndex = i * ARRAY_ENTRIES_PER_RELATIONSHIP;
                 assert (relationship.otherNode & 0xC0000000_00000000L) == 0; // using 2 bits as header
-                array[i] = relationship.otherNode << 2
-                        | (relationship.outgoing ? 1 : 0) << 1
-                        | (relationship.properties.notEmpty() ? 1 : 0);
+                // msb [62b:otherNode,1b:outgoing,1b:hasProperties] lsb
+                array[arrayIndex] = relationship.otherNode << 2 | (relationship.outgoing ? 1 : 0) << 1 | (relationship.properties.notEmpty() ? 1 : 0);
+                // TODO the schema we use to write this packed long[] is the one initially intended for mostly "big" longs and
+                //      therefore it doesn't scale all the way down to 1B, just 3B. Therefore for most of the relationships in a store
+                //      the waste is going to be 2B
+                array[arrayIndex + 1] = relationship.internalId;
             }
             return array;
         }
+    }
+
+    Relationship createRelationship( Relationship sourceNodeRelationship, long otherNode, int type, boolean outgoing )
+    {
+        checkState( internalRelationshipIdCounter < ARTIFICIAL_MAX_RELATIONSHIP_COUNTER, "Relationship counter exhausted for node %d", id );
+        long internalId = sourceNodeRelationship != null ? sourceNodeRelationship.internalId : internalRelationshipIdCounter++;
+        return relationships.getIfAbsentPut( type, () -> new MutableNodeRecordData.Relationships( type ) ).add( internalId, id, otherNode, type, outgoing );
     }
 
     void serialize( ByteBuffer buffer )
@@ -143,59 +173,63 @@ class MutableNodeRecordData
         }
         int relationshipsOffset = relationships.notEmpty() ? buffer.position() : 0;
 
-        // write the 3B offset header   msb [rrrr,pppp][rrrr,rrrr][pppp,pppp] lsb
-        byte propertyOffsetBits = (byte) propertiesOffset;
-        byte relationshipOffsetBits = (byte) relationshipsOffset;
-        byte highOffsetBits = (byte) (((relationshipOffsetBits & 0xF00) >>> 4) | ((propertyOffsetBits & 0xF00) >>> 12));
-        buffer.put( offsetHeaderPosition,     propertyOffsetBits );
-        buffer.put( offsetHeaderPosition + 1, relationshipOffsetBits );
-        buffer.put( offsetHeaderPosition + 2, highOffsetBits );
-
         // relationships
         // - StreamVByte array of types
         // - StreamVByte array (of length types-1) w/ offsets to starts of type data blocks
         // - For each type:
         // -   Number of relationships
-        // -   Rel1 (dir+otherNode)
-        // -   Rel2 (dir+otherNode)
+        // -   Rel1 (dir+hasProperties+otherNode+internalId)
+        // -   Rel2 (dir+hasProperties+otherNode+internalId)
         // -   ...
 
+        int endOffset = relationshipsOffset;
         if ( relationships.notEmpty() )
         {
             Relationships[] allRelationships = this.relationships.toArray( new Relationships[relationships.size()] );
             Arrays.sort( allRelationships );
             writeIntDeltas( typesOf( allRelationships ), buffer );
+            int firstTypeOffset = buffer.position();
             long[][] allPackedRelationships = new long[allRelationships.length][];
-            int[] typeOffsets = new int[allRelationships.length - 1];
             for ( int i = 0; i < allRelationships.length; i++ )
             {
                 allPackedRelationships[i] = allRelationships[i].packIntoLongArray();
-                // We don't quite need the offset to _after_ the last type data block
-                if ( i < allRelationships.length - 1 )
-                {
-                    int prev = i == 0 ? 0 : typeOffsets[i - 1];
-                    typeOffsets[i] = prev + StreamVByte.calculateLongsSize( allPackedRelationships[i] );
-                }
             }
-            StreamVByte.writeIntDeltas( typeOffsets, buffer );
-            // end of types and offsets header, below is the relationship data
+            // end of types header, below is the relationship data
+            int[] typeOffsets = new int[allRelationships.length - 1];
             for ( int i = 0; i < allPackedRelationships.length; i++ )
             {
                 //First write all the relationships of the type
-                StreamVByte.writeLongs( allPackedRelationships[i], buffer );
+                writeLongs( allPackedRelationships[i], buffer );
                 //Then write the properties
                 for ( Relationship relationship : allRelationships[i].relationships )
                 {
                     if ( relationship.properties.notEmpty() )
                     {
+                        // Relationship properties will have a 1-byte header which is the size of the keys+values block,
+                        // this to efficiently be able to skip through to a specific properties set
+                        int blockSizeHeaderOffset = buffer.position();
+                        buffer.position( blockSizeHeaderOffset + 1 );
                         writeProperties( relationship.properties, buffer );
+                        int blockSize = buffer.position() - blockSizeHeaderOffset;
+                        buffer.put( blockSizeHeaderOffset, safeCastIntToUnsignedByte( blockSize ) );
+                    }
+
+                    // We don't quite need the offset to _after_ the last type data block
+                    if ( i < allRelationships.length - 1 )
+                    {
+                        typeOffsets[i] = buffer.position() - firstTypeOffset;
                     }
                 }
             }
+            endOffset = buffer.position();
+            writeIntDeltas( typeOffsets, buffer );
         }
+
+        // Write the offsets (properties,relationships,end) at the reserved offsets header position at the beginning
+        buffer.putInt( offsetHeaderPosition, ((endOffset & 0x3FF) << 20) | ((relationshipsOffset & 0x3FF) << 10) | propertiesOffset & 0x3FF );
     }
 
-    private static void writeProperties(  MutableIntObjectMap<Property> properties, ByteBuffer buffer )
+    private static void writeProperties( MutableIntObjectMap<Property> properties, ByteBuffer buffer )
     {
         Property[] propertiesArray = properties.toArray( new Property[0] );
         Arrays.sort( propertiesArray );
@@ -205,6 +239,21 @@ class MutableNodeRecordData
         {
             property.value.writeTo( writer );
         }
+    }
+
+    static boolean relationshipIsOutgoing( long relationshipOtherNodeRawLong )
+    {
+        return (relationshipOtherNodeRawLong & 0b10) != 0;
+    }
+
+    static boolean relationshipHasProperties( long relationshipOtherNodeRawLong )
+    {
+        return (relationshipOtherNodeRawLong & 0b1) != 0;
+    }
+
+    static long otherNodeOf( long relationshipOtherNodeRawLong )
+    {
+        return relationshipOtherNodeRawLong >>> 2;
     }
 
     void deserialize( ByteBuffer buffer )
@@ -235,21 +284,37 @@ class MutableNodeRecordData
 
     static int readOffsetsHeader( ByteBuffer buffer )
     {
-        int propertyOffsetBits = buffer.get() & 0xFF;
-        int relationshipOffsetBits = buffer.get() & 0xFF;
-        int highOffsetBits = buffer.get() & 0xFF;
-        int propertyOffset = ((highOffsetBits & 0xF) << 8) | propertyOffsetBits;
-        int relationshipOffset = ((highOffsetBits & 0xF0) << 4) | relationshipOffsetBits;
-        return (relationshipOffset << 16) | propertyOffset;
+        return buffer.getInt();
     }
 
     static int propertyOffset( int offsetHeader )
     {
-        return offsetHeader & 0xFFFF;
+        return offsetHeader & 0x3FF;
     }
 
     static int relationshipOffset( int offsetHeader )
     {
-        return (offsetHeader & 0xFFFF0000) >>> 16;
+        return (offsetHeader >>> 10) & 0x3FF;
+    }
+
+    static int endOffset( int offsetHeader )
+    {
+        return (offsetHeader >>> 20) & 0x3FF;
+    }
+
+    static long externalRelationshipId( long sourceNode, long internalRelationshipId, long otherNode, boolean outgoing )
+    {
+        long nodeId = outgoing ? sourceNode : otherNode;
+        return nodeId | (internalRelationshipId << 40);
+    }
+
+    static long nodeIdFromRelationshipId( long relationshipId )
+    {
+        return relationshipId & 0xFF_FFFFFFFFL;
+    }
+
+    static long internalRelationshipIdFromRelationshipId( long relationshipId )
+    {
+        return relationshipId >>> 40;
     }
 }

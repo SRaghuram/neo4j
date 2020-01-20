@@ -27,7 +27,6 @@ import org.eclipse.collections.impl.map.mutable.primitive.IntIntHashMap;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.Arrays;
-import java.util.Iterator;
 
 import org.neo4j.common.EntityType;
 import org.neo4j.internal.kernel.api.TokenSet;
@@ -98,19 +97,19 @@ class FulltextIndexTransactionStateVisitor extends TxStateVisitor.Adapter
     }
 
     @Override
-    public void visitCreatedRelationship( long id, int type, long startNode, long endNode )
+    public void visitCreatedRelationship( long id, int type, long startNode, long endNode, Iterable<StorageProperty> addedProperties )
     {
         indexRelationship( id );
     }
 
     @Override
-    public void visitNodePropertyChanges( long id, Iterator<StorageProperty> added, Iterator<StorageProperty> changed, IntIterable removed )
+    public void visitNodePropertyChanges( long id, Iterable<StorageProperty> added, Iterable<StorageProperty> changed, IntIterable removed )
     {
         indexNode( id );
     }
 
     @Override
-    public void visitRelPropertyChanges( long id, Iterator<StorageProperty> added, Iterator<StorageProperty> changed, IntIterable removed )
+    public void visitRelPropertyChanges( long id, Iterable<StorageProperty> added, Iterable<StorageProperty> changed, IntIterable removed )
     {
         indexRelationship( id );
     }

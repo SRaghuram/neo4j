@@ -112,6 +112,12 @@ class StreamVByte
     {
         byte[] serialized = buffer.array();
         int offset = buffer.position();
+        buffer.position( readIntDeltas( target, serialized, offset ) );
+        return target;
+    }
+
+    static int readIntDeltas( Target target, byte[] serialized, int offset )
+    {
         int currentBlockValueLength = Byte.MAX_VALUE;
         for ( int i = 0, prev = 0; currentBlockValueLength == Byte.MAX_VALUE; )
         {
@@ -147,8 +153,7 @@ class StreamVByte
                 }
             }
         }
-        buffer.position( offset );
-        return target;
+        return offset;
     }
 
     private static int readIntValue( byte[] serialized, int offset, int size )
@@ -172,6 +177,46 @@ class StreamVByte
                     (unsigned( serialized[offset + 1] ) << 8);
         }
         return unsigned( serialized[offset] );
+    }
+
+    /**
+     * @return the size of the int-deltas block found at {@code offset} in {@code serialized} such that {@code offset} + the returned value
+     * will given the offset right after this block. So this method is good for skipping a int-deltas block.
+     */
+    static int sizeOfIntDeltas( byte[] serialized, int offset )
+    {
+        int startOffset = offset;
+        int currentBlockValueLength = Byte.MAX_VALUE;
+        while ( currentBlockValueLength == Byte.MAX_VALUE )
+        {
+            int headerByte = unsigned( serialized[offset++] );
+            if ( (headerByte & MASK_SQUASHED_BLOCK) != 0 )
+            {
+                // The special 0-2 header and count squashed byte
+                currentBlockValueLength = ((headerByte & 0b0110_0000) >>> SHIFT_SQUASHED_BLOCK_LENGTH) & 0b11;
+                headerByte &= 0b1111;
+            }
+            else
+            {
+                currentBlockValueLength = headerByte;
+                headerByte = unsigned( serialized[offset++] );
+            }
+
+            for ( int c = 0; c < currentBlockValueLength; )
+            {
+                int blockSize = min( 4, currentBlockValueLength - c );
+                for ( int j = 0; j < blockSize; j++, c++ )
+                {
+                    int size = (headerByte >>> (j * 2)) & 0b11;
+                    offset += size + 1; // because e.g. size==0 uses 1B, size==1 uses 2B a.s.o.
+                }
+                if ( blockSize == 4 )
+                {
+                    headerByte = unsigned( serialized[offset++] );
+                }
+            }
+        }
+        return offset - startOffset;
     }
 
     // =========== LONGS =============
