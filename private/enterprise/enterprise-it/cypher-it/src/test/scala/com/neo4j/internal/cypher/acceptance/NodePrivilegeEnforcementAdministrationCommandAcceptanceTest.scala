@@ -7,13 +7,16 @@ package com.neo4j.internal.cypher.acceptance
 
 import java.util
 
-import org.neo4j.configuration.GraphDatabaseSettings.{DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME}
+import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
+import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import org.neo4j.graphdb.Label
 import org.neo4j.graphdb.security.AuthorizationViolationException
 
 
 // Tests for actual behaviour of authorization rules for restricted users based on node privileges
 class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
+
+  override protected def onNewGraphDatabase(): Unit =  clearPublicRole()
 
   test("should match nodes when granted traversal privilege to custom role for all databases and all labels") {
     // GIVEN
@@ -120,7 +123,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
 
     the[AuthorizationViolationException] thrownBy {
       executeOn("foo", "joe", "soap", "MATCH (n) RETURN n.name")
-    } should have message "Database access is not allowed for user 'joe' with roles [custom]."
+    } should have message "Database access is not allowed for user 'joe' with roles [PUBLIC, custom]."
   }
 
   test("read privilege for node should not imply traverse privilege") {

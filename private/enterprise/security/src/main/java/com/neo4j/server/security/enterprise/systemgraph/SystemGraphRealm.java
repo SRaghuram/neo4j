@@ -279,7 +279,7 @@ public class SystemGraphRealm extends AuthorizingRealm implements RealmLifecycle
             return null;
         }
 
-        if ( passwordChangeRequired || suspended )
+        if ( suspended )
         {
             return new SimpleAuthorizationInfo();
         }

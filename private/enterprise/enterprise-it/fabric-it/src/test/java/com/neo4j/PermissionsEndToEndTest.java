@@ -160,7 +160,7 @@ class PermissionsEndToEndTest
         } );
 
         assertEquals( Forbidden.code().serialize(), e.code() );
-        assertEquals( "Database access is not allowed for user 'userWithNoPermission' with roles [].", e.getMessage() );
+        assertEquals( "Database access is not allowed for user 'userWithNoPermission' with roles [PUBLIC].", e.getMessage() );
     }
 
     @Test
@@ -198,7 +198,7 @@ class PermissionsEndToEndTest
         } );
 
         assertEquals( Forbidden.code().serialize(), e.code() );
-        assertEquals( "Write operations are not allowed for user 'neo4j' with roles [admin] restricted to ACCESS.", e.getMessage() );
+        assertEquals( "Write operations are not allowed for user 'neo4j' with roles [PUBLIC, admin] restricted to ACCESS.", e.getMessage() );
     }
 
     @Test
@@ -214,7 +214,8 @@ class PermissionsEndToEndTest
         } );
 
         assertEquals( Forbidden.code().serialize(), e.code() );
-        assertEquals( "Write operations are not allowed for user 'userWithAccessPermission' with roles [access] restricted to ACCESS.", e.getMessage() );
+        assertEquals( "Write operations are not allowed for user 'userWithAccessPermission' with roles [PUBLIC, access] restricted to ACCESS.",
+                      e.getMessage() );
     }
 
     @Test

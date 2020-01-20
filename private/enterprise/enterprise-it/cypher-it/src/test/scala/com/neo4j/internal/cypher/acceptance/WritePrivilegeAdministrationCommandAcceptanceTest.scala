@@ -123,6 +123,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
       }
 
       test(s"should fail when ${grantOrDeny}ing write privilege to custom role when not on system database") {
+        selectDatabase(DEFAULT_DATABASE_NAME)
         the[DatabaseAdministrationException] thrownBy {
           // WHEN
           execute(s"$grantOrDenyCommand WRITE ON GRAPH * ELEMENTS * (*) TO custom")
@@ -256,6 +257,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
       }
 
       test(s"should fail when revoking $grantOrDeny write privilege to custom role when not on system database") {
+        selectDatabase(DEFAULT_DATABASE_NAME)
         the[DatabaseAdministrationException] thrownBy {
           // WHEN
           execute(s"REVOKE $grantOrDenyCommand WRITE ON GRAPH * ELEMENTS * (*) FROM custom")
@@ -384,6 +386,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
   }
 
   test("should fail when revoking write privilege to custom role when not on system database") {
+    selectDatabase(DEFAULT_DATABASE_NAME)
     the[DatabaseAdministrationException] thrownBy {
       // WHEN
       execute("REVOKE WRITE ON GRAPH * ELEMENTS * (*) FROM custom")
@@ -584,6 +587,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
   Seq("interpreted", "slotted").foreach { runtime =>
     test(s"should read you own writes on nodes with WRITE and ACCESS privilege with $runtime") {
       // GIVEN
+      clearPublicRole()
       setupUserWithCustomRole()
 
       // Setup to create tokens
@@ -606,6 +610,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
     test(s"should read you own writes on nodes with WRITE and TRAVERSE privilege with $runtime") {
       // GIVEN
+      clearPublicRole()
       setupUserWithCustomRole()
 
       // Setup to create tokens
@@ -663,6 +668,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
     test(s"should read you own writes on nodes with WRITE and restricted READ and TRAVERSE privileges with $runtime") {
       // GIVEN
+      clearPublicRole()
       setupUserWithCustomRole()
 
       // Setup to create tokens
@@ -1033,6 +1039,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
     test(s"should read your own writes on relationships when granted ACCESS and WRITE privilege with $runtime") {
       // GIVEN
+      clearPublicRole()
       setupUserWithCustomRole()
 
       // Setup to create tokens
@@ -1238,6 +1245,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
   test("write privilege should not imply access privilege") {
     // GIVEN
+    clearPublicRole()
     setupUserWithCustomRole(access = false)
     selectDatabase(DEFAULT_DATABASE_NAME)
     execute("CREATE (n:A {name:'a'})")
@@ -1254,6 +1262,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
   test("write privilege should not imply traverse privilege") {
     // GIVEN
+    clearPublicRole()
     setupUserWithCustomRole()
     selectDatabase(DEFAULT_DATABASE_NAME)
     execute("CREATE (n:A {name:'a'})")
@@ -1289,7 +1298,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
     the[AuthorizationViolationException] thrownBy {
       executeOn("foo", "joe", "soap", "CREATE (n:B {name: 'a'}) RETURN 1 AS dummy")
-    } should have message "Write operations are not allowed for user 'joe' with roles [custom]."
+    } should have message "Write operations are not allowed for user 'joe' with roles [PUBLIC, custom]."
 
     selectDatabase("foo")
     execute("MATCH (n) RETURN n.name").toSet should be(Set(Map("n.name" -> "b")))
@@ -1319,7 +1328,7 @@ class WritePrivilegeAdministrationCommandAcceptanceTest extends AdministrationCo
 
     the[AuthorizationViolationException] thrownBy {
       executeOn("foo", "joe", "soap", "CREATE (:B {name: 'a'}) RETURN 1 AS dummy")
-    } should have message "Write operations are not allowed for user 'joe' with roles [custom]."
+    } should have message "Write operations are not allowed for user 'joe' with roles [PUBLIC, custom]."
 
     selectDatabase("foo")
     execute("MATCH (n) RETURN n.name").toSet should be(Set(Map("n.name" -> "b")))

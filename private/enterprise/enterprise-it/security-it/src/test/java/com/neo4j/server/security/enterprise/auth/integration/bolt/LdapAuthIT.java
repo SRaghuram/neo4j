@@ -67,7 +67,7 @@ import org.neo4j.test.DoubleLatch;
 
 import static com.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.assertAuth;
 import static com.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.assertAuthFail;
-import static com.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.assertReadFails;
+import static com.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.assertEmptyRead;
 import static com.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.assertReadSucceeds;
 import static com.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.assertRoles;
 import static com.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.assertWriteFails;
@@ -178,7 +178,7 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
             // then
             // Assuming showCurrentUser has fields username, roles, flags
             assertThat( record.get( 0 ).asString(), equalTo( "smith" ) );
-            assertThat( record.get( 1 ).asList(), equalTo( Collections.singletonList( "agent" ) ) );
+            assertThat( record.get( 1 ).asList(), equalTo( List.of( "agent", PredefinedRoles.PUBLIC ) ) );
             assertThat( record.get( 2 ).asList(), equalTo( Collections.emptyList() ) );
         }
     }
@@ -190,7 +190,7 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
         // Then
         // User 'neo' has reader role by default, but since we are not passing a group-to-role mapping
         // he should get no permissions
-        assertReadFails( boltUri, "neo", "abc123", ACCESS_DENIED );
+        assertEmptyRead( boltUri, "neo", "abc123" );
     }
 
     @Test
@@ -328,7 +328,7 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
                     SecuritySettings.ldap_authorization_use_system_account, true
             ) );
 
-            assertReadFails( boltUri, "neo", "abc123", ACCESS_DENIED );
+            assertEmptyRead( boltUri, "neo", "abc123" );
         }
     }
 
@@ -344,7 +344,7 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
                     SecuritySettings.ldap_authorization_use_system_account, true
             ) );
 
-            assertReadFails( boltUri, "neo", "abc123", ACCESS_DENIED );
+            assertEmptyRead( boltUri, "neo", "abc123" );
         }
     }
 
@@ -358,7 +358,7 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
                     SecuritySettings.ldap_authorization_use_system_account, true
             ) );
 
-            assertReadFails( boltUri, "neo", "abc123", ACCESS_DENIED );
+            assertEmptyRead( boltUri, "neo", "abc123" );
         }
     }
 
@@ -400,13 +400,13 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
         // because the system account is used to authorize over the ldap provider
         try ( Driver driver = connectDriver( boltUri, "tank", "localpassword", "native" ) )
         {
-            assertRoles( driver, PredefinedRoles.READER, PredefinedRoles.PUBLISHER );
+            assertRoles( driver, PredefinedRoles.READER, PredefinedRoles.PUBLISHER, PredefinedRoles.PUBLIC );
         }
 
         // the ldap "tank" can also log in and gets roles from both providers
         try ( Driver driver = connectDriver( boltUri, "tank", "abc123", "ldap" ) )
         {
-            assertRoles( driver, PredefinedRoles.READER, PredefinedRoles.PUBLISHER );
+            assertRoles( driver, PredefinedRoles.READER, PredefinedRoles.PUBLISHER, PredefinedRoles.PUBLIC );
         }
     }
 
@@ -622,12 +622,12 @@ public class LdapAuthIT extends EnterpriseLdapAuthTestBase
 
         try ( Driver driver = connectDriverWithParameters( boltUri, "neo", "abc123", parameters ) )
         {
-            assertRoles( driver, PredefinedRoles.READER );
+            assertRoles( driver, PredefinedRoles.READER, PredefinedRoles.PUBLIC );
         }
 
         try ( Driver driver = connectDriverWithParameters( boltUri, "tank", "abc123", parameters ) )
         {
-            assertRoles( driver, PredefinedRoles.PUBLISHER );
+            assertRoles( driver, PredefinedRoles.PUBLISHER, PredefinedRoles.PUBLIC );
         }
     }
 

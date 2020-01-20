@@ -57,16 +57,17 @@ public class EnterpriseSecurityContextDescriptionTest
     }
 
     @Test
-    public void shouldMakeNiceDescriptionWithoutRoles() throws Exception
+    public void shouldMakeNiceDescriptionWithoutAssignedRoles() throws Exception
     {
-        assertThat( context().description(), equalTo( "user 'mats' with no roles" ) );
+        // PUBLIC is always part of a users set of roles
+        assertThat( context().description(), equalTo( "user 'mats' with roles [PUBLIC]" ) );
     }
 
     @Test
     public void shouldMakeNiceDescriptionWithRoles() throws Exception
     {
         when( realm.getAuthorizationInfoSnapshot( principals ) ).thenReturn( new SimpleAuthorizationInfo( Set.of( PUBLISHER, "role1" ) ) );
-        assertThat( context().description(), equalTo( "user 'mats' with roles [publisher,role1]" ) );
+        assertThat( context().description(), equalTo( "user 'mats' with roles [PUBLIC, publisher, role1]" ) );
     }
 
     @Test
@@ -84,7 +85,7 @@ public class EnterpriseSecurityContextDescriptionTest
         EnterpriseSecurityContext context = context();
         EnterpriseSecurityContext restricted =
                 context.withMode( new RestrictedAccessMode( context.mode(), AccessMode.Static.READ ) );
-        assertThat( restricted.description(), equalTo( "user 'mats' with roles [publisher,role1] restricted to READ" ) );
+        assertThat( restricted.description(), equalTo( "user 'mats' with roles [PUBLIC, publisher, role1] restricted to READ" ) );
     }
 
     @Test
@@ -94,7 +95,7 @@ public class EnterpriseSecurityContextDescriptionTest
         EnterpriseSecurityContext context = context();
         EnterpriseSecurityContext overridden =
                 context.withMode( new OverriddenAccessMode( context.mode(), AccessMode.Static.READ ) );
-        assertThat( overridden.description(), equalTo( "user 'mats' with roles [publisher,role1] overridden by READ" ) );
+        assertThat( overridden.description(), equalTo( "user 'mats' with roles [PUBLIC, publisher, role1] overridden by READ" ) );
     }
 
     @Test

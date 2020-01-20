@@ -15,6 +15,8 @@ import scala.collection.JavaConverters._
 
 class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
 
+  override protected def onNewGraphDatabase(): Unit = clearPublicRole()
+
   /*
     ------------ db.relationshipTypes ------------
   */

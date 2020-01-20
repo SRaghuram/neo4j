@@ -132,6 +132,25 @@ class SystemGraphRealmIT
     }
 
     @Test
+    void shouldHaltMigrationWhenPublicRoleExists() throws Throwable
+    {
+        oldUsers.create( createUser( "alice", "foo", false ) );
+        oldUsers.create( createUser( "bob", "bar", true ) );
+
+        oldRoles.create( new RoleRecord( PredefinedRoles.ADMIN, "alice" ) );
+        oldRoles.create( new RoleRecord( "PUBLIC", "bob" ) );
+
+        Exception exception = assertThrows( InvalidArgumentsException.class, this::startSystemGraphRealm );
+        assertThat( exception.getMessage(), startsWith( "Automatic migration of users and roles into system graph failed because 'PUBLIC' role exists." +
+                                                        " Please remove or rename that role and start again." ) );
+
+        assertThat( logProvider )
+                .forLevel( ERROR )
+                .containsMessages( "Automatic migration of users and roles into system graph failed because 'PUBLIC' role exists. " +
+                                   "Please remove or rename that role and start again." );
+    }
+
+    @Test
     void shouldCreateDefaultAdminWithPredefinedUsername() throws Throwable
     {
         startSystemGraphRealm();
@@ -287,7 +306,13 @@ class SystemGraphRealmIT
         // Given existing users but no admin
         InvalidArgumentsException exception = assertThrows( InvalidArgumentsException.class, this::startSystemGraphRealm );
         assertThat( exception.getMessage(), startsWith( "No roles defined, and cannot determine which user should be admin" ) );
+        assertThat( logProvider ).forLevel( INFO )
+                                 .containsMessageWithArguments( "Completed migration of %s %s into system graph.", "3", "users" )
+                                 .containsMessageWithArguments( "Completed migration of %s %s into system graph.", "0", "roles" );
+        assertThat( logProvider ).forLevel( ERROR )
+                                 .containsMessages( "No roles defined, and cannot determine which user should be admin" );
 
+        logProvider.clear();
         // When a default admin is set by command
         defaultAdmin.create( createUser( "trinity", "ignored", false ) );
 
@@ -307,6 +332,8 @@ class SystemGraphRealmIT
     {
         SystemGraphRealm realm = startSystemGraphRealm();
 
+        ResourcePrivilege defaultAccessPrivilege =
+                new ResourcePrivilege( GRANT, ACCESS, new Resource.DatabaseResource(), DatabaseSegment.ALL, SpecialDatabase.DEFAULT );
         ResourcePrivilege accessPrivilege =
                 new ResourcePrivilege( GRANT, ACCESS, new Resource.DatabaseResource(), DatabaseSegment.ALL, SpecialDatabase.ALL );
         ResourcePrivilege readNodePrivilege =
@@ -333,6 +360,12 @@ class SystemGraphRealmIT
 
         // Then
         assertThat( privileges, containsInAnyOrder( accessPrivilege, readNodePrivilege, readRelPrivilege, findNodePrivilege, findRelPrivilege ) );
+
+        // When
+        privileges = realm.getPrivilegesForRoles( Collections.singleton( PredefinedRoles.PUBLIC ) );
+
+        // Then
+        assertThat( privileges, containsInAnyOrder( defaultAccessPrivilege ) );
 
         // When
         privileges = realm.getPrivilegesForRoles( Collections.singleton( PredefinedRoles.EDITOR ) );

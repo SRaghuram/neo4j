@@ -6,9 +6,13 @@
 package com.neo4j.internal.cypher.acceptance
 
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
+import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ADMIN
+import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC
 import org.neo4j.configuration.GraphDatabaseSettings
-import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticError
-import org.neo4j.exceptions.{DatabaseAdministrationException, InvalidArgumentException, SyntaxException}
+import org.neo4j.exceptions.DatabaseAdministrationException
+import org.neo4j.exceptions.InvalidArgumentException
+import org.neo4j.exceptions.InvalidSemanticsException
+import org.neo4j.exceptions.SyntaxException
 import org.neo4j.graphdb.security.AuthorizationViolationException
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 import org.scalatest.enablers.Messaging.messagingNatureOfThrowable
@@ -63,7 +67,10 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     val result = execute("SHOW POPULATED ROLES")
 
     // THEN
-    result.toSet should be(Set(role(PredefinedRoles.ADMIN).builtIn().map))
+    result.toSet should be(Set(
+      role(ADMIN).builtIn().map,
+      role(PUBLIC).builtIn().map
+    ))
   }
 
   test("should create and show roles") {
@@ -104,7 +111,11 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     val result = execute("SHOW POPULATED ROLES")
 
     // THEN
-    result.toSet should be(Set(role(PredefinedRoles.ADMIN).builtIn().map, role("foo").map))
+    result.toSet should be(Set(
+      role(ADMIN).builtIn().map,
+      role(PUBLIC).builtIn().map,
+      role("foo").map
+    ))
   }
 
   test("should show default roles with users") {
@@ -138,7 +149,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     val result = execute("SHOW POPULATED ROLES WITH USERS")
 
     // THEN
-    result.toSet should be(Set(role(PredefinedRoles.ADMIN).builtIn().member("neo4j").map))
+    result.toSet should be(Set(role(ADMIN).builtIn().member("neo4j").map) ++ publicRole("neo4j"))
   }
 
   test("should show populated roles with several users") {
@@ -155,10 +166,10 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
     // THEN
     result.toSet should be(Set(
-      role(PredefinedRoles.ADMIN).builtIn().member("neo4j").map,
+      role(ADMIN).builtIn().member("neo4j").map,
       role("foo").member("Bar").map,
-      role("foo").member("Baz").map
-    ))
+      role("foo").member("Baz").map,
+      ) ++ publicRole("neo4j", "Bar", "Baz"))
   }
 
   test("should fail when showing roles when not on system database") {
@@ -544,7 +555,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
     // WHEN
     the[AuthorizationViolationException] thrownBy {
-      execute(s"DROP ROLE ${PredefinedRoles.ADMIN}")
+      execute(s"DROP ROLE $ADMIN")
     } should have message "Permission denied."
 
     // THEN
@@ -617,20 +628,36 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("GRANT ROLE custom TO user")
 
     // THEN
-    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers + Map("role" -> "custom", "isBuiltIn" -> false, "member" -> "user"))
+    execute("SHOW ROLES WITH USERS").toSet should be(
+      defaultRolesWithUsers +
+      role("custom").member("user").map ++
+      publicRole("user")
+    )
   }
 
-  test("should not grant reserved role to user") {
+  test("should not fail granting reserved role to user") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE USER user SET PASSWORD 'neo'")
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
 
     // WHEN
-    val exception = the[SyntaxException] thrownBy execute("GRANT ROLE PUBLIC TO user")
-    // THEN
-    exception.getMessage should startWith("Failed to grant the specified role 'PUBLIC': 'PUBLIC' is a reserved role and cannot be granted.")
+    execute("GRANT ROLE PUBLIC TO neo4j")
 
-    execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("user"))
+    // THEN
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
+  }
+
+  test("should grant reserved role together with other role to user") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("SHOW USERS").toSet shouldBe Set(neo4jUser)
+
+    // WHEN
+    execute("GRANT ROLE PUBLIC, custom TO neo4j")
+
+    // THEN
+    execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq(ADMIN, "custom")))
   }
 
   test("should grant roles and list users with roles") {
@@ -673,8 +700,11 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("GRANT ROLE custom TO userA, userB")
 
     // THEN
-    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers + Map("role" -> "custom", "isBuiltIn" -> false, "member" -> "userA")
-      + Map("role" -> "custom", "isBuiltIn" -> false, "member" -> "userB"))
+    execute("SHOW ROLES WITH USERS").toSet should be(
+      publicRole("userA", "userB") ++ defaultRolesWithUsers +
+      role("custom").member("userA").map +
+      role("custom").member("userB").map
+    )
   }
 
   test("should grant multiple roles to user") {
@@ -688,8 +718,11 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("GRANT ROLE custom1, custom2 TO userA")
 
     // THEN
-    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers + Map("role" -> "custom1", "isBuiltIn" -> false, "member" -> "userA")
-      + Map("role" -> "custom2", "isBuiltIn" -> false, "member" -> "userA"))
+    execute("SHOW ROLES WITH USERS").toSet should be(
+      publicRole("userA") ++ defaultRolesWithUsers +
+      role("custom1").member("userA").map +
+      role("custom2").member("userA").map
+    )
   }
 
   test("should grant multiple roles to several users") {
@@ -704,11 +737,13 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("GRANT ROLE custom1, custom2 TO userA, userB")
 
     // THEN
-    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers
-      + Map("role" -> "custom1", "isBuiltIn" -> false, "member" -> "userA")
-      + Map("role" -> "custom1", "isBuiltIn" -> false, "member" -> "userB")
-      + Map("role" -> "custom2", "isBuiltIn" -> false, "member" -> "userA")
-      + Map("role" -> "custom2", "isBuiltIn" -> false, "member" -> "userB"))
+    execute("SHOW ROLES WITH USERS").toSet should be(
+      publicRole("userA", "userB") ++ defaultRolesWithUsers +
+      role("custom1").member("userA").map +
+      role("custom1").member("userB").map +
+      role("custom2").member("userA").map +
+      role("custom2").member("userB").map
+    )
   }
 
   test("should be able to grant already granted role to user") {
@@ -731,7 +766,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE USER Bar SET PASSWORD 'neo'")
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("Bar"))
-    execute("SHOW ROLES WITH USERS").toSet shouldBe defaultRolesWithUsers
+    execute("SHOW ROLES WITH USERS").toSet shouldBe defaultRolesWithUsers ++ publicRole("Bar")
 
     the[InvalidArgumentsException] thrownBy {
       // WHEN
@@ -741,7 +776,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
     // THEN
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("Bar"))
-    execute("SHOW ROLES WITH USERS").toSet shouldBe defaultRolesWithUsers
+    execute("SHOW ROLES WITH USERS").toSet shouldBe defaultRolesWithUsers ++ publicRole("Bar")
 
     // and an invalid (non-existing) one
     the[InvalidArgumentsException] thrownBy {
@@ -752,7 +787,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
 
     // AND
     execute("SHOW USERS").toSet shouldBe Set(neo4jUser, user("Bar"))
-    execute("SHOW ROLES WITH USERS").toSet shouldBe defaultRolesWithUsers
+    execute("SHOW ROLES WITH USERS").toSet shouldBe defaultRolesWithUsers ++ publicRole("Bar")
   }
 
   test("should fail when granting role to non-existing user") {
@@ -847,10 +882,13 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("REVOKE ROLE custom FROM user")
 
     // THEN
-    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers + Map("role" -> "custom", "isBuiltIn" -> false, "member" -> null))
+    execute("SHOW ROLES WITH USERS").toSet should be(
+      publicRole("user") ++ defaultRolesWithUsers +
+      role("custom").noMember().map
+    )
   }
 
-  test("should not revoke reserved role from user") {
+  test("should fail revoking reserved role") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE USER user SET PASSWORD 'neo'")
@@ -859,6 +897,27 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     val exception = the[SyntaxException] thrownBy execute("REVOKE ROLE PUBLIC FROM user")
     // THEN
     exception.getMessage should startWith("Failed to revoke the specified role 'PUBLIC': 'PUBLIC' is a reserved role and cannot be revoked.")
+
+    // THEN
+    execute("SHOW POPULATED ROLES WITH USERS").toSet should be(
+      Set(role(ADMIN).builtIn().member("neo4j").map) ++ publicRole("neo4j","user")
+    )
+  }
+
+  test("should fail revoking reserved role together with other role") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE custom")
+    execute("CREATE USER user SET PASSWORD 'neo'")
+    execute("GRANT ROLE custom TO user")
+
+    // WHEN
+    val exception = the[SyntaxException] thrownBy execute("REVOKE ROLE PUBLIC, custom FROM user")
+    // THEN
+    exception.getMessage should startWith("Failed to revoke the specified role 'PUBLIC': 'PUBLIC' is a reserved role and cannot be revoked.")
+
+    // THEN
+    execute("SHOW ROLES WITH USERS").toSet should be(publicRole("user") ++ defaultRolesWithUsers + role("custom").member("user").map)
   }
 
   test("should revoke role from several users") {
@@ -874,7 +933,10 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("REVOKE ROLE custom FROM userA, userB")
 
     // THEN
-    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers + Map("role" -> "custom", "isBuiltIn" -> false, "member" -> null))
+    execute("SHOW ROLES WITH USERS").toSet should be(
+      publicRole("userA", "userB") ++ defaultRolesWithUsers +
+      role("custom").noMember().map
+    )
   }
 
   test("should revoke multiple roles from user") {
@@ -890,8 +952,11 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("REVOKE ROLE custom1, custom2 FROM userA")
 
     // THEN
-    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers + Map("role" -> "custom1", "isBuiltIn" -> false, "member" -> null)
-      + Map("role" -> "custom2", "isBuiltIn" -> false, "member" -> null))
+    execute("SHOW ROLES WITH USERS").toSet should be(
+      publicRole("userA") ++ defaultRolesWithUsers +
+      role("custom1").noMember().map +
+      role("custom2").noMember().map
+    )
   }
 
   test("should revoke multiple roles from several users") {
@@ -914,8 +979,11 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("REVOKE ROLE custom1, custom2 FROM userA, userB, userC, userD")
 
     // THEN
-    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers + Map("role" -> "custom1", "isBuiltIn" -> false, "member" -> null)
-      + Map("role" -> "custom2", "isBuiltIn" -> false, "member" -> null))
+    execute("SHOW ROLES WITH USERS").toSet should be(
+      publicRole("userA", "userB", "userC", "userD") ++ defaultRolesWithUsers +
+      role("custom1").noMember().map +
+      role("custom2").noMember().map
+    )
   }
 
   test("should be able to revoke already revoked role from user") {
@@ -930,7 +998,10 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("REVOKE ROLE custom FROM user").toSet should be(Set.empty)
 
     // THEN
-    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers + Map("role" -> "custom", "isBuiltIn" -> false, "member" -> null))
+    execute("SHOW ROLES WITH USERS").toSet should be(
+      publicRole("user") ++ defaultRolesWithUsers +
+      role("custom").noMember().map
+    )
   }
 
   test("should grant and revoke multiple roles to multiple users") {
@@ -940,52 +1011,53 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("CREATE USER Baz SET PASSWORD 'NEO'")
     execute("CREATE ROLE foo")
     execute("CREATE ROLE fum")
-    val admin = role(PredefinedRoles.ADMIN).builtIn().member("neo4j").map
+    val admin = role(ADMIN).builtIn().member("neo4j").map
+    val publicRoles = publicRole("Bar", "Baz", "neo4j")
 
     // WHEN using single user and role version of GRANT
     execute("GRANT ROLE foo TO Bar")
     execute("GRANT ROLE foo TO Baz")
 
     // THEN
-    execute("SHOW POPULATED ROLES WITH USERS").toSet should be(Set(admin, role("foo").member("Bar").map, role("foo").member("Baz").map))
+    execute("SHOW POPULATED ROLES WITH USERS").toSet should be(publicRoles ++ Set(admin, role("foo").member("Bar").map, role("foo").member("Baz").map))
 
     // WHEN using single user and role version of REVOKE
     execute("REVOKE ROLE foo FROM Bar")
     execute("REVOKE ROLE foo FROM Baz")
 
     // THEN
-    execute("SHOW POPULATED ROLES WITH USERS").toSet should be(Set(admin))
+    execute("SHOW POPULATED ROLES WITH USERS").toSet should be(publicRoles ++ Set(admin))
 
     // WHEN granting with multiple users and roles version
     execute("GRANT ROLE foo, fum TO Bar, Baz")
 
     // THEN
-    execute("SHOW POPULATED ROLES WITH USERS").toSet should be(Set(admin, role("foo").member("Bar").map, role("foo").member("Baz").map, role("fum").member("Bar").map, role("fum").member("Baz").map))
+    execute("SHOW POPULATED ROLES WITH USERS").toSet should be(publicRoles ++ Set(admin, role("foo").member("Bar").map, role("foo").member("Baz").map, role("fum").member("Bar").map, role("fum").member("Baz").map))
 
     // WHEN revoking only one of many
     execute("REVOKE ROLE foo FROM Bar")
 
     // THEN
-    execute("SHOW POPULATED ROLES WITH USERS").toSet should be(Set(admin, role("foo").member("Baz").map, role("fum").member("Bar").map, role("fum").member("Baz").map))
+    execute("SHOW POPULATED ROLES WITH USERS").toSet should be(publicRoles ++ Set(admin, role("foo").member("Baz").map, role("fum").member("Bar").map, role("fum").member("Baz").map))
 
     // WHEN revoking with multiple users and roles version
     execute("REVOKE ROLE foo, fum FROM Bar, Baz")
 
     // THEN
-    execute("SHOW POPULATED ROLES WITH USERS").toSet should be(Set(admin))
+    execute("SHOW POPULATED ROLES WITH USERS").toSet should be(publicRoles ++ Set(admin))
   }
 
   test("should do nothing when revoking non-existent role from (existing) user") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE USER user SET PASSWORD 'neo'")
-    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers)
+    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers ++ publicRole("user"))
 
     // WHEN
     execute("REVOKE ROLE custom FROM user")
 
     // THEN
-    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers)
+    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers ++ publicRole("user"))
   }
 
   test("should do nothing when revoking (existing) role from non-existing user") {

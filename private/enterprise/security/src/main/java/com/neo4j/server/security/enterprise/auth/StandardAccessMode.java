@@ -425,7 +425,7 @@ class StandardAccessMode implements AccessMode
     public String name()
     {
         Set<String> sortedRoles = new TreeSet<>( roles );
-        return roles.isEmpty() ? "no roles" : "roles [" + String.join( ",", sortedRoles ) + "]";
+        return roles.isEmpty() ? "no roles" : "roles " + sortedRoles.toString();
     }
 
     boolean allowsAccess()
@@ -498,7 +498,7 @@ class StandardAccessMode implements AccessMode
         StandardAccessMode build()
         {
             return new StandardAccessMode(
-                    isAuthenticated && anyAccess.getOrDefault( GRANT, false ),
+                    isAuthenticated && anyAccess.getOrDefault( GRANT, false ) && !anyAccess.getOrDefault( DENY, false ),
                     isAuthenticated && anyRead.getOrDefault( GRANT, false ),
                     isAuthenticated && anyWrite.getOrDefault( GRANT, false ) && !anyWrite.getOrDefault( DENY, false ),
                     isAuthenticated && token,

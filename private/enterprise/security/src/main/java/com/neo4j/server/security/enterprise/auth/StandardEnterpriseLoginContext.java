@@ -7,15 +7,18 @@ package com.neo4j.server.security.enterprise.auth;
 
 import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
+import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
 import org.apache.shiro.authz.AuthorizationInfo;
 
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.neo4j.graphdb.security.AuthorizationViolationException;
+import org.neo4j.internal.kernel.api.security.AccessMode;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
 import org.neo4j.kernel.api.exceptions.Status;
@@ -69,7 +72,7 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
         if ( !mode.allowsAccess() )
         {
             throw mode.onViolation(
-                    String.format( "Database access is not allowed for user '%s' with roles %s.", neoShiroSubject.username(), roles.toString() ) );
+                String.format( "Database access is not allowed for user '%s' with roles %s.", neoShiroSubject.username(), new TreeSet<>( roles ).toString() ) );
         }
 
         return mode;
@@ -81,6 +84,10 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
         if ( !shiroSubject.isAuthenticated() )
         {
             throw new AuthorizationViolationException( AuthorizationViolationException.PERMISSION_DENIED, Status.Security.Unauthorized );
+        }
+        else if ( !dbName.equals( SYSTEM_DATABASE_NAME ) && shiroSubject.getAuthenticationResult().equals( AuthenticationResult.PASSWORD_CHANGE_REQUIRED ) )
+        {
+            throw AccessMode.Static.CREDENTIALS_EXPIRED.onViolation( "Permission denied." );
         }
         StandardAccessMode mode = mode( idLookup, dbName );
         return new EnterpriseSecurityContext( neoShiroSubject, mode, mode.getRoles(), mode.getAdminAccessMode() );
@@ -96,13 +103,12 @@ public class StandardEnterpriseLoginContext implements EnterpriseLoginContext
     {
         Collection<AuthorizationInfo> authorizationInfo =
                 authManager.getAuthorizationInfo( shiroSubject.getPrincipals() );
-        return authorizationInfo.stream()
-                .flatMap( authInfo ->
-                {
-                    Collection<String> roles = authInfo.getRoles();
-                    return roles == null ? Stream.empty() : roles.stream();
-                } )
-                .collect( Collectors.toSet() );
+        Set<String> collection = authorizationInfo.stream().flatMap( authInfo -> {
+            Collection<String> roles = authInfo.getRoles();
+            return roles == null ? Stream.empty() : roles.stream();
+        } ).collect( Collectors.toSet() );
+        collection.add( PredefinedRoles.PUBLIC );
+        return collection;
     }
 
     class NeoShiroSubject implements AuthSubject

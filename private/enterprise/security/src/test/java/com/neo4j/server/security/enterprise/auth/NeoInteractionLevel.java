@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 import org.neo4j.graphdb.ResourceIterator;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.event.TransactionEventListener;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.api.KernelTransaction;
@@ -20,6 +21,15 @@ public interface NeoInteractionLevel<S>
     GraphDatabaseFacade getLocalGraph();
 
     GraphDatabaseFacade getSystemGraph();
+
+    default void clearPublicRole()
+    {
+        try ( Transaction tx = getSystemGraph().beginTx() )
+        {
+            tx.execute( "REVOKE ACCESS ON DEFAULT DATABASE FROM PUBLIC" );
+            tx.commit();
+        }
+    }
 
     void shutdown();
 

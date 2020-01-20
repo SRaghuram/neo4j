@@ -15,6 +15,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ADMIN;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ARCHITECT;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.EDITOR;
+import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLISHER;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER;
 
@@ -27,6 +28,7 @@ public class PredefinedRolesBuilder implements RolesBuilder
     public static final WildcardPermission WRITE = new WildcardPermission( "database:*:write:graph" );
     public static final WildcardPermission READ = new WildcardPermission( "database:*:read:graph" );
     public static final WildcardPermission ACCESS = new WildcardPermission( "database:*:access:graph" );
+    public static final WildcardPermission DEFAULT_ACCESS = new WildcardPermission( "PUBLIC" );
 
     private static final Map<String,SimpleRole> innerRoles = staticBuildRoles();
     public static final Map<String,SimpleRole> roles = Collections.unmodifiableMap( innerRoles );
@@ -69,6 +71,10 @@ public class PredefinedRolesBuilder implements RolesBuilder
         reader.add( READ );
         reader.add( ACCESS );
         roles.put( READER, reader );
+
+        SimpleRole publicRole = new SimpleRole( PUBLIC );
+        publicRole.add( DEFAULT_ACCESS );
+        roles.put( PUBLIC, publicRole );
 
         return roles;
     }

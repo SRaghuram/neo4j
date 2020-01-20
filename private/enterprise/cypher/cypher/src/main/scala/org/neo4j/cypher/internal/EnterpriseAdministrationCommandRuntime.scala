@@ -156,7 +156,9 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       SystemCommandExecutionPlan("ShowUsers", normalExecutionEngine,
         """MATCH (u:User)
           |OPTIONAL MATCH (u)-[:HAS_ROLE]->(r:Role)
-          |RETURN u.name as user, collect(r.name) as roles, u.passwordChangeRequired AS passwordChangeRequired, u.suspended AS suspended""".stripMargin,
+          |WITH u, r.name as roleNames ORDER BY roleNames
+          |WITH u, collect(roleNames) as roles
+          |RETURN u.name as user, roles + 'PUBLIC' as roles, u.passwordChangeRequired AS passwordChangeRequired, u.suspended AS suspended""".stripMargin,
         VirtualValues.EMPTY_MAP, source = source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
       )
 
@@ -244,34 +246,35 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
     case ShowRoles(source, withUsers, showAll) => (context, parameterMapping, securityContext) =>
       val predefinedRoles = Values.stringArray(PredefinedRoles.ADMIN, PredefinedRoles.ARCHITECT, PredefinedRoles.PUBLISHER,
         PredefinedRoles.EDITOR, PredefinedRoles.READER)
-      val query = if (showAll)
-        """MATCH (r:Role)
-          |OPTIONAL MATCH (u:User)-[:HAS_ROLE]->(r)
-          |RETURN DISTINCT r.name as role,
-          |CASE
-          | WHEN r.name IN $predefined THEN true
-          | ELSE false
-          |END as isBuiltIn
-        """.stripMargin
-      else
-        """MATCH (r:Role)<-[:HAS_ROLE]-(u:User)
-          |RETURN DISTINCT r.name as role,
-          |CASE
-          | WHEN r.name IN $predefined THEN true
-          | ELSE false
-          |END as isBuiltIn
-        """.stripMargin
-      if (withUsers) {
-        SystemCommandExecutionPlan("ShowRoles", normalExecutionEngine, query + ", u.name as member",
-          VirtualValues.map(Array("predefined"), Array(predefinedRoles)),
-          source = source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
-        )
-      } else {
-        SystemCommandExecutionPlan("ShowRoles", normalExecutionEngine, query,
-          VirtualValues.map(Array("predefined"), Array(predefinedRoles)),
-          source = source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
-        )
+      val userColumns = if (withUsers) ", u.name as member" else ""
+      val maybeMatchUsers = if (withUsers) "OPTIONAL MATCH (u:User)" else ""
+      val roleMatch = (showAll, withUsers) match {
+        case (true, true) =>
+          "MATCH (r:Role) WHERE r.name <> 'PUBLIC' OPTIONAL MATCH (u:User)-[:HAS_ROLE]->(r)"
+        case (true, false) =>
+          "MATCH (r:Role) WHERE r.name <> 'PUBLIC'"
+        case (false, _) =>
+          "MATCH (r:Role)<-[:HAS_ROLE]-(u:User)"
       }
+      SystemCommandExecutionPlan("ShowRoles", normalExecutionEngine,
+        s"""
+           |$roleMatch
+           |
+           |RETURN DISTINCT r.name as role,
+           |CASE
+           | WHEN r.name IN $$predefined THEN true
+           | ELSE false
+           |END as isBuiltIn
+           |$userColumns
+           |UNION
+           |MATCH (r:Role) WHERE r.name = 'PUBLIC'
+           |$maybeMatchUsers
+           |RETURN DISTINCT r.name as role, true as isBuiltIn
+           |$userColumns
+        """.stripMargin,
+        VirtualValues.map(Array("predefined"), Array(predefinedRoles)),
+        source = source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
+      )
 
     // CREATE [OR REPLACE] ROLE foo [IF NOT EXISTS] AS COPY OF bar
     case CreateRole(source, roleName) => (context, parameterMapping, securityContext) =>
@@ -535,6 +538,12 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
              |OPTIONAL MATCH (u:User)-[:HAS_ROLE]->(r:Role) WHERE u.name = $$grantee WITH r, u
              |$privilegeMatch
              |WITH g, p, res, d, $segmentColumn AS segment, r, u ORDER BY d.name, u.name, r.name, segment
+             |$returnColumns, u.name AS user
+             |UNION
+             |MATCH (u:User) WHERE u.name = $$grantee
+             |OPTIONAL MATCH (r:Role) WHERE r.name = 'PUBLIC' WITH u, r
+             |$privilegeMatch
+             |WITH g, p, res, d, $segmentColumn AS segment, r, u ORDER BY d.name, r.name, segment
              |$returnColumns, u.name AS user
              |$orderBy
           """.stripMargin

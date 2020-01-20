@@ -1378,7 +1378,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       // WHEN
       executeOnSystem("neo4j", "neo4j", "CREATE USER bob SET PASSWORD 'builder' CHANGE NOT REQUIRED")
       // THEN
-    } should have message PERMISSION_DENIED
+    } should have message String.format(PERMISSION_DENIED + PASSWORD_CHANGE_REQUIRED_MESSAGE)
 
     // THEN
     execute("SHOW USERS").toSet should be(Set(neo4jUser))

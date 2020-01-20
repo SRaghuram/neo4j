@@ -27,6 +27,8 @@ import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
 import org.neo4j.server.security.auth.ShiroAuthenticationInfo;
 
 import static com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny.GRANT;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -94,7 +96,7 @@ class EnterpriseLoginContextTest
     {
         // Given
         when( realm.getAuthorizationInfoSnapshot( any() ) ).thenReturn( new SimpleAuthorizationInfo( Collections.singleton( PredefinedRoles.ADMIN ) ) );
-        when( realm.getPrivilegesForRoles( Collections.singleton( PredefinedRoles.ADMIN ) ) ).thenReturn(
+        when( realm.getPrivilegesForRoles( Set.of( PredefinedRoles.PUBLIC, PredefinedRoles.ADMIN ) ) ).thenReturn(
                 Set.of( accessPrivilege, traverseNodePrivilege, traverseRelPrivilege, readNodePrivilege, readRelPrivilege, writeNodePrivilege,
                         writeRelPrivilege, tokenPrivilege, schemaPrivilege, adminPrivilege ) );
         EnterpriseLoginContext loginContext = login();
@@ -113,7 +115,7 @@ class EnterpriseLoginContextTest
     {
         // Given
         when( realm.getAuthorizationInfoSnapshot( any() ) ).thenReturn( new SimpleAuthorizationInfo( Collections.singleton( PredefinedRoles.ARCHITECT ) ) );
-        when( realm.getPrivilegesForRoles( Collections.singleton( PredefinedRoles.ARCHITECT ) ) ).thenReturn(
+        when( realm.getPrivilegesForRoles( Set.of( PredefinedRoles.PUBLIC, PredefinedRoles.ARCHITECT ) ) ).thenReturn(
                 Set.of( accessPrivilege, traverseNodePrivilege, traverseRelPrivilege, readNodePrivilege, readRelPrivilege, writeNodePrivilege,
                         writeRelPrivilege, tokenPrivilege, schemaPrivilege ) );
         EnterpriseLoginContext loginContext = login();
@@ -131,7 +133,7 @@ class EnterpriseLoginContextTest
     {
         // Given
         when( realm.getAuthorizationInfoSnapshot( any() ) ).thenReturn( new SimpleAuthorizationInfo( Collections.singleton( PredefinedRoles.PUBLISHER ) ) );
-        when( realm.getPrivilegesForRoles( Collections.singleton( PredefinedRoles.PUBLISHER ) ) ).thenReturn(
+        when( realm.getPrivilegesForRoles( Set.of( PredefinedRoles.PUBLIC, PredefinedRoles.PUBLISHER ) ) ).thenReturn(
                 Set.of( accessPrivilege, traverseNodePrivilege, traverseRelPrivilege, readNodePrivilege, readRelPrivilege, writeNodePrivilege,
                         writeRelPrivilege, tokenPrivilege ) );
         EnterpriseLoginContext loginContext = login();
@@ -149,7 +151,7 @@ class EnterpriseLoginContextTest
     {
         // Given
         when( realm.getAuthorizationInfoSnapshot( any() ) ).thenReturn( new SimpleAuthorizationInfo( Collections.singleton( PredefinedRoles.READER ) ) );
-        when( realm.getPrivilegesForRoles( Collections.singleton( PredefinedRoles.READER ) ) ).thenReturn(
+        when( realm.getPrivilegesForRoles( Set.of( PredefinedRoles.PUBLIC, PredefinedRoles.READER ) ) ).thenReturn(
                 Set.of( accessPrivilege, traverseNodePrivilege, traverseRelPrivilege, readNodePrivilege, readRelPrivilege ) );
         EnterpriseLoginContext loginContext = login();
 
@@ -159,6 +161,17 @@ class EnterpriseLoginContextTest
         // Then
         assertFalse( securityContext.mode().allowsWrites() );
         assertFalse( securityContext.mode().allowsSchemaWrites() );
+    }
+
+    @Test
+    void usersShouldHavePublicRole() throws Throwable
+    {
+        // Given
+        when( realm.getAuthorizationInfoSnapshot( any() ) ).thenReturn( new SimpleAuthorizationInfo( Collections.emptySet() ) );
+        EnterpriseLoginContext loginContext = login();
+
+        assertThat(loginContext.roles(), equalTo(Collections.singleton( PredefinedRoles.PUBLIC )));
+        // When
     }
 
     @Test
@@ -176,7 +189,7 @@ class EnterpriseLoginContextTest
     {
         // Given
         when( realm.getAuthorizationInfoSnapshot( any() ) ).thenReturn( new SimpleAuthorizationInfo( Collections.singleton( PredefinedRoles.ARCHITECT ) ) );
-        when( realm.getPrivilegesForRoles( Collections.singleton( PredefinedRoles.ARCHITECT ) ) ).thenReturn(
+        when( realm.getPrivilegesForRoles( Set.of( PredefinedRoles.PUBLIC, PredefinedRoles.ARCHITECT ) ) ).thenReturn(
                 Set.of( accessPrivilege, traverseNodePrivilege, traverseRelPrivilege, readNodePrivilege, readRelPrivilege, writeNodePrivilege,
                         writeRelPrivilege, tokenPrivilege, schemaPrivilege ) );
         EnterpriseLoginContext loginContext = login();

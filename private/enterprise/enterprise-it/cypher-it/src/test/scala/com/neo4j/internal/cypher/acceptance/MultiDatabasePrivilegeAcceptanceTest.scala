@@ -7,6 +7,7 @@ package com.neo4j.internal.cypher.acceptance
 
 import java.lang.Boolean.TRUE
 
+import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC
 import org.neo4j.configuration.GraphDatabaseSettings.{DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME, default_database}
 import org.neo4j.configuration.{Config, GraphDatabaseSettings}
 import org.neo4j.graphdb.QueryExecutionException
@@ -648,10 +649,22 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
   // ACCESS DATABASE
 
+  test("should be able to access default database with grant privilege from PUBLIC") {
+    // GIVEN
+    setup()
+    setupUserWithCustomRole(access = false)
+    selectDatabase(DEFAULT_DATABASE_NAME)
+    execute("CREATE ()")
+
+    // WHEN .. THEN
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN n") should be(0)
+  }
+
   test("should be able to access database with grant privilege") {
     // GIVEN
     setup()
     setupUserWithCustomRole(access = false)
+    clearPublicRole()
     selectDatabase(DEFAULT_DATABASE_NAME)
     execute("CREATE ()")
 
@@ -674,18 +687,19 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     // THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnDefault("joe", "soap", "MATCH (n) RETURN n")
-    } should have message "Database access is not allowed for user 'joe' with roles [custom]."
+    } should have message "Database access is not allowed for user 'joe' with roles [PUBLIC, custom]."
   }
 
   test("should not be able to access database without privilege") {
     // GIVEN
     setup()
+    clearPublicRole()
     setupUserWithCustomRole(access = false)
 
     // THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnDefault("joe", "soap", "MATCH (n) RETURN n")
-    } should have message "Database access is not allowed for user 'joe' with roles [custom]."
+    } should have message "Database access is not allowed for user 'joe' with roles [PUBLIC, custom]."
   }
 
   test("should have access database privilege on new default after switch of default database") {
@@ -712,7 +726,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
     the[AuthorizationViolationException] thrownBy {
       executeOn(newDefaultDatabase, "alice", "abc", "MATCH (n) RETURN n")
-    } should have message "Database access is not allowed for user 'alice' with roles [role]."
+    } should have message "Database access is not allowed for user 'alice' with roles [PUBLIC, role]."
 
     // WHEN: switch default database
     config.set(default_database, newDefaultDatabase)
@@ -727,7 +741,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     // WHEN & THEN: accessing the databases
     the[AuthorizationViolationException] thrownBy {
       executeOn(DEFAULT_DATABASE_NAME, "alice", "abc", "MATCH (n) RETURN n")
-    } should have message "Database access is not allowed for user 'alice' with roles [role]."
+    } should have message "Database access is not allowed for user 'alice' with roles [PUBLIC, role]."
 
     executeOn(newDefaultDatabase, "alice", "abc", "MATCH (n) RETURN n") should be(0)
   }
@@ -747,7 +761,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
         execute("GRANT ROLE custom TO Alice")
 
         // THEN
-        testMethod("custom", 3)
+        testMethod("custom", 4)
       }
 
       test(s"Test admin $partialName") {
@@ -757,12 +771,13 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
         execute("GRANT ROLE admin TO Alice")
 
         // THEN
-        testMethod("admin", 2)
+        testMethod("admin", 3)
       }
   }
 
   private def testAdminWithoutAllRemovablePrivileges(role: String, populatedRoles: Int): Unit = {
     // WHEN
+    clearPublicRole()
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE DATABASE foo")
     execute(s"REVOKE TRAVERSE ON GRAPH * FROM $role")
@@ -777,25 +792,25 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     // create tokens
     the[QueryExecutionException] thrownBy {
       executeOnDefault("Alice", "secret", "CALL db.createLabel('Label')")
-    } should have message s"'create_label' operations are not allowed for user 'Alice' with roles [$role] restricted to TOKEN_WRITE."
+    } should have message s"'create_label' operations are not allowed for user 'Alice' with roles [PUBLIC, $role] restricted to TOKEN_WRITE."
 
     // index management
     execute("CALL db.createLabel('Label')")
     execute("CALL db.createProperty('prop')")
     the[AuthorizationViolationException] thrownBy {
       executeOnDefault("Alice", "secret", "CREATE INDEX FOR (n:Label) ON (n.prop)")
-    } should have message s"Schema operation 'create_index' is not allowed for user 'Alice' with roles [$role]."
+    } should have message s"Schema operation 'create_index' is not allowed for user 'Alice' with roles [PUBLIC, $role]."
 
     // constraint management
     execute("CREATE CONSTRAINT my_constraint ON (n:Label) ASSERT exists(n.prop)")
     the[AuthorizationViolationException] thrownBy {
       executeOnDefault("Alice", "secret", "DROP CONSTRAINT my_constraint")
-    } should have message s"Schema operation 'drop_constraint' is not allowed for user 'Alice' with roles [$role]."
+    } should have message s"Schema operation 'drop_constraint' is not allowed for user 'Alice' with roles [PUBLIC, $role]."
 
     // write
     the[AuthorizationViolationException] thrownBy {
       executeOnDefault("Alice", "secret", "CREATE (n:Label {prop: 'value'})")
-    } should have message s"Write operations are not allowed for user 'Alice' with roles [$role]."
+    } should have message s"Write operations are not allowed for user 'Alice' with roles [PUBLIC, $role]."
 
     // read/traverse
     execute("CREATE (n:Label {prop: 'value'})")
@@ -839,7 +854,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     // write
     the[AuthorizationViolationException] thrownBy {
       executeOnDefault("Alice", "secret", "CREATE (n:Label {prop: 'value'})")
-    } should have message s"Write operations are not allowed for user 'Alice' with roles [$role]."
+    } should have message s"Write operations are not allowed for user 'Alice' with roles [PUBLIC, $role]."
 
     // read/traverse
     execute("CREATE (n:Label {prop: 'value'})")

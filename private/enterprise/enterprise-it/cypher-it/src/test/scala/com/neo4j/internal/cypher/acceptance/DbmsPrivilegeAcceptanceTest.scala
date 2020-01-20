@@ -367,7 +367,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
     // THEN
     executeOnSystem("foo", "bar", "GRANT ROLE role TO foo")
-    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers ++ Set(role("custom").member("foo").map, role("role").member("foo").map))
+    execute("SHOW ROLES WITH USERS").toSet should be(publicRole("foo") ++ defaultRolesWithUsers ++ Set(role("custom").member("foo").map, role("role").member("foo").map))
 
     // WHEN
     execute("REVOKE ROLE role FROM foo")
@@ -412,7 +412,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
     // THEN
     executeOnSystem("foo", "bar", "REVOKE ROLE role FROM foo")
-    execute("SHOW ROLES WITH USERS").toSet should be(defaultRolesWithUsers ++ Set(role("custom").member("foo").map, role("role").noMember().map))
+    execute("SHOW ROLES WITH USERS").toSet should be(publicRole("foo") ++ defaultRolesWithUsers ++ Set(role("custom").member("foo").map, role("role").noMember().map))
 
     // WHEN
     execute("GRANT ROLE role TO foo")

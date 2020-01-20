@@ -16,6 +16,7 @@ import com.neo4j.dbms.EnterpriseSystemGraphInitializer
 import com.neo4j.kernel.enterprise.api.security.EnterpriseAuthManager
 import com.neo4j.server.security.enterprise.auth.InMemoryRoleRepository
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
+import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC
 import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphInitializer
 import org.neo4j.configuration.GraphDatabaseSettings.{DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME}
 import org.neo4j.configuration.{Config, GraphDatabaseSettings}
@@ -42,6 +43,7 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
   val offlineStatus: String = DatabaseStatus.Offline.stringValue()
 
   val defaultRoles: Set[Map[String, Any]] = Set(
+    role(PUBLIC).builtIn().map,
     role(PredefinedRoles.ADMIN).builtIn().map,
     role(PredefinedRoles.ARCHITECT).builtIn().map,
     role(PredefinedRoles.PUBLISHER).builtIn().map,
@@ -50,6 +52,7 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
   )
 
   val defaultRolesWithUsers: Set[Map[String, Any]] = Set(
+    role(PUBLIC).builtIn().member("neo4j").map,
     role(PredefinedRoles.ADMIN).builtIn().member("neo4j").map,
     role(PredefinedRoles.ARCHITECT).builtIn().noMember().map,
     role(PredefinedRoles.PUBLISHER).builtIn().noMember().map,
@@ -58,6 +61,8 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
   )
 
   lazy val defaultRolePrivileges: Set[Map[String, AnyRef]] = Set(
+    access().database("DEFAULT").role("PUBLIC").map,
+
     access().role("reader").map,
     traverse().role("reader").node("*").map,
     traverse().role("reader").relationship("*").map,
@@ -121,7 +126,8 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
   override def databaseConfig(): Map[Setting[_], Object] = Map(GraphDatabaseSettings.auth_enabled -> TRUE)
 
   def user(username: String, roles: Seq[String] = Seq.empty, suspended: Boolean = false, passwordChangeRequired: Boolean = true): Map[String, Any] = {
-    Map("user" -> username, "roles" -> roles, "suspended" -> suspended, "passwordChangeRequired" -> passwordChangeRequired)
+    val rolesWithPublic = roles.sorted :+ PUBLIC
+    Map("user" -> username, "roles" -> rolesWithPublic, "suspended" -> suspended, "passwordChangeRequired" -> passwordChangeRequired)
   }
 
   def db(name: String, status: String = onlineStatus, default: Boolean = false): Map[String, Any] =
@@ -158,6 +164,9 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
   }
 
   def role(roleName: String): RoleMapBuilder = RoleMapBuilder(Map("role" -> roleName, "isBuiltIn" -> false))
+
+  def publicRole(users: String*): Set[Map[String, Any]] =
+    users.map(u => role(PUBLIC).builtIn().member(u).map).toSet
 
   case class PrivilegeMapBuilder(map: Map[String, AnyRef]) {
     def action(action: String) = PrivilegeMapBuilder(map + ("action" -> action))
@@ -319,5 +328,10 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
       new SecureHasher)
     securityGraphInitializer.initializeSecurityGraph()
     selectDatabase(SYSTEM_DATABASE_NAME)
+  }
+
+  def clearPublicRole(): Unit = {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    execute(s"REVOKE ACCESS ON DEFAULT DATABASE FROM $PUBLIC")
   }
 }

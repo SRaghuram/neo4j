@@ -439,7 +439,8 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     execute(s"SHOW USER joe PRIVILEGES").toSet should be(Set(
       access().database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map,
       read().node("*").database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map,
-      traverse().node("*").database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map
+      traverse().node("*").database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map,
+      access().database("DEFAULT").user("joe").role("PUBLIC").map
     ))
 
     // WHEN
@@ -458,11 +459,11 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     // THEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true)))
-    the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name")
-    } should have message "Database access is not allowed for user 'joe' with roles [custom]."
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name") should be(0)
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute(s"SHOW USER joe PRIVILEGES").toSet should be(Set.empty)
+    execute(s"SHOW USER joe PRIVILEGES").toSet should be(Set(
+      access().database("DEFAULT").user("joe").role("PUBLIC").map
+    ))
   }
 
   test("should have access on a created database") {
@@ -500,7 +501,8 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     execute(s"SHOW USER joe PRIVILEGES").toSet should be(Set(
       access().database("foo").user("joe").role("custom").map,
       read().node("*").database("foo").user("joe").role("custom").map,
-      traverse().node("*").database("foo").user("joe").role("custom").map
+      traverse().node("*").database("foo").user("joe").role("custom").map,
+      access().database("DEFAULT").user("joe").role("PUBLIC").map
     ))
     executeOn("foo", "joe", "soap", "MATCH (n) RETURN n.name",
       resultHandler = (row, _) => row.get("n.name") should be("a")) should be(1)
@@ -523,12 +525,14 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     // THEN
     the[AuthorizationViolationException] thrownBy {
       executeOn("foo", "joe", "soap", "MATCH (n) RETURN n.name")
-    } should have message "Database access is not allowed for user 'joe' with roles [custom]."
+    } should have message "Database access is not allowed for user 'joe' with roles [PUBLIC, custom]."
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute(s"SHOW USER joe PRIVILEGES").toSet should be(Set.empty)
+    execute(s"SHOW USER joe PRIVILEGES").toSet should be(Set(
+      access().database("DEFAULT").user("joe").role("PUBLIC").map
+    ))
   }
 
-  test("should have no access on a re-created default database") {
+  test("should have access on a re-created default database") {
     // GIVEN
     setup()
     selectDatabase(DEFAULT_DATABASE_NAME)
@@ -546,7 +550,8 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     execute(s"SHOW USER joe PRIVILEGES").toSet should be(Set(
       access().database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map,
       read().node("*").database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map,
-      traverse().node("*").database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map
+      traverse().node("*").database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map,
+      access().database("DEFAULT").user("joe").role("PUBLIC").map
     ))
     executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name",
       resultHandler = (row, _) => row.get("n.name") should be("a")) should be(1)
@@ -569,11 +574,12 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     // THEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true)))
-    the[AuthorizationViolationException] thrownBy {
-      executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name")
-    } should have message "Database access is not allowed for user 'joe' with roles [custom]."
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name") should be(0)
+
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute(s"SHOW USER joe PRIVILEGES").toSet should be(Set.empty)
+    execute(s"SHOW USER joe PRIVILEGES").toSet should be(Set(
+      access().database("DEFAULT").user("joe").role("PUBLIC").map
+    ))
   }
 
   test("should fail when creating an already existing database") {

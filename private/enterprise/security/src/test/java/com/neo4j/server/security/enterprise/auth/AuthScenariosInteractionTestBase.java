@@ -20,6 +20,7 @@ import org.neo4j.test.DoubleLatch;
 
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ADMIN;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ARCHITECT;
+import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLISHER;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -563,7 +564,7 @@ public abstract class AuthScenariosInteractionTestBase<S> extends ProcedureInter
 
         testFailListUserRoles( subject, "Craig", PERMISSION_DENIED );
         assertSystemCommandSuccess( adminSubject, "CALL dbms.security.listRolesForUser('Craig') YIELD value as roles RETURN roles",
-                r -> assertKeyIs( r, "roles", PUBLISHER ) );
+                r -> assertKeyIs( r, "roles", PUBLISHER, PUBLIC ) );
 
         // TODO previously this was allowed, but there is no equivalent in the DDL that allows this, should really only use showCurrentUser
 //        S craigSubject = neo.login( "Craig", "foo" );
@@ -631,7 +632,7 @@ public abstract class AuthScenariosInteractionTestBase<S> extends ProcedureInter
         assertSystemCommandSuccess( adminSubject, "CALL dbms.security.removeRoleFromUser('" + PUBLISHER + "', 'Henrik')" );
 
         assertFail( henrik, "CALL test.createNode()",
-                "Write operations are not allowed for user 'Henrik' with roles [reader] restricted to TOKEN_WRITE." );
+                "Write operations are not allowed for user 'Henrik' with roles [PUBLIC, reader] restricted to TOKEN_WRITE." );
     }
 
     //---------- change password -----------

@@ -24,6 +24,7 @@ import org.neo4j.test.DoubleLatch;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ADMIN;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ARCHITECT;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.EDITOR;
+import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLISHER;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER;
 import static java.lang.String.format;
@@ -541,7 +542,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
         assertSystemCommandSuccess( adminSubject, format( "CALL dbms.security.deleteRole('%s')", READER ) );
         assertSystemCommandSuccess( adminSubject, format( "CALL dbms.security.deleteRole('%s')", ARCHITECT ) );
 
-        testSuccessfulListRoles( adminSubject, new String[]{ ADMIN, EDITOR, PUBLISHER, EMPTY_ROLE } );
+        testSuccessfulListRoles( adminSubject, new String[]{ ADMIN, EDITOR, PUBLISHER, EMPTY_ROLE, PUBLIC } );
     }
 
     // TODO: Delete this test once the ability to remove the admin role is restored
@@ -617,14 +618,14 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     void shouldReturnUsersWithRoles()
     {
         Map<String,Object> expected = map(
-                "adminSubject", listOf( ADMIN ),
-                "readSubject", listOf( READER ),
-                "schemaSubject", listOf( ARCHITECT ),
-                "writeSubject", listOf( READER, PUBLISHER ),
-                "editorSubject", listOf( EDITOR ),
-                "pwdSubject", listOf(),
-                "noneSubject", listOf(),
-                "neo4j", listOf( ADMIN )
+                "adminSubject", listOf( PUBLIC, ADMIN ),
+                "readSubject", listOf( PUBLIC, READER ),
+                "schemaSubject", listOf( PUBLIC, ARCHITECT ),
+                "writeSubject", listOf( PUBLIC, READER, PUBLISHER ),
+                "editorSubject", listOf( PUBLIC, EDITOR ),
+                "pwdSubject", listOf( PUBLIC ),
+                "noneSubject", listOf( PUBLIC ),
+                "neo4j", listOf( PUBLIC, ADMIN )
         );
         assertDDLCommandSuccess( adminSubject, String.format( "GRANT ROLE %s TO writeSubject", READER ) );
 
@@ -656,14 +657,14 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     {
         assertDDLCommandSuccess( adminSubject, String.format( "GRANT ROLE %s TO writeSubject", READER ) );
         assertSuccess( adminSubject, "CALL dbms.showCurrentUser()",
-                r -> assertKeyIsMap( r, "username", "roles", valueOf( map( "adminSubject", listOf( ADMIN ) ) ) ) );
+                r -> assertKeyIsMap( r, "username", "roles", valueOf( map( "adminSubject", listOf( ADMIN, PUBLIC ) ) ) ) );
         assertSuccess( readSubject, "CALL dbms.showCurrentUser()",
-                r -> assertKeyIsMap( r, "username", "roles", valueOf( map( "readSubject", listOf( READER ) ) ) ) );
+                r -> assertKeyIsMap( r, "username", "roles", valueOf( map( "readSubject", listOf( READER, PUBLIC ) ) ) ) );
         assertSuccess( schemaSubject, "CALL dbms.showCurrentUser()",
-                r -> assertKeyIsMap( r, "username", "roles", valueOf( map( "schemaSubject", listOf( ARCHITECT ) ) ) ) );
+                r -> assertKeyIsMap( r, "username", "roles", valueOf( map( "schemaSubject", listOf( ARCHITECT, PUBLIC ) ) ) ) );
         assertSuccess( writeSubject, "CALL dbms.showCurrentUser()",
                 r -> assertKeyIsMap( r, "username", "roles",
-                        valueOf( map( "writeSubject", listOf( READER, PUBLISHER ) ) ) ) );
+                        valueOf( map( "writeSubject", listOf( READER, PUBLISHER, PUBLIC ) ) ) ) );
         assertFail( noneSubject, "CALL dbms.showCurrentUser()", ACCESS_DENIED );
     }
 
@@ -689,6 +690,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     void shouldReturnRolesWithUsers()
     {
         Map<String,Object> expected = map(
+                PUBLIC, listOf( initialUsers ),
                 ADMIN, listOf( "adminSubject", "neo4j" ),
                 READER, listOf( "readSubject" ),
                 ARCHITECT, listOf( "schemaSubject" ),
@@ -716,17 +718,18 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     {
         assertSystemCommandSuccess( adminSubject,
                 "CALL dbms.security.listRolesForUser('adminSubject') YIELD value as roles RETURN roles",
-                r -> assertKeyIs( r, "roles", ADMIN ) );
+                r -> assertKeyIs( r, "roles", ADMIN, PUBLIC ) );
         assertSystemCommandSuccess( adminSubject,
                 "CALL dbms.security.listRolesForUser('readSubject') YIELD value as roles RETURN roles",
-                r -> assertKeyIs( r, "roles", READER ) );
+                r -> assertKeyIs( r, "roles", READER, PUBLIC ) );
     }
 
     @Test
-    void shouldListNoRolesForUserWithNoRoles()
+    void shouldListOnlyPublicRoleForUserWithNoRoles()
     {
         assertSystemCommandSuccess( adminSubject, "CALL dbms.security.createUser('Henrik', 'bar', false)" );
-        assertSystemCommandSuccess( adminSubject, "CALL dbms.security.listRolesForUser('Henrik') YIELD value as roles RETURN roles" );
+        assertSystemCommandSuccess( adminSubject, "CALL dbms.security.listRolesForUser('Henrik') YIELD value as roles RETURN roles",
+                                    r -> assertKeyIs( r, "roles", PUBLIC ) );
     }
 
     @Test
@@ -808,14 +811,14 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
 
         assertFail( noneSubject, "CALL test.numNodes", ACCESS_DENIED );
         assertFail( readSubject, "CALL test.allowedWriteProcedure",
-                "Write operations are not allowed for user 'readSubject' with roles [reader] restricted to TOKEN_WRITE." );
+                "Write operations are not allowed for user 'readSubject' with roles [PUBLIC, reader] restricted to TOKEN_WRITE." );
         assertFail( writeSubject, "CALL test.allowedSchemaProcedure",
-                "Schema operations are not allowed for user 'writeSubject' with roles [publisher]." );
+                "Schema operations are not allowed for user 'writeSubject' with roles [PUBLIC, publisher]." );
         assertFail( mats, "CALL test.numNodes",
-                "Database access is not allowed for user 'mats' with roles [failer]." );
+                "Database access is not allowed for user 'mats' with roles [PUBLIC, failer]." );
         // UDFs
         assertFail( mats, "RETURN test.allowedFunction1()",
-                "Database access is not allowed for user 'mats' with roles [failer]." );
+                "Database access is not allowed for user 'mats' with roles [PUBLIC, failer]." );
     }
 
     @Test

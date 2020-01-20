@@ -60,6 +60,7 @@ import org.neo4j.values.virtual.MapValue;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ADMIN;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ARCHITECT;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.EDITOR;
+import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLISHER;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER;
 import static java.lang.String.format;
@@ -117,7 +118,7 @@ public abstract class ProcedureInteractionTestBase<S>
 
     String[] initialUsers = {"adminSubject", "readSubject", "schemaSubject",
             "writeSubject", "editorSubject", "pwdSubject", "noneSubject", "neo4j"};
-    String[] initialRoles = {ADMIN, ARCHITECT, PUBLISHER, EDITOR, READER, EMPTY_ROLE};
+    String[] initialRoles = {ADMIN, ARCHITECT, PUBLISHER, EDITOR, READER, EMPTY_ROLE, PUBLIC};
 
     @Inject
     public TestDirectory testDirectory;
@@ -167,6 +168,8 @@ public abstract class ProcedureInteractionTestBase<S>
         grantRoleToUser( PUBLISHER, "writeSubject" );
         grantRoleToUser( EDITOR, "editorSubject" );
         grantRoleToUser( READER, "readSubject" );
+
+        neo.clearPublicRole();
 
         noneSubject = neo.login( "noneSubject", "abc" );
         pwdSubject = neo.login( "pwdSubject", "abc" );
@@ -676,7 +679,7 @@ public abstract class ProcedureInteractionTestBase<S>
             {
                 ListValue value = (ListValue) objectValue;
                 ListValue expectedValues = (ListValue) expected.get( key.stringValue() );
-                assertEquals( "sizes", value.size(), expectedValues.size() );
+                assertEquals( "sizes", expectedValues.size(), value.size() );
                 assertThat( Arrays.asList( value.asArray() ), containsInAnyOrder( expectedValues.asArray() ) );
             }
             else

@@ -48,7 +48,6 @@ import static com.neo4j.server.security.enterprise.auth.integration.bolt.DriverA
 import static com.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.assertAuthFail;
 import static com.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.assertEmptyRead;
 import static com.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.assertProcSucceeds;
-import static com.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.assertReadFails;
 import static com.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.assertReadSucceeds;
 import static com.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.assertWriteFails;
 import static com.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.assertWriteSucceeds;
@@ -392,13 +391,13 @@ public class AuthIT extends EnterpriseLdapAuthTestBase
     }
 
     @Test
-    public void shouldGetCorrectAuthorizationNoPermission()
+    public void shouldGetCorrectAuthorizationNoExplicitRoles()
     {
         setup();
         try ( Driver driver = connectDriver( boltUri, NONE_USER, password ) )
         {
-            assertReadFails( driver, ACCESS_DENIED );
-            assertWriteFails( driver, ACCESS_DENIED );
+            assertEmptyRead( driver );
+            assertWriteFails( driver );
         }
     }
 

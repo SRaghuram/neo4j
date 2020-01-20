@@ -42,6 +42,7 @@ import org.neo4j.test.rule.TestDirectory;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -562,8 +563,8 @@ class AdministrationCommandsOnClusterIT
         followerTx( ( sys, tx ) ->
         {
             var result = tx.execute( "SHOW POPULATED ROLES" ).columnAs( "role" );
-            assertEquals( PredefinedRoles.ADMIN, result.next() );
-            assertFalse( result.hasNext() );
+            Set<String> roles = result.stream().map( Object::toString ).collect( Collectors.toSet() );
+            assertThat( roles, containsInAnyOrder( PredefinedRoles.PUBLIC, PredefinedRoles.ADMIN ) );
             tx.commit();
         } );
 
@@ -571,8 +572,8 @@ class AdministrationCommandsOnClusterIT
         leaderTx( ( sys, tx ) ->
         {
             var result = tx.execute( "SHOW POPULATED ROLES" ).columnAs( "role" );
-            assertEquals( PredefinedRoles.ADMIN, result.next() );
-            assertFalse( result.hasNext() );
+            Set<String> roles = result.stream().map( Object::toString ).collect( Collectors.toSet() );
+            assertThat( roles, containsInAnyOrder( PredefinedRoles.PUBLIC, PredefinedRoles.ADMIN ) );
             tx.commit();
         } );
     }
@@ -596,12 +597,10 @@ class AdministrationCommandsOnClusterIT
         leaderTx( ( sys, tx ) ->
         {
             var result = tx.execute( "SHOW ROLES" ).columnAs( "role" );
-            assertEquals(
-                    Set.of( PredefinedRoles.ADMIN, PredefinedRoles.ARCHITECT, PredefinedRoles.PUBLISHER,
-                            PredefinedRoles.EDITOR, PredefinedRoles.READER ),
-                    Set.of( result.next().toString(), result.next().toString(), result.next().toString(),
-                            result.next().toString(), result.next().toString() ) );
-            assertFalse( result.hasNext() );
+            Set<String> roles = result.stream().map( Object::toString ).collect( Collectors.toSet() );
+            assertThat( roles, containsInAnyOrder(
+                    PredefinedRoles.PUBLIC, PredefinedRoles.ADMIN, PredefinedRoles.ARCHITECT,
+                    PredefinedRoles.PUBLISHER, PredefinedRoles.EDITOR, PredefinedRoles.READER ) );
             tx.commit();
         } );
 
@@ -611,12 +610,10 @@ class AdministrationCommandsOnClusterIT
             tx.execute( "CREATE ROLE " + roleName );
 
             var result = tx.execute( "SHOW ROLES" ).columnAs( "role" );
-            assertEquals(
-                    Set.of( PredefinedRoles.ADMIN, PredefinedRoles.ARCHITECT, PredefinedRoles.PUBLISHER,
-                            PredefinedRoles.EDITOR, PredefinedRoles.READER, roleName ),
-                    Set.of( result.next().toString(), result.next().toString(), result.next().toString(),
-                            result.next().toString(), result.next().toString(), result.next().toString() ) );
-            assertFalse( result.hasNext() );
+            Set<String> roles = result.stream().map( Object::toString ).collect( Collectors.toSet() );
+            assertThat( roles, containsInAnyOrder(
+                    PredefinedRoles.PUBLIC, PredefinedRoles.ADMIN, PredefinedRoles.ARCHITECT,
+                    PredefinedRoles.PUBLISHER, PredefinedRoles.EDITOR, PredefinedRoles.READER, roleName ) );
             tx.commit();
         } );
     }
@@ -629,11 +626,10 @@ class AdministrationCommandsOnClusterIT
             tx.execute( "CREATE ROLE " + roleName );
 
             var result = tx.execute( "SHOW ROLES" ).columnAs( "role" );
-            assertEquals(
-                    Set.of( PredefinedRoles.ADMIN, PredefinedRoles.ARCHITECT, PredefinedRoles.PUBLISHER,
-                            PredefinedRoles.EDITOR, PredefinedRoles.READER, roleName ),
-                    Set.of( result.next().toString(), result.next().toString(), result.next().toString(),
-                            result.next().toString(), result.next().toString(), result.next().toString() ) );
+            Set<String> roles = result.stream().map( Object::toString ).collect( Collectors.toSet() );
+            assertThat( roles, containsInAnyOrder(
+                    PredefinedRoles.PUBLIC, PredefinedRoles.ADMIN, PredefinedRoles.ARCHITECT,
+                    PredefinedRoles.PUBLISHER, PredefinedRoles.EDITOR, PredefinedRoles.READER, roleName ) );
             assertFalse( result.hasNext() );
             tx.commit();
         } );
@@ -655,12 +651,10 @@ class AdministrationCommandsOnClusterIT
         leaderTx( ( sys, tx ) ->
         {
             var result = tx.execute( "SHOW ROLES" ).columnAs( "role" );
-            assertEquals(
-                    Set.of( PredefinedRoles.ADMIN, PredefinedRoles.ARCHITECT, PredefinedRoles.PUBLISHER,
-                            PredefinedRoles.EDITOR, PredefinedRoles.READER, roleName ),
-                    Set.of( result.next().toString(), result.next().toString(), result.next().toString(),
-                            result.next().toString(), result.next().toString(), result.next().toString() ) );
-            assertFalse( result.hasNext() );
+            Set<String> roles = result.stream().map( Object::toString ).collect( Collectors.toSet() );
+            assertThat( roles, containsInAnyOrder(
+                    PredefinedRoles.PUBLIC, PredefinedRoles.ADMIN, PredefinedRoles.ARCHITECT,
+                    PredefinedRoles.PUBLISHER, PredefinedRoles.EDITOR, PredefinedRoles.READER, roleName ) );
             tx.commit();
         } );
 
@@ -670,12 +664,10 @@ class AdministrationCommandsOnClusterIT
             tx.execute( "CREATE ROLE " + roleName2 + " AS COPY OF " + roleName );
 
             var result = tx.execute( "SHOW ROLES" ).columnAs( "role" );
-            assertEquals(
-                    Set.of( PredefinedRoles.ADMIN, PredefinedRoles.ARCHITECT, PredefinedRoles.PUBLISHER,
-                            PredefinedRoles.EDITOR, PredefinedRoles.READER, roleName, roleName2 ),
-                    Set.of( result.next().toString(), result.next().toString(), result.next().toString(),
-                            result.next().toString(), result.next().toString(), result.next().toString(), result.next().toString() ) );
-            assertFalse( result.hasNext() );
+            Set<String> roles = result.stream().map( Object::toString ).collect( Collectors.toSet() );
+            assertThat( roles, containsInAnyOrder(
+                    PredefinedRoles.PUBLIC, PredefinedRoles.ADMIN, PredefinedRoles.ARCHITECT,
+                    PredefinedRoles.PUBLISHER, PredefinedRoles.EDITOR, PredefinedRoles.READER, roleName, roleName2 ) );
             tx.commit();
         } );
     }
@@ -699,12 +691,10 @@ class AdministrationCommandsOnClusterIT
         leaderTx( ( sys, tx ) ->
         {
             var result = tx.execute( "SHOW ROLES" ).columnAs( "role" );
-            assertEquals(
-                    Set.of( PredefinedRoles.ADMIN, PredefinedRoles.ARCHITECT, PredefinedRoles.PUBLISHER,
-                            PredefinedRoles.EDITOR, PredefinedRoles.READER ),
-                    Set.of( result.next().toString(), result.next().toString(), result.next().toString(),
-                            result.next().toString(), result.next().toString() ) );
-            assertFalse( result.hasNext() );
+            Set<String> roles = result.stream().map( Object::toString ).collect( Collectors.toSet() );
+            assertThat( roles, containsInAnyOrder(
+                    PredefinedRoles.PUBLIC, PredefinedRoles.ADMIN, PredefinedRoles.ARCHITECT,
+                    PredefinedRoles.PUBLISHER, PredefinedRoles.EDITOR, PredefinedRoles.READER ) );
             tx.commit();
         } );
 
@@ -714,12 +704,10 @@ class AdministrationCommandsOnClusterIT
             tx.execute( "CREATE ROLE " + roleName + " IF NOT EXISTS" );
 
             var result = tx.execute( "SHOW ROLES" ).columnAs( "role" );
-            assertEquals(
-                    Set.of( PredefinedRoles.ADMIN, PredefinedRoles.ARCHITECT, PredefinedRoles.PUBLISHER,
-                            PredefinedRoles.EDITOR, PredefinedRoles.READER, roleName ),
-                    Set.of( result.next().toString(), result.next().toString(), result.next().toString(),
-                            result.next().toString(), result.next().toString(), result.next().toString() ) );
-            assertFalse( result.hasNext() );
+            Set<String> roles = result.stream().map( Object::toString ).collect( Collectors.toSet() );
+            assertThat( roles, containsInAnyOrder(
+                    PredefinedRoles.PUBLIC, PredefinedRoles.ADMIN, PredefinedRoles.ARCHITECT,
+                    PredefinedRoles.PUBLISHER, PredefinedRoles.EDITOR, PredefinedRoles.READER, roleName ) );
             tx.commit();
         } );
     }
@@ -734,7 +722,8 @@ class AdministrationCommandsOnClusterIT
             tx.execute( "GRANT ROLE " + roleName + " TO " + userName );
 
             var result = tx.execute( "SHOW POPULATED ROLES" ).columnAs( "role" );
-            assertEquals( Set.of( PredefinedRoles.ADMIN, roleName ), Set.of( result.next().toString(), result.next().toString() ) );
+            Set<String> roles = result.stream().map( Object::toString ).collect( Collectors.toSet() );
+            assertThat( roles, containsInAnyOrder( PredefinedRoles.PUBLIC, PredefinedRoles.ADMIN, roleName ) );
             assertFalse( result.hasNext() );
             tx.commit();
         } );
@@ -756,8 +745,8 @@ class AdministrationCommandsOnClusterIT
         leaderTx( ( sys, tx ) ->
         {
             var result = tx.execute( "SHOW POPULATED ROLES" ).columnAs( "role" );
-            assertEquals( Set.of( PredefinedRoles.ADMIN, roleName ), Set.of( result.next().toString(), result.next().toString() ) );
-            assertFalse( result.hasNext() );
+            Set<String> roles = result.stream().map( Object::toString ).collect( Collectors.toSet() );
+            assertThat( roles, containsInAnyOrder( PredefinedRoles.PUBLIC, PredefinedRoles.ADMIN, roleName ) );
             tx.commit();
         } );
 
@@ -768,8 +757,8 @@ class AdministrationCommandsOnClusterIT
             tx.execute( "CREATE OR REPLACE ROLE " + roleName );
 
             var result = tx.execute( "SHOW POPULATED ROLES" ).columnAs( "role" );
-            assertEquals( PredefinedRoles.ADMIN, result.next() );
-            assertFalse( result.hasNext() );
+            Set<String> roles = result.stream().map( Object::toString ).collect( Collectors.toSet() );
+            assertThat( roles, containsInAnyOrder( PredefinedRoles.PUBLIC, PredefinedRoles.ADMIN ) );
             tx.commit();
         } );
     }
@@ -813,12 +802,10 @@ class AdministrationCommandsOnClusterIT
             tx.execute( "CREATE ROLE " + roleName );
 
             var result = tx.execute( "SHOW ROLES" ).columnAs( "role" );
-            assertEquals(
-                    Set.of( PredefinedRoles.ADMIN, PredefinedRoles.ARCHITECT, PredefinedRoles.PUBLISHER,
-                            PredefinedRoles.EDITOR, PredefinedRoles.READER, roleName ),
-                    Set.of( result.next().toString(), result.next().toString(), result.next().toString(),
-                            result.next().toString(), result.next().toString(), result.next().toString() ) );
-            assertFalse( result.hasNext() );
+            Set<String> roles = result.stream().map( Object::toString ).collect( Collectors.toSet() );
+            assertThat( roles, containsInAnyOrder(
+                    PredefinedRoles.PUBLIC, PredefinedRoles.ADMIN, PredefinedRoles.ARCHITECT,
+                    PredefinedRoles.PUBLISHER, PredefinedRoles.EDITOR, PredefinedRoles.READER, roleName ) );
             tx.commit();
         } );
 
@@ -838,12 +825,10 @@ class AdministrationCommandsOnClusterIT
         leaderTx( ( sys, tx ) ->
         {
             var result = tx.execute( "SHOW ROLES" ).columnAs( "role" );
-            assertEquals(
-                    Set.of( PredefinedRoles.ADMIN, PredefinedRoles.ARCHITECT, PredefinedRoles.PUBLISHER,
-                            PredefinedRoles.EDITOR, PredefinedRoles.READER, roleName ),
-                    Set.of( result.next().toString(), result.next().toString(), result.next().toString(),
-                            result.next().toString(), result.next().toString(), result.next().toString() ) );
-            assertFalse( result.hasNext() );
+            Set<String> roles = result.stream().map( Object::toString ).collect( Collectors.toSet() );
+            assertThat( roles, containsInAnyOrder(
+                    PredefinedRoles.PUBLIC, PredefinedRoles.ADMIN, PredefinedRoles.ARCHITECT,
+                    PredefinedRoles.PUBLISHER, PredefinedRoles.EDITOR, PredefinedRoles.READER, roleName ) );
             tx.commit();
         } );
 
@@ -853,12 +838,10 @@ class AdministrationCommandsOnClusterIT
             tx.execute( "DROP ROLE " + roleName + " IF EXISTS" );
 
             var result = tx.execute( "SHOW ROLES" ).columnAs( "role" );
-            assertEquals(
-                    Set.of( PredefinedRoles.ADMIN, PredefinedRoles.ARCHITECT, PredefinedRoles.PUBLISHER,
-                            PredefinedRoles.EDITOR, PredefinedRoles.READER ),
-                    Set.of( result.next().toString(), result.next().toString(), result.next().toString(),
-                            result.next().toString(), result.next().toString() ) );
-            assertFalse( result.hasNext() );
+            Set<String> roles = result.stream().map( Object::toString ).collect( Collectors.toSet() );
+            assertThat( roles, containsInAnyOrder(
+                    PredefinedRoles.PUBLIC, PredefinedRoles.ADMIN, PredefinedRoles.ARCHITECT,
+                    PredefinedRoles.PUBLISHER, PredefinedRoles.EDITOR, PredefinedRoles.READER ) );
             tx.commit();
         } );
     }
@@ -889,8 +872,8 @@ class AdministrationCommandsOnClusterIT
         leaderTx( ( sys, tx ) ->
         {
             var result = tx.execute( "SHOW POPULATED ROLES" ).columnAs( "role" );
-            assertEquals( PredefinedRoles.ADMIN, result.next() );
-            assertFalse( result.hasNext() );
+            Set<String> roles = result.stream().map( Object::toString ).collect( Collectors.toSet() );
+            assertThat( roles, containsInAnyOrder( PredefinedRoles.PUBLIC, PredefinedRoles.ADMIN ) );
             tx.commit();
         } );
 
@@ -900,8 +883,8 @@ class AdministrationCommandsOnClusterIT
             tx.execute( "GRANT ROLE " + roleName + " TO " + userName );
 
             var result = tx.execute( "SHOW POPULATED ROLES" ).columnAs( "role" );
-            assertEquals( Set.of( PredefinedRoles.ADMIN, roleName ), Set.of( result.next().toString(), result.next().toString() ) );
-            assertFalse( result.hasNext() );
+            Set<String> roles = result.stream().map( Object::toString ).collect( Collectors.toSet() );
+            assertThat( roles, containsInAnyOrder( PredefinedRoles.PUBLIC, PredefinedRoles.ADMIN, roleName ) );
             tx.commit();
         } );
     }
@@ -933,8 +916,8 @@ class AdministrationCommandsOnClusterIT
         leaderTx( ( sys, tx ) ->
         {
             var result = tx.execute( "SHOW POPULATED ROLES" ).columnAs( "role" );
-            assertEquals( Set.of( PredefinedRoles.ADMIN, roleName ), Set.of( result.next().toString(), result.next().toString() ) );
-            assertFalse( result.hasNext() );
+            Set<String> roles = result.stream().map( Object::toString ).collect( Collectors.toSet() );
+            assertThat( roles, containsInAnyOrder( PredefinedRoles.PUBLIC, PredefinedRoles.ADMIN, roleName ) );
             tx.commit();
         } );
 
@@ -944,8 +927,8 @@ class AdministrationCommandsOnClusterIT
             tx.execute( "REVOKE ROLE " + roleName + " FROM " + userName );
 
             var result = tx.execute( "SHOW POPULATED ROLES" ).columnAs( "role" );
-            assertEquals( PredefinedRoles.ADMIN, result.next().toString() );
-            assertFalse( result.hasNext() );
+            Set<String> roles = result.stream().map( Object::toString ).collect( Collectors.toSet() );
+            assertThat( roles, containsInAnyOrder( PredefinedRoles.PUBLIC, PredefinedRoles.ADMIN ) );
             tx.commit();
         } );
     }

@@ -93,38 +93,20 @@ class DriverAuthHelper
         }
     }
 
+    static void assertEmptyRead( String uri, String username, String password )
+    {
+        try ( Driver driver = connectDriver( uri, username, password ) )
+        {
+            assertEmptyRead( driver );
+        }
+    }
+
     static void assertEmptyRead( Driver driver )
     {
         try ( Session session = driver.session() )
         {
             Value single = session.run( "MATCH (n) RETURN count(n)" ).single().get( 0 );
             assertThat( single.asLong(), equalTo( 0L ) );
-        }
-    }
-
-    static void assertReadFails( String uri, String username, String password, String errorMessage )
-    {
-        try ( Driver driver = connectDriver( uri, username, password ) )
-        {
-            assertReadFails( driver, errorMessage );
-        }
-    }
-
-    static void assertReadFails( Driver driver )
-    {
-        assertReadFails( driver, "Read operations are not allowed for user " );
-    }
-
-    static void assertReadFails( Driver driver, String errorMessage )
-    {
-        try ( Session session = driver.session() )
-        {
-            session.run( "MATCH (n) RETURN count(n)" ).single().get( 0 );
-            fail( "Should not be allowed read operation" );
-        }
-        catch ( ClientException e )
-        {
-            assertThat( e.getMessage(), containsString( errorMessage ) );
         }
     }
 

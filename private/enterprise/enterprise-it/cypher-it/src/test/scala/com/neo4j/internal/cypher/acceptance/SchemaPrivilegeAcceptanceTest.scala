@@ -866,7 +866,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnDefault("joe", "soap", "CREATE INDEX FOR (u:User) ON (u.name)")
-    } should have message "'create_label' operations are not allowed for user 'joe' with roles [custom]."
+    } should have message "'create_label' operations are not allowed for user 'joe' with roles [PUBLIC, custom]."
 
     // THEN
     assert(graph.getMaybeIndex("User", Seq("name")).isEmpty)
@@ -894,7 +894,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnDefault("joe", "soap", "CREATE INDEX FOR (u:User) ON (u.name)")
-    } should have message "Schema operations are not allowed for user 'joe' with roles [custom]."
+    } should have message "Schema operations are not allowed for user 'joe' with roles [PUBLIC, custom]."
   }
 
   test("Should not allow index create for normal user with only index drop privilege") {
@@ -907,7 +907,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnDefault("joe", "soap", "CREATE INDEX FOR (u:User) ON (u.name)")
-    } should have message "Schema operation 'create_index' is not allowed for user 'joe' with roles [custom]."
+    } should have message "Schema operation 'create_index' is not allowed for user 'joe' with roles [PUBLIC, custom]."
   }
 
   test("Should not allow index drop for normal user with only index create privilege") {
@@ -925,7 +925,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnDefault("joe", "soap", "DROP INDEX my_index")
-    } should have message "Schema operation 'drop_index' is not allowed for user 'joe' with roles [custom]."
+    } should have message "Schema operation 'drop_index' is not allowed for user 'joe' with roles [PUBLIC, custom]."
   }
 
   test("Should allow index creation for normal user with index create privilege") {
@@ -1016,7 +1016,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
       executeOn("foo", "joe", "soap", "CREATE INDEX FOR (u:User) ON (u.name)")
-    } should have message "Schema operation 'create_index' is not allowed for user 'joe' with roles [custom]."
+    } should have message "Schema operation 'create_index' is not allowed for user 'joe' with roles [PUBLIC, custom]."
   }
 
   test("should have index management privilege on new default after switch of default database") {
@@ -1053,7 +1053,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     // WHEN: creating index on foo
     the[AuthorizationViolationException] thrownBy {
       executeOn(newDefaultDatabase, "alice", "abc", "CREATE INDEX foo_index FOR (n:Label) ON (n.prop)")
-    } should have message "Schema operations are not allowed for user 'alice' with roles [role]."
+    } should have message "Schema operations are not allowed for user 'alice' with roles [PUBLIC, role]."
 
     // THEN
     graph.getMaybeIndex("Label", Seq("prop")).isDefined should be(false)
@@ -1081,7 +1081,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     // WHEN: dropping index on default
     the[AuthorizationViolationException] thrownBy {
       executeOn(DEFAULT_DATABASE_NAME, "alice", "abc", "DROP INDEX neo_index")
-    } should have message "Schema operations are not allowed for user 'alice' with roles [role]."
+    } should have message "Schema operations are not allowed for user 'alice' with roles [PUBLIC, role]."
 
     // THEN
     graph.getMaybeIndex("Label", Seq("prop")).isEmpty should be(false)
@@ -1102,7 +1102,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnDefault("joe", "soap", "CREATE CONSTRAINT ON (n:User) ASSERT exists(n.name)")
-    } should have message "'create_label' operations are not allowed for user 'joe' with roles [custom]."
+    } should have message "'create_label' operations are not allowed for user 'joe' with roles [PUBLIC, custom]."
 
     // THEN
     assert(graph.getMaybeNodeConstraint("User", Seq("name")).isEmpty)
@@ -1130,7 +1130,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnDefault("joe", "soap", "CREATE CONSTRAINT ON (n:User) ASSERT exists(n.name)")
-    } should have message "Schema operations are not allowed for user 'joe' with roles [custom]."
+    } should have message "Schema operations are not allowed for user 'joe' with roles [PUBLIC, custom]."
   }
 
   test("Should not allow constraint create for normal user with only constraint drop privilege") {
@@ -1143,7 +1143,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnDefault("joe", "soap", "CREATE CONSTRAINT ON (n:User) ASSERT exists(n.name)")
-    } should have message "Schema operation 'create_constraint' is not allowed for user 'joe' with roles [custom]."
+    } should have message "Schema operation 'create_constraint' is not allowed for user 'joe' with roles [PUBLIC, custom]."
   }
 
   test("Should not allow constraint drop for normal user with only constraint create privilege") {
@@ -1161,7 +1161,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnDefault("joe", "soap", "DROP CONSTRAINT my_constraint")
-    } should have message "Schema operation 'drop_constraint' is not allowed for user 'joe' with roles [custom]."
+    } should have message "Schema operation 'drop_constraint' is not allowed for user 'joe' with roles [PUBLIC, custom]."
   }
 
   test("Should allow constraint creation for normal user with constraint create privilege") {
@@ -1252,7 +1252,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
       executeOn("foo", "joe", "soap", "CREATE CONSTRAINT ON (n:User) ASSERT exists(n.name)")
-    } should have message "Schema operation 'create_constraint' is not allowed for user 'joe' with roles [custom]."
+    } should have message "Schema operation 'create_constraint' is not allowed for user 'joe' with roles [PUBLIC, custom]."
   }
 
   test("should have constraint management privilege on new default after switch of default database") {
@@ -1289,7 +1289,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     // WHEN: creating constraint on foo
     the[AuthorizationViolationException] thrownBy {
       executeOn(newDefaultDatabase, "alice", "abc", "CREATE CONSTRAINT foo_constraint ON (n:Label) ASSERT exists(n.prop)")
-    } should have message "Schema operations are not allowed for user 'alice' with roles [role]."
+    } should have message "Schema operations are not allowed for user 'alice' with roles [PUBLIC, role]."
 
     // THEN
     graph.getMaybeNodeConstraint("Label", Seq("prop")).isDefined should be(false)
@@ -1317,7 +1317,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     // WHEN: dropping constraint on default
     the[AuthorizationViolationException] thrownBy {
       executeOn(DEFAULT_DATABASE_NAME, "alice", "abc", "DROP CONSTRAINT neo_constraint")
-    } should have message "Schema operations are not allowed for user 'alice' with roles [role]."
+    } should have message "Schema operations are not allowed for user 'alice' with roles [PUBLIC, role]."
 
     // THEN
     graph.getMaybeNodeConstraint("Label", Seq("prop")).isEmpty should be(false)
@@ -1349,12 +1349,12 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnDefault("joe", "soap", "CREATE (n:User) RETURN n")
-    } should have message "'create_label' operations are not allowed for user 'joe' with roles [custom]."
+    } should have message "'create_label' operations are not allowed for user 'joe' with roles [PUBLIC, custom]."
 
     // WHEN & THEN
     the[QueryExecutionException] thrownBy {
       executeOnDefault("joe", "soap", "CALL db.createLabel('A')")
-    } should have message "'create_label' operations are not allowed for user 'joe' with roles [custom] restricted to TOKEN_WRITE."
+    } should have message "'create_label' operations are not allowed for user 'joe' with roles [PUBLIC, custom] restricted to TOKEN_WRITE."
   }
 
   test("Should allow type creation for normal user with type create privilege") {
@@ -1376,12 +1376,12 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnDefault("joe", "soap", "CREATE ()-[n:Rel]->() RETURN n")
-    } should have message "'create_reltype' operations are not allowed for user 'joe' with roles [custom]."
+    } should have message "'create_reltype' operations are not allowed for user 'joe' with roles [PUBLIC, custom]."
 
     // WHEN & THEN
     the[QueryExecutionException] thrownBy {
       executeOnDefault("joe", "soap", "CALL db.createRelationshipType('A')")
-    } should have message "'create_reltype' operations are not allowed for user 'joe' with roles [custom] restricted to TOKEN_WRITE."
+    } should have message "'create_reltype' operations are not allowed for user 'joe' with roles [PUBLIC, custom] restricted to TOKEN_WRITE."
   }
 
   test("Should allow property key creation for normal user with name creation privilege") {
@@ -1404,17 +1404,17 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnDefault("joe", "soap", "CREATE (n:User {name: 'Alice'}) RETURN n")
-    } should have message "'create_propertykey' operations are not allowed for user 'joe' with roles [custom]."
+    } should have message "'create_propertykey' operations are not allowed for user 'joe' with roles [PUBLIC, custom]."
 
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnDefault("joe", "soap", "CREATE ()-[n:Rel {prop: 'value'}]->() RETURN n")
-    } should have message "'create_propertykey' operations are not allowed for user 'joe' with roles [custom]."
+    } should have message "'create_propertykey' operations are not allowed for user 'joe' with roles [PUBLIC, custom]."
 
     // WHEN & THEN
     the[QueryExecutionException] thrownBy {
       executeOnDefault("joe", "soap", "CALL db.createProperty('age')")
-    } should have message "'create_propertykey' operations are not allowed for user 'joe' with roles [custom] restricted to TOKEN_WRITE."
+    } should have message "'create_propertykey' operations are not allowed for user 'joe' with roles [PUBLIC, custom] restricted to TOKEN_WRITE."
   }
 
   test("Should not allow property key creation for normal user with only label creation privilege") {
@@ -1426,7 +1426,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnDefault("joe", "soap", "CREATE (n:User {name: 'Alice'}) RETURN n.name")
-    } should have message "'create_propertykey' operations are not allowed for user 'joe' with roles [custom]."
+    } should have message "'create_propertykey' operations are not allowed for user 'joe' with roles [PUBLIC, custom]."
   }
 
   test("Should not allow property key creation for normal user with only type creation privilege") {
@@ -1438,7 +1438,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     // WHEN & THEN
     the[AuthorizationViolationException] thrownBy {
       executeOnDefault("joe", "soap", "CREATE ()-[r:Rel {prop: 'value'}]->() RETURN r.prop")
-    } should have message "'create_propertykey' operations are not allowed for user 'joe' with roles [custom]."
+    } should have message "'create_propertykey' operations are not allowed for user 'joe' with roles [PUBLIC, custom]."
   }
 
   test("Should allow all creation for normal user with name management privilege") {
@@ -1489,9 +1489,9 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       executeOn(newDefaultDatabase, "alice", "abc", "CREATE (n:Label1)-[:Type1]->({prop1: 1}) RETURN n")
     }
     exception1.getMessage should (
-      be("'create_label' operations are not allowed for user 'alice' with roles [role].") or (
-        be("'create_reltype' operations are not allowed for user 'alice' with roles [role].") or
-          be("'create_propertykey' operations are not allowed for user 'alice' with roles [role]."))
+      be("'create_label' operations are not allowed for user 'alice' with roles [PUBLIC, role].") or (
+        be("'create_reltype' operations are not allowed for user 'alice' with roles [PUBLIC, role].") or
+          be("'create_propertykey' operations are not allowed for user 'alice' with roles [PUBLIC, role]."))
       )
 
     // THEN
@@ -1520,9 +1520,9 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       executeOn(DEFAULT_DATABASE_NAME, "alice", "abc", "CREATE (n:Label2)-[:Type2]->({prop2: 1}) RETURN n")
     }
     exception2.getMessage should (
-      be("'create_label' operations are not allowed for user 'alice' with roles [role].") or (
-        be("'create_reltype' operations are not allowed for user 'alice' with roles [role].") or
-          be("'create_propertykey' operations are not allowed for user 'alice' with roles [role]."))
+      be("'create_label' operations are not allowed for user 'alice' with roles [PUBLIC, role].") or (
+        be("'create_reltype' operations are not allowed for user 'alice' with roles [PUBLIC, role].") or
+          be("'create_propertykey' operations are not allowed for user 'alice' with roles [PUBLIC, role]."))
       )
 
     // THEN

@@ -21,6 +21,7 @@ import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ADMIN;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ARCHITECT;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.EDITOR;
+import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLISHER;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -90,14 +91,14 @@ public abstract class ConfiguredAuthScenariosInteractionTestBase<S> extends Proc
     }
 
     private Map<String,Object> userList = map(
-            "adminSubject", listOf( ADMIN ),
-            "readSubject", listOf( READER ),
-            "schemaSubject", listOf( ARCHITECT ),
-            "writeSubject", listOf( PUBLISHER ),
-            "editorSubject", listOf( EDITOR ),
-            "pwdSubject", listOf(),
-            "noneSubject", listOf(),
-            "neo4j", listOf( ADMIN )
+            "adminSubject", listOf( PUBLIC,  ADMIN ),
+            "readSubject", listOf( PUBLIC,  READER ),
+            "schemaSubject", listOf( PUBLIC,  ARCHITECT ),
+            "writeSubject", listOf( PUBLIC,  PUBLISHER ),
+            "editorSubject", listOf( PUBLIC,  EDITOR ),
+            "pwdSubject", listOf( PUBLIC ),
+            "noneSubject", listOf( PUBLIC ),
+            "neo4j", listOf( PUBLIC,  ADMIN )
     );
 
     private boolean containsNotification( Result result, String description )

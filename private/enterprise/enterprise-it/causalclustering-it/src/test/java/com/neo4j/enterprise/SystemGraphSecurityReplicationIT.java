@@ -27,6 +27,7 @@ import static com.neo4j.security.SecurityHelpers.userCanLogin;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ADMIN;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ARCHITECT;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.EDITOR;
+import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLISHER;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
@@ -68,7 +69,7 @@ class SystemGraphSecurityReplicationIT
     @Test
     void shouldHaveInitialRoles() throws Exception
     {
-        var expectedRoles = Set.of( ADMIN, ARCHITECT, EDITOR, PUBLISHER, READER );
+        var expectedRoles = Set.of( ADMIN, ARCHITECT, EDITOR, PUBLISHER, READER, PUBLIC );
 
         for ( var core : cluster.coreMembers() )
         {

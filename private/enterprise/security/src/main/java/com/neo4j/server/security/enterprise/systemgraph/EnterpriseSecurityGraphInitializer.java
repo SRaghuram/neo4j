@@ -58,11 +58,12 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
     private RelationshipType FOR = RelationshipType.withName( "FOR" );
 
     private Node traverseNodePriv;
-    private Node traverserRelPriv;
+    private Node traverseRelPriv;
     private Node readNodePriv;
     private Node readRelPriv;
     private Node writeNodePriv;
     private Node writeRelPriv;
+    private Node defaultAccessPriv;
     private Node accessPriv;
     private Node tokenPriv;
     private Node schemaPriv;
@@ -118,6 +119,12 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
         }
     }
 
+    private InvalidArgumentsException logAndCreateException( String message )
+    {
+        log.error( message );
+        return new InvalidArgumentsException( message );
+    }
+
     private void setupConstraints()
     {
         // Ensure that multiple roles cannot have the same name and are indexed
@@ -144,23 +151,15 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
     {
         if ( userNodes.isEmpty() )
         {
+            // This happens at startup of a new instance
             addDefaultUser( tx );
             ensureDefaultRolesAndPrivileges( tx, INITIAL_USER_NAME );
         }
         else if ( roleNodes.isEmpty() )
         {
             // This will be the case when upgrading from community to enterprise system-graph
-            try
-            {
-                String newAdmin = ensureAdmin();
-                ensureDefaultRolesAndPrivileges( tx, newAdmin );
-            }
-            catch ( InvalidArgumentsException e )
-            {
-                // Should still add users even if failed to decide who should be admin
-                tx.commit();
-                throw e;
-            }
+            String newAdmin = ensureAdmin();
+            ensureDefaultRolesAndPrivileges( tx, newAdmin );
         }
 
         // If applicable, give the default user the password set by set-initial-password command
@@ -177,7 +176,7 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
         final int numberOfDefaultAdmins = defaultAdminRepository.numberOfUsers();
         if ( numberOfDefaultAdmins > 1 )
         {
-            throw new InvalidArgumentsException( "No roles defined, and multiple users defined as default admin user. " + "Please use " +
+            throw logAndCreateException( "No roles defined, and multiple users defined as default admin user. " + "Please use " +
                     "`neo4j-admin set-default-admin` to select a valid admin." );
         }
         else if ( numberOfDefaultAdmins == 1 )
@@ -192,8 +191,8 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
             // We currently support only one default admin
             if ( !usernames.contains( newAdmin ) )
             {
-                throw new InvalidArgumentsException( "No roles defined, and default admin user '" + newAdmin + "' does not exist. " + "Please use " +
-                        "`neo4j-admin set-default-admin` to select a valid admin." );
+                throw logAndCreateException( "No roles defined, and default admin user '" + newAdmin + "' does not exist. " +
+                                             "Please use `neo4j-admin set-default-admin` to select a valid admin." );
             }
             return newAdmin;
         }
@@ -209,8 +208,8 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
         }
         else
         {
-            throw new InvalidArgumentsException(
-                    "No roles defined, and cannot determine which user should be admin. " + "Please use `neo4j-admin set-default-admin` to select an admin. " );
+            throw logAndCreateException( "No roles defined, and cannot determine which user should be admin. " +
+                                         "Please use `neo4j-admin set-default-admin` to select an admin. " );
         }
     }
 
@@ -252,6 +251,10 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
         Node allDb = tx.createNode( Label.label( "DatabaseAll" ) );
         allDb.setProperty( "name", "*" );
 
+        // Create a DatabaseDefault node
+        Node defaultDb = tx.createNode( Label.label( "DatabaseDefault" ) );
+        defaultDb.setProperty( "name", "DEFAULT" );
+
         // Create initial qualifier nodes
         Node labelQualifier = tx.createNode( Label.label( "LabelQualifierAll" ) );
         labelQualifier.setProperty( "type", "node" );
@@ -280,6 +283,10 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
         dbSegement.createRelationshipTo( dbQualifier, QUALIFIED );
         dbSegement.createRelationshipTo( allDb, FOR );
 
+        Node defaultDbSegement = tx.createNode( segmentLabel );
+        defaultDbSegement.createRelationshipTo( dbQualifier, QUALIFIED );
+        defaultDbSegement.createRelationshipTo( defaultDb, FOR );
+
         // Create initial resource nodes
         Label resourceLabel = Label.label( "Resource" );
 
@@ -300,22 +307,24 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
 
         // Create initial privilege nodes and connect them with resources and segments
         traverseNodePriv = tx.createNode( PRIVILEGE_LABEL );
-        traverserRelPriv = tx.createNode( PRIVILEGE_LABEL );
+        traverseRelPriv = tx.createNode( PRIVILEGE_LABEL );
         readNodePriv = tx.createNode( PRIVILEGE_LABEL );
         readRelPriv = tx.createNode( PRIVILEGE_LABEL );
         writeNodePriv = tx.createNode( PRIVILEGE_LABEL );
         writeRelPriv = tx.createNode( PRIVILEGE_LABEL );
+        defaultAccessPriv = tx.createNode( PRIVILEGE_LABEL );
         accessPriv = tx.createNode( PRIVILEGE_LABEL );
         tokenPriv = tx.createNode( PRIVILEGE_LABEL );
-        schemaPriv = tx.createNode( PRIVILEGE_LABEL );
         adminPriv = tx.createNode( PRIVILEGE_LABEL );
+        schemaPriv = tx.createNode( PRIVILEGE_LABEL );
 
         setupPrivilegeNode( traverseNodePriv, PrivilegeAction.TRAVERSE, labelSegement, graphResource );
-        setupPrivilegeNode( traverserRelPriv, PrivilegeAction.TRAVERSE, relSegement, graphResource );
+        setupPrivilegeNode( traverseRelPriv, PrivilegeAction.TRAVERSE, relSegement, graphResource );
         setupPrivilegeNode( readNodePriv, PrivilegeAction.READ, labelSegement, allPropResource );
         setupPrivilegeNode( readRelPriv, PrivilegeAction.READ, relSegement, allPropResource );
         setupPrivilegeNode( writeNodePriv, PrivilegeAction.WRITE, labelSegement, allPropResource );
         setupPrivilegeNode( writeRelPriv, PrivilegeAction.WRITE, relSegement, allPropResource );
+        setupPrivilegeNode( defaultAccessPriv, PrivilegeAction.ACCESS, defaultDbSegement, dbResource );
         setupPrivilegeNode( accessPriv, PrivilegeAction.ACCESS, dbSegement, dbResource );
         setupPrivilegeNode( tokenPriv, PrivilegeAction.TOKEN, dbSegement, dbResource );
         setupPrivilegeNode( schemaPriv, PrivilegeAction.SCHEMA, dbSegement, dbResource );
@@ -352,7 +361,7 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
         if ( simpleRole.isPermitted( PredefinedRolesBuilder.READ ) )
         {
             role.createRelationshipTo( traverseNodePriv, GRANTED );
-            role.createRelationshipTo( traverserRelPriv, GRANTED );
+            role.createRelationshipTo( traverseRelPriv, GRANTED );
             role.createRelationshipTo( readNodePriv, GRANTED );
             role.createRelationshipTo( readRelPriv, GRANTED );
         }
@@ -360,18 +369,26 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
         {
             role.createRelationshipTo( accessPriv, GRANTED );
         }
+        if ( simpleRole.isPermitted( PredefinedRolesBuilder.DEFAULT_ACCESS ) )
+        {
+            role.createRelationshipTo( defaultAccessPriv, GRANTED );
+        }
     }
 
     private void migrateFromFlatFileRealm( Transaction tx ) throws Exception
     {
         startUserRepository( migrationUserRepository );
         startRoleRepository( migrationRoleRepository );
+        if ( migrationRoleRepository.getRoleByName( PredefinedRoles.PUBLIC ) != null )
+        {
+            throw logAndCreateException( "Automatic migration of users and roles into system graph failed because 'PUBLIC' role exists. " +
+                                         "Please remove or rename that role and start again." );
+        }
         doMigrateUsers( tx, migrationUserRepository );
         boolean migrateOk = doMigrateRoles( tx, migrationUserRepository, migrationRoleRepository );
         if ( !migrateOk )
         {
-            throw new InvalidArgumentsException(
-                    "Automatic migration of users and roles into system graph failed because repository files are inconsistent. " );
+            throw logAndCreateException( "Automatic migration of users and roles into system graph failed because repository files are inconsistent. " );
         }
 
         stopUserRepository( migrationUserRepository );
@@ -481,7 +498,7 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
 
         if ( user == null )
         {
-            throw new InvalidArgumentsException( String.format( "User %s did not exist", username ) );
+            throw logAndCreateException( String.format( "User %s did not exist", username ) );
         }
 
         user.createRelationshipTo( role, USER_TO_ROLE );
@@ -494,7 +511,7 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
 
         if ( role == null )
         {
-            throw new InvalidArgumentsException( "Role did not eixst" );
+            throw logAndCreateException( "Role did not exist" );
         }
 
         final Iterable<Relationship> relationships = role.getRelationships( Direction.INCOMING );

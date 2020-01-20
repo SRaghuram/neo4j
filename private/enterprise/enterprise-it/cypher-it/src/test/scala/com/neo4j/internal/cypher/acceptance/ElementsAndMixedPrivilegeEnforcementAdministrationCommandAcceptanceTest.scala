@@ -18,6 +18,8 @@ import scala.collection.JavaConverters._
 // Tests for actual behaviour of authorization rules for restricted users based on element privileges
 class ElementsAndMixedPrivilegeEnforcementAdministrationCommandAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
 
+  override protected def onNewGraphDatabase(): Unit = clearPublicRole()
+
   test("read privilege for element should not imply traverse privilege") {
     // GIVEN
     setupUserWithCustomRole()

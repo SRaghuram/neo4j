@@ -13,6 +13,8 @@ import org.neo4j.graphdb.Node
 // Tests for actual behaviour of authorization rules for restricted users based on relationship privileges
 class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
 
+  override protected def onNewGraphDatabase(): Unit = clearPublicRole()
+
   test("should find relationship when granted traversal privilege") {
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
