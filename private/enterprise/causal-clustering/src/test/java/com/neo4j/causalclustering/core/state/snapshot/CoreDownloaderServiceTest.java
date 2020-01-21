@@ -10,6 +10,7 @@ import com.neo4j.causalclustering.common.StubClusteredDatabaseManager;
 import com.neo4j.causalclustering.core.state.CommandApplicationProcess;
 import com.neo4j.causalclustering.core.state.CoreSnapshotService;
 import com.neo4j.causalclustering.error_handling.DatabasePanicker;
+import com.neo4j.dbms.DatabaseStartAborter;
 import com.neo4j.dbms.ReplicatedDatabaseEventService;
 import org.junit.After;
 import org.junit.Before;
@@ -30,7 +31,7 @@ import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
 
-import static com.neo4j.causalclustering.core.state.snapshot.PersistentSnapshotDownloader.OPERATION_NAME;
+import static com.neo4j.causalclustering.core.state.snapshot.PersistentSnapshotDownloader.DOWNLOAD_SNAPSHOT;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -51,6 +52,7 @@ public class CoreDownloaderServiceTest
 
     private JobScheduler centralJobScheduler;
     private final DatabasePanicker panicker = mock( DatabasePanicker.class );
+    private final DatabaseStartAborter databaseStartAborter = mock( DatabaseStartAborter.class );
     private StoreDownloadContext downloadContext = mock( StoreDownloadContext.class );
 
     @Before
@@ -65,7 +67,7 @@ public class CoreDownloaderServiceTest
     private CoreDownloaderService createDownloader()
     {
         return new CoreDownloaderService( centralJobScheduler, coreDownloader, downloadContext, snapshotService, databaseEventService, applicationProcess,
-                logProvider, new NoPauseTimeoutStrategy(), panicker, new Monitors() );
+                logProvider, new NoPauseTimeoutStrategy(), panicker, new Monitors(), databaseStartAborter );
     }
 
     @After
@@ -83,8 +85,8 @@ public class CoreDownloaderServiceTest
         coreDownloaderService.scheduleDownload( catchupAddressProvider );
         waitForApplierToResume( applicationProcess );
 
-        verify( applicationProcess ).pauseApplier( OPERATION_NAME );
-        verify( applicationProcess ).resumeApplier( OPERATION_NAME );
+        verify( applicationProcess ).pauseApplier( DOWNLOAD_SNAPSHOT );
+        verify( applicationProcess ).resumeApplier( DOWNLOAD_SNAPSHOT );
         verify( coreDownloader ).downloadSnapshotAndStore( any(), any() );
     }
 
@@ -97,7 +99,7 @@ public class CoreDownloaderServiceTest
         CoreDownloader coreDownloader = new BlockingCoreDownloader( blockDownloader );
 
         CoreDownloaderService coreDownloaderService = new CoreDownloaderService( countingJobScheduler, coreDownloader, downloadContext, snapshotService,
-                databaseEventService, applicationProcess, logProvider, new NoPauseTimeoutStrategy(), panicker, new Monitors() );
+                databaseEventService, applicationProcess, logProvider, new NoPauseTimeoutStrategy(), panicker, new Monitors(), databaseStartAborter );
 
         coreDownloaderService.scheduleDownload( catchupAddressProvider );
         Thread.sleep( 50 );
@@ -133,7 +135,7 @@ public class CoreDownloaderServiceTest
         {
             try
             {
-                verify( applicationProcess ).resumeApplier( OPERATION_NAME );
+                verify( applicationProcess ).resumeApplier( DOWNLOAD_SNAPSHOT );
                 return true;
             }
             catch ( Throwable t )

@@ -66,7 +66,7 @@ public final class CoreDatabaseManager extends ClusteredMultiDatabaseManager
 
         BootstrapContext bootstrapContext = new BootstrapContext( namedDatabaseId, databaseLayout, storeFiles, transactionLogs );
         CoreRaftContext raftContext = edition.coreDatabaseFactory().createRaftContext( namedDatabaseId, clusterComponents,
-                coreDatabaseMonitors, coreDatabaseDependencies, bootstrapContext, coreDatabaseLogService, dbmsModel() );
+                coreDatabaseMonitors, coreDatabaseDependencies, bootstrapContext, coreDatabaseLogService );
 
         var databaseConfig = new DatabaseConfig( config, namedDatabaseId );
         var versionContextSupplier = createVersionContextSupplier( databaseConfig );
@@ -82,7 +82,7 @@ public final class CoreDatabaseManager extends ClusteredMultiDatabaseManager
         var downloadContext = new StoreDownloadContext( kernelDatabase, storeFiles, transactionLogs, internalDbmsOperator() );
 
         var coreDatabase = edition.coreDatabaseFactory().createDatabase( namedDatabaseId, clusterComponents, coreDatabaseMonitors, coreDatabaseDependencies,
-                downloadContext, kernelDatabase, kernelContext, raftContext, internalDbmsOperator(), getDatabaseStartAborter() );
+                downloadContext, kernelDatabase, kernelContext, raftContext, internalDbmsOperator() );
 
         var ctx = contextFactory.create( kernelDatabase, kernelDatabase.getDatabaseFacade(), transactionLogs,
                 storeFiles, logProvider, catchupComponentsFactory, coreDatabase, coreDatabaseMonitors );

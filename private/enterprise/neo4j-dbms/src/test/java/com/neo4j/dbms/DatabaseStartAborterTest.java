@@ -5,6 +5,7 @@
  */
 package com.neo4j.dbms;
 
+import com.neo4j.dbms.DatabaseStartAborter.PreventReason;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -34,6 +35,30 @@ import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABA
 
 class DatabaseStartAborterTest
 {
+    @Test
+    void shouldNotAbortWhenPrevented()
+    {
+        // given
+        var globalGuard = mock( AvailabilityGuard.class );
+        var dbmsModel = mock( EnterpriseSystemGraphDbmsModel.class );
+
+        NamedDatabaseId databaseId = TestDatabaseIdRepository.randomNamedDatabaseId();
+        when( dbmsModel.getStatus( databaseId ) ).thenReturn( Optional.of( STOPPED ) );
+
+        var aborter = new DatabaseStartAborter( globalGuard, dbmsModel, new FakeClock(), Duration.ofSeconds( 5 ) );
+
+        // when
+        aborter.setAbortable( databaseId, PreventReason.STORE_COPY, false );
+
+        // then
+        assertFalse( aborter.shouldAbort( databaseId ) );
+
+        // when
+        aborter.setAbortable( databaseId, PreventReason.STORE_COPY, true );
+
+        // then
+        assertTrue( aborter.shouldAbort( databaseId ) );
+    }
 
     @Test
     void shouldAbortIfGlobalAvailabilityShutDown()
@@ -51,11 +76,11 @@ class DatabaseStartAborterTest
     void shouldNotQuerySystemDbForAbortingSystemDb()
     {
         // given
-        var globaGuard = mock( AvailabilityGuard.class );
-        when( globaGuard.isShutdown() ).thenReturn( false );
+        var globalGuard = mock( AvailabilityGuard.class );
+        when( globalGuard.isShutdown() ).thenReturn( false );
         var dbmsModel = mock( EnterpriseSystemGraphDbmsModel.class );
         when( dbmsModel.getStatus( any( NamedDatabaseId.class ) ) ).thenReturn( Optional.of( STARTED ) );
-        var aborter = new DatabaseStartAborter( globaGuard, dbmsModel, new FakeClock(), Duration.ofSeconds( 5 ) );
+        var aborter = new DatabaseStartAborter( globalGuard, dbmsModel, new FakeClock(), Duration.ofSeconds( 5 ) );
 
         // when/then
         var otherId = TestDatabaseIdRepository.randomNamedDatabaseId();
@@ -69,13 +94,13 @@ class DatabaseStartAborterTest
     void shouldNotQuerySystemDbWhenStateCached()
     {
         // given
-        var globaGuard = mock( AvailabilityGuard.class );
-        when( globaGuard.isShutdown() ).thenReturn( false );
+        var globalGuard = mock( AvailabilityGuard.class );
+        when( globalGuard.isShutdown() ).thenReturn( false );
         var dbmsModel = mock( EnterpriseSystemGraphDbmsModel.class );
         var clock = new FakeClock();
         when( dbmsModel.getStatus( any( NamedDatabaseId.class ) ) ).thenReturn( Optional.of( STARTED ) ).thenReturn( Optional.of( STOPPED ) );
         var ttlSeconds = 5;
-        var aborter = new DatabaseStartAborter( globaGuard, dbmsModel, clock, Duration.ofSeconds( ttlSeconds ) );
+        var aborter = new DatabaseStartAborter( globalGuard, dbmsModel, clock, Duration.ofSeconds( ttlSeconds ) );
 
         // when/then
         var otherId = TestDatabaseIdRepository.randomNamedDatabaseId();
@@ -108,13 +133,13 @@ class DatabaseStartAborterTest
         var id1 = TestDatabaseIdRepository.randomNamedDatabaseId();
         var id2 = TestDatabaseIdRepository.randomNamedDatabaseId();
 
-        var globaGuard = mock( AvailabilityGuard.class );
-        when( globaGuard.isShutdown() ).thenReturn( false );
+        var globalGuard = mock( AvailabilityGuard.class );
+        when( globalGuard.isShutdown() ).thenReturn( false );
         var dbmsModel = mock( EnterpriseSystemGraphDbmsModel.class );
         doReturn( stopLast.removeFirst(), stopLast.toArray() ).when( dbmsModel ).getStatus( id1 );
         doReturn( dropLast.removeFirst(), dropLast.toArray() ).when( dbmsModel ).getStatus( id2 );
         var clock = new FakeClock();
-        var aborter = new DatabaseStartAborter( globaGuard, dbmsModel, clock, Duration.ofSeconds( 1 ) );
+        var aborter = new DatabaseStartAborter( globalGuard, dbmsModel, clock, Duration.ofSeconds( 1 ) );
 
         // when
         for ( int i = 0; i < nonStopDrop.size(); i++ )

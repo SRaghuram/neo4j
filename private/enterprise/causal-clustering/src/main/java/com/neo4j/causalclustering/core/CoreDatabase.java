@@ -50,6 +50,6 @@ class CoreDatabase extends ClusteredDatabase
 
         addComponent( onStop( raftMessageHandler::stop ) );
         addComponent( onStop( raftMachine::stopTimers ) );
-        addComponent( onStop( downloadService::stop ) );
+        addComponent( downloadService );
     }
 }

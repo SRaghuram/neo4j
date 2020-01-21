@@ -61,7 +61,7 @@ public abstract class MultiDatabaseManager<DB extends DatabaseContext> extends A
         catch ( Exception e )
         {
             throw new DatabaseManagementException(
-                    format( "An error occured! Unable to create new database `%s`.", namedDatabaseId.name() ), e );
+                    format( "An error occurred! Unable to create new database `%s`.", namedDatabaseId.name() ), e );
         }
 
         databaseMap.put( namedDatabaseId, databaseContext );

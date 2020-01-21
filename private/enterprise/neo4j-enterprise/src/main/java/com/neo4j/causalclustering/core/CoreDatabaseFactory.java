@@ -166,12 +166,15 @@ class CoreDatabaseFactory
     private final RecoveryFacade recoveryFacade;
     private final Outbound<SocketAddress,Message> raftSender;
     private final ReplicatedDatabaseEventService databaseEventService;
+    private final ClusterSystemGraphDbmsModel dbmsModel;
+    private final DatabaseStartAborter databaseStartAborter;
 
     CoreDatabaseFactory( GlobalModule globalModule, PanicService panicService, DatabaseManager<ClusteredDatabaseContext> databaseManager,
             CoreTopologyService topologyService, ClusterStateStorageFactory storageFactory, TemporaryDatabaseFactory temporaryDatabaseFactory,
             Map<NamedDatabaseId,DatabaseInitializer> databaseInitializers, MemberId myIdentity, RaftGroupFactory raftGroupFactory,
             RaftMessageDispatcher raftMessageDispatcher, CatchupComponentsProvider catchupComponentsProvider, RecoveryFacade recoveryFacade,
-            RaftMessageLogger<MemberId> raftLogger, Outbound<SocketAddress,Message> raftSender, ReplicatedDatabaseEventService databaseEventService )
+            RaftMessageLogger<MemberId> raftLogger, Outbound<SocketAddress,Message> raftSender, ReplicatedDatabaseEventService databaseEventService,
+            ClusterSystemGraphDbmsModel dbmsModel, DatabaseStartAborter databaseStartAborter )
     {
         this.config = globalModule.getGlobalConfig();
         this.clock = globalModule.getGlobalClock();
@@ -198,10 +201,12 @@ class CoreDatabaseFactory
         this.raftSender = raftSender;
         this.databaseEventService = databaseEventService;
         this.cursorTracerSupplier = globalModule.getTracers().getPageCursorTracerSupplier();
+        this.dbmsModel = dbmsModel;
+        this.databaseStartAborter = databaseStartAborter;
     }
 
     CoreRaftContext createRaftContext( NamedDatabaseId namedDatabaseId, LifeSupport life, Monitors monitors, Dependencies dependencies,
-            BootstrapContext bootstrapContext, DatabaseLogService logService, ClusterSystemGraphDbmsModel systemGraph )
+            BootstrapContext bootstrapContext, DatabaseLogService logService )
     {
         DatabaseLogProvider debugLog = logService.getInternalLogProvider();
 
@@ -209,7 +214,7 @@ class CoreDatabaseFactory
 
         SimpleStorage<RaftId> raftIdStorage = storageFactory.createRaftIdStorage( namedDatabaseId.name(), debugLog );
         RaftBinder raftBinder = createRaftBinder( namedDatabaseId, config, monitors, raftIdStorage, bootstrapContext,
-                temporaryDatabaseFactory, databaseInitializer, debugLog, systemGraph );
+                temporaryDatabaseFactory, databaseInitializer, debugLog, dbmsModel );
 
         CommandIndexTracker commandIndexTracker = dependencies.satisfyDependency( new CommandIndexTracker() );
         initialiseStatusDescriptionEndpoint( dependencies, commandIndexTracker, life, debugLog );
@@ -290,7 +295,7 @@ class CoreDatabaseFactory
 
     CoreDatabase createDatabase( NamedDatabaseId namedDatabaseId, LifeSupport clusterComponents, Monitors monitors, Dependencies dependencies,
             StoreDownloadContext downloadContext, Database kernelDatabase, CoreEditionKernelComponents kernelComponents, CoreRaftContext raftContext,
-            ClusterInternalDbmsOperator internalOperator, DatabaseStartAborter databaseStartAborter )
+            ClusterInternalDbmsOperator internalOperator )
     {
         DatabasePanicker panicker = panicService.panickerFor( namedDatabaseId );
         RaftGroup raftGroup = raftContext.raftGroup();
@@ -422,7 +427,7 @@ class CoreDatabaseFactory
         ExponentialBackoffStrategy backoffStrategy = new ExponentialBackoffStrategy( 1, 30, SECONDS );
 
         return new CoreDownloaderService( jobScheduler, downloader, downloadContext, snapshotService, databaseEventService, commandApplicationProcess, debugLog,
-                backoffStrategy, panicker, monitors );
+                backoffStrategy, panicker, monitors, databaseStartAborter );
     }
 
     private DatabaseIdContext createIdContext( NamedDatabaseId namedDatabaseId )

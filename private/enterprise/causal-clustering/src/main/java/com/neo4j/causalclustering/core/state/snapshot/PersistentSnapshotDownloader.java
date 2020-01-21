@@ -32,7 +32,8 @@ public class PersistentSnapshotDownloader implements Runnable
         void downloadSnapshotComplete( NamedDatabaseId namedDatabaseId );
     }
 
-    static final String OPERATION_NAME = "download of snapshot";
+    static final String DOWNLOAD_SNAPSHOT = "download of snapshot";
+    static final String SHUTDOWN = "shutdown";
 
     private final StoreDownloadContext context;
     private final CommandApplicationProcess applicationProcess;
@@ -83,7 +84,7 @@ public class PersistentSnapshotDownloader implements Runnable
         try
         {
             monitor.startedDownloadingSnapshot( databaseId );
-            applicationProcess.pauseApplier( OPERATION_NAME );
+            applicationProcess.pauseApplier( DOWNLOAD_SNAPSHOT );
 
             var stoppedDatabase = context.stopForStoreCopy();
 
@@ -137,7 +138,7 @@ public class PersistentSnapshotDownloader implements Runnable
         }
         finally
         {
-            applicationProcess.resumeApplier( OPERATION_NAME );
+            applicationProcess.resumeApplier( DOWNLOAD_SNAPSHOT );
             monitor.downloadSnapshotComplete( databaseId );
             state = State.COMPLETED;
         }
@@ -200,6 +201,7 @@ public class PersistentSnapshotDownloader implements Runnable
 
     void stop() throws InterruptedException
     {
+        applicationProcess.pauseApplier( SHUTDOWN );
         stopped = true;
 
         while ( !hasCompleted() )
