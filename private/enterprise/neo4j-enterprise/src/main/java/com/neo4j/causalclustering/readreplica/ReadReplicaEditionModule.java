@@ -40,6 +40,7 @@ import com.neo4j.server.enterprise.EnterpriseNeoWebServer;
 import com.neo4j.server.security.enterprise.EnterpriseSecurityModule;
 
 import java.io.File;
+import java.time.Duration;
 import java.util.function.Supplier;
 
 import org.neo4j.collection.Dependencies;
@@ -93,7 +94,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
     private TopologyService topologyService;
     private ReadReplicaDatabaseFactory readReplicaDatabaseFactory;
     private ClusteredDbmsReconcilerModule reconcilerModule;
-    private DatabaseStartAborter startupController;
+    private DatabaseStartAborter databaseStartAborter;
     private final ClusterStateStorageFactory storageFactory;
     private final ClusterStateLayout clusterStateLayout;
 
@@ -223,12 +224,13 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
         //Reconciler module must start last, as it starting starts actual databases, which depend on all of the above components at runtime.
         globalLife.add( reconcilerModule );
 
-        startupController = databaseManager.getDatabaseStartAborter();
+        databaseStartAborter = new DatabaseStartAborter( globalModule.getGlobalAvailabilityGuard(), dbmsModel, globalModule.getGlobalClock(),
+                Duration.ofSeconds( 5 ) );
 
         // TODO: Health should be created per-db in the factory. What about other things here?
         readReplicaDatabaseFactory = new ReadReplicaDatabaseFactory( globalConfig, globalModule.getGlobalClock(), jobScheduler,
                 topologyService, myIdentity, catchupComponentsRepository,
-                catchupClientFactory, databaseEventService, storageFactory, panicService );
+                catchupClientFactory, databaseEventService, storageFactory, panicService, databaseStartAborter );
     }
 
     @Override
@@ -266,7 +268,7 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
     @Override
     public DatabaseStartupController getDatabaseStartupController()
     {
-        return startupController;
+        return databaseStartAborter;
     }
 
     @Override

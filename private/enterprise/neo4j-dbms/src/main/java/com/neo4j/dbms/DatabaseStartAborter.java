@@ -5,6 +5,9 @@
  */
 package com.neo4j.dbms;
 
+import org.eclipse.collections.api.multimap.set.MutableSetMultimap;
+import org.eclipse.collections.impl.factory.Multimaps;
+
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -28,19 +31,43 @@ import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABA
  */
 public class DatabaseStartAborter implements DatabaseStartupController
 {
+    public enum PreventReason
+    {
+        STORE_COPY
+    }
+
     private final Duration ttl;
-    private final Map<NamedDatabaseId,CachedDatabaseState> databaseStates;
+    private final Map<NamedDatabaseId,CachedDesiredState> cachedDesiredStates;
+    private final MutableSetMultimap<Object,Object> abortPreventionSets;
     private final AvailabilityGuard globalAvailabilityGuard;
     private final EnterpriseSystemGraphDbmsModel dbmsModel;
     private final Clock clock;
 
     public DatabaseStartAborter( AvailabilityGuard globalAvailabilityGuard, EnterpriseSystemGraphDbmsModel dbmsModel, Clock clock, Duration ttl )
     {
-        this.databaseStates = new ConcurrentHashMap<>();
+        this.cachedDesiredStates = new ConcurrentHashMap<>();
+        this.abortPreventionSets = Multimaps.mutable.set.empty().asSynchronized();
         this.globalAvailabilityGuard = globalAvailabilityGuard;
         this.dbmsModel = dbmsModel;
         this.clock = clock;
         this.ttl = ttl;
+    }
+
+    public void setAbortable( NamedDatabaseId databaseId, PreventReason reason, boolean abortable )
+    {
+        if ( abortable )
+        {
+            abortPreventionSets.remove( databaseId, reason );
+        }
+        else
+        {
+            abortPreventionSets.put( databaseId, reason );
+        }
+    }
+
+    private boolean isAbortable( NamedDatabaseId databaseId )
+    {
+        return !abortPreventionSets.containsKey( databaseId );
     }
 
     /**
@@ -57,7 +84,11 @@ public class DatabaseStartAborter implements DatabaseStartupController
     @Override
     public boolean shouldAbort( NamedDatabaseId namedDatabaseId )
     {
-        if ( globalAvailabilityGuard.isShutdown() )
+        if ( !isAbortable( namedDatabaseId ) )
+        {
+            return false;
+        }
+        else if ( globalAvailabilityGuard.isShutdown() )
         {
             return true;
         }
@@ -66,17 +97,16 @@ public class DatabaseStartAborter implements DatabaseStartupController
             return false;
         }
 
-        var cached = databaseStates.compute( namedDatabaseId, ( id, cachedState ) ->
+        var desiredState = cachedDesiredStates.compute( namedDatabaseId, ( id, cachedState ) ->
         {
             if ( cachedState == null || cachedState.isTimeToDie() )
             {
-                return getFreshState( namedDatabaseId );
+                return getFreshDesiredState( namedDatabaseId );
             }
-
             return cachedState;
         } );
 
-        return cached.state() == EnterpriseOperatorState.STOPPED || cached.state() == EnterpriseOperatorState.DROPPED;
+        return desiredState.state() == EnterpriseOperatorState.STOPPED || desiredState.state() == EnterpriseOperatorState.DROPPED;
     }
 
     /**
@@ -84,22 +114,22 @@ public class DatabaseStartAborter implements DatabaseStartupController
      */
     public void started( NamedDatabaseId namedDatabaseId )
     {
-        databaseStates.remove( namedDatabaseId );
+        cachedDesiredStates.remove( namedDatabaseId );
     }
 
-    private CachedDatabaseState getFreshState( NamedDatabaseId namedDatabaseId )
+    private CachedDesiredState getFreshDesiredState( NamedDatabaseId namedDatabaseId )
     {
         var message = String.format( "Failed to check if starting %s should abort as it doesn't exist in the system db!", namedDatabaseId );
         var state = dbmsModel.getStatus( namedDatabaseId ).orElseThrow( () -> new IllegalStateException( message ) );
-        return new CachedDatabaseState( clock.instant(), state );
+        return new CachedDesiredState( clock.instant(), state );
     }
 
-    private class CachedDatabaseState
+    private class CachedDesiredState
     {
         private final OperatorState state;
         private final Instant createdAt;
 
-        private CachedDatabaseState( Instant createdAt, OperatorState state )
+        private CachedDesiredState( Instant createdAt, OperatorState state )
         {
             this.state = state;
             this.createdAt = createdAt;

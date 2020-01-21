@@ -33,7 +33,8 @@ import org.neo4j.logging.Log;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.Monitors;
 
-import static com.neo4j.causalclustering.core.state.snapshot.PersistentSnapshotDownloader.OPERATION_NAME;
+import static com.neo4j.causalclustering.core.state.snapshot.PersistentSnapshotDownloader.DOWNLOAD_SNAPSHOT;
+import static com.neo4j.causalclustering.core.state.snapshot.PersistentSnapshotDownloader.SHUTDOWN;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -104,13 +105,13 @@ class PersistentSnapshotDownloaderTest
 
         InOrder inOrder = inOrder( applicationProcess, downloadContext, coreDownloader, storeCopyHandle );
 
-        inOrder.verify( applicationProcess ).pauseApplier( OPERATION_NAME );
+        inOrder.verify( applicationProcess ).pauseApplier( DOWNLOAD_SNAPSHOT );
         inOrder.verify( downloadContext ).stopForStoreCopy();
 
         inOrder.verify( coreDownloader ).downloadSnapshotAndStore( any(), any() );
 
         inOrder.verify( storeCopyHandle ).release();
-        inOrder.verify( applicationProcess ).resumeApplier( OPERATION_NAME );
+        inOrder.verify( applicationProcess ).resumeApplier( DOWNLOAD_SNAPSHOT );
 
         assertTrue( persistentSnapshotDownloader.hasCompleted() );
     }
@@ -154,13 +155,13 @@ class PersistentSnapshotDownloaderTest
 
         // then
         verify( panicker, never() ).panic( any() );
-        verify( applicationProcess ).pauseApplier( OPERATION_NAME );
-        verify( applicationProcess ).resumeApplier( OPERATION_NAME );
+        verify( applicationProcess ).pauseApplier( DOWNLOAD_SNAPSHOT );
+        verify( applicationProcess ).resumeApplier( DOWNLOAD_SNAPSHOT );
         assertTrue( persistentSnapshotDownloader.hasCompleted() );
     }
 
     @Test
-    void shouldResumeCommandApplicationProcessIfDownloaderIsStopped() throws Exception
+    void shouldLeaveCommandApplicationProcessPausedIfDownloaderIsStopped() throws Exception
     {
         // given
         when( coreDownloader.downloadSnapshotAndStore( any(), any() ) ).thenReturn( Optional.empty() );
@@ -175,8 +176,9 @@ class PersistentSnapshotDownloaderTest
 
         // then
         verify( panicker, never() ).panic( any() );
-        verify( applicationProcess ).pauseApplier( OPERATION_NAME );
-        verify( applicationProcess ).resumeApplier( OPERATION_NAME );
+        verify( applicationProcess ).pauseApplier( DOWNLOAD_SNAPSHOT );
+        verify( applicationProcess ).pauseApplier( SHUTDOWN );
+        verify( applicationProcess ).resumeApplier( DOWNLOAD_SNAPSHOT );
         assertTrue( persistentSnapshotDownloader.hasCompleted() );
     }
 
@@ -192,8 +194,8 @@ class PersistentSnapshotDownloaderTest
 
         // then
         verify( panicker, never() ).panic( any() );
-        verify( applicationProcess ).pauseApplier( OPERATION_NAME );
-        verify( applicationProcess ).resumeApplier( OPERATION_NAME );
+        verify( applicationProcess ).pauseApplier( DOWNLOAD_SNAPSHOT );
+        verify( applicationProcess ).resumeApplier( DOWNLOAD_SNAPSHOT );
         assertEquals( 3, backoffStrategy.invocationCount() );
         assertTrue( persistentSnapshotDownloader.hasCompleted() );
     }
@@ -213,8 +215,8 @@ class PersistentSnapshotDownloaderTest
         // then
         verify( panicker, never() ).panic( any() );
         verify( coreDownloader ).downloadSnapshotAndStore( downloadContext, catchupAddressProvider );
-        verify( applicationProcess ).pauseApplier( OPERATION_NAME );
-        verify( applicationProcess ).resumeApplier( OPERATION_NAME );
+        verify( applicationProcess ).pauseApplier( DOWNLOAD_SNAPSHOT );
+        verify( applicationProcess ).resumeApplier( DOWNLOAD_SNAPSHOT );
     }
 
     @Test
@@ -234,8 +236,8 @@ class PersistentSnapshotDownloaderTest
 
         // then
         verify( panicker, never() ).panic( any() );
-        verify( applicationProcess ).pauseApplier( OPERATION_NAME );
-        verify( applicationProcess ).resumeApplier( OPERATION_NAME );
+        verify( applicationProcess ).pauseApplier( DOWNLOAD_SNAPSHOT );
+        verify( applicationProcess ).resumeApplier( DOWNLOAD_SNAPSHOT );
     }
 
     @Test

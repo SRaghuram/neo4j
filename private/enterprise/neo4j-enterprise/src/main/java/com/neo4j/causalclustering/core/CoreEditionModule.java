@@ -51,6 +51,7 @@ import com.neo4j.causalclustering.protocol.modifier.ModifierProtocols;
 import com.neo4j.causalclustering.routing.load_balancing.DefaultLeaderService;
 import com.neo4j.causalclustering.routing.load_balancing.LeaderLocatorForDatabase;
 import com.neo4j.causalclustering.routing.load_balancing.LeaderService;
+import com.neo4j.dbms.ClusterSystemGraphDbmsModel;
 import com.neo4j.dbms.ClusterSystemGraphInitializer;
 import com.neo4j.dbms.ClusteredDbmsReconcilerModule;
 import com.neo4j.dbms.DatabaseStartAborter;
@@ -66,6 +67,7 @@ import com.neo4j.server.enterprise.EnterpriseNeoWebServer;
 import com.neo4j.server.security.enterprise.EnterpriseSecurityModule;
 
 import java.io.File;
+import java.time.Duration;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -85,6 +87,7 @@ import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.SystemGraphInitializer;
 import org.neo4j.exceptions.KernelException;
+import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.module.DatabaseInitializer;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
@@ -139,7 +142,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
 
     private CoreDatabaseFactory coreDatabaseFactory;
     private CoreTopologyService topologyService;
-    private DatabaseStartAborter startupController;
+    private DatabaseStartAborter databaseStartAborter;
     private ClusteredDbmsReconcilerModule reconcilerModule;
 
     public CoreEditionModule( final GlobalModule globalModule, final DiscoveryServiceFactory discoveryServiceFactory )
@@ -288,8 +291,14 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         var fileSystem = globalModule.getFileSystem();
         var myIdentity = identityModule.myself();
 
+        Supplier<GraphDatabaseService> systemDbSupplier = () -> databaseManager.getDatabaseContext( NAMED_SYSTEM_DATABASE_ID ).orElseThrow().databaseFacade();
+        var dbmsModel = new ClusterSystemGraphDbmsModel( systemDbSupplier );
+
         reconcilerModule = new ClusteredDbmsReconcilerModule( globalModule, databaseManager, databaseEventService, storageFactory,
-                reconciledTxTracker, panicService, databaseManager.dbmsModel() );
+                reconciledTxTracker, panicService, dbmsModel );
+
+        databaseStartAborter = new DatabaseStartAborter( globalModule.getGlobalAvailabilityGuard(), dbmsModel, globalModule.getGlobalClock(),
+                Duration.ofSeconds( 5 ) );
 
         var dependencies = globalModule.getGlobalDependencies();
         dependencies.satisfyDependencies( databaseEventService );
@@ -299,7 +308,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         dependencies.satisfyDependency( new GlobalTopologyStateDiagnosticProvider( topologyService ) );
         reconcilerModule.reconciler().registerListener( topologyService );
 
-        final RaftMessageLogger<MemberId> raftLogger = createRaftLogger( globalModule, myIdentity );
+        RaftMessageLogger<MemberId> raftLogger = createRaftLogger( globalModule, myIdentity );
 
         RaftMessageDispatcher raftMessageDispatcher = new RaftMessageDispatcher( logProvider, globalModule.getGlobalClock() );
 
@@ -310,7 +319,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
 
         this.coreDatabaseFactory = new CoreDatabaseFactory( globalModule, panicService, databaseManager, topologyService, storageFactory,
                 temporaryDatabaseFactory, databaseInitializerMap, myIdentity, raftGroupFactory, raftMessageDispatcher, catchupComponentsProvider,
-                recoveryFacade, raftLogger, raftSender, databaseEventService );
+                recoveryFacade, raftLogger, raftSender, databaseEventService, dbmsModel, databaseStartAborter );
 
         RaftServerFactory raftServerFactory = new RaftServerFactory( globalModule, identityModule, pipelineBuilders.server(), raftLogger,
                 supportedRaftProtocols, supportedModifierProtocols );
@@ -318,8 +327,6 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         Server raftServer = raftServerFactory.createRaftServer( raftMessageDispatcher, serverInstalledProtocolHandler );
         globalModule.getGlobalDependencies().satisfyDependencies( raftServer ); // resolved in tests
         globalLife.add( raftServer );
-
-        startupController = databaseManager.getDatabaseStartAborter();
 
         createCoreServers( globalLife, databaseManager, fileSystem );
         //Reconciler module must start last, as it starting starts actual databases, which depend on all of the above components at runtime.
@@ -389,7 +396,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
     @Override
     public DatabaseStartupController getDatabaseStartupController()
     {
-        return startupController;
+        return databaseStartAborter;
     }
 
     @Override

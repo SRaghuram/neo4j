@@ -9,11 +9,13 @@ import com.neo4j.causalclustering.catchup.CatchupAddressProvider;
 import com.neo4j.causalclustering.core.state.CommandApplicationProcess;
 import com.neo4j.causalclustering.core.state.CoreSnapshotService;
 import com.neo4j.causalclustering.error_handling.DatabasePanicker;
+import com.neo4j.dbms.DatabaseStartAborter;
 import com.neo4j.dbms.ReplicatedDatabaseEventService;
 
 import java.util.Optional;
 
 import org.neo4j.internal.helpers.TimeoutStrategy;
+import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
@@ -21,7 +23,9 @@ import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobHandle;
 import org.neo4j.scheduler.JobScheduler;
 
-public class CoreDownloaderService
+import static com.neo4j.dbms.DatabaseStartAborter.PreventReason.STORE_COPY;
+
+public class CoreDownloaderService extends LifecycleAdapter
 {
     private final JobScheduler jobScheduler;
     private final CoreDownloader downloader;
@@ -30,6 +34,7 @@ public class CoreDownloaderService
     private final TimeoutStrategy backoffStrategy;
     private final DatabasePanicker panicker;
     private final Monitors monitors;
+    private final DatabaseStartAborter databaseStartAborter;
     private final StoreDownloadContext context;
     private final CoreSnapshotService snapshotService;
     private final ReplicatedDatabaseEventService databaseEventService;
@@ -40,7 +45,7 @@ public class CoreDownloaderService
 
     public CoreDownloaderService( JobScheduler jobScheduler, CoreDownloader downloader, StoreDownloadContext context, CoreSnapshotService snapshotService,
             ReplicatedDatabaseEventService databaseEventService, CommandApplicationProcess applicationProcess, LogProvider logProvider,
-            TimeoutStrategy backoffStrategy, DatabasePanicker panicker, Monitors monitors )
+            TimeoutStrategy backoffStrategy, DatabasePanicker panicker, Monitors monitors, DatabaseStartAborter databaseStartAborter )
     {
         this.jobScheduler = jobScheduler;
         this.downloader = downloader;
@@ -52,6 +57,7 @@ public class CoreDownloaderService
         this.backoffStrategy = backoffStrategy;
         this.panicker = panicker;
         this.monitors = monitors;
+        this.databaseStartAborter = databaseStartAborter;
     }
 
     public synchronized Optional<JobHandle> scheduleDownload( CatchupAddressProvider addressProvider )
@@ -71,6 +77,13 @@ public class CoreDownloaderService
         return Optional.of( jobHandle );
     }
 
+    @Override
+    public synchronized void start() throws Exception
+    {
+        databaseStartAborter.setAbortable( context.databaseId(), STORE_COPY, false );
+    }
+
+    @Override
     public synchronized void stop() throws Exception
     {
         stopped = true;
@@ -79,6 +92,8 @@ public class CoreDownloaderService
         {
             currentJob.stop();
         }
+
+        databaseStartAborter.setAbortable( context.databaseId(), STORE_COPY, true );
     }
 
     public synchronized Optional<JobHandle> downloadJob()

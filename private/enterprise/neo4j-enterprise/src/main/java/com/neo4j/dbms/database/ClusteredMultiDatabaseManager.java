@@ -10,16 +10,11 @@ import com.neo4j.causalclustering.catchup.storecopy.StoreFiles;
 import com.neo4j.causalclustering.common.ClusteredDatabaseContextFactory;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
-import com.neo4j.dbms.ClusterSystemGraphDbmsModel;
-import com.neo4j.dbms.DatabaseStartAborter;
 
 import java.io.IOException;
-import java.time.Duration;
-import java.util.function.Supplier;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.api.DatabaseManagementException;
-import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.graphdb.factory.module.edition.AbstractEditionModule;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -32,7 +27,6 @@ import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 
 import static java.lang.String.format;
-import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 
 public abstract class ClusteredMultiDatabaseManager extends MultiDatabaseManager<ClusteredDatabaseContext>
 {
@@ -46,8 +40,6 @@ public abstract class ClusteredMultiDatabaseManager extends MultiDatabaseManager
     protected final CatchupComponentsFactory catchupComponentsFactory;
     protected final ClusterStateLayout clusterStateLayout;
     private final ClusterInternalDbmsOperator internalDbmsOperator;
-    private final ClusterSystemGraphDbmsModel dbmsModel;
-    private final DatabaseStartAborter databaseStartAborter;
 
     public ClusteredMultiDatabaseManager( GlobalModule globalModule, AbstractEditionModule edition, CatchupComponentsFactory catchupComponentsFactory,
             FileSystemAbstraction fs, PageCache pageCache, LogProvider logProvider, Config config, ClusterStateLayout clusterStateLayout )
@@ -63,10 +55,6 @@ public abstract class ClusteredMultiDatabaseManager extends MultiDatabaseManager
         this.catchupComponentsFactory = catchupComponentsFactory;
         this.storeFiles = new StoreFiles( fs, pageCache );
         this.clusterStateLayout = clusterStateLayout;
-        Supplier<GraphDatabaseService> systemDbSupplier = () -> getDatabaseContext( NAMED_SYSTEM_DATABASE_ID ).orElseThrow().databaseFacade();
-        this.dbmsModel = new ClusterSystemGraphDbmsModel( systemDbSupplier );
-        this.databaseStartAborter = new DatabaseStartAborter( globalModule.getGlobalAvailabilityGuard(), dbmsModel, globalModule.getGlobalClock(),
-                Duration.ofSeconds( 5 ) );
     }
 
     @Override
@@ -157,18 +145,8 @@ public abstract class ClusteredMultiDatabaseManager extends MultiDatabaseManager
         }
     }
 
-    public final ClusterSystemGraphDbmsModel dbmsModel()
-    {
-        return dbmsModel;
-    }
-
     public final ClusterInternalDbmsOperator internalDbmsOperator()
     {
         return internalDbmsOperator;
-    }
-
-    public DatabaseStartAborter getDatabaseStartAborter()
-    {
-        return databaseStartAborter;
     }
 }

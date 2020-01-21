@@ -197,10 +197,10 @@ public class EnterpriseEditionModule extends CommunityEditionModule implements A
                 .orElseThrow()
                 .databaseFacade();
         var dbmsModel = new EnterpriseSystemGraphDbmsModel( systemDbSupplier );
-        databaseStartAborter = new DatabaseStartAborter( globalModule.getGlobalAvailabilityGuard(), dbmsModel, globalModule.getGlobalClock(),
-                Duration.ofSeconds( 5 ) );
         StandaloneDbmsReconcilerModule reconcilerModule = new StandaloneDbmsReconcilerModule( globalModule, databaseManager, reconciledTxTracker, dbmsModel );
         databaseStateService = reconcilerModule.reconciler();
+        databaseStartAborter = new DatabaseStartAborter( globalModule.getGlobalAvailabilityGuard(), dbmsModel, globalModule.getGlobalClock(),
+                Duration.ofSeconds( 5 ) );
         globalModule.getGlobalLife().add( reconcilerModule );
         globalModule.getGlobalDependencies().satisfyDependency( reconciledTxTracker );
 

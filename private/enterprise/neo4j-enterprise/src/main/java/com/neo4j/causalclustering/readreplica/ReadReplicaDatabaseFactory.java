@@ -58,11 +58,12 @@ class ReadReplicaDatabaseFactory
     private final ReplicatedDatabaseEventService databaseEventService;
     private final ClusterStateStorageFactory clusterStateFactory;
     private final PanicService panicService;
+    private final DatabaseStartAborter databaseStartAborter;
 
     ReadReplicaDatabaseFactory( Config config, SystemNanoClock clock, JobScheduler jobScheduler, TopologyService topologyService, MemberId myIdentity,
             CatchupComponentsRepository catchupComponentsRepository,
             CatchupClientFactory catchupClientFactory, ReplicatedDatabaseEventService databaseEventService, ClusterStateStorageFactory clusterStateFactory,
-            PanicService panicService )
+            PanicService panicService, DatabaseStartAborter databaseStartAborter )
     {
         this.config = config;
         this.clock = clock;
@@ -74,10 +75,10 @@ class ReadReplicaDatabaseFactory
         this.databaseEventService = databaseEventService;
         this.panicService = panicService;
         this.clusterStateFactory = clusterStateFactory;
+        this.databaseStartAborter = databaseStartAborter;
     }
 
-    ReadReplicaDatabase createDatabase( ReadReplicaDatabaseContext databaseContext, ClusterInternalDbmsOperator clusterInternalOperator,
-            DatabaseStartAborter databaseStartAborter )
+    ReadReplicaDatabase createDatabase( ReadReplicaDatabaseContext databaseContext, ClusterInternalDbmsOperator clusterInternalOperator )
     {
         NamedDatabaseId namedDatabaseId = databaseContext.databaseId();
         Database kernelDatabase = databaseContext.database();
