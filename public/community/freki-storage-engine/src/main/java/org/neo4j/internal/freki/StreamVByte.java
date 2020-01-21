@@ -219,6 +219,14 @@ class StreamVByte
         return offset - startOffset;
     }
 
+    static boolean nonEmptyIntDeltas( byte[] serialized, int offset )
+    {
+        int headerByte = serialized[offset] & 0xFF;
+        return (headerByte & MASK_SQUASHED_BLOCK) != 0
+               ? (((headerByte & 0b0110_0000) >>> SHIFT_SQUASHED_BLOCK_LENGTH) & 0b11) > 0
+               : headerByte > 0;
+    }
+
     // =========== LONGS =============
 
     static void writeLongs( long[] source, ByteBuffer buffer )

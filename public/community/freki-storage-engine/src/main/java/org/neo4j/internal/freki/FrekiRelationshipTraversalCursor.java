@@ -32,7 +32,6 @@ import static org.neo4j.internal.freki.MutableNodeRecordData.externalRelationshi
 import static org.neo4j.internal.freki.MutableNodeRecordData.otherNodeOf;
 import static org.neo4j.internal.freki.MutableNodeRecordData.relationshipHasProperties;
 import static org.neo4j.internal.freki.MutableNodeRecordData.relationshipIsOutgoing;
-import static org.neo4j.internal.freki.Record.FLAG_IN_USE;
 import static org.neo4j.storageengine.api.RelationshipDirection.INCOMING;
 import static org.neo4j.storageengine.api.RelationshipDirection.LOOP;
 import static org.neo4j.storageengine.api.RelationshipDirection.OUTGOING;
@@ -56,7 +55,7 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
     private boolean currentRelationshipHasProperties;
     private long currentRelationshipInternalId;
 
-    FrekiRelationshipTraversalCursor( Store mainStore )
+    FrekiRelationshipTraversalCursor( SimpleStore mainStore )
     {
         super( mainStore );
     }
@@ -70,7 +69,7 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
     @Override
     public long propertiesReference()
     {
-        return currentRelationshipHasProperties ? entityReference() : -1;
+        return currentRelationshipHasProperties ? entityReference() : NULL;
     }
 
     @Override
@@ -103,15 +102,16 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
     {
         if ( !loadedCorrectNode )
         {
-            loadMainRecord( nodeId );
-            if ( !readHeader() )
+            if ( !loadMainRecord( nodeId ) || relationshipsOffset == 0 )
             {
                 return false;
             }
-            readRelationshipTypeGroups();
-            if ( expectedType != -1 )
+
+            startIterationAfterLoad();
+            readRelationshipTypes();
+            if ( expectedType != NULL )
             {
-                int foundIndex = Arrays.binarySearch( typesInNode, expectedType );
+                int foundIndex = Arrays.binarySearch( relationshipTypesInNode, expectedType );
                 if ( foundIndex < 0 )
                 {
                     return false;
@@ -121,11 +121,11 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
             }
         }
 
-        while ( currentTypeIndex < typesInNode.length )
+        while ( currentTypeIndex < relationshipTypesInNode.length )
         {
             if ( currentTypeRelationshipIndex == -1 )
             {
-                if ( (expectedType != -1 && typesInNode[currentTypeIndex] != expectedType) )
+                if ( (expectedType != NULL && relationshipTypesInNode[currentTypeIndex] != expectedType) )
                 {
                     break;
                 }
@@ -166,7 +166,7 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
             }
             currentTypeIndex++;
             currentTypeRelationshipIndex = -1;
-            if ( currentTypePropertiesIndex >= 0 && currentTypeIndex < typesInNode.length )
+            if ( currentTypePropertiesIndex >= 0 && currentTypeIndex < relationshipTypesInNode.length )
             {
                 //Skipping the properties
                 data.position( relationshipTypeOffset( currentTypeIndex ) );
@@ -175,59 +175,58 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
         return false;
     }
 
-    private boolean readHeader()
+    private void startIterationAfterLoad()
     {
         loadedCorrectNode = true;
         currentTypeIndex = 0;
-        return !record.hasFlag( FLAG_IN_USE ) && relationshipsOffset > 0;
     }
 
     @Override
     public void reset()
     {
         super.reset();
-        nodeId = -1;
+        nodeId = NULL;
         expectedType = -1;
         expectedDirection = null;
         currentTypeIndex = -1;
         currentTypeRelationshipIndex = -1;
         loadedCorrectNode = false;
-        currentRelationshipOtherNode = -1;
+        currentRelationshipOtherNode = NULL;
         currentRelationshipHasProperties = false;
         currentTypePropertiesIndex = -1;
         currentTypePropertiesOffset = -1;
         currentRelationshipDirection = null;
-        currentRelationshipInternalId = -1;
+        currentRelationshipInternalId = NULL;
     }
 
     @Override
     public int type()
     {
-        return typesInNode[currentTypeIndex];
+        return relationshipTypesInNode[currentTypeIndex];
     }
 
     @Override
     public long sourceNodeReference()
     {
-        return originNodeReference();
+        return currentRelationshipDirection == OUTGOING ? record.id : currentRelationshipOtherNode;
     }
 
     @Override
     public long targetNodeReference()
     {
-        return neighbourNodeReference();
+        return currentRelationshipDirection == INCOMING ? record.id : currentRelationshipOtherNode;
     }
 
     @Override
     public long neighbourNodeReference()
     {
-        return currentRelationshipDirection.equals( OUTGOING ) ? currentRelationshipOtherNode : nodeId;
+        return currentRelationshipOtherNode;
     }
 
     @Override
     public long originNodeReference()
     {
-        return currentRelationshipDirection.equals( INCOMING ) ? currentRelationshipOtherNode : nodeId;
+        return nodeId;
     }
 
     @Override
@@ -242,8 +241,8 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
     {
         init( nodeCursor.entityReference(), nodeCursor.allRelationshipsReference(), nodeCursor.isDense() );
         useSharedRecordFrom( (FrekiNodeCursor) nodeCursor );
-        readHeader();
-        readRelationshipTypeGroups();
+        startIterationAfterLoad();
+        readRelationshipTypes();
     }
 
     @Override
@@ -259,14 +258,14 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
     {
         init( groupCursor.getOwningNode(), reference, nodeIsDense );
         useSharedRecordFrom( (FrekiRelationshipGroupCursor) groupCursor );
-        readHeader();
+        startIterationAfterLoad();
         expectedType = type;
         expectedDirection = direction;
 
         // Here we come from a place where the relationship data is already loaded in the FrekiRelationshipGroupCursor so we don't have to
         // read it again... merely initialize the state in here to make it look like it has one group (this type) and let next() enjoy this data.
         // The reference is the data buffer offset, so just go there.
-        typesInNode = new int[]{type};
+        relationshipTypesInNode = new int[]{type};
         data.position( (int) reference );
         currentTypeIndex = 0;
     }

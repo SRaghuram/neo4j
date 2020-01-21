@@ -21,22 +21,35 @@ package org.neo4j.internal.freki;
 
 import java.nio.ByteBuffer;
 
+import org.neo4j.internal.freki.StreamVByte.IntArrayTarget;
 import org.neo4j.io.pagecache.PageCursor;
+
+import static org.neo4j.internal.freki.Record.FLAG_IN_USE;
+import static org.neo4j.internal.freki.StreamVByte.readIntDeltas;
+import static org.neo4j.util.Preconditions.checkState;
 
 abstract class FrekiMainStoreCursor implements AutoCloseable
 {
-    final Store mainStore;
+    static final long NULL = -1;
+    static final int NULL_OFFSET = 0;
+
+    final SimpleStore mainStore;
     Record record = new Record( 1 );
     ByteBuffer data;
     private PageCursor cursor;
 
-    // state from record
+    // state from record data header
     int labelsOffset;
-    int propertiesOffset;
+    int nodePropertiesOffset;
     int relationshipsOffset;
     int endOffset;
 
-    FrekiMainStoreCursor( Store mainStore )
+    // state from relationship section, it's here because both relationship cursors as well as property cursor makes use of them
+    int[] relationshipTypesInNode;
+    int[] relationshipTypeOffsets;
+    int firstRelationshipTypeOffset;
+
+    FrekiMainStoreCursor( SimpleStore mainStore )
     {
         this.mainStore = mainStore;
         reset();
@@ -45,6 +58,8 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
     public void reset()
     {
         data = null;
+        relationshipTypeOffsets = null;
+        relationshipTypesInNode = null;
     }
 
     PageCursor cursor()
@@ -59,7 +74,7 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
     boolean loadMainRecord( long id )
     {
         mainStore.read( cursor(), record, id );
-        if ( !record.hasFlag( Record.FLAG_IN_USE ) )
+        if ( !record.hasFlag( FLAG_IN_USE ) )
         {
             return false;
         }
@@ -71,7 +86,7 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
     boolean useSharedRecordFrom( FrekiMainStoreCursor alreadyLoadedRecord )
     {
         Record otherRecord = alreadyLoadedRecord.record;
-        if ( otherRecord.hasFlag( Record.FLAG_IN_USE ) )
+        if ( otherRecord.hasFlag( FLAG_IN_USE ) )
         {
             record.initializeFromWithSharedData( otherRecord );
             data = record.dataForReading();
@@ -86,8 +101,44 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
         int offsetsHeader = MutableNodeRecordData.readOffsetsHeader( data );
         labelsOffset = data.position();
         relationshipsOffset = MutableNodeRecordData.relationshipOffset( offsetsHeader );
-        propertiesOffset = MutableNodeRecordData.propertyOffset( offsetsHeader );
+        nodePropertiesOffset = MutableNodeRecordData.propertyOffset( offsetsHeader );
         endOffset = MutableNodeRecordData.endOffset( offsetsHeader );
+    }
+
+    void readRelationshipTypes()
+    {
+        data.position( relationshipsOffset );
+        relationshipTypesInNode = readIntDeltas( new IntArrayTarget(), data ).array();
+        // Right after the types array the relationship group data starts, so this is the offset for the first type
+        firstRelationshipTypeOffset = data.position();
+
+        // Then read the rest of the offsets for type indexes > 0 after all the relationship data groups, i.e. at endOffset
+        // The values in the typeOffsets array are relative to the firstTypeOffset
+        IntArrayTarget typeOffsetsTarget = new IntArrayTarget();
+        readIntDeltas( typeOffsetsTarget, data.array(), endOffset );
+        relationshipTypeOffsets = typeOffsetsTarget.array();
+    }
+
+    int relationshipPropertiesOffset( int relationshipGroupPropertiesOffset, int relationshipIndexInGroup )
+    {
+        if ( relationshipIndexInGroup == -1 )
+        {
+            return NULL_OFFSET;
+        }
+
+        checkState( relationshipGroupPropertiesOffset >= 0, "Should not be called if this relationship has no properties" );
+        int offset = relationshipGroupPropertiesOffset;
+        for ( int i = 0; i < relationshipIndexInGroup; i++ )
+        {
+            int blockSize = data.get( offset );
+            offset += blockSize;
+        }
+        return offset + 1;
+    }
+
+    int relationshipTypeOffset( int typeIndex )
+    {
+        return typeIndex == 0 ? firstRelationshipTypeOffset : firstRelationshipTypeOffset + relationshipTypeOffsets[typeIndex - 1];
     }
 
     @Override
