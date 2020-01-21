@@ -13,6 +13,7 @@ import java.util.List;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.procedure.builtin.routing.RoutingResult;
@@ -34,7 +35,7 @@ public class FabricSingleInstanceGetRoutingTableProcedure extends SingleInstance
     }
 
     @Override
-    protected RoutingResult invoke( NamedDatabaseId namedDatabaseId, MapValue routingContext )
+    protected RoutingResult invoke( NamedDatabaseId namedDatabaseId, MapValue routingContext ) throws ProcedureException
     {
         if ( fabricDatabaseManager.isFabricDatabase( namedDatabaseId.name() ) )
         {

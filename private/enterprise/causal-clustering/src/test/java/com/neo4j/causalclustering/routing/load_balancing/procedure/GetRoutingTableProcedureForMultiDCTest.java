@@ -19,6 +19,7 @@ import org.neo4j.internal.kernel.api.procs.QualifiedName;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.api.procedure.CallableProcedure;
 import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
+import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.util.ValueUtils;
 import org.neo4j.procedure.builtin.routing.RoutingResult;
 import org.neo4j.values.AnyValue;
@@ -105,7 +106,9 @@ class GetRoutingTableProcedureForMultiDCTest
     void shouldThrowWhenDatabaseDoesNotExist()
     {
         var databaseName = "cars";
-        var databaseManager = new StubClusteredDatabaseManager();
+        TestDatabaseIdRepository databaseIdRepository = new TestDatabaseIdRepository();
+        var databaseManager = new StubClusteredDatabaseManager( databaseIdRepository );
+        databaseIdRepository.filter( databaseName );
 
         var plugin = mock( LoadBalancingPlugin.class );
         var proc = newProcedure( plugin, databaseManager );
@@ -115,19 +118,23 @@ class GetRoutingTableProcedureForMultiDCTest
     }
 
     @Test
-    void shouldThrowWhenDatabaseIsStopped()
+    void shouldNotThrowWhenDatabaseIsStopped() throws ProcedureException
     {
-        var databaseId = randomNamedDatabaseId();
         var databaseManager = new StubClusteredDatabaseManager();
+        var databaseId = databaseManager.databaseIdRepository().getByName( "my-database" ).get();
         var availabilityGuard = mock( DatabaseAvailabilityGuard.class );
         when( availabilityGuard.isAvailable() ).thenReturn( false );
         databaseManager.givenDatabaseWithConfig().withDatabaseId( databaseId ).withDatabaseAvailabilityGuard( availabilityGuard ).register();
 
         var plugin = mock( LoadBalancingPlugin.class );
+        var addresses = List.of( new SocketAddress( "localhost", 12345 ) );
+        var result = new RoutingResult( addresses, addresses, addresses, 100 );
+        when( plugin.run( any(), any( MapValue.class ) ) ).thenReturn( result );
         var proc = newProcedure( plugin, databaseManager );
 
-        var error = assertThrows( ProcedureException.class, () -> proc.apply( null, new AnyValue[]{MapValue.EMPTY, stringValue( databaseId.name() )}, null ) );
-        assertEquals( Status.Database.DatabaseUnavailable, error.status() );
+        proc.apply( null, new AnyValue[]{MapValue.EMPTY, stringValue( databaseId.name() )}, null );
+        // then
+        verify( plugin ).run( databaseId, MapValue.EMPTY );
     }
 
     @Test

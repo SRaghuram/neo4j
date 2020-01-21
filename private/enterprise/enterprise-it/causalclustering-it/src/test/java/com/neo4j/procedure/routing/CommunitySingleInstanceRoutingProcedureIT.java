@@ -136,7 +136,7 @@ class CommunitySingleInstanceRoutingProcedureIT extends BaseRoutingProcedureIT
         return managementService;
     }
 
-    private static RoutingResult newRoutingResult( SocketAddress advertisedBoltAddress )
+    static RoutingResult newRoutingResult( SocketAddress advertisedBoltAddress )
     {
         List<SocketAddress> addresses = singletonList( advertisedBoltAddress );
         Duration ttl = Config.defaults().get( routing_ttl );

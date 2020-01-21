@@ -12,6 +12,7 @@ import java.io.File;
 
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
+import org.neo4j.procedure.builtin.routing.RoutingResult;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;

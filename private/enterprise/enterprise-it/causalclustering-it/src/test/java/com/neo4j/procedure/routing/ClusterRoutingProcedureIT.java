@@ -41,12 +41,12 @@ import static org.neo4j.configuration.helpers.SocketAddressParser.socketAddress;
 class ClusterRoutingProcedureIT extends BaseRoutingProcedureIT
 {
     @Inject
-    private static ClusterFactory clusterFactory;
+    private ClusterFactory clusterFactory;
 
-    private static Cluster cluster;
+    private Cluster cluster;
 
     @BeforeAll
-    static void startCluster() throws Exception
+    void startCluster() throws Exception
     {
         cluster = clusterFactory.createCluster( clusterConfig().withNumberOfReadReplicas( 2 ) );
         cluster.start();
@@ -99,7 +99,7 @@ class ClusterRoutingProcedureIT extends BaseRoutingProcedureIT
     }
 
     @Test
-    void shouldCallRoutingProcedureForStoppedDatabase() throws Exception
+    void shouldSuccessfullyCallRoutingProcedureDespiteStoppedDatabase() throws Exception
     {
         String databaseName = "stopped-database";
 
@@ -108,8 +108,7 @@ class ClusterRoutingProcedureIT extends BaseRoutingProcedureIT
         stopDatabase( databaseName, cluster );
         assertDatabaseEventuallyStopped( databaseName, cluster );
 
-        assertAll( cluster.allMembers().stream().map( member ->
-                () -> assertRoutingProceduresFailForStoppedDatabase( databaseName, member.systemDatabase() ) ) );
+        assertAll( cluster.coreMembers().stream().map( this::assertRoutingProceduresAvailable ) );
     }
 
     @Test
