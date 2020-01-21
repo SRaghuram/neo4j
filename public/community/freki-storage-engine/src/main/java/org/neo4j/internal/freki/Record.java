@@ -43,7 +43,7 @@ class Record
     private ByteBuffer data;
 
     // temporary abstraction when trying out writes
-    MutableNodeRecordData node;
+    transient MutableNodeRecordData node;
 
     Record( int sizeMultiple )
     {
@@ -91,9 +91,16 @@ class Record
         System.arraycopy( record.data.array(), 0, data.array(), 0, data.capacity() );
     }
 
-    void setFlag( int flag )
+    void setFlag( int flag, boolean value )
     {
-        flags |= flag;
+        if ( value )
+        {
+            flags |= flag;
+        }
+        else
+        {
+            flags &= ~flag;
+        }
     }
 
     boolean hasFlag( int flag )
@@ -154,5 +161,21 @@ class Record
         }
 
         cursor.getBytes( data.array(), 0, length );
+    }
+
+    void copyContentsFrom( Record source )
+    {
+        id = source.id;
+        flags = source.flags;
+        sizeMultiple = source.sizeMultiple;
+        if ( source.data != null )
+        {
+            createNewDataBuffer( sizeMultiple );
+            System.arraycopy( source.data.array(), 0, data.array(), 0, source.data.capacity() );
+        }
+        else
+        {
+            data = null;
+        }
     }
 }

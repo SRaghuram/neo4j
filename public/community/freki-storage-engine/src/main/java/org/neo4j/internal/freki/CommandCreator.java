@@ -25,7 +25,6 @@ import org.eclipse.collections.api.map.primitive.MutableLongObjectMap;
 import org.eclipse.collections.api.set.primitive.LongSet;
 import org.eclipse.collections.impl.factory.primitive.LongObjectMaps;
 
-import java.util.Arrays;
 import java.util.Collection;
 
 import org.neo4j.exceptions.KernelException;
@@ -57,7 +56,7 @@ class CommandCreator implements TxStateVisitor
     public void visitCreatedNode( long id )
     {
         Record after = new Record( 1, id );
-        after.setFlag( FLAG_IN_USE );
+        after.setFlag( FLAG_IN_USE, true );
         after.node = new MutableNodeRecordData( id );
         Record before = new Record( 1, id );
         before.node = new MutableNodeRecordData( id );
@@ -93,7 +92,7 @@ class CommandCreator implements TxStateVisitor
         // created id != the id that kernel generated for this relationship <-- IMPORTANT
         for ( StorageProperty property : addedProperties )
         {
-            relationship.properties.put( property.propertyKeyId(), new MutableNodeRecordData.Property( property.propertyKeyId(), property.value() ) );
+            relationship.addProperty( property.propertyKeyId(), property.value() );
         }
         return relationship;
     }
@@ -112,7 +111,7 @@ class CommandCreator implements TxStateVisitor
         assertExists( command );
         for ( StorageProperty property : added )
         {
-            command.after().node.properties.put( property.propertyKeyId(), new MutableNodeRecordData.Property( property.propertyKeyId(), property.value() ) );
+            command.after().node.addProperty( property.propertyKeyId(), property.value() );
         }
     }
 
@@ -134,7 +133,7 @@ class CommandCreator implements TxStateVisitor
         }
 
         // Add the new labels into the record
-        command.after().node.labels = toSortedIntArray( added );
+        command.after().node.labels = toIntArray( added );
     }
 
     private void assertExists( FrekiCommand.Node command )
@@ -146,7 +145,7 @@ class CommandCreator implements TxStateVisitor
         }
     }
 
-    private static int[] toSortedIntArray( LongSet set )
+    private static int[] toIntArray( LongSet set )
     {
         int[] result = new int[set.size()];
         LongIterator iterator = set.longIterator();
@@ -154,7 +153,6 @@ class CommandCreator implements TxStateVisitor
         {
             result[i] = toIntExact( iterator.next() );
         }
-        Arrays.sort( result );
         return result;
     }
 
