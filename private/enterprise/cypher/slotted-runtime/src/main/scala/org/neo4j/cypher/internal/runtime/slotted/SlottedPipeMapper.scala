@@ -28,8 +28,8 @@ import org.neo4j.cypher.internal.runtime.slotted.{expressions => slottedExpressi
 import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryIndexRegistrator}
 import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.expressions.{Equals, SignedDecimalIntegerLiteral}
-import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.CachedPropertySlot
-import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.VariableSlot
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.CachedPropertySlotKey
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.VariableSlotKey
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.translateColumnOrder
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.internal.util.symbols._
@@ -465,12 +465,12 @@ class SlottedPipeMapper(fallback: PipeMapper,
     // When executing, the LHS will be copied to the first slots in the produced row, and any additional RHS columns that are not
     // part of the join comparison
     rhsSlots.foreachSlotOrdered({
-      case (VariableSlot(key), LongSlot(offset, _, _)) if offset >= argumentSize.nLongs =>
+      case (VariableSlotKey(key), LongSlot(offset, _, _)) if offset >= argumentSize.nLongs =>
         copyLongsFromRHS += ((offset, slots.getLongOffsetFor(key)))
-      case (VariableSlot(key), RefSlot(offset, _, _)) if offset >= argumentSize.nReferences =>
+      case (VariableSlotKey(key), RefSlot(offset, _, _)) if offset >= argumentSize.nReferences =>
         copyRefsFromRHS += ((offset, slots.getReferenceOffsetFor(key)))
-      case (_: VariableSlot, _) => // do nothing, already added by lhs
-      case (CachedPropertySlot(cnp), _) =>
+      case (_: VariableSlotKey, _) => // do nothing, already added by lhs
+      case (CachedPropertySlotKey(cnp), _) =>
         val offset = rhsSlots.getCachedPropertyOffsetFor(cnp)
         if (offset >= argumentSize.nReferences) {
           copyCachedPropertiesFromRHS += offset -> slots.getCachedPropertyOffsetFor(cnp)
@@ -577,8 +577,8 @@ class SlottedPipeMapper(fallback: PipeMapper,
     val rhsSlots = physicalPlan.slotConfigurations(rhsPlan.id)
     val sharedSlots =
       rhsSlots.filterSlots({
-        case (VariableSlot(k), _) =>  lhsSlots.get(k).isDefined
-        case (CachedPropertySlot(k), slot) => slot.offset < argumentSize.nReferences && lhsSlots.hasCachedPropertySlot(k)
+        case (VariableSlotKey(k), _) =>  lhsSlots.get(k).isDefined
+        case (CachedPropertySlotKey(k), slot) => slot.offset < argumentSize.nReferences && lhsSlots.hasCachedPropertySlot(k)
       })
 
     val (sharedLongSlots, sharedRefSlots) = sharedSlots.partition(_.isLongSlot)
@@ -621,25 +621,25 @@ class SlottedPipeMapper(fallback: PipeMapper,
     val rhsArgLongSlots = mutable.ArrayBuffer.empty[(String, Slot)]
     val rhsArgRefSlots = mutable.ArrayBuffer.empty[(String, Slot)]
     lhsSlots.foreachSlot({
-      case (VariableSlot(key), slot)  =>
+      case (VariableSlotKey(key), slot)  =>
         if (slot.isLongSlot && slot.offset < argumentSize.nLongs) {
           lhsArgLongSlots += (key -> slot)
         }  else if (!slot.isLongSlot && slot.offset < argumentSize.nReferences) {
           lhsArgRefSlots += (key -> slot)
         }
-      case (CachedPropertySlot(key), slot)  =>
+      case (CachedPropertySlotKey(key), slot)  =>
         if (slot.offset < argumentSize.nReferences) {
           lhsArgRefSlots += (key.asCanonicalStringVal -> slot)
         }
     })
     rhsSlots.foreachSlot({
-      case (VariableSlot(key), slot)  =>
+      case (VariableSlotKey(key), slot)  =>
         if (slot.isLongSlot && slot.offset < argumentSize.nLongs) {
           rhsArgLongSlots += (key -> slot)
         }  else if (!slot.isLongSlot && slot.offset < argumentSize.nReferences) {
           rhsArgRefSlots += (key -> slot)
         }
-      case (CachedPropertySlot(key), slot) =>
+      case (CachedPropertySlotKey(key), slot) =>
         if (slot.offset < argumentSize.nReferences) {
           rhsArgRefSlots += (key.asCanonicalStringVal -> slot)
         }

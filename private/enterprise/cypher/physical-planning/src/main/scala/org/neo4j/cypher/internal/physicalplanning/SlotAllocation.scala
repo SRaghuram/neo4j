@@ -101,10 +101,10 @@ import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.Slo
 import org.neo4j.cypher.internal.physicalplanning.SlotAllocation.NO_ARGUMENT
 import org.neo4j.cypher.internal.physicalplanning.SlotAllocation.SlotMetaData
 import org.neo4j.cypher.internal.physicalplanning.SlotAllocation.SlotsAndArgument
-import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.ApplyPlanSlot
-import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.CachedPropertySlot
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.ApplyPlanSlotKey
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.CachedPropertySlotKey
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.Size
-import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.VariableSlot
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.VariableSlotKey
 import org.neo4j.cypher.internal.runtime.expressionVariableAllocation.AvailableExpressionVariables
 import org.neo4j.cypher.internal.util.Foldable
 import org.neo4j.cypher.internal.util.UnNamedNameGenerator
@@ -655,9 +655,9 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
         // For the implementation of the slotted pipe to use array copy
         // it is very important that we add the slots in the same order
         rhs.foreachSlotOrdered({
-          case (VariableSlot(key), slot) => result.add(key, slot)
-          case (CachedPropertySlot(key), _) => result.newCachedProperty(key, shouldDuplicate = true)
-          case (ApplyPlanSlot(applyPlanId), _) => result.newArgument(applyPlanId)
+          case (VariableSlotKey(key), slot) => result.add(key, slot)
+          case (CachedPropertySlotKey(key), _) => result.newCachedProperty(key, shouldDuplicate = true)
+          case (ApplyPlanSlotKey(applyPlanId), _) => result.newArgument(applyPlanId)
         }, argument.argumentSize)
 
         result
@@ -668,15 +668,15 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
         val result = breakingPolicy.invoke(lp, rhs, argument.slotConfiguration)
 
         lhs.foreachSlotOrdered {
-          case (VariableSlot(key), slot) =>
+          case (VariableSlotKey(key), slot) =>
             // If the column is one of the join columns there is no need to add it again
             if (!nodes(key))
               result.add(key, slot.asNullable)
 
-          case (CachedPropertySlot(key), _) =>
+          case (CachedPropertySlotKey(key), _) =>
             result.newCachedProperty(key)
 
-          case (_: ApplyPlanSlot, _) =>
+          case (_: ApplyPlanSlotKey, _) =>
             throw new SlotAllocationFailed(s"Failed to allocate slots for $lp, apply plan slots are not supported.")
         }
         result
@@ -687,15 +687,15 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
         val result = breakingPolicy.invoke(lp, lhs, argument.slotConfiguration)
 
         rhs.foreachSlotOrdered {
-          case (VariableSlot(key), slot) =>
+          case (VariableSlotKey(key), slot) =>
             // If the column is one of the join columns there is no need to add it again
             if (!nodes(key))
               result.add(key, slot.asNullable)
 
-          case (CachedPropertySlot(key), _) =>
+          case (CachedPropertySlotKey(key), _) =>
             result.newCachedProperty(key)
 
-          case (_: ApplyPlanSlot, _) =>
+          case (_: ApplyPlanSlotKey, _) =>
             throw new SlotAllocationFailed(s"Failed to allocate slots for $lp, apply plan slots are not supported.")
         }
         result
@@ -706,15 +706,15 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
         val result = breakingPolicy.invoke(lp, lhs, argument.slotConfiguration)
 
         rhs.foreachSlotOrdered {
-          case (VariableSlot(key), slot) =>
+          case (VariableSlotKey(key), slot) =>
             // If the column is one of the join columns there is no need to add it again
             if (!nodes(key))
               result.add(key, slot)
 
-          case (CachedPropertySlot(key), _) =>
+          case (CachedPropertySlotKey(key), _) =>
             result.newCachedProperty(key)
 
-          case (_: ApplyPlanSlot, _) =>
+          case (_: ApplyPlanSlotKey, _) =>
             throw new SlotAllocationFailed(s"Failed to allocate slots for $lp, apply plan slots are not supported.")
         }
         result
@@ -726,9 +726,9 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
         // For the implementation of the slotted pipe to use array copy
         // it is very important that we add the slots in the same order
         rhs.foreachSlotOrdered({
-          case (VariableSlot(key), slot) => result.add(key, slot)
-          case (CachedPropertySlot(key), _) => result.newCachedProperty(key, shouldDuplicate = true)
-          case (_: ApplyPlanSlot, _) =>
+          case (VariableSlotKey(key), slot) => result.add(key, slot)
+          case (CachedPropertySlotKey(key), _) => result.newCachedProperty(key, shouldDuplicate = true)
+          case (_: ApplyPlanSlotKey, _) =>
             throw new SlotAllocationFailed(s"Failed to allocate slots for $lp, apply plan slots are not supported.")
 
         }, skipFirst = argument.argumentSize)
@@ -766,20 +766,20 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
           }
 
         lhs.foreachSlotOrdered({
-          case (VariableSlot(key), slot) if !lhs.isAlias(key) => addVariableToResult(key, slot)
+          case (VariableSlotKey(key), slot) if !lhs.isAlias(key) => addVariableToResult(key, slot)
           case _ => // ignore on the first pass
         })
 
         lhs.foreachSlotOrdered({
-          case (VariableSlot(key), slot) if lhs.isAlias(key) =>
+          case (VariableSlotKey(key), slot) if lhs.isAlias(key) =>
             addVariableToResult(key, slot)
 
           // Cached properties that exist on both sides are retained
-          case (CachedPropertySlot(key), _) =>
+          case (CachedPropertySlotKey(key), _) =>
             if (rhs.hasCachedPropertySlot(key)) {
               result.newCachedProperty(key)
             }
-          case (_: ApplyPlanSlot, _) => throw new SlotAllocationFailed("SlotAllocation of Union together with Apply is not implemented.")
+          case (_: ApplyPlanSlotKey, _) => throw new SlotAllocationFailed("SlotAllocation of Union together with Apply is not implemented.")
         })
         result
 

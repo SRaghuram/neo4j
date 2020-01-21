@@ -10,10 +10,10 @@ import org.neo4j.cypher.internal.expressions.ASTCachedProperty
 import org.neo4j.cypher.internal.expressions.CachedProperty
 import org.neo4j.cypher.internal.expressions.NODE_TYPE
 import org.neo4j.cypher.internal.expressions.PropertyKeyName
-import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.ApplyPlanSlot
-import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.CachedPropertySlot
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.ApplyPlanSlotKey
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.CachedPropertySlotKey
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.SlotKey
-import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.VariableSlot
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.VariableSlotKey
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.internal.util.symbols.CTAny
 import org.neo4j.cypher.internal.util.symbols.CTInteger
@@ -251,12 +251,12 @@ class SlotConfigurationTest extends CypherFunSuite with AstConstructionTestSuppo
     def onSlot(pair: (SlotKey, Slot)): Unit = {
       val (key, slot) = pair
       key match {
-        case VariableSlot(name) =>
+        case VariableSlotKey(name) =>
           if (slot.isLongSlot) longEvents += OnLongVar(name, slot)
           else refEvents += OnRefVar(name, slot)
-        case CachedPropertySlot(cp) =>
+        case CachedPropertySlotKey(cp) =>
           refEvents += OnCachedProp(cp)
-        case ApplyPlanSlot(id) =>
+        case ApplyPlanSlotKey(id) =>
           longEvents += OnApplyPlanId(id)
       }
     }

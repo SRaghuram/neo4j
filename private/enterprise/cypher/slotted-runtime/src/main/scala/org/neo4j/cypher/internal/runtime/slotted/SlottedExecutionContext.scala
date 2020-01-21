@@ -10,9 +10,9 @@ import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot, SlotConfig
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
 import org.neo4j.cypher.internal.runtime.{EntityById, ExecutionContext}
 import org.neo4j.cypher.internal.expressions.ASTCachedProperty
-import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.ApplyPlanSlot
-import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.CachedPropertySlot
-import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.VariableSlot
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.ApplyPlanSlotKey
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.CachedPropertySlotKey
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.VariableSlotKey
 import org.neo4j.cypher.internal.util.symbols.{CTNode, CTRelationship}
 import org.neo4j.exceptions.InternalException
 import org.neo4j.graphdb.NotFoundException
@@ -252,21 +252,21 @@ case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionCo
   override def mergeWith(other: ExecutionContext, entityById: EntityById): Unit = other match {
     case slottedOther: SlottedExecutionContext =>
       slottedOther.slots.foreachSlot({
-        case (VariableSlot(key), otherSlot @ LongSlot(offset, _, CTNode)) =>
+        case (VariableSlotKey(key), otherSlot @ LongSlot(offset, _, CTNode)) =>
           val thisSlotSetter = slots.maybePrimitiveNodeSetter(key).getOrElse(
             throw new InternalException(s"Tried to merge primitive node slot $otherSlot from $other but it is missing from $this." +
               "Looks like something needs to be fixed in slot allocation.")
           )
           thisSlotSetter.apply(this, other.getLongAt(offset), entityById)
 
-        case (VariableSlot(key), otherSlot @ LongSlot(offset, _, CTRelationship)) =>
+        case (VariableSlotKey(key), otherSlot @ LongSlot(offset, _, CTRelationship)) =>
           val thisSlotSetter = slots.maybePrimitiveRelationshipSetter(key).getOrElse(
             throw new InternalException(s"Tried to merge primitive relationship slot $otherSlot from $other but it is missing from $this." +
               "Looks like something needs to be fixed in slot allocation.")
           )
           thisSlotSetter.apply(this, other.getLongAt(offset), entityById)
 
-        case (VariableSlot(key), otherSlot @ RefSlot(offset, _, _)) if slottedOther.isRefInitialized(offset)  =>
+        case (VariableSlotKey(key), otherSlot @ RefSlot(offset, _, _)) if slottedOther.isRefInitialized(offset)  =>
           val thisSlotSetter = slots.maybeSetter(key).getOrElse(
             throw new InternalException(s"Tried to merge slot $otherSlot from $other but it is missing from $this." +
               "Looks like something needs to be fixed in slot allocation.")
@@ -276,11 +276,11 @@ case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionCo
           val otherValue = slottedOther.getRefAtWithoutCheckingInitialized(offset)
           thisSlotSetter.apply(this, otherValue)
 
-        case (_: VariableSlot, _) =>
+        case (_: VariableSlotKey, _) =>
           // a slot which is not initialized(=null). This means it is allocated, but will only be used later in the pipeline.
           // Therefore, this is a no-op.
 
-        case (CachedPropertySlot(property), refSlot) =>
+        case (CachedPropertySlotKey(property), refSlot) =>
           setCachedProperty(property, other.getCachedPropertyAt(refSlot.offset))
       })
       setLinenumber(slottedOther.getLinenumber)
@@ -309,7 +309,7 @@ case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionCo
   override def boundEntities(materializeNode: Long => AnyValue, materializeRelationship: Long => AnyValue): Map[String, AnyValue] = {
     val entities = mutable.Map.empty[String, AnyValue]
     slots.foreachSlot({
-      case (VariableSlot(key), RefSlot(offset, _, _)) =>
+      case (VariableSlotKey(key), RefSlot(offset, _, _)) =>
         if (isRefInitialized(offset)) {
           val entity = getRefAtWithoutCheckingInitialized(offset)
           entity match {
@@ -322,21 +322,21 @@ case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionCo
             case _ => // Do nothing
           }
         }
-      case (VariableSlot(key), LongSlot(offset, false, CTNode)) =>
+      case (VariableSlotKey(key), LongSlot(offset, false, CTNode)) =>
         entities += key -> materializeNode(getLongAt(offset))
-      case (VariableSlot(key), LongSlot(offset, false, CTRelationship)) =>
+      case (VariableSlotKey(key), LongSlot(offset, false, CTRelationship)) =>
         entities += key -> materializeRelationship(getLongAt(offset))
-      case (VariableSlot(key), LongSlot(offset, true, CTNode)) =>
+      case (VariableSlotKey(key), LongSlot(offset, true, CTNode)) =>
         val entityId = getLongAt(offset)
         if (entityId >= 0)
           entities += key -> materializeNode(getLongAt(offset))
-      case (VariableSlot(key), LongSlot(offset, true, CTRelationship)) =>
+      case (VariableSlotKey(key), LongSlot(offset, true, CTRelationship)) =>
         val entityId = getLongAt(offset)
         if (entityId >= 0)
           entities += key -> materializeRelationship(getLongAt(offset))
-      case (_: VariableSlot, _) => // Do nothing
-      case (_: CachedPropertySlot, _) => // Do nothing
-      case (_: ApplyPlanSlot, _) => // Do nothing
+      case (_: VariableSlotKey, _) => // Do nothing
+      case (_: CachedPropertySlotKey, _) => // Do nothing
+      case (_: ApplyPlanSlotKey, _) => // Do nothing
     })
     entities.toMap
   }

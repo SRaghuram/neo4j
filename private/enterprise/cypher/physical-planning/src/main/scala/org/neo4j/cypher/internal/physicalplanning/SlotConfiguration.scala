@@ -21,7 +21,7 @@ object SlotConfiguration {
   def empty = new SlotConfiguration(mutable.Map.empty, 0, 0)
 
   def apply(slots: Map[String, Slot], numberOfLongs: Int, numberOfReferences: Int): SlotConfiguration = {
-    val stringToSlot = mutable.Map[SlotKey, Slot](slots.toSeq.map(kv => (VariableSlot(kv._1), kv._2)): _*)
+    val stringToSlot = mutable.Map[SlotKey, Slot](slots.toSeq.map(kv => (VariableSlotKey(kv._1), kv._2)): _*)
     new SlotConfiguration(stringToSlot, numberOfLongs, numberOfReferences)
   }
 
@@ -41,9 +41,9 @@ object SlotConfiguration {
   }
 
   sealed trait SlotKey
-  case class VariableSlot(name: String) extends SlotKey
-  case class CachedPropertySlot(property: ASTCachedProperty) extends SlotKey
-  case class ApplyPlanSlot(applyPlanId: Id) extends SlotKey
+  case class VariableSlotKey(name: String) extends SlotKey
+  case class CachedPropertySlotKey(property: ASTCachedProperty) extends SlotKey
+  case class ApplyPlanSlotKey(applyPlanId: Id) extends SlotKey
 }
 
 /**
@@ -59,9 +59,9 @@ class SlotConfiguration(private val slots: mutable.Map[SlotConfiguration.SlotKey
                         var numberOfReferences: Int) {
 
   import SlotConfiguration.SlotKey
-  import SlotConfiguration.VariableSlot
-  import SlotConfiguration.CachedPropertySlot
-  import SlotConfiguration.ApplyPlanSlot
+  import SlotConfiguration.VariableSlotKey
+  import SlotConfiguration.CachedPropertySlotKey
+  import SlotConfiguration.ApplyPlanSlotKey
 
   private val aliases: mutable.Set[String] = mutable.Set()
   private val slotAliases = new mutable.HashMap[Slot, mutable.Set[String]] with mutable.MultiMap[Slot, String]
@@ -74,9 +74,9 @@ class SlotConfiguration(private val slots: mutable.Map[SlotConfiguration.SlotKey
   def size() = SlotConfiguration.Size(numberOfLongs, numberOfReferences)
 
   def addAlias(newKey: String, existingKey: String): SlotConfiguration = {
-    val slot = slots.getOrElse(VariableSlot(existingKey),
+    val slot = slots.getOrElse(VariableSlotKey(existingKey),
       throw new SlotAllocationFailed(s"Tried to alias non-existing slot '$existingKey'  with alias '$newKey'"))
-    slots.put(VariableSlot(newKey), slot)
+    slots.put(VariableSlotKey(newKey), slot)
     aliases.add(newKey)
     slotAliases.addBinding(slot, newKey)
     this
@@ -86,17 +86,17 @@ class SlotConfiguration(private val slots: mutable.Map[SlotConfiguration.SlotKey
     aliases.contains(key)
   }
 
-  def apply(key: String): Slot = slots.apply(VariableSlot(key))
+  def apply(key: String): Slot = slots.apply(VariableSlotKey(key))
 
   def nameOfLongSlot(offset: Int): Option[String] = slots.collectFirst {
-    case (VariableSlot(name), LongSlot(o, _, _)) if o == offset && !aliases(name) => name
+    case (VariableSlotKey(name), LongSlot(o, _, _)) if o == offset && !aliases(name) => name
   }
 
   def filterSlots[U](f: ((SlotKey,Slot)) => Boolean): Iterable[Slot] = {
     slots.filter(f).values
   }
 
-  def get(key: String): Option[Slot] = slots.get(VariableSlot(key))
+  def get(key: String): Option[Slot] = slots.get(VariableSlotKey(key))
 
   def add(key: String, slot: Slot): Unit = slot match {
     case LongSlot(_, nullable, typ) => newLong(key, nullable, typ)
@@ -112,7 +112,7 @@ class SlotConfiguration(private val slots: mutable.Map[SlotConfiguration.SlotKey
 
   def emptyUnderSameApply(): SlotConfiguration = {
     val applyPlanSlots = mutable.Map.empty[SlotKey, Slot]
-    applyPlanSlots ++= slots.iterator.filter(kv => kv._1.isInstanceOf[ApplyPlanSlot])
+    applyPlanSlots ++= slots.iterator.filter(kv => kv._1.isInstanceOf[ApplyPlanSlotKey])
     new SlotConfiguration(applyPlanSlots, 0, 0)
   }
 
@@ -123,7 +123,7 @@ class SlotConfiguration(private val slots: mutable.Map[SlotConfiguration.SlotKey
     require(existingAliases.contains(key))
     slotAliases.put(modifiedSlot, existingAliases)
     // Propagate changes to all corresponding entries in the slots map
-    existingAliases.foreach(alias => slots.put(VariableSlot(alias), modifiedSlot))
+    existingAliases.foreach(alias => slots.put(VariableSlotKey(alias), modifiedSlot))
     slotAliases.remove(existingSlot)
   }
 
@@ -154,7 +154,7 @@ class SlotConfiguration(private val slots: mutable.Map[SlotConfiguration.SlotKey
 
   def newLong(key: String, nullable: Boolean, typ: CypherType): SlotConfiguration = {
     val slot = LongSlot(numberOfLongs, nullable, typ)
-    slots.get(VariableSlot(key)) match {
+    slots.get(VariableSlotKey(key)) match {
       case Some(existingSlot) =>
         if (!existingSlot.isTypeCompatibleWith(slot)) {
           throw new InternalException(s"Tried overwriting already taken variable name '$key' as $slot (was: $existingSlot)")
@@ -163,7 +163,7 @@ class SlotConfiguration(private val slots: mutable.Map[SlotConfiguration.SlotKey
         unifyTypeAndNullability(key, existingSlot, slot)
 
       case None =>
-        slots.put(VariableSlot(key), slot)
+        slots.put(VariableSlotKey(key), slot)
         slotAliases.addBinding(slot, key)
         numberOfLongs = numberOfLongs + 1
     }
@@ -171,11 +171,11 @@ class SlotConfiguration(private val slots: mutable.Map[SlotConfiguration.SlotKey
   }
 
   def newArgument(applyPlanId: Id): SlotConfiguration = {
-    if (slots.contains(ApplyPlanSlot(applyPlanId))) {
+    if (slots.contains(ApplyPlanSlotKey(applyPlanId))) {
       throw new IllegalStateException(s"Should only add argument once per plan, got plan with $applyPlanId twice")
     }
     if (applyPlanId != Id.INVALID_ID) { // Top level argument is not allocated
-      slots.put(ApplyPlanSlot(applyPlanId), LongSlot(numberOfLongs, false, CTAny))
+      slots.put(ApplyPlanSlotKey(applyPlanId), LongSlot(numberOfLongs, false, CTAny))
       numberOfLongs = numberOfLongs + 1
     }
     this
@@ -183,7 +183,7 @@ class SlotConfiguration(private val slots: mutable.Map[SlotConfiguration.SlotKey
 
   def newReference(key: String, nullable: Boolean, typ: CypherType): SlotConfiguration = {
     val slot = RefSlot(numberOfReferences, nullable, typ)
-    val slotKey = VariableSlot(key)
+    val slotKey = VariableSlotKey(key)
     slots.get(slotKey) match {
       case Some(existingSlot) =>
         if (!existingSlot.isTypeCompatibleWith(slot)) {
@@ -201,7 +201,7 @@ class SlotConfiguration(private val slots: mutable.Map[SlotConfiguration.SlotKey
   }
 
   def newCachedProperty(key: ASTCachedProperty, shouldDuplicate: Boolean = false): SlotConfiguration = {
-    val slotKey = CachedPropertySlot(key)
+    val slotKey = CachedPropertySlotKey(key)
     slots.get(slotKey) match {
       case Some(_) =>
         // RefSlots for cached node properties are always compatible and identical in nullability and type. We can therefore reuse the existing slot.
@@ -216,19 +216,19 @@ class SlotConfiguration(private val slots: mutable.Map[SlotConfiguration.SlotKey
     this
   }
 
-  def getReferenceOffsetFor(name: String): Int = slots.get(VariableSlot(name)) match {
+  def getReferenceOffsetFor(name: String): Int = slots.get(VariableSlotKey(name)) match {
     case Some(s: RefSlot) => s.offset
     case Some(s) => throw new InternalException(s"Uh oh... There was no reference slot for `$name`. It was a $s")
     case _ => throw new InternalException(s"Uh oh... There was no slot for `$name`")
   }
 
-  def getLongOffsetFor(name: String): Int = slots.get(VariableSlot(name)) match {
+  def getLongOffsetFor(name: String): Int = slots.get(VariableSlotKey(name)) match {
     case Some(s: LongSlot) => s.offset
     case Some(s) => throw new InternalException(s"Uh oh... There was no long slot for `$name`. It was a $s")
     case _ => throw new InternalException(s"Uh oh... There was no slot for `$name`")
   }
 
-  def getLongSlotFor(name: String): Slot = slots.get(VariableSlot(name)) match {
+  def getLongSlotFor(name: String): Slot = slots.get(VariableSlotKey(name)) match {
     case Some(s: LongSlot) => s
     case Some(s) => throw new InternalException(s"Uh oh... There was no long slot for `$name`. It was a $s")
     case _ => throw new InternalException(s"Uh oh... There was no slot for `$name`")
@@ -238,12 +238,12 @@ class SlotConfiguration(private val slots: mutable.Map[SlotConfiguration.SlotKey
     if (applyPlanId == Id.INVALID_ID) {
       TopLevelArgument.SLOT_OFFSET
     } else {
-      slots.getOrElse(ApplyPlanSlot(applyPlanId),
+      slots.getOrElse(ApplyPlanSlotKey(applyPlanId),
         throw new InternalException(s"No argument slot allocated for plan with $applyPlanId")).offset
     }
   }
 
-  def getCachedPropertyOffsetFor(key: ASTCachedProperty): Int = slots(CachedPropertySlot(key)).offset
+  def getCachedPropertyOffsetFor(key: ASTCachedProperty): Int = slots(CachedPropertySlotKey(key)).offset
 
   def updateAccessorFunctions(key: String, getter: ExecutionContext => AnyValue, setter: (ExecutionContext, AnyValue) => Unit,
                               primitiveNodeSetter: Option[(ExecutionContext, Long, EntityById) => Unit],
@@ -295,7 +295,7 @@ class SlotConfiguration(private val slots: mutable.Map[SlotConfiguration.SlotKey
 
   def foreachCachedSlot[U](onCachedProperty: ((ASTCachedProperty, RefSlot)) => Unit): Unit = {
     slots.iterator.foreach {
-      case (CachedPropertySlot(key), slot: RefSlot) => onCachedProperty(key, slot)
+      case (CachedPropertySlotKey(key), slot: RefSlot) => onCachedProperty(key, slot)
       case _ => // do nothing
     }
   }
@@ -305,9 +305,9 @@ class SlotConfiguration(private val slots: mutable.Map[SlotConfiguration.SlotKey
                  onCachedProperty: ((ASTCachedProperty, RefSlot)) => U
                 ): Iterable[U] = {
     slots.map {
-      case (VariableSlot(key), slot) => onVariable(key, slot)
-      case (CachedPropertySlot(key), slot: RefSlot) => onCachedProperty(key, slot)
-      case (_: ApplyPlanSlot, slot) => throw new SlotAllocationFailed("SlotConfiguration.mapSlot does not support ApplyPlanSlots yet")
+      case (VariableSlotKey(key), slot) => onVariable(key, slot)
+      case (CachedPropertySlotKey(key), slot: RefSlot) => onCachedProperty(key, slot)
+      case (_: ApplyPlanSlotKey, slot) => throw new SlotAllocationFailed("SlotConfiguration.mapSlot does not support ApplyPlanSlots yet")
     }
   }
 
@@ -350,12 +350,12 @@ class SlotConfiguration(private val slots: mutable.Map[SlotConfiguration.SlotKey
    */
   def getCachedPropertySlots: immutable.IndexedSeq[SlotWithAliases] =
     slots.toIndexedSeq.collect {
-      case (CachedPropertySlot(cachedProperty), slot: RefSlot) => RefSlotWithAliases(slot, Set(cachedProperty.asCanonicalStringVal))
+      case (CachedPropertySlotKey(cachedProperty), slot: RefSlot) => RefSlotWithAliases(slot, Set(cachedProperty.asCanonicalStringVal))
     }.sorted(SlotWithAliasesOrdering)
 
-  def hasCachedPropertySlot(key: ASTCachedProperty): Boolean = slots.contains(CachedPropertySlot(key))
+  def hasCachedPropertySlot(key: ASTCachedProperty): Boolean = slots.contains(CachedPropertySlotKey(key))
 
-  def getCachedPropertySlot(key: ASTCachedProperty): Option[RefSlot] = slots.get(CachedPropertySlot(key)).asInstanceOf[Option[RefSlot]]
+  def getCachedPropertySlot(key: ASTCachedProperty): Option[RefSlot] = slots.get(CachedPropertySlotKey(key)).asInstanceOf[Option[RefSlot]]
 
   object SlotWithAliasesOrdering extends Ordering[SlotWithAliases] {
     def compare(x: SlotWithAliases, y: SlotWithAliases): Int = (x, y) match {

@@ -44,10 +44,10 @@ import org.neo4j.cypher.internal.physicalplanning.ReduceOutput
 import org.neo4j.cypher.internal.physicalplanning.RefSlot
 import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
-import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.ApplyPlanSlot
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.ApplyPlanSlotKey
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.Size
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.SlotKey
-import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.VariableSlot
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.VariableSlotKey
 import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.expressionVariableAllocation.AvailableExpressionVariables
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.CommunityExpressionConverter
@@ -390,7 +390,7 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
 
   class PipelineBuilder(head: LogicalPlan) {
     private val slots = mutable.Map.empty[SlotKey, Slot]
-    slots += ApplyPlanSlot(Id(0)) -> LongSlot(0, false, symbols.CTAny)
+    slots += ApplyPlanSlotKey(Id(0)) -> LongSlot(0, false, symbols.CTAny)
     private var longCount = 0 // TODO: shouldn't this be 1 because of the apply plan slot?
     private var refCount = 0
     private var current = head
@@ -427,17 +427,17 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
     }
 
     def addNode(node: String): Unit = {
-      slots += VariableSlot(node) -> LongSlot(longCount, nullable = false, symbols.CTNode)
+      slots += VariableSlotKey(node) -> LongSlot(longCount, nullable = false, symbols.CTNode)
       longCount += 1
     }
 
     def addRelationship(relationship: String): Unit = {
-      slots += VariableSlot(relationship) -> LongSlot(longCount, nullable = false, symbols.CTRelationship)
+      slots += VariableSlotKey(relationship) -> LongSlot(longCount, nullable = false, symbols.CTRelationship)
       longCount += 1
     }
 
     def addReference(ref: String): Unit = {
-      slots += VariableSlot(ref) -> RefSlot(refCount, nullable = true, symbols.CTAny)
+      slots += VariableSlotKey(ref) -> RefSlot(refCount, nullable = true, symbols.CTAny)
       refCount += 1
     }
 

@@ -24,8 +24,8 @@ import org.neo4j.cypher.internal.physicalplanning.ProduceResultOutput
 import org.neo4j.cypher.internal.physicalplanning.ReduceOutput
 import org.neo4j.cypher.internal.physicalplanning.RefSlot
 import org.neo4j.cypher.internal.physicalplanning.Slot
-import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.CachedPropertySlot
-import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.VariableSlot
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.CachedPropertySlotKey
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.VariableSlotKey
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.isRefSlotAndNotAlias
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.generateSlotAccessorFunctions
 import org.neo4j.cypher.internal.physicalplanning.SlottedIndexedProperty
@@ -345,12 +345,12 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         // When executing the HashJoin, the LHS will be copied to the first slots in the produced row, and any additional RHS columns that are not
         // part of the join comparison
         rhsSlots.foreachSlotOrdered({
-          case (VariableSlot(key), LongSlot(offset, _, _)) if offset >= argumentSize.nLongs =>
+          case (VariableSlotKey(key), LongSlot(offset, _, _)) if offset >= argumentSize.nLongs =>
             copyLongsFromRHS += ((offset, slots.getLongOffsetFor(key)))
-          case (VariableSlot(key), RefSlot(offset, _, _)) if offset >= argumentSize.nReferences =>
+          case (VariableSlotKey(key), RefSlot(offset, _, _)) if offset >= argumentSize.nReferences =>
             copyRefsFromRHS += ((offset, slots.getReferenceOffsetFor(key)))
-          case (_: VariableSlot, _) => // do nothing, already added by lhs
-          case (CachedPropertySlot(cnp), _) =>
+          case (_: VariableSlotKey, _) => // do nothing, already added by lhs
+          case (CachedPropertySlotKey(cnp), _) =>
             val offset = rhsSlots.getCachedPropertyOffsetFor(cnp)
             if (offset >= argumentSize.nReferences)
               copyCachedPropertiesFromRHS += offset -> slots.getCachedPropertyOffsetFor(cnp)

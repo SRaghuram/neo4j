@@ -5,9 +5,9 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted.pipes
 
-import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.ApplyPlanSlot
-import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.CachedPropertySlot
-import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.VariableSlot
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.ApplyPlanSlotKey
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.CachedPropertySlotKey
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.VariableSlotKey
 import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot, SlotConfiguration}
 import org.neo4j.cypher.internal.runtime.ExecutionContext
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
@@ -19,10 +19,10 @@ trait SlottedPipeTestHelper extends CypherFunSuite {
     list1 map { in =>
       val build = scala.collection.mutable.HashMap.empty[String, Any]
       slots.foreachSlot({
-        case (VariableSlot(column), LongSlot(offset, _, _)) => build.put(column, in.getLongAt(offset))
-        case (VariableSlot(column), RefSlot(offset, _, _)) => build.put(column, in.getRefAt(offset))
-        case (_: CachedPropertySlot, _) => // no help here
-        case (_: ApplyPlanSlot, _) => // or here
+        case (VariableSlotKey(column), LongSlot(offset, _, _)) => build.put(column, in.getLongAt(offset))
+        case (VariableSlotKey(column), RefSlot(offset, _, _)) => build.put(column, in.getRefAt(offset))
+        case (_: CachedPropertySlotKey, _) => // no help here
+        case (_: ApplyPlanSlotKey, _) => // or here
       })
       build.toMap
     }
