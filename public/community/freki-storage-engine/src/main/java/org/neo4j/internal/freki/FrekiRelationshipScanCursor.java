@@ -43,7 +43,7 @@ class FrekiRelationshipScanCursor extends FrekiRelationshipCursor implements Sto
     private int relationshipPropertiesIndex;
     private boolean outgoing;
 
-    FrekiRelationshipScanCursor( Store mainStore )
+    FrekiRelationshipScanCursor( SimpleStore mainStore )
     {
         super( mainStore );
     }
@@ -51,12 +51,12 @@ class FrekiRelationshipScanCursor extends FrekiRelationshipCursor implements Sto
     @Override
     public boolean next()
     {
-        if ( needsLoading && singleId != -1 )
+        if ( needsLoading && singleId != NULL )
         {
             needsLoading = false;
             if ( loadMainRecord( nodeIdFromRelationshipId( singleId ) ) )
             {
-                readRelationshipTypeGroups();
+                readRelationshipTypes();
                 return findRelationship();
             }
         }
@@ -66,7 +66,7 @@ class FrekiRelationshipScanCursor extends FrekiRelationshipCursor implements Sto
     private boolean findRelationship()
     {
         long expectedInternalRelationshipId = internalRelationshipIdFromRelationshipId( singleId );
-        for ( int t = 0; t < typesInNode.length; t++ )
+        for ( int t = 0; t < relationshipTypesInNode.length; t++ )
         {
             data.position( relationshipTypeOffset( t ) );
             int hasPropertiesIndex = -1;
@@ -86,7 +86,7 @@ class FrekiRelationshipScanCursor extends FrekiRelationshipCursor implements Sto
                     this.hasProperties = hasProperties;
                     outgoing = relationshipIsOutgoing( otherNodeRaw );
                     otherNode = otherNodeOf( otherNodeRaw );
-                    type = typesInNode[t];
+                    type = relationshipTypesInNode[t];
                     relationshipPropertiesIndex = hasPropertiesIndex;
                     return true;
                 }
@@ -105,10 +105,10 @@ class FrekiRelationshipScanCursor extends FrekiRelationshipCursor implements Sto
     public void reset()
     {
         super.reset();
-        singleId = -1;
-        internalId = -1;
+        singleId = NULL;
+        internalId = NULL;
         needsLoading = false;
-        otherNode = -1;
+        otherNode = NULL;
         type = -1;
         hasProperties = false;
         outgoing = false;

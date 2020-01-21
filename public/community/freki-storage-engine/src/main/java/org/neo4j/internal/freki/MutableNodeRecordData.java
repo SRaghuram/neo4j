@@ -48,31 +48,13 @@ class MutableNodeRecordData
 
     private final long id;
     int[] labels = EMPTY_PRIMITIVE_INT_ARRAY;
-    MutableIntObjectMap<Property> properties = IntObjectMaps.mutable.empty();
-    MutableIntObjectMap<Relationships> relationships = IntObjectMaps.mutable.empty();
+    private MutableIntObjectMap<Value> properties = IntObjectMaps.mutable.empty();
+    private MutableIntObjectMap<Relationships> relationships = IntObjectMaps.mutable.empty();
     private long internalRelationshipIdCounter;
 
     MutableNodeRecordData( long id )
     {
         this.id = id;
-    }
-
-    static class Property implements Comparable<Property>
-    {
-        int key;
-        Value value;
-
-        Property( int key, Value value )
-        {
-            this.key = key;
-            this.value = value;
-        }
-
-        @Override
-        public int compareTo( Property o )
-        {
-            return Integer.compare( key, o.key );
-        }
     }
 
     static class Relationship
@@ -84,7 +66,7 @@ class MutableNodeRecordData
         long otherNode;
         int type;
         boolean outgoing;
-        MutableIntObjectMap<Property> properties = IntObjectMaps.mutable.empty();
+        private MutableIntObjectMap<Value> properties = IntObjectMaps.mutable.empty();
 
         Relationship( long internalId, long sourceNodeId, long otherNode, int type, boolean outgoing )
         {
@@ -93,6 +75,11 @@ class MutableNodeRecordData
             this.otherNode = otherNode;
             this.type = type;
             this.outgoing = outgoing;
+        }
+
+        void addProperty( int propertyKeyId, Value value )
+        {
+            properties.put( propertyKeyId, value );
         }
     }
 
@@ -146,6 +133,11 @@ class MutableNodeRecordData
         }
     }
 
+    void addProperty( int propertyKeyId, Value value )
+    {
+        properties.put( propertyKeyId, value );
+    }
+
     Relationship createRelationship( Relationship sourceNodeRelationship, long otherNode, int type, boolean outgoing )
     {
         checkState( internalRelationshipIdCounter < ARTIFICIAL_MAX_RELATIONSHIP_COUNTER, "Relationship counter exhausted for node %d", id );
@@ -158,6 +150,7 @@ class MutableNodeRecordData
         int offsetHeaderPosition = buffer.position();
         // labels
         buffer.position( offsetHeaderPosition + SIZE_SLOT_HEADER );
+        Arrays.sort( labels );
         writeIntDeltas( labels, buffer );
 
         // properties
@@ -229,15 +222,14 @@ class MutableNodeRecordData
         buffer.putInt( offsetHeaderPosition, ((endOffset & 0x3FF) << 20) | ((relationshipsOffset & 0x3FF) << 10) | propertiesOffset & 0x3FF );
     }
 
-    private static void writeProperties( MutableIntObjectMap<Property> properties, ByteBuffer buffer )
+    private static void writeProperties( MutableIntObjectMap<Value> properties, ByteBuffer buffer )
     {
-        Property[] propertiesArray = properties.toArray( new Property[0] );
-        Arrays.sort( propertiesArray );
-        writeIntDeltas( keysOf( propertiesArray ), buffer );
+        int[] propertyKeys = properties.keySet().toSortedArray();
+        writeIntDeltas( propertyKeys, buffer );
         PropertyValueFormat writer = new PropertyValueFormat( buffer );
-        for ( Property property : propertiesArray )
+        for ( int propertyKey : propertyKeys )
         {
-            property.value.writeTo( writer );
+            properties.get( propertyKey ).writeTo( writer );
         }
     }
 
@@ -259,16 +251,6 @@ class MutableNodeRecordData
     void deserialize( ByteBuffer buffer )
     {
         throw new UnsupportedOperationException( "Not implemented yet" );
-    }
-
-    private static int[] keysOf( Property[] propertiesArray )
-    {
-        int[] keys = new int[propertiesArray.length];
-        for ( int i = 0; i < propertiesArray.length; i++ )
-        {
-            keys[i] = propertiesArray[i].key;
-        }
-        return keys;
     }
 
     // TODO DRY

@@ -38,7 +38,7 @@ import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 
 import static org.neo4j.internal.helpers.ArrayUtil.concat;
 
-public class Store extends LifecycleAdapter implements AutoCloseable
+public class Store extends LifecycleAdapter implements AutoCloseable, SimpleStore
 {
     private final FileSystemAbstraction fs;
     private final File file;
@@ -104,11 +104,13 @@ public class Store extends LifecycleAdapter implements AutoCloseable
         shutdown();
     }
 
-    PageCursor openWriteCursor() throws IOException
+    @Override
+    public PageCursor openWriteCursor() throws IOException
     {
         return mappedFile.io( 0, PagedFile.PF_SHARED_WRITE_LOCK, PageCursorTracer.NULL );
     }
 
+    @Override
     public void write( PageCursor cursor, Record record ) throws IOException
     {
         long id = record.id;
@@ -122,7 +124,8 @@ public class Store extends LifecycleAdapter implements AutoCloseable
         record.serialize( cursor );
     }
 
-    PageCursor openReadCursor()
+    @Override
+    public PageCursor openReadCursor()
     {
         try
         {
@@ -134,6 +137,7 @@ public class Store extends LifecycleAdapter implements AutoCloseable
         }
     }
 
+    @Override
     public boolean read( PageCursor cursor, Record record, long id )
     {
         record.clear();

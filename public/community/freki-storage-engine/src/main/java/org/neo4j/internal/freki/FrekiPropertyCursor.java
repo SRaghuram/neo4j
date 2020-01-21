@@ -25,28 +25,35 @@ import org.neo4j.storageengine.api.StorageRelationshipCursor;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.ValueGroup;
 
+import static org.neo4j.internal.freki.MutableNodeRecordData.internalRelationshipIdFromRelationshipId;
+import static org.neo4j.internal.freki.MutableNodeRecordData.nodeIdFromRelationshipId;
+import static org.neo4j.internal.freki.MutableNodeRecordData.relationshipHasProperties;
 import static org.neo4j.internal.freki.PropertyValueFormat.calculatePropertyValueSizeIncludingTypeHeader;
 import static org.neo4j.internal.freki.StreamVByte.readIntDeltas;
+import static org.neo4j.internal.freki.StreamVByte.readLongs;
 
 class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropertyCursor
 {
     private boolean initializedFromEntity;
-    private long entityId;
+    private long nodeId;
+    private long internalRelationshipId;
     private int[] propertyKeyArray;
     private int propertyKeyIndex;
     private int nextPropertyValueStartOffset;
 
-    FrekiPropertyCursor( Store mainStore )
+    FrekiPropertyCursor( SimpleStore mainStore )
     {
         super( mainStore );
     }
 
     @Override
-    public void initNodeProperties( long nodeId )
+    public void initNodeProperties( long reference )
     {
-        // Setting this field will tell make record loading happen in next() later
-        this.entityId = nodeId;
         reset();
+        if ( reference != NULL )
+        {
+            nodeId = reference;
+        }
     }
 
     @Override
@@ -65,20 +72,29 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
     @Override
     public void initRelationshipProperties( long reference )
     {
+        reset();
+        if ( reference != NULL )
+        {
+            nodeId = nodeIdFromRelationshipId( reference );
+            internalRelationshipId = internalRelationshipIdFromRelationshipId( reference );
+        }
     }
 
     @Override
     public void initRelationshipProperties( StorageRelationshipCursor relationshipCursor )
     {
-        FrekiRelationshipCursor relCursor = (FrekiRelationshipCursor) relationshipCursor;
-        if ( useSharedRecordFrom( relCursor ) )
+        if ( relationshipCursor.hasProperties() )
         {
-            int offset = relCursor.currentRelationshipPropertiesOffset();
-            if ( offset != -1 )
+            FrekiRelationshipCursor relCursor = (FrekiRelationshipCursor) relationshipCursor;
+            if ( useSharedRecordFrom( relCursor ) )
             {
-                readPropertyKeys( offset );
-                initializedFromEntity = true;
-                return;
+                int offset = relCursor.currentRelationshipPropertiesOffset();
+                if ( offset != NULL_OFFSET )
+                {
+                    readPropertyKeys( offset );
+                    initializedFromEntity = true;
+                    return;
+                }
             }
         }
         reset();
@@ -105,14 +121,30 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
     @Override
     public boolean next()
     {
-        if ( entityId != -1 || propertyKeyIndex != -1 || initializedFromEntity )
+        if ( nodeId != NULL || propertyKeyIndex != NULL || initializedFromEntity )
         {
             initializedFromEntity = false;
-            if ( entityId != -1 )
+            if ( nodeId != NULL )
             {
-                loadMainRecord( entityId );
-                entityId = -1;
-                if ( !record.hasFlag( Record.FLAG_IN_USE ) || !readNodePropertyKeys() )
+                loadMainRecord( nodeId );
+                nodeId = NULL;
+                if ( !record.hasFlag( Record.FLAG_IN_USE ) )
+                {
+                    return false;
+                }
+
+                int offset;
+                if ( internalRelationshipId == NULL )
+                {
+                    // This is properties for a node
+                    offset = nodePropertiesOffset;
+                }
+                else
+                {
+                    // This is properties for a relationship
+                    offset = findRelationshipPropertiesOffset( internalRelationshipId );
+                }
+                if ( !readPropertyKeys( offset ) )
                 {
                     return false;
                 }
@@ -134,14 +166,40 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
         return false;
     }
 
+    private int findRelationshipPropertiesOffset( long internalRelationshipId )
+    {
+        readRelationshipTypes();
+        for ( int t = 0; t < relationshipTypesInNode.length; t++ )
+        {
+            data.position( relationshipTypeOffset( t ) );
+            int hasPropertiesIndex = -1;
+            long[] relationshipGroupData = readLongs( data );
+            int relationshipGroupPropertiesOffset = data.position();
+            for ( int d = 0; d < relationshipGroupData.length; d += 2 )
+            {
+                boolean hasProperties = relationshipHasProperties( relationshipGroupData[d] );
+                if ( hasProperties )
+                {
+                    hasPropertiesIndex++;
+                }
+                long internalId = relationshipGroupData[d + 1];
+                if ( internalId == internalRelationshipId )
+                {
+                    return hasProperties ? relationshipPropertiesOffset( relationshipGroupPropertiesOffset, hasPropertiesIndex ) : NULL_OFFSET;
+                }
+            }
+        }
+        return NULL_OFFSET;
+    }
+
     private boolean readNodePropertyKeys()
     {
-        return readPropertyKeys( propertiesOffset );
+        return readPropertyKeys( nodePropertiesOffset );
     }
 
     private boolean readPropertyKeys( int offset )
     {
-        if ( offset == 0 )
+        if ( offset == NULL_OFFSET )
         {
             return false;
         }
@@ -156,7 +214,8 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
     public void reset()
     {
         super.reset();
-        entityId = -1;
+        nodeId = NULL;
+        internalRelationshipId = NULL;
         propertyKeyIndex = -1;
         initializedFromEntity = false;
     }

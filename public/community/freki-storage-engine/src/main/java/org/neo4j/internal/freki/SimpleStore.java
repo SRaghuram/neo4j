@@ -19,20 +19,17 @@
  */
 package org.neo4j.internal.freki;
 
-import org.neo4j.storageengine.api.StorageRelationshipCursor;
+import java.io.IOException;
 
-abstract class FrekiRelationshipCursor extends FrekiMainStoreCursor implements StorageRelationshipCursor
+import org.neo4j.io.pagecache.PageCursor;
+
+public interface SimpleStore
 {
-    FrekiRelationshipCursor( SimpleStore mainStore )
-    {
-        super( mainStore );
-    }
+    PageCursor openWriteCursor() throws IOException;
 
-    @Override
-    public void reset()
-    {
-        super.reset();
-    }
+    void write( PageCursor cursor, Record record ) throws IOException;
 
-    abstract int currentRelationshipPropertiesOffset();
+    PageCursor openReadCursor();
+
+    boolean read( PageCursor cursor, Record record, long id );
 }

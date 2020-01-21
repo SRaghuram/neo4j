@@ -30,14 +30,14 @@ import static org.neo4j.internal.helpers.Numbers.safeCastIntToUnsignedByte;
 
 class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
 {
-    static final byte EXTERNAL_TYPE_INT = 0;
-    static final byte EXTERNAL_TYPE_LONG = 1;
-    static final byte EXTERNAL_TYPE_STRING = 2;
+    private static final byte EXTERNAL_TYPE_INT = 0;
+    private static final byte EXTERNAL_TYPE_LONG = 1;
+    private static final byte EXTERNAL_TYPE_STRING = 2;
 
-    static final byte INTERNAL_SCALAR_TYPE_INT_8 = 0;
-    static final byte INTERNAL_SCALAR_TYPE_INT_16 = 1;
-    static final byte INTERNAL_SCALAR_TYPE_INT_32 = 2;
-    static final byte INTERNAL_SCALAR_TYPE_INT_64 = 3;
+    private static final byte INTERNAL_SCALAR_TYPE_INT_8 = 0;
+    private static final byte INTERNAL_SCALAR_TYPE_INT_16 = 1;
+    private static final byte INTERNAL_SCALAR_TYPE_INT_32 = 2;
+    private static final byte INTERNAL_SCALAR_TYPE_INT_64 = 3;
 
     private final ByteBuffer buffer;
 
@@ -46,25 +46,36 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
         this.buffer = buffer;
     }
 
-    static byte externalType( byte typeByte )
+    private static byte externalType( byte typeByte )
     {
         return (byte) (typeByte & 0xF);
     }
 
-    static byte internalType( byte typeByte )
+    private static byte internalType( byte typeByte )
     {
-        return (byte) ((typeByte & 0xF0) >> 4);
+        return (byte) ((typeByte & 0xE0) >> 5);
+    }
+
+    private static boolean negativeScalar( byte typeByte )
+    {
+        return (typeByte & 0x10) != 0;
+    }
+
+    private static byte createTypeByte( byte externalType, byte internalType, boolean negative )
+    {
+        return (byte) (externalType | (internalType << 5) | (negative ? 1 : 0) << 4);
     }
 
     @Override
     public void writeInteger( int value )
     {
-        // 4b type
-        // 4b internal type
-        // 1-4B value
+        boolean negative = value < 0;
+        if ( negative )
+        {
+            value = ~value;
+        }
         byte internalScalarType = minimalInternalScalarType( value );
-        byte typeByte = (byte) (EXTERNAL_TYPE_INT | (internalScalarType << 4));
-        buffer.put( typeByte );
+        buffer.put( createTypeByte( EXTERNAL_TYPE_INT, internalScalarType, negative ) );
         writeScalarValue( value, internalScalarType );
     }
 
@@ -76,7 +87,12 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
         case EXTERNAL_TYPE_INT:
         {
             byte internalScalarType = internalType( typeByte );
-            return Values.intValue( (int) readScalarValue( buffer, internalScalarType ) );
+            long value = readScalarValue( buffer, internalScalarType );
+            if ( negativeScalar( typeByte ) )
+            {
+                value = ~value;
+            }
+            return Values.intValue( (int) value );
         }
         case EXTERNAL_TYPE_LONG:
         {
@@ -110,12 +126,8 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
     @Override
     public void writeInteger( long value )
     {
-        // 4b type
-        // 4b internal type
-        // 1-8B value
         byte internalScalarType = minimalInternalScalarType( value );
-        byte typeByte = (byte) (EXTERNAL_TYPE_LONG | (internalScalarType << 4));
-        buffer.put( typeByte );
+        buffer.put( createTypeByte( EXTERNAL_TYPE_LONG, internalScalarType, false ) ); //No special handling of negative longs
         writeScalarValue( value, internalScalarType );
     }
 
@@ -140,15 +152,15 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
 
     private byte minimalInternalScalarType( long value )
     {
-        if ( (value & 0xFFFFFFFF_00000000L) != 0 )
+        if ( (value & 0xFFFFFFFF_80000000L) != 0 )
         {
             return INTERNAL_SCALAR_TYPE_INT_64;
         }
-        if ( (value & 0xFFFF0000L) != 0 )
+        if ( (value & 0x7FFF8000L) != 0 )
         {
             return INTERNAL_SCALAR_TYPE_INT_32;
         }
-        if ( (value & 0xFF00L) != 0 )
+        if ( (value & 0x7F80L) != 0 )
         {
             return INTERNAL_SCALAR_TYPE_INT_16;
         }
