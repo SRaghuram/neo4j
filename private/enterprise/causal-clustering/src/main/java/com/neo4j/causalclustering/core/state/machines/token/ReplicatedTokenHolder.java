@@ -20,7 +20,9 @@ import org.neo4j.kernel.api.txstate.TransactionState;
 import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.api.state.TxState;
+import org.neo4j.kernel.impl.util.collection.OnHeapCollectionsFactory;
 import org.neo4j.lock.ResourceLocker;
+import org.neo4j.memory.EmptyMemoryTracker;
 import org.neo4j.storageengine.api.CommandCreationContext;
 import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.storageengine.api.StorageEngine;
@@ -100,7 +102,7 @@ public class ReplicatedTokenHolder extends AbstractTokenHolderBase
     {
         StorageEngine storageEngine = storageEngineSupplier.get();
         Collection<StorageCommand> commands = new ArrayList<>();
-        TransactionState txState = new TxState();
+        TransactionState txState = new TxState( OnHeapCollectionsFactory.INSTANCE, EmptyMemoryTracker.INSTANCE );
         var cursorTracer = TRACER_SUPPLIER.get();
         int tokenId = Math.toIntExact( idGeneratorFactory.get( tokenIdType ).nextId( cursorTracer ) );
         tokenCreator.createToken( txState, tokenName, internal, tokenId );
