@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.runtime.pipelined.operators
 
 import org.neo4j.cypher.internal.logical.plans.QueryExpression
+import org.neo4j.cypher.internal.macros.AssertMacros
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.KernelAPISupport.RANGE_SEEKABLE_VALUE_GROUPS
@@ -43,6 +44,7 @@ class MultiNodeIndexSeekOperator(val workIdentity: WorkIdentity,
   }
 
   private val indexSeekers: Array[IndexSeeker] = nodeIndexSeekParameters.map(new IndexSeeker(_)).toArray
+  private val numberOfSeeks: Int = indexSeekers.length
 
   override protected def nextTasks(queryContext: QueryContext,
                                    state: QueryState,
@@ -58,52 +60,70 @@ class MultiNodeIndexSeekOperator(val workIdentity: WorkIdentity,
 
     override def workIdentity: WorkIdentity = MultiNodeIndexSeekOperator.this.workIdentity
 
-    private val indexQueries: Array[Seq[Seq[IndexQuery]]] = new Array(indexSeekers.length)
-    private val indexQueryIterators: Array[Iterator[Seq[IndexQuery]]] = new Array(indexSeekers.length)
-    private val currentSeekI: Array[Int] = new Array(indexSeekers.length)
-    private val seeks: Array[ArrayBuffer[() => Unit]] = new Array(indexSeekers.length)
-    private val nodeCursors: Array[NodeValueIndexCursor] = new Array(indexSeekers.length)
-    private val exactSeekValues: Array[Array[Value]] = new Array(indexSeekers.length)
+    // We have one node cursor for each index seek
+    private var nodeCursors: Array[NodeValueIndexCursor] = null
+
+    private var indexQueries: Seq[Seq[IndexQuery]] = _
+
+    // For exact seeks we also cache the values that we extract from the predicates rather than
+    private val exactSeekValues: Array[Array[Value]] = new Array(numberOfSeeks)
+
+    // Each IndexSeeker can have multiple index queries, hence the nesting.
+    // The outer array has one element per IndexSeeker (i.e for each node variable)
+    // The inner ArrayBuffer holds the lambdas used to execute the seek for each individual index query of that IndexSeeker
+    private val seeks: Array[ArrayBuffer[() => Unit]] = new Array(numberOfSeeks)
+    private val currentIndexQuery: Array[Int] = new Array(numberOfSeeks) // For each IndexSeeker this holds the index of the current index query we are positioned at
 
     // INPUT LOOP TASK
     override protected def initializeInnerLoop(context: QueryContext,
                                                state: QueryState,
                                                resources: QueryResources,
                                                initExecutionContext: ExecutionContext): Boolean = {
-      val read = context.transactionalContext.transaction.dataRead()
-      val queryState = new OldQueryState(context,
-                                         resources = null,
-                                         params = state.params,
-                                         resources.expressionCursors,
-                                         Array.empty[IndexReadSession],
-                                         resources.expressionVariables(state.nExpressionSlots),
-                                         state.subscriber,
-                                         NoMemoryTracker)
-      initExecutionContext.copyFrom(inputMorsel, argumentSize.nLongs, argumentSize.nReferences)
-      var i = 0
-      while (i < indexSeekers.length) {
-        nodeCursors(i) = resources.cursorPools.nodeValueIndexCursorPool.allocateAndTrace()
-        val indexQueries = indexSeekers(i).computeIndexQueries(queryState, initExecutionContext)
-        val indexQueryIterator = indexQueries.toIterator
-        if (!indexQueryIterator.hasNext) {
-          // If an index query does not have any predicates we can abort already
-          assert(assertion = false, "An index query should always have at least one predicate")
-          return false
-        }
-        seeks(i) = new ArrayBuffer[() => Unit]()
-        do {
-          val indexQuery = indexQueryIterator.next()
-          val indexSeek: () => Unit = seek(state.queryIndexes(nodeIndexSeekParameters(i).queryIndex), nodeCursors(i), read, indexQuery,
-                                           indexSeekers(i).needsValues, nodeIndexSeekParameters(i).kernelIndexOrder, i)
-          seeks(i) += indexSeek
-          currentSeekI(i) = 0
-          seeks(i)(0)() // Perform the first seek
-          // Advance the cursors one step, except for the innermost seek, which will be advanced on the first call to next() in the inner loop
-          if (i < indexSeekers.length - 1 && !nodeCursors(i).next()) {
-            // If a cursor does not have any results we can abort already
+      // First time initialization: set up node cursors and index queries for all index seeks
+      if (nodeCursors == null) {
+        nodeCursors = new Array(numberOfSeeks)
+        val read = context.transactionalContext.transaction.dataRead()
+        val queryState = new OldQueryState(context,
+                                           resources = null,
+                                           params = state.params,
+                                           resources.expressionCursors,
+                                           Array.empty[IndexReadSession],
+                                           resources.expressionVariables(state.nExpressionSlots),
+                                           state.subscriber,
+                                           NoMemoryTracker)
+        var i = 0
+        while (i < numberOfSeeks) {
+          nodeCursors(i) = resources.cursorPools.nodeValueIndexCursorPool.allocateAndTrace()
+          indexQueries = indexSeekers(i).computeIndexQueries(queryState, initExecutionContext)
+          val indexQueryIterator = indexQueries.toIterator
+          if (!indexQueryIterator.hasNext) {
+            // If an index query does not have any predicates we can abort already
+            assert(assertion = false, "An index query should always have at least one predicate")
             return false
           }
-        } while (indexQueryIterator.hasNext)
+
+          seeks(i) = new ArrayBuffer[() => Unit]()
+          do {
+            val indexQuery = indexQueryIterator.next()
+            val indexSeek: () => Unit = seek(state.queryIndexes(nodeIndexSeekParameters(i).queryIndex), nodeCursors(i), read, indexQuery,
+                                             indexSeekers(i).needsValues, nodeIndexSeekParameters(i).kernelIndexOrder, i)
+            seeks(i) += indexSeek
+          } while (indexQueryIterator.hasNext)
+          i += 1
+        }
+      }
+
+      // Every time, start the first index query of all index seeks and point all cursors except the innermost (rhs) at the first result
+      initExecutionContext.copyFrom(inputMorsel, argumentSize.nLongs, argumentSize.nReferences)
+      var i = 0
+      while (i < numberOfSeeks) {
+        currentIndexQuery(i) = 0
+        seeks(i)(0)() // Perform the first seek
+        // Advance the cursors one step, except for the innermost seek, which will be advanced on the first call to next() in the inner loop
+        if (i < numberOfSeeks - 1 && !nodeCursors(i).next()) {
+          // If a cursor does not have any results we can abort already
+          return false
+        }
         i += 1
       }
       true
@@ -111,16 +131,21 @@ class MultiNodeIndexSeekOperator(val workIdentity: WorkIdentity,
 
     override protected def innerLoop(outputRow: MorselExecutionContext, context: QueryContext, state: QueryState): Unit = {
 
-      while (outputRow.isValidRow && next(indexSeekers.length - 1)) {
+      while (outputRow.isValidRow && next(numberOfSeeks - 1)) {
         var j = 0
-        while (j < indexSeekers.length) {
+        while (j < numberOfSeeks) {
           val offset = nodeIndexSeekParameters(j).nodeSlotOffset
           val nodeCursor = nodeCursors(j)
           val indexPropertyIndices = indexSeekers(j).indexPropertyIndices
           val indexPropertySlotOffsets = indexSeekers(j).indexPropertySlotOffsets
 
+          // Copy arguments
           outputRow.copyFrom(inputMorsel, argumentSize.nLongs, argumentSize.nReferences)
+
+          // Set node id
           outputRow.setLongAt(offset, nodeCursor.nodeReference())
+
+          // Set cached properties
           var i = 0
           while (i < indexPropertyIndices.length) {
             val indexPropertyIndex = indexPropertyIndices(i)
@@ -138,20 +163,22 @@ class MultiNodeIndexSeekOperator(val workIdentity: WorkIdentity,
     }
 
     override def setExecutionEvent(event: OperatorProfileEvent): Unit = {
-      var i = 0
-      while (i < indexSeekers.length) {
-        if (nodeCursors(i) != null) {
-          nodeCursors(i).setTracer(event)
+      if (nodeCursors != null) {
+        var i = 0
+        while (i < numberOfSeeks) {
+          if (nodeCursors(i) != null) {
+            nodeCursors(i).setTracer(event)
+          }
+          i += 1
         }
-        i += 1
       }
     }
 
-    override protected def closeInnerLoop(resources: QueryResources): Unit = {
+    override protected def closeInnerLoop(resources: QueryResources): Unit = {}
+
+    override protected def closeCursors(resources: QueryResources): Unit = {
       var i = 0
-      while (i < indexSeekers.length) {
-        indexQueries(i) = null
-        indexQueryIterators(i) = null
+      while (i < numberOfSeeks) {
         seeks(i) = null
         resources.cursorPools.nodeValueIndexCursorPool.free(nodeCursors(i))
         nodeCursors(i) = null
@@ -160,27 +187,33 @@ class MultiNodeIndexSeekOperator(val workIdentity: WorkIdentity,
     }
 
     // HELPERS
-    private def next(i: Int): Boolean = {
-      assert (i >= 0 || i < indexSeekers.length)
+
+    // Advance node cursors for the next output row.
+    // This is always called with the highest seek index from outside (numberOfSeeks - 1), which points at the innermost (rhs) index seek
+    // but can call itself recursively to restart the outer/lhs index seeks (i.e. at lower seek indices) when an inner/rhs seek is exhausted.
+    // Returns true if a new output row should be produced
+    // (at this point it has always returned from any recursion back to point at the innermost seek (i.e. seekIndex == numberOfSeeks - 1))
+    private def next(seekIndex: Int): Boolean = {
+      AssertMacros.checkOnlyWhenAssertionsAreEnabled(seekIndex >= 0 || seekIndex < numberOfSeeks)
 
       while (true) {
-        if (nodeCursors(i) != null && nodeCursors(i).next()) {
-          if (i >= indexSeekers.length - 1) {
+        if (nodeCursors(seekIndex) != null && nodeCursors(seekIndex).next()) {
+          if (seekIndex >= numberOfSeeks - 1) {
             // We are positioned at a valid row
             return true
           } else {
-            // Restart the next index query
-            val nextI = i + 1
-            seeks(nextI)(0)()
-            currentSeekI(nextI) = 0
-            return next(nextI)
+            // Restart the next index seek
+            val nextSeekIndex = seekIndex + 1
+            currentIndexQuery(nextSeekIndex) = 0
+            seeks(nextSeekIndex)(0)() // Execute the first index query of the next index seek
+            return next(nextSeekIndex)
           }
-        } else if (currentSeekI(i) < seeks(i).length - 1) {
-          currentSeekI(i) += 1
-          seeks(i)(currentSeekI(i))()
+        } else if (currentIndexQuery(seekIndex) < seeks(seekIndex).length - 1) {
+          currentIndexQuery(seekIndex) += 1
+          seeks(seekIndex)(currentIndexQuery(seekIndex))() // Execute the actual index seek
         } else {
-          if (i > 0)
-            return next(i - 1)
+          if (seekIndex > 0)
+            return next(seekIndex - 1)
           else
             return false
         }
@@ -208,7 +241,8 @@ class MultiNodeIndexSeekOperator(val workIdentity: WorkIdentity,
         return () => () // leave cursor un-initialized/empty
       }
 
-      // We don't need property values from the index for an exact seek
+      // We don't need property values from the index for an exact seek,
+      // so instead we extract the values directly from the predicates and cache them for later use in the innerLoop
       exactSeekValues(exactSeekValueIndex) =
         if (needsValues && predicates.forall(_.isInstanceOf[ExactPredicate]))
           predicates.map(_.asInstanceOf[ExactPredicate].value()).toArray
