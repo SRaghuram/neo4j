@@ -17,6 +17,7 @@ import org.neo4j.cypher.internal.runtime.spec.pipelined._
 import org.neo4j.cypher.internal.runtime.spec.stress._
 import org.neo4j.cypher.internal.runtime.spec.tests._
 import org.neo4j.cypher.internal.util.attribution.Id
+import org.neo4j.cypher.internal.util.test_helpers.TimeLimitedCypherTest
 import org.neo4j.cypher.result.OperatorProfile
 import org.scalatest.Outcome
 

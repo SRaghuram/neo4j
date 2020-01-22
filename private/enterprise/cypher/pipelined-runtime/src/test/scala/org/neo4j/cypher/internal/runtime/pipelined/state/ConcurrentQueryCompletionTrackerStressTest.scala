@@ -15,9 +15,10 @@ import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.pipelined.state.ConcurrentQueryCompletionTrackerStressTest.POISON_PILL
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.QueryExecutionTracer
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
+import org.neo4j.cypher.internal.util.test_helpers.TimeLimitedCypherTest
 import org.neo4j.kernel.impl.query.QuerySubscriber
 
-class ConcurrentQueryCompletionTrackerStressTest extends CypherFunSuite {
+class ConcurrentQueryCompletionTrackerStressTest extends CypherFunSuite with TimeLimitedCypherTest {
 
   private val THREAD_PAIRS = 6
 
