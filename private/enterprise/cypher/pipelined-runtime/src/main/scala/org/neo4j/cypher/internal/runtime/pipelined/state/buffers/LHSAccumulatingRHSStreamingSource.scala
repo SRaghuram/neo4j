@@ -20,7 +20,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatingBuffer
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatorAndMorsel
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.DataHolder
-import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.SinkByOrigin
 
 /**
  * This buffer receives data from two sides. It will accumulate the data from the LHS using an [[ArgumentStateMap]].
@@ -66,19 +65,16 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.SinkByO
  * ............|==|
  * ............\__/
  **/
-class LHSAccumulatingRHSStreamingBuffer[DATA <: AnyRef,
+class LHSAccumulatingRHSStreamingSource[DATA <: AnyRef,
                                         LHS_ACC <: MorselAccumulator[DATA]
                                        ](tracker: QueryCompletionTracker,
                                          downstreamArgumentReducers: IndexedSeq[AccumulatingBuffer],
                                          override val argumentStateMaps: ArgumentStateMaps,
                                          val lhsArgumentStateMapId: ArgumentStateMapId,
                                          val rhsArgumentStateMapId: ArgumentStateMapId,
-                                         lhsPipelineId: PipelineId,
-                                         rhsPipelineId: PipelineId,
                                          stateFactory: StateFactory
                                        ) extends ArgumentCountUpdater
                                             with Source[AccumulatorAndMorsel[DATA, LHS_ACC]]
-                                            with SinkByOrigin
                                             with DataHolder {
 
   private val lhsArgumentStateMap = argumentStateMaps(lhsArgumentStateMapId).asInstanceOf[ArgumentStateMap[LHS_ACC]]
