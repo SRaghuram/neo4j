@@ -77,7 +77,7 @@ public class JmhOptionsUtil
                 if ( runnerParams.containsParam( param.name() ) )
                 {
                     throw new IllegalStateException( format( "Parameter name '%s' is already a system property, it can not be used as benchmark parameter.\n" +
-                                                             " * Rename parameter in: ", benchmark.className() ) );
+                                                             " * Rename parameter in: %s", param.name(), benchmark.className() ) );
                 }
                 baseBuilder = baseBuilder.param( param.name(), param.valuesArray() );
             }
