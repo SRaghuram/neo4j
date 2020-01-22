@@ -311,7 +311,7 @@ object OperatorCodeGenHelperTemplates {
                        fromExpression: IntermediateRepresentation,
                        toInclusive: Boolean,
                        toExpression: IntermediateRepresentation): IntermediateRepresentation =
-    invokeStatic(method[CompiledHelpers, IndexQuery, Int, Value, Boolean, Value, Boolean]("rangeBetweenSeek"),
+    invokeStatic(method[CompiledHelpers, IndexQuery, Int, AnyValue, Boolean, AnyValue, Boolean]("rangeBetweenSeek"),
                  constant(prop),
                  fromExpression,
                  constant(fromInclusive),

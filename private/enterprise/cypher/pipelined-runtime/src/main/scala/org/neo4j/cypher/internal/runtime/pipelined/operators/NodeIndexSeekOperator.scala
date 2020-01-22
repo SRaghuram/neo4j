@@ -373,13 +373,15 @@ class SingleExactSeekQueryNodeIndexSeekTaskTemplate(inner: OperatorTaskTemplate,
 
   override protected def beginInnerLoop: IntermediateRepresentation = {
     val value = generateSeekValue()
-    seekValue = value.copy(ir = nullCheckIfRequired(value))
+    seekValue = value.copy(ir = asStorableValue(nullCheckIfRequired(value)))
     assign(seekValueVariable, seekValue.ir)
   }
 
-  override protected def isPredicatePossible: IntermediateRepresentation = and(notEqual(load(seekValueVariable), noValue), not(isNaN(load(seekValueVariable))))
+  override protected def isPredicatePossible: IntermediateRepresentation =
+    and(notEqual(load(seekValueVariable), noValue), not(isNaN(load(seekValueVariable))))
 
-  override protected def predicate: IntermediateRepresentation = exactSeek(property.propertyKeyId, load(seekValueVariable))
+  override protected def predicate: IntermediateRepresentation =
+    invokeStatic(method[IndexQuery, ExactPredicate, Int, Object]("exact"), constant(property.propertyKeyId), load(seekValueVariable))
 }
 
 /**
