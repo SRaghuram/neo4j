@@ -11,6 +11,7 @@ import com.neo4j.bench.client.queries.annotation.AttachMetricsAnnotation;
 import com.neo4j.bench.client.queries.annotation.AttachTestRunAnnotation;
 import com.neo4j.bench.client.queries.submit.SubmitTestRun;
 import com.neo4j.bench.common.model.Annotation;
+import com.neo4j.bench.common.model.AuxiliaryMetrics;
 import com.neo4j.bench.common.model.Benchmark;
 import com.neo4j.bench.common.model.Benchmark.Mode;
 import com.neo4j.bench.common.model.BenchmarkConfig;
@@ -97,8 +98,6 @@ public class SyntheticStoreGenerator
     private static final Supplier<TimeUnit> UNIT = () -> UNITS[RNG.nextInt( 0, UNITS.length - 1 )];
     private static final Supplier<Double> MIN_NS = () -> RNG.nextDouble( 1, 100 );
     private static final Supplier<Double> MEAN_NS = () -> RNG.nextDouble( 1_000_000, 1_000_000_000 );
-    private static final Supplier<Double> ERROR_NS = () -> RNG.nextDouble( 5, 50 );
-    private static final Supplier<Double> ERROR_CONFIDENCE = () -> RNG.nextDouble( 0, 1 );
     private static final Supplier<Double> PERC_25_NS = () -> RNG.nextDouble( 150, 350 );
     private static final Supplier<Double> PERC_50_NS = () -> RNG.nextDouble( 400, 600 );
     private static final Supplier<Double> PERC_75_NS = () -> RNG.nextDouble( 700, 800 );
@@ -358,20 +357,8 @@ public class SyntheticStoreGenerator
                         benchmarkGroupBenchmarkMetrics.add(
                                 benchmarkGroup,
                                 benchmark,
-                                new Metrics( UNIT.get(),
-                                             MIN_NS.get(),
-                                             MAX_NS.get(),
-                                             MEAN_NS.get(),
-                                             ERROR_NS.get(),
-                                             ERROR_CONFIDENCE.get(),
-                                             SAMPLE_SIZE,
-                                             PERC_25_NS.get(),
-                                             PERC_50_NS.get(),
-                                             PERC_75_NS.get(),
-                                             PERC_90_NS.get(),
-                                             PERC_95_NS.get(),
-                                             PERC_99_NS.get(),
-                                             PERC_99_9_NS.get() ),
+                                randomMetrics(),
+                                randomAuxiliaryMetrics(),
                                 config );
                         generationResult.addBenchmark( tool, benchmarkGroup, benchmark );
                         generationResult.incMetrics();
@@ -463,6 +450,40 @@ public class SyntheticStoreGenerator
                                         THROUGHPUT_FORMAT.format( opsPerMs * 1000 ) ) );
         }
         return generationResult;
+    }
+
+    private Metrics randomMetrics()
+    {
+        return new Metrics( UNIT.get(),
+                            MIN_NS.get(),
+                            MAX_NS.get(),
+                            MEAN_NS.get(),
+                            SAMPLE_SIZE,
+                            PERC_25_NS.get(),
+                            PERC_50_NS.get(),
+                            PERC_75_NS.get(),
+                            PERC_90_NS.get(),
+                            PERC_95_NS.get(),
+                            PERC_99_NS.get(),
+                            PERC_99_9_NS.get() );
+    }
+
+    private AuxiliaryMetrics randomAuxiliaryMetrics()
+    {
+        return RNG.innerRng().nextBoolean()
+               ? new AuxiliaryMetrics( "rows",
+                                       MIN_NS.get(),
+                                       MAX_NS.get(),
+                                       MEAN_NS.get(),
+                                       SAMPLE_SIZE,
+                                       PERC_25_NS.get(),
+                                       PERC_50_NS.get(),
+                                       PERC_75_NS.get(),
+                                       PERC_90_NS.get(),
+                                       PERC_95_NS.get(),
+                                       PERC_99_NS.get(),
+                                       PERC_99_9_NS.get() )
+               : null;
     }
 
     private BenchmarkTool generateBenchmarkTool( Repository tool )

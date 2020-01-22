@@ -14,6 +14,7 @@ import com.neo4j.bench.client.queries.schema.DropSchema;
 import com.neo4j.bench.client.queries.schema.SetStoreVersion;
 import com.neo4j.bench.client.queries.schema.VerifyStoreSchema;
 import com.neo4j.bench.common.model.Annotation;
+import com.neo4j.bench.common.model.AuxiliaryMetrics;
 import com.neo4j.bench.common.model.Benchmark;
 import com.neo4j.bench.common.model.BenchmarkConfig;
 import com.neo4j.bench.common.model.BenchmarkGroup;
@@ -700,13 +701,15 @@ public class SubmitTestRunsAndPlansIT
             BenchmarkGroup benchmarkGroup,
             Benchmark... benchmarks )
     {
-        Metrics metrics = new Metrics( MILLISECONDS, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 );
+        Metrics metrics = getMetrics();
+        AuxiliaryMetrics auxiliaryMetrics = getAuxiliaryMetrics();
         Neo4jConfig neo4jConfig = Neo4jConfig.empty();
         BenchmarkGroupBenchmarkMetrics benchmarkGroupBenchmarkMetrics = new BenchmarkGroupBenchmarkMetrics();
         Stream.of( benchmarks ).forEach( benchmark -> benchmarkGroupBenchmarkMetrics.add(
                 benchmarkGroup,
                 benchmark,
                 metrics,
+                auxiliaryMetrics,
                 neo4jConfig ) );
         return new TestRunReport(
                 testRun,
@@ -728,13 +731,15 @@ public class SubmitTestRunsAndPlansIT
             BenchmarkGroup benchmarkGroup,
             Benchmark... benchmarks )
     {
-        Metrics metrics = new Metrics( MILLISECONDS, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 );
+        Metrics metrics = getMetrics();
+        AuxiliaryMetrics auxiliaryMetrics = getAuxiliaryMetrics();
         Neo4jConfig neo4jConfig = Neo4jConfig.empty();
         BenchmarkGroupBenchmarkMetrics benchmarkGroupBenchmarkMetrics = new BenchmarkGroupBenchmarkMetrics();
         Stream.of( benchmarks ).forEach( benchmark -> benchmarkGroupBenchmarkMetrics.add(
                 benchmarkGroup,
                 benchmark,
                 metrics,
+                auxiliaryMetrics,
                 neo4jConfig ) );
         return new TestRunReport(
                 testRun,
@@ -787,5 +792,15 @@ public class SubmitTestRunsAndPlansIT
                 "3.2",
                 new PlanTree( description, root )
         );
+    }
+
+    private Metrics getMetrics()
+    {
+        return new Metrics( MILLISECONDS, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 );
+    }
+
+    private AuxiliaryMetrics getAuxiliaryMetrics()
+    {
+        return new AuxiliaryMetrics( "rows", 1, 10, 5.0, 42, 2.5, 5.0, 7.5, 9.0, 9.5, 9.9, 9.99 );
     }
 }

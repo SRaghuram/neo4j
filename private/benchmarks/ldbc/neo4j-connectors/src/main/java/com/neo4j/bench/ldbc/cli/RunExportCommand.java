@@ -859,7 +859,7 @@ public class RunExportCommand implements Runnable
                 workloadResults.throughput(),
                 workloadResults.throughput(),
                 workloadResults.throughput() );
-        workloadMetrics.add( benchmarkGroup, summaryBenchmark, summaryMetrics, neo4jConfig );
+        workloadMetrics.add( benchmarkGroup, summaryBenchmark, summaryMetrics, null /*auxiliary metrics*/, neo4jConfig );
 
         for ( OperationMetricsSnapshot operation : workloadResults.allMetrics() )
         {
@@ -881,7 +881,7 @@ public class RunExportCommand implements Runnable
                     operationMetrics.percentile95(),
                     operationMetrics.percentile99(),
                     operationMetrics.percentile99_9() );
-            workloadMetrics.add( benchmarkGroup, benchmark, metrics, neo4jConfig );
+            workloadMetrics.add( benchmarkGroup, benchmark, metrics, null /*auxiliary metrics*/, neo4jConfig );
         }
 
         return new TestRunReport(

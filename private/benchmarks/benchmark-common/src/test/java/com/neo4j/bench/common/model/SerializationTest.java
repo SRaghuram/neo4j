@@ -48,7 +48,8 @@ public class SerializationTest
                 Sets.newHashSet( new Project( Repository.NEO4J, "commit", "3.3.3", COMMUNITY, "branch", "owner" ) );
 
         Neo4jConfig neo4jConfig = new Neo4jConfig( params );
-        Metrics metrics = new Metrics( SECONDS, 1, 10, 5.0, 1.5, 0.1, 42, 2.5, 5.0, 7.5, 9.0, 9.5, 9.9, 9.99 );
+        Metrics metrics = getMetrics();
+        AuxiliaryMetrics auxiliaryMetrics = getAuxiliaryMetrics();
         Environment environment = new Environment( "operating system", "server" );
         BenchmarkTool benchmarkTool = new BenchmarkTool( Repository.LDBC_BENCH, "commit", "neo-technology", "3.2" );
         Java java = new Java( "jvm", "version", "jvm args" );
@@ -62,9 +63,9 @@ public class SerializationTest
         Benchmark benchmark2a = Benchmark.benchmarkFor( "desc2a", "name2a", LATENCY, params );
 
         BenchmarkGroupBenchmarkMetrics benchmarkGroupBenchmarkMetrics = new BenchmarkGroupBenchmarkMetrics();
-        benchmarkGroupBenchmarkMetrics.add( benchmarkGroup1, benchmark1a, metrics, neo4jConfig );
-        benchmarkGroupBenchmarkMetrics.add( benchmarkGroup1, benchmark1b, metrics, neo4jConfig );
-        benchmarkGroupBenchmarkMetrics.add( benchmarkGroup2, benchmark2a, metrics, neo4jConfig );
+        benchmarkGroupBenchmarkMetrics.add( benchmarkGroup1, benchmark1a, metrics, auxiliaryMetrics, neo4jConfig );
+        benchmarkGroupBenchmarkMetrics.add( benchmarkGroup1, benchmark1b, metrics, auxiliaryMetrics, neo4jConfig );
+        benchmarkGroupBenchmarkMetrics.add( benchmarkGroup2, benchmark2a, metrics, auxiliaryMetrics, neo4jConfig );
 
         ProfilerRecordings profilerRecordings1A = new ProfilerRecordings()
                 .with( RecordingType.JFR, Parameters.NONE, "bucket/jfrName1a" )
@@ -237,10 +238,11 @@ public class SerializationTest
         Map<String,String> params = new HashMap<>();
         params.put( "key", "value" );
         Benchmark benchmark = Benchmark.benchmarkFor( "desc", "name", LATENCY, params );
-        Metrics metrics = new Metrics( SECONDS, 1, 10, 5.0, 1.5, 0.1, 42, 2.5, 5.0, 7.5, 9.0, 9.5, 9.9, 9.99 );
+        Metrics metrics = getMetrics();
+        AuxiliaryMetrics auxiliaryMetrics = getAuxiliaryMetrics();
         Neo4jConfig neo4jConfig = new Neo4jConfig( params );
         BenchmarkGroupBenchmarkMetrics before = new BenchmarkGroupBenchmarkMetrics();
-        before.add( benchmarkGroup, benchmark, metrics, neo4jConfig );
+        before.add( benchmarkGroup, benchmark, metrics, auxiliaryMetrics, neo4jConfig );
         // then
         shouldSerializeAndDeserialize( before );
     }
@@ -251,13 +253,15 @@ public class SerializationTest
         // given
         Map<String,String> params = new HashMap<>();
         params.put( "key", "value" );
-        Metrics metrics = new Metrics( SECONDS, 1, 10, 5.0, 1.5, 0.1, 42, 2.5, 5.0, 7.5, 9.0, 9.5, 9.9, 9.99 );
+        Metrics metrics = getMetrics();
+        AuxiliaryMetrics auxiliaryMetrics = getAuxiliaryMetrics();
         BenchmarkMetrics before = new BenchmarkMetrics(
                 "name",
                 "this is simple",
                 Benchmark.Mode.LATENCY,
                 params,
-                metrics.toMap() );
+                metrics.toMap(),
+                auxiliaryMetrics.toMap() );
         // then
         shouldSerializeAndDeserialize( before );
     }
@@ -295,10 +299,8 @@ public class SerializationTest
     @Test
     void shouldSerializeMetrics()
     {
-        // given
-        Metrics before = new Metrics( SECONDS, 1, 10, 5.0, 1.5, 0.1, 42, 2.5, 5.0, 7.5, 9.0, 9.5, 9.9, 9.99 );
-        // then
-        shouldSerializeAndDeserialize( before );
+        shouldSerializeAndDeserialize( getMetrics() );
+        shouldSerializeAndDeserialize( getAuxiliaryMetrics() );
     }
 
     @Test
@@ -450,5 +452,15 @@ public class SerializationTest
                 "3.2",
                 new PlanTree( "plan description", root )
         );
+    }
+
+    private Metrics getMetrics()
+    {
+        return new Metrics( SECONDS, 1, 10, 5.0, 42, 2.5, 5.0, 7.5, 9.0, 9.5, 9.9, 9.99 );
+    }
+
+    private AuxiliaryMetrics getAuxiliaryMetrics()
+    {
+        return new AuxiliaryMetrics( "rows", 1, 10, 5.0, 42, 2.5, 5.0, 7.5, 9.0, 9.5, 9.9, 9.99 );
     }
 }

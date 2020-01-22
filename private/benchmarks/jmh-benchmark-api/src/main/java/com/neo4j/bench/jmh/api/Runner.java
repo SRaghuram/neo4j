@@ -436,6 +436,7 @@ public abstract class Runner
                         benchmarkGroup,
                         benchmark,
                         parentBenchmarkMetrics,
+                        null /*no auxiliary metrics*/,
                         neo4jConfig );
             }
             else
@@ -460,6 +461,7 @@ public abstract class Runner
                                                benchmarkGroup,
                                                childBenchmark,
                                                childBenchmarkMetrics,
+                                               null /*no auxiliary metrics*/,
                                                neo4jConfig );
                                    } );
             }
