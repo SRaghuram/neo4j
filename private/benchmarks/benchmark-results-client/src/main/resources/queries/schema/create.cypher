@@ -25,7 +25,7 @@ CREATE CONSTRAINT ON ( environment:Environment ) ASSERT exists(environment.serve
 CREATE CONSTRAINT ON ( java:Java ) ASSERT exists(java.args)
 CREATE CONSTRAINT ON ( java:Java ) ASSERT exists(java.jvm)
 CREATE CONSTRAINT ON ( java:Java ) ASSERT exists(java.version)
-CREATE CONSTRAINT ON ( metrics:Metrics ) ASSERT exists(metrics.error)
+CREATE CONSTRAINT ON ( metrics:Metrics ) ASSERT exists(metrics.unit)
 CREATE CONSTRAINT ON ( metrics:Metrics ) ASSERT exists(metrics.max)
 CREATE CONSTRAINT ON ( metrics:Metrics ) ASSERT exists(metrics.mean)
 CREATE CONSTRAINT ON ( metrics:Metrics ) ASSERT exists(metrics.min)

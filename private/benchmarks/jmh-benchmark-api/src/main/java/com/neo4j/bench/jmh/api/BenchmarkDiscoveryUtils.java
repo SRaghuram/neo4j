@@ -29,7 +29,6 @@ import static java.util.stream.Collectors.toSet;
 
 public class BenchmarkDiscoveryUtils
 {
-    private static final double ERROR_CONFIDENCE = 0.999;
     static final String THREADS_PARAM = "threads";
 
     // -------------------------- JMH-to-Benchmark Bridge Utilities --------------------------
@@ -98,8 +97,7 @@ public class BenchmarkDiscoveryUtils
     {
         return toMetrics(
                 timeUnit,
-                statistics,
-                ERROR_CONFIDENCE );
+                statistics );
     }
 
     private static String withoutPackageName( String benchmarkName )
@@ -128,16 +126,13 @@ public class BenchmarkDiscoveryUtils
 
     private static Metrics toMetrics(
             TimeUnit timeUnit,
-            Statistics statistics,
-            double errorConfidence )
+            Statistics statistics )
     {
         return new Metrics(
                 timeUnit,
                 statistics.getMin(),
                 statistics.getMax(),
                 statistics.getMean(),
-                statistics.getMeanErrorAt( errorConfidence ),
-                errorConfidence,
                 statistics.getN(),
                 statistics.getPercentile( 25 ),
                 statistics.getPercentile( 50 ),

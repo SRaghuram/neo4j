@@ -1,28 +1,28 @@
 /*
- * Copyright (c) 2002-2020 "Neo4j,"
+ * Copyright (c) 2002-2019 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is part of Neo4j internal tooling.
  */
 package com.neo4j.bench.common.model;
 
-import com.neo4j.bench.common.util.Units;
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
-public class Metrics extends BaseMetrics
+public class AuxiliaryMetrics extends BaseMetrics
 {
     /**
      * WARNING: Never call this explicitly.
      * No-params constructor is only used for JSON (de)serialization.
      */
-    public Metrics()
+    public AuxiliaryMetrics()
     {
-        this( TimeUnit.SECONDS, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 );
+        this( null, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 );
     }
 
-    public Metrics(
-            TimeUnit unit,
+    public AuxiliaryMetrics(
+            String unit,
             double min,
             double max,
             double mean,
@@ -35,7 +35,7 @@ public class Metrics extends BaseMetrics
             double percentile_99,
             double percentile_99_9 )
     {
-        super( Units.toAbbreviation( unit ),
+        super( unit,
                min,
                max,
                mean,
@@ -49,10 +49,10 @@ public class Metrics extends BaseMetrics
                percentile_99_9 );
     }
 
-    public static Metrics fromMap( Map<String,Object> map )
+    public static AuxiliaryMetrics fromMap( Map<String,Object> map )
     {
-        return new Metrics(
-                Units.toTimeUnit( (String) map.get( UNIT ) ),
+        return new AuxiliaryMetrics(
+                (String) map.get( UNIT ),
                 (Double) map.get( MIN ),
                 (Double) map.get( MAX ),
                 (Double) map.get( MEAN ),
@@ -64,5 +64,17 @@ public class Metrics extends BaseMetrics
                 (Double) map.get( PERCENTILE_95 ),
                 (Double) map.get( PERCENTILE_99 ),
                 (Double) map.get( PERCENTILE_99_9 ) );
+    }
+
+    @Override
+    public boolean equals( Object o )
+    {
+        return EqualsBuilder.reflectionEquals( this, o );
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return HashCodeBuilder.reflectionHashCode( this );
     }
 }
