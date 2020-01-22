@@ -7,6 +7,7 @@ package com.neo4j.bench.client;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.neo4j.bench.common.model.AuxiliaryMetrics;
 import com.neo4j.bench.common.model.Benchmark;
 import com.neo4j.bench.common.model.BenchmarkConfig;
 import com.neo4j.bench.common.model.BenchmarkGroup;
@@ -301,16 +302,17 @@ public class AddProfilesIT
                 Sets.newHashSet( new Project( Repository.NEO4J, "commit", "3.3.1", COMMUNITY, "branch", "owner" ) );
 
         Neo4jConfig neo4jConfig = new Neo4jConfig( params );
-        Metrics metrics = new Metrics( SECONDS, 1, 10, 5.0, 1.5, 0.1, 42, 2.5, 5.0, 7.5, 9.0, 9.5, 9.9, 9.99 );
+        Metrics metrics = new Metrics( SECONDS, 1, 10, 5.0, 42, 2.5, 5.0, 7.5, 9.0, 9.5, 9.9, 9.99 );
+        AuxiliaryMetrics auxiliaryMetrics = new AuxiliaryMetrics( "rows", 1, 10, 5.0, 42, 2.5, 5.0, 7.5, 9.0, 9.5, 9.9, 9.99 );
         Environment environment = new Environment( "operating system", "server" );
         BenchmarkTool benchmarkTool = new BenchmarkTool( Repository.LDBC_BENCH, "commit", Repository.LDBC_BENCH.defaultOwner(), "3.2" );
         Java java = new Java( "jvm", "version", "jvm args" );
         Plan plan = SubmitTestRunsAndPlansIT.plan( "plan description" );
 
         BenchmarkGroupBenchmarkMetrics benchmarkGroupBenchmarkMetrics = new BenchmarkGroupBenchmarkMetrics();
-        benchmarkGroupBenchmarkMetrics.add( GROUP_1, BENCHMARK_1_A, metrics, neo4jConfig );
-        benchmarkGroupBenchmarkMetrics.add( GROUP_1, BENCHMARK_1_B, metrics, neo4jConfig );
-        benchmarkGroupBenchmarkMetrics.add( GROUP_2, BENCHMARK_2_A, metrics, neo4jConfig );
+        benchmarkGroupBenchmarkMetrics.add( GROUP_1, BENCHMARK_1_A, metrics, auxiliaryMetrics, neo4jConfig );
+        benchmarkGroupBenchmarkMetrics.add( GROUP_1, BENCHMARK_1_B, metrics, auxiliaryMetrics, neo4jConfig );
+        benchmarkGroupBenchmarkMetrics.add( GROUP_2, BENCHMARK_2_A, metrics, auxiliaryMetrics, neo4jConfig );
 
         BenchmarkPlan benchmarkPlan1a = new BenchmarkPlan( GROUP_1, BENCHMARK_1_A, plan );
         BenchmarkPlan benchmarkPlan1b = new BenchmarkPlan( GROUP_1, BENCHMARK_1_B, plan );

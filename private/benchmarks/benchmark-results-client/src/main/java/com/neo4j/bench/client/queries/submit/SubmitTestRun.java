@@ -71,13 +71,21 @@ public class SubmitTestRun implements Query<SubmitTestRunResult>
                         throw new RuntimeException( "Query returned more than one row!" );
                     }
 
-                    // [[benchmark,metrics,params]]
+                    // [[benchmark,metrics,auxiliary_metrics,params]]
                     List<List<Map<String,Object>>> benchmarkMetricsLists = record.get( "benchmark_metrics" )
                                                                                  .asList( list -> list.asList( MapAccessor::asMap ) );
                     List<BenchmarkMetrics> benchmarkMetrics = benchmarkMetricsLists.stream()
-                                                                                   .map( metrics -> extractBenchmarkMetrics( metrics.get( 0 ),
-                                                                                                                             metrics.get( 1 ),
-                                                                                                                             metrics.get( 2 ) ) )
+                                                                                   .map( metrics ->
+                                                                                         {
+                                                                                             Map<String,Object> benchmarkMap = metrics.get( 0 );
+                                                                                             Map<String,Object> metricsMap = metrics.get( 1 );
+                                                                                             Map<String,Object> maybeAuxiliaryMetricsMap = metrics.get( 2 );
+                                                                                             Map<String,Object> benchmarkParamsMap = metrics.get( 3 );
+                                                                                             return extractBenchmarkMetrics( benchmarkMap,
+                                                                                                                             metricsMap,
+                                                                                                                             maybeAuxiliaryMetricsMap,
+                                                                                                                             benchmarkParamsMap );
+                                                                                         } )
                                                                                    .collect( toList() );
                     SubmitTestRunResult result = new SubmitTestRunResult(
                             new TestRun( record.get( "test_run" ).asMap() ),

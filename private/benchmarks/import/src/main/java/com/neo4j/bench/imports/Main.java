@@ -291,9 +291,9 @@ public class Main
         if ( exitCode == 0 )
         {
             long time = System.currentTimeMillis() - startTime;
-            Metrics runMetrics = new Metrics( TimeUnit.MILLISECONDS, time, time, time, 0, 1, 1, time, time, time, time, time, time, time );
+            Metrics runMetrics = new Metrics( TimeUnit.MILLISECONDS, time, time, time, 1, time, time, time, time, time, time, time );
 
-            metrics.add( group, benchmark, runMetrics, neo4jConfig );
+            metrics.add( group, benchmark, runMetrics, null /*no auxiliary metrics*/, neo4jConfig );
         }
         return exitCode;
     }

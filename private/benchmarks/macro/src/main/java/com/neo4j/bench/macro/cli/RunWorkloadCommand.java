@@ -163,7 +163,7 @@ public class RunWorkloadCommand extends BaseRunWorkloadCommand
             }
 
             ErrorReporter errorReporter = new ErrorReporter( errorPolicy );
-            BenchmarkGroupBenchmarkMetrics results = new BenchmarkGroupBenchmarkMetrics();
+            BenchmarkGroupBenchmarkMetrics allResults = new BenchmarkGroupBenchmarkMetrics();
             List<BenchmarkPlan> resultPlans = new ArrayList<>();
             BenchmarkGroupBenchmarkMetricsPrinter conciseMetricsPrinter = new BenchmarkGroupBenchmarkMetricsPrinter( false );
             Instant start = Instant.now();
@@ -193,11 +193,13 @@ public class RunWorkloadCommand extends BaseRunWorkloadCommand
                                                                               resources );
 
                     BenchmarkGroupBenchmarkMetrics queryResults = new BenchmarkGroupBenchmarkMetrics();
+                    Results results = Results.loadFrom( benchmarkDir );
                     queryResults.add( query.benchmarkGroup(),
                                       query.benchmark(),
-                                      Results.loadFrom( benchmarkDir ).metrics(),
+                                      results.metrics(),
+                                      results.rowMetrics(),
                                       neo4jConfig );
-                    results.addAll( queryResults );
+                    allResults.addAll( queryResults );
 
                     List<Path> planFiles = benchmarkDir.plans();
                     // Just sanity check to avoid unnecessary/redundant plan creation
@@ -254,14 +256,14 @@ public class RunWorkloadCommand extends BaseRunWorkloadCommand
                                                 params.neo4jBranchOwner() ) ),
                     neo4jConfig,
                     Environment.current(),
-                    results,
+                    allResults,
                     tool,
                     java,
                     resultPlans,
                     errorReporter.errors() );
 
             BenchmarkGroupBenchmarkMetricsPrinter verboseMetricsPrinter = new BenchmarkGroupBenchmarkMetricsPrinter( true );
-            System.out.println( verboseMetricsPrinter.toPrettyString( results, errorReporter.errors() ) );
+            System.out.println( verboseMetricsPrinter.toPrettyString( allResults, errorReporter.errors() ) );
             System.out.println( "Exporting results as JSON to: " + resultsJson.toPath().toAbsolutePath() );
             JsonUtil.serializeJson( resultsJson.toPath(), testRunReport );
 

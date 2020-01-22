@@ -99,26 +99,31 @@ public class BenchmarkGroupBenchmarkMetricsTest
                 new BenchmarkGroup( "A" ),
                 Benchmark.benchmarkFor( "description", "test1", Mode.LATENCY, new HashMap<>() ),
                 metrics(),
+                auxiliaryMetrics(),
                 config() );
         result.add(
                 new BenchmarkGroup( "A" ),
                 Benchmark.benchmarkFor( "description", "test1", Mode.THROUGHPUT, new HashMap<>() ),
                 metrics(),
+                auxiliaryMetrics(),
                 config() );
         result.add(
                 new BenchmarkGroup( "A" ),
                 Benchmark.benchmarkFor( "description", "test1full", Mode.SINGLE_SHOT, new HashMap<>() ),
                 metrics(),
+                auxiliaryMetrics(),
                 config() );
         result.add(
                 new BenchmarkGroup( "A" ),
                 Benchmark.benchmarkFor( "description", "test2", Mode.LATENCY, new HashMap<>() ),
                 metrics(),
+                auxiliaryMetrics(),
                 config() );
         result.add(
                 new BenchmarkGroup( "B" ),
                 Benchmark.benchmarkFor( "description", "test1", Mode.LATENCY, new HashMap<>() ),
                 metrics(),
+                auxiliaryMetrics(),
                 config() );
 
         assertThrows( IllegalStateException.class, () ->
@@ -127,6 +132,7 @@ public class BenchmarkGroupBenchmarkMetricsTest
                     new BenchmarkGroup( "A" ),
                     Benchmark.benchmarkFor( "description", "test1", Mode.LATENCY, new HashMap<>() ),
                     metrics(),
+                    auxiliaryMetrics(),
                     config() );
         } );
     }
@@ -138,8 +144,6 @@ public class BenchmarkGroupBenchmarkMetricsTest
         long minNs = rng.nextLong();
         long maxNs = rng.nextLong();
         long meanNs = rng.nextLong();
-        long errorNs = rng.nextLong();
-        double errorConfidence = rng.nextDouble();
         long sampleSize = rng.nextLong();
         long percentile25Ns = rng.nextLong();
         long percentile50Ns = rng.nextLong();
@@ -153,8 +157,36 @@ public class BenchmarkGroupBenchmarkMetricsTest
                 minNs,
                 maxNs,
                 meanNs,
-                errorNs,
-                errorConfidence,
+                sampleSize,
+                percentile25Ns,
+                percentile50Ns,
+                percentile75Ns,
+                percentile90Ns,
+                percentile95Ns,
+                percentile99Ns,
+                percentile999Ns );
+    }
+
+    private static AuxiliaryMetrics auxiliaryMetrics()
+    {
+        ThreadLocalRandom rng = ThreadLocalRandom.current();
+        String unit = "rows";
+        long minNs = rng.nextLong();
+        long maxNs = rng.nextLong();
+        long meanNs = rng.nextLong();
+        long sampleSize = rng.nextLong();
+        long percentile25Ns = rng.nextLong();
+        long percentile50Ns = rng.nextLong();
+        long percentile75Ns = rng.nextLong();
+        long percentile90Ns = rng.nextLong();
+        long percentile95Ns = rng.nextLong();
+        long percentile99Ns = rng.nextLong();
+        long percentile999Ns = rng.nextLong();
+        return new AuxiliaryMetrics(
+                unit,
+                minNs,
+                maxNs,
+                meanNs,
                 sampleSize,
                 percentile25Ns,
                 percentile50Ns,

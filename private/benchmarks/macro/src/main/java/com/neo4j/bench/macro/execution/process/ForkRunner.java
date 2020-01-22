@@ -130,7 +130,7 @@ public class ForkRunner
     {
         Results results = fork.run().convertUnit( unit );
         BenchmarkGroupBenchmarkMetrics justForPrinting = new BenchmarkGroupBenchmarkMetrics();
-        justForPrinting.add( query.benchmarkGroup(), query.benchmark(), results.metrics(), NO_NEO4J_CONFIG );
+        justForPrinting.add( query.benchmarkGroup(), query.benchmark(), results.metrics(), results.rowMetrics(), NO_NEO4J_CONFIG );
         System.out.println( metricsPrinter.toPrettyString( justForPrinting ) );
     }
 

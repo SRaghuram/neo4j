@@ -284,15 +284,35 @@ public class Results
                 duration.percentile( 0.999D ) );
     }
 
+    public AuxiliaryMetrics rowMetrics()
+    {
+        return new AuxiliaryMetrics( "rows",
+                                     rows.min(),
+                                     rows.max(),
+                                     rows.mean(),
+                                     rows.count(),
+                                     rows.percentile( 0.25D ),
+                                     rows.percentile( 0.50D ),
+                                     rows.percentile( 0.75D ),
+                                     rows.percentile( 0.90D ),
+                                     rows.percentile( 0.95D ),
+                                     rows.percentile( 0.99D ),
+                                     rows.percentile( 0.999D ) );
+    }
+
     @Override
     public String toString()
     {
-        return "Results:" + "\n" +
-               "\tmin    : " + duration.min() + "\n" +
-               "\tmean   : " + duration.mean() + "\n" +
-               "\tmedian : " + duration.median() + "\n" +
-               "\tmax    : " + duration.max() + "\n" +
-               "\trows   : " + rows.mean();
+        return "\nResults:" + "\n" +
+               "\tduration min    : " + duration.min() + "\n" +
+               "\tduration mean   : " + duration.mean() + "\n" +
+               "\tduration median : " + duration.median() + "\n" +
+               "\tduration max    : " + duration.max() + "\n" +
+               "\t----------------\n" +
+               "\trows min        : " + rows.min() + "\n" +
+               "\trows mean       : " + rows.mean() + "\n" +
+               "\trows median     : " + rows.median() + "\n" +
+               "\trows max        : " + rows.max() + "\n";
     }
 
     public static final class ResultsWriter implements AutoCloseable

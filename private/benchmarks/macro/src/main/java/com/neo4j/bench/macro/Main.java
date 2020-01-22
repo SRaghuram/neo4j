@@ -77,9 +77,11 @@ public class Main
                     resources );
 
             BenchmarkGroupBenchmarkMetrics queryResults = new BenchmarkGroupBenchmarkMetrics();
+            Results results = Results.loadFrom( benchmarkDir );
             queryResults.add( options.query().benchmarkGroup(),
                               options.query().benchmark(),
-                              Results.loadFrom( benchmarkDir ).metrics(),
+                              results.metrics(),
+                              results.rowMetrics(),
                               options.neo4jConfig() );
 
             System.out.println( verboseMetricsPrinter.toPrettyString( queryResults ) );
