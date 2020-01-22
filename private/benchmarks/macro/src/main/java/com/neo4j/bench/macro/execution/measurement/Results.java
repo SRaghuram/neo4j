@@ -6,6 +6,7 @@
 package com.neo4j.bench.macro.execution.measurement;
 
 import com.google.common.collect.Lists;
+import com.neo4j.bench.common.model.AuxiliaryMetrics;
 import com.neo4j.bench.common.model.Metrics;
 import com.neo4j.bench.common.results.BenchmarkDirectory;
 import com.neo4j.bench.common.results.ForkDirectory;
@@ -273,8 +274,6 @@ public class Results
                 duration.min(),
                 duration.max(),
                 duration.mean(),
-                0, // TODO error
-                0, // TODO error confidence OR remove error confidence entirely?
                 duration.count(),
                 duration.percentile( 0.25D ),
                 duration.percentile( 0.50D ),
