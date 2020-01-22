@@ -93,12 +93,9 @@ class PipelinedRuntime private(parallelExecution: Boolean,
   override val PRINT_PIPELINE_INFO = false
   override val PRINT_FAILURE_STACK_TRACE = true
 
-  private val rewriterSequencer: String => RewriterStepSequencer = {
-    import org.neo4j.cypher.internal.Assertion._
-    import org.neo4j.cypher.internal.rewriting.RewriterStepSequencer._
+  private val rewriterSequencer: String => RewriterStepSequencer =
+    if (Assertion.assertionsEnabled()) RewriterStepSequencer.newValidating else RewriterStepSequencer.newPlain
 
-    if (assertionsEnabled()) newValidating else newPlain
-  }
   private val optimizingRewriter = PipelinedPlanRewriter(rewriterSequencer)
 
   override def compileToExecutable(query: LogicalQuery, context: EnterpriseRuntimeContext, securityContext: SecurityContext): ExecutionPlan = {

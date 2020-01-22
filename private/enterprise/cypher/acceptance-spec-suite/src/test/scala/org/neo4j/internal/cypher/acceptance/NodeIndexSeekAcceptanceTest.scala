@@ -584,6 +584,29 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
     result.executionPlanDescription() shouldNot includeSomewhere.aPlan("CartesianProduct")
   }
 
+  test("should specialize cartesian product of multiple (3) node index seeks with multiple input rows") {
+    // Given
+    graph.createIndex("L", "prop")
+    val node11 = createLabeledNode(Map("prop" -> 1), "L")
+    val node12 = createLabeledNode(Map("prop" -> 1), "L")
+    val node21 = createLabeledNode(Map("prop" -> 10), "L")
+    val node22 = createLabeledNode(Map("prop" -> 10), "L")
+    val node31 = createLabeledNode(Map("prop" -> 100), "L")
+    val node32 = createLabeledNode(Map("prop" -> 100), "L")
+    createLabeledNode(Map("prop" -> 1000), "L")
+
+    // When
+    val query = "UNWIND [9, 10, 11] as i WITH i MATCH (a:L), (b:L), (c:L) WHERE a.prop = 1 AND b.prop = toInteger(i) AND c.prop = 100 RETURN a.prop + b.prop + c.prop AS s"
+    val result = executeSingle(s"CYPHER runtime=pipelined $query")
+
+    // Then
+    result.toList should equal((1 to 8).map(_ => Map("s" -> 111L)).toList)
+
+    result.executionPlanDescription() should includeSomewhere.nTimes(1, aPlan("MultiNodeIndexSeek"))
+    result.executionPlanDescription() should includeSomewhere.nTimes(3, aPlan("NodeIndexSeek"))
+    result.executionPlanDescription() shouldNot includeSomewhere.aPlan("CartesianProduct")
+  }
+
   test("should specialize cartesian product of multiple (4) node index seeks - no results") {
     // Given
     graph.createIndex("L", "prop")

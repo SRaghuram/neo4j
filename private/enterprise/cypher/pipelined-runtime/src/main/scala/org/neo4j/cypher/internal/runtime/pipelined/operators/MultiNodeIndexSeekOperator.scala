@@ -61,64 +61,70 @@ class MultiNodeIndexSeekOperator(val workIdentity: WorkIdentity,
     override def workIdentity: WorkIdentity = MultiNodeIndexSeekOperator.this.workIdentity
 
     // We have one node cursor for each index seek
-    private var nodeCursors: Array[NodeValueIndexCursor] = null
+    private var nodeCursors: Array[NodeValueIndexCursor] = _
 
     private var indexQueries: Seq[Seq[IndexQuery]] = _
 
     // For exact seeks we also cache the values that we extract from the predicates rather than
-    private val exactSeekValues: Array[Array[Value]] = new Array(numberOfSeeks)
+    private var exactSeekValues: Array[Array[Value]] = _
 
     // Each IndexSeeker can have multiple index queries, hence the nesting.
     // The outer array has one element per IndexSeeker (i.e for each node variable)
     // The inner ArrayBuffer holds the lambdas used to execute the seek for each individual index query of that IndexSeeker
-    private val seeks: Array[ArrayBuffer[() => Unit]] = new Array(numberOfSeeks)
-    private val currentIndexQuery: Array[Int] = new Array(numberOfSeeks) // For each IndexSeeker this holds the index of the current index query we are positioned at
+    private var seeks: Array[ArrayBuffer[() => Unit]] = _
+    private var currentIndexQuery: Array[Int] = _ // For each IndexSeeker this holds the index of the current index query we are positioned at
 
     // INPUT LOOP TASK
     override protected def initializeInnerLoop(context: QueryContext,
                                                state: QueryState,
                                                resources: QueryResources,
                                                initExecutionContext: ExecutionContext): Boolean = {
-      // First time initialization: set up node cursors and index queries for all index seeks
+      // First time initialization: allocate node cursors and state holders for all index seeks
       if (nodeCursors == null) {
         nodeCursors = new Array(numberOfSeeks)
-        val read = context.transactionalContext.transaction.dataRead()
-        val queryState = new OldQueryState(context,
-                                           resources = null,
-                                           params = state.params,
-                                           resources.expressionCursors,
-                                           Array.empty[IndexReadSession],
-                                           resources.expressionVariables(state.nExpressionSlots),
-                                           state.subscriber,
-                                           NoMemoryTracker)
+        exactSeekValues = new Array(numberOfSeeks)
+        seeks = new Array(numberOfSeeks)
+        currentIndexQuery = new Array(numberOfSeeks)
         var i = 0
         while (i < numberOfSeeks) {
           nodeCursors(i) = resources.cursorPools.nodeValueIndexCursorPool.allocateAndTrace()
-          indexQueries = indexSeekers(i).computeIndexQueries(queryState, initExecutionContext)
-          val indexQueryIterator = indexQueries.toIterator
-          if (!indexQueryIterator.hasNext) {
-            // If an index query does not have any predicates we can abort already
-            assert(assertion = false, "An index query should always have at least one predicate")
-            return false
-          }
-
           seeks(i) = new ArrayBuffer[() => Unit]()
-          do {
-            val indexQuery = indexQueryIterator.next()
-            val indexSeek: () => Unit = seek(state.queryIndexes(nodeIndexSeekParameters(i).queryIndex), nodeCursors(i), read, indexQuery,
-                                             indexSeekers(i).needsValues, nodeIndexSeekParameters(i).kernelIndexOrder, i)
-            seeks(i) += indexSeek
-          } while (indexQueryIterator.hasNext)
           i += 1
         }
       }
 
-      // Every time, start the first index query of all index seeks and point all cursors except the innermost (rhs) at the first result
-      initExecutionContext.copyFrom(inputMorsel, argumentSize.nLongs, argumentSize.nReferences)
+      // For every input row, set up index seek lambdas with index queries computed on the current input row,
+      // execute the first index query of all index seeks, and point all cursors except the innermost (rhs) at the first result
+      val read = context.transactionalContext.transaction.dataRead()
+      val queryState = new OldQueryState(context,
+                                         resources = null,
+                                         params = state.params,
+                                         resources.expressionCursors,
+                                         Array.empty[IndexReadSession],
+                                         resources.expressionVariables(state.nExpressionSlots),
+                                         state.subscriber,
+                                         NoMemoryTracker)
+
+      initExecutionContext.copyFrom(inputMorsel, argumentSize.nLongs, argumentSize.nReferences) // Copy arguments from the input row
       var i = 0
       while (i < numberOfSeeks) {
+        // Recompute the index queries for the seek
+        // [Here we have an optimization opportunity to skip this step if the variables that the seek depends on did not change compared to the last input row]
+        indexQueries = indexSeekers(i).computeIndexQueries(queryState, inputMorsel)
+        val indexQueryIterator = indexQueries.toIterator
+        require(indexQueryIterator.hasNext, "An index query should always have at least one predicate")
+        seeks(i).clear()
+        do {
+          val indexQuery = indexQueryIterator.next()
+          val indexSeek: () => Unit = seek(state.queryIndexes(nodeIndexSeekParameters(i).queryIndex), nodeCursors(i), read, indexQuery,
+                                           indexSeekers(i).needsValues, nodeIndexSeekParameters(i).kernelIndexOrder, i)
+          seeks(i) += indexSeek
+        } while (indexQueryIterator.hasNext)
+
+        // Start the first index query of the seek
         currentIndexQuery(i) = 0
-        seeks(i)(0)() // Perform the first seek
+        seeks(i)(0)()
+
         // Advance the cursors one step, except for the innermost seek, which will be advanced on the first call to next() in the inner loop
         if (i < numberOfSeeks - 1 && !nodeCursors(i).next()) {
           // If a cursor does not have any results we can abort already
