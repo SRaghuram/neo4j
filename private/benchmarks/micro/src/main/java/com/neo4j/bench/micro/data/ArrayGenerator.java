@@ -65,7 +65,7 @@ public class ArrayGenerator
         return new ArrayGeneratorFactory<>( new DoubleArrayGeneratorFun(), elementGeneratorFactory, arrayLength );
     }
 
-    static class ArrayGeneratorFactory<GENERATOR_TYPE, ELEMENT_TYPE> implements ValueGeneratorFactory<GENERATOR_TYPE>
+    public static class ArrayGeneratorFactory<GENERATOR_TYPE, ELEMENT_TYPE> implements ValueGeneratorFactory<GENERATOR_TYPE>
     {
         private ArrayGeneratorFun<GENERATOR_TYPE,ELEMENT_TYPE> arrayGeneratorFun;
         private ValueGeneratorFactory<ELEMENT_TYPE> elementGeneratorFactory;
