@@ -105,12 +105,8 @@ public class DbmsReconciler implements DatabaseStateService
                 config.get( GraphDatabaseSettings.reconciler_minimum_backoff ),
                 config.get( GraphDatabaseSettings.reconciler_maximum_backoff ) );
 
-        if ( config.isExplicitlySet( GraphDatabaseSettings.reconciler_maximum_parallelism ) )
-        {
-            int parallelism = config.get( GraphDatabaseSettings.reconciler_maximum_parallelism );
-            parallelism = parallelism == 0 ? Runtime.getRuntime().availableProcessors() : parallelism;
-            scheduler.setParallelism( Group.DATABASE_RECONCILER , parallelism );
-        }
+        int parallelism = config.get( GraphDatabaseSettings.reconciler_maximum_parallelism );
+        scheduler.setParallelism( Group.DATABASE_RECONCILER , parallelism );
         this.executor = scheduler.executor( Group.DATABASE_RECONCILER );
 
         this.reconciling = new HashSet<>();
