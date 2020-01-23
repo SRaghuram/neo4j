@@ -41,10 +41,6 @@
       }
     },
     {
-      "name": "Q9",
-      "queryFile": "queries/Q9.cypher"
-    },
-    {
       "name": "Q10",
       "queryFile": "queries/Q10.cypher"
     },
