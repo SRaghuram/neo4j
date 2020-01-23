@@ -8,97 +8,32 @@ package org.neo4j.cypher.internal.runtime.pipelined.operators
 
 import java.util.function.ToLongFunction
 
-import org.neo4j.codegen.api.Field
-import org.neo4j.codegen.api.InstanceField
-import org.neo4j.codegen.api.IntermediateRepresentation
-import org.neo4j.codegen.api.IntermediateRepresentation.and
-import org.neo4j.codegen.api.IntermediateRepresentation.arrayLength
-import org.neo4j.codegen.api.IntermediateRepresentation.arrayOf
-import org.neo4j.codegen.api.IntermediateRepresentation.assign
-import org.neo4j.codegen.api.IntermediateRepresentation.block
-import org.neo4j.codegen.api.IntermediateRepresentation.condition
-import org.neo4j.codegen.api.IntermediateRepresentation.constant
-import org.neo4j.codegen.api.IntermediateRepresentation.declareAndAssign
-import org.neo4j.codegen.api.IntermediateRepresentation.equal
-import org.neo4j.codegen.api.IntermediateRepresentation.field
-import org.neo4j.codegen.api.IntermediateRepresentation.getStatic
-import org.neo4j.codegen.api.IntermediateRepresentation.ifElse
-import org.neo4j.codegen.api.IntermediateRepresentation.invoke
-import org.neo4j.codegen.api.IntermediateRepresentation.invokeSideEffect
-import org.neo4j.codegen.api.IntermediateRepresentation.invokeStatic
-import org.neo4j.codegen.api.IntermediateRepresentation.isNotNull
-import org.neo4j.codegen.api.IntermediateRepresentation.load
-import org.neo4j.codegen.api.IntermediateRepresentation.loadField
-import org.neo4j.codegen.api.IntermediateRepresentation.loop
-import org.neo4j.codegen.api.IntermediateRepresentation.method
-import org.neo4j.codegen.api.IntermediateRepresentation.noValue
-import org.neo4j.codegen.api.IntermediateRepresentation.noop
-import org.neo4j.codegen.api.IntermediateRepresentation.notEqual
-import org.neo4j.codegen.api.IntermediateRepresentation.setField
-import org.neo4j.codegen.api.IntermediateRepresentation.ternary
-import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
-import org.neo4j.codegen.api.LocalVariable
-import org.neo4j.codegen.api.Method
+import org.neo4j.codegen.api.IntermediateRepresentation.{and, arrayLength, arrayOf, assign, block, condition, constant, declareAndAssign, equal, field, getStatic, ifElse, invoke, invokeSideEffect, invokeStatic, isNotNull, load, loadField, loop, method, noValue, noop, notEqual, setField, ternary, typeRefOf}
+import org.neo4j.codegen.api._
 import org.neo4j.cypher.internal.expressions.SemanticDirection
-import org.neo4j.cypher.internal.expressions.SemanticDirection.BOTH
-import org.neo4j.cypher.internal.expressions.SemanticDirection.INCOMING
-import org.neo4j.cypher.internal.expressions.SemanticDirection.OUTGOING
-import org.neo4j.cypher.internal.physicalplanning.LongSlot
-import org.neo4j.cypher.internal.physicalplanning.RefSlot
-import org.neo4j.cypher.internal.physicalplanning.Slot
+import org.neo4j.cypher.internal.expressions.SemanticDirection.{BOTH, INCOMING, OUTGOING}
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeGetPrimitiveNodeFromSlotFunctionFor
+import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot, Slot}
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
-import org.neo4j.cypher.internal.runtime.DbAccess
-import org.neo4j.cypher.internal.runtime.ExecutionContext
-import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledHelpers
-import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
+import org.neo4j.cypher.internal.runtime.compiled.expressions.{CompiledHelpers, IntermediateExpression}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.RelationshipTypes
-import org.neo4j.cypher.internal.runtime.pipelined.NodeCursorRepresentation
-import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
-import org.neo4j.cypher.internal.runtime.pipelined.RelationshipCursorRepresentation
-import org.neo4j.cypher.internal.runtime.pipelined.execution.CursorPools
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
-import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
-import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
-import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandAllOperatorTaskTemplate.getNodeIdFromSlot
-import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandAllOperatorTaskTemplate.loadTypes
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.DB_ACCESS
+import org.neo4j.cypher.internal.runtime.pipelined.execution.{CursorPools, MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandAllOperatorTaskTemplate.{getNodeIdFromSlot, loadTypes}
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates._
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
+import org.neo4j.cypher.internal.runtime.pipelined.{NodeCursorRepresentation, OperatorExpressionCompiler, RelationshipCursorRepresentation}
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
+import org.neo4j.cypher.internal.runtime.{DbAccess, ExecutionContext, QueryContext}
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.InternalException
-import org.neo4j.internal.kernel.api.KernelReadTracer
-import org.neo4j.internal.kernel.api.NodeCursor
-import org.neo4j.internal.kernel.api.RelationshipGroupCursor
-import org.neo4j.internal.kernel.api.RelationshipTraversalCursor
-import org.neo4j.internal.kernel.api.TokenRead
-import org.neo4j.internal.kernel.api.helpers.RelationshipSelectionCursor
+import org.neo4j.internal.kernel.api._
 import org.neo4j.internal.kernel.api.helpers.RelationshipSelections
-import org.neo4j.internal.kernel.api.helpers.RelationshipSelections.allDenseCursor
-import org.neo4j.internal.kernel.api.helpers.RelationshipSelections.allSparseCursor
-import org.neo4j.internal.kernel.api.helpers.RelationshipSelections.incomingDenseCursor
-import org.neo4j.internal.kernel.api.helpers.RelationshipSelections.incomingSparseCursor
-import org.neo4j.internal.kernel.api.helpers.RelationshipSelections.outgoingDenseCursor
-import org.neo4j.internal.kernel.api.helpers.RelationshipSelections.outgoingSparseCursor
 import org.neo4j.values.AnyValue
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
-import OperatorCodeGenHelperTemplates.CURSOR_POOL_V
-import OperatorCodeGenHelperTemplates.profilingCursorNext
-import OperatorCodeGenHelperTemplates.freeCursor
-import OperatorCodeGenHelperTemplates.GroupCursorPool
-import OperatorCodeGenHelperTemplates.TraversalCursorPool
-import OperatorCodeGenHelperTemplates.allocateAndTraceCursor
-import OperatorCodeGenHelperTemplates.singleNode
-import OperatorCodeGenHelperTemplates.NodeCursorPool
-import OperatorCodeGenHelperTemplates.ALLOCATE_GROUP_CURSOR
-import OperatorCodeGenHelperTemplates.ALLOCATE_NODE_CURSOR
-import OperatorCodeGenHelperTemplates.ALLOCATE_TRAVERSAL_CURSOR
-import OperatorCodeGenHelperTemplates.cursorNext
 
 
 class ExpandAllOperator(val workIdentity: WorkIdentity,
@@ -149,8 +84,7 @@ class ExpandAllTask(val inputMorsel: MorselExecutionContext,
    */
   protected var nodeCursor: NodeCursor = _
   private var groupCursor: RelationshipGroupCursor = _
-  private var traversalCursor: RelationshipTraversalCursor = _
-  protected var relationships: RelationshipSelectionCursor = _
+  protected var traversalCursor: RelationshipTraversalCursor = _
 
   protected override def initializeInnerLoop(context: QueryContext,
                                              state: QueryState,
@@ -162,7 +96,7 @@ class ExpandAllTask(val inputMorsel: MorselExecutionContext,
     else {
       val pools: CursorPools = resources.cursorPools
       nodeCursor = pools.nodeCursorPool.allocateAndTrace()
-      relationships = getRelationshipsCursor(context, pools, fromNode, dir, types.types(context))
+      traversalCursor = getRelationshipsCursor(context, pools, fromNode, dir, types.types(context))
       true
     }
   }
@@ -171,9 +105,9 @@ class ExpandAllTask(val inputMorsel: MorselExecutionContext,
                                    context: QueryContext,
                                    state: QueryState): Unit = {
 
-    while (outputRow.isValidRow && relationships.next()) {
-      val relId = relationships.relationshipReference()
-      val otherSide = relationships.otherNodeReference()
+    while (outputRow.isValidRow && traversalCursor.next()) {
+      val relId = traversalCursor.relationshipReference()
+      val otherSide = traversalCursor.otherNodeReference()
 
       // Now we have everything needed to create a row.
       outputRow.copyFrom(inputMorsel)
@@ -203,50 +137,26 @@ class ExpandAllTask(val inputMorsel: MorselExecutionContext,
     nodeCursor = null
     groupCursor = null
     traversalCursor = null
-    relationships = null
   }
 
   protected def getRelationshipsCursor(context: QueryContext,
                                        pools: CursorPools,
                                        node: Long,
                                        dir: SemanticDirection,
-                                       types: Array[Int]): RelationshipSelectionCursor = {
+                                       types: Array[Int]): RelationshipTraversalCursor = {
 
     val read = context.transactionalContext.dataRead
     read.singleNode(node, nodeCursor)
-    if (!nodeCursor.next()) RelationshipSelectionCursor.EMPTY
+    if (!nodeCursor.next()) RelationshipTraversalCursor.EMPTY
     else {
+      traversalCursor = pools.relationshipTraversalCursorPool.allocateAndTrace()
       dir match {
         case OUTGOING =>
-          if (nodeCursor.isDense) {
-            groupCursor = pools.relationshipGroupCursorPool.allocateAndTrace()
-            traversalCursor = pools.relationshipTraversalCursorPool.allocateAndTrace()
-            outgoingDenseCursor(groupCursor, traversalCursor, nodeCursor, types)
-          }
-          else {
-            traversalCursor = pools.relationshipTraversalCursorPool.allocateAndTrace()
-            outgoingSparseCursor(traversalCursor, nodeCursor, types)
-          }
+          RelationshipSelections.outgoingCursor(traversalCursor, nodeCursor, types)
         case INCOMING =>
-          if (nodeCursor.isDense) {
-            groupCursor = pools.relationshipGroupCursorPool.allocateAndTrace()
-            traversalCursor = pools.relationshipTraversalCursorPool.allocateAndTrace()
-            incomingDenseCursor(groupCursor, traversalCursor, nodeCursor, types)
-          }
-          else {
-            traversalCursor = pools.relationshipTraversalCursorPool.allocateAndTrace()
-            incomingSparseCursor(traversalCursor, nodeCursor, types)
-          }
+          RelationshipSelections.incomingCursor(traversalCursor, nodeCursor, types)
         case BOTH =>
-          if (nodeCursor.isDense) {
-            groupCursor = pools.relationshipGroupCursorPool.allocateAndTrace()
-            traversalCursor = pools.relationshipTraversalCursorPool.allocateAndTrace()
-            allDenseCursor(groupCursor, traversalCursor, nodeCursor, types)
-          }
-          else {
-            traversalCursor = pools.relationshipTraversalCursorPool.allocateAndTrace()
-            allSparseCursor(traversalCursor, nodeCursor, types)
-          }
+          RelationshipSelections.allCursor(traversalCursor, nodeCursor, types)
       }
     }
   }
@@ -268,8 +178,7 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
 
   protected val nodeCursorField: InstanceField = field[NodeCursor](codeGen.namer.nextVariableName("nodeCursor"))
   private val groupCursorField = field[RelationshipGroupCursor](codeGen.namer.nextVariableName("group"))
-  private val traversalCursorField = field[RelationshipTraversalCursor](codeGen.namer.nextVariableName("traversal"))
-  protected val relationshipsField: InstanceField = field[RelationshipSelectionCursor](codeGen.namer.nextVariableName("relationships"))
+  protected val relationshipsField: InstanceField = field[RelationshipTraversalCursor](codeGen.namer.nextVariableName("relationships"))
   private val typeField = field[Array[Int]](codeGen.namer.nextVariableName("type"),
     if (types.isEmpty && missingTypes.isEmpty) constant(null)
     else arrayOf[Int](types.map(constant):_*))
@@ -282,7 +191,7 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
 
   override def genMoreFields: Seq[Field] = {
     val localFields =
-      ArrayBuffer(nodeCursorField, groupCursorField, traversalCursorField, relationshipsField, typeField)
+      ArrayBuffer(nodeCursorField, groupCursorField, relationshipsField, relationshipsField, typeField)
     if (missingTypes.nonEmpty) {
       localFields += missingTypeField
     }
@@ -330,7 +239,7 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
         block(
           assign(resultBoolean, constant(true)),
           setUpCursors(fromNode),
-          setField(canContinue, profilingCursorNext[RelationshipSelectionCursor](loadField(relationshipsField), id))
+          setField(canContinue, profilingCursorNext[RelationshipTraversalCursor](loadField(relationshipsField), id))
         )
       },
 
@@ -360,7 +269,7 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
         writeRow(getRelationship, getOtherNode),
         inner.genOperateWithExpressions,
         doIfInnerCantContinue(
-          setField(canContinue, profilingCursorNext[RelationshipSelectionCursor](loadField(relationshipsField), id))),
+          setField(canContinue, profilingCursorNext[RelationshipTraversalCursor](loadField(relationshipsField), id))),
         endInnerLoop
       )
     )
@@ -396,10 +305,10 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
     block(
       freeCursor[NodeCursor](loadField(nodeCursorField), NodeCursorPool),
       freeCursor[RelationshipGroupCursor](loadField(groupCursorField), GroupCursorPool),
-      freeCursor[RelationshipTraversalCursor](loadField(traversalCursorField), TraversalCursorPool),
+      freeCursor[RelationshipTraversalCursor](loadField(relationshipsField), TraversalCursorPool),
       setField(nodeCursorField, constant(null)),
       setField(groupCursorField, constant(null)),
-      setField(traversalCursorField, constant(null)),
+      setField(relationshipsField, constant(null)),
       setField(relationshipsField, constant(null))
     )
   }
@@ -410,8 +319,8 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
         invokeSideEffect(loadField(groupCursorField), method[RelationshipGroupCursor, Unit, KernelReadTracer]("setTracer"),
           loadField(executionEventField)),
       ),
-      condition(isNotNull(loadField(traversalCursorField)))(
-        invokeSideEffect(loadField(traversalCursorField), method[RelationshipTraversalCursor, Unit, KernelReadTracer]("setTracer"),
+      condition(isNotNull(loadField(relationshipsField)))(
+        invokeSideEffect(loadField(relationshipsField), method[RelationshipTraversalCursor, Unit, KernelReadTracer]("setTracer"),
           loadField(executionEventField)),
       ),
       condition(isNotNull(loadField(nodeCursorField)))(
@@ -424,7 +333,7 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
 
   protected def getOtherNode: IntermediateRepresentation = invoke(loadField(relationshipsField), otherNodeMethod)
   protected def getRelationship: IntermediateRepresentation = invoke(loadField(relationshipsField),
-    method[RelationshipSelectionCursor, Long]("relationshipReference"))
+    method[RelationshipTraversalCursor, Long]("relationshipReference"))
   protected def setUpCursors(fromNode: String): IntermediateRepresentation = {
     //look if there is already a registered nodeCursor otherwise create and register one
     val externalCursor: Option[NodeCursorRepresentation] = codeGen.cursorFor(fromName) match {
@@ -442,7 +351,7 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
         //otherwise we need to set up a cursor to point at the from node
         .getOrElse(expandWithNewNodeCursor(fromNode)),
       invokeSideEffect(loadField(relationshipsField),
-        method[RelationshipSelectionCursor, Unit, KernelReadTracer]("setTracer"),
+        method[RelationshipTraversalCursor, Unit, KernelReadTracer]("setTracer"),
         loadField(executionEventField))
     )
   }
@@ -455,17 +364,17 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
 
     ifElse(cursor.isDense)(
       block(allocateAndTraceCursor(groupCursorField, executionEventField, ALLOCATE_GROUP_CURSOR),
-        allocateAndTraceCursor(traversalCursorField, executionEventField, ALLOCATE_TRAVERSAL_CURSOR),
+        allocateAndTraceCursor(relationshipsField, executionEventField, ALLOCATE_TRAVERSAL_CURSOR),
         setField(relationshipsField, invokeStatic(denseMethod,
           loadField(groupCursorField),
-          loadField(traversalCursorField),
+          loadField(relationshipsField),
           cursor.target,
           loadField(typeField))))
     )( //else
       block(
-        allocateAndTraceCursor(traversalCursorField, executionEventField, ALLOCATE_TRAVERSAL_CURSOR),
+        allocateAndTraceCursor(relationshipsField, executionEventField, ALLOCATE_TRAVERSAL_CURSOR),
         setField(relationshipsField, invokeStatic(sparseMethod,
-          loadField(traversalCursorField),
+          loadField(relationshipsField),
           cursor.target,
           loadField(typeField)))))
   }
@@ -481,26 +390,26 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
       ifElse(cursorNext[NodeCursor](loadField(nodeCursorField)))(
         ifElse(invoke(loadField(nodeCursorField), method[NodeCursor, Boolean]("isDense")))(
           block(allocateAndTraceCursor(groupCursorField, executionEventField, ALLOCATE_GROUP_CURSOR),
-            allocateAndTraceCursor(traversalCursorField, executionEventField,
+            allocateAndTraceCursor(relationshipsField, executionEventField,
               ALLOCATE_TRAVERSAL_CURSOR),
             setField(relationshipsField, invokeStatic(denseMethod,
               loadField(groupCursorField),
-              loadField(traversalCursorField),
+              loadField(relationshipsField),
               loadField(nodeCursorField),
               loadField(typeField))))
         )( //else
           block(
-            allocateAndTraceCursor(traversalCursorField, executionEventField,
+            allocateAndTraceCursor(relationshipsField, executionEventField,
               ALLOCATE_TRAVERSAL_CURSOR),
             setField(relationshipsField, invokeStatic(sparseMethod,
-              loadField(traversalCursorField),
+              loadField(relationshipsField),
               loadField(nodeCursorField),
               loadField(typeField))))
         )
 
       )( //else
         setField(relationshipsField,
-          getStatic[RelationshipSelectionCursor, RelationshipSelectionCursor]("EMPTY"))
+          getStatic[RelationshipTraversalCursor, RelationshipTraversalCursor]("EMPTY"))
       ))
   }
 
@@ -510,28 +419,28 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
   private def findExpansionMethods: (Method, Method) = {
     dir match {
       case OUTGOING =>
-        (method[RelationshipSelections, RelationshipSelectionCursor, RelationshipGroupCursor, RelationshipTraversalCursor, NodeCursor, Array[Int]](
+        (method[RelationshipSelections, RelationshipGroupCursor, RelationshipTraversalCursor, NodeCursor, Array[Int]](
           "outgoingDenseCursor"),
-          method[RelationshipSelections, RelationshipSelectionCursor, RelationshipTraversalCursor, NodeCursor, Array[Int]](
+          method[RelationshipSelections, RelationshipTraversalCursor, NodeCursor, Array[Int]](
             "outgoingSparseCursor"))
       case INCOMING =>
-        (method[RelationshipSelections, RelationshipSelectionCursor, RelationshipGroupCursor, RelationshipTraversalCursor, NodeCursor, Array[Int]](
+        (method[RelationshipSelections, RelationshipGroupCursor, RelationshipTraversalCursor, NodeCursor, Array[Int]](
           "incomingDenseCursor"),
-          method[RelationshipSelections, RelationshipSelectionCursor, RelationshipTraversalCursor, NodeCursor, Array[Int]](
+          method[RelationshipSelections, RelationshipTraversalCursor, NodeCursor, Array[Int]](
             "incomingSparseCursor"))
       case BOTH =>
-        (method[RelationshipSelections, RelationshipSelectionCursor, RelationshipGroupCursor, RelationshipTraversalCursor, NodeCursor, Array[Int]](
+        (method[RelationshipSelections, RelationshipGroupCursor, RelationshipTraversalCursor, NodeCursor, Array[Int]](
           "allDenseCursor"),
-          method[RelationshipSelections, RelationshipSelectionCursor, RelationshipTraversalCursor, NodeCursor, Array[Int]](
+          method[RelationshipSelections, RelationshipTraversalCursor, NodeCursor, Array[Int]](
             "allSparseCursor"))
     }
   }
 
   private def otherNodeMethod: Method = {
     val otherNode = dir match {
-      case OUTGOING => method[RelationshipSelectionCursor, Long]("targetNodeReference")
-      case INCOMING => method[RelationshipSelectionCursor, Long]("sourceNodeReference")
-      case BOTH => method[RelationshipSelectionCursor, Long]("otherNodeReference")
+      case OUTGOING => method[RelationshipTraversalCursor, Long]("targetNodeReference")
+      case INCOMING => method[RelationshipTraversalCursor, Long]("sourceNodeReference")
+      case BOTH => method[RelationshipTraversalCursor, Long]("otherNodeReference")
     }
     otherNode
   }

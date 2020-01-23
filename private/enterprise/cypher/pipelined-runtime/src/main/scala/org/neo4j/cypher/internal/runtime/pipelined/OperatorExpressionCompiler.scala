@@ -8,58 +8,17 @@ package org.neo4j.cypher.internal.runtime.pipelined
 
 import java.util
 
-import org.neo4j.codegen.api.CodeGeneration
-import org.neo4j.codegen.api.Field
-import org.neo4j.codegen.api.IntermediateRepresentation
-import org.neo4j.codegen.api.IntermediateRepresentation.assign
-import org.neo4j.codegen.api.IntermediateRepresentation.block
-import org.neo4j.codegen.api.IntermediateRepresentation.cast
-import org.neo4j.codegen.api.IntermediateRepresentation.condition
-import org.neo4j.codegen.api.IntermediateRepresentation.constant
-import org.neo4j.codegen.api.IntermediateRepresentation.declare
-import org.neo4j.codegen.api.IntermediateRepresentation.field
-import org.neo4j.codegen.api.IntermediateRepresentation.invoke
-import org.neo4j.codegen.api.IntermediateRepresentation.invokeSideEffect
-import org.neo4j.codegen.api.IntermediateRepresentation.invokeStatic
-import org.neo4j.codegen.api.IntermediateRepresentation.isNull
-import org.neo4j.codegen.api.IntermediateRepresentation.load
-import org.neo4j.codegen.api.IntermediateRepresentation.loadField
-import org.neo4j.codegen.api.IntermediateRepresentation.method
-import org.neo4j.codegen.api.IntermediateRepresentation.noValue
-import org.neo4j.codegen.api.IntermediateRepresentation.noop
-import org.neo4j.codegen.api.IntermediateRepresentation.setField
-import org.neo4j.codegen.api.IntermediateRepresentation.ternary
-import org.neo4j.codegen.api.IntermediateRepresentation.variable
-import org.neo4j.codegen.api.LocalVariable
+import org.neo4j.codegen.api.IntermediateRepresentation.{assign, block, cast, condition, constant, declare, field, invoke, invokeSideEffect, invokeStatic, isNull, load, loadField, method, noValue, noop, setField, ternary, variable}
+import org.neo4j.codegen.api.{CodeGeneration, Field, IntermediateRepresentation, LocalVariable}
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.ast.SlottedCachedProperty
-import org.neo4j.cypher.internal.runtime.DbAccess
-import org.neo4j.cypher.internal.runtime.ExecutionContext
-import org.neo4j.cypher.internal.runtime.compiled.expressions.CursorRepresentation
-import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler
-import org.neo4j.cypher.internal.runtime.compiled.expressions.VariableNamer
-import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler.LocalsForSlots
-import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler.ScopeContinuationState
-import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler.ScopeLocalsState
+import org.neo4j.cypher.internal.runtime.compiled.expressions.{CursorRepresentation, ExpressionCompiler, VariableNamer}
+import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler.{LocalsForSlots, ScopeContinuationState, ScopeLocalsState}
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.DATA_READ
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_MORSEL
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.OUTPUT_ROW
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.UNINITIALIZED_LONG_SLOT_VALUE
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.UNINITIALIZED_REF_SLOT_VALUE
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.nodeGetProperty
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.nodeHasLabel
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.nodeHasProperty
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.relationshipGetProperty
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.relationshipHasProperty
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates._
+import org.neo4j.cypher.internal.runtime.{DbAccess, ExecutionContext}
 import org.neo4j.cypher.operations.CursorUtils
-import org.neo4j.internal.kernel.api.NodeCursor
-import org.neo4j.internal.kernel.api.NodeLabelIndexCursor
-import org.neo4j.internal.kernel.api.NodeValueIndexCursor
-import org.neo4j.internal.kernel.api.PropertyCursor
-import org.neo4j.internal.kernel.api.Read
-import org.neo4j.internal.kernel.api.RelationshipScanCursor
-import org.neo4j.internal.kernel.api.helpers.RelationshipSelectionCursor
+import org.neo4j.internal.kernel.api._
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Value
 
@@ -836,16 +795,16 @@ case class NodeIndexCursorRepresentation(target: IntermediateRepresentation) ext
 case class RelationshipCursorRepresentation(target: IntermediateRepresentation) extends BaseCursorRepresentation {
 
   override def reference: IntermediateRepresentation = {
-    invoke(target, method[RelationshipSelectionCursor, Long]("relationshipReference"))
+    invoke(target, method[RelationshipTraversalCursor, Long]("relationshipReference"))
   }
 
   override def relationshipType: IntermediateRepresentation = {
-    invoke(target, method[RelationshipSelectionCursor, Int]("type"))
+    invoke(target, method[RelationshipTraversalCursor, Int]("type"))
   }
 
   override def getProperty(propertyToken: IntermediateRepresentation): IntermediateRepresentation = {
     block(
-      invokeSideEffect(target, method[RelationshipSelectionCursor, Unit, PropertyCursor]("properties"),
+      invokeSideEffect(target, method[RelationshipTraversalCursor, Unit, PropertyCursor]("properties"),
         ExpressionCompiler.PROPERTY_CURSOR),
       ternary(invoke(ExpressionCompiler.PROPERTY_CURSOR, method[PropertyCursor, Boolean, Int]("seekProperty"), propertyToken),
         invoke( ExpressionCompiler.PROPERTY_CURSOR, method[PropertyCursor, Value]("propertyValue")),
@@ -855,7 +814,7 @@ case class RelationshipCursorRepresentation(target: IntermediateRepresentation) 
 
   override def hasProperty(propertyToken: IntermediateRepresentation): IntermediateRepresentation = {
     block(
-      invokeSideEffect(target, method[RelationshipSelectionCursor, Unit, PropertyCursor]("properties"),
+      invokeSideEffect(target, method[RelationshipTraversalCursor, Unit, PropertyCursor]("properties"),
         ExpressionCompiler.PROPERTY_CURSOR),
       invoke(ExpressionCompiler.PROPERTY_CURSOR, method[PropertyCursor, Boolean, Int]("seekProperty"), propertyToken)
     )

@@ -36,6 +36,7 @@ import static com.neo4j.bench.micro.benchmarks.core.Expand.NODE_COUNT;
 import static com.neo4j.bench.micro.benchmarks.core.Expand.RELATIONSHIP_DEFINITIONS;
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
 import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
+import static org.neo4j.storageengine.api.RelationshipSelection.ALL_RELATIONSHIPS;
 import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 
 @BenchmarkEnabled( true )
@@ -151,7 +152,7 @@ public class Expand extends AbstractKernelBenchmark
         txState.kernelTx.read.singleNode( nodeId, txState.node );
 
         txState.node.next();
-        txState.node.relationships( txState.edgeGroup );
+        txState.node.relationshipGroups( txState.edgeGroup );
 
         while ( txState.edgeGroup.next() )
         {
@@ -175,7 +176,7 @@ public class Expand extends AbstractKernelBenchmark
         int type = txState.randomRelationshipType( rngState.rng );
 
         txState.node.next();
-        txState.node.relationships( txState.edgeGroup );
+        txState.node.relationshipGroups( txState.edgeGroup );
 
         while ( txState.edgeGroup.next() )
         {
@@ -201,7 +202,7 @@ public class Expand extends AbstractKernelBenchmark
         txState.kernelTx.read.singleNode( nodeId, txState.node );
 
         txState.node.next();
-        txState.node.allRelationships( txState.edge );
+        txState.node.relationships( txState.edge, ALL_RELATIONSHIPS );
 
         while ( txState.edge.next() )
         {
@@ -221,7 +222,7 @@ public class Expand extends AbstractKernelBenchmark
         int type = txState.randomRelationshipType( rngState.rng );
 
         txState.node.next();
-        txState.node.allRelationships( txState.edge );
+        txState.node.relationships( txState.edge, ALL_RELATIONSHIPS );
 
         while ( txState.edge.next() )
         {
