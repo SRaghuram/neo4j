@@ -45,11 +45,6 @@
       }
     },
     {
-      "name": "Q10",
-      "description": "What are the titles of all the tracks John Lennon played on?",
-      "queryFile": "queries/Q10.cypher"
-    },
-    {
       "name": "Q11",
       "description": "What are the titles of all the tracks an artist played on?",
       "queryFile": "queries/Q11.cypher",
