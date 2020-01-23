@@ -134,6 +134,7 @@ class StoreCopyCheckpointMutexIT
                 .installedProtocolsHandler( null )
                 .listenAddress( new SocketAddress( "localhost", 0 ) )
                 .scheduler( resolve( db, JobScheduler.class ) )
+                .config( Config.defaults() )
                 .bootstrapConfig( serverConfig( Config.defaults() ) )
                 .portRegister( resolve( db, ConnectorPortRegister.class ) )
                 .serverName( "fake-catchup-server" )

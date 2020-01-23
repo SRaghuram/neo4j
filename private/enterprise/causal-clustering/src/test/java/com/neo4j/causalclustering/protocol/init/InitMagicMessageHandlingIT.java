@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ThreadLocalRandom;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.logging.AssertableLogProvider;
 
 import static com.neo4j.causalclustering.protocol.init.MagicValueUtil.magicValueBuf;
@@ -175,7 +176,7 @@ class InitMagicMessageHandlingIT
 
     private ServerChannelInitializer newServerChannelInitializer( Duration timeout, ChannelInitializer<?> initializer )
     {
-        return new ServerChannelInitializer( initializer, NettyPipelineBuilderFactory.insecure(), timeout, logProvider );
+        return new ServerChannelInitializer( initializer, NettyPipelineBuilderFactory.insecure(), timeout, logProvider, Config.defaults() );
     }
 
     private ClientChannelInitializer newClientChannelInitializer( Duration timeout, ChannelInitializer<?> initializer )

@@ -544,4 +544,8 @@ public class CausalClusteringSettings implements SettingsDeclaration
             " Allowable values: " + ModifierProtocols.ALLOWED_VALUES_STRING )
     public static final Setting<List<String>> compression_implementations =
             newBuilder( "causal_clustering.protocol_implementations.compression", listOf( STRING ), emptyList() ).build();
+
+    @Internal
+    public static final Setting<Boolean> inbound_connection_initialization_logging_enabled =
+            newBuilder( "unsupported.causal_clustering.inbound_connection_initialization_logging_enabled", BOOL, true ).dynamic().build();
 }

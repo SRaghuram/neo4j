@@ -35,6 +35,7 @@ import org.hamcrest.BaseMatcher;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -53,6 +54,7 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.test.ports.PortAuthority;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.handshake_timeout;
+import static com.neo4j.causalclustering.core.CausalClusteringSettings.inbound_connection_initialization_logging_enabled;
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocolCategory.RAFT;
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocols.RAFT_2_0;
 import static com.neo4j.causalclustering.protocol.modifier.ModifierProtocolCategory.COMPRESSION;
@@ -63,6 +65,7 @@ import static java.util.stream.Collectors.toSet;
 import static org.hamcrest.Matchers.contains;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.neo4j.logging.LogAssertions.assertThat;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 class NettyInstalledProtocolsIT
@@ -111,10 +114,41 @@ class NettyInstalledProtocolsIT
                 contains( messageMatches( networkMessage ) ), TIMEOUT_SECONDS, SECONDS );
     }
 
+    @Test
+    void shouldLogInboundConnectionsByDefault()
+    {
+        startServerAndConnect( raft2WithCompressionModifiers( Optional.empty() ) );
+
+        assertThat( logProvider ).forClass( ServerChannelInitializer.class ).forLevel( AssertableLogProvider.Level.INFO ).
+                containsMessages( "Initializing server channel" );
+
+        assertThat( logProvider ).forClass( HandshakeServerInitializer.class ).forLevel( AssertableLogProvider.Level.INFO ).
+                containsMessages( "Installing handshake server" );
+    }
+
+    @Test
+    void shouldNotLogInboundConnectionsWhenLoggingTurnedOff()
+    {
+        var configBuilder = Config.newBuilder().set( inbound_connection_initialization_logging_enabled, false );
+
+        startServerAndConnect( raft2WithCompressionModifiers( Optional.empty() ), configBuilder );
+
+        assertThat( logProvider ).forClass( ServerChannelInitializer.class ).forLevel( AssertableLogProvider.Level.INFO ).
+                doesNotContainMessage( "Initializing server channel" );
+
+        assertThat( logProvider ).forClass( HandshakeServerInitializer.class ).forLevel( AssertableLogProvider.Level.INFO ).
+                doesNotContainMessage( "Installing handshake server" );
+    }
+
     private Server server;
     private Client client;
 
     private void startServerAndConnect( Parameters parameters )
+    {
+        startServerAndConnect( parameters, Config.newBuilder() );
+    }
+
+    private void startServerAndConnect( Parameters parameters, Config.Builder configBuilder )
     {
         ApplicationProtocolRepository applicationProtocolRepository =
                 new ApplicationProtocolRepository( ApplicationProtocols.values(), parameters.applicationSupportedProtocol );
@@ -124,7 +158,7 @@ class NettyInstalledProtocolsIT
         NettyPipelineBuilderFactory serverPipelineBuilderFactory = NettyPipelineBuilderFactory.insecure();
         NettyPipelineBuilderFactory clientPipelineBuilderFactory = NettyPipelineBuilderFactory.insecure();
 
-        Config config = Config.defaults( handshake_timeout, Duration.ofSeconds( TIMEOUT_SECONDS ) );
+        Config config = configBuilder.set( handshake_timeout, Duration.ofSeconds( TIMEOUT_SECONDS ) ).build();
 
         server = new Server( serverPipelineBuilderFactory, config );
         server.start( applicationProtocolRepository, modifierProtocolRepository, logProvider );
@@ -198,10 +232,10 @@ class NettyInstalledProtocolsIT
             eventLoopGroup = new NioEventLoopGroup();
 
             HandshakeServerInitializer handshakeInitializer = new HandshakeServerInitializer( applicationProtocolRepository, modifierProtocolRepository,
-                    protocolInstallerRepository, pipelineBuilderFactory, logProvider );
+                    protocolInstallerRepository, pipelineBuilderFactory, logProvider, config );
 
             ServerChannelInitializer channelInitializer = new ServerChannelInitializer( handshakeInitializer, pipelineBuilderFactory,
-                    config.get( handshake_timeout ), logProvider );
+                    config.get( handshake_timeout ), logProvider, config );
 
             ServerBootstrap bootstrap = new ServerBootstrap().group( eventLoopGroup )
                     .channel( NioServerSocketChannel.class )

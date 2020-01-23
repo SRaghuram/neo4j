@@ -16,8 +16,8 @@ import org.junit.jupiter.api.Test;
 import java.time.Duration;
 import java.util.Map;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.internal.helpers.collection.Iterables;
-import org.neo4j.logging.NullLogProvider;
 
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -27,6 +27,7 @@ import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.neo4j.logging.NullLogProvider.nullLogProvider;
 
 class ServerChannelInitializerTest
 {
@@ -34,7 +35,7 @@ class ServerChannelInitializerTest
 
     private final Duration timeout = Duration.ofSeconds( 42 );
     private final ServerChannelInitializer serverChannelInitializer = new ServerChannelInitializer( new NoOpChannelInitializer(),
-            NettyPipelineBuilderFactory.insecure(), timeout, NullLogProvider.getInstance() );
+            NettyPipelineBuilderFactory.insecure(), timeout, nullLogProvider(), Config.defaults() );
     private final ChannelInitializer<Channel> nettyServerChannelInitializer = serverChannelInitializer.asChannelInitializer();
 
     @AfterEach

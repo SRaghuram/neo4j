@@ -270,9 +270,10 @@ class RaftSenderIT
                 new ProtocolInstallerRepository<>( List.of( factoryV2 ), ModifierProtocolInstaller.allServerInstallers );
 
         HandshakeServerInitializer handshakeInitializer = new HandshakeServerInitializer( applicationProtocolRepository, modifierProtocolRepository,
-                installer, pipelineFactory, logProvider );
+                installer, pipelineFactory, logProvider, Config.defaults() );
 
-        ServerChannelInitializer channelInitializer = new ServerChannelInitializer( handshakeInitializer, pipelineFactory, handshakeTimeout, logProvider );
+        ServerChannelInitializer channelInitializer = new ServerChannelInitializer( handshakeInitializer, pipelineFactory, handshakeTimeout, logProvider,
+                Config.defaults() );
 
         SocketAddress listenAddress = new SocketAddress( "localhost", 0 );
 

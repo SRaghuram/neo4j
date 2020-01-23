@@ -84,11 +84,11 @@ public class RaftServerFactory
                         ModifierProtocolInstaller.allServerInstallers );
 
         HandshakeServerInitializer handshakeInitializer = new HandshakeServerInitializer( applicationProtocolRepository, modifierProtocolRepository,
-                protocolInstallerRepository, pipelineBuilderFactory, logProvider );
+                protocolInstallerRepository, pipelineBuilderFactory, logProvider, config );
 
         Duration handshakeTimeout = config.get( CausalClusteringSettings.handshake_timeout );
         ServerChannelInitializer channelInitializer = new ServerChannelInitializer( handshakeInitializer, pipelineBuilderFactory,
-                handshakeTimeout, logProvider );
+                handshakeTimeout, logProvider, config );
 
         SocketAddress raftListenAddress = config.get( CausalClusteringSettings.raft_listen_address );
 

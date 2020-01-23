@@ -67,6 +67,7 @@ public class TransactionBackupServiceProvider
                     .installedProtocolsHandler( parentHandler )
                     .listenAddress( backupAddress )
                     .scheduler( scheduler )
+                    .config( config )
                     .bootstrapConfig( serverConfig( config ) )
                     .portRegister( portRegister )
                     .debugLogProvider( logProvider )
