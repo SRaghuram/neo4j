@@ -17,7 +17,11 @@ class PatternComprehensionAcceptanceTest extends ExecutionEngineFunSuite with Cy
     graph.withTx( tx => tx.execute("CREATE CONSTRAINT ON (end:End) ASSERT end.id IS UNIQUE"))
     val start = createLabeledNode("Start")
     val ends = (0 to 1000).map(id => createLabeledNode(Map("id" -> id), "End"))
-    ends.foreach(end => relate(start, end))
+    ends.foreach(end => {
+      relate(start, start)
+      relate(end, start)
+      relate(start, end)
+    })
 
     resampleIndexes()
 
