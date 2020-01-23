@@ -34,13 +34,6 @@
       "queryFile": "queries/Q7.cypher"
     },
     {
-      "name": "Q8",
-      "queryFile": "queries/Q8.cypher",
-      "parameters": {
-        "file": "parameters/relationship.txt"
-      }
-    },
-    {
       "name": "Q10",
       "queryFile": "queries/Q10.cypher"
     },
