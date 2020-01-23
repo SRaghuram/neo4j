@@ -39,11 +39,6 @@
       }
     },
     {
-      "name": "Q7",
-      "description": "John Lennon's 3rd degree network (via bands)",
-      "queryFile": "queries/Q7.cypher"
-    },
-    {
       "name": "Q8",
       "description": "An artist's 3rd degree network (via bands)",
       "queryFile": "queries/Q8.cypher",
