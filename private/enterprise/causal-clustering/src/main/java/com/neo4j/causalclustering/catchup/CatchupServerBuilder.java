@@ -28,9 +28,9 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Executor;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.configuration.helpers.SocketAddress;
-import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.scheduler.Group;
@@ -48,10 +48,9 @@ public final class CatchupServerBuilder
     }
 
     private static class StepBuilder implements NeedsCatchupServerHandler, NeedsCatchupProtocols, NeedsModifierProtocols,
-            NeedsPipelineBuilder, NeedsInstalledProtocolsHandler, NeedsListenAddress, NeedsScheduler, NeedsBootstrapConfig, NeedsPortRegister,
-            AcceptsOptionalParams
+            NeedsPipelineBuilder, NeedsInstalledProtocolsHandler, NeedsListenAddress, NeedsScheduler, NeedsConfig, NeedsBootstrapConfig,
+            NeedsPortRegister, AcceptsOptionalParams
     {
-        private DatabaseIdRepository databaseIdRepository;
         private CatchupServerHandler catchupServerHandler;
         private NettyPipelineBuilderFactory pipelineBuilder;
         private ApplicationSupportedProtocols catchupProtocols;
@@ -65,6 +64,7 @@ public final class CatchupServerBuilder
         private ConnectorPortRegister portRegister;
         private String serverName = "catchup-server";
         private BootstrapConfiguration<? extends ServerSocketChannel> bootstrapConfiguration;
+        private Config config = Config.defaults();
 
         private StepBuilder()
         {
@@ -113,7 +113,7 @@ public final class CatchupServerBuilder
         }
 
         @Override
-        public NeedsBootstrapConfig scheduler( JobScheduler scheduler )
+        public NeedsConfig scheduler( JobScheduler scheduler )
         {
             this.scheduler = scheduler;
             return this;
@@ -155,6 +155,13 @@ public final class CatchupServerBuilder
         }
 
         @Override
+        public NeedsBootstrapConfig config( Config config )
+        {
+            this.config = config;
+            return this;
+        }
+
+        @Override
         public NeedsPortRegister bootstrapConfig( BootstrapConfiguration<? extends ServerSocketChannel> bootstrapConfiguration )
         {
             this.bootstrapConfiguration = bootstrapConfiguration;
@@ -175,9 +182,9 @@ public final class CatchupServerBuilder
                     protocolInstallers, ModifierProtocolInstaller.allServerInstallers );
 
             HandshakeServerInitializer handshakeInitializer = new HandshakeServerInitializer( applicationProtocolRepository, modifierProtocolRepository,
-                    protocolInstallerRepository, pipelineBuilder, debugLogProvider );
+                    protocolInstallerRepository, pipelineBuilder, debugLogProvider, config );
             ServerChannelInitializer channelInitializer = new ServerChannelInitializer( handshakeInitializer, pipelineBuilder, handshakeTimeout,
-                    debugLogProvider );
+                    debugLogProvider, config );
 
             Executor executor = scheduler.executor( Group.CATCHUP_SERVER );
 
@@ -218,7 +225,12 @@ public final class CatchupServerBuilder
 
     public interface NeedsScheduler
     {
-        NeedsBootstrapConfig scheduler( JobScheduler scheduler );
+        NeedsConfig scheduler( JobScheduler scheduler );
+    }
+
+    public interface NeedsConfig
+    {
+        NeedsBootstrapConfig config( Config config );
     }
 
     public interface NeedsBootstrapConfig

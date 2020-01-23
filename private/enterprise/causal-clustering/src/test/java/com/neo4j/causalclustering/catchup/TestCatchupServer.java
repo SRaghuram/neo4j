@@ -47,6 +47,7 @@ class TestCatchupServer extends Server
 
     private static ChildInitializer childInitializer( CatchupServerHandler catchupServerHandler, LogProvider logProvider )
     {
+        Config config = Config.defaults();
         ApplicationSupportedProtocols catchupProtocols = new ApplicationSupportedProtocols( CATCHUP, emptyList() );
         ModifierSupportedProtocols modifierProtocols = new ModifierSupportedProtocols( COMPRESSION, emptyList() );
 
@@ -63,10 +64,10 @@ class TestCatchupServer extends Server
                 protocolInstallers, ModifierProtocolInstaller.allServerInstallers );
 
         HandshakeServerInitializer handshakeInitializer = new HandshakeServerInitializer( catchupRepository, modifierRepository, protocolInstallerRepository,
-                pipelineBuilder, logProvider );
+                pipelineBuilder, logProvider, config );
 
         var handshakeTimeout = Duration.ofSeconds( 60 );
 
-        return new ServerChannelInitializer( handshakeInitializer, pipelineBuilder, handshakeTimeout, logProvider );
+        return new ServerChannelInitializer( handshakeInitializer, pipelineBuilder, handshakeTimeout, logProvider, config );
     }
 }

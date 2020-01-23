@@ -114,6 +114,7 @@ public final class CausalClusteringTestHelpers
                 .pipelineBuilder( NettyPipelineBuilderFactory.insecure() )
                 .installedProtocolsHandler( null )
                 .listenAddress( listenAddress ).scheduler( scheduler )
+                .config( Config.defaults() )
                 .bootstrapConfig( serverConfig( Config.defaults() ) )
                 .portRegister( new ConnectorPortRegister() )
                 .debugLogProvider( NullLogProvider.getInstance() )

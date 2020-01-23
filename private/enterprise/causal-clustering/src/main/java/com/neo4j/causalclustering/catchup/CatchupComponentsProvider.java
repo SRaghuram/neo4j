@@ -118,6 +118,7 @@ public final class CatchupComponentsProvider
                 .installedProtocolsHandler( installedProtocolsHandler )
                 .listenAddress( config.get( CausalClusteringSettings.transaction_listen_address ) )
                 .scheduler( scheduler )
+                .config( config )
                 .bootstrapConfig( serverConfig( config ) )
                 .portRegister( portRegister )
                 .userLogProvider( userLogProvider )
