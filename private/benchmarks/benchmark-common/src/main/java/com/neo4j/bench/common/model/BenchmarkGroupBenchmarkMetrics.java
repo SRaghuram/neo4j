@@ -251,15 +251,17 @@ public class BenchmarkGroupBenchmarkMetrics
 
         //  [
         //      benchmark_group.name:String,    0
-        //      benchmark.name:String,          1
-        //      benchmark.simple_name:String,   2
-        //      benchmark.mode:String,          3
-        //      benchmark.description:String,   4
-        //      benchmark.parameters:Map,       5
-        //      metrics:Map,                    6
-        //      neo4j_config:Map                7
-        //      profiles:List[Map]              8
-        //      auxiliary_metrics:List[Map]     9
+        //      benchmark:Map,                  1
+        //        * name:String
+        //        * simple_name:String
+        //        * mode:String
+        //        * cypher_query:String
+        //        * description:String
+        //      benchmark.parameters:Map,       2
+        //      metrics:Map,                    3
+        //      neo4j_config:Map                4
+        //      profiles:List[Map]              5
+        //      auxiliary_metrics:List[Map]     6
         //  ]
         private List<Object> toList()
         {

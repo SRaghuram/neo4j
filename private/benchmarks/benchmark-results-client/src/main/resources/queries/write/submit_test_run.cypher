@@ -37,15 +37,15 @@ WITH test_run,
      metrics_tuple[2] AS benchmarkParams,
      metrics_tuple[3] AS metricsValues,
      metrics_tuple[4] AS neo4jBenchmarkConfig,
-     // hacky hack for dealing with conditional updates
-     CASE size(metrics_tuple) WHEN 6 THEN [metrics_tuple[5]] ELSE [] END AS profiles_maps
+     metrics_tuple[5] AS profiles_maps,
+     metrics_tuple[6] AS auxiliaryMetricsMaps
 MERGE (benchmark_group:BenchmarkGroup {name:benchmarkGroupName})<-[:IMPLEMENTS]-(benchmark_tool)
 MERGE (benchmark_group)-[:HAS_BENCHMARK]->(benchmark:Benchmark {name:benchmarkName})-[:HAS_PARAMS]->(params:BenchmarkParams)
 // Is new benchmark
 ON CREATE SET
     benchmark=benchmarkProperties,
     params=benchmarkParams
-// Description overwritten on purpose. It may get updated/corrected over time, database should reflect these changes
+// Description & Query overwritten on purpose. It may get updated/corrected over time, database should reflect these changes
 ON MATCH SET
    benchmark.description=benchmarkDescription,
    benchmark.cypher_query=cypherQuery
@@ -64,4 +64,13 @@ WITH
 FOREACH ( profiles_map IN profiles_maps |
     CREATE (metrics)-[:HAS_PROFILES]->(profiles:Profiles)
     SET profiles = profiles_map)
-RETURN test_run, collect([benchmark, metrics, params]) AS benchmark_metrics
+FOREACH ( auxiliaryMetricsMap IN auxiliaryMetricsMaps |
+  CREATE (metrics)-[:HAS_AUXILIARY_METRICS]->(auxiliaryMetrics:Metrics)
+  SET auxiliaryMetrics = auxiliaryMetricsMap)
+WITH
+  test_run,
+  benchmark,
+  metrics,
+  params,
+  collect(auxiliaryMetrics) AS allAuxiliaryMetrics
+RETURN test_run, collect([benchmark, metrics, params, allAuxiliaryMetrics]) AS benchmark_metrics
