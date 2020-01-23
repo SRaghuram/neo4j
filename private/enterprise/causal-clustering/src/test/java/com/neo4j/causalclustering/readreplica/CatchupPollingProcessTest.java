@@ -81,18 +81,18 @@ class CatchupPollingProcessTest
     private final CatchupClientV3 v3Client = spy( new MockClientV3( clientResponses, databaseIdRepository ) );
     private final DatabasePanicker panicker = mock( DatabasePanicker.class );
     private final CatchupAddressProvider catchupAddressProvider = mock( CatchupAddressProvider.class );
+    private final Database kernelDatabase = mock( Database.class );
 
     private ReadReplicaDatabaseContext databaseContext;
     private CatchupPollingProcess txPuller;
-    private MockCatchupClient catchupClient;
 
     @BeforeEach
     void before() throws Throwable
     {
-        Database kernelDatabase = mock( Database.class );
         when( kernelDatabase.getNamedDatabaseId() ).thenReturn( namedDatabaseId );
         when( kernelDatabase.getStoreId() ).thenReturn( storeId );
         when( kernelDatabase.getInternalLogProvider() ).thenReturn( nullDatabaseLogProvider() );
+        when( kernelDatabase.isStarted() ).thenReturn( true );
 
         StoreFiles storeFiles = mock( StoreFiles.class );
         when( storeFiles.readStoreId( any() )).thenReturn( storeId );
@@ -104,10 +104,11 @@ class CatchupPollingProcessTest
         when( clusteredDatabaseContext.storeId() ).thenReturn( storeId );
         when( catchupAddressProvider.primary( namedDatabaseId ) ).thenReturn( coreMemberAddress );
         when( catchupAddressProvider.secondary( namedDatabaseId ) ).thenReturn( coreMemberAddress );
+        when( storeCopyHandle.release() ).thenReturn( true );
         doReturn( storeCopyHandle ).when( databaseContext ).stopForStoreCopy();
         clearInvocations( databaseContext );
 
-        catchupClient = new MockCatchupClient( ApplicationProtocols.CATCHUP_3_0, v3Client );
+        MockCatchupClient catchupClient = new MockCatchupClient( ApplicationProtocols.CATCHUP_3_0, v3Client );
         when( catchupClientFactory.getClient( any( SocketAddress.class ), any( Log.class ) ) ).thenReturn( catchupClient );
         txPuller = new CatchupPollingProcess( executor, databaseContext, catchupClientFactory, txApplier, databaseEventDispatch,
                 storeCopy, nullLogProvider(), panicker, catchupAddressProvider );
@@ -265,6 +266,49 @@ class CatchupPollingProcessTest
         verify( storeCopy, times( 2 ) ).replaceWithStoreFrom( any( CatchupAddressProvider.class ), eq( storeId ) );
 
         verify( storeCopyHandle ).release();
+        verify( txApplier ).refreshFromNewStore();
+        verify( databaseEventDispatch ).fireStoreReplaced( BASE_TX_ID + 1 );
+
+        // puller moves to tx pulling after a successful store copy
+        assertEquals( TX_PULLING, txPuller.state() );
+    }
+
+    @Test
+    void shouldAllowToRetryOnKernelStartFailure() throws Throwable
+    {
+        // given:
+        when( txApplier.lastQueuedTxId() ).thenReturn( BASE_TX_ID + 1 );
+        clientResponses.withTxPullResponse( new TxStreamFinishedResponse( CatchupResult.E_TRANSACTION_PRUNED, 0 ) );
+        txPuller.start();
+
+        // given: kernel failing to start
+        when( kernelDatabase.isStarted() ).thenReturn( false );
+
+        // when tx pull, moves over to store copy state
+        txPuller.tick().get();
+        // when store copy attempt #1
+        txPuller.tick().get();
+
+        // then
+        verify( databaseContext ).stopForStoreCopy();
+        verify( storeCopy ).replaceWithStoreFrom( any( CatchupAddressProvider.class ), eq( storeId ) );
+
+        verify( storeCopyHandle ).release();
+        verify( txApplier, never() ).refreshFromNewStore();
+        verify( databaseEventDispatch, never() ).fireStoreReplaced( BASE_TX_ID + 1 );
+
+        // puller remains in store copying state after a failed store copy
+        assertEquals( STORE_COPYING, txPuller.state() );
+
+        // store copy attempt #2 with the kernel now starting correctly
+        when( kernelDatabase.isStarted() ).thenReturn( true );
+        txPuller.tick().get();
+
+        // then
+        verify( databaseContext, times( 2 ) ).stopForStoreCopy();
+        verify( storeCopy, times( 2 ) ).replaceWithStoreFrom( any( CatchupAddressProvider.class ), eq( storeId ) );
+
+        verify( storeCopyHandle, times( 2 ) ).release();
         verify( txApplier ).refreshFromNewStore();
         verify( databaseEventDispatch ).fireStoreReplaced( BASE_TX_ID + 1 );
 

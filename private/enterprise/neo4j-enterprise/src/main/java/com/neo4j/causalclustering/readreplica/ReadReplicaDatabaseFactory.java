@@ -84,7 +84,7 @@ class ReadReplicaDatabaseFactory
     ReadReplicaDatabase createDatabase( ReadReplicaDatabaseContext databaseContext, ClusterInternalDbmsOperator clusterInternalOperator )
     {
         NamedDatabaseId namedDatabaseId = databaseContext.databaseId();
-        Database kernelDatabase = databaseContext.database();
+        Database kernelDatabase = databaseContext.kernelDatabase();
         DatabaseLogService databaseLogService = kernelDatabase.getLogService();
         DatabaseLogProvider internalLogProvider = databaseLogService.getInternalLogProvider();
         DatabaseLogProvider userLogProvider = databaseLogService.getUserLogProvider();

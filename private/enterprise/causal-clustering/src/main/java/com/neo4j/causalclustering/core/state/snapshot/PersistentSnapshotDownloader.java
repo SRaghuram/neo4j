@@ -86,39 +86,50 @@ public class PersistentSnapshotDownloader implements Runnable
             monitor.startedDownloadingSnapshot( databaseId );
             applicationProcess.pauseApplier( DOWNLOAD_SNAPSHOT );
 
-            var stoppedDatabase = context.stopForStoreCopy();
+            log.info( "Stopping kernel before store copy" );
+            var stoppedKernel = context.stopForStoreCopy();
 
             boolean incomplete = false;
             Optional<CoreSnapshot> snapshot = downloadSnapshotAndStore( context );
 
             if ( snapshot.isPresent() )
             {
-                log.info( "Core snapshot for database '%s' downloaded: %s", databaseId.name(), snapshot.get() );
+                log.info( "Core snapshot downloaded: %s", snapshot.get() );
             }
             else
             {
-                log.warn( "Core snapshot for database '%s' could not be downloaded", databaseId.name() );
+                log.warn( "Core snapshot could not be downloaded" );
                 incomplete = true;
             }
 
             if ( incomplete )
             {
-                log.warn( "Not restarting database %s after failed store copy.", databaseId.name() );
+                log.warn( "Not starting kernel after failed store copy" );
             }
             else if ( stopped )
             {
-                log.warn( "Not restarting database %s after store copy as it has been requested to stop in the meantime.", databaseId.name() );
+                log.warn( "Not starting kernel after store copy because database has been requested to stop" );
             }
             else
             {
                 snapshotService.installSnapshot( snapshot.get() );
 
                 /* Starting the database will invoke the CoreCommitProcessFactory which has important side-effects. */
-                log.info( "Releasing temporarily stopped database" );
-                if ( stoppedDatabase.release() )
+                log.info( "Attempting kernel start after store copy" );
+                boolean reconcilerTriggered = stoppedKernel.release();
+
+                if ( !reconcilerTriggered )
                 {
-                    log.info( "Started database" );
-                    notifyStoreCopied( context.database() );
+                    log.info( "Reconciler could not be triggered at this time. This is expected during bootstrapping." );
+                }
+                else if ( !context.kernelDatabase().isStarted() )
+                {
+                    log.warn( "Kernel did not start properly after the store copy. This might be because of unexpected errors or normal early-exit paths." );
+                }
+                else
+                {
+                    log.info( "Kernel started after store copy" );
+                    notifyStoreCopied( context.kernelDatabase() );
                 }
             }
         }

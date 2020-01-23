@@ -43,7 +43,7 @@ import static com.neo4j.dbms.EnterpriseOperatorState.STORE_COPYING;
  *
  * Note that this operator imposes the strict requirement that calling components must transition
  * databases back to their original state when they are done: marking databases as successfully
- * boostrapped, or as ready for restarting after a store copy.
+ * bootstrapped, or as ready for restarting after a store copy.
  */
 public class ClusterInternalDbmsOperator extends DbmsOperator
 {
@@ -101,12 +101,12 @@ public class ClusterInternalDbmsOperator extends DbmsOperator
 
     private boolean triggerReconcilerOnStoreCopy( NamedDatabaseId namedDatabaseId )
     {
-        if ( !bootstrapping.contains( namedDatabaseId ) && !panicked.contains( namedDatabaseId ) )
+        if ( bootstrapping.contains( namedDatabaseId ) || panicked.contains( namedDatabaseId ) )
         {
-            trigger( ReconcilerRequest.simple() ).await( namedDatabaseId );
-            return true;
+            return false;
         }
-        return false;
+        trigger( ReconcilerRequest.simple() ).await( namedDatabaseId );
+        return true;
     }
 
     /**
@@ -141,9 +141,7 @@ public class ClusterInternalDbmsOperator extends DbmsOperator
         }
 
         /**
-         * Starts the database again, unless we're currently in the bootstrapping phase.
-         *
-         * @return true if the database was started, otherwise false.
+         * @return true if the reconciler was triggered, otherwise false.
          */
         public boolean release()
         {

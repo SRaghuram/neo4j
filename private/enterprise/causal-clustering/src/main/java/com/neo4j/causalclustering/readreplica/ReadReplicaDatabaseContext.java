@@ -68,7 +68,7 @@ public class ReadReplicaDatabaseContext
         return internalOperator.stopForStoreCopy( kernelDatabase.getNamedDatabaseId() );
     }
 
-    public Database database()
+    public Database kernelDatabase()
     {
         return kernelDatabase;
     }

@@ -57,6 +57,7 @@ class PersistentSnapshotDownloaderTest
     private CoreSnapshotService snapshotService = mock( CoreSnapshotService.class );
     private ReplicatedDatabaseEventService databaseEventService = mock( ReplicatedDatabaseEventService.class );
 
+    private Database database = mock( Database.class );
     private StoreDownloadContext downloadContext = mock( StoreDownloadContext.class );
     private StoreCopyHandle storeCopyHandle;
 
@@ -77,12 +78,13 @@ class PersistentSnapshotDownloaderTest
         when( downloadContext.databaseId() ).thenReturn( namedDatabaseId );
 
         storeCopyHandle = mock( StoreCopyHandle.class );
+        when( storeCopyHandle.release() ).thenReturn( true );
+
         when( downloadContext.stopForStoreCopy() ).thenReturn( storeCopyHandle );
 
         when( databaseEventService.getDatabaseEventDispatch( namedDatabaseId ) ).thenReturn( databaseEventDispatch );
 
-        Database database = mock( Database.class );
-        when( downloadContext.database() ).thenReturn( database );
+        when( downloadContext.kernelDatabase() ).thenReturn( database );
 
         Dependencies dependencies = new Dependencies();
         dependencies.satisfyDependencies( txIdStore );
@@ -121,7 +123,7 @@ class PersistentSnapshotDownloaderTest
     {
         // given
         when( coreDownloader.downloadSnapshotAndStore( any(), any() ) ).thenReturn( Optional.of( snapshot ) );
-        when( storeCopyHandle.release() ).thenReturn( true );
+        when( database.isStarted() ).thenReturn( true );
 
         PersistentSnapshotDownloader persistentSnapshotDownloader = createDownloader();
         long txIdAfterDownload = 79;
@@ -137,6 +139,30 @@ class PersistentSnapshotDownloaderTest
 
         inOrder.verify( storeCopyHandle ).release();
         inOrder.verify( databaseEventDispatch ).fireStoreReplaced( txIdAfterDownload );
+        inOrder.verifyNoMoreInteractions();
+    }
+
+    @Test
+    void shouldNotDispatchDatabaseEventIfKernelRefusesToStart() throws Throwable
+    {
+        // given
+        when( coreDownloader.downloadSnapshotAndStore( any(), any() ) ).thenReturn( Optional.of( snapshot ) );
+        when( database.isStarted() ).thenReturn( false );
+
+        PersistentSnapshotDownloader persistentSnapshotDownloader = createDownloader();
+        long txIdAfterDownload = 79;
+        txIdStore.setLastCommittedAndClosedTransactionId( txIdAfterDownload, 0, 0, 0, 0 );
+
+        // when
+        persistentSnapshotDownloader.run();
+
+        // then
+        verify( panicker, never() ).panic( any() );
+
+        InOrder inOrder = inOrder( storeCopyHandle, databaseEventDispatch );
+
+        inOrder.verify( storeCopyHandle ).release();
+        inOrder.verifyNoMoreInteractions();
     }
 
     @Test

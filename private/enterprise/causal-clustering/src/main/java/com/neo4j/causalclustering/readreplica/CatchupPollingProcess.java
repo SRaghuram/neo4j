@@ -53,7 +53,7 @@ public class CatchupPollingProcess extends LifecycleAdapter
     }
 
     private final ReadReplicaDatabaseContext databaseContext;
-    private final CatchupAddressProvider catchupAddressProvider;
+    private final CatchupAddressProvider upstreamProvider;
     private final Log log;
     private final StoreCopyProcess storeCopyProcess;
     private final CatchupClientFactory catchUpClient;
@@ -70,10 +70,10 @@ public class CatchupPollingProcess extends LifecycleAdapter
 
     CatchupPollingProcess( Executor executor, ReadReplicaDatabaseContext databaseContext, CatchupClientFactory catchUpClient, BatchingTxApplier applier,
             ReplicatedDatabaseEventDispatch databaseEventDispatch, StoreCopyProcess storeCopyProcess, LogProvider logProvider, DatabasePanicker panicker,
-            CatchupAddressProvider catchupAddressProvider )
+            CatchupAddressProvider upstreamProvider )
     {
         this.databaseContext = databaseContext;
-        this.catchupAddressProvider = catchupAddressProvider;
+        this.upstreamProvider = upstreamProvider;
         this.catchUpClient = catchUpClient;
         this.applier = applier;
         this.databaseEventDispatch = databaseEventDispatch;
@@ -169,7 +169,7 @@ public class CatchupPollingProcess extends LifecycleAdapter
         SocketAddress address;
         try
         {
-            address = catchupAddressProvider.primary( databaseContext.databaseId() );
+            address = upstreamProvider.primary( databaseContext.databaseId() );
         }
         catch ( CatchupAddressResolutionException e )
         {
@@ -292,11 +292,13 @@ public class CatchupPollingProcess extends LifecycleAdapter
     {
         try
         {
-            stopDatabaseForStoreCopy();
-            storeCopyProcess.replaceWithStoreFrom( catchupAddressProvider, databaseContext.storeId() );
-            transitionToTxPulling();
-            restartDatabaseAfterStoreCopy();
-            databaseEventDispatch.fireStoreReplaced( applier.lastQueuedTxId() );
+            ensureKernelStopped();
+            storeCopyProcess.replaceWithStoreFrom( upstreamProvider, databaseContext.storeId() );
+            if ( restartDatabaseAfterStoreCopy() )
+            {
+                transitionToTxPulling();
+                databaseEventDispatch.fireStoreReplaced( applier.lastQueuedTxId() );
+            }
         }
         catch ( IOException | StoreCopyFailedException e )
         {
@@ -308,25 +310,44 @@ public class CatchupPollingProcess extends LifecycleAdapter
         }
     }
 
-    private void stopDatabaseForStoreCopy()
+    private void ensureKernelStopped()
     {
         if ( storeCopyHandle == null )
         {
+            log.info( "Stopping kernel for store copy" );
             // keep the store copy handle between retries to make sure database doesn't transition to a different state between ticks
             storeCopyHandle = databaseContext.stopForStoreCopy();
         }
-        // else database is already stopped for store copy by a previous (failed) store-copy attempt
+        else
+        {
+            // database is already stopped for store copy by a previous (failed) store-copy attempt
+            log.info( "Kernel still stopped for store copy" );
+        }
     }
 
-    private void restartDatabaseAfterStoreCopy()
+    private boolean restartDatabaseAfterStoreCopy()
     {
         checkState( storeCopyHandle != null, "Store copy handle not initialized" );
 
+        log.info( "Attempting kernel start after store copy" );
         var handle = storeCopyHandle;
         storeCopyHandle = null;
-        handle.release();
+        boolean triggeredReconciler = handle.release();
 
+        if ( !triggeredReconciler )
+        {
+            log.warn( "Reconciler could not be triggered at this time." );
+            return false;
+        }
+        else if ( !databaseContext.kernelDatabase().isStarted() )
+        {
+            log.warn( "Kernel did not start properly after the store copy. This might be because of unexpected errors or normal early-exit paths." );
+            return false;
+        }
+
+        log.info( "Kernel started after store copy" );
         latestTxIdOfUpStream = 0; // we will find out on the next pull request response
         applier.refreshFromNewStore();
+        return true;
     }
 }

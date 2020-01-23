@@ -38,7 +38,7 @@ public class DatabaseStartAborter implements DatabaseStartupController
 
     private final Duration ttl;
     private final Map<NamedDatabaseId,CachedDesiredState> cachedDesiredStates;
-    private final MutableSetMultimap<Object,Object> abortPreventionSets;
+    private final MutableSetMultimap<NamedDatabaseId,PreventReason> abortPreventionSets;
     private final AvailabilityGuard globalAvailabilityGuard;
     private final EnterpriseSystemGraphDbmsModel dbmsModel;
     private final Clock clock;
@@ -46,7 +46,7 @@ public class DatabaseStartAborter implements DatabaseStartupController
     public DatabaseStartAborter( AvailabilityGuard globalAvailabilityGuard, EnterpriseSystemGraphDbmsModel dbmsModel, Clock clock, Duration ttl )
     {
         this.cachedDesiredStates = new ConcurrentHashMap<>();
-        this.abortPreventionSets = Multimaps.mutable.set.empty().asSynchronized();
+        this.abortPreventionSets = Multimaps.mutable.set.<NamedDatabaseId,PreventReason>empty().asSynchronized();
         this.globalAvailabilityGuard = globalAvailabilityGuard;
         this.dbmsModel = dbmsModel;
         this.clock = clock;
