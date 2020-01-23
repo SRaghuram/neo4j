@@ -24,6 +24,7 @@ import org.neo4j.cypher.internal.physicalplanning.ProduceResultOutput
 import org.neo4j.cypher.internal.physicalplanning.ReduceOutput
 import org.neo4j.cypher.internal.physicalplanning.RefSlot
 import org.neo4j.cypher.internal.physicalplanning.Slot
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.ApplyPlanSlotKey
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.CachedPropertySlotKey
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.VariableSlotKey
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.isRefSlotAndNotAlias
@@ -350,8 +351,9 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
           case (VariableSlotKey(key), RefSlot(offset, _, _)) if offset >= argumentSize.nReferences =>
             copyRefsFromRHS += ((offset, slots.getReferenceOffsetFor(key)))
           case (_: VariableSlotKey, _) => // do nothing, already added by lhs
-          case (CachedPropertySlotKey(cnp), _) =>
-            val offset = rhsSlots.getCachedPropertyOffsetFor(cnp)
+          case (_: ApplyPlanSlotKey, _) => // do nothing, already added by lhs
+          case (CachedPropertySlotKey(cnp), refSlot) =>
+            val offset = refSlot.offset
             if (offset >= argumentSize.nReferences)
               copyCachedPropertiesFromRHS += offset -> slots.getCachedPropertyOffsetFor(cnp)
         })
