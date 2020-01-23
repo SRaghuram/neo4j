@@ -135,40 +135,6 @@ public class BenchmarkGroupBenchmarkMetrics
         return toRows().stream().map( row -> row.toString() + "\n" ).collect( joining() );
     }
 
-    public String errorDetails()
-    {
-        List<Entry> entries = new ArrayList<>();
-        int maxBenchmarkLength = Integer.MIN_VALUE;
-        for ( Map.Entry<BenchmarkGroup,Map<Benchmark,AnnotatedMetrics>> groupEntry : inner.entrySet() )
-        {
-            for ( Map.Entry<Benchmark,AnnotatedMetrics> benchmarkMetrics : groupEntry.getValue().entrySet() )
-            {
-                Benchmark benchmark = benchmarkMetrics.getKey();
-                AnnotatedMetrics annotatedMetrics = benchmarkMetrics.getValue();
-                maxBenchmarkLength = Math.max( maxBenchmarkLength, benchmark.name().length() );
-                Map<String,Object> metrics = annotatedMetrics.metrics().toMap();
-                double mean = (double) metrics.get( Metrics.MEAN );
-                double error = (double) metrics.get( Metrics.ERROR );
-                entries.add( new Entry( benchmark.name(), (error / mean) * 100 ) );
-            }
-        }
-        maxBenchmarkLength = maxBenchmarkLength + 5;
-        entries.sort( ( o1, o2 ) -> Double.compare( o2.error(), o1.error() ) );
-        DecimalFormat format = new DecimalFormat( "###,##0.00" );
-        StringBuilder sb = new StringBuilder()
-                .append( "----------------------------------------------------------------------------------------\n" )
-                .append( "-------------------------------- STD DEV as % of MEAN ----------------------------------\n" )
-                .append( "----------------------------------------------------------------------------------------\n" );
-        for ( Entry entry : entries )
-        {
-            sb.append( format( "\t%1$-" + maxBenchmarkLength + "s %2$10s%%\n",
-                               entry.benchmark(), format.format( entry.error() ) ) );
-        }
-        return sb
-                .append( "----------------------------------------------------------------------------------------\n" )
-                .toString();
-    }
-
     private static class Entry
     {
         private final String benchmark;
