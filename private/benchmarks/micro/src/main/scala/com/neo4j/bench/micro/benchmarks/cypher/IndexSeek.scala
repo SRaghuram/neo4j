@@ -5,21 +5,30 @@
  */
 package com.neo4j.bench.micro.benchmarks.cypher
 
-import com.neo4j.bench.jmh.api.config.{BenchmarkEnabled, ParamValues}
+import com.neo4j.bench.jmh.api.config.BenchmarkEnabled
+import com.neo4j.bench.jmh.api.config.ParamValues
+import com.neo4j.bench.micro.Main
 import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
-import com.neo4j.bench.micro.data.DiscreteGenerator.{Bucket, discrete}
+import com.neo4j.bench.micro.data.DiscreteGenerator.Bucket
+import com.neo4j.bench.micro.data.DiscreteGenerator.discrete
 import com.neo4j.bench.micro.data.Plans._
 import com.neo4j.bench.micro.data.TypeParamValues._
+import com.neo4j.bench.micro.data.ValueGeneratorUtil
 import com.neo4j.bench.micro.data.ValueGeneratorUtil.discreteBucketsFor
 import com.neo4j.bench.micro.data._
+import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.planner.spi.PlanContext
-import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.graphdb.Label
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
+import org.neo4j.cypher.internal.util.symbols
+import org.neo4j.kernel.impl.util.ValueUtils
+
+import scala.collection.JavaConverters._
+import scala.collection.mutable
 
 @BenchmarkEnabled(true)
 class IndexSeek extends AbstractCypherBenchmark {
@@ -36,8 +45,8 @@ class IndexSeek extends AbstractCypherBenchmark {
   var selectivity: Double = _
 
   @ParamValues(
-    allowed = Array(LNG, DBL, STR_SML, STR_BIG),
-    base = Array(LNG, STR_SML))
+    allowed = Array(LNG, DBL, STR_SML, STR_BIG, DATE_TIME, POINT),
+    base = Array(LNG, STR_SML, DATE_TIME, POINT))
   @Param(Array[String]())
   var propertyType: String = _
 
@@ -65,8 +74,8 @@ class IndexSeek extends AbstractCypherBenchmark {
 
   override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
     val node = astVariable("node")
-    val literal = astLiteralFor(buckets(0), propertyType)
-    val seekExpression = SingleQueryExpression(literal)
+    val param = astParameter("thing", symbols.CTAny)
+    val seekExpression = SingleQueryExpression(param)
     val indexSeek = plans.NodeIndexSeek(
       node.name,
       astLabelToken(LABEL, planContext),
@@ -85,8 +94,9 @@ class IndexSeek extends AbstractCypherBenchmark {
   @Benchmark
   @BenchmarkMode(Array(Mode.SampleTime))
   def executePlan(threadState: IndexSeekThreadState, bh: Blackhole): Long = {
+    val params = ValueUtils.asMapValue(mutable.Map[String, AnyRef]("thing" -> buckets(0).value()).asJava)
     val subscriber = new CountSubscriber(bh)
-    val result = threadState.executablePlan.execute(tx = threadState.tx, subscriber = subscriber)
+    val result = threadState.executablePlan.execute(params, tx = threadState.tx, subscriber = subscriber)
     result.consumeAll()
     assertExpectedRowCount(minExpectedRowCount, maxExpectedRowCount, subscriber)
   }
