@@ -21,11 +21,6 @@
       }
     },
     {
-      "name": "Q5 ",
-      "description": "Bob Dylan's songs which he composed, wrote and sang himself",
-      "queryFile": "queries/Q5.cypher"
-    },
-    {
       "name": "Q6 ",
       "description": "An artist's songs which he composed, wrote and sang himself",
       "queryFile": "queries/Q6.cypher",
