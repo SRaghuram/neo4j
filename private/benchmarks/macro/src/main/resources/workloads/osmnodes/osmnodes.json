@@ -8,26 +8,6 @@
       "queryFile": "queries/Q1.cypher"
     },
     {
-      "name": "Q2",
-      "description": "Count all nodes from DateTime index",
-      "queryFile": "queries/Q2.cypher"
-    },
-    {
-      "name": "Q3",
-      "description": "Count all nodes from Spatial index",
-      "queryFile": "queries/Q3.cypher"
-    },
-    {
-      "name": "Q4",
-      "description": "Count all named nodes from 'name' string index (11.6% of nodes)",
-      "queryFile": "queries/Q4.cypher"
-    },
-    {
-      "name": "Q5",
-      "description": "Count all nodes with places from 'place' string index (12.1% of nodes)",
-      "queryFile": "queries/Q5.cypher"
-    },
-    {
       "name": "Q6",
       "description": "Count all nodes in range from uniqueness constraint",
       "queryFile": "queries/Q6.cypher"
