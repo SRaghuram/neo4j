@@ -127,13 +127,13 @@ public class CatchupProcessManager extends SafeLifecycle
 
         // TODO: We can do better than this. Core already exposes its commit process. Why not RR.
         Supplier<TransactionCommitProcess> writableCommitProcess = () -> new TransactionRepresentationCommitProcess(
-                databaseContext.database().getDependencyResolver().resolveDependency( TransactionAppender.class ),
-                databaseContext.database().getDependencyResolver().resolveDependency( StorageEngine.class ) );
+                databaseContext.kernelDatabase().getDependencyResolver().resolveDependency( TransactionAppender.class ),
+                databaseContext.kernelDatabase().getDependencyResolver().resolveDependency( StorageEngine.class ) );
 
         int maxBatchSize = config.get( CausalClusteringSettings.read_replica_transaction_applier_batch_size );
         BatchingTxApplier batchingTxApplier = new BatchingTxApplier( maxBatchSize,
-                () -> databaseContext.database().getDependencyResolver().resolveDependency( TransactionIdStore.class ), writableCommitProcess,
-                databaseContext.monitors(), databaseContext.database().getVersionContextSupplier(), commandIndexTracker,
+                () -> databaseContext.kernelDatabase().getDependencyResolver().resolveDependency( TransactionIdStore.class ), writableCommitProcess,
+                databaseContext.monitors(), databaseContext.kernelDatabase().getVersionContextSupplier(), commandIndexTracker,
                 logProvider, databaseEventDispatch );
 
         CatchupPollingProcess catchupProcess = new CatchupPollingProcess( executor, databaseContext, catchupClient,

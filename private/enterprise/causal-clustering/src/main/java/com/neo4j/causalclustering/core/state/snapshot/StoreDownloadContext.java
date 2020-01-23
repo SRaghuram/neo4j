@@ -19,7 +19,7 @@ import org.neo4j.storageengine.api.StoreId;
 
 public class StoreDownloadContext
 {
-    private final Database database;
+    private final Database kernelDatabase;
     private final StoreFiles storeFiles;
     private final LogFiles transactionLogs;
     private final Log log;
@@ -28,23 +28,23 @@ public class StoreDownloadContext
     private volatile StoreId storeId;
 
     //TODO: Merge this and ReadReplicaDatabaseContext into StoreCopyContext
-    public StoreDownloadContext( Database database, StoreFiles storeFiles, LogFiles transactionLogs, ClusterInternalDbmsOperator internalOperator )
+    public StoreDownloadContext( Database kernelDatabase, StoreFiles storeFiles, LogFiles transactionLogs, ClusterInternalDbmsOperator internalOperator )
     {
-        this.database = database;
+        this.kernelDatabase = kernelDatabase;
         this.storeFiles = storeFiles;
         this.transactionLogs = transactionLogs;
-        this.log = database.getInternalLogProvider().getLog( getClass() );
+        this.log = kernelDatabase.getInternalLogProvider().getLog( getClass() );
         this.internalOperator = internalOperator;
     }
 
     NamedDatabaseId databaseId()
     {
-        return database.getNamedDatabaseId();
+        return kernelDatabase.getNamedDatabaseId();
     }
 
     DatabaseLayout databaseLayout()
     {
-        return database.getDatabaseLayout();
+        return kernelDatabase.getDatabaseLayout();
     }
 
     public StoreId storeId()
@@ -81,11 +81,11 @@ public class StoreDownloadContext
 
     ClusterInternalDbmsOperator.StoreCopyHandle stopForStoreCopy()
     {
-        return internalOperator.stopForStoreCopy( database.getNamedDatabaseId() );
+        return internalOperator.stopForStoreCopy( kernelDatabase.getNamedDatabaseId() );
     }
 
-    public Database database()
+    public Database kernelDatabase()
     {
-        return database;
+        return kernelDatabase;
     }
 }
