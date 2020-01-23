@@ -16,7 +16,7 @@ import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
 
-@BenchmarkEnabled(false)
+@BenchmarkEnabled(true)
 class CartesianProduct extends AbstractCypherBenchmark {
   @ParamValues(
     allowed = Array(CompiledByteCode.NAME, CompiledSourceCode.NAME, Interpreted.NAME, Slotted.NAME, Morsel.NAME),
