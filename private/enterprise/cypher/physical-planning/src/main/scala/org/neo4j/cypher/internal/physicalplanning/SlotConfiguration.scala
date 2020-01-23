@@ -6,6 +6,10 @@
 package org.neo4j.cypher.internal.physicalplanning
 
 import org.neo4j.cypher.internal.expressions.ASTCachedProperty
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.ApplyPlanSlotKey
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.CachedPropertySlotKey
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.SlotKey
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.VariableSlotKey
 import org.neo4j.cypher.internal.runtime.EntityById
 import org.neo4j.cypher.internal.runtime.ExecutionContext
 import org.neo4j.cypher.internal.util.attribution.Id
@@ -57,11 +61,6 @@ object SlotConfiguration {
 class SlotConfiguration(private val slots: mutable.Map[SlotConfiguration.SlotKey, Slot],
                         var numberOfLongs: Int,
                         var numberOfReferences: Int) {
-
-  import SlotConfiguration.SlotKey
-  import SlotConfiguration.VariableSlotKey
-  import SlotConfiguration.CachedPropertySlotKey
-  import SlotConfiguration.ApplyPlanSlotKey
 
   private val aliases: mutable.Set[String] = mutable.Set()
   private val slotAliases = new mutable.HashMap[Slot, mutable.Set[String]] with mutable.MultiMap[Slot, String]
