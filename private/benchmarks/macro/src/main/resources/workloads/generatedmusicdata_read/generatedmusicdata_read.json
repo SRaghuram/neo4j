@@ -121,10 +121,6 @@
       }
     },
     {
-      "name": "Q32",
-      "queryFile": "queries/Q32.cypher"
-    },
-    {
       "name": "Q33",
       "queryFile": "queries/Q33.cypher"
     },
