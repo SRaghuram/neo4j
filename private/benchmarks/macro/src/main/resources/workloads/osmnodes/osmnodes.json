@@ -46,22 +46,6 @@
       "name": "Q9",
       "description": "Count all named nodes in range from 'name' string index (11.6% of nodes)",
       "queryFile": "queries/Q9.cypher"
-    },
-    {
-      "name": "Q10",
-      "description": "Find specific nodes in range from DateTime index",
-      "queryFile": "queries/Q10.cypher",
-      "parameters": {
-        "file": "parameters/dates.txt"
-      }
-    },
-    {
-      "name": "Q11",
-      "description": "Find specific nodes in range from Spatial index",
-      "queryFile": "queries/Q11.cypher",
-      "parameters": {
-        "file": "parameters/locations.txt"
-      }
     }
   ]
 }
