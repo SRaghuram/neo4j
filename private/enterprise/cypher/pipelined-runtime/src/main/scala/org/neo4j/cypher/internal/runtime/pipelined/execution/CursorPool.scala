@@ -8,17 +8,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.execution
 import org.neo4j.cypher.internal.RuntimeResourceLeakException
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.util.AssertionRunner
-import org.neo4j.internal.kernel.api.Cursor
-import org.neo4j.internal.kernel.api.CursorFactory
-import org.neo4j.internal.kernel.api.KernelReadTracer
-import org.neo4j.internal.kernel.api.NodeCursor
-import org.neo4j.internal.kernel.api.NodeLabelIndexCursor
-import org.neo4j.internal.kernel.api.NodeValueIndexCursor
-import org.neo4j.internal.kernel.api.PropertyCursor
-import org.neo4j.internal.kernel.api.RelationshipGroupCursor
-import org.neo4j.internal.kernel.api.RelationshipIndexCursor
-import org.neo4j.internal.kernel.api.RelationshipScanCursor
-import org.neo4j.internal.kernel.api.RelationshipTraversalCursor
+import org.neo4j.internal.kernel.api._
 import org.neo4j.io.IOUtils
 import org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier.TRACER_SUPPLIER
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer
@@ -27,8 +17,6 @@ class CursorPools(cursorFactory: CursorFactory, pageCursorTracer: PageCursorTrac
 
   val nodeCursorPool: CursorPool[NodeCursor] = CursorPool[NodeCursor](
     () => cursorFactory.allocateNodeCursor(pageCursorTracer))
-  val relationshipGroupCursorPool: CursorPool[RelationshipGroupCursor] = CursorPool[RelationshipGroupCursor](
-    () => cursorFactory.allocateRelationshipGroupCursor(pageCursorTracer))
   val relationshipTraversalCursorPool: CursorPool[RelationshipTraversalCursor] = CursorPool[RelationshipTraversalCursor](
     () => cursorFactory.allocateRelationshipTraversalCursor(pageCursorTracer))
   val relationshipScanCursorPool: CursorPool[RelationshipScanCursor] = CursorPool[RelationshipScanCursor](
@@ -40,7 +28,6 @@ class CursorPools(cursorFactory: CursorFactory, pageCursorTracer: PageCursorTrac
 
   def setKernelTracer(tracer: KernelReadTracer): Unit = {
     nodeCursorPool.setKernelTracer(tracer)
-    relationshipGroupCursorPool.setKernelTracer(tracer)
     relationshipTraversalCursorPool.setKernelTracer(tracer)
     relationshipScanCursorPool.setKernelTracer(tracer)
     nodeValueIndexCursorPool.setKernelTracer(tracer)
@@ -49,7 +36,6 @@ class CursorPools(cursorFactory: CursorFactory, pageCursorTracer: PageCursorTrac
 
   override def close(): Unit = {
     IOUtils.closeAll(nodeCursorPool,
-      relationshipGroupCursorPool,
       relationshipTraversalCursorPool,
       relationshipScanCursorPool,
       nodeValueIndexCursorPool,
@@ -58,7 +44,6 @@ class CursorPools(cursorFactory: CursorFactory, pageCursorTracer: PageCursorTrac
 
   def collectLiveCounts(liveCounts: LiveCounts): Unit = {
     liveCounts.nodeCursorPool += nodeCursorPool.getLiveCount
-    liveCounts.relationshipGroupCursorPool += relationshipGroupCursorPool.getLiveCount
     liveCounts.relationshipTraversalCursorPool += relationshipTraversalCursorPool.getLiveCount
     liveCounts.relationshipScanCursorPool += relationshipScanCursorPool.getLiveCount
     liveCounts.nodeValueIndexCursorPool += nodeValueIndexCursorPool.getLiveCount
@@ -78,8 +63,6 @@ class CursorPools(cursorFactory: CursorFactory, pageCursorTracer: PageCursorTrac
   override def allocatePropertyCursor(cursorTracer: PageCursorTracer): PropertyCursor = fail("PropertyCursor")
 
   override def allocateFullAccessPropertyCursor(cursorTracer: PageCursorTracer): PropertyCursor = fail("FullAccessPropertyCursor")
-
-  override def allocateRelationshipGroupCursor(cursorTracer: PageCursorTracer): RelationshipGroupCursor = relationshipGroupCursorPool.allocate()
 
   override def allocateNodeValueIndexCursor(): NodeValueIndexCursor = nodeValueIndexCursorPool.allocate()
 

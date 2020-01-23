@@ -28,7 +28,6 @@ import java.util.SplittableRandom;
 import java.util.stream.Stream;
 
 import org.neo4j.internal.kernel.api.NodeCursor;
-import org.neo4j.internal.kernel.api.RelationshipGroupCursor;
 import org.neo4j.internal.kernel.api.RelationshipTraversalCursor;
 
 import static com.neo4j.bench.micro.Main.run;
@@ -110,7 +109,6 @@ public class Expand extends AbstractKernelBenchmark
     {
         NodeCursor node;
         RelationshipTraversalCursor edge;
-        RelationshipGroupCursor edgeGroup;
         int[] relationshipTypeIds;
 
         @Setup
@@ -119,7 +117,6 @@ public class Expand extends AbstractKernelBenchmark
             initializeTx( benchmark );
             node = kernelTx.cursors.allocateNodeCursor( NULL );
             edge = kernelTx.cursors.allocateRelationshipTraversalCursor( NULL );
-            edgeGroup = kernelTx.cursors.allocateRelationshipGroupCursor( NULL );
 
             relationshipTypeIds = Stream.of( RELATIONSHIP_DEFINITIONS )
                                         .mapToInt( this::relationshipTypeToId )
@@ -131,7 +128,6 @@ public class Expand extends AbstractKernelBenchmark
         {
             node.close();
             edge.close();
-            edgeGroup.close();
             closeTx();
         }
 
@@ -143,56 +139,6 @@ public class Expand extends AbstractKernelBenchmark
     }
 
     // Traverse
-
-    @Benchmark
-    @BenchmarkMode( {Mode.SampleTime} )
-    public void expandAllByGroup( TxState txState, RNGState rngState, Blackhole bh )
-    {
-        long nodeId = rngState.rng.nextInt( NODE_COUNT );
-        txState.kernelTx.read.singleNode( nodeId, txState.node );
-
-        txState.node.next();
-        txState.node.relationshipGroups( txState.edgeGroup );
-
-        while ( txState.edgeGroup.next() )
-        {
-            txState.edgeGroup.outgoing( txState.edge );
-            while ( txState.edge.next() )
-            {
-                txState.edge.otherNode( txState.node );
-                txState.node.next();
-                bh.consume( txState.node.propertiesReference() );
-            }
-        }
-    }
-
-    @Benchmark
-    @BenchmarkMode( {Mode.SampleTime} )
-    public void expandTypeByGroup( TxState txState, RNGState rngState, Blackhole bh )
-    {
-        long nodeId = rngState.rng.nextInt( NODE_COUNT );
-        txState.kernelTx.read.singleNode( nodeId, txState.node );
-
-        int type = txState.randomRelationshipType( rngState.rng );
-
-        txState.node.next();
-        txState.node.relationshipGroups( txState.edgeGroup );
-
-        while ( txState.edgeGroup.next() )
-        {
-            if ( txState.edgeGroup.type() == type )
-            {
-                txState.edgeGroup.outgoing( txState.edge );
-                while ( txState.edge.next() )
-                {
-                    txState.edge.otherNode( txState.node );
-                    txState.node.next();
-                    bh.consume( txState.node.propertiesReference() );
-                }
-                return;
-            }
-        }
-    }
 
     @Benchmark
     @BenchmarkMode( {Mode.SampleTime} )

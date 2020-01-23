@@ -83,7 +83,6 @@ class ExpandAllTask(val inputMorsel: MorselExecutionContext,
   The mutable state is an unfortunate cost for this feature.
    */
   protected var nodeCursor: NodeCursor = _
-  private var groupCursor: RelationshipGroupCursor = _
   protected var traversalCursor: RelationshipTraversalCursor = _
 
   protected override def initializeInnerLoop(context: QueryContext,
@@ -121,9 +120,6 @@ class ExpandAllTask(val inputMorsel: MorselExecutionContext,
     if (nodeCursor != null) {
       nodeCursor.setTracer(event)
     }
-    if (groupCursor != null) {
-      groupCursor.setTracer(event)
-    }
     if (traversalCursor != null) {
       traversalCursor.setTracer(event)
     }
@@ -132,10 +128,8 @@ class ExpandAllTask(val inputMorsel: MorselExecutionContext,
   override protected def closeInnerLoop(resources: QueryResources): Unit = {
     val pools = resources.cursorPools
     pools.nodeCursorPool.free(nodeCursor)
-    pools.relationshipGroupCursorPool.free(groupCursor)
     pools.relationshipTraversalCursorPool.free(traversalCursor)
     nodeCursor = null
-    groupCursor = null
     traversalCursor = null
   }
 
@@ -177,7 +171,6 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
                                    (codeGen: OperatorExpressionCompiler) extends InputLoopTaskTemplate(inner, id, innermost, codeGen, isHead) {
 
   protected val nodeCursorField: InstanceField = field[NodeCursor](codeGen.namer.nextVariableName("nodeCursor"))
-  private val groupCursorField = field[RelationshipGroupCursor](codeGen.namer.nextVariableName("group"))
   protected val relationshipsField: InstanceField = field[RelationshipTraversalCursor](codeGen.namer.nextVariableName("relationships"))
   private val typeField = field[Array[Int]](codeGen.namer.nextVariableName("type"),
     if (types.isEmpty && missingTypes.isEmpty) constant(null)
@@ -191,7 +184,7 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
 
   override def genMoreFields: Seq[Field] = {
     val localFields =
-      ArrayBuffer(nodeCursorField, groupCursorField, relationshipsField, relationshipsField, typeField)
+      ArrayBuffer(nodeCursorField, relationshipsField, relationshipsField, typeField)
     if (missingTypes.nonEmpty) {
       localFields += missingTypeField
     }
@@ -304,10 +297,8 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
   override protected def genCloseInnerLoop: IntermediateRepresentation = {
     block(
       freeCursor[NodeCursor](loadField(nodeCursorField), NodeCursorPool),
-      freeCursor[RelationshipGroupCursor](loadField(groupCursorField), GroupCursorPool),
       freeCursor[RelationshipTraversalCursor](loadField(relationshipsField), TraversalCursorPool),
       setField(nodeCursorField, constant(null)),
-      setField(groupCursorField, constant(null)),
       setField(relationshipsField, constant(null)),
       setField(relationshipsField, constant(null))
     )
@@ -315,10 +306,6 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
 
   override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = {
     block(
-      condition(isNotNull(loadField(groupCursorField)))(
-        invokeSideEffect(loadField(groupCursorField), method[RelationshipGroupCursor, Unit, KernelReadTracer]("setTracer"),
-          loadField(executionEventField)),
-      ),
       condition(isNotNull(loadField(relationshipsField)))(
         invokeSideEffect(loadField(relationshipsField), method[RelationshipTraversalCursor, Unit, KernelReadTracer]("setTracer"),
           loadField(executionEventField)),
@@ -363,10 +350,8 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
     val (denseMethod, sparseMethod) = findExpansionMethods
 
     ifElse(cursor.isDense)(
-      block(allocateAndTraceCursor(groupCursorField, executionEventField, ALLOCATE_GROUP_CURSOR),
-        allocateAndTraceCursor(relationshipsField, executionEventField, ALLOCATE_TRAVERSAL_CURSOR),
+      block(allocateAndTraceCursor(relationshipsField, executionEventField, ALLOCATE_TRAVERSAL_CURSOR),
         setField(relationshipsField, invokeStatic(denseMethod,
-          loadField(groupCursorField),
           loadField(relationshipsField),
           cursor.target,
           loadField(typeField))))
@@ -389,11 +374,9 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
       singleNode(load(fromNode), loadField(nodeCursorField)),
       ifElse(cursorNext[NodeCursor](loadField(nodeCursorField)))(
         ifElse(invoke(loadField(nodeCursorField), method[NodeCursor, Boolean]("isDense")))(
-          block(allocateAndTraceCursor(groupCursorField, executionEventField, ALLOCATE_GROUP_CURSOR),
-            allocateAndTraceCursor(relationshipsField, executionEventField,
+          block(allocateAndTraceCursor(relationshipsField, executionEventField,
               ALLOCATE_TRAVERSAL_CURSOR),
             setField(relationshipsField, invokeStatic(denseMethod,
-              loadField(groupCursorField),
               loadField(relationshipsField),
               loadField(nodeCursorField),
               loadField(typeField))))
@@ -419,17 +402,17 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
   private def findExpansionMethods: (Method, Method) = {
     dir match {
       case OUTGOING =>
-        (method[RelationshipSelections, RelationshipGroupCursor, RelationshipTraversalCursor, NodeCursor, Array[Int]](
+        (method[RelationshipSelections, RelationshipTraversalCursor, NodeCursor, Array[Int]](
           "outgoingDenseCursor"),
           method[RelationshipSelections, RelationshipTraversalCursor, NodeCursor, Array[Int]](
             "outgoingSparseCursor"))
       case INCOMING =>
-        (method[RelationshipSelections, RelationshipGroupCursor, RelationshipTraversalCursor, NodeCursor, Array[Int]](
+        (method[RelationshipSelections, RelationshipTraversalCursor, NodeCursor, Array[Int]](
           "incomingDenseCursor"),
           method[RelationshipSelections, RelationshipTraversalCursor, NodeCursor, Array[Int]](
             "incomingSparseCursor"))
       case BOTH =>
-        (method[RelationshipSelections, RelationshipGroupCursor, RelationshipTraversalCursor, NodeCursor, Array[Int]](
+        (method[RelationshipSelections, RelationshipTraversalCursor, NodeCursor, Array[Int]](
           "allDenseCursor"),
           method[RelationshipSelections, RelationshipTraversalCursor, NodeCursor, Array[Int]](
             "allSparseCursor"))
