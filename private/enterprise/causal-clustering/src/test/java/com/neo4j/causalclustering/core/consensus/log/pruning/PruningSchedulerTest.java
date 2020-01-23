@@ -59,7 +59,7 @@ public class PruningSchedulerTest
 
         scheduler.start();
 
-        Runnable scheduledJob = jobScheduler.getJob();
+        Object scheduledJob = jobScheduler.getJob();
         assertNotNull( scheduledJob );
 
         // when
