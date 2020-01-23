@@ -77,11 +77,6 @@
       "queryFile": "queries/Q11.cypher"
     },
     {
-      "name": "Q13",
-      "description": "READ first 770 items",
-      "queryFile": "queries/Q13.cypher"
-    },
-    {
       "name": "Q14",
       "description": "READ 770 items across the store",
       "queryFile": "queries/Q14.cypher"
