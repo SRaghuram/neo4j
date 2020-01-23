@@ -293,7 +293,7 @@ public class Main
             long time = System.currentTimeMillis() - startTime;
             Metrics runMetrics = new Metrics( TimeUnit.MILLISECONDS, time, time, time, 1, time, time, time, time, time, time, time );
 
-            metrics.add( group, benchmark, runMetrics, null /*no auxiliary metrics*/, neo4jConfig );
+            metrics.add( group, benchmark, runMetrics, null /*no auxiliary metrics*/,  neo4jConfig );
         }
         return exitCode;
     }
