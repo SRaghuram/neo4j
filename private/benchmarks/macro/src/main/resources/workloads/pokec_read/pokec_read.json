@@ -77,14 +77,6 @@
       "queryFile": "queries/Q11.cypher"
     },
     {
-      "name": "Q12",
-      "description": "1000 x single read",
-      "queryFile": "queries/Q12.cypher",
-      "parameters": {
-        "file": "parameters/profiles.txt"
-      }
-    },
-    {
       "name": "Q13",
       "description": "READ first 770 items",
       "queryFile": "queries/Q13.cypher"
