@@ -13,11 +13,6 @@
       "queryFile": "queries/Q2.cypher"
     },
     {
-      "name": "Q3",
-      "description": "Artists from the UK with a label in the US",
-      "queryFile": "queries/Q3.cypher"
-    },
-    {
       "name": "Q4",
       "description": "Artists from a country X with a label in country Y",
       "queryFile": "queries/Q4.cypher",
