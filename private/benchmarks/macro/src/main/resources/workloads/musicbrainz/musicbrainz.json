@@ -89,10 +89,6 @@
       "queryFile": "queries/Q23.cypher"
     },
     {
-      "name": "Q24",
-      "queryFile": "queries/Q24.cypher"
-    },
-    {
       "name": "Q25",
       "queryFile": "queries/Q25.cypher"
     },
