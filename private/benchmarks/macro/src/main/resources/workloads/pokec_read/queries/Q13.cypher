@@ -1,3 +1,0 @@
-UNWIND RANGE(1,770) AS key
-MATCH (s:PROFILES { _key:key })
-RETURN s
