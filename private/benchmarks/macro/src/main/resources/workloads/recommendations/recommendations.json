@@ -36,11 +36,6 @@
       "queryFile": "queries/Q6.cypher"
     },
     {
-      "name": "Q7",
-      "description": "Graph Local: find foaf of Mike that have the same competencies, have worked at the same companies, are currently not working together",
-      "queryFile": "queries/Q7.cypher"
-    },
-    {
       "name": "Q8",
       "description": "Find the people already owning Brand X products",
       "queryFile": "queries/Q8.cypher",
@@ -57,13 +52,8 @@
       }
     },
     {
-      "name": "Q10",
-      "description": "RECOMMEND PRODUCTS: find the OTHER products that 2 people that have the same competencies, work/have worked at the same companies, are friends and have bought the same product from that brand - Shawna Luna was the pathological input",
-      "queryFile": "queries/Q10.cypher"
-    },
-    {
       "name": "Q11",
-      "description": "Same as Q10 - RECOMMEND PRODUCTS, but starting at all Person-labelled nodes",
+      "description": "RECOMMEND PRODUCTS: find the OTHER products that 2 people that have the same competencies, work/have worked at the same companies, are friends and have bought the same product from that brand",
       "queryFile": "queries/Q11.cypher"
     },
     {
@@ -73,7 +63,7 @@
     },
     {
       "name": "Q13",
-      "description": "Same as Q7 - FOAF same competencies - parametrized",
+      "description": "Graph Local: find foaf of a person that has the same competencies, has worked at the same companies, is currently not working together",
       "queryFile": "queries/Q13.cypher",
       "parameters": {
         "file": "parameters/persons.txt"
@@ -81,7 +71,7 @@
     },
     {
       "name": "Q14",
-      "description": "Same as Q10 - RECOMMEND PRODUCTS - parametrized",
+      "description": "Same as Q11 - RECOMMEND PRODUCTS - parametrized",
       "queryFile": "queries/Q14.cypher",
       "parameters": {
         "file": "parameters/persons.txt"
