@@ -25,26 +25,32 @@ import org.eclipse.collections.api.map.primitive.MutableLongObjectMap;
 import org.eclipse.collections.api.set.primitive.LongSet;
 import org.eclipse.collections.impl.factory.primitive.LongObjectMaps;
 
+import java.nio.BufferOverflowException;
 import java.util.Collection;
 
-import org.neo4j.exceptions.KernelException;
 import org.neo4j.internal.freki.MutableNodeRecordData.Relationship;
-import org.neo4j.internal.kernel.api.exceptions.schema.ConstraintValidationException;
 import org.neo4j.internal.schema.ConstraintDescriptor;
 import org.neo4j.internal.schema.IndexDescriptor;
+import org.neo4j.io.pagecache.PageCursor;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.storageengine.api.StorageProperty;
 import org.neo4j.storageengine.api.txstate.TxStateVisitor;
 import org.neo4j.token.api.NamedToken;
+import org.neo4j.util.Preconditions;
 
 import static java.lang.Math.toIntExact;
+import static org.neo4j.internal.freki.FrekiMainStoreCursor.NULL;
+import static org.neo4j.internal.freki.MutableNodeRecordData.forwardPointer;
+import static org.neo4j.internal.freki.MutableNodeRecordData.idFromForwardPointer;
+import static org.neo4j.internal.freki.MutableNodeRecordData.sizeExponentialFromForwardPointer;
 import static org.neo4j.internal.freki.Record.FLAG_IN_USE;
 
 class CommandCreator implements TxStateVisitor
 {
     private final Collection<StorageCommand> commands;
     private final Stores stores;
-    private final MutableLongObjectMap<FrekiCommand> build = LongObjectMaps.mutable.empty();
+    private final MutableLongObjectMap<Mutation> mutations = LongObjectMaps.mutable.empty();
 
     public CommandCreator( Collection<StorageCommand> commands, Stores stores )
     {
@@ -55,18 +61,13 @@ class CommandCreator implements TxStateVisitor
     @Override
     public void visitCreatedNode( long id )
     {
-        Record after = new Record( 1, id );
-        after.setFlag( FLAG_IN_USE, true );
-        after.node = new MutableNodeRecordData( id );
-        Record before = new Record( 1, id );
-        before.node = new MutableNodeRecordData( id );
-        build.put( id, new FrekiCommand.Node( before, after ) );
+        mutations.put( id, createNew( id, stores.mainStore ) );
     }
 
     @Override
     public void visitDeletedNode( long id )
     {
-        throw new UnsupportedOperationException( "Not implemented yet" );
+        getOrLoad( id ).current.after.setFlag( FLAG_IN_USE, false );
     }
 
     @Override
@@ -77,19 +78,18 @@ class CommandCreator implements TxStateVisitor
         //      This is going to require some changes in the kernel, or at least some restrictions on how the Core API can expect to make use of
         //      relationship IDs that gets created inside a transaction (the ID of the relationship read from the store later on will be different.
 
-        Relationship relationshipAtStartNode = createRelationship( null, type, startNode, endNode, addedProperties, true );
+        Relationship relationshipAtStartNode = createRelationship( null, type, startNode, endNode, addedProperties );
         if ( startNode != endNode )
         {
-            createRelationship( relationshipAtStartNode, type, endNode, startNode, addedProperties, false );
+            createRelationship( relationshipAtStartNode, type, endNode, startNode, addedProperties );
         }
     }
 
-    private Relationship createRelationship( Relationship sourceNodeRelationship, int type, long firstNode, long secondNode,
-            Iterable<StorageProperty> addedProperties, boolean outgoing )
+    private Relationship createRelationship( Relationship sourceNodeRelationship, int type, long sourceNode, long targetNode,
+            Iterable<StorageProperty> addedProperties )
     {
-        FrekiCommand.Node startCommand = (FrekiCommand.Node) build.get( firstNode );
-        Relationship relationship = startCommand.after().node.createRelationship( sourceNodeRelationship, secondNode, type, outgoing );
-        // created id != the id that kernel generated for this relationship <-- IMPORTANT
+        Mutation sourceMutation = getOrLoad( sourceNode );
+        Relationship relationship = sourceMutation.current.data.createRelationship( sourceNodeRelationship, targetNode, type );
         for ( StorageProperty property : addedProperties )
         {
             relationship.addProperty( property.propertyKeyId(), property.value() );
@@ -105,59 +105,41 @@ class CommandCreator implements TxStateVisitor
 
     @Override
     public void visitNodePropertyChanges( long id, Iterable<StorageProperty> added, Iterable<StorageProperty> changed, IntIterable removed )
-            throws ConstraintValidationException
     {
-        FrekiCommand.Node command = (FrekiCommand.Node) build.get( id );
-        assertExists( command );
+        Mutation mutation = getOrLoad( id );
         for ( StorageProperty property : added )
         {
-            command.after().node.addProperty( property.propertyKeyId(), property.value() );
+            mutation.current.data.setNodeProperty( property.propertyKeyId(), property.value() );
         }
     }
 
     @Override
     public void visitRelPropertyChanges( long id, Iterable<StorageProperty> added, Iterable<StorageProperty> changed, IntIterable removed )
-            throws ConstraintValidationException
     {
-//        throw new UnsupportedOperationException( "Not implemented yet" );
     }
 
     @Override
-    public void visitNodeLabelChanges( long id, LongSet added, LongSet removed ) throws ConstraintValidationException
+    public void visitNodeLabelChanges( long id, LongSet added, LongSet removed )
     {
-        FrekiCommand.Node command = (FrekiCommand.Node) build.get( id );
-        assertExists( command );
-        if ( !removed.isEmpty() )
-        {
-            throw new UnsupportedOperationException( "Not implemented yet" );
-        }
+        Mutation mutation = getOrLoad( id );
 
         // Add the new labels into the record
-        command.after().node.labels = toIntArray( added );
-    }
-
-    private void assertExists( FrekiCommand.Node command )
-    {
-        if ( command == null )
+        LongIterator addedIterator = added.longIterator();
+        while ( addedIterator.hasNext() )
         {
-            // Changed, not created
-            throw new UnsupportedOperationException( "Not implemented yet" );
+            mutation.current.data.labels.add( toIntExact( addedIterator.next() ) );
         }
-    }
 
-    private static int[] toIntArray( LongSet set )
-    {
-        int[] result = new int[set.size()];
-        LongIterator iterator = set.longIterator();
-        for ( int i = 0; iterator.hasNext(); i++ )
+        // Remove the removed labels
+        LongIterator removedIterator = removed.longIterator();
+        while ( removedIterator.hasNext() )
         {
-            result[i] = toIntExact( iterator.next() );
+            mutation.current.data.labels.remove( toIntExact( removedIterator.next() ) );
         }
-        return result;
     }
 
     @Override
-    public void visitAddedIndex( IndexDescriptor element ) throws KernelException
+    public void visitAddedIndex( IndexDescriptor element )
     {
         throw new UnsupportedOperationException( "Not implemented yet" );
     }
@@ -169,7 +151,7 @@ class CommandCreator implements TxStateVisitor
     }
 
     @Override
-    public void visitAddedConstraint( ConstraintDescriptor element ) throws KernelException
+    public void visitAddedConstraint( ConstraintDescriptor element )
     {
         throw new UnsupportedOperationException( "Not implemented yet" );
     }
@@ -201,6 +183,109 @@ class CommandCreator implements TxStateVisitor
     @Override
     public void close()
     {
-        build.each( commands::add );
+        mutations.each( mutation ->
+        {
+            try
+            {
+                // first try the current record size
+                mutation.current.data.serialize( mutation.current.after.dataForWriting() );
+            }
+            catch ( BufferOverflowException | ArrayIndexOutOfBoundsException e )
+            {
+                // TODO a silly thing to do, but catching this here makes this temporarily very simple to detect and grow into a larger record
+                // didn't fit, try a larger record, if it hasn't got one already (let's keep it simple for now)
+                Preconditions.checkState( mutation.large == null, "Really expected the large record to not exist at this point of overflow" );
+                SimpleStore largeStore = stores.nextLargerMainStore( mutation.small.after.sizeExp() );
+                long largeId = largeStore.nextId( PageCursorTracer.NULL );
+                mutation.large = new RecordAndData();
+                mutation.large.before = new Record( largeStore.recordSizeExponential(), largeId );
+                mutation.large.after = new Record( largeStore.recordSizeExponential(), largeId );
+                mutation.large.after.setFlag( FLAG_IN_USE, true );
+                mutation.large.data = new MutableNodeRecordData( largeId );
+                mutation.current = mutation.large;
+
+                mutation.small.data.moveDataTo( mutation.large.data );
+                mutation.small.data.setForwardPointer( forwardPointer( largeStore.recordSizeExponential(), largeId ) );
+                mutation.small.data.serialize( mutation.small.after.dataForWriting() );
+
+                // TODO if we get overflow here we'd better move to GBPTree, but that's the next step
+                mutation.large.data.serialize( mutation.large.after.dataForWriting() );
+            }
+
+            commands.add( new FrekiCommand.Node( mutation.small.before, mutation.small.after ) );
+            if ( mutation.large != null )
+            {
+                commands.add( new FrekiCommand.Node( mutation.large.before, mutation.large.after ) );
+            }
+        } );
+    }
+
+    private Mutation createNew( long id, SimpleStore store )
+    {
+        Mutation mutation = new Mutation();
+        mutation.small = new RecordAndData();
+        mutation.small.before = new Record( store.recordSizeExponential(), id );
+        mutation.small.after = new Record( store.recordSizeExponential(), id );
+        mutation.small.after.setFlag( FLAG_IN_USE, true );
+        mutation.small.data = new MutableNodeRecordData( id );
+        mutation.current = mutation.small;
+        return mutation;
+    }
+
+    private Mutation getOrLoad( long id )
+    {
+        Mutation mutation = mutations.get( id );
+        if ( mutation == null )
+        {
+            mutation = new Mutation();
+            mutation.small = new RecordAndData();
+            mutation.small.before = new Record( stores.mainStore.recordSizeExponential() );
+            try ( PageCursor cursor = stores.mainStore.openReadCursor() )
+            {
+                stores.mainStore.read( cursor, mutation.small.before, id );
+            }
+            mutation.small.data = new MutableNodeRecordData( id );
+            mutation.small.data.deserialize( mutation.small.before.dataForReading() );
+            mutation.small.after = new Record( stores.mainStore.recordSizeExponential() );
+            mutation.small.after.copyContentsFrom( mutation.small.before );
+            mutation.current = mutation.small;
+
+            long forwardPointer = mutation.small.data.getForwardPointer();
+            if ( forwardPointer != NULL )
+            {
+                int fwSizeExp = sizeExponentialFromForwardPointer( forwardPointer );
+                long fwId = idFromForwardPointer( forwardPointer );
+                SimpleStore largeStore = stores.mainStore( fwSizeExp );
+                mutation.large = new RecordAndData();
+                mutation.large.before = new Record( fwSizeExp );
+                try ( PageCursor cursor = largeStore.openReadCursor() )
+                {
+                    largeStore.read( cursor, mutation.large.before, fwId );
+                }
+                mutation.large.data = new MutableNodeRecordData( fwId );
+                mutation.large.data.deserialize( mutation.large.before.dataForReading() );
+                mutation.large.after = new Record( fwSizeExp, fwId );
+                mutation.large.after.copyContentsFrom( mutation.large.before );
+                mutation.current = mutation.large;
+            }
+            mutations.put( id, mutation );
+        }
+        return mutation;
+    }
+
+    private static class Mutation
+    {
+        private RecordAndData small;
+        private RecordAndData large;
+        // current points to either or
+        private RecordAndData current;
+    }
+
+    private static class RecordAndData
+    {
+        private Record before;
+        private Record after;
+        // data here is really accidental state, a deserialized objectified version of the data found in after
+        private MutableNodeRecordData data;
     }
 }

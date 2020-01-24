@@ -20,19 +20,17 @@
 package org.neo4j.internal.freki;
 
 import org.neo4j.internal.counts.GBPTreeCountsStore;
+import org.neo4j.internal.id.IdGenerator;
 import org.neo4j.internal.schema.SchemaCache;
 import org.neo4j.internal.schemastore.GBPTreeSchemaStore;
 import org.neo4j.internal.tokenstore.GBPTreeTokenStore;
 import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
-import org.neo4j.kernel.lifecycle.LifeSupport;
-import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.storageengine.api.TransactionMetaDataStore;
 
-class Stores extends LifecycleAdapter
+class Stores extends MainStores
 {
-    private final LifeSupport life = new LifeSupport();
-    final Store mainStore;
+    private final IdGenerator relationshipIdGenerator;
     final TransactionMetaDataStore metaDataStore;
     final GBPTreeCountsStore countsStore;
     final GBPTreeSchemaStore schemaStore;
@@ -41,10 +39,12 @@ class Stores extends LifecycleAdapter
     final GBPTreeTokenStore relationshipTypeTokenStore;
     final GBPTreeTokenStore labelTokenStore;
 
-    Stores( Store mainStore, TransactionMetaDataStore metaDataStore, GBPTreeCountsStore countsStore, GBPTreeSchemaStore schemaStore, SchemaCache schemaCache,
+    Stores( SimpleStore mainStore, SimpleStore mainLargeStore, BigPropertyValueStore bigPropertyValueStore, IdGenerator relationshipIdGenerator,
+            TransactionMetaDataStore metaDataStore, GBPTreeCountsStore countsStore, GBPTreeSchemaStore schemaStore, SchemaCache schemaCache,
             GBPTreeTokenStore propertyKeyTokenStore, GBPTreeTokenStore relationshipTypeTokenStore, GBPTreeTokenStore labelTokenStore )
     {
-        this.mainStore = mainStore;
+        super( mainStore, mainLargeStore, bigPropertyValueStore );
+        this.relationshipIdGenerator = relationshipIdGenerator;
         this.metaDataStore = metaDataStore;
         this.countsStore = countsStore;
         this.schemaStore = schemaStore;
@@ -52,7 +52,7 @@ class Stores extends LifecycleAdapter
         this.propertyKeyTokenStore = propertyKeyTokenStore;
         this.relationshipTypeTokenStore = relationshipTypeTokenStore;
         this.labelTokenStore = labelTokenStore;
-        life.add( mainStore );
+        life.add( onShutdown( relationshipIdGenerator::close ) );
         life.add( onShutdown( metaDataStore::close ) );
         life.add( onShutdown( countsStore::close ) );
         life.add( onShutdown( schemaStore::close ) );
@@ -61,37 +61,14 @@ class Stores extends LifecycleAdapter
         life.add( onShutdown( labelTokenStore::close ) );
     }
 
+    @Override
     void flushAndForce( IOLimiter limiter, PageCursorTracer cursorTracer )
     {
-        mainStore.flush( cursorTracer );
+        relationshipIdGenerator.checkpoint( limiter, cursorTracer );
         metaDataStore.flush( cursorTracer );
         schemaStore.checkpoint( limiter, cursorTracer );
         propertyKeyTokenStore.checkpoint( limiter, cursorTracer );
         relationshipTypeTokenStore.checkpoint( limiter, cursorTracer );
         labelTokenStore.checkpoint( limiter, cursorTracer );
-    }
-
-    @Override
-    public void init()
-    {
-        life.init();
-    }
-
-    @Override
-    public void start()
-    {
-        life.start();
-    }
-
-    @Override
-    public void stop()
-    {
-        life.stop();
-    }
-
-    @Override
-    public void shutdown()
-    {
-        life.shutdown();
     }
 }

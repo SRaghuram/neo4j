@@ -22,7 +22,7 @@ package org.neo4j.internal.freki;
 import org.neo4j.internal.id.IdGenerator;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.id.IdType;
-import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.storageengine.api.CommandCreationContext;
 
 class FrekiCommandCreationContext implements CommandCreationContext
@@ -32,28 +32,28 @@ class FrekiCommandCreationContext implements CommandCreationContext
     private final IdGenerator labelTokens;
     private final IdGenerator relationshipTypeTokens;
     private final IdGenerator propertyKeyTokens;
-    private final PageCursorTracerSupplier cursorTracerSupplier;
+    private final PageCursorTracer cursorTracer;
 
-    FrekiCommandCreationContext( IdGeneratorFactory idGeneratorFactory, PageCursorTracerSupplier cursorTracerSupplier )
+    FrekiCommandCreationContext( IdGeneratorFactory idGeneratorFactory, PageCursorTracer cursorTracer )
     {
         nodes = idGeneratorFactory.get( IdType.NODE );
         relationships = idGeneratorFactory.get( IdType.RELATIONSHIP );
         labelTokens = idGeneratorFactory.get( IdType.LABEL_TOKEN );
         relationshipTypeTokens = idGeneratorFactory.get( IdType.RELATIONSHIP_TYPE_TOKEN );
         propertyKeyTokens = idGeneratorFactory.get( IdType.PROPERTY_KEY_TOKEN );
-        this.cursorTracerSupplier = cursorTracerSupplier;
+        this.cursorTracer = cursorTracer;
     }
 
     @Override
     public long reserveNode()
     {
-        return nodes.nextId( cursorTracerSupplier.get() );
+        return nodes.nextId( cursorTracer );
     }
 
     @Override
     public long reserveRelationship()
     {
-        return relationships.nextId( cursorTracerSupplier.get() );
+        return relationships.nextId( cursorTracer );
     }
 
     @Override
@@ -65,19 +65,19 @@ class FrekiCommandCreationContext implements CommandCreationContext
     @Override
     public int reserveLabelTokenId()
     {
-        return (int) labelTokens.nextId( cursorTracerSupplier.get() );
+        return (int) labelTokens.nextId( cursorTracer );
     }
 
     @Override
     public int reservePropertyKeyTokenId()
     {
-        return (int) propertyKeyTokens.nextId( cursorTracerSupplier.get() );
+        return (int) propertyKeyTokens.nextId( cursorTracer );
     }
 
     @Override
     public int reserveRelationshipTypeTokenId()
     {
-        return (int) relationshipTypeTokens.nextId( cursorTracerSupplier.get() );
+        return (int) relationshipTypeTokens.nextId( cursorTracer );
     }
 
     @Override

@@ -23,7 +23,10 @@ import java.nio.ByteBuffer;
 
 import org.neo4j.internal.freki.StreamVByte.IntArrayTarget;
 import org.neo4j.io.pagecache.PageCursor;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 
+import static org.neo4j.internal.freki.MutableNodeRecordData.idFromForwardPointer;
+import static org.neo4j.internal.freki.MutableNodeRecordData.sizeExponentialFromForwardPointer;
 import static org.neo4j.internal.freki.Record.FLAG_IN_USE;
 import static org.neo4j.internal.freki.StreamVByte.readIntDeltas;
 import static org.neo4j.util.Preconditions.checkState;
@@ -33,25 +36,30 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
     static final long NULL = -1;
     static final int NULL_OFFSET = 0;
 
-    final SimpleStore mainStore;
-    Record record = new Record( 1 );
+    final MainStores stores;
+    private final PageCursorTracer cursorTracer;
+    Record record;
     ByteBuffer data;
     private PageCursor cursor;
+    long loadedNodeId = NULL;
 
     // state from record data header
     int labelsOffset;
     int nodePropertiesOffset;
     int relationshipsOffset;
     int endOffset;
+    private boolean containsForwardPointer;
 
     // state from relationship section, it's here because both relationship cursors as well as property cursor makes use of them
     int[] relationshipTypesInNode;
     int[] relationshipTypeOffsets;
     int firstRelationshipTypeOffset;
 
-    FrekiMainStoreCursor( SimpleStore mainStore )
+    FrekiMainStoreCursor( MainStores stores, PageCursorTracer cursorTracer )
     {
-        this.mainStore = mainStore;
+        this.stores = stores;
+        this.cursorTracer = cursorTracer;
+        this.record = stores.mainStore.newRecord();
         reset();
     }
 
@@ -60,26 +68,43 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
         data = null;
         relationshipTypeOffsets = null;
         relationshipTypesInNode = null;
+        loadedNodeId = NULL;
     }
 
     PageCursor cursor()
     {
         if ( cursor == null )
         {
-            cursor = mainStore.openReadCursor();
+            cursor = stores.mainStore.openReadCursor();
         }
         return cursor;
     }
 
     boolean loadMainRecord( long id )
     {
-        mainStore.read( cursor(), record, id );
+        stores.mainStore.read( cursor(), record, id );
         if ( !record.hasFlag( FLAG_IN_USE ) )
         {
             return false;
         }
         data = record.dataForReading();
         readOffsets();
+        if ( containsForwardPointer )
+        {
+            long forwardPointer = data.getLong( endOffset );
+            SimpleStore largeStore = stores.mainStore( sizeExponentialFromForwardPointer( forwardPointer ) );
+            try ( PageCursor largeCursor = largeStore.openReadCursor() )
+            {
+                largeStore.read( largeCursor, record, idFromForwardPointer( forwardPointer ) );
+                if ( !record.hasFlag( FLAG_IN_USE ) )
+                {
+                    return false;
+                }
+                data = record.dataForReading();
+                readOffsets();
+            }
+        }
+        loadedNodeId = id;
         return true;
     }
 
@@ -91,6 +116,7 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
             record.initializeFromWithSharedData( otherRecord );
             data = record.dataForReading();
             readOffsets();
+            loadedNodeId = alreadyLoadedRecord.loadedNodeId;
             return true;
         }
         return false;
@@ -103,6 +129,7 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
         relationshipsOffset = MutableNodeRecordData.relationshipOffset( offsetsHeader );
         nodePropertiesOffset = MutableNodeRecordData.propertyOffset( offsetsHeader );
         endOffset = MutableNodeRecordData.endOffset( offsetsHeader );
+        containsForwardPointer = MutableNodeRecordData.containsForwardPointer( offsetsHeader );
     }
 
     void readRelationshipTypes()
