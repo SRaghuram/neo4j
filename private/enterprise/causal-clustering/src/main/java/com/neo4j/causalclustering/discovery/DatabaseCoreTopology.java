@@ -78,6 +78,6 @@ public class DatabaseCoreTopology implements Topology<CoreServerInfo>
     @Override
     public String toString()
     {
-        return format( "DatabaseCoreTopology{%s%s %s}", databaseId, raftId == null ? "" : format( " %s", raftId ), coreMembers.keySet() );
+        return format( "DatabaseCoreTopology{%s %s}", databaseId, coreMembers.keySet() );
     }
 }
