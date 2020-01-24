@@ -40,7 +40,7 @@ public class BenchmarkMetrics
      */
     public BenchmarkMetrics()
     {
-        this( "1", "", Mode.LATENCY, emptyMap(), emptyMap(), emptyMap() );
+        this( "1", "", Mode.LATENCY, emptyMap(), new Metrics().toMap(), new AuxiliaryMetrics().toMap() );
     }
 
     public BenchmarkMetrics(
