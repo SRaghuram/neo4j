@@ -80,6 +80,12 @@ public class SubmitTestRun implements Query<SubmitTestRunResult>
                                                            Map<String,Object> benchmarkMap = (Map<String,Object>) metrics.get( 0 );
                                                            Map<String,Object> metricsMap = (Map<String,Object>) metrics.get( 1 );
                                                            Map<String,Object> benchmarkParamsMap = (Map<String,Object>) metrics.get( 2 );
+                                                           /*
+                                                           Note: at the moment submit_test_run.cypher supports creating more than one auxiliary metrics nodes,
+                                                           but the rest of the stack restricts to [0,1] (i.e., one optional) nodes.
+                                                           The following checks are just sanity checks to make sure that we really are only creating one.
+                                                           If in future we want to create more than one auxiliary per metrics it would be trivial to support.
+                                                            */
                                                            List<Map<String,Object>> auxiliaryMetricsMaps = (List<Map<String,Object>>) metrics.get( 3 );
                                                            if ( auxiliaryMetricsMaps.size() > 1 )
                                                            {
