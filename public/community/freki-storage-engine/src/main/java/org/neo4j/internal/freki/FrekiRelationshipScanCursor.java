@@ -41,7 +41,6 @@ class FrekiRelationshipScanCursor extends FrekiRelationshipCursor implements Sto
     private int type;
     private boolean hasProperties;
     private int relationshipPropertiesIndex;
-    private boolean outgoing;
 
     FrekiRelationshipScanCursor( SimpleStore mainStore )
     {
@@ -80,11 +79,10 @@ class FrekiRelationshipScanCursor extends FrekiRelationshipCursor implements Sto
                     hasPropertiesIndex++;
                 }
                 long internalId = relationshipGroupData[d + 1];
-                if ( internalId == expectedInternalRelationshipId )
+                if ( internalId == expectedInternalRelationshipId && relationshipIsOutgoing( otherNodeRaw ) )
                 {
                     this.internalId = internalId;
                     this.hasProperties = hasProperties;
-                    outgoing = relationshipIsOutgoing( otherNodeRaw );
                     otherNode = otherNodeOf( otherNodeRaw );
                     type = relationshipTypesInNode[t];
                     relationshipPropertiesIndex = hasPropertiesIndex;
@@ -111,7 +109,6 @@ class FrekiRelationshipScanCursor extends FrekiRelationshipCursor implements Sto
         otherNode = NULL;
         type = -1;
         hasProperties = false;
-        outgoing = false;
         relationshipPropertiesIndex = -1;
     }
 
@@ -186,6 +183,6 @@ class FrekiRelationshipScanCursor extends FrekiRelationshipCursor implements Sto
     @Override
     public long entityReference()
     {
-        return externalRelationshipId( record.id, internalId, otherNode, outgoing );
+        return externalRelationshipId( record.id, internalId, otherNode, true );
     }
 }
