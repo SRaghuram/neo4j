@@ -341,4 +341,20 @@ class AggregationAcceptanceTest extends ExecutionEngineFunSuite with CypherCompa
                   |RETURN *""".stripMargin
     executeWith(Configs.InterpretedAndSlottedAndPipelined, query).toList should equal(List(Map("agg" -> 2, "foobar" -> 3)))
   }
+
+  test("collect processes rows after an ORDER BY in that order") {
+    //given
+    executeSingle("""CREATE (a {name: 'A', age: 34}),
+                    |       (b {name: 'B', age: 36}),
+                    |       (c {name: 'C', age: 32})""".stripMargin)
+
+    // when
+    val query =
+      """MATCH (n)
+        |WITH n ORDER BY n.age
+        |RETURN collect(n.name) AS names""".stripMargin
+
+    // then
+   executeWith(Configs.InterpretedAndSlottedAndPipelined, query).toList should equal(List(Map("names" -> List("C", "A", "B"))))
+  }
 }
