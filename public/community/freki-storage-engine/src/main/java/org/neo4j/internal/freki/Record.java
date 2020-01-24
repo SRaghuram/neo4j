@@ -29,11 +29,11 @@ class Record
 {
     static int FLAG_IN_USE = 0x8;
 
-    public static final int SIZE_BASE = 128;
+    public static final int SIZE_BASE = 64;
     public static final int HEADER_SIZE = 1;
 
     // not stored
-    private int sizeMultiple;
+    private int sizeExp;
     long id;
 
     // stored header
@@ -43,24 +43,26 @@ class Record
     // TODO this could be off-heap or something less garbagy
     private ByteBuffer data;
 
-    // temporary abstraction when trying out writes
-    transient MutableNodeRecordData node;
-
-    Record( int sizeMultiple )
+    Record( int sizeExp )
     {
-        this( sizeMultiple, -1 );
+        this( sizeExp, -1 );
     }
 
-    Record( int sizeMultiple, long internalId )
+    Record( int sizeExp, long id )
     {
-        this.sizeMultiple = sizeMultiple;
-        id = internalId;
+        this.sizeExp = sizeExp;
+        this.id = id;
     }
 
-    private void createNewDataBuffer( int sizeMultiple )
+    static int recordSize( int sizeExp )
     {
-        data = ByteBuffer.wrap( new byte[sizeMultiple * SIZE_BASE - HEADER_SIZE] );
-        this.sizeMultiple = sizeMultiple;
+        return SIZE_BASE << sizeExp;
+    }
+
+    private void createNewDataBuffer( int sizeExp )
+    {
+        data = ByteBuffer.wrap( new byte[recordSize( sizeExp ) - HEADER_SIZE] );
+        this.sizeExp = sizeExp;
     }
 
     ByteBuffer dataForReading()
@@ -72,7 +74,7 @@ class Record
     {
         if ( data == null )
         {
-            createNewDataBuffer( sizeMultiple );
+            createNewDataBuffer( sizeExp );
         }
         return data;
     }
@@ -83,7 +85,7 @@ class Record
         this.flags = record.flags;
         if ( data == null || data.capacity() < record.data.capacity() )
         {
-            createNewDataBuffer( record.sizeMultiple );
+            createNewDataBuffer( record.sizeExp );
         }
         else
         {
@@ -109,17 +111,16 @@ class Record
         return (flags & flag) == flag;
     }
 
-    private byte sizeMultiple()
+    byte sizeExp()
     {
-        return (byte) sizeMultiple;
+        return (byte) sizeExp;
     }
 
     void serialize( WritableChannel channel ) throws IOException
     {
-        channel.put( (byte) (flags | sizeMultiple()) );
+        channel.put( (byte) (flags | sizeExp()) );
         if ( hasFlag( FLAG_IN_USE ) )
         {
-            node.serialize( dataForWriting() );
             int length = data.position();
             // write the length so that we save on tx-log command size
             channel.putShort( (short) length );
@@ -132,7 +133,7 @@ class Record
     void serialize( PageCursor cursor )
     {
         int length = data.position();
-        cursor.putByte( (byte) (flags | sizeMultiple()) );
+        cursor.putByte( (byte) (flags | sizeExp()) );
         cursor.putBytes( data.array(), 0, length );
     }
 
@@ -145,12 +146,12 @@ class Record
         }
     }
 
-    void deserialize( PageCursor cursor )
+    void loadRecord( PageCursor cursor )
     {
         int flagsRaw = cursor.getByte() & 0xFF;
-        int sizeMultiple = flagsRaw & 0b11;
-        int length = sizeMultiple * SIZE_BASE - HEADER_SIZE;
-        flags = (byte) (flagsRaw & 0b1111_1100);
+        int sizeExp = flagsRaw & 0b111;
+        int length = recordSize( sizeExp ) - HEADER_SIZE;
+        flags = (byte) (flagsRaw & 0b1111_1000);
         if ( length > cursor.getCurrentPageSize() || length <= 0 )
         {
             cursor.setCursorException( "Invalid length " + length );
@@ -158,7 +159,7 @@ class Record
         }
         if ( data == null || length > data.capacity() )
         {
-            createNewDataBuffer( sizeMultiple );
+            createNewDataBuffer( sizeExp );
         }
 
         cursor.getBytes( data.array(), 0, length );
@@ -168,10 +169,10 @@ class Record
     {
         id = source.id;
         flags = source.flags;
-        sizeMultiple = source.sizeMultiple;
+        sizeExp = source.sizeExp;
         if ( source.data != null )
         {
-            createNewDataBuffer( sizeMultiple );
+            createNewDataBuffer( sizeExp );
             System.arraycopy( source.data.array(), 0, data.array(), 0, source.data.capacity() );
         }
         else

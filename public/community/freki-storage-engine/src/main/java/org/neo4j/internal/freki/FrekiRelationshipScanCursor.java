@@ -19,6 +19,7 @@
  */
 package org.neo4j.internal.freki;
 
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.storageengine.api.AllRelationshipsScan;
 import org.neo4j.storageengine.api.StoragePropertyCursor;
 import org.neo4j.storageengine.api.StorageRelationshipScanCursor;
@@ -42,9 +43,9 @@ class FrekiRelationshipScanCursor extends FrekiRelationshipCursor implements Sto
     private boolean hasProperties;
     private int relationshipPropertiesIndex;
 
-    FrekiRelationshipScanCursor( SimpleStore mainStore )
+    FrekiRelationshipScanCursor( Stores stores, PageCursorTracer cursorTracer )
     {
-        super( mainStore );
+        super( stores, cursorTracer );
     }
 
     @Override
@@ -146,7 +147,7 @@ class FrekiRelationshipScanCursor extends FrekiRelationshipCursor implements Sto
     @Override
     public long sourceNodeReference()
     {
-        return record.id;
+        return loadedNodeId;
     }
 
     @Override
@@ -183,6 +184,6 @@ class FrekiRelationshipScanCursor extends FrekiRelationshipCursor implements Sto
     @Override
     public long entityReference()
     {
-        return externalRelationshipId( record.id, internalId, otherNode, true );
+        return externalRelationshipId( loadedNodeId, internalId, otherNode, true );
     }
 }

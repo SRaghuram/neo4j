@@ -19,6 +19,7 @@
  */
 package org.neo4j.internal.freki;
 
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.storageengine.api.AllNodeScan;
 import org.neo4j.storageengine.api.StorageNodeCursor;
 import org.neo4j.storageengine.api.StoragePropertyCursor;
@@ -31,9 +32,9 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
 {
     private long singleId;
 
-    FrekiNodeCursor( SimpleStore mainStore )
+    FrekiNodeCursor( MainStores stores, PageCursorTracer cursorTracer )
     {
-        super( mainStore );
+        super( stores, cursorTracer );
     }
 
     @Override
@@ -113,7 +114,7 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
     @Override
     public long entityReference()
     {
-        return record.id;
+        return loadedNodeId;
     }
 
     @Override

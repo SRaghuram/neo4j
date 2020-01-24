@@ -20,32 +20,21 @@
 package org.neo4j.internal.freki;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 
-public interface SimpleStore extends Lifecycle
+interface SimpleBigValueStore extends Lifecycle
 {
-    int recordSize();
-
-    int recordSizeExponential();
-
-    Record newRecord();
-
-    Record newRecord( long id );
-
     PageCursor openWriteCursor() throws IOException;
 
-    void write( PageCursor cursor, Record record ) throws IOException;
+    long write( PageCursor cursor, ByteBuffer data ) throws IOException;
 
     PageCursor openReadCursor();
 
-    boolean read( PageCursor cursor, Record record, long id );
+    boolean read( PageCursor cursor, ByteBuffer data, long position ) throws IOException;
 
     void flush( PageCursorTracer cursorTracer );
-
-    long nextId( PageCursorTracer cursorTracer );
-
-    boolean exists( long id ) throws IOException;
 }

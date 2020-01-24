@@ -19,6 +19,8 @@
  */
 package org.neo4j.internal.freki;
 
+import org.eclipse.collections.api.factory.Sets;
+
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.Collection;
@@ -31,6 +33,7 @@ import org.neo4j.internal.counts.CountsBuilder;
 import org.neo4j.internal.counts.GBPTreeCountsStore;
 import org.neo4j.internal.diagnostics.DiagnosticsManager;
 import org.neo4j.internal.id.IdController;
+import org.neo4j.internal.id.IdGenerator;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.id.IdType;
 import org.neo4j.internal.kernel.api.exceptions.TransactionApplyKernelException;
@@ -127,6 +130,9 @@ class FrekiStorageEngine implements StorageEngine
         this.cursorTracerSupplier = cursorTracerSupplier;
 
         Store mainStore = null;
+        Store mainLargeStore = null;
+        BigPropertyValueStore bigPropertyValueStore = null;
+        IdGenerator relationshipsIdGenerator = null;
         GBPTreeMetaDataStore metaDataStore = null;
         GBPTreeCountsStore countsStore = null;
         GBPTreeSchemaStore schemaStore = null;
@@ -136,10 +142,15 @@ class FrekiStorageEngine implements StorageEngine
         boolean success = false;
         try
         {
-            mainStore = new Store( fs, databaseLayout.file( "main-store" ), pageCache, idGeneratorFactory, IdType.NODE, false, createStoreIfNotExists,
+            mainStore = new Store( fs, databaseLayout.file( "main-store" ), pageCache, idGeneratorFactory, IdType.NODE, false, createStoreIfNotExists, 0,
                     cursorTracerSupplier );
-            idGeneratorFactory.create( pageCache, databaseLayout.relationshipStore(), IdType.RELATIONSHIP, 0, false, Long.MAX_VALUE, false,
-                    cursorTracerSupplier.get() );
+            mainLargeStore = new Store( fs, databaseLayout.file( "main-store-large" ), pageCache, idGeneratorFactory, IdType.NODE, false,
+                    createStoreIfNotExists, 2, cursorTracerSupplier );
+            bigPropertyValueStore =
+                    new BigPropertyValueStore( fs, databaseLayout.file( "big-values" ), pageCache, false, createStoreIfNotExists, cursorTracerSupplier );
+            relationshipsIdGenerator =
+                    idGeneratorFactory.create( pageCache, databaseLayout.relationshipStore(), IdType.RELATIONSHIP, 0, false, Long.MAX_VALUE, false,
+                            cursorTracerSupplier.get(), Sets.immutable.empty() );
             PageCursorTracer cursorTracer = cursorTracerSupplier.get();
             metaDataStore = new GBPTreeMetaDataStore( pageCache, databaseLayout.file( "meta-data-store" ), 123456789, false, pageCacheTracer, cursorTracer );
             countsStore = new GBPTreeCountsStore( pageCache, databaseLayout.countStore(), recoveryCleanupWorkCollector,
@@ -153,8 +164,8 @@ class FrekiStorageEngine implements StorageEngine
             labelTokenStore = new GBPTreeTokenStore( pageCache, databaseLayout.labelTokenStore(), recoveryCleanupWorkCollector,
                     idGeneratorFactory, IdType.LABEL_TOKEN, MAX_TOKEN_ID, false, pageCacheTracer, cursorTracer );
             SchemaCache schemaCache = new SchemaCache( constraintSemantics, indexConfigCompleter );
-            this.stores = new Stores( mainStore, metaDataStore, countsStore, schemaStore, schemaCache, propertyKeyTokenStore, relationshipTypeTokenStore,
-                    labelTokenStore );
+            this.stores = new Stores( mainStore, mainLargeStore, bigPropertyValueStore, relationshipsIdGenerator, metaDataStore, countsStore, schemaStore,
+                    schemaCache, propertyKeyTokenStore, relationshipTypeTokenStore, labelTokenStore );
             life.add( stores );
             success = true;
         }
@@ -166,7 +177,8 @@ class FrekiStorageEngine implements StorageEngine
         {
             if ( !success )
             {
-                closeAllSilently( mainStore, metaDataStore, countsStore, schemaStore, propertyKeyTokenStore, relationshipTypeTokenStore, labelTokenStore );
+                closeAllSilently( mainStore, mainLargeStore, bigPropertyValueStore, relationshipsIdGenerator, metaDataStore, countsStore, schemaStore,
+                        propertyKeyTokenStore, relationshipTypeTokenStore, labelTokenStore );
             }
         }
     }
@@ -190,9 +202,9 @@ class FrekiStorageEngine implements StorageEngine
     }
 
     @Override
-    public CommandCreationContext newCommandCreationContext()
+    public CommandCreationContext newCommandCreationContext( PageCursorTracer cursorTracer )
     {
-        return new FrekiCommandCreationContext( idGeneratorFactory, cursorTracerSupplier );
+        return new FrekiCommandCreationContext( idGeneratorFactory, cursorTracer );
     }
 
     @Override

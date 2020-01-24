@@ -19,6 +19,7 @@
  */
 package org.neo4j.internal.freki;
 
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.storageengine.api.StorageNodeCursor;
 import org.neo4j.storageengine.api.StoragePropertyCursor;
 import org.neo4j.storageengine.api.StorageRelationshipCursor;
@@ -41,9 +42,9 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
     private int propertyKeyIndex;
     private int nextPropertyValueStartOffset;
 
-    FrekiPropertyCursor( SimpleStore mainStore )
+    FrekiPropertyCursor( MainStores stores, PageCursorTracer cursorTracer )
     {
-        super( mainStore );
+        super( stores, cursorTracer );
     }
 
     @Override
