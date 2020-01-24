@@ -34,7 +34,7 @@ import static org.neo4j.values.storable.Values.NO_VALUE;
 /**
  * Contains helper methods used from compiled expressions
  */
-@SuppressWarnings( "unused" )
+@SuppressWarnings( {"unused", "Duplicates"} )
 public final class CompiledHelpers
 {
     private static final IndexQuery[] EMPTY_PREDICATE = new IndexQuery[0];
@@ -109,7 +109,7 @@ public final class CompiledHelpers
     }
 
     @CalledFromGeneratedCode
-    public static IndexQuery multipleLessThanSeek( int property, AnyValue[] values, boolean[] inclusive )
+    public static IndexQuery.RangePredicate<?> multipleLessThanSeek( int property, AnyValue[] values, boolean[] inclusive )
     {
         assert values.length == inclusive.length;
         assert values.length > 0;
@@ -184,6 +184,68 @@ public final class CompiledHelpers
             boolean toInclusive )
     {
         return IndexQuery.range( property, asStorableValue( from ), fromInclusive,  asStorableValue( to ), toInclusive );
+    }
+
+    @CalledFromGeneratedCode
+    public static IndexQuery multipleRangeBetweenSeek( int property, AnyValue[] gtValues, boolean[] gtInclusive,
+            AnyValue[] ltValues, boolean[] ltInclusive )
+    {
+        assert gtValues.length == gtInclusive.length;
+        assert ltValues.length == ltInclusive.length;
+        assert gtValues.length > 0;
+        assert ltValues.length > 0;
+
+        //greater than seek
+        Value gtSeekValue = asStorableValue( gtValues[0] );
+        boolean gtIsInclusive = gtInclusive[0];
+        for ( int i = 1; i < gtValues.length; i++ )
+        {
+            Value value = asStorableValue( gtValues[i] );
+
+            // comparing different value types always lead to no results
+            if ( !gtSeekValue.valueGroup().equals( value.valueGroup() ))
+            {
+                return null;
+            }
+
+            int compare = Values.COMPARATOR.compare( gtSeekValue, value );
+            if ( compare < 0 )
+            {   //value was greater than max
+                gtSeekValue = value;
+                gtIsInclusive = gtInclusive[i];
+            }
+            else if ( compare == 0 && gtIsInclusive && !gtInclusive[i])
+            { //say that we had >= 4 and now see a > 4
+                gtIsInclusive = false;
+            }
+        }
+
+        //less than seek
+        Value ltSeekValue = asStorableValue( ltValues[0] );
+        boolean ltIsInclusive = ltInclusive[0];
+        for ( int i = 1; i < ltValues.length; i++ )
+        {
+            Value value = asStorableValue( ltValues[i] );
+
+            // comparing different value types always lead to no results
+            if ( !ltSeekValue.valueGroup().equals( value.valueGroup() ))
+            {
+                return null;
+            }
+
+            int compare = Values.COMPARATOR.compare( ltSeekValue, value );
+            if ( compare > 0 )
+            {
+                ltSeekValue = value;
+                ltIsInclusive = ltInclusive[i];
+            }
+            else if ( compare == 0 && ltIsInclusive && !ltInclusive[i])
+            { //say that we had <= 4 and now see a < 4
+                ltIsInclusive = false;
+            }
+        }
+
+        return IndexQuery.range( property,gtSeekValue, gtIsInclusive, ltSeekValue, ltIsInclusive );
     }
 
     @CalledFromGeneratedCode

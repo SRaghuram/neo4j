@@ -333,6 +333,18 @@ object OperatorCodeGenHelperTemplates {
                  toExpression,
                  constant(toInclusive))
 
+  def multipleRangeBetweenSeek(prop: Int,
+                       fromInclusive: Seq[Boolean],
+                       fromExpressions: Seq[IntermediateRepresentation],
+                       toInclusive: Seq[Boolean],
+                       toExpressions: Seq[IntermediateRepresentation]): IntermediateRepresentation =
+    invokeStatic(method[CompiledHelpers, IndexQuery, Int, Array[AnyValue], Array[Boolean], Array[AnyValue], Array[Boolean]]("multipleRangeBetweenSeek"),
+                 constant(prop),
+                 arrayOf[AnyValue](fromExpressions:_*),
+                 arrayOf[Boolean](fromInclusive.map(constant): _*),
+                 arrayOf[AnyValue](toExpressions:_*),
+                 arrayOf[Boolean](toInclusive.map(constant): _*))
+
   def stringPrefixSeek(prop: Int, expression: IntermediateRepresentation): IntermediateRepresentation =
     invokeStatic(method[CompiledHelpers, IndexQuery, Int, AnyValue]("stringPrefix"),
                  constant(prop),

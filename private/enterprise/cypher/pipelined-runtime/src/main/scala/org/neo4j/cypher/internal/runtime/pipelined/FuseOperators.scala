@@ -19,6 +19,7 @@ import org.neo4j.cypher.internal.logical.plans.ExistenceQueryExpression
 import org.neo4j.cypher.internal.logical.plans.ExpandAll
 import org.neo4j.cypher.internal.logical.plans.ExpandInto
 import org.neo4j.cypher.internal.logical.plans.IndexedProperty
+import org.neo4j.cypher.internal.logical.plans.InequalitySeekRange
 import org.neo4j.cypher.internal.logical.plans.InequalitySeekRangeWrapper
 import org.neo4j.cypher.internal.logical.plans.Limit
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
@@ -78,6 +79,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.manyExactSeek
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.multipleGreaterThanSeek
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.multipleLessThanSeek
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.multipleRangeBetweenSeek
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.pointDistanceSeek
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.rangeBetweenSeek
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.stringContainsScan
@@ -104,7 +106,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Argume
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionConverters.orderGroupingKeyExpressions
-import org.neo4j.cypher.internal.util.Last
 import org.neo4j.cypher.internal.util.Many
 import org.neo4j.cypher.internal.util.One
 import org.neo4j.cypher.internal.util.Zero
@@ -304,32 +305,49 @@ class FuseOperators(operatorFactory: OperatorFactory,
         unhandledOutput = output)
     }
 
+    //We support multiple bounds such as a < 3 AND a < 5, this is quite esoteric and forces us to do stuff at runtime
+    //hence we have specialized versions for the more common case of single bound ranges, i.e. a < 7, a >= 10, or 10 <= a < 12
+    def computeInequalityRange(inequality: InequalitySeekRange[Expression], property: SlottedIndexedProperty): SeekExpression = inequality match {
+      case RangeLessThan(bounds) =>
+        val (expressions, inclusive) = bounds.map(e => (compileExpression(e.endPoint), e.isInclusive)).toIndexedSeq.unzip
+        val call = if (expressions.size == 1)
+          (in: Seq[IntermediateRepresentation]) => lessThanSeek(property.propertyKeyId, inclusive.head, in.head)
+        else
+          (in: Seq[IntermediateRepresentation]) => multipleLessThanSeek(property.propertyKeyId, in, inclusive)
+        SeekExpression(expressions, call, single = true)
+
+      case RangeGreaterThan(bounds) =>
+        val (expressions, inclusive) = bounds.map(e => (compileExpression(e.endPoint), e.isInclusive)).toIndexedSeq.unzip
+        val call = if (expressions.size == 1)
+          (in: Seq[IntermediateRepresentation]) => greaterThanSeek(property.propertyKeyId, inclusive.head, in.head)
+        else
+          (in: Seq[IntermediateRepresentation]) => multipleGreaterThanSeek(property.propertyKeyId, in, inclusive)
+        SeekExpression(expressions, call, single = true)
+
+      case RangeBetween(RangeGreaterThan(gtBounds), RangeLessThan(ltBounds)) =>
+        val (gtExpressions, gtInclusive) = gtBounds.map(e => (compileExpression(e.endPoint), e.isInclusive)).toIndexedSeq.unzip
+        val (ltExpressions, ltInclusive) = ltBounds.map(e => (compileExpression(e.endPoint), e.isInclusive)).toIndexedSeq.unzip
+
+        val call = if (gtExpressions.size == 1 && ltExpressions.size == 1) {
+          in: Seq[IntermediateRepresentation] =>
+            rangeBetweenSeek(property.propertyKeyId, gtInclusive.head, in.head, ltInclusive.head, in.tail.head)
+        } else {
+
+          in: Seq[IntermediateRepresentation] =>
+            multipleRangeBetweenSeek(property.propertyKeyId,
+                                     gtInclusive,
+                                     in.take(gtExpressions.size),
+                                     ltInclusive,
+                                     in.drop(gtExpressions.size))
+        }
+        SeekExpression(gtExpressions ++ ltExpressions, call, single = true)
+    }
+
     def computeRangeExpression(rangeWrapper: Expression,
                                property: SlottedIndexedProperty): Option[SeekExpression] =
       rangeWrapper match {
-        case InequalitySeekRangeWrapper(RangeLessThan(bounds)) =>
-          val (expressions, isInclusives) = bounds.map(e => (compileExpression(e.endPoint), e.isInclusive)).toIndexedSeq.unzip
-          val call = if (expressions.size == 1)
-            (in: Seq[IntermediateRepresentation]) => lessThanSeek(property.propertyKeyId, isInclusives.head, in.head)
-            else
-              (in: Seq[IntermediateRepresentation]) => multipleLessThanSeek(property.propertyKeyId, in, isInclusives)
-          Some(SeekExpression(expressions, call, single = true))
-
-        case InequalitySeekRangeWrapper(RangeGreaterThan(bounds)) =>
-          val (expressions, isInclusives) = bounds.map(e => (compileExpression(e.endPoint), e.isInclusive)).toIndexedSeq.unzip
-          val call = if (expressions.size == 1)
-            (in: Seq[IntermediateRepresentation]) => greaterThanSeek(property.propertyKeyId, isInclusives.head, in.head)
-          else
-            (in: Seq[IntermediateRepresentation]) => multipleGreaterThanSeek(property.propertyKeyId, in, isInclusives)
-          Some(SeekExpression(expressions, call, single = true))
-
-        case InequalitySeekRangeWrapper(RangeBetween(RangeGreaterThan(Last(greaterThan)), RangeLessThan(Last(lessThan)))) =>
-          Some(
-            SeekExpression(
-              Seq(compileExpression(greaterThan.endPoint),
-                  compileExpression(lessThan.endPoint)),
-              in => rangeBetweenSeek(property.propertyKeyId, greaterThan.isInclusive, in.head, lessThan.isInclusive, in.tail.head),
-              single = true))
+        case InequalitySeekRangeWrapper(inner) =>
+          Some(computeInequalityRange(inner, property))
 
         case PrefixSeekRangeWrapper(range) =>
           Some(
