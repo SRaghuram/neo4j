@@ -77,7 +77,7 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
     @Override
     public void scan()
     {
-        throw new UnsupportedOperationException( "Not implemented yet" );
+//        throw new UnsupportedOperationException( "Not implemented yet" );
     }
 
     @Override

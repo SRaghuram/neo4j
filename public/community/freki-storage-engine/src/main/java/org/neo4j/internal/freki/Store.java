@@ -122,6 +122,7 @@ public class Store extends LifecycleAdapter implements AutoCloseable, SimpleStor
         }
         cursor.setOffset( offset );
         record.serialize( cursor );
+        cursor.checkAndClearBoundsFlag();
     }
 
     @Override

@@ -50,7 +50,7 @@ class MutableNodeRecordData
     int[] labels = EMPTY_PRIMITIVE_INT_ARRAY;
     private MutableIntObjectMap<Value> properties = IntObjectMaps.mutable.empty();
     private MutableIntObjectMap<Relationships> relationships = IntObjectMaps.mutable.empty();
-    private long internalRelationshipIdCounter;
+    private long internalRelationshipIdCounter = 1;
 
     MutableNodeRecordData( long id )
     {
@@ -123,7 +123,7 @@ class MutableNodeRecordData
                 int arrayIndex = i * ARRAY_ENTRIES_PER_RELATIONSHIP;
                 assert (relationship.otherNode & 0xC0000000_00000000L) == 0; // using 2 bits as header
                 // msb [62b:otherNode,1b:outgoing,1b:hasProperties] lsb
-                array[arrayIndex] = relationship.otherNode << 2 | (relationship.outgoing ? 1 : 0) << 1 | (relationship.properties.notEmpty() ? 1 : 0);
+                array[arrayIndex] = relationship.otherNode << 2 | (relationship.properties.notEmpty() ? 1 : 0) << 1 | (relationship.outgoing ? 1 : 0 );
                 // TODO the schema we use to write this packed long[] is the one initially intended for mostly "big" longs and
                 //      therefore it doesn't scale all the way down to 1B, just 3B. Therefore for most of the relationships in a store
                 //      the waste is going to be 2B
@@ -235,12 +235,12 @@ class MutableNodeRecordData
 
     static boolean relationshipIsOutgoing( long relationshipOtherNodeRawLong )
     {
-        return (relationshipOtherNodeRawLong & 0b10) != 0;
+        return (relationshipOtherNodeRawLong & 0b01) != 0;
     }
 
     static boolean relationshipHasProperties( long relationshipOtherNodeRawLong )
     {
-        return (relationshipOtherNodeRawLong & 0b1) != 0;
+        return (relationshipOtherNodeRawLong & 0b10) != 0;
     }
 
     static long otherNodeOf( long relationshipOtherNodeRawLong )
