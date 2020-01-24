@@ -23,6 +23,7 @@ import org.neo4j.values.storable.Values
 import org.scalatest.exceptions.TestFailedException
 import org.scalatest.matchers.MatchResult
 import org.scalatest.matchers.Matcher
+
 import scala.collection.JavaConverters.iterableAsScalaIterableConverter
 
 /**
@@ -204,12 +205,12 @@ class CompositeIndexAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     val n3 = createLabeledNode(Map("name" -> "Jake", "surname" -> "Soap"), "User")
 
     Seq(
-//      ("n.name = 'Joe' AND n.surname = 'Soap'", "(equality,equality)", false, false, "", Set(Map("n" -> n1))),
-//      ("n.name = 'Joe' AND n.surname STARTS WITH 'So'", "(equality,range)", false, false, "", Set(Map("n" -> n1))),
-//      ("n.name >= 'Jo' AND n.surname STARTS WITH 'So'", "(range,exists)", false, true, ".*cache\\[n\\.surname\\] STARTS WITH .*", Set(Map("n" -> n1))),
+      ("n.name = 'Joe' AND n.surname = 'Soap'", "(equality,equality)", false, false, "", Set(Map("n" -> n1))),
+      ("n.name = 'Joe' AND n.surname STARTS WITH 'So'", "(equality,range)", false, false, "", Set(Map("n" -> n1))),
+      ("n.name >= 'Jo' AND n.surname STARTS WITH 'So'", "(range,exists)", false, true, ".*cache\\[n\\.surname\\] STARTS WITH .*", Set(Map("n" -> n1))),
       ("n.name <= 'Je' AND exists(n.surname)", "(range,exists)", false, false, "", Set(Map("n" -> n3))),
-//      ("exists(n.name) AND n.surname > 'S'", "", true, true, ".*cache\\[n\\.surname\\] > .*", Set(Map("n" -> n1), Map("n" -> n2), Map("n" -> n3))),
-//      ("exists(n.name) AND exists(n.surname)", "", true, false, "", Set(Map("n" -> n1), Map("n" -> n2), Map("n" -> n3)))
+      ("exists(n.name) AND n.surname > 'S'", "", true, true, ".*cache\\[n\\.surname\\] > .*", Set(Map("n" -> n1), Map("n" -> n2), Map("n" -> n3))),
+      ("exists(n.name) AND exists(n.surname)", "", true, false, "", Set(Map("n" -> n1), Map("n" -> n2), Map("n" -> n3)))
     ).foreach {
       case (predicates, seekString, useScan, shouldFilter, filterArgument, resultSet) =>
         val query = s"MATCH (n:User) WHERE $predicates RETURN n"

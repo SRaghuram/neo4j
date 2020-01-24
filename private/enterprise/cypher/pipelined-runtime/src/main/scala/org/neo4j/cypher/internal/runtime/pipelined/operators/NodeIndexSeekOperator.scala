@@ -566,8 +566,7 @@ class CompositeNodeIndexSeekTaskTemplate(override val inner: OperatorTaskTemplat
   override def genExpressions: Seq[IntermediateExpression] = seekValues.flatten
 
   override protected def genInitializeInnerLoop: IntermediateRepresentation = {
-    seekValues = seekExpressions.map(_.generateSeekValues).map(_.map(_()).map(v => v.copy(ir = nullCheckIfRequired(v))))
-
+    seekValues = seekExpressions.map(_.generateSeekValues).map(compile).map(nullCheck)
     /**
       * {{{
       *   this.queryIterator = compositeQueryIterator(new IndexQuery[][]{[query predicate]}
@@ -576,13 +575,13 @@ class CompositeNodeIndexSeekTaskTemplate(override val inner: OperatorTaskTemplat
       *   true
       * }}}
       */
-    val foo = seekValues.zip(seekExpressions.map(_.generatePredicate)).map{
+    val predicates = seekValues.zip(seekExpressions.map(_.generatePredicate)).map{
       case (vs, p) => p(vs.map(_.ir))
     }
 
     block(
       setField(queryIteratorField,
-               invokeStatic(compositeQueryIteratorMethod, arrayOf[Array[IndexQuery]](foo:_*))),
+               invokeStatic(compositeQueryIteratorMethod, arrayOf[Array[IndexQuery]](predicates:_*))),
       setField(nodeIndexCursorField, ALLOCATE_NODE_INDEX_CURSOR),
       setField(canContinue,
                invokeStatic(compositeNextMethod,
@@ -640,7 +639,9 @@ class CompositeNodeIndexSeekTaskTemplate(override val inner: OperatorTaskTemplat
     }
     block(ops:_*)
   }
+  private def compile(generators: Seq[() => IntermediateExpression]): Seq[IntermediateExpression] = generators.map(_())
 
+  private def nullCheck(in: Seq[IntermediateExpression]): Seq[IntermediateExpression] = in.map(v => v.copy(ir = nullCheckIfRequired(v)))
 
   private def getPropertyValueRepresentation(offset: Int): IntermediateRepresentation =
     invokeStatic(compositeGetPropertyMethod,
