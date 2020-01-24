@@ -5,8 +5,8 @@
  */
 package com.neo4j.fabric.config;
 
-import org.apache.commons.lang.builder.EqualsBuilder;
-import org.apache.commons.lang.builder.HashCodeBuilder;
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.eclipse.collections.api.multimap.set.MutableSetMultimap;
 import org.eclipse.collections.impl.factory.Multimaps;
@@ -27,6 +27,9 @@ import org.neo4j.configuration.helpers.NormalizedDatabaseName;
 import org.neo4j.configuration.helpers.NormalizedGraphName;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.logging.Level;
+
+import static org.apache.commons.lang3.builder.EqualsBuilder.reflectionEquals;
+import static org.apache.commons.lang3.builder.HashCodeBuilder.reflectionHashCode;
 
 public class FabricConfig
 {
@@ -254,13 +257,13 @@ public class FabricConfig
         @Override
         public boolean equals( Object that )
         {
-            return EqualsBuilder.reflectionEquals( this, that );
+            return reflectionEquals( this, that );
         }
 
         @Override
         public int hashCode()
         {
-            return HashCodeBuilder.reflectionHashCode( this );
+            return reflectionHashCode( this );
         }
     }
 
@@ -320,13 +323,13 @@ public class FabricConfig
         @Override
         public boolean equals( Object that )
         {
-            return EqualsBuilder.reflectionEquals( this, that );
+            return reflectionEquals( this, that );
         }
 
         @Override
         public int hashCode()
         {
-            return HashCodeBuilder.reflectionHashCode( this );
+            return reflectionHashCode( this );
         }
     }
 
@@ -399,13 +402,13 @@ public class FabricConfig
         @Override
         public boolean equals( Object that )
         {
-            return EqualsBuilder.reflectionEquals( this, that );
+            return reflectionEquals( this, that );
         }
 
         @Override
         public int hashCode()
         {
-            return HashCodeBuilder.reflectionHashCode( this );
+            return reflectionHashCode( this );
         }
     }
 

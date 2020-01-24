@@ -5,32 +5,34 @@
  */
 package com.neo4j.ssl;
 
-import org.apache.commons.lang.SystemUtils;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 
 import java.nio.file.Files;
 import java.nio.file.attribute.PosixFileAttributeView;
 import java.nio.file.attribute.PosixFileAttributes;
 import java.nio.file.attribute.PosixFilePermission;
 
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.ssl.SelfSignedCertificateFactory;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@TestDirectoryExtension
 public class SelfSignedCertificatesIT
 {
-    @Rule
-    public final TestDirectory testDirectory = TestDirectory.testDirectory();
+
+    @Inject
+    private TestDirectory testDirectory;
 
     @Test
-    public void createSelfSignedCertificateWithCorrectPermissions() throws Exception
+    @DisabledOnOs( OS.WINDOWS )
+    void createSelfSignedCertificateWithCorrectPermissions() throws Exception
     {
-        assumeTrue( !SystemUtils.IS_OS_WINDOWS );
-
         var certificates = new SelfSignedCertificateFactory();
         certificates.createSelfSignedCertificate( testDirectory.file( "certificate" ), testDirectory.file( "privateKey" ), "localhost" );
 

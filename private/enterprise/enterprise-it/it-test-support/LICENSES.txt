@@ -18,7 +18,6 @@ Apache Software License, Version 2.0
   Apache Commons Codec
   Apache Commons Collections
   Apache Commons Compress
-  Apache Commons Configuration
   Apache Commons IO
   Apache Commons Lang
   Apache Commons Logging
@@ -33,7 +32,6 @@ Apache Software License, Version 2.0
   Apache Shiro :: Event
   Apache Shiro :: Lang
   Caffeine cache
-  Commons Lang
   config
   fastinfoset
   Graphite Integration for Metrics

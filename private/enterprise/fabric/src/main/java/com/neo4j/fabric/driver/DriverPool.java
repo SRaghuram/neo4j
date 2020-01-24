@@ -7,8 +7,6 @@ package com.neo4j.fabric.driver;
 
 import com.neo4j.fabric.auth.CredentialsProvider;
 import com.neo4j.fabric.config.FabricConfig;
-import org.apache.commons.lang.builder.EqualsBuilder;
-import org.apache.commons.lang.builder.HashCodeBuilder;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -32,6 +30,8 @@ import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.ssl.config.SslPolicyLoader;
 
+import static org.apache.commons.lang3.builder.EqualsBuilder.reflectionEquals;
+import static org.apache.commons.lang3.builder.HashCodeBuilder.reflectionHashCode;
 import static org.neo4j.scheduler.Group.TRANSACTION_TIMEOUT_MONITOR;
 
 public class DriverPool extends LifecycleAdapter
@@ -197,13 +197,13 @@ public class DriverPool extends LifecycleAdapter
         @Override
         public boolean equals( Object that )
         {
-            return EqualsBuilder.reflectionEquals( this, that );
+            return reflectionEquals( this, that );
         }
 
         @Override
         public int hashCode()
         {
-            return HashCodeBuilder.reflectionHashCode( this );
+            return reflectionHashCode( this );
         }
     }
 }
