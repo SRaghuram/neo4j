@@ -111,6 +111,8 @@ public class BenchmarkGroupBenchmarkMetricsPrinter
             return updateWidths( row );
         }
 
+        // TODO add auxiliary metrics too
+
         String[] registerDataRow( BenchmarkGroup group, Benchmark benchmark, Metrics metrics )
         {
             TimeUnit unit = Units.toTimeUnit( (String) metrics.toMap().get( Metrics.UNIT ) );
@@ -178,6 +180,7 @@ public class BenchmarkGroupBenchmarkMetricsPrinter
             return new String[]{"Group", "Benchmark", "Count", "Mean", "Unit"};
         }
 
+        // TODO add auxiliary metrics too
         @Override
         public String[] createDataRow( BenchmarkGroup group, Benchmark benchmark, Metrics metrics, TimeUnit unit, TimeUnit saneUnit )
         {
@@ -198,6 +201,7 @@ public class BenchmarkGroupBenchmarkMetricsPrinter
             return new String[]{"Group", "Benchmark", "Count", "Mean", "Min", "Median", "90th", "Max", "Unit"};
         }
 
+        // TODO add auxiliary metrics too
         @Override
         String[] createDataRow( BenchmarkGroup group, Benchmark benchmark, Metrics metrics, TimeUnit unit, TimeUnit saneUnit )
         {
