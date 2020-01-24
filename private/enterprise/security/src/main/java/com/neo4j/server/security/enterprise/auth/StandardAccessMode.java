@@ -496,7 +496,7 @@ class StandardAccessMode implements AccessMode
         StandardAccessMode build()
         {
             return new StandardAccessMode(
-                    isAuthenticated && anyAccess.getOrDefault( GRANT, false ),
+                    isAuthenticated && anyAccess.getOrDefault( GRANT, false ) && !anyAccess.getOrDefault( DENY, false ),
                     isAuthenticated && anyRead.getOrDefault( GRANT, false ),
                     isAuthenticated && anyWrite.getOrDefault( GRANT, false ) && !anyWrite.getOrDefault( DENY, false ),
                     isAuthenticated && token,

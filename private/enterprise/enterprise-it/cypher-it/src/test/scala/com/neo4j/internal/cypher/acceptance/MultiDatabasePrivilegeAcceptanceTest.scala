@@ -485,6 +485,20 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     } should have message "Database access is not allowed for user 'joe' with roles [custom]."
   }
 
+  test("should not be able to access database with grant and deny privilege") {
+    // GIVEN
+    setupUserWithCustomRole(access = false)
+
+    // WHEN
+    execute(s"DENY ACCESS ON DATABASE $DEFAULT_DATABASE_NAME TO custom")
+    execute(s"GRANT ACCESS ON DATABASE $DEFAULT_DATABASE_NAME TO custom")
+
+    // THEN
+    the[AuthorizationViolationException] thrownBy {
+      executeOnDefault("joe", "soap", "MATCH (n) RETURN n")
+    } should have message "Database access is not allowed for user 'joe' with roles [custom]."
+  }
+
   test("should not be able to access database without privilege") {
     // GIVEN
     setupUserWithCustomRole(access = false)
