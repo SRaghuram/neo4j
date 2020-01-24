@@ -35,6 +35,7 @@ import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.internal.schema.SchemaCache;
 import org.neo4j.internal.schema.SchemaDescriptor;
 import org.neo4j.internal.schema.constraints.IndexBackedConstraintDescriptor;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.storageengine.api.AllNodeScan;
 import org.neo4j.storageengine.api.AllRelationshipsScan;
 import org.neo4j.storageengine.api.StorageNodeCursor;
@@ -244,7 +245,7 @@ class FrekiStorageReader implements StorageReader
     }
 
     @Override
-    public boolean nodeExists( long id )
+    public boolean nodeExists( long id, PageCursorTracer cursorTracer )
     {
         try
         {
@@ -257,7 +258,7 @@ class FrekiStorageReader implements StorageReader
     }
 
     @Override
-    public boolean relationshipExists( long id )
+    public boolean relationshipExists( long id, PageCursorTracer cursorTracer )
     {
         return false;
     }
@@ -281,33 +282,33 @@ class FrekiStorageReader implements StorageReader
     }
 
     @Override
-    public StorageNodeCursor allocateNodeCursor()
+    public StorageNodeCursor allocateNodeCursor( PageCursorTracer cursorTracer )
     {
-        return new FrekiNodeCursor( stores.mainStore );
+        return new FrekiNodeCursor( stores, cursorTracer );
     }
 
     @Override
-    public StoragePropertyCursor allocatePropertyCursor()
+    public StoragePropertyCursor allocatePropertyCursor( PageCursorTracer cursorTracer )
     {
-        return new FrekiPropertyCursor( stores.mainStore );
+        return new FrekiPropertyCursor( stores, cursorTracer );
     }
 
     @Override
-    public StorageRelationshipGroupCursor allocateRelationshipGroupCursor()
+    public StorageRelationshipGroupCursor allocateRelationshipGroupCursor( PageCursorTracer cursorTracer )
     {
-        return new FrekiRelationshipGroupCursor( stores.mainStore );
+        return new FrekiRelationshipGroupCursor( stores, cursorTracer );
     }
 
     @Override
-    public StorageRelationshipTraversalCursor allocateRelationshipTraversalCursor()
+    public StorageRelationshipTraversalCursor allocateRelationshipTraversalCursor( PageCursorTracer cursorTracer )
     {
-        return new FrekiRelationshipTraversalCursor( stores.mainStore );
+        return new FrekiRelationshipTraversalCursor( stores, cursorTracer );
     }
 
     @Override
-    public StorageRelationshipScanCursor allocateRelationshipScanCursor()
+    public StorageRelationshipScanCursor allocateRelationshipScanCursor( PageCursorTracer cursorTracer )
     {
-        return new FrekiRelationshipScanCursor( stores.mainStore );
+        return new FrekiRelationshipScanCursor( stores, cursorTracer );
     }
 
     @Override

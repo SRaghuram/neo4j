@@ -26,6 +26,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.util.stream.IntStream;
 
 import org.neo4j.io.pagecache.PageCursor;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.storageengine.api.StorageEntityCursor;
 import org.neo4j.storageengine.api.StorageNodeCursor;
 import org.neo4j.storageengine.api.StoragePropertyCursor;
@@ -46,7 +47,9 @@ abstract class FrekiCursorsTest
     @Inject
     RandomRule random;
 
-    InMemoryTestStore store = new InMemoryTestStore();
+    InMemoryTestStore store = new InMemoryTestStore( 0 );
+    InMemoryTestStore largeStore = new InMemoryTestStore( 2 );
+    MainStores stores = new MainStores( store, largeStore, new InMemoryBigValueTestStore() );
 
     static long[] toLongArray( int[] labelIds )
     {
@@ -66,16 +69,17 @@ abstract class FrekiCursorsTest
     class Node
     {
         private final Record record;
+        private final MutableNodeRecordData data;
 
         Node( long id )
         {
-            this( 1, id );
+            this( 0, id );
         }
 
-        Node( int sizeMultiple, long id )
+        Node( int sizeExp, long id )
         {
-            this.record = new Record( sizeMultiple, id );
-            record.node = new MutableNodeRecordData( id );
+            this.record = new Record( sizeExp, id );
+            data = new MutableNodeRecordData( id );
             record.setFlag( FLAG_IN_USE, true );
         }
 
@@ -88,7 +92,7 @@ abstract class FrekiCursorsTest
         {
             try ( PageCursor cursor = store.openWriteCursor() )
             {
-                record.node.serialize( record.dataForWriting() );
+                data.serialize( record.dataForWriting() );
                 store.write( cursor, record );
             }
             return record;
@@ -97,7 +101,7 @@ abstract class FrekiCursorsTest
         FrekiNodeCursor storeAndPlaceNodeCursorAt()
         {
             Record record = store();
-            FrekiNodeCursor nodeCursor = new FrekiNodeCursor( store );
+            FrekiNodeCursor nodeCursor = new FrekiNodeCursor( stores, PageCursorTracer.NULL );
             nodeCursor.single( record.id );
             assertTrue( nodeCursor.next() );
             return nodeCursor;
@@ -111,19 +115,19 @@ abstract class FrekiCursorsTest
 
         Node labels( int... labelIds )
         {
-            record.node.labels = labelIds.clone();
+            data.labels.addAll( labelIds );
             return this;
         }
 
         Node property( int propertyKeyId, Value value )
         {
-            record.node.addProperty( propertyKeyId, value );
+            data.setNodeProperty( propertyKeyId, value );
             return this;
         }
 
         Node properties( IntObjectMap<Value> properties )
         {
-            properties.forEachKeyValue( ( key, value ) -> record.node.addProperty( key, value ) );
+            properties.forEachKeyValue( ( key, value ) -> data.setNodeProperty( key, value ) );
             return this;
         }
 
@@ -134,11 +138,11 @@ abstract class FrekiCursorsTest
 
         Node relationship( int type, Node otherNode, IntObjectMap<Value> properties )
         {
-            MutableNodeRecordData.Relationship relationship = record.node.createRelationship( null, otherNode.record.id, type, true );
+            MutableNodeRecordData.Relationship relationship = data.createRelationship( null, otherNode.record.id, type );
             properties.forEachKeyValue( relationship::addProperty );
             if ( record.id != otherNode.record.id )
             {
-                relationship = otherNode.record.node.createRelationship( relationship, record.id, type, false );
+                relationship = otherNode.data.createRelationship( relationship, record.id, type );
                 properties.forEachKeyValue( relationship::addProperty );
             }
             return this;

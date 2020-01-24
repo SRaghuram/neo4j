@@ -22,8 +22,6 @@ package org.neo4j.internal.freki;
 import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.nio.file.OpenOption;
-import java.nio.file.StandardOpenOption;
 
 import org.neo4j.internal.id.IdGenerator;
 import org.neo4j.internal.id.IdGeneratorFactory;
@@ -31,62 +29,49 @@ import org.neo4j.internal.id.IdType;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.PageCursor;
-import org.neo4j.io.pagecache.PagedFile;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
-import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 
-import static org.neo4j.internal.helpers.ArrayUtil.concat;
-
-public class Store extends LifecycleAdapter implements AutoCloseable, SimpleStore
+public class Store extends BareBoneStore implements SimpleStore
 {
-    private final FileSystemAbstraction fs;
-    private final File file;
-    private final PageCache pageCache;
     private final IdGeneratorFactory idGeneratorFactory;
     private final IdType idType;
-    private final boolean readOnly;
-    private final boolean createIfNotExists;
-    private final PageCursorTracerSupplier tracerSupplier;
     private final int recordsPerPage;
+    private final int recordSize;
+    private final int sizeExp;
 
-    private PagedFile mappedFile;
     private IdGenerator idGenerator;
 
     public Store( FileSystemAbstraction fs, File file, PageCache pageCache, IdGeneratorFactory idGeneratorFactory, IdType idType, boolean readOnly,
-            boolean createIfNotExists, PageCursorTracerSupplier tracerSupplier )
+            boolean createIfNotExists, int sizeExp, PageCursorTracerSupplier tracerSupplier )
     {
-        this.fs = fs;
-        this.file = file;
-        this.pageCache = pageCache;
+        super( fs, file, pageCache, readOnly, createIfNotExists, tracerSupplier );
         this.idGeneratorFactory = idGeneratorFactory;
         this.idType = idType;
-        this.readOnly = readOnly;
-        this.createIfNotExists = createIfNotExists;
-        this.tracerSupplier = tracerSupplier;
-        this.recordsPerPage = pageCache.pageSize() / Record.SIZE_BASE;
+        this.sizeExp = sizeExp;
+        this.recordSize = Record.recordSize( sizeExp );
+        this.recordsPerPage = pageCache.pageSize() / recordSize;
     }
 
     @Override
     public void init() throws IOException
     {
-        OpenOption[] openOptions = openOptions();
-        mappedFile = pageCache.map( file, pageCache.pageSize(), openOptions );
-        idGenerator = idGeneratorFactory.open( pageCache, idFileName(), idType, () -> 0, 1L << (6 * Byte.SIZE), readOnly, tracerSupplier.get(), openOptions );
+        super.init();
+        idGenerator = idGeneratorFactory.open( pageCache, idFileName(), idType, () -> 0, 1L << (6 * Byte.SIZE), readOnly, tracerSupplier.get(),
+                openOptions( false ) );
     }
 
     @Override
     public void shutdown()
     {
         idGenerator.close();
-        mappedFile.close();
+        super.shutdown();
     }
 
-    private OpenOption[] openOptions()
+    @Override
+    public long nextId( PageCursorTracer cursorTracer )
     {
-        OpenOption[] openOptions = new OpenOption[]{StandardOpenOption.READ, StandardOpenOption.WRITE};
-        openOptions = createIfNotExists ? concat( openOptions, StandardOpenOption.CREATE ) : openOptions;
-        return openOptions;
+        return idGenerator.nextId( cursorTracer );
     }
 
     private File idFileName()
@@ -94,20 +79,28 @@ public class Store extends LifecycleAdapter implements AutoCloseable, SimpleStor
         return new File( file.getAbsolutePath() + ".id" );
     }
 
-    public void flush( PageCursorTracer cursorTracer )
+    @Override
+    public Record newRecord()
     {
+        return new Record( sizeExp );
     }
 
     @Override
-    public void close()
+    public Record newRecord( long id )
     {
-        shutdown();
+        return new Record( sizeExp, id );
     }
 
     @Override
-    public PageCursor openWriteCursor() throws IOException
+    public int recordSize()
     {
-        return mappedFile.io( 0, PagedFile.PF_SHARED_WRITE_LOCK, PageCursorTracer.NULL );
+        return recordSize;
+    }
+
+    @Override
+    public int recordSizeExponential()
+    {
+        return sizeExp;
     }
 
     @Override
@@ -126,19 +119,6 @@ public class Store extends LifecycleAdapter implements AutoCloseable, SimpleStor
     }
 
     @Override
-    public PageCursor openReadCursor()
-    {
-        try
-        {
-            return mappedFile.io( 0, PagedFile.PF_SHARED_READ_LOCK, PageCursorTracer.NULL );
-        }
-        catch ( IOException e )
-        {
-            throw new UncheckedIOException( e );
-        }
-    }
-
-    @Override
     public boolean read( PageCursor cursor, Record record, long id )
     {
         record.clear();
@@ -154,7 +134,7 @@ public class Store extends LifecycleAdapter implements AutoCloseable, SimpleStor
             do
             {
                 cursor.setOffset( offset );
-                record.deserialize( cursor );
+                record.loadRecord( cursor );
             }
             while ( cursor.shouldRetry() );
             cursor.checkAndClearBoundsFlag();
@@ -167,7 +147,8 @@ public class Store extends LifecycleAdapter implements AutoCloseable, SimpleStor
         return true;
     }
 
-    boolean exists( long id ) throws IOException
+    @Override
+    public boolean exists( long id ) throws IOException
     {
 //        try ( PageCursor cursor = openReadCursor() )
 //        {

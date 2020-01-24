@@ -19,13 +19,14 @@
  */
 package org.neo4j.internal.freki;
 
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.storageengine.api.StorageRelationshipCursor;
 
 abstract class FrekiRelationshipCursor extends FrekiMainStoreCursor implements StorageRelationshipCursor
 {
-    FrekiRelationshipCursor( SimpleStore mainStore )
+    FrekiRelationshipCursor( MainStores stores, PageCursorTracer cursorTracer )
     {
-        super( mainStore );
+        super( stores, cursorTracer );
     }
 
     @Override

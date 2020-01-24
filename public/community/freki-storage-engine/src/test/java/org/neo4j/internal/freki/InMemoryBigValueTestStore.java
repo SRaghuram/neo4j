@@ -22,47 +22,19 @@ package org.neo4j.internal.freki;
 import org.eclipse.collections.api.map.primitive.MutableLongObjectMap;
 import org.eclipse.collections.impl.factory.primitive.LongObjectMaps;
 
+import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.neo4j.io.pagecache.ByteArrayPageCursor;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 
-class InMemoryTestStore extends LifecycleAdapter implements SimpleStore
+import static org.neo4j.internal.freki.InMemoryTestStore.NO_PAGE_CURSOR;
+
+public class InMemoryBigValueTestStore extends LifecycleAdapter implements SimpleBigValueStore
 {
-    private final MutableLongObjectMap<Record> data = LongObjectMaps.mutable.empty();
-    private final int sizeExp;
-    private final AtomicLong nextId = new AtomicLong();
-
-    InMemoryTestStore( int sizeExp )
-    {
-        this.sizeExp = sizeExp;
-    }
-
-    @Override
-    public int recordSize()
-    {
-        return Record.recordSize( sizeExp );
-    }
-
-    @Override
-    public int recordSizeExponential()
-    {
-        return sizeExp;
-    }
-
-    @Override
-    public Record newRecord()
-    {
-        return new Record( sizeExp );
-    }
-
-    @Override
-    public Record newRecord( long id )
-    {
-        return new Record( sizeExp, id );
-    }
+    private final AtomicLong position = new AtomicLong();
+    private final MutableLongObjectMap<byte[]> data = LongObjectMaps.mutable.empty();
 
     @Override
     public PageCursor openWriteCursor()
@@ -71,11 +43,14 @@ class InMemoryTestStore extends LifecycleAdapter implements SimpleStore
     }
 
     @Override
-    public void write( PageCursor cursor, Record record )
+    public long write( PageCursor cursor, ByteBuffer data )
     {
-        Record copy = new Record( 1, 0 );
-        copy.copyContentsFrom( record );
-        data.put( record.id, copy );
+        int length = data.remaining();
+        long position = this.position.getAndAdd( length );
+        byte[] dataCopy = new byte[length];
+        System.arraycopy( data.array(), data.position(), dataCopy, 0, length );
+        this.data.put( position, dataCopy );
+        return position;
     }
 
     @Override
@@ -85,14 +60,15 @@ class InMemoryTestStore extends LifecycleAdapter implements SimpleStore
     }
 
     @Override
-    public boolean read( PageCursor cursor, Record record, long id )
+    public boolean read( PageCursor cursor, ByteBuffer data, long position )
     {
-        Record source = data.get( id );
-        if ( source == null )
+        byte[] bytes = this.data.get( position );
+        if ( bytes == null )
         {
             return false;
         }
-        record.copyContentsFrom( source );
+        System.arraycopy( bytes, 0, data.array(), data.position(), bytes.length );
+        data.position( data.position() + bytes.length );
         return true;
     }
 
@@ -100,19 +76,4 @@ class InMemoryTestStore extends LifecycleAdapter implements SimpleStore
     public void flush( PageCursorTracer cursorTracer )
     {
     }
-
-    @Override
-    public long nextId( PageCursorTracer cursorTracer )
-    {
-        return nextId.getAndIncrement();
-    }
-
-    @Override
-    public boolean exists( long id )
-    {
-        return data.contains( id );
-    }
-
-    // Basically this isn't used, it's just something to call close()
-    static PageCursor NO_PAGE_CURSOR = new ByteArrayPageCursor( new byte[0] );
 }

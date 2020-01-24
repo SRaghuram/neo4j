@@ -21,6 +21,7 @@ package org.neo4j.internal.freki;
 
 import java.util.Arrays;
 
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.storageengine.api.RelationshipDirection;
 import org.neo4j.storageengine.api.StorageNodeCursor;
 import org.neo4j.storageengine.api.StoragePropertyCursor;
@@ -55,9 +56,9 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
     private boolean currentRelationshipHasProperties;
     private long currentRelationshipInternalId;
 
-    FrekiRelationshipTraversalCursor( SimpleStore mainStore )
+    FrekiRelationshipTraversalCursor( MainStores stores, PageCursorTracer cursorTracer )
     {
-        super( mainStore );
+        super( stores, cursorTracer );
     }
 
     @Override
@@ -94,7 +95,7 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
     @Override
     public long entityReference()
     {
-        return externalRelationshipId( record.id, currentRelationshipInternalId, currentRelationshipOtherNode, currentRelationshipDirection.isOutgoing() );
+        return externalRelationshipId( loadedNodeId, currentRelationshipInternalId, currentRelationshipOtherNode, currentRelationshipDirection.isOutgoing() );
     }
 
     @Override
@@ -208,13 +209,13 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
     @Override
     public long sourceNodeReference()
     {
-        return currentRelationshipDirection == OUTGOING ? record.id : currentRelationshipOtherNode;
+        return currentRelationshipDirection == OUTGOING ? loadedNodeId : currentRelationshipOtherNode;
     }
 
     @Override
     public long targetNodeReference()
     {
-        return currentRelationshipDirection == INCOMING ? record.id : currentRelationshipOtherNode;
+        return currentRelationshipDirection == INCOMING ? loadedNodeId : currentRelationshipOtherNode;
     }
 
     @Override

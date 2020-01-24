@@ -20,25 +20,34 @@
 package org.neo4j.internal.freki;
 
 import org.eclipse.collections.api.map.primitive.MutableIntObjectMap;
+import org.eclipse.collections.api.set.primitive.MutableIntSet;
 import org.eclipse.collections.impl.factory.primitive.IntObjectMaps;
+import org.eclipse.collections.impl.factory.primitive.IntSets;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Objects;
 import javax.annotation.Nonnull;
 
+import org.neo4j.util.Preconditions;
 import org.neo4j.values.storable.Value;
 
+import static org.neo4j.internal.freki.FrekiMainStoreCursor.NULL;
+import static org.neo4j.internal.freki.StreamVByte.intArrayTarget;
+import static org.neo4j.internal.freki.StreamVByte.readIntDeltas;
+import static org.neo4j.internal.freki.StreamVByte.readLongs;
 import static org.neo4j.internal.freki.StreamVByte.writeIntDeltas;
 import static org.neo4j.internal.freki.StreamVByte.writeLongs;
 import static org.neo4j.internal.helpers.Numbers.safeCastIntToUnsignedByte;
 import static org.neo4j.util.Preconditions.checkState;
-import static org.neo4j.values.storable.Values.EMPTY_PRIMITIVE_INT_ARRAY;
 
 /**
- * [IN_USE|OFFSETS|LABELS|PROPERTY_KEYS,PROPERTY_VALUES|RELATIONSHIPS]
+ * [IN_USE|OFFSETS|LABELS|PROPERTY_KEYS,PROPERTY_VALUES|REL_TYPES|RELS[]|REL_TYPE_OFFSETS|FW]
+ * <--------------------------------------- Record ----------------------------------------->
+ *         <---------------------- MutableNodeRecordData ----------------------------------->
  */
 class MutableNodeRecordData
 {
@@ -47,18 +56,90 @@ class MutableNodeRecordData
     static final int ARRAY_ENTRIES_PER_RELATIONSHIP = 2;
 
     private final long id;
-    int[] labels = EMPTY_PRIMITIVE_INT_ARRAY;
+    MutableIntSet labels = IntSets.mutable.empty();
     private MutableIntObjectMap<Value> properties = IntObjectMaps.mutable.empty();
     private MutableIntObjectMap<Relationships> relationships = IntObjectMaps.mutable.empty();
     private long internalRelationshipIdCounter = 1;
+    private long forwardPointer = NULL;
 
     MutableNodeRecordData( long id )
     {
         this.id = id;
     }
 
+    @Override
+    public boolean equals( Object o )
+    {
+        if ( this == o )
+        {
+            return true;
+        }
+        if ( o == null || getClass() != o.getClass() )
+        {
+            return false;
+        }
+        MutableNodeRecordData that = (MutableNodeRecordData) o;
+        return id == that.id && internalRelationshipIdCounter == that.internalRelationshipIdCounter && forwardPointer == that.forwardPointer &&
+                labels.equals( that.labels ) && Objects.equals( properties, that.properties ) && Objects.equals( relationships, that.relationships );
+    }
+
+    @Override
+    public int hashCode()
+    {
+        int result = Objects.hash( id, properties, relationships, internalRelationshipIdCounter, forwardPointer );
+        result = 31 * result + labels.hashCode();
+        return result;
+    }
+
+    @Override
+    public String toString()
+    {
+        return String.format( "ID:%s, labels:%s, properties:%s, relationships:%s, fw:%d", id, labels, properties, relationships, forwardPointer );
+    }
+
+    void moveDataTo( MutableNodeRecordData otherData )
+    {
+        otherData.labels.addAll( labels );
+        otherData.properties.putAll( properties );
+        otherData.relationships.putAll( relationships );
+        otherData.internalRelationshipIdCounter = internalRelationshipIdCounter;
+        clearData();
+    }
+
+    void clearData()
+    {
+        // Doesn't clear entity/identity things like id and forwardPointer
+        labels.clear();
+        properties.clear();
+        relationships.clear();
+        internalRelationshipIdCounter = 1;
+    }
+
     static class Relationship
     {
+        @Override
+        public boolean equals( Object o )
+        {
+            if ( this == o )
+            {
+                return true;
+            }
+            if ( o == null || getClass() != o.getClass() )
+            {
+                return false;
+            }
+            Relationship that = (Relationship) o;
+            return internalId == that.internalId && sourceNodeId == that.sourceNodeId && otherNode == that.otherNode && type == that.type &&
+                    outgoing == that.outgoing && properties.equals( that.properties );
+        }
+
+        @Override
+        public String toString()
+        {
+            long id = externalRelationshipId( sourceNodeId, internalId, otherNode, outgoing );
+            return String.format( "ID:%s (%s), %s%s, properties: %s", id, internalId, outgoing ? "->" : " <-", otherNode, properties );
+        }
+
         // These two combined makes up the actual external relationship ID
         long internalId;
         long sourceNodeId;
@@ -131,27 +212,62 @@ class MutableNodeRecordData
             }
             return array;
         }
+
+        @Override
+        public boolean equals( Object o )
+        {
+            if ( this == o )
+            {
+                return true;
+            }
+            if ( o == null || getClass() != o.getClass() )
+            {
+                return false;
+            }
+            Relationships that = (Relationships) o;
+            return type == that.type && relationships.equals( that.relationships );
+        }
+
+        @Override
+        public String toString()
+        {
+            return String.format( "Type:%s, %s", type, relationships );
+        }
     }
 
-    void addProperty( int propertyKeyId, Value value )
+    void setNodeProperty( int propertyKeyId, Value value )
     {
         properties.put( propertyKeyId, value );
     }
 
-    Relationship createRelationship( Relationship sourceNodeRelationship, long otherNode, int type, boolean outgoing )
+    Relationship createRelationship( Relationship sourceNodeRelationship, long otherNode, int type )
     {
         checkState( internalRelationshipIdCounter < ARTIFICIAL_MAX_RELATIONSHIP_COUNTER, "Relationship counter exhausted for node %d", id );
         long internalId = sourceNodeRelationship != null ? sourceNodeRelationship.internalId : internalRelationshipIdCounter++;
+        boolean outgoing = sourceNodeRelationship == null;
         return relationships.getIfAbsentPut( type, () -> new MutableNodeRecordData.Relationships( type ) ).add( internalId, id, otherNode, type, outgoing );
+    }
+
+    // [ssff,ffff][ffff,ffff][ffff,ffff][ffff,ffff] [ffff,ffff][ffff,ffff][ffff,ffff][ffff,ffff]
+    // s: sizeExp
+    // f: forward pointer id
+    void setForwardPointer( long forwardPointer )
+    {
+        this.forwardPointer = forwardPointer;
+    }
+
+    long getForwardPointer()
+    {
+        return this.forwardPointer;
     }
 
     void serialize( ByteBuffer buffer )
     {
+        buffer.clear();
         int offsetHeaderPosition = buffer.position();
         // labels
         buffer.position( offsetHeaderPosition + SIZE_SLOT_HEADER );
-        Arrays.sort( labels );
-        writeIntDeltas( labels, buffer );
+        writeIntDeltas( labels.toSortedArray(), buffer );
 
         // properties
         // format being something like:
@@ -175,7 +291,7 @@ class MutableNodeRecordData
         // -   Rel2 (dir+hasProperties+otherNode+internalId)
         // -   ...
 
-        int endOffset = relationshipsOffset;
+        int endOffset = buffer.position();
         if ( relationships.notEmpty() )
         {
             Relationships[] allRelationships = this.relationships.toArray( new Relationships[relationships.size()] );
@@ -218,8 +334,19 @@ class MutableNodeRecordData
             writeIntDeltas( typeOffsets, buffer );
         }
 
+        if ( forwardPointer != NULL )
+        {
+            buffer.putLong( forwardPointer );
+        }
+
         // Write the offsets (properties,relationships,end) at the reserved offsets header position at the beginning
-        buffer.putInt( offsetHeaderPosition, ((endOffset & 0x3FF) << 20) | ((relationshipsOffset & 0x3FF) << 10) | propertiesOffset & 0x3FF );
+        // [ fee,eeee][eeee,eeee][rrrr,rrrr][rrpp,pppp][pppp,pppp]
+        // f: this record contains forward pointer
+        // e: end offset
+        // r: relationships offset
+        // p: properties offset
+        int fw = forwardPointer == NULL ? 0 : 0x40000000;
+        buffer.putInt( offsetHeaderPosition, fw | ((endOffset & 0x3FF) << 20) | ((relationshipsOffset & 0x3FF) << 10) | propertiesOffset & 0x3FF );
     }
 
     private static void writeProperties( MutableIntObjectMap<Value> properties, ByteBuffer buffer )
@@ -230,6 +357,14 @@ class MutableNodeRecordData
         for ( int propertyKey : propertyKeys )
         {
             properties.get( propertyKey ).writeTo( writer );
+        }
+    }
+
+    private void readProperties( MutableIntObjectMap<Value> into, ByteBuffer buffer )
+    {
+        for ( int propertyKey : readIntDeltas( intArrayTarget(), buffer ).array() )
+        {
+            into.put( propertyKey, PropertyValueFormat.read( buffer ) );
         }
     }
 
@@ -250,10 +385,60 @@ class MutableNodeRecordData
 
     void deserialize( ByteBuffer buffer )
     {
-        throw new UnsupportedOperationException( "Not implemented yet" );
+        int offsetHeader = buffer.getInt(); // [_fee][eeee][eeee][rrrr][rrrr][rrpp][pppp][pppp]
+        int propertiesOffset = propertyOffset( offsetHeader );
+        int relationshipOffset = relationshipOffset( offsetHeader );
+        int endOffset = endOffset( offsetHeader );
+        boolean containsForwardPointer = containsForwardPointer( offsetHeader );
+
+        labels = IntSets.mutable.of( readIntDeltas( intArrayTarget(), buffer ).array() );
+        properties.clear();
+        if ( propertiesOffset != 0 )
+        {
+            readProperties( properties, buffer );
+        }
+
+        relationships.clear();
+        internalRelationshipIdCounter = 1;
+        if ( relationshipOffset != 0 )
+        {
+            for ( int relationshipType : readIntDeltas( intArrayTarget(), buffer ).array() )
+            {
+                Relationships relationships = new Relationships( relationshipType );
+                long[] packedRelationships = readLongs( buffer );
+                int numRelationships = packedRelationships.length / ARRAY_ENTRIES_PER_RELATIONSHIP;
+                for ( int i = 0; i < numRelationships; i++ )
+                {
+                    int relationshipArrayIndex = i * ARRAY_ENTRIES_PER_RELATIONSHIP;
+                    long otherNodeRaw = packedRelationships[ relationshipArrayIndex ];
+                    boolean outgoing =  relationshipIsOutgoing( otherNodeRaw );
+                    long internalId = packedRelationships[ relationshipArrayIndex + 1 ];
+
+                    if ( outgoing && internalId >= internalRelationshipIdCounter )
+                    {
+                        internalRelationshipIdCounter = internalId + 1;
+                    }
+                    Relationship relationship = relationships.add( internalId, id, otherNodeOf( otherNodeRaw ), relationshipType, outgoing );
+                    if ( relationshipHasProperties( otherNodeRaw ) )
+                    {
+                        buffer.get(); //blocksize
+                        readProperties( relationship.properties, buffer );
+                    }
+                }
+                this.relationships.put( relationships.type, relationships );
+            }
+        }
+
+        if ( endOffset != 0 )
+        {
+            StreamVByte.readIntDeltas( StreamVByte.SKIP, buffer );
+            if ( containsForwardPointer )
+            {
+                forwardPointer = buffer.getLong();
+            }
+        }
     }
 
-    // TODO DRY
     private int[] typesOf( Relationships[] relationshipsArray )
     {
         int[] keys = new int[relationshipsArray.length];
@@ -284,6 +469,11 @@ class MutableNodeRecordData
         return (offsetHeader >>> 20) & 0x3FF;
     }
 
+    static boolean containsForwardPointer( int offsetHeader )
+    {
+        return (offsetHeader & 0x40000000) != 0;
+    }
+
     static long externalRelationshipId( long sourceNode, long internalRelationshipId, long otherNode, boolean outgoing )
     {
         long nodeId = outgoing ? sourceNode : otherNode;
@@ -298,5 +488,22 @@ class MutableNodeRecordData
     static long internalRelationshipIdFromRelationshipId( long relationshipId )
     {
         return relationshipId >>> 40;
+    }
+
+    static int sizeExponentialFromForwardPointer( long forwardPointer )
+    {
+        Preconditions.checkArgument( forwardPointer != NULL, "NULL FW pointer" );
+        return (int) (forwardPointer >>> 62);
+    }
+
+    static long idFromForwardPointer( long forwardPointer )
+    {
+        Preconditions.checkArgument( forwardPointer != NULL, "NULL FW pointer" );
+        return forwardPointer & 0x3FFFFFFF_FFFFFFFFL;
+    }
+
+    static long forwardPointer( int sizeExp, long id )
+    {
+        return id | (((long) sizeExp) << 62);
     }
 }

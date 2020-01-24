@@ -33,11 +33,12 @@ import static org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSuppl
 class TransactionApplier extends FrekiCommand.Dispatcher.Adapter implements Visitor<StorageCommand,IOException>, AutoCloseable
 {
     private final Stores stores;
-    private PageCursor mainStoreCursor;
+    private PageCursor[] storeCursors;
 
-    TransactionApplier( Stores stores )
+    TransactionApplier( Stores stores ) throws IOException
     {
         this.stores = stores;
+        this.storeCursors = stores.openMainStoreWriteCursors();
     }
 
     public TransactionApplier startTx( CommandsToApply batch, LockGroup locks )
@@ -54,11 +55,9 @@ class TransactionApplier extends FrekiCommand.Dispatcher.Adapter implements Visi
     @Override
     public void handle( FrekiCommand.Node node ) throws IOException
     {
-        if ( mainStoreCursor == null )
-        {
-            mainStoreCursor = stores.mainStore.openWriteCursor();
-        }
-        stores.mainStore.write( mainStoreCursor, node.after() );
+        Record record = node.after();
+        int sizeExp = record.sizeExp();
+        stores.mainStore( sizeExp ).write( storeCursors[sizeExp], node.after() );
     }
 
     @Override
@@ -82,6 +81,6 @@ class TransactionApplier extends FrekiCommand.Dispatcher.Adapter implements Visi
     @Override
     public void close() throws Exception
     {
-        IOUtils.closeAll( mainStoreCursor );
+        IOUtils.closeAll( storeCursors );
     }
 }
