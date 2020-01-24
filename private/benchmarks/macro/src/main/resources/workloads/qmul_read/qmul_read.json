@@ -11,27 +11,11 @@
       }
     },
     {
-      "name": "Q2",
-      "description": "Less severe, faster due to lower cardinality",
-      "queryFile": "queries/Q2.cypher",
-      "parameters": {
-        "file": "parameters/Q2.txt"
-      }
-    },
-    {
       "name": "Q3",
       "description": "Pathological query forced long chain",
       "queryFile": "queries/Q3.cypher",
       "parameters": {
         "file": "parameters/Q3.txt"
-      }
-    },
-    {
-      "name": "Q4",
-      "description": "Less severe query forced long chain",
-      "queryFile": "queries/Q4.cypher",
-      "parameters": {
-        "file": "parameters/Q4.txt"
       }
     },
     {
