@@ -15,6 +15,7 @@ import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
 
 /**
  * Database operator for local administrative overrides of system-wide operator.
+ *
  */
 public final class LocalDbmsOperator extends DbmsOperator
 {
@@ -29,21 +30,21 @@ public final class LocalDbmsOperator extends DbmsOperator
     {
         var id = databaseId( databaseName );
         desired.put( databaseName, new EnterpriseDatabaseState( id, DROPPED ) );
-        trigger( ReconcilerRequest.force() ).await( id );
+        trigger( ReconcilerRequest.priority( id ) ).await( id );
     }
 
     public void startDatabase( String databaseName )
     {
         var id = databaseId( databaseName );
         desired.put( databaseName, new EnterpriseDatabaseState( id, STARTED ) );
-        trigger( ReconcilerRequest.force() ).await( id );
+        trigger( ReconcilerRequest.priority( id ) ).await( id );
     }
 
     public void stopDatabase( String databaseName )
     {
         var id = databaseId( databaseName );
         desired.put( databaseName, new EnterpriseDatabaseState( id, STOPPED ) );
-        trigger( ReconcilerRequest.force() ).await( id );
+        trigger( ReconcilerRequest.priority( id ) ).await( id );
     }
 
     private NamedDatabaseId databaseId( String databaseName )

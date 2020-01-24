@@ -44,7 +44,6 @@ import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
 
 import static com.neo4j.dbms.EnterpriseOperatorState.DROPPED;
@@ -75,7 +74,7 @@ import static java.util.concurrent.CompletableFuture.delayedExecutor;
  * Besides parallelisation, the reconciler provides optional backoff/retry semantics for failed state transitions.
  *
  * Users, internal components, extensions etc... can declare the desired state of a given database via various {@link DbmsOperator}
- * instances. When triggered, the reconciler fetches the desired states from each operator as {@code Map<DatabaseId,EnterpriseOperatorState>}
+ * instances. When triggered, the reconciler fetches the desired states from each operator as {@code Map<String,EnterpriseDatabaseState>}
  * and merges them. When multiple operators specify a desired state for the same database, one state is chosen according to the
  * {@code this.precedence} binary operator. The final merged map of DatabaseIds to OperatorStates is compared to {this.currentStates}
  * and changes are made where necessary.
@@ -85,8 +84,9 @@ import static java.util.concurrent.CompletableFuture.delayedExecutor;
 public class DbmsReconciler implements DatabaseStateService
 {
     private final ExponentialBackoffStrategy backoffStrategy;
-    private final Executor executor;
-    private final Map<String,CompletableFuture<ReconcilerStepResult>> reconcilerJobCache;
+    private final ReconcilerExecutors executors;
+    private final Map<String,CompletableFuture<ReconcilerStepResult>> waitingJobCache;
+
     private final Set<String> reconciling;
     private final MultiDatabaseManager<? extends DatabaseContext> databaseManager;
     private final BinaryOperator<EnterpriseDatabaseState> precedence;
@@ -105,22 +105,14 @@ public class DbmsReconciler implements DatabaseStateService
                 config.get( GraphDatabaseSettings.reconciler_minimum_backoff ),
                 config.get( GraphDatabaseSettings.reconciler_maximum_backoff ) );
 
-        int parallelism = config.get( GraphDatabaseSettings.reconciler_maximum_parallelism );
-        scheduler.setParallelism( Group.DATABASE_RECONCILER , parallelism );
-        this.executor = scheduler.executor( Group.DATABASE_RECONCILER );
-
+        this.executors = new ReconcilerExecutors( scheduler, config );
         this.reconciling = new HashSet<>();
         this.currentStates = new ConcurrentHashMap<>();
-        this.reconcilerJobCache = new ConcurrentHashMap<>();
+        this.waitingJobCache = new ConcurrentHashMap<>();
         this.log = logProvider.getLog( getClass() );
         this.precedence = EnterpriseOperatorState.minByOperatorState( EnterpriseDatabaseState::operatorState );
         this.transitions = prepareLifecycleTransitionSteps();
         this.listeners = new CopyOnWriteArrayList<>();
-    }
-
-    private EnterpriseDatabaseState stateFor( NamedDatabaseId id )
-    {
-        return currentStates.getOrDefault( id.name(), EnterpriseDatabaseState.unknown( id ) );
     }
 
     @Override
@@ -156,9 +148,21 @@ public class DbmsReconciler implements DatabaseStateService
     {
         var namesOfDbsToReconcile = operators.stream()
                 .flatMap( op -> op.desired().keySet().stream() )
-                .distinct();
+                .collect( Collectors.toSet() );
 
-        var reconciliation = namesOfDbsToReconcile
+        if ( !request.isSimple() )
+        {
+            var requestedDbs = request.priorityDatabaseNames();
+            requestedDbs.removeAll( namesOfDbsToReconcile );
+
+            if ( !requestedDbs.isEmpty() )
+            {
+                log.warn( "Reconciliation request specifies unknown databases as priority: [%s]. Reconciler is tracking: [%s]",
+                        requestedDbs, namesOfDbsToReconcile );
+            }
+        }
+
+        var reconciliation = namesOfDbsToReconcile.stream()
                 .map( dbName -> Pair.of( dbName, scheduleReconciliationJob( dbName, request, operators ) ) )
                 .collect( Collectors.toMap( Pair::first, Pair::other ) );
 
@@ -179,9 +183,14 @@ public class DbmsReconciler implements DatabaseStateService
                 .reduce( new HashMap<>(), ( l, r ) -> DbmsReconciler.combineDesiredStates( l, r, precedence ) );
     }
 
-    protected EnterpriseDatabaseState getReconcilerEntryFor( NamedDatabaseId namedDatabaseId )
+    private EnterpriseDatabaseState getReconcilerEntryOrDefault( NamedDatabaseId namedDatabaseId, EnterpriseDatabaseState initial )
     {
-        return currentStates.getOrDefault( namedDatabaseId.name(), EnterpriseDatabaseState.initial( namedDatabaseId ) );
+        return currentStates.getOrDefault( namedDatabaseId.name(), initial );
+    }
+
+    protected EnterpriseDatabaseState initialReconcilerEntry( NamedDatabaseId namedDatabaseId )
+    {
+        return EnterpriseDatabaseState.initial( namedDatabaseId );
     }
 
     /**
@@ -216,30 +225,37 @@ public class DbmsReconciler implements DatabaseStateService
     private synchronized CompletableFuture<ReconcilerStepResult> scheduleReconciliationJob( String databaseName, ReconcilerRequest request,
             List<DbmsOperator> operators )
     {
-        var cachedJob = reconcilerJobCache.get( databaseName );
-        if ( cachedJob != null && request.isSimple() )
+        var jobCanBeCached = !request.isPriorityRequestForDatabase( databaseName );
+        if ( jobCanBeCached )
         {
-            return cachedJob;
+            var cachedJob = waitingJobCache.get( databaseName );
+            if ( cachedJob != null )
+            {
+                return cachedJob;
+            }
         }
 
         var reconcilerJobHandle = new CompletableFuture<Void>();
+        var executor = executors.executor( request, databaseName );
 
         var job = reconcilerJobHandle
-                .thenCompose( ignored -> preReconcile( databaseName, operators, request ) )
-                .thenCompose( desiredState -> doTransitions( databaseName, desiredState, request ) )
+                .thenCompose( ignored -> preReconcile( databaseName, operators, request, executor ) )
+                .thenCompose( desiredState -> doTransitions( databaseName, desiredState, request, executor ) )
                 .whenComplete( ( result, throwable ) -> postReconcile( databaseName, request, result, throwable ) );
 
-        if ( request.isSimple() )
+        if ( jobCanBeCached )
         {
-            reconcilerJobCache.put( databaseName, job );
+            waitingJobCache.put( databaseName, job );
         }
+
         //Having synchronously placed the job future in the cache (and thus avoiding potential races)
         // we can now start the job by completing the Void handle future at the head of the chain.
         reconcilerJobHandle.complete( null );
         return job;
     }
 
-    private CompletableFuture<EnterpriseDatabaseState> preReconcile( String databaseName, List<DbmsOperator> operators, ReconcilerRequest request )
+    private CompletableFuture<EnterpriseDatabaseState> preReconcile( String databaseName, List<DbmsOperator> operators, ReconcilerRequest request,
+            Executor executor )
     {
         return CompletableFuture.supplyAsync( () ->
         {
@@ -248,10 +264,11 @@ public class DbmsReconciler implements DatabaseStateService
                 log.debug( "Attempting to acquire lock before reconciling state of database `%s`.", databaseName );
                 acquireLockOn( databaseName );
 
-                if ( request.isSimple() )
+                if ( request.isPriorityRequestForDatabase( databaseName ) )
                 {
-                    // Must happen-before extracting desired states.
-                    reconcilerJobCache.remove( databaseName );
+                    // Must happen-before extracting desired states otherwise the cache might return a job which reconciles to an
+                    // earlier desired state than that specified by the component triggering this job.
+                    waitingJobCache.remove( databaseName );
                 }
 
                 var desiredState = desiredStates( operators, precedence ).get( databaseName );
@@ -276,9 +293,10 @@ public class DbmsReconciler implements DatabaseStateService
         }, executor );
     }
 
-    private CompletableFuture<ReconcilerStepResult> doTransitions( String databaseName, EnterpriseDatabaseState desiredState, ReconcilerRequest request )
+    private CompletableFuture<ReconcilerStepResult> doTransitions( String databaseName, EnterpriseDatabaseState desiredState, ReconcilerRequest request,
+            Executor executor )
     {
-        var currentState = getReconcilerEntryFor( desiredState.databaseId() );
+        var currentState = getReconcilerEntryOrDefault( desiredState.databaseId(), initialReconcilerEntry( desiredState.databaseId() ) );
         var initialResult = new ReconcilerStepResult( currentState, null, desiredState );
 
         if ( currentState.equals( desiredState ) )
@@ -287,7 +305,7 @@ public class DbmsReconciler implements DatabaseStateService
         }
         log.info( "Database %s is requested to transition from %s to %s", databaseName, currentState, desiredState );
 
-        if ( currentState.hasFailed() && !request.forceReconciliation() )
+        if ( currentState.hasFailed() && !request.isPriorityRequestForDatabase( databaseName ) )
         {
             var message = format( "Attempting to reconcile database %s to state '%s' but has previously failed. Manual force is required to retry.",
                     databaseName, desiredState.operatorState().description() );
@@ -301,7 +319,7 @@ public class DbmsReconciler implements DatabaseStateService
         var steps = getLifecycleTransitionSteps( currentState, desiredState );
 
         NamedDatabaseId namedDatabaseId = desiredState.databaseId();
-        return CompletableFuture.supplyAsync( () -> doTransitions( initialResult.state(), steps, desiredState ), executor  )
+        return CompletableFuture.supplyAsync( () -> doTransitions( initialResult.state(), steps, desiredState ), executor )
                 .thenCompose( result -> handleResult( namedDatabaseId, desiredState, result, executor, backoff, 0 ) );
     }
 
@@ -435,7 +453,7 @@ public class DbmsReconciler implements DatabaseStateService
     private static Optional<Throwable> shouldFailDatabaseWithCausePostSuccessfulReconcile( NamedDatabaseId namedDatabaseId,
             EnterpriseDatabaseState currentState, ReconcilerRequest request )
     {
-        if ( request.forceReconciliation() )
+        if ( request.isPriorityRequestForDatabase( namedDatabaseId.name() ) )
         {
             // a successful reconcile operation was forced, no need to keep the failed state
             return Optional.empty();

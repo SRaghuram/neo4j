@@ -93,5 +93,4 @@ class DbmsReconcilerIT
                 () -> reconciler.stateOfDatabase( db.databaseId() ), equalityCondition( STOPPED ), 10, SECONDS );
         assertTrue( reconciler.causeOfFailure( db.databaseId() ).isEmpty(), "Database is *not* expected to be failed" );
     }
-
 }

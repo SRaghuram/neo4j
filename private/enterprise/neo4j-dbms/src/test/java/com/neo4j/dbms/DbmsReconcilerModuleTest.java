@@ -177,7 +177,7 @@ class DbmsReconcilerModuleTest
     }
 
     @Test
-    void shouldNotCacheForceReconciliationRequests() throws Exception
+    void shouldNotReturnCachedSimpleJobForPriorityRequests() throws Exception
     {
         // given
         // an operator desiring foo as started
@@ -211,7 +211,7 @@ class DbmsReconcilerModuleTest
         // then
         // A third reconciliation attempts would return the cached job, but its forced, so it won't
         operator.stopDatabase( foo.name() );
-        var stopFooB = reconciler.reconcile( singletonList( operator ), ReconcilerRequest.force() );
+        var stopFooB = reconciler.reconcile( singletonList( operator ), ReconcilerRequest.priority( foo ) );
 
         // then
         assertNotEquals( stopFooA, stopFooB, "The reconciler results should not be equal as forced jobs should not be cached!" );

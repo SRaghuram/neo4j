@@ -29,14 +29,16 @@ class ShutdownOperator extends DbmsOperator
     void stopAll()
     {
         desired.clear();
-        var desireAllStopped = databaseManager.registeredDatabases().keySet().stream()
+        var allDbsNoSystem = databaseManager.registeredDatabases().keySet().stream()
                 .filter( e -> !e.equals( NAMED_SYSTEM_DATABASE_ID ) )
+                .collect( Collectors.toSet() );
+        var desireAllStopped = allDbsNoSystem.stream()
                 .collect( Collectors.toMap( NamedDatabaseId::name, this::stoppedState ) );
         desired.putAll( desireAllStopped );
-        trigger( ReconcilerRequest.force() ).awaitAll();
+        trigger( ReconcilerRequest.priority( allDbsNoSystem ) ).awaitAll();
 
         desired.put( NAMED_SYSTEM_DATABASE_ID.name(), stoppedState( NAMED_SYSTEM_DATABASE_ID ) );
-        trigger( ReconcilerRequest.force() ).await( NAMED_SYSTEM_DATABASE_ID );
+        trigger( ReconcilerRequest.priority( NAMED_SYSTEM_DATABASE_ID ) ).await( NAMED_SYSTEM_DATABASE_ID );
     }
 
     private EnterpriseDatabaseState stoppedState( NamedDatabaseId id )

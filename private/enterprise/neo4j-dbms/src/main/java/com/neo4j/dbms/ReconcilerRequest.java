@@ -5,32 +5,48 @@
  */
 package com.neo4j.dbms;
 
+import java.util.HashSet;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.neo4j.kernel.database.NamedDatabaseId;
 
 /**
  * Describes a request to perform a single reconciliation attempt.
+ *
+ * Reconciliation attempts are *always* global. All requests will cause the reconciler to touch all databases.
+ * This model is chosen for simplicity, and is relatively low cost as redundant reconciliations (where a database is already in its desired state)
+ * are no-ops.
+ *
+ * A reconciler request may specify a subset of databases as being high priority. This has a couple of effects:
+ *   - Even if those databases have failed a previous transition, reconciliation will be re-attempted to bring them to their desired states.
+ *   - High priority reconciliation jobs are handled by a different, unbounded thread pool, and therefore ignore the reconciler's parallelism limit.
+ *
+ *  Note that internally the reconciler tracks databases as Strings because a single reconciliation job may operate on databases with two different ids
+ *  but the same name ( i.e. STOPPED->DROPPED->INITIAL->STARTED ). The job as a whole should still be priority.
+ *                          |----(foo,1)----|  |----(foo,2)----|
  */
-public class ReconcilerRequest
+public final class ReconcilerRequest
 {
-    private static final ReconcilerRequest SIMPLE = new ReconcilerRequest( false, null, null );
-    private static final ReconcilerRequest FORCE = new ReconcilerRequest( true, null, null );
+    private static final ReconcilerRequest SIMPLE = new ReconcilerRequest( Set.of(), null, null );
 
-    private final boolean forceReconciliation;
-    private final NamedDatabaseId panickedNamedDatabaseId;
+    private final Set<String> priorityDatabases;
+    private final boolean isSimple;
+    private final NamedDatabaseId panickedDatabaseId;
     private final Throwable causeOfPanic;
 
-    private ReconcilerRequest( boolean forceReconciliation, NamedDatabaseId panickedNamedDatabaseId, Throwable causeOfPanic )
+    private ReconcilerRequest( Set<String> namesOfPriorityDatabases, NamedDatabaseId panickedDatabaseId, Throwable causeOfPanic )
     {
-        this.forceReconciliation = forceReconciliation;
-        this.panickedNamedDatabaseId = panickedNamedDatabaseId;
+        this.priorityDatabases = namesOfPriorityDatabases;
+        this.isSimple = namesOfPriorityDatabases.isEmpty();
+        this.panickedDatabaseId = panickedDatabaseId;
         this.causeOfPanic = causeOfPanic;
     }
 
     /**
-     * A request that does not force state transitions and does not mark any databases as failed.
+     * A request that does not mark any database reconciliations as high priority and does not mark any databases as failed.
      *
      * @return a reconciler request.
      */
@@ -43,10 +59,25 @@ public class ReconcilerRequest
      * A request that forces state transitions and does not mark any databases as failed.
      *
      * @return a reconciler request.
+     * @param priorityDatabase the database to be treated as priority next reconciliation
      */
-    public static ReconcilerRequest force()
+    public static ReconcilerRequest priority( NamedDatabaseId priorityDatabase )
     {
-        return FORCE;
+        return priority( Set.of( priorityDatabase ) );
+    }
+
+    /**
+     * A request that forces state transitions and does not mark any databases as failed.
+     *
+     * @return a reconciler request.
+     * @param priorityDatabases the subset of databases to be treated as priority next reconciliation
+     */
+    public static ReconcilerRequest priority( Set<NamedDatabaseId> priorityDatabases )
+    {
+        var priorityDbNames = priorityDatabases.stream()
+                .map( NamedDatabaseId::name )
+                .collect( Collectors.toSet() );
+        return new ReconcilerRequest( priorityDbNames, null, null );
     }
 
     /**
@@ -56,17 +87,22 @@ public class ReconcilerRequest
      */
     public static ReconcilerRequest forPanickedDatabase( NamedDatabaseId namedDatabaseId, Throwable causeOfPanic )
     {
-        return new ReconcilerRequest( false, namedDatabaseId, causeOfPanic );
+        return new ReconcilerRequest( Set.of( namedDatabaseId.name() ), namedDatabaseId, causeOfPanic );
+    }
+
+    Set<String> priorityDatabaseNames()
+    {
+        return new HashSet<>( priorityDatabases );
     }
 
     /**
-     * Whether or not to force the reconciler to try transitions for databases which previously failed.
+     * Whether or not this request considers the reconciliation of the given database Id to be high priority.
      *
-     * @return {@code true} if transitions should be forced, {@code false} otherwise.
+     * @return {@code true} if transitions for databaseId should be high priority, {@code false} otherwise.
      */
-    boolean forceReconciliation()
+    boolean isPriorityRequestForDatabase( String databaseName )
     {
-        return forceReconciliation;
+        return priorityDatabases.contains( databaseName );
     }
 
     /**
@@ -77,16 +113,16 @@ public class ReconcilerRequest
      */
     Optional<Throwable> causeOfPanic( NamedDatabaseId namedDatabaseId )
     {
-        boolean thisDatabaseHasPanicked = panickedNamedDatabaseId != null && panickedNamedDatabaseId.equals( namedDatabaseId );
+        boolean thisDatabaseHasPanicked = causeOfPanic != null && Objects.equals( namedDatabaseId, panickedDatabaseId );
         return thisDatabaseHasPanicked ? Optional.of( causeOfPanic ) : Optional.empty();
     }
 
     /**
-     * @return Whether this reconciler request is simple (i.e. isn't forced and has no panic cause associated).
+     * @return Whether this reconciler request is simple (i.e. isn't high priority for any databases and has no panic cause associated).
      */
     boolean isSimple()
     {
-        return causeOfPanic == null && !forceReconciliation;
+        return isSimple;
     }
 
     @Override
@@ -101,20 +137,20 @@ public class ReconcilerRequest
             return false;
         }
         ReconcilerRequest that = (ReconcilerRequest) o;
-        return forceReconciliation == that.forceReconciliation && Objects.equals( panickedNamedDatabaseId, that.panickedNamedDatabaseId ) &&
-                Objects.equals( causeOfPanic, that.causeOfPanic );
+        return isSimple == that.isSimple && Objects.equals( priorityDatabases, that.priorityDatabases ) &&
+                Objects.equals( panickedDatabaseId, that.panickedDatabaseId ) && Objects.equals( causeOfPanic, that.causeOfPanic );
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash( forceReconciliation, panickedNamedDatabaseId, causeOfPanic );
+        return Objects.hash( priorityDatabases, isSimple, panickedDatabaseId, causeOfPanic );
     }
 
     @Override
     public String toString()
     {
-        return "ReconcilerRequest{" + "forceReconciliation=" + forceReconciliation + ", panickedDatabaseId=" + panickedNamedDatabaseId + ", causeOfPanic=" +
-                causeOfPanic + '}';
+        return "ReconcilerRequest{" + "priorityDatabases=" + priorityDatabases + ", isSimple=" + isSimple + ", panickedDatabaseId=" + panickedDatabaseId +
+                ", causeOfPanic=" + causeOfPanic + '}';
     }
 }

@@ -9,7 +9,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
+import java.util.UUID;
 
+import org.neo4j.kernel.database.DatabaseIdFactory;
 import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
@@ -31,11 +33,12 @@ class LocalDbmsOperatorTest
     private LocalDbmsOperator operator = new LocalDbmsOperator( databaseIdRepository );
 
     private String databaseName = "my.db";
+    private NamedDatabaseId databaseId = DatabaseIdFactory.from( databaseName, UUID.randomUUID() );
 
     @BeforeEach
     void setup()
     {
-        when( connector.trigger( ReconcilerRequest.force() ) ).thenReturn( ReconcilerResult.EMPTY );
+        when( connector.trigger( ReconcilerRequest.priority( databaseId ) ) ).thenReturn( ReconcilerResult.EMPTY );
         operator.connect( connector );
     }
 
@@ -43,7 +46,7 @@ class LocalDbmsOperatorTest
     void shouldBeAbleToDropDatabase()
     {
         operator.dropDatabase( databaseName );
-        verify( connector, times( 1 ) ).trigger( ReconcilerRequest.force() );
+        verify( connector, times( 1 ) ).trigger( ReconcilerRequest.priority( databaseId ) );
 
         assertEquals( DROPPED, operatorState( databaseIdRepository.getByName( databaseName ) ) );
     }
@@ -52,7 +55,7 @@ class LocalDbmsOperatorTest
     void shouldBeAbleToStartDatabase()
     {
         operator.startDatabase( databaseName );
-        verify( connector, times( 1 ) ).trigger( ReconcilerRequest.force() );
+        verify( connector, times( 1 ) ).trigger( ReconcilerRequest.priority( databaseId ) );
 
         assertEquals( STARTED, operatorState( databaseIdRepository.getByName( databaseName ) ) );
     }
@@ -61,7 +64,7 @@ class LocalDbmsOperatorTest
     void shouldBeAbleToStopDatabase()
     {
         operator.stopDatabase( databaseName );
-        verify( connector, times( 1 ) ).trigger( ReconcilerRequest.force() );
+        verify( connector, times( 1 ) ).trigger( ReconcilerRequest.priority( databaseId ) );
 
         assertEquals( STOPPED, operatorState( databaseIdRepository.getByName( databaseName ) ) );
     }
