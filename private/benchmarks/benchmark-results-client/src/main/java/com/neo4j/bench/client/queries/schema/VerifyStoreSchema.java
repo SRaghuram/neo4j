@@ -109,6 +109,9 @@ public class VerifyStoreSchema implements Query<Void>
                          patternCountInStore( "(:Metrics)-[:WITH_ANNOTATION]->()", session ) +
                          patternCountInStore( "(:TestRun)-[:WITH_ANNOTATION]->()", session ) );
 
+            assertOneToOneWhenLhsExists( "AuxiliaryMetrics nodes connect to Metrics nodes correctly",
+                                         "(:Metrics)", "-[:HAS_AUXILIARY_METRICS]->", "(:AuxiliaryMetrics)", session );
+
             // --------------------------------------------------------------------------------------------------------
             // ------------------------------- Isolated Nodes ---------------------------------------------------------
             // --------------------------------------------------------------------------------------------------------
@@ -122,10 +125,10 @@ public class VerifyStoreSchema implements Query<Void>
             assertEqual( "All Project should have at least one relationship",
                          isolatedCountForLabel( "Project", session ), 0 );
 
-            assertEqual( "All Neo4jConfig should have exactly one relationship",
+            assertEqual( "All Neo4jConfig should have at least one relationship",
                          isolatedCountForLabel( "Neo4jConfig", session ), 0 );
 
-            assertEqual( "All BenchmarkConfig should have exactly one relationship",
+            assertEqual( "All BenchmarkConfig should have at least one relationship",
                          isolatedCountForLabel( "BenchmarkConfig", session ), 0 );
 
             assertEqual( "All Java should have at least one relationship",
@@ -134,7 +137,7 @@ public class VerifyStoreSchema implements Query<Void>
             assertEqual( "All Environment should have at least one relationship",
                          isolatedCountForLabel( "Environment", session ), 0 );
 
-            assertEqual( "All BenchmarkParams should have exactly one relationship",
+            assertEqual( "All BenchmarkParams should have at least one relationship",
                          isolatedCountForLabel( "BenchmarkParams", session ), 0 );
 
             assertEqual( "All BenchmarkGroup should have at least one relationship",
@@ -143,11 +146,14 @@ public class VerifyStoreSchema implements Query<Void>
             assertEqual( "All Benchmark should have at least one relationship",
                          isolatedCountForLabel( "Benchmark", session ), 0 );
 
-            assertEqual( "All Profiles should have at exactly one relationship",
+            assertEqual( "All Profiles should have at least one relationship",
                          isolatedCountForLabel( "Profiles", session ), 0 );
 
-            assertEqual( "All Annotation should have at exactly one relationship",
+            assertEqual( "All Annotation should have at least one relationship",
                          isolatedCountForLabel( "Annotation", session ), 0 );
+
+            assertEqual( "All AuxiliaryMetrics should have at least one relationship",
+                         isolatedCountForLabel( "AuxiliaryMetrics", session ), 0 );
 
             // --------------------------------------------------------------------------------------------------------
             // ------------------------------- No Unexpected Nodes ----------------------------------------------------
@@ -179,6 +185,30 @@ public class VerifyStoreSchema implements Query<Void>
         assertEqual( reason + "\n" + countsString, countLeftRel, countRightRel );
         assertEqual( reason + "\n" + countsString, countRel, countLeftRel );
         assertEqual( reason + "\n" + countsString, countRel, countRightRel );
+    }
+
+    /**
+     * Some nodes of the schema are optional, but when they do exist they should connect to exactly one other node, with exactly one relationship.
+     * This method performs this check.
+     *
+     * @param leftNode node that is always present, i.e., not optional
+     * @param optionalRelExpression relationship that connects LHS to RHS nodes, when the optional RHS node is present
+     * @param optionalRightNode optional node, i.e., not always present
+     */
+    private void assertOneToOneWhenLhsExists(
+            String reason,
+            String leftNode,
+            String optionalRelExpression,
+            String optionalRightNode,
+            Session session )
+    {
+        int maybeRightCount = patternCountInStore( optionalRightNode, session );
+        int maybeRelCount = patternCountInStore( "()" + optionalRelExpression + "()", session );
+        int maybeRightAndMaybeRelCount = patternCountInStore( "()" + optionalRelExpression + optionalRightNode, session );
+        int leftAndMaybeRelCount = patternCountInStore( leftNode + optionalRelExpression + "()", session );
+        assertEqual( reason + "\nEvery RHS node should have exactly one relationship", maybeRightCount, maybeRightAndMaybeRelCount );
+        assertEqual( reason + "\nEvery RHS node should have exactly one relationship", maybeRelCount, maybeRightAndMaybeRelCount );
+        assertEqual( reason + "\nEvery RHS node should connect to expected LHS node", leftAndMaybeRelCount, maybeRightAndMaybeRelCount );
     }
 
     // "approximate" because asserts only work on totals/averages, not on every entity

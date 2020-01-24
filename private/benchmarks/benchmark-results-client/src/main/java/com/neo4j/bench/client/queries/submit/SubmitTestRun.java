@@ -24,7 +24,7 @@ import org.neo4j.driver.v1.Record;
 import org.neo4j.driver.v1.Session;
 import org.neo4j.driver.v1.StatementResult;
 import org.neo4j.driver.v1.Transaction;
-import org.neo4j.driver.v1.types.MapAccessor;
+import org.neo4j.driver.v1.Value;
 
 import static com.neo4j.bench.common.model.BenchmarkMetrics.extractBenchmarkMetrics;
 import static com.neo4j.bench.common.util.BenchmarkUtil.prettyPrint;
@@ -71,9 +71,8 @@ public class SubmitTestRun implements Query<SubmitTestRunResult>
                         throw new RuntimeException( "Query returned more than one row!" );
                     }
 
-
                     List<List<Object>> benchmarkMetricsLists = record.get( "benchmark_metrics" )
-                                                                     .asList( list -> list.asList( MapAccessor::asMap ) );
+                                                                     .asList( Value::asList );
                     List<BenchmarkMetrics> benchmarkMetrics =
                             benchmarkMetricsLists.stream()
                                                  .map( metrics ->

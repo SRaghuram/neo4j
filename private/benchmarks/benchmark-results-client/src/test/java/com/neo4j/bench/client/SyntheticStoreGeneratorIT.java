@@ -8,7 +8,6 @@ package com.neo4j.bench.client;
 import com.neo4j.bench.client.SyntheticStoreGenerator.SyntheticStoreGeneratorBuilder;
 import com.neo4j.bench.client.SyntheticStoreGenerator.ToolBenchGroup;
 import com.neo4j.bench.client.queries.schema.CreateSchema;
-import com.neo4j.bench.client.queries.schema.DropSchema;
 import com.neo4j.bench.client.queries.schema.VerifyStoreSchema;
 import com.neo4j.bench.common.model.Repository;
 import com.neo4j.harness.junit.extension.EnterpriseNeo4jExtension;
@@ -156,7 +155,6 @@ public class SyntheticStoreGeneratorIT
 
         try ( StoreClient client = StoreClient.connect( boltUri, USERNAME, PASSWORD, 1 ) )
         {
-            QUERY_RETRIER.execute( client, new DropSchema(), CLIENT_RETRY_COUNT );
             QUERY_RETRIER.execute( client, new CreateSchema(), CLIENT_RETRY_COUNT );
             QUERY_RETRIER.execute( client, new VerifyStoreSchema(), 1 );
             return generator.generate( client );
@@ -216,6 +214,19 @@ public class SyntheticStoreGeneratorIT
                 assertThat( "has correct number of unique Metrics nodes",
                             metricsCount,
                             equalTo( generationResult.metrics() ) );
+
+                int auxiliaryMetricsCount = session.run( "MATCH (:AuxiliaryMetrics) RETURN count(*) AS c" ).next().get( "c" ).asInt();
+                assertThat( "has correct number of unique Auxiliary Metrics nodes",
+                            auxiliaryMetricsCount,
+                            equalTo( generationResult.auxiliaryMetrics() ) );
+
+                int allMetricsCount = session.run( "MATCH (n) WHERE n:Metrics OR n:AuxiliaryMetrics RETURN count(*) AS c" )
+                                             .next()
+                                             .get( "c" )
+                                             .asInt();
+                assertThat( "has correct number of unique Auxiliary Metrics & Metrics nodes",
+                            allMetricsCount,
+                            equalTo( metricsCount + auxiliaryMetricsCount ) );
 
                 int benchmarkGroupCount = session.run( "MATCH (:BenchmarkGroup) RETURN count(*) AS c" ).next().get( "c" ).asInt();
                 assertThat( "has correct number of unique BenchmarkGroup nodes",

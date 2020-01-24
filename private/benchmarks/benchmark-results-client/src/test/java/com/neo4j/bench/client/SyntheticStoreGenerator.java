@@ -354,14 +354,19 @@ public class SyntheticStoreGenerator
                     BenchmarkGroup benchmarkGroup = toolBenchGroup.group();
                     for ( Benchmark benchmark : toolBenchGroup.benchmarks() )
                     {
+                        AuxiliaryMetrics maybeAuxiliaryMetrics = randomAuxiliaryMetrics();
                         benchmarkGroupBenchmarkMetrics.add(
                                 benchmarkGroup,
                                 benchmark,
                                 randomMetrics(),
-                                randomAuxiliaryMetrics(),
+                                maybeAuxiliaryMetrics,
                                 config );
                         generationResult.addBenchmark( tool, benchmarkGroup, benchmark );
                         generationResult.incMetrics();
+                        if ( maybeAuxiliaryMetrics != null )
+                        {
+                            generationResult.incAuxiliaryMetrics();
+                        }
                     }
 
                     calendar.add( Calendar.MINUTE, minutesBetweenRuns );
@@ -608,6 +613,7 @@ public class SyntheticStoreGenerator
         private Set<BenchmarkTool> toolVersions = new HashSet<>();
         private Set<String> projectBranchOwners = new HashSet<>();
         private int metrics;
+        private int auxiliaryMetrics;
         private int testRunAnnotations;
         private int metricsAnnotations;
 
@@ -649,6 +655,11 @@ public class SyntheticStoreGenerator
         private void incMetrics()
         {
             metrics++;
+        }
+
+        private void incAuxiliaryMetrics()
+        {
+            auxiliaryMetrics++;
         }
 
         private void incTestRunAnnotations()
@@ -738,6 +749,11 @@ public class SyntheticStoreGenerator
         int metrics()
         {
             return metrics;
+        }
+
+        int auxiliaryMetrics()
+        {
+            return auxiliaryMetrics;
         }
 
         int testRunAnnotations()
