@@ -23,6 +23,7 @@ import org.neo4j.values.storable.PointValue;
 import org.neo4j.values.storable.TextValue;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.ValueGroup;
+import org.neo4j.values.storable.Values;
 import org.neo4j.values.virtual.ListValue;
 import org.neo4j.values.virtual.VirtualNodeValue;
 
@@ -108,9 +109,74 @@ public final class CompiledHelpers
     }
 
     @CalledFromGeneratedCode
+    public static IndexQuery multipleLessThanSeek( int property, AnyValue[] values, boolean[] inclusive )
+    {
+        assert values.length == inclusive.length;
+        assert values.length > 0;
+
+        Value min = asStorableValue( values[0] );
+        boolean isInclusive = inclusive[0];
+        for ( int i = 1; i < values.length; i++ )
+        {
+            Value value = asStorableValue( values[i] );
+
+            // comparing different value types always lead to no results
+            if ( !min.valueGroup().equals( value.valueGroup() ))
+            {
+                return null;
+            }
+
+            int compare = Values.COMPARATOR.compare( min, value );
+            if ( compare > 0 )
+            {
+                min = value;
+                isInclusive = inclusive[i];
+            }
+            else if ( compare == 0 && isInclusive && !inclusive[i])
+            { //say that we had <= 4 and now see a < 4
+                isInclusive = false;
+            }
+        }
+
+        return IndexQuery.range( property, null, false, min, isInclusive );
+    }
+
+    @CalledFromGeneratedCode
     public static IndexQuery greaterThanSeek( int property, AnyValue value, boolean inclusive )
     {
         return IndexQuery.range( property, asStorableValue( value ), inclusive, null, false );
+    }
+
+    @CalledFromGeneratedCode
+    public static IndexQuery multipleGreaterThanSeek( int property, AnyValue[] values, boolean[] inclusive )
+    {
+        assert values.length == inclusive.length;
+        assert values.length > 0;
+
+        Value max = asStorableValue( values[0] );
+        boolean isInclusive = inclusive[0];
+        for ( int i = 1; i < values.length; i++ )
+        {
+            Value value = asStorableValue( values[i] );
+
+            // comparing different value types always lead to no results
+            if ( !max.valueGroup().equals( value.valueGroup() ))
+            {
+                return null;
+            }
+
+            int compare = Values.COMPARATOR.compare( max, value );
+            if ( compare < 0 )
+            {   //value was greater than max
+                max = value;
+                isInclusive = inclusive[i];
+            }
+            else if ( compare == 0 && isInclusive && !inclusive[i])
+            { //say that we had >= 4 and now see a > 4
+                isInclusive = false;
+            }
+        }
+        return IndexQuery.range( property, max, isInclusive, null, false );
     }
 
     @CalledFromGeneratedCode

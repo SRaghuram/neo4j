@@ -300,11 +300,26 @@ object OperatorCodeGenHelperTemplates {
                  expression,
                  constant(inclusive))
 
+  def multipleLessThanSeek(prop: Int, expressions: Seq[IntermediateRepresentation], inclusives: Seq[Boolean]): IntermediateRepresentation = {
+    invokeStatic(method[CompiledHelpers, IndexQuery, Int, Array[AnyValue], Array[Boolean]]("multipleLessThanSeek"),
+                 constant(prop),
+                 arrayOf[AnyValue](expressions:_*),
+                 arrayOf[Boolean](inclusives.map(constant):_*))
+  }
+
   def greaterThanSeek(prop: Int, inclusive: Boolean, expression: IntermediateRepresentation): IntermediateRepresentation =
     invokeStatic(method[CompiledHelpers, IndexQuery, Int, AnyValue, Boolean]("greaterThanSeek"),
                  constant(prop),
                  expression,
                  constant(inclusive))
+
+  def multipleGreaterThanSeek(prop: Int, expressions: Seq[IntermediateRepresentation], inclusives: Seq[Boolean]): IntermediateRepresentation = {
+    invokeStatic(
+      method[CompiledHelpers, IndexQuery, Int, Array[AnyValue], Array[Boolean]]("multipleGreaterThanSeek"),
+      constant(prop),
+      arrayOf[AnyValue](expressions: _*),
+      arrayOf[Boolean](inclusives.map(constant): _*))
+  }
 
   def rangeBetweenSeek(prop: Int,
                        fromInclusive: Boolean,
