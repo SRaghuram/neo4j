@@ -10,7 +10,6 @@ import com.neo4j.bench.client.queries.annotation.AttachMetricsAnnotation;
 import com.neo4j.bench.client.queries.annotation.AttachTestRunAnnotation;
 import com.neo4j.bench.client.queries.annotation.DeleteAnnotation;
 import com.neo4j.bench.client.queries.schema.CreateSchema;
-import com.neo4j.bench.client.queries.schema.DropSchema;
 import com.neo4j.bench.client.queries.schema.SetStoreVersion;
 import com.neo4j.bench.client.queries.schema.VerifyStoreSchema;
 import com.neo4j.bench.common.model.Annotation;
@@ -131,7 +130,6 @@ public class SubmitTestRunsAndPlansIT
     {
         try ( StoreClient client = StoreClient.connect( boltUri, USERNAME, PASSWORD, 1 ) )
         {
-            QUERY_RETRIER.execute( client, new DropSchema(), 1 );
             QUERY_RETRIER.execute( client, new CreateSchema(), 1 );
             QUERY_RETRIER.execute( client, new VerifyStoreSchema(), 1 );
             assertEmptyStore( client );
@@ -166,6 +164,7 @@ public class SubmitTestRunsAndPlansIT
             assertLabelCount( "BenchmarkGroup", 1, client );
             assertLabelCount( "Benchmark", 2, client );
             assertLabelCount( "Metrics", 2, client );
+            assertLabelCount( "AuxiliaryMetrics", 2, client );
             assertLabelCount( "Profiles", 0, client );
             assertLabelCount( "BenchmarkParams", 2, client );
             assertLabelCount( "Project", 2, client );
@@ -209,6 +208,7 @@ public class SubmitTestRunsAndPlansIT
             assertLabelCount( "BenchmarkGroup", 1, client );
             assertLabelCount( "Benchmark", 2, client );
             assertLabelCount( "Metrics", 2, client );
+            assertLabelCount( "AuxiliaryMetrics", 2, client );
             assertLabelCount( "Profiles", 0, client );
             assertLabelCount( "BenchmarkParams", 2, client );
             assertLabelCount( "Project", 2, client );
@@ -242,6 +242,7 @@ public class SubmitTestRunsAndPlansIT
             assertLabelCount( "BenchmarkGroup", 1, client );
             assertLabelCount( "Benchmark", 2, client );
             assertLabelCount( "Metrics", 4, client );
+            assertLabelCount( "AuxiliaryMetrics", 4, client );
             assertLabelCount( "Profiles", 0, client );
             assertLabelCount( "BenchmarkParams", 2, client );
             assertLabelCount( "Project", 2, client );
@@ -284,6 +285,7 @@ public class SubmitTestRunsAndPlansIT
             assertLabelCount( "BenchmarkGroup", 1, client );
             assertLabelCount( "Benchmark", 2, client );
             assertLabelCount( "Metrics", 6, client );
+            assertLabelCount( "AuxiliaryMetrics", 6, client );
             assertLabelCount( "Profiles", 0, client );
             assertLabelCount( "BenchmarkParams", 2, client );
             assertLabelCount( "Project", 2, client );
@@ -305,7 +307,6 @@ public class SubmitTestRunsAndPlansIT
     {
         try ( StoreClient client = StoreClient.connect( boltUri, USERNAME, PASSWORD, 1 ) )
         {
-            QUERY_RETRIER.execute( client, new DropSchema(), 1 );
             QUERY_RETRIER.execute( client, new CreateSchema(), 1 );
             QUERY_RETRIER.execute( client, new VerifyStoreSchema(), 1 );
             assertEmptyStore( client );
@@ -354,6 +355,7 @@ public class SubmitTestRunsAndPlansIT
             assertLabelCount( "BenchmarkGroup", 1, client );
             assertLabelCount( "Benchmark", 3, client );
             assertLabelCount( "Metrics", 3, client );
+            assertLabelCount( "AuxiliaryMetrics", 3, client );
             assertLabelCount( "Profiles", 2, client );
             assertLabelCount( "BenchmarkParams", 3, client );
             assertLabelCount( "Project", 2, client );
@@ -396,11 +398,11 @@ public class SubmitTestRunsAndPlansIT
             {
                 addedAnnotations++;
                 QUERY_RETRIER.execute( client,
-                                            new AttachMetricsAnnotation( testRunReport2.testRun().id(),
-                                                                         bgb.benchmark().name(),
-                                                                         bgb.benchmarkGroup().name(),
-                                                                         new Annotation( "comment", 1, "author" ) ),
-                                            1 );
+                                       new AttachMetricsAnnotation( testRunReport2.testRun().id(),
+                                                                    bgb.benchmark().name(),
+                                                                    bgb.benchmarkGroup().name(),
+                                                                    new Annotation( "comment", 1, "author" ) ),
+                                       1 );
             }
 
             // general
@@ -409,6 +411,7 @@ public class SubmitTestRunsAndPlansIT
             assertLabelCount( "BenchmarkGroup", 1, client );
             assertLabelCount( "Benchmark", 4, client );
             assertLabelCount( "Metrics", 6, client );
+            assertLabelCount( "AuxiliaryMetrics", 6, client );
             assertLabelCount( "Profiles", 2, client );
             assertLabelCount( "BenchmarkParams", 4, client );
             assertLabelCount( "Project", 2, client );
@@ -431,6 +434,7 @@ public class SubmitTestRunsAndPlansIT
             assertLabelCount( "BenchmarkGroup", 1, client );
             assertLabelCount( "Benchmark", 4, client );
             assertLabelCount( "Metrics", 6, client );
+            assertLabelCount( "AuxiliaryMetrics", 6, client );
             assertLabelCount( "Profiles", 2, client );
             assertLabelCount( "BenchmarkParams", 4, client );
             assertLabelCount( "Project", 2, client );
@@ -493,11 +497,11 @@ public class SubmitTestRunsAndPlansIT
             {
                 addedAnnotations++;
                 QUERY_RETRIER.execute( client,
-                                            new AttachMetricsAnnotation( testRunReport1.testRun().id(),
-                                                                         bgb.benchmark().name(),
-                                                                         bgb.benchmarkGroup().name(),
-                                                                         new Annotation( "comment", 1, "author" ) ),
-                                            1 );
+                                       new AttachMetricsAnnotation( testRunReport1.testRun().id(),
+                                                                    bgb.benchmark().name(),
+                                                                    bgb.benchmarkGroup().name(),
+                                                                    new Annotation( "comment", 1, "author" ) ),
+                                       1 );
             }
 
             // general
@@ -506,6 +510,7 @@ public class SubmitTestRunsAndPlansIT
             assertLabelCount( "BenchmarkGroup", 1, client );
             assertLabelCount( "Benchmark", 2, client );
             assertLabelCount( "Metrics", 2, client );
+            assertLabelCount( "AuxiliaryMetrics", 2, client );
             assertLabelCount( "Profiles", 2, client );
             assertLabelCount( "BenchmarkParams", 2, client );
             assertLabelCount( "Project", 1, client );
@@ -528,6 +533,7 @@ public class SubmitTestRunsAndPlansIT
             assertLabelCount( "BenchmarkGroup", 1, client );
             assertLabelCount( "Benchmark", 2, client );
             assertLabelCount( "Metrics", 2, client );
+            assertLabelCount( "AuxiliaryMetrics", 2, client );
             assertLabelCount( "Profiles", 2, client );
             assertLabelCount( "BenchmarkParams", 2, client );
             assertLabelCount( "Project", 1, client );
@@ -590,11 +596,11 @@ public class SubmitTestRunsAndPlansIT
             {
                 addedAnnotations++;
                 QUERY_RETRIER.execute( client,
-                                            new AttachMetricsAnnotation( testRunReport1.testRun().id(),
-                                                                         bgb.benchmark().name(),
-                                                                         bgb.benchmarkGroup().name(),
-                                                                         new Annotation( "comment", 1, "author" ) ),
-                                            1 );
+                                       new AttachMetricsAnnotation( testRunReport1.testRun().id(),
+                                                                    bgb.benchmark().name(),
+                                                                    bgb.benchmarkGroup().name(),
+                                                                    new Annotation( "comment", 1, "author" ) ),
+                                       1 );
             }
 
             // general
@@ -603,6 +609,7 @@ public class SubmitTestRunsAndPlansIT
             assertLabelCount( "BenchmarkGroup", 1, client );
             assertLabelCount( "Benchmark", 2, client );
             assertLabelCount( "Metrics", 2, client );
+            assertLabelCount( "AuxiliaryMetrics", 2, client );
             assertLabelCount( "Profiles", 2, client );
             assertLabelCount( "BenchmarkParams", 2, client );
             assertLabelCount( "Project", 1, client );
@@ -625,6 +632,7 @@ public class SubmitTestRunsAndPlansIT
             assertLabelCount( "BenchmarkGroup", 1, client );
             assertLabelCount( "Benchmark", 2, client );
             assertLabelCount( "Metrics", 2, client );
+            assertLabelCount( "AuxiliaryMetrics", 2, client );
             assertLabelCount( "Profiles", 2, client );
             assertLabelCount( "BenchmarkParams", 2, client );
             assertLabelCount( "Project", 1, client );

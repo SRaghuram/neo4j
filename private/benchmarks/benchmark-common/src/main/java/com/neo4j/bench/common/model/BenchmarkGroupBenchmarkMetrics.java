@@ -278,7 +278,7 @@ public class BenchmarkGroupBenchmarkMetrics
             // for 'auxiliary_metrics' we want to always add an element to the row, if there are no auxiliary metrics we add an empty list
             list.add( null == auxiliaryMetrics
                       ? new ArrayList<>()
-                      : Lists.newArrayList( auxiliaryMetrics ) );
+                      : Lists.newArrayList( auxiliaryMetrics.toMap() ) );
             return list;
         }
 
