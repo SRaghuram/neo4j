@@ -29,7 +29,8 @@ class Record
 {
     static int FLAG_IN_USE = 0x8;
 
-    public static final int SIZE_BASE = 64;
+    public static final int SIZE_BASE = 128;
+    public static final int HEADER_SIZE = 1;
 
     // not stored
     private int sizeMultiple;
@@ -58,7 +59,7 @@ class Record
 
     private void createNewDataBuffer( int sizeMultiple )
     {
-        data = ByteBuffer.wrap( new byte[sizeMultiple * SIZE_BASE] );
+        data = ByteBuffer.wrap( new byte[sizeMultiple * SIZE_BASE - HEADER_SIZE] );
         this.sizeMultiple = sizeMultiple;
     }
 
@@ -88,7 +89,7 @@ class Record
         {
             data.clear();
         }
-        System.arraycopy( record.data.array(), 0, data.array(), 0, data.capacity() );
+        System.arraycopy( record.data.array(), 0, data.array(), 0, record.data.capacity() );
     }
 
     void setFlag( int flag, boolean value )
@@ -148,7 +149,7 @@ class Record
     {
         int flagsRaw = cursor.getByte() & 0xFF;
         int sizeMultiple = flagsRaw & 0b11;
-        int length = sizeMultiple * SIZE_BASE;
+        int length = sizeMultiple * SIZE_BASE - HEADER_SIZE;
         flags = (byte) (flagsRaw & 0b1111_1100);
         if ( length > cursor.getCurrentPageSize() || length <= 0 )
         {

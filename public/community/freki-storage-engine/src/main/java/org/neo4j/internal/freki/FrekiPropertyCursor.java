@@ -207,6 +207,7 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
         data.position( offset );
         propertyKeyArray = readIntDeltas( new StreamVByte.IntArrayTarget(), data ).array();
         nextPropertyValueStartOffset = data.position();
+        propertyKeyIndex = -1;
         return true;
     }
 
