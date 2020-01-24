@@ -100,7 +100,7 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
                 currentReadReplicaTopology = DatabaseReadReplicaTopology.empty( databaseId );
             }
             this.readReplicasByMemberId = extractServerInfos( readReplicaTopologiesByDatabase );
-            logTopologyChange( "Read replica topology", currentReadReplicaTopology, databaseId, newReadReplicaTopology );
+            logTopologyChange( "Read replica topology", newReadReplicaTopology, databaseId, currentReadReplicaTopology );
         }
 
         if ( hasNoMembers( newReadReplicaTopology ) )
