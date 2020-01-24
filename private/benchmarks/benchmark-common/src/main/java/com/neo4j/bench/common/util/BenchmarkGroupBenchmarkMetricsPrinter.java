@@ -5,6 +5,7 @@
  */
 package com.neo4j.bench.common.util;
 
+import com.neo4j.bench.common.model.AuxiliaryMetrics;
 import com.neo4j.bench.common.model.Benchmark;
 import com.neo4j.bench.common.model.BenchmarkGroup;
 import com.neo4j.bench.common.model.BenchmarkGroupBenchmark;
@@ -18,6 +19,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
@@ -44,15 +46,22 @@ public class BenchmarkGroupBenchmarkMetricsPrinter
 
         RowWriter rowWriter = verbose ? new VerboseRowWriter() : new ConciseRowWriter();
 
-        List<String[]> rows = new ArrayList<>();
+        List<Row> rows = new ArrayList<>();
         for ( BenchmarkGroupBenchmark benchmark : results.benchmarkGroupBenchmarks() )
         {
-            Metrics metrics = results.getMetricsFor( benchmark ).metrics();
-            rows.add( rowWriter.registerDataRow( benchmark.benchmarkGroup(), benchmark.benchmark(), metrics ) );
+            BenchmarkGroupBenchmarkMetrics.AnnotatedMetrics annotatedMetrics = results.getMetricsFor( benchmark );
+            String[] data = rowWriter.registerDataRow( benchmark.benchmarkGroup(), benchmark.benchmark(), annotatedMetrics.metrics() );
+            String[] auxiliaryData = (null == annotatedMetrics.maybeAuxiliaryMetrics())
+                                     ? null
+                                     : rowWriter.registerAuxiliaryDataRow( benchmark.benchmarkGroup(),
+                                                                           benchmark.benchmark(),
+                                                                           annotatedMetrics.maybeAuxiliaryMetrics() );
+            rows.add( new Row( data, null /* error */, auxiliaryData ) );
         }
         for ( TestRunError error : errors )
         {
-            rows.add( rowWriter.registerErrorRow( error.groupName(), error.benchmarkName() ) );
+            String[] errorData = rowWriter.registerErrorRow( error.groupName(), error.benchmarkName() );
+            rows.add( new Row( null /* data */, errorData, null  /* auxiliary data */ ) );
         }
         rows.sort( new RowComparator() );
 
@@ -60,9 +69,13 @@ public class BenchmarkGroupBenchmarkMetricsPrinter
         sb.append( rowWriter.separator() ).append( "\n" );
         sb.append( rowWriter.prettyHeader() ).append( "\n" );
         sb.append( rowWriter.separator() ).append( "\n" );
-        for ( String[] row : rows )
+
+        for ( Row row : rows )
         {
-            sb.append( rowWriter.prettyRow( row ) ).append( "\n" );
+            for ( String[] dataRow : row.dataRows() )
+            {
+                sb.append( rowWriter.prettyRow( dataRow ) ).append( "\n" );
+            }
         }
         sb.append( rowWriter.separator() ).append( "\n" );
         return sb.toString();
@@ -81,6 +94,85 @@ public class BenchmarkGroupBenchmarkMetricsPrinter
     private static final DecimalFormat FLT_FORMAT = new DecimalFormat( "###,###,###,##0.00" );
     private static final String ERROR = "---";
 
+    private static class Row
+    {
+        private final String[] data;
+        private final String[] error;
+        private final String[] auxiliaryData;
+
+        private Row( String[] data,
+                     String[] error,
+                     String[] auxiliaryData )
+        {
+            assertDataXorError( data, error );
+            assertNoAuxiliaryDataIfError( error, auxiliaryData );
+            assertDataAndAuxiliaryDataSameLength( data, auxiliaryData );
+            this.data = data;
+            this.error = error;
+            this.auxiliaryData = auxiliaryData;
+        }
+
+        private void assertDataAndAuxiliaryDataSameLength( String[] data, String[] auxiliaryData )
+        {
+            if ( null != data && null != auxiliaryData && data.length != auxiliaryData.length )
+            {
+                throw new IllegalStateException( format( "Data and auxiliary data must have same length\n" +
+                                                         "Data:           %s\n" +
+                                                         "Auxiliary Data: %s",
+                                                         Arrays.toString( data ),
+                                                         Arrays.toString( auxiliaryData ) ) );
+            }
+        }
+
+        private void assertNoAuxiliaryDataIfError( String[] error, String[] auxiliaryData )
+        {
+            if ( null != error && null != auxiliaryData )
+            {
+                throw new IllegalStateException( format( "An error row must not have auxiliary data\n" +
+                                                         "Error:          %s\n" +
+                                                         "Auxiliary Data: %s",
+                                                         Arrays.toString( error ),
+                                                         Arrays.toString( auxiliaryData ) ) );
+            }
+        }
+
+        private void assertDataXorError( String[] data, String[] error )
+        {
+            if ( (null == data) == (null == error) )
+            {
+                throw new IllegalStateException( format( "A row must have either data or error, not both or neither\n" +
+                                                         "Data:  %s\n" +
+                                                         "Error: %s",
+                                                         null == data ? null : Arrays.toString( data ),
+                                                         null == error ? null : Arrays.toString( error ) ) );
+            }
+        }
+
+        private String[][] dataRows()
+        {
+            if ( data != null )
+            {
+                return (null == auxiliaryData)
+                       ? new String[][]{data}
+                       : new String[][]{data, auxiliaryData};
+            }
+            else
+            {
+                return new String[][]{error};
+            }
+        }
+
+        private int length()
+        {
+            return null != data ? data.length : error.length;
+        }
+
+        private String elementAt( int i )
+        {
+            return null != data ? data[i] : error[i];
+        }
+    }
+
     private abstract static class RowWriter
     {
         private final String[] headers = headers();
@@ -97,7 +189,15 @@ public class BenchmarkGroupBenchmarkMetricsPrinter
          *
          * @return data row
          */
-        abstract String[] createDataRow( BenchmarkGroup group, Benchmark benchmark, Metrics metrics, TimeUnit originalUnit, TimeUnit saneUnit );
+        abstract String[] createDataRow( BenchmarkGroup group,
+                                         Benchmark benchmark,
+                                         Metrics metrics,
+                                         TimeUnit originalUnit,
+                                         TimeUnit saneUnit );
+
+        abstract String[] createAuxiliaryDataRow( BenchmarkGroup group,
+                                                  Benchmark benchmark,
+                                                  AuxiliaryMetrics auxiliaryMetrics );
 
         String[] registerErrorRow( String group, String benchmark )
         {
@@ -111,8 +211,6 @@ public class BenchmarkGroupBenchmarkMetricsPrinter
             return updateWidths( row );
         }
 
-        // TODO add auxiliary metrics too
-
         String[] registerDataRow( BenchmarkGroup group, Benchmark benchmark, Metrics metrics )
         {
             TimeUnit unit = Units.toTimeUnit( (String) metrics.toMap().get( Metrics.UNIT ) );
@@ -122,6 +220,12 @@ public class BenchmarkGroupBenchmarkMetricsPrinter
             TimeUnit saneUnit = Units.findSaneUnit( mean, unit, benchmark.mode(), 1, 1000 );
 
             String[] row = createDataRow( group, benchmark, metrics, unit, saneUnit );
+            return updateWidths( row );
+        }
+
+        String[] registerAuxiliaryDataRow( BenchmarkGroup group, Benchmark benchmark, AuxiliaryMetrics auxiliaryMetrics )
+        {
+            String[] row = createAuxiliaryDataRow( group, benchmark, auxiliaryMetrics );
             return updateWidths( row );
         }
 
@@ -180,16 +284,34 @@ public class BenchmarkGroupBenchmarkMetricsPrinter
             return new String[]{"Group", "Benchmark", "Count", "Mean", "Unit"};
         }
 
-        // TODO add auxiliary metrics too
         @Override
-        public String[] createDataRow( BenchmarkGroup group, Benchmark benchmark, Metrics metrics, TimeUnit unit, TimeUnit saneUnit )
+        public String[] createDataRow( BenchmarkGroup group,
+                                       Benchmark benchmark,
+                                       Metrics metrics,
+                                       TimeUnit unit,
+                                       TimeUnit saneUnit )
         {
+            Map<String,Object> metricsMap = metrics.toMap();
             return new String[]{
                     group.name(),
                     benchmark.name(),
-                    INT_FORMAT.format( metrics.toMap().get( Metrics.SAMPLE_SIZE ) ),
-                    FLT_FORMAT.format( Units.convertValueTo( (Double) metrics.toMap().get( Metrics.MEAN ), unit, saneUnit, benchmark.mode() ) ),
+                    INT_FORMAT.format( metricsMap.get( Metrics.SAMPLE_SIZE ) ),
+                    FLT_FORMAT.format( Units.convertValueTo( (Double) metricsMap.get( Metrics.MEAN ), unit, saneUnit, benchmark.mode() ) ),
                     Units.toAbbreviation( saneUnit, benchmark.mode() )};
+        }
+
+        @Override
+        String[] createAuxiliaryDataRow( BenchmarkGroup group,
+                                         Benchmark benchmark,
+                                         AuxiliaryMetrics auxiliaryMetrics )
+        {
+            Map<String,Object> auxiliaryMetricsMap = auxiliaryMetrics.toMap();
+            return new String[]{
+                    "" /* benchmark group column, do not print it again for auxiliary metrics rows */,
+                    "" /* benchmark column, do not print it again for auxiliary metrics rows */,
+                    "" /* count column, do not print it again for auxiliary metrics rows */,
+                    FLT_FORMAT.format( auxiliaryMetricsMap.get( AuxiliaryMetrics.MEAN ) ),
+                    (String) auxiliaryMetricsMap.get( AuxiliaryMetrics.UNIT )};
         }
     }
 
@@ -201,38 +323,60 @@ public class BenchmarkGroupBenchmarkMetricsPrinter
             return new String[]{"Group", "Benchmark", "Count", "Mean", "Min", "Median", "90th", "Max", "Unit"};
         }
 
-        // TODO add auxiliary metrics too
         @Override
-        String[] createDataRow( BenchmarkGroup group, Benchmark benchmark, Metrics metrics, TimeUnit unit, TimeUnit saneUnit )
+        String[] createDataRow( BenchmarkGroup group,
+                                Benchmark benchmark,
+                                Metrics metrics,
+                                TimeUnit unit,
+                                TimeUnit saneUnit )
         {
+            Map<String,Object> metricsMap = metrics.toMap();
             return new String[]{
                     group.name(),
                     benchmark.name(),
-                    INT_FORMAT.format( metrics.toMap().get( Metrics.SAMPLE_SIZE ) ),
-                    FLT_FORMAT.format( Units.convertValueTo( (Double) metrics.toMap().get( Metrics.MEAN ), unit, saneUnit, benchmark.mode() ) ),
-                    INT_FORMAT.format( Units.convertValueTo( (Double) metrics.toMap().get( Metrics.MIN ), unit, saneUnit, benchmark.mode() ) ),
-                    INT_FORMAT.format( Units.convertValueTo( (Double) metrics.toMap().get( Metrics.PERCENTILE_50 ), unit, saneUnit, benchmark.mode() ) ),
-                    INT_FORMAT.format( Units.convertValueTo( (Double) metrics.toMap().get( Metrics.PERCENTILE_90 ), unit, saneUnit, benchmark.mode() ) ),
-                    INT_FORMAT.format( Units.convertValueTo( (Double) metrics.toMap().get( Metrics.MAX ), unit, saneUnit, benchmark.mode() ) ),
+                    INT_FORMAT.format( metricsMap.get( Metrics.SAMPLE_SIZE ) ),
+                    FLT_FORMAT.format( Units.convertValueTo( (Double) metricsMap.get( Metrics.MEAN ), unit, saneUnit, benchmark.mode() ) ),
+                    INT_FORMAT.format( Units.convertValueTo( (Double) metricsMap.get( Metrics.MIN ), unit, saneUnit, benchmark.mode() ) ),
+                    INT_FORMAT.format( Units.convertValueTo( (Double) metricsMap.get( Metrics.PERCENTILE_50 ), unit, saneUnit, benchmark.mode() ) ),
+                    INT_FORMAT.format( Units.convertValueTo( (Double) metricsMap.get( Metrics.PERCENTILE_90 ), unit, saneUnit, benchmark.mode() ) ),
+                    INT_FORMAT.format( Units.convertValueTo( (Double) metricsMap.get( Metrics.MAX ), unit, saneUnit, benchmark.mode() ) ),
                     Units.toAbbreviation( saneUnit, benchmark.mode() )};
+        }
+
+        @Override
+        String[] createAuxiliaryDataRow( BenchmarkGroup group,
+                                         Benchmark benchmark,
+                                         AuxiliaryMetrics auxiliaryMetrics )
+        {
+            Map<String,Object> auxiliaryMetricsMap = auxiliaryMetrics.toMap();
+            return new String[]{
+                    "" /* benchmark group column, do not print it again for auxiliary metrics rows */,
+                    "" /* benchmark column, do not print it again for auxiliary metrics rows */,
+                    "" /* count column, do not print it again for auxiliary metrics rows */,
+                    FLT_FORMAT.format( auxiliaryMetricsMap.get( AuxiliaryMetrics.MEAN ) ),
+                    INT_FORMAT.format( auxiliaryMetricsMap.get( AuxiliaryMetrics.MIN ) ),
+                    INT_FORMAT.format( auxiliaryMetricsMap.get( AuxiliaryMetrics.PERCENTILE_50 ) ),
+                    INT_FORMAT.format( auxiliaryMetricsMap.get( AuxiliaryMetrics.PERCENTILE_90 ) ),
+                    INT_FORMAT.format( auxiliaryMetricsMap.get( AuxiliaryMetrics.MAX ) ),
+                    (String) auxiliaryMetricsMap.get( AuxiliaryMetrics.UNIT )};
         }
     }
 
-    private static class RowComparator implements Comparator<String[]>
+    private static class RowComparator implements Comparator<Row>
     {
         @Override
-        public int compare( String[] o1, String[] o2 )
+        public int compare( Row o1, Row o2 )
         {
             return innerCompare( o1, o2, 0 );
         }
 
-        private int innerCompare( String[] o1, String[] o2, int offset )
+        private int innerCompare( Row o1, Row o2, int offset )
         {
-            if ( offset >= o1.length )
+            if ( offset >= o1.length() )
             {
                 return 0;
             }
-            int columnCompare = o1[offset].compareTo( o2[offset] );
+            int columnCompare = o1.elementAt( offset ).compareTo( o2.elementAt( offset ) );
             return (0 != columnCompare)
                    ? columnCompare
                    : innerCompare( o1, o2, ++offset );
