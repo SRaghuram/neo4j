@@ -11,7 +11,9 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
+import java.util.TreeMap;
 
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
@@ -62,15 +64,16 @@ public class SimpleBenchmark
 
 
     private static final int NUM_CITIES = 100_000;
-    private static final int NUM_CONNECTIONS_PER_CIRY = 10;
+    private static final int NUM_CONNECTIONS_PER_CIRY = 6;
 
     private static final Label CITY = Label.label( "City" );
     private static final RelationshipType ROAD = RelationshipType.withName( "Road" );
     private static final String DISTANCE = "distance";
+    private static final String SORTVALUE = "sort";
     private static final int DISTANCE_VARIATION = 10;
 
 
-    private static final int TRAVEL_HOPS = 100_000_000;
+    private static final int TRAVEL_HOPS = 10_000_000;
     private static long startCityID;
 
 
@@ -91,6 +94,7 @@ public class SimpleBenchmark
             }
             MutableInt count = new MutableInt( 0 );
             MutableInt lastPercent = new MutableInt( -1 );
+            MutableInt relationshipCounter = new MutableInt( 0 );
             roadPerCity.forEach( ( city, numRoads ) ->
             {
                 while ( numRoads.getValue() < NUM_CONNECTIONS_PER_CIRY / 2 )
@@ -103,6 +107,7 @@ public class SimpleBenchmark
                         numRoads.increment();
                         Relationship road = city.createRelationshipTo( otherCity, ROAD );
                         road.setProperty( DISTANCE, random.nextInt( DISTANCE_VARIATION ) + 1 );
+                        road.setProperty( SORTVALUE, relationshipCounter.incrementAndGet() );
                     }
                 }
                 int currentPercent = (int) (count.getAndIncrement() * 100.0 / NUM_CITIES);
@@ -133,17 +138,12 @@ public class SimpleBenchmark
 
             while ( hops++ < TRAVEL_HOPS )
             {
-                int roadSelector = random.nextInt( NUM_CONNECTIONS_PER_CIRY / 2 );
-
-                for ( Relationship road : city.getRelationships() )
-                {
-                    if ( roadSelector-- <= 0 )
-                    {
-                        city = road.getOtherNode( city );
-                        distance += (int) road.getProperty( DISTANCE );
-                        break;
-                    }
-                }
+                Map<Integer,Relationship> sortedRoads = new TreeMap<>();
+                city.getRelationships().forEach( r -> sortedRoads.put( (int) r.getProperty( SORTVALUE ), r ));
+                Relationship[] relationships = sortedRoads.values().toArray( new Relationship[0] );
+                Relationship road = relationships[random.nextInt( sortedRoads.size() )];
+                city = road.getOtherNode( city );
+                distance += (int) road.getProperty( DISTANCE );
             }
             tx.commit();
         }
