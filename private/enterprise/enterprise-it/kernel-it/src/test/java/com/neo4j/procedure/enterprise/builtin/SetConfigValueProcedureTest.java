@@ -30,12 +30,12 @@ class SetConfigValueProcedureTest
 {
     @Inject
     private GraphDatabaseAPI db;
+    @Inject
+    private Config config;
 
     @Test
     void configShouldBeAffected()
     {
-        Config config = db.getDependencyResolver().resolveDependency( Config.class );
-
         db.executeTransactionally( "CALL dbms.setConfigValue('" + log_queries.name() + "', 'off')" );
         assertEquals( LogQueryLevel.OFF, config.get( log_queries ) );
 
@@ -49,8 +49,6 @@ class SetConfigValueProcedureTest
     @Test
     void getDefaultValueOnEmptyArg()
     {
-        Config config = db.getDependencyResolver().resolveDependency( Config.class );
-
         db.executeTransactionally( "CALL dbms.setConfigValue('" + log_queries_threshold.name() + "', '11s')" );
         assertEquals( Duration.ofSeconds( 11 ), config.get( log_queries_threshold ) );
 

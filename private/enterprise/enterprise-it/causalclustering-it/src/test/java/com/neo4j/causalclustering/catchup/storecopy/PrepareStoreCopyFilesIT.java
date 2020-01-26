@@ -43,11 +43,17 @@ class PrepareStoreCopyFilesIT
 {
     @Inject
     private GraphDatabaseAPI db;
+    @Inject
+    private PageCache pageCache;
+    @Inject
+    private Database database;
+    @Inject
+    private FileSystemAbstraction fileSystem;
 
     @Test
     void shouldReturnDifferentAtomicAndReplayableFiles() throws Exception
     {
-        try ( var prepareStoreCopyFiles = newPrepareStoreCopyFiles( db ) )
+        try ( var prepareStoreCopyFiles = newPrepareStoreCopyFiles() )
         {
             // given
             createSchemaAndData( db );
@@ -70,7 +76,7 @@ class PrepareStoreCopyFilesIT
         // - Native indexes
         // - .id files (as of 4.0, the IndexedIdGenerator)
 
-        try ( var prepareStoreCopyFiles = newPrepareStoreCopyFiles( db ) )
+        try ( var prepareStoreCopyFiles = newPrepareStoreCopyFiles() )
         {
             // given
             createSchemaAndData( db );
@@ -88,7 +94,6 @@ class PrepareStoreCopyFilesIT
     private void assertContainsSomeGBPTreeFiles( Set<File> files )
     {
         NativeIndexFileFilter nativeIndexFileFilter = new NativeIndexFileFilter( db.databaseLayout().databaseDirectory() );
-        PageCache pageCache = db.getDependencyResolver().resolveDependency( PageCache.class );
         long count = files.stream().filter( file ->
                 isKnownGBPTreeFile( nativeIndexFileFilter, db.databaseLayout(), file ) ||
                 fileContentsLooksLikeAGBPTree( file, pageCache ) ).count();
@@ -98,7 +103,6 @@ class PrepareStoreCopyFilesIT
     private void assertContainsNoGBPTreeFiles( Set<File> files )
     {
         NativeIndexFileFilter nativeIndexFileFilter = new NativeIndexFileFilter( db.databaseLayout().databaseDirectory() );
-        PageCache pageCache = db.getDependencyResolver().resolveDependency( PageCache.class );
         for ( File file : files )
         {
             // What we know today
@@ -133,10 +137,9 @@ class PrepareStoreCopyFilesIT
                 databaseLayout.idFiles().contains( file );
     }
 
-    private static PrepareStoreCopyFiles newPrepareStoreCopyFiles( GraphDatabaseAPI db )
+    private PrepareStoreCopyFiles newPrepareStoreCopyFiles()
     {
-        var resolver = db.getDependencyResolver();
-        return new PrepareStoreCopyFiles( resolver.resolveDependency( Database.class ), resolver.resolveDependency( FileSystemAbstraction.class ) );
+        return new PrepareStoreCopyFiles( database, fileSystem );
     }
 
     private static Set<File> atomicFiles( PrepareStoreCopyFiles prepareStoreCopyFiles ) throws IOException

@@ -19,12 +19,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class EnterpriseDatabaseStartupControllerIT
 {
     @Inject
-    private GraphDatabaseAPI databaseAPI;
+    private DatabaseStartupController startupController;
 
     @Test
     void enterpriseDatabaseUseCorrectStartupController()
     {
-        var startupController = databaseAPI.getDependencyResolver().resolveDependency( DatabaseStartupController.class );
         assertThat( startupController ).isInstanceOf( DatabaseStartAborter.class );
     }
 }

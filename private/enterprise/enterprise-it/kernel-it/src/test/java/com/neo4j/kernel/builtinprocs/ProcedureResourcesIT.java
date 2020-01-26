@@ -47,6 +47,8 @@ class ProcedureResourcesIT
 {
     @Inject
     private GraphDatabaseAPI db;
+    @Inject
+    private GlobalProcedures globalProcedures;
 
     private final String indexDefinition = ":Label(prop)";
     private final String ftsNodesIndex = "'ftsNodes'";
@@ -76,7 +78,7 @@ class ProcedureResourcesIT
         // when
         createIndex();
         createFulltextIndexes();
-        for ( ProcedureSignature procedure : db.getDependencyResolver().resolveDependency( GlobalProcedures.class ).getAllProcedures() )
+        for ( ProcedureSignature procedure : globalProcedures.getAllProcedures() )
         {
             // then
             initialData();

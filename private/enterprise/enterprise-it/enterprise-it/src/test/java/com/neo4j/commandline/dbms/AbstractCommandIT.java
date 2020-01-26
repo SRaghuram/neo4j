@@ -38,13 +38,14 @@ abstract class AbstractCommandIT
     GraphDatabaseAPI databaseAPI;
     @Inject
     TestDirectory testDirectory;
+    @Inject
+    Config config;
     Path neo4jHome;
     Path configDir;
 
     @BeforeEach
     void setUp() throws IOException
     {
-        Config config = databaseAPI.getDependencyResolver().resolveDependency( Config.class );
         File dataDir = databaseAPI.databaseLayout().getNeo4jLayout().databasesDirectory();
         neo4jHome = config.get( GraphDatabaseSettings.neo4j_home );
         configDir = testDirectory.directory( "configDir" ).toPath();

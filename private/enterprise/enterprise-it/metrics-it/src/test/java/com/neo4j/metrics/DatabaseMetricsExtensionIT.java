@@ -63,6 +63,12 @@ class DatabaseMetricsExtensionIT
 
     @Inject
     private GraphDatabaseAPI db;
+    @Inject
+    private CheckPointer checkPointer;
+    @Inject
+    private MetricsManager metricsManager;
+    @Inject
+    private TransactionIdStore transactionIdStore;
 
     @Inject
     private DatabaseManagementService managementService;
@@ -91,7 +97,6 @@ class DatabaseMetricsExtensionIT
     @Test
     void reportCheckpointMetrics() throws Exception
     {
-        CheckPointer checkPointer = db.getDependencyResolver().resolveDependency( CheckPointer.class );
         checkPointer.forceCheckPoint( new SimpleTriggerInfo( "testTrigger" ) );
 
         File checkpointsMetricsFile = metricsCsv( outputPath, "neo4j." + db.databaseName() + ".check_point.events" );
@@ -118,8 +123,7 @@ class DatabaseMetricsExtensionIT
     void shouldShowTxCommittedMetricsWhenMetricsEnabled() throws Throwable
     {
         // GIVEN
-        long lastCommittedTransactionId = db.getDependencyResolver().resolveDependency( TransactionIdStore.class )
-                .getLastCommittedTransactionId();
+        long lastCommittedTransactionId = transactionIdStore.getLastCommittedTransactionId();
 
         // Create some activity that will show up in the metrics data.
         addNodes( 1000 );
@@ -214,7 +218,6 @@ class DatabaseMetricsExtensionIT
         addNodes( 100 );
 
         // WHEN
-        CheckPointer checkPointer = db.getDependencyResolver().resolveDependency( CheckPointer.class );
         checkPointer.checkPointIfNeeded( new SimpleTriggerInfo( "test" ) );
 
         // wait for the file to be written before shutting down the cluster
@@ -229,8 +232,6 @@ class DatabaseMetricsExtensionIT
     @Test
     void registerDatabaseMetricsOnDatabaseStart() throws DatabaseExistsException
     {
-        MetricsManager metricsManager = db.getDependencyResolver().resolveDependency( MetricsManager.class );
-
         assertThat( metricsManager.getRegistry().getNames(), not( hasItem( "neo4j.testdb.check_point.events" ) ) );
 
         managementService.createDatabase( "testDb" );
@@ -242,8 +243,6 @@ class DatabaseMetricsExtensionIT
     @Test
     void removeDatabaseMetricsOnDatabaseStop() throws DatabaseExistsException, DatabaseNotFoundException
     {
-        MetricsManager metricsManager = db.getDependencyResolver().resolveDependency( MetricsManager.class );
-
         managementService.createDatabase( "testDb" );
         assertThat( metricsManager.getRegistry().getNames(), hasItem( "neo4j.testdb.check_point.events" ) );
 

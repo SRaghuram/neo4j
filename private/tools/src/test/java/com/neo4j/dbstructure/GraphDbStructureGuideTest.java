@@ -10,7 +10,6 @@ import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.TimeUnit;
 
-import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
@@ -285,7 +284,6 @@ class GraphDbStructureGuideTest
     @BeforeEach
     void setUp()
     {
-        DependencyResolver dependencyResolver = db.getDependencyResolver();
         this.tx = db.beginTx();
     }
 

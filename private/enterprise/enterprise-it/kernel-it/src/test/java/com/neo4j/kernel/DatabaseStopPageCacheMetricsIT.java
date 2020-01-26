@@ -20,6 +20,8 @@ class DatabaseStopPageCacheMetricsIT
 {
     @Inject
     private DatabaseManagementService managementService;
+    @Inject
+    private PageCacheCounters pageCacheCounters;
 
     @Test
     void reportPageCacheMetricsOnDatabaseStop()
@@ -27,11 +29,8 @@ class DatabaseStopPageCacheMetricsIT
         var databaseName = "foo";
         managementService.createDatabase( databaseName );
 
-        var databaseAPI = (GraphDatabaseAPI) managementService.database( databaseName );
-        var cacheCounters = databaseAPI.getDependencyResolver().resolveDependency( PageCacheCounters.class );
-
-        long pinsBeforeShutdown = cacheCounters.pins();
+        long pinsBeforeShutdown = pageCacheCounters.pins();
         managementService.shutdownDatabase( databaseName );
-        assertThat( cacheCounters.pins() ).isGreaterThan( pinsBeforeShutdown );
+        assertThat( pageCacheCounters.pins() ).isGreaterThan( pinsBeforeShutdown );
     }
 }

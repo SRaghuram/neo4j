@@ -46,6 +46,10 @@ class RelationshipIdReuseStressIT
 {
     @Inject
     private GraphDatabaseAPI embeddedDatabase;
+    @Inject
+    private IdController idController;
+    @Inject
+    private IdGeneratorFactory idGeneratorFactory;
 
     private final ExecutorService executorService = Executors.newCachedThreadPool();
 
@@ -70,7 +74,6 @@ class RelationshipIdReuseStressIT
         AtomicBoolean stopFlag = new AtomicBoolean( false );
         RelationshipsCreator relationshipsCreator = new RelationshipsCreator( stopFlag, bandLabel, cityLabel );
         RelationshipRemover relationshipRemover = new RelationshipRemover( bandLabel, cityLabel, stopFlag );
-        IdController idController = embeddedDatabase.getDependencyResolver().resolveDependency( IdController.class );
 
         assertNotNull( idController, "idController was null for some reason" );
 
@@ -105,7 +108,6 @@ class RelationshipIdReuseStressIT
 
     private long getHighestUsedIdForRelationships()
     {
-        IdGeneratorFactory idGeneratorFactory = embeddedDatabase.getDependencyResolver().resolveDependency( IdGeneratorFactory.class );
         return idGeneratorFactory.get( IdType.RELATIONSHIP ).getHighestPossibleIdInUse();
     }
 

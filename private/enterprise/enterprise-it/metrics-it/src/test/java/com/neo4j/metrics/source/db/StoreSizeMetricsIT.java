@@ -42,6 +42,8 @@ class StoreSizeMetricsIT
     private TestDirectory testDirectory;
     @Inject
     private DatabaseManagementService managementService;
+    @Inject
+    private CheckPointer checkPointer;
 
     private File metricsFolder;
     private FakeClock clock;
@@ -68,7 +70,7 @@ class StoreSizeMetricsIT
     }
 
     @Test
-    void shouldMonitorStoreSizeForAllDatabases() throws Exception
+    void shouldMonitorStoreSizeForAllDatabases()
     {
         for ( String name : managementService.listDatabases() )
         {
@@ -86,23 +88,23 @@ class StoreSizeMetricsIT
         String firstMsg = db.databaseName() + " store has some size at startup";
         String metricsName = String.format( "neo4j.%s.store.size.total", db.databaseName() );
 
-        checkPoint( db );
+        checkPoint();
         tick();
 
         assertEventually( firstMsg, () -> readLongGaugeValue( metricsCsv( metricsFolder, metricsName ) ), greaterThan( 0L ), 1, MINUTES );
         long size = readLongGaugeValue( metricsCsv( metricsFolder, metricsName ) );
 
         addSomeData( db );
-        checkPoint( db );
+        checkPoint();
         tick();
 
         String secondMsg = db.databaseName() + " store grown after adding data";
         assertEventually( secondMsg, () -> readLongGaugeValue( metricsCsv( metricsFolder, metricsName ) ), greaterThan( size ), 1, MINUTES );
     }
 
-    private void checkPoint( GraphDatabaseAPI db ) throws IOException
+    private void checkPoint() throws IOException
     {
-        db.getDependencyResolver().resolveDependency( CheckPointer.class ).forceCheckPoint( new SimpleTriggerInfo( "test" ) );
+        checkPointer.forceCheckPoint( new SimpleTriggerInfo( "test" ) );
     }
 
     private void addSomeData( GraphDatabaseAPI db )

@@ -64,6 +64,8 @@ class GlobalMetricsExtensionFactoryIT
 
     @Inject
     private GraphDatabaseAPI db;
+    @Inject
+    private Config config;
 
     private File outputPath;
 
@@ -106,9 +108,8 @@ class GlobalMetricsExtensionFactoryIT
     }
 
     @Test
-    void reportHeapUsageMetrics() throws InterruptedException, IOException
+    void reportHeapUsageMetrics() throws IOException
     {
-        Config config = db.getDependencyResolver().resolveDependency( Config.class );
         String prefix = config.get( metricsPrefix ) + ".";
         File heapCommittedFile = metricsCsv( outputPath, prefix + HEAP_COMMITTED_TEMPLATE );
         File heapMaxFile = metricsCsv( outputPath, prefix + HEAP_MAX_TEMPLATE );

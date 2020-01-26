@@ -50,6 +50,8 @@ class StoreCopyCommandIT extends AbstractCommandIT
     @Inject
     private FileSystemAbstraction fs;
     @Inject
+    private PageCache pageCache;
+    @Inject
     private SuppressOutput suppressOutput;
     private static final Label NUMBER_LABEL = Label.label( "Number" );
     private static final Label CHARACTER_LABEL = Label.label( "Character" );
@@ -379,7 +381,6 @@ class StoreCopyCommandIT extends AbstractCommandIT
 
     private void assertRecordFormat( String databaseName, FormatFamily formatFamily )
     {
-        PageCache pageCache = databaseAPI.getDependencyResolver().resolveDependency( PageCache.class );
         RecordFormats recordFormats = Objects.requireNonNull(
                 RecordFormatSelector.selectForStore( databaseAPI.databaseLayout().getNeo4jLayout().databaseLayout( databaseName ), fs, pageCache,
                         NullLogProvider.getInstance() ) );

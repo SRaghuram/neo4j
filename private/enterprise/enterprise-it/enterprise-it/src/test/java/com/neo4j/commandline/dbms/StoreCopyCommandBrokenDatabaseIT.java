@@ -36,6 +36,8 @@ class StoreCopyCommandBrokenDatabaseIT extends AbstractCommandIT
 {
     @Inject
     private FileSystemAbstraction fs;
+    @Inject
+    private PageCache pageCache;
 
     @Test
     void ignoreRelationshipForGhostNodes() throws Exception
@@ -86,7 +88,7 @@ class StoreCopyCommandBrokenDatabaseIT extends AbstractCommandIT
     {
         return new StoreFactory( databaseAPI.databaseLayout().getNeo4jLayout().databaseLayout( databaseName ), Config.defaults(),
                 new ScanOnOpenReadOnlyIdGeneratorFactory(),
-                databaseAPI.getDependencyResolver().resolveDependency( PageCache.class ), fs, NullLogProvider.getInstance(), NULL ).openAllNeoStores();
+                pageCache, fs, NullLogProvider.getInstance(), NULL ).openAllNeoStores();
     }
 
     private void copyDatabase( String... args ) throws Exception

@@ -32,6 +32,8 @@ class EnterpriseDatabaseStateServiceIT
     @Inject
     private FileSystemAbstraction fileSystem;
     @Inject
+    private DatabaseStateService stateService;
+    @Inject
     private DatabaseManagementService managementService;
 
     private final TestDatabaseIdRepository idRepository = new TestDatabaseIdRepository();
@@ -39,9 +41,6 @@ class EnterpriseDatabaseStateServiceIT
     @Test
     void shouldReportErrorStatusOnFailedTransition() throws IOException
     {
-        var system = (GraphDatabaseAPI) managementService.database( SYSTEM_DATABASE_NAME );
-        var dbStateService = system.getDependencyResolver().resolveDependency( DatabaseStateService.class );
-
         var testId = idRepository.getRaw( "test" );
         managementService.createDatabase( testId.name() );
         var testDb = (GraphDatabaseAPI) managementService.database( testId.name() );
@@ -56,9 +55,9 @@ class EnterpriseDatabaseStateServiceIT
         managementService.startDatabase( testId.name() );
 
         // then
-        Optional<Throwable> throwable = dbStateService.causeOfFailure( testId );
+        Optional<Throwable> throwable = stateService.causeOfFailure( testId );
         assertTrue( throwable.isPresent(), "The state service should have recorded an error when starting a db without key files" );
         assertThat( throwable.get().getMessage(), containsString( "Unable to start") );
-        assertEquals( STOPPED, dbStateService.stateOfDatabase( testId ), "The state service should report the db in its stopped state" );
+        assertEquals( STOPPED, stateService.stateOfDatabase( testId ), "The state service should report the db in its stopped state" );
     }
 }

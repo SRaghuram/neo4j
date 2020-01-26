@@ -51,6 +51,8 @@ class TransactionLogsMetricsIT
     private GraphDatabaseAPI db;
     @Inject
     private DatabaseManagementService managementService;
+    @Inject
+    private LogFiles logFiles;
     private File outputPath;
 
     @ExtensionCallback
@@ -70,7 +72,6 @@ class TransactionLogsMetricsIT
         addNodes( 100, db );
         File metricsFile = metricsCsv( outputPath, "neo4j." + db.databaseName() + ".log.appended_bytes" );
 
-        LogFiles logFiles = db.getDependencyResolver().resolveDependency( LogFiles.class );
         long fileLength = logFiles.getHighestLogFile().length();
 
         assertEventually( "Metrics report should include correct number of written transaction log bytes.", () -> readLongCounterValue( metricsFile ),
@@ -85,7 +86,6 @@ class TransactionLogsMetricsIT
         GraphDatabaseAPI secondDb = (GraphDatabaseAPI) managementService.database( secondDbName );
 
         addNodes( 100, db );
-        LogFiles logFiles = db.getDependencyResolver().resolveDependency( LogFiles.class );
         long fileLength = logFiles.getHighestLogFile().length();
 
         File metricsFile = metricsCsv( outputPath, "neo4j." + db.databaseName() + ".log.appended_bytes" );

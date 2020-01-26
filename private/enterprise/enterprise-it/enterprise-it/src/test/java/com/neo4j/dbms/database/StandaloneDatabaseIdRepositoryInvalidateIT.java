@@ -25,11 +25,13 @@ class StandaloneDatabaseIdRepositoryInvalidateIT
 
     @Inject
     private GraphDatabaseAPI api;
+    @Inject
+    private DatabaseManager databaseManager;
 
     @Test
     void shouldInvalidateDroppedDatabaseId()
     {
-        var databaseIdRepository = api.getDependencyResolver().resolveDependency( DatabaseManager.class ).databaseIdRepository();
+        var databaseIdRepository = databaseManager.databaseIdRepository();
         var databaseName = "woot";
 
         assertThat( databaseIdRepository.getByName( databaseName ), empty() );

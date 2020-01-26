@@ -37,9 +37,12 @@ class DbmsReconcilerIT
 {
     @Inject
     private DatabaseManagementService managementService;
+    @Inject
+    private DbmsReconciler reconciler;
+    @Inject
+    private LocalDbmsOperator localOperator;
 
     private DatabaseIdRepository idRepository;
-    private DbmsReconciler reconciler;
     private GraphDatabaseAPI db;
 
     @BeforeEach
@@ -50,7 +53,6 @@ class DbmsReconcilerIT
         var databaseName = databaseId.name();
         managementService.createDatabase( databaseName );
         db = (GraphDatabaseAPI) managementService.database( databaseName );
-        reconciler = db.getDependencyResolver().resolveDependency( DbmsReconciler.class );
     }
 
     @Test
@@ -86,7 +88,6 @@ class DbmsReconcilerIT
         assertTrue( reconciler.causeOfFailure( db.databaseId() ).isPresent(), "Database is expected to be failed" );
 
         // when
-        var localOperator = db.getDependencyResolver().resolveDependency( LocalDbmsOperator.class );
         localOperator.stopDatabase( db.databaseName() );
 
         assertEventually( "Database should be stopped",

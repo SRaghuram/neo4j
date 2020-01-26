@@ -33,6 +33,8 @@ class IdReuseTest
     private DatabaseManagementService dbms;
     @Inject
     private GraphDatabaseAPI db;
+    @Inject
+    private IdController idController;
 
     @Test
     void shouldReuseNodeIdsFromRolledBackTransaction()
@@ -127,11 +129,9 @@ class IdReuseTest
         assertEquals( relationship1 + 1, relationship2, "Ids should be sequential" );
         assertEquals( relationship2 + 1, relationship3, "Ids should be sequential" );
 
-        final IdController idMaintenanceController = getIdMaintenanceController();
-
         deleteRelationshipByLabelAndRelationshipType( marker );
 
-        idMaintenanceController.maintenance();
+        idController.maintenance();
 
         assertEquals( relationship1, createRelationship( marker ), "Relationships have reused id" );
         assertEquals( relationship2, createRelationship( marker ), "Relationships have reused id" );
@@ -143,8 +143,6 @@ class IdReuseTest
     {
         Label testLabel = Label.label( "testLabel" );
         long relationshipId = createRelationship( testLabel );
-
-        final IdController idMaintenanceController = getIdMaintenanceController();
 
         try ( Transaction transaction = db.beginTx();
               ResourceIterator<Node> nodes = transaction.findNodes( testLabel ) )
@@ -159,7 +157,7 @@ class IdReuseTest
                 }
             }
 
-            idMaintenanceController.maintenance();
+            idController.maintenance();
 
             Node node1 = transaction.createNode( testLabel );
             Node node2 = transaction.createNode( testLabel );
@@ -193,11 +191,6 @@ class IdReuseTest
             }
             transaction.commit();
         }
-    }
-
-    private IdController getIdMaintenanceController()
-    {
-        return db.getDependencyResolver().resolveDependency( IdController.class );
     }
 
     private long createRelationship( Label label )

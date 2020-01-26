@@ -55,8 +55,6 @@ public class EnterpriseDbmsSupportExtension extends DbmsSupportExtension impleme
         ExtensionContext.Store store = getStore( context );
         store.put( DBMS, dbms );
 
-        // Inject dbms
-        injectInstance( testInstance, dbms, DatabaseManagementService.class );
     }
 
     @Override
@@ -81,8 +79,7 @@ public class EnterpriseDbmsSupportExtension extends DbmsSupportExtension impleme
 
         // Inject db
         Object testInstance = context.getRequiredTestInstance();
-        injectInstance( testInstance, db, GraphDatabaseService.class );
-        injectInstance( testInstance, db, GraphDatabaseAPI.class );
+        injectInstance( testInstance, lookupInjectableFields( testInstance ), db.getDependencyResolver() );
     }
 
     @Override
