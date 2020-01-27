@@ -581,35 +581,54 @@ class SlotAllocationTest extends CypherFunSuite with LogicalPlanningTestSupport2
       )))
   }
 
-  test("joins should remember cached node properties from both sides") {
+  test("left joins should remember cached node properties from both sides") {
     // given
     val lhs = IndexSeek("x:L(lhsProp = 42)", GetValue)
     val rhs = IndexSeek("x:B(rhsProp = 42)", GetValue)
 
-    val joins =
+    val leftJoins =
       List(
         CartesianProduct(lhs, rhs),
         NodeHashJoin(Set("x"), lhs, rhs),
         LeftOuterHashJoin(Set("x"), lhs, rhs),
-        RightOuterHashJoin(Set("x"), lhs, rhs),
         ValueHashJoin(lhs, rhs, equals(varFor("x"), varFor("x")))
       )
 
-    for (join <- joins) {
-      // when
-      val joinAllocations = SlotAllocation.allocateSlots(join, semanticTable, BREAK_FOR_LEAFS, NO_EXPR_VARS).slotConfigurations
+    for (join <- leftJoins) {
+      withClue(s"operator[${join.getClass.getSimpleName}]:") {
+        // when
+        val joinAllocations = SlotAllocation.allocateSlots(join, semanticTable, BREAK_FOR_LEAFS, NO_EXPR_VARS).slotConfigurations
 
-      // then
-      joinAllocations(join.id) should be(
-        SlotConfiguration.empty
-          .newLong("x", false, CTNode)
-          .newCachedProperty(cachedNodeProp("x", "lhsProp"))
-          .newCachedProperty(cachedNodeProp("x", "rhsProp"))
-      )
+        // then
+        joinAllocations(join.id) should be(
+          SlotConfiguration.empty
+            .newLong("x", false, CTNode)
+            .newCachedProperty(cachedNodeProp("x", "lhsProp"))
+            .newCachedProperty(cachedNodeProp("x", "rhsProp"))
+        )
+      }
     }
   }
 
-  test("joins should correctly handle cached node property argument") {
+  test("right outer join should remember cached node properties from both sides") {
+    // given
+    val lhs = IndexSeek("x:L(lhsProp = 42)", GetValue)
+    val rhs = IndexSeek("x:B(rhsProp = 42)", GetValue)
+    val join = RightOuterHashJoin(Set("x"), lhs, rhs)
+
+    // when
+    val joinAllocations = SlotAllocation.allocateSlots(join, semanticTable, BREAK_FOR_LEAFS, NO_EXPR_VARS).slotConfigurations
+
+    // then
+    joinAllocations(join.id) should be(
+      SlotConfiguration.empty
+        .newLong("x", false, CTNode)
+        .newCachedProperty(cachedNodeProp("x", "rhsProp"))
+        .newCachedProperty(cachedNodeProp("x", "lhsProp"))
+    )
+  }
+
+  test("left joins should correctly handle cached node property argument") {
     // given
     val lhs = IndexSeek("x:L(lhsProp = 42)", GetValue)
     val rhs = IndexSeek("x:B(rhsProp = 42)", GetValue)
@@ -620,24 +639,47 @@ class SlotAllocationTest extends CypherFunSuite with LogicalPlanningTestSupport2
         CartesianProduct(lhs, rhs),
         NodeHashJoin(Set("x"), lhs, rhs),
         LeftOuterHashJoin(Set("x"), lhs, rhs),
-        RightOuterHashJoin(Set("x"), lhs, rhs),
         plans.ValueHashJoin(lhs, rhs, equals(varFor("x"), varFor("x")))
       )
 
     for (join <- joins) {
-      // when
-      val plan = Apply(arg, join)
-      val allocations = SlotAllocation.allocateSlots(plan, semanticTable, BREAK_FOR_LEAFS, NO_EXPR_VARS).slotConfigurations
+      withClue(s"operator[${join.getClass.getSimpleName}]:") {
+        // when
+        val plan = Apply(arg, join)
+        val allocations = SlotAllocation.allocateSlots(plan, semanticTable, BREAK_FOR_LEAFS, NO_EXPR_VARS).slotConfigurations
 
-      // then
-      allocations(plan.id) should be(
-        SlotConfiguration.empty
-          .newLong("x", false, CTNode)
-          .newCachedProperty(cachedNodeProp("x", "argProp"))
-          .newCachedProperty(cachedNodeProp("x", "lhsProp"))
-          .newCachedProperty(cachedNodeProp("x", "rhsProp"))
-      )
+        // then
+        allocations(plan.id) should be(
+          SlotConfiguration.empty
+            .newLong("x", false, CTNode)
+            .newCachedProperty(cachedNodeProp("x", "argProp"))
+            .newCachedProperty(cachedNodeProp("x", "lhsProp"))
+            .newCachedProperty(cachedNodeProp("x", "rhsProp"))
+        )
+      }
     }
+  }
+
+  test("right outer join should correctly handle cached node property argument") {
+    // given
+    val lhs = IndexSeek("x:L(lhsProp = 42)", GetValue)
+    val rhs = IndexSeek("x:B(rhsProp = 42)", GetValue)
+    val arg = IndexSeek("x:A(argProp = 42)", GetValue)
+
+    val join = RightOuterHashJoin(Set("x"), lhs, rhs)
+
+    // when
+    val plan = Apply(arg, join)
+    val allocations = SlotAllocation.allocateSlots(plan, semanticTable, BREAK_FOR_LEAFS, NO_EXPR_VARS).slotConfigurations
+
+    // then
+    allocations(plan.id) should be(
+      SlotConfiguration.empty
+        .newLong("x", false, CTNode)
+        .newCachedProperty(cachedNodeProp("x", "argProp"))
+        .newCachedProperty(cachedNodeProp("x", "rhsProp"))
+        .newCachedProperty(cachedNodeProp("x", "lhsProp"))
+    )
   }
 
   test("that argument does not apply here") {
