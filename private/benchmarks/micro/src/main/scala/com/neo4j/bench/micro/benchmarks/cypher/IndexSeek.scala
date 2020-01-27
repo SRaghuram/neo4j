@@ -5,6 +5,8 @@
  */
 package com.neo4j.bench.micro.benchmarks.cypher
 
+import java.util
+
 import com.neo4j.bench.jmh.api.config.BenchmarkEnabled
 import com.neo4j.bench.jmh.api.config.ParamValues
 import com.neo4j.bench.micro.Main
@@ -95,7 +97,8 @@ class IndexSeek extends AbstractCypherBenchmark {
   @Benchmark
   @BenchmarkMode(Array(Mode.SampleTime))
   def executePlan(threadState: IndexSeekThreadState, bh: Blackhole): Long = {
-    val params = ValueUtils.asMapValue(mutable.Map[String, AnyRef]("thing" -> buckets(0).value()).asJava)
+    val paramMap = util.Collections.singletonMap("thing", buckets(0).value())
+    val params = ValueUtils.asMapValue(paramMap)
     val subscriber = new CountSubscriber(bh)
     val result = threadState.executablePlan.execute(params, tx = threadState.tx, subscriber = subscriber)
     result.consumeAll()
