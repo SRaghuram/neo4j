@@ -16,7 +16,6 @@ import com.neo4j.bench.macro.workload.Query;
 import com.neo4j.bench.macro.workload.Workload;
 import org.junit.jupiter.api.Test;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;

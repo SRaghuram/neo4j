@@ -33,7 +33,6 @@ import org.neo4j.internal.kernel.api.IndexReadSession;
 import org.neo4j.internal.kernel.api.NodeValueIndexCursor;
 import org.neo4j.internal.kernel.api.Read;
 import org.neo4j.internal.schema.IndexDescriptor;
-import org.neo4j.internal.schema.IndexOrder;
 import org.neo4j.internal.schema.SchemaDescriptor;
 
 import static com.neo4j.bench.micro.Main.run;
@@ -56,6 +55,7 @@ import static com.neo4j.bench.micro.data.ValueGeneratorUtil.defaultRangeFor;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.randPropertyFor;
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
 import static org.neo4j.internal.helpers.collection.Iterators.single;
+import static org.neo4j.internal.kernel.api.IndexQueryConstraints.unconstrained;
 
 @BenchmarkEnabled( true )
 @OutputTimeUnit( MICROSECONDS )
@@ -173,7 +173,7 @@ public class FindNodeUnique extends AbstractKernelBenchmark
     public long findNodeByLabelKeyValue( TxState txState, RNGState rngState ) throws KernelException
     {
         IndexQuery query = IndexQuery.exact( txState.propertyKey, txState.nextValue( rngState.rng ) );
-        txState.read.nodeIndexSeek( txState.indexReadSession, txState.node, IndexOrder.NONE, false, query );
+        txState.read.nodeIndexSeek( txState.indexReadSession, txState.node, unconstrained(), query );
         return assertCursorNotNull( txState.node );
     }
 
@@ -182,7 +182,7 @@ public class FindNodeUnique extends AbstractKernelBenchmark
     public void countNodesWithLabelKeyValue( TxState txState, RNGState rngState, Blackhole bh ) throws KernelException
     {
         IndexQuery query = IndexQuery.exact( txState.propertyKey, txState.nextValue( rngState.rng ) );
-        txState.read.nodeIndexSeek( txState.indexReadSession, txState.node, IndexOrder.NONE, false, query );
+        txState.read.nodeIndexSeek( txState.indexReadSession, txState.node, unconstrained(), query );
         assertCount( txState.node, 1, bh );
     }
 

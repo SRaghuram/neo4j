@@ -19,7 +19,6 @@ import com.neo4j.bench.common.results.ErrorReportingPolicy;
 import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.tool.macro.ExecutionMode;
 import com.neo4j.bench.common.tool.macro.RunWorkloadParams;
-import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.infra.JobId;
 import com.neo4j.bench.infra.commands.BatchJobCommandParameters;

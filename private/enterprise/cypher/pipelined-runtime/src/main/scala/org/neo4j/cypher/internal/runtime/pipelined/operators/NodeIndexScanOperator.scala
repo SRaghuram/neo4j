@@ -44,6 +44,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.internal.kernel.api.IndexReadSession
+import org.neo4j.internal.kernel.api.IndexQueryConstraints
 import org.neo4j.internal.kernel.api.KernelReadTracer
 import org.neo4j.internal.kernel.api.NodeValueIndexCursor
 import org.neo4j.internal.schema.IndexOrder
@@ -82,7 +83,7 @@ class NodeIndexScanOperator(val workIdentity: WorkIdentity,
 
       cursor = resources.cursorPools.nodeValueIndexCursorPool.allocateAndTrace()
       val read = context.transactionalContext.dataRead
-      read.nodeIndexScan(index, cursor, indexOrder, needsValues)
+      read.nodeIndexScan(index, cursor, IndexQueryConstraints.ordered(indexOrder, needsValues))
       true
     }
 

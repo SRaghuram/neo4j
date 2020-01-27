@@ -19,7 +19,6 @@ import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.tool.macro.ExecutionMode;
 import com.neo4j.bench.common.tool.macro.RunWorkloadParams;
 import com.neo4j.bench.common.util.BenchmarkGroupBenchmarkMetricsPrinter;
-import com.neo4j.bench.common.util.ErrorReporter.ErrorPolicy;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.macro.cli.RunWorkloadCommand;

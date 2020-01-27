@@ -27,7 +27,6 @@ import org.neo4j.test.rule.TestDirectory;
 import static com.neo4j.metrics.MetricsTestHelper.metricsCsv;
 import static com.neo4j.metrics.MetricsTestHelper.readDoubleGaugeValue;
 import static com.neo4j.metrics.MetricsTestHelper.readLongCounterAndAssert;
-import static com.neo4j.metrics.MetricsTestHelper.readLongCounterValue;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;

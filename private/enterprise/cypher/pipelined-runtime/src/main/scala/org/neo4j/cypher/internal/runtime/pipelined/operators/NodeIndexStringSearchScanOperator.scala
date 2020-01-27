@@ -60,6 +60,7 @@ import org.neo4j.cypher.internal.runtime.slotted.SlottedQueryState
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.CypherTypeException
 import org.neo4j.internal.kernel.api.IndexQuery
+import org.neo4j.internal.kernel.api.IndexQueryConstraints
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.internal.kernel.api.KernelReadTracer
 import org.neo4j.internal.kernel.api.NodeValueIndexCursor
@@ -119,7 +120,7 @@ abstract class NodeIndexStringSearchScanOperator(val workIdentity: WorkIdentity,
         case value: TextValue =>
           val indexQuery = computeIndexQuery(property.propertyKeyId, value)
           cursor = resources.cursorPools.nodeValueIndexCursorPool.allocateAndTrace()
-          read.nodeIndexSeek(index, cursor, indexOrder, property.maybeCachedNodePropertySlot.isDefined, indexQuery)
+          read.nodeIndexSeek(index, cursor, IndexQueryConstraints.ordered(indexOrder, property.maybeCachedNodePropertySlot.isDefined), indexQuery)
           true
 
         case IsNoValue() => false

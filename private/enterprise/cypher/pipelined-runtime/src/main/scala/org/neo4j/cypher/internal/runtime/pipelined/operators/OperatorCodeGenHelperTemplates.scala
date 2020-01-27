@@ -61,6 +61,7 @@ import org.neo4j.internal.kernel.api.IndexQuery
 import org.neo4j.internal.kernel.api.IndexQuery.ExistsPredicate
 import org.neo4j.internal.kernel.api.IndexQuery.StringContainsPredicate
 import org.neo4j.internal.kernel.api.IndexQuery.StringSuffixPredicate
+import org.neo4j.internal.kernel.api.IndexQueryConstraints
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.internal.kernel.api.KernelReadTracer
 import org.neo4j.internal.kernel.api.NodeCursor
@@ -265,23 +266,26 @@ object OperatorCodeGenHelperTemplates {
                     order: IndexOrder,
                     needsValues: Boolean): IntermediateRepresentation =
     invokeSideEffect(loadField(DATA_READ),
-      method[Read, Unit, IndexReadSession, NodeValueIndexCursor, IndexOrder, Boolean]("nodeIndexScan"),
-      indexReadSession, cursor, indexOrder(order), constant(needsValues))
+      method[Read, Unit, IndexReadSession, NodeValueIndexCursor, IndexQueryConstraints]("nodeIndexScan"),
+      indexReadSession, cursor, invokeStatic(
+        method[IndexQueryConstraints, IndexQueryConstraints, IndexOrder, Boolean]("ordered"),
+        indexOrder(order),
+        constant(needsValues)))
 
   def nodeIndexSeek(indexReadSession: IntermediateRepresentation,
                     cursor: IntermediateRepresentation,
                     query: IntermediateRepresentation,
                     order: IndexOrder,
-                    needsValues: Boolean): IntermediateRepresentation = {
+                    needsValues: Boolean): IntermediateRepresentation =
     invokeSideEffect(loadField(DATA_READ),
-      method[Read, Unit, IndexReadSession, NodeValueIndexCursor, IndexOrder, Boolean, Array[IndexQuery]](
-        "nodeIndexSeek"),
+      method[Read, Unit, IndexReadSession, NodeValueIndexCursor, IndexQueryConstraints, Array[IndexQuery]]("nodeIndexSeek"),
       indexReadSession,
       cursor,
-      indexOrder(order),
-      constant(needsValues),
+      invokeStatic(
+        method[IndexQueryConstraints, IndexQueryConstraints, IndexOrder, Boolean]("ordered"),
+        indexOrder(order),
+        constant(needsValues)),
       arrayOf[IndexQuery](query))
-  }
 
   def indexOrder(indexOrder: IndexOrder): IntermediateRepresentation = indexOrder match {
     case IndexOrder.ASCENDING => getStatic[IndexOrder, IndexOrder]("ASCENDING")

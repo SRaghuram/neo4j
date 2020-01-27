@@ -81,6 +81,7 @@ import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.internal.kernel.api.IndexQuery
 import org.neo4j.internal.kernel.api.IndexQuery.ExactPredicate
 import org.neo4j.internal.kernel.api.IndexReadSession
+import org.neo4j.internal.kernel.api.IndexQueryConstraints
 import org.neo4j.internal.kernel.api.KernelReadTracer
 import org.neo4j.internal.kernel.api.NodeValueIndexCursor
 import org.neo4j.internal.kernel.api.Read
@@ -216,7 +217,7 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
           null
 
       val needsValuesFromIndexSeek = exactSeekValues == null && needsValues
-      read.nodeIndexSeek(index, nodeCursor, indexOrder, needsValuesFromIndexSeek, predicates: _*)
+      read.nodeIndexSeek(index, nodeCursor, IndexQueryConstraints.ordered(indexOrder, needsValuesFromIndexSeek), predicates: _*)
     }
   }
 }
@@ -689,7 +690,7 @@ object ManyQueriesNodeIndexSeekTaskTemplate {
           val indexQuery = queries.next()
           if (!isImpossible(indexQuery)) {
             val reallyNeedsValues = needsValues && !indexQuery.isInstanceOf[ExactPredicate]
-            read.nodeIndexSeek(index, cursor, order, reallyNeedsValues, indexQuery)
+            read.nodeIndexSeek(index, cursor, IndexQueryConstraints.ordered(order, reallyNeedsValues), indexQuery)
             continue = false
           } else {
             continue = queries.hasNext

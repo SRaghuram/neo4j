@@ -18,7 +18,6 @@ import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.tool.macro.ExecutionMode;
 import com.neo4j.bench.common.tool.macro.RunWorkloadParams;
-import com.neo4j.bench.common.util.ErrorReporter.ErrorPolicy;
 import com.neo4j.bench.common.util.JsonUtil;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.common.util.Resources;

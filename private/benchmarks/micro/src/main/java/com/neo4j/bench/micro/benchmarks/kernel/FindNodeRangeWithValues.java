@@ -32,7 +32,6 @@ import org.neo4j.internal.kernel.api.IndexReadSession;
 import org.neo4j.internal.kernel.api.NodeValueIndexCursor;
 import org.neo4j.internal.kernel.api.Read;
 import org.neo4j.internal.schema.IndexDescriptor;
-import org.neo4j.internal.schema.IndexOrder;
 import org.neo4j.internal.schema.SchemaDescriptor;
 import org.neo4j.values.storable.Value;
 
@@ -56,6 +55,7 @@ import static com.neo4j.bench.micro.data.ValueGeneratorUtil.ascPropertyFor;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.defaultRangeFor;
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
 import static org.neo4j.internal.helpers.collection.Iterators.single;
+import static org.neo4j.internal.kernel.api.IndexQueryConstraints.unorderedValues;
 
 @BenchmarkEnabled( true )
 @OutputTimeUnit( MICROSECONDS )
@@ -184,7 +184,7 @@ public class FindNodeRangeWithValues extends AbstractKernelBenchmark
     public void findNodeByLabelKeyValue( TxState txState, RNGState rngState, Blackhole bh ) throws KernelException
     {
         IndexQuery query = txState.nextQuery( rngState.rng );
-        txState.read.nodeIndexSeek( txState.indexReadSession, txState.node, IndexOrder.NONE, true, query );
+        txState.read.nodeIndexSeek( txState.indexReadSession, txState.node, unorderedValues(), query );
         assertCountAndValues( txState.node, txState.rangeSize, bh );
     }
 

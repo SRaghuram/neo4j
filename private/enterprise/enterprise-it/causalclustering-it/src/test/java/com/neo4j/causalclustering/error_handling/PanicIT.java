@@ -24,7 +24,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-import org.neo4j.driver.Driver;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.test.extension.Inject;
 

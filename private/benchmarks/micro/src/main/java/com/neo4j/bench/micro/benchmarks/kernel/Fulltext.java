@@ -28,7 +28,6 @@ import org.neo4j.internal.kernel.api.IndexReadSession;
 import org.neo4j.internal.kernel.api.NodeValueIndexCursor;
 import org.neo4j.internal.kernel.api.Read;
 import org.neo4j.internal.schema.IndexDescriptor;
-import org.neo4j.internal.schema.IndexOrder;
 import org.neo4j.values.storable.TextValue;
 import org.neo4j.values.storable.Values;
 
@@ -44,6 +43,7 @@ import static com.neo4j.bench.micro.benchmarks.core.FindNodeNonUnique.maxEstimat
 import static com.neo4j.bench.micro.benchmarks.core.FindNodeNonUnique.minEstimateFor;
 import static com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML;
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
+import static org.neo4j.internal.kernel.api.IndexQueryConstraints.unconstrained;
 
 @BenchmarkEnabled( true )
 @OutputTimeUnit( MICROSECONDS )
@@ -142,7 +142,7 @@ public class Fulltext extends AbstractKernelBenchmark
         public NodeValueIndexCursor query( String query ) throws Exception
         {
             IndexQuery indexQuery = IndexQuery.fulltextSearch( query );
-            read.nodeIndexSeek( indexReadSession, node, IndexOrder.NONE, false, indexQuery );
+            read.nodeIndexSeek( indexReadSession, node, unconstrained(), indexQuery );
             return node;
         }
 

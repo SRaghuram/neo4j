@@ -29,7 +29,6 @@ import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.internal.kernel.api.procs.ProcedureCallContext;
 import org.neo4j.internal.kernel.api.procs.ProcedureSignature;
 import org.neo4j.internal.schema.IndexDescriptor;
-import org.neo4j.internal.schema.IndexOrder;
 import org.neo4j.internal.schema.SchemaDescriptor;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.exceptions.index.IndexEntryConflictException;
@@ -54,6 +53,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.neo4j.configuration.GraphDatabaseSettings.SchemaIndex.NATIVE30;
 import static org.neo4j.internal.helpers.collection.Iterators.single;
+import static org.neo4j.internal.kernel.api.IndexQueryConstraints.unconstrained;
 import static org.neo4j.values.storable.Values.stringArray;
 import static org.neo4j.values.storable.Values.stringOrNoValue;
 import static org.neo4j.values.storable.Values.stringValue;
@@ -289,7 +289,7 @@ class EnterpriseCreateIndexProcedureIT extends KernelIntegrationTest
                 query[i] = IndexQuery.exact( propertyKeyIds[i], value );
             }
             IndexReadSession indexSession = transaction.dataRead().indexReadSession( index );
-            transaction.dataRead().nodeIndexSeek( indexSession, indexCursor, IndexOrder.NONE, false, query );
+            transaction.dataRead().nodeIndexSeek( indexSession, indexCursor, unconstrained(), query );
             assertTrue( indexCursor.next() );
             assertEquals( node, indexCursor.nodeReference() );
             assertFalse( indexCursor.next() );

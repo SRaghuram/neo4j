@@ -6,7 +6,6 @@
 package com.neo4j.bench.micro.data;
 
 import com.neo4j.bench.micro.benchmarks.RNGState;
-import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;

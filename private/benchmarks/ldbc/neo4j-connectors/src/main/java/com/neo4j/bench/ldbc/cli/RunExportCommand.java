@@ -64,7 +64,6 @@ import com.neo4j.bench.common.util.Resources;
 import com.neo4j.bench.ldbc.cli.RunCommand.LdbcRunConfig;
 import com.neo4j.bench.ldbc.connection.Neo4jApi;
 import com.neo4j.bench.ldbc.profiling.ProfilerRunner;
-import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
 
 import java.io.File;
 import java.io.IOException;
@@ -78,8 +77,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-
-import org.neo4j.kernel.impl.store.format.standard.Standard;
 
 import static com.ldbc.driver.control.ConsoleAndFileDriverConfiguration.fromParamsMap;
 import static com.ldbc.driver.runtime.metrics.WorkloadResultsSnapshot.fromJson;
@@ -97,7 +94,6 @@ import static com.neo4j.bench.ldbc.cli.ResultReportingUtil.toBenchmarkGroupName;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
-import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
 
 @Command(
         name = "run-export",

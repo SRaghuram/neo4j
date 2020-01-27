@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.error_handling;
 
-import org.neo4j.kernel.availability.AvailabilityRequirement;
 import org.neo4j.kernel.database.Database;
 
 class RaiseAvailabilityGuardHandler implements DatabasePanicEventHandler

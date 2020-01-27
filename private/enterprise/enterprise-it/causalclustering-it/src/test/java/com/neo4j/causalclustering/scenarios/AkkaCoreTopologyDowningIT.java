@@ -50,8 +50,6 @@ import org.neo4j.monitoring.Monitors;
 import org.neo4j.test.ports.PortAuthority;
 import org.neo4j.time.Clocks;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 // Exercises the case of a downing message reaching a member while it is reachable, which can happen if a partition heals at the right time.

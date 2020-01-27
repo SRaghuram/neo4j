@@ -13,7 +13,6 @@ import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
 import com.neo4j.bench.common.process.JvmArgs;
 import com.neo4j.bench.common.profiling.ProfilerType;
-import com.neo4j.bench.common.util.ErrorReporter.ErrorPolicy;
 
 import java.io.File;
 import java.io.IOException;

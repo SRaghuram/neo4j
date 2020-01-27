@@ -18,7 +18,6 @@ import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.io.fs.FileUtils;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.lifecycle.LifeSupport;
-import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.LogService;
 
 public class TestServer implements AutoCloseable

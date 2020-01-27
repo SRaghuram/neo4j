@@ -9,9 +9,7 @@ import java.util.stream.Stream;
 
 import org.neo4j.procedure.Description;
 import org.neo4j.procedure.Mode;
-import org.neo4j.procedure.Name;
 import org.neo4j.procedure.Procedure;
-import org.neo4j.procedure.UserFunction;
 
 public class ShardFunctions
 {

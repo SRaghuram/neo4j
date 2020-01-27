@@ -15,7 +15,6 @@ import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.internal.kernel.api.security.SecurityContext;
 import org.neo4j.kernel.api.security.AuthToken;
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
-import org.neo4j.kernel.impl.security.Credential;
 
 public class FabricAuthManagerWrapper implements EnterpriseAuthManager
 {
