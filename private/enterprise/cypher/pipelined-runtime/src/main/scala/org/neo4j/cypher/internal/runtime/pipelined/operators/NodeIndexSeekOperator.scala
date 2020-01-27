@@ -34,6 +34,7 @@ import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
 import org.neo4j.codegen.api.IntermediateRepresentation.variable
 import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.codegen.api.Method
+import org.neo4j.cypher.internal.frontend.helpers.SeqCombiner.combine
 import org.neo4j.cypher.internal.logical.plans.QueryExpression
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.SlottedIndexedProperty
@@ -754,7 +755,7 @@ object ManyQueriesNodeIndexSeekTaskTemplate {
 
 
   def compositeQueryIterator(predicates: Array[Array[IndexQuery]]): CompositePredicateIterator = {
-    //Combine predicates (can probably be faster)
+    //Combine predicates
     //[ [a, b], [c], [d, e, f]] => [
     //                                [a, c, d],
     //                                [a, c, e],
@@ -763,10 +764,7 @@ object ManyQueriesNodeIndexSeekTaskTemplate {
     //                                [b, c, e],
     //                                [b, c, f],
     //                             ]
-    val combined = predicates.foldLeft(Array(Array.empty[IndexQuery])) {
-      (x, y) => for (a <- x; b <- y) yield a :+ b
-    }
-    new CompositePredicateIterator(combined)
+    new CompositePredicateIterator(combine(predicates))
   }
 
   val nextMethod: Method =
