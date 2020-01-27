@@ -34,7 +34,7 @@ import static org.neo4j.values.storable.Values.NO_VALUE;
 /**
  * Contains helper methods used from compiled expressions
  */
-@SuppressWarnings( {"unused", "Duplicates"} )
+@SuppressWarnings( {"unused"} )
 public final class CompiledHelpers
 {
     private static final IndexQuery[] EMPTY_PREDICATE = new IndexQuery[0];
@@ -109,36 +109,21 @@ public final class CompiledHelpers
     }
 
     @CalledFromGeneratedCode
-    public static IndexQuery.RangePredicate<?> multipleLessThanSeek( int property, AnyValue[] values, boolean[] inclusive )
+    public static IndexQuery multipleLessThanSeek( int property, AnyValue[] values,
+            boolean[] inclusive )
     {
         assert values.length == inclusive.length;
         assert values.length > 0;
 
-        Value min = asStorableValue( values[0] );
-        boolean isInclusive = inclusive[0];
-        for ( int i = 1; i < values.length; i++ )
+        int index = seekMinRangeAnConvertToStorable( values, inclusive );
+        if ( index >= 0 )
         {
-            Value value = asStorableValue( values[i] );
-
-            // comparing different value types always lead to no results
-            if ( !min.valueGroup().equals( value.valueGroup() ))
-            {
-                return null;
-            }
-
-            int compare = Values.COMPARATOR.compare( min, value );
-            if ( compare > 0 )
-            {
-                min = value;
-                isInclusive = inclusive[i];
-            }
-            else if ( compare == 0 && isInclusive && !inclusive[i])
-            { //say that we had <= 4 and now see a < 4
-                isInclusive = false;
-            }
+            return IndexQuery.range( property, null, false, (Value) values[index], inclusive[index] );
         }
-
-        return IndexQuery.range( property, null, false, min, isInclusive );
+        else
+        {
+            return null;
+        }
     }
 
     @CalledFromGeneratedCode
@@ -153,30 +138,15 @@ public final class CompiledHelpers
         assert values.length == inclusive.length;
         assert values.length > 0;
 
-        Value max = asStorableValue( values[0] );
-        boolean isInclusive = inclusive[0];
-        for ( int i = 1; i < values.length; i++ )
+        int index = seekMaxRangeAnConvertToStorable( values, inclusive );
+        if ( index >= 0 )
         {
-            Value value = asStorableValue( values[i] );
-
-            // comparing different value types always lead to no results
-            if ( !max.valueGroup().equals( value.valueGroup() ))
-            {
-                return null;
-            }
-
-            int compare = Values.COMPARATOR.compare( max, value );
-            if ( compare < 0 )
-            {   //value was greater than max
-                max = value;
-                isInclusive = inclusive[i];
-            }
-            else if ( compare == 0 && isInclusive && !inclusive[i])
-            { //say that we had >= 4 and now see a > 4
-                isInclusive = false;
-            }
+            return IndexQuery.range( property, (Value) values[index], inclusive[index], null, false );
         }
-        return IndexQuery.range( property, max, isInclusive, null, false );
+        else
+        {
+            return null;
+        }
     }
 
     @CalledFromGeneratedCode
@@ -195,57 +165,18 @@ public final class CompiledHelpers
         assert gtValues.length > 0;
         assert ltValues.length > 0;
 
-        //greater than seek
-        Value gtSeekValue = asStorableValue( gtValues[0] );
-        boolean gtIsInclusive = gtInclusive[0];
-        for ( int i = 1; i < gtValues.length; i++ )
+        int gtIndex = seekMaxRangeAnConvertToStorable( gtValues, gtInclusive );
+        if ( gtIndex < 0 )
         {
-            Value value = asStorableValue( gtValues[i] );
-
-            // comparing different value types always lead to no results
-            if ( !gtSeekValue.valueGroup().equals( value.valueGroup() ))
-            {
-                return null;
-            }
-
-            int compare = Values.COMPARATOR.compare( gtSeekValue, value );
-            if ( compare < 0 )
-            {   //value was greater than max
-                gtSeekValue = value;
-                gtIsInclusive = gtInclusive[i];
-            }
-            else if ( compare == 0 && gtIsInclusive && !gtInclusive[i])
-            { //say that we had >= 4 and now see a > 4
-                gtIsInclusive = false;
-            }
+            return null;
         }
-
-        //less than seek
-        Value ltSeekValue = asStorableValue( ltValues[0] );
-        boolean ltIsInclusive = ltInclusive[0];
-        for ( int i = 1; i < ltValues.length; i++ )
+        int ltIndex = seekMinRangeAnConvertToStorable( ltValues, ltInclusive );
+        if ( ltIndex < 0 )
         {
-            Value value = asStorableValue( ltValues[i] );
-
-            // comparing different value types always lead to no results
-            if ( !ltSeekValue.valueGroup().equals( value.valueGroup() ))
-            {
-                return null;
-            }
-
-            int compare = Values.COMPARATOR.compare( ltSeekValue, value );
-            if ( compare > 0 )
-            {
-                ltSeekValue = value;
-                ltIsInclusive = ltInclusive[i];
-            }
-            else if ( compare == 0 && ltIsInclusive && !ltInclusive[i])
-            { //say that we had <= 4 and now see a < 4
-                ltIsInclusive = false;
-            }
+            return null;
         }
-
-        return IndexQuery.range( property,gtSeekValue, gtIsInclusive, ltSeekValue, ltIsInclusive );
+        return IndexQuery.range( property, (Value) gtValues[gtIndex], gtInclusive[gtIndex], (Value) ltValues[ltIndex],
+                ltInclusive[ltIndex] );
     }
 
     @CalledFromGeneratedCode
@@ -334,4 +265,73 @@ public final class CompiledHelpers
         }
     }
 
+    private static int seekMaxRangeAnConvertToStorable( AnyValue[] values, boolean[] inclusive )
+    {
+        Value max = asStorableValue( values[0] );
+        boolean isInclusive = inclusive[0];
+        int found = 0;
+        for ( int i = 1; i < values.length; i++ )
+        {
+            Value value = asStorableValue( values[i] );
+            //asStorableValue can be slow for Lists et al so we only want to do it once
+            //which is why we mutate in place here
+            values[i] = value;
+
+            // comparing different value types always lead to no results
+            if ( !max.valueGroup().equals( value.valueGroup() ) )
+            {
+                return -1;
+            }
+
+            int compare = Values.COMPARATOR.compare( max, value );
+            if ( compare < 0 )
+            {   //value was greater than max
+                max = value;
+                isInclusive = inclusive[i];
+                found = i;
+            }
+            else if ( compare == 0 && isInclusive && !inclusive[i] )
+            { //say that we had >= 4 and now see a > 4
+                isInclusive = false;
+                found = i;
+            }
+        }
+
+        return found;
+    }
+
+    private static int seekMinRangeAnConvertToStorable( AnyValue[] values, boolean[] inclusive )
+    {
+        Value min = asStorableValue( values[0] );
+        boolean isInclusive = inclusive[0];
+        int found = 0;
+        for ( int i = 1; i < values.length; i++ )
+        {
+            Value value = asStorableValue( values[i] );
+            //asStorableValue can be slow for Lists et al so we only want to do it once
+            //which is why we mutate in place here
+            values[i] = value;
+
+            // comparing different value types always lead to no results
+            if ( !min.valueGroup().equals( value.valueGroup() ) )
+            {
+                return -1;
+            }
+
+            int compare = Values.COMPARATOR.compare( min, value );
+            if ( compare > 0 )
+            {
+                min = value;
+                isInclusive = inclusive[i];
+                found = i;
+            }
+            else if ( compare == 0 && isInclusive && !inclusive[i] )
+            { //say that we had <= 4 and now see a < 4
+                isInclusive = false;
+                found = i;
+            }
+        }
+
+        return found;
+    }
 }
