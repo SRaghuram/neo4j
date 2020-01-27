@@ -6,7 +6,6 @@
 package com.neo4j.bench.micro.benchmarks.cypher
 
 import java.util
-import java.util.stream.Collectors
 
 import com.neo4j.bench.common.Neo4jConfigBuilder
 import com.neo4j.bench.jmh.api.config.BenchmarkEnabled
@@ -33,9 +32,6 @@ import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.neo4j.kernel.impl.util.ValueUtils
 import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
-
-import scala.collection.JavaConverters._
-import scala.collection.mutable
 
 @BenchmarkEnabled(true)
 class DirectedRelationshipByIdSeek extends AbstractCypherBenchmark {
@@ -96,8 +92,9 @@ class DirectedRelationshipByIdSeek extends AbstractCypherBenchmark {
   @BenchmarkMode(Array(Mode.SampleTime))
   def executePlan(threadState: DirectedRelationshipByIdThreadState, bh: Blackhole, rngState: RNGState): Long = {
     val idsToSeek = threadState.paramsGen.next(rngState.rng)
-    val idList = util.Arrays.stream(idsToSeek).boxed().collect(Collectors.toList())
-    val params = ValueUtils.asMapValue(mutable.Map[String, AnyRef]("ids" -> idList).asJava)
+    val idList = util.Arrays.asList(idsToSeek: _*)
+    val paramMap = util.Collections.singletonMap("ids", idList)
+    val params = ValueUtils.asMapValue(paramMap)
 
     val subscriber = new CountSubscriber(bh)
     val result = threadState.executablePlan.execute(params, tx = threadState.tx, subscriber = subscriber)
@@ -117,8 +114,6 @@ class DirectedRelationshipByIdThreadState {
     executablePlan = benchmarkState.buildPlan(from(benchmarkState.runtime))
     paramsGen = intArray(randInt(0, benchmarkState.RELATIONSHIP_COUNT - 1), benchmarkState.numIDs).create()
     tx = benchmarkState.beginInternalTransaction(benchmarkState.users(benchmarkState.user))
-
-    println(tx.execute("MATCH ()-[r]->() RETURN id(r)").resultAsString())
   }
 
   @TearDown
