@@ -7,10 +7,14 @@ package com.neo4j.server.rest.causalclustering;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.server.rest.repr.OutputFormat;
+
+import static javax.ws.rs.core.Response.Status.INTERNAL_SERVER_ERROR;
 
 public abstract class AbstractCausalClusteringService implements ClusterService
 {
@@ -21,9 +25,23 @@ public abstract class AbstractCausalClusteringService implements ClusterService
 
     private final CausalClusteringStatus status;
 
-    AbstractCausalClusteringService( OutputFormat output, DatabaseManagementService managementService, String databaseName )
+    AbstractCausalClusteringService( OutputFormat output, DatabaseStateService dbStateService, DatabaseManagementService managementService,
+                                     String databaseName )
     {
-        this.status = CausalClusteringStatusFactory.build( output, managementService, databaseName, this );
+        this.status = createStatus( output, dbStateService, managementService, databaseName );
+    }
+
+    private CausalClusteringStatus createStatus( OutputFormat output, DatabaseStateService dbStateService, DatabaseManagementService managementService,
+                                                 String databaseName )
+    {
+        try
+        {
+            return CausalClusteringStatusFactory.build( output, dbStateService, managementService, databaseName, this );
+        }
+        catch ( Exception e )
+        {
+            return new FixedResponse( Response.status( INTERNAL_SERVER_ERROR ).type( MediaType.TEXT_PLAIN_TYPE ).entity( e.toString() ).build() );
+        }
     }
 
     @GET
