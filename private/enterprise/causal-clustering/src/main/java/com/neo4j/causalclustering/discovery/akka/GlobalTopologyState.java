@@ -115,7 +115,7 @@ public class GlobalTopologyState implements TopologyUpdateSink, DirectoryUpdateS
     {
         if ( !leaderInfoMap.equals( remoteDbLeaderMap ) )
         {
-            log.info( "Database leader(s) update:%s", newPaddedLine(), printLeaderInfoMap( leaderInfoMap, remoteDbLeaderMap ) );
+            log.info( "Database leader(s) update:%s%s", newPaddedLine(), printLeaderInfoMap( leaderInfoMap, remoteDbLeaderMap ) );
             this.remoteDbLeaderMap = leaderInfoMap;
         }
     }
