@@ -71,22 +71,22 @@ public class SubmitTestRun implements Query<SubmitTestRunResult>
                         throw new RuntimeException( "Query returned more than one row!" );
                     }
 
-                    List<List<Object>> benchmarkMetricsLists = record.get( "benchmark_metrics" )
-                                                                     .asList( Value::asList );
+                    // benchmark_metrics : [[benchmark, metrics, params, [auxiliaryMetrics]]]
+                    List<List<Value>> benchmarkMetricsLists = record.get( "benchmark_metrics" ).asList( e -> e.asList( v -> v ) );
                     List<BenchmarkMetrics> benchmarkMetrics =
                             benchmarkMetricsLists.stream()
                                                  .map( metrics ->
                                                        {
-                                                           Map<String,Object> benchmarkMap = (Map<String,Object>) metrics.get( 0 );
-                                                           Map<String,Object> metricsMap = (Map<String,Object>) metrics.get( 1 );
-                                                           Map<String,Object> benchmarkParamsMap = (Map<String,Object>) metrics.get( 2 );
+                                                           Map<String,Object> benchmarkMap = metrics.get( 0 ).asMap();
+                                                           Map<String,Object> metricsMap = metrics.get( 1 ).asMap();
+                                                           Map<String,Object> benchmarkParamsMap = metrics.get( 2 ).asMap();
                                                            /*
                                                            Note: at the moment submit_test_run.cypher supports creating more than one auxiliary metrics nodes,
                                                            but the rest of the stack restricts to [0,1] (i.e., one optional) nodes.
                                                            The following checks are just sanity checks to make sure that we really are only creating one.
                                                            If in future we want to create more than one auxiliary per metrics it would be trivial to support.
                                                             */
-                                                           List<Map<String,Object>> auxiliaryMetricsMaps = (List<Map<String,Object>>) metrics.get( 3 );
+                                                           List<Map<String,Object>> auxiliaryMetricsMaps = metrics.get( 3 ).asList( Value::asMap );
                                                            if ( auxiliaryMetricsMaps.size() > 1 )
                                                            {
                                                                throw new RuntimeException( format( "Expected to create [0,1] auxiliary metrics but was %s",
