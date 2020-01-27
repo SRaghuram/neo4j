@@ -75,9 +75,9 @@ WITH
   params
 OPTIONAL MATCH (metrics)-[:HAS_AUXILIARY_METRICS]->(auxiliaryMetrics:AuxiliaryMetrics)
 WITH
-  test_run { .* } AS test_run,
-  benchmark { .* } AS benchmark,
-  metrics { .* } AS metrics,
-  params { .* } AS params,
-  collect(DISTINCT auxiliaryMetrics { .* } ) AS allAuxiliaryMetrics
+  test_run,
+  benchmark,
+  metrics,
+  params,
+  collect(auxiliaryMetrics) AS allAuxiliaryMetrics
 RETURN test_run, collect([benchmark, metrics, params, allAuxiliaryMetrics]) AS benchmark_metrics
