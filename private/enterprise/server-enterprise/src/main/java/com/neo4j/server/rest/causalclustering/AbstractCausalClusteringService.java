@@ -1,5 +1,4 @@
 /*
-
  * Copyright (c) 2002-2020 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
  * This file is a commercial add-on to Neo4j Enterprise Edition.
@@ -11,6 +10,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.server.database.DatabaseService;
 import org.neo4j.server.rest.repr.OutputFormat;
 
@@ -25,16 +25,16 @@ public abstract class AbstractCausalClusteringService implements ClusterService
 
     private final CausalClusteringStatus status;
 
-    AbstractCausalClusteringService( OutputFormat output, DatabaseService dbService, String databaseName )
+    AbstractCausalClusteringService( OutputFormat output, DatabaseStateService dbStateService, DatabaseService dbService, String databaseName )
     {
-        this.status = createStatus( output, dbService, databaseName );
+        this.status = createStatus( output, dbStateService, dbService, databaseName );
     }
 
-    private CausalClusteringStatus createStatus( OutputFormat output, DatabaseService dbService, String databaseName )
+    private CausalClusteringStatus createStatus( OutputFormat output, DatabaseStateService dbStateService, DatabaseService dbService, String databaseName )
     {
         try
         {
-            return CausalClusteringStatusFactory.build( output, dbService, databaseName, this );
+            return CausalClusteringStatusFactory.build( output, dbStateService, dbService, databaseName, this );
         }
         catch ( Exception e )
         {

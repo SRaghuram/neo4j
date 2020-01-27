@@ -11,6 +11,7 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.core.Context;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.server.configuration.ServerSettings;
 import org.neo4j.server.database.DatabaseService;
 import org.neo4j.server.rest.repr.OutputFormat;
@@ -23,9 +24,10 @@ public class CausalClusteringService extends AbstractCausalClusteringService
     private static final String DB_NAME = "databaseName";
     static final String DB_CLUSTER_PATH = "/{" + DB_NAME + "}" + CLUSTER_PATH;
 
-    public CausalClusteringService( @Context OutputFormat output, @Context DatabaseService dbService, @PathParam( DB_NAME ) String databaseName )
+    public CausalClusteringService( @Context OutputFormat output, @Context DatabaseStateService databaseStateService, @Context DatabaseService dbService,
+                                    @PathParam( DB_NAME ) String databaseName )
     {
-        super( output, dbService, databaseName );
+        super( output, databaseStateService, dbService, databaseName );
     }
 
     public static Pattern databaseClusterUriPattern( Config config )
