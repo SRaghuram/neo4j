@@ -28,6 +28,7 @@ import org.neo4j.util.VisibleForTesting;
 
 import static com.neo4j.causalclustering.catchup.CatchupResult.SUCCESS_END_OF_STREAM;
 import static java.lang.Long.max;
+import static java.lang.String.format;
 
 class TxPuller
 {
@@ -104,7 +105,7 @@ class TxPuller
             }
             catch ( Exception e )
             {
-                log.warn( "Unexpected exception when pulling transactions. [Address: %s]", fromAddress, e );
+                log.warn( format( "Unexpected exception when pulling transactions. [Address: %s]", fromAddress ), e );
                 return Result.ERROR;
             }
         }

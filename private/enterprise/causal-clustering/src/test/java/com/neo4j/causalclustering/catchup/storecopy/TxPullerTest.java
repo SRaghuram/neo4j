@@ -25,10 +25,11 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
-import org.neo4j.logging.LogProvider;
-import org.neo4j.logging.NullLogProvider;
+import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.storageengine.api.StoreId;
 
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -46,7 +47,7 @@ class TxPullerTest
     private static final NamedDatabaseId DATABASE_ID = TestDatabaseIdRepository.randomNamedDatabaseId();
 
     private static final int MAX_FAILED_TX_PULL_REQUESTS = 5;
-    private final LogProvider logProvider = NullLogProvider.getInstance();
+    private final AssertableLogProvider logProvider = new AssertableLogProvider();
     private TransactionLogCatchUpWriter writer;
     private CatchupAddressProvider addressProvider;
     private TxPullClient client;
@@ -268,5 +269,21 @@ class TxPullerTest
         {
             count = 0;
         }
+    }
+
+    @Test
+    void shouldThrowAfterPullTransactionsGenericException() throws Exception
+    {
+        RequiredTransactions requiredRange = RequiredTransactions.requiredRange( 0, 1 );
+        TxPullRequestContext context = getContext( requiredRange );
+
+        NullPointerException npe = new NullPointerException(  );
+
+        when( client.pullTransactions( any(), any(), anyLong(), any() ) ).thenThrow( npe );
+
+        assertThrows( StoreCopyFailedException.class, () -> executor.pullTransactions( context, writer, client ) );
+
+        logProvider.assertAtLeastOnce(
+                AssertableLogProvider.inLog( TxPuller.class ).warn( startsWith( "Unexpected exception when pulling transactions" ), equalTo( npe ) ) );
     }
 }
