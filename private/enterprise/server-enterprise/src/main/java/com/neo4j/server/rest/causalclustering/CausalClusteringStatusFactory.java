@@ -20,7 +20,7 @@ public class CausalClusteringStatusFactory
         var db = findDb( dbService, databaseName );
         if ( db == null )
         {
-            return new FixedStatus( NOT_FOUND );
+            return new FixedResponse( NOT_FOUND );
         }
 
         switch ( db.databaseInfo() )
@@ -30,7 +30,7 @@ public class CausalClusteringStatusFactory
         case READ_REPLICA:
             return new ReadReplicaStatus( output, db, clusterService );
         default:
-            return new FixedStatus( FORBIDDEN );
+            return new FixedResponse( FORBIDDEN );
         }
     }
 

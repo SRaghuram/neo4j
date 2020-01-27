@@ -71,7 +71,7 @@ class CausalClusteringStatusFactoryTest
 
         var status = buildStatus( dbService, UNKNOWN_DB );
 
-        assertThat( status, instanceOf( FixedStatus.class ) );
+        assertThat( status, instanceOf( FixedResponse.class ) );
 
         assertEquals( NOT_FOUND.getStatusCode(), status.discover().getStatus() );
         assertEquals( NOT_FOUND.getStatusCode(), status.available().getStatus() );
@@ -86,7 +86,7 @@ class CausalClusteringStatusFactoryTest
 
         var status = buildStatus( dbService, KNOWN_DB );
 
-        assertThat( status, instanceOf( FixedStatus.class ) );
+        assertThat( status, instanceOf( FixedResponse.class ) );
 
         assertEquals( FORBIDDEN.getStatusCode(), status.discover().getStatus() );
         assertEquals( FORBIDDEN.getStatusCode(), status.available().getStatus() );

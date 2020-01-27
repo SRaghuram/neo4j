@@ -7,47 +7,47 @@ package com.neo4j.server.rest.causalclustering;
 
 import javax.ws.rs.core.Response;
 
-class FixedStatus implements CausalClusteringStatus
+class FixedResponse implements CausalClusteringStatus
 {
-    private final Response.Status status;
+    private Response response;
 
-    FixedStatus( Response.Status status )
+    FixedResponse( Response response )
     {
-        this.status = status;
+        this.response = response;
+    }
+
+    FixedResponse( Response.Status status )
+    {
+        this( Response.status( status ).build() );
     }
 
     @Override
     public Response discover()
     {
-        return buildResponse();
+        return response;
     }
 
     @Override
     public Response available()
     {
-        return buildResponse();
+        return response;
     }
 
     @Override
     public Response readonly()
     {
-        return buildResponse();
+        return response;
     }
 
     @Override
     public Response writable()
     {
-        return buildResponse();
+        return response;
     }
 
     @Override
     public Response description()
     {
-        return buildResponse();
-    }
-
-    private Response buildResponse()
-    {
-        return Response.status( status ).build();
+        return response;
     }
 }
