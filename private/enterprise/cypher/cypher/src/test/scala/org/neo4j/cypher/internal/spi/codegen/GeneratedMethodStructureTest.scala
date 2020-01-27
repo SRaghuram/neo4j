@@ -7,8 +7,13 @@ package org.neo4j.cypher.internal.spi.codegen
 
 import java.util
 
-import org.neo4j.codegen.Expression.{invoke, newInstance}
-import org.neo4j.codegen._
+import org.neo4j.codegen.CodeGenerationStrategy
+import org.neo4j.codegen.CodeGenerator
+import org.neo4j.codegen.Expression
+import org.neo4j.codegen.Expression.invoke
+import org.neo4j.codegen.Expression.newInstance
+import org.neo4j.codegen.MethodDeclaration
+import org.neo4j.codegen.MethodReference
 import org.neo4j.codegen.bytecode.ByteCode
 import org.neo4j.codegen.source.SourceCode
 import org.neo4j.cypher.internal.ast.semantics.SemanticTable
@@ -17,13 +22,27 @@ import org.neo4j.cypher.internal.frontend.helpers.using
 import org.neo4j.cypher.internal.profiling.QueryProfiler
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.compiled.codegen.CodeGenContext
-import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.{CodeGenType, CypherCodeGenType, ReferenceType}
-import org.neo4j.cypher.internal.runtime.compiled.codegen.spi._
+import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.CodeGenType
+import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.CypherCodeGenType
+import org.neo4j.cypher.internal.runtime.compiled.codegen.ir.expressions.ReferenceType
+import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.CodeStructure
+import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.LongToCountTable
+import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.LongToListTable
+import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.LongsToCountTable
+import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.LongsToListTable
+import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.SimpleTupleDescriptor
 import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure.typeRef
 import org.neo4j.cypher.internal.util.symbols
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 import org.neo4j.graphdb.Direction
-import org.neo4j.internal.kernel.api._
+import org.neo4j.internal.kernel.api.CursorFactory
+import org.neo4j.internal.kernel.api.NodeCursor
+import org.neo4j.internal.kernel.api.PropertyCursor
+import org.neo4j.internal.kernel.api.Read
+import org.neo4j.internal.kernel.api.RelationshipScanCursor
+import org.neo4j.internal.kernel.api.RelationshipTraversalCursor
+import org.neo4j.internal.kernel.api.SchemaRead
+import org.neo4j.internal.kernel.api.TokenRead
 import org.neo4j.internal.kernel.api.helpers.CachingExpandInto
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer
 import org.neo4j.kernel.impl.core.TransactionalEntityFactory

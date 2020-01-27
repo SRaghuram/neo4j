@@ -7,13 +7,21 @@ package org.neo4j.cypher.internal.runtime.pipelined.operators
 
 import org.neo4j.cypher.internal.expressions.SemanticDirection
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
+import org.neo4j.cypher.internal.runtime.DbAccess
+import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.ExpressionCursors
 import org.neo4j.cypher.internal.runtime.pipelined.execution.CursorPools
 import org.neo4j.cypher.internal.runtime.pipelined.operators.VarExpandCursor.relationshipFromCursor
-import org.neo4j.cypher.internal.runtime.{DbAccess, ExecutionContext, ExpressionCursors}
-import org.neo4j.internal.kernel.api.helpers.RelationshipSelections.{allCursor, incomingCursor, outgoingCursor}
-import org.neo4j.internal.kernel.api.{NodeCursor, Read, RelationshipTraversalCursor}
+import org.neo4j.internal.kernel.api.NodeCursor
+import org.neo4j.internal.kernel.api.Read
+import org.neo4j.internal.kernel.api.RelationshipTraversalCursor
+import org.neo4j.internal.kernel.api.helpers.RelationshipSelections.allCursor
+import org.neo4j.internal.kernel.api.helpers.RelationshipSelections.incomingCursor
+import org.neo4j.internal.kernel.api.helpers.RelationshipSelections.outgoingCursor
 import org.neo4j.values.AnyValue
-import org.neo4j.values.virtual.{ListValue, RelationshipValue, VirtualValues}
+import org.neo4j.values.virtual.ListValue
+import org.neo4j.values.virtual.RelationshipValue
+import org.neo4j.values.virtual.VirtualValues
 
 sealed trait ExpandStatus
 case object NOT_STARTED extends ExpandStatus

@@ -12,10 +12,10 @@ import java.util.function.Supplier
 import org.eclipse.collections.api.iterator.LongIterator
 import org.neo4j.common.DependencyResolver
 import org.neo4j.cypher.internal.evaluator.{EvaluationException, SimpleInternalExpressionEvaluator}
-import org.neo4j.cypher.internal.expressions.{Expression, SemanticDirection}
 import org.neo4j.cypher.internal.logical.plans.IndexOrder
 import org.neo4j.cypher.internal.runtime._
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
+import org.neo4j.cypher.internal.expressions.{Expression, SemanticDirection}
 import org.neo4j.graphdb.{Entity, Path}
 import org.neo4j.internal.kernel.api.procs.ProcedureCallContext
 import org.neo4j.internal.kernel.api.security.SecurityContext
