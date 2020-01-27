@@ -771,8 +771,10 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
         })
 
         lhs.foreachSlotOrdered({
-          case (VariableSlotKey(key), slot) if lhs.isAlias(key) =>
-            addVariableToResult(key, slot)
+          case (VariableSlotKey(key), slot) =>
+            if (lhs.isAlias(key)) {
+              addVariableToResult(key, slot)
+            }
 
           // Cached properties that exist on both sides are retained
           case (CachedPropertySlotKey(key), _) =>
