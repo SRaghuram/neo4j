@@ -13,8 +13,8 @@ import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
+import org.neo4j.collection.Dependencies;
 import org.neo4j.dbms.api.DatabaseManagementService;
-import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
@@ -54,7 +54,9 @@ public class EnterpriseDbmsSupportExtension extends DbmsSupportExtension impleme
         // Save in context
         ExtensionContext.Store store = getStore( context );
         store.put( DBMS, dbms );
-
+        var dbmsDependency = new Dependencies();
+        dbmsDependency.satisfyDependencies( dbms );
+        injectInstance( testInstance, lookupInjectableFields( testInstance ), dbmsDependency );
     }
 
     @Override
