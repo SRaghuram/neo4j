@@ -278,7 +278,6 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     // THEN
     executeOnDefault("joe", "soap", "MATCH (a:Start) RETURN a", resultHandler = (row, _) => {
       val node = row.get("a").asInstanceOf[Node]
-      node.getDegree() should be(0)
       node.getRelationships().asScala.map(_.getType.name()).toSet should be(Set())
     }) should be(1)
 
@@ -289,7 +288,6 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     // THEN
     executeOnDefault("joe", "soap", "MATCH (a:Start) RETURN a", resultHandler = (row, _) => {
       val node = row.get("a").asInstanceOf[Node]
-      node.getDegree() should be(1)
       node.getRelationships().asScala.map(_.getType.name()).toSet should be(Set("A"))
     }) should be(1)
 
@@ -300,7 +298,6 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     // THEN
     executeOnDefault("joe", "soap", "MATCH (a:Start) RETURN a", resultHandler = (row, _) => {
       val node = row.get("a").asInstanceOf[Node]
-      node.getDegree() should be(2)
       node.getRelationships().asScala.map(_.getType.name()).toSet should be(Set("A", "B"))
     }) should be(1)
 
@@ -311,7 +308,6 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     // THEN
     executeOnDefault("joe", "soap", "MATCH (a:Start) RETURN a", resultHandler = (row, _) => {
       val node = row.get("a").asInstanceOf[Node]
-      node.getDegree() should be(1)
       node.getRelationships().asScala.map(_.getType.name()).toSet should be(Set("B"))
     }) should be(1)
 
@@ -322,7 +318,6 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
     // THEN
     executeOnDefault("joe", "soap", "MATCH (a:Start) RETURN a", resultHandler = (row, _) => {
       val node = row.get("a").asInstanceOf[Node]
-      node.getDegree() should be(0)
       node.getRelationships().asScala.map(_.getType.name()).toSet should be(Set())
     }) should be(1)
   }
