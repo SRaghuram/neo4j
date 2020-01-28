@@ -794,10 +794,6 @@ case class NodeCursorRepresentation(target: IntermediateRepresentation) extends 
       invoke(ExpressionCompiler.PROPERTY_CURSOR, method[PropertyCursor, Boolean, Int]("seekProperty"), propertyToken)
     )
   }
-
-  def isDense: IntermediateRepresentation =
-    invoke(target, method[NodeCursor, Boolean]("isDense"))
-
 }
 
 case class NodeLabelCursorRepresentation(target: IntermediateRepresentation) extends BaseCursorRepresentation {
