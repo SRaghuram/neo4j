@@ -11,7 +11,6 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -36,6 +35,7 @@ import org.neo4j.internal.id.IdType;
 import org.neo4j.kernel.DeadlockDetectedException;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
+import org.neo4j.util.concurrent.Futures;
 
 import static java.lang.System.currentTimeMillis;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -98,7 +98,7 @@ class RelationshipIdReuseStressIT
         while ( (currentTime - startTime) < 5_000 || createdRelationships < 1_000 || removedRelationships < 100 );
         stopFlag.set( true );
         executorService.shutdown();
-        completeFutures( futures );
+        Futures.getAll( futures );
 
         long highestPossibleIdInUse = getHighestUsedIdForRelationships();
         assertThat( relationshipsCreator.getCreatedRelationships() ).as(
@@ -109,15 +109,6 @@ class RelationshipIdReuseStressIT
     private long getHighestUsedIdForRelationships()
     {
         return idGeneratorFactory.get( IdType.RELATIONSHIP ).getHighestPossibleIdInUse();
-    }
-
-    private static void completeFutures( List<Future<?>> futures )
-            throws InterruptedException, ExecutionException
-    {
-        for ( Future<?> future : futures )
-        {
-            future.get();
-        }
     }
 
     private void createCities( Label cityLabel )

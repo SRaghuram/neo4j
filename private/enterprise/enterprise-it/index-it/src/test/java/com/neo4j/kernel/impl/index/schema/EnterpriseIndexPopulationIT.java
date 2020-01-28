@@ -30,6 +30,7 @@ import org.neo4j.test.extension.RandomExtension;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.RandomRule;
 import org.neo4j.test.rule.TestDirectory;
+import org.neo4j.util.concurrent.Futures;
 
 import static java.util.concurrent.Executors.newFixedThreadPool;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -132,10 +133,7 @@ class EnterpriseIndexPopulationIT
                 }
             } ) );
         }
-        for ( Future<?> future : indexCreate )
-        {
-            future.get();
-        }
+        Futures.getAll( indexCreate );
     }
 
     private void createDataOnDbs( ExecutorService executorService, List<GraphDatabaseService> dbs )
@@ -146,10 +144,7 @@ class EnterpriseIndexPopulationIT
         {
             dataCreate.add( executorService.submit( () -> doCreateData( db ) ) );
         }
-        for ( Future<?> future : dataCreate )
-        {
-            future.get();
-        }
+        Futures.getAll( dataCreate );
     }
 
     private void doCreateData( GraphDatabaseService db )

@@ -24,11 +24,11 @@ import org.neo4j.test.extension.ImpermanentDbmsExtension;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.rule.concurrent.ThreadingExtension;
 import org.neo4j.test.rule.concurrent.ThreadingRule;
+import org.neo4j.util.concurrent.Futures;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.configuration.GraphDatabaseSettings.lock_manager;
 import static org.neo4j.internal.helpers.collection.Iterators.single;
-import static org.neo4j.test.rule.concurrent.ThreadingRule.await;
 
 @ImpermanentDbmsExtension( configurationCallback = "configure" )
 @ExtendWith( ThreadingExtension.class )
@@ -71,7 +71,7 @@ abstract class MergeLockConcurrencyTemplate
         Node node = createMergeNode();
 
         // when
-        List<Node> result = await( threads.multiple( barrier.getParties(), action, barrier ) );
+        List<Node> result = Futures.getAllResults( threads.multiple( barrier.getParties(), action, barrier ) );
 
         // then
         assertEquals( 2, result.size(), "size of result" );
