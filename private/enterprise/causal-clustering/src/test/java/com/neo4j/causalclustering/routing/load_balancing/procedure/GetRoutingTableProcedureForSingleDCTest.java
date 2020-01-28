@@ -490,7 +490,7 @@ class GetRoutingTableProcedureForSingleDCTest
         var proc = newProcedure( topologyService, leaderService, config );
 
         var error = assertThrows( ProcedureException.class, () -> run( proc, unknownNamedDatabaseId, config ) );
-        assertEquals( Status.Procedure.ProcedureCallFailed, error.status() );
+        assertEquals( Status.Database.DatabaseUnavailable, error.status() );
     }
 
     private LeaderLocatorForDatabase noLeaderAvailable() throws NoLeaderFoundException

@@ -41,7 +41,6 @@ import static org.neo4j.internal.kernel.api.procs.Neo4jTypes.NTInteger;
 import static org.neo4j.internal.kernel.api.procs.Neo4jTypes.NTList;
 import static org.neo4j.internal.kernel.api.procs.Neo4jTypes.NTMap;
 import static org.neo4j.internal.kernel.api.procs.Neo4jTypes.NTString;
-import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId;
 import static org.neo4j.logging.NullLogProvider.nullLogProvider;
 import static org.neo4j.procedure.builtin.routing.BaseRoutingProcedureInstaller.DEFAULT_NAMESPACE;
 import static org.neo4j.values.storable.Values.stringValue;
@@ -151,7 +150,7 @@ class GetRoutingTableProcedureForMultiDCTest
         var proc = newProcedure( plugin, databaseManager );
 
         var error = assertThrows( ProcedureException.class, () -> proc.apply( null, new AnyValue[]{MapValue.EMPTY, stringValue( databaseId.name() )}, null ) );
-        assertEquals( Status.Procedure.ProcedureCallFailed, error.status() );
+        assertEquals( Status.Database.DatabaseUnavailable, error.status() );
         verify( plugin ).run( databaseId, MapValue.EMPTY );
     }
 
