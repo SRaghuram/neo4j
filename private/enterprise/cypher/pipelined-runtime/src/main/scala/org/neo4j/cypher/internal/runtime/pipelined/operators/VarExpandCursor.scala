@@ -235,8 +235,8 @@ object VarExpandCursor {
                                                  params: Array[AnyValue],
                                                  cursors: ExpressionCursors,
                                                  expressionVariables: Array[AnyValue],
-                                                 selectionCursor: RelationshipTraversalCursor): Boolean =
-          relationshipPredicate.isTrue(selectionCursor) && nodePredicate.isTrue(selectionCursor.otherNodeReference())
+                                                 traversalCursor: RelationshipTraversalCursor): Boolean =
+          relationshipPredicate.isTrue(traversalCursor) && nodePredicate.isTrue(traversalCursor.otherNodeReference())
       }
     case SemanticDirection.BOTH =>
       new AllVarExpandCursor(fromNode,
