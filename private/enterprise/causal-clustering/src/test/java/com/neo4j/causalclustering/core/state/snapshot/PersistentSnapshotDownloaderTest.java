@@ -152,7 +152,7 @@ class PersistentSnapshotDownloaderTest
 
         PersistentSnapshotDownloader persistentSnapshotDownloader = createDownloader();
         long txIdAfterDownload = 79;
-        txIdStore.setLastCommittedAndClosedTransactionId( txIdAfterDownload, 0, 0, 0, 0 );
+        txIdStore.setLastCommittedAndClosedTransactionId( txIdAfterDownload, 0, 0, 0, 0, NULL );
 
         // when
         persistentSnapshotDownloader.run();
