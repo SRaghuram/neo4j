@@ -84,7 +84,7 @@ public class ReplicatedTokenHolder extends AbstractTokenHolderBase
 
         if ( replicationResult.outcome() != ReplicationResult.Outcome.APPLIED )
         {
-            throw new TransactionFailureException( "Could not replicate token", replicationResult.failure() );
+            throw new TransactionFailureException( "Could not replicate token for " + databaseId, replicationResult.failure() );
         }
 
         try
@@ -113,7 +113,7 @@ public class ReplicatedTokenHolder extends AbstractTokenHolderBase
         }
         catch ( KernelException e )
         {
-            throw new RuntimeException( "Unable to create token '" + tokenName + "'", e );
+            throw new RuntimeException( "Unable to create token '" + tokenName + "' for " + databaseId, e );
         }
 
         return StorageCommandMarshal.commandsToBytes( commands );
