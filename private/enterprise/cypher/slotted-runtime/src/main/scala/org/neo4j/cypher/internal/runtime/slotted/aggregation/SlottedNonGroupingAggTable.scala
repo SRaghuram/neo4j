@@ -16,13 +16,15 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.AggregationFunction
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.NonGroupingAggTable
 import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
+import org.neo4j.cypher.internal.util.attribution.Id
 
 /**
  * Slotted variant of [[NonGroupingAggTable]]
  */
 class SlottedNonGroupingAggTable(slots: SlotConfiguration,
                                  aggregations: Map[Int, AggregationExpression],
-                                 state: QueryState) extends AggregationTable {
+                                 state: QueryState,
+                                 operatorId: Id) extends AggregationTable {
   private val (aggregationOffsets: Array[Int], aggregationExpressions: Array[AggregationExpression]) = {
     val (a, b) = aggregations.unzip
     (a.toArray, b.toArray)
@@ -32,7 +34,7 @@ class SlottedNonGroupingAggTable(slots: SlotConfiguration,
   override def clear(): Unit = {
     var i = 0
     while (i < aggregationFunctions.length) {
-      aggregationFunctions(i) = aggregationExpressions(i).createAggregationFunction
+      aggregationFunctions(i) = aggregationExpressions(i).createAggregationFunction(operatorId)
       i += 1
     }
   }
@@ -65,8 +67,8 @@ object SlottedNonGroupingAggTable {
   case class Factory(slots: SlotConfiguration,
                      aggregations: Map[Int, AggregationExpression]) extends AggregationTableFactory {
 
-    override def table(state: QueryState, executionContextFactory: ExecutionContextFactory): AggregationTable =
-      new SlottedNonGroupingAggTable(slots, aggregations, state)
+    override def table(state: QueryState, executionContextFactory: ExecutionContextFactory, operatorId: Id): AggregationTable =
+      new SlottedNonGroupingAggTable(slots, aggregations, state, operatorId)
 
     override def registerOwningPipe(pipe: Pipe): Unit = {
       aggregations.values.foreach(_.registerOwningPipe(pipe))

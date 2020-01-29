@@ -19,6 +19,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.AggregationFunction
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.GroupingAggTable
 import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
+import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.values.storable.LongArray
 import org.neo4j.values.storable.Values
 
@@ -31,7 +32,8 @@ class SlottedPrimitiveGroupingAggTable(slots: SlotConfiguration,
                                        readGrouping: Array[Int], // Offsets into the long array of the current execution context
                                        writeGrouping: Array[Int], // Offsets into the long array of the current execution context
                                        aggregations: Map[Int, AggregationExpression],
-                                       state: QueryState) extends AggregationTable {
+                                       state: QueryState,
+                                       operatorId: Id) extends AggregationTable {
 
   protected var resultMap: util.LinkedHashMap[LongArray, Array[AggregationFunction]] = _
   private val (aggregationOffsets: Array[Int], aggregationExpressions: Array[AggregationExpression]) = {
@@ -75,11 +77,11 @@ class SlottedPrimitiveGroupingAggTable(slots: SlotConfiguration,
   override def processRow(row: ExecutionContext): Unit = {
     val groupingValue = computeGroupingKey(row)
     val functions = resultMap.computeIfAbsent(groupingValue, _ => {
-      state.memoryTracker.allocated(groupingValue)
+      state.memoryTracker.allocated(groupingValue, operatorId.x)
       val functions = new Array[AggregationFunction](aggregationExpressions.length)
       var i = 0
       while (i < aggregationExpressions.length) {
-        functions(i) = aggregationExpressions(i).createAggregationFunction
+        functions(i) = aggregationExpressions(i).createAggregationFunction(operatorId)
         i += 1
       }
       functions
@@ -104,8 +106,8 @@ object SlottedPrimitiveGroupingAggTable {
                      readGrouping: Array[Int],
                      writeGrouping: Array[Int],
                      aggregations: Map[Int, AggregationExpression]) extends AggregationTableFactory {
-    override def table(state: QueryState, executionContextFactory: ExecutionContextFactory): AggregationPipe.AggregationTable =
-      new SlottedPrimitiveGroupingAggTable(slots, readGrouping, writeGrouping, aggregations, state)
+    override def table(state: QueryState, executionContextFactory: ExecutionContextFactory, operatorId: Id): AggregationPipe.AggregationTable =
+      new SlottedPrimitiveGroupingAggTable(slots, readGrouping, writeGrouping, aggregations, state, operatorId)
 
     override def registerOwningPipe(pipe: Pipe): Unit = {
       aggregations.values.foreach(_.registerOwningPipe(pipe))

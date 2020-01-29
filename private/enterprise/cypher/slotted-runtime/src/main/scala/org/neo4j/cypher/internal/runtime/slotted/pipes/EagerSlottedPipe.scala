@@ -22,6 +22,6 @@ case class EagerSlottedPipe(source: Pipe, slots: SlotConfiguration)(val id: Id =
       val outputRow = SlottedExecutionContext(slots)
       inputRow.copyTo(outputRow)
       outputRow
-    }).toIndexedSeq.iterator
+    }, id.x).toIndexedSeq.iterator
   }
 }

@@ -16,6 +16,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.OrderedChunkReceiver
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.OrderedGroupingAggTable
+import org.neo4j.cypher.internal.util.attribution.Id
 
 /**
  * Slotted variant of [[OrderedGroupingAggTable]]
@@ -24,8 +25,9 @@ class SlottedOrderedGroupingAggTable(slots: SlotConfiguration,
                                      orderedGroupingColumns: GroupingExpression,
                                      unorderedGroupingColumns: GroupingExpression,
                                      aggregations: Map[Int, AggregationExpression],
-                                     state: QueryState)
-  extends SlottedGroupingAggTable(slots, unorderedGroupingColumns, aggregations, state) with OrderedChunkReceiver {
+                                     state: QueryState,
+                                     operatorId: Id)
+  extends SlottedGroupingAggTable(slots, unorderedGroupingColumns, aggregations, state, operatorId) with OrderedChunkReceiver {
 
   private var currentGroupKey: orderedGroupingColumns.KeyType = _
 
@@ -58,8 +60,8 @@ object SlottedOrderedGroupingAggTable {
                      unorderedGroupingColumns: GroupingExpression,
                      aggregations: Map[Int, AggregationExpression]) extends OrderedAggregationTableFactory {
 
-    override def table(state: QueryState, executionContextFactory: ExecutionContextFactory): AggregationTable with OrderedChunkReceiver =
-      new SlottedOrderedGroupingAggTable(slots, orderedGroupingColumns,unorderedGroupingColumns, aggregations, state)
+    override def table(state: QueryState, executionContextFactory: ExecutionContextFactory, operatorId: Id): AggregationTable with OrderedChunkReceiver =
+      new SlottedOrderedGroupingAggTable(slots, orderedGroupingColumns,unorderedGroupingColumns, aggregations, state, operatorId)
 
     override def registerOwningPipe(pipe: Pipe): Unit = {
       orderedGroupingColumns.registerOwningPipe(pipe)

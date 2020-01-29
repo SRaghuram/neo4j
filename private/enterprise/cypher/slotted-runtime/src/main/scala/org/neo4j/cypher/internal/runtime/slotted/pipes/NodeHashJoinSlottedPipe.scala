@@ -44,7 +44,7 @@ case class NodeHashJoinSlottedPipe(lhsOffsets: Array[Int],
     if (rhsIterator.isEmpty)
       return Iterator.empty
 
-    val table = buildProbeTable(state.memoryTracker.memoryTrackingIterator(input), state)
+    val table = buildProbeTable(state.memoryTracker.memoryTrackingIterator(input, id.x), state)
 
     // This will only happen if all the lhs-values evaluate to null, which is probably rare.
     // But, it's cheap to check and will save us from exhausting the rhs, so it's probably worth it

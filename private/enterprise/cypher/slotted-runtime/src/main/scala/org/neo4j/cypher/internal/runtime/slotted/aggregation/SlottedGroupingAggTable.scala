@@ -17,6 +17,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.AggregationFunction
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.GroupingAggTable
 import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
+import org.neo4j.cypher.internal.util.attribution.Id
 
 /**
  * Slotted variant of [[GroupingAggTable]]
@@ -24,7 +25,8 @@ import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
 class SlottedGroupingAggTable(slots: SlotConfiguration,
                               groupingColumns: GroupingExpression,
                               aggregations: Map[Int, AggregationExpression],
-                              state: QueryState) extends AggregationTable {
+                              state: QueryState,
+                              operatorId: Id) extends AggregationTable {
 
   private var resultMap: java.util.LinkedHashMap[groupingColumns.KeyType, Array[AggregationFunction]] = _
   private val (aggregationOffsets: Array[Int], aggregationExpressions: Array[AggregationExpression]) = {
@@ -39,11 +41,11 @@ class SlottedGroupingAggTable(slots: SlotConfiguration,
   override def processRow(row: ExecutionContext): Unit = {
     val groupingValue = groupingColumns.computeGroupingKey(row, state)
     val functions = resultMap.computeIfAbsent(groupingValue, _ => {
-      state.memoryTracker.allocated(groupingValue)
+      state.memoryTracker.allocated(groupingValue, operatorId.x)
       val functions = new Array[AggregationFunction](aggregationExpressions.length)
       var i = 0
       while (i < aggregationExpressions.length) {
-        functions(i) = aggregationExpressions(i).createAggregationFunction
+        functions(i) = aggregationExpressions(i).createAggregationFunction(operatorId)
         i += 1
       }
       functions
@@ -82,8 +84,8 @@ object SlottedGroupingAggTable {
   case class Factory(slots: SlotConfiguration,
                      groupingColumns: GroupingExpression,
                      aggregations: Map[Int, AggregationExpression]) extends AggregationTableFactory {
-    override def table(state: QueryState, executionContextFactory: ExecutionContextFactory): AggregationTable =
-      new SlottedGroupingAggTable(slots, groupingColumns, aggregations, state)
+    override def table(state: QueryState, executionContextFactory: ExecutionContextFactory, operatorId: Id): AggregationTable =
+      new SlottedGroupingAggTable(slots, groupingColumns, aggregations, state, operatorId)
 
     override def registerOwningPipe(pipe: Pipe): Unit = {
       aggregations.values.foreach(_.registerOwningPipe(pipe))

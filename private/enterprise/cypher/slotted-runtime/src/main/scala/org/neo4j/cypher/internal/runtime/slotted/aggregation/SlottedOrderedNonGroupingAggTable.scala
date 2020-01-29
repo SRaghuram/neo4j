@@ -16,6 +16,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.OrderedChunkReceiver
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.OrderedNonGroupingAggTable
+import org.neo4j.cypher.internal.util.attribution.Id
 
 /**
  * Slotted variant of [[OrderedNonGroupingAggTable]]
@@ -23,8 +24,9 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.OrderedNo
 class SlottedOrderedNonGroupingAggTable(slots: SlotConfiguration,
                                         orderedGroupingColumns: GroupingExpression,
                                         aggregations: Map[Int, AggregationExpression],
-                                        state: QueryState)
-  extends SlottedNonGroupingAggTable(slots, aggregations, state) with OrderedChunkReceiver {
+                                        state: QueryState,
+                                        operatorId: Id)
+  extends SlottedNonGroupingAggTable(slots, aggregations, state, operatorId) with OrderedChunkReceiver {
 
   private var currentGroupKey: orderedGroupingColumns.KeyType = _
 
@@ -55,8 +57,8 @@ object SlottedOrderedNonGroupingAggTable {
                      orderedGroupingColumns: GroupingExpression,
                      aggregations: Map[Int, AggregationExpression]) extends OrderedAggregationTableFactory {
 
-    override def table(state: QueryState, executionContextFactory: ExecutionContextFactory): AggregationTable with OrderedChunkReceiver =
-      new SlottedOrderedNonGroupingAggTable(slots, orderedGroupingColumns, aggregations, state)
+    override def table(state: QueryState, executionContextFactory: ExecutionContextFactory, operatorId: Id): AggregationTable with OrderedChunkReceiver =
+      new SlottedOrderedNonGroupingAggTable(slots, orderedGroupingColumns, aggregations, state, operatorId)
 
     override def registerOwningPipe(pipe: Pipe): Unit = {
       orderedGroupingColumns.registerOwningPipe(pipe)
