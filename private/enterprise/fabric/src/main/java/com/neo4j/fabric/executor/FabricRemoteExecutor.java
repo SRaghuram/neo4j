@@ -43,7 +43,7 @@ public class FabricRemoteExecutor
         private final Object writeTransactionStartLock = new Object();
         private final FabricTransactionInfo transactionInfo;
         private final TransactionBookmarkManager bookmarkManager;
-        private final Map<FabricConfig.Graph,PooledDriver> usedDrivers = new ConcurrentHashMap<>();
+        private final Map<Long,PooledDriver> usedDrivers = new ConcurrentHashMap<>();
         private volatile FabricConfig.Graph writingTo;
         private volatile Mono<FabricDriverTransaction> writeTransaction;
 
@@ -135,7 +135,7 @@ public class FabricRemoteExecutor
 
         private PooledDriver getDriver( FabricConfig.Graph location )
         {
-            return usedDrivers.computeIfAbsent( location, l -> driverPool.getDriver( location, transactionInfo.getLoginContext().subject() ) );
+            return usedDrivers.computeIfAbsent( location.getId(), gid -> driverPool.getDriver( location, transactionInfo.getLoginContext().subject() ) );
         }
 
         private FabricException writeInReadError( FabricConfig.Graph attempt )

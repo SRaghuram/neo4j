@@ -9,8 +9,8 @@ import com.neo4j.fabric.config.FabricConfig;
 import com.neo4j.fabric.executor.FabricLocalExecutor;
 import com.neo4j.fabric.executor.FabricRemoteExecutor;
 
-import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.neo4j.common.DependencyResolver;
 import org.neo4j.internal.kernel.api.security.LoginContext;
@@ -27,7 +27,7 @@ public class TransactionManager extends LifecycleAdapter
     private final JobScheduler jobScheduler;
     private final FabricConfig fabricConfig;
 
-    private final Set<FabricTransactionImpl> openTransactions = new HashSet<>();
+    private final Set<FabricTransactionImpl> openTransactions = ConcurrentHashMap.newKeySet();
 
     public TransactionManager( DependencyResolver dependencyResolver )
     {
