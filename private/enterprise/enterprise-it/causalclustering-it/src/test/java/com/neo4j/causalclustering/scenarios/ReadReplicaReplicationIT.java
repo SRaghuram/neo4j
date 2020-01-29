@@ -344,10 +344,9 @@ class ReadReplicaReplicationIT
 
         readReplica.start();
 
-        assertReadReplicasEventuallyUpToDateWithLeader( cluster );
-
         // when
         createDataInOneTransaction( cluster, 10 );
+        assertReadReplicasEventuallyUpToDateWithLeader( cluster );
 
         // then
         assertEventually( "The read replica has the same data as the core members",
