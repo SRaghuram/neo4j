@@ -16,10 +16,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
-import javax.xml.transform.TransformerException;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.stream.StreamResult;
-import javax.xml.transform.stream.StreamSource;
+
+import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 
 /**
  * Flamegraph tool wrapper at the moment it:
@@ -49,12 +47,13 @@ class Flamegraph
                           .waitFor();
             BenchmarkUtil.assertFileExists( temporaryFlamegraph );
 
-            TransformerFactory transformerFactory = TransformerFactory.newInstance();
-            transformerFactory.newTransformer( new StreamSource( resources.getResourceFile( "/bench/profiling/flamegraph.xsl" ).toFile() ) )
-                              .transform( new StreamSource( Files.newInputStream( temporaryFlamegraph ) ),
-                                          new StreamResult( Files.newOutputStream( flameGraphSvg ) ) );
+//            TransformerFactory transformerFactory = TransformerFactory.newInstance();
+//            transformerFactory.newTransformer( new StreamSource( resources.getResourceFile( "/bench/profiling/flamegraph.xsl" ).toFile() ) )
+//                              .transform( new StreamSource( Files.newInputStream( temporaryFlamegraph ) ),
+//                                          new StreamResult( Files.newOutputStream( flameGraphSvg ) ) );
+            Files.move( temporaryFlamegraph, flameGraphSvg, REPLACE_EXISTING );
         }
-        catch ( IOException | TransformerException e )
+        catch ( IOException e )
         {
             throw new RuntimeException( "Error creating FlameGraph\n" +
                                         "From recording : " + collapsedStackFrames.toAbsolutePath() + "\n" +
