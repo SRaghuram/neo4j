@@ -73,11 +73,12 @@ case class AggregationOperatorNoGrouping(workIdentity: WorkIdentity,
       expressionValues)
 
   def reducer(argumentStateMapId: ArgumentStateMapId,
-              reducerOutputSlots: Array[Int]) =
+              reducerOutputSlots: Array[Int],
+              operatorId: Id) =
     new AggregationReduceOperatorNoGrouping(argumentStateMapId,
       workIdentity,
       aggregations,
-      reducerOutputSlots)
+      reducerOutputSlots)(operatorId)
 
   // =========== THE MAPPER ============
 
@@ -154,6 +155,7 @@ case class AggregationOperatorNoGrouping(workIdentity: WorkIdentity,
                                             val workIdentity: WorkIdentity,
                                             aggregations: Array[Aggregator],
                                             reducerOutputSlots: Array[Int])
+                                           (val id: Id = Id.INVALID_ID)
     extends Operator
     with ReduceOperatorState[Array[Updater], AggregatingAccumulator] {
 
@@ -162,7 +164,7 @@ case class AggregationOperatorNoGrouping(workIdentity: WorkIdentity,
                              queryContext: QueryContext,
                              state: QueryState,
                              resources: QueryResources): ReduceOperatorState[Array[Updater], AggregatingAccumulator] = {
-      argumentStateCreator.createArgumentStateMap(argumentStateMapId, new AggregatingAccumulator.Factory(aggregations, stateFactory.memoryTracker))
+      argumentStateCreator.createArgumentStateMap(argumentStateMapId, new AggregatingAccumulator.Factory(aggregations, stateFactory.memoryTracker, id))
       this
     }
 

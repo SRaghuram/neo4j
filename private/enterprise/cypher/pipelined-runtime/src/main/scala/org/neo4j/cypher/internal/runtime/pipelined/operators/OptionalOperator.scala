@@ -24,6 +24,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.MorselData
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.OptionalArgumentStateBuffer
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.WorkUnitEvent
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
+import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.values.storable.Values
 
 class OptionalOperator(val workIdentity: WorkIdentity,
@@ -32,6 +33,7 @@ class OptionalOperator(val workIdentity: WorkIdentity,
                        nullableSlots: Seq[Slot],
                        slots: SlotConfiguration,
                        argumentSize: SlotConfiguration.Size)
+                      (val id: Id = Id.INVALID_ID)
   extends Operator {
 
   //===========================================================================
@@ -53,7 +55,7 @@ class OptionalOperator(val workIdentity: WorkIdentity,
                            queryContext: QueryContext,
                            state: QueryState,
                            resources: QueryResources): OperatorState = {
-    argumentStateCreator.createArgumentStateMap(argumentStateMapId, new OptionalArgumentStateBuffer.Factory(stateFactory))
+    argumentStateCreator.createArgumentStateMap(argumentStateMapId, new OptionalArgumentStateBuffer.Factory(stateFactory, id))
     new OptionalOperatorState
   }
 

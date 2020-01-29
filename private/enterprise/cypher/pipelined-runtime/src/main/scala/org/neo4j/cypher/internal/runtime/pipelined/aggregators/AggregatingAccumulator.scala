@@ -9,6 +9,7 @@ import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
+import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.values.AnyValue
 
 /**
@@ -34,9 +35,9 @@ class AggregatingAccumulator(override val argumentRowId: Long,
 
 object AggregatingAccumulator {
 
-  class Factory(aggregators: Array[Aggregator], memoryTracker: QueryMemoryTracker) extends ArgumentStateFactory[AggregatingAccumulator] {
+  class Factory(aggregators: Array[Aggregator], memoryTracker: QueryMemoryTracker, operatorId: Id) extends ArgumentStateFactory[AggregatingAccumulator] {
     override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): AggregatingAccumulator =
-      new AggregatingAccumulator(argumentRowId, aggregators.map(_.newStandardReducer(memoryTracker)), argumentRowIdsForReducers)
+      new AggregatingAccumulator(argumentRowId, aggregators.map(_.newStandardReducer(memoryTracker, operatorId)), argumentRowIdsForReducers)
 
     override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): AggregatingAccumulator =
       new AggregatingAccumulator(argumentRowId, aggregators.map(_.newConcurrentReducer), argumentRowIdsForReducers)
@@ -53,7 +54,7 @@ object AggregatingAccumulator {
  */
 trait Aggregator {
   def newUpdater: Updater
-  def newStandardReducer(memoryTracker: QueryMemoryTracker): Reducer
+  def newStandardReducer(memoryTracker: QueryMemoryTracker, operatorId: Id): Reducer
   def newConcurrentReducer: Reducer
 }
 

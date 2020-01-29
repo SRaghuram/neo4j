@@ -30,6 +30,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Sink
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.ColumnOrder
+import org.neo4j.cypher.internal.util.attribution.Id
 
 /**
  * Reducing operator which collects pre-sorted input morsels until it
@@ -48,8 +49,8 @@ case class TopOperator(workIdentity: WorkIdentity,
   def mapper(argumentSlotOffset: Int, outputBufferId: BufferId): TopMapperOperator =
     new TopMapperOperator(argumentSlotOffset, outputBufferId)
 
-  def reducer(argumentStateMapId: ArgumentStateMapId): TopReduceOperator =
-    new TopReduceOperator(argumentStateMapId)
+  def reducer(argumentStateMapId: ArgumentStateMapId, operatorId: Id): TopReduceOperator =
+    new TopReduceOperator(argumentStateMapId)(operatorId)
 
   /**
    * Pre-operator for pre-sorting and limiting morsels. The operator performs local sorting/limiting of the
@@ -98,6 +99,7 @@ case class TopOperator(workIdentity: WorkIdentity,
    * Operator which streams sorted and limited data, built by [[TopMapperOperator]] and [[TopTable]].
    */
   class TopReduceOperator(argumentStateMapId: ArgumentStateMapId)
+                         (val id: Id = Id.INVALID_ID)
     extends Operator
     with ReduceOperatorState[MorselExecutionContext, TopTable] {
 
@@ -110,7 +112,7 @@ case class TopOperator(workIdentity: WorkIdentity,
                              resources: QueryResources): ReduceOperatorState[MorselExecutionContext, TopTable] = {
       // NOTE: If the _input size_ is larger than Int.MaxValue this will still fail, since an array cannot hold that many elements
       val limit = Math.min(LimitOperator.evaluateCountValue(queryContext, state, resources, countExpression), Int.MaxValue).toInt
-      argumentStateCreator.createArgumentStateMap(argumentStateMapId, new TopOperator.Factory(stateFactory.memoryTracker, comparator, limit))
+      argumentStateCreator.createArgumentStateMap(argumentStateMapId, new TopOperator.Factory(stateFactory.memoryTracker, comparator, limit, id))
       this
     }
 
@@ -162,12 +164,12 @@ case class TopOperator(workIdentity: WorkIdentity,
 
 object TopOperator {
 
-  class Factory(memoryTracker: QueryMemoryTracker, comparator: Comparator[MorselExecutionContext], limit: Int) extends ArgumentStateFactory[TopTable] {
+  class Factory(memoryTracker: QueryMemoryTracker, comparator: Comparator[MorselExecutionContext], limit: Int, operatorId: Id) extends ArgumentStateFactory[TopTable] {
     override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): TopTable =
       if (limit <= 0) {
         ZeroTable(argumentRowId, argumentRowIdsForReducers)
       } else {
-        new StandardTopTable(argumentRowId, argumentRowIdsForReducers, memoryTracker, comparator, limit)
+        new StandardTopTable(argumentRowId, argumentRowIdsForReducers, memoryTracker, comparator, limit, operatorId)
       }
 
     override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): TopTable =
@@ -217,7 +219,8 @@ object TopOperator {
                          override val argumentRowIdsForReducers: Array[Long],
                          memoryTracker: QueryMemoryTracker,
                          comparator: Comparator[MorselExecutionContext],
-                         limit: Int) extends TopTable {
+                         limit: Int,
+                         operatorId: Id) extends TopTable {
 
     private val topTable = new DefaultComparatorTopTable(comparator, limit)
     private var totalTopHeapUsage = 0L
@@ -233,16 +236,16 @@ object TopOperator {
           // assume worst case, that every row in top table is from a different morsel
           morselCount = Math.min(morselCount + 1, limit)
           maxMorselHeapUsage = Math.max(maxMorselHeapUsage, morsel.estimatedHeapUsage)
-          memoryTracker.deallocated(totalTopHeapUsage)
+          memoryTracker.deallocated(totalTopHeapUsage, operatorId.x)
           totalTopHeapUsage = maxMorselHeapUsage * morselCount
-          memoryTracker.allocated(totalTopHeapUsage)
+          memoryTracker.allocated(totalTopHeapUsage, operatorId.x)
         }
         morsel.moveToNextRow()
       }
     }
 
     override def deallocateMemory(): Unit = {
-      memoryTracker.deallocated(totalTopHeapUsage)
+      memoryTracker.deallocated(totalTopHeapUsage, operatorId.x)
     }
 
     override protected def getTopRows: util.Iterator[MorselExecutionContext] = {

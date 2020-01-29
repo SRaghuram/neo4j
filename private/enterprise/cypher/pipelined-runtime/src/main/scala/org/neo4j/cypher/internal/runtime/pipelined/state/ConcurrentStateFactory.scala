@@ -18,13 +18,14 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.ConcurrentBuffe
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.ConcurrentSingletonBuffer
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.SingletonBuffer
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.QueryExecutionTracer
+import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.kernel.impl.query.QuerySubscriber
 
 /**
  * Implementation of [[StateFactory]] which constructs concurrent state management classes.
  */
 class ConcurrentStateFactory extends StateFactory {
-  override def newBuffer[T <: WithHeapUsageEstimation](): Buffer[T] = new ConcurrentBuffer[T]
+  override def newBuffer[T <: WithHeapUsageEstimation](operatorId: Id): Buffer[T] = new ConcurrentBuffer[T]
 
   override def newSingletonBuffer[T <: AnyRef](): SingletonBuffer[T] = new ConcurrentSingletonBuffer[T]
 

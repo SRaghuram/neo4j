@@ -22,6 +22,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.QueryCompletionTracker
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatingBuffer
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.DataHolder
+import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.InternalException
 
 import scala.collection.mutable.ArrayBuffer
@@ -273,12 +274,12 @@ class OptionalArgumentStateBuffer(argumentRowId: Long,
 }
 
 object OptionalArgumentStateBuffer {
-  class Factory(stateFactory: StateFactory) extends ArgumentStateFactory[ArgumentStateBuffer] {
+  class Factory(stateFactory: StateFactory, operatorId: Id) extends ArgumentStateFactory[ArgumentStateBuffer] {
     override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): ArgumentStateBuffer =
-      new OptionalArgumentStateBuffer(argumentRowId, argumentMorsel, new StandardOptionalBuffer[MorselExecutionContext](stateFactory.newBuffer[MorselExecutionContext]()), argumentRowIdsForReducers)
+      new OptionalArgumentStateBuffer(argumentRowId, argumentMorsel, new StandardOptionalBuffer[MorselExecutionContext](stateFactory.newBuffer[MorselExecutionContext](operatorId)), argumentRowIdsForReducers)
 
     override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): ArgumentStateBuffer =
-      new OptionalArgumentStateBuffer(argumentRowId, argumentMorsel, new ConcurrentOptionalBuffer[MorselExecutionContext](stateFactory.newBuffer[MorselExecutionContext]()), argumentRowIdsForReducers)
+      new OptionalArgumentStateBuffer(argumentRowId, argumentMorsel, new ConcurrentOptionalBuffer[MorselExecutionContext](stateFactory.newBuffer[MorselExecutionContext](operatorId)), argumentRowIdsForReducers)
   }
 }
 

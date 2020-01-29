@@ -329,7 +329,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         val argumentDepth = physicalPlan.applyPlans(id)
         val argumentSlotOffset = slots.getArgumentLongOffsetFor(argumentDepth)
 
-        new OptionalOperator(WorkIdentity.fromPlan(plan), argumentStateMapId, argumentSlotOffset, nullableSlots, slots, argumentSize)
+        new OptionalOperator(WorkIdentity.fromPlan(plan), argumentStateMapId, argumentSlotOffset, nullableSlots, slots, argumentSize)(plan.id)
 
       case joinPlan:plans.NodeHashJoin =>
 
@@ -373,7 +373,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
             slots,
             longsToCopy,
             refsToCopy,
-            cachedPropertiesToCopy)
+            cachedPropertiesToCopy)(id)
         } else {
           new NodeHashJoinOperator(
             WorkIdentity.fromPlan(plan),
@@ -384,7 +384,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
             slots,
             longsToCopy,
             refsToCopy,
-            cachedPropertiesToCopy)
+            cachedPropertiesToCopy)(id)
         }
 
       case _: plans.CartesianProduct =>
@@ -395,7 +395,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
           buffer.rhsArgumentStateMapId,
           slots,
           physicalPlan.argumentSizes(plan.id)
-        )
+        )(plan.id)
 
       case plans.UnwindCollection(_, variable, collection) =>
         val offset = slots.get(variable) match {
@@ -416,14 +416,14 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         new SortMergeOperator(argumentStateMapId,
           WorkIdentity.fromPlan(plan),
           ordering,
-          argumentSlot)
+          argumentSlot)(plan.id)
 
       case plans.Top(_, sortItems, limit) =>
         val ordering = sortItems.map(translateColumnOrder(slots, _))
         val argumentStateMapId = inputBuffer.variant.asInstanceOf[ArgumentStateBufferVariant].argumentStateMapId
         TopOperator(WorkIdentity.fromPlan(plan),
           ordering,
-          converters.toCommandExpression(plan.id, limit)).reducer(argumentStateMapId)
+          converters.toCommandExpression(plan.id, limit)).reducer(argumentStateMapId, id)
 
       case plans.Aggregation(_, groupingExpressions, aggregationExpression) if groupingExpressions.isEmpty =>
         val argumentStateMapId = inputBuffer.variant.asInstanceOf[ArgumentStateBufferVariant].argumentStateMapId
@@ -440,7 +440,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         AggregationOperatorNoGrouping(WorkIdentity.fromPlan(plan),
           aggregators.result())
           .reducer(argumentStateMapId,
-            outputSlots.result())
+            outputSlots.result(), id)
 
       case plans.Aggregation(_, groupingExpressions, aggregationExpression) =>
         val argumentStateMapId = inputBuffer.variant.asInstanceOf[ArgumentStateBufferVariant].argumentStateMapId
@@ -457,7 +457,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
         }
 
         AggregationOperator(WorkIdentity.fromPlan(plan), aggregators.result(), groupings)
-          .reducer(argumentStateMapId, outputSlots.result())
+          .reducer(argumentStateMapId, outputSlots.result(), id)
 
       case plan: plans.ProduceResult => createProduceResults(plan)
 
@@ -536,7 +536,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
       case plans.Distinct(_, groupingExpressions) =>
         val argumentStateMapId = executionGraphDefinition.findArgumentStateMapForPlan(id)
         val groupings = converters.toGroupingExpression(id, groupingExpressions, Seq.empty)
-        Some(new DistinctOperator(argumentStateMapId, WorkIdentity.fromPlan(plan), groupings))
+        Some(new DistinctOperator(argumentStateMapId, WorkIdentity.fromPlan(plan), groupings)(id))
 
       case plans.Projection(_, expressions) =>
         val toProject = expressions collect {

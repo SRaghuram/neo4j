@@ -9,6 +9,7 @@ import java.util
 import java.util.concurrent.ConcurrentLinkedQueue
 
 import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
+import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
 import org.neo4j.values.virtual.ListValue
@@ -22,7 +23,7 @@ import scala.collection.mutable.ArrayBuffer
 case object CollectAggregator extends Aggregator {
 
   override def newUpdater: Updater = new CollectUpdater
-  override def newStandardReducer(memoryTracker: QueryMemoryTracker): Reducer = new CollectStandardReducer(memoryTracker)
+  override def newStandardReducer(memoryTracker: QueryMemoryTracker, operatorId: Id): Reducer = new CollectStandardReducer(memoryTracker, operatorId)
   override def newConcurrentReducer: Reducer = new CollectConcurrentReducer()
 }
 
@@ -34,7 +35,7 @@ class CollectUpdater() extends Updater {
     }
 }
 
-class CollectStandardReducer(memoryTracker: QueryMemoryTracker) extends Reducer {
+class CollectStandardReducer(memoryTracker: QueryMemoryTracker, operatorId: Id) extends Reducer {
   private val collections = new ArrayBuffer[ListValue]
   override def update(updater: Updater): Unit = {
     updater match {
@@ -42,7 +43,7 @@ class CollectStandardReducer(memoryTracker: QueryMemoryTracker) extends Reducer 
         val value = VirtualValues.fromList(u.collection)
         collections += value
         // Note: this allocation is currently never de-allocated
-        memoryTracker.allocated(value)
+        memoryTracker.allocated(value, operatorId.x)
     }
   }
 

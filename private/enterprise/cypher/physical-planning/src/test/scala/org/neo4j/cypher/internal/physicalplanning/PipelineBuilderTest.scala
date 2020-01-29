@@ -30,8 +30,8 @@ class PipelineBuilderTest extends CypherFunSuite {
       .allNodeScan("n").withBreak()
       .build() should plan {
       start(newGraph)
-        .applyBuffer(0, TopLevelArgument.SLOT_OFFSET)
-        .delegateToMorselBuffer(1)
+        .applyBuffer(0, TopLevelArgument.SLOT_OFFSET, 1)
+        .delegateToMorselBuffer(1, 1)
         .pipeline(0, Seq(classOf[AllNodesScan], classOf[ProduceResult]), serial = true)
         .end
     }
@@ -45,10 +45,10 @@ class PipelineBuilderTest extends CypherFunSuite {
       .build() should plan {
       val graph = newGraph
       start(graph)
-        .applyBuffer(0, TopLevelArgument.SLOT_OFFSET)
-        .delegateToMorselBuffer(1)
+        .applyBuffer(0, TopLevelArgument.SLOT_OFFSET, 2)
+        .delegateToMorselBuffer(1, 2)
         .pipeline(0, Seq(classOf[AllNodesScan]))
-        .argumentStateBuffer(2, 0)
+        .argumentStateBuffer(2, 0, 1)
         .pipeline(1, Seq(classOf[Sort], classOf[ProduceResult]), serial = true)
         .end
 
@@ -65,8 +65,8 @@ class PipelineBuilderTest extends CypherFunSuite {
       .build() should plan {
       val graph = newGraph
       start(graph)
-        .applyBuffer(0, TopLevelArgument.SLOT_OFFSET)
-        .delegateToMorselBuffer(1)
+        .applyBuffer(0, TopLevelArgument.SLOT_OFFSET, 2)
+        .delegateToMorselBuffer(1, 2)
         .pipeline(0, Seq(classOf[AllNodesScan], classOf[Limit], classOf[ProduceResult]), serial = true)
         .end
 
@@ -84,16 +84,16 @@ class PipelineBuilderTest extends CypherFunSuite {
       .build() should plan {
       val graph = newGraph
       start(graph)
-        .applyBuffer(0, TopLevelArgument.SLOT_OFFSET)
-        .delegateToMorselBuffer(1)
+        .applyBuffer(0, TopLevelArgument.SLOT_OFFSET, 3)
+        .delegateToMorselBuffer(1, 3)
         .pipeline(0, Seq(classOf[AllNodesScan]))
-        .leftOfJoinBuffer(id = 3, TopLevelArgument.SLOT_OFFSET, asmId = 0)
+        .leftOfJoinBuffer(id = 3, TopLevelArgument.SLOT_OFFSET, asmId = 0, planId = 1)
 
       start(graph)
         .applyBuffer(0)
-        .delegateToMorselBuffer(2)
+        .delegateToMorselBuffer(2, 2)
         .pipeline(1, Seq(classOf[NodeByLabelScan]))
-        .rightOfJoinBuffer(lhsId = 3, rhsId = 4, sourceId = 5, TopLevelArgument.SLOT_OFFSET, rhsAsmId = 1)
+        .rightOfJoinBuffer(lhsId = 3, rhsId = 4, sourceId = 5, TopLevelArgument.SLOT_OFFSET, rhsAsmId = 1, planId = 1)
         .pipeline(2, Seq(classOf[NodeHashJoin], classOf[ProduceResult]), serial = true)
         .end
 
@@ -113,11 +113,11 @@ class PipelineBuilderTest extends CypherFunSuite {
       .build() should plan {
       val graph = newGraph
       start(graph)
-        .applyBuffer(0, TopLevelArgument.SLOT_OFFSET)
-        .delegateToMorselBuffer(1)
+        .applyBuffer(0, TopLevelArgument.SLOT_OFFSET, 3)
+        .delegateToMorselBuffer(1, 3)
         .pipeline(0, Seq(classOf[AllNodesScan]))
-        .applyBuffer(2, 1)
-        .delegateToMorselBuffer(3)
+        .applyBuffer(2, 1, 1)
+        .delegateToMorselBuffer(3, 2)
         .pipeline(1, Seq(classOf[NodeByLabelScan], classOf[ProduceResult]), serial = true)
         .end
     }
@@ -134,13 +134,13 @@ class PipelineBuilderTest extends CypherFunSuite {
       val graph = newGraph
       val argumentSlotOffset = 1
       start(graph)
-        .applyBuffer(0, TopLevelArgument.SLOT_OFFSET)
-        .delegateToMorselBuffer(1)
+        .applyBuffer(0, TopLevelArgument.SLOT_OFFSET, 4)
+        .delegateToMorselBuffer(1, 4)
         .pipeline(0, Seq(classOf[AllNodesScan]))
-        .applyBuffer(2, argumentSlotOffset)
-        .delegateToMorselBuffer(3)
+        .applyBuffer(2, argumentSlotOffset, 1)
+        .delegateToMorselBuffer(3, 3)
         .pipeline(1, Seq(classOf[Argument]))
-        .optionalBuffer(4, argumentSlotOffset, 0)
+        .optionalBuffer(4, argumentSlotOffset, 0, 2)
         .pipeline(2, Seq(classOf[Optional], classOf[ProduceResult]), serial = true)
         .end
 
@@ -158,18 +158,18 @@ class PipelineBuilderTest extends CypherFunSuite {
       .build() should plan {
       val graph = newGraph
       start(graph)
-        .applyBuffer(0, TopLevelArgument.SLOT_OFFSET)
-        .delegateToMorselBuffer(1)
+        .applyBuffer(0, TopLevelArgument.SLOT_OFFSET, 3)
+        .delegateToMorselBuffer(1, 3)
         .pipeline(0, Seq(classOf[AllNodesScan]))
-        .attachBuffer(2, slots = SlotConfiguration.empty.newArgument(Id(1)).newLong("m", nullable = false, CTNode))
-        .lhsJoinSinkForAttach(lhsSinkId = 5, lhsAsmId = 0) // returns attach buffer
-        .delegateToApplyBuffer(3, 0)
-        .delegateToMorselBuffer(4)
+        .attachBuffer(2, planId = 1, slots = SlotConfiguration.empty.newArgument(Id(1)).newLong("m", nullable = false, CTNode))
+        .lhsJoinSinkForAttach(lhsSinkId = 5, lhsAsmId = 0, planId = 1) // returns attach buffer
+        .delegateToApplyBuffer(3, 0, 1)
+        .delegateToMorselBuffer(4, 2)
 
       start(graph)
         .morselBuffer(4)
         .pipeline(1, Seq(classOf[NodeByLabelScan]))
-        .rightOfJoinBuffer(lhsId = 5, rhsId = 6, sourceId = 7, argumentSlotOffset = 0, rhsAsmId = 1)
+        .rightOfJoinBuffer(lhsId = 5, rhsId = 6, sourceId = 7, argumentSlotOffset = 0, rhsAsmId = 1, planId = 1)
         .pipeline(2, Seq(classOf[CartesianProduct], classOf[ProduceResult]), serial = true)
         .end
 

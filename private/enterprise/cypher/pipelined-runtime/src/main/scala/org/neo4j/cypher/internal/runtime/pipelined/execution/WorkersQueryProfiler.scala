@@ -9,6 +9,7 @@ import org.neo4j.cypher.internal.profiling.NoKernelStatisticProvider
 import org.neo4j.cypher.internal.profiling.ProfilingTracer
 import org.neo4j.cypher.internal.profiling.ProfilingTracerData
 import org.neo4j.cypher.internal.profiling.QueryProfiler
+import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
 import org.neo4j.cypher.result.OperatorProfile
 import org.neo4j.cypher.result.QueryProfile
 
@@ -33,7 +34,7 @@ object WorkersQueryProfiler {
  *                      for counting apply rows. Instead we return the rhs operator rows, as these are guaranteed to
  *                      be identical.
  */
-class FixedWorkersQueryProfiler(numberOfWorkers: Int, applyRhsPlans: Map[Int, Int]) extends WorkersQueryProfiler {
+class FixedWorkersQueryProfiler(numberOfWorkers: Int, applyRhsPlans: Map[Int, Int], memoryTracker: QueryMemoryTracker) extends WorkersQueryProfiler {
 
   private val profilers: Array[ProfilingTracer] =
     (0 until numberOfWorkers).map(_ => new ProfilingTracer(NoKernelStatisticProvider)).toArray
@@ -53,20 +54,24 @@ class FixedWorkersQueryProfiler(numberOfWorkers: Int, applyRhsPlans: Map[Int, In
       }
     }
 
+    override def maxAllocatedMemory(): Long = memoryTracker.totalAllocatedMemory.orElseGet(() => OperatorProfile.NO_DATA)
+
     private def regularOperatorProfile(operatorId: Int): OperatorProfile = {
       var i = 0
       val data = new ProfilingTracerData()
       while (i < numberOfWorkers) {
         val workerData = profilers(i).operatorProfile(operatorId)
-        data.update(workerData.time(),
+        data.update(
+          workerData.time(),
           workerData.dbHits(),
           workerData.rows(),
+          0,
           0,
           0)
 
         i += 1
       }
-      data.update(0, 0, 0, OperatorProfile.NO_DATA, OperatorProfile.NO_DATA)
+      data.update(0, 0, 0, OperatorProfile.NO_DATA, OperatorProfile.NO_DATA, memoryTracker.maxMemoryOfOperator(operatorId).orElseGet(() => OperatorProfile.NO_DATA))
       data.sanitize()
       data
     }
@@ -77,12 +82,10 @@ class FixedWorkersQueryProfiler(numberOfWorkers: Int, applyRhsPlans: Map[Int, In
       while (i < numberOfWorkers) {
         val timeData = profilers(i).operatorProfile(applyPlanId)
         val rowData = profilers(i).operatorProfile(applyRhsPlanId)
-        data.update(timeData.time(), 0, 0, 0, 0)
-        data.update(0, 0, rowData.rows(), 0, 0)
-
+        data.update(timeData.time(), 0, rowData.rows(), 0, 0, 0)
         i += 1
       }
-      data.update(0, 0, 0, OperatorProfile.NO_DATA, OperatorProfile.NO_DATA)
+      data.update(0, 0, 0, OperatorProfile.NO_DATA, OperatorProfile.NO_DATA, memoryTracker.maxMemoryOfOperator(applyPlanId).orElseGet(() => OperatorProfile.NO_DATA))
       data.sanitize()
       data
     }

@@ -89,7 +89,7 @@ class FixedWorkersQueryExecutor(val workerResourceProvider: WorkerResourceProvid
 
     val (workersProfiler, queryProfile) =
       if (doProfile) {
-        val profiler = new FixedWorkersQueryProfiler(workerManager.numberOfWorkers, executionGraphDefinition.applyRhsPlans)
+        val profiler = new FixedWorkersQueryProfiler(workerManager.numberOfWorkers, executionGraphDefinition.applyRhsPlans, stateFactory.memoryTracker)
         (profiler, profiler.Profile)
       } else {
         (WorkersQueryProfiler.NONE, QueryProfile.NONE)

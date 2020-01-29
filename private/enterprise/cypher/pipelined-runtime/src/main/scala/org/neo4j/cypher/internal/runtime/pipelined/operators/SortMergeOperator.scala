@@ -18,6 +18,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.ArgumentStateBuffer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.ColumnOrder
+import org.neo4j.cypher.internal.util.attribution.Id
 
 /**
  * Reducing operator which collects pre-sorted input morsels until it
@@ -29,6 +30,7 @@ class SortMergeOperator(val argumentStateMapId: ArgumentStateMapId,
                         val workIdentity: WorkIdentity,
                         orderBy: Seq[ColumnOrder],
                         argumentSlotOffset: Int)
+                       (val id: Id = Id.INVALID_ID)
   extends Operator
   with ReduceOperatorState[MorselExecutionContext, ArgumentStateBuffer] {
 
@@ -41,7 +43,7 @@ class SortMergeOperator(val argumentStateMapId: ArgumentStateMapId,
                            queryContext: QueryContext,
                            state: QueryState,
                            resources: QueryResources): ReduceOperatorState[MorselExecutionContext, ArgumentStateBuffer] = {
-    argumentStateCreator.createArgumentStateMap(argumentStateMapId, new ArgumentStateBuffer.Factory(stateFactory))
+    argumentStateCreator.createArgumentStateMap(argumentStateMapId, new ArgumentStateBuffer.Factory(stateFactory, id))
     this
   }
 

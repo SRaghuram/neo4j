@@ -9,6 +9,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionCont
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
+import org.neo4j.cypher.internal.util.attribution.Id
 
 /**
  * Delegating [[Buffer]] used in argument state maps.
@@ -43,11 +44,11 @@ class ArgumentStateBuffer(override val argumentRowId: Long,
 }
 
 object ArgumentStateBuffer {
-  class Factory(stateFactory: StateFactory) extends ArgumentStateFactory[ArgumentStateBuffer] {
+  class Factory(stateFactory: StateFactory, operatorId: Id) extends ArgumentStateFactory[ArgumentStateBuffer] {
     override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): ArgumentStateBuffer =
-      new ArgumentStateBuffer(argumentRowId, stateFactory.newBuffer[MorselExecutionContext](), argumentRowIdsForReducers)
+      new ArgumentStateBuffer(argumentRowId, stateFactory.newBuffer[MorselExecutionContext](operatorId), argumentRowIdsForReducers)
 
     override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): ArgumentStateBuffer =
-      new ArgumentStateBuffer(argumentRowId, stateFactory.newBuffer[MorselExecutionContext](), argumentRowIdsForReducers)
+      new ArgumentStateBuffer(argumentRowId, stateFactory.newBuffer[MorselExecutionContext](operatorId), argumentRowIdsForReducers)
   }
 }

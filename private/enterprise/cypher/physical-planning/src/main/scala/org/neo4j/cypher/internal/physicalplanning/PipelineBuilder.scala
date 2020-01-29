@@ -99,6 +99,7 @@ object PipelineBuilder {
         throw new IllegalStateException(s"Unexpected type of BufferDefinitionBuild: $bufferDefinition")
     }
     BufferDefinition(bufferDefinition.id,
+      bufferDefinition.operatorId,
       downstreamReducers.toArray,
       workCancellerIDs.toArray,
       downstreamStateIDs.toArray,

@@ -103,8 +103,9 @@ case class AggregationOperator(workIdentity: WorkIdentity,
     new AggregationMapperOperator(argumentSlotOffset, outputBufferId, expressionValues)
 
   def reducer(argumentStateMapId: ArgumentStateMapId,
-              reducerOutputSlots: Array[Int]) =
-    new AggregationReduceOperator(argumentStateMapId, reducerOutputSlots)
+              reducerOutputSlots: Array[Int],
+              operatorId: Id) =
+    new AggregationReduceOperator(argumentStateMapId, reducerOutputSlots)(operatorId)
 
   /**
    * Pre-operator for aggregations with grouping. This performs local aggregation of the
@@ -188,7 +189,8 @@ case class AggregationOperator(workIdentity: WorkIdentity,
   class StandardAggregatingAccumulator(override val argumentRowId: Long,
                                        aggregators: Array[Aggregator],
                                        override val argumentRowIdsForReducers: Array[Long],
-                                       memoryTracker: QueryMemoryTracker) extends AggregatingAccumulator {
+                                       memoryTracker: QueryMemoryTracker,
+                                       operatorId: Id) extends AggregatingAccumulator {
 
     val reducerMap = new java.util.LinkedHashMap[groupings.KeyType, Array[Reducer]]
 
@@ -198,8 +200,8 @@ case class AggregationOperator(workIdentity: WorkIdentity,
         val entry = iterator.next()
         val reducers = reducerMap.computeIfAbsent(entry.getKey, _ => {
           // Note: this allocation is currently never de-allocated
-          memoryTracker.allocated(entry.getKey)
-          aggregators.map(_.newStandardReducer(memoryTracker))
+          memoryTracker.allocated(entry.getKey, operatorId.x)
+          aggregators.map(_.newStandardReducer(memoryTracker, operatorId))
         })
 
         var i = 0
@@ -237,9 +239,9 @@ case class AggregationOperator(workIdentity: WorkIdentity,
 
   object AggregatingAccumulator {
 
-    class Factory(aggregators: Array[Aggregator], memoryTracker: QueryMemoryTracker) extends ArgumentStateFactory[AggregatingAccumulator] {
+    class Factory(aggregators: Array[Aggregator], memoryTracker: QueryMemoryTracker, operatorId: Id) extends ArgumentStateFactory[AggregatingAccumulator] {
       override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): AggregatingAccumulator =
-        new StandardAggregatingAccumulator(argumentRowId, aggregators, argumentRowIdsForReducers, memoryTracker)
+        new StandardAggregatingAccumulator(argumentRowId, aggregators, argumentRowIdsForReducers, memoryTracker, operatorId)
 
       override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): AggregatingAccumulator =
         new ConcurrentAggregatingAccumulator(argumentRowId, aggregators, argumentRowIdsForReducers)
@@ -251,6 +253,7 @@ case class AggregationOperator(workIdentity: WorkIdentity,
    */
   class AggregationReduceOperator(val argumentStateMapId: ArgumentStateMapId,
                                   reducerOutputSlots: Array[Int])
+                                 (val id: Id = Id.INVALID_ID)
     extends Operator
     with ReduceOperatorState[AggPreMap, AggregatingAccumulator] {
 
@@ -261,7 +264,7 @@ case class AggregationOperator(workIdentity: WorkIdentity,
                              queryContext: QueryContext,
                              state: QueryState,
                              resources: QueryResources): ReduceOperatorState[AggPreMap, AggregatingAccumulator] = {
-      argumentStateCreator.createArgumentStateMap(argumentStateMapId, new AggregatingAccumulator.Factory(aggregations, stateFactory.memoryTracker))
+      argumentStateCreator.createArgumentStateMap(argumentStateMapId, new AggregatingAccumulator.Factory(aggregations, stateFactory.memoryTracker, id))
       this
     }
 

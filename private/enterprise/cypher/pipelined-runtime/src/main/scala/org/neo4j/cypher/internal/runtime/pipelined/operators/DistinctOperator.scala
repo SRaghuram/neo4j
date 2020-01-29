@@ -24,6 +24,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Argume
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.SlottedQueryState
+import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.internal.kernel.api.IndexReadSession
 
 /**
@@ -40,7 +41,8 @@ import org.neo4j.internal.kernel.api.IndexReadSession
  */
 class DistinctOperator(argumentStateMapId: ArgumentStateMapId,
                        val workIdentity: WorkIdentity,
-                       groupings: GroupingExpression) extends MiddleOperator {
+                       groupings: GroupingExpression)
+                      (val id: Id = Id.INVALID_ID) extends MiddleOperator {
 
   override def createTask(argumentStateCreator: ArgumentStateMapCreator,
                           stateFactory: StateFactory,
@@ -94,7 +96,7 @@ class DistinctOperator(argumentStateMapId: ArgumentStateMapId,
       val groupingKey = groupings.computeGroupingKey(row, queryState)
       if (seen.add(groupingKey)) {
         // Note: this allocation is currently never de-allocated
-        memoryTracker.allocated(groupingKey)
+        memoryTracker.allocated(groupingKey, id.x)
         groupings.project(row, groupingKey)
         true
       } else {

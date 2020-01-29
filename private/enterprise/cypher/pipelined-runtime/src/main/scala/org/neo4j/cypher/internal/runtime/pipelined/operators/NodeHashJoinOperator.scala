@@ -32,6 +32,7 @@ import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.f
 import org.neo4j.values.storable.LongArray
 import org.neo4j.values.storable.Values
 import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeHashJoinOperator.HashTableFactory
+import org.neo4j.cypher.internal.util.attribution.Id
 
 class NodeHashJoinOperator(val workIdentity: WorkIdentity,
                            lhsArgumentStateMapId: ArgumentStateMapId,
@@ -41,7 +42,8 @@ class NodeHashJoinOperator(val workIdentity: WorkIdentity,
                            slots: SlotConfiguration,
                            longsToCopy: Array[(Int, Int)],
                            refsToCopy: Array[(Int, Int)],
-                           cachedPropertiesToCopy: Array[(Int, Int)]) extends Operator with OperatorState {
+                           cachedPropertiesToCopy: Array[(Int, Int)])
+                          (val id: Id = Id.INVALID_ID) extends Operator with OperatorState {
 
   override def createState(argumentStateCreator: ArgumentStateMapCreator,
                            stateFactory: StateFactory,
@@ -50,10 +52,10 @@ class NodeHashJoinOperator(val workIdentity: WorkIdentity,
                            resources: QueryResources): OperatorState = {
     argumentStateCreator.createArgumentStateMap(
       lhsArgumentStateMapId,
-      new HashTableFactory(lhsOffsets, stateFactory.memoryTracker))
+      new HashTableFactory(lhsOffsets, stateFactory.memoryTracker, id))
     argumentStateCreator.createArgumentStateMap(
       rhsArgumentStateMapId,
-      new ArgumentStateBuffer.Factory(stateFactory))
+      new ArgumentStateBuffer.Factory(stateFactory, id))
     this
   }
 
@@ -113,9 +115,9 @@ class NodeHashJoinOperator(val workIdentity: WorkIdentity,
 
 object NodeHashJoinOperator {
 
-  class HashTableFactory(lhsOffsets: Array[Int], memoryTracker: QueryMemoryTracker) extends ArgumentStateFactory[HashTable] {
+  class HashTableFactory(lhsOffsets: Array[Int], memoryTracker: QueryMemoryTracker, operatorId: Id) extends ArgumentStateFactory[HashTable] {
     override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): HashTable =
-      new StandardHashTable(argumentRowId, lhsOffsets, argumentRowIdsForReducers, memoryTracker)
+      new StandardHashTable(argumentRowId, lhsOffsets, argumentRowIdsForReducers, memoryTracker, operatorId)
     override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): HashTable =
       new ConcurrentHashTable(argumentRowId, lhsOffsets, argumentRowIdsForReducers)
   }
@@ -131,7 +133,8 @@ object NodeHashJoinOperator {
   class StandardHashTable(override val argumentRowId: Long,
                           lhsOffsets: Array[Int],
                           override val argumentRowIdsForReducers: Array[Long],
-                          memoryTracker: QueryMemoryTracker) extends HashTable {
+                          memoryTracker: QueryMemoryTracker,
+                          operatorId: Id) extends HashTable {
     private val table = Multimaps.mutable.list.empty[LongArray, MorselExecutionContext]()
 
     // This is update from LHS, i.e. we need to put stuff into a hash table
@@ -150,7 +153,7 @@ object NodeHashJoinOperator {
           val view = morsel.view(morsel.getCurrentRow, morsel.getCurrentRow + 1)
           table.put(Values.longArray(key), view)
           // Note: this allocation is currently never de-allocated
-          memoryTracker.allocated(view)
+          memoryTracker.allocated(view, operatorId.x)
         }
         morsel.moveToNextRow()
       }

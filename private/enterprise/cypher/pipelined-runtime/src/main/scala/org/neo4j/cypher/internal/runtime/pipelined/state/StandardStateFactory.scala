@@ -20,13 +20,14 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.SingletonBuffer
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.StandardBuffer
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.StandardSingletonBuffer
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.QueryExecutionTracer
+import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.kernel.impl.query.QuerySubscriber
 
 /**
  * Implementation of [[StateFactory]] which creates not thread-safe implementation of the state management classes.
  */
 class StandardStateFactory extends StateFactory {
-  override def newBuffer[T <: WithHeapUsageEstimation](): Buffer[T] = new StandardBuffer[T]
+  override def newBuffer[T <: WithHeapUsageEstimation](operatorId: Id): Buffer[T] = new StandardBuffer[T]
 
   override def newSingletonBuffer[T <: AnyRef](): SingletonBuffer[T] = new StandardSingletonBuffer[T]
 
@@ -55,5 +56,5 @@ class StandardStateFactory extends StateFactory {
 class MemoryTrackingStandardStateFactory(transactionMaxMemory: Long) extends StandardStateFactory {
   override val memoryTracker: QueryMemoryTracker = new BoundedMemoryTracker(transactionMaxMemory)
 
-  override def newBuffer[T <: WithHeapUsageEstimation](): Buffer[T] = new MemoryTrackingStandardBuffer[T](memoryTracker)
+  override def newBuffer[T <: WithHeapUsageEstimation](operatorId: Id): Buffer[T] = new MemoryTrackingStandardBuffer[T](memoryTracker, operatorId)
 }

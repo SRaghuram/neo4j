@@ -64,8 +64,11 @@ case class ArgumentStateDefinition(id: ArgumentStateMapId,
 
 /**
  * A buffer between two pipelines, or a delegate after an ApplyBuffer. Maps to a PipelinedBuffer.
+ *
+ * @param operatorId the operator that consumes from this buffer. This information is needed for correct memory tracking per operator
  */
 case class BufferDefinition(id: BufferId,
+                            operatorId: Id,
                             // We need multiple reducers because a buffer might need to
                             // reference count for multiple downstream reduce operators,
                             // at potentially different argument depths
@@ -92,8 +95,8 @@ case class BufferDefinition(id: BufferId,
 
   override def hashCode(): Int = asTuple.hashCode()
 
-  private def asTuple: (BufferId, Seq[ArgumentStateMapId], Seq[ArgumentStateMapId], Seq[ArgumentStateMapId], BufferVariant) =
-    (id, reducers.toList, workCancellers.toList, downstreamStates.toList, variant)
+  private def asTuple: (BufferId, Id, Seq[ArgumentStateMapId], Seq[ArgumentStateMapId], Seq[ArgumentStateMapId], BufferVariant) =
+    (id, operatorId, reducers.toList, workCancellers.toList, downstreamStates.toList, variant)
 
   override def toString: String = s"BufferDefinition${asTuple}"
 }

@@ -21,12 +21,15 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.ArgumentStateBu
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.MorselAttachBuffer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CartesianProductOperator.LHSMorsel
+import org.neo4j.cypher.internal.util.attribution.Id
 
 class CartesianProductOperator(val workIdentity: WorkIdentity,
                                lhsArgumentStateMapId: ArgumentStateMapId,
                                rhsArgumentStateMapId: ArgumentStateMapId,
                                slots: SlotConfiguration,
-                               argumentSize: SlotConfiguration.Size) extends Operator with OperatorState {
+                               argumentSize: SlotConfiguration.Size)
+                              (val id: Id = Id.INVALID_ID)
+  extends Operator with OperatorState {
 
   override def createState(argumentStateCreator: ArgumentStateMapCreator,
                            stateFactory: StateFactory,
@@ -34,7 +37,7 @@ class CartesianProductOperator(val workIdentity: WorkIdentity,
                            state: QueryState,
                            resources: QueryResources): OperatorState = {
     argumentStateCreator.createArgumentStateMap(lhsArgumentStateMapId, new LHSMorsel.Factory(stateFactory))
-    argumentStateCreator.createArgumentStateMap(rhsArgumentStateMapId, new ArgumentStateBuffer.Factory(stateFactory))
+    argumentStateCreator.createArgumentStateMap(rhsArgumentStateMapId, new ArgumentStateBuffer.Factory(stateFactory, id))
     this
   }
 

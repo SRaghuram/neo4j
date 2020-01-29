@@ -15,6 +15,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.Argume
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffer
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.SingletonBuffer
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.QueryExecutionTracer
+import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.kernel.impl.query.QuerySubscriber
 
 /**
@@ -23,7 +24,7 @@ import org.neo4j.kernel.impl.query.QuerySubscriber
  * versions, depending on whether the execution is concurrent or not.
  */
 trait StateFactory {
-  def newBuffer[T <: WithHeapUsageEstimation](): Buffer[T]
+  def newBuffer[T <: WithHeapUsageEstimation](operatorId: Id): Buffer[T]
   def newSingletonBuffer[T <: AnyRef](): SingletonBuffer[T]
   def newTracker(subscriber: QuerySubscriber,
                  queryContext: QueryContext,
