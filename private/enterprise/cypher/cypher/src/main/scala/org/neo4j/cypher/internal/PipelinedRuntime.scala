@@ -22,8 +22,10 @@ import org.neo4j.cypher.internal.physicalplanning.PipelineBuilder
 import org.neo4j.cypher.internal.plandescription.Argument
 import org.neo4j.cypher.internal.runtime.ExecutionMode
 import org.neo4j.cypher.internal.runtime.InputDataStream
+import org.neo4j.cypher.internal.runtime.MEMORY_TRACKING
 import org.neo4j.cypher.internal.runtime.MemoryTracking
 import org.neo4j.cypher.internal.runtime.MemoryTrackingController
+import org.neo4j.cypher.internal.runtime.NO_TRACKING
 import org.neo4j.cypher.internal.runtime.ParameterMapping
 import org.neo4j.cypher.internal.runtime.ProfileMode
 import org.neo4j.cypher.internal.runtime.QueryContext
@@ -284,6 +286,8 @@ class PipelinedRuntime private(parallelExecution: Boolean,
                      inputDataStream: InputDataStream,
                      subscriber: QuerySubscriber): RuntimeResult = {
 
+      val doProfile = executionMode == ProfileMode
+
       new PipelinedRuntimeResult(executablePipelines,
         executionGraphDefinition,
         queryIndexes.initiateLabelAndSchemaIndexes(queryContext),
@@ -297,9 +301,9 @@ class PipelinedRuntime private(parallelExecution: Boolean,
         queryExecutor,
         schedulerTracer,
         subscriber,
-        executionMode == ProfileMode,
+        doProfile,
         batchSize,
-        memoryTrackingController.memoryTracking,
+        memoryTrackingController.memoryTracking(doProfile),
         executionGraphSchedulingPolicy)
     }
 
