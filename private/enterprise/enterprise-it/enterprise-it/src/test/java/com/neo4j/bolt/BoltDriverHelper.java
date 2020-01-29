@@ -15,20 +15,23 @@ import org.neo4j.driver.Logging;
 
 public class BoltDriverHelper
 {
-    private static final Config.ConfigBuilder TEST_DRIVER_CONFIG = Config.builder().withoutEncryption().withLogging( Logging.none() );
+    private static Config.ConfigBuilder baseConfig()
+    {
+        return Config.builder().withoutEncryption().withLogging( Logging.none() );
+    }
 
     public static Driver graphDatabaseDriver( URI uri )
     {
-        return GraphDatabase.driver( uri, TEST_DRIVER_CONFIG.build() );
+        return GraphDatabase.driver( uri, baseConfig().build() );
     }
 
     public static Driver graphDatabaseDriver( String uri )
     {
-        return GraphDatabase.driver( uri, TEST_DRIVER_CONFIG.build() );
+        return GraphDatabase.driver( uri, baseConfig().build() );
     }
 
     public static Driver graphDatabaseDriver( URI uri, AuthToken auth )
     {
-        return GraphDatabase.driver( uri, auth, TEST_DRIVER_CONFIG.build() );
+        return GraphDatabase.driver( uri, auth, baseConfig().build() );
     }
 }
