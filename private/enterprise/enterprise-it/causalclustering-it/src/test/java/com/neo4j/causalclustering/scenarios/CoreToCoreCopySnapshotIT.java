@@ -142,7 +142,7 @@ class CoreToCoreCopySnapshotIT
         coreParams.put( raft_log_pruning_strategy.name(), "keep_none" );
         coreParams.put( raft_log_pruning_frequency.name(), "100ms" );
         coreParams.put( state_machine_flush_window_size.name(), "64" );
-        int numberOfTransactions = 100;
+        int numberOfTransactions = 10;
 
         // start the cluster
         Cluster cluster = startCluster( coreParams );
@@ -155,7 +155,9 @@ class CoreToCoreCopySnapshotIT
         {
             timeout.assertNotTimedOut();
             firstServer = doSomeTransactions( cluster, numberOfTransactions );
+            Thread.sleep( 1000 );
             firstServerLogFileCount = getMostRecentLogIdOn( firstServer );
+
         }
         while ( firstServerLogFileCount < 5 );
         firstServer.shutdown();
@@ -168,6 +170,7 @@ class CoreToCoreCopySnapshotIT
         {
             timeout.assertNotTimedOut();
             secondServer = doSomeTransactions( cluster, numberOfTransactions );
+            Thread.sleep( 1000 );
             oldestLogOnSecondServer = getOldestLogIdOn( secondServer );
         }
         while ( oldestLogOnSecondServer < firstServerLogFileCount + 5 );
