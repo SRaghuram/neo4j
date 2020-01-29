@@ -21,6 +21,7 @@ import com.neo4j.fabric.planning.FabricPlanner;
 import com.neo4j.fabric.transaction.TransactionManager;
 
 import java.time.Clock;
+import java.util.concurrent.Executor;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
@@ -34,6 +35,8 @@ import org.neo4j.logging.internal.LogService;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.ssl.config.SslPolicyLoader;
+
+import static org.neo4j.scheduler.Group.FABRIC_WORKER;
 
 public class FabricServicesBootstrap
 {
@@ -80,8 +83,10 @@ public class FabricServicesBootstrap
                     .registerService( new FabricPlanner( fabricConfig, cypherConfig, monitors, signatureResolver ), FabricPlanner.class );
             var useEvaluation = serviceBootstrapper
                     .registerService( new UseEvaluation( catalog, proceduresSupplier, signatureResolver ), UseEvaluation.class );
-            serviceBootstrapper
-                    .registerService( new FabricExecutor( fabricConfig, planner, useEvaluation, internalLogProvider, monitoring ), FabricExecutor.class );
+
+            Executor fabricWorkerExecutor = jobScheduler.executor( FABRIC_WORKER );
+            var fabricExecutor = new FabricExecutor( fabricConfig, planner, useEvaluation, internalLogProvider, monitoring, fabricWorkerExecutor );
+            serviceBootstrapper.registerService( fabricExecutor, FabricExecutor.class );
         }
     }
 

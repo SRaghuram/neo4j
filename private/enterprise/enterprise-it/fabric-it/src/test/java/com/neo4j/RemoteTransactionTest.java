@@ -32,6 +32,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.stream.IntStream;
@@ -54,6 +56,8 @@ import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
+import org.neo4j.scheduler.CallableExecutorService;
+import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobHandle;
 import org.neo4j.scheduler.JobScheduler;
 
@@ -81,6 +85,8 @@ class RemoteTransactionTest
     private static final PooledDriver shard2Driver = mock( PooledDriver.class );
     private static final PooledDriver shard3Driver = mock( PooledDriver.class );
     private static final JobScheduler jobScheduler = mock( JobScheduler.class );
+    private static final ExecutorService fabricWorkerExecutorService = Executors.newCachedThreadPool();
+    private static final CallableExecutorService callableFabricWorkerExecutorService = new CallableExecutorService( fabricWorkerExecutorService );
     private static final DatabaseManagementService databaseManagementService = mock( DatabaseManagementService.class );
     private static final FabricDatabaseManager fabricDatabaseManager = mock( FabricDatabaseManager.class );
 
@@ -114,6 +120,7 @@ class RemoteTransactionTest
 
         JobHandle timeoutHandle = mock( JobHandle.class );
         when( jobScheduler.schedule( any(), any(), anyLong(), any() ) ).thenReturn( timeoutHandle );
+        when( jobScheduler.executor( Group.FABRIC_WORKER ) ).thenReturn( callableFabricWorkerExecutorService );
 
         testServer.start();
 
@@ -134,6 +141,7 @@ class RemoteTransactionTest
     {
         testServer.stop();
         clientDriver.close();
+        fabricWorkerExecutorService.shutdown();
     }
 
     @BeforeEach
