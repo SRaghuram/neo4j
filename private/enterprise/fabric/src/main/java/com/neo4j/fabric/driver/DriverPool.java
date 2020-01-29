@@ -32,7 +32,7 @@ import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.ssl.config.SslPolicyLoader;
 
-import static org.neo4j.scheduler.Group.TRANSACTION_TIMEOUT_MONITOR;
+import static org.neo4j.scheduler.Group.FABRIC_IDLE_DRIVER_MONITOR;
 
 public class DriverPool extends LifecycleAdapter
 {
@@ -118,7 +118,7 @@ public class DriverPool extends LifecycleAdapter
     {
         long checkInterval = fabricConfig.getGlobalDriverConfig().getDriverIdleCheckInterval().toSeconds();
         Duration idleTimeout = fabricConfig.getGlobalDriverConfig().getIdleTimeout();
-        jobScheduler.schedule( TRANSACTION_TIMEOUT_MONITOR, () ->
+        jobScheduler.schedule( FABRIC_IDLE_DRIVER_MONITOR, () ->
         {
             List<Key> timeoutCandidates = idleDrivers.entrySet().stream()
                     .filter( entry -> Duration.between( entry.getValue().getLastUsedTimestamp(), clock.instant() ).compareTo( idleTimeout ) > 0 )

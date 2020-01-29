@@ -12,6 +12,7 @@ import com.neo4j.fabric.planning.FabricPlan;
 import com.neo4j.fabric.planning.FabricPlanner;
 import com.neo4j.fabric.planning.FabricQuery;
 import com.neo4j.fabric.planning.QueryType;
+import com.neo4j.fabric.stream.CompletionDelegatingOperator;
 import com.neo4j.fabric.stream.Prefetcher;
 import com.neo4j.fabric.stream.Record;
 import com.neo4j.fabric.stream.Records;
@@ -24,6 +25,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.Map;
+import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -52,15 +54,17 @@ public class FabricExecutor
     private final UseEvaluation useEvaluation;
     private final Log log;
     private final FabricQueryMonitoring queryMonitoring;
+    private final Executor fabricWorkerExecutor;
 
     public FabricExecutor( FabricConfig config, FabricPlanner planner, UseEvaluation useEvaluation, LogProvider internalLog,
-            FabricQueryMonitoring queryMonitoring )
+            FabricQueryMonitoring queryMonitoring, Executor fabricWorkerExecutor )
     {
         this.dataStreamConfig = config.getDataStream();
         this.planner = planner;
         this.useEvaluation = useEvaluation;
         this.log = internalLog.getLog( getClass() );
         this.queryMonitoring = queryMonitoring;
+        this.fabricWorkerExecutor = fabricWorkerExecutor;
     }
 
     public StatementResult run( FabricTransaction fabricTransaction, String statement, MapValue params )
@@ -231,7 +235,13 @@ public class FabricExecutor
             Flux<Record> records =  ctx.getRemote().run( graph, queryString, queryType, parameters )
                     .flatMapMany( statementResult -> statementResult.records()
                             .doOnComplete( () -> statementResult.summary().subscribe( this::updateSummary ) ) );
-            return prefetcher.addPrefetch( records );
+            // 'onComplete' signal coming from an inner stream might cause more data being requested from an upstream operator
+            // and the request will be done using the thread that invoked 'onComplete'.
+            // Since 'onComplete' is invoked by driver IO thread ( Netty event loop ), this might cause the driver thread to block
+            // or perform a computationally intensive operation in an upstream operator if the upstream operator is Cypher local execution
+            // that produces records directly in 'request' call.
+            Flux<Record> recordsWithCompletionDelegation = new CompletionDelegatingOperator( records, fabricWorkerExecutor );
+            return prefetcher.addPrefetch( recordsWithCompletionDelegation );
         }
 
         private Map<String,AnyValue> recordAsMap( FabricQuery.RemoteQuery query, Record inputRecord )
