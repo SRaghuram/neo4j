@@ -124,6 +124,22 @@ class ProfilerAcceptanceTest extends ExecutionEngineFunSuite with CreateTempFile
     )
   }
 
+  test("track memory in distinct") {
+    createNode()
+    createNode()
+    createNode()
+
+    executeWith(
+      Configs.All,
+      "PROFILE MATCH (n) RETURN DISTINCT n",
+      planComparisonStrategy = ComparePlansWithAssertion(
+        _ should
+          haveAsRoot.aPlan.withGlobalMemory()
+            .onTopOf(aPlan("Distinct").withMemory()),
+        expectPlansToFail = Configs.Compiled)
+    )
+  }
+
   test("profile standalone call") {
     createLabeledNode("Person")
     createLabeledNode("Animal")

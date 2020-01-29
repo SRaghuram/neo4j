@@ -10,6 +10,7 @@ import java.lang.System.lineSeparator
 import org.neo4j.cypher.internal.EnterpriseRuntimeContext
 import org.neo4j.cypher.internal.PipelinedRuntime.PIPELINED
 import org.neo4j.cypher.internal.logical.plans.Ascending
+import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE
 import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE.FUSING
 import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE.MORSEL_SIZE
 import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE.NO_FUSING
@@ -27,6 +28,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.CachePropertiesTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.CartesianProductTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.DirectedRelationshipByIdSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.DistinctTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.ProfileMemoryTrackingDisabledTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ExpandAllTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ExpandAllWithOtherOperatorsTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ExpandIntoTestBase
@@ -57,6 +59,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.ProcedureCallDbHitsTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ProcedureCallRowsTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ProcedureCallTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ProcedureCallTimeTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.ProfileMemoryTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ProfileRowsTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ProfileTimeTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ProjectEndpointsTestBase
