@@ -103,12 +103,12 @@ class OptionalExpandAllOperator(val workIdentity: WorkIdentity,
       val fromNode = getFromNodeFunction.applyAsLong(inputMorsel)
       hasWritten = false
       if (entityIsNull(fromNode)) {
-        traversalCursor = RelationshipTraversalCursor.EMPTY
+        relationships = RelationshipTraversalCursor.EMPTY
       } else {
         setUp(context, state, resources)
         val pools: CursorPools = resources.cursorPools
         nodeCursor = pools.nodeCursorPool.allocateAndTrace()
-        traversalCursor = getRelationshipsCursor(context, pools, fromNode, dir, types.types(context))
+        relationships = getRelationshipsCursor(context, pools, fromNode, dir, types.types(context))
       }
       true
     }
@@ -117,10 +117,10 @@ class OptionalExpandAllOperator(val workIdentity: WorkIdentity,
                                      context: QueryContext,
                                      state: QueryState): Unit = {
 
-      while (outputRow.isValidRow && traversalCursor.next()) {
+      while (outputRow.isValidRow && relationships.next()) {
         hasWritten = writeRow(outputRow,
-          traversalCursor.relationshipReference(),
-          traversalCursor.otherNodeReference())
+          relationships.relationshipReference(),
+          relationships.otherNodeReference())
       }
       if (outputRow.isValidRow && !hasWritten) {
         writeNullRow(outputRow)
@@ -233,10 +233,10 @@ class OptionalExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
       ifElse(notEqual(load(fromNode), constant(-1L))) {
         block(
           setUpCursors(fromNode),
-          setField(canContinue, cursorNext[RelationshipTraversalCursor](loadField(traversalCursorField))),
+          setField(canContinue, cursorNext[RelationshipTraversalCursor](loadField(relationshipsField))),
         )
       }{//else
-        setField(traversalCursorField,
+        setField(relationshipsField,
           getStatic[RelationshipTraversalCursor, RelationshipTraversalCursor]("EMPTY"))
       },
       constant(true))
@@ -290,7 +290,7 @@ class OptionalExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
           doIfPredicateOrElse(condition(load(shouldWriteRow))(innerBlock))(innerBlock),
           doIfInnerCantContinue(
             setField(canContinue, and(loadField(canContinue),
-              cursorNext[RelationshipTraversalCursor](loadField(traversalCursorField))))),
+              cursorNext[RelationshipTraversalCursor](loadField(relationshipsField))))),
           endInnerLoop
         )))
   }
