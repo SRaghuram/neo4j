@@ -41,6 +41,7 @@ import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.io.pagecache.ExternallyManagedPageCache;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.impl.muninn.StandalonePageCacheFactory;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionQueue;
 import org.neo4j.kernel.impl.api.TransactionToApply;
@@ -221,7 +222,7 @@ class RebuildFromLogs
                 {
                     txId = cursor.get().getCommitEntry().getTxId();
                     TransactionRepresentation transaction = cursor.get().getTransactionRepresentation();
-                    queue.queue( new TransactionToApply( transaction, txId ) );
+                    queue.queue( new TransactionToApply( transaction, txId, PageCursorTracer.NULL ) );
                     if ( upToTxId != BASE_TX_ID && upToTxId == txId )
                     {
                         break;

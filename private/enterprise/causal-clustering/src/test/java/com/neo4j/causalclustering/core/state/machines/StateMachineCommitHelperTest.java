@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
 import org.neo4j.io.pagecache.tracing.cursor.context.VersionContextSupplier;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
@@ -26,6 +27,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 import static org.neo4j.kernel.impl.transaction.log.Commitment.NO_COMMITMENT;
 
 class StateMachineCommitHelperTest
@@ -51,7 +53,7 @@ class StateMachineCommitHelperTest
     void shouldCommitTransaction() throws Exception
     {
         var commitProcess = newCommitProcessMock( 1 );
-        var tx = new TransactionToApply( new PhysicalTransactionRepresentation( emptyList() ) );
+        var tx = new TransactionToApply( new PhysicalTransactionRepresentation( emptyList() ), NULL );
 
         commitHelper.commit( commitProcess, tx );
 

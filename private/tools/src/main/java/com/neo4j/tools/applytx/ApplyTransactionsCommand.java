@@ -19,6 +19,7 @@ import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.impl.muninn.StandalonePageCacheFactory;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.impl.api.TransactionRepresentationCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionToApply;
 import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
@@ -116,7 +117,7 @@ public class ApplyTransactionsCommand extends ArgsCommand
                             transaction.getTransactionRepresentation();
                     try
                     {
-                        commitProcess.commit( new TransactionToApply( transactionRepresentation ), NULL, EXTERNAL );
+                        commitProcess.commit( new TransactionToApply( transactionRepresentation, PageCursorTracer.NULL ), NULL, EXTERNAL );
                         progress.add( 1 );
                     }
                     catch ( final Throwable e )

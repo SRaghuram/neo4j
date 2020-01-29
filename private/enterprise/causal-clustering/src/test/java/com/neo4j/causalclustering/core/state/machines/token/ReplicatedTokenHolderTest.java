@@ -124,7 +124,7 @@ public class ReplicatedTokenHolderTest
             return null;
         } ).when( storageEngine ).createCommands( anyCollection(), any( ReadableTransactionState.class ),
                 any( StorageReader.class ), any( CommandCreationContext.class ),
-                any( ResourceLocker.class ), anyLong(), any( TxStateVisitor.Decorator.class ) );
+                any( ResourceLocker.class ), anyLong(), any( TxStateVisitor.Decorator.class ), any( PageCursorTracer.class ) );
 
         StorageReader readLayer = mock( StorageReader.class );
         when( storageEngine.newReader() ).thenReturn( readLayer );

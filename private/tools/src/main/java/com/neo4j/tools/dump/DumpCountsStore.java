@@ -24,6 +24,7 @@ import org.neo4j.time.SystemNanoClock;
 
 import static org.neo4j.configuration.Config.defaults;
 import static org.neo4j.configuration.GraphDatabaseSettings.pagecache_memory;
+import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
 
 /**
@@ -52,7 +53,7 @@ public class DumpCountsStore
               JobScheduler scheduler = createInitialisedScheduler();
               PageCache pageCache = new ConfiguringPageCacheFactory( fs, config, tracer, log, versions, scheduler, clock ).getOrCreatePageCache() )
         {
-            GBPTreeCountsStore.dump( pageCache, new File( args[0] ), out );
+            GBPTreeCountsStore.dump( pageCache, new File( args[0] ), out, NULL );
         }
     }
 }

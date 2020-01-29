@@ -109,7 +109,7 @@ public class ReplicatedTokenHolder extends AbstractTokenHolderBase
         try ( StorageReader reader = storageEngine.newReader();
               CommandCreationContext creationContext = storageEngine.newCommandCreationContext( cursorTracer ) )
         {
-            storageEngine.createCommands( commands, txState, reader, creationContext, ResourceLocker.PREVENT, Long.MAX_VALUE, NO_DECORATION );
+            storageEngine.createCommands( commands, txState, reader, creationContext, ResourceLocker.PREVENT, Long.MAX_VALUE, NO_DECORATION, cursorTracer );
         }
         catch ( KernelException e )
         {

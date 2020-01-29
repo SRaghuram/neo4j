@@ -11,10 +11,12 @@ import com.codahale.metrics.MetricRegistry;
 import java.util.function.Supplier;
 
 import org.neo4j.annotations.documented.Documented;
+import org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier;
 import org.neo4j.kernel.impl.store.stats.StoreEntityCounters;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 
 import static com.codahale.metrics.MetricRegistry.name;
+import static org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier.TRACER_SUPPLIER;
 
 @Documented( ".Database data count metrics" )
 public class DatabaseCountMetrics extends LifecycleAdapter
@@ -42,8 +44,8 @@ public class DatabaseCountMetrics extends LifecycleAdapter
     @Override
     public void start()
     {
-        registry.register( nodeCounts, (Gauge<Long>) () -> countsSource.get().allNodesCountStore() );
-        registry.register( relationshipCounts, (Gauge<Long>) () -> countsSource.get().allRelationshipsCountStore() );
+        registry.register( nodeCounts, (Gauge<Long>) () -> countsSource.get().allNodesCountStore( TRACER_SUPPLIER.get() ) );
+        registry.register( relationshipCounts, (Gauge<Long>) () -> countsSource.get().allRelationshipsCountStore( TRACER_SUPPLIER.get() ) );
     }
 
     @Override

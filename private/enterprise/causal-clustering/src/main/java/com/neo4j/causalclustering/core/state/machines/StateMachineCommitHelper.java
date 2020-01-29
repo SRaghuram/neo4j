@@ -58,7 +58,7 @@ public class StateMachineCommitHelper
     public TransactionToApply newTransactionToApply( TransactionRepresentation txRepresentation, long commandIndex, LongConsumer txCommittedCallback )
     {
         var versionContext = versionContextSupplier.getVersionContext();
-        var txToApply = new TransactionToApply( txRepresentation, versionContext );
+        var txToApply = new TransactionToApply( txRepresentation, versionContext, TRACER_SUPPLIER.get() );
         txToApply.onClose( committedTxId ->
         {
             var latestCommittedTxIdWhenStarted = txRepresentation.getLatestCommittedTxWhenStarted();

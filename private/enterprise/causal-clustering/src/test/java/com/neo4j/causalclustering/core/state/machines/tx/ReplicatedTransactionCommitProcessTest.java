@@ -14,10 +14,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.api.TransactionToApply;
 import org.neo4j.kernel.impl.transaction.TransactionRepresentation;
+import org.neo4j.kernel.impl.transaction.tracing.CommitEvent;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -26,7 +28,6 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.neo4j.kernel.impl.transaction.tracing.CommitEvent.NULL;
 import static org.neo4j.storageengine.api.TransactionApplicationMode.EXTERNAL;
 
 class ReplicatedTransactionCommitProcessTest
@@ -56,7 +57,7 @@ class ReplicatedTransactionCommitProcessTest
         when( replicator.replicate( any( ReplicatedContent.class ) ) ).thenReturn( replicationResult );
 
         // when
-        long txId = commitProcess.commit( new TransactionToApply( tx ), NULL, EXTERNAL );
+        long txId = commitProcess.commit( new TransactionToApply( tx, PageCursorTracer.NULL ), CommitEvent.NULL, EXTERNAL );
 
         // then
         assertEquals( expectedTxId, txId );
@@ -72,8 +73,8 @@ class ReplicatedTransactionCommitProcessTest
         when( replicator.replicate( any( ReplicatedContent.class ) ) ).thenReturn( replicationResult );
 
         // when
-        TransactionFailureException commitException = assertThrows(
-                TransactionFailureException.class, () -> commitProcess.commit( new TransactionToApply( tx ), NULL, EXTERNAL ) );
+        TransactionFailureException commitException = assertThrows( TransactionFailureException.class,
+                () -> commitProcess.commit( new TransactionToApply( tx, PageCursorTracer.NULL ), CommitEvent.NULL, EXTERNAL ) );
 
         // then
         assertEquals( replicatorFailure, commitException.getCause() );
@@ -89,8 +90,8 @@ class ReplicatedTransactionCommitProcessTest
         when( replicator.replicate( any( ReplicatedContent.class ) ) ).thenReturn( replicationResult );
 
         // when
-        TransactionFailureException commitException = assertThrows(
-                TransactionFailureException.class, () -> commitProcess.commit( new TransactionToApply( tx ), NULL, EXTERNAL ) );
+        TransactionFailureException commitException = assertThrows( TransactionFailureException.class,
+                () -> commitProcess.commit( new TransactionToApply( tx, PageCursorTracer.NULL ), CommitEvent.NULL, EXTERNAL ) );
 
         // then
         assertEquals( replicatorFailure, commitException.getCause() );
@@ -105,8 +106,8 @@ class ReplicatedTransactionCommitProcessTest
         when( replicator.replicate( any( ReplicatedContent.class ) ) ).thenThrow( replicatorException );
 
         // when
-        TransactionFailureException commitException = assertThrows(
-                TransactionFailureException.class, () -> commitProcess.commit( new TransactionToApply( tx ), NULL, EXTERNAL ) );
+        TransactionFailureException commitException = assertThrows( TransactionFailureException.class,
+                () -> commitProcess.commit( new TransactionToApply( tx, PageCursorTracer.NULL ), CommitEvent.NULL, EXTERNAL ) );
 
         // then
         assertEquals( replicatorException, commitException.getCause() );

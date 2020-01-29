@@ -164,8 +164,8 @@ class ReplicatedTransactionStateMachineTest
         {
             TransactionToApply txToApply = invocation.getArgument( 0 );
             txToApply.commitment( new FakeCommitment( txId, mock( TransactionIdStore.class ) ), txId );
-            txToApply.commitment().publishAsCommitted();
-            txToApply.commitment().publishAsClosed();
+            txToApply.publishAsCommitted();
+            txToApply.publishAsClosed();
             txToApply.close();
             return txId;
         } );

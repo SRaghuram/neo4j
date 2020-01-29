@@ -14,6 +14,7 @@ import org.neo4j.common.DependencyResolver;
 import org.neo4j.internal.helpers.Args;
 import org.neo4j.internal.helpers.progress.ProgressListener;
 import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.impl.api.TransactionQueue;
 import org.neo4j.kernel.impl.api.TransactionToApply;
 import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
@@ -70,7 +71,7 @@ public class ReapplyTransactionsCommand extends ArgsCommand
             while ( transactions.next() )
             {
                 CommittedTransactionRepresentation tx = transactions.get();
-                TransactionToApply txToApply = new TransactionToApply( tx.getTransactionRepresentation() );
+                TransactionToApply txToApply = new TransactionToApply( tx.getTransactionRepresentation(), PageCursorTracer.NULL );
                 txToApply.commitment( Commitment.NO_COMMITMENT, tx.getCommitEntry().getTxId() );
                 batch.queue( txToApply );
                 progress.add( 1 );

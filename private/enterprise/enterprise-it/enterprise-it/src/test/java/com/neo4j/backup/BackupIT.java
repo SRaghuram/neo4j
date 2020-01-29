@@ -979,7 +979,7 @@ class BackupIT
 
         PhysicalTransactionRepresentation txRepresentation = new PhysicalTransactionRepresentation( commands );
         txRepresentation.setHeader( new byte[0], 42, 42, 42, 42 );
-        TransactionToApply txToApply = new TransactionToApply( txRepresentation );
+        TransactionToApply txToApply = new TransactionToApply( txRepresentation, NULL );
 
         TransactionCommitProcess commitProcess = dependencyResolver( db ).resolveDependency( TransactionCommitProcess.class );
         commitProcess.commit( txToApply, CommitEvent.NULL, TransactionApplicationMode.EXTERNAL );

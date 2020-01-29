@@ -14,6 +14,7 @@ import com.neo4j.causalclustering.core.state.machines.lease.ReplicatedLeaseState
 import org.junit.jupiter.api.Test;
 
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
@@ -36,7 +37,7 @@ class CommitProcessStateMachineCollaborationTest
     {
         // given
         int initialLeaseId = 23;
-        TransactionToApply transactionToApply = new TransactionToApply( physicalTx( initialLeaseId ) );
+        TransactionToApply transactionToApply = new TransactionToApply( physicalTx( initialLeaseId ), PageCursorTracer.NULL );
 
         int finalLeaseId = 24;
         TransactionCommitProcess localCommitProcess = mock( TransactionCommitProcess.class );

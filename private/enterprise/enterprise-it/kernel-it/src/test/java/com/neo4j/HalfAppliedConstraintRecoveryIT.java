@@ -31,6 +31,7 @@ import org.neo4j.internal.recordstorage.Command;
 import org.neo4j.internal.recordstorage.RecordStorageEngine;
 import org.neo4j.io.fs.EphemeralFileSystemAbstraction;
 import org.neo4j.io.pagecache.IOLimiter;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionToApply;
 import org.neo4j.kernel.impl.api.index.IndexingService;
@@ -369,7 +370,7 @@ public class HalfAppliedConstraintRecoveryIT
         {
             try
             {
-                committer.commit( new TransactionToApply( tx ), CommitEvent.NULL, EXTERNAL );
+                committer.commit( new TransactionToApply( tx, NULL ), CommitEvent.NULL, EXTERNAL );
             }
             catch ( TransactionFailureException e )
             {

@@ -106,7 +106,8 @@ public class BatchingTxApplier extends LifecycleAdapter
             return;
         }
 
-        var toApply = new TransactionToApply( tx.getTransactionRepresentation(), receivedTxId, versionContextSupplier.getVersionContext() );
+        var toApply = new TransactionToApply( tx.getTransactionRepresentation(), receivedTxId, versionContextSupplier.getVersionContext(),
+                TRACER_SUPPLIER.get() );
         toApply.onClose( databaseEventDispatch::fireTransactionCommitted );
         txQueue.queue( toApply );
 
