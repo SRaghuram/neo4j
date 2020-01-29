@@ -390,8 +390,7 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
 
   class PipelineBuilder(head: LogicalPlan) {
     private val slots = mutable.Map.empty[SlotKey, Slot]
-    slots += ApplyPlanSlotKey(Id(0)) -> LongSlot(0, false, symbols.CTAny)
-    private var longCount = 0 // TODO: shouldn't this be 1 because of the apply plan slot?
+    private var longCount = 0
     private var refCount = 0
     private var current = head
     private var bufferId = 0
@@ -406,7 +405,7 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
 
     def ~>(f: LogicalPlan => LogicalPlan): PipelineBuilder = {
       current = f(current)
-      applyPlans.set(current.id, Id(0))
+      applyPlans.set(current.id, Id.INVALID_ID)
       current match {
         case p: ProduceResult => pipeline.outputDefinition = ProduceResultOutput(p)
         case p: Aggregation => pipeline.outputDefinition = ReduceOutput(buffer(), p)
