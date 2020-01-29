@@ -546,18 +546,22 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("SHOW ROLES").toSet should be(defaultRoles -- Set(role(PredefinedRoles.READER).builtIn().map))
   }
 
-  test("should not drop admin role") {
+  test("should lose admin rights when dropping the admin role") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("SHOW ROLES").toSet should be(defaultRoles)
+    execute(s"CREATE USER alice SET PASSWORD 'secret' CHANGE NOT REQUIRED")
+    execute(s"GRANT ROLE ${PredefinedRoles.ADMIN} TO alice")
+
+    //WHEN
+    executeOnSystem("alice", "secret", s"DROP ROLE ${PredefinedRoles.ADMIN}")
 
     // WHEN
     the[AuthorizationViolationException] thrownBy {
-      execute(s"DROP ROLE $ADMIN")
+      executeOnSystem("alice", "secret",  s"DROP ROLE ${PredefinedRoles.READER}")
     } should have message "Permission denied."
 
     // THEN
-    execute("SHOW ROLES").toSet should be(defaultRoles)
+    execute("SHOW ROLES").toSet should be(defaultRoles -- Set(role(PredefinedRoles.ADMIN).builtIn().map))
   }
 
   test("should fail when dropping non-existing role") {

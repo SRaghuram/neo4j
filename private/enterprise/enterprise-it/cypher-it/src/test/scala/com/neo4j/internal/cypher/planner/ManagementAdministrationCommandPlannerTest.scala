@@ -447,9 +447,7 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
       logPlan(
         managementPlan("DropRole", Seq(roleArg("foo")),
           helperPlan("EnsureNodeExists(Role)", Seq(userArg("foo")),
-            helperPlan("CheckFrozenRole", Seq(roleArg("foo")),
-              assertDbmsAdminPlan("DROP ROLE")
-            )
+            assertDbmsAdminPlan("DROP ROLE")
           )
         )
       ).toString
@@ -467,9 +465,7 @@ class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPl
       logPlan(
         managementPlan("DropRole", Seq(roleArg("foo")),
           helperPlan("DoNothingIfNotExists(Role)", Seq(userArg("foo")),
-            helperPlan("CheckFrozenRole", Seq(roleArg("foo")),
-              assertDbmsAdminPlan("DROP ROLE")
-            )
+            assertDbmsAdminPlan("DROP ROLE")
           )
         )
       ).toString

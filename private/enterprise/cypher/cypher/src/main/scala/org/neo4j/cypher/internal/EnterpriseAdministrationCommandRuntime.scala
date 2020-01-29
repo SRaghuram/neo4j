@@ -41,7 +41,6 @@ import org.neo4j.cypher.internal.ast.ShowUserPrivileges
 import org.neo4j.cypher.internal.compiler.phases.LogicalPlanState
 import org.neo4j.cypher.internal.logical.plans.AlterUser
 import org.neo4j.cypher.internal.logical.plans.AssertValidRevoke
-import org.neo4j.cypher.internal.logical.plans.CheckFrozenRole
 import org.neo4j.cypher.internal.logical.plans.CopyRolePrivileges
 import org.neo4j.cypher.internal.logical.plans.CreateDatabase
 import org.neo4j.cypher.internal.logical.plans.CreateRole
@@ -76,7 +75,6 @@ import org.neo4j.cypher.internal.logical.plans.ShowUsers
 import org.neo4j.cypher.internal.logical.plans.StartDatabase
 import org.neo4j.cypher.internal.logical.plans.StopDatabase
 import org.neo4j.cypher.internal.procs.AdminActionMapper
-import org.neo4j.cypher.internal.procs.AuthorizationPredicateExecutionPlan
 import org.neo4j.cypher.internal.procs.LoggingSystemCommandExecutionPlan
 import org.neo4j.cypher.internal.procs.QueryHandler
 import org.neo4j.cypher.internal.procs.SystemCommandExecutionPlan
@@ -147,11 +145,6 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
   private def fullLogicalToExecutable = logicalToExecutable orElse communityCommandRuntime.logicalToExecutable
 
   private def logicalToExecutable: PartialFunction[LogicalPlan, (RuntimeContext, ParameterMapping, SecurityContext) => ExecutionPlan] = {
-    // Special case where the admin role cannot be deleted (only in 4.0)
-    case CheckFrozenRole(source, roleName) => (context, parameterMapping, securityContext) =>
-      AuthorizationPredicateExecutionPlan(() => roleName != PredefinedRoles.ADMIN,
-        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)))
-
     // SHOW USERS
     case ShowUsers(source) => (context, parameterMapping, securityContext) =>
       SystemCommandExecutionPlan("ShowUsers", normalExecutionEngine,

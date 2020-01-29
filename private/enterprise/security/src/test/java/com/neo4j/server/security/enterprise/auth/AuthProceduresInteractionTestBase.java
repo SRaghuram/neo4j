@@ -545,15 +545,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
         testSuccessfulListRoles( adminSubject, new String[]{ ADMIN, EDITOR, PUBLISHER, EMPTY_ROLE, PUBLIC } );
     }
 
-    // TODO: Delete this test once the ability to remove the admin role is restored
     @Test
-    void shouldNotBeAbleToDeleteAdminRole()
-    {
-        assertSystemCommandFail( adminSubject, format( "CALL dbms.security.deleteRole('%s')", ADMIN ), "Permission denied" );
-    }
-
-    // TODO: Re-enable this test once the ability to remove the admin role is restored
-    @Ignore
     void shouldLoseAdminRightsWhenAdminRoleIsDeleted()
     {
         assertSystemCommandSuccess( adminSubject, format( "CALL dbms.security.deleteRole('%s')", ADMIN ) );
@@ -569,9 +561,8 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
             tx.commit();
             result.close();
         }
-        Assert.assertEquals( "Didn't get expected number of results", 5, roles.size() );
-        assertThat( roles, containsInAnyOrder( new String[]{ READER, EDITOR, PUBLISHER, ARCHITECT, EMPTY_ROLE } ) );
-
+        Assert.assertEquals( "Didn't get expected number of results", 6, roles.size() );
+        assertThat( roles, containsInAnyOrder( new String[]{ READER, EDITOR, PUBLISHER, ARCHITECT, EMPTY_ROLE, PUBLIC } ) );
     }
 
     @Test
