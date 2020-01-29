@@ -10,7 +10,10 @@ import org.neo4j.cypher.internal.EnterpriseRuntimeContext
 import org.neo4j.cypher.internal.InterpretedRuntime
 import org.neo4j.cypher.internal.PipelinedRuntime.PIPELINED
 import org.neo4j.cypher.internal.SlottedRuntime
-import org.neo4j.cypher.internal.logical.builder.LogicalPlanGenerator.WithState
+import org.neo4j.cypher.internal.compiler.planner.logical.CardinalityCostModel
+import org.neo4j.cypher.internal.compiler.planner.logical.Metrics.QueryGraphSolverInput
+import org.neo4j.cypher.internal.logical.generator.LogicalPlanGenerator.WithState
+import org.neo4j.cypher.internal.util.Cost
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 import org.neo4j.exceptions.CantCompileQueryException
 import org.neo4j.logging.AssertableLogProvider
@@ -53,15 +56,22 @@ class LogicalPlanFuzzTest extends CypherFunSuite
     runtimeTestSupport.tx.commit()
     runtimeTestSupport.stopTx()
 
-    val generator = new LogicalQueryGenerator(Seq("A", "B", "C"), Seq("AB", "BA"))
+    runtimeTestSupport.startTx()
+    val tx = runtimeTestSupport.tx
+    val txContext = runtimeTestSupport.txContext
+
+    val generator = LogicalQueryGenerator.logicalQuery(txContext, Cost(10000))
 
     try {
-      forAll(generator.logicalQuery) {
+      forAll(generator) {
         case WithState(logicalQuery, state) =>
           val parameters = state.parameters.map(_ -> randVals.nextValue().asObject()).toMap
 
+          val cost = CardinalityCostModel(null).apply(logicalQuery.logicalPlan, QueryGraphSolverInput.empty, logicalQuery.cardinalities)
+
           println(logicalQuery.logicalPlan)
           println(parameters)
+          println(cost)
 
           runtimeTestSupport.startTx()
 
@@ -73,7 +83,11 @@ class LogicalPlanFuzzTest extends CypherFunSuite
             results.zipWithIndex.tail.foreach {
               case (Success(result), i) =>
                 withClue(s"Comparing ${runtimes(i).name} against ${runtimes.head.name}") {
-                  result should (contain theSameElementsAs results.head.get)
+                  println(s"result.size = ${result.size}")
+                  if (result.size <= 1000)
+                    result should (contain theSameElementsAs results.head.get)
+                  else
+                    println(s"skipping check")
                 }
               case (Failure(_: CantCompileQueryException), _) => // OK
               case (Failure(e), i) =>
@@ -81,12 +95,13 @@ class LogicalPlanFuzzTest extends CypherFunSuite
                   throw e
                 }
             }
-            println()
           } finally {
             runtimeTestSupport.stopTx()
           }
       }
     } finally {
+      txContext.close()
+      tx.close()
       runtimeTestSupport.stop()
       managementService.shutdown()
     }
