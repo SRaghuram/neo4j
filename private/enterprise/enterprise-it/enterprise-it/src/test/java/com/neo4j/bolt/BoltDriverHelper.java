@@ -21,26 +21,29 @@ import static java.util.stream.Collectors.toSet;
 
 public class BoltDriverHelper
 {
-    private static final Config.ConfigBuilder TEST_DRIVER_CONFIG = Config.builder().withoutEncryption().withLogging( Logging.none() );
+    private static Config.ConfigBuilder baseConfig()
+    {
+        return Config.builder().withoutEncryption().withLogging( Logging.none() );
+    }
 
     public static Driver graphDatabaseDriver( URI uri )
     {
-        return GraphDatabase.driver( uri, TEST_DRIVER_CONFIG.build() );
+        return GraphDatabase.driver( uri, baseConfig().build() );
     }
 
     public static Driver graphDatabaseDriver( String uri )
     {
-        return GraphDatabase.driver( uri, TEST_DRIVER_CONFIG.build() );
+        return GraphDatabase.driver( uri, baseConfig().build() );
     }
 
     public static Driver graphDatabaseDriver( URI uri, AuthToken auth )
     {
-        return GraphDatabase.driver( uri, auth, TEST_DRIVER_CONFIG.build() );
+        return GraphDatabase.driver( uri, auth, baseConfig().build() );
     }
 
     public static Driver graphDatabaseDriver( String uri, AuthToken auth )
     {
-        return GraphDatabase.driver( uri, auth, TEST_DRIVER_CONFIG.build() );
+        return GraphDatabase.driver( uri, auth, baseConfig().build() );
     }
 
     public static Driver graphDatabaseDriver( Cluster cluster, AuthToken auth )
@@ -52,7 +55,7 @@ public class BoltDriverHelper
                 .map( uri -> ServerAddress.of( uri.getHost(), uri.getPort() ) )
                 .collect( toSet() );
 
-        return GraphDatabase.driver( "neo4j://ignore.com", auth, TEST_DRIVER_CONFIG
+        return GraphDatabase.driver( "neo4j://ignore.com", auth, baseConfig()
                 .withResolver( serverAddressResolver )
                 .build() );
     }
