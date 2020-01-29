@@ -42,7 +42,7 @@ public class ClusterFactoryExtension extends StatefullFieldExtension<ClusterFact
         }
     }
 
-    private void shutdownCluster( TrackingClusterFactory clusterFactory )
+    private static void shutdownCluster( TrackingClusterFactory clusterFactory )
     {
         clusterFactory.shutdownAll();
     }

@@ -10,6 +10,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.concurrent.Callable;
 import java.util.function.BiPredicate;
@@ -148,7 +149,7 @@ public class MetricsTestHelper
         long endTime = currentTimeMillis() + MINUTES.toMillis( 2 );
         while ( currentTimeMillis() < endTime )
         {
-            try ( BufferedReader reader = new BufferedReader( new FileReader( metricFile ) ) )
+            try ( BufferedReader reader = new BufferedReader( new FileReader( metricFile, StandardCharsets.UTF_8 ) ) )
             {
                 String headerLine = reader.readLine();
                 if ( headerLine == null )

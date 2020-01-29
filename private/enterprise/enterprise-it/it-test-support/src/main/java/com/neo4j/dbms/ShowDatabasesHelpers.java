@@ -89,7 +89,7 @@ public final class ShowDatabasesHelpers
             var requestedStatus = resultStrings.get( "requestedStatus" );
             var currentStatus = resultStrings.get( "currentStatus" );
             var error = resultStrings.get( "error" );
-            boolean isDefault = Boolean.valueOf( resultStrings.get( "default" ) );
+            boolean isDefault = Boolean.parseBoolean( resultStrings.get( "default" ) );
 
             return new ShowDatabasesResultRow( name, address, role, requestedStatus, currentStatus, error, isDefault );
         }

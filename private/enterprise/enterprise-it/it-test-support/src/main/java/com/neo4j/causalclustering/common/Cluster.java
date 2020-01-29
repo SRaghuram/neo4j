@@ -111,12 +111,12 @@ public class Cluster
         this.recordFormat = recordFormat;
         listenAddress = useWildcard ? ipFamily.wildcardAddress() : ipFamily.localhostAddress();
         advertisedAddress = ipFamily.localhostName();
-        List<SocketAddress> initialHosts = initialHosts( noOfCoreMembers );
+        List<SocketAddress> initialHosts = initialHosts( noOfCoreMembers, advertisedAddress );
         createCoreMembers( noOfCoreMembers, initialHosts, coreParams, instanceCoreParams, recordFormat );
         createReadReplicas( noOfReadReplicas, initialHosts, readReplicaParams, instanceReadReplicaParams, recordFormat );
     }
 
-    private List<SocketAddress> initialHosts( int noOfCoreMembers )
+    private static List<SocketAddress> initialHosts( int noOfCoreMembers, String advertisedAddress )
     {
         return IntStream.range( 0, noOfCoreMembers )
                 .mapToObj( ignored -> PortAuthority.allocatePort() )

@@ -91,7 +91,7 @@ public class DataCreator
         return last;
     }
 
-    public static long countNodes( CoreClusterMember member )
+    public static long countNodes( ClusterMember member )
     {
         GraphDatabaseFacade db = member.defaultDatabase();
         long count;

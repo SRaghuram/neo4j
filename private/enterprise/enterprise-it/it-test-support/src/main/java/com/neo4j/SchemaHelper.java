@@ -130,7 +130,7 @@ public enum SchemaHelper
         createNodeKeyConstraint( db, tx, label.name(), properties );
     }
 
-    public void createNodeKeyConstraintWithName( GraphDatabaseService db, Transaction tx, String name, Label label, String... propertyKey )
+    public void createNodeKeyConstraintWithName( Transaction tx, String name, Label label, String... propertyKey )
     {
         createNodeKeyConstraintWithName( tx, name, label.name(), propertyKey );
     }

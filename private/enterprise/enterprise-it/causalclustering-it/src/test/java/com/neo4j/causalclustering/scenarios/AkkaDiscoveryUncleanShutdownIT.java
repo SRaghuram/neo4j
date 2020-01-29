@@ -113,7 +113,7 @@ class AkkaDiscoveryUncleanShutdownIT
         return core;
     }
 
-    private void assertOverviews() throws KernelException, InterruptedException
+    private void assertOverviews()
     {
         int leaderCount = runningCores.size() > 1 ? 1 : 0;
         int followerCount = runningCores.size() - leaderCount;

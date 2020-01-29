@@ -11,6 +11,7 @@ import java.util.Arrays;
 import java.util.Optional;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.dbms.procedures.StandaloneDatabaseStateProcedure;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
@@ -33,7 +34,8 @@ class CommunityDatabaseStateProcedureTest
 {
     private final TestDatabaseIdRepository idRepository = new TestDatabaseIdRepository();
     private final DatabaseStateService stateService = mock( DatabaseStateService.class );
-    private final StandaloneDatabaseStateProcedure procedure = new StandaloneDatabaseStateProcedure( stateService, idRepository, Config.defaults() );
+    private final StandaloneDatabaseStateProcedure procedure =
+            new StandaloneDatabaseStateProcedure( stateService, idRepository, Config.defaults().get( BoltConnector.advertised_address ).toString() );
 
     @Test
     void shouldThrowWithInvalidInput()

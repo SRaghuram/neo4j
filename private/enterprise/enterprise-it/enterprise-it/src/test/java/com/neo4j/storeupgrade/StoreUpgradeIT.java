@@ -22,7 +22,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 
@@ -206,7 +205,7 @@ public class StoreUpgradeIT
             NeoBootstrapper bootstrapper = new CommunityBootstrapper();
             try
             {
-                bootstrapper.start( rootDir.getAbsoluteFile(), Optional.of( configFile ), Collections.emptyMap() );
+                bootstrapper.start( rootDir.getAbsoluteFile(), configFile, Collections.emptyMap() );
                 assertTrue( bootstrapper.isRunning() );
                 checkInstance( store, (GraphDatabaseAPI) bootstrapper.getDatabaseManagementService().database( DEFAULT_DATABASE_NAME ) );
             }

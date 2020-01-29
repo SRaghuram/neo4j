@@ -334,7 +334,7 @@ class FabricExecutorTest
         {
             List<Record> list = tx.run( joinAsLines( "RETURN 1 AS x" ) ).list();
 
-            assertEquals( list.get( 0 ).get( "x" ).asLong(), 1 );
+            assertEquals( 1, list.get( 0 ).get( "x" ).asLong() );
         } );
     }
 
@@ -350,21 +350,21 @@ class FabricExecutorTest
                     "RETURN x, y, z ORDER BY x, y, z"
             ) ).list();
 
-            assertEquals( list.get( 0 ).get( "x" ).asLong(), 1 );
-            assertEquals( list.get( 0 ).get( "y" ).asString(), "y" );
-            assertEquals( list.get( 0 ).get( "z" ).asLong(), 8 );
+            assertEquals(  1, list.get( 0 ).get( "x" ).asLong() );
+            assertEquals(  "y", list.get( 0 ).get( "y" ).asString() );
+            assertEquals(  8, list.get( 0 ).get( "z" ).asLong() );
 
-            assertEquals( list.get( 1 ).get( "x" ).asLong(), 1 );
-            assertEquals( list.get( 1 ).get( "y" ).asString(), "y" );
-            assertEquals( list.get( 1 ).get( "z" ).asLong(), 9 );
+            assertEquals(  1, list.get( 1 ).get( "x" ).asLong() );
+            assertEquals(  "y", list.get( 1 ).get( "y" ).asString() );
+            assertEquals(  9, list.get( 1 ).get( "z" ).asLong() );
 
-            assertEquals( list.get( 2 ).get( "x" ).asLong(), 2 );
-            assertEquals( list.get( 2 ).get( "y" ).asString(), "y" );
-            assertEquals( list.get( 2 ).get( "z" ).asLong(), 8 );
+            assertEquals(  2, list.get( 2 ).get( "x" ).asLong() );
+            assertEquals(  "y", list.get( 2 ).get( "y" ).asString() );
+            assertEquals(  8, list.get( 2 ).get( "z" ).asLong() );
 
-            assertEquals( list.get( 3 ).get( "x" ).asLong(), 2 );
-            assertEquals( list.get( 3 ).get( "y" ).asString(), "y" );
-            assertEquals( list.get( 3 ).get( "z" ).asLong(), 9 );
+            assertEquals(  2, list.get( 3 ).get( "x" ).asLong() );
+            assertEquals(  "y", list.get( 3 ).get( "y" ).asString() );
+            assertEquals(  9, list.get( 3 ).get( "z" ).asLong() );
         } );
     }
 
@@ -387,17 +387,17 @@ class FabricExecutorTest
                     "RETURN s, y ORDER BY s, y"
             ) ).list();
 
-            assertEquals( list.get( 0 ).get( "s" ).asLong(), 0 );
-            assertEquals( list.get( 0 ).get( "y" ).asString(), "a" );
+            assertEquals( 0, list.get( 0 ).get( "s" ).asLong() );
+            assertEquals( "a", list.get( 0 ).get( "y" ).asString()  );
 
-            assertEquals( list.get( 1 ).get( "s" ).asLong(), 0 );
-            assertEquals( list.get( 1 ).get( "y" ).asString(), "b" );
+            assertEquals( 0, list.get( 1 ).get( "s" ).asLong() );
+            assertEquals( "b", list.get( 1 ).get( "y" ).asString()  );
 
-            assertEquals( list.get( 2 ).get( "s" ).asLong(), 1 );
-            assertEquals( list.get( 2 ).get( "y" ).asString(), "k" );
+            assertEquals( 1, list.get( 2 ).get( "s" ).asLong() );
+            assertEquals( "k", list.get( 2 ).get( "y" ).asString()  );
 
-            assertEquals( list.get( 3 ).get( "s" ).asLong(), 1 );
-            assertEquals( list.get( 3 ).get( "y" ).asString(), "l" );
+            assertEquals( 1, list.get( 3 ).get( "s" ).asLong() );
+            assertEquals( "l", list.get( 3 ).get( "y" ).asString()  );
         } );
     }
 

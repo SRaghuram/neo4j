@@ -199,7 +199,7 @@ class SchemaWithPECAcceptanceTest
         try ( Transaction transaction = db.beginTx() )
         {
             before = getConstraints( transaction );
-            helper.createNodeKeyConstraintWithName( db, transaction, name, label, propertyKey );
+            helper.createNodeKeyConstraintWithName( transaction, name, label, propertyKey );
             transaction.commit();
         }
 
