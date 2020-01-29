@@ -11,6 +11,7 @@ import org.neo4j.cypher.internal.physicalplanning.PipelineId
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
+<<<<<<< HEAD
 import org.neo4j.cypher.internal.runtime.pipelined.execution.FilteringMorselExecutionContext
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
@@ -27,14 +28,29 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorTask
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OutputOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OutputOperatorState
+=======
+import org.neo4j.cypher.internal.runtime.pipelined.execution._
+import org.neo4j.cypher.internal.runtime.pipelined.operators.Operator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorState
+import org.neo4j.cypher.internal.runtime.pipelined.operators._
+>>>>>>> da402acfd95... Don't attribute any time to fused operators
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatorAndMorsel
+<<<<<<< HEAD
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.WorkUnitEvent
 import org.neo4j.cypher.internal.runtime.scheduling.HasWorkIdentity
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
+=======
+import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
+import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
+import org.neo4j.cypher.internal.runtime.pipelined.tracing.WorkUnitEvent
+import org.neo4j.cypher.internal.runtime.scheduling.HasWorkIdentity
+import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
+import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+>>>>>>> da402acfd95... Don't attribute any time to fused operators
 import org.neo4j.util.Preconditions
 
 case class ExecutablePipeline(id: PipelineId,
@@ -48,6 +64,11 @@ case class ExecutablePipeline(id: PipelineId,
                               outputOperator: OutputOperator,
                               needsMorsel: Boolean = true,
                               needsFilteringMorsel: Boolean = false) extends WorkIdentity {
+
+  def isFused: Boolean = start match {
+    case _: CompiledStreamingOperator => true
+    case _ => false
+  }
 
   def createState(executionState: ExecutionState,
                   queryContext: QueryContext,

@@ -6,21 +6,37 @@
 package org.neo4j.cypher.internal.runtime.pipelined.operators
 
 import org.neo4j.cypher.internal.physicalplanning.BufferId
+<<<<<<< HEAD
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.profiling.QueryProfiler
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.pipelined.ExecutionState
 import org.neo4j.cypher.internal.runtime.pipelined.Task
+=======
+import org.neo4j.cypher.internal.physicalplanning.PipelineId
+import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
+import org.neo4j.cypher.internal.profiling.QueryProfiler
+import org.neo4j.cypher.internal.runtime.QueryContext
+>>>>>>> da402acfd95... Don't attribute any time to fused operators
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.PerArgument
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Sink
+<<<<<<< HEAD
 import org.neo4j.cypher.internal.runtime.scheduling.HasWorkIdentity
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentityImpl
 import org.neo4j.cypher.internal.util.attribution.Id
+=======
+import org.neo4j.cypher.internal.runtime.pipelined.ExecutionState
+import org.neo4j.cypher.internal.runtime.pipelined.Task
+import org.neo4j.cypher.internal.runtime.scheduling.HasWorkIdentity
+import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
+import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentityImpl
+import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+>>>>>>> da402acfd95... Don't attribute any time to fused operators
 
 /**
  * Operator which ends a pipeline, and thus prepares the computed output.
@@ -39,13 +55,14 @@ trait OutputOperator extends HasWorkIdentity {
 
 trait OutputOperatorState extends HasWorkIdentity {
 
+  def trackTime: Boolean
   def prepareOutputWithProfile(output: MorselExecutionContext,
                                context: QueryContext,
                                state: QueryState,
                                resources: QueryResources,
                                queryProfiler: QueryProfiler): PreparedOutput = {
 
-    val operatorExecutionEvent = queryProfiler.executeOperator(workIdentity.workId)
+    val operatorExecutionEvent = queryProfiler.executeOperator(workIdentity.workId.x, trackTime)
     resources.setKernelTracer(operatorExecutionEvent)
     try {
       prepareOutput(output, context, state, resources, operatorExecutionEvent)
@@ -83,19 +100,26 @@ case object NoOutputOperator extends OutputOperator with OutputOperatorState wit
 
   override def produce(): Unit = ()
   override def workIdentity: WorkIdentity = WorkIdentityImpl(Id.INVALID_ID, "Perform no output")
+  override def trackTime: Boolean = true
 }
 
 // PIPELINED BUFFER OUTPUT
 
 // we need the the id of the head plan of the next pipeline because that is where er attribute time spent
 // during prepare output in profiling.
-case class MorselBufferOutputOperator(bufferId: BufferId, nextPipelineHeadPlanId: Id) extends OutputOperator {
+case class MorselBufferOutputOperator(bufferId: BufferId, nextPipelineHeadPlanId: Id, nextPipelineFused: Boolean) extends OutputOperator {
   override def outputBuffer: Option[BufferId] = Some(bufferId)
   override val workIdentity: WorkIdentity = WorkIdentityImpl(nextPipelineHeadPlanId, s"Output morsel to $bufferId")
+<<<<<<< HEAD
   override def createState(executionState: ExecutionState): OutputOperatorState =
     MorselBufferOutputState(workIdentity, bufferId, executionState)
+=======
+  override def createState(executionState: ExecutionState, pipelineId: PipelineId): OutputOperatorState =
+    MorselBufferOutputState(workIdentity, !nextPipelineFused, bufferId, executionState, pipelineId)
+>>>>>>> da402acfd95... Don't attribute any time to fused operators
 }
 case class MorselBufferOutputState(override val workIdentity: WorkIdentity,
+                                   override val trackTime: Boolean,
                                    bufferId: BufferId,
                                    executionState: ExecutionState) extends OutputOperatorState {
   override def prepareOutput(outputMorsel: MorselExecutionContext,
@@ -116,17 +140,24 @@ case class MorselBufferPreparedOutput(bufferId: BufferId,
 
 // we need the the id of the head plan of the next pipeline because that is where er attribute time spent
 // during prepare output in profiling.
-case class MorselArgumentStateBufferOutputOperator(bufferId: BufferId, argumentSlotOffset: Int, nextPipelineHeadPlanId: Id) extends OutputOperator {
+case class MorselArgumentStateBufferOutputOperator(bufferId: BufferId, argumentSlotOffset: Int, nextPipelineHeadPlanId: Id, nextPipelineFused: Boolean) extends OutputOperator {
   override def outputBuffer: Option[BufferId] = Some(bufferId)
   override val workIdentity: WorkIdentity = WorkIdentityImpl(nextPipelineHeadPlanId, s"Output morsel grouped by argumentSlot $argumentSlotOffset to $bufferId")
   override def createState(executionState: ExecutionState): OutputOperatorState =
     MorselArgumentStateBufferOutputState(workIdentity,
+<<<<<<< HEAD
       executionState.getSink[IndexedSeq[PerArgument[MorselExecutionContext]]](bufferId),
       argumentSlotOffset)
+=======
+                                         executionState.getSink[IndexedSeq[PerArgument[MorselExecutionContext]]](pipelineId, bufferId),
+                                         argumentSlotOffset,
+                                         !nextPipelineFused)
+>>>>>>> da402acfd95... Don't attribute any time to fused operators
 }
-case class MorselArgumentStateBufferOutputState(override val workIdentity: WorkIdentity,
+case class MorselArgumentStateBufferOutputState(workIdentity: WorkIdentity,
                                                 sink: Sink[IndexedSeq[PerArgument[MorselExecutionContext]]],
-                                                argumentSlotOffset: Int) extends OutputOperatorState {
+                                                argumentSlotOffset: Int,
+                                                trackTime: Boolean) extends OutputOperatorState {
   override def prepareOutput(outputMorsel: MorselExecutionContext,
                              context: QueryContext,
                              state: QueryState,

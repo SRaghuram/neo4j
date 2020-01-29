@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.operators
 
 import org.neo4j.codegen.api.Field
 import org.neo4j.codegen.api.IntermediateRepresentation
+<<<<<<< HEAD
 import org.neo4j.codegen.api.IntermediateRepresentation.field
 import org.neo4j.codegen.api.IntermediateRepresentation.variable
 import org.neo4j.codegen.api.IntermediateRepresentation.constant
@@ -30,31 +31,57 @@ import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.cypher.internal.expressions
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.BufferId
+=======
+import org.neo4j.codegen.api.LocalVariable
+import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
+import org.neo4j.cypher.internal.physicalplanning.BufferId
+import org.neo4j.cypher.internal.physicalplanning.PipelineId
+>>>>>>> da402acfd95... Don't attribute any time to fused operators
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.NoMemoryTracker
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
+<<<<<<< HEAD
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.pipelined.ExecutionState
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
+=======
+>>>>>>> da402acfd95... Don't attribute any time to fused operators
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.AggregatingAccumulator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.Aggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.Updater
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
+<<<<<<< HEAD
 import org.neo4j.cypher.internal.runtime.pipelined.operators.AggregationMapperOperatorTaskTemplate.createAggregators
 import org.neo4j.cypher.internal.runtime.pipelined.operators.AggregationMapperOperatorTaskTemplate.createUpdaters
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.EXECUTION_STATE
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
+=======
+>>>>>>> da402acfd95... Don't attribute any time to fused operators
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.PerArgument
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Sink
+<<<<<<< HEAD
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.SlottedQueryState
 import org.neo4j.cypher.internal.util.attribution.Id
+=======
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
+import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
+import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
+import org.neo4j.cypher.internal.runtime.pipelined.ExecutionState
+import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
+import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
+import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
+import org.neo4j.cypher.internal.runtime.NoMemoryTracker
+import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.v4_0.expressions.{Expression => AstExpression}
+import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+>>>>>>> da402acfd95... Don't attribute any time to fused operators
 import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.values.AnyValue
 
@@ -101,6 +128,8 @@ case class AggregationOperatorNoGrouping(workIdentity: WorkIdentity,
     class State(sink: Sink[IndexedSeq[PerArgument[Array[Updater]]]]) extends OutputOperatorState {
 
       override def workIdentity: WorkIdentity = AggregationMapperOperatorNoGrouping.this.workIdentity
+
+      override def trackTime: Boolean = true
 
       override def prepareOutput(morsel: MorselExecutionContext,
                                  context: QueryContext,
@@ -208,6 +237,12 @@ class AggregationMapperOperatorNoGroupingTaskTemplate(val inner: OperatorTaskTem
                                                       aggregationExpressionsCreator: () => Array[IntermediateExpression],
                                                       aggregationExpressions: Array[expressions.Expression])
                                                      (protected val codeGen: OperatorExpressionCompiler) extends OperatorTaskTemplate {
+<<<<<<< HEAD
+=======
+  import org.neo4j.codegen.api.IntermediateRepresentation._
+  import org.neo4j.cypher.internal.runtime.pipelined.operators.AggregationMapperOperatorTaskTemplate._
+  import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates._
+>>>>>>> da402acfd95... Don't attribute any time to fused operators
 
   type Agg = Array[Any]
   type AggOut = scala.collection.mutable.ArrayBuffer[PerArgument[Agg]]

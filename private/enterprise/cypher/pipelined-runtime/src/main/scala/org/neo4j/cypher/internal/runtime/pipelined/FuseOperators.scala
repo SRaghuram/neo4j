@@ -7,10 +7,13 @@ package org.neo4j.cypher.internal.runtime.pipelined
 
 import org.neo4j.codegen.api.CodeGeneration
 import org.neo4j.codegen.api.IntermediateRepresentation
+<<<<<<< HEAD
 import org.neo4j.codegen.api.IntermediateRepresentation.arrayOf
 import org.neo4j.cypher.internal.expressions.Expression
 import org.neo4j.cypher.internal.expressions.LabelToken
 import org.neo4j.cypher.internal.expressions.ListLiteral
+=======
+>>>>>>> da402acfd95... Don't attribute any time to fused operators
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans.CompositeQueryExpression
 import org.neo4j.cypher.internal.logical.plans.Distinct
@@ -46,6 +49,12 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.generateSlotAccessorFunctions
 import org.neo4j.cypher.internal.physicalplanning.SlottedIndexedProperty
 import org.neo4j.cypher.internal.physicalplanning.VariablePredicates.expressionSlotForPredicate
+<<<<<<< HEAD
+=======
+import org.neo4j.cypher.internal.physicalplanning.OutputDefinition
+import org.neo4j.cypher.internal.physicalplanning.RefSlot
+import org.neo4j.cypher.internal.physicalplanning._
+>>>>>>> da402acfd95... Don't attribute any time to fused operators
 import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.KernelAPISupport.asKernelIndexOrder
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
@@ -53,6 +62,7 @@ import org.neo4j.cypher.internal.runtime.compiled.expressions.VariableNamer
 import org.neo4j.cypher.internal.runtime.pipelined.FuseOperators.FUSE_LIMIT
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.Aggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.AggregatorFactory
+<<<<<<< HEAD
 import org.neo4j.cypher.internal.runtime.pipelined.operators.AggregationMapperOperatorNoGroupingTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.AggregationMapperOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ArgumentOperatorTaskTemplate
@@ -102,10 +112,19 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.SingleThreadedAllNo
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SingleThreadedLabelScanTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.UnwindOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.VarExpandOperatorTaskTemplate
+=======
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates._
+import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelLimitOperatorTaskTemplate.SerialTopLevelLimitStateFactory
+import org.neo4j.cypher.internal.runtime.pipelined.operators.Operator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorTaskTemplate
+import org.neo4j.cypher.internal.runtime.pipelined.operators.SingleThreadedAllNodeScanTaskTemplate
+import org.neo4j.cypher.internal.runtime.pipelined.operators._
+>>>>>>> da402acfd95... Don't attribute any time to fused operators
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionConverters.orderGroupingKeyExpressions
+<<<<<<< HEAD
 import org.neo4j.cypher.internal.util.Many
 import org.neo4j.cypher.internal.util.One
 import org.neo4j.cypher.internal.util.Zero
@@ -114,6 +133,15 @@ import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.CantCompileQueryException
 import org.neo4j.exceptions.InternalException
 import org.neo4j.internal.kernel.api.IndexQuery
+=======
+import org.neo4j.cypher.internal.v4_0.expressions.Expression
+import org.neo4j.cypher.internal.v4_0.expressions.LabelToken
+import org.neo4j.cypher.internal.v4_0.expressions.ListLiteral
+import org.neo4j.cypher.internal.v4_0.util._
+import org.neo4j.cypher.internal.v4_0.util.attribution.Id.INVALID_ID
+import org.neo4j.exceptions.CantCompileQueryException
+import org.neo4j.exceptions.InternalException
+>>>>>>> da402acfd95... Don't attribute any time to fused operators
 import org.neo4j.internal.schema.IndexOrder
 
 class FuseOperators(operatorFactory: OperatorFactory,
@@ -127,6 +155,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
   def compilePipelines(executionGraphDefinition: ExecutionGraphDefinition): IndexedSeq[ExecutablePipeline] = {
     // Compile pipelines from the end backwards/upstream, to track needsFilteringMorsel
     // (the previous pipelines will need a filtering morsel if its downstream pipeline has a work canceller
+<<<<<<< HEAD
     val (executablePipelines, _) =
     executionGraphDefinition.pipelines.foldRight(IndexedSeq.empty[ExecutablePipeline], false) {
       case (p, (pipelines, needsFilteringMorsel)) =>
@@ -135,6 +164,16 @@ class FuseOperators(operatorFactory: OperatorFactory,
 
         (executablePipeline +: pipelines, needsFilteringMorsel || upstreamNeedsFilteringMorsel)
     }
+=======
+    val (executablePipelines, _, _) =
+      executionGraphDefinition.pipelines.foldRight(IndexedSeq.empty[ExecutablePipeline], false, false) {
+        case (p, (pipelines, needsFilteringMorsel, nextPipelineFused)) =>
+          val (executablePipeline, upstreamNeedsFilteringMorsel) =
+            compilePipeline(p, needsFilteringMorsel, nextPipelineFused)
+
+          (executablePipeline +: pipelines, needsFilteringMorsel || upstreamNeedsFilteringMorsel, executablePipeline.isFused)
+      }
+>>>>>>> da402acfd95... Don't attribute any time to fused operators
     executablePipelines
   }
 
@@ -153,7 +192,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
    * @param needsFilteringMorsel there is a downstream pipeline that requires the pipeline to use filtering morsels
    * @return the compiled pipeline and whether upstream pipelines need to use filtering morsels
    */
-  def compilePipeline(p: PipelineDefinition, needsFilteringMorsel: Boolean): (ExecutablePipeline, Boolean) = {
+  def compilePipeline(p: PipelineDefinition, needsFilteringMorsel: Boolean, nextPipelineFused: Boolean): (ExecutablePipeline, Boolean) = {
 
     // See if we need filtering morsels in upstream pipelines
     val upstreamsNeedsFilteringMorsel = p.middlePlans.exists(requiresUpstreamPipelinesToUseFilteringMorsel) ||
@@ -179,6 +218,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
     val headOperator = maybeHeadOperator.getOrElse(operatorFactory.create(p.headPlan, p.inputBuffer))
     val middleOperators = operatorFactory.createMiddleOperators(unhandledMiddlePlans, headOperator)
     (ExecutablePipeline(p.id,
+<<<<<<< HEAD
       p.lhs,
       p.rhs,
       headOperator,
@@ -190,6 +230,19 @@ class FuseOperators(operatorFactory: OperatorFactory,
       needsMorsel,
       thisNeedsFilteringMorsel),
       upstreamsNeedsFilteringMorsel)
+=======
+                        p.lhs,
+                        p.rhs,
+                        headOperator,
+                        middleOperators,
+                        p.serial,
+                        physicalPlan.slotConfigurations(p.headPlan.id),
+                        p.inputBuffer,
+                        operatorFactory.createOutput(unhandledOutput, nextPipelineFused),
+                        needsMorsel,
+                        thisNeedsFilteringMorsel),
+     upstreamsNeedsFilteringMorsel)
+>>>>>>> da402acfd95... Don't attribute any time to fused operators
   }
 
   private def fuseOperators(pipeline: PipelineDefinition): (Option[Operator], Seq[LogicalPlan], OutputDefinition) = {

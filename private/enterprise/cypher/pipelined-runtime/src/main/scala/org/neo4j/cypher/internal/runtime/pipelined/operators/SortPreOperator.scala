@@ -8,6 +8,10 @@ package org.neo4j.cypher.internal.runtime.pipelined.operators
 import java.util.Comparator
 
 import org.neo4j.cypher.internal.physicalplanning.BufferId
+<<<<<<< HEAD
+=======
+import org.neo4j.cypher.internal.physicalplanning.PipelineId
+>>>>>>> da402acfd95... Don't attribute any time to fused operators
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.pipelined.ExecutionState
@@ -34,6 +38,7 @@ class SortPreOperator(val workIdentity: WorkIdentity,
   class State(sink: Sink[IndexedSeq[PerArgument[MorselExecutionContext]]]) extends OutputOperatorState {
 
     override def workIdentity: WorkIdentity = SortPreOperator.this.workIdentity
+    override def trackTime: Boolean = true
 
     override def prepareOutput(morsel: MorselExecutionContext,
                                context: QueryContext,

@@ -8,6 +8,7 @@ package org.neo4j.cypher.internal.runtime.pipelined
 import org.mockito.Mockito.RETURNS_DEEP_STUBS
 import org.neo4j.codegen.api.CodeGeneration.ByteCodeGeneration
 import org.neo4j.codegen.api.CodeGeneration.CodeSaver
+<<<<<<< HEAD
 import org.neo4j.cypher.internal.ast.AstConstructionTestSupport
 import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.expressions.Expression
@@ -31,12 +32,20 @@ import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
 import org.neo4j.cypher.internal.physicalplanning.LongSlot
 import org.neo4j.cypher.internal.physicalplanning.OperatorFusionPolicy
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlan
+=======
+import org.neo4j.cypher.internal.ir.LazyMode
+import org.neo4j.cypher.internal.ir.StrictnessMode
+import org.neo4j.cypher.internal.logical.plans._
+>>>>>>> da402acfd95... Don't attribute any time to fused operators
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.ApplyPlans
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.ArgumentSizes
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.NestedPlanArgumentConfigurations
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.SlotConfigurations
+<<<<<<< HEAD
 import org.neo4j.cypher.internal.physicalplanning.PipelineDefinition
 import org.neo4j.cypher.internal.physicalplanning.PipelineId
+=======
+>>>>>>> da402acfd95... Don't attribute any time to fused operators
 import org.neo4j.cypher.internal.physicalplanning.PipelineId.NO_PIPELINE
 import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.PipelineDefinitionBuild
 import org.neo4j.cypher.internal.physicalplanning.ProduceResultOutput
@@ -52,6 +61,7 @@ import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.expressionVariableAllocation.AvailableExpressionVariables
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.CommunityExpressionConverter
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
+<<<<<<< HEAD
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.DropResultPipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.FlatMapAndAppendToRow
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.NonFilteringOptionalExpandAllPipe
@@ -73,6 +83,13 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.ProduceResultOperat
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SlottedPipeHeadOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SlottedPipeMiddleOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SlottedPipeOperator
+=======
+import org.neo4j.cypher.internal.runtime.interpreted.pipes._
+import org.neo4j.cypher.internal.runtime.pipelined.InterpretedPipesFallbackPolicy.INTERPRETED_PIPES_FALLBACK_DISABLED
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
+import org.neo4j.cypher.internal.runtime.pipelined.operators._
+>>>>>>> da402acfd95... Don't attribute any time to fused operators
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentityImpl
@@ -82,10 +99,21 @@ import org.neo4j.cypher.internal.runtime.ParameterMapping
 import org.neo4j.cypher.internal.runtime.ProcedureCallMode
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.QueryIndexRegistrator
+<<<<<<< HEAD
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.internal.util.attribution.SameId
 import org.neo4j.cypher.internal.util.symbols
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
+=======
+import org.neo4j.cypher.internal.v4_0.ast.AstConstructionTestSupport
+import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
+import org.neo4j.cypher.internal.v4_0.expressions.Expression
+import org.neo4j.cypher.internal.v4_0.expressions.SemanticDirection
+import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.cypher.internal.v4_0.util.attribution.SameId
+import org.neo4j.cypher.internal.v4_0.util.symbols
+import org.neo4j.cypher.internal.v4_0.util.test_helpers.CypherFunSuite
+>>>>>>> da402acfd95... Don't attribute any time to fused operators
 import org.neo4j.exceptions.CantCompileQueryException
 import org.neo4j.logging.NullLog
 import org.scalatest.matchers.BeMatcher
@@ -481,6 +509,7 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
       parallelExecution = true,
       codeGenerationMode = ByteCodeGeneration(new CodeSaver(false, false)))
     val pipeline = PipelineDefinition(pipelineBuilder.pipeline.id,
+<<<<<<< HEAD
       NO_PIPELINE,
       NO_PIPELINE,
       pipelineBuilder.pipeline.headPlan,
@@ -490,6 +519,17 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
       pipelineBuilder.pipeline.middlePlans,
       serial = false)
     fuser.compilePipeline(pipeline, false)._1
+=======
+                                      NO_PIPELINE,
+                                      NO_PIPELINE,
+                                      pipelineBuilder.pipeline.headPlan,
+                                      pipelineBuilder.pipeline.fusedPlans,
+                                      mock[BufferDefinition](RETURNS_DEEP_STUBS),
+                                      pipelineBuilder.pipeline.outputDefinition,
+                                      pipelineBuilder.pipeline.middlePlans,
+                                      serial = false)
+    fuser.compilePipeline(pipeline, needsFilteringMorsel = false, nextPipelineFused = false)._1
+>>>>>>> da402acfd95... Don't attribute any time to fused operators
   }
 
   case class dummy(source: LogicalPlan) extends LogicalPlan(idGen) {

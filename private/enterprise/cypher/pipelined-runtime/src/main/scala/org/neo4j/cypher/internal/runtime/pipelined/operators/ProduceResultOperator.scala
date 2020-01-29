@@ -7,6 +7,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.operators
 
 import org.neo4j.codegen.api.Field
 import org.neo4j.codegen.api.IntermediateRepresentation
+<<<<<<< HEAD
 import org.neo4j.codegen.api.IntermediateRepresentation.ternary
 import org.neo4j.codegen.api.IntermediateRepresentation.invokeStatic
 import org.neo4j.codegen.api.IntermediateRepresentation.method
@@ -21,10 +22,14 @@ import org.neo4j.codegen.api.IntermediateRepresentation.constant
 import org.neo4j.codegen.api.IntermediateRepresentation.noValue
 import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.cypher.internal.physicalplanning.BufferId
+=======
+import org.neo4j.codegen.api.LocalVariable
+>>>>>>> da402acfd95... Don't attribute any time to fused operators
 import org.neo4j.cypher.internal.physicalplanning.LongSlot
 import org.neo4j.cypher.internal.physicalplanning.RefSlot
 import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+<<<<<<< HEAD
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.profiling.QueryProfiler
 import org.neo4j.cypher.internal.runtime.DbAccess
@@ -52,6 +57,28 @@ import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.SlottedQueryState
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.internal.util.symbols
+=======
+import org.neo4j.cypher.internal.physicalplanning._
+import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
+import org.neo4j.cypher.internal.profiling.QueryProfiler
+import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
+import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
+import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
+import org.neo4j.cypher.internal.runtime.pipelined.ExecutionState
+import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
+import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
+import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
+import org.neo4j.cypher.internal.runtime.DbAccess
+import org.neo4j.cypher.internal.runtime.NoMemoryTracker
+import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.ValuePopulation
+import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.cypher.internal.v4_0.util.symbols
+>>>>>>> da402acfd95... Don't attribute any time to fused operators
 import org.neo4j.cypher.result.QueryResult
 import org.neo4j.exceptions.InternalException
 import org.neo4j.internal.kernel.api.IndexReadSession
@@ -144,6 +171,8 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
     }
 
     override def produce(): Unit = {}
+
+    override def trackTime: Boolean = true
   }
 
   override def createState(executionState: ExecutionState): OutputOperatorState = new OutputOOperatorState
@@ -206,6 +235,11 @@ class ProduceResultOperatorTaskTemplate(val inner: OperatorTaskTemplate,
                                         columns: Seq[String],
                                         slots: SlotConfiguration)
                                        (protected val codeGen: OperatorExpressionCompiler) extends OperatorTaskTemplate {
+<<<<<<< HEAD
+=======
+  import org.neo4j.codegen.api.IntermediateRepresentation._
+  import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates._
+>>>>>>> da402acfd95... Don't attribute any time to fused operators
 
   override def toString: String = "ProduceResultTaskTemplate"
 

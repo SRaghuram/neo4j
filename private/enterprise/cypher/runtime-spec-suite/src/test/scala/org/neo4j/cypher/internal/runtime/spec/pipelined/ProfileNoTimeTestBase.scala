@@ -5,12 +5,21 @@
  */
 package org.neo4j.cypher.internal.runtime.spec.pipelined
 
+<<<<<<< HEAD
 import org.neo4j.cypher.internal.CypherRuntime
 import org.neo4j.cypher.internal.RuntimeContext
 import org.neo4j.cypher.internal.runtime.spec.Edition
 import org.neo4j.cypher.internal.runtime.spec.LogicalQueryBuilder
 import org.neo4j.cypher.internal.runtime.spec.RuntimeTestSuite
 import org.neo4j.cypher.internal.util.attribution.Id
+=======
+import org.neo4j.cypher.internal.runtime.spec.Edition
+import org.neo4j.cypher.internal.runtime.spec.LogicalQueryBuilder
+import org.neo4j.cypher.internal.runtime.spec.RuntimeTestSuite
+import org.neo4j.cypher.internal.v4_0.util.attribution.Id
+import org.neo4j.cypher.internal.CypherRuntime
+import org.neo4j.cypher.internal.RuntimeContext
+>>>>>>> da402acfd95... Don't attribute any time to fused operators
 import org.neo4j.cypher.result.OperatorProfile
 
 abstract class ProfileNoTimeTestBase[CONTEXT <: RuntimeContext](edition: Edition[CONTEXT],
@@ -36,6 +45,31 @@ abstract class ProfileNoTimeTestBase[CONTEXT <: RuntimeContext](edition: Edition
     val queryProfile = runtimeResult.runtimeResult.queryProfile()
     queryProfile.operatorProfile(0).time() should be(OperatorProfile.NO_DATA) // produce results
     queryProfile.operatorProfile(1).time() should be(OperatorProfile.NO_DATA) // all node scan
+    // Should not attribute anything to the invalid id
+    queryProfile.operatorProfile(Id.INVALID_ID.x) should be(NO_PROFILE)
+  }
+
+  test("should not profile time at the boundary between fused and not-fused") {
+    given { circleGraph(sizeHint, "X") }
+
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("x")       //FUSED
+      .filter("true") //FUSED
+      .expand("(x)-->(y)")    //FUSED
+      .optional()// NOTE here to make sure we don't fuse
+      .nodeByLabelScan("x", "X")
+      .build()
+
+    val runtimeResult = profile(logicalQuery, runtime)
+    consume(runtimeResult)
+
+    // then
+    val queryProfile = runtimeResult.runtimeResult.queryProfile()
+    queryProfile.operatorProfile(0).time() should be(OperatorProfile.NO_DATA) // produce results
+    queryProfile.operatorProfile(1).time() should be(OperatorProfile.NO_DATA) // filter
+    queryProfile.operatorProfile(2).time() should be(OperatorProfile.NO_DATA) // expand
+    queryProfile.operatorProfile(3).time() should be > 0L // optional
+    queryProfile.operatorProfile(4).time() should be > 0L // labelscan
     // Should not attribute anything to the invalid id
     queryProfile.operatorProfile(Id.INVALID_ID.x) should be(NO_PROFILE)
   }
