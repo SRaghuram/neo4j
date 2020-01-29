@@ -120,7 +120,7 @@ abstract class NodeIndexStringSearchScanOperator(val workIdentity: WorkIdentity,
         case value: TextValue =>
           val indexQuery = computeIndexQuery(property.propertyKeyId, value)
           cursor = resources.cursorPools.nodeValueIndexCursorPool.allocateAndTrace()
-          read.nodeIndexSeek(index, cursor, IndexQueryConstraints.ordered(indexOrder, property.maybeCachedNodePropertySlot.isDefined), indexQuery)
+          read.nodeIndexSeek(index, cursor, IndexQueryConstraints.constrained(indexOrder, property.maybeCachedNodePropertySlot.isDefined), indexQuery)
           true
 
         case IsNoValue() => false

@@ -83,7 +83,7 @@ class NodeIndexScanOperator(val workIdentity: WorkIdentity,
 
       cursor = resources.cursorPools.nodeValueIndexCursorPool.allocateAndTrace()
       val read = context.transactionalContext.dataRead
-      read.nodeIndexScan(index, cursor, IndexQueryConstraints.ordered(indexOrder, needsValues))
+      read.nodeIndexScan(index, cursor, IndexQueryConstraints.constrained(indexOrder, needsValues))
       true
     }
 

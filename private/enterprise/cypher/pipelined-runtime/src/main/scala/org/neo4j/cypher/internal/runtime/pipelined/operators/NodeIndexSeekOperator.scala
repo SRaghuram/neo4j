@@ -217,7 +217,7 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
           null
 
       val needsValuesFromIndexSeek = exactSeekValues == null && needsValues
-      read.nodeIndexSeek(index, nodeCursor, IndexQueryConstraints.ordered(indexOrder, needsValuesFromIndexSeek), predicates: _*)
+      read.nodeIndexSeek(index, nodeCursor, IndexQueryConstraints.constrained(indexOrder, needsValuesFromIndexSeek), predicates: _*)
     }
   }
 }
@@ -690,7 +690,7 @@ object ManyQueriesNodeIndexSeekTaskTemplate {
           val indexQuery = queries.next()
           if (!isImpossible(indexQuery)) {
             val reallyNeedsValues = needsValues && !indexQuery.isInstanceOf[ExactPredicate]
-            read.nodeIndexSeek(index, cursor, IndexQueryConstraints.ordered(order, reallyNeedsValues), indexQuery)
+            read.nodeIndexSeek(index, cursor, IndexQueryConstraints.constrained(order, reallyNeedsValues), indexQuery)
             continue = false
           } else {
             continue = queries.hasNext

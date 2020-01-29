@@ -268,7 +268,7 @@ object OperatorCodeGenHelperTemplates {
     invokeSideEffect(loadField(DATA_READ),
       method[Read, Unit, IndexReadSession, NodeValueIndexCursor, IndexQueryConstraints]("nodeIndexScan"),
       indexReadSession, cursor, invokeStatic(
-        method[IndexQueryConstraints, IndexQueryConstraints, IndexOrder, Boolean]("ordered"),
+        method[IndexQueryConstraints, IndexQueryConstraints, IndexOrder, Boolean]("constrained"),
         indexOrder(order),
         constant(needsValues)))
 
@@ -282,7 +282,7 @@ object OperatorCodeGenHelperTemplates {
       indexReadSession,
       cursor,
       invokeStatic(
-        method[IndexQueryConstraints, IndexQueryConstraints, IndexOrder, Boolean]("ordered"),
+        method[IndexQueryConstraints, IndexQueryConstraints, IndexOrder, Boolean]("constrained"),
         indexOrder(order),
         constant(needsValues)),
       arrayOf[IndexQuery](query))
