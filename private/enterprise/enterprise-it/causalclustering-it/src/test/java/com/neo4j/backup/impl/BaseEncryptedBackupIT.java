@@ -24,7 +24,6 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.OptionalInt;
@@ -45,7 +44,6 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.causalclustering.common.DataMatching.dataMatchesEventually;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
-import static java.lang.String.format;
 import static java.util.UUID.randomUUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
@@ -58,34 +56,32 @@ import static org.neo4j.configuration.ssl.SslPolicyScope.CLUSTER;
 @ClusterExtension
 abstract class BaseEncryptedBackupIT
 {
-    private static final int BACKUP_SSL_START = 6; // certs for backup start after 6
     private static final String BACKUP_POLICY_NAME = "backup";
     private static final String CLUSTER_POLICY_NAME = "cluster";
-    private static final String PUBLIC_KEY_NAME = "public.crt";
 
     @Inject
     private TestDirectory testDir;
     @Inject
     private ClusterFactory clusterFactory;
 
-    private final boolean encryptedTxPort;
-    private final boolean encryptedBackupPort;
+    private final boolean serverHasEncryptedTxPort;
+    private final boolean serverHasEncryptedBackupPort;
 
     private FileSystemAbstraction fs;
     private Cluster cluster;
     private File backupHome;
 
-    BaseEncryptedBackupIT( boolean encryptedTxPort, boolean encryptedBackupPort )
+    BaseEncryptedBackupIT( boolean serverHasEncryptedTxPort, boolean serverHasEncryptedBackupPort )
     {
-        this.encryptedTxPort = encryptedTxPort;
-        this.encryptedBackupPort = encryptedBackupPort;
+        this.serverHasEncryptedTxPort = serverHasEncryptedTxPort;
+        this.serverHasEncryptedBackupPort = serverHasEncryptedBackupPort;
     }
 
     @BeforeAll
     void beforeAll() throws Exception
     {
         fs = testDir.getFileSystem();
-        cluster = initialiseCluster( encryptedTxPort, encryptedBackupPort );
+        cluster = initialiseCluster( serverHasEncryptedTxPort, serverHasEncryptedBackupPort );
     }
 
     @BeforeEach
@@ -98,49 +94,61 @@ abstract class BaseEncryptedBackupIT
     void unencryptedBackupAgainstTransactionAddress() throws Exception
     {
         var backupClient = backupClientWithoutEncryption( cluster, CausalClusteringSettings.transaction_listen_address );
-        if ( encryptedTxPort )
-        {
-            shouldNotBeSuccessful( backupClient );
-        }
-        else
-        {
-            shouldBeSuccessful( cluster, backupClient );
-        }
+        testNotEncryptedBackupClient( backupClient, serverHasEncryptedTxPort );
     }
 
     @Test
     void unencryptedBackupAgainstReplicaTransactionAddress() throws Exception
     {
         var backupClient = backupClientWithoutEncryptionToReplica( cluster, CausalClusteringSettings.transaction_listen_address );
-        if ( encryptedTxPort )
-        {
-            shouldNotBeSuccessful( backupClient );
-        }
-        else
-        {
-            shouldBeSuccessful( cluster, backupClient );
-        }
+        testNotEncryptedBackupClient( backupClient, serverHasEncryptedTxPort );
     }
 
     @Test
     void unencryptedBackupAgainstBackupAddress() throws Exception
     {
         var backupClient = backupClientWithoutEncryption( cluster, OnlineBackupSettings.online_backup_listen_address );
-        if ( encryptedBackupPort )
-        {
-            shouldNotBeSuccessful( backupClient );
-        }
-        else
-        {
-            shouldBeSuccessful( cluster, backupClient );
-        }
+        testNotEncryptedBackupClient( backupClient, serverHasEncryptedBackupPort );
     }
 
     @Test
     void unencryptedBackupAgainstReplicaBackupAddress() throws Exception
     {
         var backupClient = backupClientWithoutEncryptionToReplica( cluster, OnlineBackupSettings.online_backup_listen_address );
-        if ( encryptedBackupPort )
+        testNotEncryptedBackupClient( backupClient, serverHasEncryptedBackupPort );
+    }
+
+    @Test
+    void encryptedBackupAgainstTransactionAddress() throws Exception
+    {
+        var backupClient = backupClientWithEncryption( cluster, CausalClusteringSettings.transaction_listen_address );
+        testEncryptedBackupClient( backupClient, serverHasEncryptedTxPort );
+    }
+
+    @Test
+    void encryptedBackupAgainstReplicaTransactionAddress() throws Exception
+    {
+        var backupClient = backupClientWithEncryptionToReplica( cluster, CausalClusteringSettings.transaction_listen_address );
+        testEncryptedBackupClient( backupClient, serverHasEncryptedTxPort );
+    }
+
+    @Test
+    void encryptedBackupAgainstBackupAddress() throws Exception
+    {
+        var backupClient = backupClientWithEncryption( cluster, OnlineBackupSettings.online_backup_listen_address );
+        testEncryptedBackupClient( backupClient, serverHasEncryptedBackupPort );
+    }
+
+    @Test
+    void encryptedBackupAgainstReplicaBackupAddress() throws Exception
+    {
+        var backupClient = backupClientWithEncryptionToReplica( cluster, OnlineBackupSettings.online_backup_listen_address );
+        testEncryptedBackupClient( backupClient, serverHasEncryptedBackupPort );
+    }
+
+    private void testNotEncryptedBackupClient( IntSupplier backupClient, boolean encryptedServerPort ) throws Exception
+    {
+        if ( encryptedServerPort )
         {
             shouldNotBeSuccessful( backupClient );
         }
@@ -150,81 +158,9 @@ abstract class BaseEncryptedBackupIT
         }
     }
 
-    @Test
-    void transactionEncryptedBackupAgainstTransactionAddress() throws Exception
+    private void testEncryptedBackupClient( IntSupplier backupClient, boolean encryptedServerPort ) throws Exception
     {
-        var backupClient = backupClientWithClusterEncryption( cluster, CausalClusteringSettings.transaction_listen_address );
-        if ( encryptedTxPort )
-        {
-            shouldBeSuccessful( cluster, backupClient );
-        }
-        else
-        {
-            shouldNotBeSuccessful( backupClient );
-        }
-    }
-
-    @Test
-    void transactionEncryptedBackupAgainstReplicaTransactionAddress() throws Exception
-    {
-        var backupClient = backupClientWithClusterEncryptionToReplica( cluster, CausalClusteringSettings.transaction_listen_address );
-        if ( encryptedTxPort )
-        {
-            shouldBeSuccessful( cluster, backupClient );
-        }
-        else
-        {
-            shouldNotBeSuccessful( backupClient );
-        }
-    }
-
-    @Test
-    void transactionEncryptedBackupAgainstBackupAddress() throws Exception
-    {
-        var backupClient = backupClientWithClusterEncryption( cluster, OnlineBackupSettings.online_backup_listen_address );
-        shouldNotBeSuccessful( backupClient ); // keys shouldn't match
-    }
-
-    @Test
-    void transactionEncryptedBackupAgainstReplicaBackupAddress() throws Exception
-    {
-        var backupClient = backupClientWithClusterEncryptionToReplica( cluster, OnlineBackupSettings.online_backup_listen_address );
-        shouldNotBeSuccessful( backupClient ); // keys shouldn't match
-    }
-
-    @Test
-    void backupEncryptedBackupAgainstTransactionAddress() throws Exception
-    {
-        var backupClient = backupClientWithBackupEncryption( cluster, CausalClusteringSettings.transaction_listen_address );
-        shouldNotBeSuccessful( backupClient ); // keys shouldn't match
-    }
-
-    @Test
-    void backupEncryptedBackupAgainstReplicaTransactionAddress() throws Exception
-    {
-        var backupClient = backupClientWithBackupEncryptionToReplica( cluster, CausalClusteringSettings.transaction_listen_address );
-        shouldNotBeSuccessful( backupClient ); // keys shouldn't match
-    }
-
-    @Test
-    void backupEncryptedBackupAgainstBackupAddress() throws Exception
-    {
-        var backupClient = backupClientWithBackupEncryption( cluster, OnlineBackupSettings.online_backup_listen_address );
-        if ( encryptedBackupPort )
-        {
-            shouldBeSuccessful( cluster, backupClient );
-        }
-        else
-        {
-            shouldNotBeSuccessful( backupClient );
-        }
-    }
-
-    @Test
-    void backupEncryptedBackupAgainstReplicaBackupAddress() throws Exception
-    {
-        var backupClient = backupClientWithBackupEncryptionToReplica( cluster, OnlineBackupSettings.online_backup_listen_address );
-        if ( encryptedBackupPort )
+        if ( encryptedServerPort )
         {
             shouldBeSuccessful( cluster, backupClient );
         }
@@ -288,22 +224,12 @@ abstract class BaseEncryptedBackupIT
         return backupClient( cluster, addressSetting, OptionalInt.empty(), false );
     }
 
-    private IntSupplier backupClientWithClusterEncryption( Cluster cluster, Setting<?> addressSetting ) throws Exception
+    private IntSupplier backupClientWithEncryption( Cluster cluster, Setting<?> addressSetting ) throws Exception
     {
         return backupClient( cluster, addressSetting, OptionalInt.of( 0 ), false );
     }
 
-    private IntSupplier backupClientWithBackupEncryption( Cluster cluster, Setting<?> addressSetting ) throws Exception
-    {
-        return backupClient( cluster, addressSetting, OptionalInt.of( BACKUP_SSL_START ), false );
-    }
-
-    private IntSupplier backupClientWithBackupEncryptionToReplica( Cluster cluster, Setting<?> addressSetting ) throws Exception
-    {
-        return backupClient( cluster, addressSetting, OptionalInt.of( BACKUP_SSL_START ), true );
-    }
-
-    private IntSupplier backupClientWithClusterEncryptionToReplica( Cluster cluster, Setting<?> addressSetting ) throws Exception
+    private IntSupplier backupClientWithEncryptionToReplica( Cluster cluster, Setting<?> addressSetting ) throws Exception
     {
         return backupClient( cluster, addressSetting, OptionalInt.of( 0 ), true );
     }
@@ -341,7 +267,6 @@ abstract class BaseEncryptedBackupIT
         {
             var selectedSslKey = serverId + baseSslKeyId.getAsInt();
             installCryptographicObjectsToBackupHome( backupHome, selectedSslKey );
-            exchangeBackupClientKeyWithCluster( cluster, backupHome, selectedSslKey > 6 ? BACKUP_POLICY_NAME : CLUSTER_POLICY_NAME );
         }
         // when a full backup is successful
         return () ->
@@ -358,24 +283,12 @@ abstract class BaseEncryptedBackupIT
         };
     }
 
-    private void exchangeBackupClientKeyWithCluster( Cluster cluster, File backupHome, String targetPolicyName ) throws IOException
-    {
-        // Copy backup cert to cluster trusted and copy cluster keys to backup
-        for ( var clusterMember : cluster.allMembers() )
-        {
-            copySslToPolicyTrustedDirectory( backupHome, clusterMember.homeDir(), BACKUP_POLICY_NAME, targetPolicyName, "backup-client.crt" );
-            copySslToPolicyTrustedDirectory( clusterMember.homeDir(), backupHome, targetPolicyName, BACKUP_POLICY_NAME,
-                    "from-cluster-" + clusterUniqueServerId( clusterMember ) + ".crt" );
-        }
-    }
-
     private void installCryptographicObjectsToBackupHome( File neo4jHome, int keyId ) throws IOException
     {
         createConfigFile( neo4jHome );
         var certificatesLocation = neo4jHome.toPath().resolve( "certificates" ).resolve( BACKUP_POLICY_NAME ).toFile();
         fs.mkdirs( certificatesLocation );
         installSsl( certificatesLocation, keyId );
-        copySslToPolicyTrustedDirectory( neo4jHome, neo4jHome, BACKUP_POLICY_NAME, "backup-key-copy.crt" );
     }
 
     private void createConfigFile( File neo4jHome ) throws IOException
@@ -399,18 +312,7 @@ abstract class BaseEncryptedBackupIT
     {
         fs.mkdirs( new File( baseDir, "trusted" ) );
         fs.mkdirs( new File( baseDir, "revoked" ) );
-        var sslResourceBuilder = SslResourceBuilder.selfSignedKeyId( keyId );
-        trustInGroup( sslResourceBuilder, keyId ).install( baseDir );
-    }
-
-    private static SslResourceBuilder trustInGroup( SslResourceBuilder sslResourceBuilder, int keyId )
-    {
-        var groupBaseId = keyId - (keyId % 6);
-        for ( var mutualSignId = 0; mutualSignId < 6; mutualSignId++ )
-        {
-            sslResourceBuilder = sslResourceBuilder.trustKeyId( groupBaseId + mutualSignId );
-        }
-        return sslResourceBuilder;
+        SslResourceBuilder.caSignedKeyId( keyId ).trustSignedByCA().install( baseDir );
     }
 
     /**
@@ -423,8 +325,6 @@ abstract class BaseEncryptedBackupIT
                 "--backup-dir", neo4jHome.toString(),
                 "--database", DEFAULT_DATABASE_NAME );
     }
-
-    // ---------------------- New functionality
 
     private static Map<String,String> clusterMemberSettingsWithEncryption( boolean encryptedTx, boolean encryptedBackup )
     {
@@ -471,16 +371,6 @@ abstract class BaseEncryptedBackupIT
         {
             prepareCoreToHaveKeys( clusterMember, baseKey + clusterUniqueServerId( clusterMember ), policyName );
         }
-        for ( var sourceClusterMember : cluster.allMembers() )
-        {
-            for ( var targetClusterMember : cluster.allMembers() )
-            {
-                long sourceKeyId = baseKey + clusterUniqueServerId( sourceClusterMember );
-                long targetKeyId = baseKey + clusterUniqueServerId( targetClusterMember );
-                var targetKeyMarkedAsAllowed = format( "public-%d-%d-cluster-trusted.crt", sourceKeyId, targetKeyId );
-                copySslToPolicyTrustedDirectory( sourceClusterMember.homeDir(), targetClusterMember.homeDir(), policyName, targetKeyMarkedAsAllowed );
-            }
-        }
     }
 
     private static int clusterUniqueServerId( ClusterMember clusterMember )
@@ -497,7 +387,7 @@ abstract class BaseEncryptedBackupIT
     {
         var homeDir = member.homeDir();
         var policyDir = createPolicyDirectories( homeDir, policyName );
-        createSslInParent( policyDir, keyId );
+        SslResourceBuilder.caSignedKeyId( keyId ).trustSignedByCA().install( policyDir );
     }
 
     private File createPolicyDirectories( File homeDir, String policyName ) throws IOException
@@ -506,34 +396,5 @@ abstract class BaseEncryptedBackupIT
         fs.mkdirs( new File( policyDir, "trusted" ) );
         fs.mkdirs( new File( policyDir, "revoked" ) );
         return policyDir;
-    }
-
-    private static void createSslInParent( File policyDir, int keyId ) throws IOException
-    {
-        SslResourceBuilder.caSignedKeyId( keyId ).trustSignedByCA().install( policyDir );
-    }
-
-    private void copySslToPolicyTrustedDirectory( File sourceHome, File targetHome, String policyName, String targetFileName ) throws IOException
-    {
-        copySslToPolicyTrustedDirectory( sourceHome, targetHome, policyName, policyName, targetFileName );
-    }
-
-    private void copySslToPolicyTrustedDirectory( File sourceHome, File targetHome, String sourcePolicyName, String targetPolicyName, String targetFileName )
-            throws IOException
-    {
-        var sourcePublicKey = Path.of( sourceHome.getPath(), "certificates", sourcePolicyName, PUBLIC_KEY_NAME );
-        var targetPublicKey = Path.of( targetHome.getPath(), "certificates", targetPolicyName, "trusted", targetFileName );
-        fs.mkdirs( targetPublicKey.toFile().getParentFile() );
-        try
-        {
-            if ( fs.fileExists( sourcePublicKey.toFile() ) )
-            {
-                fs.copyFile( sourcePublicKey.toFile(), targetPublicKey.toFile(), StandardCopyOption.REPLACE_EXISTING );
-            }
-        }
-        catch ( RuntimeException e )
-        {
-            throw new RuntimeException( format( "\nFileA: %s\nFileB: %s\n", sourcePublicKey, targetPublicKey ), e );
-        }
     }
 }
