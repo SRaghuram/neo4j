@@ -65,7 +65,8 @@ class MultiNodeIndexSeekOperator(val workIdentity: WorkIdentity,
 
     private var indexQueries: Seq[Seq[IndexQuery]] = _
 
-    // For exact seeks we also cache the values that we extract from the predicates rather than
+    // For exact seeks we also cache the values that we extract from the predicates instead of reading the property values
+    // from the index using the cursor (which by definition have to be the same)
     private var exactSeekValues: Array[Array[Value]] = _
 
     // Each IndexSeeker can have multiple index queries, hence the nesting.
@@ -116,8 +117,13 @@ class MultiNodeIndexSeekOperator(val workIdentity: WorkIdentity,
         seeks(i).clear()
         do {
           val indexQuery = indexQueryIterator.next()
-          val indexSeek: () => Unit = seek(state.queryIndexes(nodeIndexSeekParameters(i).queryIndex), nodeCursors(i), read, indexQuery,
-                                           indexSeekers(i).needsValues, nodeIndexSeekParameters(i).kernelIndexOrder, i)
+          val indexSeek: () => Unit = seek(state.queryIndexes(nodeIndexSeekParameters(i).queryIndex),
+                                           nodeCursors(i),
+                                           read,
+                                           indexQuery,
+                                           indexSeekers(i).needsValues,
+                                           nodeIndexSeekParameters(i).kernelIndexOrder,
+                                           i)
           seeks(i) += indexSeek
         } while (indexQueryIterator.hasNext)
 

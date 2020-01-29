@@ -607,7 +607,7 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
     result.executionPlanDescription() shouldNot includeSomewhere.aPlan("CartesianProduct")
   }
 
-  test("should specialize cartesian product of multiple (4) node index seeks - no results") {
+  test("should specialize cartesian product of multiple (4) node index seeks") {
     // Given
     graph.createIndex("L", "prop")
     val node11 = createLabeledNode(Map("prop" -> 1), "L")

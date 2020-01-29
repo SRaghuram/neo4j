@@ -9,6 +9,7 @@ import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans.DoNotIncludeTies
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
+import org.neo4j.cypher.internal.logical.plans.NodeUniqueIndexSeek
 import org.neo4j.cypher.internal.logical.plans.QueryExpression
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateBufferVariant
 import org.neo4j.cypher.internal.physicalplanning.BufferDefinition
@@ -186,7 +187,7 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
             val queryIndex = indexRegistrator.registerQueryIndex(p.label, p.properties)
             val kernelIndexOrder = asKernelIndexOrder(p.indexOrder)
             val valueExpression = p.valueExpr.map(converters.toCommandExpression(id, _))
-            val indexSeekMode = IndexSeekModeFactory(unique = true, readOnly = readOnly).fromQueryExpression(p.valueExpr)
+            val indexSeekMode = IndexSeekModeFactory(unique = p.isInstanceOf[NodeUniqueIndexSeek], readOnly = readOnly).fromQueryExpression(p.valueExpr)
             NodeIndexSeekParameters(columnOffset, slottedIndexProperties, queryIndex, kernelIndexOrder, valueExpression, indexSeekMode)
         }
 
