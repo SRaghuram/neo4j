@@ -719,7 +719,7 @@ object ManyQueriesNodeIndexSeekTaskTemplate {
           val indexQueries = queries.next()
           if (!isImpossible(indexQueries)) {
             val reallyNeedsValues = needsValues && !indexQueries.forall(_.isInstanceOf[ExactPredicate])
-            read.nodeIndexSeek(index, cursor, order, reallyNeedsValues, indexQueries:_*)
+            read.nodeIndexSeek(index, cursor, IndexQueryConstraints.constrained(order, reallyNeedsValues), indexQueries:_*)
             continue = false
           } else {
             continue = queries.hasNext
