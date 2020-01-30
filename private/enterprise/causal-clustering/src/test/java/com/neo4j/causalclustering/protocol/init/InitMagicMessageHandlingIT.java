@@ -171,7 +171,7 @@ class InitMagicMessageHandlingIT
         var serverAddress = server.start();
         var clientChannel = client.connect( serverAddress );
 
-        assertTrue( clientChannel.isActive() );
+        assertTrue( clientChannel.isOpen() );
 
         return clientChannel;
     }
