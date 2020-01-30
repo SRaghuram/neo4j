@@ -7,16 +7,27 @@ package com.neo4j.bench.micro.benchmarks.cypher
 
 import java.time.Clock
 
-import org.neo4j.configuration.{Config, GraphDatabaseSettings}
-import org.neo4j.cypher.internal._
+import com.neo4j.bench.micro.benchmarks.cypher.ContextHelper.mock
+import org.neo4j.configuration.Config
+import org.neo4j.configuration.GraphDatabaseSettings
+import org.neo4j.cypher.CypherInterpretedPipesFallbackOption
+import org.neo4j.cypher.CypherOperatorEngineOption
+import org.neo4j.cypher.internal.ConfigMemoryTrackingController
+import org.neo4j.cypher.internal.CypherRuntimeConfiguration
+import org.neo4j.cypher.internal.EnterpriseRuntimeContext
+import org.neo4j.cypher.internal.NoSchedulerTracing
+import org.neo4j.cypher.internal.RuntimeEnvironment
 import org.neo4j.cypher.internal.executionplan.GeneratedQuery
+import org.neo4j.cypher.internal.frontend.phases.CompilationPhaseTracer
+import org.neo4j.cypher.internal.frontend.phases.InternalNotificationLogger
+import org.neo4j.cypher.internal.frontend.phases.devNullLogger
 import org.neo4j.cypher.internal.planner.spi.PlanContext
 import org.neo4j.cypher.internal.runtime.compiled.codegen.spi.CodeStructure
 import org.neo4j.cypher.internal.runtime.pipelined.WorkerManagement
-import org.neo4j.cypher.internal.frontend.phases.{CompilationPhaseTracer, InternalNotificationLogger, devNullLogger}
-import org.neo4j.cypher.internal.util.{CypherException, InputPosition}
-import org.neo4j.cypher.{CypherInterpretedPipesFallbackOption, CypherOperatorEngineOption}
-import org.neo4j.internal.kernel.api.{CursorFactory, SchemaRead}
+import org.neo4j.cypher.internal.util.CypherException
+import org.neo4j.cypher.internal.util.InputPosition
+import org.neo4j.internal.kernel.api.CursorFactory
+import org.neo4j.internal.kernel.api.SchemaRead
 import org.neo4j.kernel.lifecycle.LifeSupport
 import org.neo4j.logging.NullLog
 import org.neo4j.scheduler.JobScheduler
@@ -66,6 +77,6 @@ object ContextHelper extends MockitoSugar {
       materializedEntitiesMode = materializedEntitiesMode,
       operatorEngine = CypherOperatorEngineOption.compiled,
       interpretedPipesFallback = CypherInterpretedPipesFallbackOption(GraphDatabaseSettings.cypher_pipelined_interpreted_pipes_fallback.defaultValue().toString),
-      )
+    )
   }
 }

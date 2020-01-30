@@ -6,15 +6,76 @@
 package com.neo4j.bench.micro.data
 
 import com.neo4j.bench.micro.data.DiscreteGenerator.Bucket
-import com.neo4j.bench.micro.data.TypeParamValues._
-import org.neo4j.cypher.internal.logical.plans._
-import org.neo4j.cypher.internal.planner.spi.PlanContext
+import com.neo4j.bench.micro.data.TypeParamValues.DATE
+import com.neo4j.bench.micro.data.TypeParamValues.DATE_TIME
+import com.neo4j.bench.micro.data.TypeParamValues.DBL
+import com.neo4j.bench.micro.data.TypeParamValues.DURATION
+import com.neo4j.bench.micro.data.TypeParamValues.LNG
+import com.neo4j.bench.micro.data.TypeParamValues.LOCAL_DATE_TIME
+import com.neo4j.bench.micro.data.TypeParamValues.LOCAL_TIME
+import com.neo4j.bench.micro.data.TypeParamValues.POINT
+import com.neo4j.bench.micro.data.TypeParamValues.STR_BIG
+import com.neo4j.bench.micro.data.TypeParamValues.STR_SML
+import com.neo4j.bench.micro.data.TypeParamValues.TIME
 import org.neo4j.cypher.internal.expressions
-import org.neo4j.cypher.internal.expressions._
-import org.neo4j.cypher.internal.util._
+import org.neo4j.cypher.internal.expressions.Add
+import org.neo4j.cypher.internal.expressions.Ands
+import org.neo4j.cypher.internal.expressions.DecimalDoubleLiteral
+import org.neo4j.cypher.internal.expressions.DesugaredMapProjection
+import org.neo4j.cypher.internal.expressions.Equals
+import org.neo4j.cypher.internal.expressions.Expression
+import org.neo4j.cypher.internal.expressions.FunctionInvocation
+import org.neo4j.cypher.internal.expressions.FunctionName
+import org.neo4j.cypher.internal.expressions.GreaterThan
+import org.neo4j.cypher.internal.expressions.GreaterThanOrEqual
+import org.neo4j.cypher.internal.expressions.In
+import org.neo4j.cypher.internal.expressions.LabelName
+import org.neo4j.cypher.internal.expressions.LessThan
+import org.neo4j.cypher.internal.expressions.LessThanOrEqual
+import org.neo4j.cypher.internal.expressions.ListLiteral
+import org.neo4j.cypher.internal.expressions.Literal
+import org.neo4j.cypher.internal.expressions.LiteralEntry
+import org.neo4j.cypher.internal.expressions.MapExpression
+import org.neo4j.cypher.internal.expressions.Multiply
+import org.neo4j.cypher.internal.expressions.Namespace
+import org.neo4j.cypher.internal.expressions.NodePathStep
+import org.neo4j.cypher.internal.expressions.Not
+import org.neo4j.cypher.internal.expressions.Ors
+import org.neo4j.cypher.internal.expressions.Parameter
+import org.neo4j.cypher.internal.expressions.PathExpression
+import org.neo4j.cypher.internal.expressions.Property
+import org.neo4j.cypher.internal.expressions.PropertyKeyName
+import org.neo4j.cypher.internal.expressions.PropertyKeyToken
+import org.neo4j.cypher.internal.expressions.ReduceExpression
+import org.neo4j.cypher.internal.expressions.RelTypeName
+import org.neo4j.cypher.internal.expressions.SignedDecimalIntegerLiteral
+import org.neo4j.cypher.internal.expressions.StringLiteral
+import org.neo4j.cypher.internal.expressions.Variable
+import org.neo4j.cypher.internal.logical.plans.Bound
+import org.neo4j.cypher.internal.logical.plans.Bounds
+import org.neo4j.cypher.internal.logical.plans.ExclusiveBound
+import org.neo4j.cypher.internal.logical.plans.InclusiveBound
+import org.neo4j.cypher.internal.logical.plans.InequalitySeekRange
+import org.neo4j.cypher.internal.logical.plans.InequalitySeekRangeWrapper
+import org.neo4j.cypher.internal.logical.plans.PointDistanceRange
+import org.neo4j.cypher.internal.logical.plans.PointDistanceSeekRangeWrapper
+import org.neo4j.cypher.internal.logical.plans.PrefixRange
+import org.neo4j.cypher.internal.logical.plans.PrefixSeekRangeWrapper
+import org.neo4j.cypher.internal.logical.plans.QueryExpression
+import org.neo4j.cypher.internal.logical.plans.RangeBetween
+import org.neo4j.cypher.internal.logical.plans.RangeGreaterThan
+import org.neo4j.cypher.internal.logical.plans.RangeLessThan
+import org.neo4j.cypher.internal.logical.plans.RangeQueryExpression
+import org.neo4j.cypher.internal.planner.spi.PlanContext
+import org.neo4j.cypher.internal.util.InputPosition
+import org.neo4j.cypher.internal.util.LabelId
+import org.neo4j.cypher.internal.util.NonEmptyList
+import org.neo4j.cypher.internal.util.PropertyKeyId
 import org.neo4j.cypher.internal.util.attribution.SequentialIdGen
+import org.neo4j.cypher.internal.util.symbols
 import org.neo4j.cypher.internal.util.symbols.CypherType
-import org.neo4j.graphdb.{Label, RelationshipType}
+import org.neo4j.graphdb.Label
+import org.neo4j.graphdb.RelationshipType
 
 object Plans {
   val IdGen = new SequentialIdGen()
@@ -172,8 +233,8 @@ object Plans {
   def astAnds(es: Expression*): Ands = Ands(es.toSet)(Pos)
 
   def astMap(kvs: (String, Expression)*): Expression = MapExpression(kvs.map {
-                                                                               case (key, value) => PropertyKeyName(key)(Pos) -> value
-                                                                             })(Pos)
+    case (key, value) => PropertyKeyName(key)(Pos) -> value
+  })(Pos)
 
   def astReduce(accumulator: String, init: Expression, variable: String, list: Expression, expression: Expression): Expression =
     ReduceExpression(astVariable(accumulator), init, astVariable(variable), list, expression)(Pos)

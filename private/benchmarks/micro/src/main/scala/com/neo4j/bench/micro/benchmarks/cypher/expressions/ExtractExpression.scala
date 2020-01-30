@@ -5,20 +5,37 @@
  */
 package com.neo4j.bench.micro.benchmarks.cypher.expressions
 
-import com.neo4j.bench.jmh.api.config.{BenchmarkEnabled, ParamValues}
+import com.neo4j.bench.jmh.api.config.BenchmarkEnabled
+import com.neo4j.bench.jmh.api.config.ParamValues
 import com.neo4j.bench.micro.Main
 import com.neo4j.bench.micro.benchmarks.RNGState
-import com.neo4j.bench.micro.benchmarks.cypher._
-import com.neo4j.bench.micro.data.Plans._
-import org.neo4j.cypher.internal.logical.plans
-import org.neo4j.cypher.internal.planner.spi.PlanContext
+import com.neo4j.bench.micro.benchmarks.cypher.AbstractCypherBenchmark
+import com.neo4j.bench.micro.benchmarks.cypher.ExecutablePlan
+import com.neo4j.bench.micro.benchmarks.cypher.Slotted
+import com.neo4j.bench.micro.data.Plans.IdGen
+import com.neo4j.bench.micro.data.Plans.Pos
+import com.neo4j.bench.micro.data.Plans.astAdd
+import com.neo4j.bench.micro.data.Plans.astExtract
+import com.neo4j.bench.micro.data.Plans.astParameter
+import com.neo4j.bench.micro.data.Plans.astVariable
 import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.expressions.Parameter
+import org.neo4j.cypher.internal.logical.plans
+import org.neo4j.cypher.internal.planner.spi.PlanContext
 import org.neo4j.cypher.internal.util.symbols
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.neo4j.values.storable.Values
-import org.neo4j.values.virtual.{ListValue, MapValue, VirtualValues}
-import org.openjdk.jmh.annotations._
+import org.neo4j.values.virtual.ListValue
+import org.neo4j.values.virtual.MapValue
+import org.neo4j.values.virtual.VirtualValues
+import org.openjdk.jmh.annotations.Benchmark
+import org.openjdk.jmh.annotations.BenchmarkMode
+import org.openjdk.jmh.annotations.Mode
+import org.openjdk.jmh.annotations.Param
+import org.openjdk.jmh.annotations.Scope
+import org.openjdk.jmh.annotations.Setup
+import org.openjdk.jmh.annotations.State
+import org.openjdk.jmh.annotations.TearDown
 import org.openjdk.jmh.infra.Blackhole
 
 @BenchmarkEnabled(true)
@@ -87,7 +104,7 @@ class ExtractExpressionThreadState {
     tx = benchmarkState.beginInternalTransaction()
     list = VirtualValues.list((1 to benchmarkState.size).map(Values.intValue).toArray: _*)
     params = VirtualValues.map(Array("x", "list"),
-                               Array(list, ExtractExpression.VALUES))
+      Array(list, ExtractExpression.VALUES))
   }
 
   @TearDown

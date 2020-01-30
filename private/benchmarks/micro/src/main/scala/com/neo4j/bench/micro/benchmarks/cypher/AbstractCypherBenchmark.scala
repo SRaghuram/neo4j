@@ -10,41 +10,66 @@ import java.util
 import java.util.function.LongSupplier
 
 import com.neo4j.bench.micro.benchmarks.BaseDatabaseBenchmark
-import com.neo4j.bench.micro.data.{DataGeneratorConfig, PropertyDefinition, RelationshipDefinition}
+import com.neo4j.bench.micro.data.DataGeneratorConfig
+import com.neo4j.bench.micro.data.PropertyDefinition
+import com.neo4j.bench.micro.data.RelationshipDefinition
 import org.neo4j.cypher.CypherRuntimeOption
-import org.neo4j.cypher.internal.ir.{ProvidedOrder, SinglePlannerQuery}
-import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
-import org.neo4j.cypher.internal.logical.plans.LogicalPlan
-import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.{Cardinalities, ProvidedOrders, Solveds}
-import org.neo4j.cypher.internal.planner.spi._
-import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext.IndexSearchMonitor
-import org.neo4j.cypher.internal.runtime.interpreted.{TransactionBoundQueryContext, TransactionalContextWrapper}
-import org.neo4j.cypher.internal.runtime.pipelined.WorkerManagement
-import org.neo4j.cypher.internal.runtime.{NoInput, NormalMode, QueryContext}
-import org.neo4j.cypher.internal.spi.TransactionBoundPlanContext
-import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
+import org.neo4j.cypher.internal.EnterpriseRuntimeContext
+import org.neo4j.cypher.internal.EnterpriseRuntimeFactory
+import org.neo4j.cypher.internal.ExecutionPlan
+import org.neo4j.cypher.internal.LogicalQuery
 import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.frontend.PlannerName
 import org.neo4j.cypher.internal.frontend.phases.devNullLogger
+import org.neo4j.cypher.internal.ir.ProvidedOrder
+import org.neo4j.cypher.internal.ir.SinglePlannerQuery
+import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
+import org.neo4j.cypher.internal.logical.plans.LogicalPlan
+import org.neo4j.cypher.internal.planner.spi.CostBasedPlannerName
+import org.neo4j.cypher.internal.planner.spi.GraphStatistics
+import org.neo4j.cypher.internal.planner.spi.IndexDescriptor
+import org.neo4j.cypher.internal.planner.spi.InstrumentedGraphStatistics
+import org.neo4j.cypher.internal.planner.spi.MutableGraphStatisticsSnapshot
+import org.neo4j.cypher.internal.planner.spi.PlanContext
+import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.Cardinalities
+import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.ProvidedOrders
+import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.Solveds
+import org.neo4j.cypher.internal.runtime.NoInput
+import org.neo4j.cypher.internal.runtime.NormalMode
+import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext
+import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext.IndexSearchMonitor
+import org.neo4j.cypher.internal.runtime.interpreted.TransactionalContextWrapper
+import org.neo4j.cypher.internal.runtime.pipelined.WorkerManagement
+import org.neo4j.cypher.internal.spi.TransactionBoundPlanContext
+import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
+import org.neo4j.cypher.internal.util.Cardinality
+import org.neo4j.cypher.internal.util.LabelId
+import org.neo4j.cypher.internal.util.RelTypeId
+import org.neo4j.cypher.internal.util.Selectivity
 import org.neo4j.cypher.internal.util.attribution.Id
-import org.neo4j.cypher.internal.util.{Cardinality, LabelId, RelTypeId, Selectivity}
-import org.neo4j.cypher.internal.{EnterpriseRuntimeContext, EnterpriseRuntimeFactory, ExecutionPlan, LogicalQuery}
 import org.neo4j.cypher.result.RuntimeResult
 import org.neo4j.graphdb.Label
+import org.neo4j.internal.kernel.api.CursorFactory
+import org.neo4j.internal.kernel.api.SchemaRead
 import org.neo4j.internal.kernel.api.connectioninfo.ClientConnectionInfo
-import org.neo4j.internal.kernel.api.security.{LoginContext, SecurityContext}
-import org.neo4j.internal.kernel.api.{CursorFactory, SchemaRead}
+import org.neo4j.internal.kernel.api.security.LoginContext
+import org.neo4j.internal.kernel.api.security.SecurityContext
 import org.neo4j.kernel.api.Kernel
 import org.neo4j.kernel.api.KernelTransaction.Type
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 import org.neo4j.kernel.api.query.ExecutingQuery
+import org.neo4j.kernel.api.security.AuthManager
+import org.neo4j.kernel.api.security.AuthToken
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException
-import org.neo4j.kernel.api.security.{AuthManager, AuthToken}
 import org.neo4j.kernel.database.Database
 import org.neo4j.kernel.impl.api.KernelStatement
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.neo4j.kernel.impl.factory.KernelTransactionFactory
-import org.neo4j.kernel.impl.query.{Neo4jTransactionalContext, QuerySubscriber, QuerySubscriberAdapter, TransactionalContext}
+import org.neo4j.kernel.impl.query.Neo4jTransactionalContext
+import org.neo4j.kernel.impl.query.QuerySubscriber
+import org.neo4j.kernel.impl.query.QuerySubscriberAdapter
+import org.neo4j.kernel.impl.query.TransactionalContext
 import org.neo4j.kernel.internal.GraphDatabaseAPI
 import org.neo4j.kernel.lifecycle.LifeSupport
 import org.neo4j.monitoring.Monitors
@@ -52,7 +77,8 @@ import org.neo4j.resources.CpuClock
 import org.neo4j.scheduler.JobScheduler
 import org.neo4j.time.Clocks
 import org.neo4j.values.AnyValue
-import org.neo4j.values.virtual.{MapValue, VirtualValues}
+import org.neo4j.values.virtual.MapValue
+import org.neo4j.values.virtual.VirtualValues
 import org.openjdk.jmh.infra.Blackhole
 
 import scala.collection.mutable
@@ -263,20 +289,20 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
       tx,
       initialStatement,
       new ExecutingQuery(queryId,
-                         ClientConnectionInfo.EMBEDDED_CONNECTION,
-                         databaseId,
-                         "username",
-                         "query text",
-                         queryParameters,
-                         metaData,
-                         emptySupplier,
-                         emptySupplier,
-                         emptySupplier,
-                         threadExecutingTheQuery.getId,
-                         threadExecutingTheQuery.getName,
-                         Clocks.nanoClock(),
-                         CpuClock.CPU_CLOCK),
-                         transactionFactory) {
+        ClientConnectionInfo.EMBEDDED_CONNECTION,
+        databaseId,
+        "username",
+        "query text",
+        queryParameters,
+        metaData,
+        emptySupplier,
+        emptySupplier,
+        emptySupplier,
+        threadExecutingTheQuery.getId,
+        threadExecutingTheQuery.getName,
+        Clocks.nanoClock(),
+        CpuClock.CPU_CLOCK),
+      transactionFactory) {
 
       override def close(): Unit = ()
     }

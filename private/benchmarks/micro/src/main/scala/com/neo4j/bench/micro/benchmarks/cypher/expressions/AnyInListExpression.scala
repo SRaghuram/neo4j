@@ -5,18 +5,32 @@
  */
 package com.neo4j.bench.micro.benchmarks.cypher.expressions
 
-import com.neo4j.bench.jmh.api.config.{BenchmarkEnabled, ParamValues}
+import com.neo4j.bench.jmh.api.config.BenchmarkEnabled
+import com.neo4j.bench.jmh.api.config.ParamValues
 import com.neo4j.bench.micro.benchmarks.RNGState
-import com.neo4j.bench.micro.benchmarks.cypher._
-import com.neo4j.bench.micro.data.Plans._
+import com.neo4j.bench.micro.benchmarks.cypher.AbstractCypherBenchmark
+import com.neo4j.bench.micro.benchmarks.cypher.ExecutablePlan
+import com.neo4j.bench.micro.benchmarks.cypher.Slotted
+import com.neo4j.bench.micro.data.Plans.astAny
+import com.neo4j.bench.micro.data.Plans.astGt
+import com.neo4j.bench.micro.data.Plans.astLiteralFor
+import com.neo4j.bench.micro.data.Plans.astParameter
+import com.neo4j.bench.micro.data.Plans.astVariable
 import com.neo4j.bench.micro.data.TypeParamValues.LNG
+import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.planner.spi.PlanContext
-import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.util.symbols
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.neo4j.values.virtual.MapValue
-import org.openjdk.jmh.annotations._
+import org.openjdk.jmh.annotations.Benchmark
+import org.openjdk.jmh.annotations.BenchmarkMode
+import org.openjdk.jmh.annotations.Mode
+import org.openjdk.jmh.annotations.Param
+import org.openjdk.jmh.annotations.Scope
+import org.openjdk.jmh.annotations.Setup
+import org.openjdk.jmh.annotations.State
+import org.openjdk.jmh.annotations.TearDown
 import org.openjdk.jmh.infra.Blackhole
 
 @BenchmarkEnabled(true)

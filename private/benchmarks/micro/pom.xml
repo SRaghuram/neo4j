@@ -18,6 +18,7 @@
         <jmh.generator>default</jmh.generator>
         <license-text.header>../build/license-header.txt</license-text.header>
         <test.runner.jvm.settings.additional>-Xmx6g -Djmh.ignoreLock=true</test.runner.jvm.settings.additional>
+        <skip-scalastyle>false</skip-scalastyle>
     </properties>
 
     <licenses>

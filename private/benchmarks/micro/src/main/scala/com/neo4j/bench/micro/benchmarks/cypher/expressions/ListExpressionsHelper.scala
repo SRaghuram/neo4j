@@ -5,14 +5,19 @@
  */
 package com.neo4j.bench.micro.benchmarks.cypher.expressions
 
-import com.neo4j.bench.micro.data.Plans._
-import org.neo4j.cypher.internal.planner.spi.PlanContext
+import com.neo4j.bench.micro.data.Plans.IdGen
+import com.neo4j.bench.micro.data.Plans.astParameter
+import com.neo4j.bench.micro.data.Plans.astVariable
 import org.neo4j.cypher.internal.ast.semantics.SemanticTable
-import org.neo4j.cypher.internal.expressions.{Expression, Parameter}
+import org.neo4j.cypher.internal.expressions.Expression
+import org.neo4j.cypher.internal.expressions.Parameter
 import org.neo4j.cypher.internal.logical.plans
+import org.neo4j.cypher.internal.planner.spi.PlanContext
 import org.neo4j.cypher.internal.util.symbols
 import org.neo4j.values.storable.Values
-import org.neo4j.values.virtual.{ListValue, MapValue, VirtualValues}
+import org.neo4j.values.virtual.ListValue
+import org.neo4j.values.virtual.MapValue
+import org.neo4j.values.virtual.VirtualValues
 
 trait ListExpressionsHelper {
   val ROWS: Int = 10000

@@ -5,17 +5,29 @@
  */
 package com.neo4j.bench.micro.benchmarks.cypher
 
-import com.neo4j.bench.jmh.api.config.{BenchmarkEnabled, ParamValues}
+import com.neo4j.bench.jmh.api.config.BenchmarkEnabled
+import com.neo4j.bench.jmh.api.config.ParamValues
 import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
-import com.neo4j.bench.micro.data.Plans._
-import com.neo4j.bench.micro.data.TypeParamValues.{LNG, STR_SML}
+import com.neo4j.bench.micro.data.DataGeneratorConfig
+import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder
+import com.neo4j.bench.micro.data.Plans.IdGen
+import com.neo4j.bench.micro.data.Plans.astProperty
+import com.neo4j.bench.micro.data.Plans.astVariable
+import com.neo4j.bench.micro.data.TypeParamValues.LNG
+import com.neo4j.bench.micro.data.TypeParamValues.STR_SML
 import com.neo4j.bench.micro.data.ValueGeneratorUtil.randPropertyFor
-import com.neo4j.bench.micro.data._
+import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.planner.spi.PlanContext
-import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
-import org.openjdk.jmh.annotations._
+import org.openjdk.jmh.annotations.Benchmark
+import org.openjdk.jmh.annotations.BenchmarkMode
+import org.openjdk.jmh.annotations.Mode
+import org.openjdk.jmh.annotations.Param
+import org.openjdk.jmh.annotations.Scope
+import org.openjdk.jmh.annotations.Setup
+import org.openjdk.jmh.annotations.State
+import org.openjdk.jmh.annotations.TearDown
 import org.openjdk.jmh.infra.Blackhole
 
 @BenchmarkEnabled(true)
@@ -60,7 +72,7 @@ class Distinct extends AbstractCypherBenchmark {
       .withNodeCount(NODE_COUNT)
       .isReusableStore(true)
     withProperty(columns, builder)
-    .build()
+      .build()
   }
 
   def withProperty(columnDefinition: String, builder: DataGeneratorConfigBuilder): DataGeneratorConfigBuilder = columns match {
@@ -72,8 +84,8 @@ class Distinct extends AbstractCypherBenchmark {
 
   override def getLogicalPlanAndSemanticTable(planContext: PlanContext): (plans.LogicalPlan, SemanticTable, List[String]) = {
     val table = SemanticTable()
-                .addNode(astVariable(NODE_A))
-                .addNode(astVariable(NODE_B))
+      .addNode(astVariable(NODE_A))
+      .addNode(astVariable(NODE_B))
     columns match {
       case ONE_COLUMN_PRIMITIVE =>
         val allNodesScanA = plans.AllNodesScan(NODE_A, Set.empty)(IdGen)

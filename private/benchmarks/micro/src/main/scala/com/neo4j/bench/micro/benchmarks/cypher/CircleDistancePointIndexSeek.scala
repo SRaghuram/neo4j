@@ -6,26 +6,57 @@
 package com.neo4j.bench.micro.benchmarks.cypher
 
 import com.neo4j.bench.common.Neo4jConfigBuilder
-import com.neo4j.bench.jmh.api.config.{BenchmarkEnabled, ParamValues}
+import com.neo4j.bench.jmh.api.config.BenchmarkEnabled
+import com.neo4j.bench.jmh.api.config.ParamValues
+import com.neo4j.bench.micro.benchmarks.Kaboom
+import com.neo4j.bench.micro.benchmarks.RNGState
 import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
-import com.neo4j.bench.micro.benchmarks.{Kaboom, RNGState}
-import com.neo4j.bench.micro.data.Plans._
-import com.neo4j.bench.micro.data.PointGenerator.{ClusterGridDefinition, circleGrid}
+import com.neo4j.bench.micro.data.CRS
+import com.neo4j.bench.micro.data.DataGeneratorConfig
+import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder
+import com.neo4j.bench.micro.data.LabelKeyDefinition
+import com.neo4j.bench.micro.data.Plans.IdGen
+import com.neo4j.bench.micro.data.Plans.Pos
+import com.neo4j.bench.micro.data.Plans.astLabelToken
+import com.neo4j.bench.micro.data.Plans.astLiteralFor
+import com.neo4j.bench.micro.data.Plans.astParameter
+import com.neo4j.bench.micro.data.Plans.astProperty
+import com.neo4j.bench.micro.data.Plans.astPropertyKeyToken
+import com.neo4j.bench.micro.data.Plans.astRangeBetweenPointsQueryExpression
+import com.neo4j.bench.micro.data.Plans.astVariable
+import com.neo4j.bench.micro.data.Plans.distanceFunction
+import com.neo4j.bench.micro.data.PointGenerator.ClusterGridDefinition
+import com.neo4j.bench.micro.data.PointGenerator.circleGrid
+import com.neo4j.bench.micro.data.PropertyDefinition
+import com.neo4j.bench.micro.data.ValueGeneratorFun
 import com.neo4j.bench.micro.data.ValueGeneratorUtil.DBL
-import com.neo4j.bench.micro.data._
-import org.neo4j.cypher.internal.logical.plans
-import org.neo4j.cypher.internal.logical.plans._
-import org.neo4j.cypher.internal.planner.spi.PlanContext
 import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.expressions.LessThanOrEqual
+import org.neo4j.cypher.internal.logical.plans
+import org.neo4j.cypher.internal.logical.plans.DoNotGetValue
+import org.neo4j.cypher.internal.logical.plans.IndexOrderNone
+import org.neo4j.cypher.internal.logical.plans.IndexedProperty
+import org.neo4j.cypher.internal.logical.plans.ProduceResult
+import org.neo4j.cypher.internal.logical.plans.Selection
+import org.neo4j.cypher.internal.planner.spi.PlanContext
 import org.neo4j.cypher.internal.util.symbols
 import org.neo4j.graphdb.spatial.Point
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
-import org.neo4j.kernel.impl.index.schema.config.SpatialIndexSettings.{space_filling_curve_bottom_threshold, space_filling_curve_extra_levels, space_filling_curve_top_threshold}
+import org.neo4j.kernel.impl.index.schema.config.SpatialIndexSettings.space_filling_curve_bottom_threshold
+import org.neo4j.kernel.impl.index.schema.config.SpatialIndexSettings.space_filling_curve_extra_levels
+import org.neo4j.kernel.impl.index.schema.config.SpatialIndexSettings.space_filling_curve_top_threshold
 import org.neo4j.kernel.impl.util.ValueUtils
-import org.openjdk.jmh.annotations._
+import org.openjdk.jmh.annotations.Benchmark
+import org.openjdk.jmh.annotations.BenchmarkMode
+import org.openjdk.jmh.annotations.Mode
+import org.openjdk.jmh.annotations.Param
+import org.openjdk.jmh.annotations.Scope
+import org.openjdk.jmh.annotations.Setup
+import org.openjdk.jmh.annotations.State
+import org.openjdk.jmh.annotations.TearDown
 import org.openjdk.jmh.infra.Blackhole
 
+import scala.collection.JavaConverters.mapAsJavaMapConverter
 import scala.collection.immutable.Seq
 import scala.collection.mutable
 
@@ -189,11 +220,11 @@ class CircleDistancePointIndexSeek extends AbstractSpatialBenchmark {
       .isReusableStore(true)
       .withNeo4jConfig(
         Neo4jConfigBuilder
-        .empty()
-        .withSetting(space_filling_curve_extra_levels, extraLevels.toString)
-        .withSetting(space_filling_curve_top_threshold, thresholdTop.toString)
-        .withSetting(space_filling_curve_bottom_threshold, bottomThreshold.toString)
-        .build())
+          .empty()
+          .withSetting(space_filling_curve_extra_levels, extraLevels.toString)
+          .withSetting(space_filling_curve_top_threshold, thresholdTop.toString)
+          .withSetting(space_filling_curve_bottom_threshold, bottomThreshold.toString)
+          .build())
       .build()
   }
 
@@ -232,7 +263,6 @@ class CircleDistancePointIndexSeek extends AbstractSpatialBenchmark {
   @Benchmark
   @BenchmarkMode(Array(Mode.SampleTime))
   def executePlan(threadState: CircleDistancePointIndexSeekThreadState, rngState: RNGState, bh: Blackhole): Long = {
-    import scala.collection.JavaConverters._
     val point = threadState.randomPoint(rngState)
     val params = ValueUtils.asMapValue(mutable.Map[String, AnyRef]("point" -> point).asJava)
     val subscriber = new CountSubscriber(bh)

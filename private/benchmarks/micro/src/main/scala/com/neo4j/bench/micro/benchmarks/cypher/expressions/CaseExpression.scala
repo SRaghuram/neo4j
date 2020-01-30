@@ -5,23 +5,42 @@
  */
 package com.neo4j.bench.micro.benchmarks.cypher.expressions
 
-import com.neo4j.bench.jmh.api.config.{BenchmarkEnabled, ParamValues}
+import com.neo4j.bench.jmh.api.config.BenchmarkEnabled
+import com.neo4j.bench.jmh.api.config.ParamValues
 import com.neo4j.bench.micro.Main
 import com.neo4j.bench.micro.benchmarks.RNGState
-import com.neo4j.bench.micro.benchmarks.cypher._
-import com.neo4j.bench.micro.data.Plans._
-import com.neo4j.bench.micro.data.ValueGeneratorUtil.{LNG, STR_SML}
-import com.neo4j.bench.micro.data.{DataGeneratorConfig, DataGeneratorConfigBuilder}
-import org.neo4j.cypher.internal.logical.plans
-import org.neo4j.cypher.internal.planner.spi.PlanContext
+import com.neo4j.bench.micro.benchmarks.cypher.AbstractCypherBenchmark
+import com.neo4j.bench.micro.benchmarks.cypher.ExecutablePlan
+import com.neo4j.bench.micro.benchmarks.cypher.Slotted
+import com.neo4j.bench.micro.data.DataGeneratorConfig
+import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder
+import com.neo4j.bench.micro.data.Plans.IdGen
+import com.neo4j.bench.micro.data.Plans.Pos
+import com.neo4j.bench.micro.data.Plans.astCase
+import com.neo4j.bench.micro.data.Plans.astLiteralFor
+import com.neo4j.bench.micro.data.Plans.astParameter
+import com.neo4j.bench.micro.data.Plans.astVariable
+import com.neo4j.bench.micro.data.ValueGeneratorUtil.LNG
+import com.neo4j.bench.micro.data.ValueGeneratorUtil.STR_SML
 import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.expressions.Parameter
+import org.neo4j.cypher.internal.logical.plans
+import org.neo4j.cypher.internal.planner.spi.PlanContext
 import org.neo4j.cypher.internal.util.symbols
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.neo4j.values.storable.Values
 import org.neo4j.values.storable.Values.doubleValue
-import org.neo4j.values.virtual.{ListValue, MapValueBuilder, VirtualValues}
-import org.openjdk.jmh.annotations._
+import org.neo4j.values.virtual.ListValue
+import org.neo4j.values.virtual.MapValueBuilder
+import org.neo4j.values.virtual.VirtualValues
+import org.openjdk.jmh.annotations.Benchmark
+import org.openjdk.jmh.annotations.BenchmarkMode
+import org.openjdk.jmh.annotations.Mode
+import org.openjdk.jmh.annotations.Param
+import org.openjdk.jmh.annotations.Scope
+import org.openjdk.jmh.annotations.Setup
+import org.openjdk.jmh.annotations.State
+import org.openjdk.jmh.annotations.TearDown
 import org.openjdk.jmh.infra.Blackhole
 
 @BenchmarkEnabled(true)

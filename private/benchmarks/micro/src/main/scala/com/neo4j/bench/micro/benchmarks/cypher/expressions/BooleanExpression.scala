@@ -5,32 +5,53 @@
  */
 package com.neo4j.bench.micro.benchmarks.cypher.expressions
 
-import com.neo4j.bench.jmh.api.config.{BenchmarkEnabled, ParamValues}
+import com.neo4j.bench.jmh.api.config.BenchmarkEnabled
+import com.neo4j.bench.jmh.api.config.ParamValues
 import com.neo4j.bench.micro.Main
 import com.neo4j.bench.micro.benchmarks.RNGState
-import com.neo4j.bench.micro.benchmarks.cypher._
-import com.neo4j.bench.micro.data.Plans._
+import com.neo4j.bench.micro.benchmarks.cypher.AbstractCypherBenchmark
+import com.neo4j.bench.micro.benchmarks.cypher.ExecutablePlan
+import com.neo4j.bench.micro.benchmarks.cypher.Slotted
+import com.neo4j.bench.micro.data.DataGeneratorConfig
+import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder
+import com.neo4j.bench.micro.data.Plans.IdGen
+import com.neo4j.bench.micro.data.Plans.Pos
+import com.neo4j.bench.micro.data.Plans.astAnds
+import com.neo4j.bench.micro.data.Plans.astGte
+import com.neo4j.bench.micro.data.Plans.astLiteralFor
+import com.neo4j.bench.micro.data.Plans.astLt
+import com.neo4j.bench.micro.data.Plans.astOrs
+import com.neo4j.bench.micro.data.Plans.astParameter
+import com.neo4j.bench.micro.data.Plans.astVariable
 import com.neo4j.bench.micro.data.TypeParamValues.DBL
-import com.neo4j.bench.micro.data.{DataGeneratorConfig, DataGeneratorConfigBuilder}
-import org.neo4j.cypher.internal.logical.plans
-import org.neo4j.cypher.internal.planner.spi.PlanContext
 import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.expressions.Parameter
+import org.neo4j.cypher.internal.logical.plans
+import org.neo4j.cypher.internal.planner.spi.PlanContext
 import org.neo4j.cypher.internal.util.symbols
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.neo4j.values.storable.Values
 import org.neo4j.values.storable.Values.doubleValue
-import org.neo4j.values.virtual.{ListValue, MapValue, VirtualValues}
-import org.openjdk.jmh.annotations._
+import org.neo4j.values.virtual.ListValue
+import org.neo4j.values.virtual.MapValue
+import org.neo4j.values.virtual.VirtualValues
+import org.openjdk.jmh.annotations.Benchmark
+import org.openjdk.jmh.annotations.BenchmarkMode
+import org.openjdk.jmh.annotations.Mode
+import org.openjdk.jmh.annotations.Param
+import org.openjdk.jmh.annotations.Scope
+import org.openjdk.jmh.annotations.Setup
+import org.openjdk.jmh.annotations.State
+import org.openjdk.jmh.annotations.TearDown
 import org.openjdk.jmh.infra.Blackhole
 
 @BenchmarkEnabled(true)
 class BooleanExpression extends AbstractCypherBenchmark {
 
-@ParamValues(
-  allowed = Array(CompiledExpressionEngine.NAME, InterpretedExpressionEngine.NAME),
-  base = Array(CompiledExpressionEngine.NAME, InterpretedExpressionEngine.NAME))
-@Param(Array[String]())
+  @ParamValues(
+    allowed = Array(CompiledExpressionEngine.NAME, InterpretedExpressionEngine.NAME),
+    base = Array(CompiledExpressionEngine.NAME, InterpretedExpressionEngine.NAME))
+  @Param(Array[String]())
   var engine: String = _
 
   override def description = "UNWIND $list RETURN ($x >= 0.0 OR $x < 0.5) AND ($x >= 0.5 OR $x < 1.0)"
@@ -91,9 +112,9 @@ class BooleanExpressionThreadState {
     executablePlan = benchmarkState.buildPlan(Slotted, useCompiledExpressions)
     tx = benchmarkState.beginInternalTransaction()
     params = VirtualValues.map(Array("x", "list"),
-                               Array(
-                                 doubleValue(rngState.rng.nextDouble()),
-                                 BooleanExpression.VALUES))
+      Array(
+        doubleValue(rngState.rng.nextDouble()),
+        BooleanExpression.VALUES))
   }
 
   @TearDown

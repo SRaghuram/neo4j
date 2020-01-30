@@ -5,20 +5,26 @@
  */
 package com.neo4j.bench.micro.data
 
-import java.time.{LocalDate, LocalTime, ZoneOffset}
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.ZoneOffset
 import java.util
 
-import com.neo4j.bench.micro.data.DiscreteGenerator.Bucket
 import com.neo4j.bench.micro.benchmarks.RNGState
+import com.neo4j.bench.micro.data.ConstantGenerator.constant
+import com.neo4j.bench.micro.data.DiscreteGenerator.Bucket
+import com.neo4j.bench.micro.data.DiscreteGenerator.discrete
 import org.neo4j.kernel.impl.util.ValueUtils
 import org.neo4j.values.storable.CoordinateReferenceSystem.Cartesian
+import org.neo4j.values.storable.DateTimeValue
+import org.neo4j.values.storable.DurationValue
+import org.neo4j.values.storable.LocalDateTimeValue
+import org.neo4j.values.storable.TimeValue
 import org.neo4j.values.storable.Values.pointValue
-import org.neo4j.values.storable._
 import org.neo4j.values.virtual.MapValue
 
-import scala.collection.JavaConverters._
-import com.neo4j.bench.micro.data.ConstantGenerator.constant;
-import com.neo4j.bench.micro.data.DiscreteGenerator.discrete;
+import scala.collection.JavaConverters.seqAsJavaListConverter
+import scala.collection.JavaConverters.mapAsJavaMapConverter
 import scala.collection.mutable
 
 object TypeParamValues {

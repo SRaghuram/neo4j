@@ -5,20 +5,40 @@
  */
 package com.neo4j.bench.micro.benchmarks.cypher.expressions
 
-import com.neo4j.bench.jmh.api.config.{BenchmarkEnabled, ParamValues}
+import com.neo4j.bench.jmh.api.config.BenchmarkEnabled
+import com.neo4j.bench.jmh.api.config.ParamValues
 import com.neo4j.bench.micro.Main
-import com.neo4j.bench.micro.benchmarks.cypher.{AbstractCypherBenchmark, Slotted, ExecutablePlan}
-import com.neo4j.bench.micro.data.Plans._
-import com.neo4j.bench.micro.data.{DataGeneratorConfig, DataGeneratorConfigBuilder, Plans, RelationshipDefinition}
+import com.neo4j.bench.micro.benchmarks.cypher.AbstractCypherBenchmark
+import com.neo4j.bench.micro.benchmarks.cypher.ExecutablePlan
+import com.neo4j.bench.micro.benchmarks.cypher.Slotted
+import com.neo4j.bench.micro.data.DataGeneratorConfig
+import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder
+import com.neo4j.bench.micro.data.Plans
+import com.neo4j.bench.micro.data.Plans.IdGen
+import com.neo4j.bench.micro.data.Plans.astEquals
+import com.neo4j.bench.micro.data.Plans.astFunctionInvocation
+import com.neo4j.bench.micro.data.Plans.astNot
+import com.neo4j.bench.micro.data.Plans.astPathExpression
+import com.neo4j.bench.micro.data.Plans.astVariable
+import com.neo4j.bench.micro.data.RelationshipDefinition
+import org.neo4j.cypher.internal.ast.semantics.SemanticTable
+import org.neo4j.cypher.internal.expressions.NilPathStep
+import org.neo4j.cypher.internal.expressions.NodePathStep
+import org.neo4j.cypher.internal.expressions.SemanticDirection.OUTGOING
+import org.neo4j.cypher.internal.expressions.SingleRelationshipPathStep
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans.ExpandAll
 import org.neo4j.cypher.internal.planner.spi.PlanContext
-import org.neo4j.cypher.internal.ast.semantics.SemanticTable
-import org.neo4j.cypher.internal.expressions.SemanticDirection.OUTGOING
-import org.neo4j.cypher.internal.expressions.{NilPathStep, NodePathStep, SingleRelationshipPathStep}
 import org.neo4j.graphdb.RelationshipType
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
-import org.openjdk.jmh.annotations._
+import org.openjdk.jmh.annotations.Benchmark
+import org.openjdk.jmh.annotations.BenchmarkMode
+import org.openjdk.jmh.annotations.Mode
+import org.openjdk.jmh.annotations.Param
+import org.openjdk.jmh.annotations.Scope
+import org.openjdk.jmh.annotations.Setup
+import org.openjdk.jmh.annotations.State
+import org.openjdk.jmh.annotations.TearDown
 import org.openjdk.jmh.infra.Blackhole
 
 @BenchmarkEnabled(true)
@@ -51,10 +71,10 @@ class PathExpression extends AbstractCypherBenchmark {
     val exp2 = plans.Expand(exp1, "b", OUTGOING, relTypeNames, "c", "r2", ExpandAll)(IdGen)
     val filter = plans.Selection(Seq(astNot(astEquals(astVariable("r1"), astVariable("r2")))), exp2)(IdGen)
     val expression = astFunctionInvocation("length",
-                                           astPathExpression(
-                                             NodePathStep(astVariable("a"),
-                                                          SingleRelationshipPathStep(astVariable("r1"), OUTGOING, Some(astVariable("b")),
-                                                                                     SingleRelationshipPathStep(astVariable("r2"), OUTGOING, Some(astVariable("c")), NilPathStep)))))
+      astPathExpression(
+        NodePathStep(astVariable("a"),
+          SingleRelationshipPathStep(astVariable("r1"), OUTGOING, Some(astVariable("b")),
+            SingleRelationshipPathStep(astVariable("r2"), OUTGOING, Some(astVariable("c")), NilPathStep)))))
     val projection = plans.Projection(filter, Map("result" -> expression))(IdGen)
 
     val produceResults = plans.ProduceResult(projection, resultColumns)(IdGen)

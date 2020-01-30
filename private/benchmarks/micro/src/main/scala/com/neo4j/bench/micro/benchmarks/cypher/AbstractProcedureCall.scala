@@ -6,30 +6,39 @@
 package com.neo4j.bench.micro.benchmarks.cypher
 
 import com.neo4j.bench.micro.data.DataGeneratorConfig
-import com.neo4j.bench.micro.data.Plans.{Pos, astVariable}
-import org.neo4j.cypher.internal.logical.plans._
-import org.neo4j.cypher.internal.spi.procsHelpers.{asCypherType, asCypherValue, asOption}
-import org.neo4j.cypher.internal.ast.semantics.{ExpressionTypeInfo, SemanticTable}
-import org.neo4j.cypher.internal.ast.{ASTAnnotationMap, ProcedureResultItem}
+import com.neo4j.bench.micro.data.Plans.Pos
+import com.neo4j.bench.micro.data.Plans.astVariable
+import org.neo4j.cypher.internal.ast.ASTAnnotationMap
+import org.neo4j.cypher.internal.ast.ProcedureResultItem
+import org.neo4j.cypher.internal.ast.semantics.ExpressionTypeInfo
+import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.expressions.Expression
-import org.neo4j.internal.kernel.api.procs.{QualifiedName => KernelQualifiedName}
+import org.neo4j.cypher.internal.logical.plans.FieldSignature
+import org.neo4j.cypher.internal.logical.plans.ProcedureReadOnlyAccess
+import org.neo4j.cypher.internal.logical.plans.ProcedureSignature
+import org.neo4j.cypher.internal.logical.plans.QualifiedName
+import org.neo4j.cypher.internal.logical.plans.ResolvedCall
+import org.neo4j.cypher.internal.spi.procsHelpers.asCypherType
+import org.neo4j.cypher.internal.spi.procsHelpers.asCypherValue
+import org.neo4j.cypher.internal.spi.procsHelpers.asOption
+import org.neo4j.internal.kernel
 import org.neo4j.kernel.api.procedure.GlobalProcedures
 import org.neo4j.kernel.internal.GraphDatabaseAPI
 
-import scala.collection.JavaConverters._
+import scala.collection.JavaConverters.asScalaBufferConverter
 
 abstract class AbstractProcedureCall extends AbstractCypherBenchmark {
   protected var procedureSignature: ProcedureSignature = _
 
   /**
-    * Called after starting of database
-    */
+   * Called after starting of database
+   */
   override protected def afterDatabaseStart(config: DataGeneratorConfig): Unit = {
     super.afterDatabaseStart(config)
     val resolver = db.asInstanceOf[GraphDatabaseAPI].getDependencyResolver
     val procs = resolver.resolveDependency(classOf[GlobalProcedures])
 
-    val procedure = procs.procedure(new KernelQualifiedName(procedureName.namespace.toArray, procedureName.name))
+    val procedure = procs.procedure(new kernel.api.procs.QualifiedName(procedureName.namespace.toArray, procedureName.name))
     val signature = procedure.signature()
     val input = signature.inputSignature().asScala
       .map(s => FieldSignature(s.name(), asCypherType(s.neo4jType()), asOption(s.defaultValue()).map(asCypherValue)))
@@ -39,14 +48,14 @@ abstract class AbstractProcedureCall extends AbstractCypherBenchmark {
         .map(s => FieldSignature(s.name(), asCypherType(s.neo4jType()), deprecated = s.isDeprecated)).toIndexedSeq)
 
     procedureSignature = ProcedureSignature(procedureName,
-                                            input,
-                                            output,
-                                            None,
-                                            ProcedureReadOnlyAccess(signature.allowed()),
-                                            asOption(signature.description()),
-                                            asOption(signature.warning),
-                                            procedure.signature().eager(),
-                                            procedure.id())
+      input,
+      output,
+      None,
+      ProcedureReadOnlyAccess(signature.allowed()),
+      asOption(signature.description()),
+      asOption(signature.warning),
+      procedure.signature().eager(),
+      procedure.id())
 
   }
 
@@ -64,5 +73,5 @@ abstract class AbstractProcedureCall extends AbstractCypherBenchmark {
     SemanticTable(types = semanticTypes)
   }
 
-   protected def procedureName: QualifiedName
+  protected def procedureName: QualifiedName
 }

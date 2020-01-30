@@ -7,22 +7,52 @@ package com.neo4j.bench.micro.benchmarks.cypher
 
 import java.util
 
-import com.neo4j.bench.jmh.api.config.{BenchmarkEnabled, ParamValues}
+import com.neo4j.bench.jmh.api.config.BenchmarkEnabled
+import com.neo4j.bench.jmh.api.config.ParamValues
 import com.neo4j.bench.micro.benchmarks.RNGState
 import com.neo4j.bench.micro.benchmarks.cypher.CypherRuntime.from
-import com.neo4j.bench.micro.data.Plans._
-import com.neo4j.bench.micro.data.TypeParamValues._
-import com.neo4j.bench.micro.data.ValueGeneratorUtil.{ascGeneratorFor, randGeneratorFor}
-import com.neo4j.bench.micro.data._
-import org.neo4j.cypher.internal.logical.plans
-import org.neo4j.cypher.internal.logical.plans._
-import org.neo4j.cypher.internal.planner.spi.PlanContext
+import com.neo4j.bench.micro.data.DataGeneratorConfig
+import com.neo4j.bench.micro.data.DataGeneratorConfigBuilder
+import com.neo4j.bench.micro.data.LabelKeyDefinition
+import com.neo4j.bench.micro.data.Plans.IdGen
+import com.neo4j.bench.micro.data.Plans.astLabelToken
+import com.neo4j.bench.micro.data.Plans.astParameter
+import com.neo4j.bench.micro.data.Plans.astPropertyKeyToken
+import com.neo4j.bench.micro.data.Plans.astVariable
+import com.neo4j.bench.micro.data.PropertyDefinition
+import com.neo4j.bench.micro.data.TypeParamValues.DATE
+import com.neo4j.bench.micro.data.TypeParamValues.DATE_TIME
+import com.neo4j.bench.micro.data.TypeParamValues.DBL
+import com.neo4j.bench.micro.data.TypeParamValues.DURATION
+import com.neo4j.bench.micro.data.TypeParamValues.LNG
+import com.neo4j.bench.micro.data.TypeParamValues.LOCAL_DATE_TIME
+import com.neo4j.bench.micro.data.TypeParamValues.LOCAL_TIME
+import com.neo4j.bench.micro.data.TypeParamValues.STR_BIG
+import com.neo4j.bench.micro.data.TypeParamValues.STR_SML
+import com.neo4j.bench.micro.data.TypeParamValues.TIME
+import com.neo4j.bench.micro.data.ValueGeneratorFun
+import com.neo4j.bench.micro.data.ValueGeneratorUtil.ascGeneratorFor
+import com.neo4j.bench.micro.data.ValueGeneratorUtil.randGeneratorFor
 import org.neo4j.cypher.internal.ast.semantics.SemanticTable
+import org.neo4j.cypher.internal.logical.plans
+import org.neo4j.cypher.internal.logical.plans.DoNotGetValue
+import org.neo4j.cypher.internal.logical.plans.IndexOrderNone
+import org.neo4j.cypher.internal.logical.plans.IndexedProperty
+import org.neo4j.cypher.internal.logical.plans.ProduceResult
+import org.neo4j.cypher.internal.logical.plans.SingleQueryExpression
+import org.neo4j.cypher.internal.planner.spi.PlanContext
 import org.neo4j.cypher.internal.util.symbols
 import org.neo4j.graphdb.Label
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.neo4j.kernel.impl.util.ValueUtils
-import org.openjdk.jmh.annotations._
+import org.openjdk.jmh.annotations.Benchmark
+import org.openjdk.jmh.annotations.BenchmarkMode
+import org.openjdk.jmh.annotations.Mode
+import org.openjdk.jmh.annotations.Param
+import org.openjdk.jmh.annotations.Scope
+import org.openjdk.jmh.annotations.Setup
+import org.openjdk.jmh.annotations.State
+import org.openjdk.jmh.annotations.TearDown
 import org.openjdk.jmh.infra.Blackhole
 
 @BenchmarkEnabled(true)
