@@ -5,8 +5,12 @@
  */
 package com.neo4j.fabric.planning
 
-import org.neo4j.cypher.internal.ast._
-import com.neo4j.fabric.util.Folded._
+import com.neo4j.fabric.util.Folded.Stop
+import com.neo4j.fabric.util.Folded.FoldableOps
+import org.neo4j.cypher.internal.ast.CallClause
+import org.neo4j.cypher.internal.ast.Query
+import org.neo4j.cypher.internal.ast.UnresolvedCall
+import org.neo4j.cypher.internal.ast.UpdateClause
 
 
 sealed trait QueryType

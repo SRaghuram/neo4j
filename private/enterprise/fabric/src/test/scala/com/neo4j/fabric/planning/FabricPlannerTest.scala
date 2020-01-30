@@ -8,21 +8,36 @@ package com.neo4j.fabric.planning
 import java.time.Duration
 import java.util
 
+import com.neo4j.fabric.FabricTest
+import com.neo4j.fabric.ProcedureRegistryTestSupport
 import com.neo4j.fabric.config.FabricConfig
-import com.neo4j.fabric.config.FabricConfig.{Database, GlobalDriverConfig, Graph}
+import com.neo4j.fabric.config.FabricConfig.Database
+import com.neo4j.fabric.config.FabricConfig.GlobalDriverConfig
+import com.neo4j.fabric.config.FabricConfig.Graph
 import com.neo4j.fabric.pipeline.SignatureResolver
-import com.neo4j.fabric.planning.FabricQuery._
-import com.neo4j.fabric.{FabricTest, ProcedureRegistryTestSupport}
+import com.neo4j.fabric.planning.FabricQuery.Apply
+import com.neo4j.fabric.planning.FabricQuery.ChainedQuery
+import com.neo4j.fabric.planning.FabricQuery.Direct
+import com.neo4j.fabric.planning.FabricQuery.LocalQuery
+import com.neo4j.fabric.planning.FabricQuery.RemoteQuery
+import com.neo4j.fabric.planning.FabricQuery.UnionQuery
 import org.neo4j.configuration.Config
-import org.neo4j.configuration.helpers.{NormalizedDatabaseName, NormalizedGraphName}
+import org.neo4j.configuration.helpers.NormalizedDatabaseName
+import org.neo4j.configuration.helpers.NormalizedGraphName
 import org.neo4j.cypher.internal.CypherConfiguration
-import org.neo4j.cypher.internal.ast.prettifier.{ExpressionStringifier, Prettifier}
-import org.neo4j.cypher.internal.ast.{AstConstructionTestSupport, Clause, Query, SingleQuery, UnresolvedCall}
+import org.neo4j.cypher.internal.ast.AstConstructionTestSupport
+import org.neo4j.cypher.internal.ast.Clause
+import org.neo4j.cypher.internal.ast.Query
+import org.neo4j.cypher.internal.ast.SingleQuery
+import org.neo4j.cypher.internal.ast.prettifier.ExpressionStringifier
+import org.neo4j.cypher.internal.ast.prettifier.Prettifier
 import org.neo4j.cypher.internal.util.symbols.CTAny
-import org.neo4j.exceptions.{InvalidSemanticsException, SyntaxException}
+import org.neo4j.exceptions.InvalidSemanticsException
+import org.neo4j.exceptions.SyntaxException
 import org.neo4j.monitoring.Monitors
 import org.neo4j.values.storable.Values
-import org.neo4j.values.virtual.{MapValue, VirtualValues}
+import org.neo4j.values.virtual.MapValue
+import org.neo4j.values.virtual.VirtualValues
 import org.scalatest.Assertion
 import org.scalatest.exceptions.TestFailedException
 

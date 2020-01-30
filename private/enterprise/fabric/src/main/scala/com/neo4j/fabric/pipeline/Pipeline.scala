@@ -5,23 +5,50 @@
  */
 package com.neo4j.fabric.pipeline
 
-import org.neo4j.cypher.internal.compiler.Neo4jCypherExceptionFactory
-import org.neo4j.cypher.internal.planner.spi.{CostBasedPlannerName, ProcedureSignatureResolver}
-import org.neo4j.cypher.internal.planning.WrappedMonitors
 import org.neo4j.cypher.internal.ast.Statement
-import org.neo4j.cypher.internal.ast.semantics.SemanticFeature._
-import org.neo4j.cypher.internal.ast.semantics.{SemanticErrorDef, SemanticState}
-import org.neo4j.cypher.internal.frontend.phases._
-import org.neo4j.cypher.internal.rewriting.rewriters.{GeneratingNamer, Never, expandStar}
-import org.neo4j.cypher.internal.rewriting.{Deprecations, RewriterStepSequencer}
+import org.neo4j.cypher.internal.ast.semantics.SemanticErrorDef
+import org.neo4j.cypher.internal.ast.semantics.SemanticFeature.CorrelatedSubQueries
+import org.neo4j.cypher.internal.ast.semantics.SemanticFeature.Cypher9Comparability
+import org.neo4j.cypher.internal.ast.semantics.SemanticFeature.ExpressionsInViewInvocations
+import org.neo4j.cypher.internal.ast.semantics.SemanticFeature.MultipleDatabases
+import org.neo4j.cypher.internal.ast.semantics.SemanticFeature.MultipleGraphs
+import org.neo4j.cypher.internal.ast.semantics.SemanticFeature.UseGraphSelector
+import org.neo4j.cypher.internal.ast.semantics.SemanticState
+import org.neo4j.cypher.internal.compiler.Neo4jCypherExceptionFactory
+import org.neo4j.cypher.internal.frontend.phases.AstRewriting
+import org.neo4j.cypher.internal.frontend.phases.BaseContains
+import org.neo4j.cypher.internal.frontend.phases.BaseContext
+import org.neo4j.cypher.internal.frontend.phases.BaseState
+import org.neo4j.cypher.internal.frontend.phases.CompilationPhaseTracer
+import org.neo4j.cypher.internal.frontend.phases.Condition
+import org.neo4j.cypher.internal.frontend.phases.InitialState
+import org.neo4j.cypher.internal.frontend.phases.InternalNotificationLogger
+import org.neo4j.cypher.internal.frontend.phases.Monitors
+import org.neo4j.cypher.internal.frontend.phases.Namespacer
+import org.neo4j.cypher.internal.frontend.phases.ObfuscationMetadataCollection
+import org.neo4j.cypher.internal.frontend.phases.Parsing
+import org.neo4j.cypher.internal.frontend.phases.Phase
+import org.neo4j.cypher.internal.frontend.phases.PreparatoryRewriting
+import org.neo4j.cypher.internal.frontend.phases.SemanticAnalysis
+import org.neo4j.cypher.internal.frontend.phases.SyntaxDeprecationWarnings
+import org.neo4j.cypher.internal.frontend.phases.Transformer
+import org.neo4j.cypher.internal.frontend.phases.devNullLogger
+import org.neo4j.cypher.internal.planner.spi.CostBasedPlannerName
+import org.neo4j.cypher.internal.planner.spi.ProcedureSignatureResolver
+import org.neo4j.cypher.internal.planning.WrappedMonitors
+import org.neo4j.cypher.internal.rewriting.Deprecations
+import org.neo4j.cypher.internal.rewriting.RewriterStepSequencer
+import org.neo4j.cypher.internal.rewriting.rewriters.GeneratingNamer
+import org.neo4j.cypher.internal.rewriting.rewriters.Never
+import org.neo4j.cypher.internal.rewriting.rewriters.expandStar
 import org.neo4j.cypher.internal.util.CypherExceptionFactory
-import org.neo4j.monitoring.{Monitors => KernelMonitors}
+import org.neo4j.monitoring
 
 
 object Pipeline {
 
   case class Instance(
-    kernelMonitors: KernelMonitors,
+    kernelMonitors: monitoring.Monitors,
     queryText: String,
     signatures: ProcedureSignatureResolver
   ) {

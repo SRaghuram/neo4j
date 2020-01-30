@@ -8,16 +8,21 @@ package com.neo4j.fabric
 import org.neo4j.collection.RawIterator
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException
 import org.neo4j.internal.kernel.api.procs.FieldSignature.inputField
-import org.neo4j.internal.kernel.api.procs.{Neo4jTypes, ProcedureSignature, QualifiedName, UserFunctionSignature}
+import org.neo4j.internal.kernel.api.procs.Neo4jTypes
+import org.neo4j.internal.kernel.api.procs.ProcedureSignature
+import org.neo4j.internal.kernel.api.procs.QualifiedName
+import org.neo4j.internal.kernel.api.procs.UserFunctionSignature
 import org.neo4j.kernel.api.ResourceTracker
-import org.neo4j.kernel.api.procedure.{CallableProcedure, CallableUserFunction, Context}
+import org.neo4j.kernel.api.procedure.CallableProcedure
+import org.neo4j.kernel.api.procedure.CallableUserFunction
+import org.neo4j.kernel.api.procedure.Context
 import org.neo4j.procedure.Mode
 import org.neo4j.procedure.impl.GlobalProceduresRegistry
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
 
+import scala.collection.JavaConverters.bufferAsJavaListConverter
 import scala.collection.mutable.ListBuffer
-import scala.collection.JavaConverters._
 
 trait ProcedureRegistryTestSupport {
 

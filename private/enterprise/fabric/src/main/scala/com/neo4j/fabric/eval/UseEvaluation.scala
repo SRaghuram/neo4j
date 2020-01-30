@@ -8,18 +8,21 @@ package com.neo4j.fabric.eval
 import java.util.function.Supplier
 
 import com.neo4j.fabric.util.Errors
-import com.neo4j.fabric.util.Rewritten._
-import org.neo4j.cypher.internal.logical.plans._
+import org.neo4j.cypher.internal.ast.CatalogName
+import org.neo4j.cypher.internal.ast.UseGraph
+import org.neo4j.cypher.internal.expressions.Expression
+import org.neo4j.cypher.internal.expressions.FunctionInvocation
+import org.neo4j.cypher.internal.expressions.Property
+import org.neo4j.cypher.internal.expressions.Variable
+import org.neo4j.cypher.internal.logical.plans.ResolvedFunctionInvocation
 import org.neo4j.cypher.internal.planner.spi.ProcedureSignatureResolver
 import org.neo4j.cypher.internal.runtime.CypherRow
-import org.neo4j.cypher.internal.ast.{CatalogName, UseGraph}
-import org.neo4j.cypher.internal.expressions._
-import org.neo4j.internal.kernel.api.{QueryContext => _}
 import org.neo4j.kernel.api.procedure.GlobalProcedures
 import org.neo4j.values.AnyValue
 import org.neo4j.values.virtual.MapValue
+import com.neo4j.fabric.util.Rewritten.RewritingOps
 
-import scala.collection.JavaConverters._
+import scala.collection.JavaConverters.mapAsScalaMapConverter
 import scala.collection.mutable
 
 case class UseEvaluation(
@@ -71,7 +74,7 @@ case class UseEvaluation(
       if (resolved.fcnSignature.isEmpty) {
         Errors.openCypherFailure(Errors.openCypherSemantic(s"Unknown function '${resolved.qualifiedName}'", resolved))
       }
-      
+
       return resolved
     }
   }

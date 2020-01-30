@@ -11,22 +11,46 @@ import com.neo4j.fabric.eval.Catalog
 import com.neo4j.fabric.executor.FabricException
 import com.neo4j.fabric.pipeline.Pipeline
 import com.neo4j.fabric.planning.FabricPlan.DebugOptions
-import com.neo4j.fabric.planning.FabricQuery._
-import com.neo4j.fabric.planning.Fragment.{Chain, Leaf, Union}
+import com.neo4j.fabric.planning.FabricQuery.Columns
+import com.neo4j.fabric.planning.FabricQuery.LeafQuery
+import com.neo4j.fabric.planning.FabricQuery.LocalQuery
+import com.neo4j.fabric.planning.FabricQuery.RemoteQuery
+import com.neo4j.fabric.planning.Fragment.Chain
+import com.neo4j.fabric.planning.Fragment.Leaf
+import com.neo4j.fabric.planning.Fragment.Union
 import com.neo4j.fabric.util.Errors
-import com.neo4j.fabric.util.Rewritten._
-import org.neo4j.cypher.internal._
-import org.neo4j.cypher.internal.logical.plans.{ResolvedCall, ResolvedFunctionInvocation}
-import org.neo4j.cypher.internal.planner.spi.ProcedureSignatureResolver
-import org.neo4j.cypher.internal.ast.semantics.{SemanticState, SemanticTable}
-import org.neo4j.cypher.internal.ast.{ProcedureResult, SingleQuery, Statement, UnresolvedCall}
-import org.neo4j.cypher.internal.expressions.{FunctionInvocation, FunctionName, Namespace, ProcedureName}
+import com.neo4j.fabric.util.Rewritten.RewritingOps
+import org.neo4j.cypher.internal.ast.semantics.SemanticState
+import org.neo4j.cypher.internal.ast.semantics.SemanticTable
+import org.neo4j.cypher.internal.ast.ProcedureResult
+import org.neo4j.cypher.internal.ast.SingleQuery
+import org.neo4j.cypher.internal.ast.Statement
+import org.neo4j.cypher.internal.ast.UnresolvedCall
+import org.neo4j.cypher.internal.expressions.FunctionInvocation
+import org.neo4j.cypher.internal.expressions.FunctionName
+import org.neo4j.cypher.internal.expressions.Namespace
+import org.neo4j.cypher.internal.expressions.ProcedureName
 import org.neo4j.cypher.internal.frontend.PlannerName
-import org.neo4j.cypher.internal.frontend.phases.{BaseState, Condition}
-import org.neo4j.cypher.internal.util.{InputPosition, ObfuscationMetadata}
-import org.neo4j.cypher.internal.util.symbols.{CTAny, CypherType}
-import org.neo4j.cypher.internal.{ast, expressions => exp}
-import org.neo4j.cypher.{CypherExecutionMode, CypherExpressionEngineOption, CypherRuntimeOption, CypherUpdateStrategy}
+import org.neo4j.cypher.internal.frontend.phases.BaseState
+import org.neo4j.cypher.internal.frontend.phases.Condition
+import org.neo4j.cypher.internal.logical.plans.ResolvedCall
+import org.neo4j.cypher.internal.logical.plans.ResolvedFunctionInvocation
+import org.neo4j.cypher.internal.planner.spi.ProcedureSignatureResolver
+import org.neo4j.cypher.internal.util.symbols.CTAny
+import org.neo4j.cypher.internal.util.symbols.CypherType
+import org.neo4j.cypher.internal.util.InputPosition
+import org.neo4j.cypher.internal.util.ObfuscationMetadata
+import org.neo4j.cypher.internal.ast
+import org.neo4j.cypher.internal
+import org.neo4j.cypher.CypherExecutionMode
+import org.neo4j.cypher.CypherExpressionEngineOption
+import org.neo4j.cypher.CypherRuntimeOption
+import org.neo4j.cypher.CypherUpdateStrategy
+import org.neo4j.cypher.internal.CypherConfiguration
+import org.neo4j.cypher.internal.FullyParsedQuery
+import org.neo4j.cypher.internal.PreParsedQuery
+import org.neo4j.cypher.internal.PreParser
+import org.neo4j.cypher.internal.QueryOptions
 import org.neo4j.kernel.api.exceptions.Status.Statement.SemanticError
 import org.neo4j.monitoring.Monitors
 import org.neo4j.values.virtual.MapValue
@@ -412,13 +436,13 @@ case class FabricPlanner(
 
       def withReturnAliased(names: Seq[String]): ast.SingleQuery =
         append(ast.Return(ast.ReturnItems(includeExisting = false,
-          names.map(n => ast.AliasedReturnItem(exp.Variable(n)(pos), exp.Variable(n)(pos))(pos))
+          names.map(n => ast.AliasedReturnItem(internal.expressions.Variable(n)(pos), internal.expressions.Variable(n)(pos))(pos))
         )(pos))(pos))
 
       def withParamBindings(bindings: Map[String, String]): SingleQuery = {
         val items = for {
           (varName, parName) <- bindings.toSeq
-        } yield ast.AliasedReturnItem(exp.Parameter(parName, CTAny)(pos), exp.Variable(varName)(pos))(pos)
+        } yield ast.AliasedReturnItem(internal.expressions.Parameter(parName, CTAny)(pos), internal.expressions.Variable(varName)(pos))(pos)
         prepend(
           ast.With(ast.ReturnItems(false, items)(pos))(pos)
         )
@@ -426,7 +450,7 @@ case class FabricPlanner(
 
       def withInputDataStream(names: Seq[String]): SingleQuery =
         prepend(ast.InputDataStream(
-          names.map(name => exp.Variable(name)(pos))
+          names.map(name => internal.expressions.Variable(name)(pos))
         )(pos))
     }
 

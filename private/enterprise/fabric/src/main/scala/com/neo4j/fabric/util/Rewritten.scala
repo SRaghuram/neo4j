@@ -6,7 +6,7 @@
 package com.neo4j.fabric.util
 
 import org.neo4j.cypher.internal.util
-import org.neo4j.cypher.internal.util.Rewritable._
+import org.neo4j.cypher.internal.util.Rewritable.RewritableAny
 import org.neo4j.cypher.internal.util.Rewriter
 
 object Rewritten {

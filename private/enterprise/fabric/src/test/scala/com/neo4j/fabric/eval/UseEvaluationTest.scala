@@ -8,14 +8,18 @@ package com.neo4j.fabric.eval
 import java.time.Duration
 import java.util
 
+import com.neo4j.fabric.FabricTest
+import com.neo4j.fabric.ProcedureRegistryTestSupport
 import com.neo4j.fabric.config.FabricConfig
-import com.neo4j.fabric.config.FabricConfig.{GlobalDriverConfig, Graph}
+import com.neo4j.fabric.config.FabricConfig.GlobalDriverConfig
+import com.neo4j.fabric.config.FabricConfig.Graph
 import com.neo4j.fabric.eval.Catalog.RemoteGraph
 import com.neo4j.fabric.pipeline.SignatureResolver
-import com.neo4j.fabric.{FabricTest, ProcedureRegistryTestSupport}
-import org.neo4j.configuration.helpers.{NormalizedDatabaseName, NormalizedGraphName}
+import org.neo4j.configuration.helpers.NormalizedDatabaseName
+import org.neo4j.configuration.helpers.NormalizedGraphName
 import org.neo4j.cypher.internal.ast.UseGraph
-import org.neo4j.cypher.internal.parser.{Clauses, Query}
+import org.neo4j.cypher.internal.parser.Clauses
+import org.neo4j.cypher.internal.parser.Query
 import org.neo4j.cypher.internal.util.test_helpers.TestName
 import org.neo4j.exceptions.EntityNotFoundException
 import org.neo4j.values.AnyValue

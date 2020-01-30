@@ -7,7 +7,8 @@ package com.neo4j.fabric
 
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
-import org.scalatest.{FreeSpec, Matchers}
+import org.scalatest.FreeSpec
+import org.scalatest.Matchers
 
 @RunWith(classOf[JUnitRunner])
 abstract class FabricTest extends FreeSpec with Matchers {

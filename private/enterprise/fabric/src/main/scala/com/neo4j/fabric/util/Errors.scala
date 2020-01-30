@@ -6,23 +6,31 @@
 package com.neo4j.fabric.util
 
 import com.neo4j.fabric.eval.Catalog
-import org.neo4j.cypher.internal.ast.{CatalogDDL, CatalogName}
-import org.neo4j.cypher.internal.ast.semantics.{FeatureError, SemanticError, SemanticErrorDef}
+import org.neo4j.cypher.internal.ast.CatalogDDL
+import org.neo4j.cypher.internal.ast.CatalogName
+import org.neo4j.cypher.internal.ast.semantics.FeatureError
+import org.neo4j.cypher.internal.ast.semantics.SemanticError
+import org.neo4j.cypher.internal.ast.semantics.SemanticErrorDef
+import org.neo4j.cypher.internal.util.ASTNode
+import org.neo4j.cypher.internal.util.InputPosition
 import org.neo4j.cypher.internal.util.symbols.CypherType
-import org.neo4j.cypher.internal.util.{ASTNode, InputPosition}
-import org.neo4j.exceptions._
+import org.neo4j.exceptions.CypherTypeException
+import org.neo4j.exceptions.DatabaseAdministrationException
+import org.neo4j.exceptions.EntityNotFoundException
+import org.neo4j.exceptions.InvalidSemanticsException
+import org.neo4j.exceptions.SyntaxException
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Value
 
 /**
-  * The errors in this file are in 2 categories: "Open Cypher" and "Neo4j".
-  * <p>
-  * The main feature of "Neo4j" errors is that they have status codes. Any error without a status code that occurs during cypher statement execution
-  * and makes to Bolt server will be mapped to a generic [[org.neo4j.kernel.api.exceptions.Status.Statement.ExecutionFailed]] that is an equivalent of HTTP 500
-  * and indicates a generic failure on the server side.
-  * <p>
-  * "Open Cypher" errors can be used, but they need to be mapped to "Neo4j" ones unless "Statement Execution Failed" is a desirable outcome.
-  */
+ * The errors in this file are in 2 categories: "Open Cypher" and "Neo4j".
+ * <p>
+ * The main feature of "Neo4j" errors is that they have status codes. Any error without a status code that occurs during cypher statement execution
+ * and makes to Bolt server will be mapped to a generic [[org.neo4j.kernel.api.exceptions.Status.Statement.ExecutionFailed]] that is an equivalent of HTTP 500
+ * and indicates a generic failure on the server side.
+ * <p>
+ * "Open Cypher" errors can be used, but they need to be mapped to "Neo4j" ones unless "Statement Execution Failed" is a desirable outcome.
+ */
 object Errors {
 
   trait HasErrors extends Throwable {

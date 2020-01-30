@@ -5,11 +5,19 @@
  */
 package com.neo4j.fabric.pipeline
 
-import com.neo4j.fabric.util.Rewritten._
-import org.neo4j.cypher.internal.logical.plans.{QualifiedName, ResolvedCall, ResolvedFunctionInvocation}
+import com.neo4j.fabric.util.Rewritten.RewritingOps
+import org.neo4j.cypher.internal.ast.AliasedReturnItem
+import org.neo4j.cypher.internal.ast.Query
+import org.neo4j.cypher.internal.ast.Return
+import org.neo4j.cypher.internal.ast.ReturnItems
+import org.neo4j.cypher.internal.ast.SingleQuery
+import org.neo4j.cypher.internal.ast.UnresolvedCall
+import org.neo4j.cypher.internal.expressions.FunctionInvocation
+import org.neo4j.cypher.internal.expressions.Variable
+import org.neo4j.cypher.internal.logical.plans.QualifiedName
+import org.neo4j.cypher.internal.logical.plans.ResolvedCall
+import org.neo4j.cypher.internal.logical.plans.ResolvedFunctionInvocation
 import org.neo4j.cypher.internal.planner.spi.ProcedureSignatureResolver
-import org.neo4j.cypher.internal.ast._
-import org.neo4j.cypher.internal.expressions.{FunctionInvocation, Variable}
 import org.neo4j.cypher.internal.util.Rewriter
 
 import scala.util.Try

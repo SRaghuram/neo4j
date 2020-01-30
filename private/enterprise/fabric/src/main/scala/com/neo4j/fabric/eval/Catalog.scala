@@ -14,7 +14,7 @@ import org.neo4j.cypher.internal.util.InputPosition
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.IntegralValue
 
-import scala.collection.JavaConverters._
+import scala.collection.JavaConverters.asScalaSetConverter
 
 object Catalog {
 
