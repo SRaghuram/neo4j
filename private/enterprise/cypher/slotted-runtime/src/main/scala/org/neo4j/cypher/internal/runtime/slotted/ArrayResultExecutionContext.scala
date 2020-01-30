@@ -5,10 +5,13 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted
 
+import org.neo4j.cypher.internal.expressions.ASTCachedProperty
+import org.neo4j.cypher.internal.runtime.EntityById
+import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.ResourceLinenumber
+import org.neo4j.cypher.internal.runtime.ValuePopulation
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
-import org.neo4j.cypher.internal.runtime.{EntityById, ExecutionContext, ResourceLinenumber, ValuePopulation}
-import org.neo4j.cypher.internal.expressions.ASTCachedProperty
 import org.neo4j.cypher.result.QueryResult
 import org.neo4j.exceptions.InternalException
 import org.neo4j.graphdb.NotFoundException
@@ -25,7 +28,7 @@ case class ArrayResultExecutionContextFactory(columns: Seq[(String, Expression)]
     var index = 0
     columns.foreach {
       case (name, _) => m.put(name, index)
-      index += 1
+        index += 1
     }
     m
   }

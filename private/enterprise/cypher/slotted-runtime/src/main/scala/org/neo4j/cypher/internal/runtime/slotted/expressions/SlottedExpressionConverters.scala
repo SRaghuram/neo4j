@@ -5,20 +5,49 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted.expressions
 
-import org.neo4j.cypher.internal.physicalplanning.{PhysicalPlan, SlotConfiguration, ast => runtimeAst}
+import org.neo4j.cypher.internal.expressions
+import org.neo4j.cypher.internal.expressions.Expression
+import org.neo4j.cypher.internal.expressions.MultiRelationshipPathStep
+import org.neo4j.cypher.internal.expressions.NODE_TYPE
+import org.neo4j.cypher.internal.expressions.NilPathStep
+import org.neo4j.cypher.internal.expressions.NodePathStep
+import org.neo4j.cypher.internal.expressions.PathStep
+import org.neo4j.cypher.internal.expressions.RELATIONSHIP_TYPE
+import org.neo4j.cypher.internal.expressions.SemanticDirection
+import org.neo4j.cypher.internal.expressions.SingleRelationshipPathStep
+import org.neo4j.cypher.internal.physicalplanning
+import org.neo4j.cypher.internal.physicalplanning.PhysicalPlan
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.ast.ExpressionVariable
-import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{ExpressionConverter, ExpressionConverters}
+import org.neo4j.cypher.internal.runtime.interpreted.CommandProjection
+import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
+import org.neo4j.cypher.internal.runtime.interpreted.commands
+import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverter
+import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
 import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.Predicate
-import org.neo4j.cypher.internal.runtime.interpreted.commands.{expressions => commands, predicates => commandPredicates}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.NestedPipeExpression
-import org.neo4j.cypher.internal.runtime.interpreted.{CommandProjection, GroupingExpression}
+import org.neo4j.cypher.internal.runtime.slotted
 import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionConverters.orderGroupingKeyExpressions
-import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedProjectedPath._
-import org.neo4j.cypher.internal.runtime.slotted.pipes._
-import org.neo4j.cypher.internal.runtime.slotted.{expressions => runtimeExpression}
-import org.neo4j.cypher.internal.expressions._
+import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedProjectedPath.Projector
+import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedProjectedPath.multiIncomingRelationshipProjector
+import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedProjectedPath.multiIncomingRelationshipWithKnownTargetProjector
+import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedProjectedPath.multiOutgoingRelationshipProjector
+import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedProjectedPath.multiOutgoingRelationshipWithKnownTargetProjector
+import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedProjectedPath.multiUndirectedRelationshipProjector
+import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedProjectedPath.multiUndirectedRelationshipWithKnownTargetProjector
+import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedProjectedPath.nilProjector
+import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedProjectedPath.singleIncomingRelationshipProjector
+import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedProjectedPath.singleNodeProjector
+import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedProjectedPath.singleOutgoingRelationshipProjector
+import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedProjectedPath.singleRelationshipWithKnownTargetProjector
+import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedProjectedPath.singleUndirectedRelationshipProjector
+import org.neo4j.cypher.internal.runtime.slotted.pipes.EmptyGroupingExpression
+import org.neo4j.cypher.internal.runtime.slotted.pipes.SlotExpression
+import org.neo4j.cypher.internal.runtime.slotted.pipes.SlottedGroupingExpression
+import org.neo4j.cypher.internal.runtime.slotted.pipes.SlottedGroupingExpression1
+import org.neo4j.cypher.internal.runtime.slotted.pipes.SlottedGroupingExpression2
+import org.neo4j.cypher.internal.runtime.slotted.pipes.SlottedGroupingExpression3
 import org.neo4j.cypher.internal.util.attribution.Id
-import org.neo4j.cypher.internal.{expressions => ast}
 
 object SlottedExpressionConverters {
   // This is a shared method to provide consistent ordering of grouping keys for all slot-based runtimes
@@ -58,97 +87,97 @@ case class SlottedExpressionConverters(physicalPlan: PhysicalPlan) extends Expre
     }
   }
 
-  override def toCommandExpression(id: Id, expression: ast.Expression, self: ExpressionConverters): Option[commands.Expression] =
+  override def toCommandExpression(id: Id, expression: expressions.Expression, self: ExpressionConverters): Option[commands.expressions.Expression] =
     expression match {
-      case runtimeAst.NodeFromSlot(offset, _) =>
-        Some(runtimeExpression.NodeFromSlot(offset))
-      case runtimeAst.RelationshipFromSlot(offset, _) =>
-        Some(runtimeExpression.RelationshipFromSlot(offset))
-      case runtimeAst.ReferenceFromSlot(offset, _) =>
-        Some(runtimeExpression.ReferenceFromSlot(offset))
-      case runtimeAst.NodeProperty(offset, token, _) =>
-        Some(runtimeExpression.NodeProperty(offset, token))
-      case runtimeAst.SlottedCachedPropertyWithPropertyToken(_, _, offset, offsetIsForLongSlot, token, cachedPropertyOffset, NODE_TYPE) =>
-        Some(runtimeExpression.SlottedCachedNodeProperty(offset, offsetIsForLongSlot, token, cachedPropertyOffset))
-      case runtimeAst.SlottedCachedPropertyWithPropertyToken(_, _, offset, offsetIsForLongSlot, token, cachedPropertyOffset, RELATIONSHIP_TYPE) =>
-        Some(runtimeExpression.SlottedCachedRelationshipProperty(offset, offsetIsForLongSlot, token, cachedPropertyOffset))
-      case runtimeAst.RelationshipProperty(offset, token, _) =>
-        Some(runtimeExpression.RelationshipProperty(offset, token))
-      case runtimeAst.IdFromSlot(offset) =>
-        Some(runtimeExpression.IdFromSlot(offset))
-      case runtimeAst.LabelsFromSlot(offset) =>
-        Some(runtimeExpression.LabelsFromSlot(offset))
-      case e: runtimeAst.HasLabelsFromSlot =>
+      case physicalplanning.ast.NodeFromSlot(offset, _) =>
+        Some(slotted.expressions.NodeFromSlot(offset))
+      case physicalplanning.ast.RelationshipFromSlot(offset, _) =>
+        Some(slotted.expressions.RelationshipFromSlot(offset))
+      case physicalplanning.ast.ReferenceFromSlot(offset, _) =>
+        Some(slotted.expressions.ReferenceFromSlot(offset))
+      case physicalplanning.ast.NodeProperty(offset, token, _) =>
+        Some(slotted.expressions.NodeProperty(offset, token))
+      case physicalplanning.ast.SlottedCachedPropertyWithPropertyToken(_, _, offset, offsetIsForLongSlot, token, cachedPropertyOffset, NODE_TYPE) =>
+        Some(slotted.expressions.SlottedCachedNodeProperty(offset, offsetIsForLongSlot, token, cachedPropertyOffset))
+      case physicalplanning.ast.SlottedCachedPropertyWithPropertyToken(_, _, offset, offsetIsForLongSlot, token, cachedPropertyOffset, RELATIONSHIP_TYPE) =>
+        Some(slotted.expressions.SlottedCachedRelationshipProperty(offset, offsetIsForLongSlot, token, cachedPropertyOffset))
+      case physicalplanning.ast.RelationshipProperty(offset, token, _) =>
+        Some(slotted.expressions.RelationshipProperty(offset, token))
+      case physicalplanning.ast.IdFromSlot(offset) =>
+        Some(slotted.expressions.IdFromSlot(offset))
+      case physicalplanning.ast.LabelsFromSlot(offset) =>
+        Some(slotted.expressions.LabelsFromSlot(offset))
+      case e: physicalplanning.ast.HasLabelsFromSlot =>
         Some(hasLabelsFromSlot(id, e, self))
-      case runtimeAst.RelationshipTypeFromSlot(offset) =>
-        Some(runtimeExpression.RelationshipTypeFromSlot(offset))
-      case runtimeAst.NodePropertyLate(offset, propKey, _) =>
-        Some(runtimeExpression.NodePropertyLate(offset, propKey))
-      case runtimeAst.SlottedCachedPropertyWithoutPropertyToken(_, _, offset, offsetIsForLongSlot, propertyKey, cachedPropertyOffset, NODE_TYPE) =>
-        Some(runtimeExpression.SlottedCachedNodePropertyLate(offset, offsetIsForLongSlot, propertyKey, cachedPropertyOffset))
-      case runtimeAst.SlottedCachedPropertyWithoutPropertyToken(_, _, offset, offsetIsForLongSlot, propertyKey, cachedPropertyOffset, RELATIONSHIP_TYPE) =>
-        Some(runtimeExpression.SlottedCachedRelationshipPropertyLate(offset, offsetIsForLongSlot, propertyKey, cachedPropertyOffset))
-      case runtimeAst.RelationshipPropertyLate(offset, propKey, _) =>
-        Some(runtimeExpression.RelationshipPropertyLate(offset, propKey))
-      case runtimeAst.PrimitiveEquals(a, b) =>
+      case physicalplanning.ast.RelationshipTypeFromSlot(offset) =>
+        Some(slotted.expressions.RelationshipTypeFromSlot(offset))
+      case physicalplanning.ast.NodePropertyLate(offset, propKey, _) =>
+        Some(slotted.expressions.NodePropertyLate(offset, propKey))
+      case physicalplanning.ast.SlottedCachedPropertyWithoutPropertyToken(_, _, offset, offsetIsForLongSlot, propertyKey, cachedPropertyOffset, NODE_TYPE) =>
+        Some(slotted.expressions.SlottedCachedNodePropertyLate(offset, offsetIsForLongSlot, propertyKey, cachedPropertyOffset))
+      case physicalplanning.ast.SlottedCachedPropertyWithoutPropertyToken(_, _, offset, offsetIsForLongSlot, propertyKey, cachedPropertyOffset, RELATIONSHIP_TYPE) =>
+        Some(slotted.expressions.SlottedCachedRelationshipPropertyLate(offset, offsetIsForLongSlot, propertyKey, cachedPropertyOffset))
+      case physicalplanning.ast.RelationshipPropertyLate(offset, propKey, _) =>
+        Some(slotted.expressions.RelationshipPropertyLate(offset, propKey))
+      case physicalplanning.ast.PrimitiveEquals(a, b) =>
         val lhs = self.toCommandExpression(id, a)
         val rhs = self.toCommandExpression(id, b)
-        Some(runtimeExpression.PrimitiveEquals(lhs, rhs))
-      case runtimeAst.GetDegreePrimitive(offset, typ, direction) =>
-        Some(runtimeExpression.GetDegreePrimitive(offset, typ, direction))
-      case runtimeAst.NodePropertyExists(offset, token, _) =>
-        Some(runtimeExpression.NodePropertyExists(offset, token))
-      case runtimeAst.NodePropertyExistsLate(offset, token, _) =>
-        Some(runtimeExpression.NodePropertyExistsLate(offset, token))
-      case runtimeAst.RelationshipPropertyExists(offset, token, _) =>
-        Some(runtimeExpression.RelationshipPropertyExists(offset, token))
-      case runtimeAst.RelationshipPropertyExistsLate(offset, token, _) =>
-        Some(runtimeExpression.RelationshipPropertyExistsLate(offset, token))
-      case runtimeAst.NullCheck(offset, inner) =>
+        Some(slotted.expressions.PrimitiveEquals(lhs, rhs))
+      case physicalplanning.ast.GetDegreePrimitive(offset, typ, direction) =>
+        Some(slotted.expressions.GetDegreePrimitive(offset, typ, direction))
+      case physicalplanning.ast.NodePropertyExists(offset, token, _) =>
+        Some(slotted.expressions.NodePropertyExists(offset, token))
+      case physicalplanning.ast.NodePropertyExistsLate(offset, token, _) =>
+        Some(slotted.expressions.NodePropertyExistsLate(offset, token))
+      case physicalplanning.ast.RelationshipPropertyExists(offset, token, _) =>
+        Some(slotted.expressions.RelationshipPropertyExists(offset, token))
+      case physicalplanning.ast.RelationshipPropertyExistsLate(offset, token, _) =>
+        Some(slotted.expressions.RelationshipPropertyExistsLate(offset, token))
+      case physicalplanning.ast.NullCheck(offset, inner) =>
         val a = self.toCommandExpression(id, inner)
-        Some(runtimeExpression.NullCheck(offset, a))
-      case runtimeAst.NullCheckVariable(offset, inner) =>
+        Some(slotted.expressions.NullCheck(offset, a))
+      case physicalplanning.ast.NullCheckVariable(offset, inner) =>
         val a = self.toCommandExpression(id, inner)
-        Some(runtimeExpression.NullCheck(offset, a))
-      case runtimeAst.NullCheckProperty(offset, inner) =>
+        Some(slotted.expressions.NullCheck(offset, a))
+      case physicalplanning.ast.NullCheckProperty(offset, inner) =>
         val a = self.toCommandExpression(id, inner)
-        Some(runtimeExpression.NullCheck(offset, a))
-      case e: ast.PathExpression =>
+        Some(slotted.expressions.NullCheck(offset, a))
+      case e: expressions.PathExpression =>
         Some(toCommandProjectedPath(id, e, self))
-      case runtimeAst.IsPrimitiveNull(offset) =>
-        Some(runtimeExpression.IsPrimitiveNull(offset))
+      case physicalplanning.ast.IsPrimitiveNull(offset) =>
+        Some(slotted.expressions.IsPrimitiveNull(offset))
       case e: ExpressionVariable =>
-        Some(commands.ExpressionVariable(e.offset, e.name))
+        Some(commands.expressions.ExpressionVariable(e.offset, e.name))
       case e: NestedPipeExpression =>
-        Some(runtimeExpression.NestedPipeSlottedExpression(e.pipe,
-                                                           self.toCommandExpression(id, e.projection),
-                                                           physicalPlan.nestedPlanArgumentConfigurations(e.pipe.id),
-                                                           e.availableExpressionVariables.map(commands.ExpressionVariable.of).toArray))
+        Some(slotted.expressions.NestedPipeSlottedExpression(e.pipe,
+          self.toCommandExpression(id, e.projection),
+          physicalPlan.nestedPlanArgumentConfigurations(e.pipe.id),
+          e.availableExpressionVariables.map(commands.expressions.ExpressionVariable.of).toArray))
       case _ =>
         None
     }
 
-  private def hasLabelsFromSlot(id: Id, e: runtimeAst.HasLabelsFromSlot, self: ExpressionConverters): Predicate = {
+  private def hasLabelsFromSlot(id: Id, e: physicalplanning.ast.HasLabelsFromSlot, self: ExpressionConverters): Predicate = {
     val preds =
       e.resolvedLabelTokens.map { labelId =>
         HasLabelFromSlot(e.offset, labelId)
       } ++
-      e.lateLabels.map { labelName =>
-        HasLabelFromSlotLate(e.offset, labelName): Predicate
-      }
-    commandPredicates.Ands(preds: _*)
+        e.lateLabels.map { labelName =>
+          HasLabelFromSlotLate(e.offset, labelName): Predicate
+        }
+    commands.predicates.Ands(preds: _*)
   }
 
-  def toCommandProjectedPath(id:Id, e: ast.PathExpression, self: ExpressionConverters): SlottedProjectedPath = {
+  def toCommandProjectedPath(id:Id, e: expressions.PathExpression, self: ExpressionConverters): SlottedProjectedPath = {
     def project(pathStep: PathStep): Projector = pathStep match {
 
       case NodePathStep(nodeExpression, next) =>
         singleNodeProjector(toCommandExpression(id, nodeExpression, self).get, project(next))
 
-      case ast.SingleRelationshipPathStep(relExpression, _, Some(targetNodeExpression), next) =>
+      case expressions.SingleRelationshipPathStep(relExpression, _, Some(targetNodeExpression), next) =>
         singleRelationshipWithKnownTargetProjector(toCommandExpression(id, relExpression, self).get,
-                                                   toCommandExpression(id, targetNodeExpression, self).get,
-                                                   project(next))
+          toCommandExpression(id, targetNodeExpression, self).get,
+          project(next))
 
       case SingleRelationshipPathStep(relExpression, SemanticDirection.INCOMING, _, next) =>
         singleIncomingRelationshipProjector(toCommandExpression(id, relExpression, self).get, project(next))

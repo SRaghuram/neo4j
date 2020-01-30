@@ -5,7 +5,22 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted
 
-import org.neo4j.cypher.internal.logical.plans._
+import org.neo4j.cypher.internal.logical.plans.Aggregation
+import org.neo4j.cypher.internal.logical.plans.CartesianProduct
+import org.neo4j.cypher.internal.logical.plans.CrossApply
+import org.neo4j.cypher.internal.logical.plans.Eager
+import org.neo4j.cypher.internal.logical.plans.Expand
+import org.neo4j.cypher.internal.logical.plans.LeftOuterHashJoin
+import org.neo4j.cypher.internal.logical.plans.LogicalLeafPlan
+import org.neo4j.cypher.internal.logical.plans.LogicalPlan
+import org.neo4j.cypher.internal.logical.plans.NodeHashJoin
+import org.neo4j.cypher.internal.logical.plans.OptionalExpand
+import org.neo4j.cypher.internal.logical.plans.PruningVarExpand
+import org.neo4j.cypher.internal.logical.plans.RightOuterHashJoin
+import org.neo4j.cypher.internal.logical.plans.Union
+import org.neo4j.cypher.internal.logical.plans.UnwindCollection
+import org.neo4j.cypher.internal.logical.plans.ValueHashJoin
+import org.neo4j.cypher.internal.logical.plans.VarExpand
 import org.neo4j.cypher.internal.physicalplanning.PipelineBreakingPolicy
 
 object SlottedPipelineBreakingPolicy extends PipelineBreakingPolicy {
@@ -13,11 +28,11 @@ object SlottedPipelineBreakingPolicy extends PipelineBreakingPolicy {
   override def breakOn(lp: LogicalPlan): Boolean = {
 
     lp match {
-        // leaf operators
+      // leaf operators
       case _: LogicalLeafPlan
-        => true
+      => true
 
-        // 1 child operators
+      // 1 child operators
       case _: Aggregation |
            _: Expand |
            _: OptionalExpand |
@@ -25,14 +40,14 @@ object SlottedPipelineBreakingPolicy extends PipelineBreakingPolicy {
            _: PruningVarExpand |
            _: UnwindCollection |
            _: Eager
-           // _: ProjectEndpoints | This is cardinality increasing (if undirected) but doesn't break currently
-           // _: LoadCSV | This is cardinality increasing but doesn't break currently
-           // _: ProcedureCall | This is cardinality increasing but doesn't break currently
-           //                    Also, if the procedure is void it cannot increase cardinality.
-           // _: FindShortestPaths | This is cardinality increasing but doesn't break currently
-         => true
+        // _: ProjectEndpoints | This is cardinality increasing (if undirected) but doesn't break currently
+        // _: LoadCSV | This is cardinality increasing but doesn't break currently
+        // _: ProcedureCall | This is cardinality increasing but doesn't break currently
+        //                    Also, if the procedure is void it cannot increase cardinality.
+        // _: FindShortestPaths | This is cardinality increasing but doesn't break currently
+      => true
 
-        // 2 child operators
+      // 2 child operators
       case _: CartesianProduct |
            _: CrossApply |
            _: RightOuterHashJoin |
@@ -40,7 +55,7 @@ object SlottedPipelineBreakingPolicy extends PipelineBreakingPolicy {
            _: NodeHashJoin |
            _: ValueHashJoin |
            _: Union
-        => true
+      => true
 
       case _ =>
         false

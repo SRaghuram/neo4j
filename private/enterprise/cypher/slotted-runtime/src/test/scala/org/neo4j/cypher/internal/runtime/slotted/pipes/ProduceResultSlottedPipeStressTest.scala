@@ -5,21 +5,25 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted.pipes
 
-import java.util.concurrent.{Callable, Executors, Future}
+import java.util.concurrent.Callable
+import java.util.concurrent.Executors
+import java.util.concurrent.Future
 
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.QueryStatistics
 import org.neo4j.cypher.internal.runtime.interpreted.QueryStateHelper
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Literal
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, QueryState}
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
-import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryStatistics}
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.internal.util.symbols.CTNode
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 import org.neo4j.kernel.impl.query.RecordingQuerySubscriber
 import org.neo4j.values.AnyValue
 
-import scala.collection.JavaConverters._
+import scala.collection.JavaConverters.asScalaBufferConverter
 
 class ProduceResultSlottedPipeStressTest extends CypherFunSuite {
 
@@ -48,7 +52,7 @@ class ProduceResultSlottedPipeStressTest extends CypherFunSuite {
     // Then no crashes...
     for (futureResultSet: Future[Array[AnyValue]] <- futureResultsAsExpected;
          result: AnyValue <- futureResultSet.get
-    ) {
+         ) {
       // ...and correct results
       result should equal(expected)
     }

@@ -5,17 +5,25 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted.helpers
 
-import org.neo4j.cypher.internal.physicalplanning.{Slot, SlotConfiguration}
+import org.neo4j.cypher.internal.physicalplanning.Slot
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeGetValueFromSlotFunctionFor
+import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeSetPrimitiveNodeInSlotFunctionFor
+import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeSetPrimitiveRelationshipInSlotFunctionFor
+import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeSetValueInSlotFunctionFor
 import org.neo4j.cypher.internal.runtime.EntityById
 import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
-import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils._
-import org.neo4j.values.AnyValue
-import org.neo4j.values.storable.Values
-import org.neo4j.values.virtual.{NodeValue, RelationshipValue, VirtualValues}
-import org.neo4j.cypher.internal.util.AssertionUtils._
-import org.neo4j.cypher.internal.util.symbols._
+import org.neo4j.cypher.internal.util.AssertionUtils.ifAssertionsEnabled
+import org.neo4j.cypher.internal.util.symbols.CTAny
+import org.neo4j.cypher.internal.util.symbols.CTNode
+import org.neo4j.cypher.internal.util.symbols.CTRelationship
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 import org.neo4j.exceptions.ParameterWrongTypeException
+import org.neo4j.values.AnyValue
+import org.neo4j.values.storable.Values
+import org.neo4j.values.virtual.NodeValue
+import org.neo4j.values.virtual.RelationshipValue
+import org.neo4j.values.virtual.VirtualValues
 
 // TODO: Extract abstract base class in physical planning module, with subclass tests for both slotted and pipelined runtimes
 

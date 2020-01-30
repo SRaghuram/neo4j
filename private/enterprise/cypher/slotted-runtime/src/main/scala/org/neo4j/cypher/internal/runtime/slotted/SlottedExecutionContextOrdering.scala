@@ -7,9 +7,12 @@ package org.neo4j.cypher.internal.runtime.slotted
 
 import java.util.Comparator
 
-import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot, Slot}
+import org.neo4j.cypher.internal.physicalplanning.LongSlot
+import org.neo4j.cypher.internal.physicalplanning.RefSlot
+import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.runtime.ExecutionContext
-import org.neo4j.values.{AnyValue, AnyValues}
+import org.neo4j.values.AnyValue
+import org.neo4j.values.AnyValues
 
 object SlottedExecutionContextOrdering {
   def comparator(order: ColumnOrder): scala.Ordering[ExecutionContext] = order.slot match {
@@ -43,7 +46,7 @@ object SlottedExecutionContextOrdering {
 
   def asComparator(orderBy: Seq[ColumnOrder]): Comparator[ExecutionContext] =
     orderBy.map(SlottedExecutionContextOrdering.comparator)
-    .reduceLeft[Comparator[ExecutionContext]]((a, b) => a.thenComparing(b))
+      .reduceLeft[Comparator[ExecutionContext]]((a, b) => a.thenComparing(b))
 }
 
 sealed trait ColumnOrder {

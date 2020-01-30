@@ -7,10 +7,13 @@ package org.neo4j.cypher.internal.runtime.slotted.pipes
 
 import org.eclipse.collections.impl.factory.Sets
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.PrefetchingIterator
 import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, PipeWithSource, QueryState}
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeWithSource
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.slotted.pipes.DistinctSlottedPrimitivePipe.buildGroupingValue
-import org.neo4j.cypher.internal.runtime.{ExecutionContext, PrefetchingIterator}
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.values.storable.LongArray
 
@@ -56,13 +59,13 @@ case class OrderedDistinctSlottedPrimitivePipe(source: Pipe,
   }
 }
 /**
-  * Specialization for the case that all groupingColumns are ordered
-  */
+ * Specialization for the case that all groupingColumns are ordered
+ */
 case class AllOrderedDistinctSlottedPrimitivePipe(source: Pipe,
-                                               slots: SlotConfiguration,
-                                               primitiveSlots: Array[Int],
-                                               groupingExpression: GroupingExpression)
-                                              (val id: Id = Id.INVALID_ID)
+                                                  slots: SlotConfiguration,
+                                                  primitiveSlots: Array[Int],
+                                                  groupingExpression: GroupingExpression)
+                                                 (val id: Id = Id.INVALID_ID)
   extends PipeWithSource(source) {
   groupingExpression.registerOwningPipe(this)
 

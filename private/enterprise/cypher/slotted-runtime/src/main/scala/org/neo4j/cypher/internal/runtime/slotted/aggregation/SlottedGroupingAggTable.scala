@@ -9,14 +9,18 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.ExecutionContext
 import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.AggregationExpression
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.AggregationPipe.{AggregationTable, AggregationTableFactory}
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.{AggregationFunction, GroupingAggTable}
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.{ExecutionContextFactory, Pipe, QueryState}
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.AggregationPipe.AggregationTable
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.AggregationPipe.AggregationTableFactory
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.ExecutionContextFactory
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.AggregationFunction
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.GroupingAggTable
 import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
 
 /**
-  * Slotted variant of [[GroupingAggTable]]
-  */
+ * Slotted variant of [[GroupingAggTable]]
+ */
 class SlottedGroupingAggTable(slots: SlotConfiguration,
                               groupingColumns: GroupingExpression,
                               aggregations: Map[Int, AggregationExpression],

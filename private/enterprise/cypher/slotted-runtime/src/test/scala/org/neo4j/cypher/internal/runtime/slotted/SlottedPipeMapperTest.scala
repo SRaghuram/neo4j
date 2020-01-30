@@ -5,27 +5,94 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted
 
-import org.mockito.Mockito._
+import org.mockito.Mockito.when
+import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.compiler.planner.LogicalPlanningTestSupport2
-import org.neo4j.cypher.internal.ir.{CreateNode, VarPatternLength}
+import org.neo4j.cypher.internal.expressions.LabelName
+import org.neo4j.cypher.internal.expressions.LabelToken
+import org.neo4j.cypher.internal.expressions.SemanticDirection
+import org.neo4j.cypher.internal.ir.CreateNode
+import org.neo4j.cypher.internal.ir.VarPatternLength
 import org.neo4j.cypher.internal.logical.plans
-import org.neo4j.cypher.internal.logical.plans._
+import org.neo4j.cypher.internal.logical.plans.Aggregation
+import org.neo4j.cypher.internal.logical.plans.AllNodesScan
+import org.neo4j.cypher.internal.logical.plans.Apply
+import org.neo4j.cypher.internal.logical.plans.Argument
+import org.neo4j.cypher.internal.logical.plans.CartesianProduct
+import org.neo4j.cypher.internal.logical.plans.Create
+import org.neo4j.cypher.internal.logical.plans.DoNotIncludeTies
+import org.neo4j.cypher.internal.logical.plans.Eager
+import org.neo4j.cypher.internal.logical.plans.Expand
+import org.neo4j.cypher.internal.logical.plans.ExpandAll
+import org.neo4j.cypher.internal.logical.plans.ExpandInto
+import org.neo4j.cypher.internal.logical.plans.ForeachApply
+import org.neo4j.cypher.internal.logical.plans.IndexOrderNone
+import org.neo4j.cypher.internal.logical.plans.LogicalPlan
+import org.neo4j.cypher.internal.logical.plans.NodeByLabelScan
+import org.neo4j.cypher.internal.logical.plans.NodeHashJoin
+import org.neo4j.cypher.internal.logical.plans.NodeUniqueIndexSeek
+import org.neo4j.cypher.internal.logical.plans.Optional
+import org.neo4j.cypher.internal.logical.plans.OptionalExpand
+import org.neo4j.cypher.internal.logical.plans.Projection
+import org.neo4j.cypher.internal.logical.plans.Selection
+import org.neo4j.cypher.internal.logical.plans.SingleQueryExpression
+import org.neo4j.cypher.internal.logical.plans.Sort
+import org.neo4j.cypher.internal.logical.plans.UnwindCollection
+import org.neo4j.cypher.internal.logical.plans.VarExpand
+import org.neo4j.cypher.internal.physicalplanning.LongSlot
+import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanner
+import org.neo4j.cypher.internal.physicalplanning.RefSlot
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.Size
-import org.neo4j.cypher.internal.physicalplanning._
+import org.neo4j.cypher.internal.physicalplanning.SlottedIndexedProperty
+import org.neo4j.cypher.internal.physicalplanning.VariablePredicates
 import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.QueryIndexRegistrator
-import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{CommunityExpressionConverter, ExpressionConverters}
+import org.neo4j.cypher.internal.runtime.interpreted.InterpretedPipeMapper
+import org.neo4j.cypher.internal.runtime.interpreted.commands
+import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.CommunityExpressionConverter
+import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Literal
 import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates
-import org.neo4j.cypher.internal.runtime.interpreted.pipes._
-import org.neo4j.cypher.internal.runtime.interpreted.{InterpretedPipeMapper, commands}
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.EagerAggregationPipe
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.FilterPipe
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyLabel
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.LimitPipe
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeTreeBuilder
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.ProjectionPipe
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.RelationshipTypes
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.SkipPipe
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.SortPipe
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.UniqueIndexSeek
 import org.neo4j.cypher.internal.runtime.slotted.aggregation.SlottedPrimitiveGroupingAggTable
-import org.neo4j.cypher.internal.runtime.slotted.expressions.{NodeProperty, SlottedCommandProjection, SlottedExpressionConverters}
-import org.neo4j.cypher.internal.runtime.slotted.pipes._
-import org.neo4j.cypher.internal.ast.semantics.SemanticTable
-import org.neo4j.cypher.internal.expressions.{LabelName, LabelToken, SemanticDirection}
+import org.neo4j.cypher.internal.runtime.slotted.expressions.NodeProperty
+import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedCommandProjection
+import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionConverters
+import org.neo4j.cypher.internal.runtime.slotted.pipes.AllNodesScanSlottedPipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.ApplySlottedPipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.ArgumentSlottedPipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.CartesianProductSlottedPipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.CreateNodeSlottedCommand
+import org.neo4j.cypher.internal.runtime.slotted.pipes.CreateSlottedPipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.EagerSlottedPipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.ExpandAllSlottedPipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.ExpandIntoSlottedPipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.ForeachSlottedPipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeIndexScanSlottedPipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeIndexSeekSlottedPipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.NodesByLabelScanSlottedPipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.OptionalExpandAllSlottedPipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.OptionalExpandIntoSlottedPipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.OptionalSlottedPipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.UnwindSlottedPipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.VarLengthExpandSlottedPipe
 import org.neo4j.cypher.internal.util.LabelId
-import org.neo4j.cypher.internal.util.symbols.{CTAny, CTList, CTNode, CTRelationship}
+import org.neo4j.cypher.internal.util.symbols.CTAny
+import org.neo4j.cypher.internal.util.symbols.CTList
+import org.neo4j.cypher.internal.util.symbols.CTNode
+import org.neo4j.cypher.internal.util.symbols.CTRelationship
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 
 //noinspection NameBooleanParameters
@@ -38,7 +105,7 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
     when(tokenContext.getOptPropertyKeyId("propertyKey")).thenReturn(Some(0))
     val physicalPlan = PhysicalPlanner.plan(tokenContext, beforeRewrite, table, SlottedPipelineBreakingPolicy)
     val converters = new ExpressionConverters(SlottedExpressionConverters(physicalPlan),
-                                                                          CommunityExpressionConverter(TokenContext.EMPTY))
+      CommunityExpressionConverter(TokenContext.EMPTY))
 
     val fallback = InterpretedPipeMapper(true, converters, tokenContext, mock[QueryIndexRegistrator])(table)
     val pipeBuilder = new SlottedPipeMapper(fallback, converters, physicalPlan, true, mock[QueryIndexRegistrator])(table)
@@ -172,7 +239,7 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
         "x" -> xNodeSlot,
         "r" -> rRelSlot,
         "z" -> zNodeSlot), numberOfLongs = 3, numberOfReferences = 0)
-      )())
+    )())
   }
 
   test("single node with expand into") {
@@ -190,7 +257,7 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
       AllNodesScanSlottedPipe("x", X_NODE_SLOTS, Size.zero)(),
       nodeSlot, relSlot.offset, nodeSlot, SemanticDirection.INCOMING, RelationshipTypes.empty,
       SlotConfiguration(Map("x" -> nodeSlot, "r" -> relSlot), numberOfLongs = 2, numberOfReferences = 0)
-      )())
+    )())
   }
 
   test("single optional node with expand") {
@@ -224,7 +291,7 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
         SemanticDirection.INCOMING,
         RelationshipTypes.empty,
         expandSlots
-        )())
+      )())
   }
 
   test("single optional node with expand into") {
@@ -314,7 +381,7 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
         "r" -> LongSlot(1, nullable = true, CTRelationship),
         "z" -> LongSlot(2, nullable = true, CTNode)), numberOfLongs = 3, numberOfReferences = 0),
       None
-      )())
+    )())
   }
 
   test("single node with optionalExpand ExpandInto") {
@@ -333,7 +400,7 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
         "x" -> LongSlot(0, nullable = false, CTNode),
         "r" -> LongSlot(1, nullable = true, CTRelationship)), numberOfLongs = 2, numberOfReferences = 0),
       None
-      )())
+    )())
   }
 
   test("single node with varlength expand") {
@@ -367,7 +434,7 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
       varExpandSlots,
       -1, -1,
       commands.predicates.True(), commands.predicates.True(), Size(1, 0)
-      )())
+    )())
     pipe.asInstanceOf[VarLengthExpandSlottedPipe].nodePredicate.owningPipe should equal(pipe)
     pipe.asInstanceOf[VarLengthExpandSlottedPipe].relationshipPredicate.owningPipe should equal(pipe)
   }
@@ -403,11 +470,11 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
 
     val varExpandSlots =
       SlotConfiguration(Map(
-      "x" -> LongSlot(0, nullable = false, CTNode),
-      "r" -> LongSlot(1, nullable = false, CTRelationship),
-      "z" -> LongSlot(2, nullable = false, CTNode),
-      "r2" -> RefSlot(0, nullable = false, CTList(CTRelationship))),
-      numberOfLongs = 3, numberOfReferences = 1)
+        "x" -> LongSlot(0, nullable = false, CTNode),
+        "r" -> LongSlot(1, nullable = false, CTRelationship),
+        "z" -> LongSlot(2, nullable = false, CTNode),
+        "r2" -> RefSlot(0, nullable = false, CTList(CTRelationship))),
+        numberOfLongs = 3, numberOfReferences = 1)
 
     pipe should equal(
       VarLengthExpandSlottedPipe(
@@ -580,7 +647,7 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
       ExpandAllSlottedPipe(
         ArgumentSlottedPipe(lhsSlots, Size(1, 0))(),
         rhsSlots("x"), 1, 2, SemanticDirection.INCOMING, RelationshipTypes.empty, rhsSlots
-        )()
+      )()
     )())
   }
 
@@ -641,7 +708,7 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
       UnwindSlottedPipe(
       ArgumentSlottedPipe(`expectedSlots1`, Size.zero),
       commands.expressions.ListLiteral(commands.expressions.Literal(1), commands.expressions.Literal(2), commands.expressions.Literal(3)), 0, `expectedSlots2`
-        ), _) =>
+      ), _) =>
 
     }
   }

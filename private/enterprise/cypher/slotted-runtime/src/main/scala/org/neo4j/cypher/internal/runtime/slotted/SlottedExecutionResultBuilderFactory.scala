@@ -7,9 +7,17 @@ package org.neo4j.cypher.internal.runtime.slotted
 
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.SlotConfigurations
+import org.neo4j.cypher.internal.runtime.ExpressionCursors
+import org.neo4j.cypher.internal.runtime.InputDataStream
+import org.neo4j.cypher.internal.runtime.MemoryTrackingController
+import org.neo4j.cypher.internal.runtime.ParameterMapping
+import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.QueryIndexes
+import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
+import org.neo4j.cypher.internal.runtime.createParameterArray
+import org.neo4j.cypher.internal.runtime.interpreted.BaseExecutionResultBuilderFactory
+import org.neo4j.cypher.internal.runtime.interpreted.ExecutionResultBuilder
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
-import org.neo4j.cypher.internal.runtime.interpreted.{BaseExecutionResultBuilderFactory, ExecutionResultBuilder}
-import org.neo4j.cypher.internal.runtime.{createParameterArray, _}
 import org.neo4j.kernel.impl.query.QuerySubscriber
 import org.neo4j.values.AnyValue
 import org.neo4j.values.virtual.MapValue
@@ -38,17 +46,17 @@ class SlottedExecutionResultBuilderFactory(pipe: Pipe,
                                             input: InputDataStream,
                                             subscriber: QuerySubscriber): SlottedQueryState = {
       new SlottedQueryState(queryContext,
-                            externalResource,
-                            createParameterArray(params, parameterMapping),
-                            cursors,
-                            queryIndexes.initiateLabelAndSchemaIndexes(queryContext),
-                            new Array[AnyValue](nExpressionSlots),
-                            subscriber,
-                            QueryMemoryTracker(memoryTrackingController.memoryTracking),
-                            pipeDecorator,
-                            lenientCreateRelationship = lenientCreateRelationship,
-                            prePopulateResults = prePopulateResults,
-                            input = input)
+        externalResource,
+        createParameterArray(params, parameterMapping),
+        cursors,
+        queryIndexes.initiateLabelAndSchemaIndexes(queryContext),
+        new Array[AnyValue](nExpressionSlots),
+        subscriber,
+        QueryMemoryTracker(memoryTrackingController.memoryTracking),
+        pipeDecorator,
+        lenientCreateRelationship = lenientCreateRelationship,
+        prePopulateResults = prePopulateResults,
+        input = input)
     }
   }
 }

@@ -5,20 +5,30 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted
 
-import org.neo4j.cypher.internal.macros.AssertMacros.checkOnlyWhenAssertionsAreEnabled
-import org.neo4j.cypher.internal.physicalplanning.{LongSlot, RefSlot, SlotConfiguration}
-import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
-import org.neo4j.cypher.internal.runtime.{EntityById, ExecutionContext}
 import org.neo4j.cypher.internal.expressions.ASTCachedProperty
+import org.neo4j.cypher.internal.macros.AssertMacros.checkOnlyWhenAssertionsAreEnabled
+import org.neo4j.cypher.internal.physicalplanning.LongSlot
+import org.neo4j.cypher.internal.physicalplanning.RefSlot
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+import org.neo4j.cypher.internal.runtime.EntityById
+import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
+import org.neo4j.cypher.internal.util.symbols.CTNode
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.ApplyPlanSlotKey
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.CachedPropertySlotKey
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.VariableSlotKey
-import org.neo4j.cypher.internal.util.symbols.{CTNode, CTRelationship}
+import org.neo4j.cypher.internal.util.symbols.CTRelationship
 import org.neo4j.exceptions.InternalException
 import org.neo4j.graphdb.NotFoundException
 import org.neo4j.values.AnyValue
-import org.neo4j.values.storable.{Value, Values}
-import org.neo4j.values.virtual._
+import org.neo4j.values.storable.Value
+import org.neo4j.values.storable.Values
+import org.neo4j.values.virtual.NodeReference
+import org.neo4j.values.virtual.NodeValue
+import org.neo4j.values.virtual.RelationshipReference
+import org.neo4j.values.virtual.RelationshipValue
+import org.neo4j.values.virtual.VirtualNodeValue
+import org.neo4j.values.virtual.VirtualRelationshipValue
 
 import scala.collection.mutable
 
@@ -32,10 +42,10 @@ trait SlottedCompatible {
 }
 
 /**
-  * Execution context which uses a slot configuration to store values in two arrays.
-  *
-  * @param slots the slot configuration to use.
-  */
+ * Execution context which uses a slot configuration to store values in two arrays.
+ *
+ * @param slots the slot configuration to use.
+ */
 //noinspection NameBooleanParameters
 case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionContext {
 
@@ -92,13 +102,13 @@ case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionCo
 
   override def getLongAt(offset: Int): Long =
     longs(offset)
-    // When debugging long slot issues you can uncomment and replace with this to check for uninitialized long slots
-    //  {
-    //    val value = longs(offset)
-    //    if (value == -2L)
-    //      throw new InternalException(s"Long value not initialised at offset $offset in $this")
-    //    value
-    //  }
+  // When debugging long slot issues you can uncomment and replace with this to check for uninitialized long slots
+  //  {
+  //    val value = longs(offset)
+  //    if (value == -2L)
+  //      throw new InternalException(s"Long value not initialised at offset $offset in $this")
+  //    value
+  //  }
 
   override def setRefAt(offset: Int, value: AnyValue): Unit = refs(offset) = value
 
@@ -134,7 +144,7 @@ case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionCo
           case None =>
             // This case should not be possible to reach. It is harmless though if it does, which is why no Exception is thrown unless Assertions are enabled
             require(false,
-                    s"Tried to invalidate a cached property $cnp but no slot was found for the entity name in $slots.")
+              s"Tried to invalidate a cached property $cnp but no slot was found for the entity name in $slots.")
         }
     }
   }
@@ -154,7 +164,7 @@ case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionCo
           case None =>
             // This case should not be possible to reach. It is harmless though if it does, which is why no Exception is thrown unless Assertions are enabled
             require(false,
-                    s"Tried to invalidate a cached property $crp but no slot was found for the entity name in $slots.")
+              s"Tried to invalidate a cached property $crp but no slot was found for the entity name in $slots.")
         }
     }
   }
@@ -240,7 +250,7 @@ case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionCo
     slots.maybeSetter(key1)
       .getOrElse(throw new InternalException(s"Ouch, no suitable slot for key $key1 = $value1\nSlots: $slots"))
       .apply(this, value1)
- }
+  }
 
   def isRefInitialized(offset: Int): Boolean = {
     refs(offset) != null

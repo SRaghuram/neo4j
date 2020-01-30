@@ -6,15 +6,20 @@
 package org.neo4j.cypher.internal.runtime.slotted.pipes
 
 import org.eclipse.collections.api.iterator.LongIterator
+import org.neo4j.cypher.internal.expressions.SemanticDirection
+import org.neo4j.cypher.internal.physicalplanning.Slot
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeGetPrimitiveNodeFromSlotFunctionFor
-import org.neo4j.cypher.internal.physicalplanning.{Slot, SlotConfiguration}
+import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.PrimitiveLongHelper
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContext.RelationshipCursorIterator
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
-import org.neo4j.cypher.internal.runtime.interpreted.pipes._
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeWithSource
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.RelationshipTypes
 import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
-import org.neo4j.cypher.internal.runtime.{ExecutionContext, PrimitiveLongHelper}
-import org.neo4j.cypher.internal.expressions.SemanticDirection
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.graphdb.Direction
 import org.neo4j.internal.kernel.api.helpers.CachingExpandInto
@@ -60,11 +65,11 @@ abstract class OptionalExpandIntoSlottedPipe(source: Pipe,
           val traversalCursor = query.traversalCursor()
           val relationships =
             new RelationshipCursorIterator(expandInto.connectingRelationships(nodeCursor,
-                                                                              groupCursor,
-                                                                              traversalCursor,
-                                                                              fromNode,
-                                                                              lazyTypes.types(query),
-                                                                              toNode))
+              groupCursor,
+              traversalCursor,
+              fromNode,
+              lazyTypes.types(query),
+              toNode))
           val matchIterator = findMatchIterator(inputRow, state, relationships)
 
           if (matchIterator.isEmpty) Iterator(withNulls(inputRow))
@@ -98,7 +103,7 @@ object OptionalExpandIntoSlottedPipe {
             maybePredicate: Option[Expression])
            (id: Id = Id.INVALID_ID): OptionalExpandIntoSlottedPipe = maybePredicate match {
     case Some(predicate) => FilteringOptionalExpandIntoSlottedPipe(source, fromSlot, relOffset, toSlot, dir, lazyTypes,
-                                                                   slots, predicate)(id)
+      slots, predicate)(id)
     case None => NonFilteringOptionalExpandIntoSlottedPipe(source, fromSlot, relOffset, toSlot, dir, lazyTypes, slots)(id)
   }
 }

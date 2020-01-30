@@ -5,11 +5,15 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted
 
-import org.neo4j.cypher.internal.physicalplanning.{SlotConfiguration, SlotConfigurationUtils}
+import org.neo4j.cypher.internal.expressions.CachedProperty
+import org.neo4j.cypher.internal.expressions.NODE_TYPE
+import org.neo4j.cypher.internal.expressions.PropertyKeyName
+import org.neo4j.cypher.internal.expressions.Variable
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils
 import org.neo4j.cypher.internal.runtime.ExecutionContext
-import org.neo4j.cypher.internal.expressions.{CachedProperty, NODE_TYPE, PropertyKeyName, Variable}
 import org.neo4j.cypher.internal.util.InputPosition
-import org.neo4j.cypher.internal.util.symbols._
+import org.neo4j.cypher.internal.util.symbols.CTAny
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 import org.neo4j.exceptions.InternalException
 import org.neo4j.values.storable.BooleanValue
@@ -59,8 +63,8 @@ class SlottedExecutionContextTest extends CypherFunSuite {
     // given
     val slots =
       SlotConfiguration.empty
-      .newCachedProperty(prop("n", "name"))
-      .newCachedProperty(prop("n", "extra cached"))
+        .newCachedProperty(prop("n", "name"))
+        .newCachedProperty(prop("n", "extra cached"))
 
     val extraCachedOffset = offsetFor(prop("n", "extra cached"), slots)
 

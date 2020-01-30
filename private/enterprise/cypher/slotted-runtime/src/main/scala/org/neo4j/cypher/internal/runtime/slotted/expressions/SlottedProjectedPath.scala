@@ -7,14 +7,18 @@ package org.neo4j.cypher.internal.runtime.slotted.expressions
 
 import org.neo4j.cypher.internal.runtime.ExecutionContext
 import org.neo4j.cypher.internal.runtime.interpreted.commands.AstNode
-import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.{Expression, PathValueBuilder}
+import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
+import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.PathValueBuilder
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.operations.CypherFunctions
-import org.neo4j.cypher.operations.CypherFunctions.{endNode, startNode}
+import org.neo4j.cypher.operations.CypherFunctions.endNode
+import org.neo4j.cypher.operations.CypherFunctions.startNode
 import org.neo4j.exceptions.CypherTypeException
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values.NO_VALUE
-import org.neo4j.values.virtual.{ListValue, NodeValue, RelationshipValue}
+import org.neo4j.values.virtual.ListValue
+import org.neo4j.values.virtual.NodeValue
+import org.neo4j.values.virtual.RelationshipValue
 
 object SlottedProjectedPath {
 
@@ -22,8 +26,8 @@ object SlottedProjectedPath {
     def apply(context: ExecutionContext, state: QueryState, builder: PathValueBuilder): PathValueBuilder
 
     /**
-      * The Expressions used in this Projector
-      */
+     * The Expressions used in this Projector
+     */
     def arguments: Seq[Expression]
   }
 

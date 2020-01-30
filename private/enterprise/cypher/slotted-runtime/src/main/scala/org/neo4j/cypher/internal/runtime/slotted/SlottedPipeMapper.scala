@@ -5,35 +5,163 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted
 
+import org.neo4j.cypher.internal
+import org.neo4j.cypher.internal.ast.semantics.SemanticTable
+import org.neo4j.cypher.internal.expressions.Equals
+import org.neo4j.cypher.internal.expressions.SignedDecimalIntegerLiteral
 import org.neo4j.cypher.internal.ir.VarPatternLength
 import org.neo4j.cypher.internal.logical.plans
-import org.neo4j.cypher.internal.logical.plans._
+import org.neo4j.cypher.internal.logical.plans.AbstractSelectOrSemiApply
+import org.neo4j.cypher.internal.logical.plans.AbstractSemiApply
+import org.neo4j.cypher.internal.logical.plans.Aggregation
+import org.neo4j.cypher.internal.logical.plans.AllNodesScan
+import org.neo4j.cypher.internal.logical.plans.AntiConditionalApply
+import org.neo4j.cypher.internal.logical.plans.Apply
+import org.neo4j.cypher.internal.logical.plans.Argument
+import org.neo4j.cypher.internal.logical.plans.AssertSameNode
+import org.neo4j.cypher.internal.logical.plans.CartesianProduct
+import org.neo4j.cypher.internal.logical.plans.ConditionalApply
+import org.neo4j.cypher.internal.logical.plans.Create
+import org.neo4j.cypher.internal.logical.plans.CrossApply
+import org.neo4j.cypher.internal.logical.plans.DeleteExpression
+import org.neo4j.cypher.internal.logical.plans.DeleteNode
+import org.neo4j.cypher.internal.logical.plans.DeletePath
+import org.neo4j.cypher.internal.logical.plans.DeleteRelationship
+import org.neo4j.cypher.internal.logical.plans.DetachDeleteExpression
+import org.neo4j.cypher.internal.logical.plans.DetachDeleteNode
+import org.neo4j.cypher.internal.logical.plans.DetachDeletePath
+import org.neo4j.cypher.internal.logical.plans.Distinct
+import org.neo4j.cypher.internal.logical.plans.DropResult
+import org.neo4j.cypher.internal.logical.plans.Eager
+import org.neo4j.cypher.internal.logical.plans.EmptyResult
+import org.neo4j.cypher.internal.logical.plans.ErrorPlan
+import org.neo4j.cypher.internal.logical.plans.Expand
+import org.neo4j.cypher.internal.logical.plans.ExpandAll
+import org.neo4j.cypher.internal.logical.plans.ExpandInto
+import org.neo4j.cypher.internal.logical.plans.ForeachApply
+import org.neo4j.cypher.internal.logical.plans.IncludeTies
+import org.neo4j.cypher.internal.logical.plans.Limit
+import org.neo4j.cypher.internal.logical.plans.LockNodes
+import org.neo4j.cypher.internal.logical.plans.LogicalPlan
+import org.neo4j.cypher.internal.logical.plans.MergeCreateNode
+import org.neo4j.cypher.internal.logical.plans.MergeCreateRelationship
+import org.neo4j.cypher.internal.logical.plans.NodeByLabelScan
+import org.neo4j.cypher.internal.logical.plans.NodeHashJoin
+import org.neo4j.cypher.internal.logical.plans.NodeIndexScan
+import org.neo4j.cypher.internal.logical.plans.NodeIndexSeek
+import org.neo4j.cypher.internal.logical.plans.NodeUniqueIndexSeek
+import org.neo4j.cypher.internal.logical.plans.Optional
+import org.neo4j.cypher.internal.logical.plans.OptionalExpand
+import org.neo4j.cypher.internal.logical.plans.OrderedAggregation
+import org.neo4j.cypher.internal.logical.plans.OrderedDistinct
+import org.neo4j.cypher.internal.logical.plans.ProduceResult
+import org.neo4j.cypher.internal.logical.plans.Projection
+import org.neo4j.cypher.internal.logical.plans.RemoveLabels
+import org.neo4j.cypher.internal.logical.plans.RollUpApply
+import org.neo4j.cypher.internal.logical.plans.Selection
+import org.neo4j.cypher.internal.logical.plans.SetLabels
+import org.neo4j.cypher.internal.logical.plans.SetNodePropertiesFromMap
+import org.neo4j.cypher.internal.logical.plans.SetNodeProperty
+import org.neo4j.cypher.internal.logical.plans.SetPropertiesFromMap
+import org.neo4j.cypher.internal.logical.plans.SetProperty
+import org.neo4j.cypher.internal.logical.plans.SetRelationshipPropertiesFromMap
+import org.neo4j.cypher.internal.logical.plans.SetRelationshipProperty
+import org.neo4j.cypher.internal.logical.plans.Skip
+import org.neo4j.cypher.internal.logical.plans.Sort
+import org.neo4j.cypher.internal.logical.plans.Top
+import org.neo4j.cypher.internal.logical.plans.Union
+import org.neo4j.cypher.internal.logical.plans.UnwindCollection
+import org.neo4j.cypher.internal.logical.plans.ValueHashJoin
+import org.neo4j.cypher.internal.logical.plans.VarExpand
 import org.neo4j.cypher.internal.macros.AssertMacros.checkOnlyWhenAssertionsAreEnabled
-import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.isRefSlotAndNotAlias
-import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.generateSlotAccessorFunctions
-import org.neo4j.cypher.internal.physicalplanning.VariablePredicates.expressionSlotForPredicate
-import org.neo4j.cypher.internal.physicalplanning._
-import org.neo4j.cypher.internal.physicalplanning.ast.{NodeFromSlot, NullCheckVariable, RelationshipFromSlot}
-import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
-import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.{AggregationExpression, Expression}
-import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.True
-import org.neo4j.cypher.internal.runtime.interpreted.commands.{expressions => commandExpressions}
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.{DropResultPipe, _}
-import org.neo4j.cypher.internal.runtime.slotted
-import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.{createProjectionForIdentifier, createProjectionsForResult}
-import org.neo4j.cypher.internal.runtime.slotted.aggregation._
-import org.neo4j.cypher.internal.runtime.slotted.pipes.UnionSlottedPipe.RowMapping
-import org.neo4j.cypher.internal.runtime.slotted.pipes._
-import org.neo4j.cypher.internal.runtime.slotted.{expressions => slottedExpressions}
-import org.neo4j.cypher.internal.runtime.{ExecutionContext, QueryIndexRegistrator}
-import org.neo4j.cypher.internal.ast.semantics.SemanticTable
-import org.neo4j.cypher.internal.expressions.{Equals, SignedDecimalIntegerLiteral}
+import org.neo4j.cypher.internal.physicalplanning.LongSlot
+import org.neo4j.cypher.internal.physicalplanning.PhysicalPlan
+import org.neo4j.cypher.internal.physicalplanning.RefSlot
+import org.neo4j.cypher.internal.physicalplanning.Slot
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.CachedPropertySlotKey
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.VariableSlotKey
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.isRefSlotAndNotAlias
+import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils
+import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.generateSlotAccessorFunctions
+import org.neo4j.cypher.internal.physicalplanning.SlottedIndexedProperty
+import org.neo4j.cypher.internal.physicalplanning.VariablePredicates.expressionSlotForPredicate
+import org.neo4j.cypher.internal.physicalplanning.ast.NodeFromSlot
+import org.neo4j.cypher.internal.physicalplanning.ast.NullCheckVariable
+import org.neo4j.cypher.internal.physicalplanning.ast.RelationshipFromSlot
+import org.neo4j.cypher.internal.runtime.interpreted.commands
+import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
+import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.AggregationExpression
+import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
+import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.True
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.DropResultPipe
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.EagerAggregationPipe
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.EmptyResultPipe
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.IndexSeekModeFactory
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyLabel
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyType
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.OrderedAggregationPipe
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeMapper
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.ProjectionPipe
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.RelationshipTypes
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.SortPipe
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.Top1Pipe
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.Top1WithTiesPipe
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.TopNPipe
+import org.neo4j.cypher.internal.runtime.slotted
+import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.createProjectionForIdentifier
+import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.createProjectionsForResult
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.translateColumnOrder
+import org.neo4j.cypher.internal.runtime.slotted.aggregation.SlottedGroupingAggTable
+import org.neo4j.cypher.internal.runtime.slotted.aggregation.SlottedNonGroupingAggTable
+import org.neo4j.cypher.internal.runtime.slotted.aggregation.SlottedOrderedGroupingAggTable
+import org.neo4j.cypher.internal.runtime.slotted.aggregation.SlottedOrderedNonGroupingAggTable
+import org.neo4j.cypher.internal.runtime.slotted.aggregation.SlottedPrimitiveGroupingAggTable
+import org.neo4j.cypher.internal.runtime.slotted.pipes.AllNodesScanSlottedPipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.AllOrderedDistinctSlottedPipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.AllOrderedDistinctSlottedPrimitivePipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.ApplySlottedPipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.ArgumentSlottedPipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.CartesianProductSlottedPipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.ConditionalApplySlottedPipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.CreateNodeSlottedCommand
+import org.neo4j.cypher.internal.runtime.slotted.pipes.CreateRelationshipSlottedCommand
+import org.neo4j.cypher.internal.runtime.slotted.pipes.CreateSlottedPipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.CrossApplySlottedPipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.DistinctSlottedPipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.DistinctSlottedPrimitivePipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.DistinctSlottedSinglePrimitivePipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.EagerSlottedPipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.ExpandAllSlottedPipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.ExpandIntoSlottedPipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.ForeachSlottedPipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.MergeCreateNodeSlottedPipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.MergeCreateRelationshipSlottedPipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedSingleNodePipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeIndexScanSlottedPipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeIndexSeekSlottedPipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.NodesByLabelScanSlottedPipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.OptionalExpandAllSlottedPipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.OptionalExpandIntoSlottedPipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.OptionalSlottedPipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.OrderedDistinctSlottedPipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.OrderedDistinctSlottedPrimitivePipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.OrderedDistinctSlottedSinglePrimitivePipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.ProduceResultSlottedPipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.RollUpApplySlottedPipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.UnionSlottedPipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.UnionSlottedPipe.RowMapping
+import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.QueryIndexRegistrator
+import org.neo4j.cypher.internal.runtime.slotted.pipes.UnwindSlottedPipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.ValueHashJoinSlottedPipe
+import org.neo4j.cypher.internal.runtime.slotted.pipes.VarLengthExpandSlottedPipe
 import org.neo4j.cypher.internal.util.attribution.Id
-import org.neo4j.cypher.internal.util.symbols._
-import org.neo4j.cypher.internal.{expressions => frontEndAst}
+import org.neo4j.cypher.internal.util.symbols.CTNode
+import org.neo4j.cypher.internal.util.symbols.CTRelationship
 import org.neo4j.exceptions.InternalException
 
 import scala.collection.mutable
@@ -50,7 +178,7 @@ class SlottedPipeMapper(fallback: PipeMapper,
   override def onLeaf(plan: LogicalPlan): Pipe = {
 
     val id = plan.id
-    val convertExpressions = (e: frontEndAst.Expression) => expressionConverters.toCommandExpression(id, e)
+    val convertExpressions = (e: internal.expressions.Expression) => expressionConverters.toCommandExpression(id, e)
     val slots = physicalPlan.slotConfigurations(id)
     val argumentSize = physicalPlan.argumentSizes(id)
     generateSlotAccessorFunctions(slots)
@@ -61,17 +189,17 @@ class SlottedPipeMapper(fallback: PipeMapper,
 
       case NodeIndexScan(column, label, properties, _, indexOrder) =>
         NodeIndexScanSlottedPipe(column, label, properties.map(SlottedIndexedProperty(column, _, slots)),
-                                 indexRegistrator.registerQueryIndex(label, properties), indexOrder, slots, argumentSize)(id)
+          indexRegistrator.registerQueryIndex(label, properties), indexOrder, slots, argumentSize)(id)
 
       case NodeIndexSeek(column, label, properties, valueExpr, _, indexOrder) =>
         val indexSeekMode = IndexSeekModeFactory(unique = false, readOnly = readOnly).fromQueryExpression(valueExpr)
         NodeIndexSeekSlottedPipe(column, label, properties.map(SlottedIndexedProperty(column, _, slots)).toIndexedSeq,
-                                 indexRegistrator.registerQueryIndex(label, properties), valueExpr.map(convertExpressions), indexSeekMode, indexOrder, slots, argumentSize)(id)
+          indexRegistrator.registerQueryIndex(label, properties), valueExpr.map(convertExpressions), indexSeekMode, indexOrder, slots, argumentSize)(id)
 
       case NodeUniqueIndexSeek(column, label, properties, valueExpr, _, indexOrder) =>
         val indexSeekMode = IndexSeekModeFactory(unique = true, readOnly = readOnly).fromQueryExpression(valueExpr)
         NodeIndexSeekSlottedPipe(column, label, properties.map(SlottedIndexedProperty(column, _, slots)).toIndexedSeq,
-                                 indexRegistrator.registerQueryIndex(label, properties), valueExpr.map(convertExpressions), indexSeekMode, indexOrder, slots, argumentSize)(id = id)
+          indexRegistrator.registerQueryIndex(label, properties), valueExpr.map(convertExpressions), indexSeekMode, indexOrder, slots, argumentSize)(id = id)
 
       case NodeByLabelScan(column, label, _) =>
         indexRegistrator.registerLabelScan()
@@ -90,7 +218,7 @@ class SlottedPipeMapper(fallback: PipeMapper,
   override def onOneChildPlan(plan: LogicalPlan, source: Pipe): Pipe = {
 
     val id = plan.id
-    val convertExpressions = (e: frontEndAst.Expression) => expressionConverters.toCommandExpression(id, e)
+    val convertExpressions = (e: internal.expressions.Expression) => expressionConverters.toCommandExpression(id, e)
     val slots = physicalPlan.slotConfigurations(id)
     generateSlotAccessorFunctions(slots)
 
@@ -116,7 +244,7 @@ class SlottedPipeMapper(fallback: PipeMapper,
         val relOffset = slots.getLongOffsetFor(relName)
         val toOffset = slots.getLongOffsetFor(toName)
         OptionalExpandAllSlottedPipe(source, fromSlot, relOffset, toOffset, dir, RelationshipTypes(types.toArray), slots,
-                                     predicate.map(convertExpressions))(id)
+          predicate.map(convertExpressions))(id)
 
       case OptionalExpand(_, fromName, dir, types, toName, relName, ExpandInto, predicate) =>
         val fromSlot = slots(fromName)
@@ -124,19 +252,19 @@ class SlottedPipeMapper(fallback: PipeMapper,
         val toSlot = slots(toName)
 
         OptionalExpandIntoSlottedPipe(source, fromSlot, relOffset, toSlot, dir, RelationshipTypes(types.toArray), slots,
-                                      predicate.map(convertExpressions))(id)
+          predicate.map(convertExpressions))(id)
 
       case VarExpand(sourcePlan,
-                     fromName,
-                     dir,
-                     projectedDir,
-                     types,
-                     toName,
-                     relName,
-                     VarPatternLength(min, max),
-                     expansionMode,
-                     nodePredicate,
-                     relationshipPredicate) =>
+      fromName,
+      dir,
+      projectedDir,
+      types,
+      toName,
+      relName,
+      VarPatternLength(min, max),
+      expansionMode,
+      nodePredicate,
+      relationshipPredicate) =>
         val shouldExpandAll = expansionMode match {
           case ExpandAll => true
           case ExpandInto => false
@@ -151,12 +279,12 @@ class SlottedPipeMapper(fallback: PipeMapper,
         val tempRelationshipOffset = expressionSlotForPredicate(relationshipPredicate)
         val argumentSize = SlotConfiguration.Size(sourceSlots.numberOfLongs, sourceSlots.numberOfReferences)
         VarLengthExpandSlottedPipe(source, fromSlot, relOffset, toSlot, dir, projectedDir, RelationshipTypes(types.toArray), min,
-                                   max, shouldExpandAll, slots,
-                                   tempNodeOffset = tempNodeOffset,
-                                   tempRelationshipOffset = tempRelationshipOffset,
-                                   nodePredicate = nodePredicate.map(x => expressionConverters.toCommandExpression(id, x.predicate)).getOrElse(True()),
-                                   relationshipPredicate = relationshipPredicate.map(x => expressionConverters.toCommandExpression(id, x.predicate)).getOrElse(True()),
-                                   argumentSize = argumentSize)(id)
+          max, shouldExpandAll, slots,
+          tempNodeOffset = tempNodeOffset,
+          tempRelationshipOffset = tempRelationshipOffset,
+          nodePredicate = nodePredicate.map(x => expressionConverters.toCommandExpression(id, x.predicate)).getOrElse(True()),
+          relationshipPredicate = relationshipPredicate.map(x => expressionConverters.toCommandExpression(id, x.predicate)).getOrElse(True()),
+          argumentSize = argumentSize)(id)
 
       case Optional(inner, symbols) =>
         val nullableKeys = inner.availableSymbols -- symbols
@@ -258,7 +386,7 @@ class SlottedPipeMapper(fallback: PipeMapper,
             SlottedPrimitiveGroupingAggTable.Factory(slots, longSlotGroupingValues, longSlotGroupingKeys, aggregation)
           } else {
             SlottedGroupingAggTable.Factory(slots, expressionConverters.toGroupingExpression(id, groupingExpressions, Seq.empty), aggregation)
-        }
+          }
         EagerAggregationPipe(source, tableFactory)(id)
 
       case OrderedAggregation(_, groupingExpressions, aggregationExpression, orderToLeverage) =>
@@ -292,7 +420,7 @@ class SlottedPipeMapper(fallback: PipeMapper,
 
       case Top(_, sortItems, limit) =>
         TopNPipe(source, convertExpressions(limit),
-                 SlottedExecutionContextOrdering.asComparator(sortItems.map(translateColumnOrder(slots, _))))(id = id)
+          SlottedExecutionContextOrdering.asComparator(sortItems.map(translateColumnOrder(slots, _))))(id = id)
 
       case Limit(_, count, IncludeTies) =>
         (source, count) match {
@@ -348,7 +476,7 @@ class SlottedPipeMapper(fallback: PipeMapper,
 
     val slotConfigs = physicalPlan.slotConfigurations
     val id = plan.id
-    val convertExpressions = (e: frontEndAst.Expression) => expressionConverters.toCommandExpression(id, e)
+    val convertExpressions = (e: internal.expressions.Expression) => expressionConverters.toCommandExpression(id, e)
     val slots = slotConfigs(id)
     generateSlotAccessorFunctions(slots)
 
@@ -481,25 +609,25 @@ class SlottedPipeMapper(fallback: PipeMapper,
   }
 
 
-  private def chooseDistinctPipe(groupingExpressions: Map[String, frontEndAst.Expression],
-                                 orderToLeverage: Seq[frontEndAst.Expression],
+  private def chooseDistinctPipe(groupingExpressions: Map[String, internal.expressions.Expression],
+                                 orderToLeverage: Seq[internal.expressions.Expression],
                                  slots: SlotConfiguration,
                                  source: Pipe,
                                  id: Id): Pipe = {
 
-    val convertExpressions = (e: frontEndAst.Expression) => expressionConverters.toCommandExpression(id, e)
+    val convertExpressions = (e: internal.expressions.Expression) => expressionConverters.toCommandExpression(id, e)
 
     /**
-      * We use these objects to figure out:
-      * a) can we use the primitive distinct pipe?
-      * b) if we can, what offsets are interesting
-      */
+     * We use these objects to figure out:
+     * a) can we use the primitive distinct pipe?
+     * b) if we can, what offsets are interesting
+     */
     trait DistinctPhysicalOp {
-      def addExpression(e: frontEndAst.Expression, ordered: Boolean): DistinctPhysicalOp
+      def addExpression(e: internal.expressions.Expression, ordered: Boolean): DistinctPhysicalOp
     }
 
     case class AllPrimitive(offsets: Seq[Int], orderedOffsets: Seq[Int]) extends DistinctPhysicalOp {
-      override def addExpression(e: frontEndAst.Expression, ordered: Boolean): DistinctPhysicalOp = e match {
+      override def addExpression(e: internal.expressions.Expression, ordered: Boolean): DistinctPhysicalOp = e match {
         case v: NodeFromSlot =>
           val oo = if (ordered) orderedOffsets :+ v.offset else orderedOffsets
           AllPrimitive(offsets :+ v.offset, oo)
@@ -512,10 +640,10 @@ class SlottedPipeMapper(fallback: PipeMapper,
     }
 
     object References extends DistinctPhysicalOp {
-      override def addExpression(e: frontEndAst.Expression, ordered: Boolean): DistinctPhysicalOp = References
+      override def addExpression(e: internal.expressions.Expression, ordered: Boolean): DistinctPhysicalOp = References
     }
 
-    val runtimeProjections: Map[Slot, commandExpressions.Expression] = groupingExpressions.map {
+    val runtimeProjections: Map[Slot, commands.expressions.Expression] = groupingExpressions.map {
       case (key, expression) =>
         slots(key) -> convertExpressions(expression)
     }
@@ -666,7 +794,7 @@ class SlottedPipeMapper(fallback: PipeMapper,
 object SlottedPipeMapper {
 
   def createProjectionsForResult(columns: Seq[String], slots: SlotConfiguration): Seq[(String, Expression)] = {
-    val runtimeColumns: Seq[(String, commandExpressions.Expression)] =
+    val runtimeColumns: Seq[(String, commands.expressions.Expression)] =
       columns.map(createProjectionForIdentifier(slots))
     runtimeColumns
   }
@@ -678,18 +806,18 @@ object SlottedPipeMapper {
     identifier -> SlottedPipeMapper.projectSlotExpression(slot)
   }
 
-  private def projectSlotExpression(slot: Slot): commandExpressions.Expression = slot match {
+  private def projectSlotExpression(slot: Slot): commands.expressions.Expression = slot match {
     case LongSlot(offset, false, CTNode) =>
-      slottedExpressions.NodeFromSlot(offset)
+      slotted.expressions.NodeFromSlot(offset)
     case LongSlot(offset, true, CTNode) =>
-      slottedExpressions.NullCheck(offset, slottedExpressions.NodeFromSlot(offset))
+      slotted.expressions.NullCheck(offset, slotted.expressions.NodeFromSlot(offset))
     case LongSlot(offset, false, CTRelationship) =>
-      slottedExpressions.RelationshipFromSlot(offset)
+      slotted.expressions.RelationshipFromSlot(offset)
     case LongSlot(offset, true, CTRelationship) =>
-      slottedExpressions.NullCheck(offset, slottedExpressions.RelationshipFromSlot(offset))
+      slotted.expressions.NullCheck(offset, slotted.expressions.RelationshipFromSlot(offset))
 
     case RefSlot(offset, _, _) =>
-      slottedExpressions.ReferenceFromSlot(offset)
+      slotted.expressions.ReferenceFromSlot(offset)
 
     case _ =>
       throw new InternalException(s"Do not know how to project $slot")
@@ -702,38 +830,38 @@ object SlottedPipeMapper {
   def computeUnionMapping(in: SlotConfiguration, out: SlotConfiguration): RowMapping = {
     val mapSlots: Iterable[(ExecutionContext, ExecutionContext, QueryState) => Unit] = in.mapSlot(
       onVariable = {
-      case (k, inSlot: LongSlot) =>
-        out.get(k) match {
-          // The output does not have a slot for this, so we don't need to copy
-          case None => (_, _, _) => ()
-          case Some(l: LongSlot) =>
-            (in, out, _) => out.setLongAt(l.offset, in.getLongAt(inSlot.offset))
-          case Some(r: RefSlot) =>
-            //here we must map the long slot to a reference slot
-            val projectionExpression = projectSlotExpression(inSlot) // Pre-compute projection expression
-            (in, out, state) => out.setRefAt(r.offset, projectionExpression(in, state))
-        }
-      case (k, inSlot: RefSlot) =>
-        // This means out must be a ref slot as well, if it exists, otherwise slot allocation was wrong
-        out.get(k) match {
-          // The output does not have a slot for this, so we don't need to copy
-          case None => (_, _, _) => ()
-          case Some(l: LongSlot) =>
-            throw new IllegalStateException(s"Expected Union output slot to be a refslot but was: $l")
-          case Some(r: RefSlot) =>
-            (in, out, _) => out.setRefAt(r.offset, in.getRefAt(inSlot.offset))
-        }
-    }, onCachedProperty = {
-      case (cachedProp, inRefSlot) =>
-        out.getCachedPropertySlot(cachedProp) match {
-          case Some(outRefSlot) =>
-            // Copy the cached property if the output has it as well
-          (in, out, _) => out.setCachedPropertyAt(outRefSlot.offset, in.getCachedPropertyAt(inRefSlot.offset))
-          case None =>
-            // Otherwise do nothing
-            (_, _, _) => ()
-        }
-    })
+        case (k, inSlot: LongSlot) =>
+          out.get(k) match {
+            // The output does not have a slot for this, so we don't need to copy
+            case None => (_, _, _) => ()
+            case Some(l: LongSlot) =>
+              (in, out, _) => out.setLongAt(l.offset, in.getLongAt(inSlot.offset))
+            case Some(r: RefSlot) =>
+              //here we must map the long slot to a reference slot
+              val projectionExpression = projectSlotExpression(inSlot) // Pre-compute projection expression
+              (in, out, state) => out.setRefAt(r.offset, projectionExpression(in, state))
+          }
+        case (k, inSlot: RefSlot) =>
+          // This means out must be a ref slot as well, if it exists, otherwise slot allocation was wrong
+          out.get(k) match {
+            // The output does not have a slot for this, so we don't need to copy
+            case None => (_, _, _) => ()
+            case Some(l: LongSlot) =>
+              throw new IllegalStateException(s"Expected Union output slot to be a refslot but was: $l")
+            case Some(r: RefSlot) =>
+              (in, out, _) => out.setRefAt(r.offset, in.getRefAt(inSlot.offset))
+          }
+      }, onCachedProperty = {
+        case (cachedProp, inRefSlot) =>
+          out.getCachedPropertySlot(cachedProp) match {
+            case Some(outRefSlot) =>
+              // Copy the cached property if the output has it as well
+              (in, out, _) => out.setCachedPropertyAt(outRefSlot.offset, in.getCachedPropertyAt(inRefSlot.offset))
+            case None =>
+              // Otherwise do nothing
+              (_, _, _) => ()
+          }
+      })
     //Apply all transformations
     (incoming: ExecutionContext, outgoing: ExecutionContext, state: QueryState) => {
       mapSlots.foreach(f => f(incoming, outgoing, state))

@@ -10,13 +10,18 @@ import java.util
 import org.eclipse.collections.api.multimap.list.MutableListMultimap
 import org.eclipse.collections.impl.factory.Multimaps
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, PipeWithSource, QueryState}
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeWithSource
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker
-import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.{copyDataFromRhs, fillKeyArray}
-import org.neo4j.cypher.internal.runtime.{ExecutionContext, PrefetchingIterator}
+import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.copyDataFromRhs
+import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.fillKeyArray
+import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.PrefetchingIterator
 import org.neo4j.cypher.internal.util.attribution.Id
-import org.neo4j.values.storable.{LongArray, Values}
+import org.neo4j.values.storable.LongArray
+import org.neo4j.values.storable.Values
 
 case class NodeHashJoinSlottedPipe(lhsOffsets: Array[Int],
                                    rhsOffsets: Array[Int],
@@ -102,8 +107,8 @@ case class NodeHashJoinSlottedPipe(lhsOffsets: Array[Int],
 object NodeHashJoinSlottedPipe {
 
   /**
-    * Copies longs, refs, and cached properties from the given rhs into the given new row.
-    */
+   * Copies longs, refs, and cached properties from the given rhs into the given new row.
+   */
   def copyDataFromRhs(longsToCopy: Array[(Int, Int)],
                       refsToCopy: Array[(Int, Int)],
                       cachedPropertiesToCopy: Array[(Int, Int)],
@@ -130,12 +135,12 @@ object NodeHashJoinSlottedPipe {
   }
 
   /**
-    * Modifies the given key array by writing the ids of the nodes
-    * at the offsets of the given execution context into the array.
-    *
-    * If at least one node is null. It will write -1 into the first
-    * position of the array.
-    */
+   * Modifies the given key array by writing the ids of the nodes
+   * at the offsets of the given execution context into the array.
+   *
+   * If at least one node is null. It will write -1 into the first
+   * position of the array.
+   */
   def fillKeyArray(current: ExecutionContext,
                    key: Array[Long],
                    offsets: Array[Int]): Unit = {

@@ -5,43 +5,56 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted.expressions
 
+import org.neo4j.cypher.internal.expressions
+import org.neo4j.cypher.internal.expressions.Property
+import org.neo4j.cypher.internal.expressions.PropertyKeyName
+import org.neo4j.cypher.internal.expressions.functions.Exists
+import org.neo4j.cypher.internal.expressions.functions.Function
+import org.neo4j.cypher.internal.expressions.functions.Keys
+import org.neo4j.cypher.internal.expressions.functions.Labels
 import org.neo4j.cypher.internal.planner.spi.TokenContext
-import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{ExpressionConverter, ExpressionConverters}
-import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.{Expression, NullInNullOutExpression}
+import org.neo4j.cypher.internal.runtime.CastSupport
+import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.IsNoValue
+import org.neo4j.cypher.internal.runtime.interpreted.CommandProjection
+import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
+import org.neo4j.cypher.internal.runtime.interpreted.commands
+import org.neo4j.cypher.internal.runtime.interpreted.commands.AstNode
+import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverter
+import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
+import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
+import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.NullInNullOutExpression
+import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates
 import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.Predicate
 import org.neo4j.cypher.internal.runtime.interpreted.commands.values.KeyToken
 import org.neo4j.cypher.internal.runtime.interpreted.commands.values.TokenType.PropertyKey
-import org.neo4j.cypher.internal.runtime.interpreted.commands.{AstNode, predicates, expressions => commandexpressions, values => commandvalues}
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
-import org.neo4j.cypher.internal.runtime.interpreted.{CommandProjection, GroupingExpression, commands}
-import org.neo4j.cypher.internal.runtime.{CastSupport, ExecutionContext, IsNoValue}
-import org.neo4j.cypher.internal.expressions.functions.{Exists, Function, Keys, Labels}
-import org.neo4j.cypher.internal.expressions.{Property, _}
 import org.neo4j.cypher.internal.util.attribution.Id
-import org.neo4j.cypher.internal.{expressions => ast}
 import org.neo4j.cypher.operations.CypherFunctions
 import org.neo4j.values.AnyValue
-import org.neo4j.values.virtual.{ListValue, NodeValue, RelationshipValue}
+import org.neo4j.values.virtual.ListValue
+import org.neo4j.values.virtual.NodeValue
+import org.neo4j.values.virtual.RelationshipValue
 
 case class MaterializedEntitiesExpressionConverter(tokenContext: TokenContext) extends ExpressionConverter {
 
-  override def toCommandExpression(id: Id, expression: ast.Expression, self: ExpressionConverters): Option[commandexpressions.Expression] =
+  override def toCommandExpression(id: Id, expression: expressions.Expression, self: ExpressionConverters): Option[commands.expressions.Expression] =
     expression match {
-      case e: ast.Property           => toCommandProperty(id, e, self)
-      case e: ast.HasLabels          => hasLabels(id, e, self)
-      case e: ast.FunctionInvocation => toCommandExpression(id, e.function, e, self)
+      case e: expressions.Property           => toCommandProperty(id, e, self)
+      case e: expressions.HasLabels          => hasLabels(id, e, self)
+      case e: expressions.FunctionInvocation => toCommandExpression(id, e.function, e, self)
       case _                         => None
     }
 
-  override def toGroupingExpression(id: Id, groupings: Map[String, ast.Expression], orderToLeverage: Seq[ast.Expression],
+  override def toGroupingExpression(id: Id, groupings: Map[String, expressions.Expression], orderToLeverage: Seq[expressions.Expression],
                                     self: ExpressionConverters): Option[GroupingExpression] = None
 
-  override def toCommandProjection(id: Id, projections: Map[String, ast.Expression], self: ExpressionConverters): Option[CommandProjection] = None
+  override def toCommandProjection(id: Id, projections: Map[String, expressions.Expression], self: ExpressionConverters): Option[CommandProjection] = None
 
-  private def toCommandExpression(id: Id, expression: Function, invocation: ast.FunctionInvocation,
-                                  self: ExpressionConverters): Option[commandexpressions.Expression] =
+  private def toCommandExpression(id: Id, expression: Function, invocation: expressions.FunctionInvocation,
+                                  self: ExpressionConverters): Option[commands.expressions.Expression] =
     (expression, invocation.arguments.head) match {
-      case (Exists, property: ast.Property) =>
+      case (Exists, property: expressions.Property) =>
         Some(MaterializedEntityPropertyExists(self.toCommandExpression(id, property.map), getPropertyKey(property.propertyKey)))
 
       case (Keys, arg)   => Some(MaterializedEntityKeysFunction(self.toCommandExpression(id, arg)))
@@ -49,7 +62,7 @@ case class MaterializedEntitiesExpressionConverter(tokenContext: TokenContext) e
       case _             => None
     }
 
-  private def toCommandProperty(id: Id, e: ast.LogicalProperty, self: ExpressionConverters): Option[commandexpressions.Expression] =
+  private def toCommandProperty(id: Id, e: expressions.LogicalProperty, self: ExpressionConverters): Option[commands.expressions.Expression] =
     e match {
       case Property(map, propertyKey) => Some(MaterializedEntityProperty(self.toCommandExpression(id, map), getPropertyKey(propertyKey)))
       case _                          => None
@@ -62,20 +75,20 @@ case class MaterializedEntitiesExpressionConverter(tokenContext: TokenContext) e
       PropertyKey(propertyKey.name)
   }
 
-  private def hasLabels(id: Id, e: ast.HasLabels, self: ExpressionConverters): Option[Predicate] =
+  private def hasLabels(id: Id, e: expressions.HasLabels, self: ExpressionConverters): Option[Predicate] =
     Some(e.labels
       .map { l =>
         MaterializedEntityHasLabel(self.toCommandExpression(id, e.expression),
-          commandvalues.KeyToken.Unresolved(l.name, commandvalues.TokenType.Label)): Predicate
+          commands.values.KeyToken.Unresolved(l.name, commands.values.TokenType.Label)): Predicate
       }
       .reduceLeft(predicates.And.apply)
     )
 }
 
-case class MaterializedEntityProperty(mapExpr: commandexpressions.Expression, propertyKey: KeyToken) extends commandexpressions.Expression
-  with Product with Serializable {
+case class MaterializedEntityProperty(mapExpr: commands.expressions.Expression, propertyKey: KeyToken) extends commands.expressions.Expression
+                                                                                                     with Product with Serializable {
 
-  private val property = commandexpressions.Property(mapExpr, propertyKey)
+  private val property = commands.expressions.Property(mapExpr, propertyKey)
 
   def apply(ctx: ExecutionContext, state: QueryState): AnyValue = mapExpr(ctx, state) match {
     case n: NodeValue         => n.properties().get(propertyKey.name)
@@ -83,17 +96,17 @@ case class MaterializedEntityProperty(mapExpr: commandexpressions.Expression, pr
     case _                    => property.apply(ctx, state)
   }
 
-  override def rewrite(f: commandexpressions.Expression => commandexpressions.Expression): commandexpressions.Expression
+  override def rewrite(f: commands.expressions.Expression => commands.expressions.Expression): commands.expressions.Expression
   = f(MaterializedEntityProperty(mapExpr.rewrite(f), propertyKey.rewrite(f)))
 
   override def children = Seq(mapExpr, propertyKey)
 
-  override def arguments: Seq[commandexpressions.Expression] = Seq(mapExpr)
+  override def arguments: Seq[commands.expressions.Expression] = Seq(mapExpr)
 
   override def toString = s"$mapExpr.${propertyKey.name}"
 }
 
-case class MaterializedEntityPropertyExists(variable: commandexpressions.Expression, propertyKey: KeyToken) extends Predicate {
+case class MaterializedEntityPropertyExists(variable: commands.expressions.Expression, propertyKey: KeyToken) extends Predicate {
 
   private val propertyExists = commands.predicates.PropertyExists(variable, propertyKey)
 
@@ -107,15 +120,15 @@ case class MaterializedEntityPropertyExists(variable: commandexpressions.Express
 
   override def containsIsNull = false
 
-  override def rewrite(f: commandexpressions.Expression => commandexpressions.Expression): commandexpressions.Expression =
+  override def rewrite(f: commands.expressions.Expression => commands.expressions.Expression): commands.expressions.Expression =
     f(MaterializedEntityPropertyExists(variable.rewrite(f), propertyKey.rewrite(f)))
 
-  override def arguments: Seq[commandexpressions.Expression] = Seq(variable)
+  override def arguments: Seq[commands.expressions.Expression] = Seq(variable)
 
   override def children: Seq[AstNode[_]] = Seq(variable, propertyKey)
 }
 
-case class MaterializedEntityHasLabel(entity: commandexpressions.Expression, label: KeyToken) extends Predicate {
+case class MaterializedEntityHasLabel(entity: commands.expressions.Expression, label: KeyToken) extends Predicate {
 
   override def isMatch(m: ExecutionContext, state: QueryState): Option[Boolean] = entity(m, state) match {
 
@@ -139,12 +152,12 @@ case class MaterializedEntityHasLabel(entity: commandexpressions.Expression, lab
 
   override def toString = s"$entity:${label.name}"
 
-  override def rewrite(f: commandexpressions.Expression => commandexpressions.Expression): commandexpressions.Expression =
+  override def rewrite(f: commands.expressions.Expression => commands.expressions.Expression): commands.expressions.Expression =
     f(MaterializedEntityHasLabel(entity.rewrite(f), label.typedRewrite[KeyToken](f)))
 
-  override def children: Seq[commandexpressions.Expression] = Seq(label, entity)
+  override def children: Seq[commands.expressions.Expression] = Seq(label, entity)
 
-  override def arguments: Seq[commandexpressions.Expression] = Seq(entity)
+  override def arguments: Seq[commands.expressions.Expression] = Seq(entity)
 
   override def containsIsNull = false
 }

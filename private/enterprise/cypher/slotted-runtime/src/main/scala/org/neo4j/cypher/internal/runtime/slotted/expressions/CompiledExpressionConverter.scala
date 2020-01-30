@@ -8,25 +8,34 @@ package org.neo4j.cypher.internal.runtime.slotted.expressions
 import org.neo4j.codegen.api.CodeGeneration.CodeGenerationMode
 import org.neo4j.cypher.internal.Assertion.assertionsEnabled
 import org.neo4j.cypher.internal.NonFatalCypherError
+import org.neo4j.cypher.internal.expressions.FunctionInvocation
+import org.neo4j.cypher.internal.expressions.functions.AggregatingFunction
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlan
 import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.ExecutionContext
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.defaultGenerator
-import org.neo4j.cypher.internal.runtime.compiled.expressions.{CompiledExpression, CompiledProjection, _}
+import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledExpression
+import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledProjection
 import org.neo4j.cypher.internal.runtime.interpreted.commands.AstNode
-import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.{CommunityExpressionConverter, ExpressionConverter, ExpressionConverters}
-import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.{Expression, ExtendedExpression, RandFunction}
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.{Pipe, QueryState}
-import org.neo4j.cypher.internal.runtime.interpreted.{CommandProjection, GroupingExpression}
+import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.CommunityExpressionConverter
+import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverter
+import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
+import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
+import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.ExtendedExpression
+import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.RandFunction
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
+import org.neo4j.cypher.internal.runtime.interpreted.CommandProjection
+import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
 import org.neo4j.cypher.internal.runtime.slotted.SlottedQueryState
 import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionConverters.orderGroupingKeyExpressions
-import org.neo4j.cypher.internal.expressions.FunctionInvocation
-import org.neo4j.cypher.internal.expressions.functions.AggregatingFunction
 import org.neo4j.cypher.internal.util.attribution.Id
-import org.neo4j.cypher.internal.{expressions => ast}
+import org.neo4j.cypher.internal.expressions
 import org.neo4j.exceptions.InternalException
 import org.neo4j.logging.Log
 import org.neo4j.values.AnyValue
+import CompiledExpressionConverter.COMPILE_LIMIT
+import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledGroupingExpression
 
 class CompiledExpressionConverter(log: Log,
                                   physicalPlan: PhysicalPlan,
@@ -35,11 +44,10 @@ class CompiledExpressionConverter(log: Log,
                                   codeGenerationMode: CodeGenerationMode,
                                   neverFail: Boolean = false) extends ExpressionConverter {
 
-  import CompiledExpressionConverter.COMPILE_LIMIT
   //uses an inner converter to simplify compliance with Expression trait
   private val inner = new ExpressionConverters(SlottedExpressionConverters(physicalPlan), CommunityExpressionConverter(tokenContext))
 
-  override def toCommandExpression(id: Id, expression: ast.Expression,
+  override def toCommandExpression(id: Id, expression: expressions.Expression,
                                    self: ExpressionConverters): Option[Expression] = expression match {
 
     //we don't deal with aggregations
@@ -64,13 +72,12 @@ class CompiledExpressionConverter(log: Log,
   }
 
 
-  import org.neo4j.cypher.internal.util.Foldable._
 
-  private def sizeOf(expression: ast.Expression)= expression.treeCount {
-    case _: ast.Expression => true
+  private def sizeOf(expression: expressions.Expression)= expression.treeCount {
+    case _: expressions.Expression => true
   }
 
-  override def toCommandProjection(id: Id, projections: Map[String, ast.Expression],
+  override def toCommandProjection(id: Id, projections: Map[String, expressions.Expression],
                                    self: ExpressionConverters): Option[CommandProjection] = {
     try {
       val totalSize = projections.values.foldLeft(0)((acc, current) => acc + sizeOf(current))
@@ -93,8 +100,8 @@ class CompiledExpressionConverter(log: Log,
   }
 
   override def toGroupingExpression(id: Id,
-                                    projections: Map[String, ast.Expression],
-                                    orderToLeverage: Seq[ast.Expression],
+                                    projections: Map[String, expressions.Expression],
+                                    orderToLeverage: Seq[expressions.Expression],
                                     self: ExpressionConverters): Option[GroupingExpression] = {
     try {
       if(orderToLeverage.nonEmpty) {

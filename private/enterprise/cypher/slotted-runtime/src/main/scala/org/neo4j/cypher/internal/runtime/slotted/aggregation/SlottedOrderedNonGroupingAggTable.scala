@@ -10,12 +10,16 @@ import org.neo4j.cypher.internal.runtime.ExecutionContext
 import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.AggregationExpression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.AggregationPipe.AggregationTable
-import org.neo4j.cypher.internal.runtime.interpreted.pipes._
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.ExecutionContextFactory
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.OrderedAggregationTableFactory
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.OrderedChunkReceiver
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.OrderedNonGroupingAggTable
 
 /**
-  * Slotted variant of [[OrderedNonGroupingAggTable]]
-  */
+ * Slotted variant of [[OrderedNonGroupingAggTable]]
+ */
 class SlottedOrderedNonGroupingAggTable(slots: SlotConfiguration,
                                         orderedGroupingColumns: GroupingExpression,
                                         aggregations: Map[Int, AggregationExpression],

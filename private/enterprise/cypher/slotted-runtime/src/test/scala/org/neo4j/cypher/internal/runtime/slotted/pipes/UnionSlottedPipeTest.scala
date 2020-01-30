@@ -9,20 +9,31 @@ import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.when
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
-import org.neo4j.cypher.internal.physicalplanning.{LongSlot, SlotConfiguration}
+import org.neo4j.cypher.internal.ast.AstConstructionTestSupport
+import org.neo4j.cypher.internal.physicalplanning.LongSlot
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+import org.neo4j.cypher.internal.runtime.NodeOperations
+import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.RelationshipOperations
 import org.neo4j.cypher.internal.runtime.interpreted.QueryStateHelper
 import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.computeUnionMapping
-import org.neo4j.cypher.internal.runtime.{NodeOperations, QueryContext, RelationshipOperations}
-import org.neo4j.cypher.internal.ast.AstConstructionTestSupport
-import org.neo4j.cypher.internal.util.symbols._
+import org.neo4j.cypher.internal.util.symbols.CTAny
+import org.neo4j.cypher.internal.util.symbols.CTNode
+import org.neo4j.cypher.internal.util.symbols.CTRelationship
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
-import org.neo4j.graphdb.{Node, Relationship}
-import org.neo4j.kernel.impl.util.ValueUtils.{fromNodeEntity, fromRelationshipEntity}
+import org.neo4j.graphdb.Node
+import org.neo4j.graphdb.Relationship
+import org.neo4j.kernel.impl.util.ValueUtils.fromNodeEntity
+import org.neo4j.kernel.impl.util.ValueUtils.fromRelationshipEntity
 import org.neo4j.values.storable.Values
-import org.neo4j.values.storable.Values.{longValue, stringArray, stringValue}
+import org.neo4j.values.storable.Values.longValue
+import org.neo4j.values.storable.Values.stringArray
+import org.neo4j.values.storable.Values.stringValue
+import org.neo4j.values.virtual.NodeValue
+import org.neo4j.values.virtual.RelationshipValue
+import org.neo4j.values.virtual.VirtualValues
 import org.neo4j.values.virtual.VirtualValues.EMPTY_MAP
-import org.neo4j.values.virtual.{NodeValue, RelationshipValue, VirtualValues}
 
 class UnionSlottedPipeTest extends CypherFunSuite with AstConstructionTestSupport {
 
@@ -51,13 +62,13 @@ class UnionSlottedPipeTest extends CypherFunSuite with AstConstructionTestSuppor
       case e: SlottedExecutionContext =>
         e.slots.mapSlot(
           onVariable = {
-          case (k, s: LongSlot) =>
-            val value = if (s.typ == CTNode) nodeValue(e.getLongAt(s.offset))
-            else if (s.typ == CTRelationship) relValue(e.getLongAt(s.offset))
-            else throw new AssertionError("This is clearly not right")
-            k -> value
-          case (k, s) => k -> e.getRefAt(s.offset)
-        }, onCachedProperty = {
+            case (k, s: LongSlot) =>
+              val value = if (s.typ == CTNode) nodeValue(e.getLongAt(s.offset))
+              else if (s.typ == CTRelationship) relValue(e.getLongAt(s.offset))
+              else throw new AssertionError("This is clearly not right")
+              k -> value
+            case (k, s) => k -> e.getRefAt(s.offset)
+          }, onCachedProperty = {
             case (cachedProp, refSlot) => cachedProp.asCanonicalStringVal -> e.getCachedPropertyAt(refSlot.offset)
           }).toMap
     }

@@ -10,17 +10,23 @@ import java.util
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.ExecutionContext
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.AggregationExpression
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.AggregationPipe.{AggregationTable, AggregationTableFactory}
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.{AggregationFunction, GroupingAggTable}
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.{AggregationPipe, ExecutionContextFactory, Pipe, QueryState}
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.AggregationPipe
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.AggregationPipe.AggregationTable
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.AggregationPipe.AggregationTableFactory
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.ExecutionContextFactory
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.AggregationFunction
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.GroupingAggTable
 import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
-import org.neo4j.values.storable.{LongArray, Values}
+import org.neo4j.values.storable.LongArray
+import org.neo4j.values.storable.Values
 
-import scala.collection.JavaConverters._
+import scala.collection.JavaConverters.asScalaIteratorConverter
 
 /**
-  * Slotted variant of [[GroupingAggTable]] when we have only primitive (nodes or relationships) grouping columns.
-  */
+ * Slotted variant of [[GroupingAggTable]] when we have only primitive (nodes or relationships) grouping columns.
+ */
 class SlottedPrimitiveGroupingAggTable(slots: SlotConfiguration,
                                        readGrouping: Array[Int], // Offsets into the long array of the current execution context
                                        writeGrouping: Array[Int], // Offsets into the long array of the current execution context

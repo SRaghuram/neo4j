@@ -7,21 +7,28 @@ package org.neo4j.cypher.internal.runtime.slotted.pipes
 
 import java.util.function.ToLongFunction
 
+import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.LenientCreateRelationship
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
-import org.neo4j.cypher.internal.runtime.interpreted.pipes._
-import org.neo4j.cypher.internal.runtime.{ExecutionContext, LenientCreateRelationship}
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.BaseCreatePipe
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyLabel
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyType
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.util.attribution.Id
-import org.neo4j.exceptions.{InternalException, InvalidSemanticsException}
-import org.neo4j.kernel.api.StatementConstants.{NO_SUCH_NODE, NO_SUCH_RELATIONSHIP}
+import org.neo4j.exceptions.InternalException
+import org.neo4j.exceptions.InvalidSemanticsException
+import org.neo4j.kernel.api.StatementConstants.NO_SUCH_NODE
+import org.neo4j.kernel.api.StatementConstants.NO_SUCH_RELATIONSHIP
 
 /**
-  * Extends BaseCreatePipe with slotted methods to create nodes and relationships.
-  */
+ * Extends BaseCreatePipe with slotted methods to create nodes and relationships.
+ */
 abstract class EntityCreateSlottedPipe(source: Pipe) extends BaseCreatePipe(source) {
 
   /**
-    * Create node and return id.
-    */
+   * Create node and return id.
+   */
   protected def createNode(context: ExecutionContext,
                            state: QueryState,
                            command: CreateNodeSlottedCommand): Long = {
@@ -32,8 +39,8 @@ abstract class EntityCreateSlottedPipe(source: Pipe) extends BaseCreatePipe(sour
   }
 
   /**
-    * Create relationship and return id.
-    */
+   * Create relationship and return id.
+   */
   protected def createRelationship(context: ExecutionContext,
                                    state: QueryState,
                                    command: CreateRelationshipSlottedCommand): Long = {
@@ -54,15 +61,15 @@ abstract class EntityCreateSlottedPipe(source: Pipe) extends BaseCreatePipe(sour
       relationship.id()
     }
 
-//    if (startNodeId == -1) {
-//      throw new InternalException(s"Expected to find a node, but found instead: null")
-//    }
-//    if (endNodeId == -1) {
-//      throw new InternalException(s"Expected to find a node, but found instead: null")
-//    }
-//    val relationship = state.query.createRelationship(startNodeId, endNodeId, typeId)
-//    command.properties.foreach(setProperties(context, state, relationship.id(), _, state.query.relationshipOps))
-//    relationship.id
+    //    if (startNodeId == -1) {
+    //      throw new InternalException(s"Expected to find a node, but found instead: null")
+    //    }
+    //    if (endNodeId == -1) {
+    //      throw new InternalException(s"Expected to find a node, but found instead: null")
+    //    }
+    //    val relationship = state.query.createRelationship(startNodeId, endNodeId, typeId)
+    //    command.properties.foreach(setProperties(context, state, relationship.id(), _, state.query.relationshipOps))
+    //    relationship.id
   }
 }
 
@@ -80,8 +87,8 @@ case class CreateRelationshipSlottedCommand(relIdOffset: Int,
                                             endName: String)
 
 /**
-  * Create nodes and relationships from slotted commands.
-  */
+ * Create nodes and relationships from slotted commands.
+ */
 case class CreateSlottedPipe(source: Pipe,
                              nodes: IndexedSeq[CreateNodeSlottedCommand],
                              relationships: IndexedSeq[CreateRelationshipSlottedCommand])
@@ -119,8 +126,8 @@ case class CreateSlottedPipe(source: Pipe,
 }
 
 /**
-  * Special create node for use in merge. See `MergeCreateNodePipe`.
-  */
+ * Special create node for use in merge. See `MergeCreateNodePipe`.
+ */
 case class MergeCreateNodeSlottedPipe(source: Pipe,
                                       command: CreateNodeSlottedCommand)
                                      (val id: Id = Id.INVALID_ID)
@@ -141,8 +148,8 @@ case class MergeCreateNodeSlottedPipe(source: Pipe,
 }
 
 /**
-  * Special create relationship for use in merge. See `MergeCreateRelationshipPipe`.
-  */
+ * Special create relationship for use in merge. See `MergeCreateRelationshipPipe`.
+ */
 case class MergeCreateRelationshipSlottedPipe(source: Pipe,
                                               command: CreateRelationshipSlottedCommand)
                                              (val id: Id = Id.INVALID_ID)

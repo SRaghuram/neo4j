@@ -8,14 +8,18 @@ package org.neo4j.cypher.internal.runtime.slotted.aggregation
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.ExecutionContext
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.AggregationExpression
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.AggregationPipe.{AggregationTable, AggregationTableFactory}
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.{AggregationFunction, NonGroupingAggTable}
-import org.neo4j.cypher.internal.runtime.interpreted.pipes.{ExecutionContextFactory, Pipe, QueryState}
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.AggregationPipe.AggregationTable
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.AggregationPipe.AggregationTableFactory
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.ExecutionContextFactory
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.AggregationFunction
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.NonGroupingAggTable
 import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
 
 /**
-  * Slotted variant of [[NonGroupingAggTable]]
-  */
+ * Slotted variant of [[NonGroupingAggTable]]
+ */
 class SlottedNonGroupingAggTable(slots: SlotConfiguration,
                                  aggregations: Map[Int, AggregationExpression],
                                  state: QueryState) extends AggregationTable {

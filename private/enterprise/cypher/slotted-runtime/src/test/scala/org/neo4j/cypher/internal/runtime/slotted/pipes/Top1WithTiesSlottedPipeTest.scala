@@ -5,7 +5,10 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted.pipes
 
-import org.neo4j.cypher.internal.runtime.slotted.pipes.TopSlottedPipeTestSupport._
+import org.neo4j.cypher.internal.runtime.slotted.pipes.TopSlottedPipeTestSupport.AscendingOrder
+import org.neo4j.cypher.internal.runtime.slotted.pipes.TopSlottedPipeTestSupport.list
+import org.neo4j.cypher.internal.runtime.slotted.pipes.TopSlottedPipeTestSupport.singleColumnTop1WithTiesWithInput
+import org.neo4j.cypher.internal.runtime.slotted.pipes.TopSlottedPipeTestSupport.twoColumnTop1WithTiesWithInput
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 
 class Top1WithTiesSlottedPipeTest extends CypherFunSuite {
