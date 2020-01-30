@@ -36,6 +36,8 @@ import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.Monitors;
+import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -50,6 +52,7 @@ import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import static org.neo4j.test.assertion.Assert.assertEventually;
@@ -71,9 +74,10 @@ class CommandApplicationProcessTest
     private final Monitors monitors = new Monitors();
     private final CoreState coreState = mock( CoreState.class );
     private final SinglePanic panicker = new SinglePanic();
+    private JobScheduler jobScheduler = new ThreadPoolJobScheduler();
     private final CommandApplicationProcess applicationProcess =
             new CommandApplicationProcess( raftLog, batchSize, flushEvery, NullLogProvider.getInstance(), new ProgressTrackerImpl( globalSession ),
-                    sessionTracker, coreState, inFlightCache, monitors, panicker );
+                                           sessionTracker, coreState, inFlightCache, monitors, panicker, jobScheduler );
 
     private final ReplicatedTransaction nullTx = ReplicatedTransaction.from( new byte[0], databaseId );
 
@@ -133,7 +137,7 @@ class CommandApplicationProcessTest
         applicationProcess.start();
 
         // then
-        verifyNoMoreInteractions( commandDispatcher );
+        verifyNoInteractions( commandDispatcher );
     }
 
     @Test
@@ -259,7 +263,7 @@ class CommandApplicationProcessTest
 
         //then the cache should have had it's get method called.
         verify( inFlightCache ).get( 0L );
-        verifyNoMoreInteractions( raftLog );
+        verifyNoInteractions( raftLog );
     }
 
     @Test

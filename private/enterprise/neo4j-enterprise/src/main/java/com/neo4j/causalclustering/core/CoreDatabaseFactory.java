@@ -394,7 +394,7 @@ class CoreDatabaseFactory
     {
         CommandApplicationProcess commandApplicationProcess = new CommandApplicationProcess( raftGroup.raftLog(),
                 config.get( state_machine_apply_max_batch_size ), config.get( state_machine_flush_window_size ), debugLog, progressTracker, sessionTracker,
-                coreState, raftGroup.inFlightCache(), monitors, panicker );
+                coreState, raftGroup.inFlightCache(), monitors, panicker, jobScheduler );
 
         dependencies.satisfyDependency( commandApplicationProcess ); // lastApplied() for CC-robustness
 
