@@ -30,7 +30,6 @@ import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.Transaction;
-import org.neo4j.driver.exceptions.ServiceUnavailableException;
 import org.neo4j.driver.exceptions.TransientException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.io.IOUtils;
@@ -69,10 +68,34 @@ public class BoltThreadSchedulingIT
     }
 
     @Test
+    public void oneWorkerThreadShouldBeAbleToServeSequentialMessagesFromTwoConnections() throws Throwable
+    {
+        // Given a server with single worker thread.
+        db = startDbWithBolt( 1, 1 );
+        driver = createDriver( getBoltPort( db ) );
+
+        try ( Session session1 = driver.session();
+              Session session2 = driver.session() )
+        {
+            // When connection 1 sends a few messages
+            var tx1 = session1.beginTransaction();
+            tx1.run( "MATCH (n) RETURN n LIMIT 1" ).consume();
+            // consume ensures the server worker thread has finish all messages from connection 1
+
+            // Then connection 2 send more messages
+            var tx2 = session2.beginTransaction();
+            tx2.run( "CREATE (n) RETURN n" ).consume();
+
+            tx1.commit();
+            tx2.commit();
+        }
+    }
+
+    @Test
     public void shouldFinishAllQueries() throws Throwable
     {
-        // create server with limited thread pool threads.
-        db = startDbWithBolt( 1, 2 );
+        // create server with limited thread pool size.
+        db = startDbWithBolt( 1, 1 );
         driver = createDriver( getBoltPort( db ) );
 
         // submits some jobs to executor, shooting at server at the same time.
@@ -133,9 +156,7 @@ public class BoltThreadSchedulingIT
         assertTrue( errors.size() == 2 || errors.size() == 3 );
         for ( Throwable e : errors )
         {
-            // Driver 1.7.4 will surface TransientException error (no thread available) properly.
-            // Earlier version might get ServiceUnavailableException with closed channels due to a bug in error report.
-            assertThat( e, anyOf( instanceOf( TransientException.class ), instanceOf( ServiceUnavailableException.class ) ) );
+            assertThat( e, anyOf( instanceOf( TransientException.class ) ) );
         }
     }
 
