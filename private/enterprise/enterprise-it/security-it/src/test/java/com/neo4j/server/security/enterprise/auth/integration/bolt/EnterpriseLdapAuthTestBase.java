@@ -23,6 +23,7 @@ import java.util.Map;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
+import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.config.Setting;
@@ -65,7 +66,7 @@ public abstract class EnterpriseLdapAuthTestBase extends AbstractLdapTestUnit
         dbRule.withSettings( getSettings() );
         dbRule.withSettings( settings );
         dbRule.ensureStarted();
-        boltUri = boltUri( dbRule );
+        boltUri = boltUri( dbRule.resolveDependency( ConnectorPortRegister.class ) );
         systemDb = (GraphDatabaseFacade) dbRule.getManagementService().database( SYSTEM_DATABASE_NAME );
         try ( org.neo4j.graphdb.Transaction tx = dbRule.beginTx() )
         {

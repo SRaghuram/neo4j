@@ -7,7 +7,7 @@ package com.neo4j.server.security.enterprise.auth.plugin;
 
 import com.neo4j.server.security.enterprise.auth.plugin.api.AuthProviderOperations;
 import com.neo4j.server.security.enterprise.log.SecurityLog;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.time.Clock;
 
@@ -22,14 +22,14 @@ import static org.neo4j.logging.AssertableLogProvider.Level.INFO;
 import static org.neo4j.logging.AssertableLogProvider.Level.WARN;
 import static org.neo4j.logging.LogAssertions.assertThat;
 
-public class PluginRealmTest
+class PluginRealmTest
 {
-    private Config config = mock( Config.class );
-    private AssertableLogProvider log = new AssertableLogProvider();
-    private SecurityLog securityLog = new SecurityLog( log.getLog( this.getClass() ) );
+    private final Config config = mock( Config.class );
+    private final AssertableLogProvider log = new AssertableLogProvider();
+    private final SecurityLog securityLog = new SecurityLog( log.getLog( this.getClass() ) );
 
     @Test
-    public void shouldLogToSecurityLogFromAuthPlugin() throws Throwable
+    void shouldLogToSecurityLogFromAuthPlugin() throws Throwable
     {
         PluginRealm pluginRealm = new PluginRealm( new LoggingAuthPlugin(), config, securityLog, Clock.systemUTC(),
                 mock( SecureHasher.class ) );
@@ -38,10 +38,9 @@ public class PluginRealmTest
     }
 
     @Test
-    public void shouldLogToSecurityLogFromAuthenticationPlugin() throws Throwable
+    void shouldLogToSecurityLogFromAuthenticationPlugin() throws Throwable
     {
-        PluginRealm pluginRealm = new PluginRealm(
-                new LoggingAuthenticationPlugin(),
+        PluginRealm pluginRealm = new PluginRealm( new LoggingAuthenticationPlugin(),
                 null,
                 config, securityLog, Clock.systemUTC(), mock( SecureHasher.class ) );
         pluginRealm.initialize( );
@@ -49,11 +48,10 @@ public class PluginRealmTest
     }
 
     @Test
-    public void shouldLogToSecurityLogFromAuthorizationPlugin() throws Throwable
+    void shouldLogToSecurityLogFromAuthorizationPlugin() throws Throwable
     {
         PluginRealm pluginRealm = new PluginRealm(
-                null,
-                new LoggingAuthorizationPlugin(),
+                null, new LoggingAuthorizationPlugin(),
                 config, securityLog, Clock.systemUTC(), mock( SecureHasher.class ) );
         pluginRealm.initialize();
         assertLogged( "LoggingAuthorizationPlugin" );
@@ -67,7 +65,7 @@ public class PluginRealmTest
         matcher.forLevel( ERROR ).containsMessages( format( "{plugin-%s} error line", name ) );
     }
 
-    private class LoggingAuthPlugin extends TestAuthPlugin
+    private static class LoggingAuthPlugin extends TestAuthPlugin
     {
         @Override
         public void initialize( AuthProviderOperations api )
@@ -76,7 +74,7 @@ public class PluginRealmTest
         }
     }
 
-    private class LoggingAuthenticationPlugin extends TestAuthenticationPlugin
+    private static class LoggingAuthenticationPlugin extends TestAuthenticationPlugin
     {
         @Override
         public void initialize( AuthProviderOperations api )
@@ -85,7 +83,7 @@ public class PluginRealmTest
         }
     }
 
-    private class LoggingAuthorizationPlugin extends TestAuthorizationPlugin
+    private static class LoggingAuthorizationPlugin extends TestAuthorizationPlugin
     {
         @Override
         public void initialize( AuthProviderOperations api )

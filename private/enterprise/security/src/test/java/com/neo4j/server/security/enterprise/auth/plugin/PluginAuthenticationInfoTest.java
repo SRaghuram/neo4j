@@ -9,7 +9,7 @@ import com.neo4j.server.security.enterprise.auth.plugin.spi.AuthenticationInfo;
 import com.neo4j.server.security.enterprise.auth.plugin.spi.CacheableAuthenticationInfo;
 import com.neo4j.server.security.enterprise.auth.plugin.spi.CustomCacheableAuthenticationInfo;
 import org.apache.shiro.crypto.hash.SimpleHash;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
@@ -21,19 +21,19 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public class PluginAuthenticationInfoTest
+class PluginAuthenticationInfoTest
 {
     @Test
-    public void shouldCreateCorrectAuthenticationInfo()
+    void shouldCreateCorrectAuthenticationInfo()
     {
         PluginAuthenticationInfo internalAuthInfo =
                 PluginAuthenticationInfo.createCacheable( AuthenticationInfo.of( "thePrincipal" ), "theRealm", null );
 
-        assertThat( (List<String>)internalAuthInfo.getPrincipals().asList(), containsInAnyOrder( "thePrincipal" ) );
+        assertThat( (List<String>) internalAuthInfo.getPrincipals().asList(), containsInAnyOrder( "thePrincipal" ) );
     }
 
     @Test
-    public void shouldCreateCorrectAuthenticationInfoFromCacheable()
+    void shouldCreateCorrectAuthenticationInfoFromCacheable()
     {
         SecureHasher hasher = mock( SecureHasher.class );
         when( hasher.hash( any() ) ).thenReturn( new SimpleHash( "some-hash" ) );
@@ -45,11 +45,11 @@ public class PluginAuthenticationInfoTest
                         hasher
                 );
 
-        assertThat( (List<String>)internalAuthInfo.getPrincipals().asList(), containsInAnyOrder( "thePrincipal" ) );
+        assertThat( (List<String>) internalAuthInfo.getPrincipals().asList(), containsInAnyOrder( "thePrincipal" ) );
     }
 
     @Test
-    public void shouldCreateCorrectAuthenticationInfoFromCustomCacheable()
+    void shouldCreateCorrectAuthenticationInfoFromCustomCacheable()
     {
         SecureHasher hasher = mock( SecureHasher.class );
         when( hasher.hash( any() ) ).thenReturn( new SimpleHash( "some-hash" ) );
@@ -61,6 +61,6 @@ public class PluginAuthenticationInfoTest
                         hasher
                 );
 
-        assertThat( (List<String>)internalAuthInfo.getPrincipals().asList(), containsInAnyOrder( "thePrincipal" ) );
+        assertThat( (List<String>) internalAuthInfo.getPrincipals().asList(), containsInAnyOrder( "thePrincipal" ) );
     }
 }

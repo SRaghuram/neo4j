@@ -5,8 +5,8 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.SortedSet;
@@ -18,13 +18,13 @@ import static java.util.Arrays.asList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 
-public class RoleSerializationTest
+class RoleSerializationTest
 {
     private SortedSet<String> steveBob;
     private SortedSet<String> kellyMarie;
 
-    @Before
-    public void setUp()
+    @BeforeEach
+    void setUp()
     {
         steveBob = new TreeSet<>();
         steveBob.add( "Steve" );
@@ -36,7 +36,7 @@ public class RoleSerializationTest
     }
 
     @Test
-    public void shouldSerializeAndDeserialize() throws Exception
+    void shouldSerializeAndDeserialize() throws Exception
     {
         // Given
         RoleSerialization serialization = new RoleSerialization();
@@ -57,7 +57,7 @@ public class RoleSerializationTest
      * this is your reminder to make sure to build this is in a backwards compatible way.
      */
     @Test
-    public void shouldReadV1SerializationFormat() throws Exception
+    void shouldReadV1SerializationFormat() throws Exception
     {
         // Given
         RoleSerialization serialization = new RoleSerialization();

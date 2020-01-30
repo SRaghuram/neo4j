@@ -7,8 +7,8 @@ package com.neo4j.server.security.enterprise.auth;
 
 import com.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
 import com.neo4j.server.security.enterprise.auth.AuthProceduresBase.UserResult;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.List;
@@ -24,13 +24,12 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public class SecurityProceduresTest
+class SecurityProceduresTest
 {
-
     private SecurityProcedures procedures;
 
-    @Before
-    public void setup()
+    @BeforeEach
+    void setup()
     {
         AuthSubject subject = mock( AuthSubject.class );
         when( subject.username() ).thenReturn( "pearl" );
@@ -45,7 +44,7 @@ public class SecurityProceduresTest
     }
 
     @Test
-    public void shouldReturnSecurityContextRoles()
+    void shouldReturnSecurityContextRoles()
     {
         List<UserResult> infoList = procedures.showCurrentUser().collect( Collectors.toList() );
         assertThat( infoList.size(), equalTo(1) );

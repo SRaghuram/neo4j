@@ -24,6 +24,7 @@ import java.util.stream.Collectors;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
+import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
@@ -87,7 +88,7 @@ public class NativeAuthIT
         executeOnSystem( String.format( "ALTER USER %s SET PASSWORD '%s' CHANGE NOT REQUIRED", ADMIN_USER, password ) );
         executeOnSystem( String.format( "GRANT ROLE %s TO %s", PredefinedRoles.READER, READ_USER ) );
         executeOnSystem( String.format( "GRANT ROLE %s TO %s", PredefinedRoles.PUBLISHER, WRITE_USER ) );
-        boltUri = DriverAuthHelper.boltUri( dbRule );
+        boltUri = DriverAuthHelper.boltUri( dbRule.resolveDependency( ConnectorPortRegister.class ) );
     }
 
     private void executeOnSystem( String query )
@@ -292,7 +293,7 @@ public class NativeAuthIT
     {
         // GIVEN
         dbRule.restartDatabase( Collections.singletonMap( GraphDatabaseSettings.auth_enabled, false ) );
-        boltUri = DriverAuthHelper.boltUri( dbRule );
+        boltUri = DriverAuthHelper.boltUri( dbRule.resolveDependency( ConnectorPortRegister.class ) );
         try ( Driver driver = connectDriver( boltUri, AuthTokens.none() ) )
         {
             try ( Session session = driver.session( forDatabase( SYSTEM_DATABASE_NAME ) ) )
@@ -302,7 +303,7 @@ public class NativeAuthIT
             }
         }
         dbRule.restartDatabase( Collections.singletonMap( GraphDatabaseSettings.auth_enabled, true ) );
-        boltUri = DriverAuthHelper.boltUri( dbRule );
+        boltUri = DriverAuthHelper.boltUri( dbRule.resolveDependency( ConnectorPortRegister.class ) );
 
         // THEN
         DriverAuthHelper.assertAuthFail( boltUri, "foo", "wrongPassword" );
@@ -321,7 +322,7 @@ public class NativeAuthIT
             }
         }
         dbRule.restartDatabase( Collections.singletonMap( GraphDatabaseSettings.auth_enabled, false ) );
-        boltUri = DriverAuthHelper.boltUri( dbRule );
+        boltUri = DriverAuthHelper.boltUri( dbRule.resolveDependency( ConnectorPortRegister.class ) );
 
         try ( Driver driver = connectDriver( boltUri, AuthTokens.none() ) )
         {
@@ -334,7 +335,7 @@ public class NativeAuthIT
         dbRule.restartDatabase( Collections.singletonMap( GraphDatabaseSettings.auth_enabled, true ) );
 
         // THEN
-        boltUri = DriverAuthHelper.boltUri( dbRule );
+        boltUri = DriverAuthHelper.boltUri( dbRule.resolveDependency( ConnectorPortRegister.class ) );
         DriverAuthHelper.assertAuthFail( boltUri, "foo", "bar" );
         DriverAuthHelper.assertAuth( boltUri, "foo", "abc" );
     }

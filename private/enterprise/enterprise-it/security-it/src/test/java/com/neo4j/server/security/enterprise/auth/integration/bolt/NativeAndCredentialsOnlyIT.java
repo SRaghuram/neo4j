@@ -6,50 +6,54 @@
 package com.neo4j.server.security.enterprise.auth.integration.bolt;
 
 import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
-import com.neo4j.test.rule.EnterpriseDbmsRule;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.RuleChain;
+import com.neo4j.test.extension.EnterpriseDbmsExtension;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.net.InetAddress;
 import java.util.List;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
+import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.configuration.helpers.SocketAddress;
-import org.neo4j.test.rule.DbmsRule;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
+import org.neo4j.test.extension.ExtensionCallback;
+import org.neo4j.test.extension.Inject;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.server.security.enterprise.auth.integration.bolt.DriverAuthHelper.assertAuth;
 import static org.neo4j.configuration.connectors.BoltConnector.EncryptionLevel.DISABLED;
 
-public class NativeAndCredentialsOnlyIT
+@EnterpriseDbmsExtension( configurationCallback = "configure" )
+class NativeAndCredentialsOnlyIT
 {
-    private final TestDirectory testDirectory = TestDirectory.testDirectory();
-
-    private DbmsRule dbRule = new EnterpriseDbmsRule( testDirectory ).startLazily();
-
-    @Rule
-    public RuleChain chain = RuleChain.outerRule( testDirectory ).around( dbRule );
+    @Inject
+    private TestDirectory testDirectory;
+    @Inject
+    private ConnectorPortRegister portRegister;
 
     private String boltUri;
 
-    @Before
-    public void setup()
+    @ExtensionCallback
+    void configure( TestDatabaseManagementServiceBuilder builder )
     {
-        dbRule.withSetting( GraphDatabaseSettings.auth_enabled, true )
-                .withSetting( BoltConnector.enabled, true )
-                .withSetting( BoltConnector.encryption_level, DISABLED )
-                .withSetting( BoltConnector.listen_address, new SocketAddress(  InetAddress.getLoopbackAddress().getHostAddress(), 0 ) )
-                .withSetting( SecuritySettings.authentication_providers, List.of( SecuritySettings.NATIVE_REALM_NAME, "plugin-TestCredentialsOnlyPlugin" ) )
-                .withSetting( SecuritySettings.authorization_providers, List.of( SecuritySettings.NATIVE_REALM_NAME, "plugin-TestCredentialsOnlyPlugin" ) );
-        dbRule.ensureStarted();
-        boltUri = DriverAuthHelper.boltUri( dbRule );
+        builder.setConfig( GraphDatabaseSettings.auth_enabled, true )
+                .setConfig( BoltConnector.enabled, true )
+                .setConfig( BoltConnector.encryption_level, DISABLED )
+                .setConfig( BoltConnector.listen_address, new SocketAddress(  InetAddress.getLoopbackAddress().getHostAddress(), 0 ) )
+                .setConfig( SecuritySettings.authentication_providers, List.of( SecuritySettings.NATIVE_REALM_NAME, "plugin-TestCredentialsOnlyPlugin" ) )
+                .setConfig( SecuritySettings.authorization_providers, List.of( SecuritySettings.NATIVE_REALM_NAME, "plugin-TestCredentialsOnlyPlugin" ) );
+    }
+
+    @BeforeEach
+    void setup()
+    {
+        boltUri = DriverAuthHelper.boltUri( portRegister );
     }
 
     @Test
-    public void shouldAuthenticateWithCredentialsOnlyPlugin()
+    void shouldAuthenticateWithCredentialsOnlyPlugin()
     {
         assertAuth( boltUri, "", "BASE64-ENC-PASSWORD", "plugin-TestCredentialsOnlyPlugin" );
     }

@@ -40,9 +40,9 @@ class DriverAuthHelper
             .withConnectionTimeout( 10, TimeUnit.SECONDS )
             .build();
 
-    static String boltUri( DbmsRule dbmsRule )
+    static String boltUri( ConnectorPortRegister portRegister )
     {
-        var localAddress = dbmsRule.resolveDependency( ConnectorPortRegister.class ).getLocalAddress( "bolt" );
+        var localAddress = portRegister.getLocalAddress( "bolt" );
         return "bolt://" + localAddress.toString();
     }
 

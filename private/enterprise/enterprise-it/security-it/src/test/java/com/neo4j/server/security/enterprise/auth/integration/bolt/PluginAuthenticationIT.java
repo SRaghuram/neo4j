@@ -24,6 +24,7 @@ import java.util.stream.Collectors;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
+import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.driver.AuthToken;
 import org.neo4j.driver.AuthTokens;
@@ -91,7 +92,7 @@ public class PluginAuthenticationIT
                 .withSetting( authorization_providers, DEFAULT_TEST_PLUGIN_REALMS );
         dbRule.withSettings( settings );
         dbRule.ensureStarted();
-        boltUri = DriverAuthHelper.boltUri( dbRule );
+        boltUri = DriverAuthHelper.boltUri( dbRule.resolveDependency( ConnectorPortRegister.class ) );
         try ( org.neo4j.graphdb.Transaction tx = dbRule.beginTx() )
         {
             // create a node to be able to assert that access without other privileges sees empty graph
