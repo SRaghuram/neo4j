@@ -18,6 +18,7 @@
 
     <properties>
         <moduleName>com.neo4j.enterprise.cypher.it</moduleName>
+        <skip-scalastyle>false</skip-scalastyle>
     </properties>
 
     <scm>

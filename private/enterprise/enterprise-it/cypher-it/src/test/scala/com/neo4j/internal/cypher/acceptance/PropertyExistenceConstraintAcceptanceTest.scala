@@ -6,7 +6,8 @@
 package com.neo4j.internal.cypher.acceptance
 
 import com.neo4j.cypher.EnterpriseGraphDatabaseTestSupport
-import org.neo4j.cypher._
+import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.cypher.QueryStatisticsTestSupport
 import org.neo4j.cypher.internal.compiler.helpers.ListSupport
 import org.neo4j.exceptions.CypherExecutionException
 import org.neo4j.graphdb.ConstraintViolationException

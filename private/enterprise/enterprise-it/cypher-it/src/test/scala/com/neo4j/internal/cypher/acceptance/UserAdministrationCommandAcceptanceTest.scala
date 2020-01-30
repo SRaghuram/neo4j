@@ -7,14 +7,19 @@ package com.neo4j.internal.cypher.acceptance
 
 import java.util
 
-import org.neo4j.configuration.GraphDatabaseSettings.{DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME}
-import org.neo4j.exceptions._
+import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
+import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
+import org.neo4j.cypher.internal.DatabaseStatus.Online
+import org.neo4j.exceptions.DatabaseAdministrationException
+import org.neo4j.exceptions.InvalidArgumentException
+import org.neo4j.exceptions.ParameterNotFoundException
+import org.neo4j.exceptions.ParameterWrongTypeException
+import org.neo4j.exceptions.SyntaxException
 import org.neo4j.graphdb.QueryExecutionException
 import org.neo4j.graphdb.security.AuthorizationViolationException
 import org.neo4j.graphdb.security.AuthorizationViolationException.PERMISSION_DENIED
 import org.neo4j.internal.kernel.api.security.AuthenticationResult
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
-import org.scalatest.enablers.Messaging.messagingNatureOfThrowable
 
 import scala.collection.Map
 
@@ -1359,12 +1364,12 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin"), passwordChangeRequired = false))
     selectDatabase(DEFAULT_DATABASE_NAME)
 
-     the[QueryExecutionException] thrownBy { // the DatabaseManagementException gets wrapped in this code path
+    the[QueryExecutionException] thrownBy { // the DatabaseManagementException gets wrapped in this code path
       // WHEN
-       executeOnDefault("neo4j", "neo", "ALTER CURRENT USER SET PASSWORD FROM 'neo' TO 'baz'")
+      executeOnDefault("neo4j", "neo", "ALTER CURRENT USER SET PASSWORD FROM 'neo' TO 'baz'")
       // THEN
     } should have message
-       "This is an administration command and it should be executed against the system database: ALTER CURRENT USER SET PASSWORD"
+      "This is an administration command and it should be executed against the system database: ALTER CURRENT USER SET PASSWORD"
   }
 
   // Tests for user administration with restricted privileges
@@ -1506,7 +1511,6 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
   }
 
   test("should allow show default database for non admin user") {
-    import org.neo4j.cypher.internal.DatabaseStatus.Online
 
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)

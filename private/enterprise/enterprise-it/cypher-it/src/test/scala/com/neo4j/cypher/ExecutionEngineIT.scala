@@ -14,16 +14,22 @@ import org.neo4j.cypher.GraphIcing
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 import org.neo4j.graphdb.ExecutionPlanDescription
-import org.neo4j.graphdb.Result.{ResultRow, ResultVisitor}
+import org.neo4j.graphdb.Result.ResultRow
+import org.neo4j.graphdb.Result.ResultVisitor
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException
-import org.neo4j.internal.kernel.api.procs._
+import org.neo4j.internal.kernel.api.procs.FieldSignature
+import org.neo4j.internal.kernel.api.procs.Neo4jTypes
+import org.neo4j.internal.kernel.api.procs.ProcedureSignature
+import org.neo4j.internal.kernel.api.procs.QualifiedName
 import org.neo4j.kernel.api.ResourceTracker
-import org.neo4j.kernel.api.procedure.{CallableProcedure, Context}
+import org.neo4j.kernel.api.procedure.CallableProcedure
+import org.neo4j.kernel.api.procedure.Context
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.neo4j.procedure.Mode
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
 
+import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.collection.immutable.Map
 import scala.collection.mutable.ArrayBuffer
 
@@ -83,16 +89,15 @@ class ExecutionEngineIT extends CypherFunSuite with GraphIcing {
   }
 
   class AllNodesProcedure extends CallableProcedure {
-    import scala.collection.JavaConverters._
 
     private val results = Map[String, AnyRef]("node" -> Neo4jTypes.NTInteger)
     val procedureName = new QualifiedName(Array[String]("org", "neo4j", "bench"), "getAllNodes")
-    val emptySignature: util.List[FieldSignature] = List.empty[FieldSignature].asJava
+    val emptySignature: util.List[FieldSignature] = new util.ArrayList[FieldSignature]()
     val signature: ProcedureSignature = new ProcedureSignature(
       procedureName, paramSignature, resultSignature, Mode.READ, false, null, Array.empty,
       null, null, false, false, false)
 
-    def paramSignature: util.List[FieldSignature] = List.empty[FieldSignature].asJava
+    def paramSignature: util.List[FieldSignature] = new util.ArrayList[FieldSignature]()
 
     def resultSignature: util.List[FieldSignature] = results.keys.foldLeft(List.empty[FieldSignature]) { (fields, entry) =>
       fields :+ FieldSignature.outputField(entry, results(entry).asInstanceOf[Neo4jTypes.AnyType])

@@ -5,7 +5,8 @@
  */
 package com.neo4j.internal.cypher.planner
 
-import org.neo4j.configuration.GraphDatabaseSettings.{DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME}
+import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
+import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 
 class ManagementAdministrationCommandPlannerTest extends AdministrationCommandPlannerTestBase {
 

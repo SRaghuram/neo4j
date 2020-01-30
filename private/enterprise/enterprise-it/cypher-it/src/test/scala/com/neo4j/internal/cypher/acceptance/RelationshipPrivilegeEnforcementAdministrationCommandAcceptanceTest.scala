@@ -7,8 +7,11 @@ package com.neo4j.internal.cypher.acceptance
 
 import java.util
 
-import org.neo4j.configuration.GraphDatabaseSettings.{DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME}
+import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
+import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import org.neo4j.graphdb.Node
+
+import scala.collection.JavaConverters.iterableAsScalaIterableConverter
 
 // Tests for actual behaviour of authorization rules for restricted users based on relationship privileges
 class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
@@ -264,7 +267,6 @@ class RelationshipPrivilegeEnforcementAdministrationCommandAcceptanceTest extend
 
   test("should get relationships for a matched node") {
 
-    import scala.collection.JavaConverters._
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
     setupUserWithCustomRole()

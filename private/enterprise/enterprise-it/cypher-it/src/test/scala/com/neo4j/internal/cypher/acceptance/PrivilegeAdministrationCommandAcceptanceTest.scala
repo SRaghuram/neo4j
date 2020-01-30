@@ -10,7 +10,6 @@ import org.neo4j.dbms.api.DatabaseNotFoundException
 import org.neo4j.exceptions.DatabaseAdministrationException
 import org.neo4j.graphdb.security.AuthorizationViolationException
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
-import org.scalatest.enablers.Messaging.messagingNatureOfThrowable
 
 class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
 
@@ -50,9 +49,9 @@ class PrivilegeAdministrationCommandAcceptanceTest extends AdministrationCommand
       "REVOKE READ {prop} ON GRAPH * NODES * FROM custom" -> 1,
 
       "GRANT MATCH {prop} ON GRAPH * NODES * TO custom" -> 2,
-//      "REVOKE GRANT MATCH {prop} ON GRAPH * NODES * FROM custom" -> 1, TODO: enable once REVOKE MATCH exists again
+      //      "REVOKE GRANT MATCH {prop} ON GRAPH * NODES * FROM custom" -> 1, TODO: enable once REVOKE MATCH exists again
       "DENY MATCH {prop} ON GRAPH * NODES * TO custom" -> 1,
-//      "REVOKE DENY MATCH {prop} ON GRAPH * NODES * FROM custom" -> 1, TODO: enable once REVOKE MATCH exists again
+      //      "REVOKE DENY MATCH {prop} ON GRAPH * NODES * FROM custom" -> 1, TODO: enable once REVOKE MATCH exists again
 
       "GRANT READ {a,b,c} ON GRAPH foo ELEMENTS p, q TO a, b, c" -> 36  // 3 props * 3 labels * 2 labels/types * 2 elements(nodes,rels)
     ))

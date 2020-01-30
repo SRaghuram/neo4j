@@ -7,9 +7,11 @@ package com.neo4j.internal.cypher.acceptance
 
 import java.lang.Boolean.TRUE
 
-import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC
-import org.neo4j.configuration.GraphDatabaseSettings.{DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME, default_database}
-import org.neo4j.configuration.{Config, GraphDatabaseSettings}
+import org.neo4j.configuration.Config
+import org.neo4j.configuration.GraphDatabaseSettings
+import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
+import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
+import org.neo4j.configuration.GraphDatabaseSettings.default_database
 import org.neo4j.graphdb.QueryExecutionException
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.graphdb.security.AuthorizationViolationException

@@ -13,7 +13,7 @@ import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.graphdb.config.Setting
 
-import scala.collection.JavaConverters._
+import scala.collection.JavaConverters.mapAsJavaMapConverter
 
 trait RunWithConfigTestSupport {
   def runWithConfig(m: (Setting[_], Object)*)(run: GraphDatabaseCypherService => Unit) = {

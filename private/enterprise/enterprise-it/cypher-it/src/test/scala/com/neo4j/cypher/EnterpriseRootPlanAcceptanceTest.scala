@@ -5,11 +5,20 @@
  */
 package com.neo4j.cypher
 
-import org.neo4j.cypher.internal._
-import org.neo4j.cypher.internal.planner.spi.{CostBasedPlannerName, DPPlannerName, IDPPlannerName}
+import org.neo4j.cypher.CypherVersion
+import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.cypher.internal.CompiledRuntimeName
+import org.neo4j.cypher.internal.InterpretedRuntimeName
+import org.neo4j.cypher.internal.PipelinedRuntimeName
+import org.neo4j.cypher.internal.RuntimeName
+import org.neo4j.cypher.internal.SlottedRuntimeName
 import org.neo4j.cypher.internal.frontend.PlannerName
-import org.neo4j.cypher.{CypherVersion, ExecutionEngineFunSuite}
+import org.neo4j.cypher.internal.planner.spi.CostBasedPlannerName
+import org.neo4j.cypher.internal.planner.spi.DPPlannerName
+import org.neo4j.cypher.internal.planner.spi.IDPPlannerName
 import org.neo4j.graphdb.ExecutionPlanDescription
+
+import scala.collection.JavaConverters.mapAsScalaMapConverter
 
 class EnterpriseRootPlanAcceptanceTest extends ExecutionEngineFunSuite with EnterpriseGraphDatabaseTestSupport {
 
@@ -199,7 +208,6 @@ class EnterpriseRootPlanAcceptanceTest extends ExecutionEngineFunSuite with Ente
     shouldContain("bytecode", planDescription)
   }
 
-  import scala.collection.JavaConverters._
 
   private def shouldContain(argument:String, planDescription: ExecutionPlanDescription): Unit = {
     if(!planDescription.getArguments.asScala.exists {

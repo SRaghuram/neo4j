@@ -7,11 +7,14 @@ package com.neo4j.internal.cypher.acceptance
 
 import java.util
 
-import org.neo4j.configuration.GraphDatabaseSettings.{DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME}
-import org.neo4j.graphdb.{Node, Relationship}
+import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
+import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
+import org.neo4j.graphdb.Node
+import org.neo4j.graphdb.Relationship
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 
-import scala.collection.JavaConverters._
+import scala.collection.JavaConverters.seqAsJavaListConverter
+import scala.collection.JavaConverters.asScalaBufferConverter
 
 class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
 

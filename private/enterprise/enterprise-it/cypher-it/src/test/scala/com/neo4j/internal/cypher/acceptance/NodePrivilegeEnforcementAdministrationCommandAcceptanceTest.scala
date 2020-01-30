@@ -12,7 +12,6 @@ import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import org.neo4j.graphdb.Label
 import org.neo4j.graphdb.security.AuthorizationViolationException
 
-
 // Tests for actual behaviour of authorization rules for restricted users based on node privileges
 class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
 
@@ -1662,7 +1661,7 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
     // Restricted user
     executeOnDefault("joe", "soap", query,
       resultHandler = (row, _) => {
-       row.get("n.prop") should be("visible")
+        row.get("n.prop") should be("visible")
       }, requiredOperator = Some("NodeByIdSeek")) should be(2)
 
     // Unrestricted user

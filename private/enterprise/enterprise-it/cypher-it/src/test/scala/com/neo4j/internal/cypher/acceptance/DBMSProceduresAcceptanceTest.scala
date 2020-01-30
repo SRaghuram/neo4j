@@ -9,7 +9,7 @@ import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.graphdb.QueryExecutionException
 import org.neo4j.internal.kernel.api.security.AuthenticationResult
 
-import scala.collection.JavaConverters._
+import scala.collection.JavaConverters.mapAsJavaMapConverter
 
 class DBMSProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
 

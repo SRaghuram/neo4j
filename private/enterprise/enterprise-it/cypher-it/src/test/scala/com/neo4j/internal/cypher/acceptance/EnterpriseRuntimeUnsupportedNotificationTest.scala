@@ -10,13 +10,11 @@ import java.lang.Boolean.TRUE
 import com.neo4j.cypher.EnterpriseGraphDatabaseTestSupport
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.ExecutionEngineFunSuite
-import org.neo4j.cypher.ExecutionEngineHelper._
+import org.neo4j.cypher.ExecutionEngineHelper.createEngine
 import org.neo4j.exceptions.RuntimeUnsupportedException
 import org.neo4j.graphdb.InputPosition
 import org.neo4j.graphdb.impl.notification.NotificationCode.RUNTIME_UNSUPPORTED
 import org.neo4j.graphdb.impl.notification.NotificationDetail
-
-import scala.language.reflectiveCalls
 
 class EnterpriseRuntimeUnsupportedNotificationTest extends ExecutionEngineFunSuite with EnterpriseGraphDatabaseTestSupport {
 

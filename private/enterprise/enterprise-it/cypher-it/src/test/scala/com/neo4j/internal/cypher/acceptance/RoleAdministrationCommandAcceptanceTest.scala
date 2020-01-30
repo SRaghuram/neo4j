@@ -11,11 +11,9 @@ import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBL
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.exceptions.DatabaseAdministrationException
 import org.neo4j.exceptions.InvalidArgumentException
-import org.neo4j.exceptions.InvalidSemanticsException
 import org.neo4j.exceptions.SyntaxException
 import org.neo4j.graphdb.security.AuthorizationViolationException
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
-import org.scalatest.enablers.Messaging.messagingNatureOfThrowable
 
 class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
 
@@ -169,7 +167,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       role(ADMIN).builtIn().member("neo4j").map,
       role("foo").member("Bar").map,
       role("foo").member("Baz").map,
-      ) ++ publicRole("neo4j", "Bar", "Baz"))
+    ) ++ publicRole("neo4j", "Bar", "Baz"))
   }
 
   test("should fail when showing roles when not on system database") {
@@ -630,8 +628,8 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     // THEN
     execute("SHOW ROLES WITH USERS").toSet should be(
       defaultRolesWithUsers +
-      role("custom").member("user").map ++
-      publicRole("user")
+        role("custom").member("user").map ++
+        publicRole("user")
     )
   }
 
@@ -702,8 +700,8 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     // THEN
     execute("SHOW ROLES WITH USERS").toSet should be(
       publicRole("userA", "userB") ++ defaultRolesWithUsers +
-      role("custom").member("userA").map +
-      role("custom").member("userB").map
+        role("custom").member("userA").map +
+        role("custom").member("userB").map
     )
   }
 
@@ -720,8 +718,8 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     // THEN
     execute("SHOW ROLES WITH USERS").toSet should be(
       publicRole("userA") ++ defaultRolesWithUsers +
-      role("custom1").member("userA").map +
-      role("custom2").member("userA").map
+        role("custom1").member("userA").map +
+        role("custom2").member("userA").map
     )
   }
 
@@ -739,10 +737,10 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     // THEN
     execute("SHOW ROLES WITH USERS").toSet should be(
       publicRole("userA", "userB") ++ defaultRolesWithUsers +
-      role("custom1").member("userA").map +
-      role("custom1").member("userB").map +
-      role("custom2").member("userA").map +
-      role("custom2").member("userB").map
+        role("custom1").member("userA").map +
+        role("custom1").member("userB").map +
+        role("custom2").member("userA").map +
+        role("custom2").member("userB").map
     )
   }
 
@@ -884,7 +882,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     // THEN
     execute("SHOW ROLES WITH USERS").toSet should be(
       publicRole("user") ++ defaultRolesWithUsers +
-      role("custom").noMember().map
+        role("custom").noMember().map
     )
   }
 
@@ -935,7 +933,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     // THEN
     execute("SHOW ROLES WITH USERS").toSet should be(
       publicRole("userA", "userB") ++ defaultRolesWithUsers +
-      role("custom").noMember().map
+        role("custom").noMember().map
     )
   }
 
@@ -954,8 +952,8 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     // THEN
     execute("SHOW ROLES WITH USERS").toSet should be(
       publicRole("userA") ++ defaultRolesWithUsers +
-      role("custom1").noMember().map +
-      role("custom2").noMember().map
+        role("custom1").noMember().map +
+        role("custom2").noMember().map
     )
   }
 
@@ -981,8 +979,8 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     // THEN
     execute("SHOW ROLES WITH USERS").toSet should be(
       publicRole("userA", "userB", "userC", "userD") ++ defaultRolesWithUsers +
-      role("custom1").noMember().map +
-      role("custom2").noMember().map
+        role("custom1").noMember().map +
+        role("custom2").noMember().map
     )
   }
 
@@ -1000,7 +998,7 @@ class RoleAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     // THEN
     execute("SHOW ROLES WITH USERS").toSet should be(
       publicRole("user") ++ defaultRolesWithUsers +
-      role("custom").noMember().map
+        role("custom").noMember().map
     )
   }
 

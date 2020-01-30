@@ -8,7 +8,8 @@ package com.neo4j.cypher
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.kernel.DeadlockDetectedException
 
-import scala.collection.JavaConverters._
+import scala.collection.JavaConverters.iterableAsScalaIterableConverter
+
 class MergeConcurrencyIT extends ExecutionEngineFunSuite with EnterpriseGraphDatabaseTestSupport {
 
   val nodeCount = 100
@@ -33,13 +34,13 @@ class MergeConcurrencyIT extends ExecutionEngineFunSuite with EnterpriseGraphDat
         }
         catch {
           case _: DeadlockDetectedException =>
-            // The enterprise Deadlock Detection can have false positives. Ignore.
+          // The enterprise Deadlock Detection can have false positives. Ignore.
           case e: Throwable => exceptionsThrown = exceptionsThrown :+ e
         }
       }
     }
 
-      val threads: Seq[Thread] = 0 until threadCount map (_ => new Thread(runner))
+    val threads: Seq[Thread] = 0 until threadCount map (_ => new Thread(runner))
 
     threads.foreach(_.start())
     threads.foreach(_.join())

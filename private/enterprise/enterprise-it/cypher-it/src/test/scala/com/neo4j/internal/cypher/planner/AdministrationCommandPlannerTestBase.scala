@@ -6,9 +6,19 @@
 package com.neo4j.internal.cypher.planner
 
 import com.neo4j.internal.cypher.acceptance.AdministrationCommandAcceptanceTestBase
-import org.neo4j.cypher.internal.plandescription.Arguments._
-import org.neo4j.cypher.internal.plandescription._
 import org.neo4j.cypher.internal.ast.prettifier.Prettifier
+import org.neo4j.cypher.internal.plandescription.Arguments.Database
+import org.neo4j.cypher.internal.plandescription.Arguments.User
+import org.neo4j.cypher.internal.plandescription.Arguments.Role
+import org.neo4j.cypher.internal.plandescription.Arguments.Qualifier
+import org.neo4j.cypher.internal.plandescription.Arguments.DatabaseAction
+import org.neo4j.cypher.internal.plandescription.Arguments.DbmsAction
+import org.neo4j.cypher.internal.plandescription.Argument
+import org.neo4j.cypher.internal.plandescription.Children
+import org.neo4j.cypher.internal.plandescription.NoChildren
+import org.neo4j.cypher.internal.plandescription.SingleChild
+import org.neo4j.cypher.internal.plandescription.PlanDescriptionImpl
+import org.neo4j.cypher.internal.plandescription.InternalPlanDescription
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.internal.util.test_helpers.WindowsStringSafe
 

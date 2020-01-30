@@ -18,21 +18,26 @@ import com.neo4j.server.security.enterprise.auth.InMemoryRoleRepository
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC
 import com.neo4j.server.security.enterprise.systemgraph.EnterpriseSecurityGraphInitializer
-import org.neo4j.configuration.GraphDatabaseSettings.{DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME}
-import org.neo4j.configuration.{Config, GraphDatabaseSettings}
+import org.neo4j.configuration.Config
+import org.neo4j.configuration.GraphDatabaseSettings
+import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
+import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.DatabaseStatus
 import org.neo4j.cypher.internal.javacompat.GraphDatabaseCypherService
 import org.neo4j.cypher.internal.plandescription.PlanDescriptionImpl
 import org.neo4j.cypher.internal.security.SecureHasher
-import org.neo4j.dbms.database.{DatabaseContext, DatabaseManager}
+import org.neo4j.dbms.database.DatabaseContext
+import org.neo4j.dbms.database.DatabaseManager
+import org.neo4j.graphdb.ExecutionPlanDescription
+import org.neo4j.graphdb.Result
 import org.neo4j.graphdb.config.Setting
-import org.neo4j.graphdb.{ExecutionPlanDescription, Result}
 import org.neo4j.internal.kernel.api.security.AuthenticationResult
 import org.neo4j.kernel.api.KernelTransaction.Type
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.neo4j.logging.Log
-import org.neo4j.server.security.auth.{InMemoryUserRepository, SecurityTestUtils}
+import org.neo4j.server.security.auth.InMemoryUserRepository
+import org.neo4j.server.security.auth.SecurityTestUtils
 
 import scala.collection.Map
 
@@ -272,9 +277,9 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
   }
 
   def mustHaveOperator(plan: ExecutionPlanDescription, operator: String): Unit = {
-      withClue(s"The plan did not contain any $operator : ") {
-        plan.asInstanceOf[PlanDescriptionImpl].find(operator).nonEmpty should be(true)
-      }
+    withClue(s"The plan did not contain any $operator : ") {
+      plan.asInstanceOf[PlanDescriptionImpl].find(operator).nonEmpty should be(true)
+    }
   }
 
   val PASSWORD_CHANGE_REQUIRED_MESSAGE: String = "%n%nThe credentials you provided were valid, but must be " +
