@@ -5,14 +5,15 @@
  */
 package org.neo4j.cypher.internal.runtime.spec.stress
 
+import org.neo4j.cypher.internal.CypherRuntime
+import org.neo4j.cypher.internal.EnterpriseRuntimeContext
 import org.neo4j.cypher.internal.runtime.spec.Edition
-import org.neo4j.cypher.internal.{CypherRuntime, EnterpriseRuntimeContext}
 
 import scala.util.Random
 
 abstract class NodeByIdSeekStressTestBase(edition: Edition[EnterpriseRuntimeContext], runtime: CypherRuntime[EnterpriseRuntimeContext])
   extends ParallelStressSuite(edition, runtime)
-    with RHSOfApplyLeafStressSuite {
+  with RHSOfApplyLeafStressSuite {
 
   override def rhsOfApplyLeaf(variable: String, nodeArgument: String, propArgument: String): RHSOfApplyLeafTD = {
     val random = new Random(42)

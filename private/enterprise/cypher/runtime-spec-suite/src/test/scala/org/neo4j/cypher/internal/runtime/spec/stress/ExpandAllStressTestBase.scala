@@ -5,13 +5,14 @@
  */
 package org.neo4j.cypher.internal.runtime.spec.stress
 
+import org.neo4j.cypher.internal.CypherRuntime
+import org.neo4j.cypher.internal.EnterpriseRuntimeContext
 import org.neo4j.cypher.internal.runtime.spec.Edition
-import org.neo4j.cypher.internal.{CypherRuntime, EnterpriseRuntimeContext}
 
 abstract class ExpandAllStressTestBase(edition: Edition[EnterpriseRuntimeContext], runtime: CypherRuntime[EnterpriseRuntimeContext])
   extends ParallelStressSuite(edition, runtime)
-    with RHSOfApplyOneChildStressSuite
-    with OnTopOfParallelInputStressTest {
+  with RHSOfApplyOneChildStressSuite
+  with OnTopOfParallelInputStressTest {
 
   override def onTopOfParallelInputOperator(variable: String, propVariable: String): OnTopOfParallelInputTD =
     OnTopOfParallelInputTD(
@@ -24,7 +25,7 @@ abstract class ExpandAllStressTestBase(edition: Edition[EnterpriseRuntimeContext
       Seq("x", "next")
     )
 
-  override def rhsOfApplyOperator(variable: String) =
+  override def rhsOfApplyOperator(variable: String): RHSOfApplyOneChildTD =
     RHSOfApplyOneChildTD(
       _.expand(s"($variable)-[:NEXT]->(next)"),
       rowsComingIntoTheOperator =>

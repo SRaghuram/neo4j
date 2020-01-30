@@ -45,22 +45,22 @@ trait SlottedMemoryManagementTestBase extends WithSlotsMemoryManagementTestBase 
     }
   }
 
-    test("should kill primitive distinct query before it runs out of memory") {
-      // given
-      val input = infiniteNodeInput(estimateSize(E_NODE_PRIMITIVE) * 2)
+  test("should kill primitive distinct query before it runs out of memory") {
+    // given
+    val input = infiniteNodeInput(estimateSize(E_NODE_PRIMITIVE) * 2)
 
-      // when
-      val logicalQuery = new LogicalQueryBuilder(this)
-        .produceResults("x")
-        .distinct("x AS x", "x AS y")
-        .input(nodes = Seq("x"), nullable = false)
-        .build()
+    // when
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("x")
+      .distinct("x AS x", "x AS y")
+      .input(nodes = Seq("x"), nullable = false)
+      .build()
 
-      // then
-      a[TransactionOutOfMemoryException] should be thrownBy {
-        consume(execute(logicalQuery, runtime, input))
-      }
+    // then
+    a[TransactionOutOfMemoryException] should be thrownBy {
+      consume(execute(logicalQuery, runtime, input))
     }
+  }
 
   test("should kill single primitive distinct query before it runs out of memory") {
     // given

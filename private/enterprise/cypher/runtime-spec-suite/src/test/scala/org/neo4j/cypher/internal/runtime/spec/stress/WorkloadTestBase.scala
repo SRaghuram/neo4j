@@ -5,10 +5,15 @@
  */
 package org.neo4j.cypher.internal.runtime.spec.stress
 
-import java.util.concurrent.{Callable, Executors, TimeUnit}
+import java.util.concurrent.Callable
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
-import org.neo4j.cypher.internal.runtime.spec.{Edition, LogicalQueryBuilder, RuntimeTestSuite}
-import org.neo4j.cypher.internal.{CypherRuntime, RuntimeContext}
+import org.neo4j.cypher.internal.CypherRuntime
+import org.neo4j.cypher.internal.RuntimeContext
+import org.neo4j.cypher.internal.runtime.spec.Edition
+import org.neo4j.cypher.internal.runtime.spec.LogicalQueryBuilder
+import org.neo4j.cypher.internal.runtime.spec.RuntimeTestSuite
 import org.neo4j.values.AnyValue
 
 abstract class WorkloadTestBase[CONTEXT <: RuntimeContext](edition: Edition[CONTEXT],
@@ -37,7 +42,7 @@ abstract class WorkloadTestBase[CONTEXT <: RuntimeContext](edition: Edition[CONT
               yield executeAndConsumeTransactionally(logicalQuery, runtime)
           }
         })
-    )
+      )
 
     // then
     val expected = singleColumn(nodes)

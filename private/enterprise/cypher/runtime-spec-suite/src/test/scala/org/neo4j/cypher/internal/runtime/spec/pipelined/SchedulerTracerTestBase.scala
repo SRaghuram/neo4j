@@ -5,18 +5,24 @@
  */
 package org.neo4j.cypher.internal.runtime.spec.pipelined
 
-import java.lang.Boolean.TRUE
-import java.lang.management.ManagementFactory
-import java.nio.file.{Files, Path}
+import java.nio.file.Files
+import java.nio.file.Path
 
 import org.neo4j.configuration.GraphDatabaseSettings
-import org.neo4j.cypher.internal.runtime.spec._
-import org.neo4j.cypher.internal.runtime.spec.pipelined.SchedulerTracerTestBase._
-import org.neo4j.cypher.internal.{CypherRuntime, EnterpriseRuntimeContext, PipelinedRuntime}
+import org.neo4j.cypher.internal.CypherRuntime
+import org.neo4j.cypher.internal.EnterpriseRuntimeContext
+import org.neo4j.cypher.internal.PipelinedRuntime
+import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE
+import org.neo4j.cypher.internal.runtime.spec.LogicalQueryBuilder
+import org.neo4j.cypher.internal.runtime.spec.RuntimeTestSuite
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 import scala.io.Source
+import org.neo4j.cypher.internal.runtime.spec.pipelined.SchedulerTracerTestBase.MORSEL_SIZE
+import org.neo4j.cypher.internal.runtime.spec.pipelined.SchedulerTracerTestBase.WORKER_COUNT
+import java.lang.Boolean.TRUE
+import java.lang.management.ManagementFactory
 
 object SchedulerTracerTestBase {
   def newTempCSVPath(): Path = Files.createTempFile("scheduler-trace", ".csv")
@@ -32,7 +38,7 @@ abstract class SchedulerTracerTestBase(runtime: CypherRuntime[EnterpriseRuntimeC
     GraphDatabaseSettings.cypher_worker_count -> Integer.valueOf(WORKER_COUNT),
     GraphDatabaseSettings.enable_pipelined_runtime_trace -> TRUE,
     GraphDatabaseSettings.pipelined_scheduler_trace_filename -> tempCSVPath.toAbsolutePath
-    ), runtime) {
+  ), runtime) {
 
   override def stopTest(): Unit = {
     Files.delete(tempCSVPath)
@@ -61,15 +67,15 @@ abstract class SchedulerTracerTestBase(runtime: CypherRuntime[EnterpriseRuntimeC
 
     val (header, dataRows) = parseTrace(tempCSVPath.toAbsolutePath)
     header should be (Array("id_1.0",
-                             "upstreamIds",
-                             "queryId",
-                             "schedulingThreadId",
-                             "schedulingTime(us)",
-                             "executionThreadId",
-                             "startTime(us)",
-                             "stopTime(us)",
-                             "pipelineId",
-                             "pipelineDescription"))
+      "upstreamIds",
+      "queryId",
+      "schedulingThreadId",
+      "schedulingTime(us)",
+      "executionThreadId",
+      "startTime(us)",
+      "stopTime(us)",
+      "pipelineId",
+      "pipelineDescription"))
 
     //TODO: when running with fully fused pipelines this no longer holds
     dataRows.size should be >= expectedRowCount / MORSEL_SIZE
@@ -95,7 +101,7 @@ abstract class SchedulerTracerTestBase(runtime: CypherRuntime[EnterpriseRuntimeC
     schedulingThreadIds.size should be <= (WORKER_COUNT + 1)
     executionThreadIds.size should be <= WORKER_COUNT
     if (!isWindows && runtime == PipelinedRuntime.PARALLEL) { // Scheduling on windows sometimes keeps this work on only one worker. We therefore
-                      // omit this assumption to avoid getting a flaky test.
+      // omit this assumption to avoid getting a flaky test.
       executionThreadIds.size should be > 1
     }
     withClue("Expect no duplicate work unit IDs"){

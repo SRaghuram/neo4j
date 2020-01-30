@@ -10,12 +10,81 @@ import java.lang.System.lineSeparator
 import org.neo4j.cypher.internal.EnterpriseRuntimeContext
 import org.neo4j.cypher.internal.PipelinedRuntime.PARALLEL
 import org.neo4j.cypher.internal.logical.plans.Ascending
+import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE
 import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE.MORSEL_SIZE
-import org.neo4j.cypher.internal.runtime.spec._
+import org.neo4j.cypher.internal.runtime.spec.LogicalQueryBuilder
+import org.neo4j.cypher.internal.runtime.spec.RuntimeTestSuite
 import org.neo4j.cypher.internal.runtime.spec.parallel.ParallelRuntimeSpecSuite.SIZE_HINT
-import org.neo4j.cypher.internal.runtime.spec.pipelined._
-import org.neo4j.cypher.internal.runtime.spec.stress._
-import org.neo4j.cypher.internal.runtime.spec.tests._
+import org.neo4j.cypher.internal.runtime.spec.pipelined.AssertFusingSucceeded
+import org.neo4j.cypher.internal.runtime.spec.pipelined.PipelinedDbHitsTestBase
+import org.neo4j.cypher.internal.runtime.spec.pipelined.PipelinedFusingNotificationTestBase
+import org.neo4j.cypher.internal.runtime.spec.pipelined.ProfileNoTimeTestBase
+import org.neo4j.cypher.internal.runtime.spec.pipelined.SchedulerTracerTestBase
+import org.neo4j.cypher.internal.runtime.spec.stress.AggregationStressTestBase
+import org.neo4j.cypher.internal.runtime.spec.stress.AllNodeScanStressTestBase
+import org.neo4j.cypher.internal.runtime.spec.stress.ApplyStressTestBase
+import org.neo4j.cypher.internal.runtime.spec.stress.ArgumentStressTestBase
+import org.neo4j.cypher.internal.runtime.spec.stress.DistinctStressTestBase
+import org.neo4j.cypher.internal.runtime.spec.stress.ExpandAllStressTestBase
+import org.neo4j.cypher.internal.runtime.spec.stress.ExpressionStressTestBase
+import org.neo4j.cypher.internal.runtime.spec.stress.FilterStressTestBase
+import org.neo4j.cypher.internal.runtime.spec.stress.IndexContainsScanStressTestBase
+import org.neo4j.cypher.internal.runtime.spec.stress.IndexEndsWithScanStressTestBase
+import org.neo4j.cypher.internal.runtime.spec.stress.IndexScanStressTestBase
+import org.neo4j.cypher.internal.runtime.spec.stress.IndexSeekExactStressTest
+import org.neo4j.cypher.internal.runtime.spec.stress.IndexSeekRangeStressTestBase
+import org.neo4j.cypher.internal.runtime.spec.stress.LabelScanStressTestBase
+import org.neo4j.cypher.internal.runtime.spec.stress.NodeByIdSeekStressTestBase
+import org.neo4j.cypher.internal.runtime.spec.stress.ProjectionStressTestBase
+import org.neo4j.cypher.internal.runtime.spec.stress.UnwindStressTestBase
+import org.neo4j.cypher.internal.runtime.spec.stress.VarExpandStressTestBase
+import org.neo4j.cypher.internal.runtime.spec.stress.WorkloadTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.AggregationTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.AllNodeScanTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.AllNodeScanWithOtherOperatorsTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.ArgumentTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.ArrayIndexSupport
+import org.neo4j.cypher.internal.runtime.spec.tests.CachePropertiesTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.CartesianProductTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.DirectedRelationshipByIdSeekTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.DistinctTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.ExpandAllTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.ExpandAllWithOtherOperatorsTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.ExpandIntoTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.ExpandIntoWithOtherOperatorsTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.ExpressionTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.FilterTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.LabelScanTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.LimitTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.MemoryManagementDisabledTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.MiscTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.NodeByIdSeekTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.NodeCountFromCountStoreTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.NodeHashJoinTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexContainsScanTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexEndsWithScanTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexPointDistanceSeekTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexScanTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexSeekRangeAndCompositeTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexSeekTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexStartsWithSeekTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.OptionalExpandAllTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.OptionalExpandIntoTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.OptionalTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.ProfileRowsTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.ProfileTimeTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.ProjectionTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.PruningVarLengthExpandTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.ReactiveResultStressTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.ReactiveResultTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.RelationshipCountFromCountStoreTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.ShortestPathTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.SortTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.SubscriberErrorTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.TopTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.UndirectedRelationshipByIdSeekTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.UnwindTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.VarLengthExpandTestBase
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.internal.util.test_helpers.TimeLimitedCypherTest
 import org.neo4j.cypher.result.OperatorProfile
@@ -206,10 +275,10 @@ class ParallelRuntimeReactiveResultsTest extends ReactiveResultTestBase(ENTERPRI
 class ParallelRuntimeReactiveResultsNoFusingTest extends ReactiveResultTestBase(ENTERPRISE.NO_FUSING, PARALLEL) with ParallelRuntimeSpecSuite
 class ParallelRuntimeReactiveResultsStressTest
   extends ReactiveResultStressTestBase(ENTERPRISE.FUSING, PARALLEL,
-                                       ReactiveResultStressTestBase.MORSEL_SIZE + 1) with ParallelRuntimeSpecSuite// this test is slow, hence the reduced size
+    ReactiveResultStressTestBase.MORSEL_SIZE + 1) with ParallelRuntimeSpecSuite// this test is slow, hence the reduced size
 class ParallelRuntimeReactiveNoFusingStressTest
   extends ReactiveResultStressTestBase(ENTERPRISE.NO_FUSING, PARALLEL,
-                                       ReactiveResultStressTestBase.MORSEL_SIZE + 1) with ParallelRuntimeSpecSuite// this test is slow, hence the reduced size
+    ReactiveResultStressTestBase.MORSEL_SIZE + 1) with ParallelRuntimeSpecSuite// this test is slow, hence the reduced size
 
 // OPTIONAL
 class ParallelRuntimeOptionalTest extends OptionalTestBase(ENTERPRISE.FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite

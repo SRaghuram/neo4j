@@ -10,12 +10,71 @@ import java.lang.System.lineSeparator
 import org.neo4j.cypher.internal.EnterpriseRuntimeContext
 import org.neo4j.cypher.internal.PipelinedRuntime.PIPELINED
 import org.neo4j.cypher.internal.logical.plans.Ascending
-import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE.{FUSING, MORSEL_SIZE, NO_FUSING}
+import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE.FUSING
+import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE.MORSEL_SIZE
+import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE.NO_FUSING
+import org.neo4j.cypher.internal.runtime.spec.LogicalQueryBuilder
+import org.neo4j.cypher.internal.runtime.spec.RuntimeTestSuite
 import org.neo4j.cypher.internal.runtime.spec.pipelined.PipelinedSpecSuite.SIZE_HINT
 import org.neo4j.cypher.internal.runtime.spec.slotted.WithSlotsMemoryManagementTestBase
-import org.neo4j.cypher.internal.runtime.spec.stress._
-import org.neo4j.cypher.internal.runtime.spec.tests._
-import org.neo4j.cypher.internal.runtime.spec.{LogicalQueryBuilder, RuntimeTestSuite}
+import org.neo4j.cypher.internal.runtime.spec.stress.WorkloadTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.AggregationTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.AllNodeScanTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.AllNodeScanWithOtherOperatorsTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.ArgumentTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.ArrayIndexSupport
+import org.neo4j.cypher.internal.runtime.spec.tests.CachePropertiesTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.CartesianProductTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.DirectedRelationshipByIdSeekTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.DistinctTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.ExpandAllTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.ExpandAllWithOtherOperatorsTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.ExpandIntoTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.ExpandIntoWithOtherOperatorsTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.ExpressionTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.ExpressionWithTxStateChangesTests
+import org.neo4j.cypher.internal.runtime.spec.tests.FilterTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.InputTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.LabelScanTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.LimitTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.MemoryManagementDisabledTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.MemoryManagementTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.MiscTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.NodeByIdSeekTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.NodeCountFromCountStoreTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.NodeHashJoinTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexContainsScanTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexEndsWithScanTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexPointDistanceSeekTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexScanTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexSeekRangeAndCompositeTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexSeekTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexStartsWithSeekTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.OptionalExpandAllTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.OptionalExpandIntoTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.OptionalTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.ProcedureCallDbHitsTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.ProcedureCallRowsTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.ProcedureCallTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.ProcedureCallTimeTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.ProfileRowsTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.ProfileTimeTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.ProjectEndpointsTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.ProjectionTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.ProvidedOrderTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.PruningVarLengthExpandTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.ReactiveResultStressTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.ReactiveResultTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.RelationshipCountFromCountStoreTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.ShortestPathTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.SlottedPipeFallbackTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.SortTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.SubscriberErrorTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.ThreadUnsafeExpressionTests
+import org.neo4j.cypher.internal.runtime.spec.tests.TopTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.UndirectedRelationshipByIdSeekTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.UnwindTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.VarLengthExpandTestBase
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.result.OperatorProfile
 import org.scalatest.Outcome
@@ -37,11 +96,11 @@ class PipelinedInputTest extends InputTestBase(FUSING, PIPELINED, SIZE_HINT) wit
 
 // ALL NODE SCAN
 class PipelinedAllNodeScanTest extends AllNodeScanTestBase(FUSING, PIPELINED, SIZE_HINT)
-                            with AllNodeScanWithOtherOperatorsTestBase[EnterpriseRuntimeContext]
-                            with PipelinedSpecSuite
+                               with AllNodeScanWithOtherOperatorsTestBase[EnterpriseRuntimeContext]
+                               with PipelinedSpecSuite
 class PipelinedAllNodeScanNoFusingTest extends AllNodeScanTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
-                                    with AllNodeScanWithOtherOperatorsTestBase[EnterpriseRuntimeContext]
-                                    with PipelinedSpecSuite
+                                       with AllNodeScanWithOtherOperatorsTestBase[EnterpriseRuntimeContext]
+                                       with PipelinedSpecSuite
 
 // NODE BY ID SEEK
 class PipelinedNodeByIdSeekTest extends NodeByIdSeekTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
@@ -69,14 +128,14 @@ class PipelinedLabelScanNoFusingTest extends LabelScanTestBase(NO_FUSING, PIPELI
 
 // INDEX SEEK
 class PipelinedNodeIndexSeekTest extends NodeIndexSeekTestBase(FUSING, PIPELINED, SIZE_HINT)
-                              with NodeIndexSeekRangeAndCompositeTestBase[EnterpriseRuntimeContext]
-                              with ArrayIndexSupport[EnterpriseRuntimeContext]
-                              with PipelinedSpecSuite
+                                 with NodeIndexSeekRangeAndCompositeTestBase[EnterpriseRuntimeContext]
+                                 with ArrayIndexSupport[EnterpriseRuntimeContext]
+                                 with PipelinedSpecSuite
 
 class PipelinedNodeIndexSeekNoFusingTest extends NodeIndexSeekTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
-                                      with NodeIndexSeekRangeAndCompositeTestBase[EnterpriseRuntimeContext]
-                                      with ArrayIndexSupport[EnterpriseRuntimeContext]
-                                      with PipelinedSpecSuite
+                                         with NodeIndexSeekRangeAndCompositeTestBase[EnterpriseRuntimeContext]
+                                         with ArrayIndexSupport[EnterpriseRuntimeContext]
+                                         with PipelinedSpecSuite
 class PipelinedRuntimeNodeIndexStartsWithSeekTest extends NodeIndexStartsWithSeekTestBase(FUSING, PIPELINED, SIZE_HINT)
 class PipelinedRuntimeNodeIndexStartsWithSeekNoFusingTest extends NodeIndexStartsWithSeekTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
 class PipelinedPointDistanceSeekTest extends NodeIndexPointDistanceSeekTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
@@ -100,11 +159,11 @@ class PipelinedArgumentNoFusingTest extends ArgumentTestBase(NO_FUSING, PIPELINE
 
 // EXPAND ALL
 class PipelinedExpandAllTest extends ExpandAllTestBase(FUSING, PIPELINED, SIZE_HINT)
-                          with ExpandAllWithOtherOperatorsTestBase[EnterpriseRuntimeContext]
-                          with PipelinedSpecSuite
+                             with ExpandAllWithOtherOperatorsTestBase[EnterpriseRuntimeContext]
+                             with PipelinedSpecSuite
 class PipelinedExpandAllTestNoFusing extends ExpandAllTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
-                                  with ExpandAllWithOtherOperatorsTestBase[EnterpriseRuntimeContext]
-                                  with PipelinedSpecSuite
+                                     with ExpandAllWithOtherOperatorsTestBase[EnterpriseRuntimeContext]
+                                     with PipelinedSpecSuite
 
 // EXPAND INTO
 class PipelinedExpandIntoTest extends ExpandIntoTestBase(FUSING, PIPELINED, SIZE_HINT)
@@ -181,10 +240,10 @@ class PipelinedReactiveResultsTest extends ReactiveResultTestBase(FUSING, PIPELI
 class PipelinedReactiveResultsNoFusingTest extends ReactiveResultTestBase(NO_FUSING, PIPELINED) with PipelinedSpecSuite
 class PipelinedReactiveResultsStressTest
   extends ReactiveResultStressTestBase(FUSING, PIPELINED,
-                                       ReactiveResultStressTestBase.MORSEL_SIZE + 1) with PipelinedSpecSuite
+    ReactiveResultStressTestBase.MORSEL_SIZE + 1) with PipelinedSpecSuite
 class PipelinedReactiveResultsNoFusingStressTest
   extends ReactiveResultStressTestBase(NO_FUSING, PIPELINED,
-                                       ReactiveResultStressTestBase.MORSEL_SIZE + 1) with PipelinedSpecSuite
+    ReactiveResultStressTestBase.MORSEL_SIZE + 1) with PipelinedSpecSuite
 
 // OPTIONAL
 class PipelinedOptionalTest extends OptionalTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
@@ -206,19 +265,19 @@ class PipelinedShortestPathNoFusingTest extends ShortestPathTestBase(NO_FUSING, 
 class PipelinedMiscTest extends MiscTestBase(FUSING, PIPELINED) with PipelinedSpecSuite
 class PipelinedMiscNoFusingTest extends MiscTestBase(NO_FUSING, PIPELINED) with PipelinedSpecSuite
 class PipelinedExpressionTest extends ExpressionTestBase(FUSING, PIPELINED)
-                           with ThreadUnsafeExpressionTests[EnterpriseRuntimeContext]
-                           with ExpressionWithTxStateChangesTests[EnterpriseRuntimeContext]
+                              with ThreadUnsafeExpressionTests[EnterpriseRuntimeContext]
+                              with ExpressionWithTxStateChangesTests[EnterpriseRuntimeContext]
 class PipelinedExpressionNoFusingTest extends ExpressionTestBase(NO_FUSING, PIPELINED)
-                                   with ThreadUnsafeExpressionTests[EnterpriseRuntimeContext]
-                                   with ExpressionWithTxStateChangesTests[EnterpriseRuntimeContext]
+                                      with ThreadUnsafeExpressionTests[EnterpriseRuntimeContext]
+                                      with ExpressionWithTxStateChangesTests[EnterpriseRuntimeContext]
 class PipelinedFusingNotificationTest extends PipelinedFusingNotificationTestBase(FUSING, PIPELINED) // not PipelinedSpecSuite, since we expect fusing to fail
 class PipelinedSchedulerTracerTest extends SchedulerTracerTestBase(PIPELINED) with PipelinedSpecSuite
 class PipelinedMemoryManagementTest extends MemoryManagementTestBase(FUSING, PIPELINED)
-                                 with WithSlotsMemoryManagementTestBase
-                                 with PipelinedSpecSuite
+                                    with WithSlotsMemoryManagementTestBase
+                                    with PipelinedSpecSuite
 class PipelinedMemoryManagementNoFusingTest extends MemoryManagementTestBase(NO_FUSING, PIPELINED)
-                                         with WithSlotsMemoryManagementTestBase
-                                         with PipelinedSpecSuite
+                                            with WithSlotsMemoryManagementTestBase
+                                            with PipelinedSpecSuite
 class PipelinedMemoryManagementDisabledTest extends MemoryManagementDisabledTestBase(FUSING, PIPELINED) with PipelinedSpecSuite
 class PipelinedSubscriberErrorTest extends SubscriberErrorTestBase(FUSING, PIPELINED) with PipelinedSpecSuite
 
@@ -267,11 +326,11 @@ class PipelinedProfileNoTimeTest extends ProfileNoTimeTestBase(FUSING, PIPELINED
   }
 }
 class PipelinedProfileNoFusingDbHitsTest extends PipelinedDbHitsTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
-                                      with ProcedureCallDbHitsTestBase[EnterpriseRuntimeContext]
-                                      with PipelinedSpecSuite
+                                         with ProcedureCallDbHitsTestBase[EnterpriseRuntimeContext]
+                                         with PipelinedSpecSuite
 class PipelinedProfileDbHitsTest extends PipelinedDbHitsTestBase(FUSING, PIPELINED, SIZE_HINT)
-                              with ProcedureCallDbHitsTestBase[EnterpriseRuntimeContext]
-                              with PipelinedSpecSuite {
+                                 with ProcedureCallDbHitsTestBase[EnterpriseRuntimeContext]
+                                 with PipelinedSpecSuite {
 
   override protected def canFuseOverPipelines: Boolean = true
 }

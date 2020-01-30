@@ -6,10 +6,14 @@
 package org.neo4j.cypher.internal.runtime.spec.stress
 
 import org.neo4j.configuration.GraphDatabaseSettings
+import org.neo4j.cypher.internal.CypherRuntime
+import org.neo4j.cypher.internal.EnterpriseRuntimeContext
 import org.neo4j.cypher.internal.runtime.InputValues
-import org.neo4j.cypher.internal.runtime.spec._
-import org.neo4j.cypher.internal.runtime.spec.stress.ParallelStressSuite.{MORSEL_SIZE, WORKERS}
-import org.neo4j.cypher.internal.{CypherRuntime, EnterpriseRuntimeContext}
+import org.neo4j.cypher.internal.runtime.spec.Edition
+import org.neo4j.cypher.internal.runtime.spec.LogicalQueryBuilder
+import org.neo4j.cypher.internal.runtime.spec.RuntimeTestSuite
+import org.neo4j.cypher.internal.runtime.spec.stress.ParallelStressSuite.MORSEL_SIZE
+import org.neo4j.cypher.internal.runtime.spec.stress.ParallelStressSuite.WORKERS
 import org.neo4j.graphdb.Node
 
 object ParallelStressSuite {
@@ -18,11 +22,11 @@ object ParallelStressSuite {
 }
 
 /**
-  * Here is a compilation of traits that exert stress on an operator in a given situation. Each trait represents one such situation,
-  * and they abstract over the operator to test. The graph used is always the same to make reasoning about expected results easier.
-  *
-  * To use this, implement a StressTest that extends this class and mixes in all the traits that make sense, while overriding the required methods.
-  */
+ * Here is a compilation of traits that exert stress on an operator in a given situation. Each trait represents one such situation,
+ * and they abstract over the operator to test. The graph used is always the same to make reasoning about expected results easier.
+ *
+ * To use this, implement a StressTest that extends this class and mixes in all the traits that make sense, while overriding the required methods.
+ */
 abstract class ParallelStressSuite(edition: Edition[EnterpriseRuntimeContext], runtime: CypherRuntime[EnterpriseRuntimeContext])
   extends RuntimeTestSuite(
     edition.copyWith(
@@ -35,8 +39,8 @@ abstract class ParallelStressSuite(edition: Edition[EnterpriseRuntimeContext], r
   protected val graphSize: Int = morselsPerGraph * MORSEL_SIZE
 
   /**
-    * All nodes in the test definition
-    */
+   * All nodes in the test definition
+   */
   var nodes: Seq[Node] = _
 
   implicit class RichLogicalQueryBuilder(inner: LogicalQueryBuilder) {
@@ -46,8 +50,8 @@ abstract class ParallelStressSuite(edition: Edition[EnterpriseRuntimeContext], r
   }
 
   /**
-    * This can be used to investigate flaky tests.
-    */
+   * This can be used to investigate flaky tests.
+   */
   def stringify(thread: Thread, elements: Array[StackTraceElement]): Unit = {
     val builder = new StringBuilder("\"" + thread.getName + "\"" + (if (thread.isDaemon) {
       " daemon"
@@ -108,25 +112,25 @@ abstract class ParallelStressSuite(edition: Edition[EnterpriseRuntimeContext], r
 }
 
 /**
-  * This tests a leaf operator at the RHS of an Apply, where the LHS is a parallel Input.
-  */
+ * This tests a leaf operator at the RHS of an Apply, where the LHS is a parallel Input.
+ */
 trait RHSOfApplyLeafStressSuite {
   self: ParallelStressSuite =>
 
   /**
-    * @param operator       a lambda function to append the operator to a query builder.
-    * @param expectedResult the expected result for the RHS, given rows coming into the operator. Each row will contain one value for `x`.
-    */
+   * @param operator       a lambda function to append the operator to a query builder.
+   * @param expectedResult the expected result for the RHS, given rows coming into the operator. Each row will contain one value for `x`.
+   */
   case class RHSOfApplyLeafTD(operator: LogicalQueryBuilder => LogicalQueryBuilder, expectedResult: Iterable[Array[Node]] => Iterable[Array[_]])
 
   /**
-    * Provide a test definition for the operator.
-    *
-    * @param variable     the leaf operator must introduce this variable
-    * @param nodeArgument it gets provided with this argument, which is a node
-    * @param propArgument it gets provided with this argument, which is a integer property of the node
-    * @return a test definition
-    */
+   * Provide a test definition for the operator.
+   *
+   * @param variable     the leaf operator must introduce this variable
+   * @param nodeArgument it gets provided with this argument, which is a node
+   * @param propArgument it gets provided with this argument, which is a integer property of the node
+   * @return a test definition
+   */
   def rhsOfApplyLeaf(variable: String, nodeArgument: String, propArgument: String): RHSOfApplyLeafTD
 
   test("should work on RHS of apply with parallelism") {
@@ -155,26 +159,26 @@ trait RHSOfApplyLeafStressSuite {
 }
 
 /**
-  * This tests a one-child operator at the RHS of an Apply, where the LHS is a parallel Input.
-  */
+ * This tests a one-child operator at the RHS of an Apply, where the LHS is a parallel Input.
+ */
 trait RHSOfApplyOneChildStressSuite {
   self: ParallelStressSuite =>
 
   /**
-    * @param operator       a lambda function to append the operator to a query builder.
-    * @param expectedResult the expected result for the RHS, given rows coming into the operator. Each row will contain one value for `x` and `y`.
-    * @param resultColumns  all result columns
-    */
+   * @param operator       a lambda function to append the operator to a query builder.
+   * @param expectedResult the expected result for the RHS, given rows coming into the operator. Each row will contain one value for `x` and `y`.
+   * @param resultColumns  all result columns
+   */
   case class RHSOfApplyOneChildTD(operator: LogicalQueryBuilder => LogicalQueryBuilder,
                                   expectedResult: Iterable[Array[Node]] => Iterable[Array[_]],
                                   resultColumns: Seq[String] = Seq.empty)
 
   /**
-    * Provide a test definition for the operator.
-    *
-    * @param variable a node variable available on the RHS
-    * @return a test definition
-    */
+   * Provide a test definition for the operator.
+   *
+   * @param variable a node variable available on the RHS
+   * @return a test definition
+   */
   def rhsOfApplyOperator(variable: String): RHSOfApplyOneChildTD
 
   test("should work on RHS of apply with parallelism") {
@@ -210,27 +214,27 @@ trait RHSOfApplyOneChildStressSuite {
 }
 
 /**
-  * This tests a one-child operator on top of parallel Input.
-  */
+ * This tests a one-child operator on top of parallel Input.
+ */
 trait OnTopOfParallelInputStressTest {
   self: ParallelStressSuite =>
 
   /**
-    * @param operator       a lambda function to append the operator to a query builder.
-    * @param expectedResult the expected result given rows coming into the operator. Each row will contain one value for `x`.
-    * @param resultColumns  all result columns
-    */
+   * @param operator       a lambda function to append the operator to a query builder.
+   * @param expectedResult the expected result given rows coming into the operator. Each row will contain one value for `x`.
+   * @param resultColumns  all result columns
+   */
   case class OnTopOfParallelInputTD(operator: LogicalQueryBuilder => LogicalQueryBuilder,
                                     expectedResult: Iterable[Array[Node]] => Iterable[Array[_]],
                                     resultColumns: Seq[String] = Seq.empty)
 
   /**
-    * Provide a test definition for the operator.
-    *
-    * @param variable a node variable available
-    * @param propVariable an integer property of the node
-    * @return a test definition
-    */
+   * Provide a test definition for the operator.
+   *
+   * @param variable a node variable available
+   * @param propVariable an integer property of the node
+   * @return a test definition
+   */
   def onTopOfParallelInputOperator(variable: String, propVariable: String): OnTopOfParallelInputTD
 
   test("should work on top of input with parallelism") {

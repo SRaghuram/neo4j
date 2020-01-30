@@ -5,8 +5,10 @@
  */
 package org.neo4j.cypher.internal.runtime.spec.stress
 
-import org.neo4j.cypher.internal.runtime.spec.{Edition, LogicalQueryBuilder}
-import org.neo4j.cypher.internal.{CypherRuntime, EnterpriseRuntimeContext}
+import org.neo4j.cypher.internal.CypherRuntime
+import org.neo4j.cypher.internal.EnterpriseRuntimeContext
+import org.neo4j.cypher.internal.runtime.spec.Edition
+import org.neo4j.cypher.internal.runtime.spec.LogicalQueryBuilder
 
 abstract class CartesianProductStressTestBase(edition: Edition[EnterpriseRuntimeContext], runtime: CypherRuntime[EnterpriseRuntimeContext])
   extends ParallelStressSuite(edition, runtime) {

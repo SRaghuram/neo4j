@@ -8,10 +8,14 @@ package org.neo4j.cypher.internal.runtime.spec
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicInteger
 
-import org.neo4j.cypher.internal.runtime.pipelined.tracing.{QueryExecutionTracer, ScheduledWorkUnitEvent, SchedulerTracer, WorkUnitEvent}
-import org.neo4j.cypher.internal.runtime.scheduling._
+import org.neo4j.cypher.internal.runtime.pipelined.tracing.QueryExecutionTracer
+import org.neo4j.cypher.internal.runtime.pipelined.tracing.ScheduledWorkUnitEvent
+import org.neo4j.cypher.internal.runtime.pipelined.tracing.SchedulerTracer
+import org.neo4j.cypher.internal.runtime.pipelined.tracing.WorkUnitEvent
+import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
 
+import scala.collection.JavaConverters.collectionAsScalaIterableConverter
 import scala.collection.immutable
 import scala.collection.mutable.ArrayBuffer
 
@@ -31,7 +35,6 @@ class ParallelismTracer extends SchedulerTracer {
     )
 
   def hasEvidenceOfParallelism: Boolean = {
-    import scala.collection.JavaConverters._
 
     val allWorkUnitEvents: Map[Id, immutable.IndexedSeq[TestWorkUnitEvent]] =
       workUnitEventLists.asScala.flatten.toIndexedSeq.sortBy(_.startTime).groupBy(_.workId)
@@ -83,4 +86,3 @@ class ParallelismTracer extends SchedulerTracer {
     }
   }
 }
-

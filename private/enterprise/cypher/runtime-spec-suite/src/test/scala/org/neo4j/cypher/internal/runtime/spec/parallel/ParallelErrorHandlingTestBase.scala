@@ -6,13 +6,19 @@
 package org.neo4j.cypher.internal.runtime.spec.parallel
 
 import org.neo4j.configuration.GraphDatabaseSettings
-import org.neo4j.cypher.internal.runtime.spec.stress.ParallelStressSuite.{MORSEL_SIZE, WORKERS}
-import org.neo4j.cypher.internal.runtime.spec.{ENTERPRISE, LogicalQueryBuilder, RuntimeTestSuite}
-import org.neo4j.cypher.internal.{CypherRuntime, EnterpriseRuntimeContext}
+import org.neo4j.cypher.internal.CypherRuntime
+import org.neo4j.cypher.internal.EnterpriseRuntimeContext
+import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE
+import org.neo4j.cypher.internal.runtime.spec.LogicalQueryBuilder
+import org.neo4j.cypher.internal.runtime.spec.RuntimeTestSuite
+import org.neo4j.cypher.internal.runtime.spec.stress.ParallelStressSuite.MORSEL_SIZE
+import org.neo4j.cypher.internal.runtime.spec.stress.ParallelStressSuite.WORKERS
 import org.neo4j.exceptions.ArithmeticException
 
+import scala.concurrent.Await
+import scala.concurrent.ExecutionContext.global
+import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
-import scala.concurrent.{Await, Future}
 
 object ParallelErrorHandlingTestBase {
   val MORSEL_SIZE = 1000
@@ -41,7 +47,6 @@ abstract class ParallelErrorHandlingTestBase(runtime: CypherRuntime[EnterpriseRu
       .build()
 
     // when
-    import scala.concurrent.ExecutionContext.global
     val futureResult = Future(consume(execute(logicalQuery, runtime)))(global)
 
     // then

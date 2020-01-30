@@ -10,9 +10,10 @@ import java.util.concurrent.ThreadLocalRandom
 
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder
 import org.neo4j.configuration.GraphDatabaseSettings
+import org.neo4j.cypher.internal.EnterpriseRuntimeContext
+import org.neo4j.cypher.internal.RuntimeEnvironment
 import org.neo4j.cypher.internal.runtime.pipelined.WorkerManagement
 import org.neo4j.cypher.internal.spi.codegen.GeneratedQueryStructure
-import org.neo4j.cypher.internal.{EnterpriseRuntimeContext, RuntimeEnvironment}
 import org.neo4j.kernel.api.Kernel
 import org.neo4j.scheduler.JobScheduler
 
@@ -39,7 +40,7 @@ object ENTERPRISE {
         runtimeEnvironment,
         kernel.cursors(),
         () => new ComposingSchedulerTracer(RuntimeEnvironment.createTracer(runtimeConfig, jobScheduler, lifeSupport),
-                                           new ParallelismTracer))
+          new ParallelismTracer))
     },
     GraphDatabaseSettings.cypher_hints_error -> TRUE,
     GraphDatabaseSettings.cypher_pipelined_batch_size_small -> Integer.valueOf(MORSEL_SIZE),

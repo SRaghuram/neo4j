@@ -5,10 +5,13 @@
  */
 package org.neo4j.cypher.internal.runtime.spec.parallel
 
+import org.neo4j.cypher.internal.CypherRuntime
+import org.neo4j.cypher.internal.EnterpriseRuntimeContext
+import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE
+import org.neo4j.cypher.internal.runtime.spec.Edition
+import org.neo4j.cypher.internal.runtime.spec.LogicalQueryBuilder
 import org.neo4j.cypher.internal.runtime.spec.parallel.ParallelRuntimeSpecSuite.SIZE_HINT
 import org.neo4j.cypher.internal.runtime.spec.tests.InputTestBase
-import org.neo4j.cypher.internal.runtime.spec.{ENTERPRISE, Edition, LogicalQueryBuilder}
-import org.neo4j.cypher.internal.{CypherRuntime, EnterpriseRuntimeContext}
 
 abstract class ParallelInputTestBase(edition: Edition[EnterpriseRuntimeContext],
                                      runtime: CypherRuntime[EnterpriseRuntimeContext])

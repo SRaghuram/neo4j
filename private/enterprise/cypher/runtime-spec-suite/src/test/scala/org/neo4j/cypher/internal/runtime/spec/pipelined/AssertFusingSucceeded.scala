@@ -12,7 +12,9 @@ import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 import org.neo4j.logging.AssertableLogProvider
 import org.neo4j.logging.AssertableLogProvider.Level
 import org.neo4j.logging.LogAssertions.assertThat
-import org.scalatest.{Exceptional, Outcome, TestSuiteMixin}
+import org.scalatest.Exceptional
+import org.scalatest.Outcome
+import org.scalatest.TestSuiteMixin
 
 /**
  * Assert that fusing succeeded as part of each test.

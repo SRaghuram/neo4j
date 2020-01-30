@@ -6,13 +6,14 @@
 package org.neo4j.cypher.internal.runtime.spec.stress
 
 import org.neo4j.cypher.internal.runtime.spec.Edition
-import org.neo4j.cypher.internal.{CypherRuntime, EnterpriseRuntimeContext}
+import org.neo4j.cypher.internal.CypherRuntime
+import org.neo4j.cypher.internal.EnterpriseRuntimeContext
 
 abstract class AllNodeScanStressTestBase(edition: Edition[EnterpriseRuntimeContext], runtime: CypherRuntime[EnterpriseRuntimeContext])
   extends ParallelStressSuite(edition, runtime)
-    with RHSOfApplyLeafStressSuite {
+  with RHSOfApplyLeafStressSuite {
 
-  override def rhsOfApplyLeaf(variable: String, nodeArgument: String, propArgument: String) =
+  override def rhsOfApplyLeaf(variable: String, nodeArgument: String, propArgument: String): RHSOfApplyLeafTD =
     RHSOfApplyLeafTD(
       _.allNodeScan(variable),
       rowsComingIntoTheOperator =>

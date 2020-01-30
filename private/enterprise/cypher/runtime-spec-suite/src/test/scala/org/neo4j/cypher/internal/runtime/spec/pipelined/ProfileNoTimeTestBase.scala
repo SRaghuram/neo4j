@@ -5,9 +5,12 @@
  */
 package org.neo4j.cypher.internal.runtime.spec.pipelined
 
-import org.neo4j.cypher.internal.runtime.spec.{Edition, LogicalQueryBuilder, RuntimeTestSuite}
+import org.neo4j.cypher.internal.CypherRuntime
+import org.neo4j.cypher.internal.RuntimeContext
+import org.neo4j.cypher.internal.runtime.spec.Edition
+import org.neo4j.cypher.internal.runtime.spec.LogicalQueryBuilder
+import org.neo4j.cypher.internal.runtime.spec.RuntimeTestSuite
 import org.neo4j.cypher.internal.util.attribution.Id
-import org.neo4j.cypher.internal.{CypherRuntime, RuntimeContext}
 import org.neo4j.cypher.result.OperatorProfile
 
 abstract class ProfileNoTimeTestBase[CONTEXT <: RuntimeContext](edition: Edition[CONTEXT],

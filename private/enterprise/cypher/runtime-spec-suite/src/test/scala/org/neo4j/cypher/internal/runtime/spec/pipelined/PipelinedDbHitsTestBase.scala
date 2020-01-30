@@ -5,9 +5,11 @@
  */
 package org.neo4j.cypher.internal.runtime.spec.pipelined
 
+import org.neo4j.cypher.internal.CypherRuntime
+import org.neo4j.cypher.internal.RuntimeContext
+import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE
+import org.neo4j.cypher.internal.runtime.spec.Edition
 import org.neo4j.cypher.internal.runtime.spec.tests.ProfileDbHitsTestBase
-import org.neo4j.cypher.internal.runtime.spec.{ENTERPRISE, Edition}
-import org.neo4j.cypher.internal.{CypherRuntime, RuntimeContext}
 
 abstract class PipelinedDbHitsTestBase[CONTEXT <: RuntimeContext](edition: Edition[CONTEXT],
                                                                   runtime: CypherRuntime[CONTEXT],

@@ -5,14 +5,15 @@
  */
 package org.neo4j.cypher.internal.runtime.spec.stress
 
+import org.neo4j.cypher.internal.CypherRuntime
+import org.neo4j.cypher.internal.EnterpriseRuntimeContext
 import org.neo4j.cypher.internal.runtime.spec.Edition
-import org.neo4j.cypher.internal.{CypherRuntime, EnterpriseRuntimeContext}
 
 abstract class IndexScanStressTestBase(edition: Edition[EnterpriseRuntimeContext], runtime: CypherRuntime[EnterpriseRuntimeContext])
   extends ParallelStressSuite(edition, runtime)
   with RHSOfApplyLeafStressSuite {
 
-  override def rhsOfApplyLeaf(variable: String, nodeArgument: String, propArgument: String) =
+  override def rhsOfApplyLeaf(variable: String, nodeArgument: String, propArgument: String): RHSOfApplyLeafTD =
     RHSOfApplyLeafTD(
       _.nodeIndexOperator(s"$variable:Label(prop)", argumentIds = Set(propArgument)),
       rowsComingIntoTheOperator =>

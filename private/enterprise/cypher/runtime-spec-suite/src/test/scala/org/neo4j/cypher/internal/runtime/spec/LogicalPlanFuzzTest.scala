@@ -6,8 +6,10 @@
 package org.neo4j.cypher.internal.runtime.spec
 
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
+import org.neo4j.cypher.internal.EnterpriseRuntimeContext
+import org.neo4j.cypher.internal.InterpretedRuntime
 import org.neo4j.cypher.internal.PipelinedRuntime.PIPELINED
-import org.neo4j.cypher.internal._
+import org.neo4j.cypher.internal.SlottedRuntime
 import org.neo4j.cypher.internal.logical.builder.LogicalPlanGenerator.WithState
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 import org.neo4j.exceptions.CantCompileQueryException
