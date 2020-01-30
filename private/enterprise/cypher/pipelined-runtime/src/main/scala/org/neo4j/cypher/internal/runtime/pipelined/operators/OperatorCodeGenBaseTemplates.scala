@@ -213,6 +213,8 @@ trait CompiledTask extends ContinuableOperatorTaskWithMorsel
                    with OutputOperatorState
                    with PreparedOutput
 {
+  override def trackTime: Boolean = false
+
   override def operateWithProfile(output: MorselExecutionContext,
                                   context: QueryContext,
                                   state: QueryState,
