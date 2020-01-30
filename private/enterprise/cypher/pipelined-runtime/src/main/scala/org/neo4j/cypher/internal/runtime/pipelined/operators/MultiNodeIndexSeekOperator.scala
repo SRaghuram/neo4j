@@ -11,18 +11,28 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.KernelAPISupport.RANGE_SEEKABLE_VALUE_GROUPS
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
-import org.neo4j.cypher.internal.runtime.interpreted.pipes._
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.IndexSeekMode
+import org.neo4j.cypher.internal.runtime.interpreted.pipes.NodeIndexSeeker
 import org.neo4j.cypher.internal.runtime.pipelined.NodeIndexSeekParameters
-import org.neo4j.cypher.internal.runtime.pipelined.execution.{MorselExecutionContext, QueryResources, QueryState}
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
+import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
-import org.neo4j.cypher.internal.runtime.slotted.{SlottedQueryState => OldQueryState}
-import org.neo4j.cypher.internal.runtime.{ExecutionContext, NoMemoryTracker, QueryContext}
+import org.neo4j.cypher.internal.runtime.slotted.SlottedQueryState
+import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.NoMemoryTracker
+import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.internal.kernel.api.IndexQuery
 import org.neo4j.internal.kernel.api.IndexQuery.ExactPredicate
-import org.neo4j.internal.kernel.api._
+import org.neo4j.internal.kernel.api.IndexReadSession
+import org.neo4j.internal.kernel.api.NodeValueIndexCursor
+import org.neo4j.internal.kernel.api.Read
 import org.neo4j.internal.schema.IndexOrder
-import org.neo4j.values.storable.{FloatingPointValue, Value, Values}
+import org.neo4j.values.storable.FloatingPointValue
+import org.neo4j.values.storable.Value
+import org.neo4j.values.storable.Values
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -97,14 +107,14 @@ class MultiNodeIndexSeekOperator(val workIdentity: WorkIdentity,
       // For every input row, set up index seek lambdas with index queries computed on the current input row,
       // execute the first index query of all index seeks, and point all cursors except the innermost (rhs) at the first result
       val read = context.transactionalContext.transaction.dataRead()
-      val queryState = new OldQueryState(context,
-                                         resources = null,
-                                         params = state.params,
-                                         resources.expressionCursors,
-                                         Array.empty[IndexReadSession],
-                                         resources.expressionVariables(state.nExpressionSlots),
-                                         state.subscriber,
-                                         NoMemoryTracker)
+      val queryState = new SlottedQueryState(context,
+                                             resources = null,
+                                             params = state.params,
+                                             resources.expressionCursors,
+                                             Array.empty[IndexReadSession],
+                                             resources.expressionVariables(state.nExpressionSlots),
+                                             state.subscriber,
+                                             NoMemoryTracker)
 
       initExecutionContext.copyFrom(inputMorsel, argumentSize.nLongs, argumentSize.nReferences) // Copy arguments from the input row
       var i = 0

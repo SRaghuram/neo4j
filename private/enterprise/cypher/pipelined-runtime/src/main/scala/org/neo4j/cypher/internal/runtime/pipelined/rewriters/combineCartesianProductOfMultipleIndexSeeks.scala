@@ -5,12 +5,19 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.rewriters
 
-import org.neo4j.cypher.internal.logical.plans._
+import org.neo4j.cypher.internal.logical.plans.CartesianProduct
+import org.neo4j.cypher.internal.logical.plans.ErasedTwoChildrenPlan
+import org.neo4j.cypher.internal.logical.plans.IndexSeekLeafPlan
+import org.neo4j.cypher.internal.logical.plans.LogicalPlan
+import org.neo4j.cypher.internal.logical.plans.MultiNodeIndexSeek
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.RewrittenPlans
-import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.{Cardinalities, ProvidedOrders}
+import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.Cardinalities
+import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.ProvidedOrders
 import org.neo4j.cypher.internal.runtime.pipelined.rewriters.combineCartesianProductOfMultipleIndexSeeks.CARTESIAN_PRODUCT_CARDINALITY_THRESHOLD
 import org.neo4j.cypher.internal.util.attribution.SameId
-import org.neo4j.cypher.internal.util.{Cardinality, Rewriter, bottomUpWithRecorder}
+import org.neo4j.cypher.internal.util.Cardinality
+import org.neo4j.cypher.internal.util.Rewriter
+import org.neo4j.cypher.internal.util.bottomUpWithRecorder
 
 object combineCartesianProductOfMultipleIndexSeeks {
   // We only rewrite cartesian products if the left-hand-side cardinality is below this threshold

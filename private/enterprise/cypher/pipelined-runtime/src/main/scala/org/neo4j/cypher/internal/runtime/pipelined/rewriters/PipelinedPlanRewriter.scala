@@ -8,9 +8,10 @@ package org.neo4j.cypher.internal.runtime.pipelined.rewriters
 import org.neo4j.cypher.internal.LogicalQuery
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.RewrittenPlans
-import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.{Cardinalities, ProvidedOrders}
+import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.Cardinalities
+import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.ProvidedOrders
 import org.neo4j.cypher.internal.rewriting.RewriterStepSequencer
-import org.neo4j.cypher.internal.util.{Cardinality, Rewriter}
+import org.neo4j.cypher.internal.util.Rewriter
 import org.neo4j.cypher.internal.util.helpers.fixedPoint
 
 /*
