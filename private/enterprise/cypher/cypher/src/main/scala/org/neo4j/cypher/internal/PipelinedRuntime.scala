@@ -5,9 +5,6 @@
  */
 package org.neo4j.cypher.internal
 
-import java.lang
-import java.util.Optional
-
 import org.neo4j.codegen.api.CodeGeneration
 import org.neo4j.cypher.CypherInterpretedPipesFallbackOption
 import org.neo4j.cypher.CypherOperatorEngineOption
@@ -22,10 +19,8 @@ import org.neo4j.cypher.internal.physicalplanning.PipelineBuilder
 import org.neo4j.cypher.internal.plandescription.Argument
 import org.neo4j.cypher.internal.runtime.ExecutionMode
 import org.neo4j.cypher.internal.runtime.InputDataStream
-import org.neo4j.cypher.internal.runtime.MEMORY_TRACKING
 import org.neo4j.cypher.internal.runtime.MemoryTracking
 import org.neo4j.cypher.internal.runtime.MemoryTrackingController
-import org.neo4j.cypher.internal.runtime.NO_TRACKING
 import org.neo4j.cypher.internal.runtime.ParameterMapping
 import org.neo4j.cypher.internal.runtime.ProfileMode
 import org.neo4j.cypher.internal.runtime.QueryContext
@@ -342,7 +337,7 @@ class PipelinedRuntime private(parallelExecution: Boolean,
 
     override def queryStatistics(): runtime.QueryStatistics = queryContext.getOptStatistics.getOrElse(QueryStatistics())
 
-    override def totalAllocatedMemory(): Optional[lang.Long] = {
+    override def totalAllocatedMemory(): Long = {
       ensureQuerySubscription()
       _memoryTracker.totalAllocatedMemory
     }

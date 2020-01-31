@@ -54,7 +54,7 @@ class FixedWorkersQueryProfiler(numberOfWorkers: Int, applyRhsPlans: Map[Int, In
       }
     }
 
-    override def maxAllocatedMemory(): Long = memoryTracker.totalAllocatedMemory.orElseGet(() => OperatorProfile.NO_DATA)
+    override def maxAllocatedMemory(): Long = QueryMemoryTracker.memoryAsProfileData(memoryTracker.totalAllocatedMemory)
 
     private def regularOperatorProfile(operatorId: Int): OperatorProfile = {
       var i = 0
@@ -71,7 +71,7 @@ class FixedWorkersQueryProfiler(numberOfWorkers: Int, applyRhsPlans: Map[Int, In
 
         i += 1
       }
-      data.update(0, 0, 0, OperatorProfile.NO_DATA, OperatorProfile.NO_DATA, memoryTracker.maxMemoryOfOperator(operatorId).orElseGet(() => OperatorProfile.NO_DATA))
+      data.update(0, 0, 0, OperatorProfile.NO_DATA, OperatorProfile.NO_DATA, QueryMemoryTracker.memoryAsProfileData(memoryTracker.maxMemoryOfOperator(operatorId)))
       data.sanitize()
       data
     }
@@ -85,7 +85,7 @@ class FixedWorkersQueryProfiler(numberOfWorkers: Int, applyRhsPlans: Map[Int, In
         data.update(timeData.time(), 0, rowData.rows(), 0, 0, 0)
         i += 1
       }
-      data.update(0, 0, 0, OperatorProfile.NO_DATA, OperatorProfile.NO_DATA, memoryTracker.maxMemoryOfOperator(applyPlanId).orElseGet(() => OperatorProfile.NO_DATA))
+      data.update(0, 0, 0, OperatorProfile.NO_DATA, OperatorProfile.NO_DATA, QueryMemoryTracker.memoryAsProfileData(memoryTracker.maxMemoryOfOperator(applyPlanId)))
       data.sanitize()
       data
     }

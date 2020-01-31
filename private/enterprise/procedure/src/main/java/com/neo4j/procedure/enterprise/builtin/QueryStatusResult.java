@@ -22,6 +22,7 @@ import org.neo4j.kernel.api.query.ExecutingQuery;
 import org.neo4j.kernel.api.query.QuerySnapshot;
 import org.neo4j.kernel.impl.core.TransactionalEntityFactory;
 import org.neo4j.kernel.impl.util.BaseToObjectValueWriter;
+import org.neo4j.memory.OptionalMemoryTracker;
 import org.neo4j.values.storable.CoordinateReferenceSystem;
 import org.neo4j.values.virtual.MapValue;
 
@@ -100,7 +101,8 @@ public class QueryStatusResult
         this.planner = query.planner();
         this.runtime = query.runtime();
         this.indexes = query.indexes();
-        this.allocatedBytes = query.allocatedBytes().orElse( null );
+        long bytes = query.allocatedBytes();
+        this.allocatedBytes = bytes == OptionalMemoryTracker.ALLOCATIONS_NOT_TRACKED ? null : bytes;
         this.pageHits = query.pageHits();
         this.pageFaults = query.pageFaults();
         this.connectionId = clientConnection.connectionId();

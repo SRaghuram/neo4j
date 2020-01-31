@@ -8,11 +8,11 @@ package com.neo4j.kernel.impl.query;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.internal.helpers.Strings;
 import org.neo4j.kernel.api.query.QuerySnapshot;
+import org.neo4j.memory.OptionalMemoryTracker;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.utils.PrettyPrinter;
 import org.neo4j.values.virtual.MapValue;
@@ -31,8 +31,11 @@ class QueryLogFormatter
 
     static void formatAllocatedBytes( StringBuilder result, QuerySnapshot query )
     {
-        Optional<Long> bytes = query.allocatedBytes();
-        bytes.ifPresent( x -> result.append( x ).append( " B - " ) );
+        long bytes = query.allocatedBytes();
+        if ( bytes != OptionalMemoryTracker.ALLOCATIONS_NOT_TRACKED )
+        {
+            result.append( bytes ).append( " B - " );
+        }
     }
 
     static void formatDetailedTime( StringBuilder result, QuerySnapshot query )
