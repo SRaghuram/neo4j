@@ -52,7 +52,6 @@ abstract class OptionalExpandIntoSlottedPipe(source: Pipe,
   protected def internalCreateResults(input: Iterator[ExecutionContext], state: QueryState): Iterator[ExecutionContext] = {
     val query = state.query
     val expandInto = new CachingExpandInto(query.transactionalContext.dataRead, kernelDirection)
-    val nodeCursor = query.nodeCursor()
     input.flatMap {
       inputRow: ExecutionContext =>
         val fromNode = getFromNodeFunction.applyAsLong(inputRow)
@@ -62,16 +61,23 @@ abstract class OptionalExpandIntoSlottedPipe(source: Pipe,
           Iterator(withNulls(inputRow))
         } else {
           val traversalCursor = query.traversalCursor()
-          val relationships =
-            new RelationshipCursorIterator(expandInto.connectingRelationships(nodeCursor,
-                                                                              traversalCursor,
-                                                                              fromNode,
-                                                                              lazyTypes.types(query),
-                                                                              toNode))
-          val matchIterator = findMatchIterator(inputRow, state, relationships)
+          val nodeCursor = query.nodeCursor()
+          try {
+            val selectionCursor = expandInto.connectingRelationships(nodeCursor,
+                                                                     traversalCursor,
+                                                                     fromNode,
+                                                                     lazyTypes.types(query),
+                                                                     toNode)
+            query.resources.trace(selectionCursor)
+            val relationships =
+              new RelationshipCursorIterator(selectionCursor)
+            val matchIterator = findMatchIterator(inputRow, state, relationships)
 
-          if (matchIterator.isEmpty) Iterator(withNulls(inputRow))
-          else matchIterator
+            if (matchIterator.isEmpty) Iterator(withNulls(inputRow))
+            else matchIterator
+          } finally {
+            nodeCursor.close()
+          }
         }
     }
   }

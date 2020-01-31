@@ -56,10 +56,10 @@ case class ExpandIntoSlottedPipe(source: Pipe,
   //===========================================================================
   // Runtime code
   //===========================================================================
-  protected def internalCreateResults(input: Iterator[ExecutionContext], state: QueryState): Iterator[ExecutionContext] = {
+  protected def internalCreateResults(input: Iterator[ExecutionContext],
+                                      state: QueryState): Iterator[ExecutionContext] = {
     val query = state.query
     val expandInto = new CachingExpandInto(query.transactionalContext.dataRead, kernelDirection)
-    val nodeCursor = query.nodeCursor()
     input.flatMap {
       inputRow =>
         val fromNode = getFromNodeFunction.applyAsLong(inputRow)
@@ -69,18 +69,24 @@ case class ExpandIntoSlottedPipe(source: Pipe,
           Iterator.empty
         else {
           val traversalCursor = query.traversalCursor()
-          val relationships =
-            new RelationshipCursorIterator(expandInto.connectingRelationships(nodeCursor,
-                                                                              traversalCursor,
-                                                                              fromNode,
-                                                                              lazyTypes.types(query),
-                                                                              toNode))
-          PrimitiveLongHelper.map(relationships, (relId: Long) => {
-            val outputRow = SlottedExecutionContext(slots)
-            inputRow.copyTo(outputRow)
-            outputRow.setLongAt(relOffset, relId)
-            outputRow
-          })
+          val nodeCursor = query.nodeCursor()
+          try {
+            val selectionCursor = expandInto.connectingRelationships(nodeCursor,
+                                                                     traversalCursor,
+                                                                     fromNode,
+                                                                     lazyTypes.types(query),
+                                                                     toNode)
+            query.resources.trace(selectionCursor)
+            val relationships = new RelationshipCursorIterator(selectionCursor)
+            PrimitiveLongHelper.map(relationships, (relId: Long) => {
+              val outputRow = SlottedExecutionContext(slots)
+              inputRow.copyTo(outputRow)
+              outputRow.setLongAt(relOffset, relId)
+              outputRow
+            })
+          } finally {
+            nodeCursor.close()
+          }
         }
     }
   }
