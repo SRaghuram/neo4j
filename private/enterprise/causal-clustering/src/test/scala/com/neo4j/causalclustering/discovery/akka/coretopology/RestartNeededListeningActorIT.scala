@@ -11,7 +11,6 @@ import akka.event.EventStream
 import akka.remote.ThisActorSystemQuarantinedEvent
 import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
 import org.mockito.Mockito.verify
-import org.neo4j.logging.NullLogProvider
 
 class RestartNeededListeningActorIT extends BaseAkkaIT("Quarantine") {
   "RestartNeededListeningActor" when {

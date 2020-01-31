@@ -6,22 +6,28 @@
 package com.neo4j.causalclustering.discovery.akka.directory
 
 import java.util
-import java.util.{Collections, UUID}
+import java.util.Collections
+import java.util.UUID
 
 import akka.actor.ActorRef
-import akka.cluster.ddata._
+import akka.cluster.ddata.Key
+import akka.cluster.ddata.ORMap
+import akka.cluster.ddata.ORMapKey
+import akka.cluster.ddata.Replicator
+import akka.stream.ActorMaterializer
+import akka.stream.OverflowStrategy
 import akka.stream.javadsl.Source
 import akka.stream.scaladsl.Sink
-import akka.stream.{ActorMaterializer, OverflowStrategy}
 import akka.testkit.TestProbe
 import com.neo4j.causalclustering.core.consensus.LeaderInfo
+import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
+import com.neo4j.causalclustering.discovery.akka.DirectoryUpdateSink
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier
-import com.neo4j.causalclustering.discovery.akka.{BaseAkkaIT, DirectoryUpdateSink}
 import com.neo4j.causalclustering.identity.MemberId
 import org.neo4j.kernel.database.DatabaseId
 import org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId
 
-import scala.collection.JavaConverters._
+import scala.collection.JavaConverters.mapAsJavaMapConverter
 import scala.util.Random
 
 class DirectoryActorIT extends BaseAkkaIT("DirectoryActorTest") {

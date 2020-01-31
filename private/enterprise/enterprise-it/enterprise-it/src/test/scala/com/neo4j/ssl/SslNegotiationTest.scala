@@ -8,9 +8,14 @@ package com.neo4j.ssl
 import java.util.concurrent.TimeUnit
 
 import com.neo4j.ssl.SslContextFactory.SslParameters
-import com.neo4j.ssl.SslNegotiationTest._
-import javax.net.ssl.{SSLSocket, SSLSocketFactory}
-import org.junit.runner.{Description, RunWith}
+import com.neo4j.ssl.SslNegotiationTest.TLSv1_0
+import com.neo4j.ssl.SslNegotiationTest.TLSv1_1
+import com.neo4j.ssl.SslNegotiationTest.TLSv1_2
+import com.neo4j.ssl.SslNegotiationTest.TLSv1_3
+import javax.net.ssl.SSLSocket
+import javax.net.ssl.SSLSocketFactory
+import org.junit.runner.Description
+import org.junit.runner.RunWith
 import org.junit.runners.model.Statement
 import org.neo4j.configuration.ssl.SslPolicyScope
 import org.neo4j.ssl.SslResourceBuilder.selfSignedKeyId
@@ -18,7 +23,8 @@ import org.neo4j.test.rule.TestDirectory
 import org.scalacheck.Gen
 import org.scalatest.junit.JUnitRunner
 import org.scalatest.prop.GeneratorDrivenPropertyChecks
-import org.scalatest.{Matchers, WordSpecLike}
+import org.scalatest.Matchers
+import org.scalatest.WordSpecLike
 
 import scala.util.control.NonFatal
 

@@ -7,9 +7,11 @@ package com.neo4j.causalclustering.discovery.akka.coretopology
 
 import java.util.concurrent.atomic.AtomicInteger
 
-import akka.cluster.{Cluster, MemberStatus}
+import akka.cluster.Cluster
+import akka.cluster.MemberStatus
 import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
-import org.mockito.{ArgumentMatchers, Mockito}
+import org.mockito.ArgumentMatchers
+import org.mockito.Mockito
 import org.neo4j.logging.NullLogProvider
 
 class ClusterDowningActorIT extends BaseAkkaIT("ClusterDowningActor") {

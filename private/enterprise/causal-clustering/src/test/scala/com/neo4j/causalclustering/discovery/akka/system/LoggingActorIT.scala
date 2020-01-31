@@ -13,7 +13,8 @@ import com.neo4j.causalclustering.discovery.akka.NeoSuite
 import com.neo4j.causalclustering.discovery.akka.system.TypesafeConfigService.ArteryTransport
 import org.neo4j.configuration.Config
 import org.neo4j.logging.LogAssertions.assertThat
-import org.neo4j.logging.{AssertableLogProvider, Level}
+import org.neo4j.logging.AssertableLogProvider
+import org.neo4j.logging.Level
 
 class LoggingActorIT extends NeoSuite {
 

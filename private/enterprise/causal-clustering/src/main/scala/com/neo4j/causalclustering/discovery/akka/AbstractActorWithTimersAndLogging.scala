@@ -5,7 +5,10 @@
  */
 package com.neo4j.causalclustering.discovery.akka
 
-import akka.actor.{AbstractActor, ActorLogging, TimerScheduler, Timers}
+import akka.actor.AbstractActor
+import akka.actor.ActorLogging
+import akka.actor.TimerScheduler
+import akka.actor.Timers
 
 /**
   * We need this abstract class because some actors need both Timers and ActorLogging traits.

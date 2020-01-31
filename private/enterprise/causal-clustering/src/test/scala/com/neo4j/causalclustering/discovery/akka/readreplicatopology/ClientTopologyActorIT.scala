@@ -6,27 +6,41 @@
 package com.neo4j.causalclustering.discovery.akka.readreplicatopology
 
 import java.util.concurrent.TimeUnit
-import java.util.{Collections, UUID}
+import java.util.Collections
+import java.util.UUID
 
 import akka.cluster.client.ClusterClient
 import akka.stream.javadsl.Source
 import akka.stream.scaladsl.Sink
-import akka.stream.{ActorMaterializer, OverflowStrategy}
+import akka.stream.ActorMaterializer
+import akka.stream.OverflowStrategy
 import akka.testkit.TestProbe
 import com.neo4j.causalclustering.core.CausalClusteringSettings
 import com.neo4j.causalclustering.core.consensus.LeaderInfo
-import com.neo4j.causalclustering.discovery._
-import com.neo4j.causalclustering.discovery.akka.common.{DatabaseStartedMessage, DatabaseStoppedMessage}
+import com.neo4j.causalclustering.discovery.DatabaseCoreTopology
+import com.neo4j.causalclustering.discovery.DatabaseReadReplicaTopology
+import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState
+import com.neo4j.causalclustering.discovery.TestDiscoveryMember
+import com.neo4j.causalclustering.discovery.TestTopology
+import com.neo4j.causalclustering.discovery.akka.common.DatabaseStartedMessage
+import com.neo4j.causalclustering.discovery.akka.common.DatabaseStoppedMessage
 import com.neo4j.causalclustering.discovery.akka.directory.LeaderInfoDirectoryMessage
-import com.neo4j.causalclustering.discovery.akka.{BaseAkkaIT, DatabaseStateUpdateSink, DirectoryUpdateSink, TopologyUpdateSink}
-import com.neo4j.causalclustering.identity.{MemberId, RaftId}
+import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
+import com.neo4j.causalclustering.discovery.akka.DatabaseStateUpdateSink
+import com.neo4j.causalclustering.discovery.akka.DirectoryUpdateSink
+import com.neo4j.causalclustering.discovery.akka.TopologyUpdateSink
+import com.neo4j.causalclustering.identity.MemberId
+import com.neo4j.causalclustering.identity.RaftId
 import org.neo4j.configuration.Config
 import org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId
-import org.neo4j.kernel.database.{DatabaseId, NamedDatabaseId}
+import org.neo4j.kernel.database.DatabaseId
+import org.neo4j.kernel.database.NamedDatabaseId
 import org.neo4j.logging.NullLogProvider
 import org.neo4j.time.Clocks
 
-import scala.collection.JavaConverters._
+import scala.collection.JavaConverters.mapAsJavaMapConverter
+import scala.collection.JavaConverters.setAsJavaSetConverter
+import scala.collection.JavaConverters.asScalaSetConverter
 import scala.concurrent.duration.Duration
 
 class ClientTopologyActorIT extends BaseAkkaIT("ClientTopologyActorIT") {

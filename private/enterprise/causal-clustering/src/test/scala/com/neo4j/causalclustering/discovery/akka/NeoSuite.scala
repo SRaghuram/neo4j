@@ -6,6 +6,9 @@
 package com.neo4j.causalclustering.discovery.akka
 
 import org.scalatest.mock.MockitoSugar
-import org.scalatest.{BeforeAndAfterAll, GivenWhenThen, Matchers, WordSpecLike}
+import org.scalatest.BeforeAndAfterAll
+import org.scalatest.GivenWhenThen
+import org.scalatest.Matchers
+import org.scalatest.WordSpecLike
 
 trait NeoSuite extends WordSpecLike with Matchers with BeforeAndAfterAll with GivenWhenThen with MockitoSugar

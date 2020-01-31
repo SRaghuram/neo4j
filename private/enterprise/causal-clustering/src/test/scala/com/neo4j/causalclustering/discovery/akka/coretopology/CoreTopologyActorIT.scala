@@ -6,27 +6,40 @@
 package com.neo4j.causalclustering.discovery.akka.coretopology
 
 import java.util
-import java.util.{Collections, UUID}
+import java.util.Collections
+import java.util.UUID
 
 import akka.actor.Address
+import akka.cluster.Cluster
+import akka.cluster.Member
+import akka.cluster.MemberStatus
+import akka.cluster.UniqueAddress
 import akka.cluster.ddata.LWWMapKey
-import akka.cluster.{Cluster, Member, MemberStatus, UniqueAddress}
+import akka.stream.ActorMaterializer
+import akka.stream.OverflowStrategy
 import akka.stream.javadsl.Source
 import akka.stream.scaladsl.Sink
-import akka.stream.{ActorMaterializer, OverflowStrategy}
 import akka.testkit.TestProbe
-import com.neo4j.causalclustering.discovery.akka._
-import com.neo4j.causalclustering.discovery.akka.monitoring.{ClusterSizeMonitor, ReplicatedDataIdentifier, ReplicatedDataMonitor}
-import com.neo4j.causalclustering.discovery.{DatabaseCoreTopology, _}
-import com.neo4j.causalclustering.identity.{MemberId, RaftId}
+import com.neo4j.causalclustering.discovery.CoreServerInfo
+import com.neo4j.causalclustering.discovery.DatabaseCoreTopology
+import com.neo4j.causalclustering.discovery.TestDiscoveryMember
+import com.neo4j.causalclustering.discovery.TestTopology
+import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
+import com.neo4j.causalclustering.discovery.akka.monitoring.ClusterSizeMonitor
+import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier
+import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataMonitor
+import com.neo4j.causalclustering.identity.MemberId
+import com.neo4j.causalclustering.identity.RaftId
+import org.mockito.ArgumentMatchers
 import org.mockito.ArgumentMatchers.any
+import org.mockito.Mockito
 import org.mockito.Mockito.verify
-import org.mockito.{ArgumentMatchers, Mockito}
 import org.neo4j.configuration.Config
 import org.neo4j.kernel.database.DatabaseId
 import org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId
 
-import scala.collection.JavaConverters._
+import scala.collection.JavaConverters.mapAsJavaMapConverter
+import scala.collection.JavaConverters.setAsJavaSetConverter
 
 class CoreTopologyActorIT extends BaseAkkaIT("CoreTopologyActorIT") {
 

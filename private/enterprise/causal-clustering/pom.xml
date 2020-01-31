@@ -23,6 +23,7 @@
 
     <properties>
         <moduleName>com.neo4j.causalclustering</moduleName>
+        <skip-scalastyle>false</skip-scalastyle>
     </properties>
 
     <build>

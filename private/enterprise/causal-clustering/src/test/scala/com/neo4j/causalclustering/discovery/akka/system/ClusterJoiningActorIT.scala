@@ -12,15 +12,17 @@ import java.util.concurrent.TimeUnit
 import akka.actor.Address
 import akka.cluster.Cluster
 import com.neo4j.causalclustering.core.CausalClusteringSettings
+import com.neo4j.causalclustering.discovery.InitialDiscoveryMembersResolver
+import com.neo4j.causalclustering.discovery.NoOpHostnameResolver
 import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
-import com.neo4j.causalclustering.discovery.{InitialDiscoveryMembersResolver, NoOpHostnameResolver}
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito
-import org.mockito.Mockito.{atLeastOnce, verify}
+import org.mockito.Mockito.atLeastOnce
+import org.mockito.Mockito.verify
 import org.neo4j.configuration.Config
 import org.neo4j.configuration.helpers.SocketAddress
 
-import scala.collection.JavaConverters._
+import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.concurrent.duration.Duration
 
 class ClusterJoiningActorIT extends BaseAkkaIT("ClusterJoining") {

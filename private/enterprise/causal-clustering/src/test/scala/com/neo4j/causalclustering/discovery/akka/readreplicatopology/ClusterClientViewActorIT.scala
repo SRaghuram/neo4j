@@ -5,12 +5,15 @@
  */
 package com.neo4j.causalclustering.discovery.akka.readreplicatopology
 
-import akka.cluster.client._
+import akka.cluster.client.ClusterClientUnreachable
+import akka.cluster.client.ClusterClientUp
+import akka.cluster.client.ClusterClients
+import akka.cluster.client.SubscribeClusterClients
+import akka.cluster.client.UnsubscribeClusterClients
 import akka.testkit.TestProbe
 import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
-import org.neo4j.logging.NullLogProvider
 
-import scala.collection.JavaConverters._
+import scala.collection.JavaConverters.setAsJavaSetConverter
 
 class ClusterClientViewActorIT extends BaseAkkaIT("LocallyConnectedReadReplicas") {
   "ClusterClientViewActor" when {

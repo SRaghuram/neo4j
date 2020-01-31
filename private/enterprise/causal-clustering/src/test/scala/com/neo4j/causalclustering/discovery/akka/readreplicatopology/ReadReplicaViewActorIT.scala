@@ -5,15 +5,19 @@
  */
 package com.neo4j.causalclustering.discovery.akka.readreplicatopology
 
-import java.time.{Duration, Instant}
+import java.time.Duration
+import java.time.Instant
 import java.util.concurrent.TimeUnit
-import java.util.{Collections, UUID}
+import java.util.Collections
+import java.util.UUID
 
 import akka.Done
 import akka.cluster.client.ClusterClientReceptionist
 import akka.cluster.pubsub.DistributedPubSub
-import akka.cluster.pubsub.DistributedPubSubMediator.{CurrentTopics, GetTopics, Publish}
-import akka.pattern._
+import akka.cluster.pubsub.DistributedPubSubMediator.CurrentTopics
+import akka.cluster.pubsub.DistributedPubSubMediator.GetTopics
+import akka.cluster.pubsub.DistributedPubSubMediator.Publish
+import akka.pattern.ask
 import akka.testkit.TestProbe
 import com.neo4j.causalclustering.discovery.TestTopology
 import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
@@ -21,7 +25,7 @@ import com.neo4j.causalclustering.discovery.akka.readreplicatopology.ReadReplica
 import com.neo4j.causalclustering.identity.MemberId
 import org.neo4j.time.Clocks
 
-import scala.collection.JavaConverters._
+import scala.collection.JavaConverters.mapAsJavaMapConverter
 import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
 

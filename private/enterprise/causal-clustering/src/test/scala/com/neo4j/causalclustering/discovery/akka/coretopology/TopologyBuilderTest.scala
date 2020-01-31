@@ -8,23 +8,31 @@ package com.neo4j.causalclustering.discovery.akka.coretopology
 import java.util.UUID
 
 import akka.actor
+import akka.cluster.Cluster
 import akka.cluster.ClusterEvent.CurrentClusterState
+import akka.cluster.Member
+import akka.cluster.MemberStatus
+import akka.cluster.UniqueAddress
 import akka.cluster.ddata.LWWMap
-import akka.cluster.{Cluster, Member, MemberStatus, UniqueAddress}
 import com.neo4j.causalclustering.core.consensus.LeaderInfo
 import com.neo4j.causalclustering.discovery.TestTopology
-import com.neo4j.causalclustering.identity.{MemberId, RaftId}
+import com.neo4j.causalclustering.identity.MemberId
+import com.neo4j.causalclustering.identity.RaftId
 import org.junit.runner.RunWith
 import org.mockito.Mockito
 import org.neo4j.kernel.database.DatabaseId
 import org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId
+import org.scalatest.BeforeAndAfterAll
+import org.scalatest.Matchers
+import org.scalatest.WordSpecLike
 import org.scalatest.junit.JUnitRunner
 import org.scalatest.mockito.MockitoSugar
-import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 
-import scala.collection.JavaConverters._
+import scala.collection.JavaConverters.asScalaSetConverter
+import scala.collection.JavaConverters.mapAsJavaMapConverter
+import scala.collection.JavaConverters.setAsJavaSetConverter
 import scala.collection.immutable.TreeSet
-import scala.compat.java8.OptionConverters._
+import scala.compat.java8.OptionConverters.RichOptionalGeneric
 
 @RunWith(classOf[JUnitRunner])
 class TopologyBuilderTest

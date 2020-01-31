@@ -7,20 +7,26 @@ package com.neo4j.causalclustering.discovery.akka.database.state
 
 import java.util.UUID
 
-import akka.cluster.ddata.{LWWMap, LWWMapKey, Replicator}
+import akka.cluster.ddata.LWWMap
+import akka.cluster.ddata.LWWMapKey
+import akka.cluster.ddata.Replicator
+import akka.stream.ActorMaterializer
+import akka.stream.OverflowStrategy
 import akka.stream.javadsl.Source
 import akka.stream.scaladsl.Sink
-import akka.stream.{ActorMaterializer, OverflowStrategy}
 import akka.testkit.TestProbe
 import com.neo4j.causalclustering.discovery.ReplicatedDatabaseState
+import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
+import com.neo4j.causalclustering.discovery.akka.DatabaseStateUpdateSink
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier
-import com.neo4j.causalclustering.discovery.akka.{BaseAkkaIT, DatabaseStateUpdateSink}
 import com.neo4j.causalclustering.identity.MemberId
 import com.neo4j.dbms.EnterpriseOperatorState
 import org.neo4j.kernel.database.DatabaseId
-import org.neo4j.kernel.database.TestDatabaseIdRepository.{randomDatabaseId, randomNamedDatabaseId}
+import org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId
+import org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId
 
-import scala.collection.JavaConverters._
+import scala.collection.JavaConverters.mapAsJavaMapConverter
+import scala.collection.JavaConverters.seqAsJavaListConverter
 
 class DatabaseStateActorIT extends BaseAkkaIT("DatabaseStateActorIT") {
   "database state actor" should {

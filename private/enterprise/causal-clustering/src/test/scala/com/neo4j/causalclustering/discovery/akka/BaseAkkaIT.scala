@@ -5,17 +5,26 @@
  */
 package com.neo4j.causalclustering.discovery.akka
 
-import java.util.concurrent.{Callable, TimeUnit}
+import java.util.concurrent.Callable
+import java.util.concurrent.TimeUnit
 
-import akka.actor.{ActorRef, ActorSystem, BootstrapSetup, ProviderSelection}
+import akka.actor.ActorRef
+import akka.actor.ActorSystem
+import akka.actor.BootstrapSetup
+import akka.actor.ProviderSelection
 import akka.cluster.Cluster
-import akka.cluster.ddata._
-import akka.testkit.{ImplicitSender, TestKit, TestProbe}
+import akka.cluster.ddata.Key
+import akka.cluster.ddata.ReplicatedData
+import akka.cluster.ddata.Replicator
+import akka.testkit.ImplicitSender
+import akka.testkit.TestKit
+import akka.testkit.TestProbe
 import akka.util.Timeout
 import com.neo4j.causalclustering.core.CausalClusteringSettings
 import com.neo4j.causalclustering.discovery.akka.BaseReplicatedDataActor.MetricsRefresh
 import com.neo4j.causalclustering.discovery.akka.coretopology.ClusterViewMessageTest
-import com.neo4j.causalclustering.discovery.akka.monitoring.{ReplicatedDataIdentifier, ReplicatedDataMonitor}
+import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier
+import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataMonitor
 import com.neo4j.causalclustering.discovery.akka.system.TypesafeConfigService
 import com.neo4j.causalclustering.discovery.akka.system.TypesafeConfigService.ArteryTransport
 import org.assertj.core.api.Condition
@@ -27,7 +36,8 @@ import org.scalatest.exceptions.TestFailedException
 import org.scalatest.junit.JUnitRunner
 
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.{Duration, FiniteDuration}
+import scala.concurrent.duration.Duration
+import scala.concurrent.duration.FiniteDuration
 
 object BaseAkkaIT {
 
@@ -100,32 +110,28 @@ abstract class BaseAkkaIT(name: String) extends TestKit(ActorSystem(name, BaseAk
   def replicatedDataActor[A <: ReplicatedData](newFixture: => ReplicatedDataActorFixture[A]) = {
     "subscribe to replicator" in {
       val fixture = newFixture
-      import fixture._
-      replicator.fishForSpecificMessage(defaultWaitTime) {
-        case Replicator.Subscribe(`dataKey`, `replicatedDataActorRef`) => ()
+      fixture.replicator.fishForSpecificMessage(defaultWaitTime) {
+        case Replicator.Subscribe(fixture.dataKey, fixture.replicatedDataActorRef) => ()
       }
     }
     "unsubscribe from replicator" in {
       val fixture = newFixture
-      import fixture._
-      system.stop(replicatedDataActorRef)
-      replicator.fishForSpecificMessage(defaultWaitTime) {
-        case Replicator.Unsubscribe(`dataKey`, `replicatedDataActorRef`) => ()
+      system.stop(fixture.replicatedDataActorRef)
+      fixture.replicator.fishForSpecificMessage(defaultWaitTime) {
+        case Replicator.Unsubscribe(fixture.dataKey, fixture.replicatedDataActorRef) => ()
       }
     }
     "update metrics on changed data" in {
       val fixture = newFixture
-      import fixture._
-      replicatedDataActorRef ! Replicator.Changed(dataKey)(data)
-      assertEventually(monitor.visSet, TRUE_CONDITION, defaultWaitTime.toMillis, TimeUnit.MILLISECONDS )
-      assertEventually(monitor.invisSet, TRUE_CONDITION, defaultWaitTime.toMillis, TimeUnit.MILLISECONDS )
+      fixture.replicatedDataActorRef ! Replicator.Changed(fixture.dataKey)(fixture.data)
+      assertEventually(fixture.monitor.visSet, TRUE_CONDITION, defaultWaitTime.toMillis, TimeUnit.MILLISECONDS )
+      assertEventually(fixture.monitor.invisSet, TRUE_CONDITION, defaultWaitTime.toMillis, TimeUnit.MILLISECONDS )
     }
     "update metrics on tick" in {
       val fixture = newFixture
-      import fixture._
-      replicatedDataActorRef ! MetricsRefresh.getInstance()
-      assertEventually(monitor.visSet, TRUE_CONDITION, defaultWaitTime.toMillis, TimeUnit.MILLISECONDS )
-      assertEventually(monitor.invisSet, TRUE_CONDITION, defaultWaitTime.toMillis, TimeUnit.MILLISECONDS )
+      fixture.replicatedDataActorRef ! MetricsRefresh.getInstance()
+      assertEventually(fixture.monitor.visSet, TRUE_CONDITION, defaultWaitTime.toMillis, TimeUnit.MILLISECONDS )
+      assertEventually(fixture.monitor.invisSet, TRUE_CONDITION, defaultWaitTime.toMillis, TimeUnit.MILLISECONDS )
     }
   }
 

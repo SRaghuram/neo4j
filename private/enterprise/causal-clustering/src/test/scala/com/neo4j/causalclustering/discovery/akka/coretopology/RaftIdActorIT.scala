@@ -8,11 +8,15 @@ package com.neo4j.causalclustering.discovery.akka.coretopology
 import java.util.UUID
 
 import akka.actor.ActorRef
-import akka.cluster.ddata.{Key, LWWMap, LWWMapKey, Replicator}
+import akka.cluster.ddata.Key
+import akka.cluster.ddata.LWWMap
+import akka.cluster.ddata.LWWMapKey
+import akka.cluster.ddata.Replicator
 import akka.testkit.TestProbe
 import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier
-import com.neo4j.causalclustering.identity.{MemberId, RaftId}
+import com.neo4j.causalclustering.identity.MemberId
+import com.neo4j.causalclustering.identity.RaftId
 import org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId
 
 class RaftIdActorIT extends BaseAkkaIT("RaftIdActorTest") {

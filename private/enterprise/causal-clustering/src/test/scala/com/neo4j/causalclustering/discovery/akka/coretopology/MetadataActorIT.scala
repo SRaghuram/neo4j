@@ -9,18 +9,24 @@ import java.util.UUID
 
 import akka.actor.Address
 import akka.cluster.UniqueAddress
-import akka.cluster.ddata.{LWWMap, LWWMapKey, Replicator}
+import akka.cluster.ddata.LWWMap
+import akka.cluster.ddata.LWWMapKey
+import akka.cluster.ddata.Replicator
 import akka.testkit.TestProbe
 import com.neo4j.causalclustering.discovery.akka.BaseAkkaIT
-import com.neo4j.causalclustering.discovery.akka.common.{DatabaseStartedMessage, DatabaseStoppedMessage}
+import com.neo4j.causalclustering.discovery.akka.common.DatabaseStartedMessage
+import com.neo4j.causalclustering.discovery.akka.common.DatabaseStoppedMessage
 import com.neo4j.causalclustering.discovery.akka.monitoring.ReplicatedDataIdentifier
-import com.neo4j.causalclustering.discovery.{TestDiscoveryMember, TestTopology}
+import com.neo4j.causalclustering.discovery.TestDiscoveryMember
+import com.neo4j.causalclustering.discovery.TestTopology
 import com.neo4j.causalclustering.identity.MemberId
 import org.neo4j.configuration.Config
 import org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId
-import org.neo4j.kernel.database.{DatabaseId, NamedDatabaseId, TestDatabaseIdRepository}
+import org.neo4j.kernel.database.DatabaseId
+import org.neo4j.kernel.database.NamedDatabaseId
+import org.neo4j.kernel.database.TestDatabaseIdRepository
 
-import scala.collection.JavaConverters._
+import scala.collection.JavaConverters.setAsJavaSetConverter
 
 class MetadataActorIT extends BaseAkkaIT("MetadataActorIT") {
   "metadata actor" should {
