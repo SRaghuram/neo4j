@@ -23,8 +23,6 @@ import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.neo4j.util.concurrent.Futures;
-
 import static com.neo4j.bench.common.util.BenchmarkUtil.deleteDir;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
@@ -251,7 +249,7 @@ public class Store implements AutoCloseable
     private static class CopyDirVisitor extends SimpleFileVisitor<Path>
     {
         private final ExecutorService executorService;
-        private final List<Future<?>> copyingProcesses;
+        private final List<Future<Void>> copyingProcesses;
         private final Path fromPath;
         private final Path toPath;
 
@@ -287,8 +285,10 @@ public class Store implements AutoCloseable
 
         private void awaitCompletion() throws Exception
         {
-            Futures.getAll( copyingProcesses );
-            executorService.shutdown();
+            for ( Future<Void> copyingProcess : copyingProcesses )
+            {
+                copyingProcess.get();
+            }
         }
     }
 }

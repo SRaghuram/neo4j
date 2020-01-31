@@ -41,7 +41,6 @@ import java.util.concurrent.Future;
 import java.util.stream.Stream;
 
 import org.neo4j.io.fs.FileUtils;
-import org.neo4j.util.concurrent.Futures;
 
 import static com.neo4j.bench.common.util.BenchmarkUtil.bytesToString;
 import static com.neo4j.bench.common.util.BenchmarkUtil.durationToString;
@@ -363,7 +362,7 @@ public class Stores
     private static class CopyDirVisitor extends SimpleFileVisitor<Path>
     {
         private final ExecutorService executorService;
-        private final List<Future<?>> copyingProcesses;
+        private final List<Future<Void>> copyingProcesses;
         private final Path fromPath;
         private final Path toPath;
 
@@ -399,9 +398,12 @@ public class Stores
 
         private void awaitCompletion() throws Exception
         {
-            Futures.getAll( copyingProcesses );
-            executorService.shutdown();
+            for ( Future<Void> copyingProcess : copyingProcesses )
+            {
+                copyingProcess.get();
+            }
         }
+
     }
 
     static class StoreUsage
