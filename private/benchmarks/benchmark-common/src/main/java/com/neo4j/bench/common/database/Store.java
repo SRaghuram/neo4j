@@ -289,6 +289,7 @@ public class Store implements AutoCloseable
             {
                 copyingProcess.get();
             }
+            executorService.shutdown();
         }
     }
 }

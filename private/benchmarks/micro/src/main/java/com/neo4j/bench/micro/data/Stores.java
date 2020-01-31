@@ -402,6 +402,7 @@ public class Stores
             {
                 copyingProcess.get();
             }
+            executorService.shutdown();
         }
 
     }
