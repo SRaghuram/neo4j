@@ -6,13 +6,14 @@
 package com.neo4j.causalclustering.core;
 
 import com.neo4j.causalclustering.core.BoundedPriorityQueue.Removable;
-import com.neo4j.causalclustering.core.consensus.ContinuousJob;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.RaftMessages.AppendEntries;
 import com.neo4j.causalclustering.core.consensus.RaftMessages.InboundRaftMessageContainer;
 import com.neo4j.causalclustering.core.consensus.RaftMessages.NewEntry;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
+import com.neo4j.causalclustering.helper.scheduling.QueueingScheduler;
+import com.neo4j.causalclustering.helper.scheduling.ReoccurringJobQueue;
 import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.messaging.ComposableMessageHandler;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
@@ -23,10 +24,11 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Function;
 
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.scheduler.Group;
+import org.neo4j.scheduler.JobScheduler;
 
 import static com.neo4j.causalclustering.core.BoundedPriorityQueue.Result.OK;
 import static java.lang.Long.max;
@@ -54,7 +56,7 @@ class BatchingMessageHandler implements Runnable, LifecycleMessageHandler<Inboun
     private final LifecycleMessageHandler<InboundRaftMessageContainer<?>> handler;
     private final Log log;
     private final BoundedPriorityQueue<InboundRaftMessageContainer<?>> inQueue;
-    private final ContinuousJob job;
+    private final QueueingScheduler scheduler;
     private final List<ReplicatedContent> contentBatch; // reused for efficiency
     private final List<RaftLogEntry> entryBatch; // reused for efficiency
     private final Config batchConfig;
@@ -64,8 +66,8 @@ class BatchingMessageHandler implements Runnable, LifecycleMessageHandler<Inboun
     private AtomicLong droppedCount = new AtomicLong();
 
     BatchingMessageHandler( LifecycleMessageHandler<InboundRaftMessageContainer<?>> handler,
-            BoundedPriorityQueue.Config inQueueConfig, Config batchConfig, Function<Runnable,ContinuousJob> jobFactory,
-            LogProvider logProvider )
+                            BoundedPriorityQueue.Config inQueueConfig, Config batchConfig, QueueingScheduler scheduler,
+                            LogProvider logProvider )
     {
         this.handler = handler;
         this.log = logProvider.getLog( getClass() );
@@ -73,20 +75,23 @@ class BatchingMessageHandler implements Runnable, LifecycleMessageHandler<Inboun
         this.contentBatch = new ArrayList<>( batchConfig.maxBatchCount );
         this.entryBatch = new ArrayList<>( batchConfig.maxBatchCount );
         this.inQueue = new BoundedPriorityQueue<>( inQueueConfig, ContentSize::of, new MessagePriority() );
-        this.job = jobFactory.apply( this );
+        this.scheduler = scheduler;
     }
 
     static ComposableMessageHandler composable( BoundedPriorityQueue.Config inQueueConfig, Config batchConfig,
-            Function<Runnable,ContinuousJob> jobSchedulerFactory, LogProvider logProvider )
+                                                JobScheduler jobScheduler, LogProvider logProvider )
     {
-        return delegate -> new BatchingMessageHandler( delegate, inQueueConfig, batchConfig, jobSchedulerFactory, logProvider );
+        return delegate -> new BatchingMessageHandler( delegate, inQueueConfig, batchConfig,
+                                                       new QueueingScheduler( jobScheduler, Group.RAFT_BATCH_HANDLER,
+                                                                              logProvider.getLog( BatchingMessageHandler.class ),
+                                                                              1, new ReoccurringJobQueue<>() ), logProvider );
     }
 
     @Override
     public void start( RaftId raftId ) throws Exception
     {
         handler.start( raftId );
-        job.start();
+        scheduler.offerJob( this );
     }
 
     @Override
@@ -94,7 +99,7 @@ class BatchingMessageHandler implements Runnable, LifecycleMessageHandler<Inboun
     {
         stopped = true;
         handler.stop();
-        job.stop();
+        scheduler.stopAll();
     }
 
     @Override
@@ -108,6 +113,10 @@ class BatchingMessageHandler implements Runnable, LifecycleMessageHandler<Inboun
 
         BoundedPriorityQueue.Result result = inQueue.offer( message );
         logQueueState( result );
+        if ( result == OK )
+        {
+            scheduler.offerJob( this );
+        }
     }
 
     private void logQueueState( BoundedPriorityQueue.Result result )
@@ -135,26 +144,18 @@ class BatchingMessageHandler implements Runnable, LifecycleMessageHandler<Inboun
     @Override
     public void run()
     {
-        Optional<InboundRaftMessageContainer<?>> baseMessage;
         try
         {
-            baseMessage = inQueue.poll( 1, SECONDS );
+            inQueue.poll( 1, SECONDS ).ifPresent( message ->
+                                                  {
+                                                      var batchedMessage = message.message().dispatch( new BatchingHandler( message ) );
+                                                      handler.handle( batchedMessage == null ? message : batchedMessage );
+                                                  } );
         }
         catch ( InterruptedException e )
         {
             log.warn( "Not expecting to be interrupted.", e );
-            return;
         }
-
-        if ( !baseMessage.isPresent() )
-        {
-            return;
-        }
-
-        InboundRaftMessageContainer batchedMessage = baseMessage.get().message().dispatch(
-                new BatchingHandler( baseMessage.get() ) );
-
-        handler.handle( batchedMessage == null ? baseMessage.get() : batchedMessage );
     }
 
     /**
@@ -171,7 +172,7 @@ class BatchingMessageHandler implements Runnable, LifecycleMessageHandler<Inboun
         {
             Optional<Removable<NewEntry.Request>> peeked = peekNext( NewEntry.Request.class );
 
-            if ( !peeked.isPresent() )
+            if ( peeked.isEmpty() )
             {
                 break;
             }
@@ -215,7 +216,7 @@ class BatchingMessageHandler implements Runnable, LifecycleMessageHandler<Inboun
         {
             Optional<Removable<AppendEntries.Request>> peeked = peekNext( AppendEntries.Request.class );
 
-            if ( !peeked.isPresent() )
+            if ( peeked.isEmpty() )
             {
                 break;
             }
@@ -317,7 +318,7 @@ class BatchingMessageHandler implements Runnable, LifecycleMessageHandler<Inboun
         }
     }
 
-    private class MessagePriority extends RaftMessages.HandlerAdaptor<Integer,RuntimeException>
+    private static class MessagePriority extends RaftMessages.HandlerAdaptor<Integer,RuntimeException>
             implements Comparator<InboundRaftMessageContainer<?>>
     {
         private final Integer BASE_PRIORITY = 10; // lower number means higher priority

@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.core;
 
 import com.neo4j.causalclustering.catchup.CatchupAddressProvider.LeaderOrUpstreamStrategyBasedAddressProvider;
-import com.neo4j.causalclustering.core.consensus.ContinuousJob;
 import com.neo4j.causalclustering.core.consensus.LeaderAvailabilityHandler;
 import com.neo4j.causalclustering.core.consensus.RaftGroup;
 import com.neo4j.causalclustering.core.consensus.RaftMessageMonitoringHandler;
@@ -24,7 +23,6 @@ import java.time.Clock;
 import org.neo4j.configuration.Config;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.monitoring.Monitors;
-import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
 
 /**
@@ -82,11 +80,6 @@ class RaftMessageHandlerChainFactory
         BatchingMessageHandler.Config batchConfig = new BatchingMessageHandler.Config(
                 config.get( CausalClusteringSettings.raft_in_queue_max_batch ), config.get( CausalClusteringSettings.raft_in_queue_max_batch_bytes ) );
 
-        return BatchingMessageHandler.composable( inQueueConfig, batchConfig, this::jobFactory, logProvider );
-    }
-
-    private ContinuousJob jobFactory( Runnable runnable )
-    {
-        return new ContinuousJob( jobScheduler.threadFactory( Group.RAFT_BATCH_HANDLER ), runnable, logProvider );
+        return BatchingMessageHandler.composable( inQueueConfig, batchConfig, jobScheduler, logProvider );
     }
 }

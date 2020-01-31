@@ -5,11 +5,11 @@
  */
 package com.neo4j.causalclustering.core;
 
-import com.neo4j.causalclustering.core.consensus.ContinuousJob;
 import com.neo4j.causalclustering.core.consensus.RaftMessages.InboundRaftMessageContainer;
 import com.neo4j.causalclustering.core.consensus.ReplicatedString;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
+import com.neo4j.causalclustering.helper.scheduling.QueueingScheduler;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.RaftIdFactory;
@@ -29,7 +29,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
 
 import org.neo4j.internal.helpers.ArrayUtil;
 import org.neo4j.logging.AssertableLogProvider;
@@ -41,6 +40,7 @@ import static com.neo4j.causalclustering.core.consensus.RaftMessages.NewEntry;
 import static com.neo4j.causalclustering.core.consensus.RaftMessages.RaftMessage;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -57,8 +57,7 @@ class BatchingMessageHandlerTest
     @SuppressWarnings( "unchecked" )
     private LifecycleMessageHandler<InboundRaftMessageContainer<?>> downstreamHandler = mock( LifecycleMessageHandler.class );
     private RaftId localRaftId = RaftIdFactory.random();
-    private ContinuousJob mockJob = mock( ContinuousJob.class );
-    private Function<Runnable,ContinuousJob> jobSchedulerFactory = ignored -> mockJob;
+    private final QueueingScheduler jobScheduler = mock( QueueingScheduler.class );
 
     private ExecutorService executor;
     private MemberId leader = new MemberId( UUID.randomUUID() );
@@ -81,7 +80,7 @@ class BatchingMessageHandlerTest
     {
         // given
         BatchingMessageHandler batchHandler = new BatchingMessageHandler( downstreamHandler, IN_QUEUE_CONFIG,
-                BATCH_CONFIG, jobSchedulerFactory, NullLogProvider.getInstance() );
+                                                                          BATCH_CONFIG, jobScheduler, NullLogProvider.getInstance() );
 
         NewEntry.Request message = new NewEntry.Request( null, content( "dummy" ) );
 
@@ -101,7 +100,7 @@ class BatchingMessageHandlerTest
     {
         // given
         BatchingMessageHandler batchHandler = new BatchingMessageHandler( downstreamHandler, IN_QUEUE_CONFIG,
-                BATCH_CONFIG, jobSchedulerFactory, NullLogProvider.getInstance() );
+                                                                          BATCH_CONFIG, jobScheduler, NullLogProvider.getInstance() );
         ReplicatedString content = new ReplicatedString( "dummy" );
         NewEntry.Request message = new NewEntry.Request( null, content );
 
@@ -127,7 +126,7 @@ class BatchingMessageHandlerTest
     {
         // given
         BatchingMessageHandler batchHandler = new BatchingMessageHandler( downstreamHandler, IN_QUEUE_CONFIG,
-                BATCH_CONFIG, jobSchedulerFactory, NullLogProvider.getInstance() );
+                                                                          BATCH_CONFIG, jobScheduler, NullLogProvider.getInstance() );
         ReplicatedString contentA = new ReplicatedString( "A" );
         ReplicatedString contentB = new ReplicatedString( "B" );
         NewEntry.Request messageA = new NewEntry.Request( null, contentA );
@@ -150,7 +149,7 @@ class BatchingMessageHandlerTest
     {
         // given
         BatchingMessageHandler batchHandler = new BatchingMessageHandler( downstreamHandler, IN_QUEUE_CONFIG,
-                BATCH_CONFIG, jobSchedulerFactory, NullLogProvider.getInstance() );
+                                                                          BATCH_CONFIG, jobScheduler, NullLogProvider.getInstance() );
         ReplicatedString content = new ReplicatedString( "A" );
         NewEntry.Request messageA = new NewEntry.Request( null, content );
 
@@ -173,7 +172,7 @@ class BatchingMessageHandlerTest
     {
         // given
         BatchingMessageHandler batchHandler = new BatchingMessageHandler( downstreamHandler, IN_QUEUE_CONFIG,
-                BATCH_CONFIG, jobSchedulerFactory, NullLogProvider.getInstance() );
+                                                                          BATCH_CONFIG, jobScheduler, NullLogProvider.getInstance() );
 
         ReplicatedString contentA = new ReplicatedString( "A" );
         ReplicatedString contentC = new ReplicatedString( "C" );
@@ -206,7 +205,7 @@ class BatchingMessageHandlerTest
     void shouldBatchSingleEntryAppendEntries()
     {
         BatchingMessageHandler batchHandler = new BatchingMessageHandler( downstreamHandler, IN_QUEUE_CONFIG,
-                BATCH_CONFIG, jobSchedulerFactory, NullLogProvider.getInstance() );
+                                                                          BATCH_CONFIG, jobScheduler, NullLogProvider.getInstance() );
 
         long leaderTerm = 1;
         long prevLogIndex = -1;
@@ -240,7 +239,7 @@ class BatchingMessageHandlerTest
     void shouldBatchMultipleEntryAppendEntries()
     {
         BatchingMessageHandler batchHandler = new BatchingMessageHandler( downstreamHandler, IN_QUEUE_CONFIG,
-                BATCH_CONFIG, jobSchedulerFactory, NullLogProvider.getInstance() );
+                                                                          BATCH_CONFIG, jobScheduler, NullLogProvider.getInstance() );
 
         long leaderTerm = 1;
         long prevLogIndex = -1;
@@ -288,7 +287,7 @@ class BatchingMessageHandlerTest
     void shouldNotBatchAppendEntriesDifferentLeaderTerms()
     {
         BatchingMessageHandler batchHandler = new BatchingMessageHandler( downstreamHandler, IN_QUEUE_CONFIG,
-                BATCH_CONFIG, jobSchedulerFactory, NullLogProvider.getInstance() );
+                                                                          BATCH_CONFIG, jobScheduler, NullLogProvider.getInstance() );
 
         long leaderTerm = 1;
         long prevLogIndex = -1;
@@ -324,7 +323,7 @@ class BatchingMessageHandlerTest
     void shouldPrioritiseCorrectly()
     {
         BatchingMessageHandler batchHandler = new BatchingMessageHandler( downstreamHandler, IN_QUEUE_CONFIG,
-                BATCH_CONFIG, jobSchedulerFactory, NullLogProvider.getInstance() );
+                                                                          BATCH_CONFIG, jobScheduler, NullLogProvider.getInstance() );
 
         NewEntry.Request newEntry = new NewEntry.Request( null, content( "" ) );
         AppendEntries.Request append = new AppendEntries.Request( leader, 1, -1, -1,
@@ -359,7 +358,7 @@ class BatchingMessageHandlerTest
         // given
         AssertableLogProvider logProvider = new AssertableLogProvider();
         BatchingMessageHandler batchHandler = new BatchingMessageHandler( downstreamHandler, IN_QUEUE_CONFIG,
-                BATCH_CONFIG, jobSchedulerFactory, logProvider );
+                                                                          BATCH_CONFIG, jobScheduler, logProvider );
 
         NewEntry.Request message = new NewEntry.Request( null, null );
         batchHandler.stop();
@@ -381,8 +380,8 @@ class BatchingMessageHandlerTest
     {
         // given
         BatchingMessageHandler batchHandler = new BatchingMessageHandler( downstreamHandler,
-                new BoundedPriorityQueue.Config( 1, 1, 1024 ), BATCH_CONFIG, jobSchedulerFactory,
-                NullLogProvider.getInstance() );
+                                                                          new BoundedPriorityQueue.Config( 1, 1, 1024 ), BATCH_CONFIG, jobScheduler,
+                                                                          NullLogProvider.getInstance() );
         NewEntry.Request message = new NewEntry.Request( null, new ReplicatedString( "dummy" ) );
         batchHandler.handle( wrap( message ) ); // fill the queue
 
@@ -410,7 +409,7 @@ class BatchingMessageHandlerTest
     {
         // given
         BatchingMessageHandler batchHandler = new BatchingMessageHandler( downstreamHandler, IN_QUEUE_CONFIG,
-                BATCH_CONFIG, jobSchedulerFactory, NullLogProvider.getInstance() );
+                                                                          BATCH_CONFIG, jobScheduler, NullLogProvider.getInstance() );
         RaftId raftId = RaftIdFactory.random();
 
         // when
@@ -425,7 +424,7 @@ class BatchingMessageHandlerTest
     {
         // given
         BatchingMessageHandler batchHandler = new BatchingMessageHandler( downstreamHandler, IN_QUEUE_CONFIG,
-                BATCH_CONFIG, jobSchedulerFactory, NullLogProvider.getInstance() );
+                                                                          BATCH_CONFIG, jobScheduler, NullLogProvider.getInstance() );
 
         // when
         batchHandler.stop();
@@ -435,18 +434,18 @@ class BatchingMessageHandlerTest
     }
 
     @Test
-    void shouldStartJob() throws Throwable
+    void shouldScheduleJobOnStart() throws Throwable
     {
         // given
         BatchingMessageHandler batchHandler = new BatchingMessageHandler( downstreamHandler, IN_QUEUE_CONFIG,
-                BATCH_CONFIG, jobSchedulerFactory, NullLogProvider.getInstance() );
+                                                                          BATCH_CONFIG, jobScheduler, NullLogProvider.getInstance() );
         RaftId raftId = RaftIdFactory.random();
 
         // when
         batchHandler.start( raftId );
 
         // then
-        Mockito.verify( mockJob ).start();
+        Mockito.verify( jobScheduler ).offerJob( any() );
     }
 
     @Test
@@ -454,13 +453,13 @@ class BatchingMessageHandlerTest
     {
         // given
         BatchingMessageHandler batchHandler = new BatchingMessageHandler( downstreamHandler, IN_QUEUE_CONFIG,
-                BATCH_CONFIG, jobSchedulerFactory, NullLogProvider.getInstance() );
+                                                                          BATCH_CONFIG, jobScheduler, NullLogProvider.getInstance() );
 
         // when
         batchHandler.stop();
 
         // then
-        Mockito.verify( mockJob ).stop();
+        Mockito.verify( jobScheduler ).stopAll();
     }
 
     private InboundRaftMessageContainer wrap( RaftMessage message )
