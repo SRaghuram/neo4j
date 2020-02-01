@@ -31,6 +31,7 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import org.assertj.core.api.HamcrestCondition;
 import org.hamcrest.BaseMatcher;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
@@ -111,7 +112,7 @@ class NettyInstalledProtocolsIT
         assertEventually(
                 messages -> String.format( "Received messages %s should contain message decorating %s", messages, raftMessage ),
                 () -> server.received(),
-                contains( messageMatches( networkMessage ) ), TIMEOUT_SECONDS, SECONDS );
+                new HamcrestCondition<>( contains( messageMatches( networkMessage ) ) ), TIMEOUT_SECONDS, SECONDS );
     }
 
     @Test
@@ -206,7 +207,7 @@ class NettyInstalledProtocolsIT
         private final NettyPipelineBuilderFactory pipelineBuilderFactory;
         private final Config config;
 
-        ChannelInboundHandler nettyHandler = new SimpleChannelInboundHandler<Object>()
+        ChannelInboundHandler nettyHandler = new SimpleChannelInboundHandler<>()
         {
             @Override
             protected void channelRead0( ChannelHandlerContext ctx, Object msg )
@@ -265,10 +266,10 @@ class NettyInstalledProtocolsIT
 
     static class Client
     {
-        private Bootstrap bootstrap;
-        private NioEventLoopGroup eventLoopGroup;
+        private final Bootstrap bootstrap;
+        private final NioEventLoopGroup eventLoopGroup;
         private Channel channel;
-        private HandshakeClientInitializer handshakeInitializer;
+        private final HandshakeClientInitializer handshakeInitializer;
 
         Client( ApplicationProtocolRepository applicationProtocolRepository, ModifierProtocolRepository modifierProtocolRepository,
                 NettyPipelineBuilderFactory pipelineBuilderFactory, Config config, LogProvider logProvider )

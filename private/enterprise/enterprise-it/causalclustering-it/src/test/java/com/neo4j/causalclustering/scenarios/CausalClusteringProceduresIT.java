@@ -11,6 +11,7 @@ import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
+import org.assertj.core.api.HamcrestCondition;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -47,7 +48,6 @@ import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.apache.commons.lang3.exception.ExceptionUtils.getRootCause;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
-import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.instanceOf;
@@ -56,6 +56,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.test.assertion.Assert.assertEventually;
+import static org.neo4j.test.conditions.Conditions.equalityCondition;
 
 @ClusterExtension
 class CausalClusteringProceduresIT
@@ -161,7 +162,7 @@ class CausalClusteringProceduresIT
         {
             // shutdown the only follower and wait for the leader to become a follower
             follower.shutdown();
-            assertEventually( roleReportedByProcedure( leader, databaseName ), equalTo( RoleInfo.FOLLOWER ), 2, MINUTES );
+            assertEventually( roleReportedByProcedure( leader, databaseName ), equalityCondition( RoleInfo.FOLLOWER ), 2, MINUTES );
         }
         finally
         {
@@ -169,9 +170,9 @@ class CausalClusteringProceduresIT
             follower.start();
 
             // await until follower views the correct cluster
-            assertEventualOverview( allOf(
+            assertEventualOverview( new HamcrestCondition<>( allOf(
                     containsRole( LEADER, databaseName, 1 ),
-                    containsRole( FOLLOWER, databaseName, 1 ) ), follower );
+                    containsRole( FOLLOWER, databaseName, 1 ) ) ), follower );
         }
     }
 
@@ -220,7 +221,8 @@ class CausalClusteringProceduresIT
     {
         for ( var member : members )
         {
-            assertEventually( () -> execute( member, databaseName, procedureExecutor ), hasSize( greaterThanOrEqualTo( 1 ) ), 1, MINUTES );
+            assertEventually( () -> execute( member, databaseName, procedureExecutor ), new HamcrestCondition<>( hasSize( greaterThanOrEqualTo( 1 ) ) ),
+                    1, MINUTES );
         }
     }
 
@@ -245,13 +247,13 @@ class CausalClusteringProceduresIT
         for ( var member : cluster.coreMembers() )
         {
             var expectedRole = Objects.equals( member, leader ) ? RoleInfo.LEADER : RoleInfo.FOLLOWER;
-            assertEventually( roleReportedByProcedure( member, databaseName ), equalTo( expectedRole ), 2, MINUTES );
+            assertEventually( roleReportedByProcedure( member, databaseName ), equalityCondition( expectedRole ), 2, MINUTES );
         }
 
         for ( var member : cluster.readReplicas() )
         {
             var expectedRole = RoleInfo.READ_REPLICA;
-            assertEventually( roleReportedByProcedure( member, databaseName ), equalTo( expectedRole ), 2, MINUTES );
+            assertEventually( roleReportedByProcedure( member, databaseName ), equalityCondition( expectedRole ), 2, MINUTES );
         }
     }
 

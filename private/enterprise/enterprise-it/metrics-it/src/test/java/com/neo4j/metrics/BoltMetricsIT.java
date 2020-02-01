@@ -7,6 +7,7 @@ package com.neo4j.metrics;
 
 import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+import org.assertj.core.api.Condition;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -39,6 +40,9 @@ import static org.neo4j.test.assertion.Assert.assertEventually;
 @DbmsExtension( configurationCallback = "configure" )
 class BoltMetricsIT
 {
+    private static final Condition<Long> GREATER_THAN_ZERO = new Condition<>( value -> value >= 0L, "Should be greater than 0." );
+    private static final Condition<Long> EQUALITY_CONDITION = new Condition<>( value -> value == 1L, "Should be equal to 1." );
+
     @Inject
     private TestDirectory testDirectory;
 
@@ -81,19 +85,17 @@ class BoltMetricsIT
 
         // Then
         assertEventually( "session shows up as started",
-                () -> readLongCounterValue( metricsCsv( metricsFolder, "neo4j.bolt.sessions_started" ) ), equalTo( 1L ), 5, SECONDS );
+                () -> readLongCounterValue( metricsCsv( metricsFolder, "neo4j.bolt.sessions_started" ) ), EQUALITY_CONDITION, 5, SECONDS );
         assertEventually( "init request shows up as received",
-                () -> readLongCounterValue( metricsCsv( metricsFolder, "neo4j.bolt.messages_received" ) ), equalTo( 1L ), 5, SECONDS );
+                () -> readLongCounterValue( metricsCsv( metricsFolder, "neo4j.bolt.messages_received" ) ), EQUALITY_CONDITION, 5, SECONDS );
         assertEventually( "init request shows up as started",
-                () -> readLongCounterValue( metricsCsv( metricsFolder, "neo4j.bolt.messages_started" ) ), equalTo( 1L ), 5, SECONDS );
+                () -> readLongCounterValue( metricsCsv( metricsFolder, "neo4j.bolt.messages_started" ) ), EQUALITY_CONDITION, 5, SECONDS );
         assertEventually( "init request shows up as done",
-                () -> readLongCounterValue( metricsCsv( metricsFolder, "neo4j.bolt.messages_done" ) ), equalTo( 1L ), 5, SECONDS );
+                () -> readLongCounterValue( metricsCsv( metricsFolder, "neo4j.bolt.messages_done" ) ), EQUALITY_CONDITION, 5, SECONDS );
 
         assertEventually( "queue time shows up",
-                () -> readLongCounterValue( metricsCsv( metricsFolder, "neo4j.bolt.accumulated_queue_time" ) ),
-                greaterThanOrEqualTo( 0L ), 5, SECONDS );
+                () -> readLongCounterValue( metricsCsv( metricsFolder, "neo4j.bolt.accumulated_queue_time" ) ), GREATER_THAN_ZERO, 5, SECONDS );
         assertEventually( "processing time shows up",
-                () -> readLongCounterValue( metricsCsv( metricsFolder, "neo4j.bolt.accumulated_processing_time" ) ),
-                greaterThanOrEqualTo( 0L ), 5, SECONDS );
+                () -> readLongCounterValue( metricsCsv( metricsFolder, "neo4j.bolt.accumulated_processing_time" ) ), GREATER_THAN_ZERO, 5, SECONDS );
     }
 }

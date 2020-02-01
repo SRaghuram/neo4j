@@ -55,12 +55,12 @@ import static com.neo4j.causalclustering.core.CausalClusteringSettings.middlewar
 import static com.neo4j.causalclustering.discovery.akka.system.ClusterJoiningActor.AKKA_SCHEME;
 import static java.util.Collections.singletonList;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.hamcrest.Matchers.equalTo;
 import static org.neo4j.configuration.GraphDatabaseSettings.SERVER_DEFAULTS;
 import static org.neo4j.configuration.GraphDatabaseSettings.store_internal_log_level;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
 import static org.neo4j.test.assertion.Assert.assertEventually;
+import static org.neo4j.test.conditions.Conditions.equalityCondition;
 
 @TestInstance( TestInstance.Lifecycle.PER_CLASS )
 class AkkaDistributedDataLeakTest
@@ -110,11 +110,11 @@ class AkkaDistributedDataLeakTest
     {
         cleanRestarter.start();
 
-        assertEventually( () -> harness.replicatedData.size(), equalTo( metadataCount ), TIMEOUT, SECONDS );
+        assertEventually( () -> harness.replicatedData.size(), equalityCondition( metadataCount ), TIMEOUT, SECONDS );
 
         cleanRestarter.stop();
 
-        assertEventually( () -> harness.replicatedData.size(), equalTo( metadataCount - 1 ), TIMEOUT, SECONDS );
+        assertEventually( () -> harness.replicatedData.size(), equalityCondition( metadataCount - 1 ), TIMEOUT, SECONDS );
     }
 
     @RepeatedTest( 10 )
@@ -122,11 +122,11 @@ class AkkaDistributedDataLeakTest
     {
         uncleanRestarter.start();
 
-        assertEventually( () -> harness.replicatedData.size(), equalTo( metadataCount ), TIMEOUT, SECONDS );
+        assertEventually( () -> harness.replicatedData.size(), equalityCondition( metadataCount ), TIMEOUT, SECONDS );
 
         uncleanRestarter.stop();
 
-        assertEventually( () -> harness.replicatedData.size(), equalTo( metadataCount - 1 ), TIMEOUT, SECONDS );
+        assertEventually( () -> harness.replicatedData.size(), equalityCondition( metadataCount - 1 ), TIMEOUT, SECONDS );
     }
 
     private CoreTopologyService coreTopologyService( int harnessPort, DiscoveryServiceFactory discoveryServiceFactory )

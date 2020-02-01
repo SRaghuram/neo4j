@@ -33,6 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.SettingValueParsers.FALSE;
+import static org.neo4j.test.conditions.Conditions.TRUE;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @ClusterExtension
@@ -126,7 +127,6 @@ class ReadReplicaStoreCopyIT
 
     private static void waitForStoreCopyToStartAndBlock( Semaphore storeCopyBlockingSemaphore ) throws Exception
     {
-        assertEventually( "Read replica did not copy files", storeCopyBlockingSemaphore::hasQueuedThreads,
-                is( true ), 60, TimeUnit.SECONDS );
+        assertEventually( "Read replica did not copy files", storeCopyBlockingSemaphore::hasQueuedThreads, TRUE, 60, TimeUnit.SECONDS );
     }
 }

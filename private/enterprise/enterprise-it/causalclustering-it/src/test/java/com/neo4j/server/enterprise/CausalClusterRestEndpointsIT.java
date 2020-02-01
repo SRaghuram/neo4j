@@ -6,6 +6,7 @@
 package com.neo4j.server.enterprise;
 
 import com.neo4j.harness.internal.CausalClusterInProcessBuilder;
+import org.assertj.core.api.HamcrestCondition;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -63,6 +64,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.test.conditions.Conditions.FALSE;
+import static org.neo4j.test.conditions.Conditions.TRUE;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 import static org.neo4j.test.assertion.Assert.awaitUntilAsserted;
 
@@ -80,13 +83,13 @@ class CausalClusterRestEndpointsIT
     private static CausalClusterInProcessBuilder.CausalCluster cluster;
 
     @BeforeAll
-    static void setupClass() throws Exception
+    static void setupClass()
     {
         cluster = startCluster( testDirectory );
 
         for ( var core : cluster.getCores() )
         {
-            assertEventually( canVote( statusEndpoint( core, KNOWN_DB ) ), equalTo( true ), 1, MINUTES );
+            assertEventually( canVote( statusEndpoint( core, KNOWN_DB ) ), TRUE, 1, MINUTES );
         }
     }
 
@@ -377,37 +380,39 @@ class CausalClusterRestEndpointsIT
     {
         // given there is data
         writeSomeData( cluster, KNOWN_DB );
-        assertEventually( allReplicaFieldValues( cluster, CausalClusterStatusEndpointMatchers::getNodeCount ), everyItem( greaterThan( 0L ) ),
-                3, MINUTES );
+        assertEventually( allReplicaFieldValues( cluster, CausalClusterStatusEndpointMatchers::getNodeCount ),
+                new HamcrestCondition<>( everyItem( greaterThan( 0L ) ) ), 3, MINUTES );
 
         // then cores are valid
         for ( var core : cluster.getCores() )
         {
             writeSomeData( cluster, KNOWN_DB );
-            assertEventually( statusEndpoint( core, KNOWN_DB ), coreFieldIs( equalTo( true ) ), 1, MINUTES );
-            assertEventually( statusEndpoint( core, KNOWN_DB ), lastAppliedRaftIndexFieldIs( greaterThan( 0L ) ), 1, MINUTES );
-            assertEventually( statusEndpoint( core, KNOWN_DB ), memberIdFieldIs( not( emptyOrNullString() ) ), 1, MINUTES );
-            assertEventually( statusEndpoint( core, KNOWN_DB ), healthFieldIs( equalTo( true ) ), 1, MINUTES );
-            assertEventually( statusEndpoint( core, KNOWN_DB ), leaderFieldIs( not( emptyOrNullString() ) ), 1, MINUTES );
-            assertEventually( statusEndpoint( core, KNOWN_DB ), raftMessageThroughputPerSecondFieldIs( greaterThan( 0.0 ) ), 1, MINUTES );
-            assertEventually( statusEndpoint( core, KNOWN_DB ), votingMemberSetIs( hasSize( 3 ) ), 1, MINUTES );
-            assertEventually( statusEndpoint( core, KNOWN_DB ), participatingInRaftGroup( true ), 1, MINUTES );
-            assertEventually( statusEndpoint( core, KNOWN_DB ), millisSinceLastLeaderMessageSanityCheck( true ), 1, MINUTES );
+            assertEventually( statusEndpoint( core, KNOWN_DB ), new HamcrestCondition<>( coreFieldIs( equalTo( true ) ) ), 1, MINUTES );
+            assertEventually( statusEndpoint( core, KNOWN_DB ), new HamcrestCondition<>( lastAppliedRaftIndexFieldIs( greaterThan( 0L ) ) ), 1, MINUTES );
+            assertEventually( statusEndpoint( core, KNOWN_DB ), new HamcrestCondition<>( memberIdFieldIs( not( emptyOrNullString() ) ) ), 1, MINUTES );
+            assertEventually( statusEndpoint( core, KNOWN_DB ), new HamcrestCondition<>( healthFieldIs( equalTo( true ) ) ), 1, MINUTES );
+            assertEventually( statusEndpoint( core, KNOWN_DB ), new HamcrestCondition<>( leaderFieldIs( not( emptyOrNullString() ) ) ), 1, MINUTES );
+            assertEventually( statusEndpoint( core, KNOWN_DB ), new HamcrestCondition<>( raftMessageThroughputPerSecondFieldIs( greaterThan( 0.0 ) ) ),
+                    1, MINUTES );
+            assertEventually( statusEndpoint( core, KNOWN_DB ), new HamcrestCondition<>( votingMemberSetIs( hasSize( 3 ) ) ), 1, MINUTES );
+            assertEventually( statusEndpoint( core, KNOWN_DB ), new HamcrestCondition<>( participatingInRaftGroup( true ) ), 1, MINUTES );
+            assertEventually( statusEndpoint( core, KNOWN_DB ), new HamcrestCondition<>( millisSinceLastLeaderMessageSanityCheck( true ) ), 1, MINUTES );
         }
 
         // and replicas are valid
         for ( var replica : cluster.getReadReplicas() )
         {
             writeSomeData( cluster, KNOWN_DB );
-            assertEventually( statusEndpoint( replica, KNOWN_DB ), coreFieldIs( equalTo( false ) ), 1, MINUTES );
-            assertEventually( statusEndpoint( replica, KNOWN_DB ), lastAppliedRaftIndexFieldIs( greaterThan( 0L ) ), 1, MINUTES );
-            assertEventually( statusEndpoint( replica, KNOWN_DB ), memberIdFieldIs( not( emptyOrNullString() ) ), 1, MINUTES );
-            assertEventually( statusEndpoint( replica, KNOWN_DB ), healthFieldIs( equalTo( true ) ), 1, MINUTES );
-            assertEventually( statusEndpoint( replica, KNOWN_DB ), leaderFieldIs( not( emptyOrNullString() ) ), 1, MINUTES );
-            assertEventually( statusEndpoint( replica, KNOWN_DB ), raftMessageThroughputPerSecondFieldIs( greaterThan( 0.0 ) ), 1, MINUTES );
-            assertEventually( statusEndpoint( replica, KNOWN_DB ), votingMemberSetIs( hasSize( 3 ) ), 1, MINUTES );
-            assertEventually( statusEndpoint( replica, KNOWN_DB ), participatingInRaftGroup( false ), 1, MINUTES );
-            assertEventually( statusEndpoint( replica, KNOWN_DB ), millisSinceLastLeaderMessageSanityCheck( false ), 1, MINUTES );
+            assertEventually( statusEndpoint( replica, KNOWN_DB ), new HamcrestCondition<>( coreFieldIs( equalTo( false ) ) ), 1, MINUTES );
+            assertEventually( statusEndpoint( replica, KNOWN_DB ), new HamcrestCondition<>( lastAppliedRaftIndexFieldIs( greaterThan( 0L ) ) ), 1, MINUTES );
+            assertEventually( statusEndpoint( replica, KNOWN_DB ), new HamcrestCondition<>( memberIdFieldIs( not( emptyOrNullString() ) ) ), 1, MINUTES );
+            assertEventually( statusEndpoint( replica, KNOWN_DB ), new HamcrestCondition<>( healthFieldIs( equalTo( true ) ) ), 1, MINUTES );
+            assertEventually( statusEndpoint( replica, KNOWN_DB ), new HamcrestCondition<>( leaderFieldIs( not( emptyOrNullString() ) ) ), 1, MINUTES );
+            assertEventually( statusEndpoint( replica, KNOWN_DB ), new HamcrestCondition<>( raftMessageThroughputPerSecondFieldIs( greaterThan( 0.0 ) ) ),
+                    1, MINUTES );
+            assertEventually( statusEndpoint( replica, KNOWN_DB ), new HamcrestCondition<>( votingMemberSetIs( hasSize( 3 ) ) ), 1, MINUTES );
+            assertEventually( statusEndpoint( replica, KNOWN_DB ), new HamcrestCondition<>( participatingInRaftGroup( false ) ), 1, MINUTES );
+            assertEventually( statusEndpoint( replica, KNOWN_DB ), new HamcrestCondition<>( millisSinceLastLeaderMessageSanityCheck( false ) ), 1, MINUTES );
         }
     }
 
@@ -439,20 +444,20 @@ class CausalClusterRestEndpointsIT
 
         // when more data is added
         writeSomeData( cluster, KNOWN_DB );
-        assertEventually( allReplicaFieldValues( cluster, CausalClusterStatusEndpointMatchers::getNodeCount ), everyItem( greaterThan( 1L ) ), 1,
-                MINUTES );
+        assertEventually( allReplicaFieldValues( cluster, CausalClusterStatusEndpointMatchers::getNodeCount ),
+                new HamcrestCondition<>( everyItem( greaterThan( 1L ) ) ), 1, MINUTES );
 
         // then all status endpoints have a matching last appliedRaftIndex
         assertEventually( lastAppliedRaftIndex( allStatusEndpointValues( cluster, KNOWN_DB ) ), allValuesEqual(), 1, MINUTES );
 
         // and endpoint last applied raft index has incremented
         assertEventually( statusEndpoint( awaitLeader( cluster, KNOWN_DB ), KNOWN_DB ),
-                lastAppliedRaftIndexFieldIs( greaterThan( initialLastAppliedRaftIndex ) ),
+                new HamcrestCondition<>( lastAppliedRaftIndexFieldIs( greaterThan( initialLastAppliedRaftIndex ) ) ),
                 1, MINUTES );
     }
 
     @Test
-    void participatingInRaftGroupFalseWhenNotInGroup() throws InterruptedException
+    void participatingInRaftGroupFalseWhenNotInGroup()
     {
         try
         {
@@ -466,7 +471,7 @@ class CausalClusterRestEndpointsIT
             }
 
             var remainingCore = cores.get( 0 );
-            assertEventually( canVote( statusEndpoint( remainingCore, KNOWN_DB ) ), equalTo( false ), 1, MINUTES );
+            assertEventually( canVote( statusEndpoint( remainingCore, KNOWN_DB ) ), FALSE, 1, MINUTES );
         }
         finally
         {
@@ -479,9 +484,9 @@ class CausalClusterRestEndpointsIT
     void throughputIsPositive() throws Exception
     {
         writeSomeData( cluster, KNOWN_DB );
-        assertEventually( allStatusEndpointValues( cluster, KNOWN_DB ), everyItem( raftMessageThroughputPerSecondFieldIs( greaterThan( 0.0 ) ) ),
-                1, MINUTES );
-        assertEventually( allStatusEndpointValues( cluster, KNOWN_DB ), everyItem( raftMessageThroughputPerSecondFieldIs( equalTo( 0.0 ) ) ),
-                90, SECONDS );
+        assertEventually( allStatusEndpointValues( cluster, KNOWN_DB ),
+                new HamcrestCondition<>( everyItem( raftMessageThroughputPerSecondFieldIs( greaterThan( 0.0 ) ) ) ), 1, MINUTES );
+        assertEventually( allStatusEndpointValues( cluster, KNOWN_DB ),
+                new HamcrestCondition<>( everyItem( raftMessageThroughputPerSecondFieldIs( equalTo( 0.0 ) ) ) ), 90, SECONDS );
     }
 }

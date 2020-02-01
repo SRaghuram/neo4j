@@ -34,10 +34,10 @@ import static java.time.Duration.ofMinutes;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.apache.commons.lang3.ArrayUtils.isNotEmpty;
-import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.test.assertion.Assert.assertEventually;
+import static org.neo4j.test.conditions.Conditions.equalityCondition;
 
 @TestDirectoryExtension
 class RotatableCsvOutputIT
@@ -96,7 +96,7 @@ class RotatableCsvOutputIT
         {
             File metricsCsv = metricsCsv( outputPath, metricFileName );
             return readLongCounterAndAssert( metricsCsv, MONOTONIC );
-        }, equalTo( expectedValue ), 2, TimeUnit.MINUTES );
+        }, equalityCondition( expectedValue ), 2, TimeUnit.MINUTES );
     }
 
     private void doTransaction()

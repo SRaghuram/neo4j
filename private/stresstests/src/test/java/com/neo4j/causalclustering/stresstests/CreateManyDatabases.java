@@ -9,13 +9,14 @@ import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
 import com.neo4j.causalclustering.common.ClusterOverviewHelper;
 import com.neo4j.helper.Workload;
-import org.hamcrest.Matcher;
+import org.assertj.core.api.Condition;
+import org.assertj.core.api.HamcrestCondition;
 import org.hamcrest.Matchers;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 
 import org.neo4j.configuration.helpers.NormalizedDatabaseName;
 import org.neo4j.exceptions.KernelException;
@@ -30,8 +31,8 @@ import static com.neo4j.causalclustering.common.ClusterOverviewHelper.containsRo
 import static com.neo4j.causalclustering.discovery.RoleInfo.FOLLOWER;
 import static com.neo4j.causalclustering.discovery.RoleInfo.LEADER;
 import static com.neo4j.causalclustering.discovery.RoleInfo.READ_REPLICA;
+import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.apache.commons.lang3.RandomStringUtils.random;
-import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.configuration.helpers.DatabaseNameValidator.MAXIMUM_DATABASE_NAME_LENGTH;
@@ -114,7 +115,7 @@ public class CreateManyDatabases extends Workload
                     {
                         return tx.findNode( label( databaseName ), databaseName, databaseName );
                     }
-                }, notNullValue(), 1, TimeUnit.MINUTES );
+                }, new Condition<>( Objects::nonNull, "Should be not null." ), 1, MINUTES );
             }
         }
     }
@@ -131,16 +132,16 @@ public class CreateManyDatabases extends Workload
         return databaseName.name();
     }
 
-    private void checkOverviews( Set<String> createdDatabases ) throws InterruptedException, KernelException
+    private void checkOverviews( Set<String> createdDatabases )
     {
         for ( String createdDatabase : createdDatabases )
         {
-            Matcher<List<ClusterOverviewHelper.MemberInfo>> expected = Matchers.allOf(
+            Condition<List<ClusterOverviewHelper.MemberInfo>> expected = new HamcrestCondition<>( Matchers.allOf(
                     containsAllMemberAddresses( cluster.coreMembers(), cluster.readReplicas() ),
                     containsRole( LEADER, createdDatabase, 1 ),
                     containsRole( FOLLOWER, createdDatabase, cluster.coreMembers().size() - 1 ),
                     containsRole( READ_REPLICA, createdDatabase, cluster.readReplicas().size() )
-            );
+            ) );
 
             assertAllEventualOverviews( cluster, expected );
         }

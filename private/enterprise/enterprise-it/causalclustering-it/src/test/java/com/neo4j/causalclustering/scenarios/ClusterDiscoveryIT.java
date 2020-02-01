@@ -12,6 +12,7 @@ import com.neo4j.causalclustering.read_replica.ReadReplica;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
+import org.assertj.core.api.HamcrestCondition;
 import org.hamcrest.Description;
 import org.hamcrest.TypeSafeMatcher;
 import org.junit.jupiter.api.Test;
@@ -89,7 +90,7 @@ class ClusterDiscoveryIT
         var expectedRouteEndpoints = expectedRouteEndpoints( cluster );
         var routingTableMatcher = new RoutingTableMatcher( expectedWriteEndpoints, expectedReadEndpoints, expectedRouteEndpoints );
 
-        assertEventually( () -> getMembers( coreMember.defaultDatabase() ), routingTableMatcher, 30, SECONDS );
+        assertEventually( () -> getMembers( coreMember.defaultDatabase() ), new HamcrestCondition<>( routingTableMatcher ), 30, SECONDS );
     }
 
     private static Set<String> expectedWriteEndpoints( Cluster cluster ) throws TimeoutException

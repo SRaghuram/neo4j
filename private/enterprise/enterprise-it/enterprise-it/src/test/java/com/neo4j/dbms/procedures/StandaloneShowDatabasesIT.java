@@ -8,6 +8,7 @@ package com.neo4j.dbms.procedures;
 import com.neo4j.dbms.ShowDatabasesHelpers.ShowDatabasesResultRow;
 import com.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
+import org.assertj.core.api.HamcrestCondition;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,16 +35,16 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.emptyString;
 import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.test.assertion.Assert.assertEventually;
+import static org.neo4j.test.conditions.Conditions.equalityCondition;
+import static org.neo4j.test.conditions.Conditions.sizeCondition;
 
 @TestDirectoryExtension
 class StandaloneShowDatabasesIT
 {
-
     @Inject
     FileSystemAbstraction fs;
     @Inject
@@ -67,7 +68,7 @@ class StandaloneShowDatabasesIT
     }
 
     @Test
-    void shouldDisplayErrorsForFailedDatabase() throws InterruptedException, IOException
+    void shouldDisplayErrorsForFailedDatabase() throws IOException
     {
         // given
         assertCorrectInitialShowDatabases();
@@ -79,7 +80,7 @@ class StandaloneShowDatabasesIT
 
         // then
         assertEventually( "SHOW DATABASES should return correct status for stopped database " + DEFAULT_DATABASE_NAME,
-                () -> statusForDatabase( dbms, DEFAULT_DATABASE_NAME ), is( STOPPED.description() ), 5, TimeUnit.SECONDS );
+                () -> statusForDatabase( dbms, DEFAULT_DATABASE_NAME ), equalityCondition( STOPPED.description() ), 5, TimeUnit.SECONDS );
 
         // when
         fs.deleteFile( defaultDbLayout.nodeStore() );
@@ -88,13 +89,13 @@ class StandaloneShowDatabasesIT
 
         // then
         assertEventually( "SHOW DATABASES should return an error for " + DEFAULT_DATABASE_NAME,
-                () -> errorForDatabase( dbms, DEFAULT_DATABASE_NAME ), not( emptyString() ), 5, TimeUnit.SECONDS );
+                () -> errorForDatabase( dbms, DEFAULT_DATABASE_NAME ), new HamcrestCondition<>( not( emptyString() ) ), 5, TimeUnit.SECONDS );
         assertEventually( "SHOW DATABASES should return correct status for stopped database " + DEFAULT_DATABASE_NAME,
-                () -> statusForDatabase( dbms, DEFAULT_DATABASE_NAME ), is( STOPPED.description() ), 5, TimeUnit.SECONDS );
+                () -> statusForDatabase( dbms, DEFAULT_DATABASE_NAME ), equalityCondition( STOPPED.description() ), 5, TimeUnit.SECONDS );
     }
 
     @Test
-    void shouldDisplayStatusChanges() throws InterruptedException
+    void shouldDisplayStatusChanges()
     {
         // given
         assertCorrectInitialShowDatabases();
@@ -104,11 +105,11 @@ class StandaloneShowDatabasesIT
 
         // then
         assertEventually( "SHOW DATABASES should return correct status for stopped database " + DEFAULT_DATABASE_NAME,
-                () -> statusForDatabase( dbms, DEFAULT_DATABASE_NAME ), is( STOPPED.description() ), 5, TimeUnit.SECONDS );
+                () -> statusForDatabase( dbms, DEFAULT_DATABASE_NAME ), equalityCondition( STOPPED.description() ), 5, TimeUnit.SECONDS );
     }
 
     @Test
-    void shouldShowAdditionalDatabase() throws InterruptedException
+    void shouldShowAdditionalDatabase()
     {
         // given
         assertCorrectInitialShowDatabases();
@@ -123,12 +124,12 @@ class StandaloneShowDatabasesIT
         assertThat( "SHOW DATABASES should return one row for each database, including " + additionalDatabase, getShowDatabaseNames( dbms ),
                 containsInAnyOrder( SYSTEM_DATABASE_NAME, DEFAULT_DATABASE_NAME, additionalDatabase ) );
         assertEventually( "SHOW DATABASES should return started status for database " + additionalDatabase,
-                () -> statusForDatabase( dbms, additionalDatabase ), is( STARTED.description() ), 5, TimeUnit.SECONDS );
+                () -> statusForDatabase( dbms, additionalDatabase ), equalityCondition( STARTED.description() ), 5, TimeUnit.SECONDS );
     }
 
     // Should not show dropped database
     @Test
-    void shouldNotShowDroppedDatabase() throws InterruptedException
+    void shouldNotShowDroppedDatabase()
     {
         // given
         assertCorrectInitialShowDatabases();
@@ -138,9 +139,9 @@ class StandaloneShowDatabasesIT
 
         // then
         assertEventually( "SHOW DATABASES should return a single", () -> showDatabases( dbms ),
-                hasSize( 1 ), 5, TimeUnit.SECONDS );
+                new HamcrestCondition<>( hasSize( 1 ) ), 5, TimeUnit.SECONDS );
         assertEventually( "SHOW DATABASES should return one row for system database", () -> getShowDatabaseNames( dbms ),
-                containsInAnyOrder( SYSTEM_DATABASE_NAME ), 5, TimeUnit.SECONDS );
+                new HamcrestCondition<>( containsInAnyOrder( SYSTEM_DATABASE_NAME ) ), 5, TimeUnit.SECONDS );
     }
 
     private void assertCorrectInitialShowDatabases()

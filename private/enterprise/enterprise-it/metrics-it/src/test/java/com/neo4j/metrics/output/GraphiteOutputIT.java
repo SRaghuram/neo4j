@@ -16,6 +16,7 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.DelimiterBasedFrameDecoder;
+import org.assertj.core.api.Condition;
 import org.hamcrest.Matcher;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -84,7 +85,7 @@ class GraphiteOutputIT
     @Test
     void shouldReportMetricsToGraphiteWithoutDuplicatedPrefix() throws Exception
     {
-        assertEventually( "A fake Graphite server did not receive any metrics", receivedMetrics::size, greaterThanOrEqualTo( 100 ), 2, MINUTES );
+        assertEventually( "A fake Graphite server did not receive any metrics", receivedMetrics::size, value -> value >= 100, 2, MINUTES );
 
         for ( var metric : receivedMetrics )
         {

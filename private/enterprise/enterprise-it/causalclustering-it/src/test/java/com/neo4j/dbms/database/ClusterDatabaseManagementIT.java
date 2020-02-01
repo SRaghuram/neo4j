@@ -18,6 +18,7 @@ import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
@@ -33,7 +34,6 @@ import org.neo4j.kernel.database.DatabaseIdRepository;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
 
-import static co.unruly.matchers.OptionalMatchers.empty;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.assertDatabaseEventuallyDoesNotExist;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.assertDatabaseEventuallyStarted;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.assertDatabaseEventuallyStopped;
@@ -46,11 +46,12 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toSet;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.not;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 import static org.neo4j.test.assertion.Assert.assertEventually;
+import static org.neo4j.test.conditions.Conditions.condition;
+import static org.neo4j.test.conditions.Conditions.equalityCondition;
 
 @ClusterExtension
 @TestInstance( TestInstance.Lifecycle.PER_METHOD )
@@ -399,7 +400,7 @@ class ClusterDatabaseManagementIT
         // Restart core
         toStop.start();
 
-        assertEventually( () -> hasNodeCount( toStop, databaseName, secondLabel ), equalTo( 1L ), 90, SECONDS );
+        assertEventually( () -> hasNodeCount( toStop, databaseName, secondLabel ), equalityCondition( 1L ), 90, SECONDS );
         assertThat( hasNodeCount( toStop, databaseName, firstLabel ), equalTo( 0L ) );
     }
 
@@ -419,14 +420,14 @@ class ClusterDatabaseManagementIT
 
         for ( DatabaseIdRepository.Caching dbIdRepo : dbIdRepos )
         {
-            assertEventually( () -> dbIdRepo.getByName( databaseName ), empty(), 20, SECONDS );
+            assertEventually( () -> dbIdRepo.getByName( databaseName ), condition( Optional::isEmpty ), 20, SECONDS );
         }
 
         createDatabase( databaseName, cluster );
 
         for ( DatabaseIdRepository.Caching dbIdRepo : dbIdRepos )
         {
-            assertEventually( () -> dbIdRepo.getByName( databaseName ), not( empty() ), 20, SECONDS );
+            assertEventually( () -> dbIdRepo.getByName( databaseName ), condition( Optional::isPresent ), 20, SECONDS );
         }
 
         assertDatabaseEventuallyStarted( databaseName, cluster );
@@ -434,7 +435,7 @@ class ClusterDatabaseManagementIT
 
         for ( DatabaseIdRepository.Caching dbIdRepo : dbIdRepos )
         {
-            assertEventually( () -> dbIdRepo.getByName( databaseName ), empty(), 30, SECONDS );
+            assertEventually( () -> dbIdRepo.getByName( databaseName ), condition( Optional::isEmpty ), 30, SECONDS );
         }
 
         assertDatabaseEventuallyDoesNotExist( databaseName, cluster );
@@ -502,7 +503,7 @@ class ClusterDatabaseManagementIT
         assertDefaultDatabasesAreAvailable( cluster );
     }
 
-    private static void assertDefaultDatabasesAreAvailable( Cluster cluster ) throws InterruptedException
+    private static void assertDefaultDatabasesAreAvailable( Cluster cluster )
     {
         assertDatabaseEventuallyStarted( SYSTEM_DATABASE_NAME, cluster );
         assertDatabaseEventuallyStarted( DEFAULT_DATABASE_NAME, cluster );

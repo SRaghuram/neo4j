@@ -7,7 +7,7 @@ package com.neo4j.metrics;
 
 import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
-import org.hamcrest.Matcher;
+import org.assertj.core.api.Condition;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -28,12 +28,9 @@ import static com.neo4j.metrics.MetricsTestHelper.metricsCsv;
 import static com.neo4j.metrics.MetricsTestHelper.readDoubleGaugeValue;
 import static com.neo4j.metrics.MetricsTestHelper.readLongCounterAndAssert;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.greaterThan;
-import static org.hamcrest.Matchers.greaterThanOrEqualTo;
-import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.test.assertion.Assert.assertEventually;
+import static org.neo4j.test.conditions.Conditions.equalityCondition;
 
 @DbmsExtension( configurationCallback = "configure" )
 class PageCacheMetricsIT
@@ -75,29 +72,27 @@ class PageCacheMetricsIT
             assertEquals( 1, nodes.stream().count() );
         }
 
-        assertMetrics( "Metrics report should include page cache pins", "neo4j.page_cache.pins", greaterThan( 0L ) );
-        assertMetrics( "Metrics report should include page cache unpins", "neo4j.page_cache.unpins", greaterThan( 0L ) );
-        assertMetrics( "Metrics report should include page cache evictions", "neo4j.page_cache.evictions", greaterThanOrEqualTo( 0L ) );
-        assertMetrics( "Metrics report should include page cache page faults", "neo4j.page_cache.page_faults", greaterThan( 0L ) );
-        assertMetrics( "Metrics report should include page cache hits", "neo4j.page_cache.hits", greaterThan( 0L ) );
-        assertMetrics( "Metrics report should include page cache flushes", "neo4j.page_cache.flushes", greaterThanOrEqualTo( 0L ) );
-        assertMetrics( "Metrics report should include page cache exceptions", "neo4j.page_cache.eviction_exceptions", equalTo( 0L ) );
+        var greaterThanZero = new Condition<Long>( value -> value > 0, "Greater than zero" );
+        var greaterThanEqualZero = new Condition<Long>( value -> value >= 0, "Greater than zero" );
+        assertMetrics( "Metrics report should include page cache pins", "neo4j.page_cache.pins", greaterThanZero );
+        assertMetrics( "Metrics report should include page cache unpins", "neo4j.page_cache.unpins", greaterThanZero );
+        assertMetrics( "Metrics report should include page cache evictions", "neo4j.page_cache.evictions", greaterThanEqualZero );
+        assertMetrics( "Metrics report should include page cache page faults", "neo4j.page_cache.page_faults", greaterThanZero );
+        assertMetrics( "Metrics report should include page cache hits", "neo4j.page_cache.hits", greaterThanZero );
+        assertMetrics( "Metrics report should include page cache flushes", "neo4j.page_cache.flushes", greaterThanEqualZero );
+        assertMetrics( "Metrics report should include page cache exceptions", "neo4j.page_cache.eviction_exceptions", equalityCondition( 0L ) );
 
         assertEventually(
                 "Metrics report should include page cache hit ratio",
-                () -> readDoubleGaugeValue( metricsCsv( metricsDirectory, "neo4j.page_cache.hit_ratio" ) ),
-                lessThanOrEqualTo( 1.0 ),
-                5, SECONDS );
+                () -> readDoubleGaugeValue( metricsCsv( metricsDirectory, "neo4j.page_cache.hit_ratio" ) ), value -> value <= 1.0, 5, SECONDS );
 
         assertEventually(
                 "Metrics report should include page cache usage ratio",
-                () -> readDoubleGaugeValue( metricsCsv( metricsDirectory, "neo4j.page_cache.usage_ratio" ) ),
-                lessThanOrEqualTo( 1.0 ),
-                5, SECONDS );
+                () -> readDoubleGaugeValue( metricsCsv( metricsDirectory, "neo4j.page_cache.usage_ratio" ) ), value -> value <= 1.0, 5, SECONDS );
     }
 
-    private void assertMetrics( String message, String metricName, Matcher<Long> matcher ) throws Exception
+    private void assertMetrics( String message, String metricName, Condition<Long> condition )
     {
-        assertEventually( message, () -> readLongCounterAndAssert( metricsCsv( metricsDirectory, metricName ), -1, ( a, b ) -> true ), matcher, 5, SECONDS );
+        assertEventually( message, () -> readLongCounterAndAssert( metricsCsv( metricsDirectory, metricName ), -1, ( a, b ) -> true ), condition, 5, SECONDS );
     }
 }

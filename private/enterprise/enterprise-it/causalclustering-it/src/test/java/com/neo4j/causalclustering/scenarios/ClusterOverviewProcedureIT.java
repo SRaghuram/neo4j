@@ -12,6 +12,7 @@ import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
+import org.assertj.core.api.HamcrestCondition;
 import org.hamcrest.Description;
 import org.hamcrest.TypeSafeMatcher;
 import org.junit.jupiter.api.BeforeAll;
@@ -84,7 +85,7 @@ class ClusterOverviewProcedureIT
     }
 
     @Test
-    void shouldReturnClusterOverview() throws Exception
+    void shouldReturnClusterOverview()
     {
         var clusterOverviewMatcher = new ClusterOverviewMatcher( cluster, defaultDatabases );
 
@@ -113,11 +114,11 @@ class ClusterOverviewProcedureIT
         awaitClusterOverviewToMatch( clusterOverviewWitNewDatabase );
     }
 
-    private static void awaitClusterOverviewToMatch( ClusterOverviewMatcher matcher ) throws InterruptedException
+    private static void awaitClusterOverviewToMatch( ClusterOverviewMatcher matcher )
     {
         for ( var member : cluster.allMembers() )
         {
-            assertEventually( () -> invokeClusterOverviewProcedure( member ), matcher, 2, MINUTES );
+            assertEventually( () -> invokeClusterOverviewProcedure( member ), new HamcrestCondition<>( matcher ), 2, MINUTES );
         }
     }
 

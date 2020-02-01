@@ -28,13 +28,13 @@ import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.crea
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.forceTxLogRotationAndCheckpoint;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.keep_logical_logs;
 import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static org.neo4j.test.assertion.Assert.assertEventually;
+import static org.neo4j.test.conditions.Conditions.equalityCondition;
 
 @ClusterExtension
 class ReadReplicaFallBehindIT
@@ -101,6 +101,6 @@ class ReadReplicaFallBehindIT
         TransactionIdStore txIdStore = readReplica.resolveDependency( SYSTEM_DATABASE_NAME, TransactionIdStore.class );
         long lastClosedTransactionId = txIdStore.getLastClosedTransactionId();
         ReconciledTransactionTracker reconciledTxTracker = readReplica.resolveDependency( SYSTEM_DATABASE_NAME, ReconciledTransactionTracker.class );
-        assertEventually( reconciledTxTracker::getLastReconciledTransactionId, equalTo( lastClosedTransactionId ), 60, SECONDS );
+        assertEventually( reconciledTxTracker::getLastReconciledTransactionId, equalityCondition( lastClosedTransactionId ), 60, SECONDS );
     }
 }

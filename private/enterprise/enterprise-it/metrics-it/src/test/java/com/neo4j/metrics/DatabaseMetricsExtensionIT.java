@@ -9,7 +9,7 @@ import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import com.neo4j.metrics.global.MetricsManager;
 import com.neo4j.test.extension.EnterpriseDbmsExtension;
-import org.hamcrest.Matcher;
+import org.assertj.core.api.Condition;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -44,7 +44,6 @@ import static com.neo4j.metrics.source.db.DatabaseCountMetrics.COUNTS_RELATIONSH
 import static java.lang.System.currentTimeMillis;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasItem;
@@ -54,6 +53,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.check_point_interval
 import static org.neo4j.configuration.GraphDatabaseSettings.cypher_min_replan_interval;
 import static org.neo4j.graphdb.RelationshipType.withName;
 import static org.neo4j.test.assertion.Assert.assertEventually;
+import static org.neo4j.test.conditions.Conditions.equalityCondition;
 
 @EnterpriseDbmsExtension( configurationCallback = "configure" )
 class DatabaseMetricsExtensionIT
@@ -101,7 +101,7 @@ class DatabaseMetricsExtensionIT
 
         File checkpointsMetricsFile = metricsCsv( outputPath, "neo4j." + db.databaseName() + ".check_point.events" );
         assertEventually( "Metrics report should have correct number of checkpoints.",
-                () -> readLongCounterValue( checkpointsMetricsFile ), greaterThanOrEqualTo( 1L ), 1, MINUTES );
+                () -> readLongCounterValue( checkpointsMetricsFile ), new Condition<>( value -> value >= 1L, "More than 1." ), 1, MINUTES );
     }
 
     @Test
@@ -114,9 +114,9 @@ class DatabaseMetricsExtensionIT
 
         // 10 nodes created in this test and 1 in setup
         assertMetrics( "Should get correct number of nodes from count store",
-                "neo4j." + db.databaseName() + "." + COUNTS_NODE_TEMPLATE, equalTo( 11L ) );
+                "neo4j." + db.databaseName() + "." + COUNTS_NODE_TEMPLATE, equalityCondition( 11L ) );
         assertMetrics( "Should get correct number of relationships from count store",
-                "neo4j." + db.databaseName() + "." + COUNTS_RELATIONSHIP_TEMPLATE, equalTo( 5L ) );
+                "neo4j." + db.databaseName() + "." + COUNTS_RELATIONSHIP_TEMPLATE, equalityCondition( 5L ) );
     }
 
     @Test
@@ -156,7 +156,7 @@ class DatabaseMetricsExtensionIT
     }
 
     @Test
-    void reportTransactionLogsAppendedBytesWithDefaultAllocationConfig() throws InterruptedException, IOException
+    void reportTransactionLogsAppendedBytesWithDefaultAllocationConfig() throws IOException
     {
         addNodes( 100 );
         File metricsFile = metricsCsv( outputPath, "neo4j." + db.databaseName() + ".log.appended_bytes" );
@@ -262,7 +262,7 @@ class DatabaseMetricsExtensionIT
         }
     }
 
-    private void assertMetrics( String message, String metricName, Matcher<Long> matcher ) throws Exception
+    private void assertMetrics( String message, String metricName, Condition<Long> matcher )
     {
         assertEventually( message, () -> readLongGaugeValue( metricsCsv( outputPath, metricName ) ), matcher, 5, TimeUnit.MINUTES );
     }

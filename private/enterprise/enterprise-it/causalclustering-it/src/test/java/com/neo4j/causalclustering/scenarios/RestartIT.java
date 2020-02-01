@@ -11,6 +11,7 @@ import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.causalclustering.read_replica.ReadReplica;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
+import org.assertj.core.api.HamcrestCondition;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -36,7 +37,6 @@ import org.neo4j.test.extension.Inject;
 import static com.neo4j.causalclustering.common.DataMatching.dataMatchesEventually;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static java.util.concurrent.TimeUnit.MINUTES;
-import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -44,6 +44,7 @@ import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.test.assertion.Assert.assertEventually;
+import static org.neo4j.test.conditions.Conditions.equalityCondition;
 
 @ClusterExtension
 @TestInstance( PER_METHOD )
@@ -116,8 +117,8 @@ class RestartIT
         cluster.addCoreMemberWithId( followerId ).start();
 
         // then
-        assertEventually( () -> cluster.healthyCoreMembers(), hasSize( 3 ), 1, MINUTES );
-        assertEventually( () -> cluster.numberOfCoreMembersReportedByTopology( DEFAULT_DATABASE_NAME ), equalTo( 3 ), 1, MINUTES );
+        assertEventually( () -> cluster.healthyCoreMembers(), new HamcrestCondition<>( hasSize( 3 ) ), 1, MINUTES );
+        assertEventually( () -> cluster.numberOfCoreMembersReportedByTopology( DEFAULT_DATABASE_NAME ), equalityCondition( 3 ), 1, MINUTES );
 
         done.set( true );
 

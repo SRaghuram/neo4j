@@ -187,16 +187,16 @@ class ClusterStateActorIT extends BaseAkkaIT("ClusterStateActorTest") {
         "tick received" in new Fixture {
           clusterStateRef ! ClusterMonitorRefresh.INSTANCE
 
-          assertEventually(monitor.membersSet, is(true), defaultWaitTime.toMillis, TimeUnit.MILLISECONDS )
-          assertEventually(monitor.unreachableSet, is(true), defaultWaitTime.toMillis, TimeUnit.MILLISECONDS )
-          assertEventually(monitor.convergedSet, is(true), defaultWaitTime.toMillis, TimeUnit.MILLISECONDS )
+          assertEventually(monitor.membersSet, TRUE_CONDITION, defaultWaitTime.toMillis, TimeUnit.MILLISECONDS )
+          assertEventually(monitor.unreachableSet, TRUE_CONDITION, defaultWaitTime.toMillis, TimeUnit.MILLISECONDS )
+          assertEventually(monitor.convergedSet, TRUE_CONDITION, defaultWaitTime.toMillis, TimeUnit.MILLISECONDS )
         }
         "cluster event received" in new Fixture {
           clusterStateRef ! ClusterEvent.MemberUp(createMember(99, MemberStatus.up))
 
-          assertEventually(monitor.membersSet, is(true), defaultWaitTime.toMillis, TimeUnit.MILLISECONDS )
-          assertEventually(monitor.unreachableSet, is(true), defaultWaitTime.toMillis, TimeUnit.MILLISECONDS )
-          assertEventually(monitor.convergedSet, is(true), defaultWaitTime.toMillis, TimeUnit.MILLISECONDS )
+          assertEventually(monitor.membersSet, TRUE_CONDITION, defaultWaitTime.toMillis, TimeUnit.MILLISECONDS )
+          assertEventually(monitor.unreachableSet, TRUE_CONDITION, defaultWaitTime.toMillis, TimeUnit.MILLISECONDS )
+          assertEventually(monitor.convergedSet, TRUE_CONDITION, defaultWaitTime.toMillis, TimeUnit.MILLISECONDS )
         }
       }
     }

@@ -62,6 +62,7 @@ import static java.time.OffsetDateTime.now;
 import static java.time.OffsetDateTime.ofInstant;
 import static java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME;
 import static java.util.Collections.emptyMap;
+import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.hasItem;
@@ -80,6 +81,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static org.neo4j.internal.helpers.collection.Iterables.single;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
+import static org.neo4j.test.conditions.Conditions.TRUE;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 import static org.neo4j.test.matchers.CommonMatchers.matchesOneToOneInAnyOrder;
 
@@ -1322,12 +1324,9 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         createRoleWithAccess( ROLE, SUBJECT );
     }
 
-    private void assertQueryIsRunning( String query ) throws InterruptedException
+    private void assertQueryIsRunning( String query )
     {
-        assertEventually( "Query did not appear in dbms.listQueries output",
-                () -> queryIsRunning( query ),
-                equalTo( true ),
-                1, TimeUnit.MINUTES );
+        assertEventually( "Query did not appear in dbms.listQueries output", () -> queryIsRunning( query ), TRUE, 1, MINUTES );
     }
 
     private boolean queryIsRunning( String targetQuery )

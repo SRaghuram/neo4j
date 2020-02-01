@@ -13,6 +13,7 @@ import com.neo4j.causalclustering.discovery.procedures.InstalledProtocolsProcedu
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
+import org.assertj.core.api.HamcrestCondition;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -86,16 +87,16 @@ public class InstalledProtocolsProcedureIT
 
         assertEventually( "should see outbound installed protocols on core " + leader.serverId(),
                 () -> installedProtocols( leader.defaultDatabase(), OUTBOUND ),
-                hasItems( expectedProtocolInfos ),
+                new HamcrestCondition<>( hasItems( expectedProtocolInfos ) ),
                 60, SECONDS );
     }
 
     @Test
-    void shouldSeeInboundInstalledProtocolsOnLeader() throws Throwable
+    void shouldSeeInboundInstalledProtocolsOnLeader()
     {
         assertEventually( "should see inbound installed protocols on core " + leader.serverId(),
                 () -> installedProtocols( leader.defaultDatabase(), INBOUND ),
-                hasSize( greaterThanOrEqualTo( cluster.coreMembers().size() - 1 ) ),
+                new HamcrestCondition<>( hasSize( greaterThanOrEqualTo( cluster.coreMembers().size() - 1 ) ) ),
                 60, SECONDS );
     }
 

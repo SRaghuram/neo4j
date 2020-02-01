@@ -29,12 +29,12 @@ import org.neo4j.test.extension.Inject;
 
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.clusterResolver;
 import static java.util.concurrent.TimeUnit.MINUTES;
-import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.driver.SessionConfig.forDatabase;
 import static org.neo4j.test.assertion.Assert.assertEventually;
+import static org.neo4j.test.conditions.Conditions.equalityCondition;
 
 @ClusterExtension
 @DriverExtension
@@ -144,8 +144,8 @@ class PanicIT
 
     private void assertEventuallyNumberOfMembersInTopologies( int expectedCores, int expectedReadReplicas, String databaseName ) throws Exception
     {
-        assertEventually( () -> cluster.numberOfCoreMembersReportedByTopology( databaseName ), equalTo( expectedCores ), 3, MINUTES );
-        assertEventually( () -> cluster.numberOfReadReplicaMembersReportedByTopology( databaseName ), equalTo( expectedReadReplicas ), 3, MINUTES );
+        assertEventually( () -> cluster.numberOfCoreMembersReportedByTopology( databaseName ), equalityCondition( expectedCores ), 3, MINUTES );
+        assertEventually( () -> cluster.numberOfReadReplicaMembersReportedByTopology( databaseName ), equalityCondition( expectedReadReplicas ), 3, MINUTES );
     }
 
     static Stream<Context> contexts( Cluster cluster )
@@ -163,9 +163,9 @@ class PanicIT
         return IntStream.range( 0, INITIAL_READ_REPLICAS ).mapToObj( i -> new ReadReplicaContext( i, cluster ) );
     }
 
-    private static void assertNumberOfMembersInTopology( int expected, String databaseName, Context context ) throws InterruptedException
+    private static void assertNumberOfMembersInTopology( int expected, String databaseName, Context context )
     {
-        assertEventually( () -> context.membersInTopology( databaseName ), equalTo( expected ), 3, MINUTES );
+        assertEventually( () -> context.membersInTopology( databaseName ), equalityCondition( expected ), 3, MINUTES );
     }
 
     private static class CoreContext extends Context

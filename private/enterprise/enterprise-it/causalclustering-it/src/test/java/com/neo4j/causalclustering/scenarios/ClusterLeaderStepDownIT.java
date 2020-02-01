@@ -11,6 +11,7 @@ import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
+import org.assertj.core.api.HamcrestCondition;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -26,6 +27,7 @@ import org.neo4j.test.extension.Inject;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static java.util.stream.Collectors.toList;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.test.conditions.Conditions.FALSE;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @ClusterExtension
@@ -56,7 +58,7 @@ class ClusterLeaderStepDownIT
 
         Callable<List<CoreClusterMember>> followers = () -> cluster.coreMembers().stream().filter(
                 m -> m.resolveDependency( DEFAULT_DATABASE_NAME, RaftMachine.class ).currentRole() != Role.LEADER ).collect( toList() );
-        assertEventually( "All followers visible", followers, Matchers.hasSize( 7 ), 2, TimeUnit.MINUTES );
+        assertEventually( "All followers visible", followers, new HamcrestCondition<>( Matchers.hasSize( 7 ) ), 2, TimeUnit.MINUTES );
 
         //when
         //shutdown 4 servers, leaving 4 remaining and therefore not a quorum.
@@ -64,6 +66,6 @@ class ClusterLeaderStepDownIT
 
         //then
         RaftMachine raft = leader.resolveDependency( DEFAULT_DATABASE_NAME, RaftMachine.class );
-        assertEventually( "Leader should have stepped down.", raft::isLeader, Matchers.is( false ), 2, TimeUnit.MINUTES );
+        assertEventually( "Leader should have stepped down.", raft::isLeader, FALSE, 2, TimeUnit.MINUTES );
     }
 }

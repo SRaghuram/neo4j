@@ -31,11 +31,11 @@ import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.hamcrest.CoreMatchers.startsWith;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.core.Is.is;
 import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.internal.helpers.collection.Iterables.count;
 import static org.neo4j.test.assertion.Assert.assertEventually;
+import static org.neo4j.test.conditions.Conditions.equalityCondition;
 
 @ClusterExtension
 class ReadReplicaToReadReplicaCatchupIT
@@ -144,7 +144,7 @@ class ReadReplicaToReadReplicaCatchupIT
         checkDataHasReplicatedToReadReplicas( cluster, numberOfNodes * 2 );
     }
 
-    static void checkDataHasReplicatedToReadReplicas( Cluster cluster, long numberOfNodes ) throws Exception
+    static void checkDataHasReplicatedToReadReplicas( Cluster cluster, long numberOfNodes )
     {
         for ( final ReadReplica server : cluster.readReplicas() )
         {
@@ -152,7 +152,7 @@ class ReadReplicaToReadReplicaCatchupIT
             try ( Transaction tx = readReplica.beginTx() )
             {
                 Callable<Long> nodeCount = () -> count( tx.getAllNodes() );
-                assertEventually( "node to appear on read replica", nodeCount, is( numberOfNodes ), 1, MINUTES );
+                assertEventually( "node to appear on read replica", nodeCount, equalityCondition( numberOfNodes ), 1, MINUTES );
 
                 for ( Node node : tx.getAllNodes() )
                 {

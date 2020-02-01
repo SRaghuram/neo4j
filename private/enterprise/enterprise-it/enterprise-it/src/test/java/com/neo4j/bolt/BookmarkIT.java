@@ -67,10 +67,8 @@ import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.stream.Collectors.toSet;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.arrayWithSize;
-import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -81,7 +79,9 @@ import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import static org.neo4j.internal.helpers.NamedThreadFactory.daemon;
 import static org.neo4j.kernel.api.exceptions.Status.Transaction.BookmarkTimeout;
 import static org.neo4j.kernel.impl.factory.DatabaseInfo.ENTERPRISE;
+import static org.neo4j.test.conditions.Conditions.TRUE;
 import static org.neo4j.test.assertion.Assert.assertEventually;
+import static org.neo4j.test.conditions.Conditions.equalityCondition;
 
 @TestDirectoryExtension
 @DriverExtension
@@ -125,7 +125,7 @@ class BookmarkIT
         // this makes it allocate a transaction ID but wait before acknowledging the commit operation
         commitBlocker.blockNextTransaction();
         CompletableFuture<Bookmark> secondBookmarkFuture = CompletableFuture.supplyAsync( () -> createNode( driver ) );
-        assertEventually( "Transaction did not block as expected", commitBlocker::hasBlockedTransaction, is( true ), 1, MINUTES );
+        assertEventually( "Transaction did not block as expected", commitBlocker::hasBlockedTransaction, TRUE, 1, MINUTES );
 
         Set<Bookmark> otherBookmarks = Stream.generate( () -> createNode( driver ) ).limit( 10 ).collect( toSet() );
 
@@ -183,12 +183,12 @@ class BookmarkIT
 
         waitTrackingMonitor.clearWaiting();
         assertFalse( future.isDone() );
-        assertEventually( "Tracker did not begin waiting", waitTrackingMonitor::isWaiting, equalTo( true ), 1, MINUTES );
+        assertEventually( "Tracker did not begin waiting", waitTrackingMonitor::isWaiting, equalityCondition( true ), 1, MINUTES );
 
         createDatabase( "bar" );
         waitTrackingMonitor.clearWaiting();
         assertFalse( future.isDone() );
-        assertEventually( "Tracker did not continue waiting", waitTrackingMonitor::isWaiting, equalTo( true ), 1, MINUTES );
+        assertEventually( "Tracker did not continue waiting", waitTrackingMonitor::isWaiting, equalityCondition( true ), 1, MINUTES );
 
         assertThat( "Dbms already has database foo", managementService.listDatabases(), not( hasItem( "foo" ) ) );
 
@@ -197,7 +197,7 @@ class BookmarkIT
             createDatabase( "baz" + i );
         }
 
-        assertEventually( future::isDone, equalTo( true ), 1, MINUTES );
+        assertEventually( future::isDone, equalityCondition( true ), 1, MINUTES );
 
         var databaseNames = managementService.listDatabases();
         assertThat( databaseNames, hasItem( "foo" ) );

@@ -10,6 +10,7 @@ import com.neo4j.backup.impl.OnlineBackupExecutor;
 import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import com.neo4j.test.rule.EnterpriseDbmsRule;
+import org.assertj.core.api.Condition;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -74,11 +75,10 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
         }
     }.startLazily();
 
-    private static void verifyEventuallyWarmsUp( long pagesInMemory, File metricsDirectory ) throws Exception
+    private static void verifyEventuallyWarmsUp( long pagesInMemory, File metricsDirectory )
     {
         assertEventually( "Metrics report should include page cache page faults",
-                () -> readLongCounterValue( metricsCsv( metricsDirectory, "neo4j.page_cache.page_faults" ) ),
-                greaterThanOrEqualTo( pagesInMemory ), 20, SECONDS );
+                () -> readLongCounterValue( metricsCsv( metricsDirectory, "neo4j.page_cache.page_faults" ) ), v -> v >= pagesInMemory, 20, SECONDS );
     }
 
     @Test

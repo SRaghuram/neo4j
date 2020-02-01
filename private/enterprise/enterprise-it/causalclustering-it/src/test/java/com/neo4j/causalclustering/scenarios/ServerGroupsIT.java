@@ -7,6 +7,7 @@ package com.neo4j.causalclustering.scenarios;
 
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
+import org.assertj.core.api.HamcrestCondition;
 import org.hamcrest.Description;
 import org.hamcrest.TypeSafeMatcher;
 import org.junit.jupiter.api.Test;
@@ -69,7 +70,7 @@ class ServerGroupsIT
         for ( var core : cluster.coreMembers() )
         {
             assertEventually( core + " should have groups", () -> getServerGroups( core.defaultDatabase() ),
-                    new GroupsMatcher( expected ), 30, SECONDS );
+                    new HamcrestCondition<>( new GroupsMatcher( expected ) ), 30, SECONDS );
         }
 
         // when
@@ -88,7 +89,7 @@ class ServerGroupsIT
         for ( var core : cluster.coreMembers() )
         {
             assertEventually( core + " should have groups", () -> getServerGroups( core.defaultDatabase() ),
-                    new GroupsMatcher( expected ), 30, SECONDS );
+                    new HamcrestCondition<>( new GroupsMatcher( expected ) ), 30, SECONDS );
         }
     }
 

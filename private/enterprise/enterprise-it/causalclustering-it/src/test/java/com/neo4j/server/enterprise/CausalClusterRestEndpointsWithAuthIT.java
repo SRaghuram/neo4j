@@ -7,6 +7,7 @@ package com.neo4j.server.enterprise;
 
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.harness.internal.CausalClusterInProcessBuilder;
+import org.assertj.core.api.HamcrestCondition;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -116,7 +117,7 @@ class CausalClusterRestEndpointsWithAuthIT
     {
         // HTTP response status code should be either 200 or 404. Some endpoints return 404 to indicate a negative response
         // The response status code should never be 401 Unauthorized.
-        var endpointAccessible = oneOf( OK.getStatusCode(), NOT_FOUND.getStatusCode() );
+        var endpointAccessible = new HamcrestCondition<>( oneOf( OK.getStatusCode(), NOT_FOUND.getStatusCode() ) );
 
         for ( var core : cluster.getCoresAndReadReplicas() )
         {

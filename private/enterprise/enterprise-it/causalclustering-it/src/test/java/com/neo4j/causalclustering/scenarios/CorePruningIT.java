@@ -27,10 +27,10 @@ import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_rotation_size;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.state_machine_flush_window_size;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
-import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.test.assertion.Assert.assertEventually;
+import static org.neo4j.test.conditions.Conditions.equalityCondition;
 
 @ClusterExtension
 @ExtendWith( DefaultFileSystemExtension.class )
@@ -73,7 +73,7 @@ class CorePruningIT
         File raftLogDir = coreGraphDatabase.raftLogDirectory( DEFAULT_DATABASE_NAME );
         int expectedNumberOfLogFilesAfterPruning = 2;
         assertEventually( "raft logs eventually pruned", () -> numberOfFiles( raftLogDir ),
-                equalTo( expectedNumberOfLogFilesAfterPruning ), 5, TimeUnit.SECONDS );
+                equalityCondition( expectedNumberOfLogFilesAfterPruning ), 5, TimeUnit.SECONDS );
     }
 
     @Test
@@ -90,7 +90,7 @@ class CorePruningIT
         int expectedNumberOfLogFilesAfterPruning = 2;
         File raftLogDir = coreGraphDatabase.raftLogDirectory( DEFAULT_DATABASE_NAME );
         assertEventually( "raft logs eventually pruned", () -> numberOfFiles( raftLogDir ),
-                equalTo( expectedNumberOfLogFilesAfterPruning ), 5, TimeUnit.SECONDS );
+                equalityCondition( expectedNumberOfLogFilesAfterPruning ), 5, TimeUnit.SECONDS );
     }
 
     private int numberOfFiles( File raftLogDir ) throws RuntimeException

@@ -28,7 +28,6 @@ import org.neo4j.server.BaseBootstrapperIT;
 import org.neo4j.server.NeoBootstrapper;
 import org.neo4j.test.rule.CleanupRule;
 
-import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -39,6 +38,7 @@ import static org.neo4j.internal.helpers.collection.MapUtil.store;
 import static org.neo4j.internal.helpers.collection.MapUtil.stringMap;
 import static org.neo4j.server.WebContainerTestUtils.getDefaultRelativeProperties;
 import static org.neo4j.server.WebContainerTestUtils.getRelativePath;
+import static org.neo4j.test.conditions.Conditions.TRUE;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 public class EnterpriseBootstrapperIT extends BaseBootstrapperIT
@@ -78,7 +78,7 @@ public class EnterpriseBootstrapperIT extends BaseBootstrapperIT
 
         // Then
         assertEquals( NeoBootstrapper.OK, resultCode );
-        assertEventually( "Server was not started", bootstrapper::isRunning, is( true ), 1, TimeUnit.MINUTES );
+        assertEventually( "Server was not started", bootstrapper::isRunning, TRUE, 1, TimeUnit.MINUTES );
     }
 
     @Test
@@ -100,7 +100,7 @@ public class EnterpriseBootstrapperIT extends BaseBootstrapperIT
                 "--config-dir", configFile.getParentFile().getAbsolutePath() );
 
         // Then
-        assertEventually( "Server was started", uncoveredEnterpriseBootstrapper::isRunning, is( true ), 1, TimeUnit.MINUTES );
+        assertEventually( "Server was started", uncoveredEnterpriseBootstrapper::isRunning, TRUE, 1, TimeUnit.MINUTES );
         LogProvider userLogProvider = uncoveredEnterpriseBootstrapper.getUserLogProvider();
         assertFalse( "Debug logging is disabled by default", userLogProvider.getLog( getClass() ).isDebugEnabled() );
     }
@@ -124,7 +124,7 @@ public class EnterpriseBootstrapperIT extends BaseBootstrapperIT
                 "--config-dir", configFile.getParentFile().getAbsolutePath() );
 
         // Then
-        assertEventually( "Server was started", uncoveredEnterpriseBootstrapper::isRunning, is( true ), 1, TimeUnit.MINUTES );
+        assertEventually( "Server was started", uncoveredEnterpriseBootstrapper::isRunning, TRUE, 1, TimeUnit.MINUTES );
         LogProvider userLogProvider = uncoveredEnterpriseBootstrapper.getUserLogProvider();
         assertTrue( "Debug logging enabled by setting value.", userLogProvider.getLog( getClass() ).isDebugEnabled() );
     }

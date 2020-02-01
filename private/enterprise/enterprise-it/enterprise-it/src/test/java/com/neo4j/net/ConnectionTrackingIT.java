@@ -7,6 +7,7 @@ package com.neo4j.net;
 
 import com.neo4j.harness.internal.EnterpriseInProcessNeo4jBuilder;
 import org.assertj.core.api.Condition;
+import org.assertj.core.api.HamcrestCondition;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -140,7 +141,7 @@ class ConnectionTrackingIT
     }
 
     @AfterEach
-    void afterEach() throws InterruptedException
+    void afterEach()
     {
         for ( TransportConnection connection : connections )
         {
@@ -344,35 +345,34 @@ class ConnectionTrackingIT
         return connection;
     }
 
-    private void awaitNumberOfAuthenticatedConnectionsToBe( int n ) throws InterruptedException
+    private void awaitNumberOfAuthenticatedConnectionsToBe( int n )
     {
         assertEventually( "Unexpected number of authenticated connections",
-                this::authenticatedConnectionsFromConnectionTracker, hasSize( n ),
+                this::authenticatedConnectionsFromConnectionTracker, new HamcrestCondition<>( hasSize( n ) ),
                 1, MINUTES );
     }
 
-    private void awaitNumberOfAcceptedConnectionsToBe( int n ) throws InterruptedException
+    private void awaitNumberOfAcceptedConnectionsToBe( int n )
     {
         assertEventually( connections -> "Unexpected number of accepted connections: " + connections,
-                this::acceptedConnectionsFromConnectionTracker, hasSize( n ),
+                this::acceptedConnectionsFromConnectionTracker, new HamcrestCondition<>( hasSize( n ) ),
                 1, MINUTES );
     }
 
-    private void verifyConnectionCount( TestConnector connector, String username, int expectedCount ) throws InterruptedException
+    private void verifyConnectionCount( TestConnector connector, String username, int expectedCount )
     {
         verifyConnectionCount( connector, username, expectedCount, false );
     }
 
-    private void verifyAuthenticatedConnectionCount( TestConnector connector, String username, int expectedCount ) throws InterruptedException
+    private void verifyAuthenticatedConnectionCount( TestConnector connector, String username, int expectedCount )
     {
         verifyConnectionCount( connector, username, expectedCount, true );
     }
 
     private void verifyConnectionCount( TestConnector connector, String username, int expectedCount, boolean expectAuthenticated )
-            throws InterruptedException
     {
         assertEventually( connections -> "Unexpected number of listed connections: " + connections,
-                () -> listMatchingConnection( connector, username, expectAuthenticated ), hasSize( expectedCount ),
+                () -> listMatchingConnection( connector, username, expectAuthenticated ), new HamcrestCondition<>( hasSize( expectedCount ) ),
                 1, MINUTES );
     }
 

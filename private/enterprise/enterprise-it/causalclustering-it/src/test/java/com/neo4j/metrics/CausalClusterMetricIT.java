@@ -29,17 +29,16 @@ import static com.neo4j.metrics.MetricsTestHelper.readTimerDoubleValue;
 import static com.neo4j.metrics.MetricsTestHelper.readTimerLongValueAndAssert;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;
-import static org.hamcrest.Matchers.greaterThan;
-import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.configuration.SettingValueParsers.TRUE;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.internal.helpers.collection.Iterables.count;
 import static org.neo4j.test.assertion.Assert.assertEventually;
+import static org.neo4j.test.conditions.Conditions.condition;
+import static org.neo4j.test.conditions.Conditions.equalityCondition;
 
 @ClusterExtension
 class CausalClusterMetricIT
@@ -80,15 +79,15 @@ class CausalClusterMetricIT
         {
             assertEventually( "message delay eventually recorded",
                     () -> readLongGaugeValue( metricsFile( leader, databaseName, "core.message_processing_delay" ) ),
-                    greaterThanOrEqualTo( 0L ), TIMEOUT, SECONDS );
+                    value -> value >= 0L, TIMEOUT, SECONDS );
 
             assertEventually( "message timer count eventually recorded",
                     () -> readTimerLongValueAndAssert( metricsFile( leader, databaseName, "core.message_processing_timer" ),
-                            ( newValue, currentValue ) -> newValue >= currentValue, TimerField.COUNT ), greaterThan( 0L ), TIMEOUT, SECONDS );
+                            ( newValue, currentValue ) -> newValue >= currentValue, TimerField.COUNT ), value -> value > 0L, TIMEOUT, SECONDS );
 
             assertEventually( "message timer max eventually recorded",
                     () -> readTimerDoubleValue( metricsFile( leader, databaseName, "core.message_processing_timer" ), TimerField.MAX ),
-                    greaterThanOrEqualTo( 0d ), TIMEOUT, SECONDS );
+                    value -> value >= 0d, TIMEOUT, SECONDS );
         }
     }
 
@@ -115,16 +114,13 @@ class CausalClusterMetricIT
         }
 
         assertEventually( "append index eventually accurate",
-                () -> readLongGaugeValue( metricsFile( coreMember, "core.append_index" ) ),
-                greaterThan( 0L ), TIMEOUT, SECONDS );
+                () -> readLongGaugeValue( metricsFile( coreMember, "core.append_index" ) ), value -> value > 0L, TIMEOUT, SECONDS );
 
         assertEventually( "commit index eventually accurate",
-                () -> readLongGaugeValue( metricsFile( coreMember, "core.commit_index" ) ),
-                greaterThan( 0L ), TIMEOUT, SECONDS );
+                () -> readLongGaugeValue( metricsFile( coreMember, "core.commit_index" ) ), value -> value > 0L, TIMEOUT, SECONDS );
 
         assertEventually( "term eventually accurate",
-                () -> readLongGaugeValue( metricsFile( coreMember, "core.term" ) ),
-                greaterThanOrEqualTo( 0L ), TIMEOUT, SECONDS );
+                () -> readLongGaugeValue( metricsFile( coreMember, "core.term" ) ), value -> value >= 0L, TIMEOUT, SECONDS );
 
         assertEventually( "tx pull requests received eventually accurate", () ->
         {
@@ -134,44 +130,42 @@ class CausalClusterMetricIT
                 total += readLongCounterValue( metricsFile( member, "catchup.tx_pull_requests_received" ) );
             }
             return total;
-        }, greaterThan( 0L ), TIMEOUT, SECONDS );
+        }, value -> value > 0L, TIMEOUT, SECONDS );
 
         assertEventually( "tx retries eventually accurate",
-                () -> readLongCounterValue( metricsFile( coreMember, "core.tx_retries" ) ), equalTo( 0L ),
+                () -> readLongCounterValue( metricsFile( coreMember, "core.tx_retries" ) ), equalityCondition( 0L ),
                 TIMEOUT, SECONDS );
 
         assertEventually( "is leader eventually accurate",
-                () -> readLongGaugeValue( metricsFile( coreMember, "core.is_leader" ) ),
-                greaterThanOrEqualTo( 0L ), TIMEOUT, SECONDS );
+                () -> readLongGaugeValue( metricsFile( coreMember, "core.is_leader" ) ), value -> value >= 0L, TIMEOUT, SECONDS );
 
         var readReplica = cluster.getReadReplicaById( 0 );
 
         assertEventually( "pull update request registered",
-                () -> readLongCounterValue( metricsFile( readReplica, "read_replica.pull_updates" ) ),
-                greaterThan( 0L ), TIMEOUT, SECONDS );
+                () -> readLongCounterValue( metricsFile( readReplica, "read_replica.pull_updates" ) ), value -> value > 0L, TIMEOUT, SECONDS );
 
         assertEventually( "pull update request registered",
                 () -> readLongCounterValue( metricsFile( readReplica, "read_replica.pull_update_highest_tx_id_requested" ) ),
-                greaterThan( 0L ), TIMEOUT, SECONDS );
+                value -> value > 0L, TIMEOUT, SECONDS );
 
         assertEventually( "pull update response received",
                 () -> readLongCounterValue( metricsFile( readReplica, "read_replica.pull_update_highest_tx_id_received" ) ),
-                greaterThan( 0L ), TIMEOUT, SECONDS );
+                value -> value > 0L, TIMEOUT, SECONDS );
     }
 
-    private static File metricsFile( ClusterMember member, String metricName ) throws InterruptedException
+    private static File metricsFile( ClusterMember member, String metricName )
     {
         return metricsFile( member, member.defaultDatabase().databaseName(), metricName );
     }
 
-    private static File metricsFile( ClusterMember member, String databaseName, String metricName ) throws InterruptedException
+    private static File metricsFile( ClusterMember member, String databaseName, String metricName )
     {
         var metricsDir = new File( member.homeDir(), MetricsSettings.csvPath.defaultValue().toString() );
         var metric = "neo4j." + databaseName + ".causal_clustering." + metricName;
         return metricsCsv( metricsDir, metric );
     }
 
-    private static void assertAllNodesVisible( GraphDatabaseAPI db ) throws Exception
+    private static void assertAllNodesVisible( GraphDatabaseAPI db )
     {
         try ( var tx = db.beginTx() )
         {
@@ -179,7 +173,8 @@ class CausalClusterMetricIT
 
             var config = db.getDependencyResolver().resolveDependency( Config.class );
 
-            assertEventually( "node to appear on core server " + config.get( raft_advertised_address ), nodeCount, greaterThan( 0L ), TIMEOUT, SECONDS );
+            assertEventually( "node to appear on core server " + config.get( raft_advertised_address ), nodeCount, condition( value -> value > 0L ),
+                    TIMEOUT, SECONDS );
 
             for ( var node : tx.getAllNodes() )
             {

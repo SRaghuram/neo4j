@@ -18,7 +18,7 @@ import com.neo4j.causalclustering.discovery.akka.coretopology.ClusterViewMessage
 import com.neo4j.causalclustering.discovery.akka.monitoring.{ReplicatedDataIdentifier, ReplicatedDataMonitor}
 import com.neo4j.causalclustering.discovery.akka.system.TypesafeConfigService
 import com.neo4j.causalclustering.discovery.akka.system.TypesafeConfigService.ArteryTransport
-import org.hamcrest.Matchers.is
+import org.assertj.core.api.Condition
 import org.junit.runner.RunWith
 import org.neo4j.configuration.Config
 import org.neo4j.configuration.helpers.SocketAddress
@@ -53,6 +53,7 @@ abstract class BaseAkkaIT(name: String) extends TestKit(ActorSystem(name, BaseAk
     with NeoSuite {
 
   val defaultWaitTime = Duration(10, TimeUnit.SECONDS)
+  val TRUE_CONDITION = new Condition[Boolean]((value: Boolean) => value, "Should be true.")
   implicit val timeout = Timeout(defaultWaitTime)
   implicit val execContext = ExecutionContext.global
 
@@ -116,15 +117,15 @@ abstract class BaseAkkaIT(name: String) extends TestKit(ActorSystem(name, BaseAk
       val fixture = newFixture
       import fixture._
       replicatedDataActorRef ! Replicator.Changed(dataKey)(data)
-      assertEventually(monitor.visSet, is(true), defaultWaitTime.toMillis, TimeUnit.MILLISECONDS )
-      assertEventually(monitor.invisSet, is(true), defaultWaitTime.toMillis, TimeUnit.MILLISECONDS )
+      assertEventually(monitor.visSet, TRUE_CONDITION, defaultWaitTime.toMillis, TimeUnit.MILLISECONDS )
+      assertEventually(monitor.invisSet, TRUE_CONDITION, defaultWaitTime.toMillis, TimeUnit.MILLISECONDS )
     }
     "update metrics on tick" in {
       val fixture = newFixture
       import fixture._
       replicatedDataActorRef ! MetricsRefresh.getInstance()
-      assertEventually(monitor.visSet, is(true), defaultWaitTime.toMillis, TimeUnit.MILLISECONDS )
-      assertEventually(monitor.invisSet, is(true), defaultWaitTime.toMillis, TimeUnit.MILLISECONDS )
+      assertEventually(monitor.visSet, TRUE_CONDITION, defaultWaitTime.toMillis, TimeUnit.MILLISECONDS )
+      assertEventually(monitor.invisSet, TRUE_CONDITION, defaultWaitTime.toMillis, TimeUnit.MILLISECONDS )
     }
   }
 

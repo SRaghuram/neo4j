@@ -13,6 +13,7 @@ import com.neo4j.causalclustering.routing.load_balancing.plugins.server_policies
 import com.neo4j.kernel.enterprise.api.security.EnterpriseLoginContext;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
+import org.assertj.core.api.HamcrestCondition;
 import org.eclipse.collections.impl.factory.Sets;
 import org.hamcrest.BaseMatcher;
 import org.hamcrest.Description;
@@ -242,7 +243,7 @@ class ServerPoliciesLoadBalancingIT
         assertGetServersEventuallyMatchesOnAllCores( matcher, emptyMap() );
     }
 
-    private void assertGetServersEventuallyMatchesOnAllCores( Matcher<RoutingResult> matcher, Map<String,String> context ) throws Exception
+    private void assertGetServersEventuallyMatchesOnAllCores( Matcher<RoutingResult> matcher, Map<String,String> context )
     {
         for ( CoreClusterMember core : cluster.coreMembers() )
         {
@@ -279,7 +280,7 @@ class ServerPoliciesLoadBalancingIT
 
     private static <T> void assertEventually( Matcher<? super T> matcher, Callable<T> actual )
     {
-        org.neo4j.test.assertion.Assert.assertEventually( "", actual, matcher, 120, SECONDS );
+        org.neo4j.test.assertion.Assert.assertEventually( "", actual, new HamcrestCondition<>( matcher ), 120, SECONDS );
     }
 
     class CountsMatcher extends TypeSafeMatcher<RoutingResult>

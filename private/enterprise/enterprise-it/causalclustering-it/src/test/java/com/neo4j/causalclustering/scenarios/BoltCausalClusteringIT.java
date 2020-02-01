@@ -16,6 +16,7 @@ import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
 import com.neo4j.test.driver.DriverExtension;
 import com.neo4j.test.driver.DriverFactory;
+import org.assertj.core.api.HamcrestCondition;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -61,6 +62,7 @@ import static org.neo4j.driver.AccessMode.READ;
 import static org.neo4j.driver.AccessMode.WRITE;
 import static org.neo4j.driver.SessionConfig.builder;
 import static org.neo4j.driver.Values.parameters;
+import static org.neo4j.test.conditions.Conditions.TRUE;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @DriverExtension
@@ -74,7 +76,6 @@ class BoltCausalClusteringIT
     @ClusterExtension
     class SingeCluster
     {
-
         @Inject
         private ClusterFactory clusterFactory;
 
@@ -162,7 +163,7 @@ class BoltCausalClusteringIT
                     assertEquals( "Write queries cannot be performed in READ access mode.", ex.getMessage() );
                     return true;
                 }
-            }, is( true ), 30, SECONDS );
+            }, TRUE, 30, SECONDS );
         }
 
         @Test
@@ -214,7 +215,8 @@ class BoltCausalClusteringIT
             try ( Driver driver = makeDriver( cluster );
                   Session session = driver.session() )
             {
-                assertEventually( () -> session.run( "CALL dbms.cluster.overview" ).list(), hasSize( clusterSize ), 60, SECONDS );
+                assertEventually( () -> session.run( "CALL dbms.cluster.overview" ).list(), new HamcrestCondition<>( hasSize( clusterSize ) ),
+                        60, SECONDS );
             }
         }
 
@@ -509,7 +511,7 @@ class BoltCausalClusteringIT
                     }
 
                     return readReplicas.size() == 0; // have sent something to all replicas
-                }, is( true ), 30, SECONDS );
+                }, TRUE, 30, SECONDS );
             }
         }
 

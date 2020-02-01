@@ -37,7 +37,6 @@ import static com.neo4j.causalclustering.common.DataMatching.dataMatchesEventual
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -45,6 +44,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 import static org.neo4j.function.Predicates.await;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.test.assertion.Assert.assertEventually;
+import static org.neo4j.test.conditions.Conditions.condition;
 
 @ClusterExtension
 class CoreReplicationIT
@@ -143,7 +143,7 @@ class CoreReplicationIT
                 }
             }
             return membersWithIncreasedPinCount;
-        }, is( greaterThanOrEqualTo( minimumUpdatedMembersCount ) ), 10, SECONDS );
+        }, v -> v >= minimumUpdatedMembersCount, 10, SECONDS );
     }
 
     @Test

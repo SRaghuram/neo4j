@@ -6,6 +6,7 @@
 package com.neo4j.server.enterprise.functional;
 
 import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
+import org.assertj.core.api.Condition;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.ResourceLock;
@@ -31,6 +32,7 @@ import static com.neo4j.metrics.MetricsTestHelper.readLongGaugeValue;
 import static com.neo4j.server.enterprise.helpers.EnterpriseWebContainerBuilder.serverOnRandomPorts;
 import static java.net.http.HttpRequest.BodyPublishers.ofString;
 import static java.net.http.HttpResponse.BodyHandlers.discarding;
+import static java.util.concurrent.TimeUnit.MINUTES;
 import static javax.ws.rs.core.HttpHeaders.ACCEPT;
 import static javax.ws.rs.core.HttpHeaders.CONTENT_TYPE;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
@@ -93,7 +95,7 @@ class ServerMetricsIT
     private static void assertMetricsExists( File metricsPath, String metricsName )
     {
         File file = metricsCsv( metricsPath, metricsName );
-        assertEventually( () -> threadCountReader( file ), greaterThan( 0L ), 1, TimeUnit.MINUTES );
+        assertEventually( () -> threadCountReader( file ), v -> v >= 0, 1, MINUTES );
     }
 
     private static Long threadCountReader( File file )

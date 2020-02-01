@@ -25,12 +25,12 @@ import static com.neo4j.dbms.EnterpriseOperatorState.UNKNOWN;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId;
+import static org.neo4j.test.conditions.Conditions.FALSE;
 import static org.neo4j.test.assertion.Assert.assertEventually;
+import static org.neo4j.test.conditions.Conditions.equalityCondition;
 
 @EnterpriseDbmsExtension
 class DbmsReconcilerIT
@@ -56,7 +56,7 @@ class DbmsReconcilerIT
     }
 
     @Test
-    void shouldPanicDatabaseThatFailsToTransitionToDesiredState() throws Exception
+    void shouldPanicDatabaseThatFailsToTransitionToDesiredState()
     {
         // given
         // a fake operator that desires a state invalid for a standalone database
@@ -71,7 +71,7 @@ class DbmsReconcilerIT
         var error = assertThrows( CompletionException.class, () -> reconcilerResult.await( db.databaseId() ) );
         assertThat( error.getCause().getMessage(), containsString( "unsupported state transition" ) );
         var dbHealth = db.getDependencyResolver().resolveDependency( DatabaseHealth.class );
-        assertEventually( "Database is expected to panic", dbHealth::isHealthy, equalTo( false ), 30, SECONDS );
+        assertEventually( "Database is expected to panic", dbHealth::isHealthy, FALSE, 30, SECONDS );
     }
 
     @Test
@@ -91,7 +91,7 @@ class DbmsReconcilerIT
         localOperator.stopDatabase( db.databaseName() );
 
         assertEventually( "Database should be stopped",
-                () -> reconciler.stateOfDatabase( db.databaseId() ), is( STOPPED ), 10, SECONDS );
+                () -> reconciler.stateOfDatabase( db.databaseId() ), equalityCondition( STOPPED ), 10, SECONDS );
         assertTrue( reconciler.causeOfFailure( db.databaseId() ).isEmpty(), "Database is *not* expected to be failed" );
     }
 

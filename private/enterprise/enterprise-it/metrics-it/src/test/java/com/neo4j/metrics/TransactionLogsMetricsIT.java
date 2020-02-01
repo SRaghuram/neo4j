@@ -36,11 +36,11 @@ import static com.neo4j.metrics.MetricsTestHelper.readLongGaugeValue;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.apache.commons.lang3.RandomStringUtils.randomAlphabetic;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.neo4j.configuration.GraphDatabaseSettings.preallocate_logical_logs;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogVersions.CURRENT_FORMAT_LOG_HEADER_SIZE;
 import static org.neo4j.test.assertion.Assert.assertEventually;
+import static org.neo4j.test.conditions.Conditions.equalityCondition;
 
 @EnterpriseDbmsExtension( configurationCallback = "configure" )
 class TransactionLogsMetricsIT
@@ -67,7 +67,7 @@ class TransactionLogsMetricsIT
     }
 
     @Test
-    void reportTransactionLogsAppendedBytesEqualToFileSizeWhenPreallocationDisabled() throws Exception
+    void reportTransactionLogsAppendedBytesEqualToFileSizeWhenPreallocationDisabled()
     {
         addNodes( 100, db );
         File metricsFile = metricsCsv( outputPath, "neo4j." + db.databaseName() + ".log.appended_bytes" );
@@ -75,11 +75,11 @@ class TransactionLogsMetricsIT
         long fileLength = logFiles.getHighestLogFile().length();
 
         assertEventually( "Metrics report should include correct number of written transaction log bytes.", () -> readLongCounterValue( metricsFile ),
-                equalTo( fileLength ), 1, MINUTES );
+                equalityCondition( fileLength ), 1, MINUTES );
     }
 
     @Test
-    void transactionLogsMetricsForDifferentDatabasesAreIndependent() throws Exception
+    void transactionLogsMetricsForDifferentDatabasesAreIndependent()
     {
         String secondDbName = "seconddatabase";
         managementService.createDatabase( secondDbName );
@@ -92,16 +92,16 @@ class TransactionLogsMetricsIT
         File secondMetricsFile = metricsCsv( outputPath, "neo4j." + secondDbName + ".log.appended_bytes" );
 
         assertEventually( "Metrics report should include correct number of written transaction log bytes for default db.",
-                () -> readLongCounterValue( metricsFile ), equalTo( fileLength ), 1, MINUTES );
+                () -> readLongCounterValue( metricsFile ), equalityCondition( fileLength ), 1, MINUTES );
         assertEventually( "Metrics report should include correct number of written transaction log bytes for second database.",
-                () -> readLongCounterValue( secondMetricsFile ), equalTo( (long) CURRENT_FORMAT_LOG_HEADER_SIZE ), 1, MINUTES );
+                () -> readLongCounterValue( secondMetricsFile ), equalityCondition( (long) CURRENT_FORMAT_LOG_HEADER_SIZE ), 1, MINUTES );
 
         addNodes( 100, secondDb );
 
         assertEventually( "Metrics report should include correct number of written transaction log bytes for default db.",
-                () -> readLongCounterValue( metricsFile ), equalTo( fileLength ), 1, MINUTES );
+                () -> readLongCounterValue( metricsFile ), equalityCondition( fileLength ), 1, MINUTES );
         assertEventually( "Metrics report should include correct number of written transaction log bytes for second database.",
-                () -> readLongCounterValue( secondMetricsFile ), equalTo( fileLength ), 1, MINUTES );
+                () -> readLongCounterValue( secondMetricsFile ), equalityCondition( fileLength ), 1, MINUTES );
     }
 
     @Test
@@ -125,9 +125,9 @@ class TransactionLogsMetricsIT
         File bytesFile = metricsCsv( outputPath, "neo4j." + db.databaseName() + ".log.appended_bytes" );
 
         assertEventually( "Metrics report should include correct number of reported rotations.",
-                () -> readLongCounterValue( rotationEvents ), equalTo( 2L ), 1, MINUTES );
+                () -> readLongCounterValue( rotationEvents ), equalityCondition( 2L ), 1, MINUTES );
         assertEventually( "Metrics report should include correct number of reported bytes written even for header.",
-                () -> readLongCounterValue( bytesFile ), equalTo( CURRENT_FORMAT_LOG_HEADER_SIZE * 3L ), 1, MINUTES );
+                () -> readLongCounterValue( bytesFile ), equalityCondition( CURRENT_FORMAT_LOG_HEADER_SIZE * 3L ), 1, MINUTES );
 
         long rotationTotalTimeValue = readLongCounterAndAssert( rotationTime, ( newValue, currentValue ) -> newValue >= currentValue );
         assertThat( rotationTotalTimeValue, greaterThanOrEqualTo( 0L ) );
@@ -135,7 +135,7 @@ class TransactionLogsMetricsIT
         assertThat( rotationDurationValue, greaterThanOrEqualTo( 0L ) );
     }
 
-    private void addNodes( int numberOfNodes, GraphDatabaseAPI databaseAPI )
+    private static void addNodes( int numberOfNodes, GraphDatabaseAPI databaseAPI )
     {
         for ( int i = 0; i < numberOfNodes; i++ )
         {

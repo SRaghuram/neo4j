@@ -8,6 +8,7 @@ package com.neo4j.causalclustering.common;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.read_replica.ReadReplica;
+import org.assertj.core.api.Condition;
 import org.hamcrest.Description;
 import org.hamcrest.FeatureMatcher;
 import org.hamcrest.Matcher;
@@ -44,12 +45,12 @@ public final class ClusterOverviewHelper
     {
     }
 
-    public static void assertAllEventualOverviews( Cluster cluster, Matcher<List<MemberInfo>> expected )
+    public static void assertAllEventualOverviews( Cluster cluster, Condition<List<MemberInfo>> expected )
     {
         assertAllEventualOverviews( cluster, expected, Collections.emptySet(), Collections.emptySet() );
     }
 
-    public static void assertAllEventualOverviews( Cluster cluster, Matcher<List<MemberInfo>> expected, Set<Integer> excludedCores,
+    public static void assertAllEventualOverviews( Cluster cluster, Condition<List<MemberInfo>> expected, Set<Integer> excludedCores,
             Set<Integer> excludedRRs )
     {
         for ( CoreClusterMember core : cluster.coreMembers() )
@@ -70,17 +71,17 @@ public final class ClusterOverviewHelper
         }
     }
 
-    public static void assertEventualOverview( Matcher<List<MemberInfo>> expected, CoreClusterMember core )
+    public static void assertEventualOverview( Condition<List<MemberInfo>> expected, CoreClusterMember core )
     {
         assertEventualOverview( expected, core, "core" );
     }
 
-    public static void assertEventualOverview( Matcher<List<MemberInfo>> expected, ReadReplica readReplica )
+    public static void assertEventualOverview( Condition<List<MemberInfo>> expected, ReadReplica readReplica )
     {
         assertEventualOverview( expected, readReplica, "rr" );
     }
 
-    private static void assertEventualOverview( Matcher<List<MemberInfo>> expected, ClusterMember member, String role )
+    private static void assertEventualOverview( Condition<List<MemberInfo>> expected, ClusterMember member, String role )
     {
         Function<List<MemberInfo>, String> printableMemberInfos =
                 memberInfos -> memberInfos.stream().map( MemberInfo::toString ).collect( Collectors.joining( ", " ) );

@@ -24,13 +24,13 @@ import org.neo4j.test.extension.Inject;
 import static com.neo4j.causalclustering.discovery.InitialDiscoveryMembersResolver.advertisedSocketAddressComparator;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.internal.helpers.NamedThreadFactory.daemon;
 import static org.neo4j.internal.helpers.collection.Iterables.last;
 import static org.neo4j.test.assertion.Assert.assertEventually;
+import static org.neo4j.test.conditions.Conditions.equalityCondition;
 
 @ClusterExtension
 class ClusterFormationIT
@@ -171,7 +171,7 @@ class ClusterFormationIT
 
     private static void verifyNumberOfCoresReportedByTopology( int expected, Cluster cluster ) throws InterruptedException
     {
-        assertEventually( () -> cluster.numberOfCoreMembersReportedByTopology( DEFAULT_DATABASE_NAME ), is( expected ), 30, SECONDS );
+        assertEventually( () -> cluster.numberOfCoreMembersReportedByTopology( DEFAULT_DATABASE_NAME ), equalityCondition( expected ), 30, SECONDS );
     }
 
     private static int compareDiscoveryAddresses( CoreClusterMember core1, CoreClusterMember core2 )

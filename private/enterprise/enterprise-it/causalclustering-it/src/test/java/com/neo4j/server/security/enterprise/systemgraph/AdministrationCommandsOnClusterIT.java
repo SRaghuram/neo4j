@@ -52,7 +52,10 @@ import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
+import static org.neo4j.test.conditions.Conditions.FALSE;
+import static org.neo4j.test.conditions.Conditions.TRUE;
 import static org.neo4j.test.assertion.Assert.assertEventually;
+import static org.neo4j.test.conditions.Conditions.equalityCondition;
 
 @TestInstance( PER_CLASS )
 @ClusterExtension
@@ -67,11 +70,11 @@ class AdministrationCommandsOnClusterIT
     private TestDirectory directory;
 
     private static Cluster cluster;
-    private static String followerError = "Administration commands must be executed on the LEADER server.";
-    private String userName = "foo";
-    private String roleName = "bar";
-    private String roleName2 = "foo";
-    private String dbName = "foo";
+    private static final String followerError = "Administration commands must be executed on the LEADER server.";
+    private final String userName = "foo";
+    private final String roleName = "bar";
+    private final String roleName2 = "foo";
+    private final String dbName = "foo";
 
     @BeforeAll
     static void setUp() throws ExecutionException, InterruptedException
@@ -1166,8 +1169,7 @@ class AdministrationCommandsOnClusterIT
         } );
 
         CausalClusteringTestHelpers.assertDatabaseEventuallyStarted( dbName, cluster );
-        assertEventually( "SHOW DATABASES should return a row for the database " + dbName, () -> showDatabaseHasRowsFor( dbName ),
-                is( true ), 10, TimeUnit.SECONDS );
+        assertEventually( "SHOW DATABASES should return a row for the database " + dbName, () -> showDatabaseHasRowsFor( dbName ), TRUE, 10, TimeUnit.SECONDS );
     }
 
     @Test
@@ -1189,7 +1191,7 @@ class AdministrationCommandsOnClusterIT
 
         CausalClusteringTestHelpers.assertDatabaseEventuallyStopped( dbName, cluster );
         assertEventually( "SHOW DATABASE should return current status offline for database " + dbName, () -> showDatabaseStatusesFor( dbName ),
-                equalTo( Set.of( DatabaseStatus.Offline().stringValue() ) ), 10, TimeUnit.SECONDS );
+                equalityCondition( Set.of( DatabaseStatus.Offline().stringValue() ) ), 10, TimeUnit.SECONDS );
 
         followerTx( ( sys, tx ) ->
         {
@@ -1243,8 +1245,7 @@ class AdministrationCommandsOnClusterIT
         } );
 
         CausalClusteringTestHelpers.assertDatabaseEventuallyStarted( dbName, cluster );
-        assertEventually( "SHOW DATABASES should return a row for the database " + dbName, () -> showDatabaseHasRowsFor( dbName ),
-                is( true ), 10, TimeUnit.SECONDS );
+        assertEventually( "SHOW DATABASES should return a row for the database " + dbName, () -> showDatabaseHasRowsFor( dbName ), TRUE, 10, TimeUnit.SECONDS );
     }
 
     @Test
@@ -1257,8 +1258,7 @@ class AdministrationCommandsOnClusterIT
         } );
 
         CausalClusteringTestHelpers.assertDatabaseEventuallyStarted( dbName, cluster );
-        assertEventually( "SHOW DATABASES should return rows for the database " + dbName, () -> showDatabaseHasRowsFor( dbName ),
-                is( true ), 10, TimeUnit.SECONDS );
+        assertEventually( "SHOW DATABASES should return rows for the database " + dbName, () -> showDatabaseHasRowsFor( dbName ), TRUE, 10, TimeUnit.SECONDS );
 
         followerTx( ( sys, tx ) ->
         {
@@ -1283,8 +1283,8 @@ class AdministrationCommandsOnClusterIT
         } );
 
         CausalClusteringTestHelpers.assertDatabaseEventuallyDoesNotExist( dbName, cluster );
-        assertEventually( "SHOW DATABASES should not return rows for the database " + dbName, () -> showDatabaseHasRowsFor( dbName ),
-                is( false ), 10, TimeUnit.SECONDS );
+        assertEventually( "SHOW DATABASES should not return rows for the database " + dbName, () -> showDatabaseHasRowsFor( dbName ), FALSE,
+                10, TimeUnit.SECONDS );
     }
 
     @Test
@@ -1354,7 +1354,7 @@ class AdministrationCommandsOnClusterIT
         CausalClusteringTestHelpers.assertDatabaseEventuallyStarted( dbName, cluster );
 
         assertEventually( "SHOW DATABASE should return status online for database " + dbName, () -> showDatabaseStatusesFor( dbName ),
-                equalTo( Set.of( DatabaseStatus.Online().stringValue() ) ), 10, TimeUnit.SECONDS );
+                equalityCondition( Set.of( DatabaseStatus.Online().stringValue() ) ), 10, TimeUnit.SECONDS );
 
         followerTx( ( sys, tx ) ->
         {
@@ -1381,7 +1381,7 @@ class AdministrationCommandsOnClusterIT
         CausalClusteringTestHelpers.assertDatabaseEventuallyStopped( dbName, cluster );
 
         assertEventually( "SHOW DATABASE should return status offline for database " + dbName, () -> showDatabaseStatusesFor( dbName ),
-                equalTo( Set.of( DatabaseStatus.Offline().stringValue() ) ), 10, TimeUnit.SECONDS );
+                equalityCondition( Set.of( DatabaseStatus.Offline().stringValue() ) ), 10, TimeUnit.SECONDS );
     }
 
     // Help methods

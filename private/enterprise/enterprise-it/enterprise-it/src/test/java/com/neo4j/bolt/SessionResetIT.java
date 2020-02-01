@@ -60,6 +60,7 @@ import static org.neo4j.function.Predicates.await;
 import static org.neo4j.internal.helpers.NamedThreadFactory.daemon;
 import static org.neo4j.internal.helpers.collection.Iterators.single;
 import static org.neo4j.test.assertion.Assert.assertEventually;
+import static org.neo4j.test.conditions.Conditions.equalityCondition;
 
 public class SessionResetIT
 {
@@ -243,8 +244,8 @@ public class SessionResetIT
 
     private void assertDatabaseIsIdle() throws InterruptedException
     {
-        assertEventually( "Wrong number of active queries", this::activeQueriesCount, is( 0L ), 10, SECONDS );
-        assertEventually( "Wrong number of active transactions", this::activeTransactionsCount, is( 0L ), 10, SECONDS );
+        assertEventually( "Wrong number of active queries", this::activeQueriesCount, equalityCondition( 0L ), 10, SECONDS );
+        assertEventually( "Wrong number of active transactions", this::activeTransactionsCount, equalityCondition( 0L ), 10, SECONDS );
     }
 
     private long activeQueriesCount()

@@ -20,6 +20,7 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.timeout.ReadTimeoutException;
+import org.assertj.core.api.Condition;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -40,6 +41,8 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.logging.AssertableLogProvider.Level.ERROR;
 import static org.neo4j.logging.LogAssertions.assertThat;
+import static org.neo4j.test.conditions.Conditions.FALSE;
+import static org.neo4j.test.conditions.Conditions.TRUE;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 class InitMagicMessageHandlingIT
@@ -186,7 +189,7 @@ class InitMagicMessageHandlingIT
 
     private static void assertEventuallyClosed( Channel clientChannel )
     {
-        assertEventually( "Server did not drop the connection", clientChannel::isActive, is( false ), 1, MINUTES );
+        assertEventually( "Server did not drop the connection", clientChannel::isActive, FALSE, 1, MINUTES );
     }
 
     private void assertReadTimeoutLogged( Class<?> logClass )
@@ -194,7 +197,7 @@ class InitMagicMessageHandlingIT
         assertEventually( () -> "Read timeout error did not get logged:\n" + logProvider.serialize(),
                 () -> safeTry( () -> assertThat( logProvider ).forClass( logClass ).forLevel( ERROR )
                         .assertExceptionForLogMessage( "Exception in inbound" )
-                        .isInstanceOf( ReadTimeoutException.class ) ), is( true ), 1, MINUTES );
+                        .isInstanceOf( ReadTimeoutException.class ) ), TRUE, 1, MINUTES );
     }
 
     private void assertWrongMagicValueLogged( Class<?> logClass )
@@ -203,7 +206,7 @@ class InitMagicMessageHandlingIT
                 () -> safeTry( () -> assertThat( logProvider ).forClass( logClass ).forLevel( ERROR )
                         .assertExceptionForLogMessage( "Exception in inbound" )
                         .isInstanceOf( DecoderException.class )
-                        .hasMessageContaining( "Wrong magic value" ) ), is( true ), 1, MINUTES );
+                        .hasMessageContaining( "Wrong magic value" ) ), TRUE, 1, MINUTES );
     }
 
     private boolean safeTry( Runnable runnable )
@@ -221,7 +224,7 @@ class InitMagicMessageHandlingIT
 
     private static void assertCorrectInitMessageReceived( String side, RecordingHandler recordingHandler )
     {
-        assertEventually( side + " did not receive a magic message", () -> recordingHandler.messages, contains( magicValueBuf() ), 1, MINUTES );
+        assertEventually( side + " did not receive a magic message", () -> recordingHandler.messages, value -> value.contains( magicValueBuf() ), 1, MINUTES );
     }
 
     private static ByteBuf wrongMagicMessage()

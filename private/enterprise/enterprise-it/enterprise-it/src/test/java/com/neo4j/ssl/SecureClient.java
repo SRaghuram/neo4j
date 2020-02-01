@@ -30,8 +30,8 @@ import org.neo4j.ssl.SslHandlerDetailsRegisteredEvent;
 import org.neo4j.ssl.SslPolicy;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.hamcrest.Matchers.equalTo;
 import static org.neo4j.test.assertion.Assert.assertEventually;
+import static org.neo4j.test.conditions.Conditions.equalityCondition;
 
 public class SecureClient
 {
@@ -79,9 +79,9 @@ public class SecureClient
         bucket.collectedData.release();
     }
 
-    void assertResponse( ByteBuf expected ) throws InterruptedException
+    void assertResponse( ByteBuf expected )
     {
-        assertEventually( channel.toString(), () -> bucket.collectedData, equalTo( expected ), 5, SECONDS );
+        assertEventually( channel.toString(), () -> bucket.collectedData, equalityCondition( expected ), 5, SECONDS );
     }
 
     Channel channel()

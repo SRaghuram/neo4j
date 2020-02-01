@@ -15,6 +15,7 @@ import com.neo4j.causalclustering.read_replica.ReadReplica;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
+import org.assertj.core.api.HamcrestCondition;
 import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeAll;
@@ -81,7 +82,7 @@ class ClusterOverviewIT
         }
 
         @Test
-        void shouldDiscoverCoreMembersAndReadReplicas() throws Exception
+        void shouldDiscoverCoreMembersAndReadReplicas()
         {
             // when
             Matcher<List<ClusterOverviewHelper.MemberInfo>> expected = Matchers.allOf(
@@ -91,7 +92,7 @@ class ClusterOverviewIT
                     ClusterOverviewHelper.containsRole( READ_REPLICA, DB, initialReadReplicas ) );
 
             // then
-            ClusterOverviewHelper.assertAllEventualOverviews( cluster, expected );
+            ClusterOverviewHelper.assertAllEventualOverviews( cluster, new HamcrestCondition<>( expected ) );
         }
 
         @Test
@@ -108,7 +109,7 @@ class ClusterOverviewIT
                     ClusterOverviewHelper.containsRole( READ_REPLICA, DB, initialReadReplicas ) );
 
             // then
-            ClusterOverviewHelper.assertAllEventualOverviews( cluster, expected );
+            ClusterOverviewHelper.assertAllEventualOverviews( cluster, new HamcrestCondition<>( expected ) );
         }
 
         @Test
@@ -130,7 +131,7 @@ class ClusterOverviewIT
                     ClusterOverviewHelper.containsRole( FOLLOWER, DB, finalCoreMembers - 1 ) );
 
             // then
-            ClusterOverviewHelper.assertAllEventualOverviews( cluster, expected );
+            ClusterOverviewHelper.assertAllEventualOverviews( cluster, new HamcrestCondition<>( expected ) );
         }
 
         @Test
@@ -152,40 +153,42 @@ class ClusterOverviewIT
                     ClusterOverviewHelper.containsRole( READ_REPLICA, DB, finalReadReplicas ) );
 
             // then
-            ClusterOverviewHelper.assertAllEventualOverviews( cluster, expected );
+            ClusterOverviewHelper.assertAllEventualOverviews( cluster, new HamcrestCondition<>( expected ) );
         }
 
         @Test
-        void shouldDiscoverRemovalOfReadReplicas() throws Exception
+        void shouldDiscoverRemovalOfReadReplicas()
         {
-            ClusterOverviewHelper.assertAllEventualOverviews( cluster, ClusterOverviewHelper.containsRole( READ_REPLICA, DB, initialReadReplicas ) );
+            ClusterOverviewHelper.assertAllEventualOverviews( cluster,
+                    new HamcrestCondition<>( ClusterOverviewHelper.containsRole( READ_REPLICA, DB, initialReadReplicas ) ) );
 
             // when
             cluster.removeReadReplicas( cluster.readReplicas().stream().limit( 2 ).collect( toList() ) );
 
             // then
-            ClusterOverviewHelper.assertAllEventualOverviews( cluster, ClusterOverviewHelper.containsRole( READ_REPLICA, DB, initialReadReplicas - 2 ) );
+            ClusterOverviewHelper.assertAllEventualOverviews( cluster,
+                    new HamcrestCondition<>( ClusterOverviewHelper.containsRole( READ_REPLICA, DB, initialReadReplicas - 2 ) ) );
         }
 
         @Test
-        void shouldDiscoverRemovalOfCoreMembers() throws Exception
+        void shouldDiscoverRemovalOfCoreMembers()
         {
             // given
             int coresToRemove = 2;
             assertTrue( initialCoreMembers > coresToRemove, "Expected at least " + initialCoreMembers + " cores. Found " + initialCoreMembers );
 
-            ClusterOverviewHelper.assertAllEventualOverviews( cluster, Matchers.allOf(
+            ClusterOverviewHelper.assertAllEventualOverviews( cluster, new HamcrestCondition<>( Matchers.allOf(
                     ClusterOverviewHelper.containsRole( LEADER, DB, 1 ),
-                    ClusterOverviewHelper.containsRole( FOLLOWER, DB, initialCoreMembers - 1 ) ) );
+                    ClusterOverviewHelper.containsRole( FOLLOWER, DB, initialCoreMembers - 1 ) ) ) );
 
             // when
             List<CoreClusterMember> coreMembersToRemove = cluster.coreMembers().stream().skip( initialCoreMembers - coresToRemove ).collect( toList() );
             cluster.removeCoreMembers( coreMembersToRemove );
 
             // then
-            ClusterOverviewHelper.assertAllEventualOverviews( cluster, Matchers.allOf(
+            ClusterOverviewHelper.assertAllEventualOverviews( cluster, new HamcrestCondition<>( Matchers.allOf(
                     ClusterOverviewHelper.containsRole( LEADER, DB, 1 ),
-                    ClusterOverviewHelper.containsRole( FOLLOWER, DB, initialCoreMembers - 1 - coresToRemove ) ),
+                    ClusterOverviewHelper.containsRole( FOLLOWER, DB, initialCoreMembers - 1 - coresToRemove ) ) ),
                     asSet( 0, 1 ), Collections.emptySet() );
         }
     }
@@ -206,24 +209,24 @@ class ClusterOverviewIT
             int coreMembers = cluster.coreMembers().size();
             int readReplicas = cluster.readReplicas().size();
 
-            ClusterOverviewHelper.assertAllEventualOverviews( cluster, Matchers.allOf(
+            ClusterOverviewHelper.assertAllEventualOverviews( cluster, new HamcrestCondition<>( Matchers.allOf(
                     ClusterOverviewHelper.containsRole( LEADER, DB, 1 ),
                     ClusterOverviewHelper.containsRole( FOLLOWER, DB, coreMembers - 1 ),
-                    ClusterOverviewHelper.containsRole( READ_REPLICA, DB, readReplicas ) ) );
+                    ClusterOverviewHelper.containsRole( READ_REPLICA, DB, readReplicas ) ) ) );
 
             cluster.removeCoreMemberWithServerId( getRunningCoreId( cluster ) );
 
-            ClusterOverviewHelper.assertAllEventualOverviews( cluster, Matchers.allOf(
+            ClusterOverviewHelper.assertAllEventualOverviews( cluster, new HamcrestCondition<>( Matchers.allOf(
                     ClusterOverviewHelper.containsRole( LEADER, DB, 1 ),
                     ClusterOverviewHelper.containsRole( FOLLOWER, DB, coreMembers - 2 ),
-                    ClusterOverviewHelper.containsRole( READ_REPLICA, DB, readReplicas ) ) );
+                    ClusterOverviewHelper.containsRole( READ_REPLICA, DB, readReplicas ) ) ) );
 
             cluster.removeReadReplicas( cluster.readReplicas() );
 
-            ClusterOverviewHelper.assertAllEventualOverviews( cluster, Matchers.allOf(
+            ClusterOverviewHelper.assertAllEventualOverviews( cluster, new HamcrestCondition<>( Matchers.allOf(
                     ClusterOverviewHelper.containsRole( LEADER, DB, 1 ),
                     ClusterOverviewHelper.containsRole( FOLLOWER, DB, coreMembers - 2 ),
-                    ClusterOverviewHelper.containsRole( READ_REPLICA, DB, 0 ) ) );
+                    ClusterOverviewHelper.containsRole( READ_REPLICA, DB, 0 ) ) ) );
         }
 
         @Test
@@ -237,7 +240,7 @@ class ClusterOverviewIT
             List<CoreClusterMember> followers = cluster.getAllMembersWithRole( Role.FOLLOWER );
             cluster.removeCoreMembers( followers );
 
-            ClusterOverviewHelper.assertEventualOverview( ClusterOverviewHelper.containsRole( LEADER, DB, 0 ), leader );
+            ClusterOverviewHelper.assertEventualOverview( new HamcrestCondition<>( ClusterOverviewHelper.containsRole( LEADER, DB, 0 ) ), leader );
         }
 
         @Test
@@ -253,18 +256,18 @@ class ClusterOverviewIT
 
             CoreClusterMember leader = cluster.awaitLeader();
 
-            ClusterOverviewHelper.assertEventualOverview( Matchers.allOf(
+            ClusterOverviewHelper.assertEventualOverview( new HamcrestCondition<>( Matchers.allOf(
                     ClusterOverviewHelper.containsRole( LEADER, DB, 1 ),
-                    ClusterOverviewHelper.containsRole( FOLLOWER, DB, coreMembers - 1 ) ), leader );
+                    ClusterOverviewHelper.containsRole( FOLLOWER, DB, coreMembers - 1 ) ) ), leader );
 
             List<ClusterOverviewHelper.MemberInfo> preElectionOverview = ClusterOverviewHelper.clusterOverview( leader.defaultDatabase() );
 
             CausalClusteringTestHelpers.forceReelection( cluster, DEFAULT_DATABASE_NAME );
 
-            ClusterOverviewHelper.assertEventualOverview( Matchers.allOf(
+            ClusterOverviewHelper.assertEventualOverview( new HamcrestCondition<>( Matchers.allOf(
                     ClusterOverviewHelper.containsRole( LEADER, DB, 1 ),
                     ClusterOverviewHelper.containsRole( FOLLOWER, DB, coreMembers - 1 ),
-                    not( equalTo( preElectionOverview ) ) ), leader );
+                    not( equalTo( preElectionOverview ) ) ) ), leader );
         }
     }
 

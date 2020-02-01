@@ -45,6 +45,8 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.kernel.api.KernelTransaction.Type.EXPLICIT;
 import static org.neo4j.server.security.auth.SecurityTestUtils.authToken;
+import static org.neo4j.test.conditions.Conditions.FALSE;
+import static org.neo4j.test.conditions.Conditions.TRUE;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @ClusterExtension
@@ -95,7 +97,7 @@ class SystemGraphAuthCacheClearingIT
         }
 
         // When initial login attempt is made, user is stored in cache
-        assertEventually( () -> allCanAuth( dbs, "foo", "f00" ), is( true ), 30, SECONDS );
+        assertEventually( () -> allCanAuth( dbs, "foo", "f00" ), TRUE, 30, SECONDS );
 
         // When changing the system database
         try ( Transaction tx = systemDb.beginTransaction( EXPLICIT, EnterpriseSecurityContext.AUTH_DISABLED ) )
@@ -105,7 +107,7 @@ class SystemGraphAuthCacheClearingIT
         }
 
         // Then the auth cache should be cleared and login with new password is required
-        assertEventually( () -> allCanAuth( dbs, "foo", "f00" ), is( false ), 30, SECONDS );
+        assertEventually( () -> allCanAuth( dbs, "foo", "f00" ), FALSE, 30, SECONDS );
         assertTrue( () -> allCanAuth( dbs, "foo", "b4r" ) );
     }
 
@@ -132,7 +134,7 @@ class SystemGraphAuthCacheClearingIT
         }
 
         // When initial login attempt is made, user is stored in cache
-        assertEventually( () -> allCanAuth( userDbs, "foo", "f00" ), is( true ), 30, SECONDS );
+        assertEventually( () -> allCanAuth( userDbs, "foo", "f00" ), TRUE, 30, SECONDS );
         assertFalse( () -> allCanExecuteQuery( userDbs, "foo", "f00", "MATCH (n) RETURN count(n)" ) );
 
         // When changing the system database
@@ -143,7 +145,7 @@ class SystemGraphAuthCacheClearingIT
         }
 
         // Then the privilege cache should be cleared giving read access
-        assertEventually( () -> allCanExecuteQuery( userDbs, "foo", "f00", "MATCH (n) RETURN count(n)" ), is( true ), 30, SECONDS );
+        assertEventually( () -> allCanExecuteQuery( userDbs, "foo", "f00", "MATCH (n) RETURN count(n)" ), TRUE, 30, SECONDS );
 
         // When changing the system database
         try ( Transaction tx = systemDb.beginTransaction( EXPLICIT, EnterpriseSecurityContext.AUTH_DISABLED ) )
@@ -153,7 +155,7 @@ class SystemGraphAuthCacheClearingIT
         }
 
         // Then the privilege cache should be cleared giving no read access
-        assertEventually( () -> allCanExecuteQuery( userDbs, "foo", "f00", "MATCH (n) RETURN count(n)" ), is( false ), 30, SECONDS );
+        assertEventually( () -> allCanExecuteQuery( userDbs, "foo", "f00", "MATCH (n) RETURN count(n)" ), FALSE, 30, SECONDS );
     }
 
     @Test
@@ -175,7 +177,7 @@ class SystemGraphAuthCacheClearingIT
         } );
 
         // When initial login attempt is made, user is stored in cache
-        assertEventually( () -> allCanAuth( clusterSystemDbs, "foo", "f00" ), is( true ), 30, SECONDS );
+        assertEventually( () -> allCanAuth( clusterSystemDbs, "foo", "f00" ), TRUE, 30, SECONDS );
 
         // When changing the system database
         cluster.systemTx( ( sys, tx ) ->
@@ -185,8 +187,8 @@ class SystemGraphAuthCacheClearingIT
         } );
 
         // Then the auth cache should be cleared and login with new password is required
-        assertEventually( () -> allCanAuth( clusterSystemDbs, "foo", "f00" ), is( false ), 30, SECONDS );
-        assertEventually( () -> allCanAuth( clusterSystemDbs, "foo", "b4r" ), is( true ), 30, SECONDS );
+        assertEventually( () -> allCanAuth( clusterSystemDbs, "foo", "f00" ), FALSE, 30, SECONDS );
+        assertEventually( () -> allCanAuth( clusterSystemDbs, "foo", "b4r" ), TRUE, 30, SECONDS );
     }
 
     @Test
@@ -211,7 +213,7 @@ class SystemGraphAuthCacheClearingIT
         } );
 
         // When initial login attempt is made, role to privilege is cached
-        assertEventually( () -> allCanAuth( userDbs, "foo", "f00" ), is( true ), 30, SECONDS );
+        assertEventually( () -> allCanAuth( userDbs, "foo", "f00" ), TRUE, 30, SECONDS );
         assertFalse( () -> allCanExecuteQuery( userDbs, "foo", "f00", "MATCH (n) RETURN count(n)" ) );
 
         // When granting privilege
@@ -222,7 +224,7 @@ class SystemGraphAuthCacheClearingIT
         } );
 
         // Then the privilege cache should be cleared giving read access
-        assertEventually( () -> allCanExecuteQuery( userDbs, "foo", "f00", "MATCH (n) RETURN count(n)" ), is( true ), 30, SECONDS );
+        assertEventually( () -> allCanExecuteQuery( userDbs, "foo", "f00", "MATCH (n) RETURN count(n)" ), TRUE, 30, SECONDS );
 
         // When revoking privilege
         cluster.systemTx( ( sys, tx ) ->
@@ -232,7 +234,7 @@ class SystemGraphAuthCacheClearingIT
         } );
 
         // Then the privilege cache should be cleared giving no read access
-        assertEventually( () -> allCanExecuteQuery( userDbs, "foo", "f00", "MATCH (n) RETURN count(n)" ), is( false ), 30, SECONDS );
+        assertEventually( () -> allCanExecuteQuery( userDbs, "foo", "f00", "MATCH (n) RETURN count(n)" ), FALSE, 30, SECONDS );
     }
 
     private List<GraphDatabaseAPI> clusterSystemDbs( Cluster cluster )

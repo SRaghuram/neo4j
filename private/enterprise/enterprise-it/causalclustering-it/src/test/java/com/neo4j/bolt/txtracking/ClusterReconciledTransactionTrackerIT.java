@@ -30,12 +30,12 @@ import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
-import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
+import static org.neo4j.test.conditions.Conditions.TRUE;
 import static org.neo4j.test.assertion.Assert.assertEventually;
+import static org.neo4j.test.conditions.Conditions.equalityCondition;
 
 @ClusterExtension
 @TestInstance( PER_METHOD )
@@ -63,7 +63,7 @@ class ClusterReconciledTransactionTrackerIT
         {
             var member = entry.getKey();
             var lastClosedSystemTxId = entry.getValue();
-            assertEventually( () -> lastReconciledTxId( member ), equalTo( lastClosedSystemTxId ), 1, MINUTES );
+            assertEventually( () -> lastReconciledTxId( member ), equalityCondition( lastClosedSystemTxId ), 1, MINUTES );
         }
     }
 
@@ -102,7 +102,7 @@ class ClusterReconciledTransactionTrackerIT
         {
             var member = entry.getKey();
             var lastClosedSystemTxIdAfter = entry.getValue();
-            assertEventually( () -> lastReconciledTxId( member ), equalTo( lastClosedSystemTxIdAfter ), 1, MINUTES );
+            assertEventually( () -> lastReconciledTxId( member ), equalityCondition( lastClosedSystemTxIdAfter ), 1, MINUTES );
         }
     }
 
@@ -128,7 +128,7 @@ class ClusterReconciledTransactionTrackerIT
     private static void assertAvailable( GraphDatabaseAPI db )
     {
         var availabilityGuard = resolve( db, DatabaseAvailabilityGuard.class );
-        assertEventually( availabilityGuard::isAvailable, is( true ), 1, MINUTES );
+        assertEventually( availabilityGuard::isAvailable, TRUE, 1, MINUTES );
     }
 
     private static <T> T resolve( GraphDatabaseAPI db, Class<T> clazz )

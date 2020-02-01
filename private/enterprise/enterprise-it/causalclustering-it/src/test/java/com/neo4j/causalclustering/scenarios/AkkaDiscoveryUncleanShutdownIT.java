@@ -11,6 +11,7 @@ import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
+import org.assertj.core.api.HamcrestCondition;
 import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
@@ -22,7 +23,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.IntStream;
 
-import org.neo4j.exceptions.KernelException;
 import org.neo4j.logging.Level;
 import org.neo4j.test.extension.Inject;
 
@@ -92,7 +92,7 @@ class AkkaDiscoveryUncleanShutdownIT
 
     }
 
-    private void startCore( CoreClusterMember newCore ) throws KernelException, InterruptedException
+    private void startCore( CoreClusterMember newCore )
     {
         newCore.start();
         runningCores.add( newCore );
@@ -101,7 +101,7 @@ class AkkaDiscoveryUncleanShutdownIT
         assertOverviews();
     }
 
-    private CoreClusterMember shutdownCore( int memberId ) throws KernelException, InterruptedException
+    private CoreClusterMember shutdownCore( int memberId )
     {
         CoreClusterMember core = cluster.getCoreMemberById( memberId );
         core.shutdown();
@@ -126,7 +126,7 @@ class AkkaDiscoveryUncleanShutdownIT
                 ClusterOverviewHelper.containsRole( FOLLOWER, db, followerCount ),
                 ClusterOverviewHelper.doesNotContainRole( READ_REPLICA, db ) );
 
-        ClusterOverviewHelper.assertAllEventualOverviews( cluster, expected, removedCoreIds, emptySet() );
+        ClusterOverviewHelper.assertAllEventualOverviews( cluster, new HamcrestCondition<>( expected ), removedCoreIds, emptySet() );
     }
 
     private static ClusterConfig newClusterConfig( int minimumCoreClusterSizeAtRuntime )

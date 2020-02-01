@@ -27,7 +27,6 @@ import java.net.URI;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -69,12 +68,12 @@ import static com.neo4j.AssertableQueryExecutionMonitor.query;
 import static com.neo4j.AssertableQueryExecutionMonitor.start;
 import static com.neo4j.AssertableQueryExecutionMonitor.throwable;
 import static java.nio.file.Files.readAllLines;
+import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsInRelativeOrder;
 import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -88,6 +87,7 @@ import static org.mockito.Mockito.when;
 import static org.neo4j.internal.helpers.Strings.joinAsLines;
 import static org.neo4j.logging.AssertableLogProvider.Level.DEBUG;
 import static org.neo4j.logging.LogAssertions.assertThat;
+import static org.neo4j.test.conditions.Conditions.TRUE;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @TestDirectoryExtension
@@ -628,7 +628,7 @@ class FabricExecutorTest
         doInMegaTx( AccessMode.READ, tx -> tx.run( query ).consume() );
 
         Path logFile = config.get( GraphDatabaseSettings.logs_directory ).resolve( "query.log" );
-        assertEventually( () -> testDirectory.getFileSystem().fileExists( logFile.toFile() ), equalTo( true ), 1, TimeUnit.MINUTES );
+        assertEventually( () -> testDirectory.getFileSystem().fileExists( logFile.toFile() ), TRUE, 1, MINUTES );
         List<String> logLines = readAllLines( logFile );
         assertEquals( 6, logLines.size() ); //3 queries logged, start + end of each
 

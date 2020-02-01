@@ -7,6 +7,7 @@ package com.neo4j.procedure.routing;
 
 import com.neo4j.test.driver.DriverExtension;
 import com.neo4j.test.driver.DriverFactory;
+import org.assertj.core.api.HamcrestCondition;
 import org.hamcrest.Description;
 import org.hamcrest.TypeSafeMatcher;
 
@@ -155,9 +156,9 @@ abstract class BaseRoutingProcedureIT
     }
 
     private static void assertRoutingProcedureAvailable( String query, Map<String,Object> params, GraphDatabaseService db, RoutingResult expectedResult )
-            throws InterruptedException
     {
-        assertEventually( () -> invokeRoutingProcedure( query, params, db ), new RoutingResultMatcher( expectedResult ), 2, MINUTES );
+        assertEventually( () -> invokeRoutingProcedure( query, params, db ), new HamcrestCondition<>( new RoutingResultMatcher( expectedResult ) ),
+                2, MINUTES );
     }
 
     private static void assertRoutingProcedureFails( String query, Map<String,Object> params, GraphDatabaseService db, Status failureStatus )

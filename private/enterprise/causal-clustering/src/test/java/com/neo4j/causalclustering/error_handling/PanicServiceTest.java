@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.error_handling;
 
+import org.assertj.core.api.Condition;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -12,7 +13,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.neo4j.kernel.database.NamedDatabaseId;
@@ -25,7 +25,6 @@ import org.neo4j.util.concurrent.BinaryLatch;
 
 import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -34,6 +33,7 @@ import static org.neo4j.internal.helpers.NamedThreadFactory.daemon;
 import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId;
 import static org.neo4j.logging.AssertableLogProvider.Level.ERROR;
 import static org.neo4j.logging.LogAssertions.assertThat;
+import static org.neo4j.test.conditions.Conditions.TRUE;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 class PanicServiceTest
@@ -74,7 +74,7 @@ class PanicServiceTest
         assertFalse( lockedEventHandler1.isComplete );
         lockedEventHandler1.unlock();
 
-        assertEventually( "Should have completed handling the panic event", () -> lockedEventHandler1.isComplete, equalTo( true ), 1, TimeUnit.SECONDS );
+        assertEventually( "Should have completed handling the panic event", () -> lockedEventHandler1.isComplete, TRUE, 1, SECONDS );
         assertEquals( 1, lockedEventHandler1.numberOfPanicEvents.get() );
 
         assertEquals( 0, lockedEventHandler2.numberOfPanicEvents.get() );
@@ -114,7 +114,8 @@ class PanicServiceTest
         var panicker = panicService.panickerFor( namedDatabaseId1 );
         panicker.panic( new Exception() );
 
-        assertEventually( numberOfInvokedHandlers::get, equalTo( handlers.size() ), 30, SECONDS );
+        assertEventually( numberOfInvokedHandlers::get, value -> value == handlers.size(), 30,
+                SECONDS );
     }
 
     @Test
@@ -197,7 +198,7 @@ class PanicServiceTest
 
         void awaitBackgroundTaskCompletion()
         {
-            assertEventually( this::getCompletedTaskCount, equalTo( 1L ), 30, SECONDS );
+            assertEventually( this::getCompletedTaskCount, value -> value == 1L, 30, SECONDS );
         }
     }
 }

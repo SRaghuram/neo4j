@@ -17,6 +17,7 @@ import com.neo4j.causalclustering.core.state.StateMachineResult;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.messaging.Message;
 import com.neo4j.causalclustering.messaging.Outbound;
+import org.assertj.core.api.Condition;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,6 +25,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.time.Duration;
+import java.util.Objects;
 import java.util.UUID;
 
 import org.neo4j.internal.helpers.ConstantTimeTimeoutStrategy;
@@ -48,10 +50,8 @@ import static com.neo4j.causalclustering.core.replication.ReplicationResult.Outc
 import static com.neo4j.causalclustering.core.replication.ReplicationResult.Outcome.NOT_REPLICATED;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.either;
-import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.mock;
@@ -62,6 +62,7 @@ import static org.neo4j.test.assertion.Assert.assertEventually;
 class RaftReplicatorTest
 {
     private static final int DEFAULT_TIMEOUT_MS = 15_000;
+    private static final Condition<Progress> NOT_NULL_CONDITION = new Condition<>( Objects::nonNull, "Should be not null." );
 
     private final NamedDatabaseId namedDatabaseId = new TestDatabaseIdRepository().defaultDatabase();
     private final LeaderLocator leaderLocator = mock( LeaderLocator.class );
@@ -113,7 +114,7 @@ class RaftReplicatorTest
         // when
         replicatingThread.start();
         // then
-        assertEventually( "making progress", () -> capturedProgress.last, not( equalTo( null ) ), DEFAULT_TIMEOUT_MS, MILLISECONDS );
+        assertEventually( "making progress", () -> capturedProgress.last, NOT_NULL_CONDITION, DEFAULT_TIMEOUT_MS, MILLISECONDS );
 
         // when
         capturedProgress.last.setReplicated();
@@ -146,7 +147,7 @@ class RaftReplicatorTest
         // when
         replicatingThread.start();
         // then
-        assertEventually( "send count", () -> outbound.count, greaterThan( 2 ), DEFAULT_TIMEOUT_MS, MILLISECONDS );
+        assertEventually( "send count", () -> outbound.count, value -> value > 2, DEFAULT_TIMEOUT_MS, MILLISECONDS );
 
         // cleanup
         capturedProgress.last.setReplicated();
@@ -173,8 +174,7 @@ class RaftReplicatorTest
         replicatingThread.start();
 
         // then
-        assertEventually( "making progress", () -> capturedProgress.last, not( equalTo( null ) ),
-                DEFAULT_TIMEOUT_MS, MILLISECONDS );
+        assertEventually( "making progress", () -> capturedProgress.last, NOT_NULL_CONDITION, DEFAULT_TIMEOUT_MS, MILLISECONDS );
         assertEquals( 1, sessionPool.openSessionCount() );
 
         // when
@@ -311,7 +311,7 @@ class RaftReplicatorTest
         replicatingThread.start();
 
         // then
-        assertEventually( "send count", () -> outbound.count, greaterThan( 1 ), DEFAULT_TIMEOUT_MS, MILLISECONDS );
+        assertEventually( "send count", () -> outbound.count, value -> value > 1, DEFAULT_TIMEOUT_MS, MILLISECONDS );
         replicator.onLeaderSwitch( new LeaderInfo( null, 1 ) );
         capturedProgress.last.setReplicated();
         capturedProgress.last.registerResult( StateMachineResult.of( 5 ) );

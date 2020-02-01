@@ -38,10 +38,12 @@ import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.state_machine_flush_window_size;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toSet;
-import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
+import static org.neo4j.test.conditions.Conditions.FALSE;
+import static org.neo4j.test.conditions.Conditions.TRUE;
 import static org.neo4j.test.assertion.Assert.assertEventually;
+import static org.neo4j.test.conditions.Conditions.equalityCondition;
 
 @ClusterExtension
 class CoreFallBehindIT
@@ -102,7 +104,7 @@ class CoreFallBehindIT
         // make sure this follower gets disconnected from the system Raft, by completely disconnecting it from discovery
         // this will cause the Leader to stop pushing new Raft log entries to that follower, causing it to fall behind
         stopDiscoveryService( staleFollower );
-        assertEventually( () -> isSystemDatabaseMember( staleFollower ), equalTo( false ), 60, SECONDS );
+        assertEventually( () -> isSystemDatabaseMember( staleFollower ), FALSE, 60, SECONDS );
 
         DownloadMonitor downloadMonitor = new DownloadMonitor();
         staleFollower.monitors().addMonitorListener( downloadMonitor );
@@ -125,15 +127,15 @@ class CoreFallBehindIT
         startDiscoveryService( staleFollower );
 
         // then it should download the system database and see that a new database foo shall exist and create it
-        assertEventually( () -> isSystemDatabaseMember( staleFollower ), equalTo( true ), 60, SECONDS );
+        assertEventually( () -> isSystemDatabaseMember( staleFollower ), TRUE, 60, SECONDS );
         assertDatabaseEventuallyStarted( "foo", Set.of( staleFollower ) );
-        assertEventually( downloadMonitor::systemDownloadCount, equalTo( 1 ), 60, SECONDS );
+        assertEventually( downloadMonitor::systemDownloadCount, equalityCondition( 1 ), 60, SECONDS );
 
         // also check that the tracker of reconciled transaction IDs actually got updated as well
         TransactionIdStore txIdStore = staleFollower.resolveDependency( SYSTEM_DATABASE_NAME, TransactionIdStore.class );
         long lastClosedTransactionId = txIdStore.getLastClosedTransactionId();
         ReconciledTransactionTracker reconciledTxTracker = staleFollower.resolveDependency( SYSTEM_DATABASE_NAME, ReconciledTransactionTracker.class );
-        assertEventually( reconciledTxTracker::getLastReconciledTransactionId, equalTo( lastClosedTransactionId ), 60, SECONDS );
+        assertEventually( reconciledTxTracker::getLastReconciledTransactionId, equalityCondition( lastClosedTransactionId ), 60, SECONDS );
     }
 
     private void forceRaftLogRotationAndPruning( CoreClusterMember core ) throws Exception

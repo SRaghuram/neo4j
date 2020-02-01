@@ -20,6 +20,7 @@ import com.neo4j.kernel.impl.store.format.highlimit.HighLimit;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
+import org.assertj.core.api.HamcrestCondition;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeMatcher;
@@ -78,10 +79,6 @@ import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
 import static org.hamcrest.CoreMatchers.startsWith;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.greaterThan;
-import static org.hamcrest.Matchers.greaterThanOrEqualTo;
-import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -91,7 +88,10 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.internal.helpers.collection.Iterables.count;
 import static org.neo4j.kernel.impl.store.MetaDataStore.Position.TIME;
+import static org.neo4j.test.conditions.Conditions.TRUE;
 import static org.neo4j.test.assertion.Assert.assertEventually;
+import static org.neo4j.test.conditions.Conditions.condition;
+import static org.neo4j.test.conditions.Conditions.equalityCondition;
 
 @ClusterExtension
 @TestInstance( PER_METHOD )
@@ -134,7 +134,7 @@ class ReadReplicaReplicationIT
         for ( var readReplica : cluster.readReplicas() )
         {
             Callable<Boolean> availability = () -> readReplica.defaultDatabase().isAvailable( 0 );
-            assertEventually( "read replica becomes available", availability, is( true ), 10, SECONDS );
+            assertEventually( "read replica becomes available", availability, TRUE, 10, SECONDS );
         }
     }
 
@@ -180,7 +180,7 @@ class ReadReplicaReplicationIT
             try ( var tx = readReplicaDb.beginTx() )
             {
                 Callable<Long> nodeCount = () -> count( tx.getAllNodes() );
-                assertEventually( "node to appear on read replica", nodeCount, is( 400L ), 1, MINUTES );
+                assertEventually( "node to appear on read replica", nodeCount, equalityCondition( 400L ), 1, MINUTES );
 
                 for ( var node : tx.getAllNodes() )
                 {
@@ -275,7 +275,7 @@ class ReadReplicaReplicationIT
         for ( var readReplica : cluster.readReplicas() )
         {
             Callable<Boolean> availability = () -> readReplica.defaultDatabase().isAvailable( 0 );
-            assertEventually( "read replica becomes available", availability, is( true ), 10, SECONDS );
+            assertEventually( "read replica becomes available", availability, TRUE, 10, SECONDS );
         }
     }
 
@@ -313,7 +313,7 @@ class ReadReplicaReplicationIT
 
         assertEventually( "The read replica has the same data as the core members",
                 () -> DbRepresentation.of( readReplica.defaultDatabase() ),
-                equalTo( DbRepresentation.of( cluster.awaitLeader().defaultDatabase() ) ), 10, TimeUnit.SECONDS );
+                equalityCondition( DbRepresentation.of( cluster.awaitLeader().defaultDatabase() ) ), 10, TimeUnit.SECONDS );
     }
 
     @Test
@@ -351,7 +351,7 @@ class ReadReplicaReplicationIT
         // then
         assertEventually( "The read replica has the same data as the core members",
                 () -> DbRepresentation.of( readReplica.defaultDatabase() ),
-                equalTo( DbRepresentation.of( cluster.awaitLeader().defaultDatabase() ) ), 10, TimeUnit.SECONDS );
+                equalityCondition( DbRepresentation.of( cluster.awaitLeader().defaultDatabase() ) ), 10, TimeUnit.SECONDS );
     }
 
     @Test
@@ -466,7 +466,7 @@ class ReadReplicaReplicationIT
         }
 
         var raftLogDir = coreGraphDatabase.raftLogDirectory( DEFAULT_DATABASE_NAME );
-        assertEventually( "pruning happened", () -> versionBy( raftLogDir, Math::min ), greaterThan( baseVersion ), 5, SECONDS );
+        assertEventually( "pruning happened", () -> versionBy( raftLogDir, Math::min ), v -> v > baseVersion, 5, SECONDS );
 
         // when
         cluster.addReadReplicaWithIdAndRecordFormat( 4, HighLimit.NAME ).start();
@@ -474,7 +474,7 @@ class ReadReplicaReplicationIT
         // then
         for ( var readReplica : cluster.readReplicas() )
         {
-            assertEventually( "read replica available", () -> readReplica.defaultDatabase().isAvailable( 0 ), is( true ), 10, SECONDS );
+            assertEventually( "read replica available", () -> readReplica.defaultDatabase().isAvailable( 0 ), TRUE, 10, SECONDS );
         }
     }
 
@@ -519,7 +519,7 @@ class ReadReplicaReplicationIT
                 }
             }
             return membersWithIncreasedPinCount;
-        }, is( greaterThanOrEqualTo( minimumUpdatedMembersCount ) ), 10, SECONDS );
+        }, v -> v >= minimumUpdatedMembersCount, 10, SECONDS );
     }
 
     @SuppressWarnings( "SameParameterValue" )
@@ -553,7 +553,7 @@ class ReadReplicaReplicationIT
 
     private static void assertReadReplicasEventuallyUpToDateWithLeader( Cluster cluster )
     {
-        assertEventually( () -> ReadReplicasProgress.of( cluster ), readReplicasUpToDateWithLeader(), 1, MINUTES );
+        assertEventually( () -> ReadReplicasProgress.of( cluster ), new HamcrestCondition<>( readReplicasUpToDateWithLeader() ), 1, MINUTES );
     }
 
     private static long lastClosedTransactionId( boolean fail, GraphDatabaseFacade db )

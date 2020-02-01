@@ -20,6 +20,7 @@ import static java.lang.System.currentTimeMillis;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.neo4j.test.conditions.Conditions.TRUE;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 public class MetricsTestHelper
@@ -194,7 +195,7 @@ public class MetricsTestHelper
     public static File metricsCsv( File dbDir, String metric )
     {
         File csvFile = new File( dbDir, metric + ".csv" );
-        assertEventually( "Metrics file should exist", fileExistAndHasDataLines(csvFile), is( true ), 2, MINUTES );
+        assertEventually( "Metrics file should exist", fileExistAndHasDataLines(csvFile), TRUE, 2, MINUTES );
         return csvFile;
     }
 

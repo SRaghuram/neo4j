@@ -34,12 +34,12 @@ import org.neo4j.test.rule.TestDirectory;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_advertised_address;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.internal.helpers.collection.Iterables.count;
 import static org.neo4j.test.assertion.Assert.assertEventually;
+import static org.neo4j.test.conditions.Conditions.condition;
 
 @TestDirectoryExtension
 @ClusterExtension
@@ -92,7 +92,7 @@ class ConvertNonCausalClusteringStoreIT
                 Config config = db.getDependencyResolver().resolveDependency( Config.class );
 
                 assertEventually( "node to appear on core server " + config.get( raft_advertised_address ), nodeCount,
-                        greaterThan( (long) classicNodeCount ), 15, SECONDS );
+                        v -> v > classicNodeCount, 15, SECONDS );
 
                 assertEquals( classicNodeCount + 1, count( tx.getAllNodes() ) );
 

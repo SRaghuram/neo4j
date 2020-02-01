@@ -6,6 +6,7 @@
 package com.neo4j.metrics.source.db;
 
 import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
+import org.assertj.core.api.Condition;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,6 +39,8 @@ import static org.neo4j.test.assertion.Assert.assertEventually;
 @DbmsExtension( configurationCallback = "configure" )
 class StoreSizeMetricsIT
 {
+    private static final Condition<Long> GREATER_THAN_ZERO = new Condition<>( value -> value > 0L, "Should be greater than 0." );
+
     @Inject
     private TestDirectory testDirectory;
     @Inject
@@ -76,7 +79,7 @@ class StoreSizeMetricsIT
         {
             String msg = name + " store has some size at startup";
             String metricsName = String.format( "neo4j.%s.store.size.total", name );
-            assertEventually( msg, () -> readLongGaugeValue( metricsCsv( metricsFolder, metricsName ) ), greaterThan( 0L ), 1, MINUTES );
+            assertEventually( msg, () -> readLongGaugeValue( metricsCsv( metricsFolder, metricsName ) ), GREATER_THAN_ZERO, 1, MINUTES );
         }
     }
 
@@ -91,7 +94,7 @@ class StoreSizeMetricsIT
         checkPoint();
         tick();
 
-        assertEventually( firstMsg, () -> readLongGaugeValue( metricsCsv( metricsFolder, metricsName ) ), greaterThan( 0L ), 1, MINUTES );
+        assertEventually( firstMsg, () -> readLongGaugeValue( metricsCsv( metricsFolder, metricsName ) ), GREATER_THAN_ZERO, 1, MINUTES );
         long size = readLongGaugeValue( metricsCsv( metricsFolder, metricsName ) );
 
         addSomeData( db );
@@ -99,7 +102,7 @@ class StoreSizeMetricsIT
         tick();
 
         String secondMsg = db.databaseName() + " store grown after adding data";
-        assertEventually( secondMsg, () -> readLongGaugeValue( metricsCsv( metricsFolder, metricsName ) ), greaterThan( size ), 1, MINUTES );
+        assertEventually( secondMsg, () -> readLongGaugeValue( metricsCsv( metricsFolder, metricsName ) ), value -> value > size, 1, MINUTES );
     }
 
     private void checkPoint() throws IOException

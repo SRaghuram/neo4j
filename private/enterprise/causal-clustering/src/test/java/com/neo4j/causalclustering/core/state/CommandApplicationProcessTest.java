@@ -23,7 +23,8 @@ import com.neo4j.causalclustering.core.state.machines.tx.CoreReplicatedContent;
 import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
 import com.neo4j.causalclustering.core.state.storage.InMemoryStateStorage;
 import com.neo4j.causalclustering.error_handling.DatabasePanicker;
-import org.junit.Test;
+import org.assertj.core.api.Condition;
+import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
 
 import java.util.Arrays;
@@ -35,11 +36,10 @@ import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.Monitors;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
@@ -49,7 +49,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
-import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
@@ -66,15 +65,15 @@ public class CommandApplicationProcessTest
 
     private final DatabaseId databaseId = new TestDatabaseIdRepository().defaultDatabase().databaseId();
 
-    private InFlightCache inFlightCache = spy( new ConsecutiveInFlightCache() );
+    private final InFlightCache inFlightCache = spy( new ConsecutiveInFlightCache() );
     private final Monitors monitors = new Monitors();
-    private CoreState coreState = mock( CoreState.class );
-    private SinglePanic panicker = new SinglePanic();
+    private final CoreState coreState = mock( CoreState.class );
+    private final SinglePanic panicker = new SinglePanic();
     private final CommandApplicationProcess applicationProcess =
             new CommandApplicationProcess( raftLog, batchSize, flushEvery, NullLogProvider.getInstance(), new ProgressTrackerImpl( globalSession ),
                     sessionTracker, coreState, inFlightCache, monitors, panicker );
 
-    private ReplicatedTransaction nullTx = ReplicatedTransaction.from( new byte[0], databaseId );
+    private final ReplicatedTransaction nullTx = ReplicatedTransaction.from( new byte[0], databaseId );
 
     private final CommandDispatcher commandDispatcher = mock( CommandDispatcher.class );
 
@@ -137,7 +136,7 @@ public class CommandApplicationProcessTest
         applicationProcess.start();
 
         // then
-        verifyZeroInteractions( commandDispatcher );
+        verifyNoMoreInteractions( commandDispatcher );
     }
 
     @Test
@@ -248,7 +247,7 @@ public class CommandApplicationProcessTest
         raftLog.append( new RaftLogEntry( 0, operation( nullTx ) ) );
         applicationProcess.notifyCommitted( 0 );
 
-        assertEventually( "failed apply", () -> panicker.hasPanicked, is( true ), 5, SECONDS );
+        assertEventually( "failed apply", () -> panicker.hasPanicked, value -> value, 5, SECONDS );
     }
 
     @Test
@@ -263,7 +262,7 @@ public class CommandApplicationProcessTest
 
         //then the cache should have had it's get method called.
         verify( inFlightCache ).get( 0L );
-        verifyZeroInteractions( raftLog );
+        verifyNoMoreInteractions( raftLog );
     }
 
     @Test
@@ -285,7 +284,7 @@ public class CommandApplicationProcessTest
     }
 
     @Test
-    public void shouldFailWhenCacheAndLogMiss() throws Throwable
+    public void shouldFailWhenCacheAndLogMiss()
     {
         // given
         inFlightCache.put( 0L, new RaftLogEntry( 0, operation( nullTx ) ) );
@@ -294,15 +293,7 @@ public class CommandApplicationProcessTest
 
         // when
         applicationProcess.notifyCommitted( 2 );
-        try
-        {
-            applicationProcess.start();
-            fail();
-        }
-        catch ( IllegalStateException e )
-        {
-            // expected
-        }
+        assertThrows( IllegalStateException.class, applicationProcess::start );
     }
 
     @Test
@@ -337,7 +328,7 @@ public class CommandApplicationProcessTest
         assertEquals( 2, applicationProcess.lastApplied() );
     }
 
-    private class SinglePanic implements DatabasePanicker
+    private static class SinglePanic implements DatabasePanicker
     {
         volatile boolean hasPanicked;
 

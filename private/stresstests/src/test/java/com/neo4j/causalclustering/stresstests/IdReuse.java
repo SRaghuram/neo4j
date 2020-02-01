@@ -10,6 +10,7 @@ import com.neo4j.causalclustering.common.ClusterMember;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.helper.Workload;
+import org.assertj.core.api.Condition;
 
 import java.security.SecureRandom;
 import java.util.HashMap;
@@ -30,6 +31,7 @@ import org.neo4j.storageengine.api.TransactionIdStore;
 
 import static com.neo4j.causalclustering.stresstests.TxHelp.isInterrupted;
 import static com.neo4j.causalclustering.stresstests.TxHelp.isTransient;
+import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.test.assertion.Assert.assertEventually;
@@ -57,13 +59,23 @@ class IdReuse
         }
 
         @Override
-        protected void validate() throws TimeoutException, InterruptedException
+        protected void validate()
         {
             var members = cluster.allMembers();
 
             for ( ClusterMember member : members )
             {
-                assertEventually( () -> getLastTxId( member ), equalTo( getLastTxId( cluster.awaitLeader() ) ), 1, TimeUnit.MINUTES );
+                assertEventually( () -> getLastTxId( member ), new Condition<>( value ->
+                {
+                    try
+                    {
+                        return value.equals( getLastTxId( cluster.awaitLeader() ) );
+                    }
+                    catch ( TimeoutException e )
+                    {
+                        return false;
+                    }
+                }, "Last tx id condition." ), 1, MINUTES );
             }
 
             Map<MemberId,Long> usedIdsPerMember = new HashMap<>();

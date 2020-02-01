@@ -9,6 +9,7 @@ import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
 import com.neo4j.causalclustering.core.CoreClusterMember;
 import com.neo4j.causalclustering.core.consensus.RaftMachine;
+import org.assertj.core.api.Condition;
 import org.hamcrest.Matchers;
 
 import java.io.File;
@@ -95,7 +96,7 @@ class ReplaceRandomMember extends RepeatOnRandomMember
             log.info( format( "Waiting for membership of '%s'", databaseName ) );
             RaftMachine raft = core.resolveDependency( databaseName, RaftMachine.class );
             assertEventually(  members -> format( "Voting members %s do not contain %s", members, core.id() ),
-                    raft::votingMembers, hasItem( core.id() ), 10, MINUTES );
+                    raft::votingMembers, new Condition<>( memberIds -> memberIds.contains( core.id() ), "Contains core id." ), 10, MINUTES );
         }
     }
 

@@ -52,6 +52,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 import static org.neo4j.logging.NullLogProvider.nullLogProvider;
+import static org.neo4j.test.conditions.Conditions.TRUE;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @ExtendWith( LifeExtension.class )
@@ -153,7 +154,7 @@ class DbmsReconcilerModuleTest
         // the reconciler is already executing a long running job
         operator.startDatabase( foo.name() );
         var startFoo = reconciler.reconcile( singletonList( operator ), ReconcilerRequest.simple() );
-        assertEventually( "Reconciler should be starting foo!", isStarting::get, is( true ), 10, SECONDS );
+        assertEventually( "Reconciler should be starting foo!", isStarting::get, TRUE, 10, SECONDS );
 
         // and a second job gets created. It waits and is put in an internal cache
         operator.stopDatabase( foo.name() );
@@ -202,7 +203,7 @@ class DbmsReconcilerModuleTest
         // the reconciler is already executing a long running job
         operator.startDatabase( foo.name() );
         var startFoo = reconciler.reconcile( singletonList( operator ), ReconcilerRequest.simple() );
-        assertEventually( "Reconciler should be starting foo!", isStarting::get, is( true ), 10, SECONDS );
+        assertEventually( "Reconciler should be starting foo!", isStarting::get, TRUE, 10, SECONDS );
 
         // and a second job gets created. It waits and is put in an internal cache
         operator.stopDatabase( foo.name() );

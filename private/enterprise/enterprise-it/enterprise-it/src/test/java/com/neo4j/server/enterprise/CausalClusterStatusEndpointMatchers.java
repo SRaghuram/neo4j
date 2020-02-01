@@ -6,6 +6,7 @@
 package com.neo4j.server.enterprise;
 
 import com.neo4j.harness.internal.CausalClusterInProcessBuilder.CausalCluster;
+import org.assertj.core.api.Condition;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeMatcher;
@@ -150,22 +151,9 @@ class CausalClusterStatusEndpointMatchers
         }
     }
 
-    static <T> Matcher<Collection<T>> allValuesEqual()
+    static <T> Condition<Collection<T>> allValuesEqual()
     {
-        return new TypeSafeMatcher<>()
-        {
-            @Override
-            public boolean matchesSafely( Collection<T> item )
-            {
-                return item.stream().distinct().count() == 1;
-            }
-
-            @Override
-            public void describeTo( Description description )
-            {
-                description.appendText( "Values should be equal" );
-            }
-        };
+        return new Condition<>( values -> values.stream().distinct().count() == 1, "Values should be equal" );
     }
 
     static Callable<Map<String,Object>> statusEndpoint( Neo4j server, String databaseName )

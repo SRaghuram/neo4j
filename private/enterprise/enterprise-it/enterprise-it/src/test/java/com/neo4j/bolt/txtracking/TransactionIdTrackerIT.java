@@ -34,7 +34,6 @@ import static java.time.Duration.ofMinutes;
 import static java.time.Duration.ofSeconds;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -44,6 +43,7 @@ import static org.neo4j.internal.helpers.NamedThreadFactory.daemon;
 import static org.neo4j.kernel.api.exceptions.Status.Database.DatabaseNotFound;
 import static org.neo4j.kernel.api.exceptions.Status.Database.DatabaseUnavailable;
 import static org.neo4j.kernel.api.exceptions.Status.Transaction.BookmarkTimeout;
+import static org.neo4j.test.conditions.Conditions.TRUE;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @EnterpriseDbmsExtension
@@ -147,19 +147,19 @@ class TransactionIdTrackerIT
         // should be waiting...
         waitTrackingMonitor.clearWaiting();
         assertFalse( future.isDone() );
-        assertEventually( "Tracker did not begin waiting", waitTrackingMonitor::isWaiting, equalTo( true ), 30, SECONDS );
+        assertEventually( "Tracker did not begin waiting", waitTrackingMonitor::isWaiting, TRUE, 30, SECONDS );
 
         // should still be waiting...
         createNodes( nonSystemDb, 10 );
         waitTrackingMonitor.clearWaiting();
         assertFalse( future.isDone() );
-        assertEventually( "Tracker did not continue waiting", waitTrackingMonitor::isWaiting, equalTo( true ), 30, SECONDS );
+        assertEventually( "Tracker did not continue waiting", waitTrackingMonitor::isWaiting, TRUE, 30, SECONDS );
 
         // commit enough transactions to release the waiter
         createNodes( nonSystemDb, 100 );
 
         // should stop waiting
-        assertEventually( "Bookmark wait did not complete in time", future::isDone, equalTo( true ), 30, SECONDS );
+        assertEventually( "Bookmark wait did not complete in time", future::isDone, TRUE, 30, SECONDS );
     }
 
     @Test
@@ -178,19 +178,19 @@ class TransactionIdTrackerIT
         // should be waiting...
         waitTrackingMonitor.clearWaiting();
         assertFalse( future.isDone() );
-        assertEventually( "Tracker did not begin waiting", waitTrackingMonitor::isWaiting, equalTo( true ), 30, SECONDS );
+        assertEventually( "Tracker did not begin waiting", waitTrackingMonitor::isWaiting, TRUE, 30, SECONDS );
 
         // should still be waiting...
         createDatabases( 1 );
         waitTrackingMonitor.clearWaiting();
         assertFalse( future.isDone() );
-        assertEventually( "Tracker did not continue waiting", waitTrackingMonitor::isWaiting, equalTo( true ), 30, SECONDS );
+        assertEventually( "Tracker did not continue waiting", waitTrackingMonitor::isWaiting, TRUE, 30, SECONDS );
 
         // commit enough transactions to release the waiter
         createDatabases( 5 );
 
         // should stop waiting
-        assertEventually( "Bookmark wait did not complete in time", future::isDone, equalTo( true ), 30, SECONDS );
+        assertEventually( "Bookmark wait did not complete in time", future::isDone, TRUE, 30, SECONDS );
     }
 
     @Test

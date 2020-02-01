@@ -26,11 +26,11 @@ import org.neo4j.test.extension.Inject;
 
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static java.util.stream.Collectors.toSet;
-import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.test.assertion.Assert.assertEventually;
+import static org.neo4j.test.conditions.Conditions.equalityCondition;
 
 @ClusterExtension
 @TestInstance( PER_METHOD )
@@ -61,7 +61,7 @@ class RecoveryIT
 
         assertEventually( "All cores have the same data",
                 () -> cluster.coreMembers().stream().map( RecoveryIT::dbRepresentation ).collect( toSet() ).size(),
-                equalTo( 1 ), 10, TimeUnit.SECONDS );
+                equalityCondition( 1 ), 10, TimeUnit.SECONDS );
 
         // when
         cluster.shutdown();
@@ -89,7 +89,7 @@ class RecoveryIT
         // then
         assertEventually( "All cores have the same data",
                 () -> cluster.coreMembers().stream().map( RecoveryIT::dbRepresentation ).collect( toSet() ).size(),
-                equalTo( 1 ), 10, TimeUnit.SECONDS );
+                equalityCondition( 1 ), 10, TimeUnit.SECONDS );
 
         cluster.shutdown();
 

@@ -18,6 +18,7 @@ import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.handshake.ApplicationSupportedProtocols;
 import com.neo4j.dbms.ShowDatabasesHelpers;
 import com.neo4j.dbms.ShowDatabasesHelpers.ShowDatabasesResultRow;
+import org.assertj.core.api.HamcrestCondition;
 
 import java.io.File;
 import java.io.IOException;
@@ -88,6 +89,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.keep_logical_logs;
 import static org.neo4j.test.assertion.Assert.assertEventually;
+import static org.neo4j.test.conditions.Conditions.TRUE;
 
 public final class CausalClusteringTestHelpers
 {
@@ -192,7 +194,8 @@ public final class CausalClusteringTestHelpers
             // trigger an election and await until a new leader is elected
             var follower = randomClusterMember( cluster, leader );
             follower.resolveDependency( databaseName, RaftMachine.class ).triggerElection();
-            assertEventually( "Leader re-election did not happen", cluster::awaitLeader, not( equalTo( leader ) ), 2, MINUTES );
+            assertEventually( "Leader re-election did not happen", cluster::awaitLeader,
+                    new HamcrestCondition<>( not( equalTo( leader ) ) ), 2, MINUTES );
             return disabledMemberAction.execute( leader, otherMembers );
         }
         finally
@@ -281,49 +284,49 @@ public final class CausalClusteringTestHelpers
     public static void assertDatabaseEventuallyStarted( String databaseName, Cluster cluster )
     {
         assertEventually( () -> "Database is not started on all members: " + memberDatabaseStates( databaseName, cluster ),
-                () -> allMembersHaveDatabaseState( DatabaseAvailability.AVAILABLE, cluster, databaseName ), is( true ), 10, MINUTES );
+                () -> allMembersHaveDatabaseState( DatabaseAvailability.AVAILABLE, cluster, databaseName ), TRUE, 10, MINUTES );
     }
 
     public static void assertDatabaseEventuallyStarted( String databaseName, Set<? extends ClusterMember> members )
     {
         assertEventually( () -> "Database is not started on all members: " + memberDatabaseStates( databaseName, members ),
-                () -> membersHaveDatabaseState( DatabaseAvailability.AVAILABLE, members, databaseName ), is( true ), 10, MINUTES );
+                () -> membersHaveDatabaseState( DatabaseAvailability.AVAILABLE, members, databaseName ), TRUE, 10, MINUTES );
     }
 
     public static void assertDatabaseEventuallyStopped( String databaseName, Cluster cluster )
     {
         assertEventually( () -> "Database is not stopped on all members: " + memberDatabaseStates( databaseName, cluster ),
-                () -> allMembersHaveDatabaseState( DatabaseAvailability.STOPPED, cluster, databaseName ), is( true ), 1, MINUTES );
+                () -> allMembersHaveDatabaseState( DatabaseAvailability.STOPPED, cluster, databaseName ), TRUE, 1, MINUTES );
     }
 
     public static void assertDatabaseEventuallyStopped( String databaseName, Set<ClusterMember> members )
     {
         assertEventually( () -> "Database is not stopped on all members: " + memberDatabaseStates( databaseName, members ),
-                () -> membersHaveDatabaseState( DatabaseAvailability.STOPPED, members, databaseName ), is( true ), 1, MINUTES );
+                () -> membersHaveDatabaseState( DatabaseAvailability.STOPPED, members, databaseName ), TRUE, 1, MINUTES );
     }
 
     public static void assertDatabaseEventuallyDoesNotExist( String databaseName, Cluster cluster )
     {
         assertEventually( () -> "Database is not absent on all members: " + memberDatabaseStates( databaseName, cluster ),
-                () -> allMembersHaveDatabaseState( DatabaseAvailability.ABSENT, cluster, databaseName ), is( true ), 1, MINUTES );
+                () -> allMembersHaveDatabaseState( DatabaseAvailability.ABSENT, cluster, databaseName ), TRUE, 1, MINUTES );
     }
 
     public static void assertDatabaseEventuallyDoesNotExist( String databaseName, Set<ClusterMember> members )
     {
         assertEventually( () -> "Database is not absent on all members: " + memberDatabaseStates( databaseName, members ),
-                () -> membersHaveDatabaseState( DatabaseAvailability.ABSENT, members, databaseName ), is( true ), 1, MINUTES );
+                () -> membersHaveDatabaseState( DatabaseAvailability.ABSENT, members, databaseName ), TRUE, 1, MINUTES );
     }
 
     public static void assertUserDoesNotExist( String userName, Cluster cluster )
     {
         assertEventually( () -> "User is not absent on all members: " + memberUserStates( cluster ),
-                () -> noMembersHaveUserAndNoErrors( cluster, userName ), is( true ), 1, MINUTES);
+                () -> noMembersHaveUserAndNoErrors( cluster, userName ), TRUE, 1, MINUTES);
     }
 
     public static void assertRoleDoesNotExist( String roleName, Cluster cluster )
     {
         assertEventually( () -> "Role is not absent on all members: " + memberRoleStates( cluster ),
-                () -> noMembersHaveRoleAndNoErrors( cluster, roleName ), is( true ), 1, MINUTES);
+                () -> noMembersHaveRoleAndNoErrors( cluster, roleName ), TRUE, 1, MINUTES);
     }
 
     private static boolean allMembersHaveDatabaseState( DatabaseAvailability expected, Cluster cluster, String databaseName )
