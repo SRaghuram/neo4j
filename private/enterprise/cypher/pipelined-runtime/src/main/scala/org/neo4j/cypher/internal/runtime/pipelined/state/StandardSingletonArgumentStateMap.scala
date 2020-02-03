@@ -29,7 +29,7 @@ class StandardSingletonArgumentStateMap[STATE <: ArgumentState](val argumentStat
                                             argumentMorsel: MorselExecutionContext,
                                             argumentRowIdsForReducers: Array[Long]): AbstractArgumentStateMap.StateController[STATE] = {
     if (factory.completeOnConstruction) {
-      new ImmutableStateController(factory.newConcurrentArgumentState(argument, argumentMorsel, argumentRowIdsForReducers))
+      new ImmutableStateController(factory.newStandardArgumentState(argument, argumentMorsel, argumentRowIdsForReducers))
     } else {
       new StandardStateController(factory.newStandardArgumentState(argument, argumentMorsel, argumentRowIdsForReducers))
     }
