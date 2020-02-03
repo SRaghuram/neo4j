@@ -21,7 +21,6 @@ import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.Slo
 import org.neo4j.cypher.internal.physicalplanning.PipelineId.NO_PIPELINE
 import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.ApplyBufferDefiner
 import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.ArgumentStateBufferDefiner
-import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.ArgumentStateDefiner
 import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.AttachBufferDefiner
 import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.BufferDefiner
 import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.DelegateBufferDefiner
@@ -63,59 +62,62 @@ object PipelineTreeBuilder {
     val fusedPlans = new ArrayBuffer[LogicalPlan]
     val middlePlans = new ArrayBuffer[LogicalPlan]
     var serial: Boolean = false
+
+    def result: PipelineDefinition = PipelineDefinition(id, lhs, rhs, headPlan, fusedPlans, inputBuffer.result, outputDefinition, middlePlans, serial)
   }
 
   // In the execution graph for cartesian product we directly connect an applyBuffer with the LHS of an
   // LHSAccumulatingRHSStreamingBuffer. We use NO_PIPELINE_BUILD to signal that.
   val NO_PIPELINE_BUILD = new PipelineDefiner(PipelineId.NO_PIPELINE, null)
 
-  /**
-   * Builder for [[ArgumentStateDefinition]]
-   */
-  case class ArgumentStateDefiner(id: ArgumentStateMapId,
-                                  planId: Id,
-                                  argumentSlotOffset: Int)
-
   sealed trait DownstreamStateOperator
   case class DownstreamReduce(id: ArgumentStateMapId) extends DownstreamStateOperator
   case class DownstreamWorkCanceller(id: ArgumentStateMapId) extends DownstreamStateOperator
   case class DownstreamState(id: ArgumentStateMapId) extends DownstreamStateOperator
 
-  /**
-   * Builder for [[BufferDefinition]]
-   */
   abstract class BufferDefiner(val id: BufferId, val operatorId: Id, val bufferConfiguration: SlotConfiguration) {
     val downstreamStates = new ArrayBuffer[DownstreamStateOperator]
+
+    def result: BufferDefinition = {
+      val downstreamReducers = downstreamStates.collect { case d: DownstreamReduce => d.id }
+      val workCancellerIDs = downstreamStates.collect { case d: DownstreamWorkCanceller => d.id }
+      val downstreamStateIDs = downstreamStates.collect { case d: DownstreamState => d.id }
+
+      BufferDefinition(id,
+                       operatorId,
+                       downstreamReducers.toArray,
+                       workCancellerIDs.toArray,
+                       downstreamStateIDs.toArray,
+                       variant
+                     )(bufferConfiguration)
+    }
+
+    protected def variant: BufferVariant
   }
 
-  /**
-   * Builder for [[RegularBufferVariant]]
-   */
   class MorselBufferDefiner(id: BufferId,
                             operatorId: Id,
                             val producingPipelineId: PipelineId,
-                            bufferConfiguration: SlotConfiguration) extends BufferDefiner(id, operatorId, bufferConfiguration)
+                            bufferConfiguration: SlotConfiguration) extends BufferDefiner(id, operatorId, bufferConfiguration) {
+    override protected def variant: BufferVariant = RegularBufferVariant
+  }
 
-  /**
-   * Builder for [[OptionalBufferVariant]]
-   */
   class OptionalMorselBufferDefiner(id: BufferId,
                                     operatorId: Id,
                                     val producingPipelineId: PipelineId,
                                     val argumentStateMapId: ArgumentStateMapId,
                                     val argumentSlotOffset: Int,
-                                    bufferConfiguration: SlotConfiguration) extends BufferDefiner(id, operatorId, bufferConfiguration)
-  /**
-   * Builder for [[RegularBufferVariant]], that is a delegate.
-   */
+                                    bufferConfiguration: SlotConfiguration) extends BufferDefiner(id, operatorId, bufferConfiguration) {
+    override protected def variant: BufferVariant = OptionalBufferVariant(argumentStateMapId)
+  }
+
   class DelegateBufferDefiner(id: BufferId,
                               operatorId: Id,
                               val applyBuffer: ApplyBufferDefiner,
-                              bufferConfiguration: SlotConfiguration) extends BufferDefiner(id, operatorId, bufferConfiguration)
+                              bufferConfiguration: SlotConfiguration) extends BufferDefiner(id, operatorId, bufferConfiguration) {
+    override protected def variant: BufferVariant = RegularBufferVariant
+  }
 
-  /**
-   * Builder for [[ApplyBufferVariant]]
-   */
   class ApplyBufferDefiner(id: BufferId,
                            operatorId: Id,
                            producingPipelineId: PipelineId,
@@ -123,13 +125,15 @@ object PipelineTreeBuilder {
                            bufferSlotConfiguration: SlotConfiguration
                           ) extends MorselBufferDefiner(id, operatorId, producingPipelineId, bufferSlotConfiguration) {
     // These are ArgumentStates of reducers on the RHS
-    val reducersOnRHS = new ArrayBuffer[ArgumentStateDefiner]
+    val reducersOnRHS = new ArrayBuffer[ArgumentStateDefinition]
     val delegates: ArrayBuffer[BufferId] = new ArrayBuffer[BufferId]()
+
+    override protected def variant: BufferVariant =
+      ApplyBufferVariant(argumentSlotOffset,
+                         reducersOnRHS.map(argStateBuild => argStateBuild.id).reverse.toArray,
+                         delegates.toArray)
   }
 
-  /**
-   * Builder for [[AttachBufferVariant]]
-   */
   class AttachBufferDefiner(id: BufferId,
                             operatorId: Id,
                             inputSlotConfiguration: SlotConfiguration,
@@ -139,58 +143,57 @@ object PipelineTreeBuilder {
                            ) extends BufferDefiner(id, operatorId, inputSlotConfiguration) {
 
     var applyBuffer: ApplyBufferDefiner = _
+
+    override protected def variant: BufferVariant = AttachBufferVariant(applyBuffer.result, outputSlotConfiguration, argumentSlotOffset, argumentSize)
   }
 
-  /**
-   * Builder for [[ArgumentStateBufferVariant]]
-   */
   class ArgumentStateBufferDefiner(id: BufferId,
                                    operatorId: Id,
                                    producingPipelineId: PipelineId,
                                    val argumentStateMapId: ArgumentStateMapId,
-                                   bufferSlotConfiguration: SlotConfiguration) extends MorselBufferDefiner(id, operatorId, producingPipelineId, bufferSlotConfiguration)
+                                   bufferSlotConfiguration: SlotConfiguration) extends MorselBufferDefiner(id, operatorId, producingPipelineId, bufferSlotConfiguration) {
+    override protected def variant: BufferVariant = ArgumentStateBufferVariant(argumentStateMapId)
+  }
 
 
-  /**
-   * Builder for [[LHSAccumulatingBufferVariant]]
-   */
   class LHSAccumulatingBufferDefiner(id: BufferId,
                                      operatorId: Id,
                                      val argumentStateMapId: ArgumentStateMapId,
                                      val producingPipelineId: PipelineId,
-                                     bufferSlotConfiguration: SlotConfiguration) extends BufferDefiner(id, operatorId, bufferSlotConfiguration)
+                                     bufferSlotConfiguration: SlotConfiguration) extends BufferDefiner(id, operatorId, bufferSlotConfiguration) {
+    override protected def variant: BufferVariant = LHSAccumulatingBufferVariant(id, argumentStateMapId)
+  }
 
-  /**
-   * Builder for [[RHSStreamingBufferVariant]]
-   */
   class RHSStreamingBufferDefiner(id: BufferId,
                                   operatorId: Id,
                                   val argumentStateMapId: ArgumentStateMapId,
                                   val producingPipelineId: PipelineId,
-                                  bufferSlotConfiguration: SlotConfiguration) extends BufferDefiner(id, operatorId, bufferSlotConfiguration)
+                                  bufferSlotConfiguration: SlotConfiguration) extends BufferDefiner(id, operatorId, bufferSlotConfiguration) {
+    override protected def variant: BufferVariant = RHSStreamingBufferVariant(id, argumentStateMapId)
+  }
 
-  /**
-   * Builder for [[LHSAccumulatingRHSStreamingBufferVariant]]
-   */
   class LHSAccumulatingRHSStreamingBufferDefiner(id: BufferId,
                                                  operatorId: Id,
                                                  val lhsSink: LHSAccumulatingBufferDefiner,
                                                  val rhsSink: RHSStreamingBufferDefiner,
                                                  val lhsArgumentStateMapId: ArgumentStateMapId,
                                                  val rhsArgumentStateMapId: ArgumentStateMapId,
-                                                 bufferSlotConfiguration: SlotConfiguration) extends BufferDefiner(id, operatorId, bufferSlotConfiguration)
+                                                 bufferSlotConfiguration: SlotConfiguration) extends BufferDefiner(id, operatorId, bufferSlotConfiguration) {
+    override protected def variant: BufferVariant =
+      LHSAccumulatingRHSStreamingBufferVariant(lhsSink.result, rhsSink.result, lhsArgumentStateMapId, rhsArgumentStateMapId)
+  }
 
   /**
    * Builder for [[ExecutionGraphDefinition]]
    */
   class ExecutionStateDefiner(val physicalPlan: PhysicalPlan) {
     val buffers = new ArrayBuffer[BufferDefiner]
-    val argumentStateMaps = new ArrayBuffer[ArgumentStateDefiner]
+    val argumentStateMaps = new ArrayBuffer[ArgumentStateDefinition]
     var initBuffer: ApplyBufferDefiner = _
 
-    def newArgumentStateMap(planId: Id, argumentSlotOffset: Int): ArgumentStateDefiner = {
+    def newArgumentStateMap(planId: Id, argumentSlotOffset: Int): ArgumentStateDefinition = {
       val x = argumentStateMaps.size
-      val asm = ArgumentStateDefiner(ArgumentStateMapId(x), planId, argumentSlotOffset)
+      val asm = ArgumentStateDefinition(ArgumentStateMapId(x), planId, argumentSlotOffset)
       argumentStateMaps += asm
       asm
     }
@@ -586,7 +589,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
     */
   private def markReducerInUpstreamBuffers(buffer: BufferDefiner,
                                            applyBuffer: ApplyBufferDefiner,
-                                           argumentStateDefinition: ArgumentStateDefiner): Unit = {
+                                           argumentStateDefinition: ArgumentStateDefinition): Unit = {
     val downstreamReduce = DownstreamReduce(argumentStateDefinition.id)
     traverseBuffers(buffer,
       applyBuffer,
