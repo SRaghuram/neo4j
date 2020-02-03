@@ -5,22 +5,22 @@
  */
 package org.neo4j.cypher.internal.physicalplanning
 
-import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.ApplyBufferDefinitionBuild
-import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.ArgumentStateBufferDefinitionBuild
-import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.ArgumentStateDefinitionBuild
-import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.AttachBufferDefinitionBuild
-import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.BufferDefinitionBuild
-import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.DelegateBufferDefinitionBuild
+import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.ApplyBufferDefiner
+import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.ArgumentStateBufferDefiner
+import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.ArgumentStateDefiner
+import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.AttachBufferDefiner
+import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.BufferDefiner
+import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.DelegateBufferDefiner
 import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.DownstreamReduce
 import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.DownstreamState
 import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.DownstreamWorkCanceller
-import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.ExecutionStateDefinitionBuild
-import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.LHSAccumulatingBufferDefinitionBuild
-import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.RHSStreamingBufferDefinitionBuild
-import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.LHSAccumulatingRHSStreamingBufferDefinitionBuild
-import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.MorselBufferDefinitionBuild
-import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.OptionalMorselBufferDefinitionBuild
-import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.PipelineDefinitionBuild
+import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.ExecutionStateDefiner
+import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.LHSAccumulatingBufferDefiner
+import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.RHSStreamingBufferDefiner
+import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.LHSAccumulatingRHSStreamingBufferDefiner
+import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.MorselBufferDefiner
+import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.OptionalMorselBufferDefiner
+import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.PipelineDefiner
 
 object PipelineBuilder {
 
@@ -31,18 +31,18 @@ object PipelineBuilder {
             operatorFusionPolicy: OperatorFusionPolicy,
             physicalPlan: PhysicalPlan): ExecutionGraphDefinition = {
 
-    val executionStateDefinitionBuild = new ExecutionStateDefinitionBuild(physicalPlan)
-    val pipelineTreeBuilder = new PipelineTreeBuilder(breakingPolicy, operatorFusionPolicy, executionStateDefinitionBuild, physicalPlan.slotConfigurations, physicalPlan.argumentSizes)
+    val executionStateDefiner = new ExecutionStateDefiner(physicalPlan)
+    val pipelineTreeBuilder = new PipelineTreeBuilder(breakingPolicy, operatorFusionPolicy, executionStateDefiner, physicalPlan.slotConfigurations, physicalPlan.argumentSizes)
 
     pipelineTreeBuilder.build(physicalPlan.logicalPlan)
     ExecutionGraphDefinition(physicalPlan,
-      executionStateDefinitionBuild.buffers.map(mapBuffer),
-      executionStateDefinitionBuild.argumentStateMaps.map(mapArgumentStateDefinition),
+      executionStateDefiner.buffers.map(mapBuffer),
+      executionStateDefiner.argumentStateMaps.map(mapArgumentStateDefinition),
       pipelineTreeBuilder.pipelines.map(mapPipeline),
       pipelineTreeBuilder.applyRhsPlans.toMap)
   }
 
-  private def mapPipeline(pipeline: PipelineDefinitionBuild): PipelineDefinition = {
+  private def mapPipeline(pipeline: PipelineDefiner): PipelineDefinition = {
     PipelineDefinition(
       pipeline.id,
       pipeline.lhs,
@@ -55,59 +55,59 @@ object PipelineBuilder {
       pipeline.serial)
   }
 
-  private def mapBuffer(bufferDefinition: BufferDefinitionBuild): BufferDefinition = {
-    val downstreamReducers = bufferDefinition.downstreamStates.collect { case d: DownstreamReduce => d.id }
-    val workCancellerIDs = bufferDefinition.downstreamStates.collect { case d: DownstreamWorkCanceller => d.id }
-    val downstreamStateIDs = bufferDefinition.downstreamStates.collect { case d: DownstreamState => d.id }
+  private def mapBuffer(bufferDefiner: BufferDefiner): BufferDefinition = {
+    val downstreamReducers = bufferDefiner.downstreamStates.collect { case d: DownstreamReduce => d.id }
+    val workCancellerIDs = bufferDefiner.downstreamStates.collect { case d: DownstreamWorkCanceller => d.id }
+    val downstreamStateIDs = bufferDefiner.downstreamStates.collect { case d: DownstreamState => d.id }
 
-    val variant = bufferDefinition match {
-      case b: AttachBufferDefinitionBuild =>
+    val variant = bufferDefiner match {
+      case b: AttachBufferDefiner =>
         AttachBufferVariant(mapBuffer(b.applyBuffer), b.outputSlotConfiguration, b.argumentSlotOffset, b.argumentSize)
 
-      case b: ApplyBufferDefinitionBuild =>
+      case b: ApplyBufferDefiner =>
         ApplyBufferVariant(b.argumentSlotOffset,
           b.reducersOnRHS.map(argStateBuild => argStateBuild.id).reverse.toArray,
           b.delegates.toArray)
 
-      case b: ArgumentStateBufferDefinitionBuild =>
+      case b: ArgumentStateBufferDefiner =>
         ArgumentStateBufferVariant(b.argumentStateMapId)
 
-      case b: MorselBufferDefinitionBuild =>
+      case _: MorselBufferDefiner =>
         RegularBufferVariant
 
-      case b: OptionalMorselBufferDefinitionBuild =>
+      case b: OptionalMorselBufferDefiner =>
         OptionalBufferVariant(b.argumentStateMapId)
 
-      case b: DelegateBufferDefinitionBuild =>
+      case _: DelegateBufferDefiner =>
         RegularBufferVariant
 
-      case b: LHSAccumulatingBufferDefinitionBuild =>
+      case b: LHSAccumulatingBufferDefiner =>
         LHSAccumulatingBufferVariant(b.id,
                                      b.argumentStateMapId)
 
-      case b: RHSStreamingBufferDefinitionBuild =>
+      case b: RHSStreamingBufferDefiner =>
         RHSStreamingBufferVariant(b.id,
                                   b.argumentStateMapId)
 
-      case b: LHSAccumulatingRHSStreamingBufferDefinitionBuild =>
+      case b: LHSAccumulatingRHSStreamingBufferDefiner =>
         LHSAccumulatingRHSStreamingBufferVariant(mapBuffer(b.lhsSink),
                                                  mapBuffer(b.rhsSink),
                                                  b.lhsArgumentStateMapId,
                                                  b.rhsArgumentStateMapId)
 
       case _ =>
-        throw new IllegalStateException(s"Unexpected type of BufferDefinitionBuild: $bufferDefinition")
+        throw new IllegalStateException(s"Unexpected type of BufferDefiner: $bufferDefiner")
     }
-    BufferDefinition(bufferDefinition.id,
-      bufferDefinition.operatorId,
+    BufferDefinition(bufferDefiner.id,
+      bufferDefiner.operatorId,
       downstreamReducers.toArray,
       workCancellerIDs.toArray,
       downstreamStateIDs.toArray,
       variant
-    )(bufferDefinition.bufferConfiguration)
+    )(bufferDefiner.bufferConfiguration)
   }
 
-  private def mapArgumentStateDefinition(build: ArgumentStateDefinitionBuild): ArgumentStateDefinition =
+  private def mapArgumentStateDefinition(build: ArgumentStateDefiner): ArgumentStateDefinition =
     ArgumentStateDefinition(build.id, build.planId, build.argumentSlotOffset)
 
 }

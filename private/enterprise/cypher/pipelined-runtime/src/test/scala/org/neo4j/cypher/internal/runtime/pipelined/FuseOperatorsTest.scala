@@ -38,7 +38,7 @@ import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.Slo
 import org.neo4j.cypher.internal.physicalplanning.PipelineDefinition
 import org.neo4j.cypher.internal.physicalplanning.PipelineId
 import org.neo4j.cypher.internal.physicalplanning.PipelineId.NO_PIPELINE
-import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.PipelineDefinitionBuild
+import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.PipelineDefiner
 import org.neo4j.cypher.internal.physicalplanning.ProduceResultOutput
 import org.neo4j.cypher.internal.physicalplanning.ReduceOutput
 import org.neo4j.cypher.internal.physicalplanning.RefSlot
@@ -394,7 +394,7 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
     private var current = head
     private var bufferId = 0
     val applyPlans = new ApplyPlans()
-    val pipeline = new PipelineDefinitionBuild(PipelineId(3), head)
+    val pipeline = new PipelineDefiner(PipelineId(3), head)
     if (fusionPolicy.canFuse(head)) {
       pipeline.fusedPlans += head
     }
