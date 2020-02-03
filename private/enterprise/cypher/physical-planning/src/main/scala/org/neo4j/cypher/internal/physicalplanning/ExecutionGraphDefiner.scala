@@ -22,14 +22,14 @@ import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.MorselBuff
 import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.OptionalMorselBufferDefiner
 import org.neo4j.cypher.internal.physicalplanning.PipelineTreeBuilder.PipelineDefiner
 
-object PipelineBuilder {
+object ExecutionGraphDefiner {
 
   /**
    * Builds an [[ExecutionGraphDefinition]], including [[PipelineDefinition]]s, for a given physical plan.
    */
-  def build(breakingPolicy: PipelineBreakingPolicy,
-            operatorFusionPolicy: OperatorFusionPolicy,
-            physicalPlan: PhysicalPlan): ExecutionGraphDefinition = {
+  def defineFrom(breakingPolicy: PipelineBreakingPolicy,
+                 operatorFusionPolicy: OperatorFusionPolicy,
+                 physicalPlan: PhysicalPlan): ExecutionGraphDefinition = {
 
     val executionStateDefiner = new ExecutionStateDefiner(physicalPlan)
     val pipelineTreeBuilder = new PipelineTreeBuilder(breakingPolicy, operatorFusionPolicy, executionStateDefiner, physicalPlan.slotConfigurations, physicalPlan.argumentSizes)

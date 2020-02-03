@@ -12,11 +12,11 @@ import org.neo4j.cypher.internal.PipelinedRuntime.CODE_GEN_FAILED_MESSAGE
 import org.neo4j.cypher.internal.compiler.CodeGenerationFailedNotification
 import org.neo4j.cypher.internal.compiler.ExperimentalFeatureNotification
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
+import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefiner
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
 import org.neo4j.cypher.internal.physicalplanning.OperatorFusionPolicy
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanner
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.RewrittenPlans
-import org.neo4j.cypher.internal.physicalplanning.PipelineBuilder
 import org.neo4j.cypher.internal.physicalplanning.ProduceResultOutput
 import org.neo4j.cypher.internal.plandescription.Argument
 import org.neo4j.cypher.internal.plandescription.Arguments.PipelineInfo
@@ -53,9 +53,9 @@ import org.neo4j.cypher.internal.runtime.pipelined.tracing.SchedulerTracer
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper
 import org.neo4j.cypher.internal.runtime.slotted.expressions.CompiledExpressionConverter
 import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionConverters
-import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.internal.util.CypherException
 import org.neo4j.cypher.internal.util.InternalNotification
+import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.result.QueryProfile
 import org.neo4j.cypher.result.RuntimeResult
 import org.neo4j.cypher.result.RuntimeResult.ConsumptionState
@@ -185,7 +185,7 @@ class PipelinedRuntime private(parallelExecution: Boolean,
     //=======================================================
 
     DebugLog.logDiff("PhysicalPlanner.plan")
-    val executionGraphDefinition = PipelineBuilder.build(breakingPolicy, operatorFusionPolicy, physicalPlan)
+    val executionGraphDefinition = ExecutionGraphDefiner.defineFrom(breakingPolicy, operatorFusionPolicy, physicalPlan)
 
     // Currently only interpreted pipes can do writes. Ask the policy if it is allowed.
     val readOnly = interpretedPipesFallbackPolicy.readOnly

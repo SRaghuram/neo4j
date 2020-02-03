@@ -43,7 +43,7 @@ import scala.collection.mutable.ArrayBuffer
 
 /**
  * Collection of mutable builder classes that are modified by [[PipelineTreeBuilder]] and finally
- * converted to an [[ExecutionGraphDefinition]] by the [[PipelineBuilder]].
+ * converted to an [[ExecutionGraphDefinition]] by the [[ExecutionGraphDefiner]].
  */
 object PipelineTreeBuilder {
   /**
@@ -300,7 +300,7 @@ object PipelineTreeBuilder {
 
 /**
  * Fills an [[ExecutionStateDefiner]] and and array of [[PipelineDefiner]]s.
- * Final conversion to [[ExecutionGraphDefinition]] is done by [[PipelineBuilder]].
+ * Final conversion to [[ExecutionGraphDefinition]] is done by [[ExecutionGraphDefiner]].
  */
 class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
                           operatorFusionPolicy: OperatorFusionPolicy,
