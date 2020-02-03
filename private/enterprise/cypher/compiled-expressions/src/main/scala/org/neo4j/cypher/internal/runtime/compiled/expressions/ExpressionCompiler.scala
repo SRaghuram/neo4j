@@ -454,7 +454,8 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
         val matches = namer.nextVariableName()
         val isNull = namer.nextVariableName()
         val isMatch = namer.nextVariableName()
-        val ops = Seq(
+        val result = namer.nextVariableName()
+        val lazySet = oneTime(declareAndAssign(typeRefOf[Value], result, block(
           // ListValue list = [evaluate collection expression];
           // int matches = 0;
           // boolean isNull = false;
@@ -503,10 +504,14 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
                   noValue,
                   invokeStatic(method[Values, BooleanValue, Boolean]("booleanValue"),
                                equal(load(matches), constant(1))))
-        )
-        IntermediateExpression(block(ops: _*), collection.fields ++ inner.fields,
+        )))
+
+        val ops = block(lazySet, load(result))
+        val resultNullCheck = block(lazySet, equal(load(result), noValue))
+
+        IntermediateExpression(ops, collection.fields ++ inner.fields,
                                collection.variables ++ inner.variables,
-                               collection.nullChecks)
+                               collection.nullChecks + resultNullCheck)
       }
 
     case NoneIterablePredicate(scope, collectionExpression) =>
@@ -536,7 +541,8 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
         val currentValue = namer.nextVariableName()
         val isMatch = namer.nextVariableName()
         val isNull = namer.nextVariableName()
-        val ops = Seq(
+        val result = namer.nextVariableName()
+        val lazySet = oneTime(declareAndAssign(typeRefOf[Value], result, block(
           // ListValue list = [evaluate collection expression];
           // Value isMatch = Values.NO_VALUE;
           // boolean isNull = false;
@@ -579,10 +585,14 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
           ternary(and(load(isNull), notEqual(load(isMatch), trueValue)),
                   noValue,
                   invokeStatic(method[Values, BooleanValue, Boolean]("booleanValue"), equal(load(isMatch), falseValue)))
-        )
-        IntermediateExpression(block(ops: _*), collection.fields ++ inner.fields,
+        )))
+
+        val ops = block(lazySet, load(result))
+        val resultNullCheck = block(lazySet, equal(load(result), noValue))
+
+        IntermediateExpression(ops, collection.fields ++ inner.fields,
                                collection.variables ++ inner.variables,
-                               collection.nullChecks)
+                               collection.nullChecks + resultNullCheck)
       }
 
     case AnyIterablePredicate(scope, collectionExpression) =>
@@ -612,7 +622,8 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
         val currentValue = namer.nextVariableName()
         val isMatch = namer.nextVariableName()
         val isNull = namer.nextVariableName()
-        val ops = Seq(
+        val result = namer.nextVariableName()
+        val lazySet = oneTime(declareAndAssign(typeRefOf[Value], result, block(
           // ListValue list = [evaluate collection expression];
           // Value isMatch = Values.FALSE;
           // boolean isNull = false;
@@ -652,10 +663,14 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
           ternary(and(load(isNull), notEqual(load(isMatch), trueValue)),
                   noValue,
                   load(isMatch))
-        )
-        IntermediateExpression(block(ops: _*), collection.fields ++ inner.fields,
+        )))
+
+        val ops = block(lazySet, load(result))
+        val resultNullCheck = block(lazySet, equal(load(result), noValue))
+
+        IntermediateExpression(ops, collection.fields ++ inner.fields,
                                collection.variables ++ inner.variables,
-                               collection.nullChecks)
+                               collection.nullChecks + resultNullCheck)
       }
 
     case AllIterablePredicate(scope, collectionExpression) =>
@@ -679,7 +694,7 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
         val listVar = namer.nextVariableName()
         val currentValue = namer.nextVariableName()
         val isMatch = namer.nextVariableName()
-        val ops = Seq(
+        val lazySet = oneTime(block(
           // ListValue list = [evaluate collection expression];
           // Value isMatch = Values.TRUE;
           declare[ListValue](listVar),
@@ -703,14 +718,16 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
               // isMatch = [result from inner expression]
               assign(isMatch, nullCheckIfRequired(inner))
             ): _*)
-          },
-          // }
-          // return isMatch;
-          load(isMatch)
-        )
-        IntermediateExpression(block(ops: _*), collection.fields ++ inner.fields,
+          }
+        ))
+        // }
+        // return isMatch;
+        val ops = block(lazySet, load(isMatch))
+        val resultNullCheck = block(lazySet, equal(load(isMatch), noValue))
+
+        IntermediateExpression(ops, collection.fields ++ inner.fields,
                                collection.variables ++ inner.variables,
-                               collection.nullChecks)
+                               collection.nullChecks + resultNullCheck)
       }
 
     case ListComprehension(scope, list) =>
@@ -2179,7 +2196,7 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
     *    {
     *      error = e;
     *    }
-    *    seenValue = returnValue == FALSE ? false : (seenValue ? true : returnValue == NO_VALUE);
+    *    seenNull = returnValue == FALSE ? false : (seenNull ? true : returnValue == NO_VALUE);
     *    if ( returnValue != FALSE )
     *    {
     *       try
@@ -2190,7 +2207,7 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
     *       {
     *         error = e;
     *       }
-    *       seenValue = returnValue == FALSE ? false : (seenValue ? true : returnValue == NO_VALUE);
+    *       seenNull = returnValue == FALSE ? false : (seenNull ? true : returnValue == NO_VALUE);
     *       ...[continue unroll until we are at the end of expressions]
     *     }
     * }

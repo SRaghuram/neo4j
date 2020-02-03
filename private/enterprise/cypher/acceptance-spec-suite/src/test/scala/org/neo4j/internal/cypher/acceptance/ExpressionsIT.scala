@@ -1920,6 +1920,15 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     evaluate(compiled, 1) should equal(Values.FALSE)
   }
 
+  test("anded single in list with null predicate") {
+    //When, single(bar IN [1] WHERE null) && true
+    val bar = ExpressionVariable(0, "bar")
+    val compiled = compile(ands(singleInList(bar, listOf(literalInt(1)), nullLiteral), trueLiteral))
+
+    //Then
+    evaluate(compiled, 1) should equal(NO_VALUE)
+  }
+
 
   test("none in list function basic") {
     //When
@@ -1967,6 +1976,15 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     //When, none(bar IN null WHERE bar = null)
     val bar = ExpressionVariable(0, "bar")
     val compiled = compile(noneInList(bar, listOfString("a", "aa", "aaa"), equals(bar, nullLiteral )))
+
+    //Then
+    evaluate(compiled, 1) should equal(NO_VALUE)
+  }
+
+  test("anded none in list with null predicate") {
+    //When, none(bar IN [1] WHERE null) && true
+    val bar = ExpressionVariable(0, "bar")
+    val compiled = compile(ands(noneInList(bar, listOf(literalInt(1)), nullLiteral), trueLiteral))
 
     //Then
     evaluate(compiled, 1) should equal(NO_VALUE)
@@ -2092,6 +2110,15 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     evaluate(compiled, 1) should equal(Values.FALSE)
   }
 
+  test("anded any in list with null predicate") {
+    //When, any(bar IN [1] WHERE null) && true
+    val bar = ExpressionVariable(0, "bar")
+    val compiled = compile(ands(anyInList(bar, listOf(literalInt(1)), nullLiteral), trueLiteral))
+
+    //Then
+    evaluate(compiled, 1) should equal(NO_VALUE)
+  }
+
   test("all in list function basic") {
     //When
     val bar = ExpressionVariable(0, "bar")
@@ -2175,6 +2202,15 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
     //Then
     evaluate(compiled, 1) should equal(Values.TRUE)
+  }
+
+  test("anded all in list with null predicate") {
+    //When, all(bar IN [1] WHERE null) && true
+    val bar = ExpressionVariable(0, "bar")
+    val compiled = compile(ands(allInList(bar, listOf(literalInt(1)), nullLiteral), trueLiteral))
+
+    //Then
+    evaluate(compiled, 1) should equal(NO_VALUE)
   }
 
   test("filter basic") {
