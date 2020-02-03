@@ -9,13 +9,11 @@ import com.neo4j.dbms.Transitions.Transition;
 import com.neo4j.dbms.database.MultiDatabaseManager;
 
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
@@ -87,7 +85,6 @@ public class DbmsReconciler implements DatabaseStateService
     private final ReconcilerExecutors executors;
     private final Map<String,CompletableFuture<ReconcilerStepResult>> waitingJobCache;
 
-    private final Set<String> reconciling;
     private final MultiDatabaseManager<? extends DatabaseContext> databaseManager;
     private final BinaryOperator<EnterpriseDatabaseState> precedence;
     private final Log log;
@@ -95,6 +92,7 @@ public class DbmsReconciler implements DatabaseStateService
     protected final Map<String,EnterpriseDatabaseState> currentStates;
     private final Transitions transitions;
     private final List<DatabaseStateChangedListener> listeners;
+    private final ReconcilerLocks locks;
 
     DbmsReconciler( MultiDatabaseManager<? extends DatabaseContext> databaseManager, Config config, LogProvider logProvider, JobScheduler scheduler )
     {
@@ -106,7 +104,7 @@ public class DbmsReconciler implements DatabaseStateService
                 config.get( GraphDatabaseSettings.reconciler_maximum_backoff ) );
 
         this.executors = new ReconcilerExecutors( scheduler, config );
-        this.reconciling = new HashSet<>();
+        this.locks = new ReconcilerLocks();
         this.currentStates = new ConcurrentHashMap<>();
         this.waitingJobCache = new ConcurrentHashMap<>();
         this.log = logProvider.getLog( getClass() );
@@ -262,7 +260,7 @@ public class DbmsReconciler implements DatabaseStateService
             try
             {
                 log.debug( "Attempting to acquire lock before reconciling state of database `%s`.", databaseName );
-                acquireLockOn( databaseName );
+                locks.acquireLockOn( databaseName );
 
                 if ( request.isPriorityRequestForDatabase( databaseName ) )
                 {
@@ -391,7 +389,7 @@ public class DbmsReconciler implements DatabaseStateService
         }
         finally
         {
-            releaseLockOn( databaseName );
+            locks.releaseLockOn( databaseName );
             var errorExists = throwable != null || result.error() != null;
             var outcome = errorExists ? "failed" : "succeeded";
             log.debug( "Released lock having %s to reconcile database `%s` to state %s.", outcome, databaseName,
@@ -466,26 +464,6 @@ public class DbmsReconciler implements DatabaseStateService
         return request.causeOfPanic( namedDatabaseId );
     }
 
-    private void releaseLockOn( String databaseName )
-    {
-        synchronized ( reconciling )
-        {
-            reconciling.remove( databaseName );
-            reconciling.notifyAll();
-        }
-    }
-
-    private void acquireLockOn( String databaseName ) throws InterruptedException
-    {
-        synchronized ( reconciling )
-        {
-            while ( reconciling.contains( databaseName ) )
-            {
-                reconciling.wait();
-            }
-            reconciling.add( databaseName );
-        }
-    }
 
     private boolean isFatalError( Throwable t )
     {
