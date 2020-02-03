@@ -439,13 +439,13 @@ class ExpandAllOperatorTaskTemplate(inner: OperatorTaskTemplate,
   private def findExpansionMethod: Method = {
     dir match {
       case OUTGOING =>
-        method[RelationshipSelections, RelationshipTraversalCursor, NodeCursor, Array[Int]](
+        method[RelationshipSelections, RelationshipTraversalCursor, RelationshipTraversalCursor, NodeCursor, Array[Int]](
           "outgoingCursor")
       case INCOMING =>
-        method[RelationshipSelections, RelationshipTraversalCursor, NodeCursor, Array[Int]](
+        method[RelationshipSelections, RelationshipTraversalCursor, RelationshipTraversalCursor, NodeCursor, Array[Int]](
           "incomingCursor")
       case BOTH =>
-        method[RelationshipSelections, RelationshipTraversalCursor, NodeCursor, Array[Int]](
+        method[RelationshipSelections, RelationshipTraversalCursor, RelationshipTraversalCursor, NodeCursor, Array[Int]](
           "allCursor")
     }
   }
