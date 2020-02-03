@@ -260,7 +260,7 @@ public class DbmsReconciler implements DatabaseStateService
             try
             {
                 log.debug( "Attempting to acquire lock before reconciling state of database `%s`.", databaseName );
-                locks.acquireLockOn( databaseName );
+                locks.acquireLockOn( request, databaseName );
 
                 if ( request.isPriorityRequestForDatabase( databaseName ) )
                 {
