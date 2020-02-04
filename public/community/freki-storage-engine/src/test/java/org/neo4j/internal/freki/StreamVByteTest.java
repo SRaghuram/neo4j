@@ -19,8 +19,9 @@
  */
 package org.neo4j.internal.freki;
 
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.nio.ByteBuffer;
 
@@ -39,8 +40,9 @@ class StreamVByteTest
     @Inject
     private RandomRule random;
 
-    @Test
-    void shouldWriteAndRead()
+    @ParameterizedTest
+    @ValueSource( booleans = {true, false} )
+    void shouldWriteAndRead( boolean randomExistingData )
     {
         // given
         int[] values = new int[random.nextInt( 0, 1_000 )];
@@ -53,7 +55,7 @@ class StreamVByteTest
         }
 
         // when
-        ByteBuffer data = ByteBuffer.wrap( new byte[10_000] );
+        ByteBuffer data = newTargetBuffer( 10_000, randomExistingData );
         StreamVByte.writeIntDeltas( values, data );
         int writeOffset = data.position();
 
@@ -66,8 +68,9 @@ class StreamVByteTest
         assertEquals( writeOffset, readOffset );
     }
 
-    @Test
-    void shouldWriteAndReadSmall()
+    @ParameterizedTest
+    @ValueSource( booleans = {true, false} )
+    void shouldWriteAndReadSmall( boolean randomExistingData )
     {
         // given
         int[] values = new int[random.nextInt( 0, 2 )];
@@ -79,7 +82,7 @@ class StreamVByteTest
         }
 
         // when
-        ByteBuffer data = ByteBuffer.wrap( new byte[50] );
+        ByteBuffer data = newTargetBuffer( 50, randomExistingData );
         StreamVByte.writeIntDeltas( values, data );
         int writeOffset = data.position();
 
@@ -93,8 +96,9 @@ class StreamVByteTest
         assertEquals( values.length + 1, writeOffset );
     }
 
-    @Test
-    void shouldWriteAndReadLongs()
+    @ParameterizedTest
+    @ValueSource( booleans = {true, false} )
+    void shouldWriteAndReadLongs( boolean randomExistingData )
     {
         // given
         long[] values = new long[random.nextInt( 0, 1_000 )];
@@ -105,7 +109,7 @@ class StreamVByteTest
         }
 
         // when
-        ByteBuffer data = ByteBuffer.wrap( new byte[50_000] );
+        ByteBuffer data = newTargetBuffer( 50_000, randomExistingData );
         StreamVByte.writeLongs( values, data );
         int writeOffset = data.position();
 
@@ -115,5 +119,15 @@ class StreamVByteTest
         assertArrayEquals( values, readValues );
         int readOffset = data.position();
         assertEquals( writeOffset, readOffset );
+    }
+
+    private ByteBuffer newTargetBuffer( int length, boolean randomExistingData )
+    {
+        ByteBuffer data = ByteBuffer.wrap( new byte[length] );
+        if ( randomExistingData )
+        {
+            random.nextBytes( data.array() );
+        }
+        return data;
     }
 }

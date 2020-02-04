@@ -113,6 +113,12 @@ class InMemoryTestStore extends LifecycleAdapter implements SimpleStore
         return data.contains( id );
     }
 
+    @Override
+    public void close() throws Exception
+    {
+        shutdown();
+    }
+
     // Basically this isn't used, it's just something to call close()
     static PageCursor NO_PAGE_CURSOR = new ByteArrayPageCursor( new byte[0] );
 }

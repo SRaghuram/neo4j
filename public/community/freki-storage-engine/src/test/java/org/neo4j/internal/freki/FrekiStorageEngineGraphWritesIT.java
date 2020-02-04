@@ -60,6 +60,7 @@ import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.DatabaseEventListeners;
 import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.monitoring.DatabasePanicEventGenerator;
+import org.neo4j.storageengine.api.CommandCreationContext;
 import org.neo4j.storageengine.api.CommandsToApply;
 import org.neo4j.storageengine.api.PropertyKeyValue;
 import org.neo4j.storageengine.api.StandardConstraintRuleAccessor;
@@ -196,6 +197,10 @@ public class FrekiStorageEngineGraphWritesIT
             Set<StorageProperty> addedNodeProperties = asSet( new PropertyKeyValue( 2, longValue( 202 ) ) );
             target.visitNodePropertyChanges( nodeId1, addedNodeProperties, Collections.emptyList(), IntSets.immutable.empty() );
             nodeProperties.addAll( addedNodeProperties );
+            for ( RelationshipSpec relationship : relationships )
+            {
+                target.visitCreatedRelationship( -1, relationship.type, relationship.startNodeId, relationship.endNodeId, relationshipProperties );
+            }
         } );
 
         // then
@@ -224,6 +229,51 @@ public class FrekiStorageEngineGraphWritesIT
             for ( int i = 0; i < 30; i++ )
             {
                 long otherNodeId = nodeId + i + 1;
+                int type = i % 3;
+                target.visitCreatedNode( otherNodeId );
+                target.visitCreatedRelationship( -1, type, nodeId, otherNodeId, emptyList() );
+                relationships.add( new RelationshipSpec( nodeId, type, otherNodeId, emptySet() ) );
+            }
+        } );
+
+        // then
+        assertContentsOfNode( nodeId, labelIds, nodeProperties, relationships );
+    }
+
+    @Test
+    void shouldUpdateOverflowedRecord() throws Exception
+    {
+        // given
+        CommandCreationContext commandCreationContext = storageEngine.newCommandCreationContext( NULL );
+        long nodeId = commandCreationContext.reserveNode();
+        LongSet labelIds = LongSets.immutable.of( 34, 563 );
+        Set<StorageProperty> nodeProperties = asSet(
+                new PropertyKeyValue( 1, intValue( 101 ) ),
+                new PropertyKeyValue( 2, longValue( 101101 ) ),
+                new PropertyKeyValue( 3, doubleValue( 101.101 ) ),
+                new PropertyKeyValue( 7, stringValue( "abcdef" ) ) );
+        Set<RelationshipSpec> relationships = new HashSet<>();
+        createAndApplyTransaction( target ->
+        {
+            target.visitCreatedNode( nodeId );
+            target.visitNodeLabelChanges( nodeId, labelIds, LongSets.immutable.empty() );
+            target.visitNodePropertyChanges( nodeId, nodeProperties, emptyList(), IntSets.immutable.empty() );
+            for ( int i = 0; i < 20; i++ )
+            {
+                long otherNodeId = commandCreationContext.reserveNode();
+                int type = i % 3;
+                target.visitCreatedNode( otherNodeId );
+                target.visitCreatedRelationship( -1, type, nodeId, otherNodeId, emptyList() );
+                relationships.add( new RelationshipSpec( nodeId, type, otherNodeId, emptySet() ) );
+            }
+        } );
+
+        // when
+        createAndApplyTransaction( target ->
+        {
+            for ( int i = 0; i < 5; i++ )
+            {
+                long otherNodeId = commandCreationContext.reserveNode();
                 int type = i % 3;
                 target.visitCreatedNode( otherNodeId );
                 target.visitCreatedRelationship( -1, type, nodeId, otherNodeId, emptyList() );

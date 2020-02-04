@@ -24,6 +24,7 @@ import org.eclipse.collections.impl.factory.primitive.IntObjectMaps;
 
 import org.neo4j.graphdb.Direction;
 import org.neo4j.storageengine.api.Degrees;
+import org.neo4j.storageengine.api.RelationshipDirection;
 
 import static org.apache.commons.lang3.ArrayUtils.EMPTY_INT_ARRAY;
 
@@ -39,6 +40,25 @@ public class EagerDegrees implements Degrees, Degrees.Mutator
     public void add( int type, int outgoing, int incoming, int loop )
     {
         getOrCreateDegree( type ).add( outgoing, incoming, loop );
+    }
+
+    public void add( int type, RelationshipDirection direction, int count )
+    {
+        switch ( direction )
+        {
+        case OUTGOING:
+            addOutgoing( type, count );
+            break;
+        case INCOMING:
+            addIncoming( type, count );
+            break;
+        case LOOP:
+            addLoop( type, count );
+            break;
+        default:
+            // ignore
+            break;
+        }
     }
 
     public void addOutgoing( int type, int count )
