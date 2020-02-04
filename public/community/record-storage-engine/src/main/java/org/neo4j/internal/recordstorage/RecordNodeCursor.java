@@ -38,6 +38,7 @@ import org.neo4j.storageengine.api.RelationshipSelection;
 import org.neo4j.storageengine.api.StorageNodeCursor;
 import org.neo4j.storageengine.api.StoragePropertyCursor;
 import org.neo4j.storageengine.api.StorageRelationshipTraversalCursor;
+import org.neo4j.storageengine.util.EagerDegrees;
 
 import static java.lang.Math.min;
 import static org.neo4j.internal.recordstorage.RelationshipReferenceEncoding.encodeDense;
