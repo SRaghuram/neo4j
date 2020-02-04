@@ -50,7 +50,7 @@ public class StandaloneDbmsReconcilerModule extends LifecycleAdapter
         this.localOperator = new LocalDbmsOperator( databaseIdRepository );
         this.reconciledTxTracker = reconciledTxTracker;
         this.systemOperator = new SystemGraphDbmsOperator( dbmsModel, reconciledTxTracker, internalLogProvider );
-        this.shutdownOperator = new ShutdownOperator( databaseManager );
+        this.shutdownOperator = new ShutdownOperator( databaseManager, globalModule.getGlobalConfig() );
         this.reconciler = reconciler;
         globalModule.getGlobalDependencies().satisfyDependency( reconciler );
         globalModule.getGlobalDependencies().satisfyDependencies( localOperator, systemOperator );
