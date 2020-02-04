@@ -154,7 +154,7 @@ class FrekiStorageEngine implements StorageEngine
             PageCursorTracer cursorTracer = cursorTracerSupplier.get();
             metaDataStore = new GBPTreeMetaDataStore( pageCache, databaseLayout.file( "meta-data-store" ), 123456789, false, pageCacheTracer, cursorTracer );
             countsStore = new GBPTreeCountsStore( pageCache, databaseLayout.countStore(), recoveryCleanupWorkCollector,
-                    initialCountsBuilder( metaDataStore ), false, GBPTreeCountsStore.NO_MONITOR );
+                    initialCountsBuilder( metaDataStore ), false, pageCacheTracer, GBPTreeCountsStore.NO_MONITOR );
             schemaStore = new GBPTreeSchemaStore( pageCache, databaseLayout.schemaStore(), recoveryCleanupWorkCollector, idGeneratorFactory, false,
                     pageCacheTracer, cursorTracer );
             propertyKeyTokenStore = new GBPTreeTokenStore( pageCache, databaseLayout.propertyKeyTokenStore(), recoveryCleanupWorkCollector,
@@ -221,7 +221,8 @@ class FrekiStorageEngine implements StorageEngine
 
     @Override
     public void createCommands( Collection<StorageCommand> target, ReadableTransactionState state, StorageReader storageReader,
-            CommandCreationContext creationContext, ResourceLocker locks, long lastTransactionIdWhenStarted, TxStateVisitor.Decorator additionalTxStateVisitor )
+            CommandCreationContext creationContext, ResourceLocker locks, long lastTransactionIdWhenStarted, TxStateVisitor.Decorator additionalTxStateVisitor,
+            PageCursorTracer cursorTracer )
             throws KernelException
     {
         try ( TxStateVisitor visitor = additionalTxStateVisitor.apply( new CommandCreator( target, stores ) ) )
