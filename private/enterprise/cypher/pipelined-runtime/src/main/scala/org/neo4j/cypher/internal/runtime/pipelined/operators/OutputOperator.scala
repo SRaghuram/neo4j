@@ -6,37 +6,22 @@
 package org.neo4j.cypher.internal.runtime.pipelined.operators
 
 import org.neo4j.cypher.internal.physicalplanning.BufferId
-<<<<<<< HEAD
+import org.neo4j.cypher.internal.physicalplanning.PipelineId
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.profiling.QueryProfiler
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.pipelined.ExecutionState
 import org.neo4j.cypher.internal.runtime.pipelined.Task
-=======
-import org.neo4j.cypher.internal.physicalplanning.PipelineId
-import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
-import org.neo4j.cypher.internal.profiling.QueryProfiler
-import org.neo4j.cypher.internal.runtime.QueryContext
->>>>>>> da402acfd95... Don't attribute any time to fused operators
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.PerArgument
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Sink
-<<<<<<< HEAD
 import org.neo4j.cypher.internal.runtime.scheduling.HasWorkIdentity
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentityImpl
 import org.neo4j.cypher.internal.util.attribution.Id
-=======
-import org.neo4j.cypher.internal.runtime.pipelined.ExecutionState
-import org.neo4j.cypher.internal.runtime.pipelined.Task
-import org.neo4j.cypher.internal.runtime.scheduling.HasWorkIdentity
-import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
-import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentityImpl
-import org.neo4j.cypher.internal.v4_0.util.attribution.Id
->>>>>>> da402acfd95... Don't attribute any time to fused operators
 
 /**
  * Operator which ends a pipeline, and thus prepares the computed output.
@@ -110,13 +95,9 @@ case object NoOutputOperator extends OutputOperator with OutputOperatorState wit
 case class MorselBufferOutputOperator(bufferId: BufferId, nextPipelineHeadPlanId: Id, nextPipelineFused: Boolean) extends OutputOperator {
   override def outputBuffer: Option[BufferId] = Some(bufferId)
   override val workIdentity: WorkIdentity = WorkIdentityImpl(nextPipelineHeadPlanId, s"Output morsel to $bufferId")
-<<<<<<< HEAD
   override def createState(executionState: ExecutionState): OutputOperatorState =
-    MorselBufferOutputState(workIdentity, bufferId, executionState)
-=======
-  override def createState(executionState: ExecutionState, pipelineId: PipelineId): OutputOperatorState =
-    MorselBufferOutputState(workIdentity, !nextPipelineFused, bufferId, executionState, pipelineId)
->>>>>>> da402acfd95... Don't attribute any time to fused operators
+    //if nextPipeLineFused is true we shouldn't attribute time to nextPipelineHeadPlanId
+    MorselBufferOutputState(workIdentity, !nextPipelineFused, bufferId, executionState)
 }
 case class MorselBufferOutputState(override val workIdentity: WorkIdentity,
                                    override val trackTime: Boolean,
@@ -144,15 +125,10 @@ case class MorselArgumentStateBufferOutputOperator(bufferId: BufferId, argumentS
   override def outputBuffer: Option[BufferId] = Some(bufferId)
   override val workIdentity: WorkIdentity = WorkIdentityImpl(nextPipelineHeadPlanId, s"Output morsel grouped by argumentSlot $argumentSlotOffset to $bufferId")
   override def createState(executionState: ExecutionState): OutputOperatorState =
+  //if nextPipeLineFused is true we shouldn't attribute time to nextPipelineHeadPlanId
     MorselArgumentStateBufferOutputState(workIdentity,
-<<<<<<< HEAD
       executionState.getSink[IndexedSeq[PerArgument[MorselExecutionContext]]](bufferId),
-      argumentSlotOffset)
-=======
-                                         executionState.getSink[IndexedSeq[PerArgument[MorselExecutionContext]]](pipelineId, bufferId),
-                                         argumentSlotOffset,
-                                         !nextPipelineFused)
->>>>>>> da402acfd95... Don't attribute any time to fused operators
+      argumentSlotOffset, !nextPipelineFused)
 }
 case class MorselArgumentStateBufferOutputState(workIdentity: WorkIdentity,
                                                 sink: Sink[IndexedSeq[PerArgument[MorselExecutionContext]]],

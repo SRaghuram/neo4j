@@ -213,6 +213,7 @@ trait CompiledTask extends ContinuableOperatorTaskWithMorsel
                    with OutputOperatorState
                    with PreparedOutput
 {
+  //Fused plans doesn't support time tracking
   override def trackTime: Boolean = false
 
   override def operateWithProfile(output: MorselExecutionContext,
