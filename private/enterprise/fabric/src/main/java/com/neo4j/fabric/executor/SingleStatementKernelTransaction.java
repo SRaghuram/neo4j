@@ -87,19 +87,25 @@ public class SingleStatementKernelTransaction
 
     public void commit()
     {
-        if ( internalTransaction.isOpen() )
+        synchronized ( internalTransaction )
         {
-            closeContext();
-            internalTransaction.commit();
+            if ( internalTransaction.isOpen() )
+            {
+                closeContext();
+                internalTransaction.commit();
+            }
         }
     }
 
     public void rollback()
     {
-        if ( internalTransaction.isOpen() )
+        synchronized ( internalTransaction )
         {
-            closeContext();
-            internalTransaction.rollback();
+            if ( internalTransaction.isOpen() )
+            {
+                closeContext();
+                internalTransaction.rollback();
+            }
         }
     }
 
