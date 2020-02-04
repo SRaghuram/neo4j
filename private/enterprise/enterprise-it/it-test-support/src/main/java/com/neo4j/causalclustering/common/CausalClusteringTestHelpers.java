@@ -29,6 +29,7 @@ import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -74,8 +75,10 @@ import static com.neo4j.causalclustering.protocol.application.ApplicationProtoco
 import static java.lang.String.format;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Collections.emptyList;
+import static java.util.Collections.shuffle;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.function.Function.identity;
+import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -99,12 +102,17 @@ public final class CausalClusteringTestHelpers
 
     public static ServerAddressResolver clusterResolver( Cluster cluster )
     {
-        return address -> cluster
-                .coreMembers()
-                .stream()
-                .map( c -> URI.create( c.routingURI() ) )
-                .map( uri -> ServerAddress.of( uri.getHost(), uri.getPort() ) )
-                .collect( toSet() );
+        return address ->
+        {
+            var serverAddresses = cluster
+                    .coreMembers()
+                    .stream()
+                    .map( c -> URI.create( c.routingURI() ) )
+                    .map( uri -> ServerAddress.of( uri.getHost(), uri.getPort() ) )
+                    .collect( toList() );
+            shuffle( serverAddresses );
+            return new LinkedHashSet<>( serverAddresses );
+        };
     }
 
     public static CatchupClientFactory getCatchupClient( LogProvider logProvider, JobScheduler scheduler )
