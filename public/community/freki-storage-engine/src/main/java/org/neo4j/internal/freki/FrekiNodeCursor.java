@@ -19,6 +19,8 @@
  */
 package org.neo4j.internal.freki;
 
+import java.nio.ByteBuffer;
+
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.storageengine.api.AllNodeScan;
 import org.neo4j.storageengine.api.Degrees;
@@ -26,6 +28,7 @@ import org.neo4j.storageengine.api.RelationshipSelection;
 import org.neo4j.storageengine.api.StorageNodeCursor;
 import org.neo4j.storageengine.api.StoragePropertyCursor;
 import org.neo4j.storageengine.api.StorageRelationshipTraversalCursor;
+import org.neo4j.storageengine.util.EagerDegrees;
 
 import static org.neo4j.internal.freki.Record.FLAG_IN_USE;
 import static org.neo4j.internal.freki.StreamVByte.nonEmptyIntDeltas;
@@ -34,6 +37,7 @@ import static org.neo4j.internal.freki.StreamVByte.readIntDeltas;
 class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
 {
     private long singleId;
+    private FrekiRelationshipTraversalCursor relationshipsCursor;
 
     FrekiNodeCursor( MainStores stores, PageCursorTracer cursorTracer )
     {
@@ -43,8 +47,9 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
     @Override
     public long[] labels()
     {
-        data.position( labelsOffset );
-        return readIntDeltas( new StreamVByte.LongArrayTarget(), data ).array();
+        ByteBuffer smallRecordData = smallRecord.dataForReading();
+        smallRecordData.position( labelsOffset );
+        return readIntDeltas( new StreamVByte.LongArrayTarget(), smallRecordData ).array();
     }
 
     @Override
@@ -82,12 +87,24 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
     @Override
     public Degrees degrees( RelationshipSelection selection )
     {
-        throw new UnsupportedOperationException( "Not implemented yet" );
+        if ( relationshipsCursor == null )
+        {
+            relationshipsCursor = new FrekiRelationshipTraversalCursor( stores, cursorTracer );
+        }
+        EagerDegrees degrees = new EagerDegrees();
+        relationshipsCursor.init( this, selection );
+        while ( relationshipsCursor.next() )
+        {
+            degrees.add( relationshipsCursor.type(), relationshipsCursor.currentDirection(), 1 );
+        }
+        return degrees;
     }
 
     @Override
     public boolean supportsFastDegreeLookup()
     {
+        // For simplicity degree lookup involves an internal relationships cursor, but looping through the data is cheap
+        // and the data is right there in the buffer
         return true;
     }
 
@@ -150,5 +167,20 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
     {
         super.reset();
         singleId = NULL;
+        if ( relationshipsCursor != null )
+        {
+            relationshipsCursor.reset();
+        }
+    }
+
+    @Override
+    public void close()
+    {
+        if ( relationshipsCursor != null )
+        {
+            relationshipsCursor.close();
+            relationshipsCursor = null;
+        }
+        super.close();
     }
 }

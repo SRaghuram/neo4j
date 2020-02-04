@@ -52,6 +52,7 @@ class StreamVByte
             else
             {
                 serialized[headerOffset++] = (byte) currentBlockValueLength;
+                serialized[headerOffset] = 0; // clear the header byte since we could be overwriting previous data
             }
 
             offset = headerOffset + 1;
@@ -67,6 +68,7 @@ class StreamVByte
                 if ( blockSize == 4 )
                 {
                     headerOffset = offset++;
+                    serialized[headerOffset] = 0; // clear the header byte since we could be overwriting previous data
                 }
             }
         }
@@ -246,6 +248,7 @@ class StreamVByte
             else
             {
                 serialized[headerOffset++] = (byte) currentBlockValueLength;
+                serialized[headerOffset] = 0; // clear the header byte since we could be overwriting previous data
             }
 
             offset = headerOffset + 1;
@@ -259,6 +262,7 @@ class StreamVByte
                 if ( blockSize == 4 )
                 {
                     headerOffset = offset++;
+                    serialized[headerOffset] = 0; // clear the header byte since we could be overwriting previous data
                 }
             }
         }

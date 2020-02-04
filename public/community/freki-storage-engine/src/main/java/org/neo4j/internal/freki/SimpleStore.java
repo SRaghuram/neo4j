@@ -25,7 +25,7 @@ import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 
-public interface SimpleStore extends Lifecycle
+public interface SimpleStore extends Lifecycle, AutoCloseable
 {
     int recordSize();
 

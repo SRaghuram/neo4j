@@ -39,11 +39,11 @@ class Stores extends MainStores
     final GBPTreeTokenStore relationshipTypeTokenStore;
     final GBPTreeTokenStore labelTokenStore;
 
-    Stores( SimpleStore mainStore, SimpleStore mainLargeStore, BigPropertyValueStore bigPropertyValueStore, IdGenerator relationshipIdGenerator,
+    Stores( SimpleStore[] mainStores, BigPropertyValueStore bigPropertyValueStore, IdGenerator relationshipIdGenerator,
             TransactionMetaDataStore metaDataStore, GBPTreeCountsStore countsStore, GBPTreeSchemaStore schemaStore, SchemaCache schemaCache,
             GBPTreeTokenStore propertyKeyTokenStore, GBPTreeTokenStore relationshipTypeTokenStore, GBPTreeTokenStore labelTokenStore )
     {
-        super( mainStore, mainLargeStore, bigPropertyValueStore );
+        super( mainStores, bigPropertyValueStore );
         this.relationshipIdGenerator = relationshipIdGenerator;
         this.metaDataStore = metaDataStore;
         this.countsStore = countsStore;

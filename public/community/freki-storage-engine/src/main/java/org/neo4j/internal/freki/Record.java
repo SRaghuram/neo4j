@@ -21,6 +21,7 @@ package org.neo4j.internal.freki;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 
 import org.neo4j.io.fs.WritableChannel;
 import org.neo4j.io.pagecache.PageCursor;
@@ -146,9 +147,10 @@ class Record
         }
     }
 
-    void loadRecord( PageCursor cursor )
+    void loadRecord( PageCursor cursor, int offset ) throws IOException
     {
-        int flagsRaw = cursor.getByte() & 0xFF;
+        // First read the header byte in its own shouldRetry-loop because how we read the data depends on this
+        int flagsRaw = safelyReadHeader( cursor, offset );
         int sizeExp = flagsRaw & 0b111;
         int length = recordSize( sizeExp ) - HEADER_SIZE;
         flags = (byte) (flagsRaw & 0b1111_1000);
@@ -162,7 +164,29 @@ class Record
             createNewDataBuffer( sizeExp );
         }
 
-        cursor.getBytes( data.array(), 0, length );
+        do
+        {
+            cursor.setOffset( offset + HEADER_SIZE );
+            cursor.getBytes( data.array(), 0, length );
+        }
+        while ( cursor.shouldRetry() );
+    }
+
+    private static int safelyReadHeader( PageCursor cursor, int offset ) throws IOException
+    {
+        int flagsRaw;
+        do
+        {
+            flagsRaw = cursor.getByte( offset ) & 0xFF;
+        }
+        while ( cursor.shouldRetry() );
+        return flagsRaw;
+    }
+
+    static boolean isInUse( PageCursor cursor, int offset ) throws IOException
+    {
+        int flagsRaw = safelyReadHeader( cursor, offset );
+        return (flagsRaw & FLAG_IN_USE) != 0;
     }
 
     void copyContentsFrom( Record source )
@@ -179,5 +203,11 @@ class Record
         {
             data = null;
         }
+    }
+
+    @Override
+    public String toString()
+    {
+        return "Record{" + "sizeExp=" + sizeExp + ", id=" + id + ", flags=" + flags + ", data=" + Arrays.toString( data.array() ) + '}';
     }
 }
