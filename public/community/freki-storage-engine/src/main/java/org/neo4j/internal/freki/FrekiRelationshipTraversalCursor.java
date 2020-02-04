@@ -19,13 +19,11 @@
  */
 package org.neo4j.internal.freki;
 
-import java.util.Arrays;
-
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.storageengine.api.RelationshipDirection;
+import org.neo4j.storageengine.api.RelationshipSelection;
 import org.neo4j.storageengine.api.StorageNodeCursor;
 import org.neo4j.storageengine.api.StoragePropertyCursor;
-import org.neo4j.storageengine.api.StorageRelationshipGroupCursor;
 import org.neo4j.storageengine.api.StorageRelationshipTraversalCursor;
 
 import static org.neo4j.internal.freki.MutableNodeRecordData.ARRAY_ENTRIES_PER_RELATIONSHIP;
@@ -41,8 +39,7 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
 {
     private boolean loadedCorrectNode;
     private long nodeId;
-    private int expectedType;
-    private RelationshipDirection expectedDirection;
+    private RelationshipSelection selection;
 
     private long[] currentTypeData;
     private int currentTypeIndex;
@@ -110,25 +107,19 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
 
             startIterationAfterLoad();
             readRelationshipTypes();
-            if ( expectedType != NULL )
-            {
-                int foundIndex = Arrays.binarySearch( relationshipTypesInNode, expectedType );
-                if ( foundIndex < 0 )
-                {
-                    return false;
-                }
-                currentTypeIndex = foundIndex;
-                data.position( relationshipTypeOffset( foundIndex ) );
-            }
         }
 
         while ( currentTypeIndex < relationshipTypesInNode.length )
         {
             if ( currentTypeRelationshipIndex == -1 )
             {
-                if ( (expectedType != NULL && relationshipTypesInNode[currentTypeIndex] != expectedType) )
+                // Time to move over to the next type
+                int candidateType = relationshipTypesInNode[currentTypeIndex];
+                if ( !selection.test( candidateType ) )
                 {
-                    break;
+                    // Skip this type completely, it wasn't part of the requested selection
+                    currentTypeIndex++;
+                    continue;
                 }
 
                 currentTypeData = StreamVByte.readLongs( data );
@@ -159,8 +150,11 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
                     currentTypePropertiesIndex++;
                 }
 
-                boolean matchesDirection = expectedDirection == null || currentRelationshipDirection.equals( expectedDirection );
-                if ( matchesDirection )
+                // TODO a thought about this filtering. It may be beneficial to order the relationships of: OUTGOING,LOOP,INCOMING
+                //      so that filtering OUTGOING/INCOMING would basically then be to find the point where to stop, instead of going
+                //      through all relationships of that type. This may also require an addition to RelationshipSelection so that
+                //      it can be asked about requested direction.
+                if ( selection.test( relationshipTypesInNode[currentTypeIndex], currentRelationshipDirection ) )
                 {
                     return true;
                 }
@@ -187,8 +181,7 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
     {
         super.reset();
         nodeId = NULL;
-        expectedType = -1;
-        expectedDirection = null;
+        selection = null;
         currentTypeIndex = -1;
         currentTypeRelationshipIndex = -1;
         loadedCorrectNode = false;
@@ -231,43 +224,19 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
     }
 
     @Override
-    public void init( long nodeId, long reference, boolean nodeIsDense )
+    public void init( long nodeId, long reference, RelationshipSelection selection )
     {
         reset();
         this.nodeId = nodeId;
+        this.selection = selection;
     }
 
     @Override
-    public void init( StorageNodeCursor nodeCursor )
+    public void init( StorageNodeCursor nodeCursor, RelationshipSelection selection )
     {
-        init( nodeCursor.entityReference(), nodeCursor.allRelationshipsReference(), nodeCursor.isDense() );
+        init( nodeCursor.entityReference(), nodeCursor.relationshipsReference(), selection );
         useSharedRecordFrom( (FrekiNodeCursor) nodeCursor );
         startIterationAfterLoad();
         readRelationshipTypes();
-    }
-
-    @Override
-    public void init( long nodeId, long reference, int type, RelationshipDirection direction, boolean nodeIsDense )
-    {
-        init( nodeId, reference, nodeIsDense );
-        this.expectedType = type;
-        this.expectedDirection = direction;
-    }
-
-    @Override
-    public void init( StorageRelationshipGroupCursor groupCursor, long reference, int type, RelationshipDirection direction, boolean nodeIsDense )
-    {
-        init( groupCursor.getOwningNode(), reference, nodeIsDense );
-        useSharedRecordFrom( (FrekiRelationshipGroupCursor) groupCursor );
-        startIterationAfterLoad();
-        expectedType = type;
-        expectedDirection = direction;
-
-        // Here we come from a place where the relationship data is already loaded in the FrekiRelationshipGroupCursor so we don't have to
-        // read it again... merely initialize the state in here to make it look like it has one group (this type) and let next() enjoy this data.
-        // The reference is the data buffer offset, so just go there.
-        relationshipTypesInNode = new int[]{type};
-        data.position( (int) reference );
-        currentTypeIndex = 0;
     }
 }

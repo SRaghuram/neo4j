@@ -52,6 +52,7 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.lock.ResourceLocker;
 import org.neo4j.logging.NullLog;
@@ -92,6 +93,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 import static org.neo4j.lock.LockService.NO_LOCK_SERVICE;
+import static org.neo4j.storageengine.api.RelationshipSelection.ALL_RELATIONSHIPS;
 import static org.neo4j.storageengine.api.txstate.TxStateVisitor.NO_DECORATION;
 import static org.neo4j.values.storable.Values.doubleValue;
 import static org.neo4j.values.storable.Values.intValue;
@@ -250,7 +252,7 @@ public class FrekiStorageEngineGraphWritesIT
             assertProperties( nodeProperties, propertyCursor );
 
             // relationships
-            relationshipCursor.init( nodeCursor.entityReference(), nodeCursor.allRelationshipsReference(), nodeCursor.isDense() );
+            nodeCursor.relationships( relationshipCursor, ALL_RELATIONSHIPS );
             Set<RelationshipSpec> readRelationships = new HashSet<>();
             while ( relationshipCursor.next() )
             {
@@ -299,7 +301,7 @@ public class FrekiStorageEngineGraphWritesIT
                 return null;
             } ).when( transactionState ).accept( any() );
             storageEngine.createCommands( commands, transactionState, reader, storageEngine.newCommandCreationContext( NULL ),
-                    ResourceLocker.IGNORE, TransactionIdStore.BASE_TX_ID, NO_DECORATION );
+                    ResourceLocker.IGNORE, TransactionIdStore.BASE_TX_ID, NO_DECORATION, NULL );
         }
         return commands;
     }
@@ -342,6 +344,12 @@ public class FrekiStorageEngineGraphWritesIT
         public long transactionId()
         {
             return 0;
+        }
+
+        @Override
+        public PageCursorTracer cursorTracer()
+        {
+            return NULL;
         }
 
         @Override

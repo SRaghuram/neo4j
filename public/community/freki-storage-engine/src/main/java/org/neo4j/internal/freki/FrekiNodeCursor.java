@@ -21,8 +21,11 @@ package org.neo4j.internal.freki;
 
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.storageengine.api.AllNodeScan;
+import org.neo4j.storageengine.api.Degrees;
+import org.neo4j.storageengine.api.RelationshipSelection;
 import org.neo4j.storageengine.api.StorageNodeCursor;
 import org.neo4j.storageengine.api.StoragePropertyCursor;
+import org.neo4j.storageengine.api.StorageRelationshipTraversalCursor;
 
 import static org.neo4j.internal.freki.Record.FLAG_IN_USE;
 import static org.neo4j.internal.freki.StreamVByte.nonEmptyIntDeltas;
@@ -58,21 +61,34 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
     }
 
     @Override
-    public long relationshipGroupReference()
+    public long relationshipsReference()
     {
-        return 0;
+        return loadedNodeId;
     }
 
     @Override
-    public long allRelationshipsReference()
+    public void relationships( StorageRelationshipTraversalCursor traversalCursor, RelationshipSelection selection )
     {
-        return 0;
+        traversalCursor.init( this, selection );
     }
 
     @Override
-    public boolean isDense()
+    public int[] relationshipTypes()
     {
-        return false;
+        readRelationshipTypes();
+        return relationshipTypesInNode.clone();
+    }
+
+    @Override
+    public Degrees degrees( RelationshipSelection selection )
+    {
+        throw new UnsupportedOperationException( "Not implemented yet" );
+    }
+
+    @Override
+    public boolean supportsFastDegreeLookup()
+    {
+        return true;
     }
 
     @Override

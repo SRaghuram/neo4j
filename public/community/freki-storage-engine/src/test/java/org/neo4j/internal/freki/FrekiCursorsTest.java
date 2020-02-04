@@ -27,6 +27,7 @@ import java.util.stream.IntStream;
 
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+import org.neo4j.storageengine.api.RelationshipSelection;
 import org.neo4j.storageengine.api.StorageEntityCursor;
 import org.neo4j.storageengine.api.StorageNodeCursor;
 import org.neo4j.storageengine.api.StoragePropertyCursor;
@@ -127,7 +128,7 @@ abstract class FrekiCursorsTest
 
         Node properties( IntObjectMap<Value> properties )
         {
-            properties.forEachKeyValue( ( key, value ) -> data.setNodeProperty( key, value ) );
+            properties.forEachKeyValue( data::setNodeProperty );
             return this;
         }
 
@@ -198,20 +199,20 @@ abstract class FrekiCursorsTest
         DIRECT_REFERENCE
                 {
                     @Override
-                    void connect( StorageNodeCursor nodeCursor, StorageRelationshipTraversalCursor relationshipCursor )
+                    void connect( StorageNodeCursor nodeCursor, StorageRelationshipTraversalCursor relationshipCursor, RelationshipSelection selection )
                     {
-                        relationshipCursor.init( nodeCursor );
+                        relationshipCursor.init( nodeCursor, selection );
                     }
                 },
         REFERENCE
                 {
                     @Override
-                    void connect( StorageNodeCursor nodeCursor, StorageRelationshipTraversalCursor relationshipCursor )
+                    void connect( StorageNodeCursor nodeCursor, StorageRelationshipTraversalCursor relationshipCursor, RelationshipSelection selection )
                     {
-                        relationshipCursor.init( nodeCursor.entityReference(), nodeCursor.allRelationshipsReference(), nodeCursor.isDense() );
+                        relationshipCursor.init( nodeCursor.entityReference(), nodeCursor.relationshipsReference(), selection );
                     }
                 };
 
-        abstract void connect( StorageNodeCursor nodeCursor, StorageRelationshipTraversalCursor relationshipCursor );
+        abstract void connect( StorageNodeCursor nodeCursor, StorageRelationshipTraversalCursor relationshipCursor, RelationshipSelection selection );
     }
 }

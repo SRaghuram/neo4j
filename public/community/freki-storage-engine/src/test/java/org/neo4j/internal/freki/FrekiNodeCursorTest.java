@@ -55,6 +55,7 @@ import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 import static org.neo4j.storageengine.api.RelationshipDirection.INCOMING;
 import static org.neo4j.storageengine.api.RelationshipDirection.LOOP;
 import static org.neo4j.storageengine.api.RelationshipDirection.OUTGOING;
+import static org.neo4j.storageengine.api.RelationshipSelection.ALL_RELATIONSHIPS;
 import static org.neo4j.values.storable.Values.intValue;
 import static org.neo4j.values.storable.Values.longValue;
 import static org.neo4j.values.storable.Values.stringValue;
@@ -224,7 +225,7 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
 
         // when
         FrekiRelationshipTraversalCursor relationshipCursor = new FrekiRelationshipTraversalCursor( stores, NULL );
-        connector.connect( cursor, relationshipCursor );
+        connector.connect( cursor, relationshipCursor, ALL_RELATIONSHIPS );
 
         // then
         assertFalse( relationshipCursor.next() );
@@ -242,7 +243,7 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
 
         // when
         FrekiRelationshipTraversalCursor relationshipCursor = new FrekiRelationshipTraversalCursor( stores, NULL );
-        connector.connect( cursor, relationshipCursor );
+        connector.connect( cursor, relationshipCursor, ALL_RELATIONSHIPS );
 
         // then
         assertTrue( relationshipCursor.next() );
@@ -269,7 +270,7 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
 
         // when
         FrekiRelationshipTraversalCursor relationshipCursor = new FrekiRelationshipTraversalCursor( stores, NULL );
-        connector.connect( cursor, relationshipCursor );
+        connector.connect( cursor, relationshipCursor, ALL_RELATIONSHIPS );
 
         // then
         MutableLongSet otherNodes = LongSets.mutable.empty();
@@ -300,7 +301,7 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
 
         // when
         FrekiRelationshipTraversalCursor relationshipCursor = new FrekiRelationshipTraversalCursor( stores, NULL );
-        connector.connect( cursor, relationshipCursor );
+        connector.connect( cursor, relationshipCursor, ALL_RELATIONSHIPS );
 
         // then
         assertTrue( relationshipCursor.next() );
@@ -338,7 +339,7 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
 
         // when
         FrekiRelationshipTraversalCursor relationshipCursor = new FrekiRelationshipTraversalCursor( stores, NULL );
-        connector.connect( cursor, relationshipCursor );
+        connector.connect( cursor, relationshipCursor, ALL_RELATIONSHIPS );
 
         // then
         MutableIntObjectMap<MutableLongSet> otherNodes = IntObjectMaps.mutable.empty();
@@ -366,7 +367,7 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
 
         // when
         FrekiRelationshipTraversalCursor relationshipCursor = new FrekiRelationshipTraversalCursor( stores, NULL );
-        relationshipsConnector.connect( cursor, relationshipCursor );
+        relationshipsConnector.connect( cursor, relationshipCursor, ALL_RELATIONSHIPS );
         assertTrue( relationshipCursor.next() );
 
         // then
@@ -392,7 +393,7 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
 
         // when
         FrekiRelationshipTraversalCursor relationshipCursor = new FrekiRelationshipTraversalCursor( stores, NULL );
-        relationshipsConnector.connect( cursor, relationshipCursor );
+        relationshipsConnector.connect( cursor, relationshipCursor, ALL_RELATIONSHIPS );
         assertTrue( relationshipCursor.next() );
 
         // then
@@ -420,7 +421,7 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
                 .storeAndPlaceNodeCursorAt();
         otherNode.store();
         FrekiRelationshipTraversalCursor relationshipCursor = new FrekiRelationshipTraversalCursor( stores, NULL );
-        relationshipsConnector.connect( cursor, relationshipCursor );
+        relationshipsConnector.connect( cursor, relationshipCursor, ALL_RELATIONSHIPS );
 
         // when/then
         FrekiPropertyCursor propertyCursor = new FrekiPropertyCursor( stores, NULL );
@@ -452,7 +453,7 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
         Record otherNodeRecord = otherNode.store();
         thirdNode.store();
         FrekiRelationshipTraversalCursor relationshipCursor = new FrekiRelationshipTraversalCursor( stores, NULL );
-        relationshipsConnector.connect( cursor, relationshipCursor );
+        relationshipsConnector.connect( cursor, relationshipCursor, ALL_RELATIONSHIPS );
 
         // when/then
         FrekiPropertyCursor propertyCursor = new FrekiPropertyCursor( stores, NULL );
@@ -481,7 +482,7 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
         otherNode.store();
         FrekiNodeCursor cursor = node.storeAndPlaceNodeCursorAt();
         FrekiRelationshipTraversalCursor relationshipCursor = new FrekiRelationshipTraversalCursor( stores, NULL );
-        relationshipsConnector.connect( cursor, relationshipCursor );
+        relationshipsConnector.connect( cursor, relationshipCursor, ALL_RELATIONSHIPS );
 
         // when/then
         Set<RelationshipDirection> expectedDirections = new HashSet<>( asList( OUTGOING, INCOMING, LOOP ) );
@@ -663,7 +664,7 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
             private void checkRelationships( FrekiNodeCursor cursor, int typeToCheck, int expectedNum, int expectedNumWithProps, boolean expectedOutgoing )
             {
                 FrekiRelationshipTraversalCursor relationshipCursor = new FrekiRelationshipTraversalCursor( stores, NULL );
-                AllRelationshipsConnector.DIRECT_REFERENCE.connect( cursor, relationshipCursor );
+                AllRelationshipsConnector.DIRECT_REFERENCE.connect( cursor, relationshipCursor, ALL_RELATIONSHIPS );
                 FrekiPropertyCursor propertyCursor = new FrekiPropertyCursor( stores, NULL );
 
                 int numRelationsRead = 0;
@@ -705,10 +706,8 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
                 return (int) ( from << 16 | to );
             }
         };
-
     }
 
-    // TODO relationship group cursor tests
     // TODO other randomized testing
 
     private MutableIntObjectMap<Value> readProperties( FrekiPropertyCursor propertyCursor )
