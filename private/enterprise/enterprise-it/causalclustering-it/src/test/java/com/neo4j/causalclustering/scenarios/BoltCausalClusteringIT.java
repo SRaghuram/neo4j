@@ -40,6 +40,7 @@ import org.neo4j.driver.Transaction;
 import org.neo4j.driver.TransactionWork;
 import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.driver.exceptions.SessionExpiredException;
+import org.neo4j.driver.exceptions.TransientException;
 import org.neo4j.internal.helpers.collection.Iterators;
 import org.neo4j.test.extension.Inject;
 
@@ -55,7 +56,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.fail;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static org.neo4j.driver.AccessMode.READ;
@@ -232,37 +232,26 @@ class BoltCausalClusteringIT
         {
             try ( Driver driver = makeDriver( cluster ) )
             {
-                inExpirableSession( driver, Driver::session, session ->
+                try ( Session session = driver.session() )
                 {
                     // execute a write/read query
-                    session.run( "CREATE (p:Person {name: $name })", parameters( "name", "Jim" ) );
-                    Record record = session.run( "MATCH (n:Person) RETURN COUNT(*) AS count" ).single();
+                    var record = session.writeTransaction( tx ->
+                                                           {
+                                                               tx.run( "CREATE (p:Person {name: $name })", parameters( "name", "Jim" ) ).consume();
+                                                               return tx.run( "MATCH (n:Person) RETURN COUNT(*) AS count" ).single();
+                                                           } );
                     assertEquals( 1, record.get( "count" ).asInt() );
 
                     // change leader
 
-                    try
+                    runWithLeaderDisabled( cluster, ( oldLeader, otherMembers ) ->
                     {
-                        runWithLeaderDisabled( cluster, ( oldLeader, otherMembers ) ->
-                        {
-                            try
-                            {
-                                session.run( "CREATE (p:Person {name: $name })", parameters( "name", "Mark" ) ).consume();
-                                fail( "Should have thrown an exception as the leader went away mid session" );
-                            }
-                            catch ( SessionExpiredException sep )
-                            {
-                                assertThat( sep.getMessage(), containsString( "no longer accepts writes" ) );
-                            }
-                            return null;
-                        } );
-                    }
-                    catch ( Exception e )
-                    {
-                        // ignore
-                    }
-                    return null;
-                } );
+                        var sep = assertThrows( SessionExpiredException.class, () -> session
+                                .run( "CREATE (p:Person {name: $name })", parameters( "name", "Mark" ) ).consume() );
+                        assertThat( sep.getMessage(), containsString( "no longer accepts writes" ) );
+                        return null;
+                    } );
+                }
 
                 inExpirableSession( driver, Driver::session, session ->
                 {
@@ -529,7 +518,7 @@ class BoltCausalClusteringIT
 
             int happyCount;
             int numberOfRequests;
-            try ( Driver driver = makeDriver( cluster.awaitLeader().routingURI() ) )
+            try ( Driver driver = makeDriver( cluster ) )
             {
 
                 try ( Session session = driver.session() )
@@ -563,6 +552,11 @@ class BoltCausalClusteringIT
 
                         lastBookmark = writeSession.lastBookmark();
                     }
+                }
+                try ( Session session = driver.session( builder().withBookmarks( lastBookmark ).withDefaultAccessMode( READ ).build() ) )
+                {
+                    var transientException = assertThrows( TransientException.class, session::beginTransaction );
+                    assertThat( transientException.getMessage(), containsString( "not up to the requested version:" ) );
                 }
 
                 // when the poller is resumed, it does make it to the read replica
