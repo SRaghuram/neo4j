@@ -41,7 +41,6 @@ import org.neo4j.storageengine.api.AllRelationshipsScan;
 import org.neo4j.storageengine.api.StorageNodeCursor;
 import org.neo4j.storageengine.api.StoragePropertyCursor;
 import org.neo4j.storageengine.api.StorageReader;
-import org.neo4j.storageengine.api.StorageRelationshipGroupCursor;
 import org.neo4j.storageengine.api.StorageRelationshipScanCursor;
 import org.neo4j.storageengine.api.StorageRelationshipTraversalCursor;
 import org.neo4j.storageengine.api.StorageSchemaReader;
@@ -198,25 +197,25 @@ class FrekiStorageReader implements StorageReader
     }
 
     @Override
-    public long countsForNode( int labelId )
+    public long countsForNode( int labelId, PageCursorTracer cursorTracer )
     {
-        return counts.nodeCount( labelId );
+        return counts.nodeCount( labelId, cursorTracer );
     }
 
     @Override
-    public long countsForRelationship( int startLabelId, int typeId, int endLabelId )
+    public long countsForRelationship( int startLabelId, int typeId, int endLabelId, PageCursorTracer cursorTracer )
     {
         if ( !(startLabelId == ANY_LABEL || endLabelId == ANY_LABEL) )
         {
             throw new UnsupportedOperationException( "not implemented" );
         }
-        return counts.relationshipCount( startLabelId, typeId, endLabelId );
+        return counts.relationshipCount( startLabelId, typeId, endLabelId, cursorTracer );
     }
 
     @Override
-    public long nodesGetCount()
+    public long nodesGetCount( PageCursorTracer cursorTracer )
     {
-        return counts.nodeCount( ANY_LABEL );
+        return counts.nodeCount( ANY_LABEL, cursorTracer );
     }
 
     @Override
@@ -291,12 +290,6 @@ class FrekiStorageReader implements StorageReader
     public StoragePropertyCursor allocatePropertyCursor( PageCursorTracer cursorTracer )
     {
         return new FrekiPropertyCursor( stores, cursorTracer );
-    }
-
-    @Override
-    public StorageRelationshipGroupCursor allocateRelationshipGroupCursor( PageCursorTracer cursorTracer )
-    {
-        return new FrekiRelationshipGroupCursor( stores, cursorTracer );
     }
 
     @Override

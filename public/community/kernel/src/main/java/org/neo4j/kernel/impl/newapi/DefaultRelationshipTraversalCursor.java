@@ -68,19 +68,6 @@ class DefaultRelationshipTraversalCursor extends DefaultRelationshipCursor<Stora
     }
 
     /**
-     * Initializes this cursor to traverse over all relationships.
-     * @param nodeCursor {@link DefaultNodeCursor} containing the reference to the relationships.
-     * @param read reference to {@link Read}.
-     */
-    void init( DefaultNodeCursor nodeCursor, Read read )
-    {
-        // For lazily initialized filtering the type/direction will be null, which is what the storage cursor should get in this scenario
-        this.storeCursor.init( nodeCursor.storeCursor );
-        init( read );
-        this.addedRelationships = ImmutableEmptyLongIterator.INSTANCE;
-    }
-
-    /**
      * Initializes this cursor to traverse over relationships, directly from the {@link NodeCursor}.
      *
      * @param nodeCursor {@link NodeCursor} at the origin node.

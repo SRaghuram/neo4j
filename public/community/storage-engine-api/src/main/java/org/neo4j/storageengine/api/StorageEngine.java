@@ -40,8 +40,8 @@ public interface StorageEngine extends Lifecycle
 {
     /**
      * @return a new {@link CommandCreationContext} meant to be kept for multiple calls to
-     * {@link #createCommands(Collection, ReadableTransactionState, StorageReader, CommandCreationContext, ResourceLocker, long, TxStateVisitor.Decorator)}.
-     * Must be {@link CommandCreationContext#close() closed} after used, before being discarded.
+     * {@link #createCommands(Collection, ReadableTransactionState, StorageReader, CommandCreationContext, ResourceLocker, long, TxStateVisitor.Decorator,
+     * PageCursorTracer)}. Must be {@link CommandCreationContext#close() closed} after used, before being discarded.
      */
     CommandCreationContext newCommandCreationContext( PageCursorTracer cursorTracer );
 
