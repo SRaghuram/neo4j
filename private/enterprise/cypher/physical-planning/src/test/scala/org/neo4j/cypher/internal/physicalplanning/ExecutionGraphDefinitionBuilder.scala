@@ -33,6 +33,10 @@ class ExecutionGraphDefinitionBuilder()
     semanticTable = semanticTable.addRelationship(relationship)
   }
 
+  override def newVariable(variable: Variable): Unit = {
+    semanticTable = semanticTable.addVariable(variable)
+  }
+
   def withBreak(): this.type = {
     plansToBreakOn += idOfLastPlan
     this
