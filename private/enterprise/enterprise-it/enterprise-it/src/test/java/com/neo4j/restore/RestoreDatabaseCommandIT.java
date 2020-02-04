@@ -15,7 +15,6 @@ import java.nio.file.Path;
 import org.neo4j.cli.CommandFailedException;
 import org.neo4j.configuration.Config;
 import org.neo4j.dbms.api.DatabaseManagementService;
-import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.helpers.collection.Iterables;
@@ -274,7 +273,7 @@ class RestoreDatabaseCommandIT
     private static GraphDatabaseService createDatabase( DatabaseLayout databaseLayout )
     {
         Neo4jLayout neo4jLayout = databaseLayout.getNeo4jLayout();
-        managementService = new DatabaseManagementServiceBuilder( neo4jLayout.homeDirectory() )
+        managementService = new TestDatabaseManagementServiceBuilder( neo4jLayout.homeDirectory() )
                 .setConfig( databases_root_path, neo4jLayout.databasesDirectory().toPath() )
                 .setConfig( transaction_logs_root_path, neo4jLayout.transactionLogsRootDirectory().toPath() )
                 .setConfig( online_backup_enabled, false )

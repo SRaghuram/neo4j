@@ -15,10 +15,13 @@ import org.junit.jupiter.api.TestInstance;
 import java.io.IOException;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
+import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.DbRepresentation;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
+import org.neo4j.test.extension.DbmsExtension;
+import org.neo4j.test.extension.ExtensionCallback;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
@@ -34,12 +37,24 @@ import static org.neo4j.configuration.GraphDatabaseSettings.record_format;
 @TestDirectoryExtension
 @ClusterExtension
 @TestInstance( PER_METHOD )
+@DbmsExtension( configurationCallback = "configure" )
 class ClusterCommunityToEnterpriseIT
 {
     @Inject
     private TestDirectory testDir;
     @Inject
     private ClusterFactory clusterFactory;
+    @Inject
+    private DatabaseManagementService managementService;
+
+    @ExtensionCallback
+    void configure( TestDatabaseManagementServiceBuilder builder )
+    {
+        builder.setDatabaseRootDirectory( testDir.directory( "standalone" ) );
+        builder.setConfig( allow_upgrade, true )
+                .setConfig( record_format, HighLimit.NAME )
+                .setConfig( online_backup_enabled, false );
+    }
 
     @Test
     void shouldRestoreBySeedingAllMembers() throws Throwable
@@ -47,12 +62,6 @@ class ClusterCommunityToEnterpriseIT
         // given
         var clusterConfig = clusterConfig().withRecordFormat( HighLimit.NAME ).withNumberOfCoreMembers( 3 ).withNumberOfReadReplicas( 0 );
         var cluster = clusterFactory.createCluster( clusterConfig );
-        var dir = testDir.cleanDirectory( "standalone" );
-        var managementService = new DatabaseManagementServiceBuilder( dir )
-                .setConfig( allow_upgrade, true )
-                .setConfig( record_format, HighLimit.NAME )
-                .setConfig( online_backup_enabled, false )
-                .build();
         var database = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
         var databaseLayout = database.databaseLayout();
         managementService.shutdown();

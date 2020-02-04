@@ -29,6 +29,7 @@ import org.neo4j.driver.exceptions.ServiceUnavailableException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.io.IOUtils;
 import org.neo4j.monitoring.Monitors;
+import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.bolt.BoltDriverHelper.graphDatabaseDriver;
@@ -70,7 +71,7 @@ public class BoltFailuresIT
         sessionMonitor.throwInConnectionOpened();
         Monitors monitors = newMonitorsSpy( sessionMonitor );
 
-        db = startDbWithBolt( new DatabaseManagementServiceBuilder( dir.homeDir() ).setMonitors( monitors ) );
+        db = startDbWithBolt( new TestDatabaseManagementServiceBuilder( dir.homeDir() ).setMonitors( monitors ) );
         try
         {
             // attempt to create a driver when server is unavailable
