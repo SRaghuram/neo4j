@@ -37,7 +37,8 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
     static final int NULL_OFFSET = 0;
 
     final MainStores stores;
-    private final PageCursorTracer cursorTracer;
+    final PageCursorTracer cursorTracer;
+    Record smallRecord;
     Record record;
     ByteBuffer data;
     private PageCursor cursor;
@@ -60,6 +61,7 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
         this.stores = stores;
         this.cursorTracer = cursorTracer;
         this.record = stores.mainStore.newRecord();
+        this.smallRecord = record;
         reset();
     }
 
@@ -82,7 +84,7 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
 
     boolean loadMainRecord( long id )
     {
-        stores.mainStore.read( cursor(), record, id );
+        stores.mainStore.read( cursor(), smallRecord, id );
         if ( !record.hasFlag( FLAG_IN_USE ) )
         {
             return false;
@@ -93,6 +95,7 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
         {
             long forwardPointer = data.getLong( endOffset );
             SimpleStore largeStore = stores.mainStore( sizeExponentialFromForwardPointer( forwardPointer ) );
+            record = largeStore.newRecord();
             try ( PageCursor largeCursor = largeStore.openReadCursor() )
             {
                 largeStore.read( largeCursor, record, idFromForwardPointer( forwardPointer ) );
@@ -101,7 +104,9 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
                     return false;
                 }
                 data = record.dataForReading();
+                int smallRecordLabelsOffset = labelsOffset;
                 readOffsets();
+                labelsOffset = smallRecordLabelsOffset;
             }
         }
         loadedNodeId = id;

@@ -20,7 +20,6 @@
 package org.neo4j.internal.freki;
 
 import java.io.IOException;
-import java.util.stream.Stream;
 
 import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.io.pagecache.PageCursor;
@@ -32,27 +31,22 @@ class MainStores extends LifecycleAdapter
 {
     final LifeSupport life = new LifeSupport();
     final SimpleStore mainStore;
-    final SimpleStore mainLargeStore;
     private final SimpleStore[] mainStores;
     final SimpleBigValueStore bigPropertyValueStore;
 
-    MainStores( SimpleStore mainStore, SimpleStore mainLargeStore, SimpleBigValueStore bigPropertyValueStore )
+    MainStores( SimpleStore[] mainStores, SimpleBigValueStore bigPropertyValueStore )
     {
-        this.mainStore = mainStore;
-        this.mainLargeStore = mainLargeStore;
+        this.mainStores = mainStores;
+        this.mainStore = mainStores[0];
         this.bigPropertyValueStore = bigPropertyValueStore;
-        this.mainStores = registerStoresBySizeExp( mainStore, mainLargeStore );
-        life.add( mainStore );
-        life.add( mainLargeStore );
+        for ( SimpleStore store : mainStores )
+        {
+            if ( store != null )
+            {
+                life.add( store );
+            }
+        }
         life.add( bigPropertyValueStore );
-    }
-
-    private static SimpleStore[] registerStoresBySizeExp( SimpleStore... stores )
-    {
-        int maxSizeExp = Stream.of( stores ).mapToInt( SimpleStore::recordSizeExponential ).max().getAsInt();
-        SimpleStore[] result = new SimpleStore[maxSizeExp + 1];
-        Stream.of( stores ).forEach( store -> result[store.recordSizeExponential()] = store );
-        return result;
     }
 
     SimpleStore mainStore( int sizeExp )
@@ -74,8 +68,10 @@ class MainStores extends LifecycleAdapter
 
     void flushAndForce( IOLimiter limiter, PageCursorTracer cursorTracer )
     {
-        mainStore.flush( cursorTracer );
-        mainLargeStore.flush( cursorTracer );
+        for ( SimpleStore mainStore : mainStores )
+        {
+            mainStore.flush( cursorTracer );
+        }
         bigPropertyValueStore.flush( cursorTracer );
     }
 

@@ -131,12 +131,7 @@ public class Store extends BareBoneStore implements SimpleStore
                 return false;
             }
             record.id = id;
-            do
-            {
-                cursor.setOffset( offset );
-                record.loadRecord( cursor );
-            }
-            while ( cursor.shouldRetry() );
+            record.loadRecord( cursor, offset );
             cursor.checkAndClearBoundsFlag();
             cursor.checkAndClearCursorException();
         }
@@ -150,11 +145,16 @@ public class Store extends BareBoneStore implements SimpleStore
     @Override
     public boolean exists( long id ) throws IOException
     {
-//        try ( PageCursor cursor = openReadCursor() )
-//        {
-//            Record record = new Record( 1 );
-//            return read( cursor, record, id ) && record.hasFlag( Record.FLAG_IN_USE );
-//        }
-        return true;
+        // TODO should this method perhaps accept a cursor argument?
+        try ( PageCursor cursor = openReadCursor() )
+        {
+            long pageId = id / recordsPerPage;
+            int offset = (int) ((id % recordsPerPage) * Record.SIZE_BASE);
+            if ( !cursor.next( pageId ) )
+            {
+                return false;
+            }
+            return Record.isInUse( cursor, offset );
+        }
     }
 }

@@ -97,19 +97,20 @@ class MutableNodeRecordData
         return String.format( "ID:%s, labels:%s, properties:%s, relationships:%s, fw:%d", id, labels, properties, relationships, forwardPointer );
     }
 
-    void moveDataTo( MutableNodeRecordData otherData )
+    /**
+     * Moves properties and relationships (keeps labels in the small record for now)
+     */
+    void movePropertiesAndRelationshipsTo( MutableNodeRecordData otherData )
     {
-        otherData.labels.addAll( labels );
         otherData.properties.putAll( properties );
         otherData.relationships.putAll( relationships );
         otherData.internalRelationshipIdCounter = internalRelationshipIdCounter;
-        clearData();
+        clearPropertiesAndRelationships();
     }
 
-    void clearData()
+    void clearPropertiesAndRelationships()
     {
         // Doesn't clear entity/identity things like id and forwardPointer
-        labels.clear();
         properties.clear();
         relationships.clear();
         internalRelationshipIdCounter = 1;
@@ -431,7 +432,11 @@ class MutableNodeRecordData
 
         if ( endOffset != 0 )
         {
-            StreamVByte.readIntDeltas( StreamVByte.SKIP, buffer );
+            // If there are relationships then there's also going to be a typeOffsets[], skip it
+            if ( relationshipOffset != 0 )
+            {
+                StreamVByte.readIntDeltas( StreamVByte.SKIP, buffer );
+            }
             if ( containsForwardPointer )
             {
                 forwardPointer = buffer.getLong();
@@ -490,20 +495,28 @@ class MutableNodeRecordData
         return relationshipId >>> 40;
     }
 
+    // Forward pointer: [dssi,iiii][iiii,iiii][iiii,iiii][iiii,iiii]  [iiii,iiii][iiii,iiii][iiii,iiii][iiii,iiii]
+
+    static boolean isDenseFromForwardPointer( long forwardPointer )
+    {
+        Preconditions.checkArgument( forwardPointer != NULL, "NULL FW pointer" );
+        return (forwardPointer & 0x80000000_00000000L) != 0;
+    }
+
     static int sizeExponentialFromForwardPointer( long forwardPointer )
     {
         Preconditions.checkArgument( forwardPointer != NULL, "NULL FW pointer" );
-        return (int) (forwardPointer >>> 62);
+        return (int) ((forwardPointer >>> 61) & 0x3);
     }
 
     static long idFromForwardPointer( long forwardPointer )
     {
         Preconditions.checkArgument( forwardPointer != NULL, "NULL FW pointer" );
-        return forwardPointer & 0x3FFFFFFF_FFFFFFFFL;
+        return forwardPointer & 0x1FFFFFFF_FFFFFFFFL;
     }
 
-    static long forwardPointer( int sizeExp, long id )
+    static long forwardPointer( int sizeExp, boolean isDense, long id )
     {
-        return id | (((long) sizeExp) << 62);
+        return id | (((long) sizeExp) << 61) | (isDense ? 0x80000000_00000000L : 0);
     }
 }

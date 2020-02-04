@@ -81,12 +81,11 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
     private static final byte EXTERNAL_TYPE_LOCAL_TIME = 14;
     private static final byte EXTERNAL_TYPE_DURATION = 15;
 
-    private static final byte INTERNAL_SCALAR_TYPE_INT_8 = 0;
-    private static final byte INTERNAL_SCALAR_TYPE_INT_16 = 1;
-    private static final byte INTERNAL_SCALAR_TYPE_INT_32 = 2;
-    private static final byte INTERNAL_SCALAR_TYPE_INT_64 = 3;
-
-    private static final byte INTERNAL_SCALAR_NEGATIVE = 1;
+    private static final byte INTERNAL_SCALAR_TYPE_INT_0 = 0;
+    private static final byte INTERNAL_SCALAR_TYPE_INT_8 = 1;
+    private static final byte INTERNAL_SCALAR_TYPE_INT_16 = 2;
+    private static final byte INTERNAL_SCALAR_TYPE_INT_32 = 3;
+    private static final byte INTERNAL_SCALAR_TYPE_INT_64 = 4;
 
     private static final byte INTERNAL_BOOL_FALSE = 0;
     private static final byte INTERNAL_BOOL_TRUE = 1;
@@ -102,11 +101,11 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
     private final ByteBuffer buffer;
 
     //Array state
-    private boolean writingArray = false;
+    private boolean writingArray;
     private byte currentArrayType = -1;
     private int currentArrayElementsLeft = -1;
     //Nested properties
-    private int nestedPropertyCount = 0;
+    private int nestedPropertyCount;
 
     PropertyValueFormat( ByteBuffer buffer )
     {
@@ -120,17 +119,12 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
 
     private static byte internalType( byte typeByte )
     {
-        return (byte) ((typeByte & 0xE0) >> 5);
+        return (byte) ((typeByte & 0x70) >> 4);
     }
 
-    private static boolean negativeScalar( byte typeByte )
+    private static byte createTypeByte( byte externalType, byte internalType )
     {
-        return (typeByte & 0x10) != 0;
-    }
-
-    private static byte createTypeByte( byte externalType, byte internalType, boolean negative )
-    {
-        return (byte) (externalType | (internalType << 5) | (negative ? INTERNAL_SCALAR_NEGATIVE : 0) << 4);
+        return (byte) (externalType | (internalType << 4));
     }
 
     @Override
@@ -190,7 +184,10 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
     @Override
     public void writeByteArray( byte[] value )
     {
-        throw new IllegalArgumentException( "Cannot write byte[] directly, use beginArray(size, ArrayType.BYTE)" );
+        beginArray( value.length, ArrayType.BYTE );
+        buffer.put( value );
+        currentArrayElementsLeft = 0;
+        endArray();
     }
 
     @Override
@@ -214,7 +211,7 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
     {
         beginWriteProperty( EXTERNAL_TYPE_POINT );
         int tableId = crs.getTable().getTableId();
-        assert tableId >=0 && tableId <= 0x7; //fits in 3 bits
+        assert tableId >= 0 && tableId <= 0x7; //fits in 3 bits
         buffer.put( (byte) (EXTERNAL_TYPE_POINT | (tableId << 4)) );
         writeInteger( crs.getCode() );
         for ( double coord : coordinate )
@@ -349,13 +346,13 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
     private static TimeValue readZonedTime( ByteBuffer buffer, byte typeByte )
     {
         long nanosOfDayUTC = readScalarValue( buffer, internalType( typeByte ) );
-        int offsetSeconds = (int) readScalarWithSign( buffer, buffer.get() );
+        int offsetSeconds = (int) readScalarValue( buffer, internalType( buffer.get() ) );
         return TimeValue.time( nanosOfDayUTC, ZoneOffset.ofTotalSeconds( offsetSeconds ) );
     }
 
     private static int sizeOfZonedTime( byte typeByte, ByteBuffer buffer )
     {
-        int size = 1 + (1 << internalType( typeByte ));
+        int size = 1 + sizeOfScalar( internalType( typeByte ) );
         return size + calculatePropertyValueSizeIncludingTypeHeader( buffer.position( buffer.position() + size ) );
     }
 
@@ -370,14 +367,14 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
 
     private static int sizeOfLocalDateTime( byte typeByte, ByteBuffer buffer )
     {
-        int size = 1 + (1 << internalType( typeByte ));
+        int size = 1 + sizeOfScalar( internalType( typeByte ) );
         return size + calculatePropertyValueSizeIncludingTypeHeader( buffer.position( buffer.position() + size ) );
     }
 
     private static LocalDateTimeValue readLocalDateTime( ByteBuffer buffer, byte typeByte )
     {
         long epochSecond = readScalarValue( buffer, internalType( typeByte ) );
-        int nano = (int) readScalarWithSign( buffer, buffer.get() );
+        int nano = (int) readScalarValue( buffer, internalType( buffer.get() ) );
         return LocalDateTimeValue.localDateTime( epochSecond, nano );
     }
 
@@ -408,7 +405,7 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
     private static int sizeOfDateTime( byte typeByte, ByteBuffer buffer )
     {
         int start = buffer.position();
-        int size = 1 + (1 << internalType( typeByte ));
+        int size = 1 + sizeOfScalar( internalType( typeByte ) );
         size += calculatePropertyValueSizeIncludingTypeHeader( buffer.position( start + size ) );
         size += calculatePropertyValueSizeIncludingTypeHeader( buffer.position( start + size ) );
         buffer.position( start );
@@ -418,17 +415,17 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
     private static DateTimeValue readDateTime( ByteBuffer buffer, byte typeByte )
     {
         long epochSecond = readScalarValue( buffer, internalType( typeByte ) );
-        int nano = (int) readScalarWithSign( buffer, buffer.get() );
+        int nano = (int) readScalarValue( buffer, internalType( buffer.get() ) );
         byte zoneOrOffsetTypeByte = buffer.get();
         if ( externalType( zoneOrOffsetTypeByte ) == EXTERNAL_TYPE_INT ) //offset in seconds
         {
-            int offsetSeconds = (int) readScalarWithSign( buffer, zoneOrOffsetTypeByte );
+            int offsetSeconds = (int) readScalarValue( buffer, internalType( zoneOrOffsetTypeByte ) );
             ZoneOffset offset = ZoneOffset.ofTotalSeconds( offsetSeconds );
             return DateTimeValue.datetime( epochSecond, nano, offset );
         }
         else if ( externalType( zoneOrOffsetTypeByte ) == EXTERNAL_TYPE_SHORT ) //offset in zoneid
         {
-            String zoneId = TimeZones.map( (short) readScalarWithSign( buffer, zoneOrOffsetTypeByte ) );
+            String zoneId = TimeZones.map( (short) readScalarValue( buffer, internalType( zoneOrOffsetTypeByte ) ) );
             return DateTimeValue.datetime( epochSecond, nano, ZoneId.of( zoneId ) );
         }
         throw new IllegalStateException();
@@ -438,7 +435,10 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
     public void writeInteger( byte value ) throws RuntimeException
     {
         beginWriteProperty( EXTERNAL_TYPE_BYTE );
-        buffer.put( EXTERNAL_TYPE_BYTE );
+        if ( !writingArray )
+        {
+            buffer.put( EXTERNAL_TYPE_BYTE );
+        }
         buffer.put( value );
         endWriteProperty();
     }
@@ -447,13 +447,8 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
     public void writeInteger( short value ) throws RuntimeException
     {
         beginWriteProperty( EXTERNAL_TYPE_SHORT );
-        boolean negative = value < 0;
-        if ( negative )
-        {
-            value ^= 0xFFFF;
-        }
         byte internalScalarType = minimalInternalScalarType( value );
-        buffer.put( createTypeByte( EXTERNAL_TYPE_SHORT, internalScalarType, negative ) );
+        buffer.put( createTypeByte( EXTERNAL_TYPE_SHORT, internalScalarType ) );
         writeScalarValue( value, internalScalarType );
         endWriteProperty();
     }
@@ -476,16 +471,10 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
 
     private void writeIntBits( int value, byte externalType )
     {
-        boolean negative = value < 0;
-        if ( negative )
-        {
-            value = ~value;
-        }
         byte internalScalarType = minimalInternalScalarType( value );
-        buffer.put( createTypeByte( externalType, internalScalarType, negative ) );
+        buffer.put( createTypeByte( externalType, internalScalarType ) );
         writeScalarValue( value, internalScalarType );
     }
-
 
     @Override
     public void writeInteger( long value )
@@ -498,7 +487,7 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
     private void writeLongBits( long value, byte externalType )
     {
         byte internalScalarType = minimalInternalScalarType( value );
-        buffer.put( createTypeByte( externalType, internalScalarType, false ) ); //No special handling of negative longs
+        buffer.put( createTypeByte( externalType, internalScalarType ) );
         writeScalarValue( value, internalScalarType );
     }
 
@@ -525,7 +514,10 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
     public void writeString( char value )
     {
         beginWriteProperty( EXTERNAL_TYPE_CHAR );
-        buffer.put( EXTERNAL_TYPE_CHAR );
+        if ( !writingArray )
+        {
+            buffer.put( EXTERNAL_TYPE_CHAR );
+        }
         buffer.putChar( value );
         endWriteProperty();
     }
@@ -552,16 +544,38 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
             {
                 byte externalType = externalType( typeByte );
                 int length = (int) read( buffer ).asObject();
-                Object[] values = allocateTypeArray( externalType, length );
-                for ( int i = 0; i < length; i++ )
-                {
-                    values[i] = read( buffer ).asObject();
-                }
-                return Values.of( values );
+                return readArray( externalType, length, buffer );
             }
 
-            throw new IllegalArgumentException("Unknown special type");
+            throw new IllegalArgumentException( "Unknown special type" );
         }
+    }
+
+    private static Value readArray( byte externalType, int length, ByteBuffer buffer )
+    {
+        //do nothing
+        if ( externalType == EXTERNAL_TYPE_BYTE )
+        {
+            byte[] data = new byte[length];
+            buffer.get( data );
+            return Values.of( data );
+        }
+        else if ( externalType == EXTERNAL_TYPE_CHAR )
+        {
+            char[] data = new char[length];
+            for ( int i = 0; i < length; i++ )
+            {
+                data[i] = buffer.getChar();
+            }
+            return Values.of( data );
+        }
+
+        Object[] values = allocateTypeArray( externalType, length );
+        for ( int i = 0; i < length; i++ )
+        {
+            values[i] = read( buffer ).asObject();
+        }
+        return Values.of( values );
     }
 
     private static Value readSimpleInlinedValue( byte typeByte, ByteBuffer buffer )
@@ -570,15 +584,15 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
         switch ( externalType )
         {
         case EXTERNAL_TYPE_FLOAT:
-            return Values.floatValue( Float.intBitsToFloat( (int) readScalarWithSign( buffer, typeByte ) ) );
+            return Values.floatValue( Float.intBitsToFloat( (int) readScalarValue( buffer, internalType( typeByte ) ) ) );
         case EXTERNAL_TYPE_DOUBLE:
             return Values.doubleValue( Double.longBitsToDouble( readScalarValue( buffer, internalType( typeByte ) ) ) );
         case EXTERNAL_TYPE_BYTE:
             return Values.byteValue( buffer.get() );
         case EXTERNAL_TYPE_SHORT:
-            return Values.shortValue( (short) readScalarWithSign( buffer, typeByte ) );
+            return Values.shortValue( (short) readScalarValue( buffer, internalType( typeByte ) ) );
         case EXTERNAL_TYPE_INT:
-            return Values.intValue( (int) readScalarWithSign( buffer, typeByte ) );
+            return Values.intValue( (int) readScalarValue( buffer, internalType( typeByte ) ) );
         case EXTERNAL_TYPE_LONG:
             return Values.longValue( readScalarValue( buffer, internalType( typeByte ) ) );
         case EXTERNAL_TYPE_STRING:
@@ -604,17 +618,6 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
         default:
             throw new IllegalArgumentException();
         }
-    }
-
-    private static long readScalarWithSign( ByteBuffer buffer, byte typeByte )
-    {
-        byte internalScalarType = internalType( typeByte );
-        long value = readScalarValue( buffer, internalScalarType );
-        if ( negativeScalar( typeByte ) )
-        {
-            value = ~value;
-        }
-        return value;
     }
 
     static int calculatePropertyValueSizeIncludingTypeHeader( ByteBuffer buffer )
@@ -651,7 +654,7 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
                 return size;
             }
 
-            throw new IllegalArgumentException("Unknown special type");
+            throw new IllegalArgumentException( "Unknown special type" );
         }
 
     }
@@ -668,7 +671,7 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
         case EXTERNAL_TYPE_SHORT:
         case EXTERNAL_TYPE_INT:
         case EXTERNAL_TYPE_LONG:
-            return 1 + (1 << internalType( typeByte )); //Type + Scalar
+            return 1 + sizeOfScalar( internalType( typeByte ) ); //Type + Scalar
         case EXTERNAL_TYPE_STRING:
             int propertyLength = buffer.get( buffer.position() + 1 );
             return 1 + 1 + propertyLength; // Type + length + data
@@ -693,27 +696,42 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
         }
     }
 
+    private static int sizeOfScalar( byte internalType )
+    {
+        if ( internalType == INTERNAL_SCALAR_TYPE_INT_0 )
+        {
+            return 0;
+        }
+        return 1 << (internalType - 1);
+    }
+
     private byte minimalInternalScalarType( long value )
     {
-        if ( (value & 0xFFFFFFFF_80000000L) != 0 )
+        if ( value == 0 )
         {
-            return INTERNAL_SCALAR_TYPE_INT_64;
+            return INTERNAL_SCALAR_TYPE_INT_0;
         }
-        if ( (value & 0x7FFF8000L) != 0 )
+        if ( value >= Byte.MIN_VALUE && value <= Byte.MAX_VALUE )
         {
-            return INTERNAL_SCALAR_TYPE_INT_32;
+            return INTERNAL_SCALAR_TYPE_INT_8;
         }
-        if ( (value & 0x7F80L) != 0 )
+        if ( value >= Short.MIN_VALUE && value <= Short.MAX_VALUE )
         {
             return INTERNAL_SCALAR_TYPE_INT_16;
         }
-        return INTERNAL_SCALAR_TYPE_INT_8;
+        if ( value >= Integer.MIN_VALUE && value <= Integer.MAX_VALUE )
+        {
+            return INTERNAL_SCALAR_TYPE_INT_32;
+        }
+        return INTERNAL_SCALAR_TYPE_INT_64;
     }
 
     private void writeScalarValue( long value, byte internalScalarType )
     {
         switch ( internalScalarType )
         {
+        case INTERNAL_SCALAR_TYPE_INT_0:
+            break; // write nothing
         case INTERNAL_SCALAR_TYPE_INT_64:
             buffer.putLong( value );
             break;
@@ -743,6 +761,8 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
             return buffer.getShort();
         case INTERNAL_SCALAR_TYPE_INT_8:
             return buffer.get();
+        case INTERNAL_SCALAR_TYPE_INT_0:
+            return 0L;
         default:
             throw new IllegalArgumentException( "" + internalScalarType );
         }

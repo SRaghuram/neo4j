@@ -223,6 +223,11 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
         return nodeId;
     }
 
+    RelationshipDirection currentDirection()
+    {
+        return currentRelationshipDirection;
+    }
+
     @Override
     public void init( long nodeId, long reference, RelationshipSelection selection )
     {

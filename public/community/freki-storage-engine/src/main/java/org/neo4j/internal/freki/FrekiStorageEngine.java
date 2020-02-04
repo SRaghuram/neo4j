@@ -32,6 +32,7 @@ import org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector;
 import org.neo4j.internal.counts.CountsBuilder;
 import org.neo4j.internal.counts.GBPTreeCountsStore;
 import org.neo4j.internal.diagnostics.DiagnosticsManager;
+import org.neo4j.internal.id.DefaultIdGeneratorFactory;
 import org.neo4j.internal.id.IdController;
 import org.neo4j.internal.id.IdGenerator;
 import org.neo4j.internal.id.IdGeneratorFactory;
@@ -75,6 +76,7 @@ import org.neo4j.storageengine.api.txstate.ReadableTransactionState;
 import org.neo4j.storageengine.api.txstate.TxStateVisitor;
 import org.neo4j.token.TokenHolders;
 
+import static org.neo4j.internal.helpers.ArrayUtil.concat;
 import static org.neo4j.io.IOUtils.closeAllSilently;
 import static org.neo4j.kernel.lifecycle.LifecycleAdapter.onInit;
 
@@ -129,8 +131,7 @@ class FrekiStorageEngine implements StorageEngine
         this.pageCacheTracer = pageCacheTracer;
         this.cursorTracerSupplier = cursorTracerSupplier;
 
-        Store mainStore = null;
-        Store mainLargeStore = null;
+        SimpleStore[] mainStores = new SimpleStore[4];
         BigPropertyValueStore bigPropertyValueStore = null;
         IdGenerator relationshipsIdGenerator = null;
         GBPTreeMetaDataStore metaDataStore = null;
@@ -142,10 +143,14 @@ class FrekiStorageEngine implements StorageEngine
         boolean success = false;
         try
         {
-            mainStore = new Store( fs, databaseLayout.file( "main-store" ), pageCache, idGeneratorFactory, IdType.NODE, false, createStoreIfNotExists, 0,
+            mainStores[0] = new Store( fs, databaseLayout.file( "main-store-x1" ), pageCache, idGeneratorFactory, IdType.NODE, false, createStoreIfNotExists, 0,
                     cursorTracerSupplier );
-            mainLargeStore = new Store( fs, databaseLayout.file( "main-store-large" ), pageCache, idGeneratorFactory, IdType.NODE, false,
-                    createStoreIfNotExists, 2, cursorTracerSupplier );
+            for ( int i = 1; i < mainStores.length; i++ )
+            {
+                mainStores[i] = new Store( fs, databaseLayout.file( "main-store-x" + (1 << i) ), pageCache,
+                        new DefaultIdGeneratorFactory( fs, recoveryCleanupWorkCollector, false ), IdType.NODE, false, createStoreIfNotExists, i,
+                        cursorTracerSupplier );
+            }
             bigPropertyValueStore =
                     new BigPropertyValueStore( fs, databaseLayout.file( "big-values" ), pageCache, false, createStoreIfNotExists, cursorTracerSupplier );
             relationshipsIdGenerator =
@@ -164,7 +169,7 @@ class FrekiStorageEngine implements StorageEngine
             labelTokenStore = new GBPTreeTokenStore( pageCache, databaseLayout.labelTokenStore(), recoveryCleanupWorkCollector,
                     idGeneratorFactory, IdType.LABEL_TOKEN, MAX_TOKEN_ID, false, pageCacheTracer, cursorTracer );
             SchemaCache schemaCache = new SchemaCache( constraintSemantics, indexConfigCompleter );
-            this.stores = new Stores( mainStore, mainLargeStore, bigPropertyValueStore, relationshipsIdGenerator, metaDataStore, countsStore, schemaStore,
+            this.stores = new Stores( mainStores, bigPropertyValueStore, relationshipsIdGenerator, metaDataStore, countsStore, schemaStore,
                     schemaCache, propertyKeyTokenStore, relationshipTypeTokenStore, labelTokenStore );
             life.add( stores );
             success = true;
@@ -177,8 +182,8 @@ class FrekiStorageEngine implements StorageEngine
         {
             if ( !success )
             {
-                closeAllSilently( mainStore, mainLargeStore, bigPropertyValueStore, relationshipsIdGenerator, metaDataStore, countsStore, schemaStore,
-                        propertyKeyTokenStore, relationshipTypeTokenStore, labelTokenStore );
+                closeAllSilently( concat( mainStores, bigPropertyValueStore, relationshipsIdGenerator, metaDataStore, countsStore, schemaStore,
+                        propertyKeyTokenStore, relationshipTypeTokenStore, labelTokenStore ) );
             }
         }
     }

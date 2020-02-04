@@ -101,6 +101,7 @@ class PropertyValueFormatTest
         //Given
         Map<Integer,Integer> scalarSizeMap = Map.of(
                 6, 2,
+                127, 2,
                 200, 3,
                 10_000, 3,
                 500_000_000, 5
@@ -122,6 +123,19 @@ class PropertyValueFormatTest
     }
 
     @Test
+    void shouldPackScalarsOnSizeEdgeTightly()
+    {
+        propertyValueFormat.writeInteger( 128 );
+        assertEquals( Values.intValue( 128 ), readValue() );
+        assertEquals( 3, writeBuffer.position() );
+        writeBuffer.clear();
+        readBuffer.clear();
+        propertyValueFormat.writeInteger( -128 );
+        assertEquals( Values.intValue( -128 ), readValue() );
+        assertEquals( 2, writeBuffer.position() );
+    }
+
+    @Test
     void shouldWriteAndReadLongs()
     {
         //Given
@@ -138,7 +152,14 @@ class PropertyValueFormatTest
         {
             assertEquals( Values.longValue( value ), readValue() );
         }
+    }
 
+    @Test
+    void shouldPackNegativeLongsTightly()
+    {
+        propertyValueFormat.writeInteger( -1L );
+        assertEquals( Values.longValue( -1L ), readValue() );
+        assertEquals( 2, writeBuffer.position() );
     }
 
     @Test
@@ -299,7 +320,7 @@ class PropertyValueFormatTest
     }
 
     @Test
-    void shouldWriteAndReadArrays()
+    void shouldWriteAndReadCharArrays()
     {
         char[] array = {'a', 'b', 'c'};
         propertyValueFormat.beginArray( array.length, ValueWriter.ArrayType.CHAR );
@@ -310,6 +331,26 @@ class PropertyValueFormatTest
         propertyValueFormat.endArray();
 
         assertEquals( Values.charArray( array ), readValue() );
+        assertEquals( 9, writeBuffer.position() ); //type(1) + length(2) + data(6)
+    }
+
+    @Test
+    void shouldWriteAndReadByteArrays()
+    {
+        byte[] array = {5, -2, 100, -50};
+        propertyValueFormat.writeByteArray( array );
+        assertEquals( Values.byteArray( array ), readValue() );
+        assertEquals( 7, writeBuffer.position() ); //type(1) + length(2) + data(4)
+
+        propertyValueFormat.beginArray( array.length, ValueWriter.ArrayType.BYTE );
+        for ( byte b : array )
+        {
+            propertyValueFormat.writeInteger( b );
+        }
+        propertyValueFormat.endArray();
+
+        assertEquals( Values.byteArray( array ), readValue() );
+        assertEquals( 14, writeBuffer.position() ); // prev + type(1) + length(2) + data(4)
     }
 
     @Test
@@ -353,7 +394,6 @@ class PropertyValueFormatTest
         propertyValueFormat.beginArray( 2, ValueWriter.ArrayType.FLOAT );
         assertThrows( AssertionError.class, () ->  propertyValueFormat.beginArray( 7, ValueWriter.ArrayType.LONG ) );
     }
-
 
     @Test
     void shouldFailWhenNotFillingArray()
@@ -522,6 +562,4 @@ class PropertyValueFormatTest
     {
         return PropertyValueFormat.read( readBuffer );
     }
-
-
 }
