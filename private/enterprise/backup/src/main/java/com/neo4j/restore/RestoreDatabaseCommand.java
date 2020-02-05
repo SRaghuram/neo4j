@@ -130,7 +130,6 @@ public class RestoreDatabaseCommand
 
     private static DatabaseLayout buildTargetDatabaseLayout( String databaseName, Config config )
     {
-        var normalizedDatabaseName = new NormalizedDatabaseName( databaseName );
-        return Neo4jLayout.of( config ).databaseLayout( normalizedDatabaseName.name() );
+        return Neo4jLayout.of( config ).databaseLayout( databaseName );
     }
 }

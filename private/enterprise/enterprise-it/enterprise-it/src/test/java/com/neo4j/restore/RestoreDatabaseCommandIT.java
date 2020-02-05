@@ -30,11 +30,7 @@ import org.neo4j.test.extension.Neo4jLayoutExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.online_backup_enabled;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.arrayWithSize;
-import static org.hamcrest.Matchers.emptyArray;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.greaterThan;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -82,7 +78,7 @@ class RestoreDatabaseCommandIT
                 new RestoreDatabaseCommand( fileSystem, fromPath, config, databaseName, true ).execute();
             }
         } );
-        assertThat( commandFailedException.getMessage(), equalTo( "The database is in use. Stop database 'new' and try again." ) );
+        assertThat( commandFailedException.getMessage() ).isEqualTo( "The database is in use. Stop database 'new' and try again." );
     }
 
     @Test
@@ -134,6 +130,17 @@ class RestoreDatabaseCommandIT
         IllegalArgumentException illegalException =
                 assertThrows( IllegalArgumentException.class, () -> new RestoreDatabaseCommand( fileSystem, fromPath, config, databaseName, false ).execute() );
         assertTrue( illegalException.getMessage().contains( "Source directory is not a database backup" ), illegalException.getMessage() );
+    }
+
+    @Test
+    void failOnInvalidDatabaseName()
+    {
+        var databaseName =  "__any_" ;
+        Config config = configWith( directory.absolutePath().getAbsolutePath() );
+
+        File fromPath = new File( directory.absolutePath(), "old" );
+        assertTrue( fromPath.mkdirs() );
+        assertThrows( Exception.class, () -> new RestoreDatabaseCommand( fileSystem, fromPath, config, databaseName, false ).execute() );
     }
 
     @Test
@@ -201,9 +208,9 @@ class RestoreDatabaseCommandIT
         LogFiles fromStoreLogFiles = logFilesBasedOnlyBuilder( fromLayout.databaseDirectory(), fileSystem ).build();
         LogFiles toStoreLogFiles = logFilesBasedOnlyBuilder( toLayout.databaseDirectory(), fileSystem ).build();
         LogFiles customLogLocationLogFiles = logFilesBasedOnlyBuilder( toLayout.getTransactionLogsDirectory(), fileSystem ).build();
-        assertThat( toStoreLogFiles.logFiles(), emptyArray() );
-        assertThat( customLogLocationLogFiles.logFiles(), arrayWithSize( 1 ) );
-        assertThat( fromStoreLogFiles.getLogFileForVersion( 0 ).length(), greaterThan( 0L ) );
+        assertThat( toStoreLogFiles.logFiles() ).isEmpty();
+        assertThat( customLogLocationLogFiles.logFiles() ).hasSize( 1 );
+        assertThat( fromStoreLogFiles.getLogFileForVersion( 0 ).length() ).isGreaterThan( 0L );
         assertEquals( fromStoreLogFiles.getLogFileForVersion( 0 ).length(),
                 customLogLocationLogFiles.getLogFileForVersion( 0 ).length() );
     }

@@ -38,8 +38,7 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.rule.SuppressOutput;
 
 import static java.lang.Math.min;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsString;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -65,7 +64,23 @@ class StoreCopyCommandIT extends AbstractCommandIT
         CommandFailedException commandFailedException = assertThrows( CommandFailedException.class,
                 () -> copyDatabase( "--from-database=" + databaseAPI.databaseName(), "--to-database=copy" ) );
         assertTrue( commandFailedException.getCause() instanceof FileLockException );
-        assertThat( commandFailedException.getMessage(), containsString( "The database is in use") );
+        assertThat( commandFailedException.getMessage() ).contains( "The database is in use" );
+    }
+
+    @Test
+    void failOnIncorrectFromDatabaseName()
+    {
+        var exception = assertThrows( Exception.class,
+                () -> copyDatabase( "--from-database=" + databaseAPI.databaseName() + "_", "--to-database=copy" ) );
+        assertThat( exception ).hasMessageContaining( "Invalid database name '" + databaseAPI.databaseName() + "_" + "'" );
+    }
+
+    @Test
+    void failOnIncorrectToDatabaseName()
+    {
+        var e = assertThrows( Exception.class,
+                () -> copyDatabase( "--from-database=" + databaseAPI.databaseName(), "--to-database=copy_" ) );
+        assertThat( e ).hasMessageContaining( "Invalid database name 'copy_'" );
     }
 
     @Test
@@ -80,7 +95,7 @@ class StoreCopyCommandIT extends AbstractCommandIT
 
             CommandFailedException commandFailedException = assertThrows( CommandFailedException.class,
                     () -> copyDatabase( "--from-database=" + databaseAPI.databaseName(), "--to-database=copy" ) );
-            assertThat( commandFailedException.getMessage(), containsString( "The directory is not empty" ) );
+            assertThat( commandFailedException.getMessage() ).contains( "The directory is not empty" );
         }
         finally
         {

@@ -14,10 +14,12 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.io.PrintWriter;
 import java.nio.file.Path;
 import java.time.ZoneOffset;
 import java.util.TimeZone;
 
+import org.neo4j.cli.Command;
 import org.neo4j.cli.ExecutionContext;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.logging.LogTimeZone;
@@ -26,9 +28,9 @@ import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static java.lang.String.format;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.equalTo;
+import static org.apache.commons.lang3.RandomStringUtils.randomAlphabetic;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.db_timezone;
 
 @TestDirectoryExtension
@@ -48,7 +50,7 @@ class OnlineBackupCommandTest
         {
             CommandLine.usage( command, new PrintStream( out ) );
         }
-        assertThat( baos.toString().trim(), equalTo( format(
+        assertThat( baos.toString().trim() ).isEqualTo( format(
                 "Perform an online backup from a running Neo4j enterprise server.%n%n" +
                         "USAGE%n" + "%n" +
                         "backup [--check-consistency] [--fallback-to-full] [--verbose]%n" +
@@ -103,17 +105,35 @@ class OnlineBackupCommandTest
                         "      --additional-config=<path>%n" +
                         "                            Configuration file to supply additional%n" +
                         "                              configuration in."
-        ) ) );
+        ) );
     }
 
     @ParameterizedTest
     @ValueSource( ints = {5, 8} )
     void logRespectsTimeZone( int timezoneOffset ) throws IOException
     {
-        // given
         TimeZone defaultZone = TimeZone.getDefault();
         TimeZone.setDefault( TimeZone.getTimeZone( ZoneOffset.ofHours( timezoneOffset ) ) );
+        try
+        {
+            String firstLogLine = executeBackup( DEFAULT_DATABASE_NAME );
+            assertThat( firstLogLine ).contains( format( "+0%d00", timezoneOffset ) );
+        }
+        finally
+        {
+            TimeZone.setDefault( defaultZone );
+        }
+    }
 
+    @Test
+    void failOnIncorrectDatabaseName() throws IOException
+    {
+        String firstLogLine = executeBackup( randomAlphabetic( 2056 ) );
+        assertThat( firstLogLine ).contains( "Invalid database name " );
+    }
+
+    private String executeBackup( String databaseName ) throws IOException
+    {
         File cfg = dir.file( "neo4j.conf" );
         try ( PrintStream ps = new PrintStream( fs.openAsOutputStream( cfg, false ) ) )
         {
@@ -121,24 +141,18 @@ class OnlineBackupCommandTest
         }
 
         // when
-        String firstLogLine;
         try ( ByteArrayOutputStream os = new ByteArrayOutputStream();
-              PrintStream ps = new PrintStream( os ) )
+                PrintStream ps = new PrintStream( os );
+                PrintWriter writer = new PrintWriter( ps ) )
         {
             ExecutionContext ctx = new ExecutionContext( dir.homeDir().toPath(), cfg.getParentFile().toPath(), ps, ps, fs );
 
-            new CommandLine( new OnlineBackupCommand( ctx ) ).execute(
-                    "--verbose",
-                    "--backup-dir", dir.directory( "backup" ).toString()
-            ); //this backup will fail but first few lines will expose if log respects timezone.
-
-            firstLogLine = os.toString().split( "\n", 1 )[0];
+            String[] args = { "--verbose",
+                              "--database", databaseName,
+                              "--backup-dir", dir.directory( "backup" ).toString() };
+            var command = new OnlineBackupCommand( ctx );
+            new CommandLine( command ).setErr( writer ).execute( args );
+            return os.toString().split( "\n", 1 )[0];
         }
-
-        // then
-        assertThat( firstLogLine, containsString( format( "+0%d00", timezoneOffset )) );
-
-        // cleanup
-        TimeZone.setDefault( defaultZone );
     }
 }

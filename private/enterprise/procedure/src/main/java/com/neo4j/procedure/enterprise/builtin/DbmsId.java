@@ -98,7 +98,7 @@ class DbmsId
     private static NormalizedDatabaseName normalizeAndValidateDatabaseName( String databaseName )
     {
         NormalizedDatabaseName normalizedDatabaseName = new NormalizedDatabaseName( databaseName );
-        DatabaseNameValidator.assertValidDatabaseName( normalizedDatabaseName );
+        DatabaseNameValidator.validateInternalDatabaseName( normalizedDatabaseName );
         return normalizedDatabaseName;
     }
 }

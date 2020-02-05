@@ -12,9 +12,9 @@ import org.neo4j.cli.CommandFailedException;
 import org.neo4j.cli.ExecutionContext;
 import org.neo4j.consistency.CheckConsistencyCommand;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.startsWith;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class CheckConsistencyCommandIT extends AbstractCommandIT
@@ -24,7 +24,14 @@ class CheckConsistencyCommandIT extends AbstractCommandIT
     {
         String databaseName = databaseAPI.databaseName();
         CommandFailedException exception = assertThrows( CommandFailedException.class, () -> checkConsistency( databaseName ) );
-        assertThat( exception.getMessage(), startsWith( "The database is in use. Stop database" ) );
+        assertThat( exception.getMessage() ).startsWith( "The database is in use. Stop database" );
+    }
+
+    @Test
+    void failOnInvalidDatabaseName()
+    {
+        var exception = assertThrows( Exception.class, () -> checkConsistency( "оригинальноеназвание" ) );
+        assertThat( exception ).hasMessageContaining( "Invalid database name 'оригинальноеназвание'." );
     }
 
     @Test
@@ -36,10 +43,20 @@ class CheckConsistencyCommandIT extends AbstractCommandIT
     }
 
     @Test
+    void checkConsistencyOfStoppedLowerCasedDatabase()
+    {
+        String databaseName = databaseAPI.databaseName();
+        managementService.shutdownDatabase( databaseName );
+
+        assertEquals( databaseName.toLowerCase(), databaseName );
+        assertDoesNotThrow( () -> checkConsistency( databaseName.toUpperCase() ) );
+    }
+
+    @Test
     void failToCheckNonExistentDatabase()
     {
         CommandFailedException exception = assertThrows( CommandFailedException.class, () -> checkConsistency( "foo" ) );
-        assertThat( exception.getMessage(), startsWith( "Database does not exist: foo" ) );
+        assertThat( exception.getMessage() ).startsWith( "Database does not exist: foo" );
     }
 
     private void checkConsistency( String database )

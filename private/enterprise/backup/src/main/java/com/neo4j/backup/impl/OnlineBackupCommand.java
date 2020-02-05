@@ -14,12 +14,14 @@ import java.nio.file.Path;
 
 import org.neo4j.cli.AbstractCommand;
 import org.neo4j.cli.CommandFailedException;
+import org.neo4j.cli.Converters.DatabaseNameConverter;
 import org.neo4j.cli.ExecutionContext;
 import org.neo4j.commandline.Util;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.ConfigUtils;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.SettingValueParsers;
+import org.neo4j.configuration.helpers.NormalizedDatabaseName;
 import org.neo4j.consistency.ConsistencyCheckOptions;
 import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.logging.Level;
@@ -59,8 +61,9 @@ public class OnlineBackupCommand extends AbstractCommand
             description = "Host and port of Neo4j." )
     private String from;
 
-    @Option( names = "--database", defaultValue = DEFAULT_DATABASE_NAME, description = "Name of the remote database to backup." )
-    private String database;
+    @Option( names = "--database", defaultValue = DEFAULT_DATABASE_NAME, description = "Name of the remote database to backup.",
+            converter = DatabaseNameConverter.class )
+    private NormalizedDatabaseName database;
 
     @Option( names = "--fallback-to-full", paramLabel = "<true/false>", defaultValue = "true", showDefaultValue = ALWAYS,
             description = "If an incremental backup fails backup will move the old backup to <name>.err.<N> and fallback to a full." )
@@ -95,7 +98,7 @@ public class OnlineBackupCommand extends AbstractCommand
                 .withBackupDirectory( requireExisting( backupDir ) )
                 .withReportsDirectory( consistencyCheckOptions.getReportDir() )
                 .withAddress( address )
-                .withDatabaseName( database )
+                .withDatabaseName( database.name() )
                 .withConfig( config )
                 .withFallbackToFullBackup( fallbackToFull )
                 .withConsistencyCheck( checkConsistency )

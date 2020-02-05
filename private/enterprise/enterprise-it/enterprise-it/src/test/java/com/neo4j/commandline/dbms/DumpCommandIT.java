@@ -5,6 +5,7 @@
  */
 package com.neo4j.commandline.dbms;
 
+import org.apache.commons.lang3.StringUtils;
 import org.junit.jupiter.api.Test;
 import picocli.CommandLine;
 
@@ -15,11 +16,11 @@ import org.neo4j.cli.ExecutionContext;
 import org.neo4j.commandline.dbms.DumpCommand;
 import org.neo4j.dbms.archive.Dumper;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.greaterThan;
-import static org.hamcrest.Matchers.startsWith;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DumpCommandIT extends AbstractCommandIT
 {
@@ -29,7 +30,15 @@ class DumpCommandIT extends AbstractCommandIT
         String databaseName = databaseAPI.databaseName();
         Path dumpDestination = testDirectory.file( "dump1" ).toPath();
         CommandFailedException exception = assertThrows( CommandFailedException.class, () -> dumpDatabase( databaseName, dumpDestination ) );
-        assertThat( exception.getMessage(), startsWith( "The database is in use. Stop database" ) );
+        assertThat( exception.getMessage() ).startsWith( "The database is in use. Stop database" );
+    }
+
+    @Test
+    void failToDumpDatabaseWithInvalidName()
+    {
+        Path dumpDestination = testDirectory.file( "dump1" ).toPath();
+        var exception = assertThrows( Exception.class, () -> dumpDatabase( "_someDb_", dumpDestination ) );
+        assertThat( exception ).hasMessageContaining( "Invalid database name '_someDb_'" );
     }
 
     @Test
@@ -37,7 +46,7 @@ class DumpCommandIT extends AbstractCommandIT
     {
         Path dumpDestination = testDirectory.file( "dump2" ).toPath();
         CommandFailedException exception = assertThrows( CommandFailedException.class, () -> dumpDatabase( "foo", dumpDestination ) );
-        assertThat( exception.getMessage(), startsWith( "Database does not exist: foo" ) );
+        assertThat( exception.getMessage() ).startsWith( "Database does not exist: foo" );
     }
 
     @Test
@@ -49,7 +58,21 @@ class DumpCommandIT extends AbstractCommandIT
         managementService.shutdownDatabase( databaseName );
 
         assertDoesNotThrow( () -> dumpDatabase( databaseName, dumpDestination ) );
-        assertThat( dumpDestination.toFile().length(), greaterThan( 0L ) );
+        assertThat( dumpDestination.toFile().length() ).isGreaterThan( 0L );
+    }
+
+    @Test
+    void dumpLowerCasedStoppedDatabase()
+    {
+        String databaseName = databaseAPI.databaseName();
+        Path dumpDestination = testDirectory.file( "dump2" ).toPath();
+
+        managementService.shutdownDatabase( databaseName );
+
+        assertEquals( databaseName.toLowerCase(), databaseName );
+
+        assertDoesNotThrow( () -> dumpDatabase( databaseName.toUpperCase(), dumpDestination ) );
+        assertThat( dumpDestination.toFile().length() ).isGreaterThan( 0L );
     }
 
     private void dumpDatabase( String database, Path to )

@@ -17,11 +17,13 @@ import java.util.List;
 
 import org.neo4j.cli.AbstractCommand;
 import org.neo4j.cli.CommandFailedException;
+import org.neo4j.cli.Converters.DatabaseNameConverter;
 import org.neo4j.cli.ExecutionContext;
 import org.neo4j.commandline.dbms.LockChecker;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.ConfigUtils;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.helpers.NormalizedDatabaseName;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.kernel.impl.transaction.log.files.TransactionLogFilesHelper;
@@ -51,8 +53,8 @@ public class StoreCopyCommand extends AbstractCommand
 
     private static class SourceOption
     {
-        @Option( names = "--from-database", description = "Name of database to copy from.", required = true )
-        private String database;
+        @Option( names = "--from-database", description = "Name of database to copy from.", required = true, converter = DatabaseNameConverter.class )
+        private NormalizedDatabaseName database;
         @Option( names = "--from-path", description = "Path to the database to copy from.", required = true )
         private Path path;
     }
@@ -64,8 +66,8 @@ public class StoreCopyCommand extends AbstractCommand
     )
     private Path sourceTxLogs;
 
-    @Option( names = "--to-database", description = "Name of database to copy to.", required = true )
-    private String database;
+    @Option( names = "--to-database", description = "Name of database to copy to.", required = true, converter = DatabaseNameConverter.class )
+    private NormalizedDatabaseName database;
 
     // --force
     @Option( names = "--force", description = "Force the command to run even if the integrity of the database can not be verified." )
@@ -128,7 +130,7 @@ public class StoreCopyCommand extends AbstractCommand
 
         validateSource( fromDatabaseLayout );
 
-        DatabaseLayout toDatabaseLayout = Neo4jLayout.of( config ).databaseLayout( database );
+        DatabaseLayout toDatabaseLayout = Neo4jLayout.of( config ).databaseLayout( database.name() );
 
         validateTarget( toDatabaseLayout );
 
@@ -203,7 +205,7 @@ public class StoreCopyCommand extends AbstractCommand
         }
         else
         {
-            return Neo4jLayout.of( config ).databaseLayout( source.database );
+            return Neo4jLayout.of( config ).databaseLayout( source.database.name() );
         }
     }
 

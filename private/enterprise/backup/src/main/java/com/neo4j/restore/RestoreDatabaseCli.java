@@ -13,10 +13,15 @@ import java.io.IOException;
 import java.nio.file.Path;
 
 import org.neo4j.cli.AbstractCommand;
+import org.neo4j.cli.Converters;
+import org.neo4j.cli.Converters.DatabaseNameConverter;
 import org.neo4j.cli.ExecutionContext;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.ConfigUtils;
 import org.neo4j.configuration.GraphDatabaseSettings;
+import org.neo4j.configuration.helpers.NormalizedDatabaseName;
+
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 @Command(
         name = "restore",
@@ -26,8 +31,9 @@ public class RestoreDatabaseCli extends AbstractCommand
 {
     @Option( names = "--from", paramLabel = "<path>", required = true, description = "Path to backup to restore from." )
     private File from;
-    @Option( names = "--database", description = "Name of the database to restore.", defaultValue = GraphDatabaseSettings.DEFAULT_DATABASE_NAME )
-    private String database;
+    @Option( names = "--database", description = "Name of the database to restore.", defaultValue = DEFAULT_DATABASE_NAME,
+            converter = DatabaseNameConverter.class )
+    private NormalizedDatabaseName database;
     @Option( names = "--force", arity = "0", description = "If an existing database should be replaced." )
     private boolean force;
 
@@ -50,7 +56,7 @@ public class RestoreDatabaseCli extends AbstractCommand
     {
         Config config = loadNeo4jConfig( ctx.homeDir(), ctx.confDir() );
 
-        RestoreDatabaseCommand restoreDatabaseCommand = new RestoreDatabaseCommand( ctx.fs(), from, config, database, force );
+        RestoreDatabaseCommand restoreDatabaseCommand = new RestoreDatabaseCommand( ctx.fs(), from, config, database.name(), force );
         restoreDatabaseCommand.execute();
     }
 }

@@ -25,8 +25,7 @@ import org.neo4j.internal.helpers.ArrayUtil;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.test.extension.SuppressOutputExtension;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsString;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -44,7 +43,15 @@ class LoadCommandIT extends AbstractCommandIT
         var databaseName = databaseAPI.databaseName();
         var destinationPath = databaseAPI.databaseLayout().getNeo4jLayout().databasesDirectory().toPath();
         var exception = assertThrows( CommandFailedException.class, () -> load( databaseName, destinationPath ) );
-        assertThat( exception.getMessage(), containsString( "The database is in use. Stop database" ) );
+        assertThat( exception.getMessage() ).contains( "The database is in use. Stop database" );
+    }
+
+    @Test
+    void failToLoadDatabaseWithInvalidName()
+    {
+        var destinationPath = databaseAPI.databaseLayout().getNeo4jLayout().databasesDirectory().toPath();
+        var exception = assertThrows( Exception.class, () -> load( "__invalid__", destinationPath ) );
+        assertThat( exception ).hasMessageContaining( "Invalid database name '__invalid__'" );
     }
 
     @Test
@@ -55,7 +62,7 @@ class LoadCommandIT extends AbstractCommandIT
 
         managementService.shutdownDatabase( databaseName );
         var exception = assertThrows( CommandFailedException.class, () -> load( databaseName, destinationPath ) );
-        assertThat( exception.getMessage(), containsString( "Database already exists" ) );
+        assertThat( exception.getMessage() ).contains( "Database already exists" );
     }
 
     @Test

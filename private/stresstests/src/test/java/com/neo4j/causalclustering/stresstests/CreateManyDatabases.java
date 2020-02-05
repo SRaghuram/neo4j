@@ -19,7 +19,6 @@ import java.util.Objects;
 import java.util.Set;
 
 import org.neo4j.configuration.helpers.NormalizedDatabaseName;
-import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.logging.Log;
 
@@ -36,7 +35,7 @@ import static org.apache.commons.lang3.RandomStringUtils.random;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.configuration.helpers.DatabaseNameValidator.MAXIMUM_DATABASE_NAME_LENGTH;
-import static org.neo4j.configuration.helpers.DatabaseNameValidator.assertValidDatabaseName;
+import static org.neo4j.configuration.helpers.DatabaseNameValidator.validateExternalDatabaseName;
 import static org.neo4j.graphdb.Label.label;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
@@ -126,7 +125,7 @@ public class CreateManyDatabases extends Workload
                 random( 1, true, false ) +
                 random( MAXIMUM_DATABASE_NAME_LENGTH - 1, true, true ) );
 
-        assertValidDatabaseName( databaseName );
+        validateExternalDatabaseName( databaseName );
         createDatabase( databaseName.name(), cluster );
 
         return databaseName.name();
