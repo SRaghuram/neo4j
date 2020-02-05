@@ -7,15 +7,17 @@ package org.neo4j.cypher.internal.runtime.pipelined.execution
 
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.WorkUnitEvent
+import org.neo4j.values.AnyValue
 
 import scala.collection.mutable
 
 object FilteringMorselExecutionContext {
   def apply(source: MorselExecutionContext) =
-    new FilteringMorselExecutionContext(source.morsel, source.slots, source.maxNumberOfRows, source.currentRow, source.startRow, source.endRow, source.producingWorkUnitEvent)
+    new FilteringMorselExecutionContext(source.longs, source.refs, source.slots, source.maxNumberOfRows, source.currentRow, source.startRow, source.endRow, source.producingWorkUnitEvent)
 }
 
-class FilteringMorselExecutionContext(morsel: Morsel,
+class FilteringMorselExecutionContext(longs: Array[Long],
+                                      refs: Array[AnyValue],
                                       slots: SlotConfiguration,
                                       maxNumberOfRows: Int,
                                       initialCurrentRow: Int,
@@ -23,7 +25,7 @@ class FilteringMorselExecutionContext(morsel: Morsel,
                                       initialEndRow: Int,
                                       producingWorkUnitEvent: WorkUnitEvent = null,
                                       initialCancelledRows: java.util.BitSet = null)
-  extends MorselExecutionContext(morsel, slots, maxNumberOfRows, initialCurrentRow, initialStartRow, initialEndRow, producingWorkUnitEvent) {
+  extends MorselExecutionContext(longs, refs, slots, maxNumberOfRows, initialCurrentRow, initialStartRow, initialEndRow, producingWorkUnitEvent) {
 
   // ROW CANCELLATION
 
@@ -69,7 +71,7 @@ class FilteringMorselExecutionContext(morsel: Morsel,
   // ARGUMENT COLUMNS
 
   override def shallowCopy(): FilteringMorselExecutionContext =
-    new FilteringMorselExecutionContext(morsel, slots, maxNumberOfRows, currentRow, startRow, endRow, producingWorkUnitEvent = null, cancelledRows)
+    new FilteringMorselExecutionContext(longs, refs, slots, maxNumberOfRows, currentRow, startRow, endRow, producingWorkUnitEvent = null, cancelledRows)
 
   override def moveToNextRow(): Unit = {
     do {
@@ -143,8 +145,8 @@ class FilteringMorselExecutionContext(morsel: Morsel,
   override def prettyCurrentRow: String =
     if (super.isValidRow) {
       val cancelled = if (isCancelled(currentRow)) "<Cancelled>" else ""
-      s"longs: ${morsel.longs.slice(currentRow * longsPerRow, (currentRow + 1) * longsPerRow).mkString("[", ", ", "]")} " +
-        s"refs: ${morsel.refs.slice(currentRow * refsPerRow, (currentRow + 1) * refsPerRow).mkString("[", ", ", "]")} $cancelled"
+      s"longs: ${longs.slice(currentRow * longsPerRow, (currentRow + 1) * longsPerRow).mkString("[", ", ", "]")} " +
+        s"refs: ${refs.slice(currentRow * refsPerRow, (currentRow + 1) * refsPerRow).mkString("[", ", ", "]")} $cancelled"
     } else {
       s"<Invalid row>"
     }

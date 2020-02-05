@@ -32,14 +32,15 @@ import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
 object MorselExecutionContext {
-  def apply(morsel: Morsel, slots: SlotConfiguration, maxNumberOfRows: Int) =
-    new MorselExecutionContext(morsel, slots, maxNumberOfRows, 0, 0, maxNumberOfRows)
+  def apply(longs: Array[Long], refs: Array[AnyValue], slots: SlotConfiguration, maxNumberOfRows: Int) =
+    new MorselExecutionContext(longs, refs, slots, maxNumberOfRows, 0, 0, maxNumberOfRows)
 
-  val empty: MorselExecutionContext = new MorselExecutionContext(new Morsel(Array.empty, Array.empty), SlotConfiguration.empty, 0)
+  val empty: MorselExecutionContext = new MorselExecutionContext(Array.empty, Array.empty, SlotConfiguration.empty, 0)
 
   def createInitialRow(): FilteringMorselExecutionContext =
     new FilteringMorselExecutionContext(
-      Morsel.create(INITIAL_SLOT_CONFIGURATION, 1),
+      new Array[Long](INITIAL_SLOT_CONFIGURATION.numberOfLongs * 1),
+      new Array[AnyValue](INITIAL_SLOT_CONFIGURATION.numberOfReferences * 1),
       INITIAL_SLOT_CONFIGURATION, 1, 0, 0, 1) {
 
       //it is ok to asked for a cached value even though nothing is allocated for it
@@ -49,7 +50,8 @@ object MorselExecutionContext {
 }
 
 //noinspection NameBooleanParameters
-class MorselExecutionContext(private[execution] final val morsel: Morsel,
+class MorselExecutionContext(private[execution] final val longs: Array[Long],
+                             private[execution] final val refs: Array[AnyValue],
                              final val slots: SlotConfiguration,
                              final val maxNumberOfRows: Int,
                              private[execution] var currentRow: Int = 0,
@@ -90,7 +92,7 @@ class MorselExecutionContext(private[execution] final val morsel: Morsel,
 
   // ====================
 
-  def shallowCopy(): MorselExecutionContext = new MorselExecutionContext(morsel, slots, maxNumberOfRows, currentRow, startRow, endRow)
+  def shallowCopy(): MorselExecutionContext = new MorselExecutionContext(longs, refs, slots, maxNumberOfRows, currentRow, startRow, endRow)
 
   @inline def numberOfRows: Int = endRow - startRow
 
@@ -166,16 +168,16 @@ class MorselExecutionContext(private[execution] final val morsel: Morsel,
     checkOnlyWhenAssertionsAreEnabled(!input.isInstanceOf[FilteringMorselExecutionContext] && numberOfRows >= input.numberOfRows)
 
     if (longsPerRow > 0) {
-      System.arraycopy(input.morsel.longs,
+      System.arraycopy(input.longs,
         input.startRow * input.longsPerRow,
-        morsel.longs,
+        longs,
         startRow * longsPerRow,
         input.numberOfRows * longsPerRow)
     }
     if (refsPerRow > 0) {
-      System.arraycopy(input.morsel.refs,
+      System.arraycopy(input.refs,
         input.startRow * input.refsPerRow,
-        morsel.refs,
+        refs,
         startRow * refsPerRow,
         input.numberOfRows * refsPerRow)
     }
@@ -184,12 +186,12 @@ class MorselExecutionContext(private[execution] final val morsel: Morsel,
   override def copyTo(target: ExecutionContext, sourceLongOffset: Int = 0, sourceRefOffset: Int = 0, targetLongOffset: Int = 0, targetRefOffset: Int = 0): Unit =
     target match {
       case other: MorselExecutionContext =>
-        System.arraycopy(morsel.longs, longsAtCurrentRow + sourceLongOffset, other.morsel.longs, other.longsAtCurrentRow + targetLongOffset, longsPerRow - sourceLongOffset)
-        System.arraycopy(morsel.refs, refsAtCurrentRow + sourceRefOffset, other.morsel.refs, other.refsAtCurrentRow + targetRefOffset, refsPerRow - sourceRefOffset)
+        System.arraycopy(longs, longsAtCurrentRow + sourceLongOffset, other.longs, other.longsAtCurrentRow + targetLongOffset, longsPerRow - sourceLongOffset)
+        System.arraycopy(refs, refsAtCurrentRow + sourceRefOffset, other.refs, other.refsAtCurrentRow + targetRefOffset, refsPerRow - sourceRefOffset)
 
       case other: SlottedExecutionContext =>
-        System.arraycopy(morsel.longs, longsAtCurrentRow + sourceLongOffset, other.longs, targetLongOffset, longsPerRow - sourceLongOffset)
-        System.arraycopy(morsel.refs, refsAtCurrentRow + sourceRefOffset, other.refs, targetRefOffset, refsPerRow - sourceRefOffset)
+        System.arraycopy(longs, longsAtCurrentRow + sourceLongOffset, other.longs, targetLongOffset, longsPerRow - sourceLongOffset)
+        System.arraycopy(refs, refsAtCurrentRow + sourceRefOffset, other.refs, targetRefOffset, refsPerRow - sourceRefOffset)
     }
 
   override def copyFrom(input: ExecutionContext, nLongs: Int, nRefs: Int): Unit = input match {
@@ -197,23 +199,23 @@ class MorselExecutionContext(private[execution] final val morsel: Morsel,
       if (nLongs > longsPerRow || nRefs > refsPerRow)
         throw new InternalException("A bug has occurred in the morsel runtime: The target morsel execution context cannot hold the data to copy.")
       else {
-        System.arraycopy(other.morsel.longs, other.longsAtCurrentRow, morsel.longs, longsAtCurrentRow, nLongs)
-        System.arraycopy(other.morsel.refs, other.refsAtCurrentRow, morsel.refs, refsAtCurrentRow, nRefs)
+        System.arraycopy(other.longs, other.longsAtCurrentRow, longs, longsAtCurrentRow, nLongs)
+        System.arraycopy(other.refs, other.refsAtCurrentRow, refs, refsAtCurrentRow, nRefs)
       }
 
     case other:SlottedExecutionContext =>
       if (nLongs > longsPerRow || nRefs > refsPerRow)
         throw new InternalException("A bug has occurred in the morsel runtime: The target morsel execution context cannot hold the data to copy.")
       else {
-        System.arraycopy(other.longs, 0, morsel.longs, longsAtCurrentRow, nLongs)
-        System.arraycopy(other.refs, 0, morsel.refs, refsAtCurrentRow, nRefs)
+        System.arraycopy(other.longs, 0, longs, longsAtCurrentRow, nLongs)
+        System.arraycopy(other.refs, 0, refs, refsAtCurrentRow, nRefs)
       }
     case _ => fail()
   }
 
   override def copyToSlottedExecutionContext(other: SlottedExecutionContext, nLongs: Int, nRefs: Int): Unit = {
-    System.arraycopy(morsel.longs, longsAtCurrentRow, other.longs, 0, nLongs)
-    System.arraycopy(morsel.refs, refsAtCurrentRow, other.refs, 0, nRefs)
+    System.arraycopy(longs, longsAtCurrentRow, other.longs, 0, nLongs)
+    System.arraycopy(refs, refsAtCurrentRow, other.refs, 0, nRefs)
   }
 
   override def toString: String = {
@@ -222,15 +224,15 @@ class MorselExecutionContext(private[execution] final val morsel: Morsel,
 
   def prettyCurrentRow: String =
     if (isValidRow) {
-      s"longs: ${morsel.longs.slice(currentRow * longsPerRow, (currentRow + 1) * longsPerRow).mkString("[", ", ", "]")} " +
-        s"refs: ${morsel.refs.slice(currentRow * refsPerRow, (currentRow + 1) * refsPerRow).mkString("[", ", ", "]")}"
+      s"longs: ${longs.slice(currentRow * longsPerRow, (currentRow + 1) * longsPerRow).mkString("[", ", ", "]")} " +
+        s"refs: ${refs.slice(currentRow * refsPerRow, (currentRow + 1) * refsPerRow).mkString("[", ", ", "]")}"
     } else {
       s"<Invalid row>"
     }
 
   def prettyString: Seq[String] = {
-    val longStrings = morsel.longs.slice(startRow*longsPerRow, numberOfRows*longsPerRow).map(String.valueOf)
-    val refStrings = morsel.refs.slice(startRow*refsPerRow, numberOfRows*refsPerRow).map(String.valueOf)
+    val longStrings = longs.slice(startRow*longsPerRow, numberOfRows*longsPerRow).map(String.valueOf)
+    val refStrings = refs.slice(startRow*refsPerRow, numberOfRows*refsPerRow).map(String.valueOf)
 
     def widths(strings: Array[String], nCols: Int): Array[Int] = {
       val widths = new Array[Int](nCols)
@@ -277,11 +279,11 @@ class MorselExecutionContext(private[execution] final val morsel: Morsel,
    */
   def copyFrom(input: MorselExecutionContext): Unit = copyFrom(input, input.longsPerRow, input.refsPerRow)
 
-  override def setLongAt(offset: Int, value: Long): Unit = morsel.longs(currentRow * longsPerRow + offset) = value
+  override def setLongAt(offset: Int, value: Long): Unit = longs(currentRow * longsPerRow + offset) = value
 
   override def getLongAt(offset: Int): Long = getLongAt(currentRow, offset)
 
-  def getLongAt(row: Int, offset: Int): Long = morsel.longs(row * longsPerRow + offset)
+  def getLongAt(row: Int, offset: Int): Long = longs(row * longsPerRow + offset)
 
   def getArgumentAt(offset: Int): Long =
     if (offset == TopLevelArgument.SLOT_OFFSET) 0L
@@ -294,9 +296,9 @@ class MorselExecutionContext(private[execution] final val morsel: Morsel,
       setLongAt(offset, argument)
     }
 
-  override def setRefAt(offset: Int, value: AnyValue): Unit = morsel.refs(currentRow * refsPerRow + offset) = value
+  override def setRefAt(offset: Int, value: AnyValue): Unit = refs(currentRow * refsPerRow + offset) = value
 
-  override def getRefAt(offset: Int): AnyValue = morsel.refs(currentRow * refsPerRow + offset)
+  override def getRefAt(offset: Int): AnyValue = refs(currentRow * refsPerRow + offset)
 
   override def getByName(name: String): AnyValue = slots.maybeGetter(name).map(g => g(this)).getOrElse(throw new NotFoundException(s"Unknown variable `$name`."))
 
@@ -355,9 +357,9 @@ class MorselExecutionContext(private[execution] final val morsel: Morsel,
     var i = startRow * refsPerRow
     val limit = maxNumberOfRows * refsPerRow
     while (i < limit) {
-      val ref = morsel.refs(i)
+      val ref = refs(i)
       if (ref != null) {
-        usage += morsel.refs(i).estimatedHeapUsage()
+        usage += refs(i).estimatedHeapUsage()
       }
       i += 1
     }

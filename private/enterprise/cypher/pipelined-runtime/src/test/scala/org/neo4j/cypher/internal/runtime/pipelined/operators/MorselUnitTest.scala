@@ -11,7 +11,6 @@ import org.mockito.stubbing.Answer
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.pipelined.execution.FilteringMorselExecutionContext
-import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
@@ -93,18 +92,16 @@ abstract class MorselUnitTest extends CypherFunSuite {
     }
 
     def build() : MorselExecutionContext = {
-      val morsel = new Morsel(longs, refs)
       val slots = SlotConfiguration(Map.empty, longSlots, refSlots)
-      val context = MorselExecutionContext(morsel, slots, rows)
+      val context = MorselExecutionContext(longs, refs, slots, rows)
       context
     }
   }
 
   class FilteringInput extends Input {
     override def build(): FilteringMorselExecutionContext = {
-      val morsel = new Morsel(longs, refs)
       val slots = SlotConfiguration(Map.empty, longSlots, refSlots)
-      val context = MorselExecutionContext(morsel, slots, rows)
+      val context = MorselExecutionContext(longs, refs, slots, rows)
       val filteringContext = FilteringMorselExecutionContext(context)
       filteringContext
     }

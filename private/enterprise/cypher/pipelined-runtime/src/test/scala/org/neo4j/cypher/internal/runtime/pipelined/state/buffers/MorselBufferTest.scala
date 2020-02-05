@@ -9,7 +9,6 @@ import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.BufferId
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.pipelined.execution.FilteringMorselExecutionContext
-import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
 import org.neo4j.cypher.internal.runtime.pipelined.operators.MorselUnitTest
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
@@ -424,11 +423,11 @@ class MorselBufferTest extends MorselUnitTest {
 
   private def longMorsel(longsPerRow: Int)(values: Long*): MorselExecutionContext = {
     val nRows = values.size / longsPerRow
-    var slots =
+    val slots =
       (0 until longsPerRow)
         .foldLeft(SlotConfiguration.empty)( (slots, i) => slots.newLong(s"v$i", nullable = false, symbols.CTAny) )
 
-    new FilteringMorselExecutionContext(new Morsel(values.toArray, Array.empty), slots, nRows, 0, 0, nRows)
+    new FilteringMorselExecutionContext(values.toArray, Array.empty, slots, nRows, 0, 0, nRows)
   }
 
   private def initiate(asm: ArgumentStateMap[_], argumentRowIds: Range): Unit = {

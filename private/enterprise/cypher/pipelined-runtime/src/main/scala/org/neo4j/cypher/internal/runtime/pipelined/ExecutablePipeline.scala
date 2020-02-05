@@ -11,9 +11,8 @@ import org.neo4j.cypher.internal.physicalplanning.PipelineId
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
-import org.neo4j.cypher.internal.runtime.pipelined.execution.FilteringMorselExecutionContext
-import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFactory
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CompiledStreamingOperator
@@ -158,25 +157,10 @@ class PipelineState(val pipeline: ExecutablePipeline,
     //       The MorselFactory should probably originate from the MorselBuffer to play well with reuse/pooling
     if (pipeline.needsMorsel) {
       val slots = pipeline.slots
-      val morsel = Morsel.create(slots, state.morselSize)
       if (pipeline.needsFilteringMorsel) {
-        new FilteringMorselExecutionContext(
-          morsel,
-          slots,
-          state.morselSize,
-          0,
-          0,
-          state.morselSize,
-          producingWorkUnitEvent)
+        MorselFactory.allocateFiltering(slots, state.morselSize, producingWorkUnitEvent)
       } else {
-        new MorselExecutionContext(
-          morsel,
-          slots,
-          state.morselSize,
-          currentRow = 0,
-          startRow = 0,
-          endRow = state.morselSize,
-          producingWorkUnitEvent)
+        MorselFactory.allocate(slots, state.morselSize, producingWorkUnitEvent)
       }
     } else MorselExecutionContext.empty
   }

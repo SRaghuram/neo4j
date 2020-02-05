@@ -10,10 +10,9 @@ import java.util.Comparator
 import org.neo4j.cypher.internal.macros.AssertMacros.checkOnlyWhenAssertionsAreEnabled
 import org.neo4j.cypher.internal.physicalplanning.LongSlot
 import org.neo4j.cypher.internal.physicalplanning.RefSlot
-import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFactory
 import org.neo4j.cypher.internal.runtime.slotted.ColumnOrder
-import org.neo4j.values.AnyValue
 
 object MorselSorting {
 
@@ -78,9 +77,7 @@ object MorselSorting {
     val numInputRows = inputRow.getValidRows
     // Create a temporary morsel
     // TODO: Do this without creating extra arrays
-    val tempMorsel = new Morsel(new Array[Long](numInputRows * inputRow.getLongsPerRow),
-      new Array[AnyValue](numInputRows * inputRow.getRefsPerRow))
-    val outputRow = MorselExecutionContext(tempMorsel, inputRow.slots, numInputRows)
+    val outputRow = MorselFactory.allocate(inputRow.slots, numInputRows, inputRow.producingWorkUnitEvent)
 
     while (outputRow.isValidRow) {
       val fromIndex = outputToInputIndexes(outputRow.getCurrentRow)
