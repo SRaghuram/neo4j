@@ -20,8 +20,12 @@
 package org.neo4j.internal.freki;
 
 import org.eclipse.collections.api.IntIterable;
+import org.eclipse.collections.api.map.primitive.MutableIntObjectMap;
 import org.eclipse.collections.api.map.primitive.MutableLongObjectMap;
 import org.eclipse.collections.api.set.primitive.LongSet;
+import org.eclipse.collections.api.set.primitive.MutableIntSet;
+import org.eclipse.collections.impl.factory.primitive.IntObjectMaps;
+import org.eclipse.collections.impl.factory.primitive.IntSets;
 import org.eclipse.collections.impl.factory.primitive.LongObjectMaps;
 
 import java.nio.BufferOverflowException;
@@ -111,6 +115,7 @@ class CommandCreator implements TxStateVisitor
         {
             mutation.current.setNodeProperty( property.propertyKeyId(), property.value() );
         }
+        removed.forEach( propertyKey -> mutation.current.removeNodeProperty( propertyKey ) );
     }
 
     @Override
@@ -202,7 +207,6 @@ class CommandCreator implements TxStateVisitor
                         abandonedLargeRecord.markInUse( false );
                     }
                     mutation.large = mutation.current = largerRecord;
-                    mutation.small.setForwardPointer( largerRecord.asForwardPointer() );
                     mutation.small.prepareForCommandExtraction();
                 }
             }
@@ -222,7 +226,7 @@ class CommandCreator implements TxStateVisitor
     private Mutation createNew( SimpleStore store, long id )
     {
         Mutation mutation = new Mutation();
-        mutation.small = new SmallRecordAndData( stores, store, id );
+        mutation.small = new SparseRecordAndData( stores, store, id, null );
         mutation.small.markInUse( true );
         mutation.small.markCreated();
         mutation.current = mutation.small;
@@ -235,7 +239,7 @@ class CommandCreator implements TxStateVisitor
         if ( mutation == null )
         {
             mutation = new Mutation();
-            mutation.small = new SmallRecordAndData( stores, stores.mainStore, id );
+            mutation.small = new SparseRecordAndData( stores, stores.mainStore, id, null );
             mutation.small.loadExistingData();
             mutation.current = mutation.small;
             long forwardPointer = mutation.small.getForwardPointer();
@@ -248,7 +252,7 @@ class CommandCreator implements TxStateVisitor
                     int fwSizeExp = sizeExponentialFromForwardPointer( forwardPointer );
                     long fwId = idFromForwardPointer( forwardPointer );
                     SimpleStore largeStore = stores.mainStore( fwSizeExp );
-                    mutation.large = new SmallRecordAndData( stores, largeStore, fwId );
+                    mutation.large = new SparseRecordAndData( stores, largeStore, fwId, mutation.small );
                     mutation.large.loadExistingData();
                     mutation.current = mutation.large;
                 }
@@ -264,7 +268,7 @@ class CommandCreator implements TxStateVisitor
 
     private static class Mutation
     {
-        private RecordAndData small;
+        private SparseRecordAndData small;
         private RecordAndData large;
         // current points to either or
         private RecordAndData current;
@@ -290,11 +294,11 @@ class CommandCreator implements TxStateVisitor
 
         abstract void setNodeProperty( int propertyKeyId, Value value );
 
+        abstract void removeNodeProperty( int propertyKeyId );
+
         abstract void addLabels( LongSet added );
 
         abstract void removeLabels( LongSet removed );
-
-        abstract long getForwardPointer();
 
         abstract void prepareForCommandExtraction();
 
@@ -302,28 +306,28 @@ class CommandCreator implements TxStateVisitor
 
         abstract long asForwardPointer();
 
-        abstract void setForwardPointer( long forwardPointer );
-
         abstract void createCommands( Collection<StorageCommand> commands );
     }
 
-    private static class SmallRecordAndData extends RecordAndData
+    private static class SparseRecordAndData extends RecordAndData
     {
         private final MainStores stores;
         private final SimpleStore store;
         private final long id;
+        private final SparseRecordAndData smallRecord;
 
         private boolean created;
         private Record before;
         private Record after;
-        // data here is really accidental state, a deserialized objectified version of the data found in after
+        // data here is really accidental state, a deserialized objectified version of the data found in the byte[] of the "after" record
         private MutableNodeRecordData data;
 
-        SmallRecordAndData( MainStores sStores, SimpleStore store, long id )
+        SparseRecordAndData( MainStores stores, SimpleStore store, long id, SparseRecordAndData smallRecord )
         {
-            this.stores = sStores;
+            this.stores = stores;
             this.store = store;
             this.id = id;
+            this.smallRecord = smallRecord != null ? smallRecord : this;
             before = new Record( store.recordSizeExponential(), id );
             after = new Record( store.recordSizeExponential(), id );
             data = new MutableNodeRecordData( id );
@@ -371,6 +375,12 @@ class CommandCreator implements TxStateVisitor
         }
 
         @Override
+        void removeNodeProperty( int propertyKeyId )
+        {
+            data.removeNodeProperty( propertyKeyId );
+        }
+
+        @Override
         void addLabels( LongSet added )
         {
             added.forEach( label -> data.labels.add( toIntExact( label ) ) );
@@ -382,7 +392,6 @@ class CommandCreator implements TxStateVisitor
             removed.forEach( label -> data.labels.remove( toIntExact( label ) ) );
         }
 
-        @Override
         long getForwardPointer()
         {
             return data.getForwardPointer();
@@ -398,13 +407,22 @@ class CommandCreator implements TxStateVisitor
         RecordAndData growAndRelocate()
         {
             SimpleStore largerStore = stores.nextLargerMainStore( after.sizeExp() );
-            if ( largerStore == null )
+            RecordAndData result;
+            if ( largerStore != null )
             {
-                throw new UnsupportedOperationException( "Can't grow this large currently, this is where GBPTree comes in I believe" );
+                SparseRecordAndData largerRecord = new SparseRecordAndData( stores, largerStore, largerStore.nextId( PageCursorTracer.NULL ), smallRecord );
+                data.movePropertiesAndRelationshipsTo( largerRecord.data );
+                result = largerRecord;
             }
-            SmallRecordAndData largerRecord = new SmallRecordAndData( stores, largerStore, largerStore.nextId( PageCursorTracer.NULL ) );
-            data.movePropertiesAndRelationshipsTo( largerRecord.data );
-            return largerRecord;
+            else
+            {
+                // Time to move over to GBPTree-style data
+                DenseRecordAndData denseRecord = new DenseRecordAndData( stores.denseStore, id, smallRecord );
+                denseRecord.movePropertiesAndRelationshipsFrom( data );
+                result = denseRecord;
+            }
+            smallRecord.data.setForwardPointer( result.asForwardPointer() );
+            return result;
         }
 
         @Override
@@ -414,17 +432,127 @@ class CommandCreator implements TxStateVisitor
         }
 
         @Override
-        void setForwardPointer( long forwardPointer )
+        void createCommands( Collection<StorageCommand> commands )
         {
-            data.setForwardPointer( forwardPointer );
+            commands.add( new FrekiCommand.SparseNode( before, after ) );
+        }
+    }
+
+    private static class DenseRecordAndData extends RecordAndData
+    {
+        // meta
+        private final DenseStore store;
+        private final long id;
+        private final SparseRecordAndData smallRecord;
+        private boolean created;
+        private boolean inUse;
+
+        // changes
+        // TODO it feels like we've simply moving tx-state data from one form to another and that's probably true and can probably be improved on later
+        private MutableIntObjectMap<MutableNodeRecordData.Relationships> createdRelationships = IntObjectMaps.mutable.empty();
+        private MutableIntObjectMap<MutableNodeRecordData.Relationships> deletedRelationships = IntObjectMaps.mutable.empty();
+        private MutableIntObjectMap<Value> addedProperties = IntObjectMaps.mutable.empty();
+        private MutableIntSet removedProperties = IntSets.mutable.empty();
+
+        DenseRecordAndData( DenseStore store, long id, SparseRecordAndData smallRecord )
+        {
+            this.store = store;
+            this.id = id;
+            this.smallRecord = smallRecord;
+        }
+
+        @Override
+        void markCreated()
+        {
+            created = true;
+        }
+
+        @Override
+        boolean isCreated()
+        {
+            return created;
+        }
+
+        @Override
+        void markInUse( boolean inUse )
+        {
+            this.inUse = inUse;
+        }
+
+        @Override
+        void loadExistingData()
+        {
+            // Thoughts: we shouldn't really load anything here since we don't need the existing data in order to make changes
+        }
+
+        @Override
+        Relationship createRelationship( Relationship sourceNodeRelationship, long targetNode, int type )
+        {
+            long internalRelationshipId = sourceNodeRelationship == null
+                    ? smallRecord.data.nextInternalRelationshipId()
+                    : sourceNodeRelationship.internalId;
+            boolean outgoing = sourceNodeRelationship == null;
+            return createdRelationships.getIfAbsentPutWithKey( type, MutableNodeRecordData.Relationships::new )
+                    .add( internalRelationshipId, id, targetNode, type, outgoing );
+        }
+
+        @Override
+        void setNodeProperty( int propertyKeyId, Value value )
+        {
+            removedProperties.remove( propertyKeyId );
+            addedProperties.put( propertyKeyId, value );
+        }
+
+        @Override
+        void removeNodeProperty( int propertyKeyId )
+        {
+            addedProperties.remove( propertyKeyId );
+            removedProperties.add( propertyKeyId );
+        }
+
+        @Override
+        void addLabels( LongSet added )
+        {
+            throw new UnsupportedOperationException( "Should not happen, right?" );
+        }
+
+        @Override
+        void removeLabels( LongSet removed )
+        {
+            throw new UnsupportedOperationException( "Should not happen, right?" );
+        }
+
+        @Override
+        void prepareForCommandExtraction()
+        {
+            // Thoughts: no special preparation should be required here either
+        }
+
+        @Override
+        RecordAndData growAndRelocate()
+        {
+            throw new UnsupportedOperationException( "There should be no need to grow into something bigger" );
+        }
+
+        @Override
+        long asForwardPointer()
+        {
+            // Thoughts: the nodeId comes into play when we have node-centric trees, where the root id can be the nodeId here
+            return forwardPointer( 0, true, 0 );
         }
 
         @Override
         void createCommands( Collection<StorageCommand> commands )
         {
-            commands.add( new FrekiCommand.Node( before, after ) );
+            // Thoughts: take all the logical changes and add to logical commands, either separate for each change or one big command containing all
+            commands.add( new FrekiCommand.DenseNode( id, inUse, addedProperties, removedProperties, createdRelationships, deletedRelationships ) );
+        }
+
+        void movePropertiesAndRelationshipsFrom( MutableNodeRecordData data )
+        {
+            addedProperties.putAll( data.properties );
+            createdRelationships.putAll( data.relationships );
+            data.clearPropertiesAndRelationships();
         }
     }
-
-    // GBPTreeData
 }
