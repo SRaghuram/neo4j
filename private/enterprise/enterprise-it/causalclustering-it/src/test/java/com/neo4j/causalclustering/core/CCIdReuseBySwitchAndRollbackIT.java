@@ -6,6 +6,7 @@
 package com.neo4j.causalclustering.core;
 
 import com.neo4j.causalclustering.common.Cluster;
+import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
 import org.junit.jupiter.api.AfterEach;
@@ -17,6 +18,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.function.LongConsumer;
+import java.util.function.Predicate;
 
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
@@ -28,11 +30,10 @@ import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.Barrier;
 import org.neo4j.test.extension.Inject;
 
-import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.runWithLeaderDisabled;
+import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.forceReelection;
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
@@ -100,7 +101,7 @@ class CCIdReuseBySwitchAndRollbackIT
         doIdMaintenance( allMembers );
         createRelationship( instanceB, node, null, id -> assertEquals( relationship, id ) );
         // Now do a leader switch back to instance A
-        switchLeader( cluster, instanceB, instanceA );
+        transferLeader( cluster, instanceA );
         // Let T continue and fail, which will then mark R as deleted when it's rolling back     <---- this is the bug, right there
         barrier.release();
         assertThrows( Exception.class, t::get );
@@ -114,16 +115,14 @@ class CCIdReuseBySwitchAndRollbackIT
         }
     }
 
-    private void switchLeader( Cluster cluster, CoreClusterMember currentLeader, CoreClusterMember expectedNewLeader ) throws Exception
+    private CoreClusterMember switchLeader( Cluster cluster, CoreClusterMember expectedCurrentLeader ) throws Exception
     {
-        while ( true )
-        {
-            CoreClusterMember newLeader = switchLeader( cluster, currentLeader );
-            if ( newLeader == expectedNewLeader )
-            {
-                break;
-            }
-        }
+        return switchLeader( cluster, memberId -> expectedCurrentLeader.id().equals( memberId ) );
+    }
+
+    private void transferLeader( Cluster cluster, CoreClusterMember expectedNewLeader ) throws Exception
+    {
+        switchLeader( cluster, memberId -> !memberId.equals( expectedNewLeader.id() ) );
     }
 
     private void doIdMaintenance( Iterable<CoreClusterMember> members )
@@ -137,11 +136,15 @@ class CCIdReuseBySwitchAndRollbackIT
         db.getDependencyResolver().resolveDependency( IdController.class ).maintenance();
     }
 
-    private CoreClusterMember switchLeader( Cluster cluster, CoreClusterMember currentLeader ) throws Exception
+    private CoreClusterMember switchLeader( Cluster cluster, Predicate<MemberId> shouldRetry ) throws Exception
     {
-        runWithLeaderDisabled( cluster, ( oldLeader, otherMembers ) -> null );
-        CoreClusterMember newLeader = cluster.awaitLeader();
-        assertNotSame( currentLeader, newLeader );
+        CoreClusterMember newLeader;
+        do
+        {
+            forceReelection( cluster, DEFAULT_DATABASE_NAME );
+            newLeader = cluster.awaitLeader();
+        }
+        while ( shouldRetry.test( newLeader.id() ) );
         return newLeader;
     }
 
