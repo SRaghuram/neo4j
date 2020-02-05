@@ -35,6 +35,7 @@ import org.neo4j.test.extension.LifeExtension;
 import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 
 import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
+import static com.neo4j.dbms.StandaloneDbmsReconcilerModule.createTransitionsTable;
 import static java.util.Collections.singletonList;
 import static java.util.Collections.singletonMap;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -146,8 +147,10 @@ class DbmsReconcilerModuleTest
             return null;
         } ).when( databaseManager ).startDatabase( any( NamedDatabaseId.class ) );
 
+        var transitionsTable = createTransitionsTable( new ReconcilerTransitions( databaseManager ) );
+
         // a reconciler with a proper multi threaded executor
-        var reconciler = new DbmsReconciler( databaseManager, Config.defaults(), NullLogProvider.getInstance(), jobScheduler );
+        var reconciler = new DbmsReconciler( databaseManager, Config.defaults(), NullLogProvider.getInstance(), jobScheduler, transitionsTable );
 
         // when
         // the reconciler is already executing a long running job
@@ -196,8 +199,10 @@ class DbmsReconcilerModuleTest
             return null;
         } ).when( databaseManager ).startDatabase( any( NamedDatabaseId.class ) );
 
+        var transitionsTable = createTransitionsTable( new ReconcilerTransitions( databaseManager ) );
+
         // a reconciler with a proper multi threaded executor
-        var reconciler = new DbmsReconciler( databaseManager, Config.defaults(), NullLogProvider.getInstance(), jobScheduler );
+        var reconciler = new DbmsReconciler( databaseManager, Config.defaults(), NullLogProvider.getInstance(), jobScheduler, transitionsTable );
         // when
         // the reconciler is already executing a long running job
         operator.startDatabase( foo.name() );
@@ -237,7 +242,9 @@ class DbmsReconcilerModuleTest
         NamedDatabaseId foo = idRepository.getRaw( "foo" );
         doThrow( failure ).when( databaseManager ).startDatabase( any( NamedDatabaseId.class ) );
 
-        DbmsReconciler reconciler = new DbmsReconciler( databaseManager, Config.defaults(), nullLogProvider(), jobScheduler );
+        var transitionsTable = createTransitionsTable( new ReconcilerTransitions( databaseManager ) );
+
+        DbmsReconciler reconciler = new DbmsReconciler( databaseManager, Config.defaults(), nullLogProvider(), jobScheduler, transitionsTable );
 
         // when
         LocalDbmsOperator operator = new LocalDbmsOperator( idRepository );

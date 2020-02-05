@@ -24,11 +24,11 @@ import static java.lang.String.format;
  *
  * The class itself contains numerous other types for building these mappings, or performing lookups against them.
  */
-final class Transitions
+final class TransitionsTable
 {
     private final Map<Pair<EnterpriseOperatorState,EnterpriseOperatorState>,TransitionFunction[]> transitionsTable;
 
-    private Transitions( Map<Pair<EnterpriseOperatorState,EnterpriseOperatorState>,TransitionFunction[]> transitionsTable )
+    private TransitionsTable( Map<Pair<EnterpriseOperatorState,EnterpriseOperatorState>,TransitionFunction[]> transitionsTable )
     {
         this.transitionsTable = transitionsTable;
     }
@@ -43,11 +43,11 @@ final class Transitions
         return new TransitionLookup( current );
     }
 
-    public Transitions extendWith( Transitions other )
+    public TransitionsTable extendWith( TransitionsTable other )
     {
         var combined = new HashMap<>( this.transitionsTable );
         combined.putAll( other.transitionsTable );
-        return new Transitions( combined );
+        return new TransitionsTable( combined );
     }
 
     private Stream<Transition> lookup( TransitionLookup lookup )
@@ -166,10 +166,10 @@ final class Transitions
         }
 
         @Override
-        public Transitions build()
+        public TransitionsTable build()
         {
             storePreviousEntry();
-            return new Transitions( transitionsTable );
+            return new TransitionsTable( transitionsTable );
         }
 
         private void storePreviousEntry()
@@ -205,7 +205,7 @@ final class Transitions
     public interface BuildOrContinue
     {
         NeedsTo from( EnterpriseOperatorState state );
-        Transitions build();
+        TransitionsTable build();
     }
 
     /* Transition function type and its lazy/supplier wrapper */

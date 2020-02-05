@@ -19,6 +19,10 @@ import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.storageengine.api.TransactionIdStore;
 
+import static com.neo4j.dbms.EnterpriseOperatorState.DROPPED;
+import static com.neo4j.dbms.EnterpriseOperatorState.INITIAL;
+import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
+import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 
@@ -124,6 +128,23 @@ public class StandaloneDbmsReconcilerModule extends LifecycleAdapter
         } );
     }
 
+    /**
+     * This method defines the table mapping any pair of database states to the series of steps the reconciler needs to perform
+     * to take a database from one state to another.
+     */
+    static TransitionsTable createTransitionsTable( ReconcilerTransitions t )
+    {
+        return TransitionsTable.builder()
+                .from( INITIAL ).to( DROPPED ).doNothing()
+                .from( INITIAL ).to( STOPPED ).doTransitions( t::create )
+                .from( INITIAL ).to( STARTED ).doTransitions( t::create, t::start )
+                .from( STOPPED ).to( STARTED ).doTransitions( t::start )
+                .from( STARTED ).to( STOPPED ).doTransitions( t::stop )
+                .from( STOPPED ).to( DROPPED ).doTransitions( t::drop )
+                .from( STARTED ).to( DROPPED ).doTransitions( t::prepareDrop, t::stop, t::drop )
+                .build();
+    }
+
     private GraphDatabaseAPI getSystemDatabase( MultiDatabaseManager<?> databaseManager )
     {
         return databaseManager.getDatabaseContext( NAMED_SYSTEM_DATABASE_ID ).orElseThrow().databaseFacade();
@@ -131,8 +152,9 @@ public class StandaloneDbmsReconcilerModule extends LifecycleAdapter
 
     private static DbmsReconciler createReconciler( GlobalModule globalModule, MultiDatabaseManager<?> databaseManager )
     {
+        var transitionsTable = createTransitionsTable( new ReconcilerTransitions( databaseManager ) );
         return new DbmsReconciler( databaseManager, globalModule.getGlobalConfig(), globalModule.getLogService().getInternalLogProvider(),
-                globalModule.getJobScheduler() );
+                globalModule.getJobScheduler(), transitionsTable );
     }
 
     private long getLastClosedTransactionId( GraphDatabaseAPI db )

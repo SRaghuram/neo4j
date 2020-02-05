@@ -40,7 +40,6 @@ public class TestOperatorConnector extends OperatorConnector
         return reconciler.reconcile( Collections.singletonList( operator ), request );
     }
 
-
     List<Pair<Map<String,EnterpriseDatabaseState>,ReconcilerRequest>> triggerCalls()
     {
         return triggerCalls;

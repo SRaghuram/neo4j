@@ -5,8 +5,8 @@
  */
 package com.neo4j.dbms;
 
-import com.neo4j.dbms.Transitions.Transition;
-import com.neo4j.dbms.Transitions.TransitionFunction;
+import com.neo4j.dbms.TransitionsTable.Transition;
+import com.neo4j.dbms.TransitionsTable.TransitionFunction;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -32,9 +32,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
-class TransitionsTest
+class TransitionsTableTest
 {
-    private Transitions transitions;
+    private TransitionsTable transitionsTable;
 
     private TestDatabaseIdRepository databaseIdRepository;
 
@@ -58,7 +58,7 @@ class TransitionsTest
         stopBeforeStoreCopy = new StubTransitionFunction( "stopBeforeStoreCopy" );
         startAfterStoreCopy = new StubTransitionFunction( "startAfterStoreCopy" );
 
-        transitions = Transitions.builder()
+        transitionsTable = TransitionsTable.builder()
                 .from( INITIAL ).to( DROPPED ).doTransitions( drop )
                 .from( INITIAL ).to( STOPPED ).doTransitions( create )
                 .from( INITIAL ).to( STARTED ).doTransitions( create, start )
@@ -78,7 +78,7 @@ class TransitionsTest
         var desired = new EnterpriseDatabaseState( id, DROPPED );
 
         // when
-        var lookup = this.transitions
+        var lookup = this.transitionsTable
                 .fromCurrent( current )
                 .toDesired( desired )
                 .collect( Collectors.toList() );
@@ -95,10 +95,10 @@ class TransitionsTest
     void extendedTransitionsShouldReturnCorrectMappings()
     {
         // given
-        var extraTransitions = Transitions.builder()
+        var extraTransitions = TransitionsTable.builder()
                 .from( STORE_COPYING ).to( STARTED ).doTransitions( startAfterStoreCopy )
                 .build();
-        var extendedTransitions = this.transitions.extendWith( extraTransitions );
+        var extendedTransitions = this.transitionsTable.extendWith( extraTransitions );
 
         var id = databaseIdRepository.getRaw( "foo" );
         var currentBase = new EnterpriseDatabaseState( id, STARTED );
@@ -134,10 +134,10 @@ class TransitionsTest
     void extendedTransitionsShouldOverrideMappings()
     {
         // given
-        var extraTransitions = Transitions.builder()
+        var extraTransitions = TransitionsTable.builder()
                 .from( STARTED ).to( DROPPED ).doTransitions( stop, drop )
                 .build();
-        var extendedTransitions = this.transitions.extendWith( extraTransitions );
+        var extendedTransitions = this.transitionsTable.extendWith( extraTransitions );
 
         var id = databaseIdRepository.getRaw( "foo" );
         var current = new EnterpriseDatabaseState( id, STARTED );
@@ -168,7 +168,7 @@ class TransitionsTest
         // when then throw
         try
         {
-            transitions.fromCurrent( current ).toDesired( desired );
+            transitionsTable.fromCurrent( current ).toDesired( desired );
             fail();
         }
         catch ( IllegalArgumentException e )
@@ -188,7 +188,7 @@ class TransitionsTest
         var desired = new EnterpriseDatabaseState( id2, STARTED );
 
         // when
-        var lookup = transitions
+        var lookup = transitionsTable
                 .fromCurrent( current )
                 .toDesired( desired )
                 .collect( Collectors.toList() );
@@ -216,7 +216,7 @@ class TransitionsTest
         var desired = new EnterpriseDatabaseState( id2, STARTED );
 
         // when
-        var lookup = transitions
+        var lookup = transitionsTable
                 .fromCurrent( current )
                 .toDesired( desired )
                 .collect( Collectors.toList() );
@@ -249,7 +249,7 @@ class TransitionsTest
         // when then throw
         try
         {
-            transitions.fromCurrent( current ).toDesired( desired );
+            transitionsTable.fromCurrent( current ).toDesired( desired );
             fail();
         }
         catch ( IllegalArgumentException e )
@@ -267,7 +267,7 @@ class TransitionsTest
         var desired = new EnterpriseDatabaseState( id, STARTED );
 
         // when
-        var lookup = transitions
+        var lookup = transitionsTable
                 .fromCurrent( current )
                 .toDesired( desired )
                 .collect( Collectors.toList() );

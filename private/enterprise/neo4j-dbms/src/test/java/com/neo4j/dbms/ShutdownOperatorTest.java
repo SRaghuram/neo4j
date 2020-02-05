@@ -65,7 +65,6 @@ class ShutdownOperatorTest
         operator.stopAll();
         var triggerCalls = connector.triggerCalls();
 
-
         var lastCall = triggerCalls.size() - 1;
         var penultimateDesired = triggerCalls.get( lastCall - 1 ).first();
 

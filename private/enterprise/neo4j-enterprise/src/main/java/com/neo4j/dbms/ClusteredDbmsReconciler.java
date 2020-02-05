@@ -32,16 +32,14 @@ import static java.lang.String.format;
 
 public class ClusteredDbmsReconciler extends DbmsReconciler
 {
-    private final ClusteredMultiDatabaseManager databaseManager;
     private final LogProvider logProvider;
     private final ClusterStateStorageFactory stateStorageFactory;
     private final PanicService panicService;
 
     ClusteredDbmsReconciler( ClusteredMultiDatabaseManager databaseManager, Config config, LogProvider logProvider, JobScheduler scheduler,
-            ClusterStateStorageFactory stateStorageFactory, PanicService panicService )
+            ClusterStateStorageFactory stateStorageFactory, PanicService panicService, TransitionsTable transitionsTable )
     {
-        super( databaseManager, config, logProvider, scheduler );
-        this.databaseManager = databaseManager;
+        super( databaseManager, config, logProvider, scheduler, transitionsTable );
         this.logProvider = logProvider;
         this.stateStorageFactory = stateStorageFactory;
         this.panicService = panicService;
@@ -83,53 +81,10 @@ public class ClusteredDbmsReconciler extends DbmsReconciler
     }
 
     @Override
-    protected Transitions prepareLifecycleTransitionSteps()
-    {
-        Transitions standaloneTransitions = super.prepareLifecycleTransitionSteps();
-        Transitions clusteredTransitions = Transitions.builder()
-                // All transitions from UNKNOWN to $X get deconstructed into UNKNOWN -> DROPPED -> $X
-                //     inside Transitions so only actions for this from/to pair need to be specified
-                .from( UNKNOWN ).to( DROPPED ).doTransitions( this::logCleanupAndDrop )
-                // No prepareDrop step needed here as the database will be stopped for store copying anyway
-                .from( STORE_COPYING ).to( DROPPED ).doTransitions( this::stop, this::drop )
-                // Some Cluster components still need stopped when store copying.
-                //   This will attempt to stop the kernel database again, but that should be idempotent.
-                .from( STORE_COPYING ).to( STOPPED ).doTransitions( this::stop )
-                .from( STORE_COPYING ).to( STARTED ).doTransitions( this::startAfterStoreCopy )
-                .from( STARTED ).to( STORE_COPYING ).doTransitions( this::stopBeforeStoreCopy )
-                .build();
-
-        return standaloneTransitions.extendWith( clusteredTransitions );
-    }
-
-    @Override
     protected void panicDatabase( NamedDatabaseId namedDatabaseId, Throwable error )
     {
         var databasePanicker = panicService.panickerFor( namedDatabaseId );
         databasePanicker.panic( error );
-    }
-
-    /* Operator Steps */
-    private EnterpriseDatabaseState startAfterStoreCopy( NamedDatabaseId namedDatabaseId )
-    {
-        databaseManager.startDatabaseAfterStoreCopy( namedDatabaseId );
-        return new EnterpriseDatabaseState( namedDatabaseId, STARTED );
-    }
-
-    private EnterpriseDatabaseState stopBeforeStoreCopy( NamedDatabaseId namedDatabaseId )
-    {
-        databaseManager.stopDatabaseBeforeStoreCopy( namedDatabaseId );
-        return new EnterpriseDatabaseState( namedDatabaseId, STORE_COPYING );
-    }
-
-    private EnterpriseDatabaseState logCleanupAndDrop( NamedDatabaseId namedDatabaseId )
-    {
-        var log = logProvider.getLog( getClass() );
-        log.warn( format( "Pre-existing cluster state found with an unexpected id %s. This may indicate a previous " +
-                "DROP operation for %s did not complete. Cleanup of both the database and cluster-sate has been attempted. You may need to re-seed",
-                namedDatabaseId.databaseId().uuid(), namedDatabaseId.name() ) );
-        databaseManager.dropDatabase( namedDatabaseId );
-        return new EnterpriseDatabaseState( namedDatabaseId, DROPPED );
     }
 
     private DatabaseLogProvider databaseLogProvider( NamedDatabaseId namedDatabaseId )

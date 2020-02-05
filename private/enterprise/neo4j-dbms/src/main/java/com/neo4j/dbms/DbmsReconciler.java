@@ -5,7 +5,7 @@
  */
 package com.neo4j.dbms;
 
-import com.neo4j.dbms.Transitions.Transition;
+import com.neo4j.dbms.TransitionsTable.Transition;
 import com.neo4j.dbms.database.MultiDatabaseManager;
 
 import java.util.HashMap;
@@ -38,16 +38,12 @@ import org.neo4j.internal.helpers.Exceptions;
 import org.neo4j.internal.helpers.ExponentialBackoffStrategy;
 import org.neo4j.internal.helpers.TimeoutStrategy;
 import org.neo4j.internal.helpers.collection.Pair;
-import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.JobScheduler;
 
 import static com.neo4j.dbms.EnterpriseOperatorState.DROPPED;
-import static com.neo4j.dbms.EnterpriseOperatorState.INITIAL;
-import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
-import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
 import static java.lang.String.format;
 import static java.lang.Thread.currentThread;
 import static java.util.concurrent.CompletableFuture.delayedExecutor;
@@ -90,11 +86,12 @@ public class DbmsReconciler implements DatabaseStateService
     private final Log log;
     private final boolean canRetry;
     protected final Map<String,EnterpriseDatabaseState> currentStates;
-    private final Transitions transitions;
+    private final TransitionsTable transitionsTable;
     private final List<DatabaseStateChangedListener> listeners;
     private final ReconcilerLocks locks;
 
-    DbmsReconciler( MultiDatabaseManager<? extends DatabaseContext> databaseManager, Config config, LogProvider logProvider, JobScheduler scheduler )
+    DbmsReconciler( MultiDatabaseManager<? extends DatabaseContext> databaseManager, Config config, LogProvider logProvider, JobScheduler scheduler,
+            TransitionsTable transitionsTable )
     {
         this.databaseManager = databaseManager;
 
@@ -109,37 +106,8 @@ public class DbmsReconciler implements DatabaseStateService
         this.waitingJobCache = new ConcurrentHashMap<>();
         this.log = logProvider.getLog( getClass() );
         this.precedence = EnterpriseOperatorState.minByOperatorState( EnterpriseDatabaseState::operatorState );
-        this.transitions = prepareLifecycleTransitionSteps();
+        this.transitionsTable = transitionsTable;
         this.listeners = new CopyOnWriteArrayList<>();
-    }
-
-    @Override
-    public OperatorState stateOfDatabase( NamedDatabaseId namedDatabaseId )
-    {
-        return currentStates.getOrDefault( namedDatabaseId.name(), EnterpriseDatabaseState.unknown( namedDatabaseId ) ).operatorState();
-    }
-
-    @Override
-    public Optional<Throwable> causeOfFailure( NamedDatabaseId namedDatabaseId )
-    {
-        return currentStates.getOrDefault( namedDatabaseId.name(), EnterpriseDatabaseState.unknown( namedDatabaseId ) ).failure();
-    }
-
-    public void registerListener( DatabaseStateChangedListener listener )
-    {
-        listeners.add( listener );
-    }
-
-    private void stateChanged( EnterpriseDatabaseState previousState, EnterpriseDatabaseState newState )
-    {
-        //If the previous state has a different id then a drop-recreate must have occurred
-        // In this case we should fire the listener twice, once for each databaseId.
-        if ( previousState != null && !Objects.equals( previousState.databaseId(), newState.databaseId() ) )
-        {
-            var droppedPrevious = new EnterpriseDatabaseState( previousState.databaseId(), DROPPED );
-            listeners.forEach( listener -> listener.stateChange( droppedPrevious ) );
-        }
-        listeners.forEach( listener -> listener.stateChange( newState ) );
     }
 
     ReconcilerResult reconcile( List<DbmsOperator> operators, ReconcilerRequest request )
@@ -397,6 +365,18 @@ public class DbmsReconciler implements DatabaseStateService
         }
     }
 
+    private void stateChanged( EnterpriseDatabaseState previousState, EnterpriseDatabaseState newState )
+    {
+        //If the previous state has a different id then a drop-recreate must have occurred
+        // In this case we should fire the listener twice, once for each databaseId.
+        if ( previousState != null && !Objects.equals( previousState.databaseId(), newState.databaseId() ) )
+        {
+            var droppedPrevious = new EnterpriseDatabaseState( previousState.databaseId(), DROPPED );
+            listeners.forEach( listener -> listener.stateChange( droppedPrevious ) );
+        }
+        listeners.forEach( listener -> listener.stateChange( newState ) );
+    }
+
     private Optional<EnterpriseDatabaseState> handleReconciliationErrors( Throwable throwable, ReconcilerRequest request, ReconcilerStepResult result,
             String databaseName, EnterpriseDatabaseState previousState )
     {
@@ -464,36 +444,20 @@ public class DbmsReconciler implements DatabaseStateService
         return request.causeOfPanic( namedDatabaseId );
     }
 
-
+    /**
+     * A reconciliation error is considered to be fatal/non-retryable if
+     * 1) retries are disabled
+     * OR 2) the error is e.g. an OOM
+     * OR 3) the error is due to a database start which was aborted
+     */
     private boolean isFatalError( Throwable t )
     {
-        // A reconciliation error is considered to be fatal/non-retryable if
-        // 1) retries are disabled
-        // OR 2) the error is e.g. an OOM
-        // OR 3) the error is due to a database start which was aborted
         return !canRetry || t instanceof Error || t instanceof DatabaseStartAbortedException;
-    }
-
-    /**
-     * This method defines the table mapping any pair of database states to the series of steps the reconciler needs to perform
-     * to take a database from one state to another.
-     */
-    protected Transitions prepareLifecycleTransitionSteps()
-    {
-        return Transitions.builder()
-                .from( INITIAL ).to( DROPPED ).doNothing()
-                .from( INITIAL ).to( STOPPED ).doTransitions( this::create )
-                .from( INITIAL ).to( STARTED ).doTransitions( this::create, this::start )
-                .from( STOPPED ).to( STARTED ).doTransitions( this::start )
-                .from( STARTED ).to( STOPPED ).doTransitions( this::stop )
-                .from( STOPPED ).to( DROPPED ).doTransitions( this::drop )
-                .from( STARTED ).to( DROPPED ).doTransitions( this::prepareDrop, this::stop, this::drop )
-                .build();
     }
 
     private Stream<Transition> getLifecycleTransitionSteps( EnterpriseDatabaseState currentState, EnterpriseDatabaseState desiredState )
     {
-        return transitions.fromCurrent( currentState ).toDesired( desiredState );
+        return transitionsTable.fromCurrent( currentState ).toDesired( desiredState );
     }
 
     protected void panicDatabase( NamedDatabaseId namedDatabaseId, Throwable error )
@@ -503,36 +467,21 @@ public class DbmsReconciler implements DatabaseStateService
                 .ifPresent( health -> health.panic( error ) );
     }
 
-    /* Operator Steps */
-    protected final EnterpriseDatabaseState stop( NamedDatabaseId namedDatabaseId )
+    /* DaatabaseStateService implementation */
+    @Override
+    public OperatorState stateOfDatabase( NamedDatabaseId namedDatabaseId )
     {
-        databaseManager.stopDatabase( namedDatabaseId );
-        return new EnterpriseDatabaseState( namedDatabaseId, STOPPED );
+        return currentStates.getOrDefault( namedDatabaseId.name(), EnterpriseDatabaseState.unknown( namedDatabaseId ) ).operatorState();
     }
 
-    private EnterpriseDatabaseState prepareDrop( NamedDatabaseId namedDatabaseId )
+    @Override
+    public Optional<Throwable> causeOfFailure( NamedDatabaseId namedDatabaseId )
     {
-        databaseManager.getDatabaseContext( namedDatabaseId )
-                .map( DatabaseContext::database )
-                .ifPresent( Database::prepareToDrop );
-        return new EnterpriseDatabaseState( namedDatabaseId, STARTED );
+        return currentStates.getOrDefault( namedDatabaseId.name(), EnterpriseDatabaseState.unknown( namedDatabaseId ) ).failure();
     }
 
-    protected final EnterpriseDatabaseState drop( NamedDatabaseId namedDatabaseId )
+    public final void registerListener( DatabaseStateChangedListener listener )
     {
-        databaseManager.dropDatabase( namedDatabaseId );
-        return new EnterpriseDatabaseState( namedDatabaseId, DROPPED );
-    }
-
-    protected final EnterpriseDatabaseState start( NamedDatabaseId namedDatabaseId )
-    {
-        databaseManager.startDatabase( namedDatabaseId );
-        return new EnterpriseDatabaseState( namedDatabaseId, STARTED );
-    }
-
-    protected final EnterpriseDatabaseState create( NamedDatabaseId namedDatabaseId )
-    {
-        databaseManager.createDatabase( namedDatabaseId );
-        return new EnterpriseDatabaseState( namedDatabaseId, STOPPED );
+        listeners.add( listener );
     }
 }
