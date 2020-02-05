@@ -19,8 +19,10 @@
  */
 package org.neo4j.internal.freki;
 
+import org.neo4j.internal.helpers.collection.PrefetchingResourceIterator;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.storageengine.api.StorageNodeCursor;
+import org.neo4j.storageengine.api.StorageProperty;
 import org.neo4j.storageengine.api.StoragePropertyCursor;
 import org.neo4j.storageengine.api.StorageRelationshipCursor;
 import org.neo4j.values.storable.Value;
@@ -36,11 +38,16 @@ import static org.neo4j.internal.freki.StreamVByte.readLongs;
 class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropertyCursor
 {
     private boolean initializedFromEntity;
+
+    // either the properties are in the record data, where these fields come into play...
     private long nodeId;
     private long internalRelationshipId;
     private int[] propertyKeyArray;
     private int propertyKeyIndex;
     private int nextPropertyValueStartOffset;
+
+    // ... or they are in the dense form, where these fields come into play
+    private PrefetchingResourceIterator<StorageProperty> denseProperties;
 
     FrekiPropertyCursor( MainStores stores, PageCursorTracer cursorTracer )
     {
@@ -104,7 +111,9 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
     @Override
     public int propertyKey()
     {
-        return propertyKeyArray[propertyKeyIndex];
+        return isDense
+               ? denseProperties.peek().propertyKeyId()
+               : propertyKeyArray[propertyKeyIndex];
     }
 
     @Override
@@ -116,12 +125,19 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
     @Override
     public Value propertyValue()
     {
-        return PropertyValueFormat.read( data );
+        return isDense
+               ? denseProperties.peek().value()
+               : PropertyValueFormat.read( data );
     }
 
     @Override
     public boolean next()
     {
+        if ( isDense )
+        {
+            return denseProperties.hasNext();
+        }
+
         if ( nodeId != NULL || propertyKeyIndex != NULL || initializedFromEntity )
         {
             initializedFromEntity = false;
@@ -195,7 +211,15 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
 
     private boolean readNodePropertyKeys()
     {
-        return readPropertyKeys( nodePropertiesOffset );
+        if ( isDense )
+        {
+            denseProperties = stores.denseStore.getProperties( loadedNodeId, cursorTracer );
+            return true;
+        }
+        else
+        {
+            return readPropertyKeys( nodePropertiesOffset );
+        }
     }
 
     private boolean readPropertyKeys( int offset )
@@ -220,5 +244,10 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
         internalRelationshipId = NULL;
         propertyKeyIndex = -1;
         initializedFromEntity = false;
+        if ( denseProperties != null )
+        {
+            denseProperties.close();
+            denseProperties = null;
+        }
     }
 }

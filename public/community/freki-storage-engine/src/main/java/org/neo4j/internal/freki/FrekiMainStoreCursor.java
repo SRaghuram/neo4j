@@ -26,8 +26,10 @@ import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 
 import static org.neo4j.internal.freki.MutableNodeRecordData.idFromForwardPointer;
+import static org.neo4j.internal.freki.MutableNodeRecordData.isDenseFromForwardPointer;
 import static org.neo4j.internal.freki.MutableNodeRecordData.sizeExponentialFromForwardPointer;
 import static org.neo4j.internal.freki.Record.FLAG_IN_USE;
+import static org.neo4j.internal.freki.StreamVByte.SKIP;
 import static org.neo4j.internal.freki.StreamVByte.readIntDeltas;
 import static org.neo4j.util.Preconditions.checkState;
 
@@ -49,7 +51,9 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
     int nodePropertiesOffset;
     int relationshipsOffset;
     int endOffset;
-    private boolean containsForwardPointer;
+    boolean containsForwardPointer;
+    long forwardPointer;
+    boolean isDense;
 
     // state from relationship section, it's here because both relationship cursors as well as property cursor makes use of them
     int[] relationshipTypesInNode;
@@ -71,6 +75,8 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
         relationshipTypeOffsets = null;
         relationshipTypesInNode = null;
         loadedNodeId = NULL;
+        forwardPointer = NULL;
+        isDense = false;
     }
 
     PageCursor cursor()
@@ -93,20 +99,27 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
         readOffsets();
         if ( containsForwardPointer )
         {
-            long forwardPointer = data.getLong( endOffset );
-            SimpleStore largeStore = stores.mainStore( sizeExponentialFromForwardPointer( forwardPointer ) );
-            record = largeStore.newRecord();
-            try ( PageCursor largeCursor = largeStore.openReadCursor() )
+            if ( isDense )
             {
-                largeStore.read( largeCursor, record, idFromForwardPointer( forwardPointer ) );
-                if ( !record.hasFlag( FLAG_IN_USE ) )
+                // Nothing to load, really
+            }
+            else
+            {
+                // Let's load the larger record
+                SimpleStore largeStore = stores.mainStore( sizeExponentialFromForwardPointer( forwardPointer ) );
+                record = largeStore.newRecord();
+                try ( PageCursor largeCursor = largeStore.openReadCursor() )
                 {
-                    return false;
+                    largeStore.read( largeCursor, record, idFromForwardPointer( forwardPointer ) );
+                    if ( !record.hasFlag( FLAG_IN_USE ) )
+                    {
+                        return false;
+                    }
+                    data = record.dataForReading();
+                    int smallRecordLabelsOffset = labelsOffset;
+                    readOffsets();
+                    labelsOffset = smallRecordLabelsOffset;
                 }
-                data = record.dataForReading();
-                int smallRecordLabelsOffset = labelsOffset;
-                readOffsets();
-                labelsOffset = smallRecordLabelsOffset;
             }
         }
         loadedNodeId = id;
@@ -135,6 +148,17 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
         nodePropertiesOffset = MutableNodeRecordData.propertyOffset( offsetsHeader );
         endOffset = MutableNodeRecordData.endOffset( offsetsHeader );
         containsForwardPointer = MutableNodeRecordData.containsForwardPointer( offsetsHeader );
+        if ( containsForwardPointer )
+        {
+            if ( relationshipsOffset != 0 )
+            {
+                // skip the type offsets array
+                data.position( endOffset );
+                StreamVByte.readIntDeltas( SKIP, data );
+            }
+            forwardPointer = data.getLong();
+            isDense = isDenseFromForwardPointer( forwardPointer );
+        }
     }
 
     void readRelationshipTypes()

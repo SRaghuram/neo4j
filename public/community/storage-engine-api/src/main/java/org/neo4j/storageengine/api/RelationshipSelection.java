@@ -28,6 +28,9 @@ import java.util.Arrays;
 import org.neo4j.collection.PrimitiveLongCollections;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.storageengine.api.txstate.NodeState;
+import org.neo4j.token.api.TokenConstants;
+
+import static org.neo4j.token.api.TokenConstants.ANY_RELATIONSHIP_TYPE;
 
 /**
  * Used to specify a selection of relationships to get from a node.
@@ -75,6 +78,12 @@ public abstract class RelationshipSelection
      * @return whether or not this relationship type is part of this selection.
      */
     public abstract boolean test( int type, RelationshipDirection direction );
+
+    /**
+     * @return selection criteria. Note the {@link Criterion#type()} can be {@link TokenConstants#ANY_RELATIONSHIP_TYPE},
+     * which means all relationship types.
+     */
+    public abstract Criterion[] criteria();
 
     /**
      * Selects the correct set of added relationships from transaction state, based on the selection criteria.
@@ -133,7 +142,7 @@ public abstract class RelationshipSelection
         }
     }
 
-    private static class DirectionalSingleType extends Directional
+    private static class DirectionalSingleType extends Directional implements Criterion
     {
         private final int type;
 
@@ -153,6 +162,24 @@ public abstract class RelationshipSelection
         public boolean test( int type, RelationshipDirection direction )
         {
             return this.type == type && matchesDirection( direction, this.direction );
+        }
+
+        @Override
+        public Criterion[] criteria()
+        {
+            return new Criterion[]{this};
+        }
+
+        @Override
+        public int type()
+        {
+            return type;
+        }
+
+        @Override
+        public Direction direction()
+        {
+            return direction;
         }
 
         @Override
@@ -188,6 +215,17 @@ public abstract class RelationshipSelection
         public boolean test( int type, RelationshipDirection direction )
         {
             return test( type ) && matchesDirection( direction, this.direction );
+        }
+
+        @Override
+        public Criterion[] criteria()
+        {
+            Criterion[] criteria = new Criterion[types.length];
+            for ( int i = 0; i < types.length; i++ )
+            {
+                criteria[i] = new CriterionImpl( types[i], direction );
+            }
+            return criteria;
         }
 
         @Override
@@ -230,7 +268,7 @@ public abstract class RelationshipSelection
         }
     }
 
-    private static class DirectionalAllTypes extends Directional
+    private static class DirectionalAllTypes extends Directional implements Criterion
     {
         DirectionalAllTypes( Direction direction )
         {
@@ -250,6 +288,24 @@ public abstract class RelationshipSelection
         }
 
         @Override
+        public Criterion[] criteria()
+        {
+            return new Criterion[]{this};
+        }
+
+        @Override
+        public int type()
+        {
+            return ANY_RELATIONSHIP_TYPE;
+        }
+
+        @Override
+        public Direction direction()
+        {
+            return direction;
+        }
+
+        @Override
         public LongIterator addedRelationship( NodeState transactionState )
         {
             return transactionState.getAddedRelationships( direction );
@@ -261,6 +317,40 @@ public abstract class RelationshipSelection
             return "RelationshipSelection[" + direction + "]";
         }
     }
+
+    public interface Criterion
+    {
+        int type();
+
+        Direction direction();
+    }
+
+    public static class CriterionImpl implements Criterion
+    {
+        private final int type;
+        private final Direction direction;
+
+        CriterionImpl( int type, Direction direction )
+        {
+            this.type = type;
+            this.direction = direction;
+        }
+
+        @Override
+        public int type()
+        {
+            return type;
+        }
+
+        @Override
+        public Direction direction()
+        {
+            return direction;
+        }
+    }
+
+    private static final Criterion ALL_CRITERIA = new CriterionImpl( ANY_RELATIONSHIP_TYPE, Direction.BOTH );
+    private static final Criterion[] NO_CRITERIA = new Criterion[0];
 
     public static final RelationshipSelection ALL_RELATIONSHIPS = new RelationshipSelection()
     {
@@ -295,6 +385,12 @@ public abstract class RelationshipSelection
         }
 
         @Override
+        public Criterion[] criteria()
+        {
+            return new Criterion[]{ALL_CRITERIA};
+        }
+
+        @Override
         public String toString()
         {
             return "RelationshipSelection[*]";
@@ -325,6 +421,12 @@ public abstract class RelationshipSelection
         public boolean test( int type, RelationshipDirection direction )
         {
             return false;
+        }
+
+        @Override
+        public Criterion[] criteria()
+        {
+            return NO_CRITERIA;
         }
 
         @Override

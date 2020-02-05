@@ -133,6 +133,7 @@ class FrekiStorageEngine implements StorageEngine
 
         SimpleStore[] mainStores = new SimpleStore[4];
         BigPropertyValueStore bigPropertyValueStore = null;
+        DenseStore denseStore = null;
         IdGenerator relationshipsIdGenerator = null;
         GBPTreeMetaDataStore metaDataStore = null;
         GBPTreeCountsStore countsStore = null;
@@ -153,6 +154,7 @@ class FrekiStorageEngine implements StorageEngine
             }
             bigPropertyValueStore =
                     new BigPropertyValueStore( fs, databaseLayout.file( "big-values" ), pageCache, false, createStoreIfNotExists, cursorTracerSupplier );
+            denseStore = new DenseStore( pageCache, databaseLayout.file( "dense-store" ), recoveryCleanupWorkCollector, false, pageCacheTracer );
             relationshipsIdGenerator =
                     idGeneratorFactory.create( pageCache, databaseLayout.relationshipStore(), IdType.RELATIONSHIP, 0, false, Long.MAX_VALUE, false,
                             cursorTracerSupplier.get(), Sets.immutable.empty() );
@@ -169,7 +171,7 @@ class FrekiStorageEngine implements StorageEngine
             labelTokenStore = new GBPTreeTokenStore( pageCache, databaseLayout.labelTokenStore(), recoveryCleanupWorkCollector,
                     idGeneratorFactory, IdType.LABEL_TOKEN, MAX_TOKEN_ID, false, pageCacheTracer, cursorTracer );
             SchemaCache schemaCache = new SchemaCache( constraintSemantics, indexConfigCompleter );
-            this.stores = new Stores( mainStores, bigPropertyValueStore, relationshipsIdGenerator, metaDataStore, countsStore, schemaStore,
+            this.stores = new Stores( mainStores, bigPropertyValueStore, denseStore, relationshipsIdGenerator, metaDataStore, countsStore, schemaStore,
                     schemaCache, propertyKeyTokenStore, relationshipTypeTokenStore, labelTokenStore );
             life.add( stores );
             success = true;
@@ -182,7 +184,7 @@ class FrekiStorageEngine implements StorageEngine
         {
             if ( !success )
             {
-                closeAllSilently( concat( mainStores, bigPropertyValueStore, relationshipsIdGenerator, metaDataStore, countsStore, schemaStore,
+                closeAllSilently( concat( mainStores, bigPropertyValueStore, denseStore, relationshipsIdGenerator, metaDataStore, countsStore, schemaStore,
                         propertyKeyTokenStore, relationshipTypeTokenStore, labelTokenStore ) );
             }
         }

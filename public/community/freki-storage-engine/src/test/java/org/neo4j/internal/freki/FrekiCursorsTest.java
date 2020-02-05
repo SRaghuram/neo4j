@@ -50,7 +50,7 @@ abstract class FrekiCursorsTest
 
     InMemoryTestStore store = new InMemoryTestStore( 0 );
     InMemoryTestStore largeStore = new InMemoryTestStore( 2 );
-    MainStores stores = new MainStores( new SimpleStore[]{store, null, largeStore}, new InMemoryBigValueTestStore() );
+    MainStores stores = new MainStores( new SimpleStore[]{store, null, largeStore}, new InMemoryBigValueTestStore(), null );
 
     static long[] toLongArray( int[] labelIds )
     {

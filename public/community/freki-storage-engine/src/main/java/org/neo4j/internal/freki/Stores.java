@@ -39,11 +39,11 @@ class Stores extends MainStores
     final GBPTreeTokenStore relationshipTypeTokenStore;
     final GBPTreeTokenStore labelTokenStore;
 
-    Stores( SimpleStore[] mainStores, BigPropertyValueStore bigPropertyValueStore, IdGenerator relationshipIdGenerator,
+    Stores( SimpleStore[] mainStores, BigPropertyValueStore bigPropertyValueStore, DenseStore denseStore, IdGenerator relationshipIdGenerator,
             TransactionMetaDataStore metaDataStore, GBPTreeCountsStore countsStore, GBPTreeSchemaStore schemaStore, SchemaCache schemaCache,
             GBPTreeTokenStore propertyKeyTokenStore, GBPTreeTokenStore relationshipTypeTokenStore, GBPTreeTokenStore labelTokenStore )
     {
-        super( mainStores, bigPropertyValueStore );
+        super( mainStores, bigPropertyValueStore, denseStore );
         this.relationshipIdGenerator = relationshipIdGenerator;
         this.metaDataStore = metaDataStore;
         this.countsStore = countsStore;
@@ -64,6 +64,7 @@ class Stores extends MainStores
     @Override
     void flushAndForce( IOLimiter limiter, PageCursorTracer cursorTracer )
     {
+        super.flushAndForce( limiter, cursorTracer );
         relationshipIdGenerator.checkpoint( limiter, cursorTracer );
         metaDataStore.flush( cursorTracer );
         schemaStore.checkpoint( limiter, cursorTracer );
