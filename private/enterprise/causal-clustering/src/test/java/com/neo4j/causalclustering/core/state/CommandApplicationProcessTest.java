@@ -24,9 +24,12 @@ import com.neo4j.causalclustering.core.state.machines.tx.ReplicatedTransaction;
 import com.neo4j.causalclustering.core.state.storage.InMemoryStateStorage;
 import com.neo4j.causalclustering.error_handling.DatabasePanicker;
 import org.assertj.core.api.Condition;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.UUID;
 
@@ -76,25 +79,20 @@ public class CommandApplicationProcessTest
     private final ReplicatedTransaction nullTx = ReplicatedTransaction.from( new byte[0], databaseId );
 
     private final CommandDispatcher commandDispatcher = mock( CommandDispatcher.class );
+    private int sequenceNumber;
 
+    @BeforeEach
+    void setUp()
     {
         when( coreState.commandDispatcher() ).thenReturn( commandDispatcher );
         when( coreState.getLastAppliedIndex() ).thenReturn( -1L );
         when( coreState.getLastFlushed() ).thenReturn( -1L );
     }
 
-    private ReplicatedTransaction tx( byte dataValue )
+    @AfterEach
+    void tearDown() throws IOException
     {
-        byte[] dataArray = new byte[30];
-        Arrays.fill( dataArray, dataValue );
-        return ReplicatedTransaction.from( dataArray, databaseId );
-    }
-
-    private int sequenceNumber;
-
-    private synchronized ReplicatedContent operation( CoreReplicatedContent tx )
-    {
-        return new DistributedOperation( tx, globalSession, new LocalOperationId( 0, sequenceNumber++ ) );
+        applicationProcess.stop();
     }
 
     @Test
@@ -328,6 +326,18 @@ public class CommandApplicationProcessTest
         assertEquals( 2, applicationProcess.lastApplied() );
     }
 
+    private ReplicatedTransaction tx( byte dataValue )
+    {
+        byte[] dataArray = new byte[30];
+        Arrays.fill( dataArray, dataValue );
+        return ReplicatedTransaction.from( dataArray, databaseId );
+    }
+
+    private synchronized ReplicatedContent operation( CoreReplicatedContent tx )
+    {
+        return new DistributedOperation( tx, globalSession, new LocalOperationId( 0, sequenceNumber++ ) );
+    }
+
     private static class SinglePanic implements DatabasePanicker
     {
         volatile boolean hasPanicked;
@@ -338,5 +348,4 @@ public class CommandApplicationProcessTest
             hasPanicked = true;
         }
     }
-
 }
