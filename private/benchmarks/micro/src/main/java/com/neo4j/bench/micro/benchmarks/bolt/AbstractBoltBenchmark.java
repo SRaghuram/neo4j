@@ -53,6 +53,8 @@ import org.neo4j.time.Clocks;
 import org.neo4j.time.SystemNanoClock;
 import org.neo4j.values.AnyValue;
 
+import static org.neo4j.bolt.transport.pipeline.ChannelProtector.NULL;
+
 public abstract class AbstractBoltBenchmark extends BaseDatabaseBenchmark
 {
     static final String USER_AGENT = "BoltPropertySerialization/0.0";
@@ -551,5 +553,5 @@ public abstract class AbstractBoltBenchmark extends BaseDatabaseBenchmark
         }
     };
 
-    static final BoltChannel BOLT_CHANNEL = new BoltChannel( "bolt-1", "default", CHANNEL );
+    static final BoltChannel BOLT_CHANNEL = new BoltChannel( "bolt-1", "default", CHANNEL, NULL );
 }
