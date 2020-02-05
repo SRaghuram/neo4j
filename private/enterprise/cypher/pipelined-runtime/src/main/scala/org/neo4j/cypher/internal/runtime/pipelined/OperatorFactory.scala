@@ -8,7 +8,6 @@ package org.neo4j.cypher.internal.runtime.pipelined
 import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.logical.plans
 import org.neo4j.cypher.internal.logical.plans.DoNotIncludeTies
-<<<<<<< HEAD
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateBufferVariant
 import org.neo4j.cypher.internal.physicalplanning.BufferDefinition
@@ -18,10 +17,6 @@ import org.neo4j.cypher.internal.physicalplanning.LongSlot
 import org.neo4j.cypher.internal.physicalplanning.MorselArgumentStateBufferOutput
 import org.neo4j.cypher.internal.physicalplanning.MorselBufferOutput
 import org.neo4j.cypher.internal.physicalplanning.NoOutput
-=======
-import org.neo4j.cypher.internal.logical.plans.ExpandAll
-import org.neo4j.cypher.internal.logical.plans.LogicalPlan
->>>>>>> da402acfd95... Don't attribute any time to fused operators
 import org.neo4j.cypher.internal.physicalplanning.OperatorFusionPolicy.OPERATOR_FUSION_DISABLED
 import org.neo4j.cypher.internal.physicalplanning.OptionalBufferVariant
 import org.neo4j.cypher.internal.physicalplanning.OutputDefinition
@@ -36,20 +31,12 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.isRefSlotAnd
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.generateSlotAccessorFunctions
 import org.neo4j.cypher.internal.physicalplanning.SlottedIndexedProperty
 import org.neo4j.cypher.internal.physicalplanning.VariablePredicates.expressionSlotForPredicate
-<<<<<<< HEAD
-=======
-import org.neo4j.cypher.internal.physicalplanning.LongSlot
-import org.neo4j.cypher.internal.physicalplanning.RefSlot
-import org.neo4j.cypher.internal.physicalplanning.SlottedIndexedProperty
-import org.neo4j.cypher.internal.physicalplanning._
->>>>>>> da402acfd95... Don't attribute any time to fused operators
 import org.neo4j.cypher.internal.runtime.KernelAPISupport.asKernelIndexOrder
 import org.neo4j.cypher.internal.runtime.QueryIndexRegistrator
 import org.neo4j.cypher.internal.runtime.interpreted.CommandProjection
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.True
-<<<<<<< HEAD
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.DropResultPipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.IndexSeekModeFactory
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyLabel
@@ -104,23 +91,12 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.TopOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.UndirectedRelationshipByIdSeekOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.UnwindOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.VarExpandOperator
-=======
-import org.neo4j.cypher.internal.runtime.interpreted.pipes._
-import org.neo4j.cypher.internal.runtime.pipelined.aggregators.Aggregator
-import org.neo4j.cypher.internal.runtime.pipelined.aggregators.AggregatorFactory
-import org.neo4j.cypher.internal.runtime.pipelined.operators._
->>>>>>> da402acfd95... Don't attribute any time to fused operators
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentityMutableDescription
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentityMutableDescriptionImpl
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.createProjectionsForResult
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.translateColumnOrder
-<<<<<<< HEAD
 import org.neo4j.cypher.internal.util.attribution.Id
-=======
-import org.neo4j.cypher.internal.v4_0.ast.semantics.SemanticTable
-import org.neo4j.cypher.internal.v4_0.util.attribution.Id
->>>>>>> da402acfd95... Don't attribute any time to fused operators
 import org.neo4j.exceptions.CantCompileQueryException
 import org.neo4j.exceptions.InternalException
 
