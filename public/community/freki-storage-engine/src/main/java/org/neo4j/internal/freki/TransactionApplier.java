@@ -19,14 +19,22 @@
  */
 package org.neo4j.internal.freki;
 
+import org.eclipse.collections.api.map.primitive.MutableIntObjectMap;
+
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
 
 import org.neo4j.internal.helpers.collection.Visitor;
 import org.neo4j.io.IOUtils;
 import org.neo4j.io.pagecache.PageCursor;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.lock.LockGroup;
 import org.neo4j.storageengine.api.CommandsToApply;
+import org.neo4j.storageengine.api.PropertyKeyValue;
 import org.neo4j.storageengine.api.StorageCommand;
+import org.neo4j.storageengine.api.StorageProperty;
+import org.neo4j.values.storable.Value;
 
 import static org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier.TRACER_SUPPLIER;
 
@@ -53,11 +61,48 @@ class TransactionApplier extends FrekiCommand.Dispatcher.Adapter implements Visi
     }
 
     @Override
-    public void handle( FrekiCommand.Node node ) throws IOException
+    public void handle( FrekiCommand.SparseNode node ) throws IOException
     {
         Record record = node.after();
         int sizeExp = record.sizeExp();
         stores.mainStore( sizeExp ).write( storeCursors[sizeExp], node.after() );
+    }
+
+    @Override
+    public void handle( FrekiCommand.DenseNode node ) throws IOException
+    {
+        // Thoughts: we should perhaps to the usual combine-and-apply thing for the dense node updates?
+        try ( DenseStore.Updater updater = stores.denseStore.newUpdater( PageCursorTracer.NULL ) )
+        {
+            if ( node.inUse )
+            {
+                // added node properties
+                node.addedProperties.forEachKeyValue( ( key, value ) -> updater.setProperty( node.nodeId, new PropertyKeyValue( key, value ) ) );
+                // removed node properties
+                node.removedProperties.forEach( key -> updater.removeProperty( node.nodeId, key ) );
+                // created relationships
+                node.createdRelationships.forEachKeyValue( ( type, typedRelationships ) ->
+                        typedRelationships.forEach( relationship ->
+                                updater.createRelationship( relationship.internalId, relationship.sourceNodeId, relationship.type,
+                                        relationship.otherNode, relationship.outgoing, convert( relationship.properties ) ) ) );
+                // deleted relationships
+                node.deletedRelationships.forEachKeyValue( ( type, typedRelationships ) -> typedRelationships.forEach(
+                        relationship -> updater.deleteRelationship( relationship.internalId, relationship.sourceNodeId, relationship.type, relationship.otherNode,
+                                relationship.outgoing ) ) );
+            }
+            else
+            {
+                updater.deleteNode( node.nodeId );
+            }
+        }
+    }
+
+    // TODO this object transformation is silly, please get rid of it and instead find some unified data structure across the stack
+    private Collection<StorageProperty> convert( MutableIntObjectMap<Value> properties )
+    {
+        Collection<StorageProperty> result = new ArrayList<>();
+        properties.forEachKeyValue( ( key, value ) -> result.add( new PropertyKeyValue( key, value ) ) );
+        return result;
     }
 
     @Override

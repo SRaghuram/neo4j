@@ -19,6 +19,7 @@
  */
 package org.neo4j.internal.freki;
 
+import org.eclipse.collections.api.set.primitive.ImmutableLongSet;
 import org.eclipse.collections.api.set.primitive.LongSet;
 import org.eclipse.collections.api.set.primitive.MutableLongSet;
 import org.eclipse.collections.impl.factory.primitive.IntSets;
@@ -283,6 +284,44 @@ public class FrekiStorageEngineGraphWritesIT
 
         // then
         assertContentsOfNode( nodeId, labelIds, nodeProperties, relationships );
+    }
+
+    @Test
+    void shouldOverflowIntoDenseRepresentationFor() throws Exception
+    {
+        // given
+        CommandCreationContext commandCreationContext = storageEngine.newCommandCreationContext( NULL );
+        long nodeId = commandCreationContext.reserveNode();
+        ImmutableLongSet labels = LongSets.immutable.of( 1, 78, 95 );
+        int type = 12;
+
+        // when
+        Set<RelationshipSpec> relationships = new HashSet<>();
+        createAndApplyTransaction( target ->
+        {
+            target.visitCreatedNode( nodeId );
+            target.visitNodeLabelChanges( nodeId, labels, LongSets.immutable.empty() );
+            for ( int i = 0; i < 1_000; i++ )
+            {
+                long otherNodeId = commandCreationContext.reserveNode();
+                target.visitCreatedNode( otherNodeId );
+                target.visitCreatedRelationship( i, type, nodeId, otherNodeId, emptyList() );
+                relationships.add( new RelationshipSpec( nodeId, type, otherNodeId, emptySet() ) );
+            }
+        } );
+
+        // then
+        assertContentsOfNode( nodeId, labels, emptySet(), relationships );
+    }
+
+    @Test
+    void shouldUpdateDenseNode()
+    {
+        // given
+
+        // when
+
+        // then
     }
 
     private void assertContentsOfNode( long nodeId, LongSet labelIds, Set<StorageProperty> nodeProperties, Set<RelationshipSpec> relationships )

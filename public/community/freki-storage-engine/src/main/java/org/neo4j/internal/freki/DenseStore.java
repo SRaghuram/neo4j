@@ -32,7 +32,6 @@ import java.util.Comparator;
 import java.util.Iterator;
 
 import org.neo4j.graphdb.Direction;
-import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.index.internal.gbptree.GBPTree;
 import org.neo4j.index.internal.gbptree.Layout;
 import org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector;
@@ -72,7 +71,7 @@ class DenseStore extends LifecycleAdapter implements Closeable
                 tracer, Sets.immutable.empty() );
     }
 
-    ResourceIterator<StorageProperty> getProperties( long nodeId, PageCursorTracer cursorTracer )
+    PrefetchingResourceIterator<StorageProperty> getProperties( long nodeId, PageCursorTracer cursorTracer )
     {
         DenseStoreKey from = layout.newKey();
         from.initializeProperty( nodeId, Integer.MIN_VALUE );
@@ -101,7 +100,7 @@ class DenseStore extends LifecycleAdapter implements Closeable
         }
     }
 
-    ResourceIterator<RelationshipData> getRelationships( long nodeId, int type, Direction direction, PageCursorTracer cursorTracer )
+    PrefetchingResourceIterator<RelationshipData> getRelationships( long nodeId, int type, Direction direction, PageCursorTracer cursorTracer )
     {
         DenseStoreKey from = layout.newKey();
         from.initializeRelationship( nodeId, type, direction, Long.MIN_VALUE, Long.MIN_VALUE );
@@ -231,6 +230,12 @@ class DenseStore extends LifecycleAdapter implements Closeable
             }
 
             @Override
+            public void deleteNode( long nodeId )
+            {
+                throw new UnsupportedOperationException( "Not implemented yet" );
+            }
+
+            @Override
             public void close() throws IOException
             {
                 writer.close();
@@ -258,6 +263,8 @@ class DenseStore extends LifecycleAdapter implements Closeable
         void createRelationship( long internalId, long sourceNodeId, int type, long targetNodeId, boolean outgoing, Collection<StorageProperty> properties );
 
         void deleteRelationship( long internalId, long sourceNodeId, int type, long targetNodeId, boolean outgoing );
+
+        void deleteNode( long nodeId );
     }
 
     private static class DenseStoreLayout extends Layout.Adapter<DenseStoreKey,DenseStoreValue>

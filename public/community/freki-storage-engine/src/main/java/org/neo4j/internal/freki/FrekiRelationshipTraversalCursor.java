@@ -19,6 +19,7 @@
  */
 package org.neo4j.internal.freki;
 
+import org.neo4j.internal.helpers.collection.PrefetchingResourceIterator;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.storageengine.api.RelationshipDirection;
 import org.neo4j.storageengine.api.RelationshipSelection;
@@ -52,6 +53,9 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
     private RelationshipDirection currentRelationshipDirection;
     private boolean currentRelationshipHasProperties;
     private long currentRelationshipInternalId;
+
+    // dense node state
+    private PrefetchingResourceIterator<DenseStore.RelationshipData> denseRelationships;
 
     FrekiRelationshipTraversalCursor( MainStores stores, PageCursorTracer cursorTracer )
     {
@@ -100,13 +104,20 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
     {
         if ( !loadedCorrectNode )
         {
-            if ( !loadMainRecord( nodeId ) || relationshipsOffset == 0 )
+            if ( !loadMainRecord( nodeId ) || (!isDense && relationshipsOffset == 0) )
             {
                 return false;
             }
 
-            startIterationAfterLoad();
-            readRelationshipTypes();
+            if ( isDense )
+            {
+
+            }
+            else
+            {
+                startIterationAfterLoad();
+                readRelationshipTypes();
+            }
         }
 
         while ( currentTypeIndex < relationshipTypesInNode.length )
@@ -191,6 +202,11 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
         currentTypePropertiesOffset = -1;
         currentRelationshipDirection = null;
         currentRelationshipInternalId = NULL;
+        if ( denseRelationships != null )
+        {
+            denseRelationships.close();
+            denseRelationships = null;
+        }
     }
 
     @Override

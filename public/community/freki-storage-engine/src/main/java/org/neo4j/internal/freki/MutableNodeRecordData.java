@@ -56,9 +56,9 @@ class MutableNodeRecordData
     static final int ARRAY_ENTRIES_PER_RELATIONSHIP = 2;
 
     private final long id;
-    MutableIntSet labels = IntSets.mutable.empty();
-    private MutableIntObjectMap<Value> properties = IntObjectMaps.mutable.empty();
-    private MutableIntObjectMap<Relationships> relationships = IntObjectMaps.mutable.empty();
+    final MutableIntSet labels = IntSets.mutable.empty();
+    final MutableIntObjectMap<Value> properties = IntObjectMaps.mutable.empty();
+    final MutableIntObjectMap<Relationships> relationships = IntObjectMaps.mutable.empty();
     private long internalRelationshipIdCounter = 1;
     private long forwardPointer = NULL;
 
@@ -116,8 +116,36 @@ class MutableNodeRecordData
         internalRelationshipIdCounter = 1;
     }
 
+    long nextInternalRelationshipId()
+    {
+        return internalRelationshipIdCounter++;
+    }
+
     static class Relationship
     {
+        // These two combined makes up the actual external relationship ID
+        long internalId;
+        long sourceNodeId;
+        long otherNode;
+
+        int type;
+        boolean outgoing;
+        MutableIntObjectMap<Value> properties = IntObjectMaps.mutable.empty();
+
+        Relationship( long internalId, long sourceNodeId, long otherNode, int type, boolean outgoing )
+        {
+            this.internalId = internalId;
+            this.sourceNodeId = sourceNodeId;
+            this.otherNode = otherNode;
+            this.type = type;
+            this.outgoing = outgoing;
+        }
+
+        void addProperty( int propertyKeyId, Value value )
+        {
+            properties.put( propertyKeyId, value );
+        }
+
         @Override
         public boolean equals( Object o )
         {
@@ -139,29 +167,6 @@ class MutableNodeRecordData
         {
             long id = externalRelationshipId( sourceNodeId, internalId, otherNode, outgoing );
             return String.format( "ID:%s (%s), %s%s, properties: %s", id, internalId, outgoing ? "->" : " <-", otherNode, properties );
-        }
-
-        // These two combined makes up the actual external relationship ID
-        long internalId;
-        long sourceNodeId;
-
-        long otherNode;
-        int type;
-        boolean outgoing;
-        private MutableIntObjectMap<Value> properties = IntObjectMaps.mutable.empty();
-
-        Relationship( long internalId, long sourceNodeId, long otherNode, int type, boolean outgoing )
-        {
-            this.internalId = internalId;
-            this.sourceNodeId = sourceNodeId;
-            this.otherNode = otherNode;
-            this.type = type;
-            this.outgoing = outgoing;
-        }
-
-        void addProperty( int propertyKeyId, Value value )
-        {
-            properties.put( propertyKeyId, value );
         }
     }
 
@@ -241,10 +246,15 @@ class MutableNodeRecordData
         properties.put( propertyKeyId, value );
     }
 
+    void removeNodeProperty( int propertyKeyId )
+    {
+        properties.remove( propertyKeyId );
+    }
+
     Relationship createRelationship( Relationship sourceNodeRelationship, long otherNode, int type )
     {
         checkState( internalRelationshipIdCounter < ARTIFICIAL_MAX_RELATIONSHIP_COUNTER, "Relationship counter exhausted for node %d", id );
-        long internalId = sourceNodeRelationship != null ? sourceNodeRelationship.internalId : internalRelationshipIdCounter++;
+        long internalId = sourceNodeRelationship != null ? sourceNodeRelationship.internalId : nextInternalRelationshipId();
         boolean outgoing = sourceNodeRelationship == null;
         return relationships.getIfAbsentPut( type, () -> new MutableNodeRecordData.Relationships( type ) ).add( internalId, id, otherNode, type, outgoing );
     }
@@ -338,6 +348,10 @@ class MutableNodeRecordData
         if ( forwardPointer != NULL )
         {
             buffer.putLong( forwardPointer );
+            if ( isDenseFromForwardPointer( forwardPointer ) )
+            {
+                buffer.putLong( internalRelationshipIdCounter );
+            }
         }
 
         // Write the offsets (properties,relationships,end) at the reserved offsets header position at the beginning
@@ -392,7 +406,8 @@ class MutableNodeRecordData
         int endOffset = endOffset( offsetHeader );
         boolean containsForwardPointer = containsForwardPointer( offsetHeader );
 
-        labels = IntSets.mutable.of( readIntDeltas( intArrayTarget(), buffer ).array() );
+        labels.clear();
+        labels.addAll( readIntDeltas( intArrayTarget(), buffer ).array() );
         properties.clear();
         if ( propertiesOffset != 0 )
         {
@@ -440,6 +455,10 @@ class MutableNodeRecordData
             if ( containsForwardPointer )
             {
                 forwardPointer = buffer.getLong();
+                if ( isDenseFromForwardPointer( forwardPointer ) )
+                {
+                    internalRelationshipIdCounter = buffer.getLong();
+                }
             }
         }
     }

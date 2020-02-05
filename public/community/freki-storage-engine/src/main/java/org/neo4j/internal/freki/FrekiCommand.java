@@ -19,12 +19,16 @@
  */
 package org.neo4j.internal.freki;
 
+import org.eclipse.collections.api.map.primitive.MutableIntObjectMap;
+import org.eclipse.collections.api.set.primitive.MutableIntSet;
+
 import java.io.IOException;
 
 import org.neo4j.io.fs.WritableChannel;
 import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.string.UTF8;
 import org.neo4j.token.api.NamedToken;
+import org.neo4j.values.storable.Value;
 
 abstract class FrekiCommand implements StorageCommand
 {
@@ -74,13 +78,45 @@ abstract class FrekiCommand implements StorageCommand
         }
     }
 
-    static class Node extends FrekiRecordCommand
+    static class SparseNode extends FrekiRecordCommand
     {
-        static final byte TYPE = 0;
+        static final byte TYPE = 1;
 
-        Node( Record before, Record after )
+        SparseNode( Record before, Record after )
         {
             super( TYPE, before, after );
+        }
+
+        @Override
+        boolean accept( TransactionApplier applier ) throws IOException
+        {
+            applier.handle( this );
+            return false;
+        }
+    }
+
+    static class DenseNode extends FrekiCommand
+    {
+        static final byte TYPE = 2;
+
+        final long nodeId;
+        final boolean inUse;
+        final MutableIntObjectMap<Value> addedProperties;
+        final MutableIntSet removedProperties;
+        final MutableIntObjectMap<MutableNodeRecordData.Relationships> createdRelationships;
+        final MutableIntObjectMap<MutableNodeRecordData.Relationships> deletedRelationships;
+
+        DenseNode( long nodeId, boolean inUse, MutableIntObjectMap<Value> addedProperties, MutableIntSet removedProperties,
+                MutableIntObjectMap<MutableNodeRecordData.Relationships> createdRelationships,
+                MutableIntObjectMap<MutableNodeRecordData.Relationships> deletedRelationships )
+        {
+            super( TYPE );
+            this.nodeId = nodeId;
+            this.inUse = inUse;
+            this.addedProperties = addedProperties;
+            this.removedProperties = removedProperties;
+            this.createdRelationships = createdRelationships;
+            this.deletedRelationships = deletedRelationships;
         }
 
         @Override
@@ -114,7 +150,7 @@ abstract class FrekiCommand implements StorageCommand
 
     static class LabelToken extends Token
     {
-        static final byte TYPE = 1;
+        static final byte TYPE = 10;
 
         LabelToken( NamedToken token )
         {
@@ -131,7 +167,7 @@ abstract class FrekiCommand implements StorageCommand
 
     static class RelationshipTypeToken extends Token
     {
-        static final byte TYPE = 1;
+        static final byte TYPE = 11;
 
         RelationshipTypeToken( NamedToken token )
         {
@@ -148,7 +184,7 @@ abstract class FrekiCommand implements StorageCommand
 
     static class PropertyKeyToken extends Token
     {
-        static final byte TYPE = 1;
+        static final byte TYPE = 12;
 
         PropertyKeyToken( NamedToken token )
         {
@@ -165,7 +201,9 @@ abstract class FrekiCommand implements StorageCommand
 
     interface Dispatcher
     {
-        void handle( Node node ) throws IOException;
+        void handle( SparseNode node ) throws IOException;
+
+        void handle( DenseNode node ) throws IOException;
 
         void handle( LabelToken token ) throws IOException;
 
@@ -176,7 +214,12 @@ abstract class FrekiCommand implements StorageCommand
         class Adapter implements Dispatcher
         {
             @Override
-            public void handle( Node node ) throws IOException
+            public void handle( SparseNode node ) throws IOException
+            {
+            }
+
+            @Override
+            public void handle( DenseNode node ) throws IOException
             {
             }
 

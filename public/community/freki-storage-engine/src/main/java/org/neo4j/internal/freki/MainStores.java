@@ -33,12 +33,14 @@ class MainStores extends LifecycleAdapter
     final SimpleStore mainStore;
     private final SimpleStore[] mainStores;
     final SimpleBigValueStore bigPropertyValueStore;
+    final DenseStore denseStore;
 
-    MainStores( SimpleStore[] mainStores, SimpleBigValueStore bigPropertyValueStore )
+    MainStores( SimpleStore[] mainStores, SimpleBigValueStore bigPropertyValueStore, DenseStore denseStore )
     {
         this.mainStores = mainStores;
         this.mainStore = mainStores[0];
         this.bigPropertyValueStore = bigPropertyValueStore;
+        this.denseStore = denseStore;
         for ( SimpleStore store : mainStores )
         {
             if ( store != null )
@@ -47,6 +49,11 @@ class MainStores extends LifecycleAdapter
             }
         }
         life.add( bigPropertyValueStore );
+        // TODO: 2020-02-05 for now just check for null, later on extract interface and inject test-store in tests
+        if ( denseStore != null )
+        {
+            life.add( denseStore );
+        }
     }
 
     SimpleStore mainStore( int sizeExp )
@@ -73,6 +80,7 @@ class MainStores extends LifecycleAdapter
             mainStore.flush( cursorTracer );
         }
         bigPropertyValueStore.flush( cursorTracer );
+        denseStore.checkpoint( limiter, cursorTracer );
     }
 
     @Override
