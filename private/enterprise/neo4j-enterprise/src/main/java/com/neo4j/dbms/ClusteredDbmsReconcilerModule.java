@@ -74,7 +74,7 @@ public final class ClusteredDbmsReconcilerModule extends StandaloneDbmsReconcile
         var logProvider = globalModule.getLogService().getInternalLogProvider();
         var transitionsTable = createTransitionsTable( new ClusterReconcilerTransitions( databaseManager, logProvider ) );
 
-        return new ClusteredDbmsReconciler( databaseManager, globalModule.getGlobalConfig(), globalModule.getLogService().getInternalLogProvider(),
-                globalModule.getJobScheduler(), stateStorageFactory, panicService, transitionsTable );
+        return new ClusteredDbmsReconciler( databaseManager, globalModule.getGlobalConfig(), logProvider, globalModule.getJobScheduler(),
+                stateStorageFactory, panicService, transitionsTable );
     }
 }

@@ -39,7 +39,7 @@ public final class ReconcilerRequest
 
     private ReconcilerRequest( Set<String> namesOfPriorityDatabases, NamedDatabaseId panickedDatabaseId, Throwable causeOfPanic )
     {
-        this.priorityDatabases = namesOfPriorityDatabases;
+        this.priorityDatabases = Set.copyOf( namesOfPriorityDatabases );
         this.isSimple = namesOfPriorityDatabases.isEmpty();
         this.panickedDatabaseId = panickedDatabaseId;
         this.causeOfPanic = causeOfPanic;
@@ -92,7 +92,7 @@ public final class ReconcilerRequest
 
     Set<String> priorityDatabaseNames()
     {
-        return new HashSet<>( priorityDatabases );
+        return priorityDatabases;
     }
 
     /**

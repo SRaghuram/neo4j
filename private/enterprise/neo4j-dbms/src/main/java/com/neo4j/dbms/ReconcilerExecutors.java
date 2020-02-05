@@ -23,9 +23,13 @@ public class ReconcilerExecutors
     ReconcilerExecutors( JobScheduler scheduler, Config config )
     {
         int parallelism = config.get( GraphDatabaseSettings.reconciler_maximum_parallelism );
+        if ( parallelism == 0 )
+        {
+            parallelism = Runtime.getRuntime().availableProcessors();
+        }
         scheduler.setParallelism( Group.DATABASE_RECONCILER , parallelism );
         this.standardExecutor = scheduler.executor( Group.DATABASE_RECONCILER );
-        // parallelism of the priority executor is unbounded as this executor is reserved for jobs, triggered by administrators.
+        // parallelism of the priority executor is unbounded as this executor is reserved for jobs triggered by administrators.
         this.priorityExecutor = scheduler.executor( Group.DATABASE_RECONCILER_PRIORITY );
     }
 

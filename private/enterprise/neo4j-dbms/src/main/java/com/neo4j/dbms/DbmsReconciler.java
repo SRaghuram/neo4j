@@ -9,11 +9,13 @@ import com.neo4j.dbms.TransitionsTable.Transition;
 import com.neo4j.dbms.database.MultiDatabaseManager;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
@@ -116,9 +118,30 @@ public class DbmsReconciler implements DatabaseStateService
                 .flatMap( op -> op.desired().keySet().stream() )
                 .collect( Collectors.toSet() );
 
-        if ( !request.isSimple() )
+        validatedAndWarn( request, namesOfDbsToReconcile );
+        reportFailedDatabases();
+
+        var reconciliation = namesOfDbsToReconcile.stream()
+                .map( dbName -> Pair.of( dbName, scheduleReconciliationJob( dbName, request, operators ) ) )
+                .collect( Collectors.toMap( Pair::first, Pair::other ) );
+
+        return new ReconcilerResult( reconciliation );
+    }
+
+    private void reportFailedDatabases()
+    {
+        var failedDbs = currentStates.values().stream().filter( EnterpriseDatabaseState::hasFailed )
+                .map( db -> db.databaseId().name() ).collect( Collectors.joining( ",", "[", "]" ) );
+
+        log.warn( "Reconciler triggered but the following databases are currently failed and may be ignored: %s. " +
+                "Run `SHOW DATABASES` for further information.", failedDbs );
+    }
+
+    private void validatedAndWarn( ReconcilerRequest request, Set<String> namesOfDbsToReconcile )
+    {
+        if ( request.isSimple() )
         {
-            var requestedDbs = request.priorityDatabaseNames();
+            var requestedDbs = new HashSet<>( request.priorityDatabaseNames() );
             requestedDbs.removeAll( namesOfDbsToReconcile );
 
             if ( !requestedDbs.isEmpty() )
@@ -127,12 +150,6 @@ public class DbmsReconciler implements DatabaseStateService
                         requestedDbs, namesOfDbsToReconcile );
             }
         }
-
-        var reconciliation = namesOfDbsToReconcile.stream()
-                .map( dbName -> Pair.of( dbName, scheduleReconciliationJob( dbName, request, operators ) ) )
-                .collect( Collectors.toMap( Pair::first, Pair::other ) );
-
-        return new ReconcilerResult( reconciliation );
     }
 
     private static Map<String,EnterpriseDatabaseState> combineDesiredStates( Map<String,EnterpriseDatabaseState> combined,
@@ -230,7 +247,7 @@ public class DbmsReconciler implements DatabaseStateService
                 log.debug( "Attempting to acquire lock before reconciling state of database `%s`.", databaseName );
                 locks.acquireLockOn( request, databaseName );
 
-                if ( request.isPriorityRequestForDatabase( databaseName ) )
+                if ( !request.isPriorityRequestForDatabase( databaseName ) )
                 {
                     // Must happen-before extracting desired states otherwise the cache might return a job which reconciles to an
                     // earlier desired state than that specified by the component triggering this job.
@@ -273,10 +290,6 @@ public class DbmsReconciler implements DatabaseStateService
 
         if ( currentState.hasFailed() && !request.isPriorityRequestForDatabase( databaseName ) )
         {
-            var message = format( "Attempting to reconcile database %s to state '%s' but has previously failed. Manual force is required to retry.",
-                    databaseName, desiredState.operatorState().description() );
-            log.warn( message );
-
             var previousError = currentState.failure().orElseThrow( IllegalStateException::new );
             return CompletableFuture.completedFuture( initialResult.withError( DatabaseManagementException.wrap( previousError ) ) );
         }

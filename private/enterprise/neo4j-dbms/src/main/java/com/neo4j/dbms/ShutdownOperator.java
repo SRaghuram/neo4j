@@ -32,7 +32,14 @@ class ShutdownOperator extends DbmsOperator
     ShutdownOperator( DatabaseManager<?> databaseManager, Config config )
     {
         this.databaseManager = databaseManager;
-        this.shutdownChunk = config.get( GraphDatabaseSettings.reconciler_maximum_parallelism );
+
+        int parallelism = config.get( GraphDatabaseSettings.reconciler_maximum_parallelism );
+        if ( parallelism == 0 )
+        {
+            parallelism = Runtime.getRuntime().availableProcessors();
+        }
+
+        this.shutdownChunk = parallelism;
     }
 
     void stopAll()
