@@ -129,6 +129,7 @@ class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
   }
 
   // Additions in 4.0
+
   test("administration commands should not work with CYPHER 3.5") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -232,6 +233,15 @@ class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
 
     // THEN
     graph.getMaybeNodeConstraint("Label", Seq("prop")).isDefined should be(true)
+  }
+
+  test("existential subquery should not work with CYPHER 3.5") {
+    // WHEN
+    val exception = the[SyntaxException] thrownBy {
+      executeSingle("CYPHER 3.5 MATCH (n) WHERE EXISTS { (n)-->() } RETURN n")
+    }
+    // THEN
+    exception.getMessage should include("Existential subquery is not supported in this Cypher version.")
   }
 
   // Additions in 4.1
