@@ -446,7 +446,7 @@ class RemoteTransactionTest
         IntStream.range( count, 3 ).forEach( i -> latch.countDown() );
         try
         {
-            assertTrue( latch.await( 1, TimeUnit.SECONDS ) );
+            assertTrue( latch.await( 10, TimeUnit.SECONDS ) );
         }
         catch ( InterruptedException e )
         {

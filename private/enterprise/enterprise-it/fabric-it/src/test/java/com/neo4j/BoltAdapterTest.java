@@ -154,7 +154,7 @@ class BoltAdapterTest
         }) );
 
         publishDefaultResult();
-        assertTrue( latch.await( 1, TimeUnit.SECONDS ) );
+        assertTrue( latch.await( 10, TimeUnit.SECONDS ) );
 
         waitForCommitOrRollback();
         verify( transactionManager ).begin( any(), any() );
@@ -177,7 +177,7 @@ class BoltAdapterTest
         }) );
 
         publishDefaultResult();
-        assertTrue( latch.await( 5, TimeUnit.SECONDS ) );
+        assertTrue( latch.await( 10, TimeUnit.SECONDS ) );
 
         waitForCommitOrRollback();
         verify( transactionManager ).begin( any(), any() );
@@ -200,7 +200,7 @@ class BoltAdapterTest
         } ) );
 
         publishDefaultResult();
-        assertTrue( latch.await( 5, TimeUnit.SECONDS ) );
+        assertTrue( latch.await( 10, TimeUnit.SECONDS ) );
 
         waitForCommitOrRollback();
         verify( transactionManager ).begin( any(), any() );
@@ -229,7 +229,7 @@ class BoltAdapterTest
             latch.countDown();
         } );
 
-        assertTrue( latch.await( 5, TimeUnit.SECONDS ) );
+        assertTrue( latch.await( 10, TimeUnit.SECONDS ) );
 
         waitForCommitOrRollback();
         verify( transactionManager ).begin( any(), any() );
@@ -258,7 +258,7 @@ class BoltAdapterTest
             latch.countDown();
         } );
 
-        assertTrue( latch.await( 5, TimeUnit.SECONDS ) );
+        assertTrue( latch.await( 10, TimeUnit.SECONDS ) );
 
         waitForCommitOrRollback();
         verify( transactionManager ).begin( any(), any() );
@@ -285,11 +285,11 @@ class BoltAdapterTest
             latch.countDown();
         } );
 
-        assertTrue( publisher.latch.await( 5, TimeUnit.SECONDS ) );
+        assertTrue( publisher.latch.await( 10, TimeUnit.SECONDS ) );
         publisher.publishRecord( record( "v1", "v2" ) );
         publisher.publishRecord( record( "v3", "v4" ) );
         publisher.error( new IllegalStateException( "Something went wrong" ) );
-        assertTrue( latch.await( 5, TimeUnit.SECONDS ) );
+        assertTrue( latch.await( 10, TimeUnit.SECONDS ) );
 
         waitForCommitOrRollback();
         verify( transactionManager ).begin( any(), any() );
@@ -316,11 +316,11 @@ class BoltAdapterTest
             latch.countDown();
         } );
 
-        assertTrue( publisher.latch.await( 5, TimeUnit.SECONDS ) );
+        assertTrue( publisher.latch.await( 10, TimeUnit.SECONDS ) );
         publisher.publishRecord( record( "v1", "v2" ) );
         publisher.publishRecord( record( "v3", "v4" ) );
         publisher.error( new IllegalStateException( "Something went wrong" ) );
-        assertTrue( latch.await( 5, TimeUnit.SECONDS ) );
+        assertTrue( latch.await( 10, TimeUnit.SECONDS ) );
 
         waitForCommitOrRollback();
         verify( transactionManager ).begin( any(), any() );
@@ -363,7 +363,7 @@ class BoltAdapterTest
     {
         try
         {
-            assertTrue( transactionLatch.await( 5, TimeUnit.SECONDS ) );
+            assertTrue( transactionLatch.await( 10, TimeUnit.SECONDS ) );
         }
         catch ( InterruptedException e )
         {
@@ -373,7 +373,7 @@ class BoltAdapterTest
 
     private void publishDefaultResult() throws InterruptedException
     {
-        assertTrue( publisher.latch.await( 1, TimeUnit.SECONDS ) );
+        assertTrue( publisher.latch.await( 10, TimeUnit.SECONDS ) );
         publisher.publishRecord( record( "v1", "v2" ) );
         publisher.publishRecord( record( "v3", "v4" ) );
         publisher.complete();

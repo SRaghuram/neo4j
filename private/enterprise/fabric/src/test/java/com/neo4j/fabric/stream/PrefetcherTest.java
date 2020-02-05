@@ -57,19 +57,19 @@ class PrefetcherTest
 
         executorService.submit( reader );
 
-        assertTrue( reader.rowLatch.await( 1, TimeUnit.SECONDS ) );
+        assertTrue( reader.rowLatch.await( 10, TimeUnit.SECONDS ) );
 
         reader.rowLatch = new CountDownLatch( 7 );
         produce( publisher, "2nd batch", 7, 3 );
 
-        assertTrue( reader.rowLatch.await( 1, TimeUnit.SECONDS ) );
+        assertTrue( reader.rowLatch.await( 10, TimeUnit.SECONDS ) );
 
         reader.rowLatch = new CountDownLatch( 2 );
         produce( publisher, "3rd batch", 2, 3 );
         publisher.close();
 
-        assertTrue( reader.rowLatch.await( 1, TimeUnit.SECONDS ) );
-        assertTrue( reader.endLatch.await( 1, TimeUnit.SECONDS ) );
+        assertTrue( reader.rowLatch.await( 10, TimeUnit.SECONDS ) );
+        assertTrue( reader.endLatch.await( 10, TimeUnit.SECONDS ) );
 
         assertEquals( 11, reader.data.size() );
 
@@ -93,14 +93,14 @@ class PrefetcherTest
 
         executorService.submit( reader );
 
-        assertTrue( reader.rowLatch.await( 1, TimeUnit.SECONDS ) );
+        assertTrue( reader.rowLatch.await( 10, TimeUnit.SECONDS ) );
 
         reader.rowLatch = new CountDownLatch( 7 );
         produce( publisher, "2nd batch", 7, 2 );
         publisher.publicError( new RuntimeException( "Test exception" ) );
 
-        assertTrue( reader.rowLatch.await( 1, TimeUnit.SECONDS ) );
-        assertTrue( reader.endLatch.await( 1, TimeUnit.SECONDS ) );
+        assertTrue( reader.rowLatch.await( 10, TimeUnit.SECONDS ) );
+        assertTrue( reader.endLatch.await( 10, TimeUnit.SECONDS ) );
 
         assertEquals( 9, reader.data.size() );
 
