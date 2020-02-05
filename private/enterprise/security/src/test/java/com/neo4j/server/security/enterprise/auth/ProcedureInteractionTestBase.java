@@ -16,9 +16,11 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
@@ -139,6 +141,13 @@ public abstract class ProcedureInteractionTestBase<S>
         );
     }
 
+    Set<Class> defaultProcedures()
+    {
+        Set<Class> procedureClasses = new HashSet<>();
+        procedureClasses.add( ClassWithProcedures.class );
+        return procedureClasses;
+    }
+
     @BeforeEach
     public void setUp() throws Throwable
     {
@@ -149,7 +158,10 @@ public abstract class ProcedureInteractionTestBase<S>
     {
         neo = setUpNeoServer( config );
         GlobalProcedures globalProcedures = neo.getLocalGraph().getDependencyResolver().resolveDependency( GlobalProcedures.class );
-        globalProcedures.registerProcedure( ClassWithProcedures.class );
+        for ( var procClass : defaultProcedures() )
+        {
+            globalProcedures.registerProcedure( procClass );
+        }
         globalProcedures.registerFunction( ClassWithFunctions.class );
 
         newUser( "noneSubject", "abc", false );
@@ -779,13 +791,6 @@ public abstract class ProcedureInteractionTestBase<S>
                     latch.finish();
                 }
             }
-        }
-
-        @Procedure( name = "test.neverEnding" )
-        public void neverEndingWithLock()
-        {
-            doubleLatch.start();
-            doubleLatch.finishAndWaitForAllToFinish();
         }
 
         @SuppressWarnings( "AccessStaticViaInstance" )

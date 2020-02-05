@@ -30,6 +30,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -49,6 +50,7 @@ import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.newapi.Operations;
+import org.neo4j.procedure.Procedure;
 import org.neo4j.test.Barrier;
 import org.neo4j.test.DoubleLatch;
 import org.neo4j.test.rule.concurrent.ThreadingRule;
@@ -81,8 +83,8 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static org.neo4j.internal.helpers.collection.Iterables.single;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
-import static org.neo4j.test.conditions.Conditions.TRUE;
 import static org.neo4j.test.assertion.Assert.assertEventually;
+import static org.neo4j.test.conditions.Conditions.TRUE;
 import static org.neo4j.test.matchers.CommonMatchers.matchesOneToOneInAnyOrder;
 
 public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureInteractionTestBase<S>
@@ -90,6 +92,14 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     private final String ROLE = "role1";
     private final String SUBJECT = "role1Subject";
     private final String PASSWORD = "abc";
+
+    @Override
+    Set<Class> defaultProcedures()
+    {
+        Set<Class> procs = super.defaultProcedures();
+        procs.add( TestProcedures.class );
+        return procs;
+    }
 
     //---------- list running transactions -----------
 
@@ -807,7 +817,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         assertEmpty( adminSubject, "CREATE (:MyNode {prop: 2})" );
 
         // create new latch
-        ClassWithProcedures.doubleLatch = new DoubleLatch( 2 );
+        TestProcedures.testProcedureLatch = new DoubleLatch( 2 );
 
         // start never-ending query
         String query1 = "MATCH (n:MyNode) SET n.prop = 5 WITH * CALL test.neverEnding() RETURN 1";
@@ -815,7 +825,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         tx1.executeEarly( threading, writeSubject, KernelTransaction.Type.EXPLICIT, query1 );
 
         // wait for query1 to be stuck in procedure with its write lock
-        ClassWithProcedures.doubleLatch.startAndWaitForAllToStart();
+        TestProcedures.testProcedureLatch.startAndWaitForAllToStart();
 
         // start query2
         ThreadedTransaction<S> tx2 = new ThreadedTransaction<>( neo, new DoubleLatch() );
@@ -835,7 +845,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         tx2.closeAndAssertSomeTermination();
 
         // allow query1 to exit procedure and finish
-        ClassWithProcedures.doubleLatch.finish();
+        TestProcedures.testProcedureLatch.finish();
         tx1.closeAndAssertSuccess();
     }
 
@@ -1592,6 +1602,19 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
                 ThreadingRule.waitingWhileIn( Operations.class, "acquireExclusiveNodeLock" ) ) )
         {
             TimeUnit.MILLISECONDS.sleep( 10 );
+        }
+    }
+
+    @SuppressWarnings( "unused" )
+    public static class TestProcedures
+    {
+        static DoubleLatch testProcedureLatch;
+
+        @Procedure( name = "test.neverEnding" )
+        public void neverEndingWithLock()
+        {
+            testProcedureLatch.start();
+            testProcedureLatch.finishAndWaitForAllToFinish();
         }
     }
 }
