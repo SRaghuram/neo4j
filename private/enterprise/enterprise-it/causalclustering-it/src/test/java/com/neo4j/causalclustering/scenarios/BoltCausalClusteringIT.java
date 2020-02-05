@@ -51,7 +51,6 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.core.Is.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -62,8 +61,8 @@ import static org.neo4j.driver.AccessMode.READ;
 import static org.neo4j.driver.AccessMode.WRITE;
 import static org.neo4j.driver.SessionConfig.builder;
 import static org.neo4j.driver.Values.parameters;
-import static org.neo4j.test.conditions.Conditions.TRUE;
 import static org.neo4j.test.assertion.Assert.assertEventually;
+import static org.neo4j.test.conditions.Conditions.TRUE;
 
 @DriverExtension
 class BoltCausalClusteringIT
@@ -147,23 +146,18 @@ class BoltCausalClusteringIT
         @Test
         void shouldNotBeAbleToWriteOnAReadSession() throws Exception
         {
-            // given
-            assertEventually( "Failed to execute write query on read server", () ->
+            runWithLeaderDisabled( cluster, DEFAULT_DATABASE_NAME, ( oldLeader, otherMembers ) ->
             {
-                forceReelection( cluster, DEFAULT_DATABASE_NAME );
-
-                try ( Driver driver = makeDriver( cluster ); Session session = driver.session( builder().withDefaultAccessMode( READ ).build() ) )
+                try ( Driver driver = makeDriver( oldLeader.directURI() ); Session session = driver.session( builder().withDefaultAccessMode( READ ).build() ) )
                 {
-                    // when
-                    session.run( "CREATE (n:Person {name: 'Jim'})" ).consume();
-                    return false;
+                    var ex = assertThrows( ClientException.class, () -> session.run( "CREATE (n:Person {name: 'Jim'})" ).consume() );
+                    assertEquals(
+                            "No write operations are allowed directly on this database. Writes must pass through the leader. The role of this " +
+                            "server is: FOLLOWER",
+                            ex.getMessage() );
+                    return null;
                 }
-                catch ( ClientException ex )
-                {
-                    assertEquals( "Write queries cannot be performed in READ access mode.", ex.getMessage() );
-                    return true;
-                }
-            }, TRUE, 30, SECONDS );
+            } );
         }
 
         @Test
