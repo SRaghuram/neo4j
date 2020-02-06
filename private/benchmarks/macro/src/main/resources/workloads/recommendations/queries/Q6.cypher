@@ -1,4 +1,4 @@
-MATCH (p1:Person)-[:HAS_COMPETENCY]->(c:Competency)<-[:HAS_COMPETENCY]-(p2:Person),(p1)-[:WORKED_FOR|:WORKS_FOR]->(co:Company)<-[:WORKED_FOR]-(p2)
+MATCH (p1:Person)-[:HAS_COMPETENCY]->(c:Competency)<-[:HAS_COMPETENCY]-(p2:Person),(p1)-[:WORKED_FOR|WORKS_FOR]->(co:Company)<-[:WORKED_FOR]-(p2)
 WHERE NOT ((p1)-[:WORKS_FOR]->(co)<-[:WORKS_FOR]-(p2))
 WITH p1,p2,c,co
 MATCH (p1)-[:FRIEND_OF]-()-[:FRIEND_OF]-(p2)
