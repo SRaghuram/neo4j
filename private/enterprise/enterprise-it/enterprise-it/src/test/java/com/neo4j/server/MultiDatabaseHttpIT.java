@@ -31,9 +31,9 @@ import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.server.HTTP;
 
 import static com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings.mode;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.server.http.cypher.integration.TransactionMatchers.hasErrors;
+import static org.neo4j.server.http.cypher.integration.TransactionConditions.hasErrors;
 import static org.neo4j.server.rest.AbstractRestFunctionalTestBase.txCommitUri;
 import static org.neo4j.test.server.HTTP.POST;
 import static org.neo4j.test.server.HTTP.RawPayload.quotedJson;
@@ -66,7 +66,7 @@ class MultiDatabaseHttpIT
 
         managementService = createService();
         HTTP.Response response = POST( txCommitUri( databaseName, httpPort() ), quotedJson( "{ 'statements': [ { 'statement': 'RETURN 1' } ] }" ) );
-        assertThat( response, hasErrors( Status.Database.DatabaseUnavailable ) );
+        assertThat( response ).satisfies( hasErrors( Status.Database.DatabaseUnavailable ) );
     }
 
     private DatabaseLayout prepareEmptyDatabase( String databaseName )
