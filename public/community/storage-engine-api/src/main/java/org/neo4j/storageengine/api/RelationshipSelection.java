@@ -28,7 +28,7 @@ import java.util.Arrays;
 import org.neo4j.collection.PrimitiveLongCollections;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.storageengine.api.txstate.NodeState;
-import org.neo4j.token.api.TokenConstants;
+import org.neo4j.util.Preconditions;
 
 import static org.neo4j.token.api.TokenConstants.ANY_RELATIONSHIP_TYPE;
 
@@ -52,11 +52,15 @@ public abstract class RelationshipSelection
      */
     public abstract boolean test( int type, RelationshipDirection direction );
 
-    /**
-     * @return selection criteria. Note the {@link Criterion#type()} can be {@link TokenConstants#ANY_RELATIONSHIP_TYPE},
-     * which means all relationship types.
-     */
-    public abstract Criterion[] criteria();
+    public abstract int numberOfCriteria();
+
+    public abstract Criterion criterion( int index );
+
+//    /**
+//     * @return selection criteria. Note the {@link Criterion#type()} can be {@link TokenConstants#ANY_RELATIONSHIP_TYPE},
+//     * which means all relationship types.
+//     */
+//    public abstract Criterion[] criteria();
 
     /**
      * Selects the correct set of added relationships from transaction state, based on the selection criteria.
@@ -116,9 +120,16 @@ public abstract class RelationshipSelection
         }
 
         @Override
-        public Criterion[] criteria()
+        public int numberOfCriteria()
         {
-            return new Criterion[]{this};
+            return 1;
+        }
+
+        @Override
+        public Criterion criterion( int index )
+        {
+            Preconditions.checkArgument( index == 0, "Unknown criterion index %d", index );
+            return this;
         }
 
         @Override
@@ -170,14 +181,15 @@ public abstract class RelationshipSelection
         }
 
         @Override
-        public Criterion[] criteria()
+        public int numberOfCriteria()
         {
-            Criterion[] criteria = new Criterion[types.length];
-            for ( int i = 0; i < types.length; i++ )
-            {
-                criteria[i] = new CriterionImpl( types[i], direction );
-            }
-            return criteria;
+            return types.length;
+        }
+
+        @Override
+        public Criterion criterion( int index )
+        {
+            return new CriterionImpl( types[index], direction );
         }
 
         @Override
@@ -237,9 +249,16 @@ public abstract class RelationshipSelection
         }
 
         @Override
-        public Criterion[] criteria()
+        public int numberOfCriteria()
         {
-            return new Criterion[]{this};
+            return 1;
+        }
+
+        @Override
+        public Criterion criterion( int index )
+        {
+            Preconditions.checkArgument( index == 0, "Unknown criterion index %d", index );
+            return this;
         }
 
         @Override
@@ -298,11 +317,10 @@ public abstract class RelationshipSelection
         }
     }
 
-    private static final Criterion ALL_CRITERIA = new CriterionImpl( ANY_RELATIONSHIP_TYPE, Direction.BOTH );
-    private static final Criterion[] NO_CRITERIA = new Criterion[0];
-
     public static RelationshipSelection ALL_RELATIONSHIPS = new RelationshipSelection()
     {
+        private final Criterion ALL_CRITERIA = new CriterionImpl( ANY_RELATIONSHIP_TYPE, Direction.BOTH );
+
         @Override
         public boolean test( int type )
         {
@@ -322,9 +340,16 @@ public abstract class RelationshipSelection
         }
 
         @Override
-        public Criterion[] criteria()
+        public int numberOfCriteria()
         {
-            return new Criterion[]{ALL_CRITERIA};
+            return 1;
+        }
+
+        @Override
+        public Criterion criterion( int index )
+        {
+            Preconditions.checkArgument( index == 0, "Unknown criterion index %d", index );
+            return ALL_CRITERIA;
         }
 
         @Override
@@ -349,9 +374,15 @@ public abstract class RelationshipSelection
         }
 
         @Override
-        public Criterion[] criteria()
+        public int numberOfCriteria()
         {
-            return NO_CRITERIA;
+            return 0;
+        }
+
+        @Override
+        public Criterion criterion( int index )
+        {
+            throw new IllegalArgumentException( "Unknown criterion index " + index );
         }
 
         @Override
@@ -367,7 +398,7 @@ public abstract class RelationshipSelection
         }
     };
 
-    private static boolean matchesDirection( RelationshipDirection relationshipDirection, Direction selectionDirection )
+    public static boolean matchesDirection( RelationshipDirection relationshipDirection, Direction selectionDirection )
     {
         switch ( selectionDirection )
         {
