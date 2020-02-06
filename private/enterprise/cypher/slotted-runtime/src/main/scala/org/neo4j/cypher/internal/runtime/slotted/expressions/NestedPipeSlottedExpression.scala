@@ -9,6 +9,7 @@ import java.util
 
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.CypherRow
+import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.runtime.interpreted.commands.AstNode
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.ExpressionVariable
@@ -28,7 +29,7 @@ case class NestedPipeSlottedExpression(pipe: Pipe,
 
   private val expVarSlotsInNestedPlan = availableExpressionVariables.map(ev => slots.getReferenceOffsetFor(ev.name))
 
-  override def apply(ctx: CypherRow, state: QueryState): AnyValue = {
+  override def apply(ctx: ReadableRow, state: QueryState): AnyValue = {
     val initialContext: SlottedRow = createInitialContext(ctx, state)
     val innerState = state.withInitialContext(initialContext).withDecorator(state.decorator.innerDecorator(owningPipe))
 
@@ -40,7 +41,7 @@ case class NestedPipeSlottedExpression(pipe: Pipe,
     VirtualValues.fromList(all)
   }
 
-  private def createInitialContext(ctx: CypherRow, state: QueryState): SlottedRow = {
+  private def createInitialContext(ctx: ReadableRow, state: QueryState): SlottedRow = {
     val initialContext = new SlottedRow(slots)
     initialContext.copyFrom(ctx, slots.numberOfLongs, slots.numberOfReferences - expVarSlotsInNestedPlan.length)
     var i = 0

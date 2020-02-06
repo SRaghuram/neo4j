@@ -35,6 +35,7 @@ import org.neo4j.exceptions.InternalException
 import org.neo4j.logging.Log
 import org.neo4j.values.AnyValue
 import CompiledExpressionConverter.COMPILE_LIMIT
+import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledGroupingExpression
 
 class CompiledExpressionConverter(log: Log,
@@ -175,7 +176,7 @@ case class CompileWrappingExpression(ce: CompiledExpression, legacy: Expression)
 
   override def children: Seq[AstNode[_]] = Seq(legacy)
 
-  override def apply(ctx: CypherRow, state: QueryState): AnyValue =
+  override def apply(ctx: ReadableRow, state: QueryState): AnyValue =
     ce.evaluate(ctx, state.query, CompiledExpressionConverter.parametersOrFail(state), state.cursors, state.expressionVariables)
 
   override def toString: String = legacy.toString

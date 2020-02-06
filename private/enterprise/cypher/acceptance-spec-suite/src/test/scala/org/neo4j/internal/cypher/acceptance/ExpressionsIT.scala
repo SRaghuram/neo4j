@@ -77,6 +77,7 @@ import org.neo4j.cypher.internal.runtime.MapCypherRow
 import org.neo4j.cypher.internal.runtime.NoMemoryTracker
 import org.neo4j.cypher.internal.runtime.ParameterMapping
 import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.runtime.ast.ExpressionVariable
 import org.neo4j.cypher.internal.runtime.ast.ParameterFromSlot
 import org.neo4j.cypher.internal.runtime.ast.RuntimeExpression
@@ -4125,7 +4126,7 @@ class CompiledExpressionsIT extends ExpressionsIT {
 class InterpretedExpressionIT extends ExpressionsIT {
   override  def compile(e: Expression, slots: SlotConfiguration): CompiledExpression = {
     val expression = converter(slots, (converter, id) => converter.toCommandExpression(id, e))
-    (context: CypherRow, dbAccess: DbAccess, params: Array[AnyValue], cursors: ExpressionCursors,
+    (context: ReadableRow, dbAccess: DbAccess, params: Array[AnyValue], cursors: ExpressionCursors,
      expressionVariables: Array[AnyValue]) => expression(context, state(dbAccess, params, cursors, expressionVariables))
   }
 

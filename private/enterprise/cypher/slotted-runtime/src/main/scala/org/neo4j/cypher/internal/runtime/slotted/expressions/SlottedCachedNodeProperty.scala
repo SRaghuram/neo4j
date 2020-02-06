@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.slotted.expressions
 
 import org.neo4j.cypher.internal.planner.spi.TokenContext
-import org.neo4j.cypher.internal.runtime.CypherRow
+import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.runtime.interpreted.commands.AstNode
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.AbstractCachedNodeProperty
 import org.neo4j.kernel.api.StatementConstants
@@ -18,15 +18,15 @@ case class SlottedCachedNodeProperty(nodeOffset: Int,
                                      propertyKey: Int,
                                      cachedPropertyOffset: Int) extends AbstractCachedNodeProperty with SlottedExpression {
 
-  override def getId(ctx: CypherRow): Long =
+  override def getId(ctx: ReadableRow): Long =
     if (offsetIsForLongSlot)
       ctx.getLongAt(nodeOffset)
     else
       ctx.getRefAt(nodeOffset).asInstanceOf[VirtualNodeValue].id()
 
-  override def getCachedProperty(ctx: CypherRow): Value = ctx.getCachedPropertyAt(cachedPropertyOffset)
+  override def getCachedProperty(ctx: ReadableRow): Value = ctx.getCachedPropertyAt(cachedPropertyOffset)
 
-  override def setCachedProperty(ctx: CypherRow, value: Value): Unit = ctx.setCachedPropertyAt(cachedPropertyOffset, value)
+  override def setCachedProperty(ctx: ReadableRow, value: Value): Unit = ctx.setCachedPropertyAt(cachedPropertyOffset, value)
 
   override def getPropertyKey(tokenContext: TokenContext): Int = propertyKey
 
@@ -38,15 +38,15 @@ case class SlottedCachedNodePropertyLate(nodeOffset: Int,
                                          propertyKey: String,
                                          cachedPropertyOffset: Int) extends AbstractCachedNodeProperty with SlottedExpression {
 
-  override def getId(ctx: CypherRow): Long =
+  override def getId(ctx: ReadableRow): Long =
     if (offsetIsForLongSlot)
     ctx.getLongAt(nodeOffset)
   else
     ctx.getRefAt(nodeOffset).asInstanceOf[VirtualNodeValue].id()
 
-  override def getCachedProperty(ctx: CypherRow): Value = ctx.getCachedPropertyAt(cachedPropertyOffset)
+  override def getCachedProperty(ctx: ReadableRow): Value = ctx.getCachedPropertyAt(cachedPropertyOffset)
 
-  override def setCachedProperty(ctx: CypherRow, value: Value): Unit = ctx.setCachedPropertyAt(cachedPropertyOffset, value)
+  override def setCachedProperty(ctx: ReadableRow, value: Value): Unit = ctx.setCachedPropertyAt(cachedPropertyOffset, value)
 
   override def getPropertyKey(tokenContext: TokenContext): Int =
     tokenContext.getOptPropertyKeyId(propertyKey).getOrElse(StatementConstants.NO_SUCH_PROPERTY_KEY)

@@ -188,6 +188,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.NestedPipeExpression
 import org.neo4j.cypher.internal.runtime.DbAccess
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.ExpressionCursors
+import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.util.symbols.CTAny
 import org.neo4j.cypher.internal.util.symbols.CTBoolean
 import org.neo4j.cypher.internal.util.symbols.CTDate
@@ -306,7 +307,7 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
           methods = Seq(
             MethodDeclaration("evaluate",
                               returnType = typeRefOf[AnyValue],
-                              parameters = Seq(param[CypherRow]("context"),
+                              parameters = Seq(param[ReadableRow]("context"),
                                                param[DbAccess]("dbAccess"),
                                                param[Array[AnyValue]]("params"),
                                                param[ExpressionCursors]("cursors"),

@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted.expressions
 
-import org.neo4j.cypher.internal.runtime.CypherRow
+import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.runtime.interpreted.commands.AstNode
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.Predicate
@@ -15,7 +15,7 @@ import org.neo4j.values.storable.Values
 
 case class RelationshipProperty(offset: Int, token: Int) extends Expression with SlottedExpression {
 
-  override def apply(ctx: CypherRow, state: QueryState): AnyValue =
+  override def apply(ctx: ReadableRow, state: QueryState): AnyValue =
     state.query.relationshipOps.getProperty(ctx.getLongAt(offset),
                                             token,
                                             state.cursors.relationshipScanCursor,
@@ -27,7 +27,7 @@ case class RelationshipProperty(offset: Int, token: Int) extends Expression with
 
 case class RelationshipPropertyLate(offset: Int, propKey: String) extends Expression with SlottedExpression {
 
-  override def apply(ctx: CypherRow, state: QueryState): AnyValue = {
+  override def apply(ctx: ReadableRow, state: QueryState): AnyValue = {
     val maybeToken = state.query.getOptPropertyKeyId(propKey)
     if (maybeToken.isEmpty)
       Values.NO_VALUE
@@ -45,8 +45,8 @@ case class RelationshipPropertyLate(offset: Int, propKey: String) extends Expres
 
 case class RelationshipPropertyExists(offset: Int, token: Int) extends Predicate with SlottedExpression {
 
-  override def isMatch(m: CypherRow, state: QueryState): Option[Boolean] = {
-    Some(state.query.relationshipOps.hasProperty(m.getLongAt(offset),
+  override def isMatch(ctx: ReadableRow, state: QueryState): Option[Boolean] = {
+    Some(state.query.relationshipOps.hasProperty(ctx.getLongAt(offset),
                                                  token,
                                                  state.cursors.relationshipScanCursor,
                                                  state.cursors.propertyCursor))
@@ -59,12 +59,12 @@ case class RelationshipPropertyExists(offset: Int, token: Int) extends Predicate
 
 case class RelationshipPropertyExistsLate(offset: Int, propKey: String) extends Predicate with SlottedExpression {
 
-  override def isMatch(m: CypherRow, state: QueryState): Option[Boolean] = {
+  override def isMatch(ctx: ReadableRow, state: QueryState): Option[Boolean] = {
     val maybeToken = state.query.getOptPropertyKeyId(propKey)
     val result = if (maybeToken.isEmpty)
       false
     else
-      state.query.relationshipOps.hasProperty(m.getLongAt(offset),
+      state.query.relationshipOps.hasProperty(ctx.getLongAt(offset),
                                               maybeToken.get,
                                               state.cursors.relationshipScanCursor,
                                               state.cursors.propertyCursor)

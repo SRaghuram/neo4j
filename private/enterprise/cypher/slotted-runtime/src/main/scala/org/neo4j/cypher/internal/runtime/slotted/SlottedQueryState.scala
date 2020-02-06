@@ -12,6 +12,7 @@ import org.neo4j.cypher.internal.runtime.InputDataStream
 import org.neo4j.cypher.internal.runtime.NoInput
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
+import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.InCheckContainer
 import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.SingleThreadedLRUCache
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.ExecutionContextFactory
@@ -58,13 +59,13 @@ case class SlottedExecutionContextFactory(slots: SlotConfiguration) extends Exec
   override def newExecutionContext(): CypherRow =
     SlottedRow(slots)
 
-  override def copyWith(row: CypherRow): CypherRow = {
+  override def copyWith(row: ReadableRow): CypherRow = {
     val newCtx = SlottedRow(slots)
     row.copyTo(newCtx)
     newCtx
   }
 
-  override def copyWith(row: CypherRow, newEntries: Seq[(String, AnyValue)]): CypherRow = {
+  override def copyWith(row: ReadableRow, newEntries: Seq[(String, AnyValue)]): CypherRow = {
     val newCopy = SlottedRow(slots)
     row.copyTo(newCopy)
     for ((key,value) <- newEntries) {
@@ -73,16 +74,14 @@ case class SlottedExecutionContextFactory(slots: SlotConfiguration) extends Exec
     newCopy
   }
 
-  override def copyWith(row: CypherRow, key: String, value: AnyValue): CypherRow = {
+  override def copyWith(row: ReadableRow, key: String, value: AnyValue): CypherRow = {
     val newCtx = SlottedRow(slots)
     row.copyTo(newCtx)
     newCtx.set(key, value)
     newCtx
   }
 
-  override def copyWith(row: CypherRow,
-                        key1: String, value1: AnyValue,
-                        key2: String, value2: AnyValue): CypherRow = {
+  override def copyWith(row: ReadableRow, key1: String, value1: AnyValue, key2: String, value2: AnyValue): CypherRow = {
     val newCopy = SlottedRow(slots)
     row.copyTo(newCopy)
     newCopy.set(key1, value1)
@@ -90,10 +89,7 @@ case class SlottedExecutionContextFactory(slots: SlotConfiguration) extends Exec
     newCopy
   }
 
-  override def copyWith(row: CypherRow,
-                        key1: String, value1: AnyValue,
-                        key2: String, value2: AnyValue,
-                        key3: String, value3: AnyValue): CypherRow = {
+  override def copyWith(row: ReadableRow, key1: String, value1: AnyValue, key2: String, value2: AnyValue, key3: String, value3: AnyValue): CypherRow = {
     val newCopy = SlottedRow(slots)
     row.copyTo(newCopy)
     newCopy.set(key1, value1)

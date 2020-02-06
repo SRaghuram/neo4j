@@ -5,14 +5,14 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted.expressions
 
-import org.neo4j.cypher.internal.runtime.CypherRow
+import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.runtime.interpreted.commands.AstNode
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.values.AnyValue
 
 case class LabelsFromSlot(offset: Int) extends Expression with SlottedExpression {
-  override def apply(ctx: CypherRow, state: QueryState): AnyValue =
+  override def apply(ctx: ReadableRow, state: QueryState): AnyValue =
     state.query.getLabelsForNode(ctx.getLongAt(offset), state.cursors.nodeCursor)
 
   override def children: Seq[AstNode[_]] = Seq.empty

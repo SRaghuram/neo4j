@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.slotted.expressions
 
 import org.neo4j.cypher.internal.expressions.SemanticDirection
-import org.neo4j.cypher.internal.runtime.CypherRow
+import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.runtime.interpreted.commands.AstNode
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
@@ -17,7 +17,7 @@ case class GetDegreePrimitive(offset: Int, typ: Option[String], direction: Seman
   extends Expression
   with SlottedExpression {
 
-  override def apply(ctx: CypherRow, state: QueryState): AnyValue = typ match {
+  override def apply(ctx: ReadableRow, state: QueryState): AnyValue = typ match {
     case None => Values.longValue(state.query.nodeGetDegree(ctx.getLongAt(offset), direction, state.cursors.nodeCursor))
     case Some(t) => state.query.getOptRelTypeId(t) match {
       case None => Values.ZERO_INT

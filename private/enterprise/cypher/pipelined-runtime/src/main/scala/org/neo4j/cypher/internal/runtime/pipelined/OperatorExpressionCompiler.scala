@@ -34,6 +34,8 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.ast.SlottedCachedProperty
 import org.neo4j.cypher.internal.runtime.DbAccess
 import org.neo4j.cypher.internal.runtime.CypherRow
+import org.neo4j.cypher.internal.runtime.ReadableRow
+import org.neo4j.cypher.internal.runtime.WritableRow
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CursorRepresentation
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler
 import org.neo4j.cypher.internal.runtime.compiled.expressions.VariableNamer
@@ -503,8 +505,8 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
     noop()
   }
 
-  final def doCopyFromWithExecutionContext(context: IntermediateRepresentation, input: IntermediateRepresentation, nLongs: Int, nRefs: Int): IntermediateRepresentation = {
-    invokeSideEffect(context, method[CypherRow, Unit, CypherRow, Int, Int]("copyFrom"),
+  final def doCopyFromWithWritableRow(context: IntermediateRepresentation, input: IntermediateRepresentation, nLongs: Int, nRefs: Int): IntermediateRepresentation = {
+    invokeSideEffect(context, method[WritableRow, Unit, ReadableRow, Int, Int]("copyFrom"),
       input, constant(nLongs), constant(nRefs)
     )
   }
@@ -677,10 +679,10 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
     val nRefsToCopy = Math.min(nRefSlotsToCopyFromInput, firstModifiedRefSlot)
 
     // Prepend the write operations for argument slots
-    // Decide if we should use ExecutionContext.copyFrom or just prepend individual set operations for the remaining slots?
+    // Decide if we should use WritableRow.copyFrom or just prepend individual set operations for the remaining slots?
     if (nLongsToCopy > USE_ARRAY_COPY_THRESHOLD || nRefsToCopy > USE_ARRAY_COPY_THRESHOLD) {
-      // Use the ExecutionContext.copyFrom method (which may use array copy)
-      writeOps += doCopyFromWithExecutionContext(OUTPUT_ROW, loadField(INPUT_MORSEL), nLongsToCopy, nRefsToCopy)
+      // Use the WritableRow.copyFrom method (which may use array copy)
+      writeOps += doCopyFromWithWritableRow(OUTPUT_ROW, loadField(INPUT_MORSEL), nLongsToCopy, nRefsToCopy)
       writeOps ++= writeLongSlotOps
       writeOps ++= writeRefSlotOps
     } else {
