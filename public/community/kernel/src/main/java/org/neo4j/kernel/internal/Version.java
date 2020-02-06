@@ -96,7 +96,7 @@ public class Version
     {
         this.artifactId = artifactId;
         this.title = artifactId;
-        this.version = version == null ? "dev" : version;
+        this.version = version == null ? "4.1.0-alpha01": version;//"dev" : version;
         this.releaseVersion = parseReleaseVersion( this.version );
     }
 
