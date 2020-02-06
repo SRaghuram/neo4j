@@ -28,7 +28,7 @@ import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.TopLevelArgument
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
-import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.NoMemoryTracker
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
@@ -36,7 +36,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expres
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.NumericHelper
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.LimitOperator.LimitState
@@ -76,7 +76,7 @@ object LimitOperator {
       state.subscriber,
       NoMemoryTracker)
 
-    val countValue = countExpression(ExecutionContext.empty, queryState)
+    val countValue = countExpression(CypherRow.empty, queryState)
     evaluateCountValue(countValue)
   }
 
@@ -95,10 +95,10 @@ object LimitOperator {
   }
 
   class LimitStateFactory(count: Long) extends ArgumentStateFactory[LimitState] {
-    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): LimitState =
+    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselCypherRow, argumentRowIdsForReducers: Array[Long]): LimitState =
       new StandardLimitState(argumentRowId, count, argumentRowIdsForReducers)
 
-    override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): LimitState =
+    override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselCypherRow, argumentRowIdsForReducers: Array[Long]): LimitState =
       new ConcurrentLimitState(argumentRowId, count, argumentRowIdsForReducers)
   }
 
@@ -166,7 +166,7 @@ class LimitOperator(argumentStateMapId: ArgumentStateMapId,
 
     override def workIdentity: WorkIdentity = LimitOperator.this.workIdentity
 
-    override def operate(output: MorselExecutionContext,
+    override def operate(output: MorselCypherRow,
                          context: QueryContext,
                          state: QueryState,
                          resources: QueryResources): Unit = {
@@ -235,7 +235,7 @@ class SerialTopLevelLimitOperatorTaskTemplate(val inner: OperatorTaskTemplate,
     val howMuchToReserve: IntermediateRepresentation =
       if (innermost.shouldWriteToContext) {
         // Use the available output morsel rows to determine our maximum chunk of the total limit
-        cast[Long](invoke(OUTPUT_ROW, method[MorselExecutionContext, Int]("getValidRows")))
+        cast[Long](invoke(OUTPUT_ROW, method[MorselCypherRow, Int]("getValidRows")))
       } else if (innermost.shouldCheckOutputCounter) {
         // Use the output counter to determine our maximum chunk of the total limit
         cast[Long](load(OUTPUT_COUNTER))
@@ -344,10 +344,10 @@ object SerialTopLevelLimitOperatorTaskTemplate {
 
   // This is used by fused limit in a serial pipeline, i.e. only safe to use in single-threaded execution or by a serial pipeline in parallel execution
   object SerialTopLevelLimitStateFactory extends ArgumentStateFactory[SerialTopLevelLimitState] {
-    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): SerialTopLevelLimitState =
+    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselCypherRow, argumentRowIdsForReducers: Array[Long]): SerialTopLevelLimitState =
       new StandardSerialTopLevelLimitState(argumentRowId, argumentRowIdsForReducers)
 
-    override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): SerialTopLevelLimitState =
+    override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselCypherRow, argumentRowIdsForReducers: Array[Long]): SerialTopLevelLimitState =
     // NOTE: This is actually _not_ threadsafe and only safe to use in a serial pipeline!
       new VolatileSerialTopLevelLimitState(argumentRowId, argumentRowIdsForReducers)
   }

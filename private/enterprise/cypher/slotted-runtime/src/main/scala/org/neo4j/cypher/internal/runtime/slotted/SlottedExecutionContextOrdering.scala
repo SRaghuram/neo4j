@@ -10,15 +10,15 @@ import java.util.Comparator
 import org.neo4j.cypher.internal.physicalplanning.LongSlot
 import org.neo4j.cypher.internal.physicalplanning.RefSlot
 import org.neo4j.cypher.internal.physicalplanning.Slot
-import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.values.AnyValue
 import org.neo4j.values.AnyValues
 
 object SlottedExecutionContextOrdering {
-  def comparator(order: ColumnOrder): scala.Ordering[ExecutionContext] = order.slot match {
+  def comparator(order: ColumnOrder): scala.Ordering[CypherRow] = order.slot match {
     case LongSlot(offset, true, _) =>
-      new scala.Ordering[ExecutionContext] {
-        override def compare(a: ExecutionContext, b: ExecutionContext): Int = {
+      new scala.Ordering[CypherRow] {
+        override def compare(a: CypherRow, b: CypherRow): Int = {
           val aVal = a.getLongAt(offset)
           val bVal = b.getLongAt(offset)
           order.compareNullableLongs(aVal, bVal)
@@ -26,8 +26,8 @@ object SlottedExecutionContextOrdering {
       }
 
     case LongSlot(offset, false, _) =>
-      new scala.Ordering[ExecutionContext] {
-        override def compare(a: ExecutionContext, b: ExecutionContext): Int = {
+      new scala.Ordering[CypherRow] {
+        override def compare(a: CypherRow, b: CypherRow): Int = {
           val aVal = a.getLongAt(offset)
           val bVal = b.getLongAt(offset)
           order.compareLongs(aVal, bVal)
@@ -35,8 +35,8 @@ object SlottedExecutionContextOrdering {
       }
 
     case RefSlot(offset, _, _) =>
-      new scala.Ordering[ExecutionContext] {
-        override def compare(a: ExecutionContext, b: ExecutionContext): Int = {
+      new scala.Ordering[CypherRow] {
+        override def compare(a: CypherRow, b: CypherRow): Int = {
           val aVal = a.getRefAt(offset)
           val bVal = b.getRefAt(offset)
           order.compareValues(aVal, bVal)
@@ -44,9 +44,9 @@ object SlottedExecutionContextOrdering {
       }
   }
 
-  def asComparator(orderBy: Seq[ColumnOrder]): Comparator[ExecutionContext] =
+  def asComparator(orderBy: Seq[ColumnOrder]): Comparator[CypherRow] =
     orderBy.map(SlottedExecutionContextOrdering.comparator)
-      .reduceLeft[Comparator[ExecutionContext]]((a, b) => a.thenComparing(b))
+      .reduceLeft[Comparator[CypherRow]]((a, b) => a.thenComparing(b))
 }
 
 sealed trait ColumnOrder {

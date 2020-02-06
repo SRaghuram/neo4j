@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.slotted
 
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
-import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.ExpressionCursors
 import org.neo4j.cypher.internal.runtime.InputDataStream
 import org.neo4j.cypher.internal.runtime.NoInput
@@ -32,7 +32,7 @@ class SlottedQueryState(query: QueryContext,
                         subscriber: QuerySubscriber,
                         memoryTracker: QueryMemoryTracker,
                         decorator: PipeDecorator = NullPipeDecorator,
-                        initialContext: Option[ExecutionContext] = None,
+                        initialContext: Option[CypherRow] = None,
                         cachedIn: SingleThreadedLRUCache[Any, InCheckContainer] = new SingleThreadedLRUCache(maxSize = 16),
                         lenientCreateRelationship: Boolean = false,
                         prePopulateResults: Boolean = false,
@@ -44,7 +44,7 @@ class SlottedQueryState(query: QueryContext,
     new SlottedQueryState(query, resources, params, cursors, queryIndexes, expressionVariables, subscriber, memoryTracker, decorator,
       initialContext, cachedIn, lenientCreateRelationship, prePopulateResults, input)
 
-  override def withInitialContext(initialContext: ExecutionContext) =
+  override def withInitialContext(initialContext: CypherRow) =
     new SlottedQueryState(query, resources, params, cursors, queryIndexes, expressionVariables, subscriber, memoryTracker, decorator,
       Some(initialContext), cachedIn, lenientCreateRelationship, prePopulateResults, input)
 
@@ -55,17 +55,17 @@ class SlottedQueryState(query: QueryContext,
 
 case class SlottedExecutionContextFactory(slots: SlotConfiguration) extends ExecutionContextFactory {
 
-  override def newExecutionContext(): ExecutionContext =
-    SlottedExecutionContext(slots)
+  override def newExecutionContext(): CypherRow =
+    SlottedRow(slots)
 
-  override def copyWith(row: ExecutionContext): ExecutionContext = {
-    val newCtx = SlottedExecutionContext(slots)
+  override def copyWith(row: CypherRow): CypherRow = {
+    val newCtx = SlottedRow(slots)
     row.copyTo(newCtx)
     newCtx
   }
 
-  override def copyWith(row: ExecutionContext, newEntries: Seq[(String, AnyValue)]): ExecutionContext = {
-    val newCopy = SlottedExecutionContext(slots)
+  override def copyWith(row: CypherRow, newEntries: Seq[(String, AnyValue)]): CypherRow = {
+    val newCopy = SlottedRow(slots)
     row.copyTo(newCopy)
     for ((key,value) <- newEntries) {
       newCopy.set(key, value)
@@ -73,28 +73,28 @@ case class SlottedExecutionContextFactory(slots: SlotConfiguration) extends Exec
     newCopy
   }
 
-  override def copyWith(row: ExecutionContext, key: String, value: AnyValue): ExecutionContext = {
-    val newCtx = SlottedExecutionContext(slots)
+  override def copyWith(row: CypherRow, key: String, value: AnyValue): CypherRow = {
+    val newCtx = SlottedRow(slots)
     row.copyTo(newCtx)
     newCtx.set(key, value)
     newCtx
   }
 
-  override def copyWith(row: ExecutionContext,
+  override def copyWith(row: CypherRow,
                         key1: String, value1: AnyValue,
-                        key2: String, value2: AnyValue): ExecutionContext = {
-    val newCopy = SlottedExecutionContext(slots)
+                        key2: String, value2: AnyValue): CypherRow = {
+    val newCopy = SlottedRow(slots)
     row.copyTo(newCopy)
     newCopy.set(key1, value1)
     newCopy.set(key2, value2)
     newCopy
   }
 
-  override def copyWith(row: ExecutionContext,
+  override def copyWith(row: CypherRow,
                         key1: String, value1: AnyValue,
                         key2: String, value2: AnyValue,
-                        key3: String, value3: AnyValue): ExecutionContext = {
-    val newCopy = SlottedExecutionContext(slots)
+                        key3: String, value3: AnyValue): CypherRow = {
+    val newCopy = SlottedRow(slots)
     row.copyTo(newCopy)
     newCopy.set(key1, value1)
     newCopy.set(key2, value2)

@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.slotted.pipes
 
 import org.eclipse.collections.impl.factory.Sets
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
-import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.PrefetchingIterator
 import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
@@ -24,14 +24,14 @@ case class DistinctSlottedPipe(source: Pipe,
 
   groupingExpression.registerOwningPipe(this)
 
-  protected def internalCreateResults(input: Iterator[ExecutionContext],
-                                      state: QueryState): Iterator[ExecutionContext] = {
-    new PrefetchingIterator[ExecutionContext] {
+  protected def internalCreateResults(input: Iterator[CypherRow],
+                                      state: QueryState): Iterator[CypherRow] = {
+    new PrefetchingIterator[CypherRow] {
       private val seen = Sets.mutable.empty[AnyValue]()
 
-      override def produceNext(): Option[ExecutionContext] = {
+      override def produceNext(): Option[CypherRow] = {
         while (input.hasNext) {
-          val next: ExecutionContext = input.next()
+          val next: CypherRow = input.next()
 
           val key = groupingExpression.computeGroupingKey(next, state)
           if (seen.add(key)) {

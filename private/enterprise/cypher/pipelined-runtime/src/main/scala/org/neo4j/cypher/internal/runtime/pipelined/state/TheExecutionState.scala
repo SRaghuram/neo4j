@@ -18,7 +18,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.ExecutionState
 import org.neo4j.cypher.internal.runtime.pipelined.PipelineState
 import org.neo4j.cypher.internal.runtime.pipelined.PipelineTask
 import org.neo4j.cypher.internal.runtime.pipelined.execution.AlarmSink
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.execution.WorkerWaker
@@ -113,7 +113,7 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
 
   override def initializeState(): Unit = {
     // Assumption: Buffer with ID 0 is the initial buffer
-    putMorsel(BufferId(0), MorselExecutionContext.createInitialRow())
+    putMorsel(BufferId(0), MorselCypherRow.createInitialRow())
   }
 
   // Methods
@@ -123,9 +123,9 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
   }
 
   override def putMorsel(bufferId: BufferId,
-                         output: MorselExecutionContext): Unit = {
+                         output: MorselCypherRow): Unit = {
     if (!queryStatus.cancelled) {
-      buffers.sink[MorselExecutionContext](bufferId).put(output)
+      buffers.sink[MorselCypherRow](bufferId).put(output)
       workerWaker.wakeOne()
     } else {
       DebugSupport.ERROR_HANDLING.log("Dropped morsel %s because of query cancellation", output)
@@ -154,7 +154,7 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
     }
   }
 
-  override def closeMorselTask(pipeline: ExecutablePipeline, inputMorsel: MorselExecutionContext): Unit = {
+  override def closeMorselTask(pipeline: ExecutablePipeline, inputMorsel: MorselCypherRow): Unit = {
     closeWorkUnit(pipeline)
     buffers.morselBuffer(pipeline.inputBuffer.id).close(inputMorsel)
   }
@@ -170,7 +170,7 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
   }
 
   override def closeMorselAndAccumulatorTask(pipeline: ExecutablePipeline,
-                                             inputMorsel: MorselExecutionContext,
+                                             inputMorsel: MorselCypherRow,
                                              accumulator: MorselAccumulator[_]): Unit = {
     closeWorkUnit(pipeline)
     val buffer = buffers.lhsAccumulatingRhsStreamingBuffer(pipeline.inputBuffer.id)
@@ -178,7 +178,7 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
   }
 
   override def filterCancelledArguments(pipeline: ExecutablePipeline,
-                                        inputMorsel: MorselExecutionContext): Boolean = {
+                                        inputMorsel: MorselCypherRow): Boolean = {
     buffers.morselBuffer(pipeline.inputBuffer.id).filterCancelledArguments(inputMorsel)
   }
 
@@ -188,7 +188,7 @@ class TheExecutionState(executionGraphDefinition: ExecutionGraphDefinition,
   }
 
   override def filterCancelledArguments(pipeline: ExecutablePipeline,
-                                        inputMorsel: MorselExecutionContext,
+                                        inputMorsel: MorselCypherRow,
                                         accumulator: MorselAccumulator[_]): Boolean = {
     val buffer = buffers.lhsAccumulatingRhsStreamingBuffer(pipeline.inputBuffer.id)
     buffer.filterCancelledArguments(accumulator, inputMorsel)

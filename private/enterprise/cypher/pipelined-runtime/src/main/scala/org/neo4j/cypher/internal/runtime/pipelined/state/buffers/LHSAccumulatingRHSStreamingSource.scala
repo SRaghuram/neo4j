@@ -9,7 +9,7 @@ import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.PipelineId
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.PipelinedDebugSupport
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentCountUpdater
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
@@ -115,7 +115,7 @@ class LHSAccumulatingRHSStreamingSource[DATA <: AnyRef,
    * @param accumulator the accumulator
    * @return `true` iff both the morsel and the accumulator are cancelled
    */
-  def filterCancelledArguments(accumulator: MorselAccumulator[_], rhsMorsel: MorselExecutionContext): Boolean = {
+  def filterCancelledArguments(accumulator: MorselAccumulator[_], rhsMorsel: MorselCypherRow): Boolean = {
     // TODO
     false
   }
@@ -134,7 +134,7 @@ class LHSAccumulatingRHSStreamingSource[DATA <: AnyRef,
     })
   }
 
-  def close(accumulator: MorselAccumulator[_], rhsMorsel: MorselExecutionContext): Unit = {
+  def close(accumulator: MorselAccumulator[_], rhsMorsel: MorselCypherRow): Unit = {
     if (DebugSupport.BUFFERS.enabled) {
       DebugSupport.BUFFERS.log(s"[close] $this -X- $accumulator & ${PipelinedDebugSupport.prettyMorselWithHeader("", rhsMorsel).reduce(_ + _)}")
     }
@@ -181,7 +181,7 @@ class LHSAccumulatingSink[DATA <: AnyRef, LHS_ACC <: MorselAccumulator[DATA]](va
 
   override def canPut: Boolean = true
 
-  override def initiate(argumentRowId: Long, argumentMorsel: MorselExecutionContext): Unit = {
+  override def initiate(argumentRowId: Long, argumentMorsel: MorselCypherRow): Unit = {
     if (DebugSupport.BUFFERS.enabled) {
       DebugSupport.BUFFERS.log(s"[init]  $this <- argumentRowId=$argumentRowId from $argumentMorsel")
     }
@@ -205,13 +205,13 @@ class RHSStreamingSink(val argumentStateMapId: ArgumentStateMapId,
                        downstreamArgumentReducers: IndexedSeq[AccumulatingBuffer],
                        override val argumentStateMaps: ArgumentStateMaps,
                        tracker: QueryCompletionTracker) extends ArgumentCountUpdater
-                                               with Sink[IndexedSeq[PerArgument[MorselExecutionContext]]]
+                                               with Sink[IndexedSeq[PerArgument[MorselCypherRow]]]
                                                with AccumulatingBuffer {
   private val argumentStateMap = argumentStateMaps(argumentStateMapId).asInstanceOf[ArgumentStateMap[ArgumentStateBuffer]]
 
   override val argumentSlotOffset: Int = argumentStateMap.argumentSlotOffset
 
-  override def put(data: IndexedSeq[PerArgument[MorselExecutionContext]]): Unit = {
+  override def put(data: IndexedSeq[PerArgument[MorselCypherRow]]): Unit = {
     if (DebugSupport.BUFFERS.enabled) {
       DebugSupport.BUFFERS.log(s"[put]   $this <- ${data.mkString(", ")}")
     }
@@ -231,7 +231,7 @@ class RHSStreamingSink(val argumentStateMapId: ArgumentStateMapId,
 
   override def canPut: Boolean = true
 
-  override def initiate(argumentRowId: Long, argumentMorsel: MorselExecutionContext): Unit = {
+  override def initiate(argumentRowId: Long, argumentMorsel: MorselCypherRow): Unit = {
     if (DebugSupport.BUFFERS.enabled) {
       DebugSupport.BUFFERS.log(s"[init]  $this <- argumentRowId=$argumentRowId from $argumentMorsel")
     }

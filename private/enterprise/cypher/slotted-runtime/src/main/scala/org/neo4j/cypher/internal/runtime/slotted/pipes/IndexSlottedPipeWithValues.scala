@@ -6,11 +6,11 @@
 package org.neo4j.cypher.internal.runtime.slotted.pipes
 
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
-import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.IndexIteratorBase
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
-import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
+import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
 import org.neo4j.internal.kernel.api.NodeValueIndexCursor
 
 /**
@@ -30,11 +30,11 @@ trait IndexSlottedPipeWithValues extends Pipe {
   class SlottedIndexIterator(state: QueryState,
                              slots: SlotConfiguration,
                              cursor: NodeValueIndexCursor
-                            ) extends IndexIteratorBase[ExecutionContext](cursor) {
+                            ) extends IndexIteratorBase[CypherRow](cursor) {
 
-    override protected def fetchNext(): ExecutionContext = {
+    override protected def fetchNext(): CypherRow = {
       if (cursor.next()) {
-        val slottedContext = SlottedExecutionContext(slots)
+        val slottedContext = SlottedRow(slots)
         state.copyArgumentStateTo(slottedContext, argumentSize.nLongs, argumentSize.nReferences)
         slottedContext.setLongAt(offset, cursor.nodeReference())
         var i = 0

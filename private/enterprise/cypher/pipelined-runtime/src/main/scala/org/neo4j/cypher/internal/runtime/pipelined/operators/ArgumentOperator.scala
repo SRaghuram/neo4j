@@ -20,7 +20,7 @@ import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.OUTER_LOOP_LABEL_NAME
@@ -46,13 +46,13 @@ class ArgumentOperator(val workIdentity: WorkIdentity,
                                    argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorsel] =
     IndexedSeq(new OTask(inputMorsel.nextCopy))
 
-  class OTask(val inputMorsel: MorselExecutionContext) extends ContinuableOperatorTaskWithMorsel {
+  class OTask(val inputMorsel: MorselCypherRow) extends ContinuableOperatorTaskWithMorsel {
 
     override def workIdentity: WorkIdentity = ArgumentOperator.this.workIdentity
 
     override def toString: String = "ArgumentTask"
 
-    override def operate(outputRow: MorselExecutionContext,
+    override def operate(outputRow: MorselCypherRow,
                          context: QueryContext,
                          state: QueryState,
                          resources: QueryResources): Unit = {

@@ -31,7 +31,7 @@ import org.neo4j.cypher.internal.runtime.InputDataStream
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.InputOperator.nodeOrNoValue
@@ -71,11 +71,11 @@ class InputOperator(val workIdentity: WorkIdentity,
   /**
    * A [[InputTask]] reserves new batches from the InputStream, until there are no more batches.
    */
-  class InputTask(input: MutatingInputCursor, val inputMorsel: MorselExecutionContext) extends ContinuableOperatorTaskWithMorsel {
+  class InputTask(input: MutatingInputCursor, val inputMorsel: MorselCypherRow) extends ContinuableOperatorTaskWithMorsel {
 
     override def workIdentity: WorkIdentity = InputOperator.this.workIdentity
 
-    override def operate(outputRow: MorselExecutionContext,
+    override def operate(outputRow: MorselCypherRow,
                          context: QueryContext,
                          queryState: QueryState,
                          resources: QueryResources): Unit = {

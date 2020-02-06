@@ -10,8 +10,8 @@ import java.util
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.BufferId
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
-import org.neo4j.cypher.internal.runtime.pipelined.execution.FilteringMorselExecutionContext
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.FilteringMorselCypherRow
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentCountUpdater
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
@@ -41,9 +41,9 @@ class MorselBuffer(id: BufferId,
                    downstreamArgumentReducers: IndexedSeq[AccumulatingBuffer],
                    workCancellers: IndexedSeq[ArgumentStateMapId],
                    override val argumentStateMaps: ArgumentStateMaps,
-                   inner: Buffer[MorselExecutionContext]
+                   inner: Buffer[MorselCypherRow]
                   ) extends ArgumentCountUpdater
-                    with Sink[MorselExecutionContext]
+                    with Sink[MorselCypherRow]
                     with Source[MorselParallelizer]
                     with DataHolder {
 
@@ -57,7 +57,7 @@ class MorselBuffer(id: BufferId,
     x
   }
 
-  override def put(morsel: MorselExecutionContext): Unit = {
+  override def put(morsel: MorselCypherRow): Unit = {
     if (DebugSupport.BUFFERS.enabled) {
       DebugSupport.BUFFERS.log(s"[put]   $this <- $morsel")
     }
@@ -76,7 +76,7 @@ class MorselBuffer(id: BufferId,
    * The reason is that if this is one of the delegates of a [[MorselApplyBuffer]], that
    * buffer took care of incrementing the right ones already.
    */
-  def putInDelegate(morsel: MorselExecutionContext): Unit = {
+  def putInDelegate(morsel: MorselCypherRow): Unit = {
     if (DebugSupport.BUFFERS.enabled) {
       DebugSupport.BUFFERS.log(s"[putInDelegate] $this <- $morsel")
     }
@@ -115,14 +115,14 @@ class MorselBuffer(id: BufferId,
    * @param morsel the input morsel
    * @return `true` iff the morsel is cancelled
    */
-  def filterCancelledArguments(morsel: MorselExecutionContext): Boolean = {
+  def filterCancelledArguments(morsel: MorselCypherRow): Boolean = {
     if (workCancellers.nonEmpty) {
       val currentRow = morsel.getCurrentRow // Save current row
 
-      Preconditions.checkArgument(morsel.isInstanceOf[FilteringMorselExecutionContext],
+      Preconditions.checkArgument(morsel.isInstanceOf[FilteringMorselCypherRow],
         s"Expected filtering morsel for filterCancelledArguments in buffer $id, but got ${morsel.getClass}")
 
-      val filteringMorsel = morsel.asInstanceOf[FilteringMorselExecutionContext]
+      val filteringMorsel = morsel.asInstanceOf[FilteringMorselCypherRow]
       filteringMorsel.resetToFirstRow()
 
       val rowsToCancel = determineCancelledRows(filteringMorsel)
@@ -139,7 +139,7 @@ class MorselBuffer(id: BufferId,
     morsel.isEmpty
   }
 
-  private def decrementReducers(filteringMorsel: FilteringMorselExecutionContext, rowsToCancel: util.BitSet): Unit = {
+  private def decrementReducers(filteringMorsel: FilteringMorselCypherRow, rowsToCancel: util.BitSet): Unit = {
     filteringMorsel.resetToFirstRow()
 
     val reducerArgumentRowIds = new Array[Long](downstreamArgumentReducers.size)
@@ -189,7 +189,7 @@ class MorselBuffer(id: BufferId,
     }
   }
 
-  private def determineCancelledRows(filteringMorsel: FilteringMorselExecutionContext): java.util.BitSet = {
+  private def determineCancelledRows(filteringMorsel: FilteringMorselCypherRow): java.util.BitSet = {
     val rowsToCancel =  new java.util.BitSet(filteringMorsel.maxNumberOfRows)
     while (filteringMorsel.isValidRow) {
       var i = 0
@@ -225,7 +225,7 @@ class MorselBuffer(id: BufferId,
   /**
    * Decrement reference counters attached to `morsel`.
    */
-  def close(morsel: MorselExecutionContext): Unit = {
+  def close(morsel: MorselCypherRow): Unit = {
     if (DebugSupport.BUFFERS.enabled) {
       DebugSupport.BUFFERS.log(s"[close] $this -X- $morsel")
     }
@@ -238,12 +238,12 @@ class MorselBuffer(id: BufferId,
   /**
    * Implementation of [[MorselParallelizer]] that ensures correct reference counting.
    */
-  class Parallelizer(original: MorselExecutionContext) extends MorselParallelizer {
+  class Parallelizer(original: MorselCypherRow) extends MorselParallelizer {
     private var usedOriginal = false
 
-    override def originalForClosing: MorselExecutionContext = original
+    override def originalForClosing: MorselCypherRow = original
 
-    override def nextCopy: MorselExecutionContext = {
+    override def nextCopy: MorselCypherRow = {
       if (!usedOriginal) {
         usedOriginal = true
         original

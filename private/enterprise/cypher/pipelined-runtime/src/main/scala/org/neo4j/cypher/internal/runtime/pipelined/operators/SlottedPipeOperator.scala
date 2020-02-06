@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.operators
 
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.profiling.QueryProfiler
-import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.ExpressionCursors
 import org.neo4j.cypher.internal.runtime.InputDataStream
 import org.neo4j.cypher.internal.runtime.NoInput
@@ -24,7 +24,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeDecorator
 import org.neo4j.cypher.internal.runtime.interpreted.profiler.InterpretedProfileInformation
 import org.neo4j.cypher.internal.runtime.interpreted.profiler.Profiler
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SlottedPipeOperator.createFeedPipeQueryState
@@ -56,7 +56,7 @@ abstract class SlottedPipeOperator(val workIdentity: WorkIdentityMutableDescript
 trait OperatorWithInterpretedDBHitsProfiling extends OperatorTask {
   // Overridden to not set the tracer on the operatorExecutionEvent. Otherwise we would count dbHits twice,
   // once from the morsel Tracer and once from the interpreted Profiler.
-  override def operateWithProfile(output: MorselExecutionContext,
+  override def operateWithProfile(output: MorselCypherRow,
                                   context: QueryContext,
                                   state: QueryState,
                                   resources: QueryResources,
@@ -106,16 +106,16 @@ class SlottedPipeHeadOperator(workIdentity: WorkIdentityMutableDescription,
     }
   }
 
-  class OTask(val inputMorsel: MorselExecutionContext, val feedPipeQueryState: FeedPipeQueryState) extends ContinuableOperatorTaskWithMorsel with OperatorWithInterpretedDBHitsProfiling {
+  class OTask(val inputMorsel: MorselCypherRow, val feedPipeQueryState: FeedPipeQueryState) extends ContinuableOperatorTaskWithMorsel with OperatorWithInterpretedDBHitsProfiling {
 
-    private var resultIterator: Iterator[ExecutionContext] = _
+    private var resultIterator: Iterator[CypherRow] = _
     private var profileEvent: OperatorProfileEvent = _
 
     override def workIdentity: WorkIdentity = SlottedPipeHeadOperator.this.workIdentity
 
     override def toString: String = s"SlottedPipeTask($pipe)"
 
-    override def operate(outputRow: MorselExecutionContext,
+    override def operate(outputRow: MorselCypherRow,
                          context: QueryContext,
                          state: QueryState,
                          resources: QueryResources): Unit = {
@@ -161,7 +161,7 @@ class SlottedPipeMiddleOperator(workIdentity: WorkIdentityMutableDescription,
 
   class OMiddleTask(val feedPipeQueryState: FeedPipeQueryState) extends OperatorTask with OperatorWithInterpretedDBHitsProfiling {
 
-    private var resultIterator: Iterator[ExecutionContext] = _
+    private var resultIterator: Iterator[CypherRow] = _
     private var profileEvent: OperatorProfileEvent = _
     private var _canContinue: Boolean = false
 
@@ -169,7 +169,7 @@ class SlottedPipeMiddleOperator(workIdentity: WorkIdentityMutableDescription,
 
     override def toString: String = s"SlottedPipeMiddleTask($pipe)"
 
-    override def operate(outputRow: MorselExecutionContext,
+    override def operate(outputRow: MorselCypherRow,
                          context: QueryContext,
                          state: QueryState,
                          resources: QueryResources): Unit = {
@@ -209,7 +209,7 @@ class SlottedPipeMiddleOperator(workIdentity: WorkIdentityMutableDescription,
 }
 
 object SlottedPipeOperator {
-  def createFeedPipeQueryState(inputMorsel: MorselExecutionContext,
+  def createFeedPipeQueryState(inputMorsel: MorselCypherRow,
                                queryContext: QueryContext,
                                morselQueryState: QueryState,
                                resources: QueryResources,
@@ -254,13 +254,13 @@ class FeedPipeQueryState(query: QueryContext,
                          subscriber: QuerySubscriber,
                          memoryTracker: QueryMemoryTracker,
                          decorator: PipeDecorator = NullPipeDecorator,
-                         initialContext: Option[ExecutionContext] = None,
+                         initialContext: Option[CypherRow] = None,
                          cachedIn: SingleThreadedLRUCache[Any, InCheckContainer] = new SingleThreadedLRUCache(maxSize = 16),
                          lenientCreateRelationship: Boolean = false,
                          prePopulateResults: Boolean = false,
                          input: InputDataStream = NoInput,
                          val profileInformation: InterpretedProfileInformation = null,
-                         var morsel: MorselExecutionContext = null)
+                         var morsel: MorselCypherRow = null)
   extends SlottedQueryState(query, resources, params, cursors, queryIndexes, expressionVariables, subscriber, memoryTracker, decorator, initialContext,
     cachedIn, lenientCreateRelationship, prePopulateResults, input) {
 
@@ -269,7 +269,7 @@ class FeedPipeQueryState(query: QueryContext,
       initialContext, cachedIn, lenientCreateRelationship, prePopulateResults, input, profileInformation, morsel)
   }
 
-  override def withInitialContext(initialContext: ExecutionContext): FeedPipeQueryState = {
+  override def withInitialContext(initialContext: CypherRow): FeedPipeQueryState = {
     new FeedPipeQueryState(query, resources, params, cursors, queryIndexes, expressionVariables, subscriber, memoryTracker, decorator, Some(initialContext),
       cachedIn, lenientCreateRelationship, prePopulateResults, input, profileInformation, morsel)
   }
@@ -283,19 +283,19 @@ class FeedPipeQueryState(query: QueryContext,
 
 case class MorselFeedPipe()(val id: Id = Id.INVALID_ID) extends Pipe {
 
-  override protected def internalCreateResults(state: pipes.QueryState): Iterator[ExecutionContext] = {
+  override protected def internalCreateResults(state: pipes.QueryState): Iterator[CypherRow] = {
     val feedPipeQueryState = state.asInstanceOf[FeedPipeQueryState]
     val morsel = feedPipeQueryState.morsel
 
     morsel.resetToBeforeFirstRow()
 
-    new Iterator[ExecutionContext] {
+    new Iterator[CypherRow] {
 
       override def hasNext: Boolean = {
         morsel.hasNextRow
       }
 
-      override def next(): ExecutionContext = {
+      override def next(): CypherRow = {
         morsel.moveToNextRow()
         morsel
       }

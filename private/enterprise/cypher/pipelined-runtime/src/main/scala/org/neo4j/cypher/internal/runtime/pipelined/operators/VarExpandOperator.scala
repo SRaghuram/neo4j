@@ -50,7 +50,7 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeGet
 import org.neo4j.cypher.internal.physicalplanning.VariablePredicates.NO_PREDICATE_OFFSET
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.DbAccess
-import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.ExpressionCursors
 import org.neo4j.cypher.internal.runtime.NoMemoryTracker
 import org.neo4j.cypher.internal.runtime.QueryContext
@@ -63,7 +63,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.RelationshipTypes
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.VarLengthExpandPipe
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.CursorPools
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.ALLOCATE_NODE_CURSOR
@@ -136,7 +136,7 @@ class VarExpandOperator(val workIdentity: WorkIdentity,
                          argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorsel] =
     IndexedSeq(new OTask(inputMorsel.nextCopy))
 
-  class OTask(val inputMorsel: MorselExecutionContext) extends InputLoopTask {
+  class OTask(val inputMorsel: MorselCypherRow) extends InputLoopTask {
 
     override def workIdentity: WorkIdentity = VarExpandOperator.this.workIdentity
 
@@ -166,7 +166,7 @@ class VarExpandOperator(val workIdentity: WorkIdentity,
     protected override def initializeInnerLoop(context: QueryContext,
                                                state: QueryState,
                                                resources: QueryResources,
-                                               initExecutionContext: ExecutionContext): Boolean = {
+                                               initExecutionContext: CypherRow): Boolean = {
       val fromNode = getFromNodeFunction.applyAsLong(inputMorsel)
       val toNode = getToNodeFunction.applyAsLong(inputMorsel)
 
@@ -217,7 +217,7 @@ class VarExpandOperator(val workIdentity: WorkIdentity,
       }
     }
 
-    override protected def innerLoop(outputRow: MorselExecutionContext,
+    override protected def innerLoop(outputRow: MorselCypherRow,
                                      context: QueryContext,
                                      state: QueryState): Unit = {
 
@@ -548,7 +548,7 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
         param[Int]("minLength"),
         param[Int]("maxLength"),
         param[Read]("read"),
-        param[ExecutionContext]("context"),
+        param[CypherRow]("context"),
         param[DbAccess]("dbAccess"),
         param[Array[AnyValue]]("params"),
         param[ExpressionCursors]("cursors"),
@@ -556,7 +556,7 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
       Seq(methodDeclaration[Boolean]("satisfyPredicates",
         generatePredicate,
         () => locals.toSeq,
-        param[ExecutionContext]("context"),
+        param[CypherRow]("context"),
         param[DbAccess]("dbAccess"),
         param[Array[AnyValue]]("params"),
         param[ExpressionCursors]("cursors"),

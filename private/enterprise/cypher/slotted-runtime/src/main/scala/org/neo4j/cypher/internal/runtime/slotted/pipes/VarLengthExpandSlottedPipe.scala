@@ -12,7 +12,7 @@ import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeGetPrimitiveNodeFromSlotFunctionFor
 import org.neo4j.cypher.internal.physicalplanning.VariablePredicates
-import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.RelationshipContainer
 import org.neo4j.cypher.internal.runtime.RelationshipIterator
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
@@ -21,7 +21,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeWithSource
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.RelationshipTypes
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.VarLengthExpandPipe.projectBackwards
-import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
+import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.InternalException
@@ -77,7 +77,7 @@ case class VarLengthExpandSlottedPipe(source: Pipe,
 
   private def varLengthExpand(node: LNode,
                               state: QueryState,
-                              row: ExecutionContext): Iterator[(LNode, RelationshipContainer)] = {
+                              row: CypherRow): Iterator[(LNode, RelationshipContainer)] = {
     val stackOfNodes = LongStacks.mutable.empty()
     val stackOfRelContainers = Stacks.mutable.empty[RelationshipContainer]()
     stackOfNodes.push(node)
@@ -130,7 +130,7 @@ case class VarLengthExpandSlottedPipe(source: Pipe,
     }
   }
 
-  protected def internalCreateResults(input: Iterator[ExecutionContext], state: QueryState): Iterator[ExecutionContext] = {
+  protected def internalCreateResults(input: Iterator[CypherRow], state: QueryState): Iterator[CypherRow] = {
     input.flatMap {
       inputRow =>
         val fromNode = getFromNodeFunction.applyAsLong(inputRow)
@@ -145,7 +145,7 @@ case class VarLengthExpandSlottedPipe(source: Pipe,
             paths collect {
               case (toNode: LNode, rels: RelationshipContainer)
                 if rels.size >= min && isToNodeValid(inputRow, toNode) =>
-                val resultRow = SlottedExecutionContext(slots)
+                val resultRow = SlottedRow(slots)
                 resultRow.copyFrom(inputRow, argumentSize.nLongs, argumentSize.nReferences)
                 if (shouldExpandAll) {
                   resultRow.setLongAt(toOffset, toNode)
@@ -161,7 +161,7 @@ case class VarLengthExpandSlottedPipe(source: Pipe,
     }
   }
 
-  private def predicateIsTrue(row: ExecutionContext,
+  private def predicateIsTrue(row: CypherRow,
                               state: QueryState,
                               tempOffset: Int,
                               predicate: Expression,
@@ -171,6 +171,6 @@ case class VarLengthExpandSlottedPipe(source: Pipe,
       predicate(row, state) eq Values.TRUE
     }
 
-  private def isToNodeValid(row: ExecutionContext, node: LNode): Boolean =
+  private def isToNodeValid(row: CypherRow, node: LNode): Boolean =
     shouldExpandAll || getToNodeFunction.applyAsLong(row) == node
 }

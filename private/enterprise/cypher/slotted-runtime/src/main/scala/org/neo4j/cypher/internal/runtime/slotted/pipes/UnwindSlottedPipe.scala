@@ -6,13 +6,13 @@
 package org.neo4j.cypher.internal.runtime.slotted.pipes
 
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
-import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.ListSupport
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeWithSource
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
-import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
+import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.values.AnyValue
 
@@ -26,19 +26,19 @@ case class UnwindSlottedPipe(source: Pipe,
                             (val id: Id = Id.INVALID_ID) extends PipeWithSource(source) with ListSupport {
   collection.registerOwningPipe(this)
 
-  override protected def internalCreateResults(input: Iterator[ExecutionContext], state: QueryState): Iterator[ExecutionContext] =
+  override protected def internalCreateResults(input: Iterator[CypherRow], state: QueryState): Iterator[CypherRow] =
     new UnwindIterator(input, state)
 
-  private class UnwindIterator(input: Iterator[ExecutionContext], state: QueryState) extends Iterator[ExecutionContext] {
-    private var currentInputRow: ExecutionContext = _
+  private class UnwindIterator(input: Iterator[CypherRow], state: QueryState) extends Iterator[CypherRow] {
+    private var currentInputRow: CypherRow = _
     private var unwindIterator: Iterator[AnyValue] = _
-    private var nextItem: SlottedExecutionContext = _
+    private var nextItem: SlottedRow = _
 
     prefetch()
 
     override def hasNext: Boolean = nextItem != null
 
-    override def next(): ExecutionContext =
+    override def next(): CypherRow =
       if (hasNext) {
         val ret = nextItem
         prefetch()
@@ -51,7 +51,7 @@ case class UnwindSlottedPipe(source: Pipe,
     private def prefetch() {
       nextItem = null
       if (unwindIterator != null && unwindIterator.hasNext) {
-        nextItem = SlottedExecutionContext(slots)
+        nextItem = SlottedRow(slots)
         currentInputRow.copyTo(nextItem)
         nextItem.setRefAt(offset, unwindIterator.next())
       } else {

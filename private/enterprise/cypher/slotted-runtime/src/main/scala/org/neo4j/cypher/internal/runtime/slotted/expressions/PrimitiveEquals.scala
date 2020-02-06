@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted.expressions
 
-import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.interpreted.commands.AstNode
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.Predicate
@@ -13,7 +13,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 
 case class PrimitiveEquals(a: Expression, b: Expression) extends Predicate with SlottedExpression {
 
-  override def isMatch(m: ExecutionContext, state: QueryState): Option[Boolean] = {
+  override def isMatch(m: CypherRow, state: QueryState): Option[Boolean] = {
     val value1 = a(m, state)
     val value2 = b(m, state)
     Some(value1 == value2)

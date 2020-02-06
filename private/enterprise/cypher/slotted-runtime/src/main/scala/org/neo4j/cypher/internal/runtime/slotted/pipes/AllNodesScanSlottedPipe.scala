@@ -7,11 +7,11 @@ package org.neo4j.cypher.internal.runtime.slotted.pipes
 
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.Size
-import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.PrimitiveLongHelper
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
-import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
+import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
 import org.neo4j.cypher.internal.util.attribution.Id
 
 case class AllNodesScanSlottedPipe(ident: String, slots: SlotConfiguration, argumentSize: Size)
@@ -19,9 +19,9 @@ case class AllNodesScanSlottedPipe(ident: String, slots: SlotConfiguration, argu
 
   private val offset = slots.getLongOffsetFor(ident)
 
-  protected def internalCreateResults(state: QueryState): Iterator[ExecutionContext] = {
+  protected def internalCreateResults(state: QueryState): Iterator[CypherRow] = {
     PrimitiveLongHelper.map(state.query.nodeOps.allPrimitive, { nodeId =>
-      val context = SlottedExecutionContext(slots)
+      val context = SlottedRow(slots)
       state.copyArgumentStateTo(context, argumentSize.nLongs, argumentSize.nReferences)
       context.setLongAt(offset, nodeId)
       context

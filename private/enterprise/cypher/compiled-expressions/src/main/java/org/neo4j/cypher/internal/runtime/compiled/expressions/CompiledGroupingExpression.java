@@ -5,8 +5,8 @@
  */
 package org.neo4j.cypher.internal.runtime.compiled.expressions;
 
+import org.neo4j.cypher.internal.runtime.CypherRow;
 import org.neo4j.cypher.internal.runtime.DbAccess;
-import org.neo4j.cypher.internal.runtime.ExecutionContext;
 import org.neo4j.cypher.internal.runtime.ExpressionCursors;
 import org.neo4j.values.AnyValue;
 
@@ -21,7 +21,7 @@ public interface CompiledGroupingExpression
      * @param context the context to write to
      * @param groupingKey the grouping key to project
      */
-    void projectGroupingKey( ExecutionContext context, AnyValue groupingKey );
+    void projectGroupingKey( CypherRow context, AnyValue groupingKey );
 
     /**
      * Computes grouping key.
@@ -32,7 +32,7 @@ public interface CompiledGroupingExpression
      * @param cursors cursors to use for expression evaluation
      * @param expressionVariables array used for storing expression variable values
      */
-    AnyValue computeGroupingKey( ExecutionContext context,
+    AnyValue computeGroupingKey( CypherRow context,
                                  DbAccess dbAccess,
                                  AnyValue[] params,
                                  ExpressionCursors cursors,
@@ -41,5 +41,5 @@ public interface CompiledGroupingExpression
     /**
      * Gets an already projected grouping key from the context.
      */
-    AnyValue getGroupingKey( ExecutionContext context );
+    AnyValue getGroupingKey( CypherRow context );
 }

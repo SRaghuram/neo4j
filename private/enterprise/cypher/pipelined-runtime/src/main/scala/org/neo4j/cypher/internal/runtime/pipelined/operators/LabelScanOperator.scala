@@ -27,14 +27,14 @@ import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
 import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
-import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyLabel
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyLabel.UNKNOWN
 import org.neo4j.cypher.internal.runtime.pipelined.NodeLabelCursorRepresentation
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.ALLOCATE_NODE_LABEL_CURSOR
@@ -76,7 +76,7 @@ class LabelScanOperator(val workIdentity: WorkIdentity,
    *
    * @param inputMorsel the input row, pointing to the beginning of the input morsel
    */
-  class SingleThreadedScanTask(val inputMorsel: MorselExecutionContext) extends InputLoopTask {
+  class SingleThreadedScanTask(val inputMorsel: MorselCypherRow) extends InputLoopTask {
 
     override def workIdentity: WorkIdentity = LabelScanOperator.this.workIdentity
 
@@ -87,7 +87,7 @@ class LabelScanOperator(val workIdentity: WorkIdentity,
     override protected def initializeInnerLoop(context: QueryContext,
                                                state: QueryState,
                                                resources: QueryResources,
-                                               initExecutionContext: ExecutionContext): Boolean = {
+                                               initExecutionContext: CypherRow): Boolean = {
       val id = label.getId(context)
       if (id == UNKNOWN) false
       else {
@@ -98,7 +98,7 @@ class LabelScanOperator(val workIdentity: WorkIdentity,
       }
     }
 
-    override protected def innerLoop(outputRow: MorselExecutionContext, context: QueryContext, state: QueryState): Unit = {
+    override protected def innerLoop(outputRow: MorselCypherRow, context: QueryContext, state: QueryState): Unit = {
       while (outputRow.isValidRow && cursor.next()) {
         outputRow.copyFrom(inputMorsel, argumentSize.nLongs, argumentSize.nReferences)
         outputRow.setLongAt(offset, cursor.nodeReference())

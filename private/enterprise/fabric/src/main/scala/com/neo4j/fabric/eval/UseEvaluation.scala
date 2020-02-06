@@ -11,7 +11,7 @@ import com.neo4j.fabric.util.Errors
 import com.neo4j.fabric.util.Rewritten._
 import org.neo4j.cypher.internal.logical.plans._
 import org.neo4j.cypher.internal.planner.spi.ProcedureSignatureResolver
-import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.ast.{CatalogName, UseGraph}
 import org.neo4j.cypher.internal.expressions._
 import org.neo4j.internal.kernel.api.{QueryContext => _}
@@ -53,7 +53,7 @@ case class UseEvaluation(
         catalog.resolve(nameFromProp(p))
 
       case f: FunctionInvocation =>
-        val ctx = ExecutionContext(context)
+        val ctx = CypherRow(context)
         val argValues = f.args
           .map(resolveFunctions)
           .map(expr => evaluator.evaluate(expr, parameters, ctx))

@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted.expressions
 
-import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.interpreted.CommandProjection
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
@@ -17,12 +17,12 @@ case class SlottedCommandProjection(introducedExpressions: Map[Int, Expression])
 
   override def registerOwningPipe(pipe: Pipe): Unit = introducedExpressions.values.foreach(_.registerOwningPipe(pipe))
 
-  private val projectionFunctions: Iterable[(ExecutionContext, QueryState) => Unit] = introducedExpressions map {
+  private val projectionFunctions: Iterable[(CypherRow, QueryState) => Unit] = introducedExpressions map {
     case (offset, expression) =>
-      (ctx: ExecutionContext, state: QueryState) =>
+      (ctx: CypherRow, state: QueryState) =>
         val result = expression(ctx, state)
         ctx.setRefAt(offset, result)
   }
 
-  override def project(ctx: ExecutionContext, state: QueryState): Unit = projectionFunctions.foreach(_ (ctx, state))
+  override def project(ctx: CypherRow, state: QueryState): Unit = projectionFunctions.foreach(_ (ctx, state))
 }

@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.compiled.expressions;
 import java.util.List;
 
 import org.neo4j.cypher.internal.runtime.DbAccess;
-import org.neo4j.cypher.internal.runtime.ExecutionContext;
+import org.neo4j.cypher.internal.runtime.CypherRow;
 import org.neo4j.cypher.internal.runtime.KernelAPISupport$;
 import org.neo4j.cypher.operations.CypherFunctions;
 import org.neo4j.exceptions.CypherTypeException;
@@ -57,7 +57,7 @@ public final class CompiledHelpers
     }
 
     @CalledFromGeneratedCode
-    public static AnyValue nodeOrNoValue( ExecutionContext context, DbAccess dbAccess, int offset )
+    public static AnyValue nodeOrNoValue( CypherRow context, DbAccess dbAccess, int offset )
     {
         long nodeId = context.getLongAt( offset );
         return nodeId == -1 ? NO_VALUE : dbAccess.nodeById( nodeId );
@@ -70,7 +70,7 @@ public final class CompiledHelpers
     }
 
     @CalledFromGeneratedCode
-    public static AnyValue relationshipOrNoValue( ExecutionContext context, DbAccess dbAccess, int offset )
+    public static AnyValue relationshipOrNoValue( CypherRow context, DbAccess dbAccess, int offset )
     {
         long relationshipId = context.getLongAt( offset );
         return relationshipId == -1 ? NO_VALUE : dbAccess.relationshipById( relationshipId );

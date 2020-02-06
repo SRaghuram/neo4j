@@ -18,7 +18,7 @@ import org.neo4j.cypher.internal.physicalplanning.LHSAccumulatingRHSStreamingBuf
 import org.neo4j.cypher.internal.physicalplanning.OptionalBufferVariant
 import org.neo4j.cypher.internal.physicalplanning.RegularBufferVariant
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.pipelined.state.QueryCompletionTracker
@@ -163,7 +163,7 @@ class Buffers(numBuffers: Int,
             x.argumentStateMapId)
 
         case RegularBufferVariant =>
-          new MorselBuffer(bufferDefinition.id, tracker, reducers, workCancellers, argumentStateMaps, stateFactory.newBuffer[MorselExecutionContext](bufferDefinition.operatorId))
+          new MorselBuffer(bufferDefinition.id, tracker, reducers, workCancellers, argumentStateMaps, stateFactory.newBuffer[MorselCypherRow](bufferDefinition.operatorId))
       }
   }
 
@@ -313,7 +313,7 @@ object Buffers {
      * If the accumulator is already initiated, this will increment the count.
      * Will be called when upstream apply buffers receive new morsels.
      */
-    def initiate(argumentRowId: Long, argumentMorsel: MorselExecutionContext): Unit
+    def initiate(argumentRowId: Long, argumentMorsel: MorselCypherRow): Unit
 
     /**
      * Increment counts for the accumulator relevant to the given argument ID.
@@ -331,5 +331,5 @@ object Buffers {
   /**
    * Output of lhsAccumulatingRhsStreamingBuffers.
    */
-  case class AccumulatorAndMorsel[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]](acc: ACC, morsel: MorselExecutionContext)
+  case class AccumulatorAndMorsel[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]](acc: ACC, morsel: MorselCypherRow)
 }

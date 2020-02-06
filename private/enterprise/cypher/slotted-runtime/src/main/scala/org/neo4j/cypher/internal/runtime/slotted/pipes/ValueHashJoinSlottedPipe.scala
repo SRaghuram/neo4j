@@ -6,11 +6,11 @@
 package org.neo4j.cypher.internal.runtime.slotted.pipes
 
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
-import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
-import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
+import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values.NO_VALUE
@@ -29,7 +29,7 @@ case class ValueHashJoinSlottedPipe(leftSide: Expression,
   leftSide.registerOwningPipe(this)
   rightSide.registerOwningPipe(this)
 
-  override def computeKey(context: ExecutionContext, keyColumns: Expression, queryState: QueryState): Option[AnyValue] = {
+  override def computeKey(context: CypherRow, keyColumns: Expression, queryState: QueryState): Option[AnyValue] = {
     val value = keyColumns.apply(context, queryState)
     if (value eq NO_VALUE)
       None
@@ -37,8 +37,6 @@ case class ValueHashJoinSlottedPipe(leftSide: Expression,
       Some(value)
   }
 
-  override def copyDataFromRhs(newRow: SlottedExecutionContext, rhs: ExecutionContext): Unit =
-    rhs.copyTo(newRow,
-      sourceLongOffset = argumentSize.nLongs, sourceRefOffset = argumentSize.nReferences,
-      targetLongOffset = longOffset, targetRefOffset = refsOffset)
+  override def copyDataFromRhs(newRow: SlottedRow, rhs: CypherRow): Unit =
+    rhs.copyTo(newRow, sourceLongOffset = argumentSize.nLongs, sourceRefOffset = argumentSize.nReferences, targetLongOffset = longOffset, targetRefOffset = refsOffset)
 }

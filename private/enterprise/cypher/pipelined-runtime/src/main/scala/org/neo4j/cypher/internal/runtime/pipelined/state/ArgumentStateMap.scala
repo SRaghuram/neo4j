@@ -6,8 +6,8 @@
 package org.neo4j.cypher.internal.runtime.pipelined.state
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
-import org.neo4j.cypher.internal.runtime.pipelined.execution.FilteringMorselExecutionContext
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.FilteringMorselCypherRow
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateWithCompleted
 
@@ -35,9 +35,9 @@ trait ArgumentStateMap[S <: ArgumentState] {
    * @param onArgument is called once per argumentRowId, to generate a filter state.
    * @param onRow      is called once per row, and given the filter state of the current argumentRowId
    */
-  def filter[FILTER_STATE](morsel: MorselExecutionContext,
+  def filter[FILTER_STATE](morsel: MorselCypherRow,
                            onArgument: (S, Long) => FILTER_STATE,
-                           onRow: (FILTER_STATE, MorselExecutionContext) => Boolean): Unit
+                           onRow: (FILTER_STATE, MorselCypherRow) => Boolean): Unit
 
   /**
    * Returns the [[ArgumentState]] of each completed argument, but does not remove them from the [[ArgumentStateMap]].
@@ -78,7 +78,7 @@ trait ArgumentStateMap[S <: ArgumentState] {
    *                                  states are not closed or are not involved in a buffer with downstream
    *                                  reducers.
    */
-  def initiate(argument: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): Unit
+  def initiate(argument: Long, argumentMorsel: MorselCypherRow, argumentRowIdsForReducers: Array[Long]): Unit
 
   /**
    * Increment the argument counter for `argument`.
@@ -189,12 +189,12 @@ object ArgumentStateMap {
     /**
      * Construct new ArgumentState for non-concurrent use.
      */
-    def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): S
+    def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselCypherRow, argumentRowIdsForReducers: Array[Long]): S
 
     /**
      * Construct new ArgumentState for concurrent use.
      */
-    def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): S
+    def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselCypherRow, argumentRowIdsForReducers: Array[Long]): S
 
     /**
      * True if argument states created by this factory should be completed on construction. This means that
@@ -234,10 +234,10 @@ object ArgumentStateMap {
    * @param morsel the morsel to filter
    * @param predicate the predicate
    */
-  def filter(morsel: MorselExecutionContext,
-             predicate: MorselExecutionContext => Boolean): Unit = {
+  def filter(morsel: MorselCypherRow,
+             predicate: MorselCypherRow => Boolean): Unit = {
     val currentRow = morsel.getCurrentRow // Save current row
-    val filteringMorsel = morsel.asInstanceOf[FilteringMorselExecutionContext]
+    val filteringMorsel = morsel.asInstanceOf[FilteringMorselCypherRow]
 
     if (filteringMorsel.hasCancelledRows) {
       filterLoop(filteringMorsel, predicate)
@@ -247,8 +247,8 @@ object ArgumentStateMap {
     filteringMorsel.moveToRawRow(currentRow) // Restore current row exactly (so may point at a cancelled row)
   }
 
-  private def filterLoop(filteringMorsel: FilteringMorselExecutionContext,
-                         predicate: MorselExecutionContext => Boolean): Unit = {
+  private def filterLoop(filteringMorsel: FilteringMorselCypherRow,
+                         predicate: MorselCypherRow => Boolean): Unit = {
     filteringMorsel.resetToFirstRow()
     while (filteringMorsel.isValidRow) {
       if (!predicate(filteringMorsel)) {
@@ -258,8 +258,8 @@ object ArgumentStateMap {
     }
   }
 
-  private def filterLoopRaw(filteringMorsel: FilteringMorselExecutionContext,
-                            predicate: MorselExecutionContext => Boolean): Unit = {
+  private def filterLoopRaw(filteringMorsel: FilteringMorselCypherRow,
+                            predicate: MorselCypherRow => Boolean): Unit = {
     filteringMorsel.resetToFirstRawRow()
     while (filteringMorsel.isValidRawRow) {
       if (!predicate(filteringMorsel)) {
@@ -280,12 +280,12 @@ object ArgumentStateMap {
    * @tparam FILTER_STATE state used for filtering
    */
   def filter[FILTER_STATE](argumentSlotOffset: Int,
-                           morsel: MorselExecutionContext,
+                           morsel: MorselCypherRow,
                            onArgument: (Long, Long) => FILTER_STATE,
-                           onRow: (FILTER_STATE, MorselExecutionContext) => Boolean): Unit = {
+                           onRow: (FILTER_STATE, MorselCypherRow) => Boolean): Unit = {
     val currentRow = morsel.getCurrentRow // Save current row
 
-    val filteringMorsel = morsel.asInstanceOf[FilteringMorselExecutionContext]
+    val filteringMorsel = morsel.asInstanceOf[FilteringMorselCypherRow]
 
     if (filteringMorsel.hasCancelledRows) {
       filterLoop(argumentSlotOffset, filteringMorsel, onArgument, onRow)
@@ -297,9 +297,9 @@ object ArgumentStateMap {
   }
 
   private def filterLoop[FILTER_STATE](argumentSlotOffset: Int,
-                                       filteringMorsel: FilteringMorselExecutionContext,
+                                       filteringMorsel: FilteringMorselCypherRow,
                                        onArgument: (Long, Long) => FILTER_STATE,
-                                       onRow: (FILTER_STATE, MorselExecutionContext) => Boolean): Unit = {
+                                       onRow: (FILTER_STATE, MorselCypherRow) => Boolean): Unit = {
     filteringMorsel.resetToFirstRow()
 
     while (filteringMorsel.isValidRow) {
@@ -322,9 +322,9 @@ object ArgumentStateMap {
   }
 
   private def filterLoopRaw[FILTER_STATE](argumentSlotOffset: Int,
-                                          filteringMorsel: FilteringMorselExecutionContext,
+                                          filteringMorsel: FilteringMorselCypherRow,
                                           onArgument: (Long, Long) => FILTER_STATE,
-                                          onRow: (FILTER_STATE, MorselExecutionContext) => Boolean): Unit = {
+                                          onRow: (FILTER_STATE, MorselCypherRow) => Boolean): Unit = {
     filteringMorsel.resetToFirstRawRow()
 
     while (filteringMorsel.isValidRawRow) {
@@ -349,8 +349,8 @@ object ArgumentStateMap {
   case class PerArgument[T](argumentRowId: Long, value: T)
 
   def map[T](argumentSlotOffset: Int,
-             morsel: MorselExecutionContext,
-             f: MorselExecutionContext => T): IndexedSeq[PerArgument[T]] = {
+             morsel: MorselCypherRow,
+             f: MorselCypherRow => T): IndexedSeq[PerArgument[T]] = {
 
     val result = new ArrayBuffer[PerArgument[T]]()
     foreach(argumentSlotOffset,
@@ -360,8 +360,8 @@ object ArgumentStateMap {
   }
 
   def foreach[T](argumentSlotOffset: Int,
-                 morsel: MorselExecutionContext,
-                 f: (Long, MorselExecutionContext) => Unit): Unit = {
+                 morsel: MorselCypherRow,
+                 f: (Long, MorselCypherRow) => Unit): Unit = {
 
     val readingRow = morsel.shallowCopy()
     readingRow.resetToFirstRow()

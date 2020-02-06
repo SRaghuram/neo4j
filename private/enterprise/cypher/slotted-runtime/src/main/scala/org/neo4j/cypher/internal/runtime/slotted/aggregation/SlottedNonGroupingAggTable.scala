@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.slotted.aggregation
 
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
-import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.AggregationExpression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.AggregationPipe.AggregationTable
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.AggregationPipe.AggregationTableFactory
@@ -15,7 +15,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.AggregationFunction
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.NonGroupingAggTable
-import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
+import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
 import org.neo4j.cypher.internal.util.attribution.Id
 
 /**
@@ -39,7 +39,7 @@ class SlottedNonGroupingAggTable(slots: SlotConfiguration,
     }
   }
 
-  override def processRow(row: ExecutionContext): Unit = {
+  override def processRow(row: CypherRow): Unit = {
     var i = 0
     while (i < aggregationFunctions.length) {
       aggregationFunctions(i)(row, state)
@@ -47,12 +47,12 @@ class SlottedNonGroupingAggTable(slots: SlotConfiguration,
     }
   }
 
-  override def result(): Iterator[ExecutionContext] = {
+  override def result(): Iterator[CypherRow] = {
     Iterator.single(resultRow())
   }
 
-  protected def resultRow(): ExecutionContext = {
-    val row = SlottedExecutionContext(slots)
+  protected def resultRow(): CypherRow = {
+    val row = SlottedRow(slots)
     var i = 0
     while (i < aggregationFunctions.length) {
       row.setRefAt(aggregationOffsets(i), aggregationFunctions(i).result(state))

@@ -12,7 +12,7 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeSet
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeSetPrimitiveRelationshipInSlotFunctionFor
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeSetValueInSlotFunctionFor
 import org.neo4j.cypher.internal.runtime.EntityById
-import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
+import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
 import org.neo4j.cypher.internal.util.AssertionUtils.ifAssertionsEnabled
 import org.neo4j.cypher.internal.util.symbols.CTAny
 import org.neo4j.cypher.internal.util.symbols.CTNode
@@ -40,7 +40,7 @@ class SlotConfigurationUtilsTest extends CypherFunSuite {
   // GETTING
 
   private def assertGetLong(slot: Slot, longValue: Long, expectedValue: AnyValue) = {
-    val context = SlottedExecutionContext(slots)
+    val context = SlottedRow(slots)
     val getter = makeGetValueFromSlotFunctionFor(slot)
 
     context.setLongAt(slot.offset, longValue)
@@ -78,7 +78,7 @@ class SlotConfigurationUtilsTest extends CypherFunSuite {
   test("getter for ref slot") {
     val slot = slots("x")
 
-    val context = SlottedExecutionContext(slots)
+    val context = SlottedRow(slots)
     val getter = makeGetValueFromSlotFunctionFor(slot)
 
     val expectedValue = Values.stringValue("the value")
@@ -90,7 +90,7 @@ class SlotConfigurationUtilsTest extends CypherFunSuite {
   // SETTING
 
   private def assertSetLong(slot: Slot, value: AnyValue, expected: Long): Unit = {
-    val context = SlottedExecutionContext(slots)
+    val context = SlottedRow(slots)
     val setter = makeSetValueInSlotFunctionFor(slot)
 
     setter(context, value)
@@ -101,7 +101,7 @@ class SlotConfigurationUtilsTest extends CypherFunSuite {
   private def assertSetRelationship(slot: Slot, id: Long) = assertSetLong(slot, VirtualValues.relationship(id), id)
 
   private def assertSetFails(slot: Slot, value: AnyValue): Unit = {
-    val context = SlottedExecutionContext(slots)
+    val context = SlottedRow(slots)
     val setter = makeSetValueInSlotFunctionFor(slot)
 
     a [ParameterWrongTypeException] should be thrownBy setter(context, value)
@@ -150,7 +150,7 @@ class SlotConfigurationUtilsTest extends CypherFunSuite {
   test("setter for ref slot") {
     val slot = slots("x")
 
-    val context = SlottedExecutionContext(slots)
+    val context = SlottedRow(slots)
     val setter = makeSetValueInSlotFunctionFor(slot)
 
     val expectedValue = Values.stringValue("the value")
@@ -160,7 +160,7 @@ class SlotConfigurationUtilsTest extends CypherFunSuite {
   }
 
   private def assertPrimitiveNodeSetLong(slot: Slot, id: Long): Unit = {
-    val context = SlottedExecutionContext(slots)
+    val context = SlottedRow(slots)
     val primitiveNodeSetter = makeSetPrimitiveNodeInSlotFunctionFor(slot)
 
     primitiveNodeSetter(context, id, TestEntityById)
@@ -168,7 +168,7 @@ class SlotConfigurationUtilsTest extends CypherFunSuite {
   }
 
   private def assertPrimitiveRelationshipSetLong(slot: Slot, id: Long): Unit = {
-    val context = SlottedExecutionContext(slots)
+    val context = SlottedRow(slots)
     val primitiveRelationshipSetter = makeSetPrimitiveRelationshipInSlotFunctionFor(slot)
 
     primitiveRelationshipSetter(context, id, TestEntityById)
@@ -176,7 +176,7 @@ class SlotConfigurationUtilsTest extends CypherFunSuite {
   }
 
   private def assertPrimitiveNodeSetRef(slot: Slot, id: Long, expected: AnyValue): Unit = {
-    val context = SlottedExecutionContext(slots)
+    val context = SlottedRow(slots)
     val primitiveNodeSetter = makeSetPrimitiveNodeInSlotFunctionFor(slot)
 
     primitiveNodeSetter(context, id, TestEntityById)
@@ -184,7 +184,7 @@ class SlotConfigurationUtilsTest extends CypherFunSuite {
   }
 
   private def assertPrimitiveRelationshipSetRef(slot: Slot, id: Long, expected: AnyValue): Unit = {
-    val context = SlottedExecutionContext(slots)
+    val context = SlottedRow(slots)
     val primitiveRelationshipSetter = makeSetPrimitiveRelationshipInSlotFunctionFor(slot)
 
     primitiveRelationshipSetter(context, id, TestEntityById)
@@ -192,7 +192,7 @@ class SlotConfigurationUtilsTest extends CypherFunSuite {
   }
 
   private def assertPrimitiveNodeSetFails(slot: Slot, id: Long): Unit = {
-    val context = SlottedExecutionContext(slots)
+    val context = SlottedRow(slots)
     val setter = makeSetPrimitiveNodeInSlotFunctionFor(slot)
 
     // The setter only throws if assertions are enabled
@@ -202,7 +202,7 @@ class SlotConfigurationUtilsTest extends CypherFunSuite {
   }
 
   private def assertPrimitiveRelationshipSetFails(slot: Slot, id: Long): Unit = {
-    val context = SlottedExecutionContext(slots)
+    val context = SlottedRow(slots)
     val setter = makeSetPrimitiveRelationshipInSlotFunctionFor(slot)
 
     // The setter only throws if assertions are enabled

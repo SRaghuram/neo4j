@@ -13,11 +13,13 @@ import org.neo4j.cypher.internal.physicalplanning.SlotAllocation.INITIAL_SLOT_CO
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.TopLevelArgument
 import org.neo4j.cypher.internal.runtime.EntityById
-import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.CypherRow
+import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.runtime.ResourceLinenumber
+import org.neo4j.cypher.internal.runtime.WritableRow
 import org.neo4j.cypher.internal.runtime.pipelined.tracing.WorkUnitEvent
 import org.neo4j.cypher.internal.runtime.slotted.SlottedCompatible
-import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
+import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
 import org.neo4j.cypher.internal.util.symbols.CTNode
 import org.neo4j.cypher.internal.util.symbols.CTRelationship
 import org.neo4j.exceptions.InternalException
@@ -31,33 +33,33 @@ import org.neo4j.values.virtual.VirtualRelationshipValue
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
-object MorselExecutionContext {
+object MorselCypherRow {
   def apply(longs: Array[Long], refs: Array[AnyValue], slots: SlotConfiguration, maxNumberOfRows: Int) =
-    new MorselExecutionContext(longs, refs, slots, maxNumberOfRows, 0, 0, maxNumberOfRows)
+    new MorselCypherRow(longs, refs, slots, maxNumberOfRows, 0, 0, maxNumberOfRows)
 
-  val empty: MorselExecutionContext = new MorselExecutionContext(Array.empty, Array.empty, SlotConfiguration.empty, 0)
+  val empty: MorselCypherRow = new MorselCypherRow(Array.empty, Array.empty, SlotConfiguration.empty, 0)
 
-  def createInitialRow(): FilteringMorselExecutionContext =
-    new FilteringMorselExecutionContext(
+  def createInitialRow(): FilteringMorselCypherRow =
+    new FilteringMorselCypherRow(
       new Array[Long](INITIAL_SLOT_CONFIGURATION.numberOfLongs * 1),
       new Array[AnyValue](INITIAL_SLOT_CONFIGURATION.numberOfReferences * 1),
       INITIAL_SLOT_CONFIGURATION, 1, 0, 0, 1) {
 
       //it is ok to asked for a cached value even though nothing is allocated for it
       override def getCachedPropertyAt(offset: Int): Value = null
-      override def shallowCopy(): FilteringMorselExecutionContext = createInitialRow()
+      override def shallowCopy(): FilteringMorselCypherRow = createInitialRow()
     }
 }
 
 //noinspection NameBooleanParameters
-class MorselExecutionContext(private[execution] final val longs: Array[Long],
-                             private[execution] final val refs: Array[AnyValue],
-                             final val slots: SlotConfiguration,
-                             final val maxNumberOfRows: Int,
-                             private[execution] var currentRow: Int = 0,
-                             private[execution] var startRow: Int = 0,
-                             private[execution] var endRow: Int = 0,
-                             final val producingWorkUnitEvent: WorkUnitEvent = null) extends ExecutionContext with SlottedCompatible {
+class MorselCypherRow(private[execution] final val longs: Array[Long],
+                      private[execution] final val refs: Array[AnyValue],
+                      final val slots: SlotConfiguration,
+                      final val maxNumberOfRows: Int,
+                      private[execution] var currentRow: Int = 0,
+                      private[execution] var startRow: Int = 0,
+                      private[execution] var endRow: Int = 0,
+                      final val producingWorkUnitEvent: WorkUnitEvent = null) extends CypherRow with SlottedCompatible {
   protected final val longsPerRow: Int = slots.numberOfLongs
   protected final val refsPerRow: Int = slots.numberOfReferences
 
@@ -70,9 +72,9 @@ class MorselExecutionContext(private[execution] final val longs: Array[Long],
   // so designs using this functionality must ensure that no other usage can occur
   // between the intended attach and detach.
 
-  private var attachedMorsel: MorselExecutionContext = _
+  private var attachedMorsel: MorselCypherRow = _
 
-  def attach(morsel: MorselExecutionContext): Unit = {
+  def attach(morsel: MorselCypherRow): Unit = {
     Preconditions.checkState(
       attachedMorsel == null,
       "Cannot override existing MorselExecutionContext.attachment.")
@@ -80,7 +82,7 @@ class MorselExecutionContext(private[execution] final val longs: Array[Long],
     attachedMorsel = morsel
   }
 
-  def detach(): MorselExecutionContext = {
+  def detach(): MorselCypherRow = {
     Preconditions.checkState(
       attachedMorsel != null,
       "Cannot detach if no attachment available.")
@@ -92,7 +94,7 @@ class MorselExecutionContext(private[execution] final val longs: Array[Long],
 
   // ====================
 
-  def shallowCopy(): MorselExecutionContext = new MorselExecutionContext(longs, refs, slots, maxNumberOfRows, currentRow, startRow, endRow)
+  def shallowCopy(): MorselCypherRow = new MorselCypherRow(longs, refs, slots, maxNumberOfRows, currentRow, startRow, endRow)
 
   @inline def numberOfRows: Int = endRow - startRow
 
@@ -141,7 +143,7 @@ class MorselExecutionContext(private[execution] final val longs: Array[Long],
   /**
    * Set the valid rows of the morsel to the current position of another morsel
    */
-  def finishedWritingUsing(otherContext: MorselExecutionContext): Unit = {
+  def finishedWritingUsing(otherContext: MorselCypherRow): Unit = {
     if (this.startRow != otherContext.startRow) {
       throw new IllegalStateException("Cannot write to a context from a context with a different first row.")
     }
@@ -153,7 +155,7 @@ class MorselExecutionContext(private[execution] final val longs: Array[Long],
    * @param end first index after the view (exclusive end)
    * @return a shallow copy that is configured to only see the configured view.
    */
-  def view(start: Int, end: Int): MorselExecutionContext = {
+  def view(start: Int, end: Int): MorselCypherRow = {
     val view = shallowCopy()
     view.startRow = start
     view.currentRow = start
@@ -164,8 +166,8 @@ class MorselExecutionContext(private[execution] final val longs: Array[Long],
   /**
    * Copies from input to the beginning of this morsel. Input is assumed not to contain any cancelledRows
    */
-  def compactRowsFrom(input: MorselExecutionContext): Unit = {
-    checkOnlyWhenAssertionsAreEnabled(!input.isInstanceOf[FilteringMorselExecutionContext] && numberOfRows >= input.numberOfRows)
+  def compactRowsFrom(input: MorselCypherRow): Unit = {
+    checkOnlyWhenAssertionsAreEnabled(!input.isInstanceOf[FilteringMorselCypherRow] && numberOfRows >= input.numberOfRows)
 
     if (longsPerRow > 0) {
       System.arraycopy(input.longs,
@@ -183,19 +185,19 @@ class MorselExecutionContext(private[execution] final val longs: Array[Long],
     }
   }
 
-  override def copyTo(target: ExecutionContext, sourceLongOffset: Int = 0, sourceRefOffset: Int = 0, targetLongOffset: Int = 0, targetRefOffset: Int = 0): Unit =
+  override def copyTo(target: WritableRow, sourceLongOffset: Int = 0, sourceRefOffset: Int = 0, targetLongOffset: Int = 0, targetRefOffset: Int = 0): Unit =
     target match {
-      case other: MorselExecutionContext =>
+      case other: MorselCypherRow =>
         System.arraycopy(longs, longsAtCurrentRow + sourceLongOffset, other.longs, other.longsAtCurrentRow + targetLongOffset, longsPerRow - sourceLongOffset)
         System.arraycopy(refs, refsAtCurrentRow + sourceRefOffset, other.refs, other.refsAtCurrentRow + targetRefOffset, refsPerRow - sourceRefOffset)
 
-      case other: SlottedExecutionContext =>
+      case other: SlottedRow =>
         System.arraycopy(longs, longsAtCurrentRow + sourceLongOffset, other.longs, targetLongOffset, longsPerRow - sourceLongOffset)
         System.arraycopy(refs, refsAtCurrentRow + sourceRefOffset, other.refs, targetRefOffset, refsPerRow - sourceRefOffset)
     }
 
-  override def copyFrom(input: ExecutionContext, nLongs: Int, nRefs: Int): Unit = input match {
-    case other:MorselExecutionContext =>
+  override def copyFrom(input: ReadableRow, nLongs: Int, nRefs: Int): Unit = input match {
+    case other:MorselCypherRow =>
       if (nLongs > longsPerRow || nRefs > refsPerRow)
         throw new InternalException("A bug has occurred in the morsel runtime: The target morsel execution context cannot hold the data to copy.")
       else {
@@ -203,7 +205,7 @@ class MorselExecutionContext(private[execution] final val longs: Array[Long],
         System.arraycopy(other.refs, other.refsAtCurrentRow, refs, refsAtCurrentRow, nRefs)
       }
 
-    case other:SlottedExecutionContext =>
+    case other:SlottedRow =>
       if (nLongs > longsPerRow || nRefs > refsPerRow)
         throw new InternalException("A bug has occurred in the morsel runtime: The target morsel execution context cannot hold the data to copy.")
       else {
@@ -213,7 +215,7 @@ class MorselExecutionContext(private[execution] final val longs: Array[Long],
     case _ => fail()
   }
 
-  override def copyToSlottedExecutionContext(other: SlottedExecutionContext, nLongs: Int, nRefs: Int): Unit = {
+  override def copyToSlottedExecutionContext(other: SlottedRow, nLongs: Int, nRefs: Int): Unit = {
     System.arraycopy(longs, longsAtCurrentRow, other.longs, 0, nLongs)
     System.arraycopy(refs, refsAtCurrentRow, other.refs, 0, nRefs)
   }
@@ -277,7 +279,7 @@ class MorselExecutionContext(private[execution] final val longs: Array[Long],
   /**
    * Copies the whole row from input to this.
    */
-  def copyFrom(input: MorselExecutionContext): Unit = copyFrom(input, input.longsPerRow, input.refsPerRow)
+  def copyFrom(input: MorselCypherRow): Unit = copyFrom(input, input.longsPerRow, input.refsPerRow)
 
   override def setLongAt(offset: Int, value: Long): Unit = longs(currentRow * longsPerRow + offset) = value
 
@@ -334,15 +336,15 @@ class MorselExecutionContext(private[execution] final val longs: Array[Long],
       .apply(this, value1)
   }
 
-  override def mergeWith(other: ExecutionContext, entityById: EntityById): Unit = fail()
+  override def mergeWith(other: ReadableRow, entityById: EntityById): Unit = fail()
 
-  override def createClone(): ExecutionContext = {
+  override def createClone(): CypherRow = {
     // This is used by some expressions with the expectation of being able to overwrite an
     // identifier inside a nested scope, without affecting the data in the original row.
     // That would not work with a shallow copy, so here we make a copy of the data of
     // the current row inside the morsel.
     // (If you just need a copy of the view/iteration state of the morsel, use `shallowCopy()` instead)
-    val slottedRow = SlottedExecutionContext(slots)
+    val slottedRow = SlottedRow(slots)
     copyTo(slottedRow)
     slottedRow
   }
@@ -366,13 +368,13 @@ class MorselExecutionContext(private[execution] final val longs: Array[Long],
     usage
   }
 
-  override def copyWith(key1: String, value1: AnyValue): ExecutionContext = fail()
+  override def copyWith(key1: String, value1: AnyValue): CypherRow = fail()
 
-  override def copyWith(key1: String, value1: AnyValue, key2: String, value2: AnyValue): ExecutionContext = fail()
+  override def copyWith(key1: String, value1: AnyValue, key2: String, value2: AnyValue): CypherRow = fail()
 
-  override def copyWith(key1: String, value1: AnyValue, key2: String, value2: AnyValue, key3: String, value3: AnyValue): ExecutionContext = fail()
+  override def copyWith(key1: String, value1: AnyValue, key2: String, value2: AnyValue, key3: String, value3: AnyValue): CypherRow = fail()
 
-  override def copyWith(newEntries: Seq[(String, AnyValue)]): ExecutionContext = fail()
+  override def copyWith(newEntries: Seq[(String, AnyValue)]): CypherRow = fail()
 
   override def boundEntities(materializeNode: Long => AnyValue, materializeRelationship: Long => AnyValue): Map[String, AnyValue] = fail()
 

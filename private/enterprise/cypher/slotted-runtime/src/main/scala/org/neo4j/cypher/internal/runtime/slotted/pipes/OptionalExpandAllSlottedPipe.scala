@@ -9,7 +9,7 @@ import org.neo4j.cypher.internal.expressions.SemanticDirection
 import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeGetPrimitiveNodeFromSlotFunctionFor
-import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.PrimitiveLongHelper
 import org.neo4j.cypher.internal.runtime.RelationshipIterator
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
@@ -17,7 +17,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeWithSource
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.RelationshipTypes
-import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
+import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.InternalException
@@ -41,9 +41,9 @@ abstract class OptionalExpandAllSlottedPipe(source: Pipe,
   //===========================================================================
   // Runtime code
   //===========================================================================
-  protected def internalCreateResults(input: Iterator[ExecutionContext], state: QueryState): Iterator[ExecutionContext] = {
+  protected def internalCreateResults(input: Iterator[CypherRow], state: QueryState): Iterator[CypherRow] = {
     input.flatMap {
-      inputRow: ExecutionContext =>
+      inputRow: CypherRow =>
         val fromNode = getFromNodeFunction.applyAsLong(inputRow)
 
         if (NullChecker.entityIsNull(fromNode)) {
@@ -62,7 +62,7 @@ abstract class OptionalExpandAllSlottedPipe(source: Pipe,
 
           val matchIterator = filter(PrimitiveLongHelper.map(relationships, relId => {
             relationships.relationshipVisit(relId, relVisitor)
-            val outputRow = SlottedExecutionContext(slots)
+            val outputRow = SlottedRow(slots)
             inputRow.copyTo(outputRow)
             outputRow.setLongAt(relOffset, relId)
             outputRow.setLongAt(toOffset, otherSide)
@@ -77,10 +77,10 @@ abstract class OptionalExpandAllSlottedPipe(source: Pipe,
     }
   }
 
-  def filter(iterator: Iterator[SlottedExecutionContext], state: QueryState): Iterator[SlottedExecutionContext]
+  def filter(iterator: Iterator[SlottedRow], state: QueryState): Iterator[SlottedRow]
 
-  private def withNulls(inputRow: ExecutionContext) = {
-    val outputRow = SlottedExecutionContext(slots)
+  private def withNulls(inputRow: CypherRow) = {
+    val outputRow = SlottedRow(slots)
     inputRow.copyTo(outputRow)
     outputRow.setLongAt(relOffset, -1)
     outputRow.setLongAt(toOffset, -1)
@@ -114,7 +114,7 @@ case class NonFilteringOptionalExpandAllSlottedPipe(source: Pipe,
                                                     slots: SlotConfiguration)(val id: Id)
   extends OptionalExpandAllSlottedPipe(source: Pipe, fromSlot, relOffset, toOffset, dir, types, slots) {
 
-  override def filter(iterator: Iterator[SlottedExecutionContext], state: QueryState): Iterator[SlottedExecutionContext] = iterator
+  override def filter(iterator: Iterator[SlottedRow], state: QueryState): Iterator[SlottedRow] = iterator
 }
 
 case class FilteringOptionalExpandAllSlottedPipe(source: Pipe,
@@ -129,6 +129,6 @@ case class FilteringOptionalExpandAllSlottedPipe(source: Pipe,
 
   predicate.registerOwningPipe(this)
 
-  override def filter(iterator: Iterator[SlottedExecutionContext], state: QueryState): Iterator[SlottedExecutionContext] =
+  override def filter(iterator: Iterator[SlottedRow], state: QueryState): Iterator[SlottedRow] =
     iterator.filter(ctx => predicate(ctx, state) eq Values.TRUE)
 }

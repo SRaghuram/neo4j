@@ -10,9 +10,9 @@ import org.mockito.Mockito.when
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
-import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
-import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
+import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 import org.neo4j.values.AnyValue
 
@@ -41,10 +41,10 @@ object HashJoinSlottedPipeTestHelper extends CypherFunSuite with SlottedPipeTest
 
   def mockPipeFor(slots: SlotConfiguration, rows: Row*): Pipe = {
     val p = mock[Pipe]
-    when(p.createResults(any())).thenAnswer(new Answer[Iterator[ExecutionContext]]() {
-      override def answer(invocationOnMock: InvocationOnMock): Iterator[ExecutionContext] = {
+    when(p.createResults(any())).thenAnswer(new Answer[Iterator[CypherRow]]() {
+      override def answer(invocationOnMock: InvocationOnMock): Iterator[CypherRow] = {
         rows.toIterator.map { row =>
-          val createdRow = SlottedExecutionContext(slots)
+          val createdRow = SlottedRow(slots)
           row.l.l.zipWithIndex foreach {
             case (v, idx) => createdRow.setLongAt(idx, v)
           }

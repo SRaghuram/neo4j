@@ -11,7 +11,7 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.CachedProper
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.SlotKey
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.VariableSlotKey
 import org.neo4j.cypher.internal.runtime.EntityById
-import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.internal.util.symbols.CTAny
 import org.neo4j.cypher.internal.util.symbols.CypherType
@@ -65,10 +65,10 @@ class SlotConfiguration(private val slots: mutable.Map[SlotConfiguration.SlotKey
   private val aliases: mutable.Set[String] = mutable.Set()
   private val slotAliases = new mutable.HashMap[Slot, mutable.Set[String]] with mutable.MultiMap[Slot, String]
 
-  private val getters: mutable.Map[String, ExecutionContext => AnyValue] = new mutable.HashMap[String, ExecutionContext => AnyValue]()
-  private val setters: mutable.Map[String, (ExecutionContext, AnyValue) => Unit] = new mutable.HashMap[String, (ExecutionContext, AnyValue) => Unit]()
-  private val primitiveNodeSetters: mutable.Map[String, (ExecutionContext, Long, EntityById) => Unit] = new mutable.HashMap[String, (ExecutionContext, Long, EntityById) => Unit]()
-  private val primitiveRelationshipSetters: mutable.Map[String, (ExecutionContext, Long, EntityById) => Unit] = new mutable.HashMap[String, (ExecutionContext, Long, EntityById) => Unit]()
+  private val getters: mutable.Map[String, CypherRow => AnyValue] = new mutable.HashMap[String, CypherRow => AnyValue]()
+  private val setters: mutable.Map[String, (CypherRow, AnyValue) => Unit] = new mutable.HashMap[String, (CypherRow, AnyValue) => Unit]()
+  private val primitiveNodeSetters: mutable.Map[String, (CypherRow, Long, EntityById) => Unit] = new mutable.HashMap[String, (CypherRow, Long, EntityById) => Unit]()
+  private val primitiveRelationshipSetters: mutable.Map[String, (CypherRow, Long, EntityById) => Unit] = new mutable.HashMap[String, (CypherRow, Long, EntityById) => Unit]()
 
   def size() = SlotConfiguration.Size(numberOfLongs, numberOfReferences)
 
@@ -244,36 +244,36 @@ class SlotConfiguration(private val slots: mutable.Map[SlotConfiguration.SlotKey
 
   def getCachedPropertyOffsetFor(key: ASTCachedProperty): Int = slots(CachedPropertySlotKey(key)).offset
 
-  def updateAccessorFunctions(key: String, getter: ExecutionContext => AnyValue, setter: (ExecutionContext, AnyValue) => Unit,
-                              primitiveNodeSetter: Option[(ExecutionContext, Long, EntityById) => Unit],
-                              primitiveRelationshipSetter: Option[(ExecutionContext, Long, EntityById) => Unit]): Unit = {
+  def updateAccessorFunctions(key: String, getter: CypherRow => AnyValue, setter: (CypherRow, AnyValue) => Unit,
+                              primitiveNodeSetter: Option[(CypherRow, Long, EntityById) => Unit],
+                              primitiveRelationshipSetter: Option[(CypherRow, Long, EntityById) => Unit]): Unit = {
     getters += key -> getter
     setters += key -> setter
     primitiveNodeSetter.map(primitiveNodeSetters += key -> _)
     primitiveRelationshipSetter.map(primitiveRelationshipSetters += key -> _)
   }
 
-  def getter(key: String): ExecutionContext => AnyValue = {
+  def getter(key: String): CypherRow => AnyValue = {
     getters(key)
   }
 
-  def setter(key: String): (ExecutionContext, AnyValue) => Unit = {
+  def setter(key: String): (CypherRow, AnyValue) => Unit = {
     setters(key)
   }
 
-  def maybeGetter(key: String): Option[ExecutionContext => AnyValue] = {
+  def maybeGetter(key: String): Option[CypherRow => AnyValue] = {
     getters.get(key)
   }
 
-  def maybeSetter(key: String): Option[(ExecutionContext, AnyValue) => Unit] = {
+  def maybeSetter(key: String): Option[(CypherRow, AnyValue) => Unit] = {
     setters.get(key)
   }
 
-  def maybePrimitiveNodeSetter(key: String): Option[(ExecutionContext, Long, EntityById) => Unit] = {
+  def maybePrimitiveNodeSetter(key: String): Option[(CypherRow, Long, EntityById) => Unit] = {
     primitiveNodeSetters.get(key)
   }
 
-  def maybePrimitiveRelationshipSetter(key: String): Option[(ExecutionContext, Long, EntityById) => Unit] = {
+  def maybePrimitiveRelationshipSetter(key: String): Option[(CypherRow, Long, EntityById) => Unit] = {
     primitiveRelationshipSetters.get(key)
   }
 

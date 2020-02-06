@@ -71,9 +71,9 @@ import org.neo4j.cypher.internal.physicalplanning.ast.RelationshipPropertyExists
 import org.neo4j.cypher.internal.physicalplanning.ast.RelationshipPropertyLate
 import org.neo4j.cypher.internal.physicalplanning.ast.RelationshipTypeFromSlot
 import org.neo4j.cypher.internal.runtime.DbAccess
-import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.ExpressionCursors
-import org.neo4j.cypher.internal.runtime.MapExecutionContext
+import org.neo4j.cypher.internal.runtime.MapCypherRow
 import org.neo4j.cypher.internal.runtime.NoMemoryTracker
 import org.neo4j.cypher.internal.runtime.ParameterMapping
 import org.neo4j.cypher.internal.runtime.QueryContext
@@ -91,7 +91,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.TransactionBoundQueryContex
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionalContextWrapper
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.CommunityExpressionConverter
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
-import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
+import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
 import org.neo4j.cypher.internal.runtime.slotted.SlottedQueryState
 import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionConverters
 import org.neo4j.cypher.internal.runtime.slotted.expressions.SlottedExpressionConverters.orderGroupingKeyExpressions
@@ -166,7 +166,7 @@ import scala.collection.mutable.ArrayBuffer
 
 abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructionTestSupport {
 
-  private val ctx = SlottedExecutionContext(SlotConfiguration.empty)
+  private val ctx = SlottedRow(SlotConfiguration.empty)
 
   override protected def initTest() {
     super.initTest()
@@ -394,7 +394,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   test("startNode") {
     val rel = relationshipValue()
     val slots = SlotConfiguration(Map("r" -> LongSlot(0, nullable = true, symbols.CTRelationship)), 1, 0)
-    val context = SlottedExecutionContext(slots)
+    val context = SlottedRow(slots)
     val compiled = compile(function("startNode", parameter(0)), slots)
     addRelationships(context, RelAt(rel, 0))
     evaluate(compiled, params(rel)) should equal(rel.startNode())
@@ -404,7 +404,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   test("endNode") {
     val rel = relationshipValue()
     val slots = SlotConfiguration(Map("r" -> LongSlot(0, nullable = true, symbols.CTRelationship)), 1, 0)
-    val context = SlottedExecutionContext(slots)
+    val context = SlottedRow(slots)
     val compiled = compile(function("endNode", parameter(0)), slots)
     addRelationships(context, RelAt(rel, 0))
     evaluate(compiled, params(rel)) should equal(rel.endNode())
@@ -1366,7 +1366,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       "nullNode" -> LongSlot(nullOffset, nullable = true, symbols.CTNode),
       "node" -> LongSlot(nodeOffset, nullable = true, symbols.CTNode)
     ), 2, 0)
-    val context = SlottedExecutionContext(slots)
+    val context = SlottedRow(slots)
     context.setLongAt(nullOffset, -1)
     context.setLongAt(nodeOffset, nodeValue().id())
 
@@ -1388,7 +1388,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       "nullNode" -> LongSlot(nullOffset, nullable = true, symbols.CTNode),
       "node" -> LongSlot(nodeOffset, nullable = true, symbols.CTNode)
     ), 2, 0)
-    val context = SlottedExecutionContext(slots)
+    val context = SlottedRow(slots)
     context.setLongAt(nullOffset, -1)
     context.setLongAt(nodeOffset, nodeValue().id())
 
@@ -1409,7 +1409,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     // Given
     val offset = 0
     val slots = SlotConfiguration(Map("foo" -> RefSlot(offset, nullable = true, symbols.CTAny)), 0, 1)
-    val context = SlottedExecutionContext(slots)
+    val context = SlottedRow(slots)
     context.setRefAt(offset, stringValue("hello"))
     val expression = ReferenceFromSlot(offset, "foo")
 
@@ -1425,7 +1425,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val offset = 0
     val expression = IdFromSlot(offset)
     val slots = SlotConfiguration(Map("n" -> LongSlot(0, nullable = true, symbols.CTNode)), 1, 0)
-    val context = SlottedExecutionContext(slots)
+    val context = SlottedRow(slots)
     context.setLongAt(offset, 42L)
 
     // When
@@ -1443,7 +1443,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val offset = 0
     val expression = LabelsFromSlot(offset)
     val slots = SlotConfiguration.empty.newLong("n", nullable = true, symbols.CTNode)
-    val context = SlottedExecutionContext(slots)
+    val context = SlottedRow(slots)
 
     // When
     val compiled = compile(expression, slots)
@@ -1461,7 +1461,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val offset = 0
     val expression = RelationshipTypeFromSlot(offset)
     val slots = SlotConfiguration.empty.newLong("r", nullable = true, symbols.CTRelationship)
-    val context = SlottedExecutionContext(slots)
+    val context = SlottedRow(slots)
 
     // When
     val compiled = compile(expression, slots)
@@ -1482,7 +1482,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
     val expression = HasLabelsFromSlot(offset, resolvedLabelTokenIds, Seq.empty)
     val slots = SlotConfiguration.empty.newLong("n", nullable = true, symbols.CTNode)
-    val context = SlottedExecutionContext(slots)
+    val context = SlottedRow(slots)
 
     // When
     val compiled = compile(expression, slots)
@@ -1504,7 +1504,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
     val expression = HasLabelsFromSlot(offset, resolvedLabelTokenIds, Seq.empty)
     val slots = SlotConfiguration.empty.newLong("n", nullable = true, symbols.CTNode)
-    val context = SlottedExecutionContext(slots)
+    val context = SlottedRow(slots)
 
     // When
     val compiled = compile(expression, slots)
@@ -1522,7 +1522,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val offset = 0
     val expression = HasLabelsFromSlot(offset, Seq.empty, labels)
     val slots = SlotConfiguration.empty.newLong("n", nullable = true, symbols.CTNode)
-    val context = SlottedExecutionContext(slots)
+    val context = SlottedRow(slots)
 
     // When
     val compiled = compile(expression, slots)
@@ -1540,7 +1540,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val offset = 0
     val expression = HasLabelsFromSlot(offset, Seq.empty, labels)
     val slots = SlotConfiguration.empty.newLong("n", nullable = true, symbols.CTNode)
-    val context = SlottedExecutionContext(slots)
+    val context = SlottedRow(slots)
 
     // When
     val compiled = compile(expression, slots)
@@ -1562,7 +1562,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
     val expression = HasLabelsFromSlot(offset, resolvedLabelTokenIds, lateLabels)
     val slots = SlotConfiguration.empty.newLong("n", nullable = true, symbols.CTNode)
-    val context = SlottedExecutionContext(slots)
+    val context = SlottedRow(slots)
 
     // When
     val compiled = compile(expression, slots)
@@ -1584,7 +1584,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
     val expression = HasLabelsFromSlot(offset, resolvedLabelTokenIds, lateLabels)
     val slots = SlotConfiguration.empty.newLong("n", nullable = true, symbols.CTNode)
-    val context = SlottedExecutionContext(slots)
+    val context = SlottedRow(slots)
 
     // When
     val compiled = compile(expression, slots)
@@ -1608,7 +1608,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val offset = 1
     val slots = SlotConfiguration(Map("n1" -> LongSlot(0, nullable = true, symbols.CTNode),
       "n2" -> LongSlot(1, nullable = true, symbols.CTNode)), 2, 0)
-    val context = SlottedExecutionContext(slots)
+    val context = SlottedRow(slots)
     context.setLongAt(nullOffset, -1L)
     context.setLongAt(offset, 42L)
 
@@ -1623,7 +1623,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       "aRef" -> RefSlot(0, nullable = true, symbols.CTNode),
       "notNull" -> LongSlot(notNullOffset, nullable = true, symbols.CTNode),
       "null" -> LongSlot(nullOffset, nullable = true, symbols.CTNode)), 2, 1)
-    val context = SlottedExecutionContext(slots)
+    val context = SlottedRow(slots)
     context.setLongAt(nullOffset, -1)
     context.setLongAt(notNullOffset, 42L)
     context.setRefAt(0, stringValue("hello"))
@@ -1640,7 +1640,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val slots = SlotConfiguration(Map(
       "notNull" -> LongSlot(notNullOffset, nullable = true, symbols.CTNode),
       "null" -> LongSlot(nullOffset, nullable = true, symbols.CTNode)), 2, 0)
-    val context = SlottedExecutionContext(slots)
+    val context = SlottedRow(slots)
     context.setLongAt(nullOffset, -1)
     context.setLongAt(notNullOffset, 42L)
 
@@ -1756,7 +1756,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   test("handle variables") {
     val variable = varFor("key")
     val compiled = compile(variable)
-    val context = new MapExecutionContext(mutable.Map("key" -> stringValue("hello")))
+    val context = new MapCypherRow(mutable.Map("key" -> stringValue("hello")))
     evaluate(compiled, context) should equal(stringValue("hello"))
   }
 
@@ -1764,7 +1764,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val varName = "   k\te\ty   "
     val variable = varFor(varName)
     val compiled = compile(variable)
-    val context = new MapExecutionContext(mutable.Map(varName -> stringValue("hello")))
+    val context = new MapCypherRow(mutable.Map(varName -> stringValue("hello")))
     evaluate(compiled, context) should equal(stringValue("hello"))
   }
 
@@ -1916,7 +1916,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     //given
     val slots = SlotConfiguration(Map("a" -> RefSlot(0, nullable = true, symbols.CTAny),
       "b" -> RefSlot(1, nullable = true, symbols.CTAny)), 0, 2)
-    val context = new SlottedExecutionContext(slots)
+    val context = new SlottedRow(slots)
     val projections = Map("a" -> literal("hello"), "b" -> function("sin", parameter(0)))
     val compiled = compileProjection(projections, slots)
 
@@ -1949,7 +1949,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
   test("single in list accessing variable") {
     //Given
-    val context = new MapExecutionContext(mutable.Map(
+    val context = new MapCypherRow(mutable.Map(
       "b" -> stringValue("b"),
       "a" -> stringValue("a"),
       "aaa" -> stringValue("aaa")))
@@ -1993,7 +1993,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
   test("single in list accessing same variable in inner and outer") {
     //Given
-    val context = new MapExecutionContext(mutable.Map("foo" -> VirtualValues.list(stringValue("a"), stringValue("aa"), stringValue("aaa"))))
+    val context = new MapCypherRow(mutable.Map("foo" -> VirtualValues.list(stringValue("a"), stringValue("aa"), stringValue("aaa"))))
 
     //When, single(bar IN foo WHERE size(bar) = size(foo))
     val bar = ExpressionVariable(0, "bar")
@@ -2053,7 +2053,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
   test("none in list function accessing outer scope") {
     //Given
-    val context = new MapExecutionContext(mutable.Map("a" -> stringValue("a"), "b" -> stringValue("b")))
+    val context = new MapCypherRow(mutable.Map("a" -> stringValue("a"), "b" -> stringValue("b")))
 
     //When
     val bar = ExpressionVariable(0, "bar")
@@ -2098,7 +2098,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
   test("none in list accessing same variable in inner and outer") {
     //Given
-    val context = new MapExecutionContext(mutable.Map("foo" -> VirtualValues.list(stringValue("a"), stringValue("aa"), stringValue("aaa"))))
+    val context = new MapCypherRow(mutable.Map("foo" -> VirtualValues.list(stringValue("a"), stringValue("aa"), stringValue("aaa"))))
 
     //When,  none(bar IN foo WHERE size(bar) = size(foo))
     val bar = ExpressionVariable(0, "bar")
@@ -2148,7 +2148,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
   test("any in list function accessing outer scope") {
     //Given
-    val context = new MapExecutionContext(mutable.Map("a" -> stringValue("a"), "b" -> stringValue("b")))
+    val context = new MapCypherRow(mutable.Map("a" -> stringValue("a"), "b" -> stringValue("b")))
 
     //When
     val bar = ExpressionVariable(0, "bar")
@@ -2184,7 +2184,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
   test("any in list accessing same variable in inner and outer") {
     //Given
-    val context = new MapExecutionContext(mutable.Map("foo" -> VirtualValues.list(stringValue("a"), stringValue("aa"), stringValue("aaa"))))
+    val context = new MapCypherRow(mutable.Map("foo" -> VirtualValues.list(stringValue("a"), stringValue("aa"), stringValue("aaa"))))
 
     //When,  any(bar IN foo WHERE size(bar) = size(foo))
     val bar = ExpressionVariable(0, "bar")
@@ -2242,7 +2242,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
   test("all in list function accessing outer scope") {
     //Given
-    val context = new MapExecutionContext(mutable.Map("a" -> stringValue("a"), "aa" -> stringValue("aa")))
+    val context = new MapCypherRow(mutable.Map("a" -> stringValue("a"), "aa" -> stringValue("aa")))
 
     //When
     val bar = ExpressionVariable(0, "bar")
@@ -2278,7 +2278,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
   test("all in list accessing same variable in inner and outer") {
     //Given
-    val context = new MapExecutionContext(mutable.Map("foo" -> VirtualValues.list(stringValue("a"), stringValue("aa"), stringValue("aaa"))))
+    val context = new MapCypherRow(mutable.Map("foo" -> VirtualValues.list(stringValue("a"), stringValue("aa"), stringValue("aaa"))))
 
     //When, all(bar IN foo WHERE size(bar) = size(foo))
     val bar = ExpressionVariable(0, "bar")
@@ -2330,7 +2330,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
   test("filter accessing outer scope") {
     //Given
-    val context = new MapExecutionContext(mutable.Map("foo" -> stringValue("aa")))
+    val context = new MapCypherRow(mutable.Map("foo" -> stringValue("aa")))
 
     //When, [bar IN ["a", "aa", "aaa"] WHERE bar STARTS WITH foo]
     val bar = ExpressionVariable(0, "bar")
@@ -2360,7 +2360,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
   test("filter accessing same variable in inner and outer") {
     //Given
-    val context = new MapExecutionContext(mutable.Map("foo" -> VirtualValues.list(stringValue("a"), stringValue("aa"), stringValue("aaa"))))
+    val context = new MapCypherRow(mutable.Map("foo" -> VirtualValues.list(stringValue("a"), stringValue("aa"), stringValue("aaa"))))
 
     //When,  [bar IN foo WHERE size(bar) = size(foo)]
     val bar = ExpressionVariable(0, "bar")
@@ -2424,7 +2424,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
   test("nested list expressions, outer expression accessing outer scope") {
     //Given
-    val context = new MapExecutionContext(mutable.Map("list" -> list(stringValue("a"))))
+    val context = new MapCypherRow(mutable.Map("list" -> list(stringValue("a"))))
 
     //When
     val bar = ExpressionVariable(0, "bar")
@@ -2457,7 +2457,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
   test("nested list expressions, inner expression accessing outer scope") {
     //Given
-    val context = new MapExecutionContext(mutable.Map("list" -> list(stringValue("a"))))
+    val context = new MapCypherRow(mutable.Map("list" -> list(stringValue("a"))))
 
     //When
     val bar = ExpressionVariable(0, "bar")
@@ -2490,7 +2490,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
   test("nested list expressions, both accessing outer scope") {
     //Given
-    val context = new MapExecutionContext(mutable.Map("list" -> list(stringValue("a"))))
+    val context = new MapCypherRow(mutable.Map("list" -> list(stringValue("a"))))
 
     //When
     val bar = ExpressionVariable(0, "bar")
@@ -2532,7 +2532,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
   test("extract accessing outer scope") {
     //Given
-    val context = new MapExecutionContext(mutable.Map("foo" -> intValue(10)), mutable.Map.empty)
+    val context = new MapCypherRow(mutable.Map("foo" -> intValue(10)), mutable.Map.empty)
 
     //When, [bar IN [1, 2, 3] | bar + foo]
     val bar = ExpressionVariable(0, "bar")
@@ -2554,7 +2554,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
   test("extract accessing same variable in inner and outer") {
     //Given
-    val context = new MapExecutionContext(mutable.Map("foo" -> VirtualValues.list(intValue(1), intValue(2), intValue(3))), mutable.Map.empty)
+    val context = new MapCypherRow(mutable.Map("foo" -> VirtualValues.list(intValue(1), intValue(2), intValue(3))), mutable.Map.empty)
 
     //When, [bar IN foo | size(foo)]
     val bar = ExpressionVariable(0, "bar")
@@ -2601,7 +2601,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
   test("reduce accessing variable") {
     //Given
-    val context = new MapExecutionContext(mutable.Map("foo" -> intValue(10)), mutable.Map.empty)
+    val context = new MapCypherRow(mutable.Map("foo" -> intValue(10)), mutable.Map.empty)
 
     //When, reduce(count = 0, bar IN [1, 2, 3] | count + bar + foo)
     val count = ExpressionVariable(0, "count")
@@ -2627,7 +2627,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
   test("reduce accessing same variable in inner and outer") {
     //Given
-    val context = new MapExecutionContext(mutable.Map("foo" -> VirtualValues.list(intValue(1), intValue(2), intValue(3))), mutable.Map.empty)
+    val context = new MapCypherRow(mutable.Map("foo" -> VirtualValues.list(intValue(1), intValue(2), intValue(3))), mutable.Map.empty)
 
     //When, reduce(count = 0, bar IN foo | count + size(foo)
     val count = ExpressionVariable(0, "count")
@@ -2733,7 +2733,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   test("map projection node with map context") {
     val propertyMap = VirtualValues.map(Array("prop"), Array(stringValue("hello")))
     val node = nodeValue(propertyMap)
-    val context = new MapExecutionContext(mutable.Map("n" -> node))
+    val context = new MapCypherRow(mutable.Map("n" -> node))
 
     evaluate(compile(mapProjection("n", includeAllProps = true, "foo" -> literalString("projected"))),
       context) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
@@ -2749,7 +2749,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       val slots = SlotConfiguration(Map("n" -> LongSlot(offset, nullable, symbols.CTNode)), 1, 0)
       //needed for interpreted
       SlotConfigurationUtils.generateSlotAccessorFunctions(slots)
-      val context = SlottedExecutionContext(slots)
+      val context = SlottedRow(slots)
       context.setLongAt(offset, node.id())
       evaluate(compile(mapProjection("n", includeAllProps = true, "foo" -> literalString("projected")), slots),
         context) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
@@ -2766,7 +2766,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       val slots = SlotConfiguration(Map("n" -> RefSlot(offset, nullable, symbols.CTNode)), 0, 1)
       //needed for interpreted
       SlotConfigurationUtils.generateSlotAccessorFunctions(slots)
-      val context = SlottedExecutionContext(slots)
+      val context = SlottedRow(slots)
       context.setRefAt(offset, node)
       evaluate(compile(mapProjection("n", includeAllProps = true, "foo" -> literalString("projected")), slots),
         context) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
@@ -2779,7 +2779,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val propertyMap = VirtualValues.map(Array("prop"), Array(stringValue("hello")))
     val relationship = relationshipValue(nodeValue(),
       nodeValue(), propertyMap)
-    val context = new MapExecutionContext(mutable.Map("r" -> relationship))
+    val context = new MapCypherRow(mutable.Map("r" -> relationship))
     evaluate(compile(mapProjection("r", includeAllProps = true, "foo" -> literalString("projected"))),
       context) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
     evaluate(compile(mapProjection("r", includeAllProps = false, "foo" -> literalString("projected"))),
@@ -2796,7 +2796,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       val slots = SlotConfiguration(Map("r" -> LongSlot(offset, nullable, symbols.CTRelationship)), 1, 0)
       //needed for interpreted
       SlotConfigurationUtils.generateSlotAccessorFunctions(slots)
-      val context = SlottedExecutionContext(slots)
+      val context = SlottedRow(slots)
       context.setLongAt(offset, relationship.id())
       evaluate(compile(mapProjection("r", includeAllProps = true, "foo" -> literalString("projected")), slots),
         context) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
@@ -2814,7 +2814,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       val slots = SlotConfiguration(Map("r" -> RefSlot(offset, nullable, symbols.CTRelationship)), 0, 1)
       //needed for interpreted
       SlotConfigurationUtils.generateSlotAccessorFunctions(slots)
-      val context = SlottedExecutionContext(slots)
+      val context = SlottedRow(slots)
       context.setRefAt(offset, relationship)
       evaluate(compile(mapProjection("r", includeAllProps = true, "foo" -> literalString("projected")), slots),
         context) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
@@ -2825,7 +2825,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
   test("map projection mapValue with map context") {
     val propertyMap = VirtualValues.map(Array("prop"), Array(stringValue("hello")))
-    val context = new MapExecutionContext(mutable.Map("map" -> propertyMap))
+    val context = new MapCypherRow(mutable.Map("map" -> propertyMap))
 
     evaluate(compile(mapProjection("map", includeAllProps = true, "foo" -> literalString("projected"))),
       context) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
@@ -2840,7 +2840,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       val slots = SlotConfiguration(Map("n" -> RefSlot(offset, nullable, symbols.CTMap)), 0, 1)
       //needed for interpreted
       SlotConfigurationUtils.generateSlotAccessorFunctions(slots)
-      val context = SlottedExecutionContext(slots)
+      val context = SlottedRow(slots)
       context.setRefAt(offset, propertyMap)
       evaluate(compile(mapProjection("n", includeAllProps = true, "foo" -> literalString("projected")), slots),
         context) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
@@ -2885,8 +2885,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     //given
     val slot = RefSlot(0, nullable = true, symbols.CTAny)
     val slots = SlotConfiguration(Map("a" -> slot), 0, 1)
-    val incoming = SlottedExecutionContext(slots)
-    val outgoing = SlottedExecutionContext(slots)
+    val incoming = SlottedRow(slots)
+    val outgoing = SlottedRow(slots)
     val projections = Map("a" -> literal("hello"))
     val compiled: CompiledGroupingExpression = compileGroupingExpression(projections, slots)
 
@@ -2905,8 +2905,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val refSlot = RefSlot(0, nullable = true, symbols.CTAny)
     val longSlot = LongSlot(0, nullable = true, symbols.CTNode)
     val slots = SlotConfiguration(Map("a" -> refSlot, "b" -> longSlot), 1, 1)
-    val incoming = SlottedExecutionContext(slots)
-    val outgoing = SlottedExecutionContext(slots)
+    val incoming = SlottedRow(slots)
+    val outgoing = SlottedRow(slots)
     incoming.setLongAt(0, node.id())
     val projections = Map("a" -> literal("hello"),
       "b" -> NodeFromSlot(0, "node"))
@@ -2929,10 +2929,10 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val relSlot = LongSlot(0, nullable = true, symbols.CTRelationship)
     val nodeSlot = LongSlot(1, nullable = true, symbols.CTNode)
     val slots = SlotConfiguration(Map("node" -> nodeSlot, "rel" -> relSlot), 2, 0)
-    val incoming = SlottedExecutionContext(slots)
+    val incoming = SlottedRow(slots)
     incoming.setLongAt(0, rel.id())
     incoming.setLongAt(1, node.id())
-    val outgoing = SlottedExecutionContext(slots)
+    val outgoing = SlottedRow(slots)
     val projections = Map("rel" -> RelationshipFromSlot(0, "rel"),
       "node" -> NodeFromSlot(1, "node"))
     val compiled: CompiledGroupingExpression = compileGroupingExpression(projections, slots)
@@ -2956,7 +2956,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       "n2" -> LongSlot(n2.slot, nullable = true, symbols.CTNode),
       "r" -> LongSlot(r.slot, nullable = true, symbols.CTRelationship)
     ), 3, 0)
-    val context = SlottedExecutionContext(slots)
+    val context = SlottedRow(slots)
     addNodes(context, n1, n2)
     addRelationships(context, r)
 
@@ -2978,7 +2978,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       "n2" -> LongSlot(n2.slot, nullable = true, symbols.CTNode),
       "r" -> LongSlot(r.slot, nullable = true, symbols.CTRelationship)
     ), 3, 0)
-    val context = SlottedExecutionContext(slots)
+    val context = SlottedRow(slots)
     addNodes(context, n1, n2)
     addRelationships(context, r)
 
@@ -2995,7 +2995,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     // given
     val n1 = NodeAt(nodeValue(), 0)
     val slots = SlotConfiguration(Map("n1" -> LongSlot(n1.slot, nullable = true, symbols.CTNode)), 1, 0)
-    val context = SlottedExecutionContext(slots)
+    val context = SlottedRow(slots)
     addNodes(context, n1)
 
     //when
@@ -3015,7 +3015,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       "n2" -> LongSlot(n2.slot, nullable = true, symbols.CTNode),
       "r" -> LongSlot(r.slot, nullable = true, symbols.CTRelationship)
     ), 3, 0)
-    val context = SlottedExecutionContext(slots)
+    val context = SlottedRow(slots)
     addNodes(context, n1, n2)
     addRelationships(context, r)
 
@@ -3038,7 +3038,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       "n2" -> LongSlot(n2.slot, nullable = true, symbols.CTNode),
       "r" -> LongSlot(r.slot, nullable = true, symbols.CTRelationship)
     ), 3, 0)
-    val context = SlottedExecutionContext(slots)
+    val context = SlottedRow(slots)
     addNodes(context, n1, n2)
     addRelationships(context, r)
 
@@ -3060,7 +3060,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       "n2" -> LongSlot(n2.slot, nullable = true, symbols.CTNode),
       "r" -> LongSlot(r.slot, nullable = true, symbols.CTRelationship)
     ), 3, 0)
-    val context = SlottedExecutionContext(slots)
+    val context = SlottedRow(slots)
     addNodes(context, n1, n2)
     addRelationships(context, r)
 
@@ -3087,7 +3087,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       "n2" -> LongSlot(n2.slot, nullable = true, symbols.CTNode),
       "r" -> LongSlot(r.slot, nullable = true, symbols.CTRelationship)
     ), 3, 0)
-    val context = SlottedExecutionContext(slots)
+    val context = SlottedRow(slots)
     addNodes(context, n1, n2)
     addRelationships(context, r)
 
@@ -3113,7 +3113,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       "n2" -> LongSlot(n2.slot, nullable = true, symbols.CTNode),
       "r" -> LongSlot(2, nullable = true, symbols.CTRelationship)
     ), 3, 0)
-    val context = SlottedExecutionContext(slots)
+    val context = SlottedRow(slots)
 
     context.setLongAt(2, -1L)
     addNodes(context, n1, n2)
@@ -3136,7 +3136,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       "n2" -> RefSlot(n2.slot, nullable = true, symbols.CTAny),
       "r" -> RefSlot(r.slot, nullable = true, symbols.CTAny)
     ), 0, 3)
-    val context = SlottedExecutionContext(slots)
+    val context = SlottedRow(slots)
     context.setRefAt(n1.slot, n1.node)
     context.setRefAt(n2.slot, n2.node)
     context.setRefAt(r.slot, r.rel)
@@ -3166,7 +3166,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       "r1" -> LongSlot(r1.slot, nullable = true, symbols.CTRelationship),
       "r2" -> LongSlot(r2.slot, nullable = true, symbols.CTRelationship),
       "r3" -> LongSlot(r3.slot, nullable = true, symbols.CTRelationship)), 7, 0)
-    val context = SlottedExecutionContext(slots)
+    val context = SlottedRow(slots)
     addNodes(context, n1, n2, n3, n4)
     addRelationships(context, r1, r2, r3)
 
@@ -3198,7 +3198,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       "r2" -> LongSlot(r2.slot, nullable = true, symbols.CTRelationship),
       "r3" -> LongSlot(r3.slot, nullable = true, symbols.CTRelationship),
       "r" -> RefSlot(0, nullable = true, symbols.CTList(symbols.CTRelationship))), 7, 1)
-    val context = SlottedExecutionContext(slots)
+    val context = SlottedRow(slots)
     addNodes(context, n1, n2, n3, n4)
     addRelationships(context, r1, r2, r3)
     context.setRefAt(0, list(r1.rel, r2.rel, r3.rel))
@@ -3231,7 +3231,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       "r2" -> LongSlot(r2.slot, nullable = true, symbols.CTRelationship),
       "r3" -> LongSlot(r3.slot, nullable = true, symbols.CTRelationship),
       "r" -> RefSlot(0, nullable = true, symbols.CTList(symbols.CTRelationship))), 7, 1)
-    val context = SlottedExecutionContext(slots)
+    val context = SlottedRow(slots)
     addNodes(context, n1, n2, n3, n4)
     addRelationships(context, r1, r2, r3)
     context.setRefAt(0, list(r1.rel, r2.rel, r3.rel))
@@ -3264,7 +3264,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       "r2" -> LongSlot(r2.slot, nullable = true, symbols.CTRelationship),
       "r3" -> LongSlot(r3.slot, nullable = true, symbols.CTRelationship),
       "r" -> RefSlot(0, nullable = true, symbols.CTList(symbols.CTRelationship))), 7, 1)
-    val context = SlottedExecutionContext(slots)
+    val context = SlottedRow(slots)
     addNodes(context, n1, n2, n3, n4)
     addRelationships(context, r1, r2, r3)
     context.setRefAt(0, list(r3.rel, r2.rel, r1.rel))
@@ -3297,7 +3297,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       "r2" -> LongSlot(r2.slot, nullable = true, symbols.CTRelationship),
       "r3" -> LongSlot(r3.slot, nullable = true, symbols.CTRelationship),
       "r" -> RefSlot(0, nullable = true, symbols.CTList(symbols.CTRelationship))), 7, 1)
-    val context = SlottedExecutionContext(slots)
+    val context = SlottedRow(slots)
     addNodes(context, n1, n2, n3, n4)
     addRelationships(context, r1, r2, r3)
     context.setRefAt(0, list(r3.rel, r2.rel, r1.rel))
@@ -3330,7 +3330,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       "r2" -> LongSlot(r2.slot, nullable = true, symbols.CTRelationship),
       "r3" -> LongSlot(r3.slot, nullable = true, symbols.CTRelationship),
       "r" -> RefSlot(0, nullable = true, symbols.CTList(symbols.CTRelationship))), 7, 1)
-    val context = SlottedExecutionContext(slots)
+    val context = SlottedRow(slots)
     addNodes(context, n1, n2, n3, n4)
     addRelationships(context, r1, r2, r3)
     context.setRefAt(0, list(r3.rel, r2.rel, r1.rel))
@@ -3363,7 +3363,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       "r2" -> LongSlot(r2.slot, nullable = true, symbols.CTRelationship),
       "r3" -> LongSlot(r3.slot, nullable = true, symbols.CTRelationship),
       "r" -> RefSlot(0, nullable = true, symbols.CTList(symbols.CTRelationship))), 7, 1)
-    val context = SlottedExecutionContext(slots)
+    val context = SlottedRow(slots)
     addNodes(context, n1, n2, n3, n4)
     addRelationships(context, r1, r2, r3)
     context.setRefAt(0, list(r3.rel, r2.rel, r1.rel))
@@ -3396,7 +3396,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       "r2" -> LongSlot(r2.slot, nullable = true, symbols.CTRelationship),
       "r3" -> LongSlot(r3.slot, nullable = true, symbols.CTRelationship),
       "r" -> RefSlot(0, nullable = true, symbols.CTList(symbols.CTRelationship))), 7, 1)
-    val context = SlottedExecutionContext(slots)
+    val context = SlottedRow(slots)
     addNodes(context, n1, n2, n3, n4)
     addRelationships(context, r1, r2, r3)
     context.setRefAt(0, list(r1.rel, NO_VALUE, r3.rel))
@@ -3418,7 +3418,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val slots = SlotConfiguration(Map("n1" -> LongSlot(n1.slot, nullable = true, symbols.CTNode),
       "n2" -> LongSlot(n2.slot, nullable = true, symbols.CTNode),
       "r" -> RefSlot(0, nullable = true, symbols.CTList(symbols.CTRelationship))), 2, 1)
-    val context = SlottedExecutionContext(slots)
+    val context = SlottedRow(slots)
     context.setRefAt(0, NO_VALUE)
     addNodes(context, n1, n2)
 
@@ -3444,7 +3444,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
                           lateExpression: Int => RuntimeProperty,
                           earlyCachedExpression: (PropertyKeyName, Int, Int, Boolean) => RuntimeExpression,
                           lateCachedExpression: (PropertyKeyName, Int, Int, Boolean) => RuntimeExpression,
-                          invalidate: (ExecutionContext, Long) => Unit)
+                          invalidate: (CypherRow, Long) => Unit)
 
   case class RuntimeAccess(time: String,
                            expression: Int => RuntimeProperty,
@@ -3485,7 +3485,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       val n = entity("hello")
       val token = tokenReader(tx, _.propertyKey("prop"))
       val slots = SlotConfiguration(Map("n" -> LongSlot(0, nullable = true, typ)), 1, 0)
-      val context = SlottedExecutionContext(slots)
+      val context = SlottedRow(slots)
       context.setLongAt(0, n.getId)
 
       // When
@@ -3500,7 +3500,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       val n = entity("hello from tx state")
       val token = tokenReader(tx, _.propertyKey("prop"))
       val slots = SlotConfiguration(Map("n" -> LongSlot(0, nullable = true, typ)), 1, 0)
-      val context = SlottedExecutionContext(slots)
+      val context = SlottedRow(slots)
       val pkn = PropertyKeyName("prop")(pos)
       val property = expressions.CachedProperty("n", Variable("n")(pos), pkn, entityType)(pos)
       context.setLongAt(0, n.getId)
@@ -3522,7 +3522,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       val property = expressions.CachedProperty("n", Variable("n")(pos), pkn, entityType)(pos)
       val slots = SlotConfiguration(Map("n" -> LongSlot(0, nullable = true, typ)), 1, 0)
       val cachedPropertyOffset = slots.newCachedProperty(property).getCachedPropertyOffsetFor(property)
-      val context = SlottedExecutionContext(slots)
+      val context = SlottedRow(slots)
       context.setLongAt(0, n.getId)
       context.setCachedProperty(property, stringValue("hello from cache"))
       val expression = cachedExpression(pkn, token, cachedPropertyOffset, true)
@@ -3542,7 +3542,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       val property = expressions.CachedProperty("n", Variable("n")(pos), pkn, entityType)(pos)
       val slots = SlotConfiguration(Map("n" -> RefSlot(0, nullable = true, typ)), 0, 1)
       val cachedPropertyOffset = slots.newCachedProperty(property).getCachedPropertyOffsetFor(property)
-      val context = SlottedExecutionContext(slots)
+      val context = SlottedRow(slots)
       context.setRefAt(0, virtualValueConstructor(n.getId))
       context.setCachedProperty(property, stringValue("hello from cache"))
       val expression = cachedExpression(pkn, token, cachedPropertyOffset, false)
@@ -3562,7 +3562,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       val property = expressions.CachedProperty("n", Variable("n")(pos), pkn, entityType)(pos)
       val slots = SlotConfiguration(Map("n" -> LongSlot(0, nullable = true, typ)), 1, 0)
       val cachedPropertyOffset = slots.newCachedProperty(property).getCachedPropertyOffsetFor(property)
-      val context = SlottedExecutionContext(slots)
+      val context = SlottedRow(slots)
       context.setLongAt(0, n.getId)
       context.setCachedProperty(property, stringValue("hello from cache"))
       invalidate(context, n.getId)
@@ -3582,7 +3582,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       val property = expressions.CachedProperty("n", Variable("n")(pos), pkn, entityType)(pos)
       val slots = SlotConfiguration(Map("n" -> LongSlot(0, nullable = true, typ)), 1, 0)
       val cachedPropertyOffset = slots.newCachedProperty(property).getCachedPropertyOffsetFor(property)
-      val context = SlottedExecutionContext(slots)
+      val context = SlottedRow(slots)
       context.setLongAt(0, node.getId)
       context.setCachedProperty(property, stringValue("hello from cache"))
       val expression = function("exists", cachedExpression(pkn, token, cachedPropertyOffset, true))
@@ -3600,7 +3600,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       val property = expressions.CachedProperty("n", Variable("n")(pos), pkn, entityType)(pos)
       val slots = SlotConfiguration(Map("n" -> RefSlot(0, nullable = true, typ)), 0, 1)
       val cachedPropertyOffset = slots.newCachedProperty(property).getCachedPropertyOffsetFor(property)
-      val context = SlottedExecutionContext(slots)
+      val context = SlottedRow(slots)
       context.setRefAt(0, virtualValueConstructor(node.getId))
       context.setCachedProperty(property, stringValue("hello from cache"))
       val expression = function("exists", cachedExpression(pkn, token, cachedPropertyOffset, false))
@@ -3618,7 +3618,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       val property = expressions.CachedProperty("n", Variable("n")(pos), pkn, entityType)(pos)
       val slots = SlotConfiguration(Map("n" -> LongSlot(0, nullable = true, typ)), 1, 0)
       val cachedPropertyOffset = slots.newCachedProperty(property).getCachedPropertyOffsetFor(property)
-      val context = SlottedExecutionContext(slots)
+      val context = SlottedRow(slots)
       context.setLongAt(0, node.getId)
       context.setCachedProperty(property, Values.NO_VALUE)
       val expression = function("exists", cachedExpression(pkn, token, cachedPropertyOffset, true))
@@ -3636,7 +3636,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       val property = expressions.CachedProperty("n", Variable("n")(pos), pkn, entityType)(pos)
       val slots = SlotConfiguration(Map("n" -> LongSlot(0, nullable = true, typ)), 1, 0)
       val cachedPropertyOffset = slots.newCachedProperty(property).getCachedPropertyOffsetFor(property)
-      val context = SlottedExecutionContext(slots)
+      val context = SlottedRow(slots)
       context.setLongAt(0, node.getId)
       val expression = function("exists", cachedExpression(pkn, token, cachedPropertyOffset, true))
       val compiled = compile(expression, slots)
@@ -3653,7 +3653,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       val property = expressions.CachedProperty("n", Variable("n")(pos), pkn, entityType)(pos)
       val slots = SlotConfiguration(Map("n" -> LongSlot(0, nullable = true, typ)), 1, 0)
       val cachedPropertyOffset = slots.newCachedProperty(property).getCachedPropertyOffsetFor(property)
-      val context = SlottedExecutionContext(slots)
+      val context = SlottedRow(slots)
       context.setLongAt(0, node.getId)
       val expression = function("exists", cachedExpression(pkn, token, cachedPropertyOffset, true))
       val compiled = compile(expression, slots)
@@ -3676,7 +3676,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       val property = expressions.CachedProperty("n", Variable("n")(pos), pkn, entityType)(pos)
       val slots = SlotConfiguration(Map("n" -> LongSlot(0, nullable = true, typ)), 1, 0)
       val cachedPropertyOffset = slots.newCachedProperty(property).getCachedPropertyOffsetFor(property)
-      val context = SlottedExecutionContext(slots)
+      val context = SlottedRow(slots)
       context.setLongAt(0, testEntity.getId)
       context.setCachedProperty(property, stringValue("hello from cache"))
       val expression = function("exists", cachedExpression(pkn, token, cachedPropertyOffset, true))
@@ -3693,7 +3693,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       val property = expressions.CachedProperty("n", Variable("n")(pos), pkn, entityType)(pos)
       val slots = SlotConfiguration(Map("n" -> LongSlot(0, nullable = true, typ)), 1, 0)
       val cachedPropertyOffset = slots.newCachedProperty(property).getCachedPropertyOffsetFor(property)
-      val context = SlottedExecutionContext(slots)
+      val context = SlottedRow(slots)
       context.setLongAt(0, node.getId)
       context.setCachedProperty(property, stringValue("hello from cache"))
       val expression = function("exists", cachedExpression(pkn, token, cachedPropertyOffset, true))
@@ -3722,7 +3722,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val cachedRPropertyOffset = slots.newCachedProperty(rProperty).getCachedPropertyOffsetFor(rProperty)
     val cachedN2PropertyOffset = slots.newCachedProperty(n2Property).getCachedPropertyOffsetFor(n2Property)
     val cachedR2PropertyOffset = slots.newCachedProperty(r2Property).getCachedPropertyOffsetFor(r2Property)
-    val context = SlottedExecutionContext(slots)
+    val context = SlottedRow(slots)
 
     // Set nodes and rels
     context.setLongAt(0, node.getId)
@@ -3777,7 +3777,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     relate(n, createNode())
 
     val slots = SlotConfiguration(Map("n" -> LongSlot(0, nullable = true, symbols.CTNode)), 1, 0)
-    val context = SlottedExecutionContext(slots)
+    val context = SlottedRow(slots)
     context.setLongAt(0, n.getId)
 
     evaluate(compile(GetDegreePrimitive(0, None, OUTGOING), slots), context) should
@@ -3798,7 +3798,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     relate(n, createNode(), relType)
     relate(n, createNode(), "OTHER")
     val slots = SlotConfiguration(Map("n" -> LongSlot(0, nullable = true, symbols.CTNode)), 1, 0)
-    val context = SlottedExecutionContext(slots)
+    val context = SlottedRow(slots)
     context.setLongAt(0, n.getId)
 
     evaluate(compile(GetDegreePrimitive(0, Some(relType), OUTGOING), slots), context) should equal(Values.longValue(2))
@@ -3809,7 +3809,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   test("NodePropertyExists") {
     val n = createNode("prop" -> "hello")
     val slots = SlotConfiguration(Map("n" -> LongSlot(0, nullable = true, symbols.CTNode)), 1, 0)
-    val context = SlottedExecutionContext(slots)
+    val context = SlottedRow(slots)
     context.setLongAt(0, n.getId)
     val property = tokenReader(tx, _.propertyKey("prop"))
     val nonExistingProperty = 1337
@@ -3821,7 +3821,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   test("NodePropertyExistsLate") {
     val n = createNode("prop" -> "hello")
     val slots = SlotConfiguration(Map("n" -> LongSlot(0, nullable = true, symbols.CTNode)), 1, 0)
-    val context = SlottedExecutionContext(slots)
+    val context = SlottedRow(slots)
     context.setLongAt(0, n.getId)
 
     evaluate(compile(NodePropertyExistsLate(0, "prop", "prop")(null), slots), context) should equal(Values.TRUE)
@@ -3831,7 +3831,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   test("RelationshipPropertyExists") {
     val r = relate(createNode(), createNode(), "prop" -> "hello")
     val slots = SlotConfiguration(Map("r" -> LongSlot(0, nullable = true, symbols.CTRelationship)), 1, 0)
-    val context = SlottedExecutionContext(slots)
+    val context = SlottedRow(slots)
     context.setLongAt(0, r.getId)
     val property = tokenReader(tx, _.propertyKey("prop"))
     val nonExistingProperty = 1337
@@ -3843,7 +3843,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   test("RelationshipPropertyExistsLate") {
     val r = relate(createNode(), createNode(), "prop" -> "hello")
     val slots = SlotConfiguration(Map("r" -> LongSlot(0, nullable = true, symbols.CTRelationship)), 1, 0)
-    val context = SlottedExecutionContext(slots)
+    val context = SlottedRow(slots)
     context.setLongAt(0, r.getId)
 
     evaluate(compile(RelationshipPropertyExistsLate(0, "prop", "prop")(null), slots), context) should equal(Values.TRUE)
@@ -3854,7 +3854,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     // Given
     val n = nodeValue()
     val slots = SlotConfiguration(Map("n" -> LongSlot(0, nullable = true, symbols.CTNode)), 1, 0)
-    val context = SlottedExecutionContext(slots)
+    val context = SlottedRow(slots)
     context.setLongAt(0, n.id())
     val expression = NodeFromSlot(0, "foo")
 
@@ -3869,7 +3869,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     // Given
     val r = relationshipValue()
     val slots = SlotConfiguration(Map("r" -> LongSlot(0, nullable = true, symbols.CTRelationship)), 1, 0)
-    val context = SlottedExecutionContext(slots)
+    val context = SlottedRow(slots)
     context.setLongAt(0, r.id())
     val expression = RelationshipFromSlot(0, "foo")
 
@@ -3883,7 +3883,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   test("HasLabels") {
     val n = createLabeledNode("L1", "L2")
     val slots = SlotConfiguration(Map("n" -> LongSlot(0, nullable = true, symbols.CTNode)), 1, 0)
-    val context = SlottedExecutionContext(slots)
+    val context = SlottedRow(slots)
     context.setLongAt(0, n.getId)
 
     evaluate(compile(hasLabels(NodeFromSlot(0, "n"), "L1"), slots), context) should equal(Values.TRUE)
@@ -3896,14 +3896,14 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
   case class NodeAt(node: NodeValue, slot: Int)
   case class RelAt(rel: RelationshipValue, slot: Int)
 
-  private def addNodes(context: ExecutionContext, nodes: NodeAt*): Unit = {
+  private def addNodes(context: CypherRow, nodes: NodeAt*): Unit = {
 
     for (node <- nodes) {
       context.setLongAt(node.slot, node.node.id())
     }
   }
 
-  private def addRelationships(context: ExecutionContext, rels: RelAt*): Unit = {
+  private def addRelationships(context: CypherRow, rels: RelAt*): Unit = {
     inTestTx(
       for (rel <- rels) {
         context.setLongAt(rel.slot, rel.rel.id())
@@ -3972,13 +3972,13 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     compiled.evaluate(ctx, query, params, cursors, expressionVariables)
 
   private def evaluate(compiled: CompiledExpression,
-                       context: ExecutionContext): AnyValue =
+                       context: CypherRow): AnyValue =
     compiled.evaluate(context, query, Array.empty, cursors, expressionVariables)
 
   private def evaluate(compiled: CompiledExpression,
                        nExpressionSlots: Int,
                        params: Array[AnyValue] = Array.empty,
-                       context: ExecutionContext = ctx): AnyValue =
+                       context: CypherRow = ctx): AnyValue =
     compiled.evaluate(context, query, params, cursors, new Array(nExpressionSlots))
 
   private def parameter(offset: Int): Expression = ParameterFromSlot(offset, s"a$offset", CTAny)
@@ -4125,14 +4125,14 @@ class CompiledExpressionsIT extends ExpressionsIT {
 class InterpretedExpressionIT extends ExpressionsIT {
   override  def compile(e: Expression, slots: SlotConfiguration): CompiledExpression = {
     val expression = converter(slots, (converter, id) => converter.toCommandExpression(id, e))
-    (context: ExecutionContext, dbAccess: DbAccess, params: Array[AnyValue], cursors: ExpressionCursors,
+    (context: CypherRow, dbAccess: DbAccess, params: Array[AnyValue], cursors: ExpressionCursors,
      expressionVariables: Array[AnyValue]) => expression(context, state(dbAccess, params, cursors, expressionVariables))
   }
 
   override  def compileProjection(projections: Map[String, Expression],
                                   slots: SlotConfiguration): CompiledProjection = {
     val projector = converter(slots, (converter, id) => converter.toCommandProjection(id, projections))
-    (context: ExecutionContext, dbAccess: DbAccess, params: Array[AnyValue], cursors: ExpressionCursors,
+    (context: CypherRow, dbAccess: DbAccess, params: Array[AnyValue], cursors: ExpressionCursors,
      expressionVariables: Array[AnyValue]) => projector
       .project(context, state(dbAccess, params, cursors, expressionVariables))
   }
@@ -4142,10 +4142,10 @@ class InterpretedExpressionIT extends ExpressionsIT {
     val grouping = converter(slots, (converter, id) => converter.toGroupingExpression(id, projections, Seq.empty))
     new CompiledGroupingExpression {
 
-      override def projectGroupingKey(context: ExecutionContext,
+      override def projectGroupingKey(context: CypherRow,
                                       groupingKey: AnyValue): Unit = grouping.project(context, groupingKey.asInstanceOf[grouping.KeyType])
 
-      override def computeGroupingKey(context: ExecutionContext,
+      override def computeGroupingKey(context: CypherRow,
                                       dbAccess: DbAccess,
                                       params: Array[AnyValue],
                                       cursors: ExpressionCursors,
@@ -4153,7 +4153,7 @@ class InterpretedExpressionIT extends ExpressionsIT {
         grouping.computeGroupingKey(context, state(dbAccess, params, cursors, expressionVariables))
 
 
-      override def getGroupingKey(context: ExecutionContext): AnyValue = grouping.getGroupingKey(context)
+      override def getGroupingKey(context: CypherRow): AnyValue = grouping.getGroupingKey(context)
     }
   }
 

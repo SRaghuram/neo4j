@@ -12,7 +12,7 @@ import org.neo4j.cypher.internal.expressions.FunctionInvocation
 import org.neo4j.cypher.internal.expressions.functions.AggregatingFunction
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlan
 import org.neo4j.cypher.internal.planner.spi.TokenContext
-import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.defaultGenerator
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledExpression
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledProjection
@@ -147,15 +147,15 @@ case class CompileWrappingDistinctGroupingExpression(grouping: CompiledGroupingE
 
   override type KeyType = AnyValue
 
-  override def computeGroupingKey(context: ExecutionContext, state: QueryState): AnyValue =
+  override def computeGroupingKey(context: CypherRow, state: QueryState): AnyValue =
     grouping.computeGroupingKey(context, state.query, CompiledExpressionConverter.parametersOrFail(state), state.cursors, state.expressionVariables)
 
   override def computeOrderedGroupingKey(groupingKey: AnyValue): AnyValue =
     throw new IllegalStateException("Compiled expressions do not support this yet.")
 
-  override def getGroupingKey(context: ExecutionContext): AnyValue = grouping.getGroupingKey(context)
+  override def getGroupingKey(context: CypherRow): AnyValue = grouping.getGroupingKey(context)
 
-  override def project(context: ExecutionContext, groupingKey: AnyValue): Unit =
+  override def project(context: CypherRow, groupingKey: AnyValue): Unit =
     grouping.projectGroupingKey(context, groupingKey)
 }
 
@@ -163,7 +163,7 @@ case class CompileWrappingProjection(projection: CompiledProjection, isEmpty: Bo
 
   override def registerOwningPipe(pipe: Pipe): Unit = {}
 
-  override def project(ctx: ExecutionContext, state: QueryState): Unit =
+  override def project(ctx: CypherRow, state: QueryState): Unit =
     projection.project(ctx, state.query, CompiledExpressionConverter.parametersOrFail(state), state.cursors, state.expressionVariables)
 }
 
@@ -175,7 +175,7 @@ case class CompileWrappingExpression(ce: CompiledExpression, legacy: Expression)
 
   override def children: Seq[AstNode[_]] = Seq(legacy)
 
-  override def apply(ctx: ExecutionContext, state: QueryState): AnyValue =
+  override def apply(ctx: CypherRow, state: QueryState): AnyValue =
     ce.evaluate(ctx, state.query, CompiledExpressionConverter.parametersOrFail(state), state.cursors, state.expressionVariables)
 
   override def toString: String = legacy.toString

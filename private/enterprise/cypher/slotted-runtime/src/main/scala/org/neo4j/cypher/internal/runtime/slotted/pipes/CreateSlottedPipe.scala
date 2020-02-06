@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.slotted.pipes
 
 import java.util.function.ToLongFunction
 
-import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.LenientCreateRelationship
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.BaseCreatePipe
@@ -29,7 +29,7 @@ abstract class EntityCreateSlottedPipe(source: Pipe) extends BaseCreatePipe(sour
   /**
    * Create node and return id.
    */
-  protected def createNode(context: ExecutionContext,
+  protected def createNode(context: CypherRow,
                            state: QueryState,
                            command: CreateNodeSlottedCommand): Long = {
     val labelIds = command.labels.map(_.getOrCreateId(state.query)).toArray
@@ -41,7 +41,7 @@ abstract class EntityCreateSlottedPipe(source: Pipe) extends BaseCreatePipe(sour
   /**
    * Create relationship and return id.
    */
-  protected def createRelationship(context: ExecutionContext,
+  protected def createRelationship(context: CypherRow,
                                    state: QueryState,
                                    command: CreateRelationshipSlottedCommand): Long = {
 
@@ -78,9 +78,9 @@ case class CreateNodeSlottedCommand(idOffset: Int,
                                     properties: Option[Expression])
 
 case class CreateRelationshipSlottedCommand(relIdOffset: Int,
-                                            startNodeIdGetter: ToLongFunction[ExecutionContext],
+                                            startNodeIdGetter: ToLongFunction[CypherRow],
                                             relType: LazyType,
-                                            endNodeIdGetter: ToLongFunction[ExecutionContext],
+                                            endNodeIdGetter: ToLongFunction[CypherRow],
                                             properties: Option[Expression],
                                             relName: String,
                                             startName: String,
@@ -97,7 +97,7 @@ case class CreateSlottedPipe(source: Pipe,
   nodes.foreach(_.properties.foreach(_.registerOwningPipe(this)))
   relationships.foreach(_.properties.foreach(_.registerOwningPipe(this)))
 
-  override protected def internalCreateResults(input: Iterator[ExecutionContext], state: QueryState): Iterator[ExecutionContext] = {
+  override protected def internalCreateResults(input: Iterator[CypherRow], state: QueryState): Iterator[CypherRow] = {
     input.map {
       row =>
         var i = 0
@@ -135,7 +135,7 @@ case class MergeCreateNodeSlottedPipe(source: Pipe,
 
   command.properties.foreach(_.registerOwningPipe(this))
 
-  override protected def internalCreateResults(input: Iterator[ExecutionContext], state: QueryState): Iterator[ExecutionContext] = {
+  override protected def internalCreateResults(input: Iterator[CypherRow], state: QueryState): Iterator[CypherRow] = {
     input.map {
       row =>
         row.setLongAt(command.idOffset, createNode(row, state, command))
@@ -157,7 +157,7 @@ case class MergeCreateRelationshipSlottedPipe(source: Pipe,
 
   command.properties.foreach(_.registerOwningPipe(this))
 
-  override protected def internalCreateResults(input: Iterator[ExecutionContext], state: QueryState): Iterator[ExecutionContext] = {
+  override protected def internalCreateResults(input: Iterator[CypherRow], state: QueryState): Iterator[CypherRow] = {
     input.map {
       row =>
         row.setLongAt(command.relIdOffset, createRelationship(row, state, command))

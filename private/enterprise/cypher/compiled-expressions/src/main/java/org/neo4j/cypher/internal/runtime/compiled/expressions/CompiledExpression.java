@@ -5,8 +5,8 @@
  */
 package org.neo4j.cypher.internal.runtime.compiled.expressions;
 
+import org.neo4j.cypher.internal.runtime.CypherRow;
 import org.neo4j.cypher.internal.runtime.DbAccess;
-import org.neo4j.cypher.internal.runtime.ExecutionContext;
 import org.neo4j.cypher.internal.runtime.ExpressionCursors;
 import org.neo4j.values.AnyValue;
 
@@ -25,7 +25,7 @@ public interface CompiledExpression
      * @param expressionVariables array used for storing expression variable values
      * @return an evaluated result from the compiled expression and given input.
      */
-    AnyValue evaluate( ExecutionContext context,
+    AnyValue evaluate( CypherRow context,
                        DbAccess dbAccess,
                        AnyValue[] params,
                        ExpressionCursors cursors,

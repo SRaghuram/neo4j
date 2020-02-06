@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.state.buffers
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.BufferId
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentCountUpdater
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.IdAllocator
@@ -36,9 +36,9 @@ class MorselApplyBuffer(id: BufferId,
                         idAllocator: IdAllocator,
                         delegates: IndexedSeq[MorselBuffer]
                        ) extends ArgumentCountUpdater
-                         with Sink[MorselExecutionContext] {
+                         with Sink[MorselCypherRow] {
 
-  def put(morsel: MorselExecutionContext): Unit = {
+  def put(morsel: MorselCypherRow): Unit = {
     if (DebugSupport.BUFFERS.enabled) {
       DebugSupport.BUFFERS.log(s"[put]   $this <- $morsel")
     }

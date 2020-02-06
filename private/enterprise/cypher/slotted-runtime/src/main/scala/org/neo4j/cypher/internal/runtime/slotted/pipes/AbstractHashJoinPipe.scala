@@ -6,11 +6,11 @@
 package org.neo4j.cypher.internal.runtime.slotted.pipes
 
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
-import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeWithSource
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
-import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
+import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
 
 import scala.collection.mutable
 
@@ -20,7 +20,7 @@ abstract class AbstractHashJoinPipe[Key, T](left: Pipe,
   protected val leftSide: T
   protected val rightSide: T
 
-  override protected def internalCreateResults(input: Iterator[ExecutionContext], state: QueryState): Iterator[ExecutionContext] = {
+  override protected def internalCreateResults(input: Iterator[CypherRow], state: QueryState): Iterator[CypherRow] = {
 
     if (!input.hasNext)
       return Iterator.empty
@@ -37,13 +37,13 @@ abstract class AbstractHashJoinPipe[Key, T](left: Pipe,
     if (table.isEmpty)
       return Iterator.empty
 
-    val result = for {rhs: ExecutionContext <- rhsIterator
+    val result = for {rhs: CypherRow <- rhsIterator
                       joinKey <- computeKey(rhs, rightSide, state)}
       yield {
-        val matchesFromLhs: mutable.Seq[ExecutionContext] = table.getOrElse(joinKey, mutable.MutableList.empty)
+        val matchesFromLhs: mutable.Seq[CypherRow] = table.getOrElse(joinKey, mutable.MutableList.empty)
 
         matchesFromLhs.map { lhs =>
-          val newRow = SlottedExecutionContext(slots)
+          val newRow = SlottedRow(slots)
           lhs.copyTo(newRow)
           copyDataFromRhs(newRow, rhs)
           newRow
@@ -53,8 +53,8 @@ abstract class AbstractHashJoinPipe[Key, T](left: Pipe,
     result.flatten
   }
 
-  private def buildProbeTable(input: Iterator[ExecutionContext], queryState: QueryState): mutable.HashMap[Key, mutable.MutableList[ExecutionContext]] = {
-    val table = new mutable.HashMap[Key, mutable.MutableList[ExecutionContext]]
+  private def buildProbeTable(input: Iterator[CypherRow], queryState: QueryState): mutable.HashMap[Key, mutable.MutableList[CypherRow]] = {
+    val table = new mutable.HashMap[Key, mutable.MutableList[CypherRow]]
 
     for {context <- input
          joinKey <- computeKey(context, leftSide, queryState)} {
@@ -65,7 +65,7 @@ abstract class AbstractHashJoinPipe[Key, T](left: Pipe,
     table
   }
 
-  def computeKey(context: ExecutionContext, keyColumns: T, queryState: QueryState): Option[Key]
+  def computeKey(context: CypherRow, keyColumns: T, queryState: QueryState): Option[Key]
 
-  def copyDataFromRhs(newRow: SlottedExecutionContext, rhs: ExecutionContext): Unit
+  def copyDataFromRhs(newRow: SlottedRow, rhs: CypherRow): Unit
 }

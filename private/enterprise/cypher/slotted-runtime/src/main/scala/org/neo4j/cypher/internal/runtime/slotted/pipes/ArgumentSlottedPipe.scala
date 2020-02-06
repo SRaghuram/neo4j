@@ -9,7 +9,7 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.Size
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
-import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
+import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
 import org.neo4j.cypher.internal.util.attribution.Id
 
 case class ArgumentSlottedPipe(slots: SlotConfiguration,
@@ -17,8 +17,8 @@ case class ArgumentSlottedPipe(slots: SlotConfiguration,
                               (val id: Id = Id.INVALID_ID)
   extends Pipe {
 
-  def internalCreateResults(state: QueryState): Iterator[SlottedExecutionContext] = {
-    val context = SlottedExecutionContext(slots)
+  def internalCreateResults(state: QueryState): Iterator[SlottedRow] = {
+    val context = SlottedRow(slots)
     state.copyArgumentStateTo(context, argumentSize.nLongs, argumentSize.nReferences)
     Iterator(context)
   }

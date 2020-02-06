@@ -90,7 +90,7 @@ import org.neo4j.cypher.internal.physicalplanning.VariablePredicates.expressionS
 import org.neo4j.cypher.internal.physicalplanning.ast.NodeFromSlot
 import org.neo4j.cypher.internal.physicalplanning.ast.NullCheckVariable
 import org.neo4j.cypher.internal.physicalplanning.ast.RelationshipFromSlot
-import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.QueryIndexRegistrator
 import org.neo4j.cypher.internal.runtime.interpreted.commands
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
@@ -834,7 +834,7 @@ object SlottedPipeMapper {
   //we have a reference slot in the output but a long slot on one of the inputs,
   //e.g. MATCH (n) RETURN n UNION RETURN 42 AS n
   def computeUnionMapping(in: SlotConfiguration, out: SlotConfiguration): RowMapping = {
-    val mapSlots: Iterable[(ExecutionContext, ExecutionContext, QueryState) => Unit] = in.mapSlot(
+    val mapSlots: Iterable[(CypherRow, CypherRow, QueryState) => Unit] = in.mapSlot(
       onVariable = {
         case (k, inSlot: LongSlot) =>
           out.get(k) match {
@@ -869,7 +869,7 @@ object SlottedPipeMapper {
           }
       })
     //Apply all transformations
-    (incoming: ExecutionContext, outgoing: ExecutionContext, state: QueryState) => {
+    (incoming: CypherRow, outgoing: CypherRow, state: QueryState) => {
       mapSlots.foreach(f => f(incoming, outgoing, state))
     }
   }

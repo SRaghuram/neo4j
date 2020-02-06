@@ -6,11 +6,11 @@
 package org.neo4j.cypher.internal.runtime.slotted.pipes
 
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
-import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeWithSource
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
-import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
+import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
 import org.neo4j.cypher.internal.util.attribution.Id
 
 case class CrossApplySlottedPipe(lhs: Pipe, rhs: Pipe,
@@ -20,17 +20,15 @@ case class CrossApplySlottedPipe(lhs: Pipe, rhs: Pipe,
                                  rhsArgumentSize: SlotConfiguration.Size)
                                 (val id: Id = Id.INVALID_ID)
   extends PipeWithSource(lhs) with Pipe {
-  override protected def internalCreateResults(input: Iterator[ExecutionContext], state: QueryState): Iterator[ExecutionContext] =
+  override protected def internalCreateResults(input: Iterator[CypherRow], state: QueryState): Iterator[CypherRow] =
     for {
       lhsCtx <- lhs.createResults(state)
       rhsState = state.withInitialContext(lhsCtx)
       rhsCtx <- rhs.createResults(rhsState)
     } yield {
-      val context = SlottedExecutionContext(slots)
+      val context = SlottedRow(slots)
       lhsCtx.copyTo(context)
-      rhsCtx.copyTo(context,
-        sourceLongOffset = rhsArgumentSize.nLongs, sourceRefOffset = rhsArgumentSize.nReferences, // Skip over arguments since they should be identical to lhsCtx
-        targetLongOffset = lhsLongCount, targetRefOffset = lhsRefCount)
+      rhsCtx.copyTo(context, sourceLongOffset = rhsArgumentSize.nLongs, sourceRefOffset = rhsArgumentSize.nReferences, targetLongOffset = lhsLongCount, targetRefOffset = lhsRefCount)
       context
     }
 }

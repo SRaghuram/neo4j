@@ -9,7 +9,7 @@ import org.eclipse.collections.impl.factory.primitive.LongSets
 import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeSetValueInSlotFunctionFor
-import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.PrefetchingIterator
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
@@ -29,20 +29,20 @@ case class DistinctSlottedSinglePrimitivePipe(source: Pipe,
   //===========================================================================
   // Compile-time initializations
   //===========================================================================
-  private val setInSlot: (ExecutionContext, AnyValue) => Unit = makeSetValueInSlotFunctionFor(toSlot)
+  private val setInSlot: (CypherRow, AnyValue) => Unit = makeSetValueInSlotFunctionFor(toSlot)
 
   expression.registerOwningPipe(this)
 
   //===========================================================================
   // Runtime code
   //===========================================================================
-  protected def internalCreateResults(input: Iterator[ExecutionContext],
-                                      state: QueryState): Iterator[ExecutionContext] = {
+  protected def internalCreateResults(input: Iterator[CypherRow],
+                                      state: QueryState): Iterator[CypherRow] = {
 
-    new PrefetchingIterator[ExecutionContext] {
+    new PrefetchingIterator[CypherRow] {
       private val seen = LongSets.mutable.empty()
 
-      override def produceNext(): Option[ExecutionContext] = {
+      override def produceNext(): Option[CypherRow] = {
         while (input.hasNext) { // Let's pull data until we find something not already seen
           val next = input.next()
           val key = next.getLongAt(offset)

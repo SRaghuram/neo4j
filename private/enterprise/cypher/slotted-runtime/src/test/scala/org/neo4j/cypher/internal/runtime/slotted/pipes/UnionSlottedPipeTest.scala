@@ -16,7 +16,7 @@ import org.neo4j.cypher.internal.runtime.NodeOperations
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.RelationshipOperations
 import org.neo4j.cypher.internal.runtime.interpreted.QueryStateHelper
-import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
+import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
 import org.neo4j.cypher.internal.runtime.slotted.SlottedPipeMapper.computeUnionMapping
 import org.neo4j.cypher.internal.util.symbols.CTAny
 import org.neo4j.cypher.internal.util.symbols.CTNode
@@ -59,7 +59,7 @@ class UnionSlottedPipeTest extends CypherFunSuite with AstConstructionTestSuppor
     })
     when(context.relationshipOps).thenReturn(relOps)
     val res = union.createResults(QueryStateHelper.emptyWith(query = context)).toList.map {
-      case e: SlottedExecutionContext =>
+      case e: SlottedRow =>
         e.slots.mapSlot(
           onVariable = {
             case (k, s: LongSlot) =>

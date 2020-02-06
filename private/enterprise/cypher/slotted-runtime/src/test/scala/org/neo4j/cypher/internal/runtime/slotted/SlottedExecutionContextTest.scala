@@ -11,7 +11,7 @@ import org.neo4j.cypher.internal.expressions.PropertyKeyName
 import org.neo4j.cypher.internal.expressions.Variable
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils
-import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.util.InputPosition
 import org.neo4j.cypher.internal.util.symbols.CTAny
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
@@ -24,8 +24,8 @@ class SlottedExecutionContextTest extends CypherFunSuite {
   private def slots(longs: Int, refs: Int) = SlotConfiguration(Map.empty, longs, refs)
 
   test("copy fills upp the first few elements") {
-    val input = SlottedExecutionContext(slots(2, 1))
-    val result = SlottedExecutionContext(slots(3, 2))
+    val input = SlottedRow(slots(2, 1))
+    val result = SlottedRow(slots(3, 2))
 
     input.setLongAt(0, 42)
     input.setLongAt(1, 666)
@@ -39,15 +39,15 @@ class SlottedExecutionContextTest extends CypherFunSuite {
   }
 
   test("copy fails if copy from larger") {
-    val input = SlottedExecutionContext(slots(4, 0))
-    val result = SlottedExecutionContext(slots(2, 0))
+    val input = SlottedRow(slots(4, 0))
+    val result = SlottedRow(slots(2, 0))
 
     intercept[InternalException](result.copyFrom(input, 4, 0))
   }
 
   test("copy fails if copy from larger 2") {
-    val input = SlottedExecutionContext(slots(0, 4))
-    val result = SlottedExecutionContext(slots(0, 2))
+    val input = SlottedRow(slots(0, 4))
+    val result = SlottedRow(slots(0, 2))
 
     intercept[InternalException](result.copyFrom(input, 0, 4))
   }
@@ -56,7 +56,7 @@ class SlottedExecutionContextTest extends CypherFunSuite {
     val leftSlots = slots(0, 0).newReference("a", nullable = true, CTAny)
     SlotConfigurationUtils.generateSlotAccessorFunctions(leftSlots)
     val rightSlots = slots(0, 0).newReference("a", nullable = true, CTAny)
-    SlottedExecutionContext(leftSlots).mergeWith(SlottedExecutionContext(rightSlots), null) // should not fail
+    SlottedRow(leftSlots).mergeWith(SlottedRow(rightSlots), null) // should not fail
   }
 
   test("mergeWith - cached properties on rhs only") {
@@ -68,16 +68,16 @@ class SlottedExecutionContextTest extends CypherFunSuite {
 
     val extraCachedOffset = offsetFor(prop("n", "extra cached"), slots)
 
-    val lhsCtx = SlottedExecutionContext(slots)
+    val lhsCtx = SlottedRow(slots)
 
-    val rhsCtx = SlottedExecutionContext(slots)
+    val rhsCtx = SlottedRow(slots)
     rhsCtx.setCachedProperty(prop("n", "name"), stringValue("b"))
 
     // when
     lhsCtx.mergeWith(rhsCtx, null)
 
     // then
-    def cachedPropAt(key: CachedProperty, ctx: ExecutionContext) =
+    def cachedPropAt(key: CachedProperty, ctx: CypherRow) =
       ctx.getCachedPropertyAt(offsetFor(key, slots))
 
     cachedPropAt(prop("n", "name"), lhsCtx) should be(stringValue("b"))
@@ -96,7 +96,7 @@ class SlottedExecutionContextTest extends CypherFunSuite {
         .newCachedProperty(prop("c", "name"))
         .newCachedProperty(prop("c", "age"))
 
-    val result = SlottedExecutionContext(resultSlots)
+    val result = SlottedRow(resultSlots)
     result.setCachedProperty(prop("a", "name"), stringValue("initial"))
     result.setCachedProperty(prop("b", "name"), stringValue("initial"))
     result.setCachedProperty(prop("b", "age"), stringValue("initial"))
@@ -107,7 +107,7 @@ class SlottedExecutionContextTest extends CypherFunSuite {
         .newCachedProperty(prop("c", "name"))
         .newCachedProperty(prop("c", "age"))
 
-    val arg = SlottedExecutionContext(argSlots)
+    val arg = SlottedRow(argSlots)
     arg.setCachedProperty(prop("b", "name"), stringValue("arg"))
     arg.setCachedProperty(prop("c", "name"), stringValue("arg"))
     arg.setCachedProperty(prop("c", "age"), stringValue("arg"))
@@ -127,14 +127,14 @@ class SlottedExecutionContextTest extends CypherFunSuite {
   }
 
   test("should ignore null refs on estimateHeapUsage") {
-    val ctx = SlottedExecutionContext(slots(0, 1))
+    val ctx = SlottedRow(slots(0, 1))
     ctx.estimatedHeapUsage shouldBe 0L
   }
 
   private def prop(node: String, prop: String) =
     CachedProperty(node, Variable(node)(InputPosition.NONE), PropertyKeyName(prop)(InputPosition.NONE), NODE_TYPE)(InputPosition.NONE)
 
-  private def mutatingLeftDoesNotAffectRight(left: ExecutionContext, right: ExecutionContext, extraCachedOffset: Int): Unit = {
+  private def mutatingLeftDoesNotAffectRight(left: CypherRow, right: CypherRow, extraCachedOffset: Int): Unit = {
     // given
     left should not be theSameInstanceAs(right)
     left.getCachedPropertyAt(extraCachedOffset) should equal(null)

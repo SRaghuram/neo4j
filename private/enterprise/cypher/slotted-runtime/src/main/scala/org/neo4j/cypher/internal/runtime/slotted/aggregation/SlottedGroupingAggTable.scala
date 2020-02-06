@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.slotted.aggregation
 
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
-import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.AggregationExpression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.AggregationPipe.AggregationTable
@@ -16,7 +16,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.AggregationFunction
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.GroupingAggTable
-import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
+import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
 import org.neo4j.cypher.internal.util.attribution.Id
 
 /**
@@ -38,7 +38,7 @@ class SlottedGroupingAggTable(slots: SlotConfiguration,
     resultMap = new java.util.LinkedHashMap[groupingColumns.KeyType, Array[AggregationFunction]]()
   }
 
-  override def processRow(row: ExecutionContext): Unit = {
+  override def processRow(row: CypherRow): Unit = {
     val groupingValue = groupingColumns.computeGroupingKey(row, state)
     val functions = resultMap.computeIfAbsent(groupingValue, _ => {
       state.memoryTracker.allocated(groupingValue, operatorId.x)
@@ -57,16 +57,16 @@ class SlottedGroupingAggTable(slots: SlotConfiguration,
     }
   }
 
-  override def result(): Iterator[ExecutionContext] = {
+  override def result(): Iterator[CypherRow] = {
     val innerIterator = resultMap.entrySet().iterator()
-    new Iterator[ExecutionContext] {
+    new Iterator[CypherRow] {
       override def hasNext: Boolean = innerIterator.hasNext
 
-      override def next(): ExecutionContext = {
+      override def next(): CypherRow = {
         val entry = innerIterator.next()
         val unorderedGroupingValue = entry.getKey
         val aggregateFunctions = entry.getValue
-        val row = SlottedExecutionContext(slots)
+        val row = SlottedRow(slots)
         groupingColumns.project(row, unorderedGroupingValue)
         var i = 0
         while (i < aggregateFunctions.length) {

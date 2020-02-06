@@ -11,10 +11,10 @@ import org.neo4j.cypher.internal.physicalplanning.RefSlot
 import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
-import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
@@ -39,12 +39,12 @@ class OptionalOperator(val workIdentity: WorkIdentity,
   //===========================================================================
   // Compile-time initializations
   //===========================================================================
-  private val setNullableSlotToNullFunctions: Seq[ExecutionContext => Unit] =
+  private val setNullableSlotToNullFunctions: Seq[CypherRow => Unit] =
   nullableSlots.map {
     case LongSlot(offset, _, _) =>
-      (context: ExecutionContext) => context.setLongAt(offset, -1L)
+      (context: CypherRow) => context.setLongAt(offset, -1L)
     case RefSlot(offset, _, _) =>
-      (context: ExecutionContext) => context.setRefAt(offset, Values.NO_VALUE)
+      (context: CypherRow) => context.setRefAt(offset, Values.NO_VALUE)
   }
 
   //===========================================================================
@@ -80,11 +80,11 @@ class OptionalOperator(val workIdentity: WorkIdentity,
     private val morselIterator = morselData.morsels.iterator
     // To remember whether we already processed the ArgumentStream, which can lead to a null row.
     private var consumedArgumentStream = false
-    private var currentMorsel: MorselExecutionContext = _
+    private var currentMorsel: MorselCypherRow = _
 
     override def workIdentity: WorkIdentity = OptionalOperator.this.workIdentity
 
-    override def operate(output: MorselExecutionContext, context: QueryContext, state: QueryState, resources: QueryResources): Unit = {
+    override def operate(output: MorselCypherRow, context: QueryContext, state: QueryState, resources: QueryResources): Unit = {
       while (output.isValidRow && canContinue) {
         if (currentMorsel == null || !currentMorsel.isValidRow) {
           if (morselIterator.hasNext) {

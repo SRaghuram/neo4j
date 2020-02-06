@@ -47,7 +47,7 @@ import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.CursorPool
 import org.neo4j.cypher.internal.runtime.pipelined.execution.CursorPools
 import org.neo4j.cypher.internal.runtime.pipelined.execution.FlowControl
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
@@ -108,7 +108,7 @@ object OperatorCodeGenHelperTemplates {
 
   // Constructor parameters
   val DATA_READ_CONSTRUCTOR_PARAMETER: Parameter = param[Read]("dataRead")
-  val INPUT_MORSEL_CONSTRUCTOR_PARAMETER: Parameter = param[MorselExecutionContext]("inputMorsel")
+  val INPUT_MORSEL_CONSTRUCTOR_PARAMETER: Parameter = param[MorselCypherRow]("inputMorsel")
   val ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER: Parameter = param[ArgumentStateMaps]("argumentStateMaps")
 
   // Other method parameters
@@ -118,7 +118,7 @@ object OperatorCodeGenHelperTemplates {
   // Fields
   val WORK_IDENTITY_STATIC_FIELD_NAME  = "_workIdentity"
   val DATA_READ: InstanceField = field[Read]("dataRead", load(DATA_READ_CONSTRUCTOR_PARAMETER.name))
-  val INPUT_MORSEL: InstanceField = field[MorselExecutionContext]("inputMorsel", load(INPUT_MORSEL_CONSTRUCTOR_PARAMETER.name))
+  val INPUT_MORSEL: InstanceField = field[MorselCypherRow]("inputMorsel", load(INPUT_MORSEL_CONSTRUCTOR_PARAMETER.name))
 
   // IntermediateRepresentation code
   val QUERY_PROFILER: IntermediateRepresentation = load("queryProfiler")
@@ -136,7 +136,7 @@ object OperatorCodeGenHelperTemplates {
     load("context")
 
   val OUTPUT_ROW_MOVE_TO_NEXT: IntermediateRepresentation =
-    invokeSideEffect(OUTPUT_ROW, method[MorselExecutionContext, Unit]("moveToNextRow"))
+    invokeSideEffect(OUTPUT_ROW, method[MorselCypherRow, Unit]("moveToNextRow"))
 
   val DB_ACCESS: IntermediateRepresentation =
     load("dbAccess")
@@ -181,10 +181,10 @@ object OperatorCodeGenHelperTemplates {
 
   val OUTER_LOOP_LABEL_NAME: String = "outerLoop"
 
-  val INPUT_ROW_IS_VALID: IntermediateRepresentation = invoke(loadField(INPUT_MORSEL), method[MorselExecutionContext, Boolean]("isValidRow"))
-  val OUTPUT_ROW_IS_VALID: IntermediateRepresentation = invoke(OUTPUT_ROW, method[MorselExecutionContext, Boolean]("isValidRow"))
-  val OUTPUT_ROW_FINISHED_WRITING: IntermediateRepresentation = invokeSideEffect(OUTPUT_ROW, method[MorselExecutionContext, Unit]("finishedWriting"))
-  val INPUT_ROW_MOVE_TO_NEXT: IntermediateRepresentation = invokeSideEffect(loadField(INPUT_MORSEL), method[MorselExecutionContext, Unit]("moveToNextRow"))
+  val INPUT_ROW_IS_VALID: IntermediateRepresentation = invoke(loadField(INPUT_MORSEL), method[MorselCypherRow, Boolean]("isValidRow"))
+  val OUTPUT_ROW_IS_VALID: IntermediateRepresentation = invoke(OUTPUT_ROW, method[MorselCypherRow, Boolean]("isValidRow"))
+  val OUTPUT_ROW_FINISHED_WRITING: IntermediateRepresentation = invokeSideEffect(OUTPUT_ROW, method[MorselCypherRow, Unit]("finishedWriting"))
+  val INPUT_ROW_MOVE_TO_NEXT: IntermediateRepresentation = invokeSideEffect(loadField(INPUT_MORSEL), method[MorselCypherRow, Unit]("moveToNextRow"))
   val UPDATE_DEMAND: IntermediateRepresentation =
     invokeSideEffect(load(SUBSCRIPTION), method[FlowControl, Unit, Long]("addServed"), load(SERVED))
 

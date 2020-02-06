@@ -51,7 +51,7 @@ import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpres
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.pipelined.ExecutionState
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.HAS_DEMAND
@@ -107,7 +107,7 @@ trait CompiledStreamingOperator extends StreamingOperator {
   }
 
   protected def compiledNextTask(dataRead: Read,
-                                 inputMorsel: MorselExecutionContext,
+                                 inputMorsel: MorselCypherRow,
                                  argumentStateMaps: ArgumentStateMaps): ContinuableOperatorTaskWithMorsel
 }
 
@@ -156,11 +156,11 @@ object CompiledStreamingOperator {
         MethodDeclaration("compiledNextTask",
           returnType = typeRefOf[ContinuableOperatorTaskWithMorsel],
           parameters = Seq(param[Read]("dataRead"),
-            param[MorselExecutionContext]("inputMorsel"),
+            param[MorselCypherRow]("inputMorsel"),
             param[ArgumentStateMaps]("argumentStateMaps")),
           body = newInstance(Constructor(TypeReference.typeReference(taskClazz),
             Seq(TypeReference.typeReference(classOf[Read]),
-              TypeReference.typeReference(classOf[MorselExecutionContext]),
+              TypeReference.typeReference(classOf[MorselCypherRow]),
               TypeReference.typeReference(classOf[ArgumentStateMaps]))),
             load("dataRead"),
             load("inputMorsel"),
@@ -216,7 +216,7 @@ trait CompiledTask extends ContinuableOperatorTaskWithMorsel
   //Fused plans doesn't support time tracking
   override def trackTime: Boolean = false
 
-  override def operateWithProfile(output: MorselExecutionContext,
+  override def operateWithProfile(output: MorselCypherRow,
                                   context: QueryContext,
                                   state: QueryState,
                                   resources: QueryResources,
@@ -248,7 +248,7 @@ trait CompiledTask extends ContinuableOperatorTaskWithMorsel
   /**
    * Method of [[OutputOperatorState]] trait. Override to prevent creation of profiler event, which is not necessary when output operator is fused.
    */
-  override final def prepareOutputWithProfile(output: MorselExecutionContext,
+  override final def prepareOutputWithProfile(output: MorselCypherRow,
                                               context: QueryContext,
                                               state: QueryState,
                                               resources: QueryResources,
@@ -257,7 +257,7 @@ trait CompiledTask extends ContinuableOperatorTaskWithMorsel
   /**
    * Method of [[OutputOperatorState]] trait. Implementing this allows the same [[CompiledTask]] instance to also act as a [[PreparedOutput]].
    */
-  override protected final def prepareOutput(outputMorsel: MorselExecutionContext,
+  override protected final def prepareOutput(outputMorsel: MorselCypherRow,
                                              context: QueryContext,
                                              state: QueryState,
                                              resources: QueryResources,
@@ -278,7 +278,7 @@ trait CompiledTask extends ContinuableOperatorTaskWithMorsel
    * Generated code that executes the operator.
    */
   @throws[Exception]
-  def compiledOperate(context: MorselExecutionContext,
+  def compiledOperate(context: MorselCypherRow,
                       dbAccess: QueryContext,
                       state: QueryState,
                       resources: QueryResources,
@@ -311,7 +311,7 @@ trait CompiledTask extends ContinuableOperatorTaskWithMorsel
 
   override def setExecutionEvent(event: OperatorProfileEvent): Unit = throw new IllegalStateException("Fused operators should be called via operateWithProfile.")
 
-  override def operate(output: MorselExecutionContext,
+  override def operate(output: MorselCypherRow,
                        context: QueryContext,
                        state: QueryState,
                        resources: QueryResources): Unit = throw new IllegalStateException("Fused operators should be called via operateWithProfile.")
@@ -549,7 +549,7 @@ trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
         ),
         MethodDeclaration("compiledOperate",
           returnType = typeRefOf[Unit],
-          Seq(param[MorselExecutionContext]("context"),
+          Seq(param[MorselCypherRow]("context"),
             param[QueryContext]("dbAccess"),
             param[QueryState]("state"),
             param[QueryResources]("resources"),
@@ -624,7 +624,7 @@ trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
         ),
         // This is only needed because we extend an abstract scala class containing `val inputMorsel`
         MethodDeclaration("inputMorsel",
-          returnType = typeRefOf[MorselExecutionContext],
+          returnType = typeRefOf[MorselCypherRow],
           parameters = Seq.empty,
           body = loadField(INPUT_MORSEL)
         )

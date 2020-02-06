@@ -11,12 +11,12 @@ import org.eclipse.collections.api.map.primitive.MutableLongObjectMap
 import org.eclipse.collections.impl.factory.primitive.LongObjectMaps
 import org.eclipse.collections.impl.list.mutable.FastList
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
-import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.PrefetchingIterator
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeWithSource
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
-import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
+import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
 import org.neo4j.cypher.internal.util.attribution.Id
 
 case class NodeHashJoinSlottedSingleNodePipe(lhsOffset: Int,
@@ -28,7 +28,7 @@ case class NodeHashJoinSlottedSingleNodePipe(lhsOffset: Int,
                                              refsToCopy: Array[(Int, Int)],
                                              cachedPropertiesToCopy: Array[(Int, Int)])
                                             (val id: Id = Id.INVALID_ID) extends PipeWithSource(left) {
-  override protected def internalCreateResults(input: Iterator[ExecutionContext], state: QueryState): Iterator[ExecutionContext] = {
+  override protected def internalCreateResults(input: Iterator[CypherRow], state: QueryState): Iterator[CypherRow] = {
 
     if (input.isEmpty)
       return Iterator.empty
@@ -48,13 +48,13 @@ case class NodeHashJoinSlottedSingleNodePipe(lhsOffset: Int,
     probeInput(rhsIterator, state, table)
   }
 
-  private def buildProbeTable(lhsInput: Iterator[ExecutionContext], queryState: QueryState): MutableLongObjectMap[FastList[ExecutionContext]] = {
-    val table = LongObjectMaps.mutable.empty[FastList[ExecutionContext]]()
+  private def buildProbeTable(lhsInput: Iterator[CypherRow], queryState: QueryState): MutableLongObjectMap[FastList[CypherRow]] = {
+    val table = LongObjectMaps.mutable.empty[FastList[CypherRow]]()
 
     for (current <- lhsInput) {
       val nodeId = current.getLongAt(lhsOffset)
       if(nodeId != -1) {
-        val list = table.getIfAbsentPut(nodeId, new FastList[ExecutionContext](1))
+        val list = table.getIfAbsentPut(nodeId, new FastList[CypherRow](1))
         list.add(current)
       }
     }
@@ -62,18 +62,18 @@ case class NodeHashJoinSlottedSingleNodePipe(lhsOffset: Int,
     table
   }
 
-  private def probeInput(rhsInput: Iterator[ExecutionContext],
+  private def probeInput(rhsInput: Iterator[CypherRow],
                          queryState: QueryState,
-                         probeTable: MutableLongObjectMap[FastList[ExecutionContext]]): Iterator[ExecutionContext] =
-    new PrefetchingIterator[ExecutionContext] {
-      private var matches: util.Iterator[ExecutionContext] = util.Collections.emptyIterator()
-      private var currentRhsRow: ExecutionContext = _
+                         probeTable: MutableLongObjectMap[FastList[CypherRow]]): Iterator[CypherRow] =
+    new PrefetchingIterator[CypherRow] {
+      private var matches: util.Iterator[CypherRow] = util.Collections.emptyIterator()
+      private var currentRhsRow: CypherRow = _
 
-      override def produceNext(): Option[ExecutionContext] = {
+      override def produceNext(): Option[CypherRow] = {
         // If we have already found matches, we'll first exhaust these
         if (matches.hasNext) {
           val lhs = matches.next()
-          val newRow = SlottedExecutionContext(slots)
+          val newRow = SlottedRow(slots)
           lhs.copyTo(newRow)
           copyDataFromRhs(newRow, currentRhsRow)
           return Some(newRow)
@@ -95,7 +95,7 @@ case class NodeHashJoinSlottedSingleNodePipe(lhsOffset: Int,
       }
     }
 
-  private def copyDataFromRhs(newRow: SlottedExecutionContext, rhs: ExecutionContext): Unit = {
+  private def copyDataFromRhs(newRow: SlottedRow, rhs: CypherRow): Unit = {
     var i = 0
     var len = longsToCopy.length
     while (i < len) {

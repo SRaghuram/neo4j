@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.slotted.aggregation
 import java.util
 
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
-import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.AggregationExpression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.AggregationPipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.AggregationPipe.AggregationTable
@@ -18,7 +18,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.AggregationFunction
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.aggregation.GroupingAggTable
-import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
+import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.values.storable.LongArray
 import org.neo4j.values.storable.Values
@@ -41,7 +41,7 @@ class SlottedPrimitiveGroupingAggTable(slots: SlotConfiguration,
     (a.toArray, b.toArray)
   }
 
-  private def computeGroupingKey(row: ExecutionContext): LongArray = {
+  private def computeGroupingKey(row: CypherRow): LongArray = {
     val keys = new Array[Long](readGrouping.length)
     var i = 0
     while (i < readGrouping.length) {
@@ -51,7 +51,7 @@ class SlottedPrimitiveGroupingAggTable(slots: SlotConfiguration,
     Values.longArray(keys)
   }
 
-  private def projectGroupingKey(ctx: ExecutionContext, key: LongArray): Unit = {
+  private def projectGroupingKey(ctx: CypherRow, key: LongArray): Unit = {
     var i = 0
     while (i < writeGrouping.length) {
       ctx.setLongAt(writeGrouping(i), key.longValue(i))
@@ -59,8 +59,8 @@ class SlottedPrimitiveGroupingAggTable(slots: SlotConfiguration,
     }
   }
 
-  private def createResultRow(groupingKey: LongArray, aggregateFunctions: Seq[AggregationFunction]): ExecutionContext = {
-    val row = SlottedExecutionContext(slots)
+  private def createResultRow(groupingKey: LongArray, aggregateFunctions: Seq[AggregationFunction]): CypherRow = {
+    val row = SlottedRow(slots)
     projectGroupingKey(row, groupingKey)
     var i = 0
     while (i < aggregateFunctions.length) {
@@ -74,7 +74,7 @@ class SlottedPrimitiveGroupingAggTable(slots: SlotConfiguration,
     resultMap = new java.util.LinkedHashMap[LongArray, Array[AggregationFunction]]()
   }
 
-  override def processRow(row: ExecutionContext): Unit = {
+  override def processRow(row: CypherRow): Unit = {
     val groupingValue = computeGroupingKey(row)
     val functions = resultMap.computeIfAbsent(groupingValue, _ => {
       state.memoryTracker.allocated(groupingValue, operatorId.x)
@@ -93,7 +93,7 @@ class SlottedPrimitiveGroupingAggTable(slots: SlotConfiguration,
     }
   }
 
-  override def result(): Iterator[ExecutionContext] = {
+  override def result(): Iterator[CypherRow] = {
     resultMap.entrySet().iterator().asScala.map {
       e: java.util.Map.Entry[LongArray, Array[AggregationFunction]] => createResultRow(e.getKey, e.getValue)
     }

@@ -14,12 +14,12 @@ object MorselFactory {
   def allocate(slots: SlotConfiguration,
                rowsPerMorsel: Int,
                producingWorkUnitEvent: WorkUnitEvent = null
-              ): MorselExecutionContext = {
+              ): MorselCypherRow = {
 
     val longs = new Array[Long](slots.numberOfLongs * rowsPerMorsel)
     val refs = new Array[AnyValue](slots.numberOfReferences * rowsPerMorsel)
 
-    new MorselExecutionContext(
+    new MorselCypherRow(
       longs,
       refs,
       slots,
@@ -33,12 +33,12 @@ object MorselFactory {
   def allocateFiltering(slots: SlotConfiguration,
                         rowsPerMorsel: Int,
                         producingWorkUnitEvent: WorkUnitEvent = null
-                       ): MorselExecutionContext = {
+                       ): MorselCypherRow = {
 
     val longs = new Array[Long](slots.numberOfLongs * rowsPerMorsel)
     val refs = new Array[AnyValue](slots.numberOfReferences * rowsPerMorsel)
 
-    new FilteringMorselExecutionContext(
+    new FilteringMorselCypherRow(
       longs,
       refs,
       slots,

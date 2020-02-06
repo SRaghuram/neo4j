@@ -14,7 +14,7 @@ import org.neo4j.cypher.internal.expressions.functions.Keys
 import org.neo4j.cypher.internal.expressions.functions.Labels
 import org.neo4j.cypher.internal.planner.spi.TokenContext
 import org.neo4j.cypher.internal.runtime.CastSupport
-import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.IsNoValue
 import org.neo4j.cypher.internal.runtime.interpreted.CommandProjection
 import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
@@ -90,7 +90,7 @@ case class MaterializedEntityProperty(mapExpr: commands.expressions.Expression, 
 
   private val property = commands.expressions.Property(mapExpr, propertyKey)
 
-  def apply(ctx: ExecutionContext, state: QueryState): AnyValue = mapExpr(ctx, state) match {
+  def apply(ctx: CypherRow, state: QueryState): AnyValue = mapExpr(ctx, state) match {
     case n: NodeValue         => n.properties().get(propertyKey.name)
     case r: RelationshipValue => r.properties().get(propertyKey.name)
     case _                    => property.apply(ctx, state)
@@ -110,7 +110,7 @@ case class MaterializedEntityPropertyExists(variable: commands.expressions.Expre
 
   private val propertyExists = commands.predicates.PropertyExists(variable, propertyKey)
 
-  override def isMatch(m: ExecutionContext, state: QueryState): Option[Boolean] = variable(m, state) match {
+  override def isMatch(m: CypherRow, state: QueryState): Option[Boolean] = variable(m, state) match {
     case n: NodeValue         => Some(n.properties().containsKey(propertyKey.name))
     case r: RelationshipValue => Some(r.properties().containsKey(propertyKey.name))
     case _                    => propertyExists.isMatch(m, state)
@@ -130,7 +130,7 @@ case class MaterializedEntityPropertyExists(variable: commands.expressions.Expre
 
 case class MaterializedEntityHasLabel(entity: commands.expressions.Expression, label: KeyToken) extends Predicate {
 
-  override def isMatch(m: ExecutionContext, state: QueryState): Option[Boolean] = entity(m, state) match {
+  override def isMatch(m: CypherRow, state: QueryState): Option[Boolean] = entity(m, state) match {
 
     case IsNoValue() =>
       None
@@ -164,7 +164,7 @@ case class MaterializedEntityHasLabel(entity: commands.expressions.Expression, l
 
 case class MaterializedEntityKeysFunction(expr: Expression) extends NullInNullOutExpression(expr) {
 
-  override def compute(value: AnyValue, ctx: ExecutionContext, state: QueryState): ListValue =
+  override def compute(value: AnyValue, ctx: CypherRow, state: QueryState): ListValue =
     value match {
       case n: NodeValue         => n.properties().keys()
       case r: RelationshipValue => r.properties().keys()
@@ -181,7 +181,7 @@ case class MaterializedEntityKeysFunction(expr: Expression) extends NullInNullOu
 
 case class MaterializedEntityLabelsFunction(nodeExpr: Expression) extends NullInNullOutExpression(nodeExpr) {
 
-  override def compute(value: AnyValue, m: ExecutionContext, state: QueryState): AnyValue = {
+  override def compute(value: AnyValue, m: CypherRow, state: QueryState): AnyValue = {
     value match {
       case n: NodeValue => n.labels()
       case _            => CypherFunctions.labels(value, state.query, state.cursors.nodeCursor)

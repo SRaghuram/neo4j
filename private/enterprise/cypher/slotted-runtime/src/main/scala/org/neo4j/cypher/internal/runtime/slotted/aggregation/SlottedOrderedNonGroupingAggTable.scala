@@ -6,7 +6,7 @@
 package org.neo4j.cypher.internal.runtime.slotted.aggregation
 
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
-import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.AggregationExpression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.AggregationPipe.AggregationTable
@@ -35,15 +35,15 @@ class SlottedOrderedNonGroupingAggTable(slots: SlotConfiguration,
     super.clear()
   }
 
-  override def isSameChunk(first: ExecutionContext,
-                           current: ExecutionContext): Boolean = {
+  override def isSameChunk(first: CypherRow,
+                           current: CypherRow): Boolean = {
     if (currentGroupKey == null) {
       currentGroupKey = orderedGroupingColumns.computeGroupingKey(first, state)
     }
     current.eq(first) || currentGroupKey == orderedGroupingColumns.computeGroupingKey(current, state)
   }
 
-  override def result(): Iterator[ExecutionContext] = {
+  override def result(): Iterator[CypherRow] = {
     val row = resultRow()
     orderedGroupingColumns.project(row, currentGroupKey)
     Iterator.single(row)

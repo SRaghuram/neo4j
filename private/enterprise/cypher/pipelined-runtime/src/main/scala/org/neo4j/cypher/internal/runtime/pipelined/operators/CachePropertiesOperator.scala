@@ -15,7 +15,7 @@ import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profileRow
@@ -28,7 +28,7 @@ import org.neo4j.internal.kernel.api.IndexReadSession
 class CachePropertiesOperator(val workIdentity: WorkIdentity,
                               val properties: Array[commands.expressions.Expression]) extends StatelessOperator {
 
-  override def operate(currentRow: MorselExecutionContext,
+  override def operate(currentRow: MorselCypherRow,
                        context: QueryContext,
                        state: QueryState,
                        resources: QueryResources): Unit = {

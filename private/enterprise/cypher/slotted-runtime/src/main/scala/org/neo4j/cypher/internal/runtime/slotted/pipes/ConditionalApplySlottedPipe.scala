@@ -6,11 +6,11 @@
 package org.neo4j.cypher.internal.runtime.slotted.pipes
 
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
-import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeWithSource
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
-import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
+import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.values.storable.Values
@@ -24,7 +24,7 @@ case class ConditionalApplySlottedPipe(lhs: Pipe,
                                       (val id: Id = Id.INVALID_ID)
   extends PipeWithSource(lhs) with Pipe {
 
-  override protected def internalCreateResults(input: Iterator[ExecutionContext], state: QueryState): Iterator[ExecutionContext] =
+  override protected def internalCreateResults(input: Iterator[CypherRow], state: QueryState): Iterator[CypherRow] =
     input.flatMap {
       lhsContext =>
 
@@ -33,13 +33,13 @@ case class ConditionalApplySlottedPipe(lhs: Pipe,
           rhs.createResults(rhsState)
         }
         else {
-          val output = SlottedExecutionContext(slots)
+          val output = SlottedRow(slots)
           lhsContext.copyTo(output)
           Iterator.single(output)
         }
     }
 
-  private def condition(context: ExecutionContext) = {
+  private def condition(context: CypherRow) = {
     val cond = longOffsets.exists(offset => !NullChecker.entityIsNull(context.getLongAt(offset))) ||
       refOffsets.exists(x => !(context.getRefAt(x) eq Values.NO_VALUE))
     if (negated) !cond else cond

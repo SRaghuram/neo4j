@@ -11,12 +11,14 @@ import org.neo4j.cypher.internal.physicalplanning.LongSlot
 import org.neo4j.cypher.internal.physicalplanning.RefSlot
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.EntityById
-import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNull
 import org.neo4j.cypher.internal.util.symbols.CTNode
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.ApplyPlanSlotKey
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.CachedPropertySlotKey
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.VariableSlotKey
+import org.neo4j.cypher.internal.runtime.ReadableRow
+import org.neo4j.cypher.internal.runtime.WritableRow
 import org.neo4j.cypher.internal.util.symbols.CTRelationship
 import org.neo4j.exceptions.InternalException
 import org.neo4j.graphdb.NotFoundException
@@ -32,13 +34,13 @@ import org.neo4j.values.virtual.VirtualRelationshipValue
 
 import scala.collection.mutable
 
-object SlottedExecutionContext {
-  def empty = new SlottedExecutionContext(SlotConfiguration.empty)
+object SlottedRow {
+  def empty = new SlottedRow(SlotConfiguration.empty)
   val DEBUG = false
 }
 
 trait SlottedCompatible {
-  def copyToSlottedExecutionContext(target: SlottedExecutionContext, nLongs: Int, nRefs: Int): Unit
+  def copyToSlottedExecutionContext(target: SlottedRow, nLongs: Int, nRefs: Int): Unit
 }
 
 /**
@@ -47,7 +49,7 @@ trait SlottedCompatible {
  * @param slots the slot configuration to use.
  */
 //noinspection NameBooleanParameters
-case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionContext {
+case class SlottedRow(slots: SlotConfiguration) extends CypherRow {
 
   val longs = new Array[Long](slots.numberOfLongs)
   //java.util.Arrays.fill(longs, -2L) // When debugging long slot issues you can uncomment this to check for uninitialized long slots (also in getLongAt below)
@@ -65,9 +67,9 @@ case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionCo
     s.result
   }
 
-  override def copyTo(target: ExecutionContext, sourceLongOffset: Int = 0, sourceRefOffset: Int = 0, targetLongOffset: Int = 0, targetRefOffset: Int = 0): Unit =
+  override def copyTo(target: WritableRow, sourceLongOffset: Int = 0, sourceRefOffset: Int = 0, targetLongOffset: Int = 0, targetRefOffset: Int = 0): Unit =
     target match {
-      case other@SlottedExecutionContext(otherPipeline) =>
+      case other@SlottedRow(otherPipeline) =>
         if (slots.numberOfLongs > otherPipeline.numberOfLongs ||
           slots.numberOfReferences > otherPipeline.numberOfReferences)
           throw new InternalException(
@@ -82,11 +84,11 @@ case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionCo
       case _ => fail()
     }
 
-  override def copyFrom(input: ExecutionContext, nLongs: Int, nRefs: Int): Unit =
+  override def copyFrom(input: ReadableRow, nLongs: Int, nRefs: Int): Unit =
     if (nLongs > slots.numberOfLongs || nRefs > slots.numberOfReferences)
       throw new InternalException("A bug has occurred in the slotted runtime: The target slotted execution context cannot hold the data to copy.")
     else input match {
-      case other@SlottedExecutionContext(_) =>
+      case other@SlottedRow(_) =>
         System.arraycopy(other.longs, 0, longs, 0, nLongs)
         System.arraycopy(other.refs, 0, refs, 0, nRefs)
         setLinenumber(other.getLinenumber)
@@ -114,7 +116,7 @@ case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionCo
 
   override def getRefAt(offset: Int): AnyValue = {
     val value = refs(offset)
-    if (SlottedExecutionContext.DEBUG && value == null)
+    if (SlottedRow.DEBUG && value == null)
       throw new InternalException(s"Reference value not initialised at offset $offset in $this")
     value
   }
@@ -218,15 +220,15 @@ case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionCo
     setValue(key3, value3)
   }
 
-  override def copyWith(key1: String, value1: AnyValue): ExecutionContext = {
+  override def copyWith(key1: String, value1: AnyValue): CypherRow = {
     // This method should throw like its siblings below as soon as reduce is changed to not use it.
-    val newCopy = SlottedExecutionContext(slots)
+    val newCopy = SlottedRow(slots)
     copyTo(newCopy)
     newCopy.setValue(key1, value1)
     newCopy
   }
 
-  override def copyWith(key1: String, value1: AnyValue, key2: String, value2: AnyValue): ExecutionContext = {
+  override def copyWith(key1: String, value1: AnyValue, key2: String, value2: AnyValue): CypherRow = {
     throw new UnsupportedOperationException(
       "Use ExecutionContextFactory.copyWith instead to get the correct slot configuration"
     )
@@ -234,13 +236,13 @@ case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionCo
 
   override def copyWith(key1: String, value1: AnyValue,
                         key2: String, value2: AnyValue,
-                        key3: String, value3: AnyValue): ExecutionContext = {
+                        key3: String, value3: AnyValue): CypherRow = {
     throw new UnsupportedOperationException(
       "Use ExecutionContextFactory.copyWith instead to get the correct slot configuration"
     )
   }
 
-  override def copyWith(newEntries: Seq[(String, AnyValue)]): ExecutionContext = {
+  override def copyWith(newEntries: Seq[(String, AnyValue)]): CypherRow = {
     throw new UnsupportedOperationException(
       "Use ExecutionContextFactory.copyWith instead to get the correct slot configuration"
     )
@@ -259,8 +261,8 @@ case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionCo
   def getRefAtWithoutCheckingInitialized(offset: Int): AnyValue =
     refs(offset)
 
-  override def mergeWith(other: ExecutionContext, entityById: EntityById): Unit = other match {
-    case slottedOther: SlottedExecutionContext =>
+  override def mergeWith(other: ReadableRow, entityById: EntityById): Unit = other match {
+    case slottedOther: SlottedRow =>
       slottedOther.slots.foreachSlot({
         case (VariableSlotKey(key), otherSlot @ LongSlot(offset, _, CTNode)) =>
           val thisSlotSetter = slots.maybePrimitiveNodeSetter(key).getOrElse(
@@ -307,8 +309,8 @@ case class SlottedExecutionContext(slots: SlotConfiguration) extends ExecutionCo
     true
   }
 
-  override def createClone(): ExecutionContext = {
-    val clone = SlottedExecutionContext(slots)
+  override def createClone(): CypherRow = {
+    val clone = SlottedRow(slots)
     copyTo(clone)
     clone
   }

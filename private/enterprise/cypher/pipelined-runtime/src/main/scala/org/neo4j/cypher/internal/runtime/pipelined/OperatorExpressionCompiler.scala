@@ -33,7 +33,7 @@ import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.ast.SlottedCachedProperty
 import org.neo4j.cypher.internal.runtime.DbAccess
-import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CursorRepresentation
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler
 import org.neo4j.cypher.internal.runtime.compiled.expressions.VariableNamer
@@ -504,7 +504,7 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
   }
 
   final def doCopyFromWithExecutionContext(context: IntermediateRepresentation, input: IntermediateRepresentation, nLongs: Int, nRefs: Int): IntermediateRepresentation = {
-    invokeSideEffect(context, method[ExecutionContext, Unit, ExecutionContext, Int, Int]("copyFrom"),
+    invokeSideEffect(context, method[CypherRow, Unit, CypherRow, Int, Int]("copyFrom"),
       input, constant(nLongs), constant(nRefs)
     )
   }
@@ -638,8 +638,8 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
    * accessed within the pipeline that always needs to be copied to the output context because a pipeline of an outer apply-nesting level may need them later on,
    * and a suffix range of n+1 to m arguments that are being accessed in this pipeline, and thus already declared as locals.
    * However, currently we copy the whole range from the input context, up to the first slot that was modified within this pipeline.
-   * If that range is very small, within a threshold, we use individual slot setter methods (e.g. [[ExecutionContext.setLongAt]]),
-   * otherwise we use the [[ExecutionContext.copyFrom]] method.
+   * If that range is very small, within a threshold, we use individual slot setter methods (e.g. [[CypherRow.setLongAt]]),
+   * otherwise we use the [[CypherRow.copyFrom]] method.
    *
    */
   def writeLocalsToSlots(): IntermediateRepresentation = {

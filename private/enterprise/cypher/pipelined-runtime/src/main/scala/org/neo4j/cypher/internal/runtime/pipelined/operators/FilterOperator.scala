@@ -18,7 +18,7 @@ import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profileRow
@@ -34,7 +34,7 @@ import org.neo4j.values.storable.Values
 class FilterOperator(val workIdentity: WorkIdentity,
                      predicate: Expression) extends StatelessOperator {
 
-  override def operate(readingRow: MorselExecutionContext,
+  override def operate(readingRow: MorselCypherRow,
                        context: QueryContext,
                        state: QueryState,
                        resources: QueryResources): Unit = {

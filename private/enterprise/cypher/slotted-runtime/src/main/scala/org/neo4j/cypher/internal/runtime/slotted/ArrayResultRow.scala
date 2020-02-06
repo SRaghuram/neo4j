@@ -7,9 +7,11 @@ package org.neo4j.cypher.internal.runtime.slotted
 
 import org.neo4j.cypher.internal.expressions.ASTCachedProperty
 import org.neo4j.cypher.internal.runtime.EntityById
-import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.CypherRow
+import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.runtime.ResourceLinenumber
 import org.neo4j.cypher.internal.runtime.ValuePopulation
+import org.neo4j.cypher.internal.runtime.WritableRow
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 import org.neo4j.cypher.result.QueryResult
@@ -33,7 +35,7 @@ case class ArrayResultExecutionContextFactory(columns: Seq[(String, Expression)]
     m
   }
 
-  def newResult(context: ExecutionContext, state: QueryState, prePopulate: Boolean): ArrayResultExecutionContext = {
+  def newResult(context: CypherRow, state: QueryState, prePopulate: Boolean): ArrayResultRow = {
     val result = allocateExecutionContext
 
     // Apply the expressions that materializes the result values and fill in the result array
@@ -57,9 +59,9 @@ case class ArrayResultExecutionContextFactory(columns: Seq[(String, Expression)]
 
   //---------------------------------------------------------------------------
   // Instance cache of size 1. Reuses the last created ArrayResultExecutionContext
-  private var freeExecutionContextInstance: ArrayResultExecutionContext = _
+  private var freeExecutionContextInstance: ArrayResultRow = _
 
-  private def allocateExecutionContext: ArrayResultExecutionContext = {
+  private def allocateExecutionContext: ArrayResultRow = {
     if (freeExecutionContextInstance != null) {
       val context = freeExecutionContextInstance
       freeExecutionContextInstance = null
@@ -70,21 +72,21 @@ case class ArrayResultExecutionContextFactory(columns: Seq[(String, Expression)]
     }
   }
 
-  def releaseExecutionContext(executionContext: ArrayResultExecutionContext) = {
+  def releaseExecutionContext(executionContext: ArrayResultRow) = {
     freeExecutionContextInstance = executionContext
   }
 
-  private def createNewExecutionContext: ArrayResultExecutionContext = {
+  private def createNewExecutionContext: ArrayResultRow = {
     val resultArray = new Array[AnyValue](columnArraySize)
-    ArrayResultExecutionContext(resultArray, columnIndexMap, this)
+    ArrayResultRow(resultArray, columnIndexMap, this)
   }
   //---------------------------------------------------------------------------
 }
 
-case class ArrayResultExecutionContext(resultArray: Array[AnyValue],
-                                       columnIndexMap: scala.collection.Map[String, Int],
-                                       factory: ArrayResultExecutionContextFactory)
-  extends ExecutionContext with QueryResult.Record {
+case class ArrayResultRow(resultArray: Array[AnyValue],
+                          columnIndexMap: scala.collection.Map[String, Int],
+                          factory: ArrayResultExecutionContextFactory)
+  extends CypherRow with QueryResult.Record {
 
   override def release(): Unit = factory.releaseExecutionContext(this)
 
@@ -109,9 +111,9 @@ case class ArrayResultExecutionContext(resultArray: Array[AnyValue],
   // The methods below should never be called on a produced result
   private def fail(): Nothing = throw new InternalException("Tried using a result context as an execution context")
 
-  override def copyTo(target: ExecutionContext, sourceLongOffset: Int, sourceRefOffset: Int, targetLongOffset: Int, targetRefOffset: Int): Unit = fail()
+  override def copyTo(target: WritableRow, sourceLongOffset: Int, sourceRefOffset: Int, targetLongOffset: Int, targetRefOffset: Int): Unit = fail()
 
-  override def copyFrom(input: ExecutionContext, nLongs: Int, nRefs: Int): Unit = fail()
+  override def copyFrom(input: ReadableRow, nLongs: Int, nRefs: Int): Unit = fail()
 
   override def setLongAt(offset: Int, value: Long): Unit = fail()
 
@@ -129,17 +131,17 @@ case class ArrayResultExecutionContext(resultArray: Array[AnyValue],
 
   override def set(key1: String, value1: AnyValue, key2: String, value2: AnyValue, key3: String, value3: AnyValue): Unit = fail()
 
-  override def mergeWith(other: ExecutionContext, entityById: EntityById): Unit = fail()
+  override def mergeWith(other: ReadableRow, entityById: EntityById): Unit = fail()
 
-  override def createClone(): ExecutionContext = fail()
+  override def createClone(): CypherRow = fail()
 
-  override def copyWith(key: String, value: AnyValue): ExecutionContext = fail()
+  override def copyWith(key: String, value: AnyValue): CypherRow = fail()
 
-  override def copyWith(key1: String, value1: AnyValue, key2: String, value2: AnyValue): ExecutionContext = fail()
+  override def copyWith(key1: String, value1: AnyValue, key2: String, value2: AnyValue): CypherRow = fail()
 
-  override def copyWith(key1: String, value1: AnyValue, key2: String, value2: AnyValue, key3: String, value3: AnyValue): ExecutionContext = fail()
+  override def copyWith(key1: String, value1: AnyValue, key2: String, value2: AnyValue, key3: String, value3: AnyValue): CypherRow = fail()
 
-  override def copyWith(newEntries: Seq[(String, AnyValue)]): ExecutionContext = fail()
+  override def copyWith(newEntries: Seq[(String, AnyValue)]): CypherRow = fail()
 
   override def boundEntities(materializeNode: Long => AnyValue, materializeRelationship: Long => AnyValue): Map[String, AnyValue] = fail()
 

@@ -12,11 +12,11 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import org.eclipse.collections.impl.factory.Multimaps
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
-import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeHashJoinOperator.HashTable
@@ -64,7 +64,7 @@ class NodeHashJoinOperator(val workIdentity: WorkIdentity,
                          operatorInput: OperatorInput,
                          parallelism: Int,
                          resources: QueryResources,
-                         argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithAccumulator[MorselExecutionContext, HashTable]] = {
+                         argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithAccumulator[MorselCypherRow, HashTable]] = {
     val accAndMorsel = operatorInput.takeAccumulatorAndMorsel()
     if (accAndMorsel != null) {
       Array(new OTask(accAndMorsel.acc, accAndMorsel.morsel))
@@ -75,29 +75,29 @@ class NodeHashJoinOperator(val workIdentity: WorkIdentity,
   }
 
   // Extending InputLoopTask first to get the correct producingWorkUnitEvent implementation
-  class OTask(override val accumulator: HashTable, rhsRow: MorselExecutionContext)
+  class OTask(override val accumulator: HashTable, rhsRow: MorselCypherRow)
     extends InputLoopTask
-    with ContinuableOperatorTaskWithMorselAndAccumulator[MorselExecutionContext, HashTable] {
+    with ContinuableOperatorTaskWithMorselAndAccumulator[MorselCypherRow, HashTable] {
 
     override def workIdentity: WorkIdentity = NodeHashJoinOperator.this.workIdentity
 
-    override val inputMorsel: MorselExecutionContext = rhsRow
+    override val inputMorsel: MorselCypherRow = rhsRow
 
     override def toString: String = "NodeHashJoinTask"
 
-    private var lhsRows: java.util.Iterator[MorselExecutionContext] = _
+    private var lhsRows: java.util.Iterator[MorselCypherRow] = _
     private val key = new Array[Long](rhsOffsets.length)
 
     override protected def initializeInnerLoop(context: QueryContext,
                                                state: QueryState,
                                                resources: QueryResources,
-                                               initExecutionContext: ExecutionContext): Boolean = {
+                                               initExecutionContext: CypherRow): Boolean = {
       fillKeyArray(rhsRow, key, rhsOffsets)
       lhsRows = accumulator.lhsRows(Values.longArray(key))
       true
     }
 
-    override protected def innerLoop(outputRow: MorselExecutionContext,
+    override protected def innerLoop(outputRow: MorselCypherRow,
                                      context: QueryContext,
                                      state: QueryState): Unit = {
 
@@ -116,17 +116,17 @@ class NodeHashJoinOperator(val workIdentity: WorkIdentity,
 object NodeHashJoinOperator {
 
   class HashTableFactory(lhsOffsets: Array[Int], memoryTracker: QueryMemoryTracker, operatorId: Id) extends ArgumentStateFactory[HashTable] {
-    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): HashTable =
+    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselCypherRow, argumentRowIdsForReducers: Array[Long]): HashTable =
       new StandardHashTable(argumentRowId, lhsOffsets, argumentRowIdsForReducers, memoryTracker, operatorId)
-    override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): HashTable =
+    override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselCypherRow, argumentRowIdsForReducers: Array[Long]): HashTable =
       new ConcurrentHashTable(argumentRowId, lhsOffsets, argumentRowIdsForReducers)
   }
 
   /**
    * MorselAccumulator which groups rows by a tuple of node ids.
    */
-  abstract class HashTable extends MorselAccumulator[MorselExecutionContext] {
-    def lhsRows(nodeIds: LongArray): java.util.Iterator[MorselExecutionContext]
+  abstract class HashTable extends MorselAccumulator[MorselCypherRow] {
+    def lhsRows(nodeIds: LongArray): java.util.Iterator[MorselCypherRow]
 
   }
 
@@ -135,10 +135,10 @@ object NodeHashJoinOperator {
                           override val argumentRowIdsForReducers: Array[Long],
                           memoryTracker: QueryMemoryTracker,
                           operatorId: Id) extends HashTable {
-    private val table = Multimaps.mutable.list.empty[LongArray, MorselExecutionContext]()
+    private val table = Multimaps.mutable.list.empty[LongArray, MorselCypherRow]()
 
     // This is update from LHS, i.e. we need to put stuff into a hash table
-    override def update(morsel: MorselExecutionContext): Unit = {
+    override def update(morsel: MorselCypherRow): Unit = {
       while (morsel.isValidRow) {
         val key = new Array[Long](lhsOffsets.length)
         fillKeyArray(morsel, key, lhsOffsets)
@@ -159,17 +159,17 @@ object NodeHashJoinOperator {
       }
     }
 
-    override def lhsRows(nodeIds: LongArray): util.Iterator[MorselExecutionContext] =
+    override def lhsRows(nodeIds: LongArray): util.Iterator[MorselCypherRow] =
       table.get(nodeIds).iterator()
   }
 
   class ConcurrentHashTable(override val argumentRowId: Long,
                             lhsOffsets: Array[Int],
                             override val argumentRowIdsForReducers: Array[Long]) extends HashTable {
-    private val table = new ConcurrentHashMap[LongArray, ConcurrentLinkedQueue[MorselExecutionContext]]()
+    private val table = new ConcurrentHashMap[LongArray, ConcurrentLinkedQueue[MorselCypherRow]]()
 
     // This is update from LHS, i.e. we need to put stuff into a hash table
-    override def update(morsel: MorselExecutionContext): Unit = {
+    override def update(morsel: MorselCypherRow): Unit = {
       while (morsel.isValidRow) {
         val key = new Array[Long](lhsOffsets.length)
         fillKeyArray(morsel, key, lhsOffsets)
@@ -181,14 +181,14 @@ object NodeHashJoinOperator {
           //        }
           //        lastMorsel.moveToNextRow()
           //        lastMorsel.copyFrom(morsel)
-          val lhsRows = table.computeIfAbsent(Values.longArray(key), _ => new ConcurrentLinkedQueue[MorselExecutionContext]())
+          val lhsRows = table.computeIfAbsent(Values.longArray(key), _ => new ConcurrentLinkedQueue[MorselCypherRow]())
           lhsRows.add(morsel.shallowCopy())
         }
         morsel.moveToNextRow()
       }
     }
 
-    override def lhsRows(nodeIds: LongArray): util.Iterator[MorselExecutionContext] = {
+    override def lhsRows(nodeIds: LongArray): util.Iterator[MorselCypherRow] = {
       val lhsRows = table.get(nodeIds)
       if (lhsRows == null)
         util.Collections.emptyIterator()

@@ -11,7 +11,7 @@ import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.when
 import org.neo4j.cypher.internal.runtime.pipelined.execution.ExecutingQuery
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryManager
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QuerySchedulingPolicy
@@ -61,7 +61,7 @@ class WorkerTest extends CypherFunSuite {
 
   test("should handle scheduling error which occurred before getting morsel from parallelizer") {
     val cause = new Exception
-    val originalMorsel = mock[MorselExecutionContext]
+    val originalMorsel = mock[MorselCypherRow]
     val input = mock[MorselParallelizer]
     val pipeline = mock[ExecutablePipeline]
     when(input.originalForClosing).thenReturn(originalMorsel)
@@ -87,7 +87,7 @@ class WorkerTest extends CypherFunSuite {
 
   test("should handle scheduling error which occurred after getting morsel from parallelizer") {
     val cause = new Exception
-    val originalMorsel = mock[MorselExecutionContext]
+    val originalMorsel = mock[MorselCypherRow]
     val input = mock[MorselParallelizer]
     when(input.originalForClosing).thenReturn(originalMorsel)
     val pipeline = mock[ExecutablePipeline]

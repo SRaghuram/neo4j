@@ -11,21 +11,21 @@ import org.neo4j.values.AnyValue
 
 import scala.collection.mutable
 
-object FilteringMorselExecutionContext {
-  def apply(source: MorselExecutionContext) =
-    new FilteringMorselExecutionContext(source.longs, source.refs, source.slots, source.maxNumberOfRows, source.currentRow, source.startRow, source.endRow, source.producingWorkUnitEvent)
+object FilteringMorselCypherRow {
+  def apply(source: MorselCypherRow) =
+    new FilteringMorselCypherRow(source.longs, source.refs, source.slots, source.maxNumberOfRows, source.currentRow, source.startRow, source.endRow, source.producingWorkUnitEvent)
 }
 
-class FilteringMorselExecutionContext(longs: Array[Long],
-                                      refs: Array[AnyValue],
-                                      slots: SlotConfiguration,
-                                      maxNumberOfRows: Int,
-                                      initialCurrentRow: Int,
-                                      initialStartRow: Int,
-                                      initialEndRow: Int,
-                                      producingWorkUnitEvent: WorkUnitEvent = null,
-                                      initialCancelledRows: java.util.BitSet = null)
-  extends MorselExecutionContext(longs, refs, slots, maxNumberOfRows, initialCurrentRow, initialStartRow, initialEndRow, producingWorkUnitEvent) {
+class FilteringMorselCypherRow(longs: Array[Long],
+                               refs: Array[AnyValue],
+                               slots: SlotConfiguration,
+                               maxNumberOfRows: Int,
+                               initialCurrentRow: Int,
+                               initialStartRow: Int,
+                               initialEndRow: Int,
+                               producingWorkUnitEvent: WorkUnitEvent = null,
+                               initialCancelledRows: java.util.BitSet = null)
+  extends MorselCypherRow(longs, refs, slots, maxNumberOfRows, initialCurrentRow, initialStartRow, initialEndRow, producingWorkUnitEvent) {
 
   // ROW CANCELLATION
 
@@ -70,8 +70,8 @@ class FilteringMorselExecutionContext(longs: Array[Long],
 
   // ARGUMENT COLUMNS
 
-  override def shallowCopy(): FilteringMorselExecutionContext =
-    new FilteringMorselExecutionContext(longs, refs, slots, maxNumberOfRows, currentRow, startRow, endRow, producingWorkUnitEvent = null, cancelledRows)
+  override def shallowCopy(): FilteringMorselCypherRow =
+    new FilteringMorselCypherRow(longs, refs, slots, maxNumberOfRows, currentRow, startRow, endRow, producingWorkUnitEvent = null, cancelledRows)
 
   override def moveToNextRow(): Unit = {
     do {
@@ -119,7 +119,7 @@ class FilteringMorselExecutionContext(longs: Array[Long],
    * @param end first index after the view (exclusive end)
    * @return a shallow copy that is configured to only see the configured view.
    */
-  override def view(start: Int, end: Int): MorselExecutionContext = {
+  override def view(start: Int, end: Int): MorselCypherRow = {
     val view = shallowCopy()
     view.startRow = start
     view.currentRow = start
@@ -129,7 +129,7 @@ class FilteringMorselExecutionContext(longs: Array[Long],
   }
 
 
-  override def compactRowsFrom(input: MorselExecutionContext): Unit = {
+  override def compactRowsFrom(input: MorselCypherRow): Unit = {
     super.compactRowsFrom(input)
     if (cancelledRows != null) {
       //we may have to compensate if rows have been filtered out

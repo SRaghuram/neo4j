@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.slotted.pipes
 import org.neo4j.cypher.internal.physicalplanning.LongSlot
 import org.neo4j.cypher.internal.physicalplanning.RefSlot
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
-import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeWithSource
@@ -29,23 +29,23 @@ case class RollUpApplySlottedPipe(lhs: Pipe, rhs: Pipe,
 
   private val getValueToCollectFunction = {
     val expression: Expression = identifierToCollect._2
-    state: QueryState => (ctx: ExecutionContext) => expression(ctx, state)
+    state: QueryState => (ctx: CypherRow) => expression(ctx, state)
   }
 
-  private val hasNullValuePredicates: Seq[ExecutionContext => Boolean] =
+  private val hasNullValuePredicates: Seq[CypherRow => Boolean] =
     nullableIdentifiers.toSeq.map { elem =>
       val elemSlot = slots.get(elem)
       elemSlot match {
-        case Some(LongSlot(offset, true, _)) => (ctx: ExecutionContext) => ctx.getLongAt(offset) == -1
-        case Some(RefSlot(offset, true, _)) => (ctx: ExecutionContext) => ctx.getRefAt(offset) eq NO_VALUE
-        case _ => (ctx: ExecutionContext) => false
+        case Some(LongSlot(offset, true, _)) => (ctx: CypherRow) => ctx.getLongAt(offset) == -1
+        case Some(RefSlot(offset, true, _)) => (ctx: CypherRow) => ctx.getRefAt(offset) eq NO_VALUE
+        case _ => (ctx: CypherRow) => false
       }
     }
 
-  private def hasNullValue(ctx: ExecutionContext): Boolean =
+  private def hasNullValue(ctx: CypherRow): Boolean =
     hasNullValuePredicates.exists(p => p(ctx))
 
-  override protected def internalCreateResults(input: Iterator[ExecutionContext], state: QueryState) = {
+  override protected def internalCreateResults(input: Iterator[CypherRow], state: QueryState) = {
     input.map {
       ctx =>
         if (hasNullValue(ctx)) {
@@ -53,7 +53,7 @@ case class RollUpApplySlottedPipe(lhs: Pipe, rhs: Pipe,
         }
         else {
           val innerState = state.withInitialContext(ctx)
-          val innerResults: Iterator[ExecutionContext] = rhs.createResults(innerState)
+          val innerResults: Iterator[CypherRow] = rhs.createResults(innerState)
           val collection = VirtualValues.list(innerResults.map(getValueToCollectFunction(state)).toArray: _*)
           ctx.setRefAt(collectionRefSlotOffset, collection)
         }

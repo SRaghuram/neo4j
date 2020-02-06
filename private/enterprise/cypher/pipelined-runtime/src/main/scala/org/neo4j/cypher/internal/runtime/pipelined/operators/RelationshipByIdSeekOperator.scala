@@ -43,7 +43,7 @@ import org.neo4j.cypher.internal.logical.plans.SeekableArgs
 import org.neo4j.cypher.internal.logical.plans.SingleSeekableArg
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
-import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.NoMemoryTracker
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
@@ -51,7 +51,7 @@ import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpres
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.NumericHelper
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.SeekArgs
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.freeCursor
@@ -88,7 +88,7 @@ abstract class RelationshipByIdSeekOperator(val workIdentity: WorkIdentity,
 
 
 
-  abstract class RelationshipByIdTask(val inputMorsel: MorselExecutionContext) extends InputLoopTask {
+  abstract class RelationshipByIdTask(val inputMorsel: MorselCypherRow) extends InputLoopTask {
 
 
     protected var ids: java.util.Iterator[AnyValue] = _
@@ -97,7 +97,7 @@ abstract class RelationshipByIdSeekOperator(val workIdentity: WorkIdentity,
     override protected def initializeInnerLoop(context: QueryContext,
                                                state: QueryState,
                                                resources: QueryResources,
-                                               initExecutionContext: ExecutionContext): Boolean = {
+                                               initExecutionContext: CypherRow): Boolean = {
       cursor = resources.cursorPools.relationshipScanCursorPool.allocateAndTrace()
       val queryState = new SlottedQueryState(context,
         resources = null,
@@ -214,7 +214,7 @@ class DirectedRelationshipByIdSeekOperator(workIdentity: WorkIdentity,
                                    argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
 
     IndexedSeq(new RelationshipByIdTask(inputMorsel.nextCopy) {
-      override protected def innerLoop(outputRow: MorselExecutionContext, context: QueryContext, state: QueryState): Unit = {
+      override protected def innerLoop(outputRow: MorselCypherRow, context: QueryContext, state: QueryState): Unit = {
         while (outputRow.isValidRow && ids.hasNext) {
           val nextId = NumericHelper.asLongEntityIdPrimitive(ids.next())
           val read = context.transactionalContext.dataRead
@@ -259,7 +259,7 @@ class UndirectedRelationshipByIdSeekOperator(workIdentity: WorkIdentity,
                                    argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
 
     IndexedSeq(new RelationshipByIdTask(inputMorsel.nextCopy) {
-      override protected def innerLoop(outputRow: MorselExecutionContext, context: QueryContext, state: QueryState): Unit = {
+      override protected def innerLoop(outputRow: MorselCypherRow, context: QueryContext, state: QueryState): Unit = {
         while (outputRow.isValidRow && (!forwardDirection || ids.hasNext)) {
           if (forwardDirection) {
             val nextId = NumericHelper.asLongEntityIdPrimitive(ids.next())

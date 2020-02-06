@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.state.buffers
 import org.neo4j.cypher.internal.physicalplanning.BufferId
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 
@@ -33,9 +33,9 @@ class MorselAttachBuffer(id: BufferId,
                          argumentSlotOffset: Int,
                          argumentNumLongs: Int,
                          argumentNumRefs: Int
-                        ) extends Sink[MorselExecutionContext] {
+                        ) extends Sink[MorselCypherRow] {
 
-  def put(morsel: MorselExecutionContext): Unit = {
+  def put(morsel: MorselCypherRow): Unit = {
     if (DebugSupport.BUFFERS.enabled) {
       DebugSupport.BUFFERS.log(s"[put]   $this <- $morsel")
     }

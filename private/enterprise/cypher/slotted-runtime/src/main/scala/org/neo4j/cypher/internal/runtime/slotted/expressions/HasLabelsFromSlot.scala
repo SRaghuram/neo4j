@@ -5,13 +5,13 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted.expressions
 
-import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.interpreted.commands.AstNode
 import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates.Predicate
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
 
 case class HasLabelFromSlot(offset: Int, resolvedLabelToken: Int) extends Predicate with SlottedExpression {
-  override def isMatch(m: ExecutionContext, state: QueryState): Option[Boolean] = {
+  override def isMatch(m: CypherRow, state: QueryState): Option[Boolean] = {
     Some(state.query.isLabelSetOnNode(resolvedLabelToken, m.getLongAt(offset), state.cursors.nodeCursor))
   }
 
@@ -21,7 +21,7 @@ case class HasLabelFromSlot(offset: Int, resolvedLabelToken: Int) extends Predic
 }
 
 case class HasLabelFromSlotLate(offset: Int, labelName: String) extends Predicate with SlottedExpression {
-  override def isMatch(m: ExecutionContext, state: QueryState): Option[Boolean] = {
+  override def isMatch(m: CypherRow, state: QueryState): Option[Boolean] = {
     val maybeToken = state.query.getOptLabelId(labelName)
     val result =
       if (maybeToken.isEmpty)

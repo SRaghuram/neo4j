@@ -11,7 +11,7 @@ import org.neo4j.cypher.internal.physicalplanning.BufferId
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.pipelined.ExecutionState
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
@@ -29,14 +29,14 @@ class SortPreOperator(val workIdentity: WorkIdentity,
   override def outputBuffer: Option[BufferId] = Some(outputBufferId)
 
   override def createState(executionState: ExecutionState): OutputOperatorState =
-    new State(executionState.getSink[IndexedSeq[PerArgument[MorselExecutionContext]]](outputBufferId))
+    new State(executionState.getSink[IndexedSeq[PerArgument[MorselCypherRow]]](outputBufferId))
 
-  class State(sink: Sink[IndexedSeq[PerArgument[MorselExecutionContext]]]) extends OutputOperatorState {
+  class State(sink: Sink[IndexedSeq[PerArgument[MorselCypherRow]]]) extends OutputOperatorState {
 
     override def workIdentity: WorkIdentity = SortPreOperator.this.workIdentity
     override def trackTime: Boolean = true
 
-    override def prepareOutput(morsel: MorselExecutionContext,
+    override def prepareOutput(morsel: MorselCypherRow,
                                context: QueryContext,
                                state: QueryState,
                                resources: QueryResources,
@@ -54,7 +54,7 @@ class SortPreOperator(val workIdentity: WorkIdentity,
       new PreSortedOutput(preSorted, sink)
     }
 
-    private def sortInPlace(morsel: MorselExecutionContext, comparator: Comparator[Integer]): MorselExecutionContext = {
+    private def sortInPlace(morsel: MorselCypherRow, comparator: Comparator[Integer]): MorselCypherRow = {
       // First we create an array of the same size as the rows in the morsel that we'll sort.
       // This array contains only the pointers to the morsel rows
       val outputToInputIndexes: Array[Integer] = MorselSorting.createMorselIndexesArray(morsel)
@@ -69,8 +69,8 @@ class SortPreOperator(val workIdentity: WorkIdentity,
     }
   }
 
-  class PreSortedOutput(preSorted: IndexedSeq[PerArgument[MorselExecutionContext]],
-                        sink: Sink[IndexedSeq[PerArgument[MorselExecutionContext]]]) extends PreparedOutput {
+  class PreSortedOutput(preSorted: IndexedSeq[PerArgument[MorselCypherRow]],
+                        sink: Sink[IndexedSeq[PerArgument[MorselCypherRow]]]) extends PreparedOutput {
     override def produce(): Unit = sink.put(preSorted)
   }
 }

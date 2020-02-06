@@ -15,7 +15,7 @@ import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.QueryMemoryTracker
 import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
@@ -57,7 +57,7 @@ class DistinctOperator(argumentStateMapId: ArgumentStateMapId,
 
     override def workIdentity: WorkIdentity = DistinctOperator.this.workIdentity
 
-    override def operate(output: MorselExecutionContext,
+    override def operate(output: MorselCypherRow,
                          context: QueryContext,
                          state: QueryState,
                          resources: QueryResources): Unit = {
@@ -80,10 +80,10 @@ class DistinctOperator(argumentStateMapId: ArgumentStateMapId,
   }
 
   class DistinctStateFactory(memoryTracker: QueryMemoryTracker) extends ArgumentStateFactory[DistinctState] {
-    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): DistinctState =
+    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselCypherRow, argumentRowIdsForReducers: Array[Long]): DistinctState =
       new DistinctState(argumentRowId, new util.HashSet[groupings.KeyType](), argumentRowIdsForReducers, memoryTracker)
 
-    override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselExecutionContext, argumentRowIdsForReducers: Array[Long]): DistinctState =
+    override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselCypherRow, argumentRowIdsForReducers: Array[Long]): DistinctState =
       new DistinctState(argumentRowId, ConcurrentHashMap.newKeySet[groupings.KeyType](), argumentRowIdsForReducers, memoryTracker)
   }
 
@@ -92,7 +92,7 @@ class DistinctOperator(argumentStateMapId: ArgumentStateMapId,
                       override val argumentRowIdsForReducers: Array[Long],
                       memoryTracker: QueryMemoryTracker) extends ArgumentState {
 
-    def filterOrProject(row: MorselExecutionContext, queryState: SlottedQueryState): Boolean = {
+    def filterOrProject(row: MorselCypherRow, queryState: SlottedQueryState): Boolean = {
       val groupingKey = groupings.computeGroupingKey(row, queryState)
       if (seen.add(groupingKey)) {
         // Note: this allocation is currently never de-allocated

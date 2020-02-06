@@ -9,7 +9,7 @@ import java.util.concurrent.atomic.AtomicLong
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
 import org.neo4j.cypher.internal.runtime.pipelined.state.AbstractArgumentStateMap.ImmutableStateController
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
@@ -29,7 +29,7 @@ class ConcurrentArgumentStateMap[STATE <: ArgumentState](val argumentStateMapId:
   override protected var lastCompletedArgumentId: Long = -1
 
   override protected def newStateController(argument: Long,
-                                            argumentMorsel: MorselExecutionContext,
+                                            argumentMorsel: MorselCypherRow,
                                             argumentRowIdsForReducers: Array[Long]): AbstractArgumentStateMap.StateController[STATE] = {
     if (factory.completeOnConstruction) {
       new ImmutableStateController(factory.newConcurrentArgumentState(argument, argumentMorsel, argumentRowIdsForReducers))

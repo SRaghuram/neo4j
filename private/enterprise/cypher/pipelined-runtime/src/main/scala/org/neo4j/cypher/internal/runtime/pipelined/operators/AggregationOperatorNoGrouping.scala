@@ -42,7 +42,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.AggregatingAccumulator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.Aggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.Updater
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.AggregationMapperOperatorTaskTemplate.createAggregators
@@ -104,7 +104,7 @@ case class AggregationOperatorNoGrouping(workIdentity: WorkIdentity,
 
       override def trackTime: Boolean = true
 
-      override def prepareOutput(morsel: MorselExecutionContext,
+      override def prepareOutput(morsel: MorselCypherRow,
                                  context: QueryContext,
                                  state: QueryState,
                                  resources: QueryResources,
@@ -126,7 +126,7 @@ case class AggregationOperatorNoGrouping(workIdentity: WorkIdentity,
         new PreAggregatedOutput(preAggregated, sink)
       }
 
-      private def preAggregate(queryState: SlottedQueryState)(morsel: MorselExecutionContext): Array[Updater] = {
+      private def preAggregate(queryState: SlottedQueryState)(morsel: MorselCypherRow): Array[Updater] = {
         val updaters = aggregations.map(_.newUpdater)
         //loop over the entire morsel view and apply the aggregation
         while (morsel.isValidRow) {
@@ -182,7 +182,7 @@ case class AggregationOperatorNoGrouping(workIdentity: WorkIdentity,
 
       override def workIdentity: WorkIdentity = AggregationReduceOperatorNoGrouping.this.workIdentity
 
-      override def operate(outputRow: MorselExecutionContext,
+      override def operate(outputRow: MorselCypherRow,
                            context: QueryContext,
                            state: QueryState,
                            resources: QueryResources): Unit = {

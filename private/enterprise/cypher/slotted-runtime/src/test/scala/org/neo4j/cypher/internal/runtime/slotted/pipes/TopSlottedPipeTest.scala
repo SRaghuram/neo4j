@@ -17,7 +17,7 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.TopNPipe
 import org.neo4j.cypher.internal.runtime.slotted.Ascending
 import org.neo4j.cypher.internal.runtime.slotted.ColumnOrder
 import org.neo4j.cypher.internal.runtime.slotted.Descending
-import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
+import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
 import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContextOrdering
 import org.neo4j.cypher.internal.runtime.slotted.pipes.TopSlottedPipeTestSupport.AscendingOrder
 import org.neo4j.cypher.internal.runtime.slotted.pipes.TopSlottedPipeTestSupport.DescendingOrder
@@ -260,7 +260,7 @@ object TopSlottedPipeTestSupport {
 
     val results = topPipe.createResults(QueryStateHelper.empty)
     results.map {
-      case c: SlottedExecutionContext =>
+      case c: SlottedRow =>
         slot match {
           case RefSlot(offset, _, _) =>
             c.getRefAt(offset)
@@ -287,7 +287,7 @@ object TopSlottedPipeTestSupport {
     val topPipe = createTopPipe(source, topOrderBy, limit, withTies)
 
     topPipe.createResults(QueryStateHelper.empty).map {
-      case c: SlottedExecutionContext =>
+      case c: SlottedRow =>
         (slots(0), slots(1)) match {
           case (RefSlot(offset1, _, _), RefSlot(offset2, _, _)) =>
             (c.getRefAt(offset1), c.getRefAt(offset2))

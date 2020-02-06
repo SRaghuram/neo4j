@@ -11,7 +11,7 @@ import org.mockito.Mockito.when
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
-import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.NodeOperations
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.interpreted.QueryStateHelper
@@ -134,7 +134,7 @@ class RollUpApplySlottedPipeTest extends CypherFunSuite with PipeTestSupport wit
     // given
     val lhs = createLhs(1)
     val rhs = mock[Pipe]
-    when(rhs.createResults(any())).then(new Answer[Iterator[ExecutionContext]] {
+    when(rhs.createResults(any())).then(new Answer[Iterator[CypherRow]] {
       override def answer(invocation: InvocationOnMock) = {
         val state = invocation.getArguments.apply(0).asInstanceOf[QueryState]
         state.initialContext should not be empty

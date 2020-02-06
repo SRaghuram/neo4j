@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted.expressions
 
-import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.interpreted.commands.AstNode
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.PathValueBuilder
@@ -23,7 +23,7 @@ import org.neo4j.values.virtual.RelationshipValue
 object SlottedProjectedPath {
 
   trait Projector {
-    def apply(context: ExecutionContext, state: QueryState, builder: PathValueBuilder): PathValueBuilder
+    def apply(context: CypherRow, state: QueryState, builder: PathValueBuilder): PathValueBuilder
 
     /**
      * The Expressions used in this Projector
@@ -32,13 +32,13 @@ object SlottedProjectedPath {
   }
 
   object nilProjector extends Projector {
-    override def apply(ctx: ExecutionContext, state: QueryState, builder: PathValueBuilder): PathValueBuilder = builder
+    override def apply(ctx: CypherRow, state: QueryState, builder: PathValueBuilder): PathValueBuilder = builder
 
     override def arguments: Seq[Expression] = Seq.empty
   }
 
   case class singleNodeProjector(node: Expression, tailProjector: Projector) extends Projector {
-    override def apply(ctx: ExecutionContext, state: QueryState, builder: PathValueBuilder): PathValueBuilder = {
+    override def apply(ctx: CypherRow, state: QueryState, builder: PathValueBuilder): PathValueBuilder = {
       val nodeValue = node.apply(ctx, state)
       tailProjector(ctx, state, builder.addNode(nodeValue))
     }
@@ -47,7 +47,7 @@ object SlottedProjectedPath {
   }
 
   case class singleRelationshipWithKnownTargetProjector(rel: Expression, target: Expression, tailProjector: Projector) extends Projector {
-    override def apply(ctx: ExecutionContext, state: QueryState, builder: PathValueBuilder): PathValueBuilder = {
+    override def apply(ctx: CypherRow, state: QueryState, builder: PathValueBuilder): PathValueBuilder = {
       val relValue = rel.apply(ctx, state)
       val nodeValue = target.apply(ctx, state)
       tailProjector(ctx, state, builder.addRelationship(relValue).addNode(nodeValue))
@@ -57,28 +57,28 @@ object SlottedProjectedPath {
   }
 
   case class singleIncomingRelationshipProjector(rel: Expression, tailProjector: Projector) extends Projector {
-    override def apply(ctx: ExecutionContext, state: QueryState, builder: PathValueBuilder): PathValueBuilder =
+    override def apply(ctx: CypherRow, state: QueryState, builder: PathValueBuilder): PathValueBuilder =
       tailProjector(ctx, state, addIncoming(rel.apply(ctx,state), state, builder))
 
     override def arguments: Seq[Expression] = Seq(rel) ++ tailProjector.arguments
   }
 
   case class singleOutgoingRelationshipProjector(rel: Expression, tailProjector: Projector) extends Projector {
-    override def apply(ctx: ExecutionContext, state: QueryState, builder: PathValueBuilder): PathValueBuilder =
+    override def apply(ctx: CypherRow, state: QueryState, builder: PathValueBuilder): PathValueBuilder =
       tailProjector(ctx, state, addOutgoing(rel.apply(ctx,state), state, builder))
 
     override def arguments: Seq[Expression] = Seq(rel) ++ tailProjector.arguments
   }
 
   case class singleUndirectedRelationshipProjector(rel: Expression, tailProjector: Projector) extends Projector {
-    override def apply(ctx: ExecutionContext, state: QueryState, builder: PathValueBuilder): PathValueBuilder =
+    override def apply(ctx: CypherRow, state: QueryState, builder: PathValueBuilder): PathValueBuilder =
       tailProjector(ctx, state, addUndirected(rel.apply(ctx,state), state, builder))
 
     override def arguments: Seq[Expression] = Seq(rel) ++ tailProjector.arguments
   }
 
   case class multiIncomingRelationshipWithKnownTargetProjector(rel: Expression, node: Expression, tailProjector: Projector) extends Projector {
-    override def apply(ctx: ExecutionContext, state: QueryState, builder: PathValueBuilder): PathValueBuilder = rel.apply(ctx, state) match {
+    override def apply(ctx: CypherRow, state: QueryState, builder: PathValueBuilder): PathValueBuilder = rel.apply(ctx, state) match {
       case list: ListValue if list.nonEmpty() =>
         val aggregated = addAllExceptLast(builder, list, (b, v) => b.addIncomingRelationship(v))
         tailProjector(ctx, state, aggregated.addRelationship(list.last()).addNode(node.apply(ctx, state)))
@@ -92,7 +92,7 @@ object SlottedProjectedPath {
   }
 
   case class multiOutgoingRelationshipWithKnownTargetProjector(rel: Expression, node: Expression, tailProjector: Projector) extends Projector {
-    override def apply(ctx: ExecutionContext, state: QueryState, builder: PathValueBuilder): PathValueBuilder = rel.apply(ctx, state) match {
+    override def apply(ctx: CypherRow, state: QueryState, builder: PathValueBuilder): PathValueBuilder = rel.apply(ctx, state) match {
       case list: ListValue if list.nonEmpty() =>
         val aggregated = addAllExceptLast(builder, list, (b, v) => b.addOutgoingRelationship(v))
         tailProjector(ctx, state, aggregated.addRelationship(list.last()).addNode(node.apply(ctx, state)))
@@ -106,7 +106,7 @@ object SlottedProjectedPath {
   }
 
   case class multiUndirectedRelationshipWithKnownTargetProjector(rel: Expression, node: Expression, tailProjector: Projector) extends Projector {
-    override def apply(ctx: ExecutionContext, state: QueryState, builder: PathValueBuilder): PathValueBuilder = rel.apply(ctx, state) match {
+    override def apply(ctx: CypherRow, state: QueryState, builder: PathValueBuilder): PathValueBuilder = rel.apply(ctx, state) match {
       case list: ListValue if list.nonEmpty() =>
         if (correctDirection(builder.previousNode, list.head()))  {
           val aggregated = addAllExceptLast(builder, list, (b, v) => b.addUndirectedRelationship(v))
@@ -126,7 +126,7 @@ object SlottedProjectedPath {
   }
 
   case class multiIncomingRelationshipProjector(rel: Expression, tailProjector: Projector) extends Projector {
-    override def apply(ctx: ExecutionContext, state: QueryState, builder: PathValueBuilder): PathValueBuilder = {
+    override def apply(ctx: CypherRow, state: QueryState, builder: PathValueBuilder): PathValueBuilder = {
       val relListValue = rel.apply(ctx, state)
       //we know these relationships have already loaded start and end relationship
       //so we should not use CypherFunctions::[start,end]Node to look them up
@@ -137,7 +137,7 @@ object SlottedProjectedPath {
   }
 
   case class multiOutgoingRelationshipProjector(rel: Expression, tailProjector: Projector) extends Projector {
-    override def apply(ctx: ExecutionContext, state: QueryState, builder: PathValueBuilder): PathValueBuilder = {
+    override def apply(ctx: CypherRow, state: QueryState, builder: PathValueBuilder): PathValueBuilder = {
       val relListValue = rel.apply(ctx, state)
       //we know these relationships have already loaded start and end relationship
       //so we should not use CypherFunctions::[start,end]Node to look them up
@@ -148,7 +148,7 @@ object SlottedProjectedPath {
   }
 
   case class multiUndirectedRelationshipProjector(rel: Expression, tailProjector: Projector) extends Projector {
-    override def apply(ctx: ExecutionContext, state: QueryState, builder: PathValueBuilder): PathValueBuilder = {
+    override def apply(ctx: CypherRow, state: QueryState, builder: PathValueBuilder): PathValueBuilder = {
       val relListValue = rel.apply(ctx, state)
       //we know these relationships have already loaded start and end relationship
       //so we should not use CypherFunctions::[start,end]Node to look them up
@@ -209,7 +209,7 @@ object SlottedProjectedPath {
  These expressions cannot be generated by the user directly
  */
 case class SlottedProjectedPath(symbolTableDependencies: Set[String], projector: SlottedProjectedPath.Projector) extends Expression {
-  override def apply(ctx: ExecutionContext, state: QueryState): AnyValue = projector(ctx, state, state.clearPathValueBuilder).result()
+  override def apply(ctx: CypherRow, state: QueryState): AnyValue = projector(ctx, state, state.clearPathValueBuilder).result()
 
   override def arguments: Seq[Expression] = Seq.empty
 

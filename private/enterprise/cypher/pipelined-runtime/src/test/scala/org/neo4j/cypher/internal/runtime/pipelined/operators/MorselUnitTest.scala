@@ -10,8 +10,8 @@ import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.pipelined.execution.FilteringMorselExecutionContext
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselExecutionContext
+import org.neo4j.cypher.internal.runtime.pipelined.execution.FilteringMorselCypherRow
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
@@ -91,18 +91,18 @@ abstract class MorselUnitTest extends CypherFunSuite {
       this
     }
 
-    def build() : MorselExecutionContext = {
+    def build() : MorselCypherRow = {
       val slots = SlotConfiguration(Map.empty, longSlots, refSlots)
-      val context = MorselExecutionContext(longs, refs, slots, rows)
+      val context = MorselCypherRow(longs, refs, slots, rows)
       context
     }
   }
 
   class FilteringInput extends Input {
-    override def build(): FilteringMorselExecutionContext = {
+    override def build(): FilteringMorselCypherRow = {
       val slots = SlotConfiguration(Map.empty, longSlots, refSlots)
-      val context = MorselExecutionContext(longs, refs, slots, rows)
-      val filteringContext = FilteringMorselExecutionContext(context)
+      val context = MorselCypherRow(longs, refs, slots, rows)
+      val filteringContext = FilteringMorselCypherRow(context)
       filteringContext
     }
   }
@@ -166,7 +166,7 @@ abstract class MorselUnitTest extends CypherFunSuite {
   def gtePredicate(n: Long): Long => Boolean = _ >= n
   def eqPredicate(n: Long): Long => Boolean = _ == n
 
-  def buildSequentialInput(numberOfRows: Int): FilteringMorselExecutionContext = {
+  def buildSequentialInput(numberOfRows: Int): FilteringMorselCypherRow = {
     var rb = new FilteringInput()
     (0 until numberOfRows).foreach { i =>
       rb = rb.addRow(Longs(i, i*2), Refs(Values.stringValue(i.toString), Values.stringValue((i*2).toString)))
@@ -174,7 +174,7 @@ abstract class MorselUnitTest extends CypherFunSuite {
     rb.build()
   }
 
-  def validateRows(row: FilteringMorselExecutionContext, numberOfRows: Int, predicate: Long => Boolean): Unit = {
+  def validateRows(row: FilteringMorselCypherRow, numberOfRows: Int, predicate: Long => Boolean): Unit = {
     val rawRow = row.shallowCopy()
 
     val expectedValidRows = (0 until numberOfRows).foldLeft(0)((count, i) => if (predicate(i)) count + 1 else count)
@@ -210,7 +210,7 @@ abstract class MorselUnitTest extends CypherFunSuite {
     rawRow.isValidRawRow shouldEqual false
   }
 
-  def validateRowDataContent(row: MorselExecutionContext, i: Int): Unit = {
+  def validateRowDataContent(row: MorselCypherRow, i: Int): Unit = {
     row.getLongAt(0) shouldEqual i
     row.getLongAt(1) shouldEqual i*2
     row.getRefAt(0) shouldEqual Values.stringValue(i.toString)
@@ -226,7 +226,7 @@ abstract class MorselUnitTest extends CypherFunSuite {
     }
   }
 
-  class ThenOutput(outputRow: MorselExecutionContext, longSlots: Int, refSlots: Int) {
+  class ThenOutput(outputRow: MorselCypherRow, longSlots: Int, refSlots: Int) {
     private var rowCount = 0
     private val currentRow = outputRow.shallowCopy()
     currentRow.resetToFirstRow()
@@ -281,7 +281,7 @@ abstract class MorselUnitTest extends CypherFunSuite {
   }
 
   class ThenContinuableOutput(task: ContinuableOperatorTask,
-                              outputRow: MorselExecutionContext,
+                              outputRow: MorselCypherRow,
                               longSlots: Int,
                               refSlots: Int) extends ThenOutput(outputRow, longSlots, refSlots) {
 

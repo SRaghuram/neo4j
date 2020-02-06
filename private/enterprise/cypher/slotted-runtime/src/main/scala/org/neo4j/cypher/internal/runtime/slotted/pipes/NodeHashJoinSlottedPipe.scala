@@ -13,11 +13,11 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.PipeWithSource
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
-import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
+import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
 import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.copyDataFromRhs
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.fillKeyArray
-import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.PrefetchingIterator
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.values.storable.LongArray
@@ -34,7 +34,7 @@ case class NodeHashJoinSlottedPipe(lhsOffsets: Array[Int],
                                   (val id: Id = Id.INVALID_ID) extends PipeWithSource(left) {
   private val width: Int = lhsOffsets.length
 
-  override protected def internalCreateResults(input: Iterator[ExecutionContext], state: QueryState): Iterator[ExecutionContext] = {
+  override protected def internalCreateResults(input: Iterator[CypherRow], state: QueryState): Iterator[CypherRow] = {
 
     if (input.isEmpty)
       return Iterator.empty
@@ -54,8 +54,8 @@ case class NodeHashJoinSlottedPipe(lhsOffsets: Array[Int],
     probeInput(rhsIterator, state, table)
   }
 
-  private def buildProbeTable(lhsInput: Iterator[ExecutionContext], queryState: QueryState): MutableListMultimap[LongArray, ExecutionContext] = {
-    val table = Multimaps.mutable.list.empty[LongArray, ExecutionContext]()
+  private def buildProbeTable(lhsInput: Iterator[CypherRow], queryState: QueryState): MutableListMultimap[LongArray, CypherRow] = {
+    val table = Multimaps.mutable.list.empty[LongArray, CypherRow]()
 
     for (current <- lhsInput) {
       val key = new Array[Long](width)
@@ -68,19 +68,19 @@ case class NodeHashJoinSlottedPipe(lhsOffsets: Array[Int],
     table
   }
 
-  private def probeInput(rhsInput: Iterator[ExecutionContext],
+  private def probeInput(rhsInput: Iterator[CypherRow],
                          queryState: QueryState,
-                         probeTable: MutableListMultimap[LongArray, ExecutionContext]): Iterator[ExecutionContext] =
-    new PrefetchingIterator[ExecutionContext] {
+                         probeTable: MutableListMultimap[LongArray, CypherRow]): Iterator[CypherRow] =
+    new PrefetchingIterator[CypherRow] {
       private val key = new Array[Long](width)
-      private var matches: util.Iterator[ExecutionContext] = util.Collections.emptyIterator()
-      private var currentRhsRow: ExecutionContext = _
+      private var matches: util.Iterator[CypherRow] = util.Collections.emptyIterator()
+      private var currentRhsRow: CypherRow = _
 
-      override def produceNext(): Option[ExecutionContext] = {
+      override def produceNext(): Option[CypherRow] = {
         // If we have already found matches, we'll first exhaust these
         if (matches.hasNext) {
           val lhs = matches.next()
-          val newRow = SlottedExecutionContext(slots)
+          val newRow = SlottedRow(slots)
           lhs.copyTo(newRow)
           copyDataFromRhs(longsToCopy, refsToCopy, cachedPropertiesToCopy, newRow, currentRhsRow)
           return Some(newRow)
@@ -112,8 +112,8 @@ object NodeHashJoinSlottedPipe {
   def copyDataFromRhs(longsToCopy: Array[(Int, Int)],
                       refsToCopy: Array[(Int, Int)],
                       cachedPropertiesToCopy: Array[(Int, Int)],
-                      newRow: ExecutionContext,
-                      rhs: ExecutionContext): Unit = {
+                      newRow: CypherRow,
+                      rhs: CypherRow): Unit = {
     var i = 0
     while (i < longsToCopy.length) {
       val (from, to) = longsToCopy(i)
@@ -141,7 +141,7 @@ object NodeHashJoinSlottedPipe {
    * If at least one node is null. It will write -1 into the first
    * position of the array.
    */
-  def fillKeyArray(current: ExecutionContext,
+  def fillKeyArray(current: CypherRow,
                    key: Array[Long],
                    offsets: Array[Int]): Unit = {
     // We use a while loop like this to be able to break out early

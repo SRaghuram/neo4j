@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.operators
 import org.neo4j.cypher.internal.expressions.SemanticDirection
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.DbAccess
-import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.ExpressionCursors
 import org.neo4j.cypher.internal.runtime.pipelined.execution.CursorPools
 import org.neo4j.cypher.internal.runtime.pipelined.operators.VarExpandCursor.relationshipFromCursor
@@ -36,7 +36,7 @@ abstract class VarExpandCursor(val fromNode: Long,
                                minLength: Int,
                                maxLength: Int,
                                read: Read,
-                               executionContext: ExecutionContext,
+                               executionContext: CypherRow,
                                dbAccess: DbAccess,
                                params: Array[AnyValue],
                                cursors: ExpressionCursors,
@@ -57,7 +57,7 @@ abstract class VarExpandCursor(val fromNode: Long,
                                 types: Array[Int]): RelationshipTraversalCursor
 
   //extension point
-  protected def satisfyPredicates(executionContext: ExecutionContext,
+  protected def satisfyPredicates(executionContext: CypherRow,
                                   dbAccess: DbAccess,
                                   params: Array[AnyValue],
                                   cursors: ExpressionCursors,
@@ -208,7 +208,7 @@ object VarExpandCursor {
         null,
         null) {
 
-        override protected def satisfyPredicates(executionContext: ExecutionContext,
+        override protected def satisfyPredicates(executionContext: CypherRow,
                                                  dbAccess: DbAccess,
                                                  params: Array[AnyValue],
                                                  cursors: ExpressionCursors,
@@ -230,7 +230,7 @@ object VarExpandCursor {
         null,
         null,
         null) {
-        override protected def satisfyPredicates(executionContext: ExecutionContext,
+        override protected def satisfyPredicates(executionContext: CypherRow,
                                                  dbAccess: DbAccess,
                                                  params: Array[AnyValue],
                                                  cursors: ExpressionCursors,
@@ -252,7 +252,7 @@ object VarExpandCursor {
         null,
         null,
         null) {
-        override protected def satisfyPredicates(executionContext: ExecutionContext,
+        override protected def satisfyPredicates(executionContext: CypherRow,
                                                  dbAccess: DbAccess,
                                                  params: Array[AnyValue],
                                                  cursors: ExpressionCursors,
@@ -357,7 +357,7 @@ abstract class OutgoingVarExpandCursor(override val fromNode: Long,
                                        minLength: Int,
                                        maxLength: Int,
                                        read: Read,
-                                       executionContext: ExecutionContext,
+                                       executionContext: CypherRow,
                                        dbAccess: DbAccess,
                                        params: Array[AnyValue],
                                        cursors: ExpressionCursors,
@@ -390,7 +390,7 @@ abstract class IncomingVarExpandCursor(fromNode: Long,
                                        minLength: Int,
                                        maxLength: Int,
                                        read: Read,
-                                       executionContext: ExecutionContext,
+                                       executionContext: CypherRow,
                                        dbAccess: DbAccess,
                                        params: Array[AnyValue],
                                        cursors: ExpressionCursors,
@@ -426,7 +426,7 @@ abstract class AllVarExpandCursor(fromNode: Long,
                                   minLength: Int,
                                   maxLength: Int,
                                   read: Read,
-                                  executionContext: ExecutionContext,
+                                  executionContext: CypherRow,
                                   dbAccess: DbAccess,
                                   params: Array[AnyValue],
                                   cursors: ExpressionCursors,

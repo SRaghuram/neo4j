@@ -9,11 +9,11 @@ import org.neo4j.cypher.internal.expressions.ASTCachedProperty
 import org.neo4j.cypher.internal.physicalplanning.LongSlot
 import org.neo4j.cypher.internal.physicalplanning.RefSlot
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
-import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.interpreted.ValueConversion.asValue
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
-import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
+import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.values.storable.Value
 import org.scalatest.mockito.MockitoSugar
@@ -25,9 +25,9 @@ case class FakeSlottedPipe(data: Iterable[Map[Any, Any]],
                            slots: SlotConfiguration)
   extends Pipe with MockitoSugar {
 
-  def internalCreateResults(state: QueryState): Iterator[ExecutionContext] = {
+  def internalCreateResults(state: QueryState): Iterator[CypherRow] = {
     data.iterator.map { values =>
-      val result = SlottedExecutionContext(slots)
+      val result = SlottedRow(slots)
 
       values foreach {
         case (key: String, value) =>

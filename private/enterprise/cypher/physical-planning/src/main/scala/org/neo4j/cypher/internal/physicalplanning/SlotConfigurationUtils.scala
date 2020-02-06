@@ -11,7 +11,7 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.ApplyPlanSlo
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.CachedPropertySlotKey
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.VariableSlotKey
 import org.neo4j.cypher.internal.runtime.EntityById
-import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.util.AssertionUtils
 import org.neo4j.cypher.internal.util.symbols.CTNode
 import org.neo4j.cypher.internal.util.symbols.CTRelationship
@@ -34,18 +34,18 @@ object SlotConfigurationUtils {
    * Use this to make a specialized getter function for a slot,
    * that given an ExecutionContext returns an AnyValue.
    */
-  def makeGetValueFromSlotFunctionFor(slot: Slot): ExecutionContext => AnyValue =
+  def makeGetValueFromSlotFunctionFor(slot: Slot): CypherRow => AnyValue =
     slot match {
       case LongSlot(offset, false, CTNode) =>
-        (context: ExecutionContext) =>
+        (context: CypherRow) =>
           VirtualValues.node(context.getLongAt(offset))
 
       case LongSlot(offset, false, CTRelationship) =>
-        (context: ExecutionContext) =>
+        (context: CypherRow) =>
           VirtualValues.relationship(context.getLongAt(offset))
 
       case LongSlot(offset, true, CTNode) =>
-        (context: ExecutionContext) => {
+        (context: CypherRow) => {
           val nodeId = context.getLongAt(offset)
           if (nodeId == PRIMITIVE_NULL)
             Values.NO_VALUE
@@ -53,7 +53,7 @@ object SlotConfigurationUtils {
             VirtualValues.node(nodeId)
         }
       case LongSlot(offset, true, CTRelationship) =>
-        (context: ExecutionContext) => {
+        (context: CypherRow) => {
           val relId = context.getLongAt(offset)
           if (relId == PRIMITIVE_NULL)
             Values.NO_VALUE
@@ -61,7 +61,7 @@ object SlotConfigurationUtils {
             VirtualValues.relationship(relId)
         }
       case RefSlot(offset, _, _) =>
-        (context: ExecutionContext) =>
+        (context: CypherRow) =>
           context.getRefAt(offset)
 
       case _ =>
@@ -72,14 +72,14 @@ object SlotConfigurationUtils {
    * Use this to make a specialized getter function for a slot and a primitive return type (i.e. CTNode or CTRelationship),
    * that given an ExecutionContext returns a long.
    */
-  def makeGetPrimitiveFromSlotFunctionFor(slot: Slot, returnType: CypherType, throwOfTypeError: Boolean = true): ToLongFunction[ExecutionContext] =
+  def makeGetPrimitiveFromSlotFunctionFor(slot: Slot, returnType: CypherType, throwOfTypeError: Boolean = true): ToLongFunction[CypherRow] =
     (slot, returnType, throwOfTypeError) match {
       case (LongSlot(offset, _, _), CTNode | CTRelationship, _) =>
-        (context: ExecutionContext) =>
+        (context: CypherRow) =>
           context.getLongAt(offset)
 
       case (RefSlot(offset, false, _), CTNode, true) =>
-        (context: ExecutionContext) =>
+        (context: CypherRow) =>
           val value = context.getRefAt(offset)
           try {
             value.asInstanceOf[VirtualNodeValue].id()
@@ -89,7 +89,7 @@ object SlotConfigurationUtils {
           }
 
       case (RefSlot(offset, false, _), CTRelationship, true) =>
-        (context: ExecutionContext) =>
+        (context: CypherRow) =>
           val value = context.getRefAt(offset)
           try {
             value.asInstanceOf[VirtualRelationshipValue].id()
@@ -99,7 +99,7 @@ object SlotConfigurationUtils {
           }
 
       case (RefSlot(offset, true, _), CTNode, true) =>
-        (context: ExecutionContext) =>
+        (context: CypherRow) =>
           val value = context.getRefAt(offset)
           try {
             if (value eq Values.NO_VALUE)
@@ -112,7 +112,7 @@ object SlotConfigurationUtils {
           }
 
       case (RefSlot(offset, true, _), CTRelationship, true) =>
-        (context: ExecutionContext) =>
+        (context: CypherRow) =>
           val value = context.getRefAt(offset)
           try {
             if (value eq Values.NO_VALUE)
@@ -125,14 +125,14 @@ object SlotConfigurationUtils {
           }
 
       case (RefSlot(offset, _, _), CTNode, false) =>
-        (context: ExecutionContext) =>
+        (context: CypherRow) =>
           context.getRefAt(offset) match {
             case n: VirtualNodeValue => n.id()
             case _ => PRIMITIVE_NULL
           }
 
       case (RefSlot(offset, _, _), CTRelationship, false) =>
-        (context: ExecutionContext) =>
+        (context: CypherRow) =>
           context.getRefAt(offset) match {
             case r: VirtualRelationshipValue => r.id()
             case _ => PRIMITIVE_NULL
@@ -146,26 +146,26 @@ object SlotConfigurationUtils {
    * Use this to make a specialized getter function for a slot that is expected to contain a node
    * that given an ExecutionContext returns a long with the node id.
    */
-  def makeGetPrimitiveNodeFromSlotFunctionFor(slot: Slot, throwOnTypeError: Boolean = true): ToLongFunction[ExecutionContext] =
+  def makeGetPrimitiveNodeFromSlotFunctionFor(slot: Slot, throwOnTypeError: Boolean = true): ToLongFunction[CypherRow] =
     makeGetPrimitiveFromSlotFunctionFor(slot, CTNode, throwOnTypeError)
 
   /**
    * Use this to make a specialized getter function for a slot that is expected to contain a node
    * that given an ExecutionContext returns a long with the relationship id.
    */
-  def makeGetPrimitiveRelationshipFromSlotFunctionFor(slot: Slot, throwOfTypeError: Boolean = true): ToLongFunction[ExecutionContext] =
+  def makeGetPrimitiveRelationshipFromSlotFunctionFor(slot: Slot, throwOfTypeError: Boolean = true): ToLongFunction[CypherRow] =
     makeGetPrimitiveFromSlotFunctionFor(slot, CTRelationship, throwOfTypeError)
 
-  val NO_ENTITY_FUNCTION: ToLongFunction[ExecutionContext] = (value: ExecutionContext) => PRIMITIVE_NULL
+  val NO_ENTITY_FUNCTION: ToLongFunction[CypherRow] = (value: CypherRow) => PRIMITIVE_NULL
 
   /**
    * Use this to make a specialized setter function for a slot,
    * that takes as input an ExecutionContext and an AnyValue.
    */
-  def makeSetValueInSlotFunctionFor(slot: Slot): (ExecutionContext, AnyValue) => Unit =
+  def makeSetValueInSlotFunctionFor(slot: Slot): (CypherRow, AnyValue) => Unit =
     slot match {
       case LongSlot(offset, false, CTNode) =>
-        (context: ExecutionContext, value: AnyValue) =>
+        (context: CypherRow, value: AnyValue) =>
           try {
             context.setLongAt(offset, value.asInstanceOf[VirtualNodeValue].id())
           } catch {
@@ -174,7 +174,7 @@ object SlotConfigurationUtils {
           }
 
       case LongSlot(offset, false, CTRelationship) =>
-        (context: ExecutionContext, value: AnyValue) =>
+        (context: CypherRow, value: AnyValue) =>
           try {
             context.setLongAt(offset, value.asInstanceOf[VirtualRelationshipValue].id())
           } catch {
@@ -183,7 +183,7 @@ object SlotConfigurationUtils {
           }
 
       case LongSlot(offset, true, CTNode) =>
-        (context: ExecutionContext, value: AnyValue) =>
+        (context: CypherRow, value: AnyValue) =>
           if (value eq Values.NO_VALUE)
             context.setLongAt(offset, PRIMITIVE_NULL)
           else {
@@ -196,7 +196,7 @@ object SlotConfigurationUtils {
           }
 
       case LongSlot(offset, true, CTRelationship) =>
-        (context: ExecutionContext, value: AnyValue) =>
+        (context: CypherRow, value: AnyValue) =>
           if (value eq Values.NO_VALUE)
             context.setLongAt(offset, PRIMITIVE_NULL)
           else {
@@ -209,7 +209,7 @@ object SlotConfigurationUtils {
           }
 
       case RefSlot(offset, _, _) =>
-        (context: ExecutionContext, value: AnyValue) =>
+        (context: CypherRow, value: AnyValue) =>
           context.setRefAt(offset, value)
 
       case _ =>
@@ -220,68 +220,68 @@ object SlotConfigurationUtils {
    * Use this to make a specialized setter function for a slot,
    * that takes as input an ExecutionContext and a primitive long value.
    */
-  def makeSetPrimitiveInSlotFunctionFor(slot: Slot, valueType: CypherType): (ExecutionContext, Long, EntityById) => Unit =
+  def makeSetPrimitiveInSlotFunctionFor(slot: Slot, valueType: CypherType): (CypherRow, Long, EntityById) => Unit =
     (slot, valueType) match {
       case (LongSlot(offset, nullable, CTNode), CTNode) =>
         if (AssertionUtils.assertionsEnabled && !nullable) {
-          (context: ExecutionContext, value: Long, _: EntityById) =>
+          (context: CypherRow, value: Long, _: EntityById) =>
             if (value == PRIMITIVE_NULL)
               throw new ParameterWrongTypeException(s"Cannot assign null to a non-nullable slot")
             context.setLongAt(offset, value)
         }
         else {
-          (context: ExecutionContext, value: Long, _: EntityById) =>
+          (context: CypherRow, value: Long, _: EntityById) =>
             context.setLongAt(offset, value)
         }
 
       case (LongSlot(offset, nullable, CTRelationship), CTRelationship) =>
         if (AssertionUtils.assertionsEnabled && !nullable) {
-          (context: ExecutionContext, value: Long, _: EntityById) =>
+          (context: CypherRow, value: Long, _: EntityById) =>
             if (value == PRIMITIVE_NULL)
               throw new ParameterWrongTypeException(s"Cannot assign null to a non-nullable slot")
             context.setLongAt(offset, value)
         }
         else {
-          (context: ExecutionContext, value: Long, _: EntityById) =>
+          (context: CypherRow, value: Long, _: EntityById) =>
             context.setLongAt(offset, value)
         }
 
       case (RefSlot(offset, false, typ), CTNode) if typ.isAssignableFrom(CTNode) =>
         if (AssertionUtils.assertionsEnabled) {
-          (context: ExecutionContext, value: Long, entityById: EntityById) =>
+          (context: CypherRow, value: Long, entityById: EntityById) =>
             if (value == PRIMITIVE_NULL)
               throw new ParameterWrongTypeException(s"Cannot assign null to a non-nullable slot")
             context.setRefAt(offset, entityById.nodeById(value))
         }
         else {
-          (context: ExecutionContext, value: Long, entityById: EntityById) =>
+          (context: CypherRow, value: Long, entityById: EntityById) =>
             // NOTE: Slot allocation needs to guarantee that we can never get nulls in here
             context.setRefAt(offset, entityById.nodeById(value))
         }
 
       case (RefSlot(offset, false, typ), CTRelationship) if typ.isAssignableFrom(CTRelationship) =>
         if (AssertionUtils.assertionsEnabled) {
-          (context: ExecutionContext, value: Long, entityById: EntityById) =>
+          (context: CypherRow, value: Long, entityById: EntityById) =>
             if (value == -1L)
               if (value == PRIMITIVE_NULL)
                 throw new ParameterWrongTypeException(s"Cannot assign null to a non-nullable slot")
             context.setRefAt(offset, entityById.relationshipById(value))
         }
         else {
-          (context: ExecutionContext, value: Long, entityById: EntityById) =>
+          (context: CypherRow, value: Long, entityById: EntityById) =>
             // NOTE: Slot allocation needs to guarantee that we can never get nulls in here
             context.setRefAt(offset, entityById.relationshipById(value))
         }
 
       case (RefSlot(offset, true, typ), CTNode) if typ.isAssignableFrom(CTNode) =>
-        (context: ExecutionContext, value: Long, entityById: EntityById) =>
+        (context: CypherRow, value: Long, entityById: EntityById) =>
           if (value == PRIMITIVE_NULL)
             context.setRefAt(offset, Values.NO_VALUE)
           else
             context.setRefAt(offset, entityById.nodeById(value))
 
       case (RefSlot(offset, true, typ), CTRelationship) if typ.isAssignableFrom(CTRelationship) =>
-        (context: ExecutionContext, value: Long, entityById: EntityById) =>
+        (context: CypherRow, value: Long, entityById: EntityById) =>
           if (value == PRIMITIVE_NULL)
             context.setRefAt(offset, Values.NO_VALUE)
           else
@@ -295,14 +295,14 @@ object SlotConfigurationUtils {
    * Use this to make a specialized getter function for a slot that is expected to contain a node
    * that given an ExecutionContext returns a long with the node id.
    */
-  def makeSetPrimitiveNodeInSlotFunctionFor(slot: Slot): (ExecutionContext, Long, EntityById) => Unit =
+  def makeSetPrimitiveNodeInSlotFunctionFor(slot: Slot): (CypherRow, Long, EntityById) => Unit =
     makeSetPrimitiveInSlotFunctionFor(slot, CTNode)
 
   /**
    * Use this to make a specialized getter function for a slot that is expected to contain a node
    * that given an ExecutionContext returns a long with the relationship id.
    */
-  def makeSetPrimitiveRelationshipInSlotFunctionFor(slot: Slot): (ExecutionContext, Long, EntityById) => Unit =
+  def makeSetPrimitiveRelationshipInSlotFunctionFor(slot: Slot): (CypherRow, Long, EntityById) => Unit =
     makeSetPrimitiveInSlotFunctionFor(slot, CTRelationship)
 
   /**

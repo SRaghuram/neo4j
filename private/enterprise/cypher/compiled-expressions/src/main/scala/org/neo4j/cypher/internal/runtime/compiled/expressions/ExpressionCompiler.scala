@@ -186,7 +186,7 @@ import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.vRELATIONSHIP_CURSOR
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.NestedPipeExpression
 import org.neo4j.cypher.internal.runtime.DbAccess
-import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.ExpressionCursors
 import org.neo4j.cypher.internal.util.symbols.CTAny
 import org.neo4j.cypher.internal.util.symbols.CTBoolean
@@ -306,7 +306,7 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
           methods = Seq(
             MethodDeclaration("evaluate",
                               returnType = typeRefOf[AnyValue],
-                              parameters = Seq(param[ExecutionContext]("context"),
+                              parameters = Seq(param[CypherRow]("context"),
                                                param[DbAccess]("dbAccess"),
                                                param[Array[AnyValue]]("params"),
                                                param[ExpressionCursors]("cursors"),
@@ -340,7 +340,7 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
           methods = Seq(
             MethodDeclaration("project",
                               returnType = typeRefOf[Unit],
-                              parameters = Seq(param[ExecutionContext]("context"),
+                              parameters = Seq(param[CypherRow]("context"),
                                                param[DbAccess]("dbAccess"),
                                                param[Array[AnyValue]]("params"),
                                                param[ExpressionCursors]("cursors"),
@@ -382,14 +382,14 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
           methods = Seq(
             MethodDeclaration("projectGroupingKey",
                               returnType = typeRefOf[Unit],
-                              parameters = Seq(param[ExecutionContext]("context"),
+                              parameters = Seq(param[CypherRow]("context"),
                                                param[AnyValue]("key")),
                               body = block(
                                 declarations(grouping.projectKey),
                                 grouping.projectKey.ir)),
             MethodDeclaration("computeGroupingKey",
                               returnType = typeRefOf[AnyValue],
-                              parameters = Seq(param[ExecutionContext]("context"),
+                              parameters = Seq(param[CypherRow]("context"),
                                                param[DbAccess]("dbAccess"),
                                                param[Array[AnyValue]]("params"),
                                                param[ExpressionCursors]("cursors"),
@@ -399,7 +399,7 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
                                 nullCheckIfRequired(grouping.computeKey))),
             MethodDeclaration("getGroupingKey",
                               returnType = typeRefOf[AnyValue],
-                              parameters = Seq(param[ExecutionContext]("context")),
+                              parameters = Seq(param[CypherRow]("context")),
                               body = block(
                                 declarations(grouping.getKey),
                                 nullCheckIfRequired(grouping.getKey)))
@@ -2359,24 +2359,24 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
     }
 
   final def getLongFromExecutionContext(offset: Int, context: IntermediateRepresentation = LOAD_CONTEXT): IntermediateRepresentation =
-    invoke(context, method[ExecutionContext, Long, Int]("getLongAt"), constant(offset))
+    invoke(context, method[CypherRow, Long, Int]("getLongAt"), constant(offset))
 
   final def getRefFromExecutionContext(offset: Int, context: IntermediateRepresentation = LOAD_CONTEXT): IntermediateRepresentation =
-    invoke(context, method[ExecutionContext, AnyValue, Int]("getRefAt"), constant(offset))
+    invoke(context, method[CypherRow, AnyValue, Int]("getRefAt"), constant(offset))
 
   final def getCachedPropertyFromExecutionContext(offset: Int, context: IntermediateRepresentation = LOAD_CONTEXT): IntermediateRepresentation =
-    invoke(context, method[ExecutionContext, Value, Int]("getCachedPropertyAt"), constant(offset))
+    invoke(context, method[CypherRow, Value, Int]("getCachedPropertyAt"), constant(offset))
 
   final def setRefInExecutionContext(offset: Int, value: IntermediateRepresentation): IntermediateRepresentation =
-    invokeSideEffect(LOAD_CONTEXT, method[ExecutionContext, Unit, Int, AnyValue]("setRefAt"),
+    invokeSideEffect(LOAD_CONTEXT, method[CypherRow, Unit, Int, AnyValue]("setRefAt"),
                      constant(offset), value)
 
    final def setLongInExecutionContext(offset: Int, value: IntermediateRepresentation): IntermediateRepresentation =
-    invokeSideEffect(LOAD_CONTEXT, method[ExecutionContext, Unit, Int, Long]("setLongAt"),
+    invokeSideEffect(LOAD_CONTEXT, method[CypherRow, Unit, Int, Long]("setLongAt"),
                      constant(offset), value)
 
   protected final def setCachedPropertyInExecutionContext(offset: Int, value: IntermediateRepresentation): IntermediateRepresentation =
-    invokeSideEffect(LOAD_CONTEXT, method[ExecutionContext, Unit, Int, Value]("setCachedPropertyAt"),
+    invokeSideEffect(LOAD_CONTEXT, method[CypherRow, Unit, Int, Value]("setCachedPropertyAt"),
                      constant(offset), value)
 
   //==================================================================================================
@@ -2667,7 +2667,7 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
       case _ =>
         computeRepresentation(ir =
                                 invoke(LOAD_CONTEXT,
-                                          method[ExecutionContext, AnyValue, String]("getByName"), constant(name)),
+                                          method[CypherRow, AnyValue, String]("getByName"), constant(name)),
                               nullCheck = None, nullable = true)
     }
   }

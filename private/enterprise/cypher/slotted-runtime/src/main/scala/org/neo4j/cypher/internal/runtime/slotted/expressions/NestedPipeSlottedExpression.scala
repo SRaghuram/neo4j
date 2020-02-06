@@ -8,13 +8,13 @@ package org.neo4j.cypher.internal.runtime.slotted.expressions
 import java.util
 
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
-import org.neo4j.cypher.internal.runtime.ExecutionContext
+import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.interpreted.commands.AstNode
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.ExpressionVariable
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.QueryState
-import org.neo4j.cypher.internal.runtime.slotted.SlottedExecutionContext
+import org.neo4j.cypher.internal.runtime.slotted.SlottedRow
 import org.neo4j.values.AnyValue
 import org.neo4j.values.virtual.VirtualValues
 
@@ -28,8 +28,8 @@ case class NestedPipeSlottedExpression(pipe: Pipe,
 
   private val expVarSlotsInNestedPlan = availableExpressionVariables.map(ev => slots.getReferenceOffsetFor(ev.name))
 
-  override def apply(ctx: ExecutionContext, state: QueryState): AnyValue = {
-    val initialContext: SlottedExecutionContext = createInitialContext(ctx, state)
+  override def apply(ctx: CypherRow, state: QueryState): AnyValue = {
+    val initialContext: SlottedRow = createInitialContext(ctx, state)
     val innerState = state.withInitialContext(initialContext).withDecorator(state.decorator.innerDecorator(owningPipe))
 
     val results = pipe.createResults(innerState)
@@ -40,8 +40,8 @@ case class NestedPipeSlottedExpression(pipe: Pipe,
     VirtualValues.fromList(all)
   }
 
-  private def createInitialContext(ctx: ExecutionContext, state: QueryState): SlottedExecutionContext = {
-    val initialContext = new SlottedExecutionContext(slots)
+  private def createInitialContext(ctx: CypherRow, state: QueryState): SlottedRow = {
+    val initialContext = new SlottedRow(slots)
     initialContext.copyFrom(ctx, slots.numberOfLongs, slots.numberOfReferences - expVarSlotsInNestedPlan.length)
     var i = 0
     while (i < expVarSlotsInNestedPlan.length) {

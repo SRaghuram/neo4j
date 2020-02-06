@@ -47,7 +47,7 @@ object StaticEvaluation {
       memoryTracker = null
     )
 
-    override def evaluate(expression: Expression, params: MapValue, context: ExecutionContext): AnyValue = {
+    override def evaluate(expression: Expression, params: MapValue, context: CypherRow): AnyValue = {
       try {
         super.evaluate(expression, params, context)
       } catch {
