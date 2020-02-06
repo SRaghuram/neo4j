@@ -353,7 +353,8 @@ class MorselExecutionContext(private[execution] final val morsel: Morsel,
   override def estimatedHeapUsage: Long = {
     var usage = longsPerRow * maxNumberOfRows * 8L
     var i = startRow * refsPerRow
-    while (i < ((startRow + maxNumberOfRows) * refsPerRow)) {
+    val limit = maxNumberOfRows * refsPerRow
+    while (i < limit) {
       val ref = morsel.refs(i)
       if (ref != null) {
         usage += morsel.refs(i).estimatedHeapUsage()

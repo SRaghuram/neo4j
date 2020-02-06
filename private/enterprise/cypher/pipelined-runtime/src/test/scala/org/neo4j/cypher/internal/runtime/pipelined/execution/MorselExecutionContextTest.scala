@@ -29,4 +29,22 @@ class MorselExecutionContextTest extends CypherFunSuite {
     val expectedSizeOfRefs = 0L
     ctx.estimatedHeapUsage should be(expectedSizeOfLongs + expectedSizeOfRefs)
   }
+
+  test("should compute estimateHeapUsage on a view") {
+    // GIVEN
+    val morselSize = 3
+    val slots =
+      SlotConfiguration.empty
+        .newLong("n", nullable = false, CTNode)
+        .newReference("x", nullable = true, CTAny)
+
+    // WHEN
+    val morsel = Morsel.create(slots, morselSize)
+    val ctx = new MorselExecutionContext(morsel, slots, morselSize, 0, 0, morselSize).view(1, morselSize )
+
+    // THEN
+    val expectedSizeOfLongs = morselSize * 8L
+    val expectedSizeOfRefs = 0L
+    ctx.estimatedHeapUsage should be(expectedSizeOfLongs + expectedSizeOfRefs)
+  }
 }
