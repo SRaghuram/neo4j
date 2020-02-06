@@ -128,6 +128,45 @@ class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
     result.toList should be(List(Map("len" -> 3))) // a -> b -> c, a -> c -> b, a -> c -> d
   }
 
+  test("MATCH with legacy type separator with CYPHER 3.5") {
+    // GIVEN
+    val a = createNode()
+    val b = createNode()
+    val c = createNode()
+    relate(a, b, "B", Map("foo" -> "bar"))
+    relate(a, b, "C", Map("foo" -> "bar"))
+    relate(a, c, "D")
+
+    val queryVariable = "MATCH (n)-[x:A|:B|:C]->() RETURN n" // variable binding
+    val queryProperty = "MATCH (n)-[:A|:B|:C {foo: 'bar'}]->() RETURN n" // inlined property predicate
+    val queryLength = "MATCH (n)-[:A|:B|:C*]->() RETURN n" // variable length
+
+    val queryShortestPath = "MATCH p = shortestPath((n)-[:A|:B|:C|:D*]->(m)) WHERE n <> m RETURN p"
+    val queryWhere1 = "MATCH (n) WHERE (n)-[:A|:B|:C {foo: 'bar'}]->() RETURN n"
+    val queryWhere2 = "MATCH (n) WHERE exists((n)-[:A|:B|:C*]->()) RETURN n"
+    val queryWith1 = "MATCH (n) WITH size((n)-[:A|:B|:C {foo: 'bar'}]->()) AS size RETURN size"
+    val queryWith2 = "MATCH (n) WITH exists((n)-[:A|:B|:C {foo: 'bar'}]->()) AS exists RETURN exists"
+
+    Seq(
+      (queryVariable, 2),
+      (queryProperty, 2),
+      (queryLength, 2),
+      (queryShortestPath, 2),
+      (queryWhere1, 1),
+      (queryWhere2, 1),
+      (queryWith1, 3),
+      (queryWith2, 3)
+    ).foreach { case (query, numResults) =>
+      withClue(query) {
+        // WHEN
+        val res = executeSingle(s"CYPHER 3.5 $query")
+
+        // THEN
+        res.toList.size should be(numResults)
+      }
+    }
+  }
+
   // Additions in 4.0
 
   test("administration commands should not work with CYPHER 3.5") {

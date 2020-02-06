@@ -60,35 +60,6 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
     procedures.registerProcedure(classOf[NotificationAcceptanceTest.TestProcedures])
   }
 
-  test("Warn on future ambiguous separator between alternative relationship types") {
-    val res1 = executeSingle("explain MATCH (a)-[:A|:B|:C {foo:'bar'}]-(b) RETURN a,b", Map.empty)
-
-    res1.notifications should contain(
-      DEPRECATED_RELATIONSHIP_TYPE_SEPARATOR.notification(new graphdb.InputPosition(17, 1, 18)))
-
-    val res2 = executeSingle("explain MATCH (a)-[:A|B|C {foo:'bar'}]-(b) RETURN a,b", Map.empty)
-
-    res2.notifications.map(_.getTitle) should not contain "Neo.ClientNotification.Statement.FeatureDeprecationWarning."
-
-    val res3 = executeSingle("explain MATCH (a)-[:A|:B|:C]-(b) RETURN a,b", Map.empty)
-
-    res3.notifications.map(_.getTitle) should not contain "Neo.ClientNotification.Statement.FeatureDeprecationWarning."
-
-    val res4 = executeSingle("explain MATCH (a)-[:A|B|C]-(b) RETURN a,b", Map.empty)
-
-    res4.notifications.map(_.getTitle) should not contain "Neo.ClientNotification.Statement.FeatureDeprecationWarning."
-
-    val res5 = executeSingle("explain MATCH (a)-[x:A|:B|:C]-() RETURN a", Map.empty)
-
-    res5.notifications should contain(
-      DEPRECATED_RELATIONSHIP_TYPE_SEPARATOR.notification(new graphdb.InputPosition(17, 1, 18)))
-
-    val res6 = executeSingle("explain MATCH (a)-[:A|:B|:C*]-() RETURN a", Map.empty)
-
-    res6.notifications should contain(
-      DEPRECATED_RELATIONSHIP_TYPE_SEPARATOR.notification(new graphdb.InputPosition(17, 1, 18)))
-  }
-
   test("Warn on binding variable length relationships") {
     val res1 = executeSingle("explain MATCH ()-[rs*]-() RETURN rs", Map.empty)
 

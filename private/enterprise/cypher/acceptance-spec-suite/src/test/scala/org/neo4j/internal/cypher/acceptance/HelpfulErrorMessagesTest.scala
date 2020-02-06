@@ -22,7 +22,7 @@ class HelpfulErrorMessagesTest extends ExecutionEngineFunSuite with CypherCompar
 
   test("should provide sensible error message when trying to add multiple relationship types on create") {
     failWithError(Configs.All,
-      "CREATE (a)-[:ASSOCIATED_WITH|:KNOWS]->(b)",
+      "CREATE (a)-[:ASSOCIATED_WITH|KNOWS]->(b)",
       Seq("A single relationship type must be specified for CREATE",
         "The given query is not currently supported in the selected cost-based planner" ))
   }
@@ -35,9 +35,37 @@ class HelpfulErrorMessagesTest extends ExecutionEngineFunSuite with CypherCompar
 
   test("should provide sensible error message when trying to add multiple relationship types on merge") {
     failWithError(Configs.All,
-      "MERGE (a)-[:ASSOCIATED_WITH|:KNOWS]->(b)",
+      "MERGE (a)-[:ASSOCIATED_WITH|KNOWS]->(b)",
       Seq("A single relationship type must be specified for MERGE",
         "The given query is not currently supported in the selected cost-based planner"))
+  }
+
+  test("should provide sensible error message when using colon in the separation of alternative relationship types in failing cases") {
+    val errorMessage = Seq(
+      """The semantics of using colon in the separation of alternative relationship types in conjunction with
+        |the use of variable binding, inlined property predicates, or variable length is no longer supported.
+        |Please separate the relationships types using `:A|B|C` instead""".stripMargin)
+
+    val failingQuery1 = "MATCH (a)-[x:A|:B|:C]-() RETURN a" // variable binding
+    val failingQuery2 = "MATCH (a)-[:A|:B|:C {foo:'bar'}]-(b) RETURN a,b" // inlined property predicates
+    val failingQuery3 = "MATCH (a)-[:A|:B|:C*]-() RETURN a" // variable length
+    val failingQuery4 = "MATCH (a)-[x:A|:B|:C {foo:'bar'}]-(b) RETURN a,b" // variable binding and inlined property predicates
+
+    val succeedingQuery1 = "MATCH (a)-[:A|B|C]-(b) RETURN a,b" // no : separation
+    val succeedingQuery2 = "MATCH (a)-[:A|:B|:C]-(b) RETURN a,b" // no variable binding, inlined property or variable length
+    val succeedingQuery3 = "MATCH (a)-[x:A|B|C]-(b) RETURN a,b" // no : separation, but with variable binding
+    val succeedingQuery4 = "MATCH (a)-[:A|B|C {foo:'bar'}]-(b) RETURN a,b" // no : separation, but with inlined property
+    val succeedingQuery5 = "MATCH (a)-[:A|B|C*]-(b) RETURN a,b"  // no : separation, but with variable length
+
+    failWithError(Configs.All, failingQuery1, errorMessage)
+    failWithError(Configs.All, failingQuery2, errorMessage)
+    failWithError(Configs.All, failingQuery3, errorMessage)
+    failWithError(Configs.All, failingQuery4, errorMessage)
+    executeWith(Configs.All, succeedingQuery1)
+    executeWith(Configs.All, succeedingQuery2)
+    executeWith(Configs.All, succeedingQuery3)
+    executeWith(Configs.All, succeedingQuery4)
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, succeedingQuery5)
   }
 
   test("should provide sensible error message for invalid regex syntax together with index") {
