@@ -253,13 +253,13 @@ class CommandCreator implements TxStateVisitor
                     long fwId = idFromForwardPointer( forwardPointer );
                     SimpleStore largeStore = stores.mainStore( fwSizeExp );
                     mutation.large = new SparseRecordAndData( stores, largeStore, fwId, mutation.small );
-                    mutation.large.loadExistingData();
-                    mutation.current = mutation.large;
                 }
                 else
                 {
-                    throw new UnsupportedOperationException( "Load dense not implemented yet" );
+                    mutation.large = new DenseRecordAndData( stores.denseStore, mutation.small );
                 }
+                mutation.current = mutation.large;
+                mutation.current.loadExistingData();
             }
             mutations.put( id, mutation );
         }
@@ -417,7 +417,7 @@ class CommandCreator implements TxStateVisitor
             else
             {
                 // Time to move over to GBPTree-style data
-                DenseRecordAndData denseRecord = new DenseRecordAndData( stores.denseStore, id, smallRecord );
+                DenseRecordAndData denseRecord = new DenseRecordAndData( stores.denseStore, smallRecord );
                 denseRecord.movePropertiesAndRelationshipsFrom( data );
                 result = denseRecord;
             }
@@ -454,10 +454,10 @@ class CommandCreator implements TxStateVisitor
         private MutableIntObjectMap<Value> addedProperties = IntObjectMaps.mutable.empty();
         private MutableIntSet removedProperties = IntSets.mutable.empty();
 
-        DenseRecordAndData( DenseStore store, long id, SparseRecordAndData smallRecord )
+        DenseRecordAndData( DenseStore store, SparseRecordAndData smallRecord )
         {
             this.store = store;
-            this.id = id;
+            this.id = smallRecord.id;
             this.smallRecord = smallRecord;
         }
 
@@ -483,6 +483,7 @@ class CommandCreator implements TxStateVisitor
         void loadExistingData()
         {
             // Thoughts: we shouldn't really load anything here since we don't need the existing data in order to make changes
+            markInUse( true );
         }
 
         @Override

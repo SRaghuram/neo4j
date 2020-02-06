@@ -80,7 +80,7 @@ class Record
         return data;
     }
 
-    void initializeFromWithSharedData( Record record )
+    void initializeFromSharedData( Record record )
     {
         this.id = record.id;
         this.flags = record.flags;
@@ -208,6 +208,7 @@ class Record
     @Override
     public String toString()
     {
-        return "Record{" + "sizeExp=" + sizeExp + ", id=" + id + ", flags=" + flags + ", data=" + Arrays.toString( data.array() ) + '}';
+        return "Record{" + "sizeExp=" + sizeExp + ", id=" + id + ", flags=" + flags + ", data=" +
+               (data != null ? Arrays.toString( Arrays.copyOf( data.array(), data.position() ) ) : "[]") + '}';
     }
 }

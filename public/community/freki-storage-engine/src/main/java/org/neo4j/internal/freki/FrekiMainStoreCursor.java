@@ -25,6 +25,7 @@ import org.neo4j.internal.freki.StreamVByte.IntArrayTarget;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 
+import static org.apache.commons.lang3.ArrayUtils.EMPTY_INT_ARRAY;
 import static org.neo4j.internal.freki.MutableNodeRecordData.idFromForwardPointer;
 import static org.neo4j.internal.freki.MutableNodeRecordData.isDenseFromForwardPointer;
 import static org.neo4j.internal.freki.MutableNodeRecordData.sizeExponentialFromForwardPointer;
@@ -88,81 +89,104 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
         return cursor;
     }
 
+    /**
+     * Loads a record from {@link Store}, starting with the "small" record, which corresponds to the given id.
+     * The record header, i.e. offsets and such is read and if it looks like this record points to a larger record
+     * then the larger record is also loaded. They will live in {@link #smallRecord} and {@link #record} respectively,
+     * but {@link #data} will point to the large record data, which for the time being holds the majority of the data.
+     */
     boolean loadMainRecord( long id )
     {
         stores.mainStore.read( cursor(), smallRecord, id );
-        if ( !record.hasFlag( FLAG_IN_USE ) )
+        if ( !smallRecord.hasFlag( FLAG_IN_USE ) )
         {
             return false;
         }
-        data = record.dataForReading();
-        readOffsets();
-        if ( containsForwardPointer )
+        data = smallRecord.dataForReading();
+        readOffsets( true );
+        if ( containsForwardPointer && !isDense )
         {
-            if ( isDense )
+            // Let's load the larger record
+            SimpleStore largeStore = stores.mainStore( sizeExponentialFromForwardPointer( forwardPointer ) );
+            record = largeStore.newRecord();
+            try ( PageCursor largeCursor = largeStore.openReadCursor() )
             {
-                // Nothing to load, really
-            }
-            else
-            {
-                // Let's load the larger record
-                SimpleStore largeStore = stores.mainStore( sizeExponentialFromForwardPointer( forwardPointer ) );
-                record = largeStore.newRecord();
-                try ( PageCursor largeCursor = largeStore.openReadCursor() )
+                largeStore.read( largeCursor, record, idFromForwardPointer( forwardPointer ) );
+                if ( !record.hasFlag( FLAG_IN_USE ) )
                 {
-                    largeStore.read( largeCursor, record, idFromForwardPointer( forwardPointer ) );
-                    if ( !record.hasFlag( FLAG_IN_USE ) )
-                    {
-                        return false;
-                    }
-                    data = record.dataForReading();
-                    int smallRecordLabelsOffset = labelsOffset;
-                    readOffsets();
-                    labelsOffset = smallRecordLabelsOffset;
+                    return false;
                 }
+                data = record.dataForReading();
+                readOffsets( false );
             }
         }
         loadedNodeId = id;
         return true;
     }
 
+    /**
+     * Uses already loaded data from another cursor, starting with the "small" record, which corresponds to the given id.
+     * If a larger record is also involved then that too will be used for this cursor. They will live in {@link #smallRecord} and
+     * {@link #record} respectively, but {@link #data} will point to the large record data, which for the time being holds the majority of the data.
+     */
     boolean useSharedRecordFrom( FrekiMainStoreCursor alreadyLoadedRecord )
     {
-        Record otherRecord = alreadyLoadedRecord.record;
+        Record otherRecord = alreadyLoadedRecord.smallRecord;
         if ( otherRecord.hasFlag( FLAG_IN_USE ) )
         {
-            record.initializeFromWithSharedData( otherRecord );
-            data = record.dataForReading();
-            readOffsets();
+            smallRecord.initializeFromSharedData( otherRecord );
+            data = smallRecord.dataForReading();
+            readOffsets( true );
             loadedNodeId = alreadyLoadedRecord.loadedNodeId;
+            if ( containsForwardPointer && !isDense )
+            {
+                SimpleStore largeStore = stores.mainStore( sizeExponentialFromForwardPointer( forwardPointer ) );
+                record = largeStore.newRecord();
+                record.initializeFromSharedData( alreadyLoadedRecord.record );
+                data = record.dataForReading();
+                readOffsets( false );
+            }
             return true;
         }
         return false;
     }
 
-    private void readOffsets()
+    private void readOffsets( boolean forSmallRecord )
     {
         int offsetsHeader = MutableNodeRecordData.readOffsetsHeader( data );
-        labelsOffset = data.position();
+        if ( forSmallRecord )
+        {
+            labelsOffset = data.position();
+        }
         relationshipsOffset = MutableNodeRecordData.relationshipOffset( offsetsHeader );
         nodePropertiesOffset = MutableNodeRecordData.propertyOffset( offsetsHeader );
         endOffset = MutableNodeRecordData.endOffset( offsetsHeader );
-        containsForwardPointer = MutableNodeRecordData.containsForwardPointer( offsetsHeader );
-        if ( containsForwardPointer )
+        if ( forSmallRecord )
         {
-            if ( relationshipsOffset != 0 )
+            containsForwardPointer = MutableNodeRecordData.containsForwardPointer( offsetsHeader );
+            if ( containsForwardPointer )
             {
-                // skip the type offsets array
                 data.position( endOffset );
-                StreamVByte.readIntDeltas( SKIP, data );
+                if ( relationshipsOffset != 0 )
+                {
+                    // skip the type offsets array
+                    StreamVByte.readIntDeltas( SKIP, data );
+                }
+                forwardPointer = data.getLong();
+                isDense = isDenseFromForwardPointer( forwardPointer );
             }
-            forwardPointer = data.getLong();
-            isDense = isDenseFromForwardPointer( forwardPointer );
         }
     }
 
-    void readRelationshipTypes()
+    void readRelationshipTypesAndOffsets()
     {
+        if ( relationshipsOffset == 0 )
+        {
+            relationshipTypesInNode = EMPTY_INT_ARRAY;
+            relationshipTypeOffsets = EMPTY_INT_ARRAY;
+            return;
+        }
+
         data.position( relationshipsOffset );
         relationshipTypesInNode = readIntDeltas( new IntArrayTarget(), data ).array();
         // Right after the types array the relationship group data starts, so this is the offset for the first type

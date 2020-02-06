@@ -108,7 +108,7 @@ public class Store extends BareBoneStore implements SimpleStore
     {
         long id = record.id;
         long pageId = id / recordsPerPage;
-        int offset = (int) ((id % recordsPerPage) * Record.SIZE_BASE);
+        int offset = (int) ((id % recordsPerPage) * recordSize);
         if ( !cursor.next( pageId ) )
         {
             throw new IllegalStateException( "Could not grow file?" );
@@ -123,7 +123,7 @@ public class Store extends BareBoneStore implements SimpleStore
     {
         record.clear();
         long pageId = id / recordsPerPage;
-        int offset = (int) ((id % recordsPerPage) * Record.SIZE_BASE);
+        int offset = (int) ((id % recordsPerPage) * recordSize);
         try
         {
             if ( !cursor.next( pageId ) )

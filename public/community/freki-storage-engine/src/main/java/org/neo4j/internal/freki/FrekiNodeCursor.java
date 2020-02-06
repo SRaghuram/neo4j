@@ -80,7 +80,7 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
     @Override
     public int[] relationshipTypes()
     {
-        readRelationshipTypes();
+        readRelationshipTypesAndOffsets();
         return relationshipTypesInNode.clone();
     }
 

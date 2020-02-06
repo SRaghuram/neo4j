@@ -19,7 +19,7 @@
  */
 package org.neo4j.internal.freki;
 
-import org.neo4j.internal.helpers.collection.PrefetchingResourceIterator;
+import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.storageengine.api.RelationshipDirection;
 import org.neo4j.storageengine.api.RelationshipSelection;
@@ -55,7 +55,9 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
     private long currentRelationshipInternalId;
 
     // dense node state
-    private PrefetchingResourceIterator<DenseStore.RelationshipData> denseRelationships;
+    private ResourceIterator<DenseStore.RelationshipData> denseRelationships;
+    private DenseStore.RelationshipData currentDenseRelationship;
+    private int selectionCriterionIndex;
 
     FrekiRelationshipTraversalCursor( MainStores stores, PageCursorTracer cursorTracer )
     {
@@ -65,12 +67,24 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
     @Override
     public boolean hasProperties()
     {
+        if ( isDense )
+        {
+            if ( denseProperties == null )
+            {
+                denseProperties = currentDenseRelationship.properties();
+            }
+            return denseProperties.hasNext();
+        }
         return currentRelationshipHasProperties;
     }
 
     @Override
     public long propertiesReference()
     {
+        if ( isDense )
+        {
+            throw new UnsupportedOperationException( "Not implemented yet for dense" );
+        }
         return currentRelationshipHasProperties ? entityReference() : NULL;
     }
 
@@ -109,73 +123,109 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
                 return false;
             }
 
-            if ( isDense )
-            {
-
-            }
-            else
-            {
-                startIterationAfterLoad();
-                readRelationshipTypes();
-            }
+            startIterationAfterLoad();
+            readRelationshipTypesAndOffsets();
         }
 
-        while ( currentTypeIndex < relationshipTypesInNode.length )
+        if ( isDense )
         {
-            if ( currentTypeRelationshipIndex == -1 )
+            // TODO We could be clever and place a type[] in the quick access record so that we know which types even exist for this node
+            //      if we do this we don't have to make a tree seek for every relationship type when there will be nothing there
+            while ( selectionCriterionIndex < selection.numberOfCriteria() )
             {
-                // Time to move over to the next type
-                int candidateType = relationshipTypesInNode[currentTypeIndex];
-                if ( !selection.test( candidateType ) )
+                if ( denseRelationships == null )
                 {
-                    // Skip this type completely, it wasn't part of the requested selection
-                    currentTypeIndex++;
-                    continue;
+                    RelationshipSelection.Criterion criterion = selection.criterion( selectionCriterionIndex );
+                    denseRelationships = stores.denseStore.getRelationships( loadedNodeId, criterion.type(), criterion.direction(), cursorTracer );
                 }
 
-                currentTypeData = StreamVByte.readLongs( data );
-                currentTypePropertiesOffset = data.position();
-                currentTypeRelationshipIndex = 0;
-                currentTypePropertiesIndex = -1;
+                if ( denseRelationships.hasNext() )
+                {
+                    // We don't need filtering here because we ask for the correct type and direction right away in the tree seek
+                    currentDenseRelationship = denseRelationships.next();
+                    currentRelationshipDirection = currentDenseRelationship.direction();
+                    denseProperties = null;
+                    return true;
+                }
+                // Mark the end of this criterion
+                denseRelationships.close();
+                denseRelationships = null;
+                selectionCriterionIndex++;
             }
-
-            while ( currentTypeRelationshipIndex * ARRAY_ENTRIES_PER_RELATIONSHIP < currentTypeData.length )
+        }
+        else
+        {
+            while ( currentTypeIndex < relationshipTypesInNode.length )
             {
-                int index = currentTypeRelationshipIndex++;
-                int dataArrayIndex = index * ARRAY_ENTRIES_PER_RELATIONSHIP; // because of two longs per relationship
-                long currentRelationshipOtherNodeRaw = currentTypeData[dataArrayIndex];
-                currentRelationshipInternalId = currentTypeData[dataArrayIndex + 1];
-                currentRelationshipOtherNode = otherNodeOf( currentRelationshipOtherNodeRaw );
-                if ( currentRelationshipOtherNode == nodeId )
+                if ( currentTypeRelationshipIndex == -1 )
                 {
-                    currentRelationshipDirection = LOOP;
-                }
-                else
-                {
-                    boolean outgoing = relationshipIsOutgoing( currentRelationshipOtherNodeRaw );
-                    currentRelationshipDirection = outgoing ? OUTGOING : INCOMING;
-                }
-                currentRelationshipHasProperties = relationshipHasProperties( currentRelationshipOtherNodeRaw );
-                if ( currentRelationshipHasProperties )
-                {
-                    currentTypePropertiesIndex++;
+                    // Time to load data for the next type
+                    int candidateType = relationshipTypesInNode[currentTypeIndex];
+                    if ( !selection.test( candidateType ) )
+                    {
+                        // Skip this type completely, it wasn't part of the requested selection
+                        currentTypeIndex++;
+                        continue;
+                    }
+
+                    currentTypeData = StreamVByte.readLongs( data );
+                    currentTypePropertiesOffset = data.position();
+                    currentTypeRelationshipIndex = 0;
+                    currentTypePropertiesIndex = -1;
                 }
 
-                // TODO a thought about this filtering. It may be beneficial to order the relationships of: OUTGOING,LOOP,INCOMING
-                //      so that filtering OUTGOING/INCOMING would basically then be to find the point where to stop, instead of going
-                //      through all relationships of that type. This may also require an addition to RelationshipSelection so that
-                //      it can be asked about requested direction.
-                if ( selection.test( relationshipTypesInNode[currentTypeIndex], currentRelationshipDirection ) )
+                if ( sparseNextFromCurrentType() )
                 {
                     return true;
                 }
+                sparseGoToNextType();
             }
-            currentTypeIndex++;
-            currentTypeRelationshipIndex = -1;
-            if ( currentTypePropertiesIndex >= 0 && currentTypeIndex < relationshipTypesInNode.length )
+        }
+        return false;
+    }
+
+    private void sparseGoToNextType()
+    {
+        currentTypeIndex++;
+        currentTypeRelationshipIndex = -1;
+        if ( currentTypePropertiesIndex >= 0 && currentTypeIndex < relationshipTypesInNode.length )
+        {
+            //Skipping the properties
+            data.position( relationshipTypeOffset( currentTypeIndex ) );
+        }
+    }
+
+    private boolean sparseNextFromCurrentType()
+    {
+        while ( currentTypeRelationshipIndex * ARRAY_ENTRIES_PER_RELATIONSHIP < currentTypeData.length )
+        {
+            int index = currentTypeRelationshipIndex++;
+            int dataArrayIndex = index * ARRAY_ENTRIES_PER_RELATIONSHIP; // because of two longs per relationship
+            long currentRelationshipOtherNodeRaw = currentTypeData[dataArrayIndex];
+            currentRelationshipInternalId = currentTypeData[dataArrayIndex + 1];
+            currentRelationshipOtherNode = otherNodeOf( currentRelationshipOtherNodeRaw );
+            if ( currentRelationshipOtherNode == nodeId )
             {
-                //Skipping the properties
-                data.position( relationshipTypeOffset( currentTypeIndex ) );
+                currentRelationshipDirection = LOOP;
+            }
+            else
+            {
+                boolean outgoing = relationshipIsOutgoing( currentRelationshipOtherNodeRaw );
+                currentRelationshipDirection = outgoing ? OUTGOING : INCOMING;
+            }
+            currentRelationshipHasProperties = relationshipHasProperties( currentRelationshipOtherNodeRaw );
+            if ( currentRelationshipHasProperties )
+            {
+                currentTypePropertiesIndex++;
+            }
+
+            // TODO a thought about this filtering. It may be beneficial to order the relationships of: OUTGOING,LOOP,INCOMING
+            //      so that filtering OUTGOING/INCOMING would basically then be to find the point where to stop, instead of going
+            //      through all relationships of that type. This may also require an addition to RelationshipSelection so that
+            //      it can be asked about requested direction.
+            if ( selection.test( relationshipTypesInNode[currentTypeIndex], currentRelationshipDirection ) )
+            {
+                return true;
             }
         }
         return false;
@@ -185,6 +235,7 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
     {
         loadedCorrectNode = true;
         currentTypeIndex = 0;
+        selectionCriterionIndex = 0;
     }
 
     @Override
@@ -193,6 +244,7 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
         super.reset();
         nodeId = NULL;
         selection = null;
+        selectionCriterionIndex = -1;
         currentTypeIndex = -1;
         currentTypeRelationshipIndex = -1;
         loadedCorrectNode = false;
@@ -207,30 +259,47 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
             denseRelationships.close();
             denseRelationships = null;
         }
+        denseProperties = null;
     }
 
     @Override
     public int type()
     {
-        return relationshipTypesInNode[currentTypeIndex];
+        return isDense
+               ? currentDenseRelationship.type()
+               : relationshipTypesInNode[currentTypeIndex];
     }
 
     @Override
     public long sourceNodeReference()
     {
-        return currentRelationshipDirection == OUTGOING ? loadedNodeId : currentRelationshipOtherNode;
+        if ( currentRelationshipDirection == OUTGOING )
+        {
+            return loadedNodeId;
+        }
+        return isDense
+               ? currentDenseRelationship.neighbourNodeId()
+               : currentRelationshipOtherNode;
     }
 
     @Override
     public long targetNodeReference()
     {
-        return currentRelationshipDirection == INCOMING ? loadedNodeId : currentRelationshipOtherNode;
+        if ( currentRelationshipDirection == INCOMING )
+        {
+            return loadedNodeId;
+        }
+        return isDense
+               ? currentDenseRelationship.neighbourNodeId()
+               : currentRelationshipOtherNode;
     }
 
     @Override
     public long neighbourNodeReference()
     {
-        return currentRelationshipOtherNode;
+        return isDense
+               ? currentDenseRelationship.neighbourNodeId()
+               : currentRelationshipOtherNode;
     }
 
     @Override
@@ -241,7 +310,9 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
 
     RelationshipDirection currentDirection()
     {
-        return currentRelationshipDirection;
+        return isDense
+                ? currentDenseRelationship.direction()
+                : currentRelationshipDirection;
     }
 
     @Override
@@ -258,6 +329,6 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
         init( nodeCursor.entityReference(), nodeCursor.relationshipsReference(), selection );
         useSharedRecordFrom( (FrekiNodeCursor) nodeCursor );
         startIterationAfterLoad();
-        readRelationshipTypes();
+        readRelationshipTypesAndOffsets();
     }
 }
