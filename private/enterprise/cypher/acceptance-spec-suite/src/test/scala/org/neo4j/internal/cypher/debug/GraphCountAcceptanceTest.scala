@@ -8,6 +8,9 @@ package org.neo4j.internal.cypher.debug
 import java.io.File
 
 import org.json4s.DefaultFormats
+import org.json4s.Formats
+import org.json4s.StringInput
+import org.json4s.native.JsonMethods
 import org.json4s.native.Serialization
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.QueryStatisticsTestSupport
@@ -203,5 +206,40 @@ class GraphCountAcceptanceTest extends ExecutionEngineFunSuite
     executeSingle("MATCH (u)-[:OWNS]->(n:Car) RETURN u, n").toList should not be empty
     executeSingle("MATCH (u)-[:OWNS]->(n:Room) RETURN u, n").toList should not be empty
     executeSingle("MATCH (u)-[:STAYS_IN]->(n:Room) RETURN u, n").toList should not be empty
+  }
+
+  test("should use index backed order by with data collector graph counts and custom plan context") {
+    val json = s"""
+         |{
+         |  "relationships":[],
+         |  "nodes":[
+         |    {"count":150},
+         |    {"count":90,"label":"Person"}
+         |  ],
+         |  "indexes":[{"updatesSinceEstimation":0,"totalSize":0,"properties":["name"],"labels":["Person"],"estimatedUniqueSize":0}],
+         |  "constraints":[]
+         |}
+         |""".stripMargin
+
+    implicit val formats: Formats = DefaultFormats + RowSerializer
+    val graphCountData = JsonMethods.parse(StringInput(json)).extract[GraphCountData]
+
+    // Create a custom plan context like the one in the support case template above
+    def getPlanContext(tc: TransactionalContextWrapper, logger: InternalNotificationLogger, log: Log): GraphCountsPlanContext = {
+      new GraphCountsPlanContext(graphCountData)(tc, logger)
+    }
+    CypherPlanner.customPlanContextCreator = Some(getPlanContext)
+
+    createGraph(graphCountData)
+
+    val query =
+      """
+        | MATCH (p: Person)
+        | WHERE p.name STARTS WITH "s"
+        | RETURN p.name ORDER BY p.name
+        |""".stripMargin
+
+    val result = executeSingle(query)
+    result.executionPlanDescription() should not(includeSomewhere.aPlan("Sort"))
   }
 }

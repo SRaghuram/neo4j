@@ -7,11 +7,16 @@ package org.neo4j.internal.cypher.debug
 
 import org.neo4j.cypher.internal.LastCommittedTxIdProvider
 import org.neo4j.cypher.internal.frontend.phases.InternalNotificationLogger
+import org.neo4j.cypher.internal.logical.plans.CanGetValue
+import org.neo4j.cypher.internal.logical.plans.DoNotGetValue
 import org.neo4j.cypher.internal.logical.plans.ProcedureSignature
 import org.neo4j.cypher.internal.logical.plans.QualifiedName
 import org.neo4j.cypher.internal.logical.plans.UserFunctionSignature
 import org.neo4j.cypher.internal.planner.spi.GraphStatistics
 import org.neo4j.cypher.internal.planner.spi.IndexDescriptor
+import org.neo4j.cypher.internal.planner.spi.IndexDescriptor.OrderCapability
+import org.neo4j.cypher.internal.planner.spi.IndexDescriptor.ValueCapability
+import org.neo4j.cypher.internal.planner.spi.IndexOrderCapability
 import org.neo4j.cypher.internal.planner.spi.InstrumentedGraphStatistics
 import org.neo4j.cypher.internal.planner.spi.MinimumGraphStatistics
 import org.neo4j.cypher.internal.planner.spi.MutableGraphStatisticsSnapshot
@@ -23,9 +28,26 @@ import org.neo4j.cypher.internal.util.LabelId
 import org.neo4j.cypher.internal.util.PropertyKeyId
 import org.neo4j.cypher.internal.util.RelTypeId
 import org.neo4j.cypher.internal.util.Selectivity
+import org.neo4j.cypher.internal.util.symbols.CypherType
+import org.neo4j.cypher.internal.util.symbols.DateTimeType
+import org.neo4j.cypher.internal.util.symbols.DateType
+import org.neo4j.cypher.internal.util.symbols.DurationType
+import org.neo4j.cypher.internal.util.symbols.FloatType
+import org.neo4j.cypher.internal.util.symbols.GeometryType
+import org.neo4j.cypher.internal.util.symbols.IntegerType
+import org.neo4j.cypher.internal.util.symbols.LocalDateTimeType
+import org.neo4j.cypher.internal.util.symbols.LocalTimeType
+import org.neo4j.cypher.internal.util.symbols.PointType
+import org.neo4j.cypher.internal.util.symbols.StringType
+import org.neo4j.cypher.internal.util.symbols.TimeType
 import org.neo4j.exceptions.KernelException
 import org.neo4j.internal.schema.ConstraintDescriptor
+import org.neo4j.internal.schema.IndexCapability
+import org.neo4j.internal.schema.IndexOrder
+import org.neo4j.internal.schema.IndexValueCapability
 import org.neo4j.internal.schema.SchemaDescriptor
+import org.neo4j.kernel.impl.index.schema.GenericNativeIndexProvider
+import org.neo4j.values.storable.ValueCategory
 
 import scala.collection.JavaConverters.asScalaIteratorConverter
 import scala.collection.mutable
@@ -53,11 +75,54 @@ class GraphCountsPlanContext(data: GraphCountData)(tc: TransactionalContextWrapp
     new MutableGraphStatisticsSnapshot())
 
   override def indexesGetForLabel(labelId: Int): Iterator[IndexDescriptor] = {
+    // Assume native index
+    val indexCapability: IndexCapability = GenericNativeIndexProvider.CAPABILITY
+
+    // Same as product code in TransactionBoundPlanContext
+    val orderCapability: OrderCapability = tps => {
+      indexCapability.orderCapability(tps.map(typeToValueCategory): _*) match {
+        case Array() => IndexOrderCapability.NONE
+        case Array(IndexOrder.ASCENDING, IndexOrder.DESCENDING) => IndexOrderCapability.BOTH
+        case Array(IndexOrder.DESCENDING, IndexOrder.ASCENDING) => IndexOrderCapability.BOTH
+        case Array(IndexOrder.ASCENDING) => IndexOrderCapability.ASC
+        case Array(IndexOrder.DESCENDING) => IndexOrderCapability.DESC
+        case _ => IndexOrderCapability.NONE
+      }
+    }
+    val valueCapability: ValueCapability = tps => {
+      indexCapability.valueCapability(tps.map(typeToValueCategory): _*) match {
+        // As soon as the kernel provides an array of IndexValueCapability, this mapping can change
+        case IndexValueCapability.YES => tps.map(_ => CanGetValue)
+        case IndexValueCapability.PARTIAL => tps.map(_ => DoNotGetValue)
+        case IndexValueCapability.NO => tps.map(_ => DoNotGetValue)
+      }
+    }
+
     indexes
       .filter(_.labels.contains(getLabelName(labelId)))
       .map(x => IndexDescriptor(LabelId(labelId),
-        x.properties.map(propertyName => PropertyKeyId(getPropertyKeyId(propertyName))))
+        x.properties.map(propertyName => PropertyKeyId(getPropertyKeyId(propertyName))),
+                                orderCapability = orderCapability, valueCapability = valueCapability)
       ).toIterator
+  }
+
+  private def typeToValueCategory(in: CypherType): ValueCategory = in match {
+    case _: IntegerType |
+         _: FloatType =>
+      ValueCategory.NUMBER
+
+    case _: StringType =>
+      ValueCategory.TEXT
+
+    case _: GeometryType | _: PointType =>
+      ValueCategory.GEOMETRY
+
+    case _: DateTimeType | _: LocalDateTimeType | _: DateType | _: TimeType | _: LocalTimeType | _: DurationType =>
+      ValueCategory.TEMPORAL
+
+    // For everything else, we don't know
+    case _ =>
+      ValueCategory.UNKNOWN
   }
 
   override def uniqueIndexesGetForLabel(labelId: Int): Iterator[IndexDescriptor] = {
