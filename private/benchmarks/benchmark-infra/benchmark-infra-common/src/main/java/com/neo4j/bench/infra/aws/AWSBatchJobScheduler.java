@@ -19,7 +19,6 @@ import com.amazonaws.services.cloudformation.AmazonCloudFormation;
 import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
 import com.amazonaws.services.cloudformation.model.DescribeStacksRequest;
 import com.amazonaws.services.cloudformation.model.Output;
-import com.neo4j.bench.common.tool.macro.RunWorkloadParams;
 import com.neo4j.bench.infra.InfraParams;
 import com.neo4j.bench.infra.JobId;
 import com.neo4j.bench.infra.JobScheduler;
@@ -34,6 +33,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
@@ -54,7 +54,7 @@ public class AWSBatchJobScheduler implements JobScheduler
      * @param stack CloudFormation stack name
      * @return AWS job scheduler
      */
-    public static JobScheduler create(
+    public static AWSBatchJobScheduler create(
             String region,
             String jobQueue,
             String jobDefinition,
@@ -75,7 +75,7 @@ public class AWSBatchJobScheduler implements JobScheduler
      * @param stack CloudFormation stack name
      * @return AWS job scheduler
      */
-    public static JobScheduler create(
+    public static AWSBatchJobScheduler create(
             String region,
             String awsKey,
             String awsSecret,
@@ -90,7 +90,7 @@ public class AWSBatchJobScheduler implements JobScheduler
         return create( credentialsProvider, region, jobQueue, jobDefinition, stack );
     }
 
-    public static JobScheduler getJobScheduler( InfraParams infraParams, String jobQueue, String jobDefinition, String batchStack )
+    public static AWSBatchJobScheduler getJobScheduler( InfraParams infraParams, String jobQueue, String jobDefinition, String batchStack )
     {
         if ( infraParams.hasAwsCredentials() )
         {
@@ -110,21 +110,11 @@ public class AWSBatchJobScheduler implements JobScheduler
         }
     }
 
-    public static List<JobStatus> jobStatuses( JobScheduler jobScheduler, InfraParams infraParams, JobId jobId )
-    {
-        List<JobStatus> jobStatuses =
-                jobScheduler.jobsStatuses( Collections.singletonList( jobId ) );
-        LOG.info( "current jobs statuses:\n{}",
-                  jobStatuses.stream()
-                             .map( status -> status.toStatusLine( infraParams.awsRegion() ) ).collect( joining( "\n" ) ) );
-        return jobStatuses;
-    }
-
-    private static JobScheduler create( AWSCredentialsProvider credentialsProvider,
-                                        String region,
-                                        String jobQueue,
-                                        String jobDefinition,
-                                        String stack )
+    private static AWSBatchJobScheduler create( AWSCredentialsProvider credentialsProvider,
+                                                String region,
+                                                String jobQueue,
+                                                String jobDefinition,
+                                                String stack )
     {
         Objects.requireNonNull( region );
         Objects.requireNonNull( jobQueue );
@@ -169,13 +159,13 @@ public class AWSBatchJobScheduler implements JobScheduler
     }
 
     @Override
-    public JobId schedule( URI workerArtifactUri, URI baseArtifactUri, RunWorkloadParams runWorkloadParams )
+    public JobId schedule( URI workerArtifactUri, URI baseArtifactUri, String jobName )
     {
+        assertJobName( jobName );
         Map<String,String> paramsMap = new HashMap<>();
         paramsMap.put( InfraParams.CMD_ARTIFACT_WORKER_URI, workerArtifactUri.toString() );
         paramsMap.put( InfraParams.CMD_ARTIFACT_BASE_URI, baseArtifactUri.toString() );
 
-        String jobName = getJobName( "macro", runWorkloadParams.workloadName(), runWorkloadParams.neo4jVersion().toString(), runWorkloadParams.triggeredBy() );
         SubmitJobRequest submitJobRequest = new SubmitJobRequest()
                 .withJobDefinition( jobDefinition )
                 .withJobQueue( jobQueue )
@@ -197,12 +187,17 @@ public class AWSBatchJobScheduler implements JobScheduler
                        .collect( Collectors.toList() );
     }
 
-    private static String getJobName( String tool, String benchmark, String version, String triggered )
+    private static void assertJobName( String jobName )
     {
-        // job name should follow these restrictions, https://docs.aws.amazon.com/cli/latest/reference/batch/submit-job.html
-        // The first character must be alphanumeric, and up to 128 letters (uppercase and lowercase), numbers, hyphens, and underscores are allowed.
-        String jobName = format( "%s-%s-%s-%s", tool, benchmark, version, triggered );
-        return StringUtils.substring( jobName.replaceAll( "[^\\p{Alnum}|^_|^-]", "_" ), 0, 127 );
+        Pattern jobNamePattern = Pattern.compile( "\\p{Alnum}(\\p{Alnum}|_|-){0,127}" );
+        if ( !jobNamePattern.matcher( jobName ).matches() )
+        {
+            throw new IllegalArgumentException(
+                    format( "job name '%s' should follow these restrictions, https://docs.aws.amazon.com/cli/latest/reference/batch/submit-job.html, " +
+                            "the first character must be alphanumeric, and up to 128 letters (uppercase and lowercase), " +
+                            "numbers, hyphens, and underscores are allowed",
+                            jobName ) );
+        }
     }
 
     private static JobStatus jobStatus( JobDetail jobDetail )

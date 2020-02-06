@@ -5,8 +5,6 @@
  */
 package com.neo4j.bench.infra;
 
-import com.neo4j.bench.common.tool.macro.RunWorkloadParams;
-
 import java.net.URI;
 import java.util.List;
 
@@ -19,12 +17,12 @@ public interface JobScheduler
     /**
      * Schedules a benchmark run
      *
-     * @param workerArtifactUri
-     * @param baseArtifactUri
-     * @param runWorkloadParams
+     * @param workerArtifactUri URI to worker artifact
+     * @param baseArtifactUri URI to workspace base
+     * @param jobName human readable job name
      * @return ID of scheduled job
      */
-    JobId schedule( URI workerArtifactUri, URI baseArtifactUri, RunWorkloadParams runWorkloadParams );
+    JobId schedule( URI workerArtifactUri, URI baseArtifactUri, String jobName );
 
     /**
      * Fetches status of scheduled job

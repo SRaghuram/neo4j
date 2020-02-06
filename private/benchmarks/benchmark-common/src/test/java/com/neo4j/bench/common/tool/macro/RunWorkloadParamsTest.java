@@ -54,7 +54,8 @@ public class RunWorkloadParamsTest
                                                                      1L,
                                                                      0L,
                                                                      "neo4j" );
-        RunWorkloadParams actualRunWorkloadParams = JsonUtil.deserializeJson( JsonUtil.serializeJson( runWorkloadParams ), RunWorkloadParams.class );
+        RunWorkloadParams
+                actualRunWorkloadParams = JsonUtil.deserializeJson( JsonUtil.serializeJson( runWorkloadParams ), RunWorkloadParams.class );
         assertEquals( runWorkloadParams, actualRunWorkloadParams );
     }
 }
