@@ -76,7 +76,7 @@ class StreamVByteTest
         int[] values = new int[random.nextInt( 0, 2 )];
         for ( int i = 0, prev = 0; i < values.length; i++ )
         {
-            int diff = random.nextInt( 1, random.nextInt( 256 ) );
+            int diff = random.nextInt( 1, 255 );
             values[i] = prev + diff;
             prev = values[i];
         }

@@ -72,7 +72,7 @@ class StreamVByte
                 }
             }
         }
-        if ( length == 0 )
+        if ( length % 127 == 0 )
         {
             serialized[offset++] = (byte) MASK_SQUASHED_BLOCK;
         }
@@ -266,7 +266,7 @@ class StreamVByte
                 }
             }
         }
-        if ( length == 0 )
+        if ( length % 127 == 0 )
         {
             serialized[offset++] = (byte) MASK_SQUASHED_BLOCK;
         }
