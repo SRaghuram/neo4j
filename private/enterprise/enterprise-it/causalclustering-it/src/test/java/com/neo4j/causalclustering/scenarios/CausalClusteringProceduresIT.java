@@ -62,9 +62,9 @@ import static org.neo4j.test.conditions.Conditions.equalityCondition;
 class CausalClusteringProceduresIT
 {
     @Inject
-    private static ClusterFactory clusterFactory;
+    private ClusterFactory clusterFactory;
 
-    private static Cluster cluster;
+    private Cluster cluster;
 
     @BeforeAll
     void setup() throws Exception
@@ -78,61 +78,61 @@ class CausalClusteringProceduresIT
     }
 
     @Test
-    void dbmsProceduresShouldBeAvailable() throws Exception
+    void dbmsProceduresShouldBeAvailable()
     {
         verifyProcedureAvailability( DEFAULT_DATABASE_NAME, cluster.allMembers(), this::invokeDbmsProcedures );
     }
 
     @Test
-    void dbmsListQueriesShouldBeAvailable() throws Exception
+    void dbmsListQueriesShouldBeAvailable()
     {
         verifyProcedureAvailability( DEFAULT_DATABASE_NAME, cluster.allMembers(), this::invokeDbmsListQueries );
     }
 
     @Test
-    void dbmsClusterOverviewShouldBeAvailable() throws Exception
+    void dbmsClusterOverviewShouldBeAvailable()
     {
         verifyProcedureAvailability( DEFAULT_DATABASE_NAME, cluster.allMembers(), this::invokeDbmsClusterOverview );
     }
 
     @Test
-    void dbmsClusterOverviewShouldBeAvailableOnSystemDatabase() throws Exception
+    void dbmsClusterOverviewShouldBeAvailableOnSystemDatabase()
     {
         verifyProcedureAvailability( SYSTEM_DATABASE_NAME, cluster.allMembers(), this::invokeDbmsClusterOverview );
     }
 
     @Test
-    void routingProcedureShouldBeAvailable() throws Exception
+    void routingProcedureShouldBeAvailable()
     {
         verifyProcedureAvailability( DEFAULT_DATABASE_NAME, cluster.allMembers(), this::invokeRoutingProcedure );
     }
 
     @Test
-    void routingProcedureShouldBeAvailableOnSystemDatabase() throws Exception
+    void routingProcedureShouldBeAvailableOnSystemDatabase()
     {
         verifyProcedureAvailability( SYSTEM_DATABASE_NAME, cluster.allMembers(), this::invokeRoutingProcedure );
     }
 
     @Test
-    void legacyRoutingProcedureShouldBeAvailable() throws Exception
+    void legacyRoutingProcedureShouldBeAvailable()
     {
         verifyProcedureAvailability( DEFAULT_DATABASE_NAME, cluster.allMembers(), this::invokeLegacyRoutingProcedure );
     }
 
     @Test
-    void legacyRoutingProcedureShouldBeAvailableOnSystemDatabase() throws Exception
+    void legacyRoutingProcedureShouldBeAvailableOnSystemDatabase()
     {
         verifyProcedureAvailability( SYSTEM_DATABASE_NAME, cluster.allMembers(), this::invokeLegacyRoutingProcedure );
     }
 
     @Test
-    void installedProtocolsProcedure() throws Exception
+    void installedProtocolsProcedure()
     {
         verifyProcedureAvailability( DEFAULT_DATABASE_NAME, cluster.coreMembers(), this::invokeClusterProtocolsProcedure );
     }
 
     @Test
-    void installedProtocolsProcedureOnSystemDatabase() throws Exception
+    void installedProtocolsProcedureOnSystemDatabase()
     {
         verifyProcedureAvailability( SYSTEM_DATABASE_NAME, cluster.coreMembers(), this::invokeClusterProtocolsProcedure );
     }
@@ -217,7 +217,7 @@ class CausalClusteringProceduresIT
     }
 
     private static void verifyProcedureAvailability( String databaseName, Set<? extends ClusterMember> members,
-            Function<Transaction,Result> procedureExecutor ) throws Exception
+            Function<Transaction,Result> procedureExecutor )
     {
         for ( var member : members )
         {

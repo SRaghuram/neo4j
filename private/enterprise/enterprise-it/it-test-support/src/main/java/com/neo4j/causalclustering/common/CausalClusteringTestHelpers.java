@@ -16,8 +16,10 @@ import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.net.Server;
 import com.neo4j.causalclustering.protocol.NettyPipelineBuilderFactory;
 import com.neo4j.causalclustering.protocol.handshake.ApplicationSupportedProtocols;
+import com.neo4j.dbms.EnterpriseOperatorState;
 import com.neo4j.dbms.ShowDatabasesHelpers;
 import com.neo4j.dbms.ShowDatabasesHelpers.ShowDatabasesResultRow;
+import org.assertj.core.api.Condition;
 import org.assertj.core.api.HamcrestCondition;
 
 import java.io.File;
@@ -41,11 +43,10 @@ import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.driver.net.ServerAddress;
 import org.neo4j.driver.net.ServerAddressResolver;
-import org.neo4j.graphdb.DatabaseShutdownException;
-import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.ResourceIterator;
@@ -72,11 +73,15 @@ import static com.neo4j.causalclustering.core.RaftServerFactory.RAFT_SERVER_NAME
 import static com.neo4j.causalclustering.net.BootstrapConfiguration.clientConfig;
 import static com.neo4j.causalclustering.net.BootstrapConfiguration.serverConfig;
 import static com.neo4j.causalclustering.protocol.application.ApplicationProtocolCategory.CATCHUP;
+import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
+import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
+import static com.neo4j.dbms.EnterpriseOperatorState.UNKNOWN;
 import static java.lang.String.format;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.shuffle;
 import static java.util.concurrent.TimeUnit.MINUTES;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
@@ -292,106 +297,92 @@ public final class CausalClusteringTestHelpers
     public static void assertDatabaseEventuallyStarted( String databaseName, Cluster cluster )
     {
         assertEventually( () -> "Database is not started on all members: " + memberDatabaseStates( databaseName, cluster ),
-                () -> allMembersHaveDatabaseState( DatabaseAvailability.AVAILABLE, cluster, databaseName ), TRUE, 10, MINUTES );
+                          () -> allMembersHaveDatabaseState( cluster, databaseName ), allStatesMatch( STARTED ), 10, MINUTES );
     }
 
     public static void assertDatabaseEventuallyStarted( String databaseName, Set<? extends ClusterMember> members )
     {
         assertEventually( () -> "Database is not started on all members: " + memberDatabaseStates( databaseName, members ),
-                () -> membersHaveDatabaseState( DatabaseAvailability.AVAILABLE, members, databaseName ), TRUE, 10, MINUTES );
+                          () -> membersHaveDatabaseState( members, databaseName ), allStatesMatch( STARTED ), 10, MINUTES );
     }
 
     public static void assertDatabaseEventuallyStopped( String databaseName, Cluster cluster )
     {
         assertEventually( () -> "Database is not stopped on all members: " + memberDatabaseStates( databaseName, cluster ),
-                () -> allMembersHaveDatabaseState( DatabaseAvailability.STOPPED, cluster, databaseName ), TRUE, 1, MINUTES );
+                          () -> allMembersHaveDatabaseState( cluster, databaseName ), allStatesMatch( STOPPED ), 1, MINUTES );
     }
 
     public static void assertDatabaseEventuallyStopped( String databaseName, Set<ClusterMember> members )
     {
         assertEventually( () -> "Database is not stopped on all members: " + memberDatabaseStates( databaseName, members ),
-                () -> membersHaveDatabaseState( DatabaseAvailability.STOPPED, members, databaseName ), TRUE, 1, MINUTES );
+                          () -> membersHaveDatabaseState( members, databaseName ), allStatesMatch( STOPPED ), 1, MINUTES );
     }
 
     public static void assertDatabaseEventuallyDoesNotExist( String databaseName, Cluster cluster )
     {
         assertEventually( () -> "Database is not absent on all members: " + memberDatabaseStates( databaseName, cluster ),
-                () -> allMembersHaveDatabaseState( DatabaseAvailability.ABSENT, cluster, databaseName ), TRUE, 1, MINUTES );
+                          () -> allMembersHaveDatabaseState( cluster, databaseName ), allStatesMatch( UNKNOWN ), 1, MINUTES );
     }
 
     public static void assertDatabaseEventuallyDoesNotExist( String databaseName, Set<ClusterMember> members )
     {
         assertEventually( () -> "Database is not absent on all members: " + memberDatabaseStates( databaseName, members ),
-                () -> membersHaveDatabaseState( DatabaseAvailability.ABSENT, members, databaseName ), TRUE, 1, MINUTES );
+                          () -> membersHaveDatabaseState( members, databaseName ), allStatesMatch( UNKNOWN ), 1, MINUTES );
+    }
+
+    private static Condition<List<EnterpriseOperatorState>> allStatesMatch( EnterpriseOperatorState state )
+    {
+        return new AllStatesMatch( state );
     }
 
     public static void assertUserDoesNotExist( String userName, Cluster cluster )
     {
         assertEventually( () -> "User is not absent on all members: " + memberUserStates( cluster ),
-                () -> noMembersHaveUserAndNoErrors( cluster, userName ), TRUE, 1, MINUTES);
+                          () -> noMembersHaveUserAndNoErrors( cluster, userName ), TRUE, 1, MINUTES );
     }
 
     public static void assertRoleDoesNotExist( String roleName, Cluster cluster )
     {
         assertEventually( () -> "Role is not absent on all members: " + memberRoleStates( cluster ),
-                () -> noMembersHaveRoleAndNoErrors( cluster, roleName ), TRUE, 1, MINUTES);
+                          () -> noMembersHaveRoleAndNoErrors( cluster, roleName ), TRUE, 1, MINUTES );
     }
 
-    private static boolean allMembersHaveDatabaseState( DatabaseAvailability expected, Cluster cluster, String databaseName )
+    private static List<EnterpriseOperatorState> allMembersHaveDatabaseState( Cluster cluster, String databaseName )
     {
-        return membersHaveDatabaseState( expected, cluster.allMembers(), databaseName );
+        return membersHaveDatabaseState( cluster.allMembers(), databaseName );
     }
 
-    private static boolean membersHaveDatabaseState( DatabaseAvailability expected, Set<? extends ClusterMember> members, String databaseName )
+    private static List<EnterpriseOperatorState> membersHaveDatabaseState( Set<? extends ClusterMember> members,
+                                                                           String databaseName )
     {
         return members.stream()
-                .map( member -> memberDatabaseState( member, databaseName ) )
-                .allMatch( availability -> availability == expected );
+                      .map( member -> memberDatabaseState( member, databaseName ) ).collect( toList() );
     }
 
-    private static Map<ClusterMember,DatabaseAvailability> memberDatabaseStates( String databaseName, Cluster cluster )
+    private static Map<ClusterMember,EnterpriseOperatorState> memberDatabaseStates( String databaseName, Cluster cluster )
     {
         return memberDatabaseStates( databaseName, cluster.allMembers() );
     }
 
-    private static Map<ClusterMember,DatabaseAvailability> memberDatabaseStates( String databaseName, Set<? extends ClusterMember> members )
+    private static Map<ClusterMember,EnterpriseOperatorState> memberDatabaseStates( String databaseName, Set<? extends ClusterMember> members )
     {
         return members.stream()
-                .collect( toMap( identity(), member -> memberDatabaseState( member, databaseName ) ) );
+                      .collect( toMap( identity(), member -> memberDatabaseState( member, databaseName ) ) );
     }
 
-    private static DatabaseAvailability memberDatabaseState( ClusterMember member, String databaseName )
+    private static EnterpriseOperatorState memberDatabaseState( ClusterMember member, String databaseName )
     {
-        GraphDatabaseService db;
-
-        var managementService = member.managementService();
-        if ( managementService == null )
-        {
-            return DatabaseAvailability.ABSENT;
-        }
+        var databaseStateService = member.resolveDependency( SYSTEM_DATABASE_NAME, DatabaseStateService.class );
+        GraphDatabaseFacade database;
         try
         {
-            db = managementService.database( databaseName );
+            database = member.database( databaseName );
         }
-        catch ( DatabaseNotFoundException ignored )
+        catch ( DatabaseNotFoundException e )
         {
-            return DatabaseAvailability.ABSENT;
+            return EnterpriseOperatorState.UNKNOWN;
         }
-
-        try ( var tx = db.beginTx() )
-        {
-            tx.commit();
-        }
-        catch ( DatabaseShutdownException ignored )
-        {
-            return DatabaseAvailability.STOPPED;
-        }
-        catch ( Exception ignored )
-        {
-            return DatabaseAvailability.UNDEFINED;
-        }
-
-        return DatabaseAvailability.AVAILABLE;
+        return (EnterpriseOperatorState) databaseStateService.stateOfDatabase( database.databaseId() );
     }
 
     private static Map<ClusterMember,Set<String>> memberUserStates( Cluster cluster )
@@ -541,23 +532,12 @@ public final class CausalClusteringTestHelpers
         }
     }
 
-    private enum DatabaseAvailability
+    private static class AllStatesMatch extends Condition<List<EnterpriseOperatorState>>
     {
-        /**
-         * The state is undefined (not to be confused with unavailable). Do not assert on this value in tests!
-         */
-        UNDEFINED,
-        /**
-         * A database with the specified name does not exist.
-         */
-        ABSENT,
-        /**
-         * The database is stopped.
-         */
-        STOPPED,
-        /**
-         * The database is available for transactions.
-         */
-        AVAILABLE,
+        private AllStatesMatch( EnterpriseOperatorState state )
+        {
+            super( enterpriseOperatorStates -> enterpriseOperatorStates.stream().allMatch( operatorState -> operatorState == state ),
+                   "Expected all databases to have operator state " + state );
+        }
     }
 }
