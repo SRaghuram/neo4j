@@ -77,7 +77,7 @@ class BoltInteraction implements NeoInteractionLevel<BoltInteraction.BoltSubject
 
     BoltInteraction( Map<Setting<?>,String> config, Supplier<FileSystemAbstraction> fileSystemSupplier )
     {
-        TestEnterpriseDatabaseManagementServiceBuilder factory = new TestEnterpriseDatabaseManagementServiceBuilder();
+        TestEnterpriseDatabaseManagementServiceBuilder factory = new TestEnterpriseDatabaseManagementServiceBuilder().impermanent();
         fileSystem = fileSystemSupplier.get();
         server = new Neo4jWithSocket( getClass(),
                 factory,

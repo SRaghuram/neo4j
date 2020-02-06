@@ -7,15 +7,6 @@ package com.neo4j.server.security.enterprise.auth;
 
 import org.junit.jupiter.api.Test;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
-
-import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.test.DoubleLatch;
 
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.ADMIN;
@@ -23,10 +14,6 @@ import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRol
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLISHER;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.hasItem;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 public abstract class AuthScenariosInteractionTestBase<S> extends ProcedureInteractionTestBase<S>
 {
@@ -64,45 +51,6 @@ public abstract class AuthScenariosInteractionTestBase<S> extends ProcedureInter
         assertSystemCommandSuccess( adminSubject, "CALL dbms.security.addRoleToUser('" + READER + "', 'Henrik')" );
         S subject = neo.login( "Henrik", "foo" );
         neo.assertUnauthenticated( subject );
-    }
-
-    /*
-     * Logging scenario smoke test
-     */
-    @Test
-    void shouldLogSecurityEvents() throws Exception
-    {
-        S mats = neo.login( "mats", "neo4j" );
-        // for REST, login doesn't happen until the subject does something
-        neo.executeQuery( mats, DEFAULT_DATABASE_NAME, "UNWIND [] AS i RETURN 1", Collections.emptyMap(), r -> {} );
-        assertSystemCommandSuccess( adminSubject, "CALL dbms.security.createUser('mats', 'neo4j', false)" );
-        assertSystemCommandSuccess( adminSubject, "CALL dbms.security.createRole('role1')" );
-        assertSystemCommandSuccess( adminSubject, "CALL dbms.security.deleteRole('role1')" );
-        assertSystemCommandSuccess( adminSubject, "CALL dbms.security.addRoleToUser('reader', 'mats')" );
-        mats = neo.login( "mats", "neo4j" );
-        assertEmpty( mats, "MATCH (n) WHERE id(n) < 0 RETURN 1" );
-        assertSystemCommandFail( mats, "CALL dbms.security.changeUserPassword('neo4j', 'hackerPassword')", PERMISSION_DENIED );
-        assertSystemCommandFail( mats, "ALTER CURRENT USER SET PASSWORD FROM 'neo4j' TO ''", "A password cannot be empty." );
-        assertDDLCommandSuccess( mats, "ALTER CURRENT USER SET PASSWORD FROM 'neo4j' TO 'hackerPassword'" );
-        assertSystemCommandSuccess( adminSubject, "CALL dbms.security.removeRoleFromUser('reader', 'mats')" );
-        assertSystemCommandSuccess( adminSubject, "CALL dbms.security.deleteUser('mats')" );
-
-        // flush log
-        neo.shutdown();
-
-        // assert on log content
-        SecurityLog log = new SecurityLog();
-        log.load();
-
-        log.assertHasLine( "mats", "failed to log in" );
-        log.assertHasLine( "adminSubject", "CREATE USER mats SET PASSWORD '******' CHANGE NOT REQUIRED" );
-        log.assertHasLine( "adminSubject", "CREATE ROLE role1" );
-        log.assertHasLine( "adminSubject", "DROP ROLE role1" );
-        log.assertHasLine( "mats", "logged in" );
-        log.assertHasLine( "adminSubject", "GRANT ROLE reader TO mats" );
-        log.assertHasLine( "mats", "ALTER CURRENT USER SET PASSWORD FROM '******' TO '******'" );
-        log.assertHasLine( "adminSubject", "REVOKE ROLE reader FROM mats");
-        log.assertHasLine( "adminSubject", "DROP USER mats");
     }
 
     /*
@@ -730,27 +678,5 @@ public abstract class AuthScenariosInteractionTestBase<S> extends ProcedureInter
         assertFail( readSubject, "MATCH (n:MyNode) SET n:Foo RETURN toString(count(*)) AS c", CREATE_LABEL_OPS_NOT_ALLOWED );
         assertSuccess( schemaSubject, "MATCH (n:MyNode) SET n.nonExistent = 'foo' RETURN toString(count(*)) AS c", r -> assertKeyIs( r, "c", "1" ) );
         assertSuccess( readSubject, "MATCH (n:MyNode) WHERE n.nonExistent = 'foo' RETURN toString(count(*)) AS c", r -> assertKeyIs( r, "c", "1" ) );
-    }
-
-    private class SecurityLog
-    {
-        List<String> lines;
-
-        void load() throws IOException
-        {
-            File securityLog = new File( AuthScenariosInteractionTestBase.this.securityLog.getAbsolutePath() );
-            try ( FileSystemAbstraction fileSystem = neo.fileSystem();
-                  BufferedReader bufferedReader = new BufferedReader(
-                            fileSystem.openAsReader( securityLog, StandardCharsets.UTF_8 ) ) )
-            {
-                lines = bufferedReader.lines().collect( java.util.stream.Collectors.toList() );
-            }
-        }
-
-        void assertHasLine( String subject, String msg )
-        {
-            Objects.requireNonNull( lines );
-            assertThat( lines, hasItem( containsString( "[" + subject + "]: " + msg ) ) );
-        }
     }
 }

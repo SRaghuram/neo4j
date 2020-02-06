@@ -79,7 +79,6 @@ abstract class AbstractRESTInteraction extends CommunityWebContainerTestBase imp
 
         CommunityWebContainerBuilder builder = EnterpriseWebContainerBuilder.serverOnRandomPorts();
         builder = builder
-                .persistent()
                 .usingDataDir( dataDir.getAbsolutePath() )
                 .withProperty( BoltConnector.enabled.name(), TRUE )
                 .withProperty( BoltConnector.encryption_level.name(), DISABLED.name() )
