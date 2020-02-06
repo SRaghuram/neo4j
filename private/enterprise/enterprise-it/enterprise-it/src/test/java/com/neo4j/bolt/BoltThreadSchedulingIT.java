@@ -66,8 +66,8 @@ class BoltThreadSchedulingIT
     @Test
     void oneWorkerThreadShouldBeAbleToServeSequentialMessagesFromTwoConnections() throws Throwable
     {
-        // Given a server with single worker thread.
-        db = startDbWithBolt( 1, 1 );
+        // Given a server with single worker thread but waiting forever for a thread available for new jobs.
+        db = startDbWithBolt( 1, 1, -1 /*unlimited*/ );
         driver = createDriver( getBoltPort( db ) );
 
         try ( Session session1 = driver.session();
@@ -90,8 +90,8 @@ class BoltThreadSchedulingIT
     @Test
     void shouldFinishAllQueries() throws Throwable
     {
-        // create server with limited thread pool size.
-        db = startDbWithBolt( 1, 1 );
+        // create server with limited thread pool size and rejecting jobs immediately if no thread available.
+        db = startDbWithBolt( 1, 1, 0 );
         driver = createDriver( getBoltPort( db ) );
 
         // submits some jobs to executor, shooting at server at the same time.
@@ -148,20 +148,22 @@ class BoltThreadSchedulingIT
                 errors.add( e.getCause() );
             }
         }
-        // The server will at least reject 2 requests due to missing threads handing incoming requests.
-        assertTrue( errors.size() == 2 || errors.size() == 3 );
+        // The server should reject a few requests due to missing threads handing incoming requests.
+        assertTrue( errors.size() > 0 );
         for ( Throwable e : errors )
         {
             assertThat( e, anyOf( instanceOf( TransientException.class ) ) );
         }
     }
 
-    private GraphDatabaseService startDbWithBolt( int threadPoolMinSize, int threadPoolMaxSize )
+    private GraphDatabaseService startDbWithBolt( int threadPoolMinSize, int threadPoolMaxSize,
+            int threadPoolQueueSize )
     {
         DatabaseManagementServiceBuilder dbFactory = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() );
         managementService = dbFactory
                 .setConfig( BoltConnector.enabled, true )
                 .setConfig( BoltConnector.listen_address, new SocketAddress( "localhost", 0 ) )
+                .setConfig( BoltConnector.unsupported_thread_pool_queue_size, threadPoolQueueSize )
                 .setConfig( BoltConnector.thread_pool_min_size, threadPoolMinSize )
                 .setConfig( BoltConnector.thread_pool_max_size, threadPoolMaxSize )
                 .setConfig( GraphDatabaseSettings.auth_enabled, false )
