@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.core;
 
 import com.neo4j.causalclustering.common.Cluster;
-import com.neo4j.causalclustering.common.ClusterMonitors;
+import com.neo4j.causalclustering.common.RaftMonitors;
 import com.neo4j.causalclustering.core.consensus.log.monitoring.RaftLogCommitIndexMonitor;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.configuration.CausalClusteringSettings;
@@ -215,7 +215,7 @@ class CCIdReuseBySwitchAndRollbackIT
         List<RaftLogCommitIndexMonitor> monitors = new ArrayList<>();
         cluster.coreMembers().forEach( coreClusterMember -> {
             var monitor = new StubRaftLogCommitIndexMonitor();
-            var clusterMonitors = coreClusterMember.defaultDatabase().getDependencyResolver().resolveDependency( ClusterMonitors.class );
+            var clusterMonitors = coreClusterMember.defaultDatabase().getDependencyResolver().resolveDependency( RaftMonitors.class );
             clusterMonitors.addMonitorListener( monitor );
             monitors.add( monitor );
         } );

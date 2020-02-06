@@ -8,7 +8,7 @@ package com.neo4j.metrics.database;
 import com.codahale.metrics.MetricRegistry;
 import com.neo4j.configuration.MetricsSettings;
 import com.neo4j.metrics.source.causalclustering.CatchUpMetrics;
-import com.neo4j.metrics.source.causalclustering.CoreMetrics;
+import com.neo4j.metrics.source.causalclustering.RaftCoreMetrics;
 import com.neo4j.metrics.source.causalclustering.ReadReplicaMetrics;
 import com.neo4j.metrics.source.db.CheckPointingMetrics;
 import com.neo4j.metrics.source.db.CypherMetrics;
@@ -101,12 +101,12 @@ public class DatabaseMetricsExporter
             OperationalMode mode = context.dbmsInfo().operationalMode;
             if ( mode == OperationalMode.CORE )
             {
-                life.add( new CoreMetrics( metricsPrefix, dependencies.clusterMonitors(), registry, dependencies.coreMetadataSupplier() ) );
+                life.add( new RaftCoreMetrics( metricsPrefix, dependencies.raftMonitors(), registry, dependencies.coreMetadataSupplier() ) );
                 life.add( new CatchUpMetrics( metricsPrefix, dependencies.monitors(), registry ) );
             }
             else if ( mode == OperationalMode.READ_REPLICA )
             {
-                life.add( new ReadReplicaMetrics( metricsPrefix, dependencies.clusterMonitors(), registry ) );
+                life.add( new ReadReplicaMetrics( metricsPrefix, dependencies.raftMonitors(), registry ) );
                 life.add( new CatchUpMetrics( metricsPrefix, dependencies.monitors(), registry ) );
             }
         }

@@ -16,16 +16,16 @@ import org.neo4j.monitoring.Monitors;
  * <p>
  * This is basically a marker type so that metrics can dependency-resolve the correct {@link Monitors} instance.
  */
-public class ClusterMonitors extends Monitors
+public class RaftMonitors extends Monitors
 {
-    private ClusterMonitors( Monitors parent )
+    private RaftMonitors( Monitors parent )
     {
         super( parent );
     }
 
-    public static ClusterMonitors create( Monitors globalMonitors, Dependencies clusterDependencies )
+    public static RaftMonitors create( Monitors globalMonitors, Dependencies clusterDependencies )
     {
-        var monitors = new ClusterMonitors( globalMonitors );
+        var monitors = new RaftMonitors( globalMonitors );
         // add monitors to the dependency resolver so that metrics extension can resolve them
         clusterDependencies.satisfyDependency( monitors );
         return monitors;

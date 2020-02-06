@@ -15,7 +15,7 @@ import com.neo4j.causalclustering.catchup.storecopy.StoreFileStreamProvider;
 import com.neo4j.causalclustering.catchup.storecopy.StoreIdDownloadFailedException;
 import com.neo4j.causalclustering.catchup.tx.TxPullClient;
 import com.neo4j.causalclustering.catchup.tx.TxPullResponseListener;
-import com.neo4j.causalclustering.common.ClusterMonitors;
+import com.neo4j.causalclustering.common.RaftMonitors;
 import io.netty.buffer.ByteBuf;
 
 import java.io.File;
@@ -62,7 +62,7 @@ class CatchupClientsWrapper
     CatchupClientsWrapper( GlobalModule module, CatchupClientFactory catchupClientFactory, NamedDatabaseId databaseId, LogProvider logProvider,
             SocketAddress socketAddress )
     {
-        var monitors = ClusterMonitors.create( module.getGlobalMonitors(), module.getGlobalDependencies() );
+        var monitors = RaftMonitors.create( module.getGlobalMonitors(), module.getGlobalDependencies() );
         var backupStrategy = new ConstantTimeTimeoutStrategy( 5, TimeUnit.SECONDS );
         this.storeCopyClient = new StoreCopyClient( catchupClientFactory, databaseId, () -> monitors, logProvider, backupStrategy );
         this.txPullClient = new TxPullClient( catchupClientFactory, databaseId, () -> monitors, logProvider );

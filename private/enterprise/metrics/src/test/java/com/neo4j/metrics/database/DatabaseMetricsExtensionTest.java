@@ -5,7 +5,7 @@
  */
 package com.neo4j.metrics.database;
 
-import com.neo4j.causalclustering.common.ClusterMonitors;
+import com.neo4j.causalclustering.common.RaftMonitors;
 import com.neo4j.causalclustering.core.consensus.CoreMetaData;
 import com.neo4j.configuration.MetricsSettings;
 import com.neo4j.metrics.global.GlobalMetricsExtension;
@@ -217,7 +217,7 @@ class DatabaseMetricsExtensionTest
         }
 
         @Override
-        public ClusterMonitors clusterMonitors()
+        public RaftMonitors raftMonitors()
         {
             return null;
         }

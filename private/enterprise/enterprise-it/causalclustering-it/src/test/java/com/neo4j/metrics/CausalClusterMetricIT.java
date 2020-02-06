@@ -5,6 +5,7 @@
  */
 package com.neo4j.metrics;
 
+import com.codahale.metrics.MetricRegistry;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
@@ -45,18 +46,20 @@ import static org.neo4j.test.conditions.Conditions.equalityCondition;
 @ClusterExtension
 class CausalClusterMetricIT
 {
-    private static final int TIMEOUT = 15;
+    private static final int TIMEOUT = 30;
 
     @Inject
     private ClusterFactory clusterFactory;
 
     private Cluster cluster;
+    private int noCoreMembers;
 
     @BeforeAll
     void startCluster() throws Exception
     {
+        noCoreMembers = 3;
         var clusterConfig = clusterConfig()
-                .withNumberOfCoreMembers( 3 )
+                .withNumberOfCoreMembers( noCoreMembers )
                 .withNumberOfReadReplicas( 1 )
                 .withSharedCoreParam( MetricsSettings.metrics_enabled, TRUE )
                 .withSharedReadReplicaParam( MetricsSettings.metrics_enabled, TRUE )
@@ -94,7 +97,31 @@ class CausalClusterMetricIT
     }
 
     @Test
-    void shouldMonitorCausalCluster() throws Exception
+    void shouldMonitorAkkaDiscovery() throws Exception
+    {
+        // when
+        var coreMember = cluster.awaitLeader();
+
+        // then
+        assertEventually( "convergence",
+                () -> readLongGaugeValue( discoveryMetricsFile( coreMember, "core.discovery.cluster.converged" ) ),
+                value -> value == 1L, TIMEOUT, SECONDS );
+
+        assertEventually( "members eventually accurate",
+                () -> readLongGaugeValue( discoveryMetricsFile( coreMember, "core.discovery.cluster.members" ) ),
+                value -> value == noCoreMembers, TIMEOUT, SECONDS );
+
+        assertEventually( "replicated data size accurate",
+                () -> readLongGaugeValue( discoveryMetricsFile( coreMember, "core.discovery.replicated_data.member_data.visible" ) ),
+                value -> value >= noCoreMembers, TIMEOUT, SECONDS );
+
+        assertEventually( "replicated data size vvector accurate",
+                () -> readLongGaugeValue( discoveryMetricsFile( coreMember, "core.discovery.replicated_data.member_data.visible" ) ),
+                value -> value >= noCoreMembers, TIMEOUT, SECONDS );
+    }
+
+    @Test
+    void shouldMonitorRaft() throws Exception
     {
         // when
         var coreMember = cluster.coreTx( ( db, tx ) ->
@@ -116,50 +143,50 @@ class CausalClusterMetricIT
         }
 
         assertEventually( "append index eventually accurate",
-                () -> readLongGaugeValue( metricsFile( coreMember, "core.append_index" ) ), value -> value > 0L, TIMEOUT, SECONDS );
+                () -> readLongGaugeValue( raftMetricsFile( coreMember, "core.append_index" ) ), value -> value > 0L, TIMEOUT, SECONDS );
 
         assertEventually( "commit index eventually accurate",
-                () -> readLongGaugeValue( metricsFile( coreMember, "core.commit_index" ) ), value -> value > 0L, TIMEOUT, SECONDS );
+                () -> readLongGaugeValue( raftMetricsFile( coreMember, "core.commit_index" ) ), value -> value > 0L, TIMEOUT, SECONDS );
 
         assertEventually( "applied index eventually accurate",
-                () -> readLongGaugeValue( metricsFile( coreMember, "core.applied_index" ) ), value -> value > 0L, TIMEOUT, SECONDS );
+                () -> readLongGaugeValue( raftMetricsFile( coreMember, "core.applied_index" ) ), value -> value > 0L, TIMEOUT, SECONDS );
 
         assertEventually( "term eventually accurate",
-                () -> readLongGaugeValue( metricsFile( coreMember, "core.term" ) ), value -> value >= 0L, TIMEOUT, SECONDS );
+                () -> readLongGaugeValue( raftMetricsFile( coreMember, "core.term" ) ), value -> value >= 0L, TIMEOUT, SECONDS );
 
         assertEventually( "tx pull requests received eventually accurate", () ->
         {
             long total = 0;
             for ( var member : cluster.coreMembers() )
             {
-                total += readLongCounterValue( metricsFile( member, "catchup.tx_pull_requests_received" ) );
+                total += readLongCounterValue( raftMetricsFile( member, "catchup.tx_pull_requests_received" ) );
             }
             return total;
         }, value -> value > 0L, TIMEOUT, SECONDS );
 
         assertEventually( "tx retries eventually accurate",
-                () -> readLongCounterValue( metricsFile( coreMember, "core.tx_retries" ) ), equalityCondition( 0L ),
+                () -> readLongCounterValue( raftMetricsFile( coreMember, "core.tx_retries" ) ), equalityCondition( 0L ),
                 TIMEOUT, SECONDS );
 
         assertEventually( "is leader eventually accurate",
-                () -> readLongGaugeValue( metricsFile( coreMember, "core.is_leader" ) ),
+                () -> readLongGaugeValue( raftMetricsFile( coreMember, "core.is_leader" ) ),
                 value -> isMemberLeader( coreMember ) ? (value == 1) : (value == 0), TIMEOUT, SECONDS );
 
         assertEventually( "is last message from leader elapsed time eventually accurate",
-                () -> readLongGaugeValue( metricsFile( coreMember, "core.last_leader_message" ) ),
+                () -> readLongGaugeValue( raftMetricsFile( coreMember, "core.last_leader_message" ) ),
                 value -> isMemberLeader( coreMember ) ? (value == 0) : (value > 0), TIMEOUT, SECONDS );
 
         var readReplica = cluster.getReadReplicaById( 0 );
 
         assertEventually( "pull update request registered",
-                () -> readLongCounterValue( metricsFile( readReplica, "read_replica.pull_updates" ) ), value -> value > 0L, TIMEOUT, SECONDS );
+                () -> readLongCounterValue( raftMetricsFile( readReplica, "read_replica.pull_updates" ) ), value -> value > 0L, TIMEOUT, SECONDS );
 
         assertEventually( "pull update request registered",
-                () -> readLongCounterValue( metricsFile( readReplica, "read_replica.pull_update_highest_tx_id_requested" ) ),
+                () -> readLongCounterValue( raftMetricsFile( readReplica, "read_replica.pull_update_highest_tx_id_requested" ) ),
                 value -> value > 0L, TIMEOUT, SECONDS );
 
         assertEventually( "pull update response received",
-                () -> readLongCounterValue( metricsFile( readReplica, "read_replica.pull_update_highest_tx_id_received" ) ),
+                () -> readLongCounterValue( raftMetricsFile( readReplica, "read_replica.pull_update_highest_tx_id_received" ) ),
                 value -> value > 0L, TIMEOUT, SECONDS );
     }
 
@@ -169,7 +196,12 @@ class CausalClusterMetricIT
         return dependencyResolver.resolveDependency( RoleProvider.class ).currentRole() == Role.LEADER;
     }
 
-    private static File metricsFile( ClusterMember member, String metricName )
+    private static File discoveryMetricsFile( ClusterMember member, String metricName )
+    {
+        return metricsFile( member, null, metricName );
+    }
+
+    private static File raftMetricsFile( ClusterMember member, String metricName )
     {
         return metricsFile( member, member.defaultDatabase().databaseName(), metricName );
     }
@@ -177,7 +209,7 @@ class CausalClusterMetricIT
     private static File metricsFile( ClusterMember member, String databaseName, String metricName )
     {
         var metricsDir = new File( member.homeDir(), MetricsSettings.csv_path.defaultValue().toString() );
-        var metric = "neo4j." + databaseName + ".causal_clustering." + metricName;
+        var metric = MetricRegistry.name( "neo4j", databaseName, "causal_clustering", metricName );
         return metricsCsv( metricsDir, metric );
     }
 

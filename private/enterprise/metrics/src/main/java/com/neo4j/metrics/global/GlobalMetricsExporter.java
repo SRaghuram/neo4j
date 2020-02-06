@@ -8,6 +8,7 @@ package com.neo4j.metrics.global;
 import com.codahale.metrics.MetricRegistry;
 import com.neo4j.configuration.MetricsSettings;
 import com.neo4j.metrics.global.GlobalMetricsExtensionFactory.Dependencies;
+import com.neo4j.metrics.source.causalclustering.DiscoveryCoreMetrics;
 import com.neo4j.metrics.source.db.BoltMetrics;
 import com.neo4j.metrics.source.db.DatabaseOperationCountMetrics;
 import com.neo4j.metrics.source.db.GlobalMemoryPoolMetrics;
@@ -22,6 +23,7 @@ import com.neo4j.metrics.source.jvm.ThreadMetrics;
 import com.neo4j.metrics.source.server.ServerMetrics;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.HttpConnector;
 import org.neo4j.configuration.connectors.HttpsConnector;
 import org.neo4j.kernel.extension.context.ExtensionContext;
@@ -86,6 +88,11 @@ public class GlobalMetricsExporter
         if ( config.get( MetricsSettings.jvm_pause_time_enabled ) )
         {
             life.add( new PauseMetrics( globalMetricsPrefix, registry, dependencies.monitors() ) );
+        }
+
+        if ( config.get( MetricsSettings.causal_clustering_enabled ) && config.get( GraphDatabaseSettings.mode ) == GraphDatabaseSettings.Mode.CORE )
+        {
+            life.add( new DiscoveryCoreMetrics( globalMetricsPrefix, dependencies.monitors(), registry ) );
         }
 
         if ( config.get( MetricsSettings.bolt_messages_enabled ) )

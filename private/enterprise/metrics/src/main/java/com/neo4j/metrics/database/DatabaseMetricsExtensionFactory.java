@@ -5,7 +5,7 @@
  */
 package com.neo4j.metrics.database;
 
-import com.neo4j.causalclustering.common.ClusterMonitors;
+import com.neo4j.causalclustering.common.RaftMonitors;
 import com.neo4j.causalclustering.core.consensus.CoreMetaData;
 import com.neo4j.metrics.global.MetricsManager;
 
@@ -37,7 +37,7 @@ public class DatabaseMetricsExtensionFactory extends ExtensionFactory<DatabaseMe
     {
         Monitors monitors();
 
-        ClusterMonitors clusterMonitors();
+        RaftMonitors raftMonitors();
 
         Config configuration();
 

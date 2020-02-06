@@ -6,7 +6,7 @@
 package com.neo4j.causalclustering.core;
 
 import com.neo4j.causalclustering.catchup.CatchupComponentsFactory;
-import com.neo4j.causalclustering.common.ClusterMonitors;
+import com.neo4j.causalclustering.common.RaftMonitors;
 import com.neo4j.causalclustering.core.state.BootstrapContext;
 import com.neo4j.causalclustering.core.state.ClusterStateLayout;
 import com.neo4j.causalclustering.core.state.CoreEditionKernelComponents;
@@ -60,7 +60,7 @@ public final class CoreDatabaseManager extends ClusteredMultiDatabaseManager
         LifeSupport clusterComponents = new LifeSupport();
         Dependencies coreDatabaseDependencies = new Dependencies( globalModule.getGlobalDependencies() );
         DatabaseLogService coreDatabaseLogService = new DatabaseLogService( new DatabaseNameLogContext( namedDatabaseId ), globalModule.getLogService() );
-        Monitors coreDatabaseMonitors = ClusterMonitors.create( globalModule.getGlobalMonitors(), coreDatabaseDependencies );
+        Monitors coreDatabaseMonitors = RaftMonitors.create( globalModule.getGlobalMonitors(), coreDatabaseDependencies );
 
         var pageCacheTracer = globalModule.getTracers().getPageCacheTracer();
         DatabaseLayout databaseLayout = globalModule.getNeo4jLayout().databaseLayout( namedDatabaseId.name() );
