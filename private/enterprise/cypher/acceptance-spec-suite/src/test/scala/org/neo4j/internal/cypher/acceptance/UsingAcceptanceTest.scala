@@ -927,7 +927,7 @@ class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTest
          |WHERE a.prop = 'foo' and b.prop = 'bar'
          |RETURN b.prop AS res""".stripMargin
 
-    val result = executeWith(Configs.All - Configs.Pipelined, query,
+    val result = executeWith(Configs.All, query,
       planComparisonStrategy = ComparePlansWithAssertion(planDescription => {
         planDescription should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek").containingVariables("a"))
         planDescription should includeSomewhere.atLeastNTimes(1, aPlan("NodeIndexSeek").containingVariables("b"))

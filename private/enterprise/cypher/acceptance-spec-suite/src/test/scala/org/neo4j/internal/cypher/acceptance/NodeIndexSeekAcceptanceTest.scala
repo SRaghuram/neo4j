@@ -508,8 +508,6 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
     val query = "MATCH (a:L), (b:L) WHERE a.prop = 1 AND b.prop = 10 RETURN a.prop + b.prop AS s"
     val result = executeSingle(s"CYPHER runtime=pipelined $query")
 
-    println(result.executionPlanDescription())
-
     // Then
     result.toList should equal(List(Map("s" -> 11L)))
 
@@ -574,8 +572,6 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
     val query = "MATCH (a:L), (b:L), (c:L) WHERE a.prop = 1 AND b.prop = 10 AND c.prop = 100 RETURN a.prop + b.prop + c.prop AS s"
     val result = executeSingle(s"CYPHER runtime=pipelined $query")
 
-    println(result.executionPlanDescription())
-
     // Then
     result.toList should equal((1 to 8).map(_ => Map("s" -> 111L)).toList)
 
@@ -604,29 +600,6 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
 
     result.executionPlanDescription() should includeSomewhere.nTimes(1, aPlan("MultiNodeIndexSeek"))
     result.executionPlanDescription() should includeSomewhere.nTimes(3, aPlan("NodeIndexSeek"))
-    result.executionPlanDescription() shouldNot includeSomewhere.aPlan("CartesianProduct")
-  }
-
-  test("should specialize cartesian product of multiple (4) node index seeks") {
-    // Given
-    graph.createIndex("L", "prop")
-    val node11 = createLabeledNode(Map("prop" -> 1), "L")
-    val node12 = createLabeledNode(Map("prop" -> 1), "L")
-    val node21 = createLabeledNode(Map("prop" -> 10), "L")
-    val node22 = createLabeledNode(Map("prop" -> 10), "L")
-    val node31 = createLabeledNode(Map("prop" -> 100), "L")
-    val node32 = createLabeledNode(Map("prop" -> 100), "L")
-    val node41 = createLabeledNode(Map("prop" -> 1000), "L")
-
-    // When
-    val query = "MATCH (a:L), (b:L), (c:L), (d:L) WHERE a.prop = 1 AND b.prop = 10 AND c.prop = 100 AND d.prop = 1000 RETURN a.prop + b.prop + c.prop + d.prop AS s"
-    val result = executeSingle(s"CYPHER runtime=pipelined $query")
-
-    // Then
-    result.toList should equal((1 to 8).map(_ => Map("s" -> 1111L)).toList)
-
-    result.executionPlanDescription() should includeSomewhere.nTimes(1, aPlan("MultiNodeIndexSeek"))
-    result.executionPlanDescription() should includeSomewhere.nTimes(4, aPlan("NodeIndexSeek"))
     result.executionPlanDescription() shouldNot includeSomewhere.aPlan("CartesianProduct")
   }
 
