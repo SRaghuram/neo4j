@@ -328,7 +328,7 @@ class MutableNodeRecordData
                         // Relationship properties will have a 1-byte header which is the size of the keys+values block,
                         // this to efficiently be able to skip through to a specific properties set
                         int blockSizeHeaderOffset = buffer.position();
-                        buffer.position( blockSizeHeaderOffset + 1 );
+                        buffer.put( (byte) 0 );
                         writeProperties( relationship.properties, buffer );
                         int blockSize = buffer.position() - blockSizeHeaderOffset;
                         buffer.put( blockSizeHeaderOffset, safeCastIntToUnsignedByte( blockSize ) );
@@ -411,6 +411,7 @@ class MutableNodeRecordData
         properties.clear();
         if ( propertiesOffset != 0 )
         {
+            Preconditions.checkState( buffer.position() == propertiesOffset, "Mismatching properties offset and expected offset" );
             readProperties( properties, buffer );
         }
 

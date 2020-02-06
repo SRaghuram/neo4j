@@ -19,14 +19,18 @@
  */
 package org.neo4j.internal.freki;
 
+import org.apache.commons.lang3.mutable.MutableLong;
+import org.eclipse.collections.api.map.primitive.MutableLongObjectMap;
 import org.eclipse.collections.api.set.primitive.ImmutableLongSet;
 import org.eclipse.collections.api.set.primitive.LongSet;
 import org.eclipse.collections.api.set.primitive.MutableLongSet;
 import org.eclipse.collections.impl.factory.primitive.IntSets;
+import org.eclipse.collections.impl.factory.primitive.LongObjectMaps;
 import org.eclipse.collections.impl.factory.primitive.LongSets;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -77,7 +81,9 @@ import org.neo4j.storageengine.api.TransactionIdStore;
 import org.neo4j.storageengine.api.txstate.ReadableTransactionState;
 import org.neo4j.storageengine.api.txstate.TxStateVisitor;
 import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.RandomExtension;
 import org.neo4j.test.extension.pagecache.PageCacheExtension;
+import org.neo4j.test.rule.RandomRule;
 import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.token.DelegatingTokenHolder;
 import org.neo4j.token.TokenCreator;
@@ -106,6 +112,7 @@ import static org.neo4j.values.storable.Values.stringValue;
  * Focus of this test is to verify that creating and applying commands via {@link FrekiStorageEngine} surface works.
  */
 @PageCacheExtension
+@ExtendWith( RandomExtension.class )
 public class FrekiStorageEngineGraphWritesIT
 {
     @Inject
@@ -114,6 +121,8 @@ public class FrekiStorageEngineGraphWritesIT
     private PageCache pageCache;
     @Inject
     private TestDirectory directory;
+    @Inject
+    private RandomRule random;
 
     private LifeSupport life;
     private StorageEngine storageEngine;
@@ -287,13 +296,14 @@ public class FrekiStorageEngineGraphWritesIT
     }
 
     @Test
-    void shouldOverflowIntoDenseRepresentationFor() throws Exception
+    void shouldOverflowIntoDenseRepresentation() throws Exception
     {
         // given
         CommandCreationContext commandCreationContext = storageEngine.newCommandCreationContext( NULL );
         long nodeId = commandCreationContext.reserveNode();
         ImmutableLongSet labels = LongSets.immutable.of( 1, 78, 95 );
-        int type = 12;
+        Set<StorageProperty> relationshipProperties = asSet( new PropertyKeyValue( 123, intValue( 5 ) ) );
+        Set<StorageProperty> nodeProperties = new HashSet<>();
 
         // when
         Set<RelationshipSpec> relationships = new HashSet<>();
@@ -301,27 +311,65 @@ public class FrekiStorageEngineGraphWritesIT
         {
             target.visitCreatedNode( nodeId );
             target.visitNodeLabelChanges( nodeId, labels, LongSets.immutable.empty() );
-            for ( int i = 0; i < 1_000; i++ )
+            for ( int i = 0; i < 20; i++ )
+            {
+                nodeProperties.add( new PropertyKeyValue( i, longValue( 1L << i ) ) );
+            }
+            target.visitNodePropertyChanges( nodeId, nodeProperties, emptyList(), IntSets.immutable.empty() );
+            for ( int i = 0; i < 5_000; i++ )
             {
                 long otherNodeId = commandCreationContext.reserveNode();
                 target.visitCreatedNode( otherNodeId );
-                target.visitCreatedRelationship( i, type, nodeId, otherNodeId, emptyList() );
-                relationships.add( new RelationshipSpec( nodeId, type, otherNodeId, emptySet() ) );
+                int type = i % 20;
+                target.visitCreatedRelationship( i, type, nodeId, otherNodeId, relationshipProperties );
+                relationships.add( new RelationshipSpec( nodeId, type, otherNodeId, relationshipProperties ) );
             }
         } );
 
         // then
-        assertContentsOfNode( nodeId, labels, emptySet(), relationships );
+        assertContentsOfNode( nodeId, labels, nodeProperties, relationships );
     }
 
+    // TODO shouldUpdateDenseNode
+
     @Test
-    void shouldUpdateDenseNode()
+    void shouldOverwriteRecordMultipleTimes() throws Exception
     {
         // given
+        long[] nodes = new long[10];
+        CommandCreationContext context = storageEngine.newCommandCreationContext( NULL );
+        createAndApplyTransaction( target ->
+        {
+            for ( int i = 0; i < nodes.length; i++ )
+            {
+                target.visitCreatedNode( nodes[i] = context.reserveNode() );
+            }
+        } );
 
         // when
+        MutableLong nextRelationshipId = new MutableLong( 1 );
+        MutableLongObjectMap<Set<RelationshipSpec>> expectedRelationships = LongObjectMaps.mutable.empty();
+        for ( int i = 0; i < 10; i++ )
+        {
+            createAndApplyTransaction( target ->
+            {
+                for ( int j = 0; j < nodes.length; j++ )
+                {
+                    long startNode = nodes[random.nextInt( nodes.length )];
+                    long endNode = nodes[random.nextInt( nodes.length )];
+                    target.visitCreatedRelationship( nextRelationshipId.getAndIncrement(), 0, startNode, endNode, emptyList() );
+                    RelationshipSpec spec = new RelationshipSpec( startNode, 0, endNode, emptySet() );
+                    expectedRelationships.getIfAbsentPut( startNode, HashSet::new ).add( spec );
+                    expectedRelationships.getIfAbsentPut( endNode, HashSet::new ).add( spec );
+                }
+            } );
+        }
 
         // then
+        for ( long node : nodes )
+        {
+            assertContentsOfNode( node, LongSets.immutable.empty(), emptySet(), expectedRelationships.get( node ) );
+        }
     }
 
     private void assertContentsOfNode( long nodeId, LongSet labelIds, Set<StorageProperty> nodeProperties, Set<RelationshipSpec> relationships )

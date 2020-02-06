@@ -56,7 +56,7 @@ class FrekiRelationshipScanCursor extends FrekiRelationshipCursor implements Sto
             needsLoading = false;
             if ( loadMainRecord( nodeIdFromRelationshipId( singleId ) ) )
             {
-                readRelationshipTypes();
+                readRelationshipTypesAndOffsets();
                 return findRelationship();
             }
         }

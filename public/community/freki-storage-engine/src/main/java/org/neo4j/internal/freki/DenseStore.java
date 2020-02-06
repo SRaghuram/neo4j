@@ -30,6 +30,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.Iterator;
+import java.util.function.Predicate;
 
 import org.neo4j.graphdb.Direction;
 import org.neo4j.index.internal.gbptree.GBPTree;
@@ -46,8 +47,11 @@ import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.storageengine.api.RelationshipDirection;
+import org.neo4j.storageengine.api.RelationshipSelection;
 import org.neo4j.storageengine.api.StorageProperty;
 import org.neo4j.values.storable.Value;
+
+import static org.neo4j.token.api.TokenConstants.ANY_RELATIONSHIP_TYPE;
 
 /**
  * Last resort for dense nodes, can contain any number of entries for a node. Although only properties and relationships (and relationship properties)
@@ -102,13 +106,21 @@ class DenseStore extends LifecycleAdapter implements Closeable
 
     PrefetchingResourceIterator<RelationshipData> getRelationships( long nodeId, int type, Direction direction, PageCursorTracer cursorTracer )
     {
+        // If type is defined (i.e. NOT -1) then we can seek by direction too, otherwise we'll have to filter on direction
         DenseStoreKey from = layout.newKey();
-        from.initializeRelationship( nodeId, type, direction, Long.MIN_VALUE, Long.MIN_VALUE );
+        from.initializeRelationship( nodeId, type == ANY_RELATIONSHIP_TYPE ? Integer.MIN_VALUE : type, direction, Long.MIN_VALUE, Long.MIN_VALUE );
         DenseStoreKey to = layout.newKey();
-        to.initializeRelationship( nodeId, type, direction, Long.MAX_VALUE, Long.MAX_VALUE );
+        to.initializeRelationship( nodeId, type == ANY_RELATIONSHIP_TYPE ? Integer.MAX_VALUE : type, direction, Long.MAX_VALUE, Long.MAX_VALUE );
+        Predicate<RelationshipData> filter = null;
+        if ( type == ANY_RELATIONSHIP_TYPE && direction != Direction.BOTH )
+        {
+            // TODO A case where we need to filter... not very nice, let's fix this somehow
+            filter = rel -> RelationshipSelection.matchesDirection( rel.direction(), direction );
+        }
+
         try
         {
-            return new RelationshipIterator( tree.seek( from, to, cursorTracer ) )
+            return new RelationshipIterator( tree.seek( from, to, cursorTracer ), filter )
             {
                 @Override
                 public long internalId()
@@ -246,6 +258,12 @@ class DenseStore extends LifecycleAdapter implements Closeable
     void checkpoint( IOLimiter ioLimiter, PageCursorTracer cursorTracer )
     {
         tree.checkpoint( ioLimiter, cursorTracer );
+    }
+
+    @Override
+    public void shutdown() throws IOException
+    {
+        close();
     }
 
     @Override
@@ -542,12 +560,14 @@ class DenseStore extends LifecycleAdapter implements Closeable
     private static abstract class CursorIterator<ITEM> extends PrefetchingResourceIterator<ITEM>
     {
         final Seeker<DenseStoreKey,DenseStoreValue> seek;
+        private final Predicate<ITEM> filter;
         DenseStoreKey key;
         DenseStoreValue value;
 
-        CursorIterator( Seeker<DenseStoreKey,DenseStoreValue> seek )
+        CursorIterator( Seeker<DenseStoreKey,DenseStoreValue> seek, Predicate<ITEM> filter )
         {
             this.seek = seek;
+            this.filter = filter;
         }
 
         @Override
@@ -555,11 +575,16 @@ class DenseStore extends LifecycleAdapter implements Closeable
         {
             try
             {
-                if ( seek.next() )
+                while ( seek.next() )
                 {
                     key = seek.key();
+                    ITEM item = (ITEM) this;
+                    if ( filter != null && !filter.test( item ) )
+                    {
+                        continue;
+                    }
                     value = seek.value();
-                    return (ITEM) this;
+                    return item;
                 }
                 return null;
             }
@@ -587,7 +612,7 @@ class DenseStore extends LifecycleAdapter implements Closeable
     {
         PropertyIterator( Seeker<DenseStoreKey,DenseStoreValue> seek )
         {
-            super( seek );
+            super( seek, null );
         }
 
         @Override
@@ -614,9 +639,9 @@ class DenseStore extends LifecycleAdapter implements Closeable
 
     private static abstract class RelationshipIterator extends CursorIterator<RelationshipData> implements RelationshipData
     {
-        RelationshipIterator( Seeker<DenseStoreKey,DenseStoreValue> seek )
+        RelationshipIterator( Seeker<DenseStoreKey,DenseStoreValue> seek, Predicate<RelationshipData> filter )
         {
-            super( seek );
+            super( seek, filter );
         }
     }
 
