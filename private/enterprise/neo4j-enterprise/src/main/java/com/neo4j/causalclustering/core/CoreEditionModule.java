@@ -243,7 +243,7 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         globalProcedures.registerProcedure( EnterpriseBuiltInDbmsProcedures.class, true );
         globalProcedures.registerProcedure( EnterpriseBuiltInProcedures.class, true );
         globalProcedures.register( new ClusterOverviewProcedure( topologyService, databaseManager.databaseIdRepository() ) );
-        globalProcedures.register( new CoreRoleProcedure( identityModule, topologyService, databaseManager ) );
+        globalProcedures.register( new CoreRoleProcedure( databaseManager ) );
         globalProcedures.register( new ClusteredDatabaseStateProcedure( databaseManager.databaseIdRepository(), topologyService,
                 reconcilerModule.reconciler() ) );
         globalProcedures.register( new InstalledProtocolsProcedure( clientInstalledProtocols, serverInstalledProtocols ) );

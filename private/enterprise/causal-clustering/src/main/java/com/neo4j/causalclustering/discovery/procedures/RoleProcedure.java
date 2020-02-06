@@ -10,6 +10,7 @@ import com.neo4j.causalclustering.discovery.RoleInfo;
 import java.util.Arrays;
 
 import org.neo4j.collection.RawIterator;
+import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
 import org.neo4j.internal.kernel.api.procs.Neo4jTypes;
@@ -49,15 +50,25 @@ abstract class RoleProcedure extends CallableProcedure.BasicProcedure
     @Override
     public RawIterator<AnyValue[],ProcedureException> apply( Context ctx, AnyValue[] input, ResourceTracker resourceTracker ) throws ProcedureException
     {
-        var databaseId = extractDatabaseId( input );
-        var role = role( databaseId );
-        assertRoleIsKnown( role, databaseId.name() );
+        var databaseContext = extractDatabaseContext( input );
+        checkAvailable( databaseContext );
+        var role = role( databaseContext );
         return RawIterator.<AnyValue[],ProcedureException>of( new AnyValue[]{stringValue( role.toString() )} );
     }
 
-    abstract RoleInfo role( NamedDatabaseId namedDatabaseId );
+    private void checkAvailable( DatabaseContext databaseContext ) throws ProcedureException
+    {
+        if ( !databaseContext.database().getDatabaseAvailabilityGuard().isAvailable() )
+        {
+            throw new ProcedureException( DatabaseUnavailable,
+                                          "Unable to get a cluster role for database '" + databaseContext.database().getNamedDatabaseId() +
+                                          " because the database is not available" );
+        }
+    }
 
-    private NamedDatabaseId extractDatabaseId( AnyValue[] input ) throws ProcedureException
+    abstract RoleInfo role( DatabaseContext namedDatabaseId );
+
+    private DatabaseContext extractDatabaseContext( AnyValue[] input ) throws ProcedureException
     {
         if ( input.length != 1 )
         {
@@ -67,20 +78,9 @@ abstract class RoleProcedure extends CallableProcedure.BasicProcedure
         if ( value instanceof TextValue )
         {
             var databaseName = ((TextValue) value).stringValue();
-            return databaseManager.databaseIdRepository()
-                    .getByName( databaseName )
-                    .orElseThrow( () -> databaseNotFoundException( databaseName ) );
+            return databaseManager.getDatabaseContext( databaseName ).orElseThrow( () -> databaseNotFoundException( databaseName ) );
         }
         throw new IllegalArgumentException( "Parameter '" + PARAMETER_NAME + "' value should be a string: " + value );
-    }
-
-    private static void assertRoleIsKnown( RoleInfo role, String databaseName ) throws ProcedureException
-    {
-        if ( role == RoleInfo.UNKNOWN )
-        {
-            throw new ProcedureException( DatabaseUnavailable,
-                    "Unable to get a cluster role for database '" + databaseName + "' because this database is stopped" );
-        }
     }
 
     private static ProcedureException databaseNotFoundException( String databaseName )

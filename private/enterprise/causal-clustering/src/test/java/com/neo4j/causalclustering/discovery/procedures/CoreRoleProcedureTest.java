@@ -5,113 +5,48 @@
  */
 package com.neo4j.causalclustering.discovery.procedures;
 
-import com.neo4j.causalclustering.common.StubClusteredDatabaseManager;
-import com.neo4j.causalclustering.core.IdentityModule;
-import com.neo4j.causalclustering.discovery.RoleInfo;
-import com.neo4j.causalclustering.discovery.TopologyService;
-import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.core.consensus.RaftMachine;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.List;
-import java.util.UUID;
+import org.neo4j.collection.Dependencies;
 
-import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
-import org.neo4j.internal.kernel.api.procs.QualifiedName;
-import org.neo4j.kernel.api.ResourceTracker;
-import org.neo4j.kernel.api.procedure.Context;
-import org.neo4j.kernel.database.NamedDatabaseId;
-import org.neo4j.values.AnyValue;
-
+import static com.neo4j.causalclustering.discovery.RoleInfo.FOLLOWER;
+import static com.neo4j.causalclustering.discovery.RoleInfo.LEADER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.neo4j.kernel.api.exceptions.Status.Database.DatabaseUnavailable;
-import static org.neo4j.values.storable.Values.intValue;
-import static org.neo4j.values.storable.Values.stringValue;
 
-class CoreRoleProcedureTest
+class CoreRoleProcedureTest extends RoleProcedureTest
 {
-    private final StubClusteredDatabaseManager databaseManager = new StubClusteredDatabaseManager();
-    private final NamedDatabaseId namedDatabaseId = databaseManager.databaseIdRepository().getRaw( "cars" );
-    private final MemberId memberId = new MemberId( UUID.randomUUID() );
-    private final IdentityModule identityModule = mock( IdentityModule.class );
-    private final TopologyService topologyService = mock( TopologyService.class );
+    private final RaftMachine raftMachine = mock( RaftMachine.class );
 
-    private final Context procedureContext = mock( Context.class );
-    private final ResourceTracker resourceTracker = mock( ResourceTracker.class );
-
-    private final CoreRoleProcedure procedure = new CoreRoleProcedure( identityModule, topologyService, databaseManager );
-
-    @Test
-    void shouldThrowWhenDatabaseNameNotSpecified()
+    CoreRoleProcedureTest()
     {
-        assertThrows( IllegalArgumentException.class, () -> procedure.apply( procedureContext, new AnyValue[]{}, resourceTracker ) );
+        super( CoreRoleProcedure::new );
     }
 
-    @Test
-    void shouldThrowWhenDatabaseNameIsNull()
+    @BeforeEach
+    void addRaftMachine()
     {
-        assertThrows( IllegalArgumentException.class, () -> procedure.apply( procedureContext, new AnyValue[]{null}, resourceTracker ) );
-    }
-
-    @Test
-    void shouldThrowWhenDatabaseNameIsNotString()
-    {
-        assertThrows( IllegalArgumentException.class, () -> procedure.apply( procedureContext, new AnyValue[]{intValue( 42 )}, resourceTracker ) );
+        var dependencies = new Dependencies();
+        dependencies.satisfyDependencies( raftMachine );
+        when( databaseContext.dependencies() ).thenReturn( dependencies );
     }
 
     @Test
     void shouldReturnLeader() throws Exception
     {
-        testProcedureCall( RoleInfo.LEADER );
+        mockAvailableExitingDatabase();
+        when( raftMachine.isLeader() ).thenReturn( true );
+        assertEquals( LEADER, runProcedure() );
     }
 
     @Test
     void shouldReturnFollower() throws Exception
     {
-        testProcedureCall( RoleInfo.FOLLOWER );
-    }
-
-    @Test
-    void shouldThrowWhenRoleIsUnknown()
-    {
-        when( identityModule.myself() ).thenReturn( memberId );
-        when( topologyService.lookupRole( namedDatabaseId, memberId ) ).thenReturn( RoleInfo.UNKNOWN );
-
-        var error = assertThrows( ProcedureException.class,
-                () -> procedure.apply( procedureContext, new AnyValue[]{stringValue( namedDatabaseId.name() )}, resourceTracker ) );
-
-        assertEquals( DatabaseUnavailable, error.status() );
-    }
-
-    @Test
-    void shouldHaveCorrectName()
-    {
-        assertEquals( new QualifiedName( List.of( "dbms", "cluster" ), "role" ), procedure.signature().name() );
-    }
-
-    @Test
-    void shouldBeASystemProcedure()
-    {
-        assertTrue( procedure.signature().systemProcedure() );
-    }
-
-    private void testProcedureCall( RoleInfo role ) throws Exception
-    {
-        when( identityModule.myself() ).thenReturn( memberId );
-        when( topologyService.lookupRole( namedDatabaseId, memberId ) ).thenReturn( role );
-
-        var result = procedure.apply( procedureContext, new AnyValue[]{stringValue( namedDatabaseId.name() )}, resourceTracker );
-        assertTrue( result.hasNext() );
-
-        var row = result.next();
-        assertFalse( result.hasNext() );
-        assertEquals( 1, row.length );
-
-        var element = row[0];
-        assertEquals( stringValue( role.toString() ), element );
+        mockAvailableExitingDatabase();
+        when( raftMachine.isLeader() ).thenReturn( false );
+        assertEquals( FOLLOWER, runProcedure() );
     }
 }

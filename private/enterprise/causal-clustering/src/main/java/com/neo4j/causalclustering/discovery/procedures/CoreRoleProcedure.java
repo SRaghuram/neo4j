@@ -6,28 +6,23 @@
 package com.neo4j.causalclustering.discovery.procedures;
 
 import com.neo4j.causalclustering.core.IdentityModule;
+import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import com.neo4j.causalclustering.discovery.RoleInfo;
-import com.neo4j.causalclustering.discovery.TopologyService;
 
+import org.neo4j.dbms.DatabaseStateService;
+import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
-import org.neo4j.kernel.database.NamedDatabaseId;
 
 public class CoreRoleProcedure extends RoleProcedure
 {
-    private final IdentityModule identityModule;
-    private final TopologyService topologyService;
-
-    public CoreRoleProcedure( IdentityModule identityModule, TopologyService topologyService, DatabaseManager<?> databaseManager )
+    public CoreRoleProcedure( DatabaseManager<?> databaseManager )
     {
         super( databaseManager );
-        this.identityModule = identityModule;
-        this.topologyService = topologyService;
     }
 
     @Override
-    RoleInfo role( NamedDatabaseId namedDatabaseId )
+    RoleInfo role( DatabaseContext databaseContext )
     {
-        var myId = identityModule.myself();
-        return topologyService.lookupRole( namedDatabaseId, myId );
+        return databaseContext.dependencies().resolveDependency( RaftMachine.class ).isLeader() ? RoleInfo.LEADER : RoleInfo.FOLLOWER;
     }
 }
