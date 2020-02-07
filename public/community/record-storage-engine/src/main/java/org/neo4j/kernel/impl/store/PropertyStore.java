@@ -58,8 +58,8 @@ import org.neo4j.values.utils.TemporalValueWriterAdapter;
 
 import static org.neo4j.kernel.impl.store.DynamicArrayStore.getRightArray;
 import static org.neo4j.kernel.impl.store.NoStoreHeaderFormat.NO_STORE_HEADER_FORMAT;
-import static org.neo4j.kernel.impl.store.record.AbstractBaseRecord.NO_ID;
 import static org.neo4j.kernel.impl.store.record.RecordLoad.NORMAL;
+import static org.neo4j.storageengine.api.StorageEntityScanCursor.NO_ID;
 
 /**
  * Implementation of the property store. This implementation has two dynamic

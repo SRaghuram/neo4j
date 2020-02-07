@@ -29,6 +29,8 @@ import org.neo4j.kernel.impl.store.record.Record;
 import org.neo4j.kernel.impl.store.record.RecordLoad;
 import org.neo4j.kernel.impl.store.record.SchemaRecord;
 
+import static org.neo4j.storageengine.api.StorageEntityScanCursor.NO_ID;
+
 public class SchemaRecordFormat extends BaseOneByteHeaderRecordFormat<SchemaRecord> implements RecordFormat<SchemaRecord>
 {
     // 8 bits header. 56 possible bits for property record reference. (Even high-limit format only uses 50 bits for property ids).
@@ -53,7 +55,7 @@ public class SchemaRecordFormat extends BaseOneByteHeaderRecordFormat<SchemaReco
     @Override
     public SchemaRecord newRecord()
     {
-        return new SchemaRecord( AbstractBaseRecord.NO_ID );
+        return new SchemaRecord( NO_ID );
     }
 
     @Override

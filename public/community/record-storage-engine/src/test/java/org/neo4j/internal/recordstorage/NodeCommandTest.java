@@ -57,7 +57,7 @@ import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 import static org.neo4j.kernel.impl.store.DynamicNodeLabels.dynamicPointer;
 import static org.neo4j.kernel.impl.store.NodeLabelsField.parseLabelsField;
 import static org.neo4j.kernel.impl.store.ShortArray.LONG;
-import static org.neo4j.kernel.impl.store.record.AbstractBaseRecord.NO_ID;
+import static org.neo4j.storageengine.api.StorageEntityScanCursor.NO_ID;
 import static org.neo4j.kernel.impl.store.record.DynamicRecord.dynamicRecord;
 
 @EphemeralPageCacheExtension

@@ -27,6 +27,8 @@ import org.neo4j.kernel.impl.store.record.RecordLoad;
 import org.neo4j.kernel.impl.store.record.RelationshipGroupRecord;
 import org.neo4j.kernel.impl.store.record.RelationshipRecord;
 
+import static org.neo4j.storageengine.api.StorageEntityScanCursor.NO_ID;
+
 class RecordRelationshipGroupCursor extends RelationshipGroupRecord implements AutoCloseable
 {
     private final RelationshipStore relationshipStore;

@@ -21,6 +21,8 @@ package org.neo4j.kernel.impl.store.record;
 
 import java.util.Objects;
 
+import static org.neo4j.storageengine.api.StorageEntityScanCursor.NO_ID;
+
 /**
  * {@link AbstractBaseRecord records} are intended to be reusable. Created with a zero-arg constructor
  * and initialized with the public {@code initialize} method exposed by the specific record implementations,
@@ -39,7 +41,7 @@ import java.util.Objects;
  */
 public abstract class AbstractBaseRecord
 {
-    public static final int NO_ID = -1;
+    //public static final int NO_ID = -1;
     private long id;
     // Used for the "record unit" feature where one logical record may span two physical records,
     // as to still keep low and fixed record size, but support occasionally bigger records.

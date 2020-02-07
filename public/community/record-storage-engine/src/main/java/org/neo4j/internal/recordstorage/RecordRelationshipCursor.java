@@ -28,6 +28,8 @@ import org.neo4j.storageengine.api.RelationshipVisitor;
 import org.neo4j.storageengine.api.StoragePropertyCursor;
 import org.neo4j.storageengine.api.StorageRelationshipCursor;
 
+import static org.neo4j.storageengine.api.StorageEntityScanCursor.NO_ID;
+
 abstract class RecordRelationshipCursor extends RelationshipRecord implements RelationshipVisitor<RuntimeException>, StorageRelationshipCursor
 {
     final RelationshipStore relationshipStore;
