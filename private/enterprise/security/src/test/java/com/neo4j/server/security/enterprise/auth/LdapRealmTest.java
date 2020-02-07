@@ -40,11 +40,8 @@ import org.neo4j.server.security.auth.ShiroAuthToken;
 import static com.neo4j.server.security.enterprise.configuration.SecuritySettings.ldap_authorization_group_to_role_mapping;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.hamcrest.CoreMatchers.containsString;
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.CoreMatchers.hasItems;
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -101,8 +98,8 @@ class LdapRealmTest
 
         LdapRealm realm = new LdapRealm( config, securityLog, secureHasher,true, true );
 
-        assertThat( realm.getGroupToRoleMapping().get( "group" ), equalTo( asList( "role1", "role2", "role3" ) ) );
-        assertThat( realm.getGroupToRoleMapping().size(), equalTo( 1 ) );
+        assertThat( realm.getGroupToRoleMapping().get( "group" ) ).isEqualTo( asList( "role1", "role2", "role3" ) );
+        assertThat( realm.getGroupToRoleMapping().size() ).isEqualTo( 1 );
     }
 
     @Test
@@ -113,12 +110,11 @@ class LdapRealmTest
 
         LdapRealm realm = new LdapRealm( config, securityLog, secureHasher,true, true );
 
-        assertThat( realm.getGroupToRoleMapping().keySet(),
-                equalTo( new TreeSet<>( asList( "group1", "group2", "group3" ) ) ) );
-        assertThat( realm.getGroupToRoleMapping().get( "group1" ), equalTo( singletonList( "role1" ) ) );
-        assertThat( realm.getGroupToRoleMapping().get( "group2" ), equalTo( asList( "role2", "role3" ) ) );
-        assertThat( realm.getGroupToRoleMapping().get( "group3" ), equalTo( singletonList( "role4" ) ) );
-        assertThat( realm.getGroupToRoleMapping().size(), equalTo( 3 ) );
+        assertThat( realm.getGroupToRoleMapping().keySet() ).isEqualTo( new TreeSet<>( asList( "group1", "group2", "group3" ) ) );
+        assertThat( realm.getGroupToRoleMapping().get( "group1" ) ).isEqualTo( singletonList( "role1" ) );
+        assertThat( realm.getGroupToRoleMapping().get( "group2" ) ).isEqualTo( asList( "role2", "role3" ) );
+        assertThat( realm.getGroupToRoleMapping().get( "group3" ) ).isEqualTo( singletonList( "role4" ) );
+        assertThat( realm.getGroupToRoleMapping().size() ).isEqualTo( 3 );
     }
 
     @Test
@@ -129,14 +125,13 @@ class LdapRealmTest
 
         LdapRealm realm = new LdapRealm( config, securityLog, secureHasher,true, true );
 
-        assertThat( realm.getGroupToRoleMapping().keySet(),
-                equalTo( new TreeSet<>( asList( "group1", "group2", "gr oup3", "group4 ", "g" ) ) ) );
-        assertThat( realm.getGroupToRoleMapping().get( "group1" ), equalTo( singletonList( "role1" ) ) );
-        assertThat( realm.getGroupToRoleMapping().get( "group2" ), equalTo( asList( "role2", "role3" ) ) );
-        assertThat( realm.getGroupToRoleMapping().get( "gr oup3" ), equalTo( singletonList( "role4" ) ) );
-        assertThat( realm.getGroupToRoleMapping().get( "group4 " ), equalTo( Collections.emptyList() ) );
-        assertThat( realm.getGroupToRoleMapping().get( "g" ), equalTo( singletonList( "r" ) ) );
-        assertThat( realm.getGroupToRoleMapping().size(), equalTo( 5 ) );
+        assertThat( realm.getGroupToRoleMapping().keySet() ).isEqualTo( new TreeSet<>( asList( "group1", "group2", "gr oup3", "group4 ", "g" ) ) );
+        assertThat( realm.getGroupToRoleMapping().get( "group1" ) ).isEqualTo( singletonList( "role1" ) );
+        assertThat( realm.getGroupToRoleMapping().get( "group2" ) ).isEqualTo( asList( "role2", "role3" ) );
+        assertThat( realm.getGroupToRoleMapping().get( "gr oup3" ) ).isEqualTo( singletonList( "role4" ) );
+        assertThat( realm.getGroupToRoleMapping().get( "group4 " ) ).isEqualTo( Collections.emptyList() );
+        assertThat( realm.getGroupToRoleMapping().get( "g" ) ).isEqualTo( singletonList( "r" ) );
+        assertThat( realm.getGroupToRoleMapping().size() ).isEqualTo( 5 );
     }
 
     @Test
@@ -146,8 +141,8 @@ class LdapRealmTest
 
         LdapRealm realm = new LdapRealm( config, securityLog, secureHasher,true, true );
 
-        assertThat( realm.getGroupToRoleMapping().get( "group" ), equalTo( singletonList( "role" ) ) );
-        assertThat( realm.getGroupToRoleMapping().size(), equalTo( 1 ) );
+        assertThat( realm.getGroupToRoleMapping().get( "group" ) ).isEqualTo( singletonList( "role" ) );
+        assertThat( realm.getGroupToRoleMapping().size() ).isEqualTo( 1 );
     }
 
     @Test
@@ -158,11 +153,9 @@ class LdapRealmTest
 
         LdapRealm realm = new LdapRealm( config, securityLog, secureHasher, true, true );
 
-        assertThat( realm.getGroupToRoleMapping().keySet(),
-                equalTo( Stream.of( "group" ).collect( Collectors.toSet() ) ) );
-        assertThat( realm.getGroupToRoleMapping().get( "group" ),
-                equalTo( asList( "role1", "role2", "role3" ) ) );
-        assertThat( realm.getGroupToRoleMapping().size(), equalTo( 1 ) );
+        assertThat( realm.getGroupToRoleMapping().keySet() ).isEqualTo( Stream.of( "group" ).collect( Collectors.toSet() ) );
+        assertThat( realm.getGroupToRoleMapping().get( "group" ) ).isEqualTo( asList( "role1", "role2", "role3" ) );
+        assertThat( realm.getGroupToRoleMapping().size() ).isEqualTo( 1 );
     }
 
     @Test
@@ -172,8 +165,8 @@ class LdapRealmTest
 
         LdapRealm realm = new LdapRealm( config, securityLog, secureHasher, true, true );
 
-        assertThat( realm.getGroupToRoleMapping().get( "group" ).size(), equalTo( 0 ) );
-        assertThat( realm.getGroupToRoleMapping().size(), equalTo( 1 ) );
+        assertThat( realm.getGroupToRoleMapping().get( "group" ).size() ).isEqualTo( 0 );
+        assertThat( realm.getGroupToRoleMapping().size() ).isEqualTo( 1 );
     }
 
     @Test
@@ -182,7 +175,7 @@ class LdapRealmTest
         when( config.get( ldap_authorization_group_to_role_mapping ) ).thenReturn( "group" );
 
         var e = assertThrows( IllegalArgumentException.class, () -> new LdapRealm( config, securityLog, secureHasher, true, true ) );
-        assertThat( e.getMessage(), containsString( "wrong number of fields" ) );
+        assertThat( e.getMessage() ).contains( "wrong number of fields" );
     }
 
     @Test
@@ -191,7 +184,7 @@ class LdapRealmTest
         when( config.get( ldap_authorization_group_to_role_mapping ) ).thenReturn( "=role" );
 
         var e = assertThrows( IllegalArgumentException.class, () -> new LdapRealm( config, securityLog, secureHasher, true, true ) );
-        assertThat( e.getMessage(), containsString( "wrong number of fields" ) );
+        assertThat( e.getMessage() ).contains( "wrong number of fields" );
     }
 
     @Test
@@ -202,9 +195,8 @@ class LdapRealmTest
 
         LdapRealm realm = new LdapRealm( config, securityLog, secureHasher, true, true );
 
-        assertThat( realm.getGroupToRoleMapping().get( "group" ),
-                equalTo( asList( "role1", "role2", "role3" ) ) );
-        assertThat( realm.getGroupToRoleMapping().size(), equalTo( 1 ) );
+        assertThat( realm.getGroupToRoleMapping().get( "group" ) ).isEqualTo( asList( "role1", "role2", "role3" ) );
+        assertThat( realm.getGroupToRoleMapping().size() ).isEqualTo( 1 );
     }
 
     @Test
@@ -326,7 +318,7 @@ class LdapRealmTest
         Set<String> roles = realm.findRoleNamesForUser( "username", ldapContext );
 
         // Then
-        assertThat( roles, hasItems( "role1", "role2", "role3" ) );
+        assertThat( roles ).contains( "role1", "role2", "role3" );
     }
 
     @Test

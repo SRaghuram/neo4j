@@ -15,8 +15,7 @@ import java.util.List;
 
 import org.neo4j.cypher.internal.security.SecureHasher;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -29,7 +28,7 @@ class PluginAuthenticationInfoTest
         PluginAuthenticationInfo internalAuthInfo =
                 PluginAuthenticationInfo.createCacheable( AuthenticationInfo.of( "thePrincipal" ), "theRealm", null );
 
-        assertThat( (List<String>) internalAuthInfo.getPrincipals().asList(), containsInAnyOrder( "thePrincipal" ) );
+        assertThat( (List<String>) internalAuthInfo.getPrincipals().asList() ).contains( "thePrincipal" );
     }
 
     @Test
@@ -45,7 +44,7 @@ class PluginAuthenticationInfoTest
                         hasher
                 );
 
-        assertThat( (List<String>) internalAuthInfo.getPrincipals().asList(), containsInAnyOrder( "thePrincipal" ) );
+        assertThat( (List<String>) internalAuthInfo.getPrincipals().asList() ).contains( "thePrincipal" );
     }
 
     @Test
@@ -61,6 +60,6 @@ class PluginAuthenticationInfoTest
                         hasher
                 );
 
-        assertThat( (List<String>) internalAuthInfo.getPrincipals().asList(), containsInAnyOrder( "thePrincipal" ) );
+        assertThat( (List<String>) internalAuthInfo.getPrincipals().asList() ).contains( "thePrincipal" );
     }
 }

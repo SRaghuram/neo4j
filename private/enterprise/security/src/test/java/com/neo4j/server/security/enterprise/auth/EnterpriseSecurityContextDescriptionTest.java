@@ -12,7 +12,6 @@ import org.apache.shiro.authz.SimpleAuthorizationInfo;
 import org.apache.shiro.cache.MemoryConstrainedCacheManager;
 import org.apache.shiro.subject.PrincipalCollection;
 import org.apache.shiro.subject.SimplePrincipalCollection;
-import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -29,8 +28,7 @@ import org.neo4j.kernel.impl.api.security.RestrictedAccessMode;
 import org.neo4j.server.security.auth.ShiroAuthenticationInfo;
 
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLISHER;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -61,14 +59,14 @@ class EnterpriseSecurityContextDescriptionTest
     void shouldMakeNiceDescriptionWithoutAssignedRoles() throws Exception
     {
         // PUBLIC is always part of a users set of roles
-        assertThat( context().description(), equalTo( "user 'mats' with roles [PUBLIC]" ) );
+        assertThat( context().description() ).isEqualTo( "user 'mats' with roles [PUBLIC]" );
     }
 
     @Test
     void shouldMakeNiceDescriptionWithRoles() throws Exception
     {
         when( realm.getAuthorizationInfoSnapshot( principals ) ).thenReturn( new SimpleAuthorizationInfo( Set.of( PUBLISHER, "role1" ) ) );
-        assertThat( context().description(), equalTo( "user 'mats' with roles [PUBLIC, publisher, role1]" ) );
+        assertThat( context().description() ).isEqualTo( "user 'mats' with roles [PUBLIC, publisher, role1]" );
     }
 
     @Test
@@ -76,7 +74,7 @@ class EnterpriseSecurityContextDescriptionTest
     {
         when( realm.getAuthorizationInfoSnapshot( principals ) ).thenReturn( new SimpleAuthorizationInfo( Set.of( PUBLISHER, "role1" ) ) );
         EnterpriseSecurityContext modified = context().withMode( AccessMode.Static.CREDENTIALS_EXPIRED );
-        assertThat( modified.description(), equalTo( "user 'mats' with CREDENTIALS_EXPIRED" ) );
+        assertThat( modified.description() ).isEqualTo( "user 'mats' with CREDENTIALS_EXPIRED" );
     }
 
     @Test
@@ -86,7 +84,7 @@ class EnterpriseSecurityContextDescriptionTest
         EnterpriseSecurityContext context = context();
         EnterpriseSecurityContext restricted =
                 context.withMode( new RestrictedAccessMode( context.mode(), AccessMode.Static.READ ) );
-        assertThat( restricted.description(), equalTo( "user 'mats' with roles [PUBLIC, publisher, role1] restricted to READ" ) );
+        assertThat( restricted.description() ).isEqualTo( "user 'mats' with roles [PUBLIC, publisher, role1] restricted to READ" );
     }
 
     @Test
@@ -96,14 +94,14 @@ class EnterpriseSecurityContextDescriptionTest
         EnterpriseSecurityContext context = context();
         EnterpriseSecurityContext overridden =
                 context.withMode( new OverriddenAccessMode( context.mode(), AccessMode.Static.READ ) );
-        assertThat( overridden.description(), equalTo( "user 'mats' with roles [PUBLIC, publisher, role1] overridden by READ" ) );
+        assertThat( overridden.description() ).isEqualTo( "user 'mats' with roles [PUBLIC, publisher, role1] overridden by READ" );
     }
 
     @Test
     void shouldMakeNiceDescriptionAuthDisabled()
     {
         EnterpriseSecurityContext disabled = EnterpriseSecurityContext.AUTH_DISABLED;
-        assertThat( disabled.description(), equalTo( "AUTH_DISABLED with FULL" ) );
+        assertThat( disabled.description() ).isEqualTo( "AUTH_DISABLED with FULL" );
     }
 
     @Test
@@ -112,7 +110,7 @@ class EnterpriseSecurityContextDescriptionTest
         EnterpriseSecurityContext disabled = EnterpriseSecurityContext.AUTH_DISABLED;
         EnterpriseSecurityContext restricted =
                 disabled.withMode( new RestrictedAccessMode( disabled.mode(), AccessMode.Static.READ ) );
-        assertThat( restricted.description(), equalTo( "AUTH_DISABLED with FULL restricted to READ" ) );
+        assertThat( restricted.description() ).isEqualTo( "AUTH_DISABLED with FULL restricted to READ" );
     }
 
     private EnterpriseSecurityContext context() throws InvalidAuthTokenException

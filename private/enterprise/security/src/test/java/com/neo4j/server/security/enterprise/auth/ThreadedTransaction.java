@@ -18,10 +18,8 @@ import org.neo4j.test.DoubleLatch;
 import org.neo4j.test.NamedFunction;
 import org.neo4j.test.rule.concurrent.ThreadingRule;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.instanceOf;
-import static org.junit.Assert.fail;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.fail;
 
 class ThreadedTransaction<S>
 {
@@ -132,8 +130,7 @@ class ThreadedTransaction<S>
             fail( "Expected explicit TransactionTerminatedException in the threaded transaction, " +
                     "but no exception was raised" );
         }
-        assertThat( Exceptions.stringify( exceptionInOtherThread ),
-                exceptionInOtherThread.getMessage(), containsString( "Explicitly terminated by the user.") );
+        assertThat( exceptionInOtherThread.getMessage() ).as( Exceptions.stringify( exceptionInOtherThread ) ).contains( "Explicitly terminated by the user." );
     }
 
     void closeAndAssertSomeTermination() throws Throwable
@@ -143,8 +140,7 @@ class ThreadedTransaction<S>
         {
             fail( "Expected a TransactionTerminatedException in the threaded transaction, but no exception was raised" );
         }
-        assertThat( Exceptions.stringify( exceptionInOtherThread ),
-                exceptionInOtherThread, instanceOf( TransactionTerminatedException.class ) );
+        assertThat( exceptionInOtherThread ).as( Exceptions.stringify( exceptionInOtherThread ) ).isInstanceOf( TransactionTerminatedException.class );
     }
 
     private Throwable join() throws ExecutionException, InterruptedException

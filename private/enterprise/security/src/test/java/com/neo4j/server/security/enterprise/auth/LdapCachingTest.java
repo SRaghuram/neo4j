@@ -34,8 +34,7 @@ import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -84,13 +83,13 @@ class LdapCachingTest
     {
         // Given
         authManager.login( authToken( "mike", "123" ) );
-        assertThat( "Test realm did not receive a call", testRealm.takeAuthenticationFlag(), is( true ) );
+        assertThat( testRealm.takeAuthenticationFlag() ).as( "Test realm did not receive a call" ).isEqualTo( true );
 
         // When
         authManager.login( authToken( "mike", "123" ) );
 
         // Then
-        assertThat( "Test realm received a call", testRealm.takeAuthenticationFlag(), is( false ) );
+        assertThat( testRealm.takeAuthenticationFlag() ).as( "Test realm received a call" ).isEqualTo( false );
     }
 
     @Test
@@ -99,13 +98,13 @@ class LdapCachingTest
         // Given
         EnterpriseLoginContext mike = authManager.login( authToken( "mike", "123" ) );
         mike.authorize( token, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
-        assertThat( "Test realm did not receive a call", testRealm.takeAuthorizationFlag(), is( true ) );
+        assertThat( testRealm.takeAuthorizationFlag() ).as( "Test realm did not receive a call" ).isEqualTo( true );
 
         // When
         mike.authorize( token, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
 
         // Then
-        assertThat( "Test realm received a call", testRealm.takeAuthorizationFlag(), is( false ) );
+        assertThat( testRealm.takeAuthorizationFlag() ).as( "Test realm received a call" ).isEqualTo( false );
     }
 
     @Test
@@ -114,21 +113,21 @@ class LdapCachingTest
         // Given
         EnterpriseLoginContext mike = authManager.login( authToken( "mike", "123" ) );
         mike.authorize( token, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
-        assertThat( "Test realm did not receive a call", testRealm.takeAuthorizationFlag(), is( true ) );
+        assertThat( testRealm.takeAuthorizationFlag() ).as( "Test realm did not receive a call" ).isEqualTo( true );
 
         // When
         fakeTicker.advance( 99, TimeUnit.MILLISECONDS );
         mike.authorize( token, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
 
         // Then
-        assertThat( "Test realm received a call", testRealm.takeAuthorizationFlag(), is( false ) );
+        assertThat( testRealm.takeAuthorizationFlag() ).as( "Test realm received a call" ).isEqualTo( false );
 
         // When
         fakeTicker.advance( 2, TimeUnit.MILLISECONDS );
         mike.authorize( token, GraphDatabaseSettings.DEFAULT_DATABASE_NAME );
 
         // Then
-        assertThat( "Test realm did not received a call", testRealm.takeAuthorizationFlag(), is( true ) );
+        assertThat( testRealm.takeAuthorizationFlag() ).as( "Test realm did not received a call" ).isEqualTo( true );
     }
 
     @Test
@@ -137,21 +136,21 @@ class LdapCachingTest
         // Given
         Map<String,Object> mike = authToken( "mike", "123" );
         authManager.login( mike );
-        assertThat( "Test realm did not receive a call", testRealm.takeAuthenticationFlag(), is( true ) );
+        assertThat( testRealm.takeAuthenticationFlag() ).as( "Test realm did not receive a call" ).isEqualTo( true );
 
         // When
         fakeTicker.advance( 99, TimeUnit.MILLISECONDS );
         authManager.login( mike );
 
         // Then
-        assertThat( "Test realm received a call", testRealm.takeAuthenticationFlag(), is( false ) );
+        assertThat( testRealm.takeAuthenticationFlag() ).as( "Test realm received a call" ).isEqualTo( false );
 
         // When
         fakeTicker.advance( 2, TimeUnit.MILLISECONDS );
         authManager.login( mike );
 
         // Then
-        assertThat( "Test realm did not received a call", testRealm.takeAuthenticationFlag(), is( true ) );
+        assertThat( testRealm.takeAuthenticationFlag() ).as( "Test realm did not received a call" ).isEqualTo( true );
     }
 
     @Test
@@ -160,21 +159,21 @@ class LdapCachingTest
         // Given
         Map<String,Object> mike = authToken( "mike", "123" );
         authManager.login( mike );
-        assertThat( "Test realm did not receive a call", testRealm.takeAuthenticationFlag(), is( true ) );
+        assertThat( testRealm.takeAuthenticationFlag() ).as( "Test realm did not receive a call" ).isEqualTo( true );
 
         // When
         fakeTicker.advance( 2, TimeUnit.MILLISECONDS );
         authManager.login( mike );
 
         // Then
-        assertThat( "Test realm received a call", testRealm.takeAuthenticationFlag(), is( false ) );
+        assertThat( testRealm.takeAuthenticationFlag() ).as( "Test realm received a call" ).isEqualTo( false );
 
         // When
         authManager.clearAuthCache();
         authManager.login( mike );
 
         // Then
-        assertThat( "Test realm did not receive a call", testRealm.takeAuthenticationFlag(), is( true ) );
+        assertThat( testRealm.takeAuthenticationFlag() ).as( "Test realm did not receive a call" ).isEqualTo( true );
     }
 
     private class TestRealm extends LdapRealm

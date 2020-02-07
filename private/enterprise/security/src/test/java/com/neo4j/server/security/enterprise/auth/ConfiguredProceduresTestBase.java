@@ -24,8 +24,7 @@ import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRol
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.internal.util.collections.Sets.newSet;
 import static org.neo4j.configuration.SettingValueParsers.FALSE;
 import static org.neo4j.internal.helpers.collection.MapUtil.genericMap;
@@ -195,7 +194,7 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
         expected.put( "queryId", valueOf( "my-database-query-9999999999" ) );
         expected.put( "username", valueOf( "n/a" ) );
         expected.put( "message", valueOf( "No Query found with this id" ) );
-        assertSuccess( adminSubject, query, r -> assertThat( r.next(), equalTo( expected ) ) );
+        assertSuccess( adminSubject, query, r -> assertThat( r.next() ).isEqualTo( expected ) );
     }
 
     @Test
@@ -222,7 +221,7 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
         assertSuccess( adminSubject, query, r ->
         {
             Set<Map<String,Object>> actual = r.stream().collect( toSet() );
-            assertThat( actual, equalTo( expected ) );
+            assertThat( actual ).isEqualTo( expected );
         } );
     }
 
@@ -241,7 +240,7 @@ public abstract class ConfiguredProceduresTestBase<S> extends ProcedureInteracti
                 return name + ": expected '" + expected.get( name ) + "' but was '" + record.get( "defaultBuiltInRoles" ) + "'";
             } ).collect( toList() );
 
-            assertThat( "Expectations violated: " + failures.toString(), failures.isEmpty() );
+            assertThat( failures ).as( "Expectations violated: " + failures.toString() ).isEmpty();
         } );
     }
 }

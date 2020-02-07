@@ -27,9 +27,8 @@ import org.neo4j.server.security.auth.AuthenticationStrategy;
 import org.neo4j.server.security.systemgraph.SecurityGraphInitializer;
 import org.neo4j.server.security.systemgraph.SystemGraphRealmHelper;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
@@ -93,7 +92,7 @@ class MultiRealmAuthManagerTest
         AuthenticationResult result = manager.login( authToken( "jake", "abc123" ) ).subject().getAuthenticationResult();
 
         // Then
-        assertThat( result, equalTo( AuthenticationResult.SUCCESS ) );
+        assertThat( result ).isEqualTo( AuthenticationResult.SUCCESS );
         info( "[jake]: logged in" );
     }
 
@@ -114,7 +113,7 @@ class MultiRealmAuthManagerTest
         AuthenticationResult result = manager.login( authToken( "jake", "abc123" ) ).subject().getAuthenticationResult();
 
         // Then
-        assertThat( result, equalTo( AuthenticationResult.SUCCESS ) );
+        assertThat( result ).isEqualTo( AuthenticationResult.SUCCESS );
         assertThat( logProvider ).forClass( this.getClass() ).forLevel( INFO ).doesNotContainMessage( "[jake]: logged in" );
     }
 
@@ -132,7 +131,7 @@ class MultiRealmAuthManagerTest
         AuthenticationResult result = authSubject.getAuthenticationResult();
 
         // Then
-        assertThat( result, equalTo( AuthenticationResult.TOO_MANY_ATTEMPTS ) );
+        assertThat( result ).isEqualTo( AuthenticationResult.TOO_MANY_ATTEMPTS );
         error( "[%s]: failed to log in: too many failed attempts", "jake" );
     }
 
@@ -149,7 +148,7 @@ class MultiRealmAuthManagerTest
         AuthenticationResult result = manager.login( authToken( "jake", "abc123" ) ).subject().getAuthenticationResult();
 
         // Then
-        assertThat( result, equalTo( AuthenticationResult.PASSWORD_CHANGE_REQUIRED ) );
+        assertThat( result ).isEqualTo( AuthenticationResult.PASSWORD_CHANGE_REQUIRED );
         info( "[jake]: logged in (password change required)" );
     }
 
@@ -190,7 +189,7 @@ class MultiRealmAuthManagerTest
         AuthenticationResult result = authSubject.getAuthenticationResult();
 
         // Then
-        assertThat( result, equalTo( AuthenticationResult.FAILURE ) );
+        assertThat( result ).isEqualTo( AuthenticationResult.FAILURE );
         error( "[%s]: failed to log in: %s", "unknown", "invalid principal or credentials" );
     }
 
@@ -205,7 +204,7 @@ class MultiRealmAuthManagerTest
         AuthenticationResult result = authSubject.getAuthenticationResult();
 
         // Then
-        assertThat( result, equalTo( AuthenticationResult.FAILURE ) );
+        assertThat( result ).isEqualTo( AuthenticationResult.FAILURE );
         error( "[%s]: failed to log in: %s", escape( "unknown\n\t\r\"haxx0r\"" ), "invalid principal or credentials" );
     }
 
@@ -223,7 +222,7 @@ class MultiRealmAuthManagerTest
         AuthenticationResult result = manager.login( authToken( "neo", "wrong" ) ).subject().getAuthenticationResult();
 
         // Then
-        assertThat( result, equalTo( AuthenticationResult.FAILURE ) );
+        assertThat( result ).isEqualTo( AuthenticationResult.FAILURE );
     }
 
     @SuppressWarnings( "Duplicates" )
@@ -243,8 +242,8 @@ class MultiRealmAuthManagerTest
         manager.login( authToken );
 
         // Then
-        assertThat( password, equalTo( clearedPasswordWithSameLengthAs( "abc123" ) ) );
-        assertThat( authToken.get( AuthToken.CREDENTIALS ), equalTo( clearedPasswordWithSameLengthAs( "abc123" ) ) );
+        assertThat( password ).isEqualTo( clearedPasswordWithSameLengthAs( "abc123" ) );
+        assertThat( authToken.get( AuthToken.CREDENTIALS ) ).isEqualTo( clearedPasswordWithSameLengthAs( "abc123" ) );
     }
 
     @Test
@@ -260,8 +259,8 @@ class MultiRealmAuthManagerTest
         assertThrows( InvalidAuthTokenException.class, () -> manager.login( authToken ) );
 
         // Then
-        assertThat( password, equalTo( clearedPasswordWithSameLengthAs( "abc123" ) ) );
-        assertThat( authToken.get( AuthToken.CREDENTIALS ), equalTo( clearedPasswordWithSameLengthAs( "abc123" ) ) );
+        assertThat( password ).isEqualTo( clearedPasswordWithSameLengthAs( "abc123" ) );
+        assertThat( authToken.get( AuthToken.CREDENTIALS ) ).isEqualTo( clearedPasswordWithSameLengthAs( "abc123" ) );
     }
 
     private LogAssert info( String message )

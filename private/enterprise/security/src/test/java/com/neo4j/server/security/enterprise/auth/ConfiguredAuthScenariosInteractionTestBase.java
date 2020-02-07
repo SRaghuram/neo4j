@@ -24,8 +24,7 @@ import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRol
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLIC;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLISHER;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
 
 public abstract class ConfiguredAuthScenariosInteractionTestBase<S> extends ProcedureInteractionTestBase<S>
@@ -61,7 +60,7 @@ public abstract class ConfiguredAuthScenariosInteractionTestBase<S> extends Proc
             Result result = transaction1.execute( "EXPLAIN CALL dbms.security.listUsers" );
             String description =
                     String.format( "%s (%s)", Status.Procedure.ProcedureWarning.code().description(), "dbms.security.listUsers only applies to native users." );
-            assertThat( containsNotification( result, description ), equalTo( true ) );
+            assertThat( containsNotification( result, description ) ).isEqualTo( true );
         }
     }
 
@@ -80,7 +79,7 @@ public abstract class ConfiguredAuthScenariosInteractionTestBase<S> extends Proc
             Result result = transaction1.execute( "EXPLAIN CALL dbms.security.listUsers" );
             String description =
                     String.format( "%s (%s)", Status.Procedure.ProcedureWarning.code().description(), "dbms.security.listUsers only applies to native users." );
-            assertThat( containsNotification( result, description ), equalTo( false ) );
+            assertThat( containsNotification( result, description ) ).isEqualTo( false );
         }
     }
 
@@ -90,7 +89,7 @@ public abstract class ConfiguredAuthScenariosInteractionTestBase<S> extends Proc
         return obj;
     }
 
-    private Map<String,Object> userList = map(
+    private final Map<String,Object> userList = map(
             "adminSubject", listOf( PUBLIC,  ADMIN ),
             "readSubject", listOf( PUBLIC,  READER ),
             "schemaSubject", listOf( PUBLIC,  ARCHITECT ),

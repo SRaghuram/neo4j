@@ -6,16 +6,12 @@
 package com.neo4j.server.security.enterprise.auth;
 
 import com.google.common.testing.FakeTicker;
-import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.equalTo;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -37,27 +33,27 @@ class ShiroCaffeineCacheTest
     {
         new ShiroCaffeineCache<>( fakeTicker::read, Runnable::run, 0, 5, false );
         var e = assertThrows( IllegalArgumentException.class, () -> new ShiroCaffeineCache<>( fakeTicker::read, Runnable::run, 0, 5, true ) );
-        assertThat( e.getMessage(), containsString( "TTL must be larger than zero." ) );
+        assertThat( e.getMessage() ).contains( "TTL must be larger than zero." );
     }
 
     @Test
     void shouldNotGetNonExistentValue()
     {
-        assertThat( cache.get( 1 ), equalTo( null ) );
+        assertThat( cache.get( 1 ) ).isEqualTo( null );
     }
 
     @Test
     void shouldPutAndGet()
     {
         cache.put( 1, "1" );
-        assertThat( cache.get( 1 ), equalTo( "1" ) );
+        assertThat( cache.get( 1 ) ).isEqualTo( "1" );
     }
 
     @Test
     void shouldNotReturnExpiredValueThroughPut()
     {
         assertNull( cache.put( 1, "first" ));
-        assertThat( cache.put( 1, "second" ), equalTo( "first" ) );
+        assertThat( cache.put( 1, "second" ) ).isEqualTo( "first" );
         fakeTicker.advance( TTL + 1, MILLISECONDS );
         assertNull( cache.put( 1, "third" ) );
     }
@@ -67,7 +63,7 @@ class ShiroCaffeineCacheTest
     {
         assertNull( cache.remove( 1 ) );
         cache.put( 1, "1" );
-        assertThat( cache.remove( 1 ), equalTo( "1" ) );
+        assertThat( cache.remove( 1 ) ).isEqualTo( "1" );
     }
 
     @Test
@@ -75,9 +71,9 @@ class ShiroCaffeineCacheTest
     {
         cache.put( 1, "1" );
         cache.put( 2, "2" );
-        assertThat( cache.size(), equalTo( 2 ) );
+        assertThat( cache.size() ).isEqualTo( 2 );
         cache.clear();
-        assertThat( cache.size(), equalTo( 0 ) );
+        assertThat( cache.size() ).isEqualTo( 0 );
     }
 
     @Test
@@ -86,7 +82,7 @@ class ShiroCaffeineCacheTest
         cache.put( 1, "1" );
         cache.put( 2, "1" );
         cache.put( 3, "1" );
-        assertThat( cache.keys(), containsInAnyOrder( 1, 2, 3 ) );
+        assertThat( cache.keys() ).contains( 1, 2, 3 );
     }
 
     @Test
@@ -95,7 +91,7 @@ class ShiroCaffeineCacheTest
         cache.put( 1, "1" );
         cache.put( 2, "1" );
         cache.put( 3, "1" );
-        assertThat( cache.values(), containsInAnyOrder( "1", "1", "1" ) );
+        assertThat( cache.values() ).contains( "1", "1", "1" );
     }
 
     @Test
@@ -105,7 +101,7 @@ class ShiroCaffeineCacheTest
         fakeTicker.advance( TTL + 1, MILLISECONDS );
         cache.put( 2, "foo" );
 
-        assertThat( cache.values(), containsInAnyOrder( "foo" ) );
+        assertThat( cache.values() ).contains( "foo" );
     }
 
     @Test
@@ -115,8 +111,8 @@ class ShiroCaffeineCacheTest
         fakeTicker.advance( TTL + 1, MILLISECONDS );
         cache.put( 2, "foo" );
 
-        assertThat( cache.get( 1 ), equalTo( null ) );
-        assertThat( cache.get( 2 ), equalTo( "foo" ) );
+        assertThat( cache.get( 1 ) ).isEqualTo( null );
+        assertThat( cache.get( 2 ) ).isEqualTo( "foo" );
     }
 
     @Test
@@ -126,7 +122,7 @@ class ShiroCaffeineCacheTest
         fakeTicker.advance( TTL + 1, MILLISECONDS );
         cache.put( 2, "foo" );
 
-        assertThat( cache.keys(), containsInAnyOrder( 2 ) );
+        assertThat( cache.keys() ).contains( 2 );
     }
 
     @Test
@@ -139,7 +135,7 @@ class ShiroCaffeineCacheTest
         cache.put( 5, "five" );
         cache.put( 6, "six" );
 
-        assertThat( cache.size(), equalTo( 5 ) );
+        assertThat( cache.size() ).isEqualTo( 5 );
     }
 
     @Test
@@ -147,6 +143,6 @@ class ShiroCaffeineCacheTest
     {
         cache.put( 1, "foo" );
         fakeTicker.advance( TTL - 1, MILLISECONDS );
-        assertThat( cache.get( 1 ), equalTo( "foo" ) );
+        assertThat( cache.get( 1 ) ).isEqualTo( "foo" );
     }
 }

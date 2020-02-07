@@ -13,8 +13,7 @@ import java.util.Map;
 import org.neo4j.configuration.Config;
 import org.neo4j.procedure.impl.ProcedureConfig;
 
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.neo4j.configuration.GraphDatabaseSettings.default_allowed;
 import static org.neo4j.configuration.GraphDatabaseSettings.procedure_roles;
 import static org.neo4j.configuration.GraphDatabaseSettings.procedure_unrestricted;
@@ -35,7 +34,7 @@ class ProcedureConfigTest
     {
         Config config = Config.defaults();
         ProcedureConfig procConfig = new ProcedureConfig( config );
-        assertThat( procConfig.rolesFor( "x" ), equalTo( EMPTY ) );
+        assertThat( procConfig.rolesFor( "x" ) ).isEqualTo( EMPTY );
     }
 
     @Test
@@ -43,7 +42,7 @@ class ProcedureConfigTest
     {
         Config config = Config.defaults( default_allowed, "role1" );
         ProcedureConfig procConfig = new ProcedureConfig( config );
-        assertThat( procConfig.rolesFor( "x" ), equalTo( arrayOf( "role1" ) ) );
+        assertThat( procConfig.rolesFor( "x" ) ).isEqualTo( arrayOf( "role1" ) );
     }
 
     @Test
@@ -52,8 +51,8 @@ class ProcedureConfigTest
         Config config = Config.defaults( Map.of( default_allowed, "role1",
                 procedure_roles, "xyz:anotherRole" ) );
         ProcedureConfig procConfig = new ProcedureConfig( config );
-        assertThat( procConfig.rolesFor( "xyz" ), equalTo( arrayOf( "anotherRole" ) ) );
-        assertThat( procConfig.rolesFor( "abc" ), equalTo( arrayOf( "role1" ) ) );
+        assertThat( procConfig.rolesFor( "xyz" ) ).isEqualTo( arrayOf( "anotherRole" ) );
+        assertThat( procConfig.rolesFor( "abc" ) ).isEqualTo( arrayOf( "role1" ) );
     }
 
     @Test
@@ -91,8 +90,8 @@ class ProcedureConfigTest
         Config config = Config.defaults( Map.of( default_allowed, "role1", procedure_roles,
                         "xyz*:anotherRole" ) );
         ProcedureConfig procConfig = new ProcedureConfig( config );
-        assertThat( procConfig.rolesFor( "xyzabc" ), equalTo( arrayOf( "anotherRole" ) ) );
-        assertThat( procConfig.rolesFor( "abcxyz" ), equalTo( arrayOf( "role1" ) ) );
+        assertThat( procConfig.rolesFor( "xyzabc" ) ).isEqualTo( arrayOf( "anotherRole" ) );
+        assertThat( procConfig.rolesFor( "abcxyz" ) ).isEqualTo( arrayOf( "role1" ) );
     }
 
     @Test
@@ -100,8 +99,8 @@ class ProcedureConfigTest
     {
         Config config = Config.defaults( procedure_roles, "xyz*:anotherRole" );
         ProcedureConfig procConfig = new ProcedureConfig( config );
-        assertThat( procConfig.rolesFor( "xyzabc" ), equalTo( arrayOf( "anotherRole" ) ) );
-        assertThat( procConfig.rolesFor( "abcxyz" ), equalTo( EMPTY ) );
+        assertThat( procConfig.rolesFor( "xyzabc" ) ).isEqualTo( arrayOf( "anotherRole" ) );
+        assertThat( procConfig.rolesFor( "abcxyz" ) ).isEqualTo( EMPTY );
     }
 
     @Test
@@ -110,16 +109,16 @@ class ProcedureConfigTest
         Config config = Config.defaults( procedure_roles,
                 "apoc.convert.*:apoc_reader;apoc.load.json:apoc_writer;apoc.trigger.add:TriggerHappy" );
         ProcedureConfig procConfig = new ProcedureConfig( config );
-        assertThat( procConfig.rolesFor( "xyz" ), equalTo( EMPTY ) );
-        assertThat( procConfig.rolesFor( "apoc.convert.xml" ), equalTo( arrayOf( "apoc_reader" ) ) );
-        assertThat( procConfig.rolesFor( "apoc.convert.json" ), equalTo( arrayOf( "apoc_reader" ) ) );
-        assertThat( procConfig.rolesFor( "apoc.load.xml" ), equalTo( EMPTY ) );
-        assertThat( procConfig.rolesFor( "apoc.load.json" ), equalTo( arrayOf( "apoc_writer" ) ) );
-        assertThat( procConfig.rolesFor( "apoc.trigger.add" ), equalTo( arrayOf( "TriggerHappy" ) ) );
-        assertThat( procConfig.rolesFor( "apoc.convert-json" ), equalTo( EMPTY ) );
-        assertThat( procConfig.rolesFor( "apoc.load-xml" ), equalTo( EMPTY ) );
-        assertThat( procConfig.rolesFor( "apoc.load-json" ), equalTo( EMPTY ) );
-        assertThat( procConfig.rolesFor( "apoc.trigger-add" ), equalTo( EMPTY ) );
+        assertThat( procConfig.rolesFor( "xyz" ) ).isEqualTo( EMPTY );
+        assertThat( procConfig.rolesFor( "apoc.convert.xml" ) ).isEqualTo( arrayOf( "apoc_reader" ) );
+        assertThat( procConfig.rolesFor( "apoc.convert.json" ) ).isEqualTo( arrayOf( "apoc_reader" ) );
+        assertThat( procConfig.rolesFor( "apoc.load.xml" ) ).isEqualTo( EMPTY );
+        assertThat( procConfig.rolesFor( "apoc.load.json" ) ).isEqualTo( arrayOf( "apoc_writer" ) );
+        assertThat( procConfig.rolesFor( "apoc.trigger.add" ) ).isEqualTo( arrayOf( "TriggerHappy" ) );
+        assertThat( procConfig.rolesFor( "apoc.convert-json" ) ).isEqualTo( EMPTY );
+        assertThat( procConfig.rolesFor( "apoc.load-xml" ) ).isEqualTo( EMPTY );
+        assertThat( procConfig.rolesFor( "apoc.load-json" ) ).isEqualTo( EMPTY );
+        assertThat( procConfig.rolesFor( "apoc.trigger-add" ) ).isEqualTo( EMPTY );
     }
 
     @Test
@@ -128,12 +127,12 @@ class ProcedureConfigTest
         Config config = Config.defaults( Map.of( default_allowed, "default", procedure_roles,
                         "apoc.*:apoc;apoc.load.*:loader;apoc.trigger.*:trigger;apoc.trigger.add:TriggerHappy" ) );
         ProcedureConfig procConfig = new ProcedureConfig( config );
-        assertThat( procConfig.rolesFor( "xyz" ), equalTo( arrayOf( "default" ) ) );
-        assertThat( procConfig.rolesFor( "apoc.convert.xml" ), equalTo( arrayOf( "apoc" ) ) );
-        assertThat( procConfig.rolesFor( "apoc.load.xml" ), equalTo( arrayOf( "apoc", "loader" ) ) );
-        assertThat( procConfig.rolesFor( "apoc.trigger.add" ), equalTo( arrayOf( "apoc", "trigger", "TriggerHappy" ) ) );
-        assertThat( procConfig.rolesFor( "apoc.trigger.remove" ), equalTo( arrayOf( "apoc", "trigger" ) ) );
-        assertThat( procConfig.rolesFor( "apoc.load-xml" ), equalTo( arrayOf( "apoc" ) ) );
+        assertThat( procConfig.rolesFor( "xyz" ) ).isEqualTo( arrayOf( "default" ) );
+        assertThat( procConfig.rolesFor( "apoc.convert.xml" ) ).isEqualTo( arrayOf( "apoc" ) );
+        assertThat( procConfig.rolesFor( "apoc.load.xml" ) ).isEqualTo( arrayOf( "apoc", "loader" ) );
+        assertThat( procConfig.rolesFor( "apoc.trigger.add" ) ).isEqualTo( arrayOf( "apoc", "trigger", "TriggerHappy" ) );
+        assertThat( procConfig.rolesFor( "apoc.trigger.remove" ) ).isEqualTo( arrayOf( "apoc", "trigger" ) );
+        assertThat( procConfig.rolesFor( "apoc.load-xml" ) ).isEqualTo( arrayOf( "apoc" ) );
     }
 
     @Test
@@ -142,9 +141,9 @@ class ProcedureConfigTest
         Config config = Config.defaults( procedure_roles,
                 "xyz*:role1,role2,  role3  ,    role4   ;    abc:  role3   ,role1" );
         ProcedureConfig procConfig = new ProcedureConfig( config );
-        assertThat( procConfig.rolesFor( "xyzabc" ), equalTo( arrayOf( "role1", "role2", "role3", "role4" ) ) );
-        assertThat( procConfig.rolesFor( "abc" ), equalTo( arrayOf( "role3", "role1" ) ) );
-        assertThat( procConfig.rolesFor( "abcxyz" ), equalTo( EMPTY ) );
+        assertThat( procConfig.rolesFor( "xyzabc" ) ).isEqualTo( arrayOf( "role1", "role2", "role3", "role4" ) );
+        assertThat( procConfig.rolesFor( "abc" ) ).isEqualTo( arrayOf( "role3", "role1" ) );
+        assertThat( procConfig.rolesFor( "abcxyz" ) ).isEqualTo( EMPTY );
     }
 
     @Test
@@ -152,7 +151,7 @@ class ProcedureConfigTest
     {
         Config config = Config.defaults();
         ProcedureConfig procConfig = new ProcedureConfig( config );
-        assertThat( procConfig.fullAccessFor( "x" ), equalTo( false ) );
+        assertThat( procConfig.fullAccessFor( "x" ) ).isEqualTo( false );
     }
 
     @Test
@@ -161,8 +160,8 @@ class ProcedureConfigTest
         Config config = Config.defaults( procedure_unrestricted, List.of( "test.procedure.name" ) );
         ProcedureConfig procConfig = new ProcedureConfig( config );
 
-        assertThat( procConfig.fullAccessFor( "xyzabc" ), equalTo( false ) );
-        assertThat( procConfig.fullAccessFor( "test.procedure.name" ), equalTo( true ) );
+        assertThat( procConfig.fullAccessFor( "xyzabc" ) ).isEqualTo( false );
+        assertThat( procConfig.fullAccessFor( "test.procedure.name" ) ).isEqualTo( true );
     }
 
     @Test
@@ -171,9 +170,9 @@ class ProcedureConfigTest
         Config config = Config.defaults( procedure_unrestricted, List.of( "test.procedure.name", "test.procedure.otherName" ) );
         ProcedureConfig procConfig = new ProcedureConfig( config );
 
-        assertThat( procConfig.fullAccessFor( "xyzabc" ), equalTo( false ) );
-        assertThat( procConfig.fullAccessFor( "test.procedure.name" ), equalTo( true ) );
-        assertThat( procConfig.fullAccessFor( "test.procedure.otherName" ), equalTo( true ) );
+        assertThat( procConfig.fullAccessFor( "xyzabc" ) ).isEqualTo( false );
+        assertThat( procConfig.fullAccessFor( "test.procedure.name" ) ).isEqualTo( true );
+        assertThat( procConfig.fullAccessFor( "test.procedure.otherName" ) ).isEqualTo( true );
     }
 
     @Test
@@ -182,9 +181,9 @@ class ProcedureConfigTest
         Config config = Config.defaults( procedure_unrestricted, List.of( "test\\.procedure.name", "test*rocedure.otherName" ) );
         ProcedureConfig procConfig = new ProcedureConfig( config );
 
-        assertThat( procConfig.fullAccessFor( "xyzabc" ), equalTo( false ) );
-        assertThat( procConfig.fullAccessFor( "test\\.procedure.name" ), equalTo( true ) );
-        assertThat( procConfig.fullAccessFor( "test*procedure.otherName" ), equalTo( true ) );
+        assertThat( procConfig.fullAccessFor( "xyzabc" ) ).isEqualTo( false );
+        assertThat( procConfig.fullAccessFor( "test\\.procedure.name" ) ).isEqualTo( true );
+        assertThat( procConfig.fullAccessFor( "test*procedure.otherName" ) ).isEqualTo( true );
     }
 
     @Test
@@ -193,12 +192,12 @@ class ProcedureConfigTest
         Config config = Config.defaults( procedure_unrestricted, List.of( " test.procedure.*  ", "     test.*.otherName" ) );
         ProcedureConfig procConfig = new ProcedureConfig( config );
 
-        assertThat( procConfig.fullAccessFor( "xyzabc" ), equalTo( false ) );
-        assertThat( procConfig.fullAccessFor( "test.procedure.name" ), equalTo( true ) );
-        assertThat( procConfig.fullAccessFor( "test.procedure.otherName" ), equalTo( true ) );
-        assertThat( procConfig.fullAccessFor( "test.other.otherName" ), equalTo( true ) );
-        assertThat( procConfig.fullAccessFor( "test.other.cool.otherName" ), equalTo( true ) );
-        assertThat( procConfig.fullAccessFor( "test.other.name" ), equalTo( false ) );
+        assertThat( procConfig.fullAccessFor( "xyzabc" ) ).isEqualTo( false );
+        assertThat( procConfig.fullAccessFor( "test.procedure.name" ) ).isEqualTo( true );
+        assertThat( procConfig.fullAccessFor( "test.procedure.otherName" ) ).isEqualTo( true );
+        assertThat( procConfig.fullAccessFor( "test.other.otherName" ) ).isEqualTo( true );
+        assertThat( procConfig.fullAccessFor( "test.other.cool.otherName" ) ).isEqualTo( true );
+        assertThat( procConfig.fullAccessFor( "test.other.name" ) ).isEqualTo( false );
     }
 
     @Test
@@ -209,9 +208,9 @@ class ProcedureConfigTest
                 procedure_whitelist, List.of( "test.procedure.name" ) ) );
         ProcedureConfig procConfig = new ProcedureConfig( config );
 
-        assertThat( procConfig.isWhitelisted( "xyzabc" ), equalTo( false ) );
-        assertThat( procConfig.isWhitelisted( "test.procedure.name" ), equalTo( true ) );
-        assertThat( procConfig.isWhitelisted( "test.procedure.name2" ), equalTo( false ) );
+        assertThat( procConfig.isWhitelisted( "xyzabc" ) ).isEqualTo( false );
+        assertThat( procConfig.isWhitelisted( "test.procedure.name" ) ).isEqualTo( true );
+        assertThat( procConfig.isWhitelisted( "test.procedure.name2" ) ).isEqualTo( false );
     }
 
     @Test
@@ -220,12 +219,12 @@ class ProcedureConfigTest
         Config config = Config.defaults( procedure_whitelist, List.of( " test.procedure.*",  "test.*.otherName" ) );
         ProcedureConfig procConfig = new ProcedureConfig( config );
 
-        assertThat( procConfig.isWhitelisted( "xyzabc" ), equalTo( false ) );
-        assertThat( procConfig.isWhitelisted( "test.procedure.name" ), equalTo( true ) );
-        assertThat( procConfig.isWhitelisted( "test.procedure.otherName" ), equalTo( true ) );
-        assertThat( procConfig.isWhitelisted( "test.other.otherName" ), equalTo( true ) );
-        assertThat( procConfig.isWhitelisted( "test.other.cool.otherName" ), equalTo( true ) );
-        assertThat( procConfig.isWhitelisted( "test.other.name" ), equalTo( false ) );
+        assertThat( procConfig.isWhitelisted( "xyzabc" ) ).isEqualTo( false );
+        assertThat( procConfig.isWhitelisted( "test.procedure.name" ) ).isEqualTo( true );
+        assertThat( procConfig.isWhitelisted( "test.procedure.otherName" ) ).isEqualTo( true );
+        assertThat( procConfig.isWhitelisted( "test.other.otherName" ) ).isEqualTo( true );
+        assertThat( procConfig.isWhitelisted( "test.other.cool.otherName" ) ).isEqualTo( true );
+        assertThat( procConfig.isWhitelisted( "test.other.name" ) ).isEqualTo( false );
     }
 
     @Test
@@ -233,54 +232,54 @@ class ProcedureConfigTest
     {
         Config config = Config.defaults( procedure_whitelist, List.of( "[\\db^a]*" ) );
         ProcedureConfig procConfig = new ProcedureConfig( config );
-        assertThat( procConfig.isWhitelisted( "123" ), equalTo( false ) );
-        assertThat( procConfig.isWhitelisted( "b" ), equalTo( false ) );
-        assertThat( procConfig.isWhitelisted( "a" ), equalTo( false ) );
+        assertThat( procConfig.isWhitelisted( "123" ) ).isEqualTo( false );
+        assertThat( procConfig.isWhitelisted( "b" ) ).isEqualTo( false );
+        assertThat( procConfig.isWhitelisted( "a" ) ).isEqualTo( false );
 
         config = Config.defaults( procedure_whitelist, List.of( "(abc)" ) );
         procConfig = new ProcedureConfig( config );
-        assertThat( procConfig.isWhitelisted( "(abc)" ), equalTo( true ) );
+        assertThat( procConfig.isWhitelisted( "(abc)" ) ).isEqualTo( true );
 
         config = Config.defaults( procedure_whitelist, List.of( "^$" ) );
         procConfig = new ProcedureConfig( config );
-        assertThat( procConfig.isWhitelisted( "^$" ), equalTo( true ) );
+        assertThat( procConfig.isWhitelisted( "^$" ) ).isEqualTo( true );
 
         config = Config.defaults( procedure_whitelist, List.of( "\\" ) );
         procConfig = new ProcedureConfig( config );
-        assertThat( procConfig.isWhitelisted( "\\" ), equalTo( true ) );
+        assertThat( procConfig.isWhitelisted( "\\" ) ).isEqualTo( true );
 
         config = Config.defaults( procedure_whitelist, List.of( "&&" ) );
         procConfig = new ProcedureConfig( config );
-        assertThat( procConfig.isWhitelisted( "&&" ), equalTo( true ) );
+        assertThat( procConfig.isWhitelisted( "&&" ) ).isEqualTo( true );
 
         config = Config.defaults( procedure_whitelist, List.of( "\\p{Lower}" ) );
         procConfig = new ProcedureConfig( config );
-        assertThat( procConfig.isWhitelisted( "a" ), equalTo( false ) );
-        assertThat( procConfig.isWhitelisted( "\\p{Lower}" ), equalTo( true ) );
+        assertThat( procConfig.isWhitelisted( "a" ) ).isEqualTo( false );
+        assertThat( procConfig.isWhitelisted( "\\p{Lower}" ) ).isEqualTo( true );
 
         config = Config.defaults( procedure_whitelist, List.of( "a+" ) );
         procConfig = new ProcedureConfig( config );
-        assertThat( procConfig.isWhitelisted( "aaaaaa" ), equalTo( false ) );
-        assertThat( procConfig.isWhitelisted( "a+" ), equalTo( true ) );
+        assertThat( procConfig.isWhitelisted( "aaaaaa" ) ).isEqualTo( false );
+        assertThat( procConfig.isWhitelisted( "a+" ) ).isEqualTo( true );
 
         config = Config.defaults( procedure_whitelist, List.of( "a|b" ) );
         procConfig = new ProcedureConfig( config );
-        assertThat( procConfig.isWhitelisted( "a" ), equalTo( false ) );
-        assertThat( procConfig.isWhitelisted( "b" ), equalTo( false ) );
-        assertThat( procConfig.isWhitelisted( "|" ), equalTo( false ) );
-        assertThat( procConfig.isWhitelisted( "a|b" ), equalTo( true ) );
+        assertThat( procConfig.isWhitelisted( "a" ) ).isEqualTo( false );
+        assertThat( procConfig.isWhitelisted( "b" ) ).isEqualTo( false );
+        assertThat( procConfig.isWhitelisted( "|" ) ).isEqualTo( false );
+        assertThat( procConfig.isWhitelisted( "a|b" ) ).isEqualTo( true );
 
         config = Config.defaults( procedure_whitelist, List.of( "[a-c]" ) );
         procConfig = new ProcedureConfig( config );
-        assertThat( procConfig.isWhitelisted( "a" ), equalTo( false ) );
-        assertThat( procConfig.isWhitelisted( "b" ), equalTo( false ) );
-        assertThat( procConfig.isWhitelisted( "c" ), equalTo( false ) );
-        assertThat( procConfig.isWhitelisted( "-" ), equalTo( false ) );
-        assertThat( procConfig.isWhitelisted( "[a-c]" ), equalTo( true ) );
+        assertThat( procConfig.isWhitelisted( "a" ) ).isEqualTo( false );
+        assertThat( procConfig.isWhitelisted( "b" ) ).isEqualTo( false );
+        assertThat( procConfig.isWhitelisted( "c" ) ).isEqualTo( false );
+        assertThat( procConfig.isWhitelisted( "-" ) ).isEqualTo( false );
+        assertThat( procConfig.isWhitelisted( "[a-c]" ) ).isEqualTo( true );
 
         config = Config.defaults( procedure_whitelist, List.of( "a\tb" ) );
         procConfig = new ProcedureConfig( config );
-        assertThat( procConfig.isWhitelisted( "a    b" ), equalTo( false ) );
-        assertThat( procConfig.isWhitelisted( "a\tb" ), equalTo( true ) );
+        assertThat( procConfig.isWhitelisted( "a    b" ) ).isEqualTo( false );
+        assertThat( procConfig.isWhitelisted( "a\tb" ) ).isEqualTo( true );
     }
 }

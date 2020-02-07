@@ -27,8 +27,7 @@ import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
 import org.neo4j.server.security.auth.ShiroAuthenticationInfo;
 
 import static com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny.GRANT;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -170,7 +169,7 @@ class EnterpriseLoginContextTest
         when( realm.getAuthorizationInfoSnapshot( any() ) ).thenReturn( new SimpleAuthorizationInfo( Collections.emptySet() ) );
         EnterpriseLoginContext loginContext = login();
 
-        assertThat(loginContext.roles(), equalTo(Collections.singleton( PredefinedRoles.PUBLIC )));
+        assertThat( loginContext.roles() ).isEqualTo( Collections.singleton( PredefinedRoles.PUBLIC ) );
         // When
     }
 

@@ -5,17 +5,13 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.CopyOption;
-import java.util.Collections;
-import java.util.List;
 import java.util.concurrent.Future;
 
 import org.neo4j.io.fs.DelegatingFileSystemAbstraction;
@@ -29,56 +25,47 @@ import org.neo4j.server.security.auth.ListSnapshot;
 import org.neo4j.server.security.auth.exception.ConcurrentModificationException;
 import org.neo4j.string.UTF8;
 import org.neo4j.test.DoubleLatch;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
+import org.neo4j.test.rule.concurrent.ThreadingExtension;
 import org.neo4j.test.rule.concurrent.ThreadingRule;
-import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
+import static java.util.Collections.emptyList;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.CoreMatchers.nullValue;
-import static org.hamcrest.CoreMatchers.startsWith;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.logging.AssertableLogProvider.Level.ERROR;
 import static org.neo4j.logging.LogAssertions.assertThat;
 
-public class FileRoleRepositoryTest
+@TestDirectoryExtension
+@ExtendWith( ThreadingExtension.class )
+class FileRoleRepositoryTest
 {
     private File roleFile;
     private final LogProvider logProvider = NullLogProvider.getInstance();
-    private FileSystemAbstraction fs;
     private RoleRepository roleRepository;
 
-    @Rule
-    public final TestDirectory testDirectory = TestDirectory.testDirectory();
-    @Rule
-    public final ExpectedException thrown = ExpectedException.none();
-    @Rule
-    public final ThreadingRule threading = new ThreadingRule();
-    @Rule
-    public final DefaultFileSystemRule fileSystemRule = new DefaultFileSystemRule();
+    @Inject
+    private TestDirectory testDirectory;
+    @Inject
+    private ThreadingRule threading;
+    @Inject
+    private FileSystemAbstraction fileSystem;
 
-    @Before
-    public void setup()
+    @BeforeEach
+    void setup()
     {
-        fs = fileSystemRule.get();
         roleFile = new File( testDirectory.directory( "dbms" ), "roles" );
-        roleRepository = new FileRoleRepository( fs, roleFile, logProvider );
-    }
-
-    @After
-    public void tearDown() throws IOException
-    {
-        fs.close();
+        roleRepository = new FileRoleRepository( fileSystem, roleFile, logProvider );
     }
 
     @Test
-    public void shouldStoreAndRetrieveRolesByName() throws Exception
+    void shouldStoreAndRetrieveRolesByName() throws Exception
     {
         // Given
         RoleRecord role = new RoleRecord( "admin", "petra", "olivia" );
@@ -88,28 +75,28 @@ public class FileRoleRepositoryTest
         RoleRecord result = roleRepository.getRoleByName( role.name() );
 
         // Then
-        assertThat( result, equalTo( role ) );
+        assertThat( result ).isEqualTo( role );
     }
 
     @Test
-    public void shouldPersistRoles() throws Throwable
+    void shouldPersistRoles() throws Throwable
     {
         // Given
         RoleRecord role = new RoleRecord( "admin", "craig", "karl" );
         roleRepository.create( role );
 
-        roleRepository = new FileRoleRepository( fs, roleFile, logProvider );
+        roleRepository = new FileRoleRepository( fileSystem, roleFile, logProvider );
         roleRepository.start();
 
         // When
         RoleRecord resultByName = roleRepository.getRoleByName( role.name() );
 
         // Then
-        assertThat( resultByName, equalTo( role ) );
+        assertThat( resultByName ).isEqualTo( role );
     }
 
     @Test
-    public void shouldNotFindRoleAfterDelete() throws Throwable
+    void shouldNotFindRoleAfterDelete() throws Throwable
     {
         // Given
         RoleRecord role = new RoleRecord( "jake", "admin" );
@@ -119,11 +106,11 @@ public class FileRoleRepositoryTest
         roleRepository.delete( role );
 
         // Then
-        assertThat( roleRepository.getRoleByName( role.name() ), nullValue() );
+        assertThat( roleRepository.getRoleByName( role.name() ) ).isNull();
     }
 
     @Test
-    public void shouldNotAllowComplexNames() throws Exception
+    void shouldNotAllowComplexNames() throws Exception
     {
         // Given
 
@@ -150,12 +137,12 @@ public class FileRoleRepositoryTest
     }
 
     @Test
-    public void shouldRecoverIfCrashedDuringMove() throws Throwable
+    void shouldRecoverIfCrashedDuringMove() throws Throwable
     {
         // Given
         final IOException exception = new IOException( "simulated IO Exception on create" );
         FileSystemAbstraction crashingFileSystem =
-                new DelegatingFileSystemAbstraction( fs )
+                new DelegatingFileSystemAbstraction( fileSystem )
                 {
                     @Override
                     public void renameFile( File oldLocation, File newLocation, CopyOption... copyOptions ) throws
@@ -174,23 +161,16 @@ public class FileRoleRepositoryTest
         RoleRecord role = new RoleRecord( "admin", "jake" );
 
         // When
-        try
-        {
-            roleRepository.create( role );
-            fail( "Expected an IOException" );
-        }
-        catch ( IOException e )
-        {
-            assertSame( exception, e );
-        }
+        var e = assertThrows( IOException.class, () -> roleRepository.create( role ) );
+        assertSame( exception, e );
 
         // Then
         assertFalse( crashingFileSystem.fileExists( roleFile ) );
-        assertThat( crashingFileSystem.listFiles( roleFile.getParentFile() ).length, equalTo( 0 ) );
+        assertThat( crashingFileSystem.listFiles( roleFile.getParentFile() ).length ).isEqualTo( 0 );
     }
 
     @Test
-    public void shouldThrowIfUpdateChangesName() throws Throwable
+    void shouldThrowIfUpdateChangesName() throws Throwable
     {
         // Given
         RoleRecord role = new RoleRecord( "admin", "steve", "bob" );
@@ -198,21 +178,13 @@ public class FileRoleRepositoryTest
 
         // When
         RoleRecord updatedRole = new RoleRecord( "admins", "steve", "bob" );
-        try
-        {
-            roleRepository.update( role, updatedRole );
-            fail( "expected exception not thrown" );
-        }
-        catch ( IllegalArgumentException e )
-        {
-            // Then continue
-        }
+        assertThrows( IllegalArgumentException.class, () -> roleRepository.update( role, updatedRole ) );
 
-        assertThat( roleRepository.getRoleByName( role.name() ), equalTo( role ) );
+        assertThat( roleRepository.getRoleByName( role.name() ) ).isEqualTo( role );
     }
 
     @Test
-    public void shouldThrowIfExistingRoleDoesNotMatch() throws Throwable
+    void shouldThrowIfExistingRoleDoesNotMatch() throws Throwable
     {
         // Given
         RoleRecord role = new RoleRecord( "admin", "jake" );
@@ -221,89 +193,71 @@ public class FileRoleRepositoryTest
 
         // When
         RoleRecord updatedRole = new RoleRecord( "admin", "john" );
-        try
-        {
-            roleRepository.update( modifiedRole, updatedRole );
-            fail( "expected exception not thrown" );
-        }
-        catch ( ConcurrentModificationException e )
-        {
-            // Then continue
-        }
+        assertThrows( ConcurrentModificationException.class, () -> roleRepository.update( modifiedRole, updatedRole ) );
     }
 
     @Test
-    public void shouldFailOnReadingInvalidEntries() throws Throwable
+    void shouldFailOnReadingInvalidEntries() throws Throwable
     {
         // Given
         AssertableLogProvider logProvider = new AssertableLogProvider();
 
-        fs.mkdirs( roleFile.getParentFile() );
+        fileSystem.mkdirs( roleFile.getParentFile() );
         // First line is correctly formatted, second line has an extra field
-        FileRepositorySerializer.writeToFile( fs, roleFile, UTF8.encode(
+        FileRepositorySerializer.writeToFile( fileSystem, roleFile, UTF8.encode(
                 "neo4j:admin\n" +
                 "admin:admin:\n" ) );
 
         // When
-        roleRepository = new FileRoleRepository( fs, roleFile, logProvider );
+        roleRepository = new FileRoleRepository( fileSystem, roleFile, logProvider );
 
-        thrown.expect( IllegalStateException.class );
-        thrown.expectMessage( startsWith( "Failed to read role file '" ) );
-
-        try
-        {
-            roleRepository.start();
-        }
-        // Then
-        catch ( IllegalStateException e )
-        {
-            assertThat( roleRepository.numberOfRoles(), equalTo( 0 ) );
-            assertThat( logProvider ).forClass( FileRoleRepository.class ).forLevel( ERROR )
-                    .containsMessageWithArguments(
-                            "Failed to read role file \"%s\" (%s)", roleFile.getAbsolutePath(),
-                            "wrong number of line fields [line 2]" );
-            throw e;
-        }
+        var e = assertThrows( IllegalStateException.class, () -> roleRepository.start() );
+        assertThat( e ).hasMessageStartingWith( "Failed to read role file '" );
+        assertThat( roleRepository.numberOfRoles() ).isEqualTo( 0 );
+        assertThat( logProvider ).forClass( FileRoleRepository.class ).forLevel( ERROR )
+                .containsMessageWithArguments(
+                        "Failed to read role file \"%s\" (%s)", roleFile.getAbsolutePath(),
+                        "wrong number of line fields [line 2]" );
     }
 
     @Test
-    public void shouldNotAddEmptyUserToRole() throws Throwable
+    void shouldNotAddEmptyUserToRole() throws Throwable
     {
         // Given
-        fs.mkdirs( roleFile.getParentFile() );
-        FileRepositorySerializer.writeToFile( fs, roleFile, UTF8.encode( "admin:neo4j\nreader:\n" ) );
+        fileSystem.mkdirs( roleFile.getParentFile() );
+        FileRepositorySerializer.writeToFile( fileSystem, roleFile, UTF8.encode( "admin:neo4j\nreader:\n" ) );
 
         // When
-        roleRepository = new FileRoleRepository( fs, roleFile, logProvider );
+        roleRepository = new FileRoleRepository( fileSystem, roleFile, logProvider );
         roleRepository.start();
 
         RoleRecord role = roleRepository.getRoleByName( "admin" );
-        assertTrue( "neo4j should be assigned to 'admin'", role.users().contains( "neo4j" ) );
-        assertEquals( "only one admin should exist", 1, role.users().size() );
+        assertTrue( role.users().contains( "neo4j" ), "neo4j should be assigned to 'admin'" );
+        assertEquals( 1, role.users().size(), "only one admin should exist" );
 
         role = roleRepository.getRoleByName( "reader" );
-        assertTrue( "no users should be assigned to 'reader'", role.users().isEmpty() );
+        assertTrue( role.users().isEmpty(), "no users should be assigned to 'reader'" );
     }
 
     @Test
-    public void shouldProvideRolesByUsernameEvenIfMidSetRoles() throws Throwable
+    void shouldProvideRolesByUsernameEvenIfMidSetRoles() throws Throwable
     {
         // Given
-        roleRepository = new FileRoleRepository( fs, roleFile, logProvider );
+        roleRepository = new FileRoleRepository( fileSystem, roleFile, logProvider );
         roleRepository.create( new RoleRecord( "admin", "oskar" ) );
         DoubleLatch latch = new DoubleLatch( 2 );
 
         // When
         Future<Object> setUsers = threading.execute( o ->
         {
-            roleRepository.setRoles( new HangingListSnapshot( latch, 10L, Collections.emptyList() ) );
+            roleRepository.setRoles( new HangingListSnapshot( latch, 10L ) );
             return null;
         }, null );
 
         latch.startAndWaitForAllToStart();
 
         // Then
-        assertThat( roleRepository.getRoleNamesByUsername( "oskar" ), containsInAnyOrder( "admin" ) );
+        assertThat( roleRepository.getRoleNamesByUsername( "oskar" ) ).contains( "admin" );
 
         latch.finish();
         setUsers.get();
@@ -313,9 +267,9 @@ public class FileRoleRepositoryTest
     {
         private final DoubleLatch latch;
 
-        HangingListSnapshot( DoubleLatch latch, long timestamp, List<RoleRecord> values )
+        HangingListSnapshot( DoubleLatch latch, long timestamp )
         {
-            super( timestamp, values );
+            super( timestamp, emptyList() );
             this.latch = latch;
         }
 

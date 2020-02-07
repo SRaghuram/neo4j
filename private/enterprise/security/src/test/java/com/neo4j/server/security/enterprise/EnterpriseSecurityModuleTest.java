@@ -36,12 +36,7 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.scheduler.JobScheduler;
 
 import static com.neo4j.server.security.enterprise.EnterpriseSecurityModule.mergeAuthenticationAndAuthorization;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.hamcrest.Matchers.containsInRelativeOrder;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.instanceOf;
-import static org.hamcrest.Matchers.is;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -106,8 +101,8 @@ class EnterpriseSecurityModuleTest
 
         // Then
         String errorMessage = "Failed to register security procedures: Injected error";
-        assertThat( runtimeException.getMessage(), equalTo( errorMessage ) );
-        assertThat( runtimeException.getCause(), instanceOf( KernelException.class ) );
+        assertThat( runtimeException.getMessage() ).isEqualTo( errorMessage );
+        assertThat( runtimeException.getCause() ).isInstanceOf( KernelException.class );
 
         assertThat( logProvider ).forClass( EnterpriseSecurityModule.class ).forLevel( ERROR )
                 .assertExceptionForLogMessage( errorMessage ).isInstanceOf( KernelException.class );
@@ -226,28 +221,28 @@ class EnterpriseSecurityModuleTest
     void testMerge()
     {
         List<String> merged = mergeAuthenticationAndAuthorization( List.of( "a" ), List.of( "b", "c" ) );
-        assertThat( merged, containsInAnyOrder( "a", "b", "c" ) );
-        assertThat( merged, containsInRelativeOrder( "b", "c" ) );
-        assertThat( merged.size(), is( 3 ) );
+        assertThat( merged ).contains( "a", "b", "c" );
+        assertThat( merged ).containsSequence( "b", "c" );
+        assertThat( merged.size() ).isEqualTo( 3 );
 
         merged = mergeAuthenticationAndAuthorization( List.of( "a", "b" ), List.of( "b", "c" ) );
-        assertThat( merged, containsInRelativeOrder( "a", "b", "c" ) );
-        assertThat( merged.size(), is( 3 ) );
+        assertThat( merged ).containsSequence( "a", "b", "c" );
+        assertThat( merged.size() ).isEqualTo( 3 );
 
         merged = mergeAuthenticationAndAuthorization( List.of( "a", "b", "d" ), List.of( "b", "c", "d" ) );
-        assertThat( merged, containsInRelativeOrder( "a", "b", "c", "d" ) );
-        assertThat( merged.size(), is( 4 ) );
+        assertThat( merged ).containsSequence( "a", "b", "c", "d" );
+        assertThat( merged.size() ).isEqualTo( 4 );
 
         merged = mergeAuthenticationAndAuthorization( List.of( "a", "b", "c" ), List.of() );
-        assertThat( merged, containsInRelativeOrder( "a", "b", "c" ) );
-        assertThat( merged.size(), is( 3 ) );
+        assertThat( merged ).containsSequence( "a", "b", "c" );
+        assertThat( merged.size() ).isEqualTo( 3 );
 
         merged = mergeAuthenticationAndAuthorization( List.of(), List.of("a", "b", "c" ) );
-        assertThat( merged, containsInRelativeOrder( "a", "b", "c" ) );
-        assertThat( merged.size(), is( 3 ) );
+        assertThat( merged ).containsSequence( "a", "b", "c" );
+        assertThat( merged.size() ).isEqualTo( 3 );
 
         merged = mergeAuthenticationAndAuthorization( List.of(), List.of() );
-        assertThat( merged.size(), is( 0 ) );
+        assertThat( merged.size() ).isEqualTo( 0 );
 
         IllegalArgumentException illegalArgumentException =
                 assertThrows( IllegalArgumentException.class, () -> mergeAuthenticationAndAuthorization( List.of( "a", "b" ), List.of( "b", "a" ) ) );
@@ -284,9 +279,9 @@ class EnterpriseSecurityModuleTest
             r.add( c );
         }
         List<String> merged = mergeAuthenticationAndAuthorization( a, b );
-        assertThat( merged.size(), is( r.size() ) );
-        assertThat( merged, containsInRelativeOrder( a.toArray() ) );
-        assertThat( merged, containsInRelativeOrder( b.toArray() ) );
+        assertThat( merged.size() ).isEqualTo( r.size() );
+        assertThat( merged ).containsSubsequence( a );
+        assertThat( merged ).containsSubsequence( b );
     }
 
     // --------- HELPERS ----------

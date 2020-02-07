@@ -17,10 +17,7 @@ import java.util.stream.Collectors;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.hamcrest.Matchers.empty;
-import static org.hamcrest.Matchers.equalTo;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -47,11 +44,11 @@ class SecurityProceduresTest
     void shouldReturnSecurityContextRoles()
     {
         List<UserResult> infoList = procedures.showCurrentUser().collect( Collectors.toList() );
-        assertThat( infoList.size(), equalTo(1) );
+        assertThat( infoList.size() ).isEqualTo( 1 );
 
         UserResult row = infoList.get( 0 );
-        assertThat( row.username, equalTo( "pearl" ) );
-        assertThat( row.roles, containsInAnyOrder( "jammer" ) );
-        assertThat( row.flags, empty() );
+        assertThat( row.username ).isEqualTo( "pearl" );
+        assertThat( row.roles ).contains( "jammer" );
+        assertThat( row.flags ).isEmpty();
     }
 }

@@ -7,6 +7,7 @@ package com.neo4j.server.security.enterprise.auth;
 
 import org.apache.commons.lang3.StringUtils;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -65,15 +66,11 @@ import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRol
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
-import static org.hamcrest.CoreMatchers.containsString;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.hasKey;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.CREATE_LABEL;
@@ -251,8 +248,8 @@ public abstract class ProcedureInteractionTestBase<S>
         assertSuccess( subject, "MATCH (n) RETURN count(n) as count, 1 AS ignored", r ->
         {
             List<Object> result = r.stream().map( s -> s.get( "count" ) ).collect( toList() );
-            assertThat( result.size(), equalTo( 1 ) );
-            assertThat( result.get( 0 ), equalTo( valueOf( count ) ) );
+            assertThat( result.size() ).isEqualTo( 1 );
+            assertThat( result.get( 0 ) ).isEqualTo( valueOf( count ) );
         } );
     }
 
@@ -485,14 +482,14 @@ public abstract class ProcedureInteractionTestBase<S>
         }
         else
         {
-            assertThat( err, containsString( partOfErrorMsg ) );
+            assertThat( err ).contains( partOfErrorMsg );
         }
     }
 
     void assertSystemCommandSuccess( S subject, String call )
     {
         String err = assertCallEmpty( subject, SYSTEM_DATABASE_NAME, call, null );
-        assertThat( err, equalTo( "" ) );
+        assertThat( err ).isEqualTo( "" );
     }
 
     void assertDDLCommandSuccess( S subject, String query )
@@ -503,7 +500,7 @@ public abstract class ProcedureInteractionTestBase<S>
     void assertSystemCommandSuccess( S subject, String call, Consumer<ResourceIterator<Map<String,Object>>> resultConsumer )
     {
         String err = neo.executeQuery( subject, SYSTEM_DATABASE_NAME, call, null, resultConsumer );
-        assertThat( err, equalTo( "" ) );
+        assertThat( err ).isEqualTo( "" );
     }
 
     @SuppressWarnings( "SameParameterValue" )
@@ -516,14 +513,14 @@ public abstract class ProcedureInteractionTestBase<S>
         }
         else
         {
-            assertThat( err, containsString( partOfErrorMsg ) );
+            assertThat( err ).contains( partOfErrorMsg );
         }
     }
 
     void assertEmpty( S subject, String call )
     {
         String err = assertCallEmpty( subject, DEFAULT_DATABASE_NAME, call, null );
-        assertThat( err, equalTo( "" ) );
+        assertThat( err ).isEqualTo( "" );
     }
 
     void assertSuccess( S subject, String call, Consumer<ResourceIterator<Map<String,Object>>> resultConsumer )
@@ -534,7 +531,7 @@ public abstract class ProcedureInteractionTestBase<S>
     void assertSuccess( S subject, String call, Map<String, Object> params, Consumer<ResourceIterator<Map<String,Object>>> resultConsumer )
     {
         String err = neo.executeQuery( subject, DEFAULT_DATABASE_NAME, call, params, resultConsumer );
-        assertThat( err, equalTo( "" ) );
+        assertThat( err ).isEqualTo( "" );
     }
 
     @SuppressWarnings( "SameParameterValue" )
@@ -552,7 +549,7 @@ public abstract class ProcedureInteractionTestBase<S>
                 result ->
                 {
                     List<Map<String,Object>> collect = result.stream().collect( toList() );
-                    assertTrue( "Expected no results but got: " + collect, collect.isEmpty() );
+                    assertTrue( collect.isEmpty(), "Expected no results but got: " + collect );
                 } );
     }
 
@@ -610,8 +607,8 @@ public abstract class ProcedureInteractionTestBase<S>
     private void assertKeyIsArray( ResourceIterator<Map<String,Object>> r, String key, Object[] items )
     {
         List<Object> results = getObjectsAsList( r, key );
-        assertEquals( "Didn't get expected number of results", Arrays.asList( items ).size(), results.size() );
-        assertThat( results, containsInAnyOrder( Arrays.stream( items ).map( this::valueOf ).toArray() ) );
+        assertEquals( Arrays.asList( items ).size(), results.size(), "Didn't get expected number of results" );
+        assertThat( results ).contains( Arrays.stream( items ).map( this::valueOf ).toArray() );
     }
 
     @SuppressWarnings( "unchecked" )
@@ -634,28 +631,27 @@ public abstract class ProcedureInteractionTestBase<S>
     {
         List<Map<String,Object>> result = r.stream().collect( toList() );
 
-        assertEquals( "Results for should have size " + expected.size() + " but was " + result.size(),
-                expected.size(), result.size() );
+        assertEquals( expected.size(), result.size(), "Results for should have size " + expected.size() + " but was " + result.size() );
 
         for ( Map<String,Object> row : result )
         {
             String key = (String) row.get( keyKey );
-            assertThat( expected, hasKey( key ) );
-            assertThat( row, hasKey( valueKey ) );
+            assertThat( expected ).containsKey( key );
+            assertThat( row ).containsKey( valueKey );
 
             Object objectValue = row.get( valueKey );
             if ( objectValue instanceof List )
             {
                 List<String> value = (List<String>) objectValue;
                 List<String> expectedValues = (List<String>) expected.get( key );
-                assertEquals( "sizes", value.size(), expectedValues.size() );
-                assertThat( value, containsInAnyOrder( expectedValues.toArray() ) );
+                assertEquals( value.size(), expectedValues.size(), "sizes" );
+                assertThat( value ).containsAll( expectedValues );
             }
             else
             {
                 String value = objectValue.toString();
                 String expectedValue = expected.get( key ).toString();
-                assertThat( value, equalTo( expectedValue ) );
+                assertThat( value ).isEqualTo( expectedValue );
             }
         }
     }
@@ -665,28 +661,27 @@ public abstract class ProcedureInteractionTestBase<S>
     {
         List<Map<String,Object>> result = r.stream().collect( toList() );
 
-        assertEquals( "Results for should have size " + expected.size() + " but was " + result.size(),
-                expected.size(), result.size() );
+        assertEquals( expected.size(), result.size(), "Results for should have size " + expected.size() + " but was " + result.size() );
 
         for ( Map<String,Object> row : result )
         {
             TextValue key = (TextValue) row.get( keyKey );
             assertTrue( expected.containsKey( key.stringValue() ) );
-            assertThat( row, hasKey( valueKey ) );
+            assertThat( row ).containsKey( valueKey );
 
             Object objectValue = row.get( valueKey );
             if ( objectValue instanceof ListValue )
             {
                 ListValue value = (ListValue) objectValue;
                 ListValue expectedValues = (ListValue) expected.get( key.stringValue() );
-                assertEquals( "sizes", expectedValues.size(), value.size() );
-                assertThat( Arrays.asList( value.asArray() ), containsInAnyOrder( expectedValues.asArray() ) );
+                assertEquals( expectedValues.size(), value.size(), "sizes" );
+                assertThat( Arrays.asList( value.asArray() ) ).contains( expectedValues.asArray() );
             }
             else
             {
                 String value = ((TextValue) objectValue).stringValue();
                 String expectedValue = ((TextValue) expected.get( key.stringValue() )).stringValue();
-                assertThat( value, equalTo( expectedValue ) );
+                assertThat( value ).isEqualTo( expectedValue );
             }
         }
     }

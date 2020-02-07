@@ -6,7 +6,7 @@
 package com.neo4j.server.security.enterprise.auth;
 
 import org.junit.Assert;
-import org.junit.Ignore;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
@@ -28,11 +28,7 @@ import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRol
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.PUBLISHER;
 import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles.READER;
 import static java.lang.String.format;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.greaterThan;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -59,13 +55,12 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
                 if ( name.contains( "dbms.security" ) &&
                      !(name.contains( "Transaction" ) || name.contains( "Connection" )) )
                 {
-                    assertThat( "Description for '" + name + "' should not be empty", description.trim().length(),
-                            greaterThan( 0 ) );
+                    assertThat( description.trim().length() ).as( "Description for '" + name + "' should not be empty" ).isGreaterThan( 0 );
                     return true;
                 }
                 return false;
             } );
-            assertThat( securityProcedures.count(), equalTo( 15L ) );
+            assertThat( securityProcedures.count() ).isEqualTo( 15L );
         } );
     }
 
@@ -561,8 +556,8 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
             tx.commit();
             result.close();
         }
-        Assert.assertEquals( "Didn't get expected number of results", 6, roles.size() );
-        assertThat( roles, containsInAnyOrder( new String[]{ READER, EDITOR, PUBLISHER, ARCHITECT, EMPTY_ROLE, PUBLIC } ) );
+        assertEquals( 6, roles.size(), "Didn't get expected number of results" );
+        assertThat( roles ).contains( new String[]{READER, EDITOR, PUBLISHER, ARCHITECT, EMPTY_ROLE, PUBLIC} );
     }
 
     @Test
@@ -821,7 +816,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
         latch.start();
         assertEmpty( writeSubject, "CALL test.threadTransaction" );
         latch.finishAndWaitForAllToFinish();
-        assertThat( ClassWithProcedures.exceptionsInProcedure.size(), equalTo( 0 ) );
+        assertThat( ClassWithProcedures.exceptionsInProcedure.size() ).isEqualTo( 0 );
         assertSuccess( adminSubject, "MATCH (:VeryUniqueLabel) RETURN toString(count(*)) as n",
                 r -> assertKeyIs( r, "n", "1" ) );
     }
@@ -835,8 +830,8 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
         latch.start();
         assertEmpty( readSubject, "CALL test.threadReadDoingWriteTransaction" );
         latch.finishAndWaitForAllToFinish();
-        assertThat( ClassWithProcedures.exceptionsInProcedure.size(), equalTo( 1 ) );
-        assertThat( ClassWithProcedures.exceptionsInProcedure.get( 0 ).getMessage(), containsString( WRITE_OPS_NOT_ALLOWED ) );
+        assertThat( ClassWithProcedures.exceptionsInProcedure.size() ).isEqualTo( 1 );
+        assertThat( ClassWithProcedures.exceptionsInProcedure.get( 0 ).getMessage() ).contains( WRITE_OPS_NOT_ALLOWED );
                 assertSuccess( adminSubject, "MATCH (:VeryUniqueLabel) RETURN toString(count(*)) as n",
                 r -> assertKeyIs( r, "n", "0" ) );
     }

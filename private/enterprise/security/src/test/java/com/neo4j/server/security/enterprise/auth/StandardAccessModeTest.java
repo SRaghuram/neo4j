@@ -16,8 +16,7 @@ import org.neo4j.kernel.impl.newapi.Labels;
 
 import static com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny.DENY;
 import static com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny.GRANT;
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
@@ -57,66 +56,66 @@ class StandardAccessModeTest
     {
         StandardAccessMode mode = builder.build();
 
-        assertThat( mode.allowsAccess(), equalTo( false ) );
+        assertThat( mode.allowsAccess() ).isEqualTo( false );
 
         // TRAVERSE NODES
-        assertThat( mode.allowsTraverseAllLabels(), equalTo( false ) );
-        assertThat( mode.allowsTraverseNode( ANY_LABEL ), equalTo( false ) );
+        assertThat( mode.allowsTraverseAllLabels() ).isEqualTo( false );
+        assertThat( mode.allowsTraverseNode( ANY_LABEL ) ).isEqualTo( false );
 
-        assertThat( mode.allowsTraverseNode( A ), equalTo( false ) );
-        assertThat( mode.allowsTraverseNode( B ), equalTo( false ) );
-        assertThat( mode.allowsTraverseNode( A, B ), equalTo( false ) );
+        assertThat( mode.allowsTraverseNode( A ) ).isEqualTo( false );
+        assertThat( mode.allowsTraverseNode( B ) ).isEqualTo( false );
+        assertThat( mode.allowsTraverseNode( A, B ) ).isEqualTo( false );
 
-        assertThat( mode.disallowsTraverseLabel( A ), equalTo( false ) );
-        assertThat( mode.disallowsTraverseLabel( B ), equalTo( false ) );
-        assertThat( mode.disallowsTraverseLabel( ANY_LABEL ), equalTo( false ) );
+        assertThat( mode.disallowsTraverseLabel( A ) ).isEqualTo( false );
+        assertThat( mode.disallowsTraverseLabel( B ) ).isEqualTo( false );
+        assertThat( mode.disallowsTraverseLabel( ANY_LABEL ) ).isEqualTo( false );
 
-        assertThat( mode.allowsTraverseAllNodesWithLabel( A ), equalTo( false ) );
-        assertThat( mode.allowsTraverseAllNodesWithLabel( B ), equalTo( false ) );
-        assertThat( mode.allowsTraverseAllNodesWithLabel( ANY_LABEL ), equalTo( false ) );
+        assertThat( mode.allowsTraverseAllNodesWithLabel( A ) ).isEqualTo( false );
+        assertThat( mode.allowsTraverseAllNodesWithLabel( B ) ).isEqualTo( false );
+        assertThat( mode.allowsTraverseAllNodesWithLabel( ANY_LABEL ) ).isEqualTo( false );
 
         // TRAVERSE RELATIONSHIPS
-        assertThat( mode.allowsTraverseAllRelTypes(), equalTo( false ) );
-        assertThat( mode.allowsTraverseRelType( ANY_RELATIONSHIP_TYPE ), equalTo( false ) );
+        assertThat( mode.allowsTraverseAllRelTypes() ).isEqualTo( false );
+        assertThat( mode.allowsTraverseRelType( ANY_RELATIONSHIP_TYPE ) ).isEqualTo( false );
 
-        assertThat( mode.allowsTraverseRelType( R1 ), equalTo( false ) );
-        assertThat( mode.allowsTraverseRelType( R2 ), equalTo( false ) );
+        assertThat( mode.allowsTraverseRelType( R1 ) ).isEqualTo( false );
+        assertThat( mode.allowsTraverseRelType( R2 ) ).isEqualTo( false );
 
         // READ {PROP} ON NODES
-        assertThat( mode.allowsReadPropertyAllLabels( PROP1 ), equalTo( false ) );
-        assertThat( mode.allowsReadPropertyAllLabels( PROP2 ), equalTo( false ) );
+        assertThat( mode.allowsReadPropertyAllLabels( PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadPropertyAllLabels( PROP2 ) ).isEqualTo( false );
 
-        assertThat( mode.disallowsReadPropertyForSomeLabel( PROP1 ), equalTo( false ) );
-        assertThat( mode.disallowsReadPropertyForSomeLabel( PROP2 ), equalTo( false ) );
+        assertThat( mode.disallowsReadPropertyForSomeLabel( PROP1 ) ).isEqualTo( false );
+        assertThat( mode.disallowsReadPropertyForSomeLabel( PROP2 ) ).isEqualTo( false );
 
-        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A ), PROP1 ), equalTo( false ) );
-        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A ), PROP2 ), equalTo( false ) );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A ), PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A ), PROP2 ) ).isEqualTo( false );
 
         // READ {PROP} ON RELATIONSHIPS
-        assertThat( mode.allowsReadPropertyAllRelTypes( PROP1 ), equalTo( false ) );
-        assertThat( mode.allowsReadPropertyAllRelTypes( PROP2 ), equalTo( false ) );
+        assertThat( mode.allowsReadPropertyAllRelTypes( PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadPropertyAllRelTypes( PROP2 ) ).isEqualTo( false );
 
-        assertThat( mode.allowsReadRelationshipProperty( () -> R1, PROP1 ), equalTo( false ) );
-        assertThat( mode.allowsReadRelationshipProperty( () -> R1, PROP2 ), equalTo( false ) );
+        assertThat( mode.allowsReadRelationshipProperty( () -> R1, PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadRelationshipProperty( () -> R1, PROP2 ) ).isEqualTo( false );
 
         // SEE PROP IN TOKEN STORE
-        assertThat( mode.allowsSeePropertyKeyToken( PROP1 ), equalTo( false ) );
-        assertThat( mode.allowsSeePropertyKeyToken( PROP2 ), equalTo( false ) );
+        assertThat( mode.allowsSeePropertyKeyToken( PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsSeePropertyKeyToken( PROP2 ) ).isEqualTo( false );
 
         // WRITE
-        assertThat( mode.allowsWrites(), equalTo( false ) );
+        assertThat( mode.allowsWrites() ).isEqualTo( false );
 
         // NAME MANAGEMENT
-        assertThat( mode.allowsTokenCreates( PrivilegeAction.CREATE_LABEL ), equalTo( false ) );
-        assertThat( mode.allowsTokenCreates( PrivilegeAction.CREATE_RELTYPE ), equalTo( false ) );
-        assertThat( mode.allowsTokenCreates( PrivilegeAction.CREATE_PROPERTYKEY ), equalTo( false ) );
+        assertThat( mode.allowsTokenCreates( PrivilegeAction.CREATE_LABEL ) ).isEqualTo( false );
+        assertThat( mode.allowsTokenCreates( PrivilegeAction.CREATE_RELTYPE ) ).isEqualTo( false );
+        assertThat( mode.allowsTokenCreates( PrivilegeAction.CREATE_PROPERTYKEY ) ).isEqualTo( false );
 
         // INDEX/CONSTRAINT MANAGEMENT
-        assertThat( mode.allowsSchemaWrites(), equalTo( false ) );
-        assertThat( mode.allowsSchemaWrites( PrivilegeAction.CREATE_INDEX ), equalTo( false ) );
-        assertThat( mode.allowsSchemaWrites( PrivilegeAction.DROP_INDEX ), equalTo( false ) );
-        assertThat( mode.allowsSchemaWrites( PrivilegeAction.CREATE_CONSTRAINT ), equalTo( false ) );
-        assertThat( mode.allowsSchemaWrites( PrivilegeAction.DROP_CONSTRAINT ), equalTo( false ) );
+        assertThat( mode.allowsSchemaWrites() ).isEqualTo( false );
+        assertThat( mode.allowsSchemaWrites( PrivilegeAction.CREATE_INDEX ) ).isEqualTo( false );
+        assertThat( mode.allowsSchemaWrites( PrivilegeAction.DROP_INDEX ) ).isEqualTo( false );
+        assertThat( mode.allowsSchemaWrites( PrivilegeAction.CREATE_CONSTRAINT ) ).isEqualTo( false );
+        assertThat( mode.allowsSchemaWrites( PrivilegeAction.DROP_CONSTRAINT ) ).isEqualTo( false );
     }
 
     // TRAVERSE NODES
@@ -130,18 +129,18 @@ class StandardAccessModeTest
         var mode = builder.addPrivilege( privilege ).build();
 
         // THEN
-        assertThat( mode.allowsTraverseNode( A ), equalTo( true ) );
-        assertThat( mode.allowsTraverseNode( B ), equalTo( false ) );
-        assertThat( mode.allowsTraverseNode( A, B ), equalTo( true ) );
+        assertThat( mode.allowsTraverseNode( A ) ).isEqualTo( true );
+        assertThat( mode.allowsTraverseNode( B ) ).isEqualTo( false );
+        assertThat( mode.allowsTraverseNode( A, B ) ).isEqualTo( true );
 
-        assertThat( mode.disallowsTraverseLabel( A ), equalTo( false ) );
-        assertThat( mode.disallowsTraverseLabel( B ), equalTo( false ) );
+        assertThat( mode.disallowsTraverseLabel( A ) ).isEqualTo( false );
+        assertThat( mode.disallowsTraverseLabel( B ) ).isEqualTo( false );
 
-        assertThat( mode.allowsTraverseAllNodesWithLabel( A ), equalTo( true ) );
-        assertThat( mode.allowsTraverseAllNodesWithLabel( B ), equalTo( false ) );
+        assertThat( mode.allowsTraverseAllNodesWithLabel( A ) ).isEqualTo( true );
+        assertThat( mode.allowsTraverseAllNodesWithLabel( B ) ).isEqualTo( false );
 
-        assertThat( mode.allowsTraverseAllLabels(), equalTo( false ) );
-        assertThat( mode.allowsTraverseNode( ANY_LABEL ), equalTo( false ) );
+        assertThat( mode.allowsTraverseAllLabels() ).isEqualTo( false );
+        assertThat( mode.allowsTraverseNode( ANY_LABEL ) ).isEqualTo( false );
     }
 
     @Test
@@ -153,19 +152,19 @@ class StandardAccessModeTest
         var mode = builder.addPrivilege( privilege ).build();
 
         // THEN
-        assertThat( mode.allowsTraverseNode( A ), equalTo( true ) );
-        assertThat( mode.allowsTraverseNode( B ), equalTo( true ) );
-        assertThat( mode.allowsTraverseNode( A, B ), equalTo( true ) );
+        assertThat( mode.allowsTraverseNode( A ) ).isEqualTo( true );
+        assertThat( mode.allowsTraverseNode( B ) ).isEqualTo( true );
+        assertThat( mode.allowsTraverseNode( A, B ) ).isEqualTo( true );
 
-        assertThat( mode.disallowsTraverseLabel( A ), equalTo( false ) );
-        assertThat( mode.disallowsTraverseLabel( B ), equalTo( false ) );
+        assertThat( mode.disallowsTraverseLabel( A ) ).isEqualTo( false );
+        assertThat( mode.disallowsTraverseLabel( B ) ).isEqualTo( false );
 
-        assertThat( mode.allowsTraverseAllNodesWithLabel( A ), equalTo( true ) );
-        assertThat( mode.allowsTraverseAllNodesWithLabel( B ), equalTo( true ) );
+        assertThat( mode.allowsTraverseAllNodesWithLabel( A ) ).isEqualTo( true );
+        assertThat( mode.allowsTraverseAllNodesWithLabel( B ) ).isEqualTo( true );
 
-        assertThat( mode.allowsTraverseAllLabels(), equalTo( true ) );
-        assertThat( mode.allowsTraverseNode( ANY_LABEL ), equalTo( true ) );
-        assertThat( mode.disallowsTraverseLabel( ANY_LABEL ), equalTo( false ) );
+        assertThat( mode.allowsTraverseAllLabels() ).isEqualTo( true );
+        assertThat( mode.allowsTraverseNode( ANY_LABEL ) ).isEqualTo( true );
+        assertThat( mode.disallowsTraverseLabel( ANY_LABEL ) ).isEqualTo( false );
     }
 
     @Test
@@ -179,19 +178,19 @@ class StandardAccessModeTest
         var mode = builder.addPrivilege( privilege1 ).addPrivilege( privilege2 ).build();
 
         // THEN
-        assertThat( mode.allowsTraverseAllLabels(), equalTo( false ) );
-        assertThat( mode.allowsTraverseNode( ANY_LABEL), equalTo( false ) );
+        assertThat( mode.allowsTraverseAllLabels() ).isEqualTo( false );
+        assertThat( mode.allowsTraverseNode( ANY_LABEL ) ).isEqualTo( false );
 
-        assertThat( mode.allowsTraverseNode( A ), equalTo( false ) );
-        assertThat( mode.allowsTraverseNode( B ), equalTo( true ) );
-        assertThat( mode.allowsTraverseNode( A, B ), equalTo( false ) );
+        assertThat( mode.allowsTraverseNode( A ) ).isEqualTo( false );
+        assertThat( mode.allowsTraverseNode( B ) ).isEqualTo( true );
+        assertThat( mode.allowsTraverseNode( A, B ) ).isEqualTo( false );
 
-        assertThat( mode.disallowsTraverseLabel( A ), equalTo( true ) );
-        assertThat( mode.disallowsTraverseLabel( B ), equalTo( false ) );
+        assertThat( mode.disallowsTraverseLabel( A ) ).isEqualTo( true );
+        assertThat( mode.disallowsTraverseLabel( B ) ).isEqualTo( false );
 
-        assertThat( mode.allowsTraverseAllNodesWithLabel( A ), equalTo( false ) );
-        assertThat( mode.allowsTraverseAllNodesWithLabel( B ), equalTo( false ) );
-        assertThat( mode.allowsTraverseAllNodesWithLabel( ANY_LABEL), equalTo( false ) );
+        assertThat( mode.allowsTraverseAllNodesWithLabel( A ) ).isEqualTo( false );
+        assertThat( mode.allowsTraverseAllNodesWithLabel( B ) ).isEqualTo( false );
+        assertThat( mode.allowsTraverseAllNodesWithLabel( ANY_LABEL ) ).isEqualTo( false );
     }
 
     // TRAVERSE RELATIONSHIPS
@@ -205,10 +204,10 @@ class StandardAccessModeTest
         var mode = builder.addPrivilege( privilege ).build();
 
         // THEN
-        assertThat( mode.allowsTraverseRelType( R1 ), equalTo( true ) );
-        assertThat( mode.allowsTraverseRelType( R2 ), equalTo( true ) );
-        assertThat( mode.allowsTraverseRelType( ANY_RELATIONSHIP_TYPE ), equalTo( true ) );
-        assertThat( mode.allowsTraverseAllRelTypes(), equalTo( true ) );
+        assertThat( mode.allowsTraverseRelType( R1 ) ).isEqualTo( true );
+        assertThat( mode.allowsTraverseRelType( R2 ) ).isEqualTo( true );
+        assertThat( mode.allowsTraverseRelType( ANY_RELATIONSHIP_TYPE ) ).isEqualTo( true );
+        assertThat( mode.allowsTraverseAllRelTypes() ).isEqualTo( true );
     }
 
     @Test
@@ -220,10 +219,10 @@ class StandardAccessModeTest
         var mode = builder.addPrivilege( privilege ).build();
 
         // THEN
-        assertThat( mode.allowsTraverseRelType( R1 ), equalTo( true ) );
-        assertThat( mode.allowsTraverseRelType( R2 ), equalTo( false ) );
-        assertThat( mode.allowsTraverseRelType( ANY_RELATIONSHIP_TYPE ), equalTo( false ) );
-        assertThat( mode.allowsTraverseAllRelTypes(), equalTo( false ) );
+        assertThat( mode.allowsTraverseRelType( R1 ) ).isEqualTo( true );
+        assertThat( mode.allowsTraverseRelType( R2 ) ).isEqualTo( false );
+        assertThat( mode.allowsTraverseRelType( ANY_RELATIONSHIP_TYPE ) ).isEqualTo( false );
+        assertThat( mode.allowsTraverseAllRelTypes() ).isEqualTo( false );
     }
 
     @Test
@@ -237,10 +236,10 @@ class StandardAccessModeTest
         var mode = builder.addPrivilege( privilege1 ).addPrivilege( privilege2 ).build();
 
         // THEN
-        assertThat( mode.allowsTraverseRelType( R1 ), equalTo( false ) );
-        assertThat( mode.allowsTraverseRelType( R2 ), equalTo( true ) );
-        assertThat( mode.allowsTraverseRelType( ANY_RELATIONSHIP_TYPE ), equalTo( false ) );
-        assertThat( mode.allowsTraverseAllRelTypes(), equalTo( false ) );
+        assertThat( mode.allowsTraverseRelType( R1 ) ).isEqualTo( false );
+        assertThat( mode.allowsTraverseRelType( R2 ) ).isEqualTo( true );
+        assertThat( mode.allowsTraverseRelType( ANY_RELATIONSHIP_TYPE ) ).isEqualTo( false );
+        assertThat( mode.allowsTraverseAllRelTypes() ).isEqualTo( false );
     }
 
     // READ {PROP} ON NODES
@@ -254,21 +253,21 @@ class StandardAccessModeTest
         var mode = builder.addPrivilege( privilege ).build();
 
         // THEN
-        assertThat( mode.allowsReadPropertyAllLabels( PROP1 ), equalTo( true ) );
-        assertThat( mode.allowsReadPropertyAllLabels( PROP2 ), equalTo( true ) );
+        assertThat( mode.allowsReadPropertyAllLabels( PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsReadPropertyAllLabels( PROP2 ) ).isEqualTo( true );
 
-        assertThat( mode.disallowsReadPropertyForSomeLabel( PROP1 ), equalTo( false ) );
-        assertThat( mode.disallowsReadPropertyForSomeLabel( PROP2 ), equalTo( false ) );
+        assertThat( mode.disallowsReadPropertyForSomeLabel( PROP1 ) ).isEqualTo( false );
+        assertThat( mode.disallowsReadPropertyForSomeLabel( PROP2 ) ).isEqualTo( false );
 
-        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A ), PROP1 ), equalTo( true ) );
-        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A ), PROP2 ), equalTo( true ) );
-        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( B ), PROP1 ), equalTo( true ) );
-        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( B ), PROP2 ), equalTo( true ) );
-        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A, B ), PROP1 ), equalTo( true ) );
-        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A, B ), PROP2 ), equalTo( true ) );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A ), PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A ), PROP2 ) ).isEqualTo( true );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( B ), PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( B ), PROP2 ) ).isEqualTo( true );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A, B ), PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A, B ), PROP2 ) ).isEqualTo( true );
 
-        assertThat( mode.allowsReadNodeProperty( Labels::from, PROP1 ), equalTo( true ) );
-        assertThat( mode.allowsReadNodeProperty( Labels::from, PROP2 ), equalTo( true ) );
+        assertThat( mode.allowsReadNodeProperty( Labels::from, PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsReadNodeProperty( Labels::from, PROP2 ) ).isEqualTo( true );
     }
 
     @Test
@@ -280,21 +279,21 @@ class StandardAccessModeTest
         var mode = builder.addPrivilege( privilege ).build();
 
         // THEN
-        assertThat( mode.allowsReadPropertyAllLabels( PROP1 ), equalTo( true ) );
-        assertThat( mode.allowsReadPropertyAllLabels( PROP2 ), equalTo( false ) );
+        assertThat( mode.allowsReadPropertyAllLabels( PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsReadPropertyAllLabels( PROP2 ) ).isEqualTo( false );
 
-        assertThat( mode.disallowsReadPropertyForSomeLabel( PROP1 ), equalTo( false ) );
-        assertThat( mode.disallowsReadPropertyForSomeLabel( PROP2 ), equalTo( false ) );
+        assertThat( mode.disallowsReadPropertyForSomeLabel( PROP1 ) ).isEqualTo( false );
+        assertThat( mode.disallowsReadPropertyForSomeLabel( PROP2 ) ).isEqualTo( false );
 
-        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A ), PROP1 ), equalTo( true ) );
-        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A ), PROP2 ), equalTo( false ) );
-        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( B ), PROP1 ), equalTo( true ) );
-        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( B ), PROP2 ), equalTo( false ) );
-        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A, B ), PROP1 ), equalTo( true ) );
-        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A, B ), PROP2 ), equalTo( false ) );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A ), PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A ), PROP2 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( B ), PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( B ), PROP2 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A, B ), PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A, B ), PROP2 ) ).isEqualTo( false );
 
-        assertThat( mode.allowsReadNodeProperty( Labels::from, PROP1 ), equalTo( true ) );
-        assertThat( mode.allowsReadNodeProperty( Labels::from, PROP2 ), equalTo( false ) );
+        assertThat( mode.allowsReadNodeProperty( Labels::from, PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsReadNodeProperty( Labels::from, PROP2 ) ).isEqualTo( false );
     }
 
     @Test
@@ -306,21 +305,21 @@ class StandardAccessModeTest
         var mode = builder.addPrivilege( privilege ).build();
 
         // THEN
-        assertThat( mode.allowsReadPropertyAllLabels( PROP1 ), equalTo( false ) );
-        assertThat( mode.allowsReadPropertyAllLabels( PROP2 ), equalTo( false ) );
+        assertThat( mode.allowsReadPropertyAllLabels( PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadPropertyAllLabels( PROP2 ) ).isEqualTo( false );
 
-        assertThat( mode.disallowsReadPropertyForSomeLabel( PROP1 ), equalTo( false ) );
-        assertThat( mode.disallowsReadPropertyForSomeLabel( PROP2 ), equalTo( false ) );
+        assertThat( mode.disallowsReadPropertyForSomeLabel( PROP1 ) ).isEqualTo( false );
+        assertThat( mode.disallowsReadPropertyForSomeLabel( PROP2 ) ).isEqualTo( false );
 
-        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A ), PROP1 ), equalTo( true ) );
-        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A ), PROP2 ), equalTo( false ) );
-        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( B ), PROP1 ), equalTo( false ) );
-        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( B ), PROP2 ), equalTo( false ) );
-        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A, B ), PROP1 ), equalTo( true ) );
-        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A, B ), PROP2 ), equalTo( false ) );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A ), PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A ), PROP2 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( B ), PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( B ), PROP2 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A, B ), PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A, B ), PROP2 ) ).isEqualTo( false );
 
-        assertThat( mode.allowsReadNodeProperty( Labels::from, PROP1 ), equalTo( false ) );
-        assertThat( mode.allowsReadNodeProperty( Labels::from, PROP2 ), equalTo( false ) );
+        assertThat( mode.allowsReadNodeProperty( Labels::from, PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadNodeProperty( Labels::from, PROP2 ) ).isEqualTo( false );
     }
 
     @Test
@@ -334,21 +333,21 @@ class StandardAccessModeTest
         var mode = builder.addPrivilege( privilege1 ).addPrivilege( privilege2 ).build();
 
         // THEN
-        assertThat( mode.allowsReadPropertyAllLabels( PROP1 ), equalTo( false ) );
-        assertThat( mode.allowsReadPropertyAllLabels( PROP2 ), equalTo( false ) );
+        assertThat( mode.allowsReadPropertyAllLabels( PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadPropertyAllLabels( PROP2 ) ).isEqualTo( false );
 
-        assertThat( mode.disallowsReadPropertyForSomeLabel( PROP1 ), equalTo( false ) );
-        assertThat( mode.disallowsReadPropertyForSomeLabel( PROP2 ), equalTo( false ) );
+        assertThat( mode.disallowsReadPropertyForSomeLabel( PROP1 ) ).isEqualTo( false );
+        assertThat( mode.disallowsReadPropertyForSomeLabel( PROP2 ) ).isEqualTo( false );
 
-        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A ), PROP1 ), equalTo( true ) );
-        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A ), PROP2 ), equalTo( false ) );
-        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( B ), PROP1 ), equalTo( false ) );
-        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( B ), PROP2 ), equalTo( false ) );
-        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A, B ), PROP1 ), equalTo( true ) );
-        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A, B ), PROP2 ), equalTo( false ) );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A ), PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A ), PROP2 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( B ), PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( B ), PROP2 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A, B ), PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A, B ), PROP2 ) ).isEqualTo( false );
 
-        assertThat( mode.allowsReadNodeProperty( Labels::from, PROP1 ), equalTo( false ) );
-        assertThat( mode.allowsReadNodeProperty( Labels::from, PROP2 ), equalTo( false ) );
+        assertThat( mode.allowsReadNodeProperty( Labels::from, PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadNodeProperty( Labels::from, PROP2 ) ).isEqualTo( false );
     }
 
     @Test
@@ -362,21 +361,21 @@ class StandardAccessModeTest
         var mode = builder.addPrivilege( privilege1 ).addPrivilege( privilege2 ).build();
 
         // THEN
-        assertThat( mode.allowsReadPropertyAllLabels( PROP1 ), equalTo( false ) );
-        assertThat( mode.allowsReadPropertyAllLabels( PROP2 ), equalTo( true ) );
+        assertThat( mode.allowsReadPropertyAllLabels( PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadPropertyAllLabels( PROP2 ) ).isEqualTo( true );
 
-        assertThat( mode.disallowsReadPropertyForSomeLabel( PROP1 ), equalTo( true ) );
-        assertThat( mode.disallowsReadPropertyForSomeLabel( PROP2 ), equalTo( false ) );
+        assertThat( mode.disallowsReadPropertyForSomeLabel( PROP1 ) ).isEqualTo( true );
+        assertThat( mode.disallowsReadPropertyForSomeLabel( PROP2 ) ).isEqualTo( false );
 
-        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A ), PROP1 ), equalTo( false ) );
-        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A ), PROP2 ), equalTo( true ) );
-        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( B ), PROP1 ), equalTo( false ) );
-        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( B ), PROP2 ), equalTo( true ) );
-        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A, B ), PROP1 ), equalTo( false ) );
-        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A, B ), PROP2 ), equalTo( true ) );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A ), PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A ), PROP2 ) ).isEqualTo( true );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( B ), PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( B ), PROP2 ) ).isEqualTo( true );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A, B ), PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A, B ), PROP2 ) ).isEqualTo( true );
 
-        assertThat( mode.allowsReadNodeProperty( Labels::from, PROP1 ), equalTo( false ) );
-        assertThat( mode.allowsReadNodeProperty( Labels::from, PROP2 ), equalTo( true ) );
+        assertThat( mode.allowsReadNodeProperty( Labels::from, PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadNodeProperty( Labels::from, PROP2 ) ).isEqualTo( true );
     }
 
     @Test
@@ -390,21 +389,21 @@ class StandardAccessModeTest
         var mode = builder.addPrivilege( privilege1 ).addPrivilege( privilege2 ).build();
 
         // THEN
-        assertThat( mode.allowsReadPropertyAllLabels( PROP1 ), equalTo( false ) );
-        assertThat( mode.allowsReadPropertyAllLabels( PROP2 ), equalTo( true ) );
+        assertThat( mode.allowsReadPropertyAllLabels( PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadPropertyAllLabels( PROP2 ) ).isEqualTo( true );
 
-        assertThat( mode.disallowsReadPropertyForSomeLabel( PROP1 ), equalTo( true ) );
-        assertThat( mode.disallowsReadPropertyForSomeLabel( PROP2 ), equalTo( false ) );
+        assertThat( mode.disallowsReadPropertyForSomeLabel( PROP1 ) ).isEqualTo( true );
+        assertThat( mode.disallowsReadPropertyForSomeLabel( PROP2 ) ).isEqualTo( false );
 
-        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A ), PROP1 ), equalTo( false ) );
-        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A ), PROP2 ), equalTo( true ) );
-        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( B ), PROP1 ), equalTo( true ) );
-        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( B ), PROP2 ), equalTo( true ) );
-        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A, B ), PROP1 ), equalTo( false ) );
-        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A, B ), PROP2 ), equalTo( true ) );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A ), PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A ), PROP2 ) ).isEqualTo( true );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( B ), PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( B ), PROP2 ) ).isEqualTo( true );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A, B ), PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A, B ), PROP2 ) ).isEqualTo( true );
 
-        assertThat( mode.allowsReadNodeProperty( Labels::from, PROP1 ), equalTo( true ) );
-        assertThat( mode.allowsReadNodeProperty( Labels::from, PROP2 ), equalTo( true ) );
+        assertThat( mode.allowsReadNodeProperty( Labels::from, PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsReadNodeProperty( Labels::from, PROP2 ) ).isEqualTo( true );
     }
 
     @Test
@@ -418,21 +417,21 @@ class StandardAccessModeTest
         var mode = builder.addPrivilege( privilege1 ).addPrivilege( privilege2 ).build();
 
         // THEN
-        assertThat( mode.allowsReadPropertyAllLabels( PROP1 ), equalTo( false ) );
-        assertThat( mode.allowsReadPropertyAllLabels( PROP2 ), equalTo( false ) );
+        assertThat( mode.allowsReadPropertyAllLabels( PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadPropertyAllLabels( PROP2 ) ).isEqualTo( false );
 
-        assertThat( mode.disallowsReadPropertyForSomeLabel( PROP1 ), equalTo( true ) );
-        assertThat( mode.disallowsReadPropertyForSomeLabel( PROP2 ), equalTo( true ) );
+        assertThat( mode.disallowsReadPropertyForSomeLabel( PROP1 ) ).isEqualTo( true );
+        assertThat( mode.disallowsReadPropertyForSomeLabel( PROP2 ) ).isEqualTo( true );
 
-        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A ), PROP1 ), equalTo( false ) );
-        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A ), PROP2 ), equalTo( false ) );
-        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( B ), PROP1 ), equalTo( true ) );
-        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( B ), PROP2 ), equalTo( true ) );
-        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A, B ), PROP1 ), equalTo( false ) );
-        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A, B ), PROP2 ), equalTo( false ) );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A ), PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A ), PROP2 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( B ), PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( B ), PROP2 ) ).isEqualTo( true );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A, B ), PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadNodeProperty( () -> Labels.from( A, B ), PROP2 ) ).isEqualTo( false );
 
-        assertThat( mode.allowsReadNodeProperty( Labels::from, PROP1 ), equalTo( true ) );
-        assertThat( mode.allowsReadNodeProperty( Labels::from, PROP2 ), equalTo( true ) );
+        assertThat( mode.allowsReadNodeProperty( Labels::from, PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsReadNodeProperty( Labels::from, PROP2 ) ).isEqualTo( true );
     }
 
     // READ {PROP} ON RELATIONSHIPS
@@ -446,13 +445,13 @@ class StandardAccessModeTest
         var mode = builder.addPrivilege( privilege ).build();
 
         // THEN
-        assertThat( mode.allowsReadPropertyAllRelTypes( PROP1 ), equalTo( true ) );
-        assertThat( mode.allowsReadPropertyAllRelTypes( PROP2 ), equalTo( true ) );
+        assertThat( mode.allowsReadPropertyAllRelTypes( PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsReadPropertyAllRelTypes( PROP2 ) ).isEqualTo( true );
 
-        assertThat( mode.allowsReadRelationshipProperty( () -> R1, PROP1 ), equalTo( true ) );
-        assertThat( mode.allowsReadRelationshipProperty( () -> R1, PROP2 ), equalTo( true ) );
-        assertThat( mode.allowsReadRelationshipProperty( () -> R2, PROP1 ), equalTo( true ) );
-        assertThat( mode.allowsReadRelationshipProperty( () -> R2, PROP2 ), equalTo( true ) );
+        assertThat( mode.allowsReadRelationshipProperty( () -> R1, PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsReadRelationshipProperty( () -> R1, PROP2 ) ).isEqualTo( true );
+        assertThat( mode.allowsReadRelationshipProperty( () -> R2, PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsReadRelationshipProperty( () -> R2, PROP2 ) ).isEqualTo( true );
     }
 
     @Test
@@ -464,13 +463,13 @@ class StandardAccessModeTest
         var mode = builder.addPrivilege( privilege ).build();
 
         // THEN
-        assertThat( mode.allowsReadPropertyAllRelTypes( PROP1 ), equalTo( true ) );
-        assertThat( mode.allowsReadPropertyAllRelTypes( PROP2 ), equalTo( false ) );
+        assertThat( mode.allowsReadPropertyAllRelTypes( PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsReadPropertyAllRelTypes( PROP2 ) ).isEqualTo( false );
 
-        assertThat( mode.allowsReadRelationshipProperty( () -> R1, PROP1 ), equalTo( true ) );
-        assertThat( mode.allowsReadRelationshipProperty( () -> R1, PROP2 ), equalTo( false ) );
-        assertThat( mode.allowsReadRelationshipProperty( () -> R2, PROP1 ), equalTo( true ) );
-        assertThat( mode.allowsReadRelationshipProperty( () -> R2, PROP2 ), equalTo( false ) );
+        assertThat( mode.allowsReadRelationshipProperty( () -> R1, PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsReadRelationshipProperty( () -> R1, PROP2 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadRelationshipProperty( () -> R2, PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsReadRelationshipProperty( () -> R2, PROP2 ) ).isEqualTo( false );
     }
 
     @Test
@@ -482,13 +481,13 @@ class StandardAccessModeTest
         var mode = builder.addPrivilege( privilege ).build();
 
         // THEN
-        assertThat( mode.allowsReadPropertyAllRelTypes( PROP1 ), equalTo( false ) );
-        assertThat( mode.allowsReadPropertyAllRelTypes( PROP2 ), equalTo( false ) );
+        assertThat( mode.allowsReadPropertyAllRelTypes( PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadPropertyAllRelTypes( PROP2 ) ).isEqualTo( false );
 
-        assertThat( mode.allowsReadRelationshipProperty( () -> R1, PROP1 ), equalTo( true ) );
-        assertThat( mode.allowsReadRelationshipProperty( () -> R1, PROP2 ), equalTo( false ) );
-        assertThat( mode.allowsReadRelationshipProperty( () -> R2, PROP1 ), equalTo( false ) );
-        assertThat( mode.allowsReadRelationshipProperty( () -> R2, PROP2 ), equalTo( false ) );
+        assertThat( mode.allowsReadRelationshipProperty( () -> R1, PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsReadRelationshipProperty( () -> R1, PROP2 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadRelationshipProperty( () -> R2, PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadRelationshipProperty( () -> R2, PROP2 ) ).isEqualTo( false );
     }
 
     @Test
@@ -502,13 +501,13 @@ class StandardAccessModeTest
         var mode = builder.addPrivilege( privilege1 ).addPrivilege( privilege2 ).build();
 
         // THEN
-        assertThat( mode.allowsReadPropertyAllRelTypes( PROP1 ), equalTo( false ) );
-        assertThat( mode.allowsReadPropertyAllRelTypes( PROP2 ), equalTo( false ) );
+        assertThat( mode.allowsReadPropertyAllRelTypes( PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadPropertyAllRelTypes( PROP2 ) ).isEqualTo( false );
 
-        assertThat( mode.allowsReadRelationshipProperty( () -> R1, PROP1 ), equalTo( true ) );
-        assertThat( mode.allowsReadRelationshipProperty( () -> R1, PROP2 ), equalTo( false ) );
-        assertThat( mode.allowsReadRelationshipProperty( () -> R2, PROP1 ), equalTo( false ) );
-        assertThat( mode.allowsReadRelationshipProperty( () -> R2, PROP2 ), equalTo( false ) );
+        assertThat( mode.allowsReadRelationshipProperty( () -> R1, PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsReadRelationshipProperty( () -> R1, PROP2 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadRelationshipProperty( () -> R2, PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadRelationshipProperty( () -> R2, PROP2 ) ).isEqualTo( false );
     }
 
     @Test
@@ -522,13 +521,13 @@ class StandardAccessModeTest
         var mode = builder.addPrivilege( privilege1 ).addPrivilege( privilege2 ).build();
 
         // THEN
-        assertThat( mode.allowsReadPropertyAllRelTypes( PROP1 ), equalTo( false ) );
-        assertThat( mode.allowsReadPropertyAllRelTypes( PROP2 ), equalTo( true ) );
+        assertThat( mode.allowsReadPropertyAllRelTypes( PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadPropertyAllRelTypes( PROP2 ) ).isEqualTo( true );
 
-        assertThat( mode.allowsReadRelationshipProperty( () -> R1, PROP1 ), equalTo( false ) );
-        assertThat( mode.allowsReadRelationshipProperty( () -> R1, PROP2 ), equalTo( true ) );
-        assertThat( mode.allowsReadRelationshipProperty( () -> R2, PROP1 ), equalTo( false ) );
-        assertThat( mode.allowsReadRelationshipProperty( () -> R2, PROP2 ), equalTo( true ) );
+        assertThat( mode.allowsReadRelationshipProperty( () -> R1, PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadRelationshipProperty( () -> R1, PROP2 ) ).isEqualTo( true );
+        assertThat( mode.allowsReadRelationshipProperty( () -> R2, PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadRelationshipProperty( () -> R2, PROP2 ) ).isEqualTo( true );
     }
 
     @Test
@@ -542,13 +541,13 @@ class StandardAccessModeTest
         var mode = builder.addPrivilege( privilege1 ).addPrivilege( privilege2 ).build();
 
         // THEN
-        assertThat( mode.allowsReadPropertyAllRelTypes( PROP1 ), equalTo( false ) );
-        assertThat( mode.allowsReadPropertyAllRelTypes( PROP2 ), equalTo( true ) );
+        assertThat( mode.allowsReadPropertyAllRelTypes( PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadPropertyAllRelTypes( PROP2 ) ).isEqualTo( true );
 
-        assertThat( mode.allowsReadRelationshipProperty( () -> R1, PROP1 ), equalTo( false ) );
-        assertThat( mode.allowsReadRelationshipProperty( () -> R1, PROP2 ), equalTo( true ) );
-        assertThat( mode.allowsReadRelationshipProperty( () -> R2, PROP1 ), equalTo( true ) );
-        assertThat( mode.allowsReadRelationshipProperty( () -> R2, PROP2 ), equalTo( true ) );
+        assertThat( mode.allowsReadRelationshipProperty( () -> R1, PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadRelationshipProperty( () -> R1, PROP2 ) ).isEqualTo( true );
+        assertThat( mode.allowsReadRelationshipProperty( () -> R2, PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsReadRelationshipProperty( () -> R2, PROP2 ) ).isEqualTo( true );
     }
 
     @Test
@@ -562,13 +561,13 @@ class StandardAccessModeTest
         var mode = builder.addPrivilege( privilege1 ).addPrivilege( privilege2 ).build();
 
         // THEN
-        assertThat( mode.allowsReadPropertyAllRelTypes( PROP1 ), equalTo( false ) );
-        assertThat( mode.allowsReadPropertyAllRelTypes( PROP2 ), equalTo( false ) );
+        assertThat( mode.allowsReadPropertyAllRelTypes( PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadPropertyAllRelTypes( PROP2 ) ).isEqualTo( false );
 
-        assertThat( mode.allowsReadRelationshipProperty( () -> R1, PROP1 ), equalTo( false ) );
-        assertThat( mode.allowsReadRelationshipProperty( () -> R1, PROP2 ), equalTo( false ) );
-        assertThat( mode.allowsReadRelationshipProperty( () -> R2, PROP1 ), equalTo( true ) );
-        assertThat( mode.allowsReadRelationshipProperty( () -> R2, PROP2 ), equalTo( true ) );
+        assertThat( mode.allowsReadRelationshipProperty( () -> R1, PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadRelationshipProperty( () -> R1, PROP2 ) ).isEqualTo( false );
+        assertThat( mode.allowsReadRelationshipProperty( () -> R2, PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsReadRelationshipProperty( () -> R2, PROP2 ) ).isEqualTo( true );
     }
 
     // SEE PROP IN TOKEN STORE
@@ -582,8 +581,8 @@ class StandardAccessModeTest
         var mode = builder.addPrivilege( privilege ).build();
 
         // THEN
-        assertThat( mode.allowsSeePropertyKeyToken( PROP1 ), equalTo( true ) );
-        assertThat( mode.allowsSeePropertyKeyToken( PROP2 ), equalTo( true ) );
+        assertThat( mode.allowsSeePropertyKeyToken( PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsSeePropertyKeyToken( PROP2 ) ).isEqualTo( true );
     }
 
     @Test
@@ -595,8 +594,8 @@ class StandardAccessModeTest
         var mode = builder.addPrivilege( privilege ).build();
 
         // THEN
-        assertThat( mode.allowsSeePropertyKeyToken( PROP1 ), equalTo( true ) );
-        assertThat( mode.allowsSeePropertyKeyToken( PROP2 ), equalTo( true ) );
+        assertThat( mode.allowsSeePropertyKeyToken( PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsSeePropertyKeyToken( PROP2 ) ).isEqualTo( true );
     }
 
     @Test
@@ -608,8 +607,8 @@ class StandardAccessModeTest
         var mode = builder.addPrivilege( privilege ).build();
 
         // THEN
-        assertThat( mode.allowsSeePropertyKeyToken( PROP1 ), equalTo( true ) );
-        assertThat( mode.allowsSeePropertyKeyToken( PROP2 ), equalTo( false ) );
+        assertThat( mode.allowsSeePropertyKeyToken( PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsSeePropertyKeyToken( PROP2 ) ).isEqualTo( false );
     }
 
     @Test
@@ -621,8 +620,8 @@ class StandardAccessModeTest
         var mode = builder.addPrivilege( privilege ).build();
 
         // THEN
-        assertThat( mode.allowsSeePropertyKeyToken( PROP1 ), equalTo( false ) );
-        assertThat( mode.allowsSeePropertyKeyToken( PROP2 ), equalTo( true ) );
+        assertThat( mode.allowsSeePropertyKeyToken( PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsSeePropertyKeyToken( PROP2 ) ).isEqualTo( true );
     }
 
     @Test
@@ -636,8 +635,8 @@ class StandardAccessModeTest
         var mode = builder.addPrivilege( privilege1 ).addPrivilege( privilege2 ).build();
 
         // THEN
-        assertThat( mode.allowsSeePropertyKeyToken( PROP1 ), equalTo( false ) );
-        assertThat( mode.allowsSeePropertyKeyToken( PROP2 ), equalTo( true ) );
+        assertThat( mode.allowsSeePropertyKeyToken( PROP1 ) ).isEqualTo( false );
+        assertThat( mode.allowsSeePropertyKeyToken( PROP2 ) ).isEqualTo( true );
     }
 
     @Test
@@ -651,8 +650,8 @@ class StandardAccessModeTest
         var mode = builder.addPrivilege( privilege1 ).addPrivilege( privilege2 ).build();
 
         // THEN
-        assertThat( mode.allowsSeePropertyKeyToken( PROP1 ), equalTo( true ) );
-        assertThat( mode.allowsSeePropertyKeyToken( PROP2 ), equalTo( false ) );
+        assertThat( mode.allowsSeePropertyKeyToken( PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsSeePropertyKeyToken( PROP2 ) ).isEqualTo( false );
     }
 
     @Test
@@ -666,8 +665,8 @@ class StandardAccessModeTest
         var mode = builder.addPrivilege( privilege1 ).addPrivilege( privilege2 ).build();
 
         // THEN
-        assertThat( mode.allowsSeePropertyKeyToken( PROP1 ), equalTo( true ) );
-        assertThat( mode.allowsSeePropertyKeyToken( PROP2 ), equalTo( true ) );
+        assertThat( mode.allowsSeePropertyKeyToken( PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsSeePropertyKeyToken( PROP2 ) ).isEqualTo( true );
     }
 
     @Test
@@ -681,8 +680,8 @@ class StandardAccessModeTest
         var mode = builder.addPrivilege( privilege1 ).addPrivilege( privilege2 ).build();
 
         // THEN
-        assertThat( mode.allowsSeePropertyKeyToken( PROP1 ), equalTo( true ) );
-        assertThat( mode.allowsSeePropertyKeyToken( PROP2 ), equalTo( true ) );
+        assertThat( mode.allowsSeePropertyKeyToken( PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsSeePropertyKeyToken( PROP2 ) ).isEqualTo( true );
     }
 
     @Test
@@ -696,8 +695,8 @@ class StandardAccessModeTest
         var mode = builder.addPrivilege( privilege1 ).addPrivilege( privilege2 ).build();
 
         // THEN
-        assertThat( mode.allowsSeePropertyKeyToken( PROP1 ), equalTo( true ) );
-        assertThat( mode.allowsSeePropertyKeyToken( PROP2 ), equalTo( true ) );
+        assertThat( mode.allowsSeePropertyKeyToken( PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsSeePropertyKeyToken( PROP2 ) ).isEqualTo( true );
     }
 
     @Test
@@ -711,8 +710,8 @@ class StandardAccessModeTest
         var mode = builder.addPrivilege( privilege1 ).addPrivilege( privilege2 ).build();
 
         // THEN
-        assertThat( mode.allowsSeePropertyKeyToken( PROP1 ), equalTo( true ) );
-        assertThat( mode.allowsSeePropertyKeyToken( PROP2 ), equalTo( true ) );
+        assertThat( mode.allowsSeePropertyKeyToken( PROP1 ) ).isEqualTo( true );
+        assertThat( mode.allowsSeePropertyKeyToken( PROP2 ) ).isEqualTo( true );
     }
 
     // WRITE
@@ -727,6 +726,6 @@ class StandardAccessModeTest
         var mode = builder.addPrivilege( privilege1 ).addPrivilege( privilege2 ).build();
 
         // THEN
-        assertThat( mode.allowsWrites(), equalTo( true ) );
+        assertThat( mode.allowsWrites() ).isEqualTo( true );
     }
 }

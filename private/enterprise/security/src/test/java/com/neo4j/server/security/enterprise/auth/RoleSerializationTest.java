@@ -15,8 +15,7 @@ import java.util.TreeSet;
 import org.neo4j.string.UTF8;
 
 import static java.util.Arrays.asList;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
+import static org.assertj.core.api.Assertions.assertThat;
 
 class RoleSerializationTest
 {
@@ -49,7 +48,7 @@ class RoleSerializationTest
         byte[] serialized = serialization.serialize( roles );
 
         // Then
-        assertThat( serialization.deserializeRecords( serialized ), equalTo( roles ) );
+        assertThat( serialization.deserializeRecords( serialized ) ).isEqualTo( roles );
     }
 
     /**
@@ -67,8 +66,6 @@ class RoleSerializationTest
                 UTF8.encode( "admin:Bob,Steve\n" + "publisher:Kelly,Marie\n" ) );
 
         // Then
-        assertThat( deserialized, equalTo( asList(
-                new RoleRecord( "admin", steveBob ),
-                new RoleRecord( "publisher", kellyMarie ) ) ) );
+        assertThat( deserialized ).isEqualTo( asList( new RoleRecord( "admin", steveBob ), new RoleRecord( "publisher", kellyMarie ) ) );
     }
 }
