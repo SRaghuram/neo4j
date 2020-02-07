@@ -47,6 +47,7 @@ import org.neo4j.kernel.impl.store.record.RelationshipTypeTokenRecord;
 import org.neo4j.kernel.impl.store.record.SchemaRecord;
 import org.neo4j.kernel.impl.store.record.TokenRecord;
 import org.neo4j.storageengine.api.StorageCommand;
+import org.neo4j.storageengine.api.StorageCommonCommand;
 import org.neo4j.string.UTF8;
 import org.neo4j.values.storable.CoordinateReferenceSystem;
 import org.neo4j.values.storable.Value;
@@ -54,8 +55,6 @@ import org.neo4j.values.storable.ValueWriter;
 
 import static java.lang.Math.toIntExact;
 import static java.lang.String.format;
-import static org.neo4j.token.api.TokenIdPrettyPrinter.label;
-import static org.neo4j.token.api.TokenIdPrettyPrinter.relationshipType;
 import static org.neo4j.util.Bits.bitFlag;
 import static org.neo4j.util.Bits.bitFlags;
 
@@ -63,51 +62,13 @@ import static org.neo4j.util.Bits.bitFlags;
  * Command implementations for all the commands that can be performed on a Neo
  * store.
  */
-public abstract class Command implements StorageCommand
+public abstract class Command extends StorageCommonCommand implements StorageCommand
 {
-    private int keyHash;
-    private long key;
-    private Mode mode;
 
-    /*
-     * TODO: This is techdebt
-     * This is used to control the order of how commands are applied, which is done because
-     * we don't take read locks, and so the order or how we change things lowers the risk
-     * of reading invalid state. This should be removed once eg. MVCC or read locks has been
-     * implemented.
-     */
-    public enum Mode
+    public static Mode modeFromRecordState( AbstractBaseRecord record )
     {
-        CREATE,
-        UPDATE,
-        DELETE;
-
-        public static Mode fromRecordState( boolean created, boolean inUse )
-        {
-            if ( !inUse )
-            {
-                return DELETE;
-            }
-            if ( created )
-            {
-                return CREATE;
-            }
-            return UPDATE;
-        }
-
-        public static Mode fromRecordState( AbstractBaseRecord record )
-        {
-            return fromRecordState( record.isCreated(), record.inUse() );
-        }
+        return Mode.fromRecordState( record.isCreated(), record.inUse() );
     }
-
-    protected final void setup( long key, Mode mode )
-    {
-        this.mode = mode;
-        this.keyHash = (int) ((key >>> 32) ^ key);
-        this.key = key;
-    }
-
     @Override
     public int hashCode()
     {
@@ -135,6 +96,34 @@ public abstract class Command implements StorageCommand
     }
 
     public abstract boolean handle( CommandVisitor handler ) throws IOException;
+
+    public static class PackagedCommand extends Command {
+        StorageCommonCommand cmd;
+        PackagedCommand(StorageCommonCommand cmd)
+        {
+            this.cmd = cmd;
+        }
+
+        @Override
+        public String toString() {
+            return cmd.toString();
+        }
+
+        @Override
+        public boolean handle(CommandVisitor handler) throws IOException {
+            return cmd.handle( handler );
+        }
+
+        @Override
+        public boolean handle(CommonCommandVisitor handler) throws IOException {
+            return cmd.handle(handler);
+        }
+
+        @Override
+        public void serialize(WritableChannel channel) throws IOException {
+            cmd.serialize(channel);
+        }
+    }
 
     protected String beforeAndAfterToString( AbstractBaseRecord before, AbstractBaseRecord after )
     {
@@ -170,10 +159,10 @@ public abstract class Command implements StorageCommand
                 inUse |= Record.ADDITIONAL_FLAG_1;
             }
             channel.putLong( record.getId() )
-                   .putInt( record.getTypeAsInt() )
-                   .put( inUse )
-                   .putInt( record.getLength() )
-                   .putLong( record.getNextBlock() );
+                    .putInt( record.getTypeAsInt() )
+                    .put( inUse )
+                    .putInt( record.getLength() )
+                    .putLong( record.getNextBlock() );
             byte[] data = record.getData();
             assert data != null;
             channel.put( data, data.length );
@@ -182,8 +171,8 @@ public abstract class Command implements StorageCommand
         {
             byte inUse = Record.NOT_IN_USE.byteValue();
             channel.putLong( record.getId() )
-                   .putInt( record.getTypeAsInt() )
-                   .put( inUse );
+                    .putInt( record.getTypeAsInt() )
+                    .put( inUse );
         }
     }
 
@@ -194,7 +183,7 @@ public abstract class Command implements StorageCommand
 
         public BaseCommand( RECORD before, RECORD after )
         {
-            setup( after.getId(), Mode.fromRecordState( after ) );
+            setup( after.getId(), modeFromRecordState( after ) );
             this.before = before;
             this.after = after;
         }
@@ -241,10 +230,10 @@ public abstract class Command implements StorageCommand
         private void writeNodeRecord( WritableChannel channel, NodeRecord record ) throws IOException
         {
             byte flags = bitFlags( bitFlag( record.inUse(), Record.IN_USE.byteValue() ),
-                                   bitFlag( record.isCreated(), Record.CREATED_IN_TX ),
-                                   bitFlag( record.requiresSecondaryUnit(), Record.REQUIRE_SECONDARY_UNIT ),
-                                   bitFlag( record.hasSecondaryUnitId(), Record.HAS_SECONDARY_UNIT ),
-                                   bitFlag( record.isUseFixedReferences(), Record.USES_FIXED_REFERENCE_FORMAT ) );
+                    bitFlag( record.isCreated(), Record.CREATED_IN_TX ),
+                    bitFlag( record.requiresSecondaryUnit(), Record.REQUIRE_SECONDARY_UNIT ),
+                    bitFlag( record.hasSecondaryUnitId(), Record.HAS_SECONDARY_UNIT ),
+                    bitFlag( record.isUseFixedReferences(), Record.USES_FIXED_REFERENCE_FORMAT ) );
             channel.put( flags );
             if ( record.inUse() )
             {
@@ -259,6 +248,11 @@ public abstract class Command implements StorageCommand
             // Always write dynamic label records because we want to know which ones have been deleted
             // especially if the node has been deleted.
             writeDynamicRecords( channel, record.getDynamicLabelRecords() );
+        }
+
+        @Override
+        public boolean handle(CommonCommandVisitor handler) throws IOException {
+            return false;
         }
     }
 
@@ -287,18 +281,18 @@ public abstract class Command implements StorageCommand
         private void writeRelationshipRecord( WritableChannel channel, RelationshipRecord record ) throws IOException
         {
             byte flags = bitFlags( bitFlag( record.inUse(), Record.IN_USE.byteValue() ),
-                                   bitFlag( record.isCreated(), Record.CREATED_IN_TX ),
-                                   bitFlag( record.requiresSecondaryUnit(), Record.REQUIRE_SECONDARY_UNIT ),
-                                   bitFlag( record.hasSecondaryUnitId(), Record.HAS_SECONDARY_UNIT ),
-                                   bitFlag( record.isUseFixedReferences(), Record.USES_FIXED_REFERENCE_FORMAT ) );
+                    bitFlag( record.isCreated(), Record.CREATED_IN_TX ),
+                    bitFlag( record.requiresSecondaryUnit(), Record.REQUIRE_SECONDARY_UNIT ),
+                    bitFlag( record.hasSecondaryUnitId(), Record.HAS_SECONDARY_UNIT ),
+                    bitFlag( record.isUseFixedReferences(), Record.USES_FIXED_REFERENCE_FORMAT ) );
             channel.put( flags );
             if ( record.inUse() )
             {
                 channel.putLong( record.getFirstNode() ).putLong( record.getSecondNode() ).putInt( record.getType() )
-                       .putLong( record.getFirstPrevRel() ).putLong( record.getFirstNextRel() )
-                       .putLong( record.getSecondPrevRel() ).putLong( record.getSecondNextRel() )
-                       .putLong( record.getNextProp() )
-                       .put( (byte) ((record.isFirstInFirstChain() ? 1 : 0) | (record.isFirstInSecondChain() ? 2 : 0)) );
+                        .putLong( record.getFirstPrevRel() ).putLong( record.getFirstNextRel() )
+                        .putLong( record.getSecondPrevRel() ).putLong( record.getSecondNextRel() )
+                        .putLong( record.getNextProp() )
+                        .put( (byte) ((record.isFirstInFirstChain() ? 1 : 0) | (record.isFirstInSecondChain() ? 2 : 0)) );
                 if ( record.hasSecondaryUnitId() )
                 {
                     channel.putLong( record.getSecondaryUnitId() );
@@ -308,6 +302,11 @@ public abstract class Command implements StorageCommand
             {
                 channel.putInt( record.getType() );
             }
+        }
+
+        @Override
+        public boolean handle(CommonCommandVisitor handler) throws IOException {
+            return false;
         }
     }
 
@@ -337,9 +336,9 @@ public abstract class Command implements StorageCommand
                 throws IOException
         {
             byte flags = bitFlags( bitFlag( record.inUse(), Record.IN_USE.byteValue() ),
-                                   bitFlag( record.requiresSecondaryUnit(), Record.REQUIRE_SECONDARY_UNIT ),
-                                   bitFlag( record.hasSecondaryUnitId(), Record.HAS_SECONDARY_UNIT ),
-                                   bitFlag( record.isUseFixedReferences(), Record.USES_FIXED_REFERENCE_FORMAT ) );
+                    bitFlag( record.requiresSecondaryUnit(), Record.REQUIRE_SECONDARY_UNIT ),
+                    bitFlag( record.hasSecondaryUnitId(), Record.HAS_SECONDARY_UNIT ),
+                    bitFlag( record.isUseFixedReferences(), Record.USES_FIXED_REFERENCE_FORMAT ) );
             channel.put( flags );
             channel.putShort( (short) record.getType() );
             channel.putLong( record.getNext() );
@@ -351,6 +350,11 @@ public abstract class Command implements StorageCommand
             {
                 channel.putLong( record.getSecondaryUnitId() );
             }
+        }
+
+        @Override
+        public boolean handle(CommonCommandVisitor handler) throws IOException {
+            return false;
         }
     }
 
@@ -381,6 +385,11 @@ public abstract class Command implements StorageCommand
         private void writeNeoStoreRecord( WritableChannel channel, NeoStoreRecord record ) throws IOException
         {
             channel.putLong( record.getNextProp() );
+        }
+
+        @Override
+        public boolean handle(CommonCommandVisitor handler) throws IOException {
+            return false;
         }
     }
 
@@ -429,10 +438,10 @@ public abstract class Command implements StorageCommand
         private void writePropertyRecord( WritableChannel channel, PropertyRecord record ) throws IOException
         {
             byte flags = bitFlags( bitFlag( record.inUse(), Record.IN_USE.byteValue() ),
-                                   bitFlag( record.getRelId() != -1, Record.REL_PROPERTY.byteValue() ),
-                                   bitFlag( record.requiresSecondaryUnit(), Record.REQUIRE_SECONDARY_UNIT ),
-                                   bitFlag( record.hasSecondaryUnitId(), Record.HAS_SECONDARY_UNIT ),
-                                   bitFlag( record.isUseFixedReferences(), Record.USES_FIXED_REFERENCE_FORMAT ) );
+                    bitFlag( record.getRelId() != -1, Record.REL_PROPERTY.byteValue() ),
+                    bitFlag( record.requiresSecondaryUnit(), Record.REQUIRE_SECONDARY_UNIT ),
+                    bitFlag( record.hasSecondaryUnitId(), Record.HAS_SECONDARY_UNIT ),
+                    bitFlag( record.isUseFixedReferences(), Record.USES_FIXED_REFERENCE_FORMAT ) );
 
             channel.put( flags ); // 1
             channel.putLong( record.getNextProp() ).putLong( record.getPrevProp() ); // 8 + 8
@@ -495,6 +504,10 @@ public abstract class Command implements StorageCommand
             {
                 writeDynamicRecords( channel, block.getValueRecords() );
             }
+        }
+        @Override
+        public boolean handle(CommonCommandVisitor handler) throws IOException {
+            return false;
         }
     }
 
@@ -563,12 +576,17 @@ public abstract class Command implements StorageCommand
                 writeDynamicRecords( channel, record.getNameRecords() );
             }
         }
+
+        @Override
+        public boolean handle(CommonCommandVisitor handler) throws IOException {
+            return false;
+        }
     }
 
     public static class RelationshipTypeTokenCommand extends TokenCommand<RelationshipTypeTokenRecord>
     {
         public RelationshipTypeTokenCommand( RelationshipTypeTokenRecord before,
-                RelationshipTypeTokenRecord after )
+                                             RelationshipTypeTokenRecord after )
         {
             super( before, after );
         }
@@ -605,6 +623,11 @@ public abstract class Command implements StorageCommand
                 writeDynamicRecords( channel, record.getNameRecords() );
             }
         }
+
+        @Override
+        public boolean handle(CommonCommandVisitor handler) throws IOException {
+            return false;
+        }
     }
 
     public static class LabelTokenCommand extends TokenCommand<LabelTokenRecord>
@@ -636,6 +659,11 @@ public abstract class Command implements StorageCommand
             headerByte += record.isInternal() ? Record.ADDITIONAL_FLAG_1 : 0;
             channel.put( headerByte ).putInt( record.getNameId() );
             writeDynamicRecords( channel, record.getNameRecords() );
+        }
+
+        @Override
+        public boolean handle(CommonCommandVisitor handler) throws IOException {
+            return false;
         }
     }
 
@@ -689,9 +717,9 @@ public abstract class Command implements StorageCommand
         private void writeSchemaRecord( WritableChannel channel, SchemaRecord record ) throws IOException
         {
             byte flags = bitFlags( bitFlag( record.inUse(), Record.IN_USE.byteValue() ),
-                                   bitFlag( record.isCreated(), Record.CREATED_IN_TX ),
-                                   bitFlag( record.isUseFixedReferences(), Record.USES_FIXED_REFERENCE_FORMAT ),
-                                   bitFlag( record.hasSecondaryUnitId(), Record.HAS_SECONDARY_UNIT ) );
+                    bitFlag( record.isCreated(), Record.CREATED_IN_TX ),
+                    bitFlag( record.isUseFixedReferences(), Record.USES_FIXED_REFERENCE_FORMAT ),
+                    bitFlag( record.hasSecondaryUnitId(), Record.HAS_SECONDARY_UNIT ) );
             channel.put( flags );
             if ( record.inUse() )
             {
@@ -757,33 +785,33 @@ public abstract class Command implements StorageCommand
             {
                 switch ( arrayType )
                 {
-                case BYTE:
-                    return BYTE;
-                case SHORT:
-                    return SHORT;
-                case INT:
-                    return INT;
-                case LONG:
-                    return LONG;
-                case FLOAT:
-                    return FLOAT;
-                case DOUBLE:
-                    return DOUBLE;
-                case BOOLEAN:
-                    return BOOL_ARRAY_ELEMENT;
-                case STRING:
-                    return STRING;
-                case CHAR:
-                    return CHAR;
-                case POINT:
-                case ZONED_DATE_TIME:
-                case LOCAL_DATE_TIME:
-                case DATE:
-                case ZONED_TIME:
-                case LOCAL_TIME:
-                case DURATION:
-                default:
-                    throw new IOException( "Unsupported schema record map value type: " + arrayType );
+                    case BYTE:
+                        return BYTE;
+                    case SHORT:
+                        return SHORT;
+                    case INT:
+                        return INT;
+                    case LONG:
+                        return LONG;
+                    case FLOAT:
+                        return FLOAT;
+                    case DOUBLE:
+                        return DOUBLE;
+                    case BOOLEAN:
+                        return BOOL_ARRAY_ELEMENT;
+                    case STRING:
+                        return STRING;
+                    case CHAR:
+                        return CHAR;
+                    case POINT:
+                    case ZONED_DATE_TIME:
+                    case LOCAL_DATE_TIME:
+                    case DATE:
+                    case ZONED_TIME:
+                    case LOCAL_TIME:
+                    case DURATION:
+                    default:
+                        throw new IOException( "Unsupported schema record map value type: " + arrayType );
                 }
             }
 
@@ -969,113 +997,10 @@ public abstract class Command implements StorageCommand
                 }
             } );
         }
-    }
-
-    public static class NodeCountsCommand extends Command
-    {
-        private final int labelId;
-        private final long delta;
-
-        public NodeCountsCommand( int labelId, long delta )
-        {
-            setup( labelId, Mode.UPDATE );
-            assert delta != 0 : "Tried to create a NodeCountsCommand for something that didn't change any count";
-            this.labelId = labelId;
-            this.delta = delta;
-        }
-
         @Override
-        public String toString()
-        {
-            return String.format( "UpdateCounts[(%s) %s %d]",
-                    label( labelId ), delta < 0 ? "-" : "+", Math.abs( delta ) );
-        }
-
-        @Override
-        public boolean handle( CommandVisitor handler ) throws IOException
-        {
-            return handler.visitNodeCountsCommand( this );
-        }
-
-        public int labelId()
-        {
-            return labelId;
-        }
-
-        public long delta()
-        {
-            return delta;
-        }
-
-        @Override
-        public void serialize( WritableChannel channel ) throws IOException
-        {
-            channel.put( NeoCommandType.UPDATE_NODE_COUNTS_COMMAND );
-            channel.putInt( labelId() )
-                   .putLong( delta() );
+        public boolean handle(CommonCommandVisitor handler) throws IOException {
+            return false;
         }
     }
 
-    public static class RelationshipCountsCommand extends Command
-    {
-        private final int startLabelId;
-        private final int typeId;
-        private final int endLabelId;
-        private final long delta;
-
-        public RelationshipCountsCommand( int startLabelId, int typeId, int endLabelId, long delta )
-        {
-            setup( typeId, Mode.UPDATE );
-            assert delta !=
-                   0 : "Tried to create a RelationshipCountsCommand for something that didn't change any count";
-            this.startLabelId = startLabelId;
-            this.typeId = typeId;
-            this.endLabelId = endLabelId;
-            this.delta = delta;
-        }
-
-        @Override
-        public String toString()
-        {
-            return String.format( "UpdateCounts[(%s)-%s->(%s) %s %d]",
-                    label( startLabelId ), relationshipType( typeId ), label( endLabelId ),
-                    delta < 0 ? "-" : "+", Math.abs( delta ) );
-        }
-
-        @Override
-        public boolean handle( CommandVisitor handler ) throws IOException
-        {
-            return handler.visitRelationshipCountsCommand( this );
-        }
-
-        public int startLabelId()
-        {
-            return startLabelId;
-        }
-
-        public int typeId()
-        {
-            return typeId;
-        }
-
-        public int endLabelId()
-        {
-            return endLabelId;
-        }
-
-        public long delta()
-        {
-            return delta;
-        }
-
-        @Override
-        public void serialize( WritableChannel channel ) throws IOException
-        {
-            channel.put( NeoCommandType.UPDATE_RELATIONSHIP_COUNTS_COMMAND );
-            channel.putInt( startLabelId() )
-                   .putInt( typeId() )
-                   .putInt( endLabelId() )
-                   .putLong( delta() );
-        }
-    }
 }

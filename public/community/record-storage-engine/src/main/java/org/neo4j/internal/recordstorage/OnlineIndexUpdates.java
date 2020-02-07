@@ -36,8 +36,8 @@ import org.neo4j.storageengine.api.StorageNodeCursor;
 import org.neo4j.storageengine.api.StorageReader;
 import org.neo4j.storageengine.api.StorageRelationshipScanCursor;
 
-import static org.neo4j.internal.recordstorage.Command.Mode.CREATE;
-import static org.neo4j.internal.recordstorage.Command.Mode.DELETE;
+import static org.neo4j.storageengine.api.StorageCommonCommand.Mode.CREATE;
+import static org.neo4j.storageengine.api.StorageCommonCommand.Mode.DELETE;
 import static org.neo4j.io.IOUtils.closeAllUnchecked;
 import static org.neo4j.kernel.impl.store.NodeLabelsField.parseLabelsField;
 

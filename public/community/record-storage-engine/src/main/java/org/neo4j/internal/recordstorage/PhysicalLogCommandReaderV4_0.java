@@ -45,6 +45,7 @@ import org.neo4j.kernel.impl.store.record.RelationshipRecord;
 import org.neo4j.kernel.impl.store.record.RelationshipTypeTokenRecord;
 import org.neo4j.kernel.impl.store.record.SchemaRecord;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryVersion;
+import org.neo4j.storageengine.api.StorageCommonCommand;
 import org.neo4j.string.UTF8;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.Values;
@@ -809,8 +810,7 @@ public class PhysicalLogCommandReaderV4_0 extends BaseCommandReader
     {
         int labelId = channel.getInt();
         long delta = channel.getLong();
-        return new Command.NodeCountsCommand( labelId, delta );
-    }
+        return new Command.PackagedCommand( new StorageCommonCommand.NodeCountsCommand( labelId, delta ));    }
 
     private Command visitRelationshipCountsCommand( ReadableChannel channel ) throws IOException
     {
@@ -818,7 +818,7 @@ public class PhysicalLogCommandReaderV4_0 extends BaseCommandReader
         int typeId = channel.getInt();
         int endLabelId = channel.getInt();
         long delta = channel.getLong();
-        return new Command.RelationshipCountsCommand( startLabelId, typeId, endLabelId, delta );
+        return new Command.PackagedCommand(new StorageCommonCommand.RelationshipCountsCommand( startLabelId, typeId, endLabelId, delta ));
     }
 
     static void markAfterRecordAsCreatedIfCommandLooksCreated( AbstractBaseRecord before, AbstractBaseRecord after )

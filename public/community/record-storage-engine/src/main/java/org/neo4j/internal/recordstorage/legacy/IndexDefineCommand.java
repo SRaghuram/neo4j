@@ -33,6 +33,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.neo4j.internal.recordstorage.Command;
 import org.neo4j.internal.recordstorage.CommandVisitor;
+import org.neo4j.internal.recordstorage.CommonCommandVisitor;
 import org.neo4j.internal.recordstorage.NeoCommandType;
 import org.neo4j.io.fs.WritableChannel;
 import org.neo4j.util.VisibleForTesting;
@@ -214,5 +215,10 @@ public class IndexDefineCommand extends Command
                 throw new UncheckedIOException( e );
             }
         } );
+    }
+
+    @Override
+    public boolean handle(CommonCommandVisitor handler) throws IOException {
+        return false;
     }
 }

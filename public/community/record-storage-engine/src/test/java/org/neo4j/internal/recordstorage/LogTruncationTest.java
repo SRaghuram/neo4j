@@ -27,8 +27,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.neo4j.internal.recordstorage.Command.NodeCountsCommand;
-import org.neo4j.internal.recordstorage.Command.RelationshipCountsCommand;
+import org.neo4j.storageengine.api.StorageCommonCommand;
+import org.neo4j.storageengine.api.StorageCommonCommand.NodeCountsCommand;
+import org.neo4j.storageengine.api.StorageCommonCommand.RelationshipCountsCommand;
 import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.internal.schema.IndexPrototype;
 import org.neo4j.internal.schema.SchemaDescriptor;
@@ -92,9 +93,11 @@ class LogTruncationTest
                         createLabelTokenRecord( 1 ) ) } );
 
         // Counts commands
-        permutations.put( NodeCountsCommand.class, new Command[]{new NodeCountsCommand( 42, 11 )} );
+        StorageCommonCommand cmd = new NodeCountsCommand( 42, 11 );
+        permutations.put( NodeCountsCommand.class, new Command[]{ (Command)cmd} );
+        cmd = new RelationshipCountsCommand( 17, 2, 13, -2 );
         permutations.put( RelationshipCountsCommand.class,
-                new Command[]{new RelationshipCountsCommand( 17, 2, 13, -2 )} );
+                new Command[]{(Command)cmd} );
     }
 
     @Test

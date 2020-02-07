@@ -25,6 +25,7 @@ import java.util.Objects;
 
 import org.neo4j.internal.recordstorage.Command;
 import org.neo4j.internal.recordstorage.CommandVisitor;
+import org.neo4j.internal.recordstorage.CommonCommandVisitor;
 import org.neo4j.internal.recordstorage.NeoCommandType;
 import org.neo4j.io.fs.WritableChannel;
 
@@ -243,6 +244,10 @@ public abstract class IndexCommand extends Command
             channel.put( NeoCommandType.INDEX_ADD_COMMAND );
             writeToFile( channel );
         }
+        @Override
+        public boolean handle(CommonCommandVisitor handler) throws IOException {
+            return false;
+        }
     }
 
     protected static byte needsLong( long value )
@@ -335,6 +340,10 @@ public abstract class IndexCommand extends Command
             putIntOrLong( channel, getStartNode() );
             putIntOrLong( channel, getEndNode() );
         }
+        @Override
+        public boolean handle(CommonCommandVisitor handler) throws IOException {
+            return false;
+        }
     }
 
     public static class RemoveCommand extends IndexCommand
@@ -363,6 +372,10 @@ public abstract class IndexCommand extends Command
             channel.put( NeoCommandType.INDEX_REMOVE_COMMAND );
             writeToFile( channel );
         }
+        @Override
+        public boolean handle(CommonCommandVisitor handler) throws IOException {
+            return false;
+        }
     }
 
     public static class DeleteCommand extends IndexCommand
@@ -389,6 +402,10 @@ public abstract class IndexCommand extends Command
         {
             channel.put( NeoCommandType.INDEX_DELETE_COMMAND );
             writeIndexCommandHeader( channel );
+        }
+        @Override
+        public boolean handle(CommonCommandVisitor handler) throws IOException {
+            return false;
         }
     }
 
@@ -456,6 +473,10 @@ public abstract class IndexCommand extends Command
                 write2bLengthAndString( channel, entry.getKey() );
                 write2bLengthAndString( channel, entry.getValue() );
             }
+        }
+        @Override
+        public boolean handle(CommonCommandVisitor handler) throws IOException {
+            return false;
         }
     }
 

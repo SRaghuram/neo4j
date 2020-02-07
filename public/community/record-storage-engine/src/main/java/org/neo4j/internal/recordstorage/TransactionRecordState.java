@@ -30,7 +30,7 @@ import java.util.function.Function;
 
 import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
-import org.neo4j.internal.recordstorage.Command.Mode;
+import org.neo4j.storageengine.api.StorageCommonCommand.Mode;
 import org.neo4j.internal.recordstorage.RecordAccess.RecordProxy;
 import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.internal.schema.SchemaRule;

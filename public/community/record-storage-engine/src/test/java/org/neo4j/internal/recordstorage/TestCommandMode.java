@@ -22,7 +22,7 @@ package org.neo4j.internal.recordstorage;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.neo4j.internal.recordstorage.Command.Mode.fromRecordState;
+import static org.neo4j.storageengine.api.StorageCommonCommand.Mode.fromRecordState;
 
 class TestCommandMode
 {

@@ -57,6 +57,7 @@ import org.neo4j.kernel.impl.store.record.RelationshipTypeTokenRecord;
 import org.neo4j.kernel.impl.store.record.SchemaRecord;
 import org.neo4j.kernel.impl.storemigration.legacy.SchemaRuleSerialization35;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryVersion;
+import org.neo4j.storageengine.api.StorageCommonCommand;
 
 import static org.neo4j.internal.helpers.Numbers.unsignedShortToInt;
 import static org.neo4j.internal.recordstorage.CommandReading.COLLECTION_DYNAMIC_RECORD_ADDER;
@@ -733,7 +734,7 @@ public class PhysicalLogCommandReaderV3_0_10 extends BaseCommandReader
     {
         int labelId = channel.getInt();
         long delta = channel.getLong();
-        return new Command.NodeCountsCommand( labelId, delta );
+        return new Command.PackagedCommand(new StorageCommonCommand.NodeCountsCommand( labelId, delta ));
     }
 
     private Command visitRelationshipCountsCommand( ReadableChannel channel ) throws IOException
@@ -742,7 +743,7 @@ public class PhysicalLogCommandReaderV3_0_10 extends BaseCommandReader
         int typeId = channel.getInt();
         int endLabelId = channel.getInt();
         long delta = channel.getLong();
-        return new Command.RelationshipCountsCommand( startLabelId, typeId, endLabelId, delta );
+        return new Command.PackagedCommand(new StorageCommonCommand.RelationshipCountsCommand( startLabelId, typeId, endLabelId, delta ));
     }
 
     private MutableObjectIntMap<String> readMap( ReadableChannel channel ) throws IOException

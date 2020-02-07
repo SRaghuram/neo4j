@@ -23,20 +23,19 @@ import java.io.IOException;
 
 import org.neo4j.internal.recordstorage.Command.LabelTokenCommand;
 import org.neo4j.internal.recordstorage.Command.NodeCommand;
-import org.neo4j.internal.recordstorage.Command.NodeCountsCommand;
 import org.neo4j.internal.recordstorage.Command.PropertyCommand;
 import org.neo4j.internal.recordstorage.Command.PropertyKeyTokenCommand;
 import org.neo4j.internal.recordstorage.Command.RelationshipCommand;
-import org.neo4j.internal.recordstorage.Command.RelationshipCountsCommand;
 import org.neo4j.internal.recordstorage.Command.RelationshipGroupCommand;
 import org.neo4j.internal.recordstorage.Command.RelationshipTypeTokenCommand;
 import org.neo4j.internal.recordstorage.Command.SchemaRuleCommand;
+import org.neo4j.storageengine.api.StorageCommonCommand;
 
 /**
  * An interface for dealing with commands, either reading or writing them. See also {@link TransactionApplier}. The
  * methods in this class should almost always return false, unless something went wrong.
  */
-public interface CommandVisitor
+public interface CommandVisitor extends CommonCommandVisitor
 {
     // Store commands
     boolean visitNodeCommand( NodeCommand command ) throws IOException;
@@ -54,10 +53,6 @@ public interface CommandVisitor
     boolean visitPropertyKeyTokenCommand( PropertyKeyTokenCommand command ) throws IOException;
 
     boolean visitSchemaRuleCommand( SchemaRuleCommand command ) throws IOException;
-
-    boolean visitNodeCountsCommand( NodeCountsCommand command ) throws IOException;
-
-    boolean visitRelationshipCountsCommand( RelationshipCountsCommand command ) throws IOException;
 
     /**
      * An empty implementation of a {@link CommandVisitor}. Allows you to implement only the methods you are
@@ -115,13 +110,13 @@ public interface CommandVisitor
         }
 
         @Override
-        public boolean visitNodeCountsCommand( NodeCountsCommand command )
+        public boolean visitNodeCountsCommand( StorageCommonCommand.NodeCountsCommand command )
         {
             return false;
         }
 
         @Override
-        public boolean visitRelationshipCountsCommand( RelationshipCountsCommand command )
+        public boolean visitRelationshipCountsCommand( StorageCommonCommand.RelationshipCountsCommand command )
         {
             return false;
         }
