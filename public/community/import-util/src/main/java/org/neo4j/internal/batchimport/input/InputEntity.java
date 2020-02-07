@@ -95,6 +95,14 @@ public class InputEntity implements InputEntityVisitor
     }
 
     @Override
+    public boolean property( String key, Object value, Object strValue )
+    {
+        checkClear();
+        properties.add( key );
+        properties.add( value );
+        return delegate.property( key, value, strValue );
+    }
+    @Override
     public boolean property( int propertyKeyId, Object value )
     {
         checkClear();

@@ -30,7 +30,9 @@ public interface InputEntityVisitor extends Closeable
 {
     boolean propertyId( long nextProp );
 
-    boolean property( String key, Object value );
+    boolean property( String key, Object value, Object stringValue );
+
+    boolean property( String key, Object value);
 
     boolean property( int propertyKeyId, Object value );
 
@@ -61,7 +63,10 @@ public interface InputEntityVisitor extends Closeable
     class Adapter implements InputEntityVisitor
     {
         @Override
-        public boolean property( String key, Object value )
+        public boolean property( String key, Object value){ return true; }
+
+        @Override
+        public boolean property( String key, Object value, Object strValue)
         {
             return true;
         }
@@ -165,9 +170,14 @@ public interface InputEntityVisitor extends Closeable
         }
 
         @Override
-        public boolean property( String key, Object value )
+        public boolean property( String key, Object value)
         {
-            return actual.property( key, value );
+            return property(key, value, null);
+        }
+        @Override
+        public boolean property( String key, Object value, Object strValue )
+        {
+            return actual.property( key, value, strValue );
         }
 
         @Override
