@@ -6,24 +6,24 @@
 package org.neo4j.cypher.internal.runtime.pipelined.operators
 
 import org.neo4j.codegen.api.Field
-import org.neo4j.codegen.api.IntermediateRepresentation.field
-import org.neo4j.codegen.api.IntermediateRepresentation.isNotNull
-import org.neo4j.codegen.api.IntermediateRepresentation.invoke
-import org.neo4j.codegen.api.IntermediateRepresentation.constant
-import org.neo4j.codegen.api.IntermediateRepresentation.isNull
-import org.neo4j.codegen.api.IntermediateRepresentation.setField
-import org.neo4j.codegen.api.IntermediateRepresentation.newInstance
-import org.neo4j.codegen.api.IntermediateRepresentation.constructor
-import org.neo4j.codegen.api.IntermediateRepresentation.invokeStatic
-import org.neo4j.codegen.api.IntermediateRepresentation.not
-import org.neo4j.codegen.api.IntermediateRepresentation.labeledLoop
+import org.neo4j.codegen.api.IntermediateRepresentation
 import org.neo4j.codegen.api.IntermediateRepresentation.and
-import org.neo4j.codegen.api.IntermediateRepresentation.or
-import org.neo4j.codegen.api.IntermediateRepresentation.loadField
 import org.neo4j.codegen.api.IntermediateRepresentation.block
 import org.neo4j.codegen.api.IntermediateRepresentation.condition
+import org.neo4j.codegen.api.IntermediateRepresentation.constant
+import org.neo4j.codegen.api.IntermediateRepresentation.constructor
+import org.neo4j.codegen.api.IntermediateRepresentation.field
+import org.neo4j.codegen.api.IntermediateRepresentation.invoke
+import org.neo4j.codegen.api.IntermediateRepresentation.invokeStatic
+import org.neo4j.codegen.api.IntermediateRepresentation.isNotNull
+import org.neo4j.codegen.api.IntermediateRepresentation.isNull
+import org.neo4j.codegen.api.IntermediateRepresentation.loadField
+import org.neo4j.codegen.api.IntermediateRepresentation.loop
 import org.neo4j.codegen.api.IntermediateRepresentation.method
-import org.neo4j.codegen.api.IntermediateRepresentation
+import org.neo4j.codegen.api.IntermediateRepresentation.newInstance
+import org.neo4j.codegen.api.IntermediateRepresentation.not
+import org.neo4j.codegen.api.IntermediateRepresentation.or
+import org.neo4j.codegen.api.IntermediateRepresentation.setField
 import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.InputCursor
@@ -38,7 +38,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.InputOperator.nodeO
 import org.neo4j.cypher.internal.runtime.pipelined.operators.InputOperator.relationshipOrNoValue
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.QUERY_STATE
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profileRow
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.OUTER_LOOP_LABEL_NAME
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
@@ -225,7 +224,7 @@ class InputOperatorTemplate(override val inner: OperatorTaskTemplate,
         block(
           setField(canContinue, invoke(loadField(inputCursorField), method[MutatingInputCursor, Boolean]("nextInput"))),
           profileRow(id, loadField(canContinue)))),
-      labeledLoop(OUTER_LOOP_LABEL_NAME, and(innermost.predicate, loadField(canContinue)))(
+      loop(and(innermost.predicate, loadField(canContinue)))(
         block(
           setters,
           inner.genOperateWithExpressions,

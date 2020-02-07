@@ -14,7 +14,6 @@ import org.neo4j.codegen.api.IntermediateRepresentation.condition
 import org.neo4j.codegen.api.IntermediateRepresentation.constant
 import org.neo4j.codegen.api.IntermediateRepresentation.field
 import org.neo4j.codegen.api.IntermediateRepresentation.ifElse
-import org.neo4j.codegen.api.IntermediateRepresentation.labeledLoop
 import org.neo4j.codegen.api.IntermediateRepresentation.loadField
 import org.neo4j.codegen.api.IntermediateRepresentation.loop
 import org.neo4j.codegen.api.IntermediateRepresentation.not
@@ -26,7 +25,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.OUTER_LOOP_LABEL_NAME
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_ROW_IS_VALID
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_ROW_MOVE_TO_NEXT
 import org.neo4j.cypher.internal.util.attribution.Id
@@ -188,7 +186,7 @@ abstract class InputLoopTaskTemplate(override val inner: OperatorTaskTemplate,
     //
     //outputRow.finishedWriting()
     block(
-      labeledLoop(OUTER_LOOP_LABEL_NAME, and(or(INPUT_ROW_IS_VALID, loadField(innerLoop)), innermost.predicate))(
+      loop(and(or(INPUT_ROW_IS_VALID, loadField(innerLoop)), innermost.predicate))(
         block(
           // Initialize the inner loop
           doInitializeInnerLoopOrRestoreContinuationState,

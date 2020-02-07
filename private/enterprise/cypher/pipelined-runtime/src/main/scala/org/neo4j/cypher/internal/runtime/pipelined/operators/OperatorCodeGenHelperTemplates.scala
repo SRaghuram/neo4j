@@ -179,8 +179,6 @@ object OperatorCodeGenHelperTemplates {
   val ALLOCATE_TRAVERSAL_CURSOR: IntermediateRepresentation = allocateCursor(TraversalCursorPool)
   val ALLOCATE_REL_SCAN_CURSOR: IntermediateRepresentation = allocateCursor(RelScanCursorPool)
 
-  val OUTER_LOOP_LABEL_NAME: String = "outerLoop"
-
   val INPUT_ROW_IS_VALID: IntermediateRepresentation = invoke(loadField(INPUT_MORSEL), method[MorselCypherRow, Boolean]("isValidRow"))
   val OUTPUT_ROW_IS_VALID: IntermediateRepresentation = invoke(OUTPUT_ROW, method[MorselCypherRow, Boolean]("isValidRow"))
   val OUTPUT_ROW_FINISHED_WRITING: IntermediateRepresentation = invokeSideEffect(OUTPUT_ROW, method[MorselCypherRow, Unit]("finishedWriting"))
