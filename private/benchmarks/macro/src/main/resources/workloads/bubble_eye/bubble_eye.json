@@ -49,6 +49,14 @@
       "parameters": {
         "file": "parameters/apps.txt"
       }
+    },
+    {
+      "name": "Q6 -- Sub Query",
+      "description": "Q6, modified with correlated sub-queries",
+      "queryFile": "queries/Q6_subquery.cypher",
+      "parameters": {
+        "file": "parameters/apps.txt"
+      }
     }
   ]
 }
