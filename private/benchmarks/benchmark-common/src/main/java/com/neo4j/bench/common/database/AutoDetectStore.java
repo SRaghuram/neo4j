@@ -134,9 +134,9 @@ public class AutoDetectStore extends Store
     }
 
     @Override
-    public String databaseName()
+    public DatabaseName databaseName()
     {
-        return graphDbDirectory().getFileName().toString();
+        return DatabaseName.ofNullable( graphDbDirectory().getFileName().toString() );
     }
 
     @Override

@@ -141,7 +141,7 @@ public class EmbeddedDatabase implements Database
         requireNonNull( managementService );
         this.store = store;
         this.managementService = managementService;
-        this.db = managementService.database( store.databaseName() );
+        this.db = managementService.database( store.databaseName().name() );
         this.resultVisitor = new CountingResultVisitor();
     }
 

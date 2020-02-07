@@ -17,36 +17,33 @@ import org.neo4j.io.layout.Neo4jLayout;
 
 public class Neo4jStore extends Store
 {
-    // Copy from GraphDatabaseSettings
-    private static final String SYSTEM_DATABASE_NAME = "system";
-    public static final String DEFAULT_DATABASE_NAME = "neo4j";
     private final Path homeDir;
     private final boolean isTemporaryCopy;
     private final Neo4jLayout layout;
-    private final String databaseName;
+    private final DatabaseName databaseName;
 
-    private Neo4jStore( Path homeDir, String databaseName, boolean isTemporaryCopy )
+    private Neo4jStore( Path homeDir, DatabaseName databaseName, boolean isTemporaryCopy )
     {
-        this.databaseName = databaseName;
         BenchmarkUtil.assertDirectoryExists( homeDir );
         this.homeDir = homeDir;
+        this.databaseName = Objects.requireNonNull( databaseName );
         this.isTemporaryCopy = isTemporaryCopy;
         this.layout = Neo4jLayout.of( homeDir.toFile() );
     }
 
     public static Neo4jStore createFrom( Path originalTopLevelDir )
     {
-        return new Neo4jStore( originalTopLevelDir, DEFAULT_DATABASE_NAME, false );
+        return new Neo4jStore( originalTopLevelDir, DatabaseName.defaultDatabase(), false );
     }
 
-    public static Neo4jStore createFrom( Path originalTopLevelDir, String databaseName )
+    public static Neo4jStore createFrom( Path originalTopLevelDir, DatabaseName databaseName )
     {
         return new Neo4jStore( originalTopLevelDir, databaseName, false );
     }
 
     public static Neo4jStore createTemporaryFrom( Path originalTopLevelDir )
     {
-        return new Neo4jStore( originalTopLevelDir, DEFAULT_DATABASE_NAME, true );
+        return new Neo4jStore( originalTopLevelDir, DatabaseName.defaultDatabase(), true );
     }
 
     @Override
@@ -84,11 +81,11 @@ public class Neo4jStore extends Store
     @Override
     public Path graphDbDirectory()
     {
-        return layout.databaseLayout( databaseName ).databaseDirectory().toPath();
+        return layout.databaseLayout( databaseName.name() ).databaseDirectory().toPath();
     }
 
     @Override
-    public String databaseName()
+    public DatabaseName databaseName()
     {
         return databaseName;
     }
@@ -96,7 +93,7 @@ public class Neo4jStore extends Store
     @Override
     public void removeTxLogs()
     {
-        DatabaseLayout databaseLayout = layout.databaseLayout( databaseName );
+        DatabaseLayout databaseLayout = layout.databaseLayout( databaseName.name() );
         Arrays.stream( Objects.requireNonNull( databaseLayout.getTransactionLogsDirectory().listFiles() ) )
                 .forEach( File::delete );
     }

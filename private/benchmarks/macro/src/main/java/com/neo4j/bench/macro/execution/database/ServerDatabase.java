@@ -6,6 +6,7 @@
 package com.neo4j.bench.macro.execution.database;
 
 import com.neo4j.bench.common.Neo4jConfigBuilder;
+import com.neo4j.bench.common.database.DatabaseName;
 import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.common.process.Pid;
 import com.neo4j.bench.common.util.Jvm;
@@ -42,14 +43,14 @@ public class ServerDatabase implements Database
                                               Redirect errorRedirect,
                                               Path copyLogsToOnClose )
     {
-        String databaseName = store.databaseName();
+        DatabaseName databaseName = store.databaseName();
 
         Neo4jConfigBuilder.fromFile( neo4jConfigFile )
                           .setBoltUri( generateBoltUriString() )
                           .withSetting( GraphDatabaseSettings.auth_enabled, FALSE )
                           .withSetting( GraphDatabaseSettings.databases_root_path,
                                         store.topLevelDirectory().resolve( "data" ).resolve( "databases" ).toString() )
-                          .withSetting( GraphDatabaseSettings.default_database, databaseName )
+                          .withSetting( GraphDatabaseSettings.default_database, databaseName.name() )
                           .withSetting( GraphDatabaseSettings.transaction_logs_root_path,
                                         store.topLevelDirectory().resolve( "data" ).resolve( "transactions" ).toString() )
                           .writeToFile( neo4jConfigFile );
@@ -66,20 +67,20 @@ public class ServerDatabase implements Database
         return "127.0.0.1:7687";
     }
 
-    public static ServerDatabase connectClient( URI boltUri, String databaseName, Pid pid )
+    public static ServerDatabase connectClient( URI boltUri, DatabaseName databaseName, Pid pid )
     {
         return new ServerDatabase( null, boltUri, databaseName, pid, null );
     }
 
     private final Neo4jServerWrapper neo4jServer;
     private final URI boltUri;
-    private final String databaseName;
+    private final DatabaseName databaseName;
     private final Pid pid;
     private final Driver driver;
     private final Session session;
     private final Path copyLogsToOnClose;
 
-    private ServerDatabase( Neo4jServerWrapper neo4jServer, URI boltUri, String databaseName, Pid pid, Path copyLogsToOnClose )
+    private ServerDatabase( Neo4jServerWrapper neo4jServer, URI boltUri, DatabaseName databaseName, Pid pid, Path copyLogsToOnClose )
     {
         this.neo4jServer = neo4jServer;
         this.boltUri = Objects.requireNonNull( boltUri );
@@ -95,14 +96,10 @@ public class ServerDatabase implements Database
             this.driver = GraphDatabase.driver( boltUri,
                                                 AuthTokens.none(),
                                                 driverConfig );
-            if (databaseName == null)
-            {
-                this.session = driver.session();
-            }
-            else
-            {
-                this.session = driver.session( SessionConfig.builder().withDatabase( this.databaseName ).build() );
-            }
+
+            this.session = driver.session( SessionConfig.builder()
+                                                        .withDatabase( this.databaseName.name() )
+                                                        .build() );
         }
         catch ( Exception e )
         {

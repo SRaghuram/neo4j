@@ -29,7 +29,7 @@ public abstract class Store implements AutoCloseable
 
     public abstract Path graphDbDirectory();
 
-    public abstract String databaseName();
+    public abstract DatabaseName databaseName();
 
     public void removeIndexDir()
     {

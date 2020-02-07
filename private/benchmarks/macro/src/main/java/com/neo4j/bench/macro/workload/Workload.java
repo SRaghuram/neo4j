@@ -8,6 +8,7 @@ package com.neo4j.bench.macro.workload;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Sets;
 import com.google.common.io.CharStreams;
+import com.neo4j.bench.common.database.DatabaseName;
 import com.neo4j.bench.common.model.BenchmarkGroup;
 import com.neo4j.bench.common.tool.macro.DeploymentMode;
 import com.neo4j.bench.common.util.Resources;
@@ -23,6 +24,7 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -42,7 +44,7 @@ public class Workload
     private final String name;
     private final Path configFile;
     private final Schema schema;
-    private final String databaseName;
+    private final DatabaseName databaseName;
 
     public static Workload fromName( String workloadName, Resources resources, DeploymentMode mode )
     {
@@ -144,7 +146,7 @@ public class Workload
             }
             Path schemaFile = workloadConfigFile.getParent().resolve( (String) config.get( SCHEMA ) );
             Schema schema = loadSchema( schemaFile );
-            String databaseName = (String) config.get( DATABASE_NAME );
+            DatabaseName databaseName = DatabaseName.ofNullable( (String) config.get( DATABASE_NAME ) );
             return new Workload( queries, workloadName, workloadConfigFile, schema, databaseName );
         }
         catch ( WorkloadConfigException e )
@@ -233,13 +235,13 @@ public class Workload
         }
     }
 
-    private Workload( List<Query> queries, String name, Path configFile, Schema schema, String databaseName )
+    private Workload( List<Query> queries, String name, Path configFile, Schema schema, DatabaseName databaseName )
     {
         this.queries = queries;
         this.name = name;
         this.configFile = configFile;
         this.schema = schema;
-        this.databaseName = databaseName;
+        this.databaseName = Objects.requireNonNull( databaseName );
     }
 
     public Schema expectedSchema()
@@ -287,7 +289,7 @@ public class Workload
                "\tconfigFile  : " + configFile;
     }
 
-    public String getDatabaseName()
+    public DatabaseName getDatabaseName()
     {
         return databaseName;
     }
