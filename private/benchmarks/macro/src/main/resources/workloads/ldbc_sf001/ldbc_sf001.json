@@ -73,6 +73,14 @@
       }
     },
     {
+      "name": "Read 10 -- Sub Query",
+      "description": "Read 10, modified with correlated sub-queries",
+      "queryFile": "queries/query_10_subquery.cypher",
+      "parameters": {
+        "file": "parameters/query_10.txt"
+      }
+    },
+    {
       "name": "Read 11",
       "queryFile": "queries/query_11.cypher",
       "parameters": {
