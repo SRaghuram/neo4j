@@ -25,6 +25,7 @@ import org.neo4j.counts.CountsVisitor;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.storageengine.api.CountsDelta;
 import org.neo4j.storageengine.api.StorageCommand;
+import org.neo4j.storageengine.api.StorageCommonCommand;
 
 /**
  * A {@link CountsDelta} with an additional capability of turning counts into {@link StorageCommand commands} for storage.
@@ -60,7 +61,8 @@ public class CountsRecordState extends CountsDelta implements RecordState
         {
             if ( count != 0 )
             {   // Only add commands for counts that actually change
-                commands.add( new Command.NodeCountsCommand( labelId, count ) );
+                commands.add(new StorageCommonCommand.NodeCountsCommand(labelId, count));
+                //commands.add( new Command.NodeCountsCommand( labelId, count ) );
             }
         }
 
@@ -69,7 +71,8 @@ public class CountsRecordState extends CountsDelta implements RecordState
         {
             if ( count != 0 )
             {   // Only add commands for counts that actually change
-                commands.add( new Command.RelationshipCountsCommand( startLabelId, typeId, endLabelId, count ) );
+                commands.add( new StorageCommonCommand.RelationshipCountsCommand( startLabelId, typeId, endLabelId, count ) );
+                //commands.add( new Command.RelationshipCountsCommand( startLabelId, typeId, endLabelId, count ) );
             }
         }
     }
