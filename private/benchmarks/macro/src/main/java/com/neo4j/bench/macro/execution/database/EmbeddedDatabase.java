@@ -116,10 +116,6 @@ public class EmbeddedDatabase implements Database
         {
             verifySchema( db, expectedSchema );
         }
-        catch ( Exception e )
-        {
-            e.printStackTrace(  );
-        }
     }
 
     private static void verifySchema( EmbeddedDatabase db, Schema expectedSchema )
@@ -151,8 +147,7 @@ public class EmbeddedDatabase implements Database
 
     private boolean isRunning()
     {
-//        return db != null && db.isAvailable( MINUTES.toMillis( 5 ) );
-        return db != null && db.isAvailable( SECONDS.toMillis( 5 ) );
+        return db != null && db.isAvailable( MINUTES.toMillis( 5 ) );
     }
 
     private static DatabaseManagementService newDb( Store store, Edition edition, Neo4jConfig neo4jConfig )
@@ -358,7 +353,6 @@ public class EmbeddedDatabase implements Database
     {
         return "Neo4j EmbeddedDatabase\n" +
                "\t* Path:    " + store.topLevelDirectory().toAbsolutePath() + "\n" +
-               //"\t* Running: " + isRunning() + "\n" +
                "\t* Size:    " + BenchmarkUtil.bytesToString( store.bytes() );
     }
 
