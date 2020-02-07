@@ -11,14 +11,13 @@ import org.neo4j.codegen.api.Field
 import org.neo4j.codegen.api.IntermediateRepresentation
 import org.neo4j.codegen.api.IntermediateRepresentation.assign
 import org.neo4j.codegen.api.IntermediateRepresentation.block
-import org.neo4j.codegen.api.IntermediateRepresentation.break
 import org.neo4j.codegen.api.IntermediateRepresentation.cast
 import org.neo4j.codegen.api.IntermediateRepresentation.condition
 import org.neo4j.codegen.api.IntermediateRepresentation.constant
 import org.neo4j.codegen.api.IntermediateRepresentation.field
+import org.neo4j.codegen.api.IntermediateRepresentation.greaterThan
 import org.neo4j.codegen.api.IntermediateRepresentation.invoke
 import org.neo4j.codegen.api.IntermediateRepresentation.invokeStatic
-import org.neo4j.codegen.api.IntermediateRepresentation.lessThanOrEqual
 import org.neo4j.codegen.api.IntermediateRepresentation.load
 import org.neo4j.codegen.api.IntermediateRepresentation.loadField
 import org.neo4j.codegen.api.IntermediateRepresentation.method
@@ -42,7 +41,6 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.LimitOperator.LimitState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.LimitOperator.evaluateCountValue
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.OUTER_LOOP_LABEL_NAME
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.OUTPUT_COUNTER
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.OUTPUT_ROW
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profileRows
@@ -261,11 +259,11 @@ class SerialTopLevelLimitOperatorTaskTemplate(val inner: OperatorTaskTemplate,
 
   override def genOperate: IntermediateRepresentation = {
     block(
-      condition(lessThanOrEqual(load(countLeftVar), constant(0L))) (
-        break(OUTER_LOOP_LABEL_NAME)
-      ),
-      assign(countLeftVar, subtract(load(countLeftVar), constant(1L))),
-      inner.genOperateWithExpressions
+      condition(greaterThan(load(countLeftVar), constant(0L))) (
+        block(
+          inner.genOperateWithExpressions,
+          doIfInnerCantContinue(assign(countLeftVar, subtract(load(countLeftVar), constant(1L)))))
+      )
     )
   }
 
