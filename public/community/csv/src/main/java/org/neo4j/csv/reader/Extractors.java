@@ -360,6 +360,7 @@ public class Extractors
 
     private abstract static class AbstractSingleValueExtractor<T> extends AbstractExtractor<T>
     {
+        String stringValue;
         AbstractSingleValueExtractor( String toString )
         {
             super( toString, null );
@@ -380,7 +381,11 @@ public class Extractors
             }
             return extract0( data, offset, length, optionalData );
         }
-
+        @Override
+        public Object getStringValue()
+        {
+            return stringValue;
+        }
         @Override
         public final boolean extract( char[] data, int offset, int length, boolean hadQuotes )
         {
@@ -777,6 +782,7 @@ public class Extractors
     {
         protected final char arrayDelimiter;
         protected T value;
+        String[] stringValue;
 
         ArrayExtractor( char arrayDelimiter, Class<?> componentType )
         {
@@ -796,7 +802,11 @@ public class Extractors
             extract0( data, offset, length, optionalData );
             return true;
         }
-
+        @Override
+        public Object getStringValue()
+        {
+            return stringValue;
+        }
         @Override
         public boolean extract( char[] data, int offset, int length, boolean hadQuotes )
         {

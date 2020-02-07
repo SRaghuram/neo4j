@@ -34,7 +34,7 @@ public class ChunkedNumberArrayFactory extends NumberArrayFactory.Adapter
     private static final int MAX_ARRAY_SIZE = Integer.MAX_VALUE - Short.MAX_VALUE;
     private final NumberArrayFactory delegate;
 
-    ChunkedNumberArrayFactory( Monitor monitor )
+    public ChunkedNumberArrayFactory( Monitor monitor )
     {
         this( monitor, OFF_HEAP, HEAP );
     }

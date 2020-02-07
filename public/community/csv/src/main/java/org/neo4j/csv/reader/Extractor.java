@@ -75,4 +75,5 @@ public interface Extractor<T> extends Cloneable
      * @return an extractor which potentially is of a broader type than this extractor.
      */
     Extractor<?> normalize();
+    Object getStringValue();
 }

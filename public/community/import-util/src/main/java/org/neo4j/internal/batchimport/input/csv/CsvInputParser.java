@@ -98,7 +98,8 @@ public class CsvInputParser implements Closeable
                             doContinue = visitor.id( idValue, entry.group() );
                             if ( entry.name() != null )
                             {
-                                doContinue = visitor.property( entry.name(), idValue );
+                                //doContinue = visitor.property( entry.name(), idValue );
+                                doContinue = visitor.property( entry.name(), idValue, entry.extractor().getStringValue() );
                             }
                             break;
                         case ACTUAL:
@@ -158,7 +159,8 @@ public class CsvInputParser implements Closeable
                         Object value = entry.extractor().value();
                         if ( !isEmptyArray( value ) )
                         {
-                            doContinue = visitor.property( entry.name(), value );
+                            //doContinue = visitor.property( entry.name(), value );
+                            doContinue = visitor.property( entry.name(), value, entry.extractor().getStringValue() );
                         }
                     }
                     break;

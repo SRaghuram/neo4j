@@ -28,6 +28,7 @@ package org.neo4j.internal.batchimport.cache;
 public class DynamicIntArray extends DynamicNumberArray<IntArray> implements IntArray
 {
     private final int defaultValue;
+    private long maxIndex = 0;
 
     public DynamicIntArray( NumberArrayFactory factory, long chunkSize, int defaultValue )
     {
@@ -46,11 +47,18 @@ public class DynamicIntArray extends DynamicNumberArray<IntArray> implements Int
     public void set( long index, int value )
     {
         at( index ).set( index, value );
+        if (index > maxIndex)
+            maxIndex = index;
     }
 
     @Override
     protected IntArray addChunk( long chunkSize, long base )
     {
         return factory.newIntArray( chunkSize, defaultValue, base );
+    }
+
+    public long getEntries()
+    {
+        return maxIndex+1;
     }
 }

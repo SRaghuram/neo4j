@@ -194,7 +194,7 @@ class InputEntityDecoratorsTest
         }
         for ( int i = 0; i < properties.length; i++ )
         {
-            entity.property( (String) properties[i++], properties[i] );
+            entity.property( (String) properties[i++], properties[i], null );
         }
     }
 
