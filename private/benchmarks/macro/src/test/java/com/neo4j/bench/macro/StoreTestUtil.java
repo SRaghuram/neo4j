@@ -5,7 +5,9 @@
  */
 package com.neo4j.bench.macro;
 
+import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.database.Store;
+import com.neo4j.bench.common.model.Neo4jConfig;
 import com.neo4j.bench.common.options.Edition;
 import com.neo4j.bench.macro.execution.database.EmbeddedDatabase;
 import com.neo4j.bench.macro.execution.database.Schema;
@@ -24,6 +26,11 @@ public class StoreTestUtil
     {
         try
         {
+            // Ensure defaults are set
+            Neo4jConfigBuilder.withDefaults()
+                              .mergeWith( Neo4jConfigBuilder.fromFile( neo4jConfigFile ).build() )
+                              .writeToFile( neo4jConfigFile );
+
             Store store = TestSupport.createEmptyStore( Files.createTempDirectory( storePath, "store" ), neo4jConfigFile );
             recreateSchema( store, neo4jConfigFile, workload );
             return store;

@@ -147,7 +147,7 @@ public class EmbeddedDatabase implements Database
 
     private boolean isRunning()
     {
-        return db != null && db.isAvailable( MINUTES.toMillis( 5 ) );
+        return db != null && db.isAvailable( SECONDS.toMillis( 5 ) );
     }
 
     private static DatabaseManagementService newDb( Store store, Edition edition, Neo4jConfig neo4jConfig )
