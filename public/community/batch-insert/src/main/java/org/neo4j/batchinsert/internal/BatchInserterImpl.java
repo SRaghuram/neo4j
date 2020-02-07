@@ -64,18 +64,8 @@ import org.neo4j.internal.id.IdValidator;
 import org.neo4j.internal.index.label.NativeLabelScanStore;
 import org.neo4j.internal.kernel.api.InternalIndexState;
 import org.neo4j.internal.kernel.api.exceptions.schema.IndexNotFoundKernelException;
-import org.neo4j.internal.recordstorage.DirectRecordAccessSet;
-import org.neo4j.internal.recordstorage.PropertyCreator;
-import org.neo4j.internal.recordstorage.PropertyDeleter;
-import org.neo4j.internal.recordstorage.PropertyTraverser;
-import org.neo4j.internal.recordstorage.RecordAccess;
+import org.neo4j.internal.recordstorage.*;
 import org.neo4j.internal.recordstorage.RecordAccess.RecordProxy;
-import org.neo4j.internal.recordstorage.RecordStorageReader;
-import org.neo4j.internal.recordstorage.RelationshipCreator;
-import org.neo4j.internal.recordstorage.RelationshipGroupGetter;
-import org.neo4j.internal.recordstorage.SchemaCache;
-import org.neo4j.internal.recordstorage.SchemaRuleAccess;
-import org.neo4j.internal.recordstorage.StoreTokens;
 import org.neo4j.internal.schema.ConstraintDescriptor;
 import org.neo4j.internal.schema.IndexConfig;
 import org.neo4j.internal.schema.IndexDescriptor;
@@ -331,7 +321,7 @@ public class BatchInserterImpl implements BatchInserter
 
             indexProviderMap = life.add( new DefaultIndexProviderMap( databaseExtensions, config ) );
 
-            schemaRuleAccess = SchemaRuleAccess.getSchemaRuleAccess( schemaStore, tokenHolders );
+            schemaRuleAccess = StoreSchemaRuleAccess.getSchemaRuleAccess( schemaStore, tokenHolders );
             schemaCache = new SchemaCache( getConstraintSemantics(), indexProviderMap );
             schemaCache.load( schemaRuleAccess.getAll( cursorTracer ) );
 

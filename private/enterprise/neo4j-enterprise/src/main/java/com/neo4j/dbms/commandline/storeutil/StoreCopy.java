@@ -38,6 +38,7 @@ import org.neo4j.internal.batchimport.staging.SpectrumExecutionMonitor;
 import org.neo4j.internal.id.ScanOnOpenReadOnlyIdGeneratorFactory;
 import org.neo4j.internal.kernel.api.TokenRead;
 import org.neo4j.internal.recordstorage.SchemaRuleAccess;
+import org.neo4j.internal.recordstorage.StoreSchemaRuleAccess;
 import org.neo4j.internal.schema.ConstraintDescriptor;
 import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
@@ -188,7 +189,7 @@ public class StoreCopy
             TokenHolders tokenHolders )
     {
         TokenRead tokenRead = new ReadOnlyTokenRead( tokenHolders );
-        SchemaRuleAccess schemaRuleAccess = SchemaRuleAccess.getSchemaRuleAccess( schemaStore, tokenHolders );
+        SchemaRuleAccess schemaRuleAccess = StoreSchemaRuleAccess.getSchemaRuleAccess( schemaStore, tokenHolders );
         Map<String,IndexDescriptor> indexes = new HashMap<>();
         List<ConstraintDescriptor> constraints = new ArrayList<>();
         schemaRuleAccess.indexesGetAll( TRACER_SUPPLIER.get() ).forEachRemaining( i -> indexes.put( i.getName(), i ) );

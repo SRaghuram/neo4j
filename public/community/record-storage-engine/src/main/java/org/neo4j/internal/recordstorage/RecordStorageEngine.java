@@ -110,7 +110,7 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
     private final IntegrityValidator integrityValidator;
     private final CacheAccessBackDoor cacheAccess;
     private final SchemaState schemaState;
-    private final SchemaRuleAccess schemaRuleAccess;
+    private final StoreSchemaRuleAccess schemaRuleAccess;
     private final ConstraintRuleAccessor constraintSemantics;
     private final LockService lockService;
     private final boolean consistencyCheckApply;
@@ -161,7 +161,7 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
 
         try
         {
-            schemaRuleAccess = SchemaRuleAccess.getSchemaRuleAccess( neoStores.getSchemaStore(), tokenHolders );
+            schemaRuleAccess = (StoreSchemaRuleAccess)StoreSchemaRuleAccess.getSchemaRuleAccess( neoStores.getSchemaStore(), tokenHolders );
             schemaCache = new SchemaCache( constraintSemantics, indexConfigCompleter );
 
             integrityValidator = new IntegrityValidator( neoStores );

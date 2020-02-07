@@ -30,17 +30,10 @@ import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.internal.schema.SchemaDescriptorSupplier;
 import org.neo4j.internal.schema.SchemaRule;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
-import org.neo4j.kernel.impl.store.SchemaStore;
-import org.neo4j.token.TokenHolders;
 import org.neo4j.util.VisibleForTesting;
 
 public interface SchemaRuleAccess
 {
-    static SchemaRuleAccess getSchemaRuleAccess( SchemaStore store, TokenHolders tokenHolders )
-    {
-        return new SchemaStorage( store, tokenHolders );
-    }
-
     long newRuleId( PageCursorTracer cursorTracer );
 
     Iterable<SchemaRule> getAll( PageCursorTracer cursorTracer );
@@ -76,8 +69,6 @@ public interface SchemaRuleAccess
             throws SchemaRuleNotFoundException, DuplicateSchemaRuleException;
 
     Iterator<ConstraintDescriptor> constraintsGetAllIgnoreMalformed( PageCursorTracer cursorTracer );
-
-    SchemaRecordChangeTranslator getSchemaRecordChangeTranslator();
 
     /**
      * Write the given schema rule at the location given by its persistent id, overwriting any data that might be at that location already.

@@ -43,6 +43,7 @@ import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.internal.index.label.LabelScanStore;
 import org.neo4j.internal.recordstorage.SchemaRuleAccess;
+import org.neo4j.internal.recordstorage.StoreSchemaRuleAccess;
 import org.neo4j.internal.recordstorage.StoreTokens;
 import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.kernel.impl.store.RecordStore;
@@ -174,7 +175,7 @@ class ConsistencyCheckTasks
         // PASS 2: Rule integrity and obligation build up
         TokenHolders tokenHolders = StoreTokens.readOnlyTokenHolders( nativeStores.getRawNeoStores(), TRACER_SUPPLIER.get() );
         final SchemaRecordCheck schemaCheck =
-                new SchemaRecordCheck( SchemaRuleAccess.getSchemaRuleAccess( nativeStores.getSchemaStore(), tokenHolders ), indexes );
+                new SchemaRecordCheck( StoreSchemaRuleAccess.getSchemaRuleAccess( nativeStores.getSchemaStore(), tokenHolders ), indexes );
         tasks.add( new SchemaStoreProcessorTask<>( "SchemaStoreProcessor-check_rules", statistics, numberOfThreads,
                 nativeStores.getSchemaStore(), nativeStores, "check_rules",
                 schemaCheck, multiPartBuilder, cacheAccess, defaultProcessor, ROUND_ROBIN ) );

@@ -34,6 +34,7 @@ import org.neo4j.common.EntityType;
 import org.neo4j.function.ThrowingFunction;
 import org.neo4j.internal.kernel.api.InternalIndexState;
 import org.neo4j.internal.recordstorage.SchemaRuleAccess;
+import org.neo4j.internal.recordstorage.StoreSchemaRuleAccess;
 import org.neo4j.internal.recordstorage.StoreTokens;
 import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.io.IOUtils;
@@ -70,7 +71,7 @@ public class IndexAccessors implements Closeable
             throws IOException
     {
         TokenHolders tokenHolders = StoreTokens.readOnlyTokenHolders( neoStores, TRACER_SUPPLIER.get() );
-        Iterator<IndexDescriptor> indexes = SchemaRuleAccess.getSchemaRuleAccess( neoStores.getSchemaStore(), tokenHolders )
+        Iterator<IndexDescriptor> indexes = StoreSchemaRuleAccess.getSchemaRuleAccess( neoStores.getSchemaStore(), tokenHolders )
                 .indexesGetAll( TRACER_SUPPLIER.get() );
         while ( true )
         {

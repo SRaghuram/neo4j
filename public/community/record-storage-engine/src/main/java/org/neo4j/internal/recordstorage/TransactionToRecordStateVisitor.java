@@ -48,7 +48,7 @@ class TransactionToRecordStateVisitor extends TxStateVisitor.Adapter
     private final ConstraintRuleAccessor constraintSemantics;
     private final PageCursorTracer cursorTracer;
 
-    TransactionToRecordStateVisitor( TransactionRecordState recordState, SchemaState schemaState, SchemaRuleAccess schemaRuleAccess,
+    TransactionToRecordStateVisitor( TransactionRecordState recordState, SchemaState schemaState, StoreSchemaRuleAccess schemaRuleAccess,
             ConstraintRuleAccessor constraintSemantics, PageCursorTracer cursorTracer )
     {
         this.recordState = recordState;
