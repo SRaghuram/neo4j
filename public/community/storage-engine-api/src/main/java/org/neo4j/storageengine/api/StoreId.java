@@ -19,9 +19,21 @@
  */
 package org.neo4j.storageengine.api;
 
+import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.io.pagecache.PageCursor;
+import org.neo4j.io.pagecache.PagedFile;
+import org.neo4j.io.pagecache.tracing.cursor.context.EmptyVersionContextSupplier;
+import org.neo4j.kernel.impl.store.MetaDataStoreCommon;
+
+import java.io.File;
+import java.io.IOException;
 import java.security.SecureRandom;
 import java.util.Objects;
 import java.util.Random;
+
+import static org.eclipse.collections.impl.factory.Sets.immutable;
+import static org.neo4j.io.pagecache.PagedFile.PF_SHARED_READ_LOCK;
+import static org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier.TRACER_SUPPLIER;
 
 public final class StoreId
 {
@@ -86,6 +98,11 @@ public final class StoreId
         return storeVersion;
     }
 
+    public String getStoreVersionString()
+    {
+        return MetaDataStoreCommon.versionLongToString(storeVersion);
+    }
+
     @Override
     public boolean equals( Object o )
     {
@@ -135,5 +152,44 @@ public final class StoreId
                 ", upgradeTime=" + upgradeTime +
                 ", upgradeTxId=" + upgradeTxId +
                 '}';
+    }
+
+    public static StoreId getStoreId(PageCache pageCache, File neoStore ) throws IOException
+    {
+        return new StoreId(
+                getRecord( pageCache, neoStore, MetaDataStoreCommon.Position.TIME ),
+                getRecord( pageCache, neoStore, MetaDataStoreCommon.Position.RANDOM_NUMBER ),
+                getRecord( pageCache, neoStore, MetaDataStoreCommon.Position.STORE_VERSION ),
+                getRecord( pageCache, neoStore, MetaDataStoreCommon.Position.UPGRADE_TIME ),
+                getRecord( pageCache, neoStore, MetaDataStoreCommon.Position.UPGRADE_TRANSACTION_ID )
+        );
+    }
+
+    // this is just to read the storeid
+    public static long getRecord(PageCache pageCache, File neoStore, MetaDataStoreCommon.Position position ) throws IOException
+    {
+        //MetaDataRecordFormat format = new MetaDataRecordFormat();
+        int pageSize = MetaDataStoreCommon.getPageSize( pageCache );
+        long value = MetaDataStoreCommon.FIELD_NOT_PRESENT;
+        int offset = MetaDataStoreCommon.RECORD_SIZE * position.id;;//offset( position );
+        try ( PagedFile pagedFile = pageCache.map( neoStore, EmptyVersionContextSupplier.EMPTY, pageSize, immutable.empty()  ) )
+        {
+            if ( pagedFile.getLastPageId() >= 0 )
+            {
+                try ( PageCursor cursor = pagedFile.io( 0, PF_SHARED_READ_LOCK, TRACER_SUPPLIER.get() ) )
+                {
+                    if ( cursor.next() )
+                    {
+                        cursor.setOffset( offset );
+                        byte inUse = cursor.getByte();
+                        if ( inUse == MetaDataStoreCommon.Record.IN_USE.byteValue() )
+                        {
+                            value = cursor.getLong();
+                        }
+                    }
+                }
+            }
+        }
+        return value;
     }
 }

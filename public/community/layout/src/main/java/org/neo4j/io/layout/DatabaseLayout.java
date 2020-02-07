@@ -49,6 +49,7 @@ public class DatabaseLayout
     private final File databaseDirectory;
     private final Neo4jLayout neo4jLayout;
     private final String databaseName;
+    private String storageFactoryClassName = null;
 
     public static DatabaseLayout ofFlat( File databaseDirectory )
     {
@@ -343,5 +344,15 @@ public class DatabaseLayout
         return Objects.equals( databaseDirectory, that.databaseDirectory ) &&
                Objects.equals( neo4jLayout, that.neo4jLayout ) &&
                getTransactionLogsDirectory().equals( that.getTransactionLogsDirectory() );
+    }
+
+    public void putStorageFactoryClassName(String storageFactoryClassName)
+    {
+        this.storageFactoryClassName = storageFactoryClassName.substring(storageFactoryClassName.lastIndexOf(".")+1, storageFactoryClassName.indexOf("@"));
+    }
+
+    public String getStorageFactoryClassName()
+    {
+        return storageFactoryClassName;
     }
 }

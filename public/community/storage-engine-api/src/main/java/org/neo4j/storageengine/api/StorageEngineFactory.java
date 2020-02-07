@@ -130,8 +130,42 @@ public interface StorageEngineFactory
      * @return the selected {@link StorageEngineFactory}.
      * @throws IllegalStateException if there were no candidates.
      */
+    //static StorageEngineFactory selectStorageEngine()
+    //{
+    //    return Iterables.single( Services.loadAll( StorageEngineFactory.class ) );
+    //}
     static StorageEngineFactory selectStorageEngine()
     {
-        return Iterables.single( Services.loadAll( StorageEngineFactory.class ) );
+        return selectStorageEngine("RecordStorageEngineFactory");
+    }
+    static StorageEngineFactory selectStorageEngine( String className )
+    {
+        if (className == null)
+            className = "RecordStorageEngineFactory";
+        StorageEngineFactory[] storageEngineFactories = selectStorageEngineNew();
+        for (int i = 0; i < storageEngineFactories.length; i++)
+        {
+            String storageClassName = storageEngineFactories[i].getClass().getName();
+            if (storageClassName.endsWith( className ))
+                return storageEngineFactories[i];
+        }
+        return null;
+        //return Iterables.single( Services.loadAll( StorageEngineFactory.class ) );
+    }
+    static StorageEngineFactory selectStorageEngine( DatabaseLayout dbLayout )
+    {
+        String storeFactory = null;
+        if (dbLayout == null || dbLayout.getDatabaseName().contains("mystore"))
+            storeFactory = "MyStorageEngineFactory";
+        else
+            storeFactory = "RecordStorageEngineFactory";
+        return selectStorageEngine( storeFactory );
+        //return Iterables.single( Services.loadAll( StorageEngineFactory.class ) );
+    }
+    static StorageEngineFactory[] selectStorageEngineNew()
+    {
+        //FileSystemAbstraction[] fs = Services.loadAll(FileSystemAbstraction.class).toArray(new FileSystemAbstraction[0]);
+        return Services.loadAll( StorageEngineFactory.class ).toArray(new StorageEngineFactory[0]);
+        //return Iterables.single( Services.loadAll( StorageEngineFactory.class ) );
     }
 }

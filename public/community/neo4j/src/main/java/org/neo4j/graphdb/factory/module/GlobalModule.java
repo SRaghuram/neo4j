@@ -84,6 +84,9 @@ import org.neo4j.scheduler.DeferredExecutor;
 import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.StorageEngineFactory;
+import org.neo4j.storageengine.api.StoreId;
+import org.neo4j.storageengine.api.StoreVersion;
+import org.neo4j.storageengine.api.StoreVersionCheck;
 import org.neo4j.time.Clocks;
 import org.neo4j.time.SystemNanoClock;
 
@@ -124,6 +127,7 @@ public class GlobalModule
     private final GlobalTransactionEventListeners transactionEventListeners;
     // In the future this may not be a global decision, but for now this is a good central place to make the decision about which storage engine to use
     private final StorageEngineFactory storageEngineFactory;
+    private final StorageEngineFactory[] storageEngineFactories;
     private final DependencyResolver externalDependencyResolver;
     private final FileLockerService fileLockerService;
 
@@ -218,8 +222,12 @@ public class GlobalModule
 
         // There's no way of actually configuring storage engine right now and this is on purpose since
         // we have neither figured out the surface, use cases nor other storage engines.
-        storageEngineFactory = StorageEngineFactory.selectStorageEngine();
-        globalDependencies.satisfyDependency( storageEngineFactory );
+        //storageEngineFactory = StorageEngineFactory.selectStorageEngine();
+        //globalDependencies.satisfyDependency( storageEngineFactory );
+        storageEngineFactories = StorageEngineFactory.selectStorageEngineNew();
+        storageEngineFactory = getStorageEngineFactory();
+        for (int i = 0; i < storageEngineFactories.length; i++)
+            globalDependencies.satisfyDependency( storageEngineFactories[i] );
 
         checkLegacyDefaultDatabase();
     }
@@ -517,8 +525,65 @@ public class GlobalModule
         return transactionEventListeners;
     }
 
+    //public StorageEngineFactory getStorageEngineFactory()
+    //{
+    //    return storageEngineFactory;
+    //}
     public StorageEngineFactory getStorageEngineFactory()
     {
+        return getStorageEngineFactory("RecordStorageEngineFactory");
+    }
+    /*public StorageEngineFactory getStorageEngineFactory( DatabaseLayout dbLayout ){
+        StorageEngineFactory storeFactory = null;
+        if (dbLayout == null || dbLayout.getDatabaseName().contains("mystore"))
+            storeFactory = getStorageEngineFactory("MyStorageEngineFactory");
+        else
+            storeFactory = getStorageEngineFactory("RecordStorageEngineFactory");
+        System.out.println("Database Name["+dbLayout.getDatabaseName()+"] served by storage engine["+storeFactory.toString()+"]");
+        return storeFactory;
+    }*/
+
+    public StorageEngineFactory getStorageEngineFactory( DatabaseLayout dbLayout ){
+        StorageEngineFactory storeFactory = null;
+        StoreId storeId = null;
+        try {
+            if (dbLayout.metadataStore().exists())
+                storeId = StoreId.getStoreId(pageCache, dbLayout.metadataStore());
+        } catch (IOException io)
+        {
+            //ignore
+        }
+        if (storeId == null)
+            return StorageEngineFactory.selectStorageEngine();
+        String versionString = storeId.getStoreVersionString();
+        for (StorageEngineFactory storageEngineFactory: storageEngineFactories)
+        {
+            if (storageEngineFactory.storageExists(fileSystem, dbLayout, pageCache))
+            {
+                StoreVersionCheck storeVersionCheck = storageEngineFactory.versionCheck(fileSystem, dbLayout, globalConfig, pageCache, logService);
+                try {
+                    StoreVersion storeVersion = storeVersionCheck.versionInformation(versionString);
+                } catch (IllegalArgumentException ie)
+                {
+                    continue;
+                }
+                storeFactory = storageEngineFactory;
+                break;
+            }
+        }
+        System.out.println("Database Name["+dbLayout.getDatabaseName()+"] served by storage engine["+storeFactory.toString()+"]");
+        dbLayout.putStorageFactoryClassName( storeFactory.toString() );
+        return storeFactory;
+    }
+    public StorageEngineFactory getStorageEngineFactory(String className)
+    {
+        for (int i = 0; i < storageEngineFactories.length; i++)
+        {
+            String storageClassName = storageEngineFactories[i].getClass().getName();
+            if (storageClassName.endsWith(className))
+                return storageEngineFactories[i];
+        }
+        //default
         return storageEngineFactory;
     }
 
