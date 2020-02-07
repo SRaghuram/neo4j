@@ -12,6 +12,7 @@ import java.io.File;
 import java.lang.annotation.Annotation;
 import java.util.Arrays;
 import java.util.Optional;
+import java.util.function.UnaryOperator;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.dbms.api.DatabaseManagementService;
@@ -28,7 +29,7 @@ public class EnterpriseDbmsSupportController extends DbmsSupportController
     }
 
     @Override
-    public void startDbms() throws Exception
+    public void startDbms( UnaryOperator<TestDatabaseManagementServiceBuilder> callback ) throws Exception
     {
         // Create and manage TestDirectoryExtension our self
         // The caveat is that the order of postProcessTestInstance and beforeAll changes if you change TestInstance.Lifecycle
@@ -40,7 +41,7 @@ public class EnterpriseDbmsSupportController extends DbmsSupportController
                 getTestAnnotation( ImpermanentEnterpriseDbmsExtension.class ) );
 
         // Create service
-        DatabaseManagementService dbms = buildDbms( enterpriseDbmsExtension.configurationCallback );
+        DatabaseManagementService dbms = buildDbms( enterpriseDbmsExtension.configurationCallback, callback );
 
         var dbmsDependency = new Dependencies();
         dbmsDependency.satisfyDependencies( dbms );
@@ -63,7 +64,28 @@ public class EnterpriseDbmsSupportController extends DbmsSupportController
     @Override
     public DbmsController asDbmsController()
     {
-        return this::restartDatabase;
+        return new DbmsController()
+        {
+            @Override
+            public void restartDbms( UnaryOperator<TestDatabaseManagementServiceBuilder> callback )
+            {
+                shutdown();
+                try
+                {
+                    startDbms( callback );
+                }
+                catch ( Exception e )
+                {
+                    throw new RuntimeException( e );
+                }
+            }
+
+            @Override
+            public void restartDatabase()
+            {
+                EnterpriseDbmsSupportController.this.restartDatabase();
+            }
+        };
     }
 
     @SafeVarargs
