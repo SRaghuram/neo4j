@@ -109,6 +109,14 @@
       }
     },
     {
+      "name": "Read 14 -- Sub Query",
+      "description": "Read 14, modified with correlated sub-queries",
+      "queryFile": "queries/query_14_subquery.cypher",
+      "parameters": {
+        "file": "parameters/query_14.txt"
+      }
+    },
+    {
       "name": "Short Read 1",
       "queryFile": "queries/short_read_1.cypher",
       "parameters": {
