@@ -11,6 +11,14 @@
       }
     },
     {
+      "name": "Q1 -- Sub Query",
+      "description": "Q1, modified with correlated sub-queries",
+      "queryFile": "queries/Q1_subquery.cypher",
+      "parameters": {
+        "file": "parameters/administrators.txt"
+      }
+    },
+    {
       "name": "Q2",
       "description": "Should find admin for account resource where allowed inherit and allowed not inherit",
       "queryFile": "queries/Q2.cypher",
