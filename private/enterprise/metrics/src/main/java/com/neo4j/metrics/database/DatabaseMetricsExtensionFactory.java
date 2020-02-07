@@ -22,6 +22,7 @@ import org.neo4j.kernel.impl.transaction.stats.CheckpointCounters;
 import org.neo4j.kernel.impl.transaction.stats.TransactionCounters;
 import org.neo4j.kernel.impl.transaction.stats.TransactionLogCounters;
 import org.neo4j.kernel.lifecycle.Lifecycle;
+import org.neo4j.kernel.monitoring.tracing.Tracers;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.storageengine.api.TransactionIdStore;
@@ -58,6 +59,8 @@ public class DatabaseMetricsExtensionFactory extends ExtensionFactory<DatabaseMe
         CheckpointCounters checkpointCounters();
 
         FileSystemAbstraction fileSystem();
+
+        Tracers tracers();
     }
 
     public DatabaseMetricsExtensionFactory()

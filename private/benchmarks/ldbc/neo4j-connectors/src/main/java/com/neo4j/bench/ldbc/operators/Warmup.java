@@ -26,6 +26,7 @@ import org.neo4j.kernel.impl.store.format.standard.RelationshipRecordFormat;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 
 import static java.lang.String.format;
+import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 import static org.neo4j.kernel.api.KernelTransaction.Type.IMPLICIT;
 
 public class Warmup
@@ -44,7 +45,7 @@ public class Warmup
 
         warmNodeStore(
                 db,
-                neoStore.getNodeStore().getHighestPossibleIdInUse(),
+                neoStore.getNodeStore().getHighestPossibleIdInUse( NULL ),
                 nodesPerPage );
 
         long relationshipStoreWarmupStart = System.currentTimeMillis();
@@ -53,7 +54,7 @@ public class Warmup
 
         warmRelationshipStore(
                 db,
-                neoStore.getRelationshipStore().getHighestPossibleIdInUse(),
+                neoStore.getRelationshipStore().getHighestPossibleIdInUse( NULL ),
                 relationshipsPerPage );
 
         loggingService.info( format( "Relationship store warmed in: %s",

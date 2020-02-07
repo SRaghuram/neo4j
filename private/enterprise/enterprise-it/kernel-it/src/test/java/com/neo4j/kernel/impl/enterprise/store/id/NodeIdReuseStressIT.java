@@ -25,6 +25,7 @@ import org.neo4j.test.Race;
 import org.neo4j.test.extension.Inject;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
 
 @EnterpriseDbmsExtension
 class NodeIdReuseStressIT
@@ -93,7 +94,7 @@ class NodeIdReuseStressIT
         DependencyResolver resolver = dependencyResolver( db );
         NeoStores neoStores = resolver.resolveDependency( RecordStorageEngine.class ).testAccessNeoStores();
         NodeStore nodeStore = neoStores.getNodeStore();
-        return nodeStore.getHighestPossibleIdInUse();
+        return nodeStore.getHighestPossibleIdInUse( NULL );
     }
 
     private static void maybeRunIdMaintenance( GraphDatabaseService db, int iteration )

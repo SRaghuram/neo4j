@@ -36,6 +36,7 @@ import org.neo4j.kernel.impl.transaction.stats.DatabaseTransactionStats;
 import org.neo4j.kernel.impl.transaction.stats.TransactionCounters;
 import org.neo4j.kernel.impl.transaction.stats.TransactionLogCounters;
 import org.neo4j.kernel.lifecycle.Lifespan;
+import org.neo4j.kernel.monitoring.tracing.Tracers;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.logging.internal.SimpleLogService;
@@ -247,6 +248,12 @@ class DatabaseMetricsExtensionTest
         public FileSystemAbstraction fileSystem()
         {
             return fileSystem;
+        }
+
+        @Override
+        public Tracers tracers()
+        {
+            return null;
         }
 
         @Override

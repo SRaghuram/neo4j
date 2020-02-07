@@ -5,9 +5,12 @@
  */
 package com.neo4j.metrics;
 
+import com.codahale.metrics.Gauge;
+import com.codahale.metrics.MetricRegistry;
 import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import com.neo4j.metrics.global.MetricsManager;
+import com.neo4j.metrics.source.db.DatabaseCountMetrics;
 import com.neo4j.test.extension.EnterpriseDbmsExtension;
 import org.assertj.core.api.Condition;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,6 +28,8 @@ import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.io.pagecache.tracing.DefaultPageCacheTracer;
+import org.neo4j.kernel.impl.store.stats.StoreEntityCounters;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.SimpleTriggerInfo;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
@@ -44,6 +49,7 @@ import static com.neo4j.metrics.source.db.DatabaseCountMetrics.COUNTS_RELATIONSH
 import static java.lang.System.currentTimeMillis;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.neo4j.configuration.GraphDatabaseSettings.check_point_interval_time;
 import static org.neo4j.configuration.GraphDatabaseSettings.cypher_min_replan_interval;
 import static org.neo4j.graphdb.RelationshipType.withName;
@@ -97,6 +103,28 @@ class DatabaseMetricsExtensionIT
         File checkpointsMetricsFile = metricsCsv( outputPath, "neo4j." + db.databaseName() + ".check_point.events" );
         assertEventually( "Metrics report should have correct number of checkpoints.",
                 () -> readLongCounterValue( checkpointsMetricsFile ), new Condition<>( value -> value >= 1L, "More than 1." ), 1, MINUTES );
+    }
+
+    @Test
+    void tracePageCacheAccessOnCountMetricsEvaluation()
+    {
+        var registry = new MetricRegistry();
+        var tempDatabaseName = "foo";
+        managementService.createDatabase( tempDatabaseName );
+        GraphDatabaseAPI fooDb = (GraphDatabaseAPI) managementService.database( tempDatabaseName );
+        var suppliers = fooDb.getDependencyResolver().provideDependency( StoreEntityCounters.class );
+        var pageCacheTracer = new DefaultPageCacheTracer();
+
+        var countMetrics = new DatabaseCountMetrics( "prefix", registry, suppliers, pageCacheTracer );
+        countMetrics.start();
+
+        var gauges = registry.getGauges().values();
+        gauges.forEach( Gauge::getValue );
+        assertEquals( 2, gauges.size() );
+
+        assertEquals( 2, pageCacheTracer.pins() );
+        assertEquals( 2, pageCacheTracer.unpins() );
+        assertEquals( 2, pageCacheTracer.hits() );
     }
 
     @Test

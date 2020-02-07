@@ -37,8 +37,7 @@ public class DatabaseMetricsExtension implements Lifecycle
             if ( metricsManager.isConfigured() )
             {
                 MetricRegistry metricRegistry = metricsManager.getRegistry();
-                EventReporter eventReporter = metricsManager.getReporter();
-                new DatabaseMetricsExporter( metricRegistry, eventReporter, dependencies.configuration(), context, dependencies, life ).export();
+                new DatabaseMetricsExporter( metricRegistry, dependencies.configuration(), context, dependencies, life ).export();
             }
         } );
         life.init();
