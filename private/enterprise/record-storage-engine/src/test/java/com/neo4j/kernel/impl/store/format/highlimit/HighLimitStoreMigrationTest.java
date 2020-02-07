@@ -42,7 +42,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.immediate;
 import static org.neo4j.io.pagecache.tracing.PageCacheTracer.NULL;
-import static org.neo4j.kernel.impl.store.MetaDataStore.Position.STORE_VERSION;
+import static org.neo4j.kernel.impl.store.MetaDataStoreCommon.Position.STORE_VERSION;
 
 @PageCacheExtension
 @Neo4jLayoutExtension

@@ -71,7 +71,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.immediate;
 import static org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer.NULL;
-import static org.neo4j.kernel.impl.store.MetaDataStore.Position.LAST_MISSING_STORE_FILES_RECOVERY_TIMESTAMP;
+import static org.neo4j.kernel.impl.store.MetaDataStoreCommon.Position.LAST_MISSING_STORE_FILES_RECOVERY_TIMESTAMP;
 import static org.neo4j.kernel.impl.store.MetaDataStore.versionStringToLong;
 import static org.neo4j.kernel.impl.store.format.standard.Standard.LATEST_STORE_VERSION;
 import static org.neo4j.kernel.impl.store.record.RecordLoad.FORCE;

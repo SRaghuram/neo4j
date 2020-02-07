@@ -51,7 +51,7 @@ import org.neo4j.logging.Logger;
 import org.neo4j.storageengine.api.format.CapabilityType;
 
 import static org.apache.commons.lang3.ArrayUtils.contains;
-import static org.neo4j.kernel.impl.store.MetaDataStore.Position.STORE_VERSION;
+import static org.neo4j.kernel.impl.store.MetaDataStoreCommon.Position.STORE_VERSION;
 import static org.neo4j.kernel.impl.store.MetaDataStore.versionLongToString;
 
 /**

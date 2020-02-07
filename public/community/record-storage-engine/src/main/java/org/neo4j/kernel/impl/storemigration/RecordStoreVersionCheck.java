@@ -36,7 +36,7 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.storageengine.api.StoreVersion;
 import org.neo4j.storageengine.api.StoreVersionCheck;
 
-import static org.neo4j.kernel.impl.store.MetaDataStore.Position.STORE_VERSION;
+import static org.neo4j.kernel.impl.store.MetaDataStoreCommon.Position.STORE_VERSION;
 import static org.neo4j.kernel.impl.store.format.RecordFormatPropertyConfigurator.configureRecordFormat;
 
 public class RecordStoreVersionCheck implements StoreVersionCheck

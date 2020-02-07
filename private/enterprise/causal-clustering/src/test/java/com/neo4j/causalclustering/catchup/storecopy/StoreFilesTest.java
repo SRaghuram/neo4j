@@ -31,11 +31,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.neo4j.kernel.impl.store.MetaDataStore.Position.RANDOM_NUMBER;
-import static org.neo4j.kernel.impl.store.MetaDataStore.Position.STORE_VERSION;
-import static org.neo4j.kernel.impl.store.MetaDataStore.Position.TIME;
-import static org.neo4j.kernel.impl.store.MetaDataStore.Position.UPGRADE_TIME;
-import static org.neo4j.kernel.impl.store.MetaDataStore.Position.UPGRADE_TRANSACTION_ID;
+import static org.neo4j.kernel.impl.store.MetaDataStoreCommon.Position.RANDOM_NUMBER;
+import static org.neo4j.kernel.impl.store.MetaDataStoreCommon.Position.STORE_VERSION;
+import static org.neo4j.kernel.impl.store.MetaDataStoreCommon.Position.TIME;
+import static org.neo4j.kernel.impl.store.MetaDataStoreCommon.Position.UPGRADE_TIME;
+import static org.neo4j.kernel.impl.store.MetaDataStoreCommon.Position.UPGRADE_TRANSACTION_ID;
 
 @PageCacheExtension
 class StoreFilesTest

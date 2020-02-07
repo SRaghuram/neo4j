@@ -49,7 +49,7 @@ import static java.util.Comparator.comparingInt;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.internal.helpers.collection.Iterables.concat;
 import static org.neo4j.internal.helpers.collection.Iterables.map;
-import static org.neo4j.kernel.impl.store.MetaDataStore.Position.STORE_VERSION;
+import static org.neo4j.kernel.impl.store.MetaDataStoreCommon.Position.STORE_VERSION;
 import static org.neo4j.kernel.impl.store.format.FormatFamily.isSameFamily;
 
 /**
