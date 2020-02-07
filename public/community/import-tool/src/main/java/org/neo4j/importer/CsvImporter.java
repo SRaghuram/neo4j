@@ -174,7 +174,7 @@ class CsvImporter implements Importer
                     executionMonitor,
                     EMPTY,
                     databaseConfig,
-                    RecordFormatSelector.selectForConfig( databaseConfig, logProvider ),
+                    //RecordFormatSelector.selectForConfig( databaseConfig, logProvider ),
                     new PrintingImportLogicMonitor( stdOut, stdErr ),
                     jobScheduler, badCollector, TransactionLogsInitializer.INSTANCE );
 

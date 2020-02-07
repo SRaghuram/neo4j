@@ -21,6 +21,7 @@ package org.neo4j.internal.batchimport;
 
 import java.io.IOException;
 
+import org.neo4j.batchinsert.internal.TransactionLogsInitializer;
 import org.neo4j.configuration.Config;
 import org.neo4j.internal.batchimport.input.Collector;
 import org.neo4j.internal.batchimport.input.Input;
@@ -54,14 +55,14 @@ public class ParallelBatchImporter implements BatchImporter
     private final RecordFormats recordFormats;
     private final ExecutionMonitor executionMonitor;
     private final AdditionalInitialIds additionalInitialIds;
-    private final ImportLogic.Monitor monitor;
+    private final ImportLogicMonitor.Monitor monitor;
     private final JobScheduler jobScheduler;
     private final Collector badCollector;
     private final LogFilesInitializer logFilesInitializer;
 
     public ParallelBatchImporter( DatabaseLayout databaseLayout, FileSystemAbstraction fileSystem, PageCache externalPageCache,
             Configuration config, LogService logService, ExecutionMonitor executionMonitor,
-            AdditionalInitialIds additionalInitialIds, Config dbConfig, RecordFormats recordFormats, ImportLogic.Monitor monitor,
+            AdditionalInitialIds additionalInitialIds, Config dbConfig, RecordFormats recordFormats, ImportLogicMonitor.Monitor monitor,
             JobScheduler jobScheduler, Collector badCollector, LogFilesInitializer logFilesInitializer )
     {
         this.externalPageCache = externalPageCache;
@@ -97,7 +98,9 @@ public class ParallelBatchImporter implements BatchImporter
             logic.linkRelationshipsOfAllTypes();
             logic.defragmentRelationshipGroups();
             logic.buildCountsStore();
-            logFilesInitializer.initializeLogFiles( dbConfig, databaseLayout, store.getNeoStores(), fileSystem );
+            ((TransactionLogsInitializer)logFilesInitializer).initStores(store.getNeoStores());
+            logFilesInitializer.initializeLogFiles( dbConfig, databaseLayout, //store.getNeoStores()
+                      fileSystem );
 
             logic.success();
         }

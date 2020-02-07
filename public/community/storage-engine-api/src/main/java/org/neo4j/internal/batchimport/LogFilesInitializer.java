@@ -22,9 +22,8 @@ package org.neo4j.internal.batchimport;
 import org.neo4j.configuration.Config;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
-import org.neo4j.kernel.impl.store.NeoStores;
 
 public interface LogFilesInitializer
 {
-    void initializeLogFiles( Config config, DatabaseLayout databaseLayout, NeoStores neoStores, FileSystemAbstraction fileSystem );
+    void initializeLogFiles( Config config, DatabaseLayout databaseLayout, FileSystemAbstraction fileSystem );
 }

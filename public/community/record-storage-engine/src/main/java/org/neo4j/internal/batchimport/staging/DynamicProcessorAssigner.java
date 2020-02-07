@@ -57,24 +57,24 @@ public class DynamicProcessorAssigner extends ExecutionMonitor.Adapter
     }
 
     @Override
-    public void start( StageExecution execution )
+    public void start( StageControl execution )
     {   // A new stage begins, any data that we had is irrelevant
         lastChangedProcessors.clear();
     }
 
     @Override
-    public void check( StageExecution execution )
+    public void check( StageControl execution )
     {
-        if ( execution.stillExecuting() )
+        if ( ((StageExecution)execution).stillExecuting() )
         {
-            int permits = availableProcessors - countActiveProcessors( execution );
+            int permits = availableProcessors - countActiveProcessors( (StageExecution)execution );
             if ( permits > 0 )
             {
                 // Be swift at assigning processors to slow steps, i.e. potentially multiple per round
-                assignProcessorsToPotentialBottleNeck( execution, permits );
+                assignProcessorsToPotentialBottleNeck( (StageExecution)execution, permits );
             }
             // Be a little more conservative removing processors from too fast steps
-            removeProcessorFromPotentialIdleStep( execution );
+            removeProcessorFromPotentialIdleStep( (StageExecution)execution );
         }
     }
 

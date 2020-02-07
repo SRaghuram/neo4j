@@ -57,7 +57,7 @@ public class MultiExecutionMonitor implements ExecutionMonitor
     }
 
     @Override
-    public void start( StageExecution execution )
+    public void start( StageControl execution )
     {
         for ( ExecutionMonitor monitor : monitors )
         {
@@ -66,7 +66,7 @@ public class MultiExecutionMonitor implements ExecutionMonitor
     }
 
     @Override
-    public void end( StageExecution execution, long totalTimeMillis )
+    public void end( StageControl execution, long totalTimeMillis )
     {
         for ( ExecutionMonitor monitor : monitors )
         {
@@ -108,7 +108,7 @@ public class MultiExecutionMonitor implements ExecutionMonitor
     }
 
     @Override
-    public void check( StageExecution execution )
+    public void check( StageControl execution )
     {
         long currentTimeMillis = clock.millis();
         for ( int i = 0; i < monitors.length; i++ )

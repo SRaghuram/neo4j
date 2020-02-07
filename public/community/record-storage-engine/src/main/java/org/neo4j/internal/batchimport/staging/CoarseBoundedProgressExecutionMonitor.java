@@ -52,21 +52,21 @@ public abstract class CoarseBoundedProgressExecutionMonitor extends ExecutionMon
     }
 
     @Override
-    public void check( StageExecution execution )
+    public void check( StageControl execution )
     {
         update( execution );
     }
 
     @Override
-    public void start( StageExecution execution )
+    public void start( StageControl execution )
     {
         prevDoneBatches = 0;
     }
 
-    private void update( StageExecution execution )
+    private void update( StageControl execution )
     {
         long diff = 0;
-        long doneBatches = doneBatches( execution );
+        long doneBatches = doneBatches( (StageExecution)execution );
         diff += doneBatches - prevDoneBatches;
         prevDoneBatches = doneBatches;
 

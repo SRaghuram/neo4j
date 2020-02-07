@@ -43,13 +43,7 @@ import org.neo4j.common.EntityType;
 import org.neo4j.common.ProgressReporter;
 import org.neo4j.configuration.Config;
 import org.neo4j.exceptions.KernelException;
-import org.neo4j.internal.batchimport.AdditionalInitialIds;
-import org.neo4j.internal.batchimport.BatchImporter;
-import org.neo4j.internal.batchimport.BatchImporterFactory;
-import org.neo4j.internal.batchimport.Configuration;
-import org.neo4j.internal.batchimport.EmptyLogFilesInitializer;
-import org.neo4j.internal.batchimport.InputIterable;
-import org.neo4j.internal.batchimport.InputIterator;
+import org.neo4j.internal.batchimport.*;
 import org.neo4j.internal.batchimport.input.BadCollector;
 import org.neo4j.internal.batchimport.input.Collector;
 import org.neo4j.internal.batchimport.input.Collectors;
@@ -434,10 +428,19 @@ public class RecordStorageMigrator extends AbstractStoreMigrationParticipant
                     readAdditionalIds( lastTxId, lastTxChecksum, lastTxLogVersion, lastTxLogByteOffset );
 
             // We have to make sure to keep the token ids if we're migrating properties/labels
-            BatchImporter importer = BatchImporterFactory.withHighestPriority().instantiate( migrationDirectoryStructure,
+            /*BatchImporter importer = BatchImporterFactory.withHighestPriority().instantiate( migrationDirectoryStructure,
                     fileSystem, pageCache, importConfig, logService,
                     withDynamicProcessorAssignment( migrationBatchImporterMonitor( legacyStore, progressReporter,
                             importConfig ), importConfig ), additionalInitialIds, config, newFormat, NO_MONITOR, jobScheduler, badCollector,
+                    EmptyLogFilesInitializer.INSTANCE );*/
+            StandardBatchImporterFactory recFactory = new StandardBatchImporterFactory( );
+            BatchImporter importer = recFactory.instantiate( migrationDirectoryStructure,
+                    fileSystem, pageCache, importConfig, logService,
+                    withDynamicProcessorAssignment( migrationBatchImporterMonitor( legacyStore, progressReporter,
+                            importConfig ), importConfig ), additionalInitialIds, config,
+                    //newFormat,
+                    NO_MONITOR,
+                    jobScheduler, badCollector,
                     EmptyLogFilesInitializer.INSTANCE );
             InputIterable nodes = () -> legacyNodesAsInput( legacyStore, requiresPropertyMigration );
             InputIterable relationships = () -> legacyRelationshipsAsInput( legacyStore, requiresPropertyMigration );

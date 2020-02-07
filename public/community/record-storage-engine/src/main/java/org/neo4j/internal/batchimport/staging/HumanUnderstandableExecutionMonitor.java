@@ -146,10 +146,10 @@ public class HumanUnderstandableExecutionMonitor implements ExecutionMonitor
     }
 
     @Override
-    public void start( StageExecution execution )
+    public void start( StageControl execution )
     {
         // Divide into 4 progress stages:
-        if ( execution.getStageName().equals( DataImporter.NODE_IMPORT_NAME ) )
+        if ( ((StageExecution)execution).getStageName().equals( DataImporter.NODE_IMPORT_NAME ) )
         {
             // Import nodes:
             // - import nodes
@@ -159,7 +159,7 @@ public class HumanUnderstandableExecutionMonitor implements ExecutionMonitor
                     dependencyResolver.resolveDependency( IdMapper.class ),
                     dependencyResolver.resolveDependency( BatchingNeoStores.class ) );
         }
-        else if ( execution.getStageName().equals( DataImporter.RELATIONSHIP_IMPORT_NAME ) )
+        else if ( ((StageExecution)execution).getStageName().equals( DataImporter.RELATIONSHIP_IMPORT_NAME ) )
         {
             endPrevious();
 
@@ -170,7 +170,7 @@ public class HumanUnderstandableExecutionMonitor implements ExecutionMonitor
                     dependencyResolver.resolveDependency( IdMapper.class ),
                     dependencyResolver.resolveDependency( BatchingNeoStores.class ) );
         }
-        else if ( execution.getStageName().equals( NodeDegreeCountStage.NAME ) )
+        else if ( ((StageExecution)execution).getStageName().equals( NodeDegreeCountStage.NAME ) )
         {
             endPrevious();
 
@@ -184,7 +184,7 @@ public class HumanUnderstandableExecutionMonitor implements ExecutionMonitor
                     dependencyResolver.resolveDependency( NodeRelationshipCache.class ),
                     dependencyResolver.resolveDependency( DataStatistics.class ) );
         }
-        else if ( execution.getStageName().equals( CountGroupsStage.NAME ) )
+        else if ( ((StageExecution)execution).getStageName().equals( CountGroupsStage.NAME ) )
         {
             endPrevious();
 
@@ -195,7 +195,7 @@ public class HumanUnderstandableExecutionMonitor implements ExecutionMonitor
                     dependencyResolver.resolveDependency( BatchingNeoStores.class ),
                     dependencyResolver.resolveDependency( DataStatistics.class ) );
         }
-        else if ( includeStage( execution ) )
+        else if ( includeStage( (StageExecution)execution ) )
         {
             stashedProgress += progress;
             progress = 0;
@@ -408,7 +408,7 @@ public class HumanUnderstandableExecutionMonitor implements ExecutionMonitor
     }
 
     @Override
-    public void end( StageExecution execution, long totalTimeMillis )
+    public void end( StageControl execution, long totalTimeMillis )
     {
     }
 
@@ -428,11 +428,11 @@ public class HumanUnderstandableExecutionMonitor implements ExecutionMonitor
     }
 
     @Override
-    public void check( StageExecution execution )
+    public void check( StageControl execution )
     {
-        if ( includeStage( execution ) )
+        if ( includeStage( (StageExecution)execution ) )
         {
-            updateProgress( progressOf( execution ) );
+            updateProgress( progressOf( (StageExecution)execution ) );
         }
     }
 

@@ -39,12 +39,12 @@ public class ExecutionMonitors
     private static final ExecutionMonitor INVISIBLE = new ExecutionMonitor()
     {
         @Override
-        public void start( StageExecution execution )
+        public void start( StageControl execution )
         {   // Do nothing
         }
 
         @Override
-        public void end( StageExecution execution, long totalTimeMillis )
+        public void end( StageControl execution, long totalTimeMillis )
         {   // Do nothing
         }
 
@@ -55,7 +55,7 @@ public class ExecutionMonitors
         }
 
         @Override
-        public void check( StageExecution execution )
+        public void check( StageControl execution )
         {   // Do nothing
         }
 

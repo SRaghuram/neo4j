@@ -85,22 +85,8 @@ import static org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSuppl
  */
 public class ImportLogic implements Closeable
 {
-    public interface Monitor
-    {
-        void doubleRelationshipRecordUnitsEnabled();
 
-        void mayExceedNodeIdCapacity( long capacity, long estimatedCount );
-
-        void mayExceedRelationshipIdCapacity( long capacity, long estimatedCount );
-
-        void insufficientHeapSize( long optimalMinimalHeapSize, long heapSize );
-
-        void abundantHeapSize( long optimalMinimalHeapSize, long heapSize );
-
-        void insufficientAvailableMemory( long estimatedCacheSize, long optimalMinimalHeapSize, long availableMemory );
-    }
-
-    public static final Monitor NO_MONITOR = new Monitor()
+    public static final ImportLogicMonitor.Monitor NO_MONITOR = new ImportLogicMonitor.Monitor()
     {
         @Override
         public void mayExceedRelationshipIdCapacity( long capacity, long estimatedCount )
@@ -143,7 +129,7 @@ public class ImportLogic implements Closeable
     private final DataImporter.Monitor storeUpdateMonitor = new DataImporter.Monitor();
     private final long maxMemory;
     private final Dependencies dependencies = new Dependencies();
-    private final Monitor monitor;
+    private final ImportLogicMonitor.Monitor monitor;
     private Input input;
     private boolean successful;
 
@@ -171,10 +157,10 @@ public class ImportLogic implements Closeable
      * @param executionMonitor {@link ExecutionMonitor} to follow progress as the import proceeds.
      * @param recordFormats which {@link RecordFormats record format} to use for the created db.
      * @param badCollector {@link Collector} for bad entries.
-     * @param monitor {@link Monitor} for some events.
+     * @param monitor {@link ImportLogicMonitor.Monitor} for some events.
      */
     public ImportLogic( DatabaseLayout databaseLayout, BatchingNeoStores neoStore, Configuration config, Config dbConfig, LogService logService,
-            ExecutionMonitor executionMonitor, RecordFormats recordFormats, Collector badCollector, Monitor monitor )
+            ExecutionMonitor executionMonitor, RecordFormats recordFormats, Collector badCollector, ImportLogicMonitor.Monitor monitor )
     {
         this.databaseDirectory = databaseLayout.databaseDirectory();
         this.neoStore = neoStore;

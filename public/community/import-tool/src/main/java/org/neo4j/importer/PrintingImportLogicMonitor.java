@@ -19,13 +19,13 @@
  */
 package org.neo4j.importer;
 
-import java.io.PrintStream;
+import org.neo4j.internal.batchimport.ImportLogicMonitor;
 
-import org.neo4j.internal.batchimport.ImportLogic;
+import java.io.PrintStream;
 
 import static org.neo4j.io.ByteUnit.bytesToString;
 
-class PrintingImportLogicMonitor implements ImportLogic.Monitor
+class PrintingImportLogicMonitor implements ImportLogicMonitor.Monitor
 {
     private final PrintStream out;
     private final PrintStream err;

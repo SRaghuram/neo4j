@@ -79,7 +79,7 @@ class MultiExecutionMonitorTest
         }
 
         @Override
-        public void check( StageExecution execution )
+        public void check( StageControl execution )
         {
             timesPolled++;
         }

@@ -69,14 +69,14 @@ public class SpectrumExecutionMonitor extends ExecutionMonitor.Adapter
     }
 
     @Override
-    public void start( StageExecution execution )
+    public void start( StageControl execution )
     {
-        out.println( execution.name() + ", started " + date() );
+        out.println( ((StageExecution)execution).name() + ", started " + date() );
         lastProgress = 0;
     }
 
     @Override
-    public void end( StageExecution execution, long totalTimeMillis )
+    public void end( StageControl execution, long totalTimeMillis )
     {
         check( execution );
         out.println();
@@ -91,13 +91,13 @@ public class SpectrumExecutionMonitor extends ExecutionMonitor.Adapter
     }
 
     @Override
-    public void check( StageExecution execution )
+    public void check( StageControl execution )
     {
         StringBuilder builder = new StringBuilder();
-        printSpectrum( builder, execution, width, DetailLevel.IMPORTANT );
+        printSpectrum( builder, (StageExecution)execution, width, DetailLevel.IMPORTANT );
 
         // add delta
-        long progress = last( execution.steps() ).stats().stat( Keys.done_batches ).asLong() * execution.getConfig().batchSize();
+        long progress = last( ((StageExecution)execution).steps() ).stats().stat( Keys.done_batches ).asLong() * ((StageExecution)execution).getConfig().batchSize();
         long currentDelta = progress - lastProgress;
         builder.append( " ∆" ).append( fitInProgress( currentDelta ) );
 

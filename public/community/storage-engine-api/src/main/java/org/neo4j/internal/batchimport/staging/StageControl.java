@@ -22,8 +22,8 @@ package org.neo4j.internal.batchimport.staging;
 import java.util.function.Supplier;
 
 /**
- * Represents a means to control and coordinate lifecycle matters about a {@link Stage} and all its
- * {@link Step steps}.
+ * Represents a means to control and coordinate lifecycle matters about a { Stage} and all its
+ * { Step steps}.
  */
 public interface StageControl
 {

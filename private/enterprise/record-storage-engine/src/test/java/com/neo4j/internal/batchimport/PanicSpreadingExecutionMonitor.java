@@ -6,6 +6,7 @@
 package com.neo4j.internal.batchimport;
 
 import org.neo4j.internal.batchimport.staging.ExecutionMonitor;
+import org.neo4j.internal.batchimport.staging.StageControl;
 import org.neo4j.internal.batchimport.staging.StageExecution;
 
 import static java.lang.System.currentTimeMillis;
@@ -22,9 +23,9 @@ class PanicSpreadingExecutionMonitor implements ExecutionMonitor
     }
 
     @Override
-    public void start( StageExecution execution )
+    public void start( StageControl execution )
     {
-        if ( trueForStart && stageName.equals( execution.getStageName() ) )
+        if ( trueForStart && stageName.equals( ((StageExecution)execution).getStageName() ) )
         {
             execution.panic( new RuntimeException( "Deliberately causing import to fail at start of stage " + stageName ) );
         }
@@ -37,9 +38,9 @@ class PanicSpreadingExecutionMonitor implements ExecutionMonitor
     }
 
     @Override
-    public void end( StageExecution execution, long totalTimeMillis )
+    public void end( StageControl execution, long totalTimeMillis )
     {
-        if ( !trueForStart && stageName.equals( execution.getStageName() ) )
+        if ( !trueForStart && stageName.equals( ((StageExecution)execution).getStageName() ) )
         {
             execution.panic( new RuntimeException( "Deliberately causing import to fail at end of stage " + stageName ) );
         }
@@ -51,7 +52,7 @@ class PanicSpreadingExecutionMonitor implements ExecutionMonitor
     }
 
     @Override
-    public void check( StageExecution execution )
+    public void check( StageControl execution )
     {
     }
 }

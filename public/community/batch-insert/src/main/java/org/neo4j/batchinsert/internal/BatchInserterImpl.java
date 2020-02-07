@@ -605,7 +605,8 @@ public class BatchInserterImpl implements BatchInserter
 
     private void createEmptyTransactionLog()
     {
-        TransactionLogsInitializer.INSTANCE.initializeLogFiles( config, databaseLayout, neoStores, fileSystem );
+        TransactionLogsInitializer.INSTANCE.initializeLogFiles( config, databaseLayout, //neoStores,
+                 fileSystem );
     }
 
     private IndexDescriptor[] getIndexesNeedingPopulation()

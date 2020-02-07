@@ -102,7 +102,8 @@ class RestartImportFromSpecificStatesTest
     private BatchImporter importer( ExecutionMonitor monitor )
     {
         return BatchImporterFactory.withHighestPriority().instantiate( databaseLayout, fs, null, DEFAULT, NullLogService.getInstance(), monitor,
-              EMPTY, Config.defaults(), RecordFormatSelector.defaultFormat(), NO_MONITOR, jobScheduler, Collector.EMPTY, TransactionLogsInitializer.INSTANCE );
+              EMPTY, Config.defaults(), //RecordFormatSelector.defaultFormat(),
+                NO_MONITOR, jobScheduler, Collector.EMPTY, TransactionLogsInitializer.INSTANCE );
     }
 
     private void verifyDb( SimpleRandomizedInput input ) throws IOException

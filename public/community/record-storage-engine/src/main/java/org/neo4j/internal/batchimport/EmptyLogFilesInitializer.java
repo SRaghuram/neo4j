@@ -33,7 +33,7 @@ public class EmptyLogFilesInitializer implements LogFilesInitializer
     }
 
     @Override
-    public void initializeLogFiles( Config config, DatabaseLayout databaseLayout, NeoStores neoStores, FileSystemAbstraction fileSystem )
+    public void initializeLogFiles( Config config, DatabaseLayout databaseLayout, FileSystemAbstraction fileSystem )
     {
         // empty
     }

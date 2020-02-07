@@ -34,13 +34,13 @@ import org.neo4j.kernel.lifecycle.Lifespan;
 public class TransactionLogsInitializer implements LogFilesInitializer
 {
     public static final LogFilesInitializer INSTANCE = new TransactionLogsInitializer();
-
+    NeoStores neoStores= null;
     private TransactionLogsInitializer()
     {
     }
 
     @Override
-    public void initializeLogFiles( Config config, DatabaseLayout databaseLayout, NeoStores neoStores, FileSystemAbstraction fileSystem )
+    public void initializeLogFiles( Config config, DatabaseLayout databaseLayout, FileSystemAbstraction fileSystem )
     {
         try
         {
@@ -55,5 +55,9 @@ public class TransactionLogsInitializer implements LogFilesInitializer
         {
             throw new UnderlyingStorageException( "Fail to create empty transaction log file.", e );
         }
+    }
+    public void initStores(NeoStores neoStores)
+    {
+        this.neoStores = neoStores;
     }
 }

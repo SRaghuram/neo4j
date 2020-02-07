@@ -159,7 +159,8 @@ class RestartableImportIT
             File databaseDirectory = new File( args[0] );
             BatchImporterFactory.withHighestPriority().instantiate( DatabaseLayout.ofFlat( databaseDirectory ), new DefaultFileSystemAbstraction(),
                     null, DEFAULT, NullLogService.getInstance(), ExecutionMonitors.invisible(), EMPTY, Config.defaults(),
-                    RecordFormatSelector.defaultFormat(), NO_MONITOR, jobScheduler, Collector.EMPTY, TransactionLogsInitializer.INSTANCE )
+                    //RecordFormatSelector.defaultFormat(),
+                    NO_MONITOR, jobScheduler, Collector.EMPTY, TransactionLogsInitializer.INSTANCE )
                     .doImport( input( Long.parseLong( args[1] ) ) );
             // Create this file to communicate completion for realz
             new File( databaseDirectory, COMPLETED ).createNewFile();

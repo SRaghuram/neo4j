@@ -14,13 +14,8 @@ import java.util.List;
 import java.util.Set;
 
 import org.neo4j.configuration.Config;
-import org.neo4j.internal.batchimport.AdditionalInitialIds;
-import org.neo4j.internal.batchimport.BatchImporter;
-import org.neo4j.internal.batchimport.Configuration;
-import org.neo4j.internal.batchimport.DataStatistics;
-import org.neo4j.internal.batchimport.ImportLogic;
-import org.neo4j.internal.batchimport.ImportLogic.Monitor;
-import org.neo4j.internal.batchimport.LogFilesInitializer;
+import org.neo4j.internal.batchimport.*;
+import org.neo4j.internal.batchimport.ImportLogicMonitor.Monitor;
 import org.neo4j.internal.batchimport.input.Collector;
 import org.neo4j.internal.batchimport.input.Input;
 import org.neo4j.internal.batchimport.staging.ExecutionMonitor;
@@ -78,7 +73,7 @@ public class RestartableParallelBatchImporter implements BatchImporter
     private final ExecutionMonitor executionMonitor;
     private final AdditionalInitialIds additionalInitialIds;
     private final RelationshipTypeDistributionStorage dataStatisticsStorage;
-    private final Monitor monitor;
+    private final ImportLogicMonitor.Monitor monitor;
     private final JobScheduler jobScheduler;
     private final Collector badCollector;
     private final LogFilesInitializer logFilesInitializer;
@@ -183,7 +178,7 @@ public class RestartableParallelBatchImporter implements BatchImporter
             void run( byte[] fromCheckPoint, CheckPointer checkPointer )
             {
                 logic.buildCountsStore();
-                logFilesInitializer.initializeLogFiles( dbConfig, databaseLayout, store.getNeoStores(), fileSystem );
+                logFilesInitializer.initializeLogFiles( dbConfig, databaseLayout, fileSystem );
             }
         } );
 

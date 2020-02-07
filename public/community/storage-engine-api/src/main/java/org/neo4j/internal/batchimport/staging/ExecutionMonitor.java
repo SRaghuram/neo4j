@@ -26,8 +26,8 @@ import org.neo4j.common.DependencyResolver;
 import org.neo4j.time.Clocks;
 
 /**
- * Gets notified now and then about {@link StageExecution}, where statistics can be read and displayed,
- * aggregated or in other ways make sense of the data of {@link StageExecution}.
+ * Gets notified now and then about {@link StageControl}, where statistics can be read and displayed,
+ * aggregated or in other ways make sense of the data of {@link StageControl}.
  */
 public interface ExecutionMonitor
 {
@@ -41,17 +41,17 @@ public interface ExecutionMonitor
     }
 
     /**
-     * Signals the start of a {@link StageExecution}.
+     * Signals the start of a {@link StageControl}.
      */
-    void start( StageExecution execution );
+    void start( StageControl execution );
 
     /**
-     * Signals the end of the execution previously {@link #start(StageExecution) started}.
+     * Signals the end of the execution previously {@link #start(StageControl) started}.
      */
-    void end( StageExecution execution, long totalTimeMillis );
+    void end( StageControl execution, long totalTimeMillis );
 
     /**
-     * Called after all {@link StageExecution stage executions} have run.
+     * Called after all {@link StageControl stage executions} have run.
      */
     void done( boolean successful, long totalTimeMillis, String additionalInformation );
 
@@ -61,9 +61,9 @@ public interface ExecutionMonitor
     long nextCheckTime();
 
     /**
-     * Called periodically while executing a {@link StageExecution}.
+     * Called periodically while executing a {@link StageControl}.
      */
-    void check( StageExecution execution );
+    void check( StageControl execution );
 
     /**
      * Base implementation with most methods defaulting to not doing anything.
@@ -91,12 +91,12 @@ public interface ExecutionMonitor
         }
 
         @Override
-        public void start( StageExecution execution )
+        public void start( StageControl execution )
         {   // Do nothing by default
         }
 
         @Override
-        public void end( StageExecution execution, long totalTimeMillis )
+        public void end( StageControl execution, long totalTimeMillis )
         {   // Do nothing by default
         }
 

@@ -154,7 +154,8 @@ public class StoreCopy
                 log.info( "Empty database created, will start importing readable data from the source." );
 
                 BatchImporter batchImporter = BatchImporterFactory.withHighestPriority().instantiate( toDatabaseLayout, fs, pageCache, Configuration.DEFAULT,
-                        new SimpleLogService( logProvider ), executionMonitor, AdditionalInitialIds.EMPTY, config, recordFormats, NO_MONITOR, null,
+                        new SimpleLogService( logProvider ), executionMonitor, AdditionalInitialIds.EMPTY, config, //recordFormats,
+                        NO_MONITOR, null,
                         Collector.EMPTY, TransactionLogsInitializer.INSTANCE );
 
                 batchImporter.doImport( Input.input( this::nodeIterator, this::relationshipIterator, IdType.INTEGER, getEstimates(), new Groups() ) );
