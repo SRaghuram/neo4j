@@ -9,7 +9,6 @@ import org.apache.commons.lang3.mutable.MutableInt;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -61,10 +60,7 @@ public class SimpleBenchmark
         }
     }
 
-
-
-    private static final int NUM_CITIES = 100_000;
-    private static final int NUM_CONNECTIONS_PER_CIRY = 6;
+    private static final int NUM_CITIES = 10_000;
 
     private static final Label CITY = Label.label( "City" );
     private static final RelationshipType ROAD = RelationshipType.withName( "Road" );
@@ -72,44 +68,36 @@ public class SimpleBenchmark
     private static final String SORTVALUE = "sort";
     private static final int DISTANCE_VARIATION = 10;
 
-
-    private static final int TRAVEL_HOPS = 10_000_000;
+    private static final int TRAVEL_HOPS = 1_000_000;
     private static long startCityID;
-
 
     private static void createData( GraphDatabaseService db, int seed )
     {
-
-        System.out.println( "Data creation started using seed " + seed);
+        System.out.println( "Data creation started using seed " + seed );
         Random random = new Random( seed );
         try ( Transaction tx = db.beginTx() )
         {
             List<Node> cities = new ArrayList<>( NUM_CITIES );
-            HashMap<Node,MutableInt> roadPerCity = new HashMap<>();
             for ( int i = 0; i < NUM_CITIES; i++ )
             {
                 Node city = tx.createNode( CITY );
                 cities.add( city );
-                roadPerCity.put( city, new MutableInt( 0 ) );
             }
             MutableInt count = new MutableInt( 0 );
             MutableInt lastPercent = new MutableInt( -1 );
             MutableInt relationshipCounter = new MutableInt( 0 );
-            roadPerCity.forEach( ( city, numRoads ) ->
+            cities.forEach( city ->
             {
-                while ( numRoads.getValue() < NUM_CONNECTIONS_PER_CIRY / 2 )
+                // Create roads for this node
+                int numberOfRoadsToCreate = random.nextInt( 10 ) + 1;
+                for ( int i = 0; i < numberOfRoadsToCreate; i++ )
                 {
                     Node otherCity = cities.get( random.nextInt( cities.size() ) );
-                    MutableInt otherCityNumRoads = roadPerCity.get( otherCity );
-                    if ( otherCityNumRoads.getValue() < NUM_CONNECTIONS_PER_CIRY - 1)
-                    {
-                        otherCityNumRoads.increment();
-                        numRoads.increment();
-                        Relationship road = city.createRelationshipTo( otherCity, ROAD );
-                        road.setProperty( DISTANCE, random.nextInt( DISTANCE_VARIATION ) + 1 );
-                        road.setProperty( SORTVALUE, relationshipCounter.incrementAndGet() );
-                    }
+                    Relationship road = city.createRelationshipTo( otherCity, ROAD );
+                    road.setProperty( DISTANCE, random.nextInt( DISTANCE_VARIATION ) + 1 );
+                    road.setProperty( SORTVALUE, relationshipCounter.incrementAndGet() );
                 }
+
                 int currentPercent = (int) (count.getAndIncrement() * 100.0 / NUM_CITIES);
                 if ( lastPercent.getValue() < currentPercent )
                 {
@@ -122,12 +110,11 @@ public class SimpleBenchmark
             tx.commit();
         }
         System.out.println( "Data creation finished" );
-
     }
 
     private static void runBenchmark( GraphDatabaseService db, int seed )
     {
-        System.out.println( "Benchmark started using seed: " + seed);
+        System.out.println( "Benchmark started using seed: " + seed );
         Random random = new Random( seed );
         Stopwatch time = Stopwatch.start();
         long distance = 0;
@@ -139,7 +126,7 @@ public class SimpleBenchmark
             while ( hops++ < TRAVEL_HOPS )
             {
                 Map<Integer,Relationship> sortedRoads = new TreeMap<>();
-                city.getRelationships().forEach( r -> sortedRoads.put( (int) r.getProperty( SORTVALUE ), r ));
+                city.getRelationships().forEach( r -> sortedRoads.put( (int) r.getProperty( SORTVALUE ), r ) );
                 Relationship[] relationships = sortedRoads.values().toArray( new Relationship[0] );
                 Relationship road = relationships[random.nextInt( sortedRoads.size() )];
                 city = road.getOtherNode( city );
