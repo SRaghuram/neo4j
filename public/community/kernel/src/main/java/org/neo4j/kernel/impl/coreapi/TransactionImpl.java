@@ -58,6 +58,7 @@ import org.neo4j.internal.kernel.api.NodeValueIndexCursor;
 import org.neo4j.internal.kernel.api.PropertyCursor;
 import org.neo4j.internal.kernel.api.Read;
 import org.neo4j.internal.kernel.api.RelationshipScanCursor;
+import org.neo4j.internal.kernel.api.RelationshipTraversalCursor;
 import org.neo4j.internal.kernel.api.TokenRead;
 import org.neo4j.internal.kernel.api.TokenWrite;
 import org.neo4j.internal.kernel.api.Write;
@@ -591,6 +592,12 @@ public class TransactionImpl implements InternalTransaction
     public RelationshipEntity newRelationshipEntity( long id, long startNodeId, int typeId, long endNodeId )
     {
         return new RelationshipEntity( this, id, startNodeId, typeId, endNodeId );
+    }
+
+    @Override
+    public Relationship newRelationshipEntity( long id, long startNodeId, int typeId, long endNodeId, RelationshipTraversalCursor cursor )
+    {
+        return new RelationshipEntity( this, id, startNodeId, typeId, endNodeId, cursor );
     }
 
     @Override
