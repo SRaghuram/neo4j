@@ -28,14 +28,13 @@ import java.io.OutputStream;
 import static org.neo4j.configuration.GraphDatabaseSettings.store_internal_log_path;
 
 @ServiceProvider
-public class RestartableBatchImporterFactory extends BatchImporterFactory
-{
+public class RestartableBatchImporterFactory implements BatchImporterFactory {
     public RestartableBatchImporterFactory()
     {
-        super( 10 );
+        //super( 10 );
     }
 
-    @Override
+
     public String getName()
     {
         return "restartable";
@@ -60,6 +59,11 @@ public class RestartableBatchImporterFactory extends BatchImporterFactory
         {
 
         }
+        return null;
+    }
+
+    @Override
+    public BatchImporter instantiate() {
         return null;
     }
 }

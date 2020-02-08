@@ -24,6 +24,7 @@ import org.neo4j.internal.kernel.api.exceptions.schema.CreateConstraintFailureEx
 import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.internal.recordstorage.RecordStorageEngine;
 import org.neo4j.internal.recordstorage.SchemaRuleAccess;
+import org.neo4j.internal.recordstorage.StoreSchemaRuleAccess;
 import org.neo4j.internal.schema.ConstraintDescriptor;
 import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.internal.schema.LabelSchemaDescriptor;
@@ -242,7 +243,7 @@ class UniquenessConstraintCreationIT extends AbstractConstraintCreationIT<Constr
         commit();
 
         // then
-        SchemaRuleAccess schemaRuleAccess = SchemaRuleAccess.getSchemaRuleAccess( neoStores().getSchemaStore(), tokenHolders() );
+        SchemaRuleAccess schemaRuleAccess = StoreSchemaRuleAccess.getSchemaRuleAccess( neoStores().getSchemaStore(), tokenHolders() );
         IndexDescriptor indexRule = ArrayUtil.single( schemaRuleAccess.indexGetForSchema( TestIndexDescriptorFactory
                 .uniqueForLabel( typeId, propertyKeyId ), NULL ) );
         ConstraintDescriptor constraintRule = schemaRuleAccess.constraintsGetSingle(

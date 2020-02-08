@@ -78,6 +78,7 @@
     <module>testing</module>
     <module>neo4j-exceptions</module>
     <module>layout</module>
+    <module>StorageSubsystem-MyStore</module>
   </modules>
 
   <licenses>

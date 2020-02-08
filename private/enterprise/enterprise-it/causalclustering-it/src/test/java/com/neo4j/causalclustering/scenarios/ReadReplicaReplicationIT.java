@@ -87,7 +87,7 @@ import static org.mockito.Mockito.mock;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.internal.helpers.collection.Iterables.count;
-import static org.neo4j.kernel.impl.store.MetaDataStore.Position.TIME;
+import static org.neo4j.kernel.impl.store.MetaDataStoreCommon.Position.TIME;
 import static org.neo4j.test.conditions.Conditions.TRUE;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 import static org.neo4j.test.conditions.Conditions.condition;

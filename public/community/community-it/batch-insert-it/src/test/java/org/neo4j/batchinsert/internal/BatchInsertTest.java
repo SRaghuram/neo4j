@@ -65,6 +65,7 @@ import org.neo4j.internal.index.label.LabelScanStore;
 import org.neo4j.internal.index.label.NativeLabelScanStore;
 import org.neo4j.internal.recordstorage.RecordStorageEngine;
 import org.neo4j.internal.recordstorage.SchemaRuleAccess;
+import org.neo4j.internal.recordstorage.StoreSchemaRuleAccess;
 import org.neo4j.internal.schema.ConstraintDescriptor;
 import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.internal.schema.IndexProviderDescriptor;
@@ -755,7 +756,7 @@ class BatchInsertTest
                     .resolveDependency( RecordStorageEngine.class ).testAccessNeoStores();
             SchemaStore store = neoStores.getSchemaStore();
             TokenHolders tokenHolders = graphdb.getDependencyResolver().resolveDependency( TokenHolders.class );
-            SchemaRuleAccess schemaRuleAccess = SchemaRuleAccess.getSchemaRuleAccess( store, tokenHolders );
+            SchemaRuleAccess schemaRuleAccess = StoreSchemaRuleAccess.getSchemaRuleAccess( store, tokenHolders );
             List<Long> inUse = new ArrayList<>();
             SchemaRecord record = store.newRecord();
             for ( long i = 1, high = store.getHighestPossibleIdInUse(); i <= high; i++ )

@@ -19,8 +19,7 @@
  */
 package org.neo4j.internal.recordstorage;
 
-import org.neo4j.internal.kernel.api.Read;
-
+import static org.neo4j.storageengine.api.StorageEntityScanCursor.NO_ID;
 /**
  * Relationship/relationship group references that are exposed from the kernel API surface into the client
  * will have some flags encoded into them, basically to provide some context which will be lost when exiting the kernel.
@@ -46,7 +45,7 @@ import org.neo4j.internal.kernel.api.Read;
  * the reference, the encoding must be cleared with {@link #clearEncoding(long)}. To guard against using an
  * encoded reference, all encoded references are marked so they appear negative.
  */
-enum RelationshipReferenceEncoding
+public enum RelationshipReferenceEncoding
 {
     /** No encoding */
     NONE( 0 ),
@@ -68,9 +67,9 @@ enum RelationshipReferenceEncoding
         this.bits = id << 60;
     }
 
-    static RelationshipReferenceEncoding parseEncoding( long reference )
+    public static RelationshipReferenceEncoding parseEncoding(long reference)
     {
-        if ( reference == Read.NO_ID )
+        if ( reference == NO_ID )
         {
             return NONE;
         }
@@ -96,9 +95,9 @@ enum RelationshipReferenceEncoding
      * @param reference The reference to clear.
      * @return The cleared reference.
      */
-    static long clearEncoding( long reference )
+    public static long clearEncoding(long reference)
     {
-        assert reference != Read.NO_ID;
+        assert reference != NO_ID;
         return reference & ~FLAGS;
     }
 }

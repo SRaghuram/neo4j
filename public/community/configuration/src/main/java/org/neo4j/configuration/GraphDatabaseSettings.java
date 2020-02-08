@@ -1175,6 +1175,9 @@ public class GraphDatabaseSettings implements SettingsDeclaration
     public static final Setting<Boolean> consistency_check_on_apply =
             newBuilder( "unsupported.dbms.storage.consistency_check_on_apply", BOOL, Boolean.FALSE ).build();
 
+    @Description( "Storage engine factory to be use in import command specified in the additionalConfig file" )
+    public static final Setting<String> storageEngineFactory = newBuilder( "dbms.import.storageEngineFactory", STRING , "StandardBatchImporterFactory").build();
+
     /**
      * Default settings for connectors. The default values are assumes to be default for embedded deployments through the code.
      * This map contains default connector settings that you can pass to the builders.

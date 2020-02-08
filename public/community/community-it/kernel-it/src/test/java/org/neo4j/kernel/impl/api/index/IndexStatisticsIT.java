@@ -34,6 +34,7 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.internal.recordstorage.RecordStorageEngine;
 import org.neo4j.internal.recordstorage.SchemaRuleAccess;
+import org.neo4j.internal.recordstorage.StoreSchemaRuleAccess;
 import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.io.fs.EphemeralFileSystemAbstraction;
 import org.neo4j.io.fs.UncloseableDelegatingFileSystemAbstraction;
@@ -95,7 +96,7 @@ class IndexStatisticsIT
         // where ALIEN and SPECIMEN are both the first ids of their kind
         IndexDescriptor index = TestIndexDescriptorFactory.forLabel( labelId( ALIEN ), pkId( SPECIMEN ) );
         SchemaRuleAccess schemaRuleAccess =
-                SchemaRuleAccess.getSchemaRuleAccess( neoStores().getSchemaStore(), resolveDependency( TokenHolders.class ) );
+                StoreSchemaRuleAccess.getSchemaRuleAccess( neoStores().getSchemaStore(), resolveDependency( TokenHolders.class ) );
         long indexId = single( schemaRuleAccess.indexGetForSchema( index, NULL ) ).getId();
 
         // for which we don't have index counts

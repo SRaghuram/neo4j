@@ -88,7 +88,7 @@ public class SchemaCache
         return schemaCacheState.constraints();
     }
 
-    boolean hasConstraintRule( Long constraintRuleId )
+    public boolean hasConstraintRule( Long constraintRuleId )
     {
         return schemaCacheState.hasConstraintRule( constraintRuleId );
     }
@@ -108,22 +108,22 @@ public class SchemaCache
         return schemaCacheState.hasIndex( descriptor );
     }
 
-    Iterator<ConstraintDescriptor> constraintsForLabel( final int label )
+    public Iterator<ConstraintDescriptor> constraintsForLabel(final int label)
     {
         return Iterators.filter( SchemaDescriptorPredicates.hasLabel( label ), constraints().iterator() );
     }
 
-    Iterator<ConstraintDescriptor> constraintsForRelationshipType( final int relTypeId )
+    public Iterator<ConstraintDescriptor> constraintsForRelationshipType(final int relTypeId)
     {
         return Iterators.filter( SchemaDescriptorPredicates.hasRelType( relTypeId ), constraints().iterator() );
     }
 
-    Iterator<ConstraintDescriptor> constraintsForSchema( SchemaDescriptor descriptor )
+    public Iterator<ConstraintDescriptor> constraintsForSchema(SchemaDescriptor descriptor)
     {
         return Iterators.filter( SchemaDescriptor.equalTo( descriptor ), constraints().iterator() );
     }
 
-    <P, T> T getOrCreateDependantState( Class<T> type, Function<P,T> factory, P parameter )
+    public <P, T> T getOrCreateDependantState(Class<T> type, Function<P, T> factory, P parameter)
     {
         return schemaCacheState.getOrCreateDependantState( type, factory, parameter );
     }
@@ -210,18 +210,18 @@ public class SchemaCache
         return schemaCacheState.getIndexesRelatedTo( entityType, changedEntityTokens, unchangedEntityTokens, properties, propertyListIsComplete );
     }
 
-    Collection<IndexBackedConstraintDescriptor> getUniquenessConstraintsRelatedTo( long[] changedLabels, long[] unchangedLabels, int[] properties,
-            boolean propertyListIsComplete, EntityType entityType )
+    public Collection<IndexBackedConstraintDescriptor> getUniquenessConstraintsRelatedTo(long[] changedLabels, long[] unchangedLabels, int[] properties,
+                                                                                         boolean propertyListIsComplete, EntityType entityType)
     {
         return schemaCacheState.getUniquenessConstraintsRelatedTo( entityType, changedLabels, unchangedLabels, properties, propertyListIsComplete );
     }
 
-    boolean hasRelatedSchema( long[] labels, int propertyKey, EntityType entityType )
+    public boolean hasRelatedSchema(long[] labels, int propertyKey, EntityType entityType)
     {
         return schemaCacheState.hasRelatedSchema( labels, propertyKey, entityType );
     }
 
-    boolean hasRelatedSchema( int label, EntityType entityType )
+    public boolean hasRelatedSchema(int label, EntityType entityType)
     {
         return schemaCacheState.hasRelatedSchema( label, entityType );
     }

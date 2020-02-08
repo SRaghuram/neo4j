@@ -64,6 +64,7 @@ import org.neo4j.internal.batchimport.input.InputChunk;
 import org.neo4j.internal.batchimport.input.InputEntity;
 import org.neo4j.internal.batchimport.input.InputEntityVisitor;
 import org.neo4j.internal.batchimport.staging.ExecutionMonitor;
+import org.neo4j.internal.batchimport.staging.StageControl;
 import org.neo4j.internal.batchimport.staging.StageExecution;
 import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
@@ -605,13 +606,13 @@ public class ParallelBatchImporterTest
         }
 
         @Override
-        public void start( StageExecution execution )
+        public void start( StageControl execution )
         {
             delegate.start( execution );
         }
 
         @Override
-        public void end( StageExecution execution, long totalTimeMillis )
+        public void end( StageControl execution, long totalTimeMillis )
         {
             delegate.end( execution, totalTimeMillis );
         }
@@ -630,7 +631,7 @@ public class ParallelBatchImporterTest
         }
 
         @Override
-        public void check( StageExecution execution )
+        public void check( StageControl execution )
         {
             delegate.check( execution );
         }

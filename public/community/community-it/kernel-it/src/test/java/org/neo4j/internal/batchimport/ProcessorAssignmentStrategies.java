@@ -27,6 +27,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.internal.batchimport.staging.ExecutionMonitor;
+import org.neo4j.internal.batchimport.staging.StageControl;
 import org.neo4j.internal.batchimport.staging.StageExecution;
 import org.neo4j.internal.batchimport.staging.Step;
 import org.neo4j.time.Clocks;
@@ -54,10 +55,10 @@ public class ProcessorAssignmentStrategies
         return new AbstractAssigner( Clocks.systemClock(), 10, SECONDS )
         {
             @Override
-            public void start( StageExecution execution )
+            public void start( StageControl execution )
             {
-                saturate( availableProcessor, execution );
-                registerProcessorCount( execution );
+                saturate( availableProcessor, (StageExecution)execution );
+                registerProcessorCount( (StageExecution)execution );
             }
 
             private void saturate( final int availableProcessor, StageExecution execution )
@@ -78,7 +79,7 @@ public class ProcessorAssignmentStrategies
             }
 
             @Override
-            public void check( StageExecution execution )
+            public void check( StageControl execution )
             {   // We do everything in start
             }
         };
@@ -94,10 +95,10 @@ public class ProcessorAssignmentStrategies
             private int processors = availableProcessor;
 
             @Override
-            public void check( StageExecution execution )
+            public void check( StageControl execution )
             {
-                saturate( execution );
-                registerProcessorCount( execution );
+                saturate( (StageExecution)execution );
+                registerProcessorCount( (StageExecution)execution );
             }
 
             private void saturate( StageExecution execution )

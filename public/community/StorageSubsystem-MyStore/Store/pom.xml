@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>StorageSubsystem-MyStore</artifactId>
+        <groupId>org.neo4j.build</groupId>
+        <version>4.1.0-SNAPSHOT</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+    <version>4.1.0-SNAPSHOT</version>
+    <packaging>jar</packaging>
+    <name>Neo4j - Storage subsystem MyStore-store</name>
+    <description>Internal Storage batchimport of Neo4j</description>
+    <url>http://components.neo4j.org/${project.artifactId}/${project.version}</url>
+    <properties>
+        <license-text.header>headers/GPL-3-header.txt</license-text.header>
+        <licensing.prepend.text>licensing/notice-gpl-prefix.txt</licensing.prepend.text>
+        <moduleName>org.neo4j.storageengine</moduleName>
+        <default.jupiter.test.mode>concurrent</default.jupiter.test.mode>
+    </properties>
+    <scm>
+        <connection>scm:git:git://github.com/neo4j/neo4j.git</connection>
+        <developerConnection>scm:git:git@github.com:neo4j/neo4j.git</developerConnection>
+        <url>https://github.com/neo4j/neo4j</url>
+    </scm>
+    <artifactId>StorageSubsystem-MyStore-Store</artifactId>
+    <dependencies>
+        <dependency>
+            <groupId>org.neo4j</groupId>
+            <artifactId>neo4j-configuration</artifactId>
+            <version>4.1.0-SNAPSHOT</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.neo4j</groupId>
+            <artifactId>neo4j-common</artifactId>
+            <version>4.1.0-SNAPSHOT</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.neo4j</groupId>
+            <artifactId>neo4j-import-util</artifactId>
+            <version>4.1.0-SNAPSHOT</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.neo4j</groupId>
+            <artifactId>neo4j-kernel-api</artifactId>
+            <version>4.1.0-SNAPSHOT</version>
+            <scope>compile</scope>
+        </dependency>
+
+    </dependencies>
+
+
+</project>

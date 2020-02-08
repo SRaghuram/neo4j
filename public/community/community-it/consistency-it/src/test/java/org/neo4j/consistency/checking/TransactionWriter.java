@@ -39,6 +39,7 @@ import org.neo4j.kernel.impl.store.record.TokenRecord;
 import org.neo4j.kernel.impl.transaction.TransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionRepresentation;
 import org.neo4j.storageengine.api.StorageCommand;
+import org.neo4j.storageengine.api.StorageCommonCommand;
 
 import static org.neo4j.kernel.impl.store.TokenStore.NAME_STORE_BLOCK_SIZE;
 import static org.neo4j.kernel.impl.store.record.Record.NO_NEXT_PROPERTY;
@@ -51,7 +52,7 @@ public class TransactionWriter
     private final List<Command.NodeCommand> nodeCommands = new ArrayList<>();
     private final List<Command.RelationshipCommand> relationshipCommands = new ArrayList<>();
     private final List<Command.RelationshipGroupCommand> relationshipGroupCommands = new ArrayList<>();
-    private final List<Command> otherCommands = new ArrayList<>();
+    private final List<StorageCommand> otherCommands = new ArrayList<>();
 
     public TransactionWriter( NeoStores neoStores )
     {
@@ -250,12 +251,12 @@ public class TransactionWriter
 
     public void incrementNodeCount( int labelId, long delta )
     {
-        otherCommands.add( new Command.NodeCountsCommand( labelId, delta ) );
+        otherCommands.add( new StorageCommonCommand.NodeCountsCommand( labelId, delta ) );
     }
 
     public void incrementRelationshipCount( int startLabelId, int typeId, int endLabelId, long delta )
     {
-        otherCommands.add( new Command.RelationshipCountsCommand( startLabelId, typeId, endLabelId, delta ) );
+        otherCommands.add( new StorageCommonCommand.RelationshipCountsCommand( startLabelId, typeId, endLabelId, delta ) );
     }
 
     private static <T extends TokenRecord> T withName( T record, int[] dynamicIds, String name )

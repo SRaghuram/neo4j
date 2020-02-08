@@ -11,6 +11,7 @@ import java.io.PrintStream;
 import org.neo4j.configuration.Config;
 import org.neo4j.internal.id.DefaultIdGeneratorFactory;
 import org.neo4j.internal.recordstorage.SchemaRuleAccess;
+import org.neo4j.internal.recordstorage.StoreSchemaRuleAccess;
 import org.neo4j.internal.recordstorage.StoreTokens;
 import org.neo4j.internal.schema.SchemaDescriptor;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
@@ -65,7 +66,7 @@ public class DumpIndexStatisticsStore
                         pageCache, fs, logProvider, PageCacheTracer.NULL );
                 NeoStores neoStores = factory.openAllNeoStores();
                 TokenHolders tokenHolders = StoreTokens.readOnlyTokenHolders( neoStores, NULL );
-                SchemaRuleAccess schemaStorage = SchemaRuleAccess.getSchemaRuleAccess( neoStores.getSchemaStore(), tokenHolders );
+                SchemaRuleAccess schemaStorage = StoreSchemaRuleAccess.getSchemaRuleAccess( neoStores.getSchemaStore(), tokenHolders );
                 schema = new SimpleSchemaRuleCache( neoStores, schemaStorage );
             }
             else

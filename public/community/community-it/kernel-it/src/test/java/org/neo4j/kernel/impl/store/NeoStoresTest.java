@@ -65,7 +65,7 @@ import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.txstate.TransactionState;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.impl.api.KernelTransactionImplementation;
-import org.neo4j.kernel.impl.store.MetaDataStore.Position;
+import org.neo4j.kernel.impl.store.MetaDataStoreCommon.Position;
 import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
 import org.neo4j.kernel.impl.store.format.RecordFormats;
 import org.neo4j.kernel.impl.store.record.NodeRecord;

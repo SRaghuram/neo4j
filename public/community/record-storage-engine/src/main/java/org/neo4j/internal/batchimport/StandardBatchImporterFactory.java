@@ -41,19 +41,20 @@ import java.io.OutputStream;
 import static org.neo4j.configuration.GraphDatabaseSettings.store_internal_log_path;
 
 @ServiceProvider
-public class StandardBatchImporterFactory extends BatchImporterFactory
+public class StandardBatchImporterFactory implements BatchImporterFactory
 {
-    public StandardBatchImporterFactory()
+    public BatchImporter instantiate( DatabaseLayout databaseLayout, FileSystemAbstraction fileSystem, PageCache externalPageCache, Configuration config,
+                                      LogService logService, ExecutionMonitor executionMonitor, AdditionalInitialIds additionalInitialIds, Config dbConfig, RecordFormats recordFormats,
+                                      ImportLogicMonitor.Monitor monitor, JobScheduler jobScheduler, Collector badCollector, LogFilesInitializer logFilesInitializer )
     {
-        super( 1 );
+        return new ParallelBatchImporter( databaseLayout, fileSystem, externalPageCache, config, logService, executionMonitor,
+                additionalInitialIds, dbConfig, recordFormats, monitor, jobScheduler, badCollector, logFilesInitializer );
     }
 
     @Override
-    public String getName()
-    {
-        return "standard";
+    public BatchImporter instantiate() {
+        return null;
     }
-
     @Override
     public BatchImporter instantiate(DatabaseLayout directoryStructure, FileSystemAbstraction fileSystem, PageCache externalPageCache, Configuration config,
                                      LogService logService, ExecutionMonitor executionMonitor, AdditionalInitialIds additionalInitialIds, Config dbConfig, //RecordFormats recordFormats,

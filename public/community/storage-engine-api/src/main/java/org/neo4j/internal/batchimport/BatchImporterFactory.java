@@ -34,14 +34,9 @@ import org.neo4j.service.NamedService;
 import org.neo4j.service.Services;
 
 @Service
-public abstract class BatchImporterFactory implements NamedService
+public interface BatchImporterFactory
 {
-    private final int priority;
-
-    protected BatchImporterFactory( int priority )
-    {
-        this.priority = priority;
-    }
+    int priority = 0;
 
     public abstract BatchImporter instantiate( DatabaseLayout directoryStructure, FileSystemAbstraction fileSystem, PageCache externalPageCache,
             Configuration config, LogService logService, ExecutionMonitor executionMonitor,
@@ -49,6 +44,7 @@ public abstract class BatchImporterFactory implements NamedService
                                                ImportLogicMonitor.Monitor monitor,
             JobScheduler jobScheduler, Collector badCollector, LogFilesInitializer logFilesInitializer );
 
+    BatchImporter instantiate();
     public static BatchImporterFactory withHighestPriority()
     {
         BatchImporterFactory highestPrioritized = null;

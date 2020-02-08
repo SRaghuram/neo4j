@@ -45,7 +45,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-import static org.neo4j.kernel.impl.store.MetaDataStore.Position.RANDOM_NUMBER;
+import static org.neo4j.kernel.impl.store.MetaDataStoreCommon.Position.RANDOM_NUMBER;
 import static org.neo4j.logging.internal.DatabaseLogProvider.nullDatabaseLogProvider;
 
 @ExtendWith( DefaultFileSystemExtension.class )

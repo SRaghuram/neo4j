@@ -15,6 +15,7 @@ import org.neo4j.common.HexPrinter;
 import org.neo4j.configuration.Config;
 import org.neo4j.internal.id.DefaultIdGeneratorFactory;
 import org.neo4j.internal.recordstorage.SchemaRuleAccess;
+import org.neo4j.internal.recordstorage.StoreSchemaRuleAccess;
 import org.neo4j.internal.recordstorage.StoreTokens;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseFile;
@@ -252,7 +253,7 @@ public class DumpStore<RECORD extends AbstractBaseRecord, STORE extends RecordSt
         try ( SchemaStore store = neoStores.getSchemaStore() )
         {
             TokenHolders tokenHolders = StoreTokens.readOnlyTokenHolders( neoStores, NULL );
-            final SchemaRuleAccess schemaRuleAccess = SchemaRuleAccess.getSchemaRuleAccess( store, tokenHolders );
+            final SchemaRuleAccess schemaRuleAccess = StoreSchemaRuleAccess.getSchemaRuleAccess( store, tokenHolders );
             new DumpStore<SchemaRecord,SchemaStore>( System.out )
             {
                 @Override

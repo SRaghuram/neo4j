@@ -70,6 +70,7 @@ import org.neo4j.internal.index.label.LabelScanWriter;
 import org.neo4j.internal.kernel.api.TokenRead;
 import org.neo4j.internal.kernel.api.TokenWrite;
 import org.neo4j.internal.recordstorage.SchemaRuleAccess;
+import org.neo4j.internal.recordstorage.StoreSchemaRuleAccess;
 import org.neo4j.internal.recordstorage.StoreTokens;
 import org.neo4j.internal.schema.ConstraintDescriptor;
 import org.neo4j.internal.schema.IndexDescriptor;
@@ -2486,7 +2487,7 @@ public class FullCheckIntegrationTest
 
     private void writeToSchemaStore( SchemaStore schemaStore, SchemaRule rule ) throws KernelException
     {
-        SchemaRuleAccess schemaRuleAccess = SchemaRuleAccess.getSchemaRuleAccess( schemaStore, fixture.writableTokenHolders() );
+        SchemaRuleAccess schemaRuleAccess = StoreSchemaRuleAccess.getSchemaRuleAccess( schemaStore, fixture.writableTokenHolders() );
         schemaRuleAccess.writeSchemaRule( rule, NULL );
     }
 
@@ -2494,7 +2495,7 @@ public class FullCheckIntegrationTest
     {
         StoreAccess storeAccess = fixture.directStoreAccess().nativeStores();
         TokenHolders tokenHolders = StoreTokens.readOnlyTokenHolders( storeAccess.getRawNeoStores(), NULL );
-        SchemaRuleAccess schema = SchemaRuleAccess.getSchemaRuleAccess( storeAccess.getSchemaStore(), tokenHolders );
+        SchemaRuleAccess schema = StoreSchemaRuleAccess.getSchemaRuleAccess( storeAccess.getSchemaStore(), tokenHolders );
         return schema.indexesGetAll( NULL );
     }
 

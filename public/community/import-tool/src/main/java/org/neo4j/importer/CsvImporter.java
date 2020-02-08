@@ -66,9 +66,11 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.logging.internal.SimpleLogService;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.service.Services;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.commons.lang3.exception.ExceptionUtils.indexOfThrowable;
+import static org.neo4j.configuration.GraphDatabaseSettings.storageEngineFactory;
 import static org.neo4j.configuration.GraphDatabaseSettings.store_internal_log_path;
 import static org.neo4j.internal.batchimport.AdditionalInitialIds.EMPTY;
 import static org.neo4j.internal.batchimport.input.Collectors.badCollector;
@@ -165,8 +167,16 @@ class CsvImporter implements Importer
 
             ExecutionMonitor executionMonitor = verbose ? new SpectrumExecutionMonitor( 2, TimeUnit.SECONDS, stdOut,
                     SpectrumExecutionMonitor.DEFAULT_WIDTH ) : ExecutionMonitors.defaultVisible();
-
-            BatchImporter importer = BatchImporterFactory.withHighestPriority().instantiate( databaseLayout,
+            BatchImporterFactory chosenOne = null;
+            for ( BatchImporterFactory candidate : Services.loadAll( BatchImporterFactory.class ) )
+            {
+                String engineFactoryName = candidate.toString().substring(0, candidate.toString().indexOf("@"));
+                String configuredEngineFactoryName = databaseConfig.get( storageEngineFactory );
+                System.out.println( engineFactoryName+ "--"+  configuredEngineFactoryName);
+                if (engineFactoryName.endsWith(configuredEngineFactoryName))
+                    chosenOne = candidate;
+            }
+            BatchImporter importer = chosenOne.instantiate( databaseLayout,
                     fileSystem,
                     null, // no external page cache
                     importConfig,

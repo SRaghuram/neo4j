@@ -86,6 +86,7 @@ import static org.neo4j.kernel.api.impl.fulltext.FulltextIndexProceduresUtil.NOD
 import static org.neo4j.kernel.api.impl.fulltext.FulltextIndexProceduresUtil.RELATIONSHIP_CREATE;
 import static org.neo4j.kernel.api.impl.fulltext.FulltextIndexProceduresUtil.asCypherStringsList;
 import static org.neo4j.kernel.impl.index.schema.FailingGenericNativeIndexProviderFactory.FailureType.SKIP_ONLINE_UPDATES;
+import static org.neo4j.storageengine.api.StorageEntityScanCursor.NO_ID;
 import static org.neo4j.test.TestDatabaseManagementServiceBuilder.INDEX_PROVIDERS_FILTER;
 
 @Neo4jLayoutExtension
@@ -709,7 +710,7 @@ class FulltextIndexConsistencyCheckIT
         RelationshipRecord record = stores.getRelationshipStore().newRecord();
         record = stores.getRelationshipStore().getRecord( relId, record, RecordLoad.NORMAL, NULL );
         long propId = record.getNextProp();
-        record.setNextProp( AbstractBaseRecord.NO_ID );
+        record.setNextProp( NO_ID );
         stores.getRelationshipStore().updateRecord( record, NULL );
         PropertyRecord propRecord = stores.getPropertyStore().getRecord( propId, stores.getPropertyStore().newRecord(), RecordLoad.NORMAL, NULL );
         propRecord.setInUse( false );
