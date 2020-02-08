@@ -24,6 +24,13 @@ import java.util.Arrays;
 
 import static java.lang.Integer.min;
 
+/**
+ * Writes arrays of ints or longs. Terminology:
+ * <ul>
+ *     <li>chunk: count header (0-127) + 0-127 array items. A chunk contains 0 or more blocks</li>
+ *     <li>block: count header (for 0-4 array items) + 0-4 array items</li>
+ * </ul>
+ */
 class StreamVByte
 {
     private static final int MASK_SQUASHED_BLOCK = 0b1000_0000;
@@ -39,44 +46,48 @@ class StreamVByte
     {
         byte[] serialized = buffer.array();
         int offset = buffer.position();
-        int length = source.length();
-        for ( int i = 0, prev = 0; i < length; )
+        int count = source.length();
+        for ( int i = 0, prev = 0; i < count; )
         {
-            int headerOffset = offset;
-            int currentBlockValueLength = min( Byte.MAX_VALUE, length - i );
-            if ( currentBlockValueLength <= 2 )
-            {
-                // If block size is 0..2 then count and header bytes can be squashed into a single byte
-                serialized[headerOffset] = (byte) (MASK_SQUASHED_BLOCK | (currentBlockValueLength << SHIFT_SQUASHED_BLOCK_LENGTH));
-            }
-            else
-            {
-                serialized[headerOffset++] = (byte) currentBlockValueLength;
-                serialized[headerOffset] = 0; // clear the header byte since we could be overwriting previous data
-            }
-
+            int currentChunkCount = min( Byte.MAX_VALUE, count - i );
+            int headerOffset = writeChunkHeader( serialized, offset, currentChunkCount );
             offset = headerOffset + 1;
-            for ( int c = 0; c < currentBlockValueLength; )
+            for ( int c = 0; c < currentChunkCount; )
             {
-                int blockSize = min( 4, currentBlockValueLength - c );
-                for ( int j = 0; j < blockSize; j++, i++, c++ )
+                int currentBlockCount = min( 4, currentChunkCount - c );
+                for ( int j = 0; j < currentBlockCount; j++, i++, c++ )
                 {
                     int value = source.valueAt( i );
                     offset = writeIntValue( serialized, offset, headerOffset, j, value - prev );
                     prev = value;
                 }
-                if ( blockSize == 4 )
+                if ( currentBlockCount == 4 )
                 {
                     headerOffset = offset++;
                     serialized[headerOffset] = 0; // clear the header byte since we could be overwriting previous data
                 }
             }
         }
-        if ( length % 127 == 0 )
+        if ( count % 127 == 0 )
         {
             serialized[offset++] = (byte) MASK_SQUASHED_BLOCK;
         }
         buffer.position( offset );
+    }
+
+    private static int writeChunkHeader( byte[] serialized, int offset, int currentBlockValueLength )
+    {
+        if ( currentBlockValueLength <= 2 )
+        {
+            // If block size is 0..2 then count and header bytes can be squashed into a single byte
+            serialized[offset] = (byte) (MASK_SQUASHED_BLOCK | (currentBlockValueLength << SHIFT_SQUASHED_BLOCK_LENGTH));
+        }
+        else
+        {
+            serialized[offset++] = (byte) currentBlockValueLength;
+            serialized[offset] = 0; // clear the header byte since we could be overwriting previous data
+        }
+        return offset;
     }
 
     private static int writeIntValue( byte[] serialized, int offset, int headerOffset, int j, int value )
@@ -120,27 +131,27 @@ class StreamVByte
 
     static int readIntDeltas( Target target, byte[] serialized, int offset )
     {
-        int currentBlockValueLength = Byte.MAX_VALUE;
-        for ( int i = 0, prev = 0; currentBlockValueLength == Byte.MAX_VALUE; )
+        int currentChunkCount = Byte.MAX_VALUE;
+        for ( int i = 0, prev = 0; currentChunkCount == Byte.MAX_VALUE; )
         {
             int headerByte = unsigned( serialized[offset++] );
             if ( (headerByte & MASK_SQUASHED_BLOCK) != 0 )
             {
                 // The special 0-2 header and count squashed byte
-                currentBlockValueLength = ((headerByte & 0b0110_0000) >>> SHIFT_SQUASHED_BLOCK_LENGTH) & 0b11;
+                currentChunkCount = ((headerByte & 0b0110_0000) >>> SHIFT_SQUASHED_BLOCK_LENGTH) & 0b11;
                 headerByte &= 0b1111;
             }
             else
             {
-                currentBlockValueLength = headerByte;
+                currentChunkCount = headerByte;
                 headerByte = unsigned( serialized[offset++] );
             }
 
-            target.beginBlock( currentBlockValueLength, i + currentBlockValueLength );
-            for ( int c = 0; c < currentBlockValueLength; )
+            target.beginBlock( currentChunkCount, i + currentChunkCount );
+            for ( int c = 0; c < currentChunkCount; )
             {
-                int blockSize = min( 4, currentBlockValueLength - c );
-                for ( int j = 0; j < blockSize; j++, i++, c++ )
+                int currentBlockCount = min( 4, currentChunkCount - c );
+                for ( int j = 0; j < currentBlockCount; j++, i++, c++ )
                 {
                     int size = (headerByte >>> (j * 2)) & 0b11;
                     int readValue = readIntValue( serialized, offset, size );
@@ -149,7 +160,7 @@ class StreamVByte
                     offset += size + 1; // because e.g. size==0 uses 1B, size==1 uses 2B a.s.o.
                     prev = value;
                 }
-                if ( blockSize == 4 )
+                if ( currentBlockCount == 4 )
                 {
                     headerByte = unsigned( serialized[offset++] );
                 }
@@ -188,31 +199,31 @@ class StreamVByte
     static int sizeOfIntDeltas( byte[] serialized, int offset )
     {
         int startOffset = offset;
-        int currentBlockValueLength = Byte.MAX_VALUE;
-        while ( currentBlockValueLength == Byte.MAX_VALUE )
+        int currentChunkCount = Byte.MAX_VALUE;
+        while ( currentChunkCount == Byte.MAX_VALUE )
         {
             int headerByte = unsigned( serialized[offset++] );
             if ( (headerByte & MASK_SQUASHED_BLOCK) != 0 )
             {
                 // The special 0-2 header and count squashed byte
-                currentBlockValueLength = ((headerByte & 0b0110_0000) >>> SHIFT_SQUASHED_BLOCK_LENGTH) & 0b11;
+                currentChunkCount = ((headerByte & 0b0110_0000) >>> SHIFT_SQUASHED_BLOCK_LENGTH) & 0b11;
                 headerByte &= 0b1111;
             }
             else
             {
-                currentBlockValueLength = headerByte;
+                currentChunkCount = headerByte;
                 headerByte = unsigned( serialized[offset++] );
             }
 
-            for ( int c = 0; c < currentBlockValueLength; )
+            for ( int c = 0; c < currentChunkCount; )
             {
-                int blockSize = min( 4, currentBlockValueLength - c );
-                for ( int j = 0; j < blockSize; j++, c++ )
+                int currentBlockCount = min( 4, currentChunkCount - c );
+                for ( int j = 0; j < currentBlockCount; j++, c++ )
                 {
                     int size = (headerByte >>> (j * 2)) & 0b11;
                     offset += size + 1; // because e.g. size==0 uses 1B, size==1 uses 2B a.s.o.
                 }
-                if ( blockSize == 4 )
+                if ( currentBlockCount == 4 )
                 {
                     headerByte = unsigned( serialized[offset++] );
                 }
@@ -235,38 +246,27 @@ class StreamVByte
     {
         byte[] serialized = buffer.array();
         int offset = buffer.position();
-        int length = source.length;
-        for ( int i = 0; i < length; )
+        int count = source.length;
+        for ( int i = 0; i < count; )
         {
-            int headerOffset = offset;
-            int currentBlockValueLength = min( Byte.MAX_VALUE, length - i );
-            if ( currentBlockValueLength <= 2 )
-            {
-                // If block size is 0..2 then count and header bytes can be squashed into a single byte
-                serialized[headerOffset] = (byte) (MASK_SQUASHED_BLOCK | (currentBlockValueLength << SHIFT_SQUASHED_BLOCK_LENGTH));
-            }
-            else
-            {
-                serialized[headerOffset++] = (byte) currentBlockValueLength;
-                serialized[headerOffset] = 0; // clear the header byte since we could be overwriting previous data
-            }
-
+            int currentChunkCount = min( Byte.MAX_VALUE, count - i );
+            int headerOffset = writeChunkHeader( serialized, offset, currentChunkCount );
             offset = headerOffset + 1;
-            for ( int c = 0; c < currentBlockValueLength; )
+            for ( int c = 0; c < currentChunkCount; )
             {
-                int blockSize = min( 4, currentBlockValueLength - c );
-                for ( int j = 0; j < blockSize; j++, i++, c++ )
+                int currentBlockCount = min( 4, currentChunkCount - c );
+                for ( int j = 0; j < currentBlockCount; j++, i++, c++ )
                 {
                     offset = writeLongValue( serialized, offset, headerOffset, j, source[i] );
                 }
-                if ( blockSize == 4 )
+                if ( currentBlockCount == 4 )
                 {
                     headerOffset = offset++;
                     serialized[headerOffset] = 0; // clear the header byte since we could be overwriting previous data
                 }
             }
         }
-        if ( length % 127 == 0 )
+        if ( count % 127 == 0 )
         {
             serialized[offset++] = (byte) MASK_SQUASHED_BLOCK;
         }
@@ -276,25 +276,25 @@ class StreamVByte
     static int calculateLongsSize( long[] source )
     {
         int size = 0;
-        int length = source.length;
-        for ( int i = 0; i < length; )
+        int count = source.length;
+        for ( int i = 0; i < count; )
         {
-            int currentBlockValueLength = min( Byte.MAX_VALUE, length - i );
-            size += (currentBlockValueLength <= 2 ? 1 : 2);
-            for ( int c = 0; c < currentBlockValueLength; )
+            int currentChunkCount = min( Byte.MAX_VALUE, count - i );
+            size += (currentChunkCount <= 2 ? 1 : 2);
+            for ( int c = 0; c < currentChunkCount; )
             {
-                int blockSize = min( 4, currentBlockValueLength - c );
-                for ( int j = 0; j < blockSize; j++, i++, c++ )
+                int currentBlockCount = min( 4, currentChunkCount - c );
+                for ( int j = 0; j < currentBlockCount; j++, i++, c++ )
                 {
                     size += calculateLongSize( source[i] );
                 }
-                if ( blockSize == 4 )
+                if ( currentBlockCount == 4 )
                 {
                     size++;
                 }
             }
         }
-        return length == 0 ? size + 1 : size;
+        return count == 0 ? size + 1 : size;
     }
 
     private static int calculateLongSize( long value )
@@ -318,35 +318,35 @@ class StreamVByte
     {
         byte[] serialized = buffer.array();
         int offset = buffer.position();
-        int currentBlockValueLength = Byte.MAX_VALUE;
+        int currentChunkCount = Byte.MAX_VALUE;
         long[] target = null;
-        for ( int i = 0; currentBlockValueLength == Byte.MAX_VALUE; )
+        for ( int i = 0; currentChunkCount == Byte.MAX_VALUE; )
         {
             int headerByte = unsigned( serialized[offset++] );
             if ( (headerByte & MASK_SQUASHED_BLOCK) != 0 )
             {
                 // The special 0-2 header and count squashed byte
-                currentBlockValueLength = ((headerByte & 0b0110_0000) >>> SHIFT_SQUASHED_BLOCK_LENGTH) & 0b11;
+                currentChunkCount = ((headerByte & 0b0110_0000) >>> SHIFT_SQUASHED_BLOCK_LENGTH) & 0b11;
                 headerByte &= 0b1111;
             }
             else
             {
-                currentBlockValueLength = headerByte;
+                currentChunkCount = headerByte;
                 headerByte = unsigned( serialized[offset++] );
             }
 
-            target = target == null ? new long[currentBlockValueLength] : Arrays.copyOf( target, i + currentBlockValueLength );
-            for ( int c = 0; c < currentBlockValueLength; )
+            target = target == null ? new long[currentChunkCount] : Arrays.copyOf( target, i + currentChunkCount );
+            for ( int c = 0; c < currentChunkCount; )
             {
-                int blockSize = min( 4, currentBlockValueLength - c );
-                for ( int j = 0; j < blockSize; j++, i++, c++ )
+                int currentBlockCount = min( 4, currentChunkCount - c );
+                for ( int j = 0; j < currentBlockCount; j++, i++, c++ )
                 {
                     int size = (headerByte >>> (j * 2)) & 0b11;
                     long readValue = readLongValue( serialized, offset, size );
                     target[i] = readValue;
                     offset += LONG_SIZES[size];
                 }
-                if ( blockSize == 4 )
+                if ( currentBlockCount == 4 )
                 {
                     headerByte = unsigned( serialized[offset++] );
                 }

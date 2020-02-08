@@ -136,7 +136,7 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
         {
             smallRecord.initializeFromSharedData( otherRecord );
             data = smallRecord.dataForReading();
-            readOffsets( true );
+            copyOffsetsFrom( alreadyLoadedRecord, true );
             loadedNodeId = alreadyLoadedRecord.loadedNodeId;
             if ( containsForwardPointer && !isDense )
             {
@@ -144,11 +144,28 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
                 record = largeStore.newRecord();
                 record.initializeFromSharedData( alreadyLoadedRecord.record );
                 data = record.dataForReading();
-                readOffsets( false );
+                copyOffsetsFrom( alreadyLoadedRecord, false );
             }
             return true;
         }
         return false;
+    }
+
+    private void copyOffsetsFrom( FrekiMainStoreCursor record, boolean forSmallRecord )
+    {
+        this.relationshipsOffset = record.relationshipsOffset;
+        this.nodePropertiesOffset = record.nodePropertiesOffset;
+        this.endOffset = record.endOffset;
+        if ( forSmallRecord )
+        {
+            this.labelsOffset = record.labelsOffset;
+            this.containsForwardPointer = record.containsForwardPointer;
+            this.isDense = record.isDense;
+            if ( containsForwardPointer && !isDense )
+            {
+                this.forwardPointer = record.forwardPointer;
+            }
+        }
     }
 
     private void readOffsets( boolean forSmallRecord )
