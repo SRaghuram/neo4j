@@ -60,7 +60,7 @@ public class SimpleBenchmark
         }
     }
 
-    private static final int NUM_CITIES = 10_000;
+    private static final int NUM_CITIES = 100_000;
 
     private static final Label CITY = Label.label( "City" );
     private static final RelationshipType ROAD = RelationshipType.withName( "Road" );
