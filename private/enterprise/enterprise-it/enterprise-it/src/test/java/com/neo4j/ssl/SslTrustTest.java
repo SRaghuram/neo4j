@@ -7,44 +7,46 @@ package com.neo4j.ssl;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import org.junit.After;
-import org.junit.Rule;
-import org.junit.Test;
+import org.hamcrest.MatcherAssert;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.ExecutionException;
 import javax.net.ssl.SSLException;
 
+import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.ssl.SslResource;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
-import org.neo4j.test.rule.fs.DefaultFileSystemRule;
 
 import static com.neo4j.ssl.SslContextFactory.makeSslPolicy;
 import static java.util.concurrent.TimeUnit.MINUTES;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.configuration.ssl.SslPolicyScope.TESTING;
 import static org.neo4j.ssl.SslResourceBuilder.caSignedKeyId;
 import static org.neo4j.ssl.SslResourceBuilder.selfSignedKeyId;
 
-public class SslTrustTest
+@TestDirectoryExtension
+class SslTrustTest
 {
     private static final int UNRELATED_ID = 5; // SslContextFactory requires us to trust something
-
     private static final byte[] REQUEST = {1, 2, 3, 4};
 
-    @Rule
-    public TestDirectory testDir = TestDirectory.testDirectory();
-
-    @Rule
-    public DefaultFileSystemRule fsRule = new DefaultFileSystemRule();
+    @Inject
+    private TestDirectory testDir;
+    @Inject
+    private DefaultFileSystemAbstraction fs;
 
     private SecureServer server;
     private SecureClient client;
     private ByteBuf expected;
 
-    @After
-    public void cleanup()
+    @AfterEach
+    void cleanup()
     {
         if ( expected != null )
         {
@@ -61,7 +63,7 @@ public class SslTrustTest
     }
 
     @Test
-    public void partiesWithMutualTrustShouldCommunicate() throws Exception
+    void partiesWithMutualTrustShouldCommunicate() throws Exception
     {
         // given
         SslResource sslServerResource = selfSignedKeyId( 0 ).trustKeyId( 1 ).install( testDir.directory( "server" ) );
@@ -84,7 +86,7 @@ public class SslTrustTest
     }
 
     @Test
-    public void partiesWithMutualTrustThroughCAShouldCommunicate() throws Exception
+    void partiesWithMutualTrustThroughCAShouldCommunicate() throws Exception
     {
         // given
         SslResource sslServerResource = caSignedKeyId( 0 ).trustSignedByCA().install( testDir.directory( "server" ) );
@@ -107,7 +109,7 @@ public class SslTrustTest
     }
 
     @Test
-    public void serverShouldNotCommunicateWithUntrustedClient() throws Exception
+    void serverShouldNotCommunicateWithUntrustedClient() throws Exception
     {
         // given
         SslResource sslClientResource = selfSignedKeyId( 1 ).trustKeyId( 0 ).install( testDir.directory( "client" ) );
@@ -119,20 +121,12 @@ public class SslTrustTest
         client = new SecureClient( makeSslPolicy( sslClientResource, TESTING ) );
         client.connect( server.port() );
 
-        try
-        {
-            // when
-            client.sslHandshakeFuture().get( 1, MINUTES );
-            fail();
-        }
-        catch ( ExecutionException e )
-        {
-            assertThat( e.getCause(), instanceOf( SSLException.class ) );
-        }
+        var e = assertThrows( ExecutionException.class, () -> client.sslHandshakeFuture().get( 1, MINUTES ) );
+        assertThat( e ).hasCauseInstanceOf( SSLException.class );
     }
 
     @Test
-    public void clientShouldNotCommunicateWithUntrustedServer() throws Exception
+    void clientShouldNotCommunicateWithUntrustedServer() throws Exception
     {
         // given
         SslResource sslClientResource = selfSignedKeyId( 0 ).trustKeyId( UNRELATED_ID ).install( testDir.directory( "client" ) );
@@ -144,19 +138,12 @@ public class SslTrustTest
         client = new SecureClient( makeSslPolicy( sslClientResource, TESTING ) );
         client.connect( server.port() );
 
-        try
-        {
-            client.sslHandshakeFuture().get( 1, MINUTES );
-            fail();
-        }
-        catch ( ExecutionException e )
-        {
-            assertThat( e.getCause(), instanceOf( SSLException.class ) );
-        }
+        var e = assertThrows( ExecutionException.class, () -> client.sslHandshakeFuture().get( 1, MINUTES ) );
+        assertThat( e ).hasCauseInstanceOf( SSLException.class );
     }
 
     @Test
-    public void partiesWithMutualTrustThroughCAShouldNotCommunicateWhenServerRevoked() throws Exception
+    void partiesWithMutualTrustThroughCAShouldNotCommunicateWhenServerRevoked() throws Exception
     {
         // given
         SslResource sslServerResource = caSignedKeyId( 0 ).trustSignedByCA().install( testDir.directory( "server" ) );
@@ -168,19 +155,12 @@ public class SslTrustTest
         client = new SecureClient( makeSslPolicy( sslClientResource, TESTING ) );
         client.connect( server.port() );
 
-        try
-        {
-            client.sslHandshakeFuture().get( 1, MINUTES );
-            fail( "Server should have been revoked" );
-        }
-        catch ( ExecutionException e )
-        {
-            assertThat( e.getCause(), instanceOf( SSLException.class ) );
-        }
+        var e = assertThrows( ExecutionException.class, () -> client.sslHandshakeFuture().get( 1, MINUTES ) );
+        assertThat( e ).hasCauseInstanceOf( SSLException.class );
     }
 
     @Test
-    public void partiesWithMutualTrustThroughCAShouldNotCommunicateWhenClientRevoked() throws Exception
+    void partiesWithMutualTrustThroughCAShouldNotCommunicateWhenClientRevoked() throws Exception
     {
         // given
         SslResource sslServerResource = caSignedKeyId( 0 ).trustSignedByCA().revoke( 1 ).install( testDir.directory( "server" ) );
@@ -192,14 +172,7 @@ public class SslTrustTest
         client = new SecureClient( makeSslPolicy( sslClientResource, TESTING ) );
         client.connect( server.port() );
 
-        try
-        {
-            client.sslHandshakeFuture().get( 1, MINUTES );
-            fail( "Client should have been revoked" );
-        }
-        catch ( ExecutionException e )
-        {
-            assertThat( e.getCause(), instanceOf( SSLException.class ) );
-        }
+        var e = assertThrows( ExecutionException.class, () -> client.sslHandshakeFuture().get( 1, MINUTES ) );
+        assertThat( e ).hasCauseInstanceOf( SSLException.class );
     }
 }

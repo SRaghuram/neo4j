@@ -7,10 +7,12 @@ package com.neo4j.ssl;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
 import org.hamcrest.core.IsIterableContaining;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.Objects;
 import java.util.concurrent.ExecutionException;
@@ -24,24 +26,27 @@ import org.neo4j.logging.Level;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.ssl.SslPolicy;
 import org.neo4j.ssl.config.SslPolicyLoader;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.SuppressOutputExtension;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.ssl.HostnameVerificationHelper.aConfig;
 import static com.neo4j.ssl.HostnameVerificationHelper.trust;
 import static java.util.concurrent.TimeUnit.MINUTES;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.ssl.SslPolicyScope.TESTING;
 
-public class PemSslPolicyLoaderIT
+@TestDirectoryExtension
+class PemSslPolicyLoaderIT
 {
-    @Rule
-    public TestDirectory testDirectory = TestDirectory.testDirectory();
-
-    private static final LogProvider LOG_PROVIDER = FormattedLogProvider.withDefaultLogLevel( Level.DEBUG ).toOutputStream( System.out );
+    private static final LogProvider LOG_PROVIDER = FormattedLogProvider.withDefaultLogLevel( Level.ERROR ).toOutputStream( System.out );
+    @Inject
+    private TestDirectory testDirectory;
 
     @Test
-    public void certificatesWithInvalidCommonNameAreRejected() throws Exception
+    void certificatesWithInvalidCommonNameAreRejected() throws Exception
     {
         // given server has a certificate that matches an invalid hostname
         Config serverConfig = aConfig( "invalid-not-localhost", testDirectory, TESTING );
@@ -64,7 +69,7 @@ public class PemSslPolicyLoaderIT
     }
 
     @Test
-    public void normalBehaviourIfServerCertificateMatchesClientExpectation() throws Exception
+    void normalBehaviourIfServerCertificateMatchesClientExpectation() throws Exception
     {
         // given server has valid hostname
         Config serverConfig = aConfig( "localhost", testDirectory, TESTING );
@@ -120,8 +125,7 @@ public class PemSslPolicyLoaderIT
         }
         catch ( ExecutionException e )
         {
-            assertThat( causes( e ).map( Throwable::getMessage ).collect( Collectors.toList() ),
-                    IsIterableContaining.hasItem( Matchers.containsString( expectedMessage ) ) );
+            assertThat( e ).hasMessageContaining( expectedMessage );
         }
         catch ( TimeoutException e )
         {
@@ -131,19 +135,6 @@ public class PemSslPolicyLoaderIT
         {
             secureClient.disconnect();
             secureServer.stop();
-        }
-    }
-
-    private static Stream<Throwable> causes( Throwable throwable )
-    {
-        Stream<Throwable> thisStream = Stream.of( throwable ).filter( Objects::nonNull );
-        if ( throwable != null && throwable.getCause() != null )
-        {
-            return Stream.concat( thisStream, causes( throwable.getCause() ) );
-        }
-        else
-        {
-            return thisStream;
         }
     }
 }

@@ -7,11 +7,8 @@ package com.neo4j.bolt;
 
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
-import org.junit.After;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.RuleChain;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.function.Consumer;
@@ -30,92 +27,85 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.io.IOUtils;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.SkipThreadLeakageGuard;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.bolt.BoltDriverHelper.graphDatabaseDriver;
-import static org.hamcrest.Matchers.instanceOf;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.fail;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.io.IOUtils.closeAllSilently;
 import static org.neo4j.test.PortUtils.getBoltPort;
 
-public class BoltFailuresIT
+@TestDirectoryExtension
+@SkipThreadLeakageGuard
+class BoltFailuresIT
 {
-    private static final int TEST_TIMEOUT_SECONDS = 120;
-
-    private final TestDirectory dir = TestDirectory.testDirectory();
-
-    @Rule
-    public final RuleChain ruleChain = RuleChain.outerRule( Timeout.seconds( TEST_TIMEOUT_SECONDS ) ).around( dir );
+    @Inject
+    private TestDirectory directory;
 
     private GraphDatabaseService db;
     private Driver driver;
     private DatabaseManagementService managementService;
 
-    @After
-    public void shutdownDb()
+    @AfterEach
+    void shutdownDb()
     {
-        if ( db != null )
+        closeAllSilently( driver );
+        if ( managementService != null )
         {
             managementService.shutdown();
         }
-        IOUtils.closeAllSilently( driver );
     }
 
     @Test
-    public void throwsWhenMonitoredWorkerCreationFails()
+    void throwsWhenMonitoredWorkerCreationFails()
     {
         ThrowingSessionMonitor sessionMonitor = new ThrowingSessionMonitor();
         sessionMonitor.throwInConnectionOpened();
         Monitors monitors = newMonitorsSpy( sessionMonitor );
 
-        db = startDbWithBolt( new TestDatabaseManagementServiceBuilder( dir.homeDir() ).setMonitors( monitors ) );
-        try
-        {
-            // attempt to create a driver when server is unavailable
-            driver = createDriver( getBoltPort( db ) );
-            fail( "Exception expected" );
-        }
-        catch ( Exception e )
-        {
-            assertThat( e, instanceOf( ServiceUnavailableException.class ) );
-        }
+        db = startDbWithBolt( new TestDatabaseManagementServiceBuilder( directory.homeDir() ).setMonitors( monitors ) );
+        assertThrows( ServiceUnavailableException.class, () -> driver = createDriver( getBoltPort( db ) ) );
     }
 
     @Test
-    public void throwsWhenInitMessageReceiveFails()
+    void throwsWhenInitMessageReceiveFails()
     {
         throwsWhenInitMessageFails( ThrowingSessionMonitor::throwInMessageReceived, false );
     }
 
     @Test
-    public void throwsWhenInitMessageProcessingFailsToStart()
+    void throwsWhenInitMessageProcessingFailsToStart()
     {
         throwsWhenInitMessageFails( ThrowingSessionMonitor::throwInMessageProcessingStarted, false );
     }
 
     @Test
-    public void throwsWhenInitMessageProcessingFailsToComplete()
+    void throwsWhenInitMessageProcessingFailsToComplete()
     {
         throwsWhenInitMessageFails( ThrowingSessionMonitor::throwInMessageProcessingCompleted, true );
     }
 
     @Test
-    public void throwsWhenRunMessageReceiveFails()
+    void throwsWhenRunMessageReceiveFails()
     {
         throwsWhenRunMessageFails( ThrowingSessionMonitor::throwInMessageReceived );
     }
 
     @Test
-    public void throwsWhenRunMessageProcessingFailsToStart()
+    void throwsWhenRunMessageProcessingFailsToStart()
     {
         throwsWhenRunMessageFails( ThrowingSessionMonitor::throwInMessageProcessingStarted );
     }
 
     @Test
-    public void throwsWhenRunMessageProcessingFailsToComplete()
+    void throwsWhenRunMessageProcessingFailsToComplete()
     {
         throwsWhenRunMessageFails( ThrowingSessionMonitor::throwInMessageProcessingCompleted );
     }
@@ -148,7 +138,7 @@ public class BoltFailuresIT
         }
         catch ( Exception e )
         {
-            assertThat( e, instanceOf( ServiceUnavailableException.class ) );
+            assertThat( e ).isInstanceOf( ServiceUnavailableException.class );
         }
     }
 
@@ -177,13 +167,13 @@ public class BoltFailuresIT
         }
         catch ( Exception e )
         {
-            assertThat( e, instanceOf( ServiceUnavailableException.class ) );
+            assertThat( e ).isInstanceOf( ServiceUnavailableException.class );
         }
     }
 
     private GraphDatabaseService startTestDb( Monitors monitors )
     {
-        return startDbWithBolt( newDbFactory( dir.homeDir() ).setMonitors( monitors ) );
+        return startDbWithBolt( newDbFactory( directory.homeDir() ).setMonitors( monitors ) );
     }
 
     private GraphDatabaseService startDbWithBolt( DatabaseManagementServiceBuilder dbFactory )

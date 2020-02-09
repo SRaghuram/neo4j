@@ -7,11 +7,8 @@ package com.neo4j.bolt;
 
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
-import org.junit.After;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.RuleChain;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,43 +29,42 @@ import org.neo4j.driver.Session;
 import org.neo4j.driver.Transaction;
 import org.neo4j.driver.exceptions.TransientException;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.io.IOUtils;
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
 import static com.neo4j.bolt.BoltDriverHelper.graphDatabaseDriver;
 import static org.hamcrest.CoreMatchers.anyOf;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.io.IOUtils.closeAllSilently;
 import static org.neo4j.test.PortUtils.getBoltPort;
 
-public class BoltThreadSchedulingIT
+@TestDirectoryExtension
+class BoltThreadSchedulingIT
 {
-    private static final int TEST_TIMEOUT_SECONDS = 120;
-
-    private final TestDirectory dir = TestDirectory.testDirectory();
-
-    @Rule
-    public final RuleChain ruleChain = RuleChain.outerRule( Timeout.seconds( TEST_TIMEOUT_SECONDS ) ).around( dir );
+    @Inject
+    private TestDirectory testDirectory;
 
     private GraphDatabaseService db;
     private Driver driver;
     private DatabaseManagementService managementService;
 
-    @After
-    public void shutdownDb() throws InterruptedException
+    @AfterEach
+    void shutdownDb() throws InterruptedException
     {
-        IOUtils.closeAllSilently( driver );
+        closeAllSilently( driver );
         Thread.sleep( 100 );
-        if ( db != null )
+        if ( managementService != null )
         {
             managementService.shutdown();
         }
     }
 
     @Test
-    public void oneWorkerThreadShouldBeAbleToServeSequentialMessagesFromTwoConnections() throws Throwable
+    void oneWorkerThreadShouldBeAbleToServeSequentialMessagesFromTwoConnections() throws Throwable
     {
         // Given a server with single worker thread.
         db = startDbWithBolt( 1, 1 );
@@ -92,7 +88,7 @@ public class BoltThreadSchedulingIT
     }
 
     @Test
-    public void shouldFinishAllQueries() throws Throwable
+    void shouldFinishAllQueries() throws Throwable
     {
         // create server with limited thread pool size.
         db = startDbWithBolt( 1, 1 );
@@ -162,7 +158,7 @@ public class BoltThreadSchedulingIT
 
     private GraphDatabaseService startDbWithBolt( int threadPoolMinSize, int threadPoolMaxSize )
     {
-        DatabaseManagementServiceBuilder dbFactory = new TestEnterpriseDatabaseManagementServiceBuilder( dir.homeDir() );
+        DatabaseManagementServiceBuilder dbFactory = new TestEnterpriseDatabaseManagementServiceBuilder( testDirectory.homeDir() );
         managementService = dbFactory
                 .setConfig( BoltConnector.enabled, true )
                 .setConfig( BoltConnector.listen_address, new SocketAddress( "localhost", 0 ) )
