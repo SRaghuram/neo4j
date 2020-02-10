@@ -23,6 +23,7 @@ import org.eclipse.collections.api.factory.Sets;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.ByteBuffer;
 import java.util.Collection;
 
 import org.neo4j.configuration.Config;
@@ -48,6 +49,7 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
@@ -80,7 +82,7 @@ import static org.neo4j.internal.helpers.ArrayUtil.concat;
 import static org.neo4j.io.IOUtils.closeAllSilently;
 import static org.neo4j.kernel.lifecycle.LifecycleAdapter.onInit;
 
-class FrekiStorageEngine implements StorageEngine
+public class FrekiStorageEngine implements StorageEngine
 {
     private static final int MAX_TOKEN_ID = (int) ((1L << 24) - 1);
 
@@ -245,11 +247,11 @@ class FrekiStorageEngine implements StorageEngine
         // point between closing this and the locks above
         CommandsToApply initialBatch = batch;
         try ( LockGroup locks = new LockGroup();
-              TransactionApplier batchApplier = new TransactionApplier( stores ) )
+              FrekiTransactionApplier batchApplier = new FrekiTransactionApplier( stores, indexUpdateListener ) )
         {
             while ( batch != null )
             {
-                try ( TransactionApplier txApplier = batchApplier.startTx( batch, locks ) )
+                try ( FrekiTransactionApplier txApplier = batchApplier.startTx( batch, locks ) )
                 {
                     batch.accept( txApplier );
                 }
@@ -355,5 +357,40 @@ class FrekiStorageEngine implements StorageEngine
     public void shutdown()
     {
         life.shutdown();
+    }
+
+    public void printAverageFactorFilledRecords() throws IOException
+    {
+        for ( int i = 0; i < 4; i++ )
+        {
+            SimpleStore store = stores.mainStore( i );
+            if ( store != null )
+            {
+                System.out.println( averageFactorFilledRecords( store ) );
+            }
+        }
+    }
+
+    private double averageFactorFilledRecords( SimpleStore store )
+    {
+        long bytesUsed = 0;
+        long bytesMax = 9;
+        Record record = store.newRecord();
+        try ( PageCursor cursor = store.openReadCursor() )
+        {
+            long highId = store.getHighId();
+            for ( long id = 0; id < highId; id++ )
+            {
+                if ( store.read( cursor, record, id ) )
+                {
+                    MutableNodeRecordData data = new MutableNodeRecordData( id );
+                    ByteBuffer buffer = record.dataForReading();
+                    data.deserialize( buffer );
+                    bytesUsed += buffer.position();
+                    bytesMax += buffer.capacity();
+                }
+            }
+        }
+        return ((double) bytesUsed) / bytesMax;
     }
 }

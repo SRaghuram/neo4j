@@ -41,6 +41,7 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
 
     final MainStores stores;
     final PageCursorTracer cursorTracer;
+
     Record smallRecord;
     Record record;
     ByteBuffer data;
@@ -48,13 +49,8 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
     long loadedNodeId = NULL;
 
     // state from record data header
-    int labelsOffset;
-    int nodePropertiesOffset;
-    int relationshipsOffset;
-    int endOffset;
-    boolean containsForwardPointer;
-    long forwardPointer;
-    boolean isDense;
+    MainRecordHeaderState headerState;
+    boolean borrowedHeaderState;
 
     // state from relationship section, it's here because both relationship cursors as well as property cursor makes use of them
     int[] relationshipTypesInNode;
@@ -76,8 +72,15 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
         relationshipTypeOffsets = null;
         relationshipTypesInNode = null;
         loadedNodeId = NULL;
-        forwardPointer = NULL;
-        isDense = false;
+        if ( borrowedHeaderState )
+        {
+            headerState = null;
+            borrowedHeaderState = false;
+        }
+        else if ( headerState != null )
+        {
+            headerState.reset();
+        }
     }
 
     PageCursor cursor()
@@ -104,14 +107,18 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
         }
         data = smallRecord.dataForReading();
         readOffsets( true );
-        if ( containsForwardPointer && !isDense )
+        if ( headerState.containsForwardPointer && !headerState.isDense )
         {
             // Let's load the larger record
-            SimpleStore largeStore = stores.mainStore( sizeExponentialFromForwardPointer( forwardPointer ) );
-            record = largeStore.newRecord();
+            int sizeExp = sizeExponentialFromForwardPointer( headerState.forwardPointer );
+            SimpleStore largeStore = stores.mainStore( sizeExp );
+            if ( record == null || record.sizeExp() != sizeExp )
+            {
+                record = largeStore.newRecord();
+            }
             try ( PageCursor largeCursor = largeStore.openReadCursor() )
             {
-                largeStore.read( largeCursor, record, idFromForwardPointer( forwardPointer ) );
+                largeStore.read( largeCursor, record, idFromForwardPointer( headerState.forwardPointer ) );
                 if ( !record.hasFlag( FLAG_IN_USE ) )
                 {
                     return false;
@@ -136,75 +143,66 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
         {
             smallRecord.initializeFromSharedData( otherRecord );
             data = smallRecord.dataForReading();
-            copyOffsetsFrom( alreadyLoadedRecord, true );
+            headerState = alreadyLoadedRecord.headerState;
+            borrowedHeaderState = true;
             loadedNodeId = alreadyLoadedRecord.loadedNodeId;
-            if ( containsForwardPointer && !isDense )
+            if ( headerState.containsForwardPointer && !headerState.isDense )
             {
-                SimpleStore largeStore = stores.mainStore( sizeExponentialFromForwardPointer( forwardPointer ) );
-                record = largeStore.newRecord();
+                int sizeExp = sizeExponentialFromForwardPointer( headerState.forwardPointer );
+                SimpleStore largeStore = stores.mainStore( sizeExp );
+                if ( record == null || record.sizeExp() != sizeExp )
+                {
+                    record = largeStore.newRecord();
+                }
                 record.initializeFromSharedData( alreadyLoadedRecord.record );
                 data = record.dataForReading();
-                copyOffsetsFrom( alreadyLoadedRecord, false );
             }
             return true;
         }
         return false;
     }
 
-    private void copyOffsetsFrom( FrekiMainStoreCursor record, boolean forSmallRecord )
-    {
-        this.relationshipsOffset = record.relationshipsOffset;
-        this.nodePropertiesOffset = record.nodePropertiesOffset;
-        this.endOffset = record.endOffset;
-        if ( forSmallRecord )
-        {
-            this.labelsOffset = record.labelsOffset;
-            this.containsForwardPointer = record.containsForwardPointer;
-            this.isDense = record.isDense;
-            if ( containsForwardPointer && !isDense )
-            {
-                this.forwardPointer = record.forwardPointer;
-            }
-        }
-    }
-
     private void readOffsets( boolean forSmallRecord )
     {
         int offsetsHeader = MutableNodeRecordData.readOffsetsHeader( data );
-        if ( forSmallRecord )
+        if ( headerState == null )
         {
-            labelsOffset = data.position();
+            headerState = new MainRecordHeaderState();
         }
-        relationshipsOffset = MutableNodeRecordData.relationshipOffset( offsetsHeader );
-        nodePropertiesOffset = MutableNodeRecordData.propertyOffset( offsetsHeader );
-        endOffset = MutableNodeRecordData.endOffset( offsetsHeader );
         if ( forSmallRecord )
         {
-            containsForwardPointer = MutableNodeRecordData.containsForwardPointer( offsetsHeader );
-            if ( containsForwardPointer )
+            headerState.labelsOffset = data.position();
+        }
+        headerState.relationshipsOffset = MutableNodeRecordData.relationshipOffset( offsetsHeader );
+        headerState.nodePropertiesOffset = MutableNodeRecordData.propertyOffset( offsetsHeader );
+        headerState.endOffset = MutableNodeRecordData.endOffset( offsetsHeader );
+        if ( forSmallRecord )
+        {
+            headerState.containsForwardPointer = MutableNodeRecordData.containsForwardPointer( offsetsHeader );
+            if ( headerState.containsForwardPointer )
             {
-                data.position( endOffset );
-                if ( relationshipsOffset != 0 )
+                data.position( headerState.endOffset );
+                if ( headerState.relationshipsOffset != 0 )
                 {
                     // skip the type offsets array
                     StreamVByte.readIntDeltas( SKIP, data );
                 }
-                forwardPointer = data.getLong();
-                isDense = isDenseFromForwardPointer( forwardPointer );
+                headerState.forwardPointer = data.getLong();
+                headerState.isDense = isDenseFromForwardPointer( headerState.forwardPointer );
             }
         }
     }
 
     void readRelationshipTypesAndOffsets()
     {
-        if ( relationshipsOffset == 0 )
+        if ( headerState.relationshipsOffset == 0 )
         {
             relationshipTypesInNode = EMPTY_INT_ARRAY;
             relationshipTypeOffsets = EMPTY_INT_ARRAY;
             return;
         }
 
-        data.position( relationshipsOffset );
+        data.position( headerState.relationshipsOffset );
         relationshipTypesInNode = readIntDeltas( new IntArrayTarget(), data ).array();
         // Right after the types array the relationship group data starts, so this is the offset for the first type
         firstRelationshipTypeOffset = data.position();
@@ -212,7 +210,7 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
         // Then read the rest of the offsets for type indexes > 0 after all the relationship data groups, i.e. at endOffset
         // The values in the typeOffsets array are relative to the firstTypeOffset
         IntArrayTarget typeOffsetsTarget = new IntArrayTarget();
-        readIntDeltas( typeOffsetsTarget, data.array(), endOffset );
+        readIntDeltas( typeOffsetsTarget, data.array(), headerState.endOffset );
         relationshipTypeOffsets = typeOffsetsTarget.array();
     }
 

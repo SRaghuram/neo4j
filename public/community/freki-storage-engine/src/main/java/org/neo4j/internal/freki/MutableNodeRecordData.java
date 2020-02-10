@@ -55,7 +55,7 @@ class MutableNodeRecordData
     static final int SIZE_SLOT_HEADER = 4;
     static final int ARRAY_ENTRIES_PER_RELATIONSHIP = 2;
 
-    private final long id;
+    long id;
     final MutableIntSet labels = IntSets.mutable.empty();
     final MutableIntObjectMap<Value> properties = IntObjectMaps.mutable.empty();
     final MutableIntObjectMap<Relationships> relationships = IntObjectMaps.mutable.empty();

@@ -19,35 +19,21 @@
  */
 package org.neo4j.internal.freki;
 
-import java.io.IOException;
+import static org.neo4j.internal.freki.FrekiMainStoreCursor.NULL;
 
-import org.neo4j.io.pagecache.PageCursor;
-import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
-import org.neo4j.kernel.lifecycle.Lifecycle;
-
-public interface SimpleStore extends Lifecycle, AutoCloseable
+class MainRecordHeaderState
 {
-    int recordSize();
+    int labelsOffset;
+    int nodePropertiesOffset;
+    int relationshipsOffset;
+    int endOffset;
+    boolean containsForwardPointer;
+    long forwardPointer;
+    boolean isDense;
 
-    int recordSizeExponential();
-
-    Record newRecord();
-
-    Record newRecord( long id );
-
-    PageCursor openWriteCursor() throws IOException;
-
-    void write( PageCursor cursor, Record record ) throws IOException;
-
-    PageCursor openReadCursor();
-
-    boolean read( PageCursor cursor, Record record, long id );
-
-    void flush( PageCursorTracer cursorTracer );
-
-    long nextId( PageCursorTracer cursorTracer );
-
-    boolean exists( long id ) throws IOException;
-
-    long getHighId();
+    void reset()
+    {
+        forwardPointer = NULL;
+        isDense = false;
+    }
 }

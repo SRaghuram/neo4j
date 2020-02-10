@@ -24,13 +24,19 @@ import org.eclipse.collections.api.map.primitive.MutableIntObjectMap;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 
+import org.neo4j.exceptions.KernelException;
+import org.neo4j.internal.freki.FrekiCommand.Mode;
 import org.neo4j.internal.helpers.collection.Visitor;
+import org.neo4j.internal.schema.IndexDescriptor;
+import org.neo4j.internal.schema.SchemaRule;
 import org.neo4j.io.IOUtils;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.lock.LockGroup;
 import org.neo4j.storageengine.api.CommandsToApply;
+import org.neo4j.storageengine.api.IndexUpdateListener;
 import org.neo4j.storageengine.api.PropertyKeyValue;
 import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.storageengine.api.StorageProperty;
@@ -38,18 +44,21 @@ import org.neo4j.values.storable.Value;
 
 import static org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier.TRACER_SUPPLIER;
 
-class TransactionApplier extends FrekiCommand.Dispatcher.Adapter implements Visitor<StorageCommand,IOException>, AutoCloseable
+class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements Visitor<StorageCommand,IOException>, AutoCloseable
 {
     private final Stores stores;
     private PageCursor[] storeCursors;
+    private final IndexUpdateListener indexUpdateListener;
+    private List<IndexDescriptor> createdIndexes;
 
-    TransactionApplier( Stores stores ) throws IOException
+    FrekiTransactionApplier( Stores stores, IndexUpdateListener indexUpdateListener ) throws IOException
     {
         this.stores = stores;
         this.storeCursors = stores.openMainStoreWriteCursors();
+        this.indexUpdateListener = indexUpdateListener;
     }
 
-    public TransactionApplier startTx( CommandsToApply batch, LockGroup locks )
+    FrekiTransactionApplier startTx( CommandsToApply batch, LockGroup locks )
     {
         return this;
     }
@@ -124,8 +133,55 @@ class TransactionApplier extends FrekiCommand.Dispatcher.Adapter implements Visi
     }
 
     @Override
+    public void handle( FrekiCommand.Schema schema ) throws IOException
+    {
+        // TODO There should be logic around avoiding deadlocks and working around problems with batches of transactions where some transactions
+        //      updates indexes and some change schema, which are not quite implemented here yet
+
+        SchemaRule rule = schema.descriptor;
+        if ( schema.mode == Mode.CREATE || schema.mode == Mode.UPDATE )
+        {
+            stores.schemaStore.writeRule( rule, TRACER_SUPPLIER.get() );
+            if ( rule instanceof IndexDescriptor )
+            {
+                if ( schema.mode == Mode.CREATE )
+                {
+                    if ( createdIndexes == null )
+                    {
+                        createdIndexes = new ArrayList<>();
+                    }
+                    createdIndexes.add( (IndexDescriptor) rule );
+                }
+                else
+                {
+                    try
+                    {
+                        indexUpdateListener.activateIndex( (IndexDescriptor) rule );
+                    }
+                    catch ( KernelException e )
+                    {
+                        throw new IllegalStateException( e );
+                    }
+                }
+            }
+        }
+        else
+        {
+            stores.schemaStore.deleteRule( rule.getId(), TRACER_SUPPLIER.get() );
+            if ( rule instanceof IndexDescriptor  )
+            {
+                indexUpdateListener.dropIndex( (IndexDescriptor) rule );
+            }
+        }
+    }
+
+    @Override
     public void close() throws Exception
     {
         IOUtils.closeAll( storeCursors );
+        if ( createdIndexes != null )
+        {
+            indexUpdateListener.createIndexes( createdIndexes.toArray( new IndexDescriptor[createdIndexes.size()] ) );
+        }
     }
 }

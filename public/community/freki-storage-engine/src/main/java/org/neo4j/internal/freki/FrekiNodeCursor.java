@@ -37,6 +37,7 @@ import static org.neo4j.internal.freki.StreamVByte.readIntDeltas;
 class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
 {
     private long singleId;
+    private boolean inScan;
     private FrekiRelationshipTraversalCursor relationshipsCursor;
 
     FrekiNodeCursor( MainStores stores, PageCursorTracer cursorTracer )
@@ -48,7 +49,7 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
     public long[] labels()
     {
         ByteBuffer smallRecordData = smallRecord.dataForReading();
-        smallRecordData.position( labelsOffset );
+        smallRecordData.position( headerState.labelsOffset );
         return readIntDeltas( new StreamVByte.LongArrayTarget(), smallRecordData ).array();
     }
 
@@ -111,7 +112,8 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
     @Override
     public void scan()
     {
-//        throw new UnsupportedOperationException( "Not implemented yet" );
+        inScan = true;
+        singleId = 0;
     }
 
     @Override
@@ -129,7 +131,7 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
     @Override
     public boolean hasProperties()
     {
-        return nonEmptyIntDeltas( data.array(), nodePropertiesOffset );
+        return nonEmptyIntDeltas( data.array(), headerState.nodePropertiesOffset );
     }
 
     @Override
@@ -153,11 +155,23 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
     @Override
     public boolean next()
     {
-        if ( singleId != NULL )
+        if ( inScan )
+        {
+            while ( singleId < stores.mainStore.getHighId() )
+            {
+                if ( loadMainRecord( singleId++ ) )
+                {
+                    return true;
+                }
+            }
+            inScan = false;
+            singleId = NULL;
+        }
+        else if ( singleId != NULL )
         {
             loadMainRecord( singleId );
             singleId = NULL;
-            return record.hasFlag( FLAG_IN_USE );
+            return smallRecord.hasFlag( FLAG_IN_USE );
         }
         return false;
     }
@@ -167,6 +181,7 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
     {
         super.reset();
         singleId = NULL;
+        inScan = false;
         if ( relationshipsCursor != null )
         {
             relationshipsCursor.reset();

@@ -67,7 +67,7 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
     @Override
     public boolean hasProperties()
     {
-        if ( isDense )
+        if ( headerState.isDense )
         {
             if ( denseProperties == null )
             {
@@ -81,7 +81,7 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
     @Override
     public long propertiesReference()
     {
-        if ( isDense )
+        if ( headerState.isDense )
         {
             throw new UnsupportedOperationException( "Not implemented yet for dense" );
         }
@@ -118,7 +118,7 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
     {
         if ( !loadedCorrectNode )
         {
-            if ( !loadMainRecord( nodeId ) || (!isDense && relationshipsOffset == 0) )
+            if ( !loadMainRecord( nodeId ) || (!headerState.isDense && headerState.relationshipsOffset == 0) )
             {
                 return false;
             }
@@ -127,7 +127,7 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
             readRelationshipTypesAndOffsets();
         }
 
-        if ( isDense )
+        if ( headerState.isDense )
         {
             // TODO We could be clever and place a type[] in the quick access record so that we know which types even exist for this node
             //      if we do this we don't have to make a tree seek for every relationship type when there will be nothing there
@@ -265,7 +265,7 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
     @Override
     public int type()
     {
-        return isDense
+        return headerState.isDense
                ? currentDenseRelationship.type()
                : relationshipTypesInNode[currentTypeIndex];
     }
@@ -277,7 +277,7 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
         {
             return loadedNodeId;
         }
-        return isDense
+        return headerState.isDense
                ? currentDenseRelationship.neighbourNodeId()
                : currentRelationshipOtherNode;
     }
@@ -289,7 +289,7 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
         {
             return loadedNodeId;
         }
-        return isDense
+        return headerState.isDense
                ? currentDenseRelationship.neighbourNodeId()
                : currentRelationshipOtherNode;
     }
@@ -297,7 +297,7 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
     @Override
     public long neighbourNodeReference()
     {
-        return isDense
+        return headerState.isDense
                ? currentDenseRelationship.neighbourNodeId()
                : currentRelationshipOtherNode;
     }
@@ -310,7 +310,7 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
 
     RelationshipDirection currentDirection()
     {
-        return isDense
+        return headerState.isDense
                 ? currentDenseRelationship.direction()
                 : currentRelationshipDirection;
     }
