@@ -12,9 +12,11 @@ import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import org.neo4j.configuration.GraphDatabaseSettings.default_database
+import org.neo4j.dbms.api.DatabaseNotFoundException
 import org.neo4j.graphdb.QueryExecutionException
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.graphdb.security.AuthorizationViolationException
+import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 
 class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
   test("should return empty counts to the outside for commands that update the system graph internally") {
@@ -431,6 +433,43 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     execute(s"SHOW DATABASE $newDefaultDatabase").toSet should be(Set(db(newDefaultDatabase, onlineStatus, default = true)))
   }
 
+  test("should be allowed to start database with all database privilege") {
+    setup()
+    execute("CREATE DATABASE foo")
+    execute("STOP DATABASE foo")
+    setupUserWithCustomRole("alice", "abc")
+    execute("GRANT ALL ON DATABASE foo TO custom")
+
+    // WHEN
+    executeOnSystem("alice", "abc", "START DATABASE foo")
+
+    // THEN
+    execute("SHOW DATABASE foo").toSet should be(Set(db("foo", onlineStatus)))
+  }
+
+  test("should fail to grant start database to non-existing role") {
+    // GIVEN
+    setup()
+
+    the[InvalidArgumentsException] thrownBy {
+      // WHEN
+      execute("GRANT START ON DATABASE * TO role")
+      // THEN
+    } should have message "Failed to grant start_database privilege to role 'role': Role 'role' does not exist."
+  }
+
+  test("should fail to grant start database with missing database") {
+    // GIVEN
+    setup()
+    execute("CREATE ROLE role")
+
+    the[DatabaseNotFoundException] thrownBy {
+      // WHEN
+      execute("GRANT START ON DATABASE foo TO role")
+      // THEN
+    } should have message "Failed to grant start_database privilege to role 'role': Database 'foo' does not exist."
+  }
+
   // STOP DATABASE
 
   test("admin should be allowed to stop database") {
@@ -647,6 +686,42 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     execute(s"SHOW DATABASE $newDefaultDatabase").toSet should be(Set(db(newDefaultDatabase, offlineStatus, default = true)))
   }
 
+  test("should be allowed to stop database with all database privilege") {
+    setup()
+    execute("CREATE DATABASE foo")
+    setupUserWithCustomRole("alice", "abc")
+    execute("GRANT ALL ON DATABASE foo TO custom")
+
+    // WHEN
+    executeOnSystem("alice", "abc", "STOP DATABASE foo")
+
+    // THEN
+    execute("SHOW DATABASE foo").toSet should be(Set(db("foo", offlineStatus)))
+  }
+
+  test("should fail to deny stop database to non-existing role") {
+    // GIVEN
+    setup()
+
+    the[InvalidArgumentsException] thrownBy {
+      // WHEN
+      execute("DENY STOP ON DATABASE * TO role")
+      // THEN
+    } should have message "Failed to deny stop_database privilege to role 'role': Role 'role' does not exist."
+  }
+
+  test("should fail to deny stop database with missing database") {
+    // GIVEN
+    setup()
+    execute("CREATE ROLE role")
+
+    the[DatabaseNotFoundException] thrownBy {
+      // WHEN
+      execute("DENY STOP ON DATABASE foo TO role")
+      // THEN
+    } should have message "Failed to deny stop_database privilege to role 'role': Database 'foo' does not exist."
+  }
+
   // ACCESS DATABASE
 
   test("should be able to access default database with grant privilege from PUBLIC") {
@@ -746,6 +821,39 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     executeOn(newDefaultDatabase, "alice", "abc", "MATCH (n) RETURN n") should be(0)
   }
 
+  test("should be allowed to access database with all database privilege") {
+    setup()
+    setupUserWithCustomRole("alice", "abc", access = false)
+    clearPublicRole()
+
+    // WHEN
+    execute("GRANT ALL ON DEFAULT DATABASE TO custom")
+
+    // THEN
+    executeOnDefault("alice", "abc", "MATCH (n) RETURN n") should be(0)
+  }
+
+  test("should do nothing when revoking access from non-existing role") {
+    // GIVEN
+    setup()
+    execute("CREATE ROLE role")
+    execute("GRANT ACCESS ON DATABASE * TO role")
+
+    // WHEN
+    execute("REVOKE ACCESS ON DATABASE * FROM wrongRole")
+  }
+
+  test("should do nothing when revoking access with missing database") {
+    // GIVEN
+    setup()
+    execute("CREATE ROLE role")
+    execute("CREATE DATABASE bar")
+    execute("GRANT ACCESS ON DATABASE bar TO role")
+
+    // WHEN
+    execute("REVOKE ACCESS ON DATABASE foo FROM role")
+  }
+
   // REDUCED ADMIN
 
   Seq(
@@ -783,8 +891,12 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     execute(s"REVOKE TRAVERSE ON GRAPH * FROM $role")
     execute(s"REVOKE READ {*} ON GRAPH * FROM $role")
     execute(s"REVOKE WRITE ON GRAPH * FROM $role")
-    execute(s"DENY ALL ON DATABASE * TO $role") // have to deny since we can't revoke compound privileges
-    execute(s"REVOKE DENY ACCESS ON DATABASE * FROM $role") // undo the deny from the line above
+    // have to deny since we can't revoke compound admin privilege
+    execute(s"DENY INDEX ON DATABASE * TO $role")
+    execute(s"DENY CONSTRAINT ON DATABASE * TO $role")
+    execute(s"DENY NAME MANAGEMENT ON DATABASE * TO $role")
+    execute(s"DENY START ON DATABASE * TO $role")
+    execute(s"DENY STOP ON DATABASE * TO $role")
 
     // THEN
     testAlwaysAllowedForAdmin(populatedRoles)

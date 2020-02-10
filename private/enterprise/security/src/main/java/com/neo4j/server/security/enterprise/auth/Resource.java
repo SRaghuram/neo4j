@@ -9,8 +9,7 @@ import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ADMIN;
-import static org.neo4j.internal.kernel.api.security.PrivilegeAction.SCHEMA;
-import static org.neo4j.internal.kernel.api.security.PrivilegeAction.TOKEN;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ALL_DATABASE_PRIVILEGES;
 
 public interface Resource
 {
@@ -69,10 +68,7 @@ public interface Resource
         @Override
         public void assertValidCombination( PrivilegeAction action ) throws InvalidArgumentsException
         {
-            if ( !(action.equals( PrivilegeAction.ACCESS ) ||
-                   SCHEMA.satisfies( action ) ||
-                   TOKEN.satisfies( action ) ||
-                   ADMIN.satisfies( action )) )
+            if ( !(ADMIN.satisfies( action ) || ALL_DATABASE_PRIVILEGES.satisfies( action )) )
             {
                 throw new InvalidArgumentsException( String.format( "Database resource cannot be combined with action '%s'", action.toString() ) );
             }

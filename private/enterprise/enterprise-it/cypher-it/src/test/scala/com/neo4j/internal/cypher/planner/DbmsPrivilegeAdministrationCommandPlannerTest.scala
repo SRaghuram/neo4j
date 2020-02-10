@@ -325,30 +325,10 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
     // Then
     plan should include(
       logPlan(
-        dbmsPrivilegePlan("RevokeDbmsAction(DENIED)", "SHOW ROLE", "reader",
-          dbmsPrivilegePlan("RevokeDbmsAction(GRANTED)", "SHOW ROLE", "reader",
-            dbmsPrivilegePlan("RevokeDbmsAction(DENIED)", "REMOVE ROLE", "reader",
-              dbmsPrivilegePlan("RevokeDbmsAction(GRANTED)", "REMOVE ROLE", "reader",
-                dbmsPrivilegePlan("RevokeDbmsAction(DENIED)", "ASSIGN ROLE", "reader",
-                  dbmsPrivilegePlan("RevokeDbmsAction(GRANTED)", "ASSIGN ROLE", "reader",
-                    dbmsPrivilegePlan("RevokeDbmsAction(DENIED)", "DROP ROLE", "reader",
-                      dbmsPrivilegePlan("RevokeDbmsAction(GRANTED)", "DROP ROLE", "reader",
-                        dbmsPrivilegePlan("RevokeDbmsAction(DENIED)", "CREATE ROLE", "reader",
-                          dbmsPrivilegePlan("RevokeDbmsAction(GRANTED)", "CREATE ROLE", "reader",
-                            dbmsPrivilegePlan("RevokeDbmsAction(DENIED)", "ROLE MANAGEMENT", "reader",
-                              dbmsPrivilegePlan("RevokeDbmsAction(GRANTED)", "ROLE MANAGEMENT", "reader",
-                                helperPlan("AssertValidRevoke", Seq(DbmsAction("ROLE MANAGEMENT"), rolePrivilegeArg("reader")),
-                                  assertDbmsAdminPlan("REVOKE PRIVILEGE")
-                                )
-                              )
-                            )
-                          )
-                        )
-                      )
-                    )
-                  )
-                )
-              )
+        dbmsPrivilegePlan("RevokeDbmsAction(DENIED)", "ROLE MANAGEMENT", "reader",
+          dbmsPrivilegePlan("RevokeDbmsAction(GRANTED)", "ROLE MANAGEMENT", "reader",
+            helperPlan("AssertValidRevoke", Seq(DbmsAction("ROLE MANAGEMENT"), rolePrivilegeArg("reader")),
+              assertDbmsAdminPlan("REVOKE PRIVILEGE")
             )
           )
         )
@@ -617,26 +597,10 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
     // Then
     plan should include(
       logPlan(
-        dbmsPrivilegePlan("RevokeDbmsAction(DENIED)", "SHOW USER", "reader",
-          dbmsPrivilegePlan("RevokeDbmsAction(GRANTED)", "SHOW USER", "reader",
-            dbmsPrivilegePlan("RevokeDbmsAction(DENIED)", "ALTER USER", "reader",
-              dbmsPrivilegePlan("RevokeDbmsAction(GRANTED)", "ALTER USER", "reader",
-                dbmsPrivilegePlan("RevokeDbmsAction(DENIED)", "DROP USER", "reader",
-                  dbmsPrivilegePlan("RevokeDbmsAction(GRANTED)", "DROP USER", "reader",
-                    dbmsPrivilegePlan("RevokeDbmsAction(DENIED)", "CREATE USER", "reader",
-                      dbmsPrivilegePlan("RevokeDbmsAction(GRANTED)", "CREATE USER", "reader",
-                        dbmsPrivilegePlan("RevokeDbmsAction(DENIED)", "USER MANAGEMENT", "reader",
-                          dbmsPrivilegePlan("RevokeDbmsAction(GRANTED)", "USER MANAGEMENT", "reader",
-                            helperPlan("AssertValidRevoke", Seq(DbmsAction("USER MANAGEMENT"), rolePrivilegeArg("reader")),
-                              assertDbmsAdminPlan("REVOKE PRIVILEGE")
-                            )
-                          )
-                        )
-                      )
-                    )
-                  )
-                )
-              )
+        dbmsPrivilegePlan("RevokeDbmsAction(DENIED)", "USER MANAGEMENT", "reader",
+          dbmsPrivilegePlan("RevokeDbmsAction(GRANTED)", "USER MANAGEMENT", "reader",
+            helperPlan("AssertValidRevoke", Seq(DbmsAction("USER MANAGEMENT"), rolePrivilegeArg("reader")),
+              assertDbmsAdminPlan("REVOKE PRIVILEGE")
             )
           )
         )

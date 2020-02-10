@@ -374,21 +374,21 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
       )
 
-    // GRANT/DENY/REVOKE action ON DBMS TO role
+    // GRANT/DENY/REVOKE _ ON DBMS TO role
     case GrantDbmsAction(source, action, roleName) => (context, parameterMapping, securityContext) =>
       val dbmsAction = AdminActionMapper.asKernelAction(action).toString
       makeGrantOrDenyExecutionPlan(dbmsAction, DatabaseResource()(InputPosition.NONE), AllGraphsScope()(InputPosition.NONE), AllQualifier()(InputPosition.NONE), roleName,
-        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), GRANT, s"Failed to grant dbms privilege to role '$roleName'")
+        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), GRANT, s"Failed to grant $dbmsAction privilege to role '$roleName'")
 
     case DenyDbmsAction(source, action, roleName) => (context, parameterMapping, securityContext) =>
       val dbmsAction = AdminActionMapper.asKernelAction(action).toString
       makeGrantOrDenyExecutionPlan(dbmsAction, DatabaseResource()(InputPosition.NONE), AllGraphsScope()(InputPosition.NONE), AllQualifier()(InputPosition.NONE), roleName,
-        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), DENY, s"Failed to deny dbms privilege to role '$roleName'")
+        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), DENY, s"Failed to deny $dbmsAction privilege to role '$roleName'")
 
     case RevokeDbmsAction(source, action, roleName, revokeType) => (context, parameterMapping, securityContext) =>
       val dbmsAction = AdminActionMapper.asKernelAction(action).toString
       makeRevokeExecutionPlan(dbmsAction, DatabaseResource()(InputPosition.NONE), AllGraphsScope()(InputPosition.NONE), AllQualifier()(InputPosition.NONE), roleName, revokeType,
-        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), s"Failed to revoke dbms privilege from role '$roleName'")
+        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), s"Failed to revoke $dbmsAction privilege from role '$roleName'")
 
     case AssertValidRevoke(source, action, scope, roleName) => (context, parameterMapping, securityContext) =>
       val (dbPredicate, dbValue) = scope match {
@@ -428,21 +428,21 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         }),
         source = source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)))
 
-    // GRANT/DENY/REVOKE ACCESS ON DATABASE foo TO role
+    // GRANT/DENY/REVOKE _ ON DATABASE foo TO role
     case GrantDatabaseAction(source, action, database, qualifier, roleName) => (context, parameterMapping, securityContext) =>
       val databaseAction = AdminActionMapper.asKernelAction(action).toString
       makeGrantOrDenyExecutionPlan(databaseAction, DatabaseResource()(InputPosition.NONE), database, qualifier, roleName,
-        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), GRANT, s"Failed to grant access privilege to role '$roleName'")
+        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), GRANT, s"Failed to grant $databaseAction privilege to role '$roleName'")
 
     case DenyDatabaseAction(source, action, database, qualifier, roleName) => (context, parameterMapping, securityContext) =>
       val databaseAction = AdminActionMapper.asKernelAction(action).toString
       makeGrantOrDenyExecutionPlan(databaseAction, DatabaseResource()(InputPosition.NONE), database, qualifier, roleName,
-        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), DENY, s"Failed to deny access privilege to role '$roleName'")
+        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), DENY, s"Failed to deny $databaseAction privilege to role '$roleName'")
 
     case RevokeDatabaseAction(source, action, database, qualifier, roleName, revokeType) => (context, parameterMapping, securityContext) =>
       val databaseAction = AdminActionMapper.asKernelAction(action).toString
       makeRevokeExecutionPlan(databaseAction, DatabaseResource()(InputPosition.NONE), database, qualifier, roleName, revokeType,
-        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), s"Failed to revoke access privilege from role '$roleName'")
+        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), s"Failed to revoke $databaseAction privilege from role '$roleName'")
 
     // GRANT/DENY/REVOKE TRAVERSE ON GRAPH foo NODES A (*) TO role
     case GrantTraverse(source, database, qualifier, roleName) => (context, parameterMapping, securityContext) =>

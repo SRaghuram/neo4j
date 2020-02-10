@@ -91,7 +91,7 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
     read().role("publisher").relationship("*").map,
     write().role("publisher").node("*").map,
     write().role("publisher").relationship("*").map,
-    grantToken().role("publisher").map,
+    nameManagement().role("publisher").map,
 
     access().role("architect").map,
     traverse().role("architect").node("*").map,
@@ -100,7 +100,7 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
     read().role("architect").relationship("*").map,
     write().role("architect").node("*").map,
     write().role("architect").relationship("*").map,
-    grantToken().role("architect").map,
+    nameManagement().role("architect").map,
     grantSchema().role("architect").map,
 
     access().role("admin").map,
@@ -110,7 +110,7 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
     read().role("admin").relationship("*").map,
     write().role("admin").node("*").map,
     write().role("admin").relationship("*").map,
-    grantToken().role("admin").map,
+    nameManagement().role("admin").map,
     grantSchema().role("admin").map,
     grantAdmin().role("admin").map,
   )
@@ -200,19 +200,23 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
 
   def createIndex(grant: String = GRANTED): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "database")).action("create_index")
   def dropIndex(grant: String = GRANTED): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "database")).action("drop_index")
+  def indexManagement(grant: String = GRANTED): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "database")).action("index")
+
   def createConstraint(grant: String = GRANTED): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "database")).action("create_constraint")
   def dropConstraint(grant: String = GRANTED): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "database")).action("drop_constraint")
+  def constraintManagement(grant: String = GRANTED): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "database")).action("constraint")
 
   def createNodeLabel(grant: String = GRANTED): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "database")).action("create_label")
   def createRelationshipType(grant: String = GRANTED): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "database")).action("create_reltype")
   def createPropertyKey(grant: String = GRANTED): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "database")).action("create_propertykey")
+  def nameManagement(grant: String = GRANTED): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "database")).action("token")
 
   def access(grant: String = GRANTED): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "database")).action("access")
   def traverse(grant: String = GRANTED): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "graph")).action("traverse")
   def read(grant: String = GRANTED): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "all_properties")).action("read")
   def write(grant: String = GRANTED): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "all_properties")).action("write")
 
-  def grantToken(): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap() + ("resource" -> "database")).action("token")
+  def allDatabasePrivilege(grant: String = GRANTED): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "database")).action("all_database_privileges")
   def grantSchema(): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap() + ("resource" -> "database")).action("schema")
   def grantAdmin(): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap() + ("resource" -> "database")).action("admin")
 

@@ -326,13 +326,9 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     // Then
     plan should include(
       logPlan(
-        databasePrivilegePlan("GrantDatabaseAction", "DROP INDEX", allDatabases = true, "editor",
-          databasePrivilegePlan("GrantDatabaseAction", "CREATE INDEX", allDatabases = true, "editor",
-            databasePrivilegePlan("GrantDatabaseAction", "DROP INDEX", allDatabases = true, "reader",
-              databasePrivilegePlan("GrantDatabaseAction", "CREATE INDEX", allDatabases = true, "reader",
-                assertDbmsAdminPlan("GRANT PRIVILEGE")
-              )
-            )
+        databasePrivilegePlan("GrantDatabaseAction", "INDEX MANAGEMENT", allDatabases = true, "editor",
+          databasePrivilegePlan("GrantDatabaseAction", "INDEX MANAGEMENT", allDatabases = true, "reader",
+            assertDbmsAdminPlan("GRANT PRIVILEGE")
           )
         )
       ).toString
@@ -348,10 +344,8 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     // Then
     plan should include(
       logPlan(
-        databasePrivilegePlan("DenyDatabaseAction", "DROP INDEX", SYSTEM_DATABASE_NAME, "reader",
-          databasePrivilegePlan("DenyDatabaseAction", "CREATE INDEX", SYSTEM_DATABASE_NAME, "reader",
-            assertDbmsAdminPlan("DENY PRIVILEGE")
-          )
+        databasePrivilegePlan("DenyDatabaseAction", "INDEX MANAGEMENT", SYSTEM_DATABASE_NAME, "reader",
+          assertDbmsAdminPlan("DENY PRIVILEGE")
         )
       ).toString
     )
@@ -366,18 +360,10 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     // Then
     plan should include(
       logPlan(
-        databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "DROP INDEX", allDatabases = false, "reader",
-          databasePrivilegePlan("RevokeDatabaseAction(GRANTED)", "DROP INDEX", allDatabases = false, "reader",
-            databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "CREATE INDEX", allDatabases = false, "reader",
-              databasePrivilegePlan("RevokeDatabaseAction(GRANTED)", "CREATE INDEX", allDatabases = false, "reader",
-                databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "INDEX MANAGEMENT", allDatabases = false, "reader",
-                  databasePrivilegePlan("RevokeDatabaseAction(GRANTED)", "INDEX MANAGEMENT", allDatabases = false, "reader",
-                    helperPlan("AssertValidRevoke", Seq(DatabaseAction("INDEX MANAGEMENT"), rolePrivilegeArg("reader")),
-                      assertDbmsAdminPlan("REVOKE PRIVILEGE")
-                    )
-                  )
-                )
-              )
+        databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "INDEX MANAGEMENT", allDatabases = false, "reader",
+          databasePrivilegePlan("RevokeDatabaseAction(GRANTED)", "INDEX MANAGEMENT", allDatabases = false, "reader",
+            helperPlan("AssertValidRevoke", Seq(DatabaseAction("INDEX MANAGEMENT"), rolePrivilegeArg("reader")),
+              assertDbmsAdminPlan("REVOKE PRIVILEGE")
             )
           )
         )
@@ -498,14 +484,10 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     // Then
     plan should include(
       logPlan(
-        databasePrivilegePlan("GrantDatabaseAction", "DROP CONSTRAINT", allDatabases = true, "editor",
-          databasePrivilegePlan("GrantDatabaseAction", "CREATE CONSTRAINT", allDatabases = true, "editor",
-            databasePrivilegePlan("GrantDatabaseAction", "DROP CONSTRAINT", allDatabases = true, "reader",
-              databasePrivilegePlan("GrantDatabaseAction", "CREATE CONSTRAINT", allDatabases = true, "reader",
+          databasePrivilegePlan("GrantDatabaseAction", "CONSTRAINT MANAGEMENT", allDatabases = true, "editor",
+            databasePrivilegePlan("GrantDatabaseAction", "CONSTRAINT MANAGEMENT", allDatabases = true, "reader",
                 assertDbmsAdminPlan("GRANT PRIVILEGE")
               )
-            )
-          )
         )
       ).toString
     )
@@ -520,10 +502,8 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     // Then
     plan should include(
       logPlan(
-        databasePrivilegePlan("DenyDatabaseAction", "DROP CONSTRAINT", SYSTEM_DATABASE_NAME, "reader",
-          databasePrivilegePlan("DenyDatabaseAction", "CREATE CONSTRAINT", SYSTEM_DATABASE_NAME, "reader",
-            assertDbmsAdminPlan("DENY PRIVILEGE")
-          )
+        databasePrivilegePlan("DenyDatabaseAction", "CONSTRAINT MANAGEMENT", SYSTEM_DATABASE_NAME, "reader",
+          assertDbmsAdminPlan("DENY PRIVILEGE")
         )
       ).toString
     )
@@ -538,18 +518,10 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     // Then
     plan should include(
       logPlan(
-        databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "DROP CONSTRAINT", allDatabases = false, "reader",
-          databasePrivilegePlan("RevokeDatabaseAction(GRANTED)", "DROP CONSTRAINT", allDatabases = false, "reader",
-            databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "CREATE CONSTRAINT", allDatabases = false, "reader",
-              databasePrivilegePlan("RevokeDatabaseAction(GRANTED)", "CREATE CONSTRAINT", allDatabases = false, "reader",
-                databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "CONSTRAINT MANAGEMENT", allDatabases = false, "reader",
-                  databasePrivilegePlan("RevokeDatabaseAction(GRANTED)", "CONSTRAINT MANAGEMENT", allDatabases = false, "reader",
-                    helperPlan("AssertValidRevoke", Seq(DatabaseAction("CONSTRAINT MANAGEMENT"), rolePrivilegeArg("reader")),
-                      assertDbmsAdminPlan("REVOKE PRIVILEGE")
-                    )
-                  )
-                )
-              )
+        databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "CONSTRAINT MANAGEMENT", allDatabases = false, "reader",
+          databasePrivilegePlan("RevokeDatabaseAction(GRANTED)", "CONSTRAINT MANAGEMENT", allDatabases = false, "reader",
+            helperPlan("AssertValidRevoke", Seq(DatabaseAction("CONSTRAINT MANAGEMENT"), rolePrivilegeArg("reader")),
+              assertDbmsAdminPlan("REVOKE PRIVILEGE")
             )
           )
         )
@@ -726,17 +698,9 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     // Then
     plan should include(
       logPlan(
-        databasePrivilegePlan("GrantDatabaseAction", "CREATE NEW PROPERTY NAME", allDatabases = true, "editor",
-          databasePrivilegePlan("GrantDatabaseAction", "CREATE NEW RELATIONSHIP TYPE", allDatabases = true, "editor",
-            databasePrivilegePlan("GrantDatabaseAction", "CREATE NEW NODE LABEL", allDatabases = true, "editor",
-              databasePrivilegePlan("GrantDatabaseAction", "CREATE NEW PROPERTY NAME", allDatabases = true, "reader",
-                databasePrivilegePlan("GrantDatabaseAction", "CREATE NEW RELATIONSHIP TYPE", allDatabases = true, "reader",
-                  databasePrivilegePlan("GrantDatabaseAction", "CREATE NEW NODE LABEL", allDatabases = true, "reader",
-                    assertDbmsAdminPlan("GRANT PRIVILEGE")
-                  )
-                )
-              )
-            )
+        databasePrivilegePlan("GrantDatabaseAction", "NAME MANAGEMENT", allDatabases = true, "editor",
+          databasePrivilegePlan("GrantDatabaseAction", "NAME MANAGEMENT", allDatabases = true, "reader",
+            assertDbmsAdminPlan("GRANT PRIVILEGE")
           )
         )
       ).toString
@@ -752,12 +716,8 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     // Then
     plan should include(
       logPlan(
-        databasePrivilegePlan("DenyDatabaseAction", "CREATE NEW PROPERTY NAME", SYSTEM_DATABASE_NAME, "reader",
-          databasePrivilegePlan("DenyDatabaseAction", "CREATE NEW RELATIONSHIP TYPE", SYSTEM_DATABASE_NAME, "reader",
-            databasePrivilegePlan("DenyDatabaseAction", "CREATE NEW NODE LABEL", SYSTEM_DATABASE_NAME, "reader",
-              assertDbmsAdminPlan("DENY PRIVILEGE")
-            )
-          )
+        databasePrivilegePlan("DenyDatabaseAction", "NAME MANAGEMENT", SYSTEM_DATABASE_NAME, "reader",
+          assertDbmsAdminPlan("DENY PRIVILEGE")
         )
       ).toString
     )
@@ -772,22 +732,10 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     // Then
     plan should include(
       logPlan(
-        databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "CREATE NEW PROPERTY NAME", allDatabases = false, "reader",
-          databasePrivilegePlan("RevokeDatabaseAction(GRANTED)", "CREATE NEW PROPERTY NAME", allDatabases = false, "reader",
-            databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "CREATE NEW RELATIONSHIP TYPE", allDatabases = false, "reader",
-              databasePrivilegePlan("RevokeDatabaseAction(GRANTED)", "CREATE NEW RELATIONSHIP TYPE", allDatabases = false, "reader",
-                databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "CREATE NEW NODE LABEL", allDatabases = false, "reader",
-                  databasePrivilegePlan("RevokeDatabaseAction(GRANTED)", "CREATE NEW NODE LABEL", allDatabases = false, "reader",
-                    databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "NAME MANAGEMENT", allDatabases = false, "reader",
-                      databasePrivilegePlan("RevokeDatabaseAction(GRANTED)", "NAME MANAGEMENT", allDatabases = false, "reader",
-                        helperPlan("AssertValidRevoke", Seq(DatabaseAction("NAME MANAGEMENT"), rolePrivilegeArg("reader")),
-                          assertDbmsAdminPlan("REVOKE PRIVILEGE")
-                        )
-                      )
-                    )
-                  )
-                )
-              )
+        databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "NAME MANAGEMENT", allDatabases = false, "reader",
+          databasePrivilegePlan("RevokeDatabaseAction(GRANTED)", "NAME MANAGEMENT", allDatabases = false, "reader",
+            helperPlan("AssertValidRevoke", Seq(DatabaseAction("NAME MANAGEMENT"), rolePrivilegeArg("reader")),
+              assertDbmsAdminPlan("REVOKE PRIVILEGE")
             )
           )
         )
@@ -806,45 +754,9 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     // Then
     plan should include(
       logPlan(
-        databasePrivilegePlan("GrantDatabaseAction", "CREATE NEW PROPERTY NAME", allDatabases = true, "editor",
-          databasePrivilegePlan("GrantDatabaseAction", "CREATE NEW RELATIONSHIP TYPE", allDatabases = true, "editor",
-            databasePrivilegePlan("GrantDatabaseAction", "CREATE NEW NODE LABEL", allDatabases = true, "editor",
-              databasePrivilegePlan("GrantDatabaseAction", "DROP INDEX", allDatabases = true, "editor",
-                databasePrivilegePlan("GrantDatabaseAction", "CREATE INDEX", allDatabases = true, "editor",
-                  databasePrivilegePlan("GrantDatabaseAction", "DROP CONSTRAINT", allDatabases = true, "editor",
-                    databasePrivilegePlan("GrantDatabaseAction", "CREATE CONSTRAINT", allDatabases = true, "editor",
-                      databasePrivilegePlan("GrantDatabaseAction", "STOP", allDatabases = true, "editor",
-                        databasePrivilegePlan("GrantDatabaseAction", "START", allDatabases = true, "editor",
-                          databasePrivilegePlan("GrantDatabaseAction", "ACCESS", allDatabases = true, "editor",
-                            databasePrivilegePlan("GrantDatabaseAction", "CREATE NEW PROPERTY NAME", allDatabases = true, "reader",
-                              databasePrivilegePlan("GrantDatabaseAction", "CREATE NEW RELATIONSHIP TYPE", allDatabases = true, "reader",
-                                databasePrivilegePlan("GrantDatabaseAction", "CREATE NEW NODE LABEL", allDatabases = true, "reader",
-                                  databasePrivilegePlan("GrantDatabaseAction", "DROP INDEX", allDatabases = true, "reader",
-                                    databasePrivilegePlan("GrantDatabaseAction", "CREATE INDEX", allDatabases = true, "reader",
-                                      databasePrivilegePlan("GrantDatabaseAction", "DROP CONSTRAINT", allDatabases = true, "reader",
-                                        databasePrivilegePlan("GrantDatabaseAction", "CREATE CONSTRAINT", allDatabases = true, "reader",
-                                          databasePrivilegePlan("GrantDatabaseAction", "STOP", allDatabases = true, "reader",
-                                            databasePrivilegePlan("GrantDatabaseAction", "START", allDatabases = true, "reader",
-                                              databasePrivilegePlan("GrantDatabaseAction", "ACCESS", allDatabases = true, "reader",
-                                                assertDbmsAdminPlan("GRANT PRIVILEGE")
-                                              )
-                                            )
-                                          )
-                                        )
-                                      )
-                                    )
-                                  )
-                                )
-                              )
-                            )
-                          )
-                        )
-                      )
-                    )
-                  )
-                )
-              )
-            )
+        databasePrivilegePlan("GrantDatabaseAction", "ALL DATABASE PRIVILEGES", allDatabases = true, "editor",
+          databasePrivilegePlan("GrantDatabaseAction", "ALL DATABASE PRIVILEGES", allDatabases = true, "reader",
+            assertDbmsAdminPlan("GRANT PRIVILEGE")
           )
         )
       ).toString
@@ -860,26 +772,8 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     // Then
     plan should include(
       logPlan(
-        databasePrivilegePlan("DenyDatabaseAction", "CREATE NEW PROPERTY NAME", SYSTEM_DATABASE_NAME, "reader",
-          databasePrivilegePlan("DenyDatabaseAction", "CREATE NEW RELATIONSHIP TYPE", SYSTEM_DATABASE_NAME, "reader",
-            databasePrivilegePlan("DenyDatabaseAction", "CREATE NEW NODE LABEL", SYSTEM_DATABASE_NAME, "reader",
-              databasePrivilegePlan("DenyDatabaseAction", "DROP INDEX", SYSTEM_DATABASE_NAME, "reader",
-                databasePrivilegePlan("DenyDatabaseAction", "CREATE INDEX", SYSTEM_DATABASE_NAME, "reader",
-                  databasePrivilegePlan("DenyDatabaseAction", "DROP CONSTRAINT", SYSTEM_DATABASE_NAME, "reader",
-                    databasePrivilegePlan("DenyDatabaseAction", "CREATE CONSTRAINT", SYSTEM_DATABASE_NAME, "reader",
-                      databasePrivilegePlan("DenyDatabaseAction", "STOP", SYSTEM_DATABASE_NAME, "reader",
-                        databasePrivilegePlan("DenyDatabaseAction", "START", SYSTEM_DATABASE_NAME, "reader",
-                          databasePrivilegePlan("DenyDatabaseAction", "ACCESS", SYSTEM_DATABASE_NAME, "reader",
-                            assertDbmsAdminPlan("DENY PRIVILEGE")
-                          )
-                        )
-                      )
-                    )
-                  )
-                )
-              )
-            )
-          )
+        databasePrivilegePlan("DenyDatabaseAction", "ALL DATABASE PRIVILEGES", SYSTEM_DATABASE_NAME, "reader",
+          assertDbmsAdminPlan("DENY PRIVILEGE")
         )
       ).toString
     )
@@ -894,66 +788,10 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
     // Then
     plan should include(
       logPlan(
-        databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "CREATE NEW PROPERTY NAME", allDatabases = false, "reader",
-          databasePrivilegePlan("RevokeDatabaseAction(GRANTED)", "CREATE NEW PROPERTY NAME", allDatabases = false, "reader",
-            databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "CREATE NEW RELATIONSHIP TYPE", allDatabases = false, "reader",
-              databasePrivilegePlan("RevokeDatabaseAction(GRANTED)", "CREATE NEW RELATIONSHIP TYPE", allDatabases = false, "reader",
-                databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "CREATE NEW NODE LABEL", allDatabases = false, "reader",
-                  databasePrivilegePlan("RevokeDatabaseAction(GRANTED)", "CREATE NEW NODE LABEL", allDatabases = false, "reader",
-                    databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "NAME MANAGEMENT", allDatabases = false, "reader",
-                      databasePrivilegePlan("RevokeDatabaseAction(GRANTED)", "NAME MANAGEMENT", allDatabases = false, "reader",
-                        databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "DROP INDEX", allDatabases = false, "reader",
-                          databasePrivilegePlan("RevokeDatabaseAction(GRANTED)", "DROP INDEX", allDatabases = false, "reader",
-                            databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "CREATE INDEX", allDatabases = false, "reader",
-                              databasePrivilegePlan("RevokeDatabaseAction(GRANTED)", "CREATE INDEX", allDatabases = false, "reader",
-                                databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "INDEX MANAGEMENT", allDatabases = false, "reader",
-                                  databasePrivilegePlan("RevokeDatabaseAction(GRANTED)", "INDEX MANAGEMENT", allDatabases = false, "reader",
-                                    databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "DROP CONSTRAINT", allDatabases = false, "reader",
-                                      databasePrivilegePlan("RevokeDatabaseAction(GRANTED)", "DROP CONSTRAINT", allDatabases = false, "reader",
-                                        databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "CREATE CONSTRAINT", allDatabases = false, "reader",
-                                          databasePrivilegePlan("RevokeDatabaseAction(GRANTED)", "CREATE CONSTRAINT", allDatabases = false, "reader",
-                                            databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "CONSTRAINT MANAGEMENT", allDatabases = false, "reader",
-                                              databasePrivilegePlan("RevokeDatabaseAction(GRANTED)", "CONSTRAINT MANAGEMENT", allDatabases = false, "reader",
-                                                databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "SCHEMA MANAGEMENT", allDatabases = false, "reader",
-                                                  databasePrivilegePlan("RevokeDatabaseAction(GRANTED)", "SCHEMA MANAGEMENT", allDatabases = false, "reader",
-                                                    databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "STOP", allDatabases = false, "reader",
-                                                      databasePrivilegePlan("RevokeDatabaseAction(GRANTED)", "STOP", allDatabases = false, "reader",
-                                                        databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "START", allDatabases = false, "reader",
-                                                          databasePrivilegePlan("RevokeDatabaseAction(GRANTED)", "START", allDatabases = false, "reader",
-                                                            databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "ACCESS", allDatabases = false, "reader",
-                                                              databasePrivilegePlan("RevokeDatabaseAction(GRANTED)", "ACCESS", allDatabases = false, "reader",
-                                                                databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "ALL DATABASE PRIVILEGES", allDatabases = false, "reader",
-                                                                  databasePrivilegePlan("RevokeDatabaseAction(GRANTED)", "ALL DATABASE PRIVILEGES", allDatabases = false, "reader",
-                                                                    helperPlan("AssertValidRevoke", Seq(DatabaseAction("ALL DATABASE PRIVILEGES"), rolePrivilegeArg("reader")),
-                                                                      assertDbmsAdminPlan("REVOKE PRIVILEGE")
-                                                                    )
-                                                                  )
-                                                                )
-                                                              )
-                                                            )
-                                                          )
-                                                        )
-                                                      )
-                                                    )
-                                                  )
-                                                )
-                                              )
-                                            )
-                                          )
-                                        )
-                                      )
-                                    )
-                                  )
-                                )
-                              )
-                            )
-                          )
-                        )
-                      )
-                    )
-                  )
-                )
-              )
+        databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "ALL DATABASE PRIVILEGES", allDatabases = false, "reader",
+          databasePrivilegePlan("RevokeDatabaseAction(GRANTED)", "ALL DATABASE PRIVILEGES", allDatabases = false, "reader",
+            helperPlan("AssertValidRevoke", Seq(DatabaseAction("ALL DATABASE PRIVILEGES"), rolePrivilegeArg("reader")),
+              assertDbmsAdminPlan("REVOKE PRIVILEGE")
             )
           )
         )

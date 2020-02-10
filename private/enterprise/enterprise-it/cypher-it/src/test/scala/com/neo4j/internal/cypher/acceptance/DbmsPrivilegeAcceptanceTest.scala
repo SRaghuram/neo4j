@@ -8,6 +8,7 @@ package com.neo4j.internal.cypher.acceptance
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.graphdb.security.AuthorizationViolationException
+import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 
 class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
 
@@ -27,6 +28,17 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
           adminAction("create_role", relType).role("custom").map
         ))
+      }
+
+      test(s"should fail to $grant create role privilege to non-existing role") {
+        // GIVEN
+        selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+        the[InvalidArgumentsException] thrownBy {
+          // WHEN
+          execute(s"$grant CREATE ROLE ON DBMS TO role")
+          // THEN
+        } should have message s"Failed to ${grant.toLowerCase} create_role privilege to role 'role': Role 'role' does not exist."
       }
 
       test(s"should $grant drop role privilege") {
@@ -127,6 +139,17 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
         ))
       }
 
+      test(s"should fail to $grant drop user privilege to non-existing role") {
+        // GIVEN
+        selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+
+        the[InvalidArgumentsException] thrownBy {
+          // WHEN
+          execute(s"$grant DROP USER ON DBMS TO role")
+          // THEN
+        } should have message s"Failed to ${grant.toLowerCase} drop_user privilege to role 'role': Role 'role' does not exist."
+      }
+
       test(s"should $grant show user privilege") {
         // GIVEN
         selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
@@ -170,7 +193,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
       }
   }
 
-  test("should revoke other role management privileges when revoking role management") {
+  test("should not revoke other role management privileges when revoking role management") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
@@ -194,10 +217,16 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
     execute("REVOKE ROLE MANAGEMENT ON DBMS FROM custom")
 
     // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(empty)
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      adminAction("create_role").role("custom").map,
+      adminAction("drop_role").role("custom").map,
+      adminAction("assign_role").role("custom").map,
+      adminAction("remove_role").role("custom").map,
+      adminAction("show_role").role("custom").map
+    ))
   }
 
-  test("should revoke other user management privileges when revoking user management") {
+  test("should not revoke other user management privileges when revoking user management") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
     execute("CREATE ROLE custom")
@@ -219,7 +248,12 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
     execute("REVOKE USER MANAGEMENT ON DBMS FROM custom")
 
     // THEN
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(empty)
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      adminAction("create_user").role("custom").map,
+      adminAction("drop_user").role("custom").map,
+      adminAction("alter_user").role("custom").map,
+      adminAction("show_user").role("custom").map
+    ))
   }
 
   test("Should get error when revoking a subset of role management privilege") {
@@ -263,6 +297,26 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
         execute(s"REVOKE $privilege ON DBMS FROM custom")
       } should have message s"Unsupported to revoke a sub-privilege '$privilege' from a compound privilege 'USER MANAGEMENT', consider using DENY instead."
     }
+  }
+
+  test("should do nothing when revoking role management privilege from non-existing role") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE role")
+    execute("GRANT ROLE MANAGEMENT ON DBMS TO role")
+
+    // WHEN
+    execute("REVOKE ROLE MANAGEMENT ON DBMS FROM wrongRole")
+  }
+
+  test("should do nothing when revoking user management privilege from non-existing role") {
+    // GIVEN
+    selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
+    execute("CREATE ROLE role")
+    execute("DENY USER MANAGEMENT ON DBMS TO role")
+
+    // WHEN
+    execute("REVOKE USER MANAGEMENT ON DBMS FROM wrongRole")
   }
 
   // Enforcement tests
