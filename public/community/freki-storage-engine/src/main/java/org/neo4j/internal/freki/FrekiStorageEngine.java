@@ -252,14 +252,11 @@ public class FrekiStorageEngine implements StorageEngine
         // point between closing this and the locks above
         CommandsToApply initialBatch = batch;
         try ( LockGroup locks = new LockGroup();
-              FrekiTransactionApplier batchApplier = new FrekiTransactionApplier( stores, indexUpdateListener ) )
+              FrekiTransactionApplier txApplier = new FrekiTransactionApplier( stores, indexUpdateListener ) )
         {
             while ( batch != null )
             {
-                try ( FrekiTransactionApplier txApplier = batchApplier.startTx( batch, locks ) )
-                {
-                    batch.accept( txApplier );
-                }
+                batch.accept( txApplier );
                 batch = batch.next();
             }
         }
