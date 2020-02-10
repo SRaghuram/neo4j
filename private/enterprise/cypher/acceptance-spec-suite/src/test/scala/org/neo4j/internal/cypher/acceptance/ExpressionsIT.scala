@@ -397,21 +397,25 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
   test("startNode") {
     val rel = relationshipValue()
+    val reference = VirtualValues.relationship(rel.id())
     val slots = SlotConfiguration(Map("r" -> LongSlot(0, nullable = true, symbols.CTRelationship)), 1, 0)
     val context = SlottedRow(slots)
     val compiled = compile(function("startNode", parameter(0)), slots)
     addRelationships(context, RelAt(rel, 0))
     evaluate(compiled, params(rel)) should equal(rel.startNode())
+    evaluate(compiled, params(reference)) should equal(rel.startNode())
     evaluate(compiled, params(NO_VALUE)) should equal(NO_VALUE)
   }
 
   test("endNode") {
     val rel = relationshipValue()
+    val reference = VirtualValues.relationship(rel.id())
     val slots = SlotConfiguration(Map("r" -> LongSlot(0, nullable = true, symbols.CTRelationship)), 1, 0)
     val context = SlottedRow(slots)
     val compiled = compile(function("endNode", parameter(0)), slots)
     addRelationships(context, RelAt(rel, 0))
     evaluate(compiled, params(rel)) should equal(rel.endNode())
+    evaluate(compiled, params(reference)) should equal(rel.endNode())
     evaluate(compiled, params(NO_VALUE)) should equal(NO_VALUE)
   }
 
