@@ -30,6 +30,8 @@ import org.neo4j.storageengine.api.TransactionMetaDataStore;
 
 class Stores extends MainStores
 {
+    static final String META_DATA_STORE_FILENAME = "meta-data-store";
+
     private final IdGenerator relationshipIdGenerator;
     final TransactionMetaDataStore metaDataStore;
     final GBPTreeCountsStore countsStore;
