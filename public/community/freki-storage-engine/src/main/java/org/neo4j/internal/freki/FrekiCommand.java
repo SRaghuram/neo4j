@@ -24,6 +24,7 @@ import org.eclipse.collections.api.set.primitive.MutableIntSet;
 
 import java.io.IOException;
 
+import org.neo4j.internal.schema.SchemaRule;
 import org.neo4j.io.fs.WritableChannel;
 import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.string.UTF8;
@@ -45,7 +46,7 @@ abstract class FrekiCommand implements StorageCommand
         channel.put( recordType );
     }
 
-    abstract boolean accept( TransactionApplier applier ) throws IOException;
+    abstract boolean accept( FrekiTransactionApplier applier ) throws IOException;
 
     static abstract class FrekiRecordCommand extends FrekiCommand
     {
@@ -88,7 +89,7 @@ abstract class FrekiCommand implements StorageCommand
         }
 
         @Override
-        boolean accept( TransactionApplier applier ) throws IOException
+        boolean accept( FrekiTransactionApplier applier ) throws IOException
         {
             applier.handle( this );
             return false;
@@ -120,7 +121,7 @@ abstract class FrekiCommand implements StorageCommand
         }
 
         @Override
-        boolean accept( TransactionApplier applier ) throws IOException
+        boolean accept( FrekiTransactionApplier applier ) throws IOException
         {
             applier.handle( this );
             return false;
@@ -158,7 +159,7 @@ abstract class FrekiCommand implements StorageCommand
         }
 
         @Override
-        boolean accept( TransactionApplier applier ) throws IOException
+        boolean accept( FrekiTransactionApplier applier ) throws IOException
         {
             applier.handle( this );
             return false;
@@ -175,7 +176,7 @@ abstract class FrekiCommand implements StorageCommand
         }
 
         @Override
-        boolean accept( TransactionApplier applier ) throws IOException
+        boolean accept( FrekiTransactionApplier applier ) throws IOException
         {
             applier.handle( this );
             return false;
@@ -192,7 +193,36 @@ abstract class FrekiCommand implements StorageCommand
         }
 
         @Override
-        boolean accept( TransactionApplier applier ) throws IOException
+        boolean accept( FrekiTransactionApplier applier ) throws IOException
+        {
+            applier.handle( this );
+            return false;
+        }
+    }
+
+    enum Mode
+    {
+        CREATE,
+        UPDATE,
+        DELETE;
+    }
+
+    static class Schema extends FrekiCommand
+    {
+        static final byte TYPE = 13;
+
+        final SchemaRule descriptor;
+        final Mode mode;
+
+        Schema( SchemaRule descriptor, Mode mode )
+        {
+            super( TYPE );
+            this.descriptor = descriptor;
+            this.mode = mode;
+        }
+
+        @Override
+        boolean accept( FrekiTransactionApplier applier ) throws IOException
         {
             applier.handle( this );
             return false;
@@ -210,6 +240,8 @@ abstract class FrekiCommand implements StorageCommand
         void handle( RelationshipTypeToken token ) throws IOException;
 
         void handle( PropertyKeyToken token ) throws IOException;
+
+        void handle( Schema schema ) throws IOException;
 
         class Adapter implements Dispatcher
         {
@@ -235,6 +267,11 @@ abstract class FrekiCommand implements StorageCommand
 
             @Override
             public void handle( PropertyKeyToken token ) throws IOException
+            {
+            }
+
+            @Override
+            public void handle( Schema schema ) throws IOException
             {
             }
         }
