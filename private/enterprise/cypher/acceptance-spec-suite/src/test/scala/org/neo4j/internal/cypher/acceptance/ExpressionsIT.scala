@@ -626,9 +626,10 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     val compiled = compile(function("labels", parameter(0)))
 
     val labels = Values.stringArray("A", "B", "C")
-    val node = ValueUtils.fromNodeEntity(createLabeledNode("A", "B", "C"))
+    val node = createLabeledNode("A", "B", "C")
     evaluate(compiled, params(NO_VALUE)) should equal(NO_VALUE)
-    evaluate(compiled, params(node)) should equal(labels)
+    evaluate(compiled, params(ValueUtils.fromNodeEntity(node))) should equal(labels)
+    evaluate(compiled, params(VirtualValues.node(node.getId))) should equal(labels)
   }
 
   test("type function") {
