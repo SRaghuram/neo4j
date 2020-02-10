@@ -8,7 +8,6 @@ package com.neo4j.procedure;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -307,9 +306,8 @@ class AggregationFunctionIT
         }
     }
 
-    //TODO unignore when we have updated front end dependency
-    @Disabled
-    public void shouldBeAbleToAccessPropertiesFromAggregatedValues()
+    @Test
+    void shouldBeAbleToAccessPropertiesFromAggregatedValues()
     {
         // Given
         try ( Transaction tx = db.beginTx() )
