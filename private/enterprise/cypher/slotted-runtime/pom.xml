@@ -19,7 +19,6 @@
 
     <properties>
         <moduleName>com.neo4j.cypher.internal.compatibility.runtime.slotted</moduleName>
-        <skip-scalastyle>false</skip-scalastyle>
     </properties>
 
     <scm>

@@ -25,7 +25,6 @@
 
     <properties>
         <moduleName>com.neo4j.cypher.enterprise</moduleName>
-        <skip-scalastyle>false</skip-scalastyle>
     </properties>
 
     <dependencies>

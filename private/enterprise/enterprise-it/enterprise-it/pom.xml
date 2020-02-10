@@ -17,7 +17,6 @@
 
     <properties>
         <moduleName>com.neo4j.enterprise.enterprise.it</moduleName>
-        <skip-scalastyle>false</skip-scalastyle>
     </properties>
 
     <scm>

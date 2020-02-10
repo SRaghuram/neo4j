@@ -25,7 +25,6 @@
 
   <properties>
     <moduleName>com.neo4j.cypher.internal.enterprise.runtime.spec</moduleName>
-    <skip-scalastyle>false</skip-scalastyle>
   </properties>
 
   <licenses>

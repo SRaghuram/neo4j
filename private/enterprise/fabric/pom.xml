@@ -15,7 +15,6 @@
 
     <properties>
         <moduleName>com.neo4j.fabric</moduleName>
-        <skip-scalastyle>false</skip-scalastyle>
     </properties>
 
     <packaging>jar</packaging>
