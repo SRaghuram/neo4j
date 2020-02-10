@@ -66,7 +66,7 @@ abstract class RoleProcedure extends CallableProcedure.BasicProcedure
         }
     }
 
-    abstract RoleInfo role( DatabaseContext namedDatabaseId );
+    abstract RoleInfo role( DatabaseContext namedDatabaseId ) throws ProcedureException;
 
     private DatabaseContext extractDatabaseContext( AnyValue[] input ) throws ProcedureException
     {

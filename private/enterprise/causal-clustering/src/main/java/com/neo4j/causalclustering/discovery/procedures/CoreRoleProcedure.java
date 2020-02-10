@@ -5,13 +5,13 @@
  */
 package com.neo4j.causalclustering.discovery.procedures;
 
-import com.neo4j.causalclustering.core.IdentityModule;
 import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 
-import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.dbms.database.DatabaseContext;
 import org.neo4j.dbms.database.DatabaseManager;
+import org.neo4j.internal.kernel.api.exceptions.ProcedureException;
+import org.neo4j.kernel.api.exceptions.Status;
 
 public class CoreRoleProcedure extends RoleProcedure
 {
@@ -21,8 +21,13 @@ public class CoreRoleProcedure extends RoleProcedure
     }
 
     @Override
-    RoleInfo role( DatabaseContext databaseContext )
+    RoleInfo role( DatabaseContext databaseContext ) throws ProcedureException
     {
-        return databaseContext.dependencies().resolveDependency( RaftMachine.class ).isLeader() ? RoleInfo.LEADER : RoleInfo.FOLLOWER;
+        var raftMachine = databaseContext.dependencies().resolveDependency( RaftMachine.class );
+        if ( raftMachine == null )
+        {
+            throw new ProcedureException( Status.General.UnknownError, "Unable to resolve role for database. This may be because the database is stopping." );
+        }
+        return raftMachine.isLeader() ? RoleInfo.LEADER : RoleInfo.FOLLOWER;
     }
 }
