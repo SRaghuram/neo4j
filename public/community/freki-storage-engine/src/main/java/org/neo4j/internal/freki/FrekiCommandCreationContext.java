@@ -32,6 +32,7 @@ class FrekiCommandCreationContext implements CommandCreationContext
     private final IdGenerator labelTokens;
     private final IdGenerator relationshipTypeTokens;
     private final IdGenerator propertyKeyTokens;
+    private final IdGenerator schema;
     private final PageCursorTracer cursorTracer;
 
     FrekiCommandCreationContext( IdGeneratorFactory idGeneratorFactory, PageCursorTracer cursorTracer )
@@ -41,6 +42,7 @@ class FrekiCommandCreationContext implements CommandCreationContext
         labelTokens = idGeneratorFactory.get( IdType.LABEL_TOKEN );
         relationshipTypeTokens = idGeneratorFactory.get( IdType.RELATIONSHIP_TYPE_TOKEN );
         propertyKeyTokens = idGeneratorFactory.get( IdType.PROPERTY_KEY_TOKEN );
+        schema = idGeneratorFactory.get( IdType.SCHEMA );
         this.cursorTracer = cursorTracer;
     }
 
@@ -59,7 +61,7 @@ class FrekiCommandCreationContext implements CommandCreationContext
     @Override
     public long reserveSchema()
     {
-        throw new UnsupportedOperationException( "Not implemented yet" );
+        return schema.nextId( cursorTracer );
     }
 
     @Override
