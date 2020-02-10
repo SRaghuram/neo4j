@@ -30,7 +30,10 @@ import org.eclipse.collections.impl.factory.primitive.LongObjectMaps;
 
 import java.nio.BufferOverflowException;
 import java.util.Collection;
+import java.util.Iterator;
+import java.util.OptionalLong;
 
+import org.neo4j.internal.freki.FrekiCommand.Mode;
 import org.neo4j.internal.freki.MutableNodeRecordData.Relationship;
 import org.neo4j.internal.schema.ConstraintDescriptor;
 import org.neo4j.internal.schema.IndexDescriptor;
@@ -49,6 +52,7 @@ import static org.neo4j.internal.freki.MutableNodeRecordData.idFromForwardPointe
 import static org.neo4j.internal.freki.MutableNodeRecordData.isDenseFromForwardPointer;
 import static org.neo4j.internal.freki.MutableNodeRecordData.sizeExponentialFromForwardPointer;
 import static org.neo4j.internal.freki.Record.FLAG_IN_USE;
+import static org.neo4j.internal.helpers.collection.Iterators.loop;
 
 class CommandCreator implements TxStateVisitor
 {
@@ -121,6 +125,7 @@ class CommandCreator implements TxStateVisitor
     @Override
     public void visitRelPropertyChanges( long id, Iterable<StorageProperty> added, Iterable<StorageProperty> changed, IntIterable removed )
     {
+        //TODO!
     }
 
     @Override
@@ -134,25 +139,56 @@ class CommandCreator implements TxStateVisitor
     @Override
     public void visitAddedIndex( IndexDescriptor element )
     {
-        throw new UnsupportedOperationException( "Not implemented yet" );
+        commands.add( new FrekiCommand.Schema( element, Mode.CREATE ) );
     }
 
     @Override
     public void visitRemovedIndex( IndexDescriptor element )
     {
-        throw new UnsupportedOperationException( "Not implemented yet" );
+        commands.add( new FrekiCommand.Schema( element, Mode.DELETE ) );
     }
 
     @Override
-    public void visitAddedConstraint( ConstraintDescriptor element )
+    public void visitAddedConstraint( ConstraintDescriptor constraint )
     {
-        throw new UnsupportedOperationException( "Not implemented yet" );
+        commands.add( new FrekiCommand.Schema( constraint, Mode.CREATE ) );
+        switch ( constraint.type() )
+        {
+        case UNIQUE:
+            // This also means updating the index to have this constraint as owner
+            commands.add( new FrekiCommand.Schema( stores.schemaCache.getIndex(
+                    constraint.asUniquenessConstraint().ownedIndexId() ).withOwningConstraintId( constraint.getId() ), Mode.UPDATE ) );
+            break;
+        default:
+            throw new UnsupportedOperationException( "Not implemented yet" );
+        }
     }
 
     @Override
-    public void visitRemovedConstraint( ConstraintDescriptor element )
+    public void visitRemovedConstraint( ConstraintDescriptor constraint )
     {
-        throw new UnsupportedOperationException( "Not implemented yet" );
+        commands.add( new FrekiCommand.Schema( constraint, Mode.DELETE ) );
+        switch ( constraint.type() )
+        {
+        case UNIQUE:
+            // Remove the index for the constraint as well
+            Iterator<IndexDescriptor> indexes = stores.schemaCache.indexesForSchema( constraint.schema() );
+            for ( IndexDescriptor index : loop( indexes ) )
+            {
+                OptionalLong owningConstraintId = index.getOwningConstraintId();
+                if ( owningConstraintId.isPresent() && owningConstraintId.getAsLong() == constraint.getId() )
+                {
+                    visitRemovedIndex( index );
+                }
+                // Note that we _could_ also go through all the matching indexes that have isUnique == true and no owning constraint id, and remove those
+                // as well. These might be orphaned indexes from failed constraint creations. However, since we want to allow multiple indexes and
+                // constraints on the same schema, they could also be constraint indexes that are currently populating for other constraints, and if that's
+                // the case, then we cannot remove them, since that would ruin the constraint they are being built for.
+            }
+            break;
+        default:
+            throw new UnsupportedOperationException( "Not implemented yet" );
+        }
     }
 
     @Override
@@ -181,14 +217,6 @@ class CommandCreator implements TxStateVisitor
             RecordAndData abandonedLargeRecord = null;
             while ( true )
             {
-                if ( mutation.current != mutation.small )
-                {
-                    // The record have grown into a larger record, although still prepare the small one due to potential changes
-                    // TODO we should track whether or not we need to do this preparation actually
-                    // TODO for the time being we expect this to work because there should only be labels in it, 60 or so should fit
-                    mutation.small.prepareForCommandExtraction();
-                }
-
                 try
                 {
                     mutation.current.prepareForCommandExtraction();
@@ -207,8 +235,15 @@ class CommandCreator implements TxStateVisitor
                         abandonedLargeRecord.markInUse( false );
                     }
                     mutation.large = mutation.current = largerRecord;
-                    mutation.small.prepareForCommandExtraction();
                 }
+            }
+            if ( mutation.current != mutation.small )
+            {
+                // The record have grown into a larger record, although still prepare the small one due to potential changes
+                // TODO we should track whether or not we need to do this preparation actually
+                // TODO for the time being we expect this to work because there should only be labels in it, 60 or so should fit
+                mutation.small.data.setForwardPointer( mutation.current.asForwardPointer() );
+                mutation.small.prepareForCommandExtraction();
             }
 
             mutation.small.createCommands( commands );
@@ -313,7 +348,6 @@ class CommandCreator implements TxStateVisitor
     {
         private final MainStores stores;
         private final SimpleStore store;
-        private final long id;
         private final SparseRecordAndData smallRecord;
 
         private boolean created;
@@ -326,7 +360,6 @@ class CommandCreator implements TxStateVisitor
         {
             this.stores = stores;
             this.store = store;
-            this.id = id;
             this.smallRecord = smallRecord != null ? smallRecord : this;
             before = new Record( store.recordSizeExponential(), id );
             after = new Record( store.recordSizeExponential(), id );
@@ -356,7 +389,7 @@ class CommandCreator implements TxStateVisitor
         {
             try ( PageCursor cursor = store.openReadCursor() )
             {
-                store.read( cursor, before, id );
+                store.read( cursor, before, after.id );
             }
             data.deserialize( before.dataForReading() );
             after.copyContentsFrom( before );
@@ -401,6 +434,10 @@ class CommandCreator implements TxStateVisitor
         void prepareForCommandExtraction()
         {
             data.serialize( after.dataForWriting() );
+            if ( data.id == -1 )
+            {
+                acquireId();
+            }
         }
 
         @Override
@@ -410,7 +447,7 @@ class CommandCreator implements TxStateVisitor
             RecordAndData result;
             if ( largerStore != null )
             {
-                SparseRecordAndData largerRecord = new SparseRecordAndData( stores, largerStore, largerStore.nextId( PageCursorTracer.NULL ), smallRecord );
+                SparseRecordAndData largerRecord = new SparseRecordAndData( stores, largerStore, -1, smallRecord );
                 data.movePropertiesAndRelationshipsTo( largerRecord.data );
                 result = largerRecord;
             }
@@ -421,14 +458,21 @@ class CommandCreator implements TxStateVisitor
                 denseRecord.movePropertiesAndRelationshipsFrom( data );
                 result = denseRecord;
             }
-            smallRecord.data.setForwardPointer( result.asForwardPointer() );
             return result;
+        }
+
+        private void acquireId()
+        {
+            long id = store.nextId( PageCursorTracer.NULL );
+            data.id = id;
+            before.id = id;
+            after.id = id;
         }
 
         @Override
         long asForwardPointer()
         {
-            return forwardPointer( store.recordSizeExponential(), false, id );
+            return forwardPointer( store.recordSizeExponential(), false, after.id );
         }
 
         @Override
@@ -442,7 +486,6 @@ class CommandCreator implements TxStateVisitor
     {
         // meta
         private final DenseStore store;
-        private final long id;
         private final SparseRecordAndData smallRecord;
         private boolean created;
         private boolean inUse;
@@ -457,7 +500,6 @@ class CommandCreator implements TxStateVisitor
         DenseRecordAndData( DenseStore store, SparseRecordAndData smallRecord )
         {
             this.store = store;
-            this.id = smallRecord.id;
             this.smallRecord = smallRecord;
         }
 
@@ -494,7 +536,7 @@ class CommandCreator implements TxStateVisitor
                     : sourceNodeRelationship.internalId;
             boolean outgoing = sourceNodeRelationship == null;
             return createdRelationships.getIfAbsentPutWithKey( type, MutableNodeRecordData.Relationships::new )
-                    .add( internalRelationshipId, id, targetNode, type, outgoing );
+                    .add( internalRelationshipId, smallRecord.after.id, targetNode, type, outgoing );
         }
 
         @Override
@@ -546,7 +588,8 @@ class CommandCreator implements TxStateVisitor
         void createCommands( Collection<StorageCommand> commands )
         {
             // Thoughts: take all the logical changes and add to logical commands, either separate for each change or one big command containing all
-            commands.add( new FrekiCommand.DenseNode( id, inUse, addedProperties, removedProperties, createdRelationships, deletedRelationships ) );
+            commands.add(
+                    new FrekiCommand.DenseNode( smallRecord.after.id, inUse, addedProperties, removedProperties, createdRelationships, deletedRelationships ) );
         }
 
         void movePropertiesAndRelationshipsFrom( MutableNodeRecordData data )

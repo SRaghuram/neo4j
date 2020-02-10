@@ -108,6 +108,12 @@ class InMemoryTestStore extends LifecycleAdapter implements SimpleStore
     }
 
     @Override
+    public long getHighId()
+    {
+        return nextId.get();
+    }
+
+    @Override
     public boolean exists( long id )
     {
         return data.contains( id );

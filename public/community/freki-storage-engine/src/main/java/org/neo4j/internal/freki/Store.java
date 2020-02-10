@@ -157,4 +157,10 @@ public class Store extends BareBoneStore implements SimpleStore
             return Record.isInUse( cursor, offset );
         }
     }
+
+    @Override
+    public long getHighId()
+    {
+        return idGenerator.getHighId();
+    }
 }

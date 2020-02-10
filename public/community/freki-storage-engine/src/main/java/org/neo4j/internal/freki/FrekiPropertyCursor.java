@@ -98,7 +98,7 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
             FrekiRelationshipCursor relCursor = (FrekiRelationshipCursor) relationshipCursor;
             if ( useSharedRecordFrom( relCursor ) )
             {
-                if ( isDense )
+                if ( headerState.isDense )
                 {
                     denseProperties = relCursor.denseProperties;
                     return;
@@ -121,7 +121,7 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
     @Override
     public int propertyKey()
     {
-        return isDense
+        return headerState.isDense
                ? currentDenseProperty.propertyKeyId()
                : propertyKeyArray[propertyKeyIndex];
     }
@@ -135,7 +135,7 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
     @Override
     public Value propertyValue()
     {
-        return isDense
+        return headerState.isDense
                ? currentDenseProperty.value()
                : PropertyValueFormat.read( data );
     }
@@ -143,7 +143,7 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
     @Override
     public boolean next()
     {
-        if ( isDense )
+        if ( loadedNodeId != NULL && headerState.isDense )
         {
             if ( denseProperties.hasNext() )
             {
@@ -158,9 +158,9 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
             initializedFromEntity = false;
             if ( nodeId != NULL )
             {
-                loadMainRecord( nodeId );
+                boolean inUse = loadMainRecord( nodeId );
                 nodeId = NULL;
-                if ( !record.hasFlag( Record.FLAG_IN_USE ) )
+                if ( !inUse )
                 {
                     return false;
                 }
@@ -169,7 +169,7 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
                 if ( internalRelationshipId == NULL )
                 {
                     // This is properties for a node
-                    offset = nodePropertiesOffset;
+                    offset = headerState.nodePropertiesOffset;
                 }
                 else
                 {
@@ -226,14 +226,14 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
 
     private boolean readNodePropertyKeys()
     {
-        if ( isDense )
+        if ( headerState.isDense )
         {
             denseProperties = stores.denseStore.getProperties( loadedNodeId, cursorTracer );
             return true;
         }
         else
         {
-            return readPropertyKeys( nodePropertiesOffset );
+            return readPropertyKeys( headerState.nodePropertiesOffset );
         }
     }
 
