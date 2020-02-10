@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
+import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.configuration.Config;
 import org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector;
 import org.neo4j.internal.id.IdController;
@@ -59,18 +60,19 @@ import org.neo4j.token.TokenHolders;
  * - Add multi-size records
  * - Add record chains
  */
+@ServiceProvider
 public class FrekiStorageEngineFactory implements StorageEngineFactory
 {
     @Override
     public StoreVersionCheck versionCheck( FileSystemAbstraction fs, DatabaseLayout databaseLayout, Config config, PageCache pageCache, LogService logService )
     {
-        return null;
+        return new FrekiStoreVersionCheck();
     }
 
     @Override
     public StoreVersion versionInformation( String storeVersion )
     {
-        return null;
+        return new FrekiStoreVersion();
     }
 
     @Override
@@ -100,7 +102,7 @@ public class FrekiStorageEngineFactory implements StorageEngineFactory
     @Override
     public boolean storageExists( FileSystemAbstraction fileSystem, DatabaseLayout databaseLayout, PageCache pageCache )
     {
-        return false;
+        return fileSystem.fileExists( databaseLayout.file( Stores.META_DATA_STORE_FILENAME ) );
     }
 
     @Override

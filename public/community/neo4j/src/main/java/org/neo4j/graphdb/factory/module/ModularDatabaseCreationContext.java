@@ -154,11 +154,22 @@ public class ModularDatabaseCreationContext implements DatabaseCreationContext
         this.watcherServiceFactory = editionComponents.getWatcherServiceFactory();
         this.databaseAvailabilityGuardFactory =
                 databaseTimeoutMillis -> databaseAvailabilityGuardFactory( namedDatabaseId, globalModule, databaseTimeoutMillis );
-        this.storageEngineFactory = globalModule.getStorageEngineFactory();
+        this.storageEngineFactory = selectStorageEngineBasedOnName( globalModule.getStorageEngineFactory(), namedDatabaseId );
         this.fileLockerService = globalModule.getFileLockerService();
         this.accessCapabilityFactory = editionComponents.getAccessCapabilityFactory();
         this.leaseService = leaseService;
         this.startupController = editionComponents.getStartupController();
+    }
+
+    private StorageEngineFactory selectStorageEngineBasedOnName( StorageEngineFactory defaultStorageEngineFactory, NamedDatabaseId namedDatabaseId )
+    {
+        int dotIndex = namedDatabaseId.name().indexOf( '.' );
+        if ( dotIndex >= 0 )
+        {
+            String prefix = namedDatabaseId.name().substring( 0, dotIndex );
+            return StorageEngineFactory.selectStorageEngine( prefix );
+        }
+        return defaultStorageEngineFactory;
     }
 
     @Override
