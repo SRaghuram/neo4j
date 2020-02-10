@@ -33,6 +33,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.OptionalLong;
 
+import org.neo4j.exceptions.KernelException;
 import org.neo4j.internal.freki.FrekiCommand.Mode;
 import org.neo4j.internal.freki.MutableNodeRecordData.Relationship;
 import org.neo4j.internal.schema.ConstraintDescriptor;
@@ -149,15 +150,16 @@ class CommandCreator implements TxStateVisitor
     }
 
     @Override
-    public void visitAddedConstraint( ConstraintDescriptor constraint )
+    public void visitAddedConstraint( ConstraintDescriptor constraint ) throws KernelException
     {
+        constraint = constraint.withId( stores.schemaStore.nextSchemaRuleId( PageCursorTracer.NULL ) );
         commands.add( new FrekiCommand.Schema( constraint, Mode.CREATE ) );
         switch ( constraint.type() )
         {
         case UNIQUE:
             // This also means updating the index to have this constraint as owner
-            commands.add( new FrekiCommand.Schema( stores.schemaCache.getIndex(
-                    constraint.asUniquenessConstraint().ownedIndexId() ).withOwningConstraintId( constraint.getId() ), Mode.UPDATE ) );
+            IndexDescriptor index = (IndexDescriptor) stores.schemaStore.loadRule( constraint.asUniquenessConstraint().ownedIndexId(), PageCursorTracer.NULL );
+            commands.add( new FrekiCommand.Schema( index.withOwningConstraintId( constraint.getId() ), Mode.UPDATE ) );
             break;
         default:
             throw new UnsupportedOperationException( "Not implemented yet" );
