@@ -41,6 +41,7 @@ import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.io.pagecache.ExternallyManagedPageCache;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.impl.muninn.StandalonePageCacheFactory;
+import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionQueue;
@@ -61,6 +62,7 @@ import org.neo4j.kernel.impl.transaction.log.entry.VersionAwareLogEntryReader;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.kernel.monitoring.tracing.Tracers;
 import org.neo4j.logging.FormattedLog;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.token.TokenHolders;
@@ -264,6 +266,7 @@ class RebuildFromLogs
         private void checkConsistency() throws ConsistencyCheckIncompleteException, InconsistentStoreException
         {
             PageCache pageCache = graphdb.getDependencyResolver().resolveDependency( PageCache.class );
+            var pageCacheTracer = graphdb.getDependencyResolver().resolveDependency( Tracers.class ).getPageCacheTracer();
             RecordStorageEngine storageEngine = graphdb.getDependencyResolver().resolveDependency( RecordStorageEngine.class );
             StoreAccess nativeStores = new StoreAccess( storageEngine.testAccessNeoStores() ).initialize();
             DirectStoreAccess stores = new DirectStoreAccess( nativeStores, labelScanStore, indexes, tokenHolders, indexStatisticsStore, idGeneratorFactory );
@@ -271,8 +274,8 @@ class RebuildFromLogs
                     ConsistencyCheckService.defaultConsistencyCheckThreadsNumber(), ConsistencyFlags.DEFAULT, tuningConfiguration, false,
                     NodeBasedMemoryLimiter.DEFAULT );
 
-            ConsistencySummaryStatistics summaryStatistics =
-                    fullCheck.execute( pageCache, stores, () -> (CountsStore) storageEngine.countsAccessor(), FormattedLog.toOutputStream( System.err ) );
+            ConsistencySummaryStatistics summaryStatistics = fullCheck.execute( pageCache, stores, () -> (CountsStore) storageEngine.countsAccessor(),
+                    pageCacheTracer, FormattedLog.toOutputStream( System.err ) );
             if ( !summaryStatistics.isConsistent() )
             {
                 throw new InconsistentStoreException( summaryStatistics );

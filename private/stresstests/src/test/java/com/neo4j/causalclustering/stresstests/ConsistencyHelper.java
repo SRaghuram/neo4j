@@ -12,6 +12,7 @@ import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.logging.NullLogProvider;
 
 final class ConsistencyHelper
@@ -26,7 +27,7 @@ final class ConsistencyHelper
     {
         ConsistencyCheckService.Result result =
                 new ConsistencyCheckService().runFullConsistencyCheck( databaseLayout, Config.defaults(), ProgressMonitorFactory.NONE,
-                        NullLogProvider.getInstance(), fs, pageCache, false, CONSISTENCY_FLAGS );
+                        NullLogProvider.getInstance(), fs, pageCache, false, CONSISTENCY_FLAGS, PageCacheTracer.NULL );
 
         if ( !result.isSuccessful() )
         {
