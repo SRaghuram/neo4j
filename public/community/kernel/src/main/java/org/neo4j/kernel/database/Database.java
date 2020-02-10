@@ -44,7 +44,6 @@ import org.neo4j.dbms.database.DatabasePageCache;
 import org.neo4j.function.Factory;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector;
-import org.neo4j.internal.freki.FrekiStorageEngineFactory;
 import org.neo4j.internal.id.IdController;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.index.label.FullStoreChangeStream;
@@ -382,8 +381,7 @@ public class Database extends LifecycleAdapter
             Supplier<IdController.ConditionSnapshot> transactionsSnapshotSupplier = () -> kernelModule.kernelTransactions().get();
             idController.initialize( transactionsSnapshotSupplier );
 
-            StorageEngineFactory sef = namedDatabaseId.isSystemDatabase() ? storageEngineFactory : new FrekiStorageEngineFactory();
-            storageEngine = sef.instantiate( fs, databaseLayout, databaseConfig, databasePageCache, tokenHolders, databaseSchemaState,
+            storageEngine = storageEngineFactory.instantiate( fs, databaseLayout, databaseConfig, databasePageCache, tokenHolders, databaseSchemaState,
                     constraintSemantics, indexProviderMap, lockService, idGeneratorFactory, idController, databaseHealth, internalLogProvider,
                     recoveryCleanupWorkCollector, pageCacheTracer, !storageExists );
 

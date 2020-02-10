@@ -21,13 +21,14 @@ package org.neo4j.storageengine.api;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 import org.neo4j.annotations.service.Service;
 import org.neo4j.configuration.Config;
 import org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector;
-import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.internal.id.IdController;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.schema.IndexConfigCompleter;
@@ -169,6 +170,32 @@ public interface StorageEngineFactory
      */
     static StorageEngineFactory selectStorageEngine()
     {
-        return Iterables.single( Services.loadAll( StorageEngineFactory.class ) );
+        return selectDefaultStorageEngine( allAvailableStorageEngines() );
+    }
+
+    static Collection<StorageEngineFactory> allAvailableStorageEngines()
+    {
+        return Services.loadAll( StorageEngineFactory.class );
+    }
+
+    static StorageEngineFactory selectStorageEngine( FileSystemAbstraction fs, DatabaseLayout databaseLayout, PageCache pageCache )
+    {
+        Collection<StorageEngineFactory> storageEngineFactories = allAvailableStorageEngines();
+        Optional<StorageEngineFactory> first =
+                storageEngineFactories.stream().filter( engine -> engine.storageExists( fs, databaseLayout, pageCache ) ).findFirst();
+        return first.orElseGet( () -> selectDefaultStorageEngine( storageEngineFactories ) );
+    }
+
+    static StorageEngineFactory selectDefaultStorageEngine( Collection<StorageEngineFactory> storageEngineFactories )
+    {
+        return storageEngineFactories.stream().filter( engine -> engine.getClass().getSimpleName().equals( "RecordStorageEngineFactory" ) ).findFirst().get();
+    }
+
+    static StorageEngineFactory selectStorageEngine( String nameish )
+    {
+        Collection<StorageEngineFactory> storageEngineFactories = allAvailableStorageEngines();
+        Optional<StorageEngineFactory> first =
+                storageEngineFactories.stream().filter( engine -> engine.getClass().getSimpleName().toLowerCase().contains( nameish ) ).findFirst();
+        return first.orElseThrow( () -> new IllegalArgumentException( "No storage engine w/ name similar to '" + nameish + "' found" ) );
     }
 }

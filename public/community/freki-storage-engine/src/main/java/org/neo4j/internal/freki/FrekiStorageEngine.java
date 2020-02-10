@@ -146,6 +146,10 @@ public class FrekiStorageEngine implements StorageEngine
         boolean success = false;
         try
         {
+            if ( createStoreIfNotExists )
+            {
+                fs.mkdirs( databaseLayout.databaseDirectory() );
+            }
             mainStores[0] = new Store( fs, databaseLayout.file( "main-store-x1" ), pageCache, idGeneratorFactory, IdType.NODE, false, createStoreIfNotExists, 0,
                     cursorTracerSupplier );
             for ( int i = 1; i < mainStores.length; i++ )
@@ -161,7 +165,8 @@ public class FrekiStorageEngine implements StorageEngine
                     idGeneratorFactory.create( pageCache, databaseLayout.relationshipStore(), IdType.RELATIONSHIP, 0, false, Long.MAX_VALUE, false,
                             cursorTracerSupplier.get(), Sets.immutable.empty() );
             PageCursorTracer cursorTracer = cursorTracerSupplier.get();
-            metaDataStore = new GBPTreeMetaDataStore( pageCache, databaseLayout.file( "meta-data-store" ), 123456789, false, pageCacheTracer, cursorTracer );
+            metaDataStore =
+                    new GBPTreeMetaDataStore( pageCache, databaseLayout.file( Stores.META_DATA_STORE_FILENAME ), 123456789, false, pageCacheTracer, cursorTracer );
             countsStore = new GBPTreeCountsStore( pageCache, databaseLayout.countStore(), recoveryCleanupWorkCollector,
                     initialCountsBuilder( metaDataStore ), false, pageCacheTracer, GBPTreeCountsStore.NO_MONITOR );
             schemaStore = new GBPTreeSchemaStore( pageCache, databaseLayout.schemaStore(), recoveryCleanupWorkCollector, idGeneratorFactory, false,
