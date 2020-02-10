@@ -152,8 +152,11 @@ import org.neo4j.values.storable.Values.stringValue
 import org.neo4j.values.storable.Values.temporalValue
 import org.neo4j.values.virtual.ListValue
 import org.neo4j.values.virtual.MapValue
+import org.neo4j.values.virtual.NodeReference
 import org.neo4j.values.virtual.NodeValue
+import org.neo4j.values.virtual.RelationshipReference
 import org.neo4j.values.virtual.RelationshipValue
+import org.neo4j.values.virtual.VirtualNodeValue
 import org.neo4j.values.virtual.VirtualValues
 import org.neo4j.values.virtual.VirtualValues.EMPTY_LIST
 import org.neo4j.values.virtual.VirtualValues.EMPTY_MAP
@@ -2776,6 +2779,23 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     }
   }
 
+  test("map projection node reference from ref slot") {
+    val propertyMap = VirtualValues.map(Array("prop"), Array(stringValue("hello")))
+    val offset = 0
+    val node = nodeReference(propertyMap)
+    for (nullable <- List(true, false)) {
+      val slots = SlotConfiguration(Map("n" -> RefSlot(offset, nullable, symbols.CTNode)), 0, 1)
+      //needed for interpreted
+      SlotConfigurationUtils.generateSlotAccessorFunctions(slots)
+      val context = SlottedExecutionContext(slots)
+      context.setRefAt(offset, node)
+      evaluate(compile(mapProjection("n", includeAllProps = true, "foo" -> literalString("projected")), slots),
+               context) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
+      evaluate(compile(mapProjection("n", includeAllProps = false, "foo" -> literalString("projected")), slots),
+               context) should equal(VirtualValues.map(Array("foo"), Array(stringValue("projected"))))
+    }
+  }
+
   test("map projection relationship with map context") {
     val propertyMap = VirtualValues.map(Array("prop"), Array(stringValue("hello")))
     val relationship = relationshipValue(nodeValue(),
@@ -2821,6 +2841,23 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
         context) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
       evaluate(compile(mapProjection("r", includeAllProps = false, "foo" -> literalString("projected")), slots),
         context) should equal(VirtualValues.map(Array("foo"), Array(stringValue("projected"))))
+    }
+  }
+
+  test("map projection relationship reference from ref slot") {
+    val propertyMap = VirtualValues.map(Array("prop"), Array(stringValue("hello")))
+    val offset = 0
+    val relationship = relationshipReference(nodeValue(), nodeValue(), propertyMap)
+    for (nullable <- List(true, false)) {
+      val slots = SlotConfiguration(Map("r" -> RefSlot(offset, nullable, symbols.CTRelationship)), 0, 1)
+      //needed for interpreted
+      SlotConfigurationUtils.generateSlotAccessorFunctions(slots)
+      val context = SlottedExecutionContext(slots)
+      context.setRefAt(offset, relationship)
+      evaluate(compile(mapProjection("r", includeAllProps = true, "foo" -> literalString("projected")), slots),
+               context) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
+      evaluate(compile(mapProjection("r", includeAllProps = false, "foo" -> literalString("projected")), slots),
+               context) should equal(VirtualValues.map(Array("foo"), Array(stringValue("projected"))))
     }
   }
 
@@ -3945,16 +3982,36 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     }
   }
 
+  private def nodeReference(properties: MapValue = EMPTY_MAP): NodeReference = {
+    inTestTx {
+      val node = createNode()
+      properties.foreach((t: String, u: AnyValue) => {
+        node.setProperty(t, u.asInstanceOf[Value].asObject())
+      })
+
+      VirtualValues.node(node.getId)
+    }
+  }
+
   private def relationshipValue(properties: MapValue = EMPTY_MAP): RelationshipValue = {
     relationshipValue(nodeValue(), nodeValue(), properties)
   }
 
-  private def relationshipValue(from: NodeValue, to: NodeValue, properties: MapValue): RelationshipValue = {
+
+  private def relationshipValue(from: VirtualNodeValue, to: VirtualNodeValue, properties: MapValue): RelationshipValue = {
+      val r: Relationship = relate(tx.getNodeById(from.id()), tx.getNodeById(to.id()))
+      properties.foreach((t: String, u: AnyValue) => {
+        r.setProperty(t, u.asInstanceOf[Value].asObject())
+      })
+      ValueUtils.fromRelationshipEntity(r)
+  }
+
+  private def relationshipReference(from: VirtualNodeValue, to: VirtualNodeValue, properties: MapValue): RelationshipReference = {
     val r: Relationship = relate(tx.getNodeById(from.id()), tx.getNodeById(to.id()))
     properties.foreach((t: String, u: AnyValue) => {
       r.setProperty(t, u.asInstanceOf[Value].asObject())
     })
-    ValueUtils.fromRelationshipEntity(r)
+    VirtualValues.relationship(r.getId)
   }
 
   def compile(e: Expression, slots: SlotConfiguration = SlotConfiguration.empty): CompiledExpression

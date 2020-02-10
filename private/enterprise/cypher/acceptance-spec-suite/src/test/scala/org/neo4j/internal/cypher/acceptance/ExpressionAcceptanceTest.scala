@@ -44,6 +44,22 @@ class ExpressionAcceptanceTest extends ExecutionEngineFunSuite with CypherCompar
     result.toList should equal(List(Map("n" -> Map("foo" -> 1, "bar" -> "apa"))))
   }
 
+  test("map projection on an optional node and collect") {
+    createNode("foo" -> 1, "bar" -> "apa")
+
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "OPTIONAL MATCH (n) RETURN collect(n{.*}) AS map")
+
+    result.toList should equal(List(Map("map" -> List(Map("foo" -> 1, "bar" -> "apa")))))
+  }
+
+  test("map projection on an optional relationship and collect") {
+    relate(createLabeledNode("START"), createNode(), "foo" -> 1, "bar" -> "apa")
+
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, "OPTIONAL MATCH (start: START) OPTIONAL MATCH (start)-[r]->() RETURN collect(r{.*}) AS map")
+
+    result.toList should equal(List(Map("map" -> List(Map("foo" -> 1, "bar" -> "apa")))))
+  }
+
   test("returning all properties of a node and adds other selectors") {
     createNode("foo" -> 1, "bar" -> "apa")
 
