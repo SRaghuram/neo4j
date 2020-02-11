@@ -57,9 +57,9 @@ class StoreFilesTest
     @BeforeEach
     void beforeEach() throws Exception
     {
-        databaseDir = testDirectory.directory( "databaseDir" );
+        databaseDir = testDirectory.directory( "databasedir" );
         databaseLayout = DatabaseLayout.ofFlat( databaseDir );
-        otherDatabaseDir = testDirectory.directory( "otherDatabaseDir" );
+        otherDatabaseDir = testDirectory.directory( "otherdatabasedir" );
         otherDatabaseLayout = DatabaseLayout.ofFlat( otherDatabaseDir );
         logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( databaseDir, fs ).build();
         otherLogFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( otherDatabaseDir, fs ).build();
@@ -86,12 +86,12 @@ class StoreFilesTest
     @Test
     void shouldDeleteDirectoriesThatMatchTheFilter() throws Exception
     {
-        StoreFiles storeFiles = newStoreFiles( name -> name.startsWith( "KnownDirectory" ) );
+        StoreFiles storeFiles = newStoreFiles( name -> name.startsWith( "knownDirectory" ) );
 
         List<File> directories = Arrays.asList(
-                createDirectory( databaseDir, "KnownDirectory1" ),
-                createDirectory( databaseDir, "KnownDirectory2" ),
-                createDirectory( databaseDir, "KnownDirectory3" ) );
+                createDirectory( databaseDir, "knownDirectory1" ),
+                createDirectory( databaseDir, "knownDirectory2" ),
+                createDirectory( databaseDir, "knownDirectory3" ) );
 
         for ( File directory : directories )
         {

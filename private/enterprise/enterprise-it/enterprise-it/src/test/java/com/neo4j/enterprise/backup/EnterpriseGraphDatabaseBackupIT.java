@@ -85,7 +85,7 @@ class EnterpriseGraphDatabaseBackupIT
     @Test
     void shouldFailWithErrorMessageForUnknownDatabase() throws Exception
     {
-        var unknownDbName = "unknown_db";
+        var unknownDbName = "unknowndb";
         db = newEnterpriseDb( testDirectory.homeDir(), true );
 
         var exitCode = runBackupToolFromSameJvm( databaseLayout.databaseDirectory(),

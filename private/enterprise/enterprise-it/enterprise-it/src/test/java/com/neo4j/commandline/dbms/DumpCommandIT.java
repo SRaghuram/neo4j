@@ -5,7 +5,6 @@
  */
 package com.neo4j.commandline.dbms;
 
-import org.apache.commons.lang3.StringUtils;
 import org.junit.jupiter.api.Test;
 import picocli.CommandLine;
 
@@ -20,7 +19,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DumpCommandIT extends AbstractCommandIT
 {
@@ -65,7 +63,7 @@ class DumpCommandIT extends AbstractCommandIT
     void dumpLowerCasedStoppedDatabase()
     {
         String databaseName = databaseAPI.databaseName();
-        Path dumpDestination = testDirectory.file( "dump2" ).toPath();
+        Path dumpDestination = testDirectory.file( "dump3" ).toPath();
 
         managementService.shutdownDatabase( databaseName );
 

@@ -889,7 +889,7 @@ class BackupIT
     @Test
     void shouldFailToBackupUnknownDatabase()
     {
-        var unknownDbName = "unknown_db";
+        var unknownDbName = "unknowndb";
 
         var db = startDb( serverHomeDir );
         createInitialDataSet( db );
