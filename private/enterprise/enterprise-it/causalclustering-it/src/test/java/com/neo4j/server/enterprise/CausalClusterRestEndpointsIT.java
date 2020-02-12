@@ -134,7 +134,7 @@ class CausalClusterRestEndpointsIT
             {
                 var response = queryClusterEndpoint( neo4j, UNKNOWN_DB );
                 assertEquals( NOT_FOUND.getStatusCode(), response.statusCode() );
-                assertThat( response.body(), is( anEmptyMap() ) );
+                assertThat( response.body(), is( not( anEmptyMap() ) ) );
             } );
         }
     }
@@ -370,7 +370,7 @@ class CausalClusterRestEndpointsIT
             {
                 var response = queryStatusEndpoint( neo4j, UNKNOWN_DB );
                 assertEquals( NOT_FOUND.getStatusCode(), response.statusCode() );
-                assertThat( response.body(), is( anEmptyMap() ) );
+                assertThat( response.body(), is( not( anEmptyMap() ) ) );
             } );
         }
     }
