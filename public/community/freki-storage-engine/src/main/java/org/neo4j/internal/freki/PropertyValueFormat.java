@@ -53,6 +53,8 @@ import org.neo4j.values.storable.ValueWriter;
 import org.neo4j.values.storable.Values;
 import org.neo4j.values.utils.TemporalValueWriterAdapter;
 
+import static org.neo4j.internal.helpers.Numbers.safeCastIntToUnsignedByte;
+
 class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
 {
     // Header 1B [x___,____]
@@ -507,8 +509,8 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
         int length = bytes.length;
         if ( length > 30 )
         {
-            long pointer = bigPropertyValueStore.allocateSpace( length );
-            writePointer( EXTERNAL_TYPE_STRING, pointer, length );
+            long pointer = bigPropertyValueStore.allocateSpace( bytes.length );
+            writePointer( EXTERNAL_TYPE_STRING, pointer );
             try ( PageCursor cursor = bigPropertyValueStore.openWriteCursor() )
             {
                 bigPropertyValueStore.write( cursor, ByteBuffer.wrap( bytes ), pointer );
@@ -521,17 +523,16 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
         else
         {
             buffer.put( EXTERNAL_TYPE_STRING );
-            writeInteger( length );
+            buffer.put( safeCastIntToUnsignedByte( bytes.length ) );
             buffer.put( bytes );
         }
         endWriteProperty();
     }
 
-    private void writePointer( byte externalType, long pointer, int length )
+    private void writePointer( byte externalType, long pointer )
     {
         buffer.put( (byte) (externalType | SPECIAL_TYPE_MASK | SPECIAL_TYPE_POINTER) );
         writeInteger( pointer );
-        writeInteger( length );
     }
 
     private static Value readString( ByteBuffer buffer )
@@ -559,7 +560,7 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
         return read( buffer, null );
     }
 
-    static Value read( ByteBuffer buffer, BigPropertyValueStore bigPropertyValueStore )
+    static Value read( ByteBuffer buffer, SimpleBigValueStore bigPropertyValueStore )
     {
         byte typeByte = buffer.get();
         boolean isSimpleInlinedValue = (typeByte & SPECIAL_TYPE_MASK) == 0;
@@ -573,10 +574,9 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
             if ( isPointer )
             {
                 long pointer = (long) readSimpleInlinedValue( buffer.get(), buffer ).asObject();
-                int length = (int) readSimpleInlinedValue( buffer.get(), buffer ).asObject();
                 // TODO this is some sort of first approach to not blow up on reading big values on the write path
                 //      this ensures that the pointers will be kept and serialized back when writing
-                return new PointerValue( externalType( typeByte ), pointer, length, bigPropertyValueStore );
+                return new PointerValue( typeByte, pointer, bigPropertyValueStore );
             }
 
             boolean isArray = (typeByte & SPECIAL_TYPE_ARRAY) != 0;
@@ -584,14 +584,14 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
             {
                 byte externalType = externalType( typeByte );
                 int length = (int) read( buffer, bigPropertyValueStore ).asObject();
-                return readArray( externalType, length, buffer );
+                return readArray( externalType, length, buffer, bigPropertyValueStore );
             }
 
             throw new IllegalArgumentException( "Unknown special type" );
         }
     }
 
-    private static Value readArray( byte externalType, int length, ByteBuffer buffer )
+    private static Value readArray( byte externalType, int length, ByteBuffer buffer, SimpleBigValueStore bigPropertyValueStore )
     {
         //do nothing
         if ( externalType == EXTERNAL_TYPE_BYTE )
@@ -613,7 +613,7 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
         Object[] values = allocateTypeArray( externalType, length );
         for ( int i = 0; i < length; i++ )
         {
-            values[i] = read( buffer ).asObject();
+            values[i] = read( buffer, bigPropertyValueStore ).asObject(); //This will force read if in BigPropertyStore, laziness ignored
         }
         return Values.of( values );
     }
@@ -892,40 +892,38 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
 
     private static class PointerValue extends Value
     {
-        private final BigPropertyValueStore bigPropertyValueStore;
+        private final SimpleBigValueStore bigPropertyValueStore;
         private final byte externalType;
         private final long pointer;
-        private final int length;
 
         private Value cachedValue;
 
-        private PointerValue( byte externalType, long pointer, int length, BigPropertyValueStore bigPropertyValueStore )
+        private PointerValue( byte typeByte, long pointer, SimpleBigValueStore bigPropertyValueStore )
         {
-            this.externalType = externalType;
+            this.externalType = externalType( typeByte );
             this.pointer = pointer;
-            this.length = length;
             this.bigPropertyValueStore = bigPropertyValueStore;
         }
 
         private Value readBigValue()
         {
+            ByteBuffer buffer;
+            try ( PageCursor cursor = bigPropertyValueStore.openReadCursor() )
+            {
+                int length = bigPropertyValueStore.length( cursor, pointer ); // this is not optimal, as read() re-reads the length.
+                buffer = ByteBuffer.wrap( new byte[length] );
+                bigPropertyValueStore.read( cursor, buffer, pointer );
+            }
+            catch ( IOException e )
+            {
+                throw new UncheckedIOException( e );
+            }
+
             if ( externalType == EXTERNAL_TYPE_STRING )
             {
-                ByteBuffer stringBuffer = ByteBuffer.wrap( new byte[length] );
-                try ( PageCursor cursor = bigPropertyValueStore.openReadCursor() )
-                {
-                    bigPropertyValueStore.read( cursor, stringBuffer, pointer );
-                    return Values.utf8Value( stringBuffer.array() );
-                }
-                catch ( IOException e )
-                {
-                    throw new UncheckedIOException( e );
-                }
+                return Values.utf8Value( buffer.array() );
             }
-            else
-            {
-                throw new UnsupportedOperationException( "Not implemented yet" );
-            }
+            return read( buffer );
         }
 
         @Override
@@ -937,7 +935,7 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
         @Override
         public <E extends Exception> void writeTo( ValueWriter<E> writer )
         {
-            ((PropertyValueFormat) writer).writePointer( externalType, pointer, length );
+            ((PropertyValueFormat) writer).writePointer( externalType, pointer );
         }
 
         @Override
@@ -947,7 +945,7 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
             {
                 cachedValue = readBigValue();
             }
-            return cachedValue;
+            return cachedValue.asObjectCopy();
         }
 
         @Override
