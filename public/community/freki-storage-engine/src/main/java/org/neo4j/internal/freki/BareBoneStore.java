@@ -48,7 +48,7 @@ abstract class BareBoneStore extends LifecycleAdapter implements AutoCloseable
     private final boolean createIfNotExists;
     final PageCursorTracerSupplier tracerSupplier;
 
-    private PagedFile mappedFile;
+    protected PagedFile mappedFile;
 
     BareBoneStore( FileSystemAbstraction fs, File file, PageCache pageCache, boolean readOnly, boolean createIfNotExists,
             PageCursorTracerSupplier tracerSupplier )

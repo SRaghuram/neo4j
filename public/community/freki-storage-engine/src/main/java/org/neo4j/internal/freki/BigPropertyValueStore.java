@@ -21,6 +21,7 @@ package org.neo4j.internal.freki;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -34,14 +35,61 @@ import static java.lang.Integer.min;
 class BigPropertyValueStore extends BareBoneStore implements SimpleBigValueStore
 {
     private static final int LENGTH_SIZE = 4;
+    private static final int HEADER_SIZE = Long.BYTES; //for now, only a long in the header
 
-    // TODO Ehrm, reserved 8B for writing the position in the header, but don't care about that now
-    private final AtomicLong nextPosition = new AtomicLong( Long.BYTES );
+    private final AtomicLong nextPosition = new AtomicLong( HEADER_SIZE );
 
     BigPropertyValueStore( FileSystemAbstraction fs, File file, PageCache pageCache, boolean readOnly,
             boolean createIfNotExists, PageCursorTracerSupplier tracerSupplier )
     {
         super( fs, file, pageCache, readOnly, createIfNotExists, tracerSupplier );
+    }
+
+    @Override
+    public void init() throws IOException
+    {
+        super.init();
+        tryReadHeader();
+    }
+
+    @Override
+    public void shutdown()
+    {
+        try
+        {
+            tryWriteHeader(); // what happens if we fail here?
+        }
+        catch ( IOException e )
+        {
+            throw new UncheckedIOException( e ); // header will be incorrect on next start leading to data-corruption on write
+        }
+        super.shutdown();
+    }
+
+    private void tryReadHeader() throws IOException
+    {
+        if ( !readOnly ) // header only contains information usable for write
+        {
+            if ( mappedFile.getLastPageId() >= 0 )
+            {
+                //nextPos write is done on shutdown, we only read it here.
+                try ( PageCursor cursor = openReadCursor() )
+                {
+                    nextPosition.set( cursor.getLong( 0 ) );
+                }
+            }
+        }
+    }
+
+    private void tryWriteHeader() throws IOException
+    {
+        if ( !readOnly )
+        {
+            try ( PageCursor cursor = openWriteCursor() )
+            {
+                cursor.putLong( 0, nextPosition.get() );
+            }
+        }
     }
 
     @Override
@@ -69,17 +117,8 @@ class BigPropertyValueStore extends BareBoneStore implements SimpleBigValueStore
     @Override
     public boolean read( PageCursor cursor, ByteBuffer buffer, long position ) throws IOException
     {
-        long page = position / pageSize;
-        int offset = (int) (position % pageSize);
-        goToPage( cursor, page );
-        int length;
-        do
-        {
-            cursor.setOffset( offset );
-            length = cursor.getInt();
-        }
-        while ( cursor.shouldRetry() );
-        offset += LENGTH_SIZE;
+        int length = length( cursor, position );
+        int offset = (int) (position % pageSize) + LENGTH_SIZE;
 
         while ( length > 0 )
         {
@@ -104,6 +143,22 @@ class BigPropertyValueStore extends BareBoneStore implements SimpleBigValueStore
             }
         }
         return true;
+    }
+
+    @Override
+    public int length( PageCursor cursor, long position ) throws IOException
+    {
+        long page = position / pageSize;
+        int offset = (int) (position % pageSize);
+        goToPage( cursor, page );
+        int length;
+        do
+        {
+            cursor.setOffset( offset );
+            length = cursor.getInt();
+        }
+        while ( cursor.shouldRetry() );
+        return length;
     }
 
     private void goToNextPage( PageCursor cursor ) throws IOException
