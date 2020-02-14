@@ -96,8 +96,8 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
                                         relationship.otherNode, relationship.outgoing, convert( relationship.properties ) ) ) );
                 // deleted relationships
                 node.deletedRelationships.forEachKeyValue( ( type, typedRelationships ) -> typedRelationships.forEach(
-                        relationship -> updater.deleteRelationship( relationship.internalId, relationship.sourceNodeId, relationship.type, relationship.otherNode,
-                                relationship.outgoing ) ) );
+                        relationship -> updater.deleteRelationship( relationship.internalId, relationship.sourceNodeId, relationship.type,
+                                relationship.otherNode, relationship.outgoing ) ) );
             }
             else
             {

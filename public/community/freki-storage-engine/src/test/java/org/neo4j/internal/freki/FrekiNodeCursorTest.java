@@ -506,19 +506,19 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
             {
                 for ( int numRelationsType1 = 0; numRelationsType1 < 3; numRelationsType1++ )
                 {
-                    for ( int numRelationsType1WithProperties = 0; numRelationsType1WithProperties <= numRelationsType1; numRelationsType1WithProperties++ )
+                    for ( int numRelsType1WithProps = 0; numRelsType1WithProps <= numRelationsType1; numRelsType1WithProps++ )
                     {
-                        for ( int numRelationsType2 = 0; numRelationsType2 < 3; numRelationsType2++ )
+                        for ( int numRelsType2 = 0; numRelsType2 < 3; numRelsType2++ )
                         {
-                            for ( int numRelationsType2WithProperties = 0; numRelationsType2WithProperties <= numRelationsType2; numRelationsType2WithProperties++ )
+                            for ( int numRelsType2WithProps = 0; numRelsType2WithProps <= numRelsType2; numRelsType2WithProps++ )
                             {
                                 Executable test = createPermutationTest(
                                         numLabels,
                                         numProperties,
                                         numRelationsType1,
-                                        numRelationsType1WithProperties,
-                                        numRelationsType2,
-                                        numRelationsType2WithProperties
+                                        numRelsType1WithProps,
+                                        numRelsType2,
+                                        numRelsType2WithProps
                                 );
                                 tests.add( DynamicTest.dynamicTest( test.toString(), test ) );
                             }
@@ -602,7 +602,6 @@ class FrekiNodeCursorTest extends FrekiCursorsTest
             {
                 assertArrayEquals( toLongArray( labels ), cursor.labels() );
             }
-
 
             private void createNodeProperties()
             {

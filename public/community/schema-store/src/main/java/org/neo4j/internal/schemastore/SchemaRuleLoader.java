@@ -30,7 +30,7 @@ import static org.neo4j.internal.schema.SchemaRuleMapifier.unmapifySchemaRule;
 class SchemaRuleLoader implements GBPTreeSchemaStore.EntryVisitor<MalformedSchemaRuleException>
 {
     private final List<SchemaRule> loadedSchemaRules = new ArrayList<>();
-    private SchemaKeyGroup keyGroup = null;
+    private SchemaKeyGroup keyGroup;
 
     @Override
     public boolean accept( SchemaKey key, SchemaValue value ) throws MalformedSchemaRuleException

@@ -163,6 +163,12 @@ class MutableNodeRecordData
         }
 
         @Override
+        public int hashCode()
+        {
+            return Objects.hash( internalId, sourceNodeId, otherNode, type, outgoing, properties );
+        }
+
+        @Override
         public String toString()
         {
             long id = externalRelationshipId( sourceNodeId, internalId, otherNode, outgoing );
@@ -232,6 +238,12 @@ class MutableNodeRecordData
             }
             Relationships that = (Relationships) o;
             return type == that.type && relationships.equals( that.relationships );
+        }
+
+        @Override
+        public int hashCode()
+        {
+            return Objects.hash( type, relationships );
         }
 
         @Override

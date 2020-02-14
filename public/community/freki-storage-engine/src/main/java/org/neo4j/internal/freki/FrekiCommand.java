@@ -48,7 +48,7 @@ abstract class FrekiCommand implements StorageCommand
 
     abstract boolean accept( FrekiTransactionApplier applier ) throws IOException;
 
-    static abstract class FrekiRecordCommand extends FrekiCommand
+    abstract static class FrekiRecordCommand extends FrekiCommand
     {
         private final Record before;
         private final Record after;
@@ -128,7 +128,7 @@ abstract class FrekiCommand implements StorageCommand
         }
     }
 
-    static abstract class Token extends FrekiCommand
+    abstract static class Token extends FrekiCommand
     {
         final NamedToken token;
 
