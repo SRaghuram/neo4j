@@ -34,12 +34,16 @@ import org.neo4j.values.storable.DateValue;
 import org.neo4j.values.storable.DurationValue;
 import org.neo4j.values.storable.LocalDateTimeValue;
 import org.neo4j.values.storable.LocalTimeValue;
+import org.neo4j.values.storable.StringValue;
 import org.neo4j.values.storable.TimeValue;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.ValueWriter;
 import org.neo4j.values.storable.Values;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class PropertyValueFormatTest
@@ -47,7 +51,8 @@ class PropertyValueFormatTest
     private final byte[] data = new byte[1024]; // should be enough to hold any properties we write in those tests
     private final ByteBuffer readBuffer = ByteBuffer.wrap( data);
     private final ByteBuffer writeBuffer = ByteBuffer.wrap( data );
-    private final PropertyValueFormat propertyValueFormat = new PropertyValueFormat( null, writeBuffer );
+    private final SimpleBigValueStore bigValueStore = new InMemoryBigValueTestStore();
+    private final PropertyValueFormat propertyValueFormat = new PropertyValueFormat( bigValueStore, writeBuffer );
 
     @BeforeEach
     void setUp()
@@ -167,12 +172,12 @@ class PropertyValueFormatTest
         //When
         propertyValueFormat.writeString( "abc" );
         propertyValueFormat.writeString( "" );
-        propertyValueFormat.writeString( "A B C D E F G H I J K L M N O P Q R S T U V W X Y Z" );
+        propertyValueFormat.writeString( "ABCDEFGHIJKLMNOPQRSTUVWXYZ" ); //not long enough to be considered "big'!
 
         //Then
         assertEquals( Values.stringValue( "abc" ), readValue() );
         assertEquals( Values.stringValue( "" ), readValue() );
-        assertEquals( Values.stringValue( "A B C D E F G H I J K L M N O P Q R S T U V W X Y Z" ), readValue() );
+        assertEquals( Values.stringValue( "ABCDEFGHIJKLMNOPQRSTUVWXYZ" ), readValue() );
 
     }
 
@@ -557,8 +562,42 @@ class PropertyValueFormatTest
         assertEquals( writeBuffer.position(), PropertyValueFormat.calculatePropertyValueSizeIncludingTypeHeader( readBuffer ) );
     }
 
+    @Test
+    void shouldReadAndWriteLongStrings()
+    {
+        String longString = "A B C D E F G H I J K L M N O P Q R S T U V W X Y Z 1 2 3 4 5 6 7 8 9 10"; //should be big enough to end up in BigValueStore
+        propertyValueFormat.writeString( longString );
+
+        Value value = readValue();
+        assertFalse( value instanceof StringValue ); //should be of internal type PropertyValueFormat.PointerValue
+
+        Object actual = value.asObject();
+        assertEquals( longString, actual ); //should be correct
+        assertSame( actual, value.asObjectCopy() ); //should be lazy and cached
+    }
+
+    @Test
+    void shouldReadAndWriteLongStringArrays()
+    {
+        //Given
+        String longString = "A B C D E F G H I J K L M N O P Q R S T U V W X Y Z 1 2 3 4 5 6 7 8 9 10";
+        String shortString = "foo";
+        String anotherLongString = new StringBuilder( longString ).reverse().toString();
+
+        //When
+        propertyValueFormat.beginArray( 3, ValueWriter.ArrayType.STRING );
+        propertyValueFormat.writeString( longString );
+        propertyValueFormat.writeString( shortString );
+        propertyValueFormat.writeString( anotherLongString );
+        propertyValueFormat.endArray();
+
+        //Then
+        Value value = readValue();
+        assertArrayEquals((String[]) value.asObject(), new String[]{longString, shortString, anotherLongString} );
+    }
+
     private Value readValue()
     {
-        return PropertyValueFormat.read( readBuffer );
+        return PropertyValueFormat.read( readBuffer, bigValueStore );
     }
 }

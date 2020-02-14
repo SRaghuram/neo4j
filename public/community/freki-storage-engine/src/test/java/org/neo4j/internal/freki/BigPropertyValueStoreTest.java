@@ -43,6 +43,8 @@ import org.neo4j.test.rule.TestDirectory;
 
 import static java.nio.ByteBuffer.wrap;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier.TRACER_SUPPLIER;
 import static org.neo4j.test.Race.throwing;
 
@@ -122,6 +124,80 @@ class BigPropertyValueStoreTest
                     long position = positions.next();
                     readAndVerify( store, expected.get( position ), position );
                 }
+            }
+        }
+    }
+
+    @Test
+    void shouldRememberWhereToWriteAfterRestart() throws IOException
+    {
+        //given
+        byte[] firstProp = "A B C D E F G H I J K L M N O P Q R S T U V W X Y Z".getBytes();
+        byte[] secondProp = randomData( ThreadLocalRandom.current() );
+        byte[] thirdProp = "1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20".getBytes();
+        //when
+        long firstPropertyPointer = writeDataAndShutDown( firstProp );
+        long secondPropertyPointer = writeDataAndShutDown( secondProp );
+        long thirdPropertyPointer = writeDataAndShutDown( thirdProp );
+
+        //then
+        assertArrayEquals( firstProp, readDataAndShutDown( firstPropertyPointer, firstProp.length ) );
+        assertArrayEquals( secondProp, readDataAndShutDown( secondPropertyPointer, secondProp.length ) );
+        assertArrayEquals( thirdProp, readDataAndShutDown( thirdPropertyPointer, thirdProp.length ) );
+
+        assertTrue( secondPropertyPointer >= firstPropertyPointer + firstProp.length, "Pointers are not overlapping" );
+        assertTrue( thirdPropertyPointer >= secondPropertyPointer + secondProp.length, "Pointers are not overlapping" );
+
+    }
+
+    @Test
+    void shouldBeAbleToFetchDataLength() throws IOException
+    {
+        try ( Lifespan life = new Lifespan() )
+        {
+            // given
+            BigPropertyValueStore store = new BigPropertyValueStore( fs, directory.file( "dude" ), pageCache, false, true, TRACER_SUPPLIER );
+            life.add( store );
+
+            byte[] data = randomData( ThreadLocalRandom.current() );
+            try ( PageCursor cursor = store.openWriteCursor() )
+            {
+                long pointer = store.allocateSpace( data.length );
+                store.write( cursor, ByteBuffer.wrap( data ), pointer );
+
+                //then
+                assertEquals( data.length, store.length( cursor, pointer ) );
+            }
+        }
+    }
+
+    private long writeDataAndShutDown( byte[] data ) throws IOException
+    {
+        try ( Lifespan life = new Lifespan() )
+        {
+            BigPropertyValueStore store = new BigPropertyValueStore( fs, directory.file( "dude" ), pageCache, false, true, TRACER_SUPPLIER );
+            life.add( store );
+            try ( PageCursor cursor = store.openWriteCursor() )
+            {
+                long pointer = store.allocateSpace( data.length );
+                store.write( cursor, ByteBuffer.wrap( data ), pointer );
+                return pointer;
+            }
+        }
+    }
+
+    private byte[] readDataAndShutDown( long pointer, int size ) throws IOException
+    {
+        try ( Lifespan life = new Lifespan() )
+        {
+            BigPropertyValueStore store = new BigPropertyValueStore( fs, directory.file( "dude" ), pageCache, true, true, TRACER_SUPPLIER );
+            life.add( store );
+            try ( PageCursor cursor = store.openReadCursor() )
+            {
+                byte[] data = new byte[size];
+                ByteBuffer buffer = ByteBuffer.wrap( data );
+                store.read( cursor, buffer, pointer );
+                return data;
             }
         }
     }

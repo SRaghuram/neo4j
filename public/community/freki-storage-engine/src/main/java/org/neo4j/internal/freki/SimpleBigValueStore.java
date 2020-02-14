@@ -38,5 +38,7 @@ interface SimpleBigValueStore extends Lifecycle
 
     boolean read( PageCursor cursor, ByteBuffer data, long position ) throws IOException;
 
+    int length( PageCursor cursor, long position ) throws IOException;
+
     void flush( PageCursorTracer cursorTracer );
 }

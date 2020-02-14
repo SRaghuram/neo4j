@@ -77,6 +77,17 @@ public class InMemoryBigValueTestStore extends LifecycleAdapter implements Simpl
     }
 
     @Override
+    public int length( PageCursor cursor, long position )
+    {
+        byte[] bytes = this.data.get( position );
+        if ( bytes != null )
+        {
+            return bytes.length;
+        }
+        return -1;
+    }
+
+    @Override
     public void flush( PageCursorTracer cursorTracer )
     {
     }
