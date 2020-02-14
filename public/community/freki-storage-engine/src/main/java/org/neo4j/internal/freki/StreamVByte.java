@@ -280,7 +280,7 @@ class StreamVByte
         for ( int i = 0; i < count; )
         {
             int currentChunkCount = min( Byte.MAX_VALUE, count - i );
-            size += (currentChunkCount <= 2 ? 1 : 2);
+            size += currentChunkCount <= 2 ? 1 : 2;
             for ( int c = 0; c < currentChunkCount; )
             {
                 int currentBlockCount = min( 4, currentChunkCount - c );

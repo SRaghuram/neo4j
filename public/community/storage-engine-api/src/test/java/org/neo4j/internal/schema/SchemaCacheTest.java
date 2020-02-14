@@ -419,16 +419,16 @@ class SchemaCacheTest
     void shouldGetRelatedIndexesForLabel()
     {
         SchemaCache cache = newSchemaCacheWithRulesForRelatedToCalls();
-        Assertions.assertThat( cache.getIndexesRelatedTo( entityTokens( 5 ), entityTokens( 3, 4 ), properties(), false, NODE ) ).contains( schema5_6_7, schema5_8,
-                node35_8 );
+        Assertions.assertThat( cache.getIndexesRelatedTo( entityTokens( 5 ), entityTokens( 3, 4 ), properties(), false, NODE ) ).contains( schema5_6_7,
+                schema5_8, node35_8 );
     }
 
     @Test
     void shouldGetRelatedIndexes()
     {
         SchemaCache cache = newSchemaCacheWithRulesForRelatedToCalls();
-        Assertions.assertThat( cache.getIndexesRelatedTo( entityTokens( 3 ), entityTokens( 4, 5 ), properties( 7 ), false, NODE ) ).contains( schema3_4, schema5_6_7,
-                node35_8 );
+        Assertions.assertThat( cache.getIndexesRelatedTo( entityTokens( 3 ), entityTokens( 4, 5 ), properties( 7 ), false, NODE ) ).contains( schema3_4,
+                schema5_6_7, node35_8 );
     }
 
     @Test
@@ -459,7 +459,8 @@ class SchemaCacheTest
         SchemaCache cache = newSchemaCacheWithRulesForRelatedToCalls();
         Assertions.assertThat( cache.getIndexesRelatedTo( entityTokens( 3 ), noEntityToken, properties(), false, NODE ) ).contains( schema3_4, node35_8 );
 
-        Assertions.assertThat( cache.getIndexesRelatedTo( entityTokens( 5 ), noEntityToken, properties(), false, NODE ) ).contains( schema5_8, schema5_6_7, node35_8 );
+        Assertions.assertThat( cache.getIndexesRelatedTo( entityTokens( 5 ), noEntityToken, properties(), false, NODE ) ).contains( schema5_8, schema5_6_7,
+                node35_8 );
     }
 
     @Test
@@ -482,7 +483,6 @@ class SchemaCacheTest
         cache.removeSchemaRule( 7 );
         Assertions.assertThat( cache.getIndexesRelatedTo( entityTokens( 5 ), noEntityToken, properties(), false, NODE ) ).contains( schema5_8, schema5_6_7 );
         Assertions.assertThat( cache.getIndexesRelatedTo( entityTokens( 5 ), noEntityToken, properties(), false, RELATIONSHIP ) ).contains( rel35_8 );
-
     }
 
     @Test
