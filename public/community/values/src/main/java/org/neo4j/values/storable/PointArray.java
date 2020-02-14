@@ -88,7 +88,7 @@ public final class PointArray extends NonPrimitiveArray<PointValue>
     }
 
     @Override
-    int unsafeCompareTo( Value otherValue )
+    public int unsafeCompareTo( Value otherValue )
     {
         return compareToNonPrimitiveArray( (PointArray) otherValue );
     }

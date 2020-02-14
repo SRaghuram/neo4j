@@ -21,6 +21,8 @@ package org.neo4j.internal.freki;
 
 import org.apache.commons.lang3.NotImplementedException;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -31,21 +33,25 @@ import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.temporal.TemporalAmount;
 
+import org.neo4j.hashing.HashFunction;
+import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.string.UTF8;
+import org.neo4j.values.ValueMapper;
 import org.neo4j.values.storable.CoordinateReferenceSystem;
 import org.neo4j.values.storable.DateTimeValue;
 import org.neo4j.values.storable.DateValue;
 import org.neo4j.values.storable.DurationValue;
 import org.neo4j.values.storable.LocalDateTimeValue;
 import org.neo4j.values.storable.LocalTimeValue;
+import org.neo4j.values.storable.NumberType;
 import org.neo4j.values.storable.PointValue;
 import org.neo4j.values.storable.TimeValue;
 import org.neo4j.values.storable.TimeZones;
 import org.neo4j.values.storable.Value;
+import org.neo4j.values.storable.ValueGroup;
+import org.neo4j.values.storable.ValueWriter;
 import org.neo4j.values.storable.Values;
 import org.neo4j.values.utils.TemporalValueWriterAdapter;
-
-import static org.neo4j.internal.helpers.Numbers.safeCastIntToUnsignedByte;
 
 class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
 {
@@ -98,6 +104,7 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
     private static final short SPECIAL_TYPE_POINTER = 0x20;
     private static final short SPECIAL_TYPE_ARRAY = 0x10;
 
+    private final SimpleBigValueStore bigPropertyValueStore;
     private final ByteBuffer buffer;
 
     //Array state
@@ -107,8 +114,9 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
     //Nested properties
     private int nestedPropertyCount;
 
-    PropertyValueFormat( ByteBuffer buffer )
+    PropertyValueFormat( SimpleBigValueStore bigPropertyValueStore, ByteBuffer buffer )
     {
+        this.bigPropertyValueStore = bigPropertyValueStore;
         this.buffer = buffer;
     }
 
@@ -494,17 +502,36 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
     @Override
     public void writeString( String value )
     {
-        if ( value.length() > 100 )
-        {
-            value = "removed string...";
-        }
-
         beginWriteProperty( EXTERNAL_TYPE_STRING );
         byte[] bytes = UTF8.encode( value );
-        buffer.put( EXTERNAL_TYPE_STRING );
-        buffer.put( safeCastIntToUnsignedByte( bytes.length ) );
-        buffer.put( bytes );
+        int length = bytes.length;
+        if ( length > 30 )
+        {
+            long pointer = bigPropertyValueStore.allocateSpace( length );
+            writePointer( EXTERNAL_TYPE_STRING, pointer, length );
+            try ( PageCursor cursor = bigPropertyValueStore.openWriteCursor() )
+            {
+                bigPropertyValueStore.write( cursor, ByteBuffer.wrap( bytes ), pointer );
+            }
+            catch ( IOException e )
+            {
+                throw new UncheckedIOException( e );
+            }
+        }
+        else
+        {
+            buffer.put( EXTERNAL_TYPE_STRING );
+            writeInteger( length );
+            buffer.put( bytes );
+        }
         endWriteProperty();
+    }
+
+    private void writePointer( byte externalType, long pointer, int length )
+    {
+        buffer.put( (byte) (externalType | SPECIAL_TYPE_MASK | SPECIAL_TYPE_POINTER) );
+        writeInteger( pointer );
+        writeInteger( length );
     }
 
     private static Value readString( ByteBuffer buffer )
@@ -529,6 +556,11 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
 
     static Value read( ByteBuffer buffer )
     {
+        return read( buffer, null );
+    }
+
+    static Value read( ByteBuffer buffer, BigPropertyValueStore bigPropertyValueStore )
+    {
         byte typeByte = buffer.get();
         boolean isSimpleInlinedValue = (typeByte & SPECIAL_TYPE_MASK) == 0;
         if ( isSimpleInlinedValue )
@@ -540,15 +572,18 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
             boolean isPointer = (typeByte & SPECIAL_TYPE_POINTER) != 0;
             if ( isPointer )
             {
-                throw new NotImplementedException( "Pointer values not yet implemented" );
-                //TODO read and follow pointer to data
+                long pointer = (long) readSimpleInlinedValue( buffer.get(), buffer ).asObject();
+                int length = (int) readSimpleInlinedValue( buffer.get(), buffer ).asObject();
+                // TODO this is some sort of first approach to not blow up on reading big values on the write path
+                //      this ensures that the pointers will be kept and serialized back when writing
+                return new PointerValue( externalType( typeByte ), pointer, length, bigPropertyValueStore );
             }
 
             boolean isArray = (typeByte & SPECIAL_TYPE_ARRAY) != 0;
             if ( isArray )
             {
                 byte externalType = externalType( typeByte );
-                int length = (int) read( buffer ).asObject();
+                int length = (int) read( buffer, bigPropertyValueStore ).asObject();
                 return readArray( externalType, length, buffer );
             }
 
@@ -852,6 +887,121 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
             return new TemporalAmount[length];
         default:
             throw new UnsupportedOperationException( "Unknown external type:" + externalType );
+        }
+    }
+
+    private static class PointerValue extends Value
+    {
+        private final BigPropertyValueStore bigPropertyValueStore;
+        private final byte externalType;
+        private final long pointer;
+        private final int length;
+
+        private Value cachedValue;
+
+        private PointerValue( byte externalType, long pointer, int length, BigPropertyValueStore bigPropertyValueStore )
+        {
+            this.externalType = externalType;
+            this.pointer = pointer;
+            this.length = length;
+            this.bigPropertyValueStore = bigPropertyValueStore;
+        }
+
+        private Value readBigValue()
+        {
+            if ( externalType == EXTERNAL_TYPE_STRING )
+            {
+                ByteBuffer stringBuffer = ByteBuffer.wrap( new byte[length] );
+                try ( PageCursor cursor = bigPropertyValueStore.openReadCursor() )
+                {
+                    bigPropertyValueStore.read( cursor, stringBuffer, pointer );
+                    return Values.utf8Value( stringBuffer.array() );
+                }
+                catch ( IOException e )
+                {
+                    throw new UncheckedIOException( e );
+                }
+            }
+            else
+            {
+                throw new UnsupportedOperationException( "Not implemented yet" );
+            }
+        }
+
+        @Override
+        public boolean equals( Value other )
+        {
+            return false;
+        }
+
+        @Override
+        public <E extends Exception> void writeTo( ValueWriter<E> writer )
+        {
+            ((PropertyValueFormat) writer).writePointer( externalType, pointer, length );
+        }
+
+        @Override
+        public Object asObjectCopy()
+        {
+            if ( cachedValue == null )
+            {
+                cachedValue = readBigValue();
+            }
+            return cachedValue;
+        }
+
+        @Override
+        public String prettyPrint()
+        {
+            throw new UnsupportedOperationException( "Not implemented yet" );
+        }
+
+        @Override
+        public ValueGroup valueGroup()
+        {
+            throw new UnsupportedOperationException( "Not implemented yet" );
+        }
+
+        @Override
+        public NumberType numberType()
+        {
+            throw new UnsupportedOperationException( "Not implemented yet" );
+        }
+
+        @Override
+        public long updateHash( HashFunction hashFunction, long hash )
+        {
+            throw new UnsupportedOperationException( "Not implemented yet" );
+        }
+
+        @Override
+        protected int computeHash()
+        {
+            throw new UnsupportedOperationException( "Not implemented yet" );
+        }
+
+        @Override
+        public <T> T map( ValueMapper<T> mapper )
+        {
+            throw new UnsupportedOperationException( "Not implemented yet" );
+        }
+
+        @Override
+        public String getTypeName()
+        {
+            throw new UnsupportedOperationException( "Not implemented yet" );
+        }
+
+        @Override
+        protected long estimatedPayloadSize()
+        {
+            throw new UnsupportedOperationException( "Not implemented yet" );
+        }
+
+        @Override
+        public int unsafeCompareTo( Value other )
+        {
+            throw new UnsupportedOperationException( "Not implemented yet" );
         }
     }
 }

@@ -44,11 +44,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class PropertyValueFormatTest
 {
-
     private final byte[] data = new byte[1024]; // should be enough to hold any properties we write in those tests
     private final ByteBuffer readBuffer = ByteBuffer.wrap( data);
     private final ByteBuffer writeBuffer = ByteBuffer.wrap( data );
-    private final PropertyValueFormat propertyValueFormat = new PropertyValueFormat( writeBuffer );
+    private final PropertyValueFormat propertyValueFormat = new PropertyValueFormat( null, writeBuffer );
 
     @BeforeEach
     void setUp()

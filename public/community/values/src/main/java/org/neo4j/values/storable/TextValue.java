@@ -82,7 +82,7 @@ public abstract class TextValue extends ScalarValue
     public abstract int compareTo( TextValue other );
 
     @Override
-    int unsafeCompareTo( Value otherValue )
+    public int unsafeCompareTo( Value otherValue )
     {
         return compareTo( (TextValue) otherValue );
     }

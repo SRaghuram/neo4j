@@ -43,14 +43,18 @@ public class InMemoryBigValueTestStore extends LifecycleAdapter implements Simpl
     }
 
     @Override
-    public long write( PageCursor cursor, ByteBuffer data )
+    public long allocateSpace( int length )
+    {
+        return this.position.getAndAdd( length );
+    }
+
+    @Override
+    public void write( PageCursor cursor, ByteBuffer data, long position )
     {
         int length = data.remaining();
-        long position = this.position.getAndAdd( length );
         byte[] dataCopy = new byte[length];
         System.arraycopy( data.array(), data.position(), dataCopy, 0, length );
         this.data.put( position, dataCopy );
-        return position;
     }
 
     @Override

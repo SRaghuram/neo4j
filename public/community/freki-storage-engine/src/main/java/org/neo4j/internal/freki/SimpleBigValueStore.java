@@ -30,7 +30,9 @@ interface SimpleBigValueStore extends Lifecycle
 {
     PageCursor openWriteCursor() throws IOException;
 
-    long write( PageCursor cursor, ByteBuffer data ) throws IOException;
+    long allocateSpace( int length );
+
+    void write( PageCursor cursor, ByteBuffer data, long position ) throws IOException;
 
     PageCursor openReadCursor();
 

@@ -435,7 +435,7 @@ class CommandCreator implements TxStateVisitor
         @Override
         void prepareForCommandExtraction()
         {
-            data.serialize( after.dataForWriting() );
+            data.serialize( after.dataForWriting(), stores.bigPropertyValueStore );
             if ( data.id == -1 )
             {
                 acquireId();
