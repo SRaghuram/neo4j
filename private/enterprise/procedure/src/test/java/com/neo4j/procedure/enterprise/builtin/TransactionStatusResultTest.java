@@ -58,8 +58,7 @@ import org.neo4j.time.SystemNanoClock;
 import static java.util.Collections.emptyMap;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsString;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.RETURNS_MOCKS;
 import static org.mockito.Mockito.mock;
@@ -118,7 +117,7 @@ class TransactionStatusResultTest
         transactionHandle = new TransactionHandleWithLocks( new StubKernelTransaction(), true );
         snapshotsMap.put( transactionHandle, Optional.empty() );
         TransactionStatusResult statusResult = new TransactionStatusResult( "neo4j", transactionHandle, blockerResolver, snapshotsMap, ZoneId.of( "UTC" ) );
-        assertThat( statusResult.initializationStackTrace, containsString( "Transaction initialization stacktrace." ) );
+        assertThat( statusResult.initializationStackTrace ).contains( "Transaction initialization stacktrace." );
     }
 
     private static void checkTransactionStatusWithoutQueries( TransactionStatusResult statusResult )

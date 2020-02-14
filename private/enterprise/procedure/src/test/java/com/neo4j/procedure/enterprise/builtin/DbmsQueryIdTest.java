@@ -9,9 +9,7 @@ import org.junit.jupiter.api.Test;
 
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.equalTo;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.configuration.helpers.DatabaseNameValidator.MAXIMUM_DATABASE_NAME_LENGTH;
 
@@ -20,7 +18,7 @@ class DbmsQueryIdTest
     @Test
     void printsQueryIds() throws InvalidArgumentsException
     {
-        assertThat( new DbmsQueryId( "neo4j", 12L ).toString(), equalTo( "neo4j-query-12" ) );
+        assertThat( new DbmsQueryId( "neo4j", 12L ).toString() ).isEqualTo( "neo4j-query-12" );
     }
 
     @Test
@@ -32,7 +30,7 @@ class DbmsQueryIdTest
     @Test
     void parsesQueryIds() throws InvalidArgumentsException
     {
-        assertThat( new DbmsQueryId( "neo4j-query-14" ), equalTo( new DbmsQueryId( "neo4j", 14L ) ) );
+        assertThat( new DbmsQueryId( "neo4j-query-14" ) ).isEqualTo( new DbmsQueryId( "neo4j", 14L ) );
     }
 
     @Test
@@ -62,9 +60,9 @@ class DbmsQueryIdTest
     @Test
     void validateAndNormalizeDatabaseName() throws InvalidArgumentsException
     {
-        assertThat( new DbmsQueryId( "NEO4J-query-14" ), equalTo( new DbmsQueryId( "neo4j", 14L ) ) );
+        assertThat( new DbmsQueryId( "NEO4J-query-14" ) ).isEqualTo( new DbmsQueryId( "neo4j", 14L ) );
         IllegalArgumentException e = assertThrows( IllegalArgumentException.class, () ->
                 new DbmsQueryId( "a".repeat( MAXIMUM_DATABASE_NAME_LENGTH + 1 ) + "-query-14" ) );
-        assertThat( e.getMessage(), containsString( " must have a length between " ) );
+        assertThat( e.getMessage() ).contains( " must have a length between " );
     }
 }

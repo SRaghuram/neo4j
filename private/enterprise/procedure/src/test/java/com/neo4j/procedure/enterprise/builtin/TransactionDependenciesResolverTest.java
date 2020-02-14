@@ -28,9 +28,7 @@ import org.neo4j.time.Clocks;
 import org.neo4j.values.virtual.VirtualValues;
 
 import static java.util.Collections.singletonList;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.emptyString;
-import static org.hamcrest.Matchers.is;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -95,8 +93,8 @@ class TransactionDependenciesResolverTest
         map.put( handle2, Optional.of( createQuerySnapshot( 2 ) ) );
         TransactionDependenciesResolver resolver = new TransactionDependenciesResolver( map );
 
-        assertThat( resolver.describeBlockingTransactions( handle1 ), is( emptyString() ) );
-        assertThat( resolver.describeBlockingTransactions( handle2 ), is( emptyString() ) );
+        assertThat( resolver.describeBlockingTransactions( handle1 ) ).isEmpty();
+        assertThat( resolver.describeBlockingTransactions( handle2 ) ).isEmpty();
     }
 
     @Test
@@ -111,7 +109,7 @@ class TransactionDependenciesResolverTest
         map.put( handle2, Optional.of( createQuerySnapshotWaitingForLock( 2, false, ResourceTypes.NODE, 1 ) ) );
         TransactionDependenciesResolver resolver = new TransactionDependenciesResolver( map );
 
-        assertThat( resolver.describeBlockingTransactions( handle1 ), is( emptyString() ) );
+        assertThat( resolver.describeBlockingTransactions( handle1 ) ).isEmpty();
         assertEquals( "[transaction-3]", resolver.describeBlockingTransactions( handle2 ) );
     }
 
@@ -130,7 +128,7 @@ class TransactionDependenciesResolverTest
         map.put( handle3, Optional.of( createQuerySnapshotWaitingForLock( 3, true, ResourceTypes.NODE, 2 ) ) );
         TransactionDependenciesResolver resolver = new TransactionDependenciesResolver( map );
 
-        assertThat( resolver.describeBlockingTransactions( handle1 ), is( emptyString() ) );
+        assertThat( resolver.describeBlockingTransactions( handle1 ) ).isEmpty();
         assertEquals( "[transaction-4]", resolver.describeBlockingTransactions( handle2 ) );
         assertEquals( "[transaction-4, transaction-5]", resolver.describeBlockingTransactions( handle3 ) );
     }
