@@ -494,6 +494,11 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
     @Override
     public void writeString( String value )
     {
+        if ( value.length() > 100 )
+        {
+            value = "removed string...";
+        }
+
         beginWriteProperty( EXTERNAL_TYPE_STRING );
         byte[] bytes = UTF8.encode( value );
         buffer.put( EXTERNAL_TYPE_STRING );
@@ -673,7 +678,7 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
         case EXTERNAL_TYPE_LONG:
             return 1 + sizeOfScalar( internalType( typeByte ) ); //Type + Scalar
         case EXTERNAL_TYPE_STRING:
-            int propertyLength = buffer.get( buffer.position() + 1 );
+            int propertyLength = buffer.get( buffer.position() + 1 ) & 0xFF;
             return 1 + 1 + propertyLength; // Type + length + data
         case EXTERNAL_TYPE_BOOL:
             return 1; //Type (value is embedded)
