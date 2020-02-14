@@ -9,6 +9,8 @@ import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import com.neo4j.test.extension.EnterpriseDbmsExtension;
+import org.assertj.core.api.Condition;
+import org.assertj.core.data.Index;
 import org.hamcrest.Description;
 import org.hamcrest.TypeSafeMatcher;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,6 +22,7 @@ import java.lang.management.ManagementFactory;
 import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Predicate;
 import javax.management.MBeanServer;
 
 import org.neo4j.collection.RawIterator;
@@ -48,9 +51,7 @@ import static com.neo4j.metrics.MetricsTestHelper.readLongGaugeAndAssert;
 import static com.neo4j.metrics.source.jvm.HeapMetrics.HEAP_COMMITTED_TEMPLATE;
 import static com.neo4j.metrics.source.jvm.HeapMetrics.HEAP_MAX_TEMPLATE;
 import static com.neo4j.metrics.source.jvm.HeapMetrics.HEAP_USED_TEMPLATE;
-import static org.hamcrest.CoreMatchers.hasItem;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.internal.helpers.collection.Iterators.asList;
 import static org.neo4j.kernel.api.ResourceTracker.EMPTY_RESOURCE_TRACKER;
@@ -103,8 +104,8 @@ class GlobalMetricsExtensionFactoryIT
         long threadCountResult = readLongGaugeAndAssert( threadCountFile, ( newValue, currentValue ) -> newValue >= 0 );
 
         // THEN
-        assertThat( threadTotalResult, greaterThanOrEqualTo( 0L ) );
-        assertThat( threadCountResult, greaterThanOrEqualTo( 0L ) );
+        assertThat( threadTotalResult ).isGreaterThanOrEqualTo( 0L );
+        assertThat( threadCountResult ).isGreaterThanOrEqualTo( 0L );
     }
 
     @Test
@@ -120,9 +121,9 @@ class GlobalMetricsExtensionFactoryIT
         long heapMaxResult = readLongGaugeAndAssert( heapMaxFile, ( newValue, currentValue ) -> newValue >= 0 );
 
         // THEN
-        assertThat( heapCommittedResult, greaterThanOrEqualTo( 0L ) );
-        assertThat( heapUsedResult, greaterThanOrEqualTo( 0L ) );
-        assertThat( heapMaxResult, greaterThanOrEqualTo( 0L ) );
+        assertThat( heapCommittedResult ).isGreaterThanOrEqualTo( 0L );
+        assertThat( heapUsedResult ).isGreaterThanOrEqualTo( 0L );
+        assertThat( heapMaxResult ).isGreaterThanOrEqualTo( 0L );
     }
 
     @Test
@@ -165,7 +166,7 @@ class GlobalMetricsExtensionFactoryIT
         RawIterator<AnyValue[],ProcedureException> result = procedure.apply( null, new AnyValue[]{jmxQuery}, EMPTY_RESOURCE_TRACKER );
 
         List<AnyValue[]> queryResult = asList( result );
-        assertThat( queryResult, hasItem( new MetricsRecordMatcher() ) );
+        assertThat( queryResult ).has( new MetricsRecordCondition() );
     }
 
     private void addNodes( int numberOfNodes )
@@ -181,19 +182,23 @@ class GlobalMetricsExtensionFactoryIT
         }
     }
 
-    private static class MetricsRecordMatcher extends TypeSafeMatcher<AnyValue[]>
+    private static class MetricsRecordCondition extends Condition<List<? extends AnyValue[]>>
     {
-        @Override
-        protected boolean matchesSafely( AnyValue[] item )
+        MetricsRecordCondition()
         {
-            return item.length > 2 && stringValue( "neo4j.metrics:name=neo4j.system.transaction.active_write" ).equals( item[0] ) &&
-                    stringValue( "Information on the management interface of the MBean" ).equals( item[1] );
-        }
-
-        @Override
-        public void describeTo( Description description )
-        {
-            description.appendText( "Expected to see neo4j.system.transaction.active_write in result set" );
+            super( ( List<? extends AnyValue[]> items ) ->
+            {
+                for ( AnyValue[] item : items )
+                {
+                    if ( item.length > 2 &&
+                            stringValue( "neo4j.metrics:name=neo4j.system.transaction.active_write" ).equals( item[0] ) &&
+                            stringValue( "Information on the management interface of the MBean" ).equals( item[1] ) )
+                    {
+                        return true;
+                    }
+                }
+                return false;
+            }, "Expected to see neo4j.system.transaction.active_write in result set" );
         }
     }
 }

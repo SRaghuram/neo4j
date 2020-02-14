@@ -16,8 +16,6 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.DelimiterBasedFrameDecoder;
-import org.assertj.core.api.Condition;
-import org.hamcrest.Matcher;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -43,10 +41,7 @@ import static java.lang.Math.toIntExact;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.greaterThanOrEqualTo;
-import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.startsWith;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.neo4j.function.ThrowingAction.executeAll;
 import static org.neo4j.io.ByteUnit.mebiBytes;
 import static org.neo4j.test.assertion.Assert.assertEventually;
@@ -87,16 +82,11 @@ class GraphiteOutputIT
     {
         assertEventually( "A fake Graphite server did not receive any metrics", receivedMetrics::size, value -> value >= 100, 2, MINUTES );
 
+        var doublePrefix = CUSTOM_METRICS_PREFIX + "." + CUSTOM_METRICS_PREFIX;
         for ( var metric : receivedMetrics )
         {
-            assertThat( metric, doesNotHaveDoublePrefix() );
+            assertThat( metric ).doesNotStartWith( doublePrefix );
         }
-    }
-
-    private static Matcher<String> doesNotHaveDoublePrefix()
-    {
-        var doublePrefix = CUSTOM_METRICS_PREFIX + "." + CUSTOM_METRICS_PREFIX;
-        return not( startsWith( doublePrefix ) );
     }
 
     private static DatabaseManagementService startDatabaseWithGraphiteMetrics( File homeDir, SocketAddress graphiteServerAddress )

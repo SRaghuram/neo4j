@@ -31,8 +31,6 @@ import org.neo4j.test.rule.TestDirectory;
 import static com.neo4j.metrics.MetricsTestHelper.metricsCsv;
 import static com.neo4j.metrics.MetricsTestHelper.readLongCounterValue;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.neo4j.internal.helpers.collection.MapUtil.map;
 import static org.neo4j.test.PortUtils.getBoltPort;
 import static org.neo4j.test.assertion.Assert.assertEventually;

@@ -35,8 +35,7 @@ import static com.neo4j.metrics.MetricsTestHelper.readLongCounterValue;
 import static com.neo4j.metrics.MetricsTestHelper.readLongGaugeValue;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.apache.commons.lang3.RandomStringUtils.randomAlphabetic;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 import static org.neo4j.configuration.GraphDatabaseSettings.preallocate_logical_logs;
 import static org.neo4j.kernel.impl.transaction.log.entry.LogVersions.CURRENT_FORMAT_LOG_HEADER_SIZE;
 import static org.neo4j.test.assertion.Assert.assertEventually;
@@ -130,9 +129,9 @@ class TransactionLogsMetricsIT
                 () -> readLongCounterValue( bytesFile ), equalityCondition( CURRENT_FORMAT_LOG_HEADER_SIZE * 3L ), 1, MINUTES );
 
         long rotationTotalTimeValue = readLongCounterAndAssert( rotationTime, ( newValue, currentValue ) -> newValue >= currentValue );
-        assertThat( rotationTotalTimeValue, greaterThanOrEqualTo( 0L ) );
+        assertThat( rotationTotalTimeValue ).isGreaterThanOrEqualTo( 0 );
         long rotationDurationValue = readLongGaugeValue( rotationDuration );
-        assertThat( rotationDurationValue, greaterThanOrEqualTo( 0L ) );
+        assertThat( rotationDurationValue ).isGreaterThanOrEqualTo( 0L );
     }
 
     private static void addNodes( int numberOfNodes, GraphDatabaseAPI databaseAPI )

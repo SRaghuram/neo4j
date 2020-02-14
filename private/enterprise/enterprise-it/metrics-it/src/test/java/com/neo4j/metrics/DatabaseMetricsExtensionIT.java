@@ -43,12 +43,7 @@ import static com.neo4j.metrics.source.db.DatabaseCountMetrics.COUNTS_NODE_TEMPL
 import static com.neo4j.metrics.source.db.DatabaseCountMetrics.COUNTS_RELATIONSHIP_TEMPLATE;
 import static java.lang.System.currentTimeMillis;
 import static java.util.concurrent.TimeUnit.MINUTES;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.greaterThan;
-import static org.hamcrest.Matchers.greaterThanOrEqualTo;
-import static org.hamcrest.Matchers.hasItem;
-import static org.hamcrest.Matchers.lessThanOrEqualTo;
-import static org.hamcrest.Matchers.not;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.neo4j.configuration.GraphDatabaseSettings.check_point_interval_time;
 import static org.neo4j.configuration.GraphDatabaseSettings.cypher_min_replan_interval;
 import static org.neo4j.graphdb.RelationshipType.withName;
@@ -105,7 +100,7 @@ class DatabaseMetricsExtensionIT
     }
 
     @Test
-    void countNodesAndRelationships() throws Throwable
+    void countNodesAndRelationships()
     {
         for ( int i = 0; i < 5; i++ )
         {
@@ -135,8 +130,8 @@ class DatabaseMetricsExtensionIT
                 ( newValue, currentValue ) -> newValue >= currentValue );
 
         // THEN
-        assertThat( committedTransactions, greaterThanOrEqualTo( lastCommittedTransactionId ) );
-        assertThat( committedTransactions, lessThanOrEqualTo( lastCommittedTransactionId + 1001L ) );
+        assertThat( committedTransactions ).isGreaterThanOrEqualTo( lastCommittedTransactionId );
+        assertThat( committedTransactions ).isLessThanOrEqualTo( lastCommittedTransactionId + 1001L );
     }
 
     @Test
@@ -152,7 +147,7 @@ class DatabaseMetricsExtensionIT
                 ( newValue, currentValue ) -> newValue >= currentValue );
 
         // THEN
-        assertThat( committedTransactions, lessThanOrEqualTo( 1001L ) );
+        assertThat( committedTransactions ).isLessThanOrEqualTo( 1001L );
     }
 
     @Test
@@ -165,7 +160,7 @@ class DatabaseMetricsExtensionIT
                 ( newValue, currentValue ) -> newValue >= currentValue );
 
         // THEN
-        assertThat( appendedBytes, greaterThan( 0L ) );
+        assertThat( appendedBytes ).isGreaterThan( 0L );
     }
 
     @Test
@@ -208,7 +203,7 @@ class DatabaseMetricsExtensionIT
                 Thread.sleep( 300 );
             }
         }
-        assertThat( events, greaterThan( 0L ) );
+        assertThat( events ).isGreaterThan( 0L );
     }
 
     @Test
@@ -226,17 +221,17 @@ class DatabaseMetricsExtensionIT
         long result = readLongGaugeAndAssert( metricFile, ( newValue, currentValue ) -> newValue >= 0 );
 
         // THEN
-        assertThat( result, greaterThanOrEqualTo( 0L ) );
+        assertThat( result ).isGreaterThanOrEqualTo( 0L );
     }
 
     @Test
     void registerDatabaseMetricsOnDatabaseStart() throws DatabaseExistsException
     {
-        assertThat( metricsManager.getRegistry().getNames(), not( hasItem( "neo4j.testdb.check_point.events" ) ) );
+        assertThat( metricsManager.getRegistry().getNames() ).doesNotContain( "neo4j.testdb.check_point.events" );
 
         managementService.createDatabase( "testDb" );
 
-        assertThat( metricsManager.getRegistry().getNames(), hasItem( "neo4j.testdb.check_point.events" ) );
+        assertThat( metricsManager.getRegistry().getNames() ).contains( "neo4j.testdb.check_point.events" );
         managementService.dropDatabase( "testDb" );
     }
 
@@ -244,10 +239,10 @@ class DatabaseMetricsExtensionIT
     void removeDatabaseMetricsOnDatabaseStop() throws DatabaseExistsException, DatabaseNotFoundException
     {
         managementService.createDatabase( "testDb" );
-        assertThat( metricsManager.getRegistry().getNames(), hasItem( "neo4j.testdb.check_point.events" ) );
+        assertThat( metricsManager.getRegistry().getNames() ).contains( "neo4j.testdb.check_point.events" );
 
         managementService.shutdownDatabase( "testDb" );
-        assertThat( metricsManager.getRegistry().getNames(), not( hasItem( "neo4j.testdb.check_point.events" ) ) );
+        assertThat( metricsManager.getRegistry().getNames() ).doesNotContain( "neo4j.testdb.check_point.events" );
         managementService.dropDatabase( "testDb" );
     }
 

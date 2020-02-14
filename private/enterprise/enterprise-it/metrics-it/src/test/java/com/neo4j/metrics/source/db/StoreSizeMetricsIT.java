@@ -32,7 +32,6 @@ import org.neo4j.time.FakeClock;
 import static com.neo4j.metrics.MetricsTestHelper.metricsCsv;
 import static com.neo4j.metrics.MetricsTestHelper.readLongGaugeValue;
 import static java.util.concurrent.TimeUnit.MINUTES;
-import static org.hamcrest.Matchers.greaterThan;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 
