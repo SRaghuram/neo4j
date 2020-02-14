@@ -23,6 +23,7 @@ import org.eclipse.collections.api.map.primitive.IntObjectMap;
 import org.eclipse.collections.impl.factory.primitive.IntObjectMaps;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import java.nio.BufferOverflowException;
 import java.util.stream.IntStream;
 
 import org.neo4j.io.pagecache.PageCursor;
@@ -40,6 +41,7 @@ import org.neo4j.test.rule.RandomRule;
 import org.neo4j.values.storable.Value;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.neo4j.internal.freki.MutableNodeRecordData.forwardPointer;
 import static org.neo4j.internal.freki.Record.FLAG_IN_USE;
 
 @ExtendWith( {RandomExtension.class, EphemeralFileSystemExtension.class} )
@@ -93,7 +95,26 @@ abstract class FrekiCursorsTest
         {
             try ( PageCursor cursor = store.openWriteCursor() )
             {
-                data.serialize( record.dataForWriting() );
+                try
+                {
+                    data.serialize( record.dataForWriting() );
+                }
+                catch ( BufferOverflowException e )
+                {
+                    InMemoryTestStore largeStore = (InMemoryTestStore) stores.nextLargerMainStore( record.sizeExp() );
+                    MutableNodeRecordData largeData = new MutableNodeRecordData( largeStore.nextId( PageCursorTracer.NULL ) );
+                    data.movePropertiesAndRelationshipsTo( largeData );
+                    try ( PageCursor largeCursor = largeStore.openWriteCursor() )
+                    {
+                        Record largeRecord = largeStore.newRecord( largeData.id );
+                        largeRecord.setFlag( FLAG_IN_USE, true );
+                        largeData.serialize( largeRecord.dataForWriting() );
+                        largeStore.write( largeCursor, largeRecord );
+                    }
+
+                    data.setForwardPointer( forwardPointer( largeStore.recordSizeExponential(), false, largeData.id ) );
+                    data.serialize( record.dataForWriting() );
+                }
                 store.write( cursor, record );
             }
             return record;

@@ -51,6 +51,7 @@ import org.neo4j.storageengine.api.RelationshipSelection;
 import org.neo4j.storageengine.api.StorageProperty;
 import org.neo4j.values.storable.Value;
 
+import static java.lang.String.format;
 import static org.neo4j.token.api.TokenConstants.ANY_RELATIONSHIP_TYPE;
 
 /**
@@ -80,7 +81,7 @@ class DenseStore extends LifecycleAdapter implements Closeable
         DenseStoreKey from = layout.newKey();
         from.initializeProperty( nodeId, Integer.MIN_VALUE );
         DenseStoreKey to = layout.newKey();
-        from.initializeProperty( nodeId, Integer.MAX_VALUE );
+        to.initializeProperty( nodeId, Integer.MAX_VALUE );
         try
         {
             return new PropertyIterator( tree.seek( from, to, cursorTracer ) )
@@ -343,12 +344,12 @@ class DenseStore extends LifecycleAdapter implements Closeable
             {
             case DenseStoreKey.TYPE_PROPERTY:
             {
-                cursor.putInt( (int) key.nodeId );
                 // [ sss,iiii][tttt,tttt][tttt,tttt][tttt,tttt]
                 // t: tokenId
                 // i: item type
                 // s: source node size
-                // TODO but for now just store the sourceNodeId as an int afterwards
+                // TODO but for now just store the sourceNodeId as an int
+                cursor.putInt( (int) key.nodeId );
                 int serialized = key.tokenId | (key.itemType << 24);
                 cursor.putInt( serialized );
                 break;
@@ -359,7 +360,7 @@ class DenseStore extends LifecycleAdapter implements Closeable
                 // t: tokenId
                 // i: item type
                 // s: source node size
-                // TODO but for now just store the sourceNodeId as an int afterwards
+                // TODO but for now just store the sourceNodeId as an int
                 cursor.putInt( (int) key.nodeId );
                 int serialized = key.tokenId | (key.itemType << 24) | (key.isOutgoing() ? 0x80000000 : 0);
                 cursor.putInt( serialized );
@@ -423,13 +424,13 @@ class DenseStore extends LifecycleAdapter implements Closeable
         @Override
         public void initializeAsLowest( DenseStoreKey key )
         {
-            key.itemType = Byte.MIN_VALUE;
+            key.nodeId = Long.MIN_VALUE;
         }
 
         @Override
         public void initializeAsHighest( DenseStoreKey key )
         {
-            key.itemType = Byte.MAX_VALUE;
+            key.nodeId = Long.MAX_VALUE;
         }
 
         @Override
@@ -511,6 +512,20 @@ class DenseStore extends LifecycleAdapter implements Closeable
         boolean isOutgoing()
         {
             return direction == Direction.OUTGOING;
+        }
+
+        @Override
+        public String toString()
+        {
+            switch ( itemType )
+            {
+            case TYPE_PROPERTY:
+                return format( "nodeId:%d,Property{key:%d}", nodeId, tokenId );
+            case TYPE_RELATIONSHIP:
+                return format( "nodeId:%d,Relationship{type:%d,%s,%d}", nodeId, tokenId, isOutgoing() ? "OUT" : "IN", neighbourNodeId );
+            default:
+                throw new UnsupportedOperationException( "Unrecognized type " + itemType );
+            }
         }
     }
 
