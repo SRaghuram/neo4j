@@ -101,7 +101,7 @@ public class MapValue extends AbstractValuesBenchmark
                     keys[i] = base + padding + "-" + i;
                 }
 
-                values[i] = Values.stringValue( keys[i] );
+                values[i] = Values.utf8Value( keys[i] );
             }
 
             return VirtualValues.map( keys, values );

@@ -26,6 +26,7 @@ import static org.neo4j.internal.kernel.api.procs.ProcedureSignature.procedureSi
 import static org.neo4j.kernel.api.exceptions.Status.Database.DatabaseNotFound;
 import static org.neo4j.kernel.api.exceptions.Status.Database.DatabaseUnavailable;
 import static org.neo4j.values.storable.Values.stringValue;
+import static org.neo4j.values.storable.Values.utf8Value;
 
 abstract class RoleProcedure extends CallableProcedure.BasicProcedure
 {
@@ -53,7 +54,7 @@ abstract class RoleProcedure extends CallableProcedure.BasicProcedure
         var databaseContext = extractDatabaseContext( input );
         checkAvailable( databaseContext );
         var role = role( databaseContext );
-        return RawIterator.<AnyValue[],ProcedureException>of( new AnyValue[]{stringValue( role.toString() )} );
+        return RawIterator.<AnyValue[],ProcedureException>of( new AnyValue[]{utf8Value( role.toString() )} );
     }
 
     private void checkAvailable( DatabaseContext databaseContext ) throws ProcedureException

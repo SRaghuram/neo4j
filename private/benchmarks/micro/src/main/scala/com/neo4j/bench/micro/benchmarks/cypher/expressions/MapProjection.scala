@@ -97,7 +97,7 @@ object MapProjection {
   val ROWS: Int = 10000
   val VALUES: ListValue = VirtualValues.list((1 to ROWS).map(Values.intValue).toArray: _*)
   val MAP: MapValue = VirtualValues.map((1 to 100).map(i => s"k$i").toArray,
-    (1 to 100).map(i => Values.stringValue(s"v$i")).toArray)
+    (1 to 100).map(i => Values.utf8Value(s"v$i")).toArray)
 
   def main(args: Array[String]): Unit = {
     Main.run(classOf[MapProjection], args: _*)

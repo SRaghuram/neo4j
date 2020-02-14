@@ -20,6 +20,7 @@ import org.neo4j.bolt.runtime.Bookmark;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
 import static org.neo4j.values.storable.Values.stringValue;
+import static org.neo4j.values.storable.Values.utf8Value;
 
 public class FabricBookmark extends BookmarkMetadata implements Bookmark
 {
@@ -49,7 +50,7 @@ public class FabricBookmark extends BookmarkMetadata implements Bookmark
     @Override
     public void attachTo( BoltResponseHandler state )
     {
-        state.onMetadata( BOOKMARK_KEY, stringValue( serialize() ) );
+        state.onMetadata( BOOKMARK_KEY, utf8Value( serialize() ) );
     }
 
     public List<GraphState> getGraphStates()

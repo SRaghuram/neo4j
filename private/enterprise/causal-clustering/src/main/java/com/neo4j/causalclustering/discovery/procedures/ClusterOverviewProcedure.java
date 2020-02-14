@@ -40,6 +40,7 @@ import static java.util.stream.Collectors.toMap;
 import static org.neo4j.internal.helpers.collection.Iterators.asRawIterator;
 import static org.neo4j.internal.kernel.api.procs.ProcedureSignature.procedureSignature;
 import static org.neo4j.values.storable.Values.stringValue;
+import static org.neo4j.values.storable.Values.utf8Value;
 import static org.neo4j.values.virtual.VirtualValues.fromList;
 
 /**
@@ -114,7 +115,7 @@ public class ClusterOverviewProcedure extends CallableProcedure.BasicProcedure
     private static AnyValue[] formatResultRow( ResultRow row )
     {
         return new AnyValue[]{
-                stringValue( row.memberId.toString() ),
+                utf8Value( row.memberId.toString() ),
                 formatAddresses( row ),
                 formatDatabases( row ),
                 formatGroups( row ),
@@ -126,7 +127,7 @@ public class ClusterOverviewProcedure extends CallableProcedure.BasicProcedure
         List<AnyValue> stringValues = row.addresses.uriList()
                 .stream()
                 .map( URI::toString )
-                .map( Values::stringValue )
+                .map( Values::utf8Value )
                 .collect( toList() );
 
         return fromList( stringValues );
@@ -139,7 +140,7 @@ public class ClusterOverviewProcedure extends CallableProcedure.BasicProcedure
         {
             var databaseId = entry.getKey();
             var roleString = entry.getValue().toString();
-            builder.add( databaseId.name(), stringValue( roleString ) );
+            builder.add( databaseId.name(), utf8Value( roleString ) );
         }
         return builder.build();
     }
@@ -148,7 +149,7 @@ public class ClusterOverviewProcedure extends CallableProcedure.BasicProcedure
     {
         List<AnyValue> stringValues = row.groups.stream()
                 .sorted()
-                .map( Values::stringValue )
+                .map( Values::utf8Value )
                 .collect( toList() );
 
         return fromList( stringValues );

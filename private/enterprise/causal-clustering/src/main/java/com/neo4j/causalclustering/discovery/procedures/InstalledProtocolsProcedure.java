@@ -28,6 +28,7 @@ import org.neo4j.kernel.api.procedure.Context;
 import org.neo4j.values.AnyValue;
 
 import static org.neo4j.values.storable.Values.stringValue;
+import static org.neo4j.values.storable.Values.utf8Value;
 
 public class InstalledProtocolsProcedure extends CallableProcedure.BasicProcedure
 {
@@ -81,11 +82,11 @@ public class InstalledProtocolsProcedure extends CallableProcedure.BasicProcedur
         ProtocolStack protocolStack = connectionInfo.other();
         return new AnyValue[]
                 {
-                        stringValue( orientation ),
-                        stringValue( socketAddress.toString() ),
-                        stringValue( protocolStack.applicationProtocol().category() ),
-                        stringValue( protocolStack.applicationProtocol().implementation().toString() ),
-                        stringValue( modifierString( protocolStack ) )
+                        utf8Value( orientation ),
+                        utf8Value( socketAddress.toString() ),
+                        utf8Value( protocolStack.applicationProtocol().category() ),
+                        utf8Value( protocolStack.applicationProtocol().implementation().toString() ),
+                        utf8Value( modifierString( protocolStack ) )
                 };
     }
 

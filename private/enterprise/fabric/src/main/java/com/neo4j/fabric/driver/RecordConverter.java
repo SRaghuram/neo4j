@@ -362,6 +362,6 @@ class RecordConverter
 
     private TextValue convertString( String driverValue )
     {
-        return Values.stringValue( driverValue );
+        return Values.utf8Value( driverValue );
     }
 }

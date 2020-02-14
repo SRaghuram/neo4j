@@ -170,8 +170,8 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           VirtualValues.map(
             Array("name", "credentials", "passwordChangeRequired", "suspended"),
             Array(
-              Values.stringValue(userName),
-              Values.stringValue(SystemGraphCredential.createCredentialForPassword(initialPassword, secureHasher).serialize()),
+              Values.utf8Value(userName),
+              Values.utf8Value(SystemGraphCredential.createCredentialForPassword(initialPassword, secureHasher).serialize()),
               Values.booleanValue(requirePasswordChange),
               Values.booleanValue(suspended))),
           QueryHandler
@@ -201,7 +201,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           case None => Seq.empty
           case Some(value: Boolean) => Seq((param._2, Values.booleanValue(value)))
           case Some(value: Array[Byte]) =>
-            Seq((param._2, Values.stringValue(SystemGraphCredential.createCredentialForPassword(validatePassword(value), secureHasher).serialize())))
+            Seq((param._2, Values.utf8Value(SystemGraphCredential.createCredentialForPassword(validatePassword(value), secureHasher).serialize())))
           case Some(p) => throw new InvalidArgumentsException(s"Invalid option type for ALTER USER, expected byte array or boolean but got: ${p.getClass.getSimpleName}")
         }
       }
@@ -211,7 +211,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       }
       UpdatingSystemCommandExecutionPlan("AlterUser", normalExecutionEngine,
         s"$query RETURN oldCredentials",
-        VirtualValues.map(keys :+ "name", values :+ Values.stringValue(userName)),
+        VirtualValues.map(keys :+ "name", values :+ Values.utf8Value(userName)),
         QueryHandler
           .handleNoResult(() => Some(new InvalidArgumentsException(s"Failed to alter the specified user '$userName': User does not exist.")))
           .handleError {
@@ -278,7 +278,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         """CREATE (new:Role {name: $name})
           |RETURN new.name
         """.stripMargin,
-        VirtualValues.map(Array("name"), Array(Values.stringValue(roleName))),
+        VirtualValues.map(Array("name"), Array(Values.utf8Value(roleName))),
         QueryHandler
           .handleNoResult(() => Some(new IllegalStateException(s"Failed to create the specified role '$roleName'.")))
           .handleError(error => (error, error.getCause) match {
@@ -296,7 +296,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       UpdatingSystemCommandExecutionPlan("RequireRole", normalExecutionEngine,
         """MATCH (role:Role {name: $name})
           |RETURN role.name""".stripMargin,
-        VirtualValues.map(Array("name"), Array(Values.stringValue(roleName))),
+        VirtualValues.map(Array("name"), Array(Values.utf8Value(roleName))),
         QueryHandler
           .handleNoResult(() => Some(new InvalidArgumentsException(s"Failed to create a role as copy of '$roleName': Role does not exist.")))
           .handleError {
@@ -315,7 +315,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
            |MATCH (from:Role {name: $$from})-[:$grantDeny]->(p:Privilege)
            |MERGE (to)-[g:$grantDeny]->(p)
            |RETURN from.name, to.name, count(g)""".stripMargin,
-        VirtualValues.map(Array("from", "to"), Array(Values.stringValue(from), Values.stringValue(to))),
+        VirtualValues.map(Array("from", "to"), Array(Values.utf8Value(from), Values.utf8Value(to))),
         QueryHandler.handleError(e => new IllegalStateException(s"Failed to create role '$to' as copy of '$from': Failed to copy privileges.", e)),
         source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext))
       )
@@ -325,7 +325,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       UpdatingSystemCommandExecutionPlan("DropRole", normalExecutionEngine,
         """MATCH (role:Role {name: $name}) DETACH DELETE role
           |RETURN 1 AS ignore""".stripMargin,
-        VirtualValues.map(Array("name"), Array(Values.stringValue(roleName))),
+        VirtualValues.map(Array("name"), Array(Values.utf8Value(roleName))),
         QueryHandler
           .handleError {
             case error: HasStatus if error.status() == Status.Cluster.NotALeader =>
@@ -343,7 +343,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           |WITH r, u
           |MERGE (u)-[a:HAS_ROLE]->(r)
           |RETURN u.name AS user""".stripMargin,
-        VirtualValues.map(Array("role","user"), Array(Values.stringValue(roleName), Values.stringValue(userName))),
+        VirtualValues.map(Array("role","user"), Array(Values.utf8Value(roleName), Values.utf8Value(userName))),
         QueryHandler
           .handleNoResult(() => Some(new InvalidArgumentsException(s"Failed to grant role '$roleName' to user '$userName': Role does not exist.")))
           .handleError {
@@ -365,7 +365,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           |OPTIONAL MATCH (u)-[a:HAS_ROLE]->(r)
           |DELETE a
           |RETURN u.name AS user""".stripMargin,
-        VirtualValues.map(Array("role", "user"), Array(Values.stringValue(roleName), Values.stringValue(userName))),
+        VirtualValues.map(Array("role", "user"), Array(Values.utf8Value(roleName), Values.utf8Value(userName))),
         QueryHandler.handleError {
           case error: HasStatus if error.status() == Status.Cluster.NotALeader =>
             new DatabaseAdministrationOnFollowerException(s"Failed to revoke role '$roleName' from user '$userName': $followerError", error)
@@ -521,7 +521,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         """.stripMargin
 
       val (grantee: Value, query) = scope match {
-        case ShowRolePrivileges(name) => (Values.stringValue(name),
+        case ShowRolePrivileges(name) => (Values.utf8Value(name),
           s"""
              |OPTIONAL MATCH (r:Role) WHERE r.name = $$grantee WITH r
              |$privilegeMatch
@@ -530,7 +530,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
              |$orderBy
           """.stripMargin
         )
-        case ShowUserPrivileges(name) => (Values.stringValue(name),
+        case ShowUserPrivileges(name) => (Values.utf8Value(name),
           s"""
              |OPTIONAL MATCH (u:User)-[:HAS_ROLE]->(r:Role) WHERE u.name = $$grantee WITH r, u
              |$privilegeMatch
@@ -582,10 +582,10 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         "default",
         "uuid")
       val virtualValues: Array[AnyValue] = Array(
-        Values.stringValue(dbName),
+        Values.utf8Value(dbName),
         DatabaseStatus.Online,
         Values.booleanValue(default),
-        Values.stringValue(UUID.randomUUID().toString))
+        Values.utf8Value(UUID.randomUUID().toString))
 
       val clusterProperties =
         """
@@ -601,7 +601,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
 
           (clusterProperties, VirtualValues.map(
             virtualKeys ++ Array("initialMembers", "creationTime", "randomId", "storeVersion"),
-            virtualValues ++ Array(Values.stringArray(initial:_*), Values.longValue(creation), Values.longValue(randomId), Values.stringValue(storeVersion))))
+            virtualValues ++ Array(Values.stringArray(initial:_*), Values.longValue(creation), Values.longValue(randomId), Values.utf8Value(storeVersion))))
 
         case None => ("",VirtualValues.map(virtualKeys, virtualValues))
       }
@@ -655,7 +655,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           |SET d:DeletedDatabase
           |SET d.deleted_at = datetime()
           |RETURN d.name as name, d.status as status""".stripMargin,
-        VirtualValues.map(Array("name"), Array(Values.stringValue(dbName))),
+        VirtualValues.map(Array("name"), Array(Values.utf8Value(dbName))),
         QueryHandler.handleError {
           case error: HasStatus if error.status() == Status.Cluster.NotALeader =>
             new DatabaseAdministrationOnFollowerException(s"Failed to delete the specified database '$dbName': $followerError", error)
@@ -675,7 +675,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           |RETURN d2.name as name, d2.status as status, d.name as db""".stripMargin,
         VirtualValues.map(
           Array("name", "oldStatus", "status"),
-          Array(Values.stringValue(dbName),
+          Array(Values.utf8Value(dbName),
             DatabaseStatus.Offline,
             DatabaseStatus.Online
           )
@@ -703,7 +703,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           |RETURN d2.name as name, d2.status as status""".stripMargin,
         VirtualValues.map(
           Array("name", "oldStatus", "status"),
-          Array(Values.stringValue(dbName),
+          Array(Values.utf8Value(dbName),
             DatabaseStatus.Online,
             DatabaseStatus.Offline
           )
@@ -726,7 +726,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       UpdatingSystemCommandExecutionPlan("EnsureValidNonSystemDatabase", normalExecutionEngine,
         """MATCH (db:Database {name: $name})
           |RETURN db.name AS name""".stripMargin,
-        VirtualValues.map(Array("name"), Array(Values.stringValue(dbName))),
+        VirtualValues.map(Array("name"), Array(Values.utf8Value(dbName))),
         QueryHandler
           .handleNoResult(() => Some(new DatabaseNotFoundException(s"Failed to $action the specified database '$dbName': Database does not exist.")))
           .handleError {
@@ -748,18 +748,18 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
   }
 
   private def getResourcePart(resource: ActionResource, startOfErrorMessage: String, grantName: String, matchOrMerge: String): (Value, Value, String) = resource match {
-    case DatabaseResource() => (Values.NO_VALUE, Values.stringValue(Resource.Type.DATABASE.toString), matchOrMerge + " (res:Resource {type: $resource})")
-    case PropertyResource(name) => (Values.stringValue(name), Values.stringValue(Resource.Type.PROPERTY.toString), matchOrMerge + " (res:Resource {type: $resource, arg1: $property})")
-    case NoResource() => (Values.NO_VALUE, Values.stringValue(Resource.Type.GRAPH.toString), matchOrMerge + " (res:Resource {type: $resource})")
-    case AllResource() => (Values.NO_VALUE, Values.stringValue(Resource.Type.ALL_PROPERTIES.toString), matchOrMerge + " (res:Resource {type: $resource})") // The label is just for later printout of results
+    case DatabaseResource() => (Values.NO_VALUE, Values.utf8Value(Resource.Type.DATABASE.toString), matchOrMerge + " (res:Resource {type: $resource})")
+    case PropertyResource(name) => (Values.utf8Value(name), Values.utf8Value(Resource.Type.PROPERTY.toString), matchOrMerge + " (res:Resource {type: $resource, arg1: $property})")
+    case NoResource() => (Values.NO_VALUE, Values.utf8Value(Resource.Type.GRAPH.toString), matchOrMerge + " (res:Resource {type: $resource})")
+    case AllResource() => (Values.NO_VALUE, Values.utf8Value(Resource.Type.ALL_PROPERTIES.toString), matchOrMerge + " (res:Resource {type: $resource})") // The label is just for later printout of results
     case _ => throw new IllegalStateException(s"$startOfErrorMessage: Invalid privilege $grantName resource type $resource")
   }
 
   private def getQualifierPart(qualifier: PrivilegeQualifier, startOfErrorMessage: String, grantName: String, matchOrMerge: String): (Value, String) = qualifier match {
     case AllQualifier() => (Values.NO_VALUE, matchOrMerge + " (q:DatabaseQualifier {type: 'database', label: ''})") // The label is just for later printout of results
-    case LabelQualifier(name) => (Values.stringValue(name), matchOrMerge + " (q:LabelQualifier {type: 'node', label: $label})")
+    case LabelQualifier(name) => (Values.utf8Value(name), matchOrMerge + " (q:LabelQualifier {type: 'node', label: $label})")
     case LabelAllQualifier() => (Values.NO_VALUE, matchOrMerge + " (q:LabelQualifierAll {type: 'node', label: '*'})") // The label is just for later printout of results
-    case RelationshipQualifier(name) => (Values.stringValue(name), matchOrMerge + " (q:RelationshipQualifier {type: 'relationship', label: $label})")
+    case RelationshipQualifier(name) => (Values.utf8Value(name), matchOrMerge + " (q:RelationshipQualifier {type: 'relationship', label: $label})")
     case RelationshipAllQualifier() => (Values.NO_VALUE, matchOrMerge + " (q:RelationshipQualifierAll {type: 'relationship', label: '*'})") // The label is just for later printout of results
     case UserAllQualifier() => (Values.NO_VALUE, matchOrMerge + " (q:UserQualifierAll {type: 'user', label: '*'})") // The label is just for later printout of results
     case UserQualifier(name) => (Values.stringValue(name), matchOrMerge + " (q:UserQualifier {type: 'user', label: $label})")
@@ -777,12 +777,12 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
 
     val commandName = if (grant.isGrant) "GrantPrivilege" else "DenyPrivilege"
 
-    val action = Values.stringValue(actionName)
-    val role = Values.stringValue(roleName)
+    val action = Values.utf8Value(actionName)
+    val role = Values.utf8Value(roleName)
     val (property: Value, resourceType: Value, resourceMerge: String) = getResourcePart(resource, startOfErrorMessage, grant.name, "MERGE")
     val (label: Value, qualifierMerge: String) = getQualifierPart(qualifier, startOfErrorMessage, grant.name, "MERGE")
     val (dbName, db, databaseMerge, scopeMerge) = database match {
-      case NamedGraphScope(name) => (Values.stringValue(name), name, "MATCH (d:Database {name: $database})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)")
+      case NamedGraphScope(name) => (Values.utf8Value(name), name, "MATCH (d:Database {name: $database})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)")
       case AllGraphsScope() => (Values.NO_VALUE, "*", "MERGE (d:DatabaseAll {name: '*'})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)") // The name is just for later printout of results
       case DefaultDatabaseScope() => (Values.NO_VALUE, "DEFAULT DATABASE", "MERGE (d:DatabaseDefault {name: 'DEFAULT'})", "MERGE (d)<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)") // The name is just for later printout of results
       case _ => throw new IllegalStateException(s"$startOfErrorMessage: Invalid privilege ${grant.name} scope database $database")
@@ -827,13 +827,13 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
 
   private def makeRevokeExecutionPlan(actionName: String, resource: ActionResource, database: GraphScope, qualifier: PrivilegeQualifier,
                                       roleName: String, revokeType: String, source: Option[ExecutionPlan], startOfErrorMessage: String) = {
-    val action = Values.stringValue(actionName)
-    val role = Values.stringValue(roleName)
+    val action = Values.utf8Value(actionName)
+    val role = Values.utf8Value(roleName)
 
     val (property: Value, resourceType: Value, resourceMatch: String) = getResourcePart(resource, startOfErrorMessage, "revoke", "MATCH")
     val (label: Value, qualifierMatch: String) = getQualifierPart(qualifier, startOfErrorMessage, "revoke", "MATCH")
     val (dbName, scopeMatch) = database match {
-      case NamedGraphScope(name) => (Values.stringValue(name), "MATCH (d:Database {name: $database})<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)")
+      case NamedGraphScope(name) => (Values.utf8Value(name), "MATCH (d:Database {name: $database})<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)")
       case AllGraphsScope() => (Values.NO_VALUE, "MATCH (d:DatabaseAll {name: '*'})<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)")
       case DefaultDatabaseScope() => (Values.NO_VALUE, "MATCH (d:DatabaseDefault {name: 'DEFAULT'})<-[:FOR]-(s:Segment)-[:QUALIFIED]->(q)")
       case _ => throw new IllegalStateException(s"$startOfErrorMessage: Invalid privilege revoke scope database $database")

@@ -233,7 +233,7 @@ public class StringGenerator
         @Override
         public Value nextValue( SplittableRandom rng )
         {
-            return Values.stringValue( next( rng ) );
+            return Values.utf8Value( next( rng ) );
         }
     }
 
@@ -275,7 +275,7 @@ public class StringGenerator
         @Override
         public Value nextValue( SplittableRandom rng )
         {
-            return Values.stringValue( next( rng ) );
+            return Values.utf8Value( next( rng ) );
         }
 
         private void createValueIfNecessary( SplittableRandom rng )

@@ -30,7 +30,7 @@ import org.neo4j.cypher.internal.util.symbols
 import org.neo4j.kernel.impl.coreapi.InternalTransaction
 import org.neo4j.values.storable.Values.intValue
 import org.neo4j.values.storable.Values.longValue
-import org.neo4j.values.storable.Values.stringValue
+import org.neo4j.values.storable.Values.utf8Value
 import org.neo4j.values.virtual.ListValue
 import org.neo4j.values.virtual.MapValueBuilder
 import org.neo4j.values.virtual.VirtualValues
@@ -136,7 +136,7 @@ class InThreadState {
     executablePlan = benchmarkState.buildPlan(Slotted, useCompiledExpressions)
     tx = benchmarkState.beginInternalTransaction()
     paramBuilder.add("list", In.VALUES)
-    paramBuilder.add("foo", stringValue("FOO"))
+    paramBuilder.add("foo", utf8Value("FOO"))
   }
 
   @TearDown

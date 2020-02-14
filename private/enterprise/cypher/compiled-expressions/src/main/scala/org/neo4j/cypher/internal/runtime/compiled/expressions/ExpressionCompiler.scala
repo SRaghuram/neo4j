@@ -516,7 +516,7 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
       val constant = staticConstant[LongValue](namer.nextVariableName().toUpperCase, Values.longValue(i.value))
       Some(IntermediateExpression(getStatic[LongValue](constant.name), Seq(constant), Seq.empty, Set.empty, requireNullCheck = false))
     case s: expressions.StringLiteral =>
-      val constant = staticConstant[TextValue](namer.nextVariableName().toUpperCase, Values.stringValue(s.value))
+      val constant = staticConstant[TextValue](namer.nextVariableName().toUpperCase, Values.utf8Value(s.value))
       Some(IntermediateExpression(getStatic[TextValue](constant.name), Seq(constant), Seq.empty, Set.empty, requireNullCheck = false))
     case _: Null => Some(IntermediateExpression(noValue, Seq.empty, Seq.empty, Set(constant(true))))
     case _: True => Some(IntermediateExpression(trueValue, Seq.empty, Seq.empty, Set.empty, requireNullCheck = false))
