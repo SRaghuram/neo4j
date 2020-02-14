@@ -61,7 +61,7 @@ class CommandCreator implements TxStateVisitor
     private final Stores stores;
     private final MutableLongObjectMap<Mutation> mutations = LongObjectMaps.mutable.empty();
 
-    public CommandCreator( Collection<StorageCommand> commands, Stores stores )
+    CommandCreator( Collection<StorageCommand> commands, Stores stores )
     {
         this.commands = commands;
         this.stores = stores;
@@ -317,7 +317,7 @@ class CommandCreator implements TxStateVisitor
         }
     }
 
-    private static abstract class RecordAndData
+    private abstract static class RecordAndData
     {
         abstract void markCreated();
 

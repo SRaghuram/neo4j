@@ -575,7 +575,7 @@ class DenseStore extends LifecycleAdapter implements Closeable
         }
     }
 
-    private static abstract class CursorIterator<ITEM> extends PrefetchingResourceIterator<ITEM>
+    private abstract static class CursorIterator<ITEM> extends PrefetchingResourceIterator<ITEM>
     {
         final Seeker<DenseStoreKey,DenseStoreValue> seek;
         private final Predicate<ITEM> filter;
@@ -626,7 +626,7 @@ class DenseStore extends LifecycleAdapter implements Closeable
         }
     }
 
-    private static abstract class PropertyIterator extends CursorIterator<StorageProperty> implements StorageProperty
+    private abstract static class PropertyIterator extends CursorIterator<StorageProperty> implements StorageProperty
     {
         PropertyIterator( Seeker<DenseStoreKey,DenseStoreValue> seek )
         {
@@ -655,7 +655,7 @@ class DenseStore extends LifecycleAdapter implements Closeable
         Iterator<StorageProperty> properties();
     }
 
-    private static abstract class RelationshipIterator extends CursorIterator<RelationshipData> implements RelationshipData
+    private abstract static class RelationshipIterator extends CursorIterator<RelationshipData> implements RelationshipData
     {
         RelationshipIterator( Seeker<DenseStoreKey,DenseStoreValue> seek, Predicate<RelationshipData> filter )
         {
@@ -663,7 +663,7 @@ class DenseStore extends LifecycleAdapter implements Closeable
         }
     }
 
-    private static abstract class RelationshipPropertyIterator extends PrefetchingIterator<StorageProperty> implements StorageProperty
+    private abstract static class RelationshipPropertyIterator extends PrefetchingIterator<StorageProperty> implements StorageProperty
     {
     }
 }
