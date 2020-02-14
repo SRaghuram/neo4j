@@ -73,7 +73,7 @@ public class MigrateDataIntoOtherDatabase
         MutableIntIntMap fromToNodeIdTable = IntIntMaps.mutable.empty();
         try ( ResourceIterator<Node> nodes = fromTx.getAllNodes().iterator() )
         {
-            while ( nodes.hasNext() )
+            for ( int batch = 0; nodes.hasNext(); batch++ )
             {
                 try ( Transaction toTx = to.beginTx() )
                 {
@@ -84,13 +84,13 @@ public class MigrateDataIntoOtherDatabase
                         fromToNodeIdTable.put( toIntExact( fromNode.getId() ), toIntExact( toNode.getId() ) );
                     }
                     toTx.commit();
-                    System.out.println( "node batch completed" );
+                    System.out.println( "node batch " + batch + " completed" );
                 }
             }
         }
         try ( ResourceIterator<Relationship> relationships = fromTx.getAllRelationships().iterator() )
         {
-            while ( relationships.hasNext() )
+            for ( int batch = 0; relationships.hasNext(); batch++ )
             {
                 try ( Transaction toTx = to.beginTx() )
                 {
@@ -103,7 +103,7 @@ public class MigrateDataIntoOtherDatabase
                         fromRelationship.getAllProperties().forEach( toRelationship::setProperty );
                     }
                     toTx.commit();
-                    System.out.println( "relationship batch completed" );
+                    System.out.println( "relationship batch " + batch + " completed" );
                 }
             }
         }
