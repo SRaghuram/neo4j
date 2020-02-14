@@ -11,7 +11,7 @@ import com.neo4j.causalclustering.core.state.machines.CommandIndexTracker;
 import com.neo4j.causalclustering.discovery.FakeTopologyService;
 import com.neo4j.causalclustering.discovery.RoleInfo;
 import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.causalclustering.monitoring.ThroughputMonitor;
+import com.neo4j.causalclustering.monitoring.ThroughputMonitorService;
 import com.neo4j.dbms.EnterpriseOperatorState;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,7 +23,6 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import javax.ws.rs.core.Response;
 
@@ -48,7 +47,6 @@ import org.neo4j.time.SystemNanoClock;
 
 import static com.neo4j.causalclustering.discovery.FakeTopologyService.memberId;
 import static com.neo4j.causalclustering.discovery.FakeTopologyService.memberIds;
-import static java.time.temporal.ChronoUnit.SECONDS;
 import static java.util.stream.Collectors.toList;
 import static javax.ws.rs.core.Response.Status.NOT_FOUND;
 import static javax.ws.rs.core.Response.Status.OK;
@@ -96,8 +94,8 @@ class ReadReplicaStatusTest
         databaseHealth = dependencyResolver.satisfyDependency(
                 new DatabaseHealth( mock( DatabasePanicEventGenerator.class ), logProvider.getLog( DatabaseHealth.class ) ) );
         commandIndexTracker = dependencyResolver.satisfyDependency( new CommandIndexTracker() );
-        dependencyResolver.satisfyDependency(
-                new ThroughputMonitor( logProvider, clock, jobScheduler, Duration.of( 5, SECONDS ), commandIndexTracker::getAppliedCommandIndex ) );
+        var throughputMonitor = new ThroughputMonitorService( clock, jobScheduler, Duration.ofSeconds( 5 ), logProvider ).createMonitor( commandIndexTracker );
+        dependencyResolver.satisfyDependency( throughputMonitor );
 
         var internalDatabase = mock( org.neo4j.kernel.database.Database.class );
         when( internalDatabase.getNamedDatabaseId() ).thenReturn( new TestDatabaseIdRepository().defaultDatabase() );
@@ -213,10 +211,6 @@ class ReadReplicaStatusTest
     @Test
     void throughputNullWhenUnknown() throws IOException
     {
-        var throughputMonitor = mock( ThroughputMonitor.class );
-        when( throughputMonitor.throughput() ).thenReturn( Optional.empty() );
-        dependencyResolver.satisfyDependency( throughputMonitor );
-
         var description = status.description();
 
         var response = responseAsMap( description );

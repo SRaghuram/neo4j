@@ -6,118 +6,225 @@
 package com.neo4j.causalclustering.monitoring;
 
 import org.apache.commons.lang3.mutable.MutableInt;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
-import java.time.temporal.ChronoUnit;
-import java.util.Optional;
-import java.util.function.Supplier;
 
-import org.neo4j.test.FakeClockJobScheduler;
+import org.neo4j.logging.AssertableLogProvider;
+import org.neo4j.logging.FormattedLogProvider;
+import org.neo4j.logging.LogProvider;
+import org.neo4j.time.Clocks;
+import org.neo4j.time.FakeClock;
 
-import static com.neo4j.causalclustering.monitoring.ThroughputMonitor.SAMPLING_WINDOW_DIVISOR;
-import static java.time.temporal.ChronoUnit.SECONDS;
+import static java.util.concurrent.TimeUnit.MINUTES;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.neo4j.logging.NullLogProvider.nullLogProvider;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.neo4j.logging.AssertableLogProvider.Level.WARN;
+import static org.neo4j.logging.LogAssertions.assertThat;
 
 class ThroughputMonitorTest
 {
-    private FakeClockJobScheduler scheduler = new FakeClockJobScheduler();
+    private static final int START_VALUE = 0;
+    private final Duration warnThreshold = Duration.ofSeconds( 1 );
+    private final Duration samplingWindow = Duration.ofSeconds( 5 );
+    private final int samples = 5;
+    private final MutableInt value = new MutableInt( START_VALUE );
+    private final AssertableLogProvider logProvider = new AssertableLogProvider();
+    private final FakeClock clock = Clocks.fakeClock();
 
-    private Duration samplingWindow = Duration.of( 5, SECONDS );
-    private Duration samplingInterval = samplingWindow.dividedBy( SAMPLING_WINDOW_DIVISOR );
-    private Duration halfSamplingWindow = samplingWindow.dividedBy( 2 );
-    private Duration infinitesimal = Duration.of( 1, ChronoUnit.MILLIS );
+    ThroughputMonitorService throughputMonitorService = mock( ThroughputMonitorService.class );
 
-    private ThroughputMonitor monitor;
-    private MutableInt value = new MutableInt();
-    private Supplier<Long> valueSupplier = () -> value.longValue();
-
-    @BeforeEach
-    void before()
-    {
-        monitor = new ThroughputMonitor( nullLogProvider(), scheduler, scheduler, samplingWindow, valueSupplier );
-        monitor.start();
-    }
-
-    @AfterEach
-    void after()
-    {
-        monitor.stop();
-    }
+    private ThroughputMonitor monitor =
+            new ThroughputMonitor( logProvider, clock, warnThreshold, samplingWindow, samplingWindow.dividedBy( 2 ),
+                                   new QualitySampler<>( clock, Duration.ofDays( 1 ), value::longValue ), samples,
+                                   throughputMonitorService );
 
     @Test
     void shouldNotHaveThroughputInitially()
     {
-        Optional<Double> throughput = monitor.throughput();
-        assertFalse( throughput.isPresent() );
+        assertNoThroughput();
     }
 
     @Test
-    void shouldFailBeforeHalfOfTheSamplingWindow()
+    void shouldUnregisterOnStop()
     {
-        scheduler.forward( halfSamplingWindow.minus( infinitesimal ) );
-        assertFalse( monitor.throughput().isPresent() );
+        monitor.start();
+
+        monitor.stop();
+
+        verify( throughputMonitorService, times( 1 ) ).unregisterMonitor( monitor );
     }
 
     @Test
-    void shouldSucceedAfterHalfOfSamplingWindow()
+    void stoppedThroughputMonitorShouldNotGiveThroughput()
     {
-        scheduler.forward( halfSamplingWindow );
-        assertTrue( monitor.throughput().isPresent() );
+        monitor.start();
+        fillBuffer();
+        assertThat( monitor.throughput() ).isNotEmpty();
+        monitor.stop();
+        assertThat( monitor.throughput() ).isEmpty();
     }
 
     @Test
-    void shouldFailAfterOneAndHalfOfTheSamplingWindow()
+    void shouldNotSampleIfNotStarted()
     {
-        scheduler.forward( halfSamplingWindow.multipliedBy( 3 ).plus( infinitesimal ) );
-        assertFalse( monitor.throughput().isPresent() );
-    }
-
-    @Test
-    void shouldChooseBestEstimate()
-    {
-        // initial sample at start became: value 0 at 0 seconds
-
-        value.setValue( 10 );
-        scheduler.forward( samplingWindow.minus( samplingInterval ) ); // 4.875 seconds
-        value.setValue( 30 );
-        scheduler.forward( samplingInterval ); // "best" - exactly 5 seconds
-        value.setValue( 60 );
-        scheduler.forward( samplingInterval ); // 5.125 seconds
-
-        value.setValue( 100 );
-        scheduler.forward( samplingWindow.minus( samplingInterval ) ); // 10 seconds
-
-        Optional<Double> throughput = monitor.throughput(); // 10 seconds
-        assertTrue( throughput.isPresent() );
-        assertEquals( (100 - 30d) / samplingWindow.getSeconds(), throughput.get(), 0.01 );
-    }
-
-    @SuppressWarnings( "OptionalGetWithoutIsPresent" )
-    @Test
-    void shouldAdaptToChangeInRate()
-    {
-        for ( int i = 0; i < 100; i++ )
+        for ( int i = 0; i < samples; i++ )
         {
-            scheduler.forward( samplingInterval );
+            monitor.samplingTask();
+        }
+        assertNoThroughput();
+    }
+
+    @Test
+    void shouldNotProvideThroughputIfLastSampleIsOld()
+    {
+        monitor.start();
+
+        // capped logger is set to 1 min
+        clock.forward( 1, MINUTES );
+
+        for ( int i = 0; i < samples; i++ )
+        {
+            monitor.samplingTask();
+            value.increment();
+            clock.forward( 1, SECONDS );
         }
 
-        assertEquals( 0d, monitor.throughput().get(), 0.01 );
+        clock.forward( 1, SECONDS );
 
-        for ( int i = 0; i < 100; i++ )
+        var throughput = monitor.throughput();
+
+        assertNoThroughput();
+        assertThat( logProvider ).forClass( ThroughputMonitor.class ).forLevel( WARN )
+                .containsMessages( "Last measurement was made 2000 ms ago" );
+    }
+
+    @Test
+    void requireFullSetOfSamples()
+    {
+        monitor.start();
+
+        for ( int i = 0; i < samples - 1; i++ )
         {
-            value.add( 10 );
-            scheduler.forward( samplingInterval );
-
-            int valueDiff = Math.min( value.getValue(), 10 * SAMPLING_WINDOW_DIVISOR );
-            double expectedThroughput = (double) valueDiff / samplingWindow.getSeconds();
-
-            assertEquals( expectedThroughput, monitor.throughput().get(), 0.01 );
+            assertNoThroughput();
+            monitor.samplingTask();
+            value.increment();
+            clock.forward( 1, SECONDS );
         }
+        monitor.samplingTask();
+
+        var expectedThroughput = (value.getValue() - START_VALUE) * 1000.0 / clock.millis();
+
+        assertEquals( expectedThroughput, monitor.throughput().get() );
+    }
+
+    @Test
+    void shouldNotAcceptToSmallWindow()
+    {
+        monitor.start();
+
+        monitor.samplingTask();
+        monitor.samplingTask();
+        monitor.samplingTask();
+        monitor.samplingTask();
+        clock.forward( 2, SECONDS );
+        value.increment();
+        monitor.samplingTask();
+
+        var throughput = monitor.throughput();
+        assertThat( throughput ).isEmpty();
+    }
+
+    @Test
+    void shouldNotAcceptTooBigWindow()
+    {
+        monitor.start();
+
+        monitor.samplingTask();
+        monitor.samplingTask();
+        monitor.samplingTask();
+        monitor.samplingTask();
+        clock.forward( 8, SECONDS );
+        value.increment();
+        monitor.samplingTask();
+
+        var throughput = monitor.throughput();
+        assertThat( throughput ).isEmpty();
+    }
+
+    @Test
+    void shouldAcceptSightlyBigWindow()
+    {
+        monitor.start();
+
+        monitor.samplingTask();
+        monitor.samplingTask();
+        monitor.samplingTask();
+        monitor.samplingTask();
+        clock.forward( 7, SECONDS );
+        value.increment();
+        monitor.samplingTask();
+
+        var throughput = monitor.throughput();
+        assertThat( throughput ).isNotEmpty();
+    }
+
+    @Test
+    void shouldAcceptSightlySmallWindow()
+    {
+        monitor.start();
+
+        monitor.samplingTask();
+        monitor.samplingTask();
+        monitor.samplingTask();
+        monitor.samplingTask();
+        clock.forward( 3, SECONDS );
+        value.increment();
+        monitor.samplingTask();
+
+        var throughput = monitor.throughput();
+        assertThat( throughput ).isNotEmpty();
+    }
+
+    @Test
+    void shouldCalculateCorrectThroughputDespiteIrregularMeasurements()
+    {
+        monitor.start();
+
+        monitor.samplingTask();
+        clock.forward( 10, SECONDS );
+        value.increment();
+        monitor.samplingTask();
+        clock.forward( 1, SECONDS );
+        value.increment();
+        monitor.samplingTask();
+        clock.forward( 1, SECONDS );
+        value.increment();
+        monitor.samplingTask();
+        clock.forward( 1, SECONDS );
+        value.increment();
+        monitor.samplingTask();
+
+        var expectedThroughput = (value.getValue() - 1) * 1000.0 / 3_000;
+
+        assertEquals( expectedThroughput, monitor.throughput().get() );
+    }
+
+    private void fillBuffer()
+    {
+        for ( int i = 0; i < samples; i++ )
+        {
+            monitor.samplingTask();
+            clock.forward( 1, SECONDS );
+            value.increment();
+        }
+    }
+
+    private void assertNoThroughput()
+    {
+        assertThat( monitor.throughput() ).isEmpty();
     }
 }

@@ -67,7 +67,7 @@ import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 import com.neo4j.causalclustering.messaging.LoggingOutbound;
 import com.neo4j.causalclustering.messaging.Outbound;
 import com.neo4j.causalclustering.messaging.RaftOutbound;
-import com.neo4j.causalclustering.monitoring.ThroughputMonitor;
+import com.neo4j.causalclustering.monitoring.ThroughputMonitorService;
 import com.neo4j.causalclustering.upstream.NoOpUpstreamDatabaseStrategiesLoader;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionStrategy;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategiesLoader;
@@ -131,7 +131,6 @@ import org.neo4j.token.api.TokenHolder;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.raft_log_pruning_frequency;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.state_machine_apply_max_batch_size;
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.state_machine_flush_window_size;
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.status_throughput_window;
 import static java.lang.Thread.sleep;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.neo4j.graphdb.factory.EditionLocksFactories.createLockFactory;
@@ -223,7 +222,7 @@ class CoreDatabaseFactory
                 temporaryDatabaseFactory, databaseInitializer, debugLog, dbmsModel );
 
         CommandIndexTracker commandIndexTracker = dependencies.satisfyDependency( new CommandIndexTracker() );
-        initialiseStatusDescriptionEndpoint( dependencies, commandIndexTracker, life, debugLog );
+        initialiseStatusDescriptionEndpoint( dependencies, commandIndexTracker, life );
 
         long logThresholdMillis = config.get( CausalClusteringSettings.unknown_address_logging_throttle ).toMillis();
 
@@ -472,12 +471,9 @@ class CoreDatabaseFactory
         return new LeaderOnlyLockManager( localLocks );
     }
 
-    private void initialiseStatusDescriptionEndpoint( Dependencies dependencies, CommandIndexTracker commandIndexTracker, LifeSupport life,
-            DatabaseLogProvider debugLog )
+    private void initialiseStatusDescriptionEndpoint( Dependencies dependencies, CommandIndexTracker commandIndexTracker, LifeSupport life )
     {
-        Duration samplingWindow = config.get( status_throughput_window );
-        ThroughputMonitor throughputMonitor = new ThroughputMonitor( debugLog, clock, jobScheduler, samplingWindow,
-                commandIndexTracker::getAppliedCommandIndex );
+        var throughputMonitor = dependencies.resolveDependency( ThroughputMonitorService.class ).createMonitor( commandIndexTracker );
         life.add( throughputMonitor );
         dependencies.satisfyDependency( throughputMonitor );
     }

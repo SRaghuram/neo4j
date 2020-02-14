@@ -17,7 +17,7 @@ import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.error_handling.DatabasePanicker;
 import com.neo4j.causalclustering.error_handling.PanicService;
 import com.neo4j.causalclustering.identity.MemberId;
-import com.neo4j.causalclustering.monitoring.ThroughputMonitor;
+import com.neo4j.causalclustering.monitoring.ThroughputMonitorService;
 import com.neo4j.causalclustering.upstream.NoOpUpstreamDatabaseStrategiesLoader;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategiesLoader;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
@@ -27,7 +27,6 @@ import com.neo4j.dbms.DatabaseStartAborter;
 import com.neo4j.dbms.ReplicatedDatabaseEventService;
 import com.neo4j.dbms.ReplicatedDatabaseEventService.ReplicatedDatabaseEventDispatch;
 
-import java.time.Duration;
 import java.util.concurrent.Executor;
 import java.util.function.Supplier;
 
@@ -44,13 +43,11 @@ import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.time.SystemNanoClock;
 
-import static com.neo4j.causalclustering.core.CausalClusteringSettings.status_throughput_window;
 import static java.lang.String.format;
 
 class ReadReplicaDatabaseFactory
 {
     private final Config config;
-    private final SystemNanoClock clock;
     private final JobScheduler jobScheduler;
     private final TopologyService topologyService;
     private final MemberId myIdentity;
@@ -68,7 +65,6 @@ class ReadReplicaDatabaseFactory
             PanicService panicService, DatabaseStartAborter databaseStartAborter, PageCacheTracer pageCacheTracer )
     {
         this.config = config;
-        this.clock = clock;
         this.jobScheduler = jobScheduler;
         this.topologyService = topologyService;
         this.myIdentity = myIdentity;
@@ -92,7 +88,7 @@ class ReadReplicaDatabaseFactory
         LifeSupport clusterComponents = new LifeSupport();
         Executor catchupExecutor = jobScheduler.executor( Group.CATCHUP_CLIENT );
         CommandIndexTracker commandIndexTracker = databaseContext.dependencies().satisfyDependency( new CommandIndexTracker() );
-        initialiseStatusDescriptionEndpoint( commandIndexTracker, clusterComponents, databaseContext.dependencies(), internalLogProvider );
+        initialiseStatusDescriptionEndpoint( commandIndexTracker, clusterComponents, databaseContext.dependencies() );
 
         TimerService timerService = new TimerService( jobScheduler, internalLogProvider );
         ConnectToRandomCoreServerStrategy defaultStrategy = new ConnectToRandomCoreServerStrategy();
@@ -141,12 +137,9 @@ class ReadReplicaDatabaseFactory
         return new UpstreamDatabaseStrategySelector( defaultStrategy, loader, logProvider );
     }
 
-    private void initialiseStatusDescriptionEndpoint( CommandIndexTracker commandIndexTracker, LifeSupport life, Dependencies dependencies,
-            DatabaseLogProvider debugLog )
+    private void initialiseStatusDescriptionEndpoint( CommandIndexTracker commandIndexTracker, LifeSupport life, Dependencies dependencies )
     {
-        Duration samplingWindow = config.get( status_throughput_window );
-        ThroughputMonitor throughputMonitor = new ThroughputMonitor( debugLog, clock, jobScheduler, samplingWindow,
-                commandIndexTracker::getAppliedCommandIndex );
+        var throughputMonitor = dependencies.resolveDependency( ThroughputMonitorService.class ).createMonitor( commandIndexTracker );
         life.add( throughputMonitor );
         dependencies.satisfyDependency( throughputMonitor );
     }

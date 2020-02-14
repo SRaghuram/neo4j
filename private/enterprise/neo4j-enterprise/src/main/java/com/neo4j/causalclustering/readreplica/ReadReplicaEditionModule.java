@@ -23,6 +23,7 @@ import com.neo4j.causalclustering.discovery.procedures.ClusterOverviewProcedure;
 import com.neo4j.causalclustering.discovery.procedures.ReadReplicaRoleProcedure;
 import com.neo4j.causalclustering.error_handling.PanicService;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.monitoring.ThroughputMonitorService;
 import com.neo4j.causalclustering.net.InstalledProtocolHandler;
 import com.neo4j.dbms.ClusterSystemGraphDbmsModel;
 import com.neo4j.dbms.ClusteredDbmsReconcilerModule;
@@ -69,9 +70,11 @@ import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.procedure.builtin.routing.BaseRoutingProcedureInstaller;
+import org.neo4j.scheduler.Group;
 import org.neo4j.scheduler.JobScheduler;
 import org.neo4j.ssl.config.SslPolicyLoader;
 
+import static com.neo4j.causalclustering.core.CausalClusteringSettings.status_throughput_window;
 import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 
 /**
@@ -136,9 +139,21 @@ public class ReadReplicaEditionModule extends ClusteringEditionModule implements
         clusterStateLayout = ClusterStateLayout.of( dataDir );
         storageFactory = new ClusterStateStorageFactory( fileSystem, clusterStateLayout, logProvider, globalConfig );
 
+        addThroughputMonitorService();
+
         satisfyEnterpriseOnlyDependencies( this.globalModule );
 
         editionInvariants( globalModule, globalDependencies );
+    }
+
+    private void addThroughputMonitorService()
+    {
+        var jobScheduler = globalModule.getJobScheduler();
+        jobScheduler.setParallelism( Group.THROUGHPUT_MONITOR, 1 );
+        Duration throughputWindow = globalModule.getGlobalConfig().get( status_throughput_window );
+        var throughputMonitorService = new ThroughputMonitorService( globalModule.getGlobalClock(), jobScheduler, throughputWindow, logProvider );
+        globalModule.getGlobalLife().add( throughputMonitorService );
+        globalModule.getGlobalDependencies().satisfyDependencies( throughputMonitorService );
     }
 
     @Override

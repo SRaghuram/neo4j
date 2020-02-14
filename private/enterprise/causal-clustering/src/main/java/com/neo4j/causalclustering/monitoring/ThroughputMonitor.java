@@ -11,166 +11,101 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
-import java.util.OptionalDouble;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
 
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
-import org.neo4j.scheduler.Group;
-import org.neo4j.scheduler.JobHandle;
-import org.neo4j.scheduler.JobScheduler;
-import org.neo4j.util.VisibleForTesting;
+
+import static java.time.Duration.between;
+import static java.util.Optional.empty;
 
 public class ThroughputMonitor extends LifecycleAdapter
 {
-    @VisibleForTesting
-    static final int SAMPLING_WINDOW_DIVISOR = 8;
-
-    private final Log log;
-    private final Clock clock;
-    private final JobScheduler scheduler;
-    private final Semaphore samplingTaskLock = new Semaphore( 0, true ); // Fairness means the lock is given in arrival order.
-
-    private final Duration samplingWindow;
-    private final Duration samplingInterval;
+    private final int sampleSize;
+    private Duration period;
+    private final ThroughputMonitorService throughputMonitorService;
 
     private final QualitySampler<Long> qualitySampler;
-    private final CircularBuffer<Sample<Long>> samples = new CircularBuffer<>( SAMPLING_WINDOW_DIVISOR + 1 );
+    private final CircularBuffer<Sample<Long>> samples;
 
-    private JobHandle job;
+    private volatile boolean isRunning;
+    private final SamplesValidator samplesValidator;
 
     /**
-     * @param scheduler that allows scheduled execution
-     * @param samplingWindow the approximate time window over which throughput is estimated
-     * @param valueSupplier obtains the value being measured
+     * @param lagTolerance             limits how far behind the most recent sample can be for a successful throughput measurement
+     * @param period                   the desired duration period of a throughput measurement
+     * @param acceptedOffset           how much smaller or larger the actual sampled window may vary from the desired sampling window
+     * @param sampler                  sampler for obtaining samples
+     * @param sampleSize               amount of samples to store
+     * @param throughputMonitorService service of which to unregister during lifecycle stop.
      */
-    public ThroughputMonitor( LogProvider logProvider, Clock clock, JobScheduler scheduler, Duration samplingWindow, Supplier<Long> valueSupplier )
+    ThroughputMonitor( LogProvider logProvider, Clock clock, Duration lagTolerance, Duration period, Duration acceptedOffset,
+            QualitySampler<Long> sampler, int sampleSize, ThroughputMonitorService throughputMonitorService )
     {
-        this.log = logProvider.getLog( getClass() );
-        this.clock = clock;
-        this.scheduler = scheduler;
-
-        this.samplingWindow = samplingWindow;
-        this.samplingInterval = samplingWindow.dividedBy( SAMPLING_WINDOW_DIVISOR );
-
-        Duration samplingTolerance = samplingInterval.dividedBy( 2 );
-        this.qualitySampler = new QualitySampler<>( clock, samplingTolerance, valueSupplier );
+        this.period = period;
+        this.throughputMonitorService = throughputMonitorService;
+        this.samplesValidator = new SamplesValidator( logProvider.getLog( getClass() ), clock, lagTolerance, period, acceptedOffset );
+        this.sampleSize = sampleSize;
+        this.samples = new CircularBuffer<>( sampleSize );
+        this.qualitySampler = sampler;
     }
 
     @Override
     public void start()
     {
-        samplingTaskLock.release();
-        this.job = scheduler.scheduleRecurring( Group.THROUGHPUT_MONITOR, this::samplingTask, samplingInterval.toMillis(), TimeUnit.MILLISECONDS );
+        isRunning = true;
     }
 
     @Override
     public void stop()
     {
-        job.cancel();
-
-        // After cancelling the job, no new jobs will be scheduled.
-        // We drain the semaphore, blocking if necessary, to ensure that any on-going job will finish, and no enqueued jobs will start.
-        samplingTaskLock.acquireUninterruptibly();
+        isRunning = false;
+        throughputMonitorService.unregisterMonitor( this );
     }
 
-    private boolean tooEarly()
+    boolean samplingTask()
     {
-        if ( samples.size() == 0 )
+        if ( !isRunning )
         {
             return false;
         }
 
-        Sample<Long> lastSample = samples.read( samples.size() - 1 );
-        return Duration.between( lastSample.instant(), clock.instant() ).compareTo( samplingInterval ) < 0;
+        Optional<Sample<Long>> sample = qualitySampler.sample();
+        sample.ifPresent( s ->
+        {
+            synchronized ( samples )
+            {
+                samples.append( s );
+            }
+        } );
+        return sample.isPresent();
     }
 
-    private void samplingTask()
+    public Optional<Double> throughput()
     {
-        if ( samplingTaskLock.tryAcquire() )
+        if ( !isRunning )
         {
-            try
+            return empty();
+        }
+        Sample<Long> first;
+        Sample<Long> last;
+        synchronized ( samples )
+        {
+            last = samples.read( sampleSize - 1 );
+            if ( last == null )
             {
-                samplingTask0();
+                return empty();
             }
-            catch ( Throwable e )
-            {
-                log.error( "Sampling task failed exceptionally", e );
-            }
-            finally
-            {
-                samplingTaskLock.release();
-            }
+            first = findClosestSample( last.instant().minus( period ) );
         }
-    }
-
-    private void samplingTask0()
-    {
-        if ( tooEarly() )
+        if ( first == null || !samplesValidator.validSamples( first, last ) )
         {
-            return;
+            return empty();
         }
-
-        synchronized ( this )
-        {
-            Optional<Sample<Long>> sample = qualitySampler.sample();
-
-            if ( sample.isPresent() )
-            {
-                samples.append( sample.get() );
-            }
-            else
-            {
-                log.warn( "Sampling task failed" );
-            }
-        }
-    }
-
-    /**
-     * Get a high quality estimate of the the average throughput over the measured window.
-     * <p>
-     * To get a high quality estimate we take an up-to-date sample and then go looking for another
-     * older sample which fulfils some quality criteria (old enough, but not too old). If either
-     * of these cannot be found, then no estimate is returned.
-     *
-     * @return a high quality estimate of the throughput or {@link OptionalDouble#empty()} if one could not be produced.
-     */
-    public synchronized Optional<Double> throughput()
-    {
-        Optional<Sample<Long>> optSample = qualitySampler.sample();
-
-        if ( optSample.isEmpty() )
-        {
-            log.warn( "Sampling for throughput failed" );
-            return Optional.empty();
-        }
-
-        Sample<Long> latestSample = optSample.get();
-        Instant origin = latestSample.instant().minus( samplingWindow );
-        Sample<Long> bestOldSample = findClosestSample( origin );
-
-        if ( bestOldSample == null )
-        {
-            log.warn( "Throughput estimation failed due to lack of older sample" );
-            return Optional.empty();
-        }
-
-        Duration acceptableDelta = samplingWindow.dividedBy( 2 );
-        if ( Duration.between( bestOldSample.instant(), origin ).abs().compareTo( acceptableDelta ) > 0 )
-        {
-            log.warn( "Throughput estimation failed due to lack of acceptable older sample" );
-            return Optional.empty();
-        }
-
-        long timeDiffMillis = Duration.between( bestOldSample.instant(), latestSample.instant() ).toMillis();
-        long valueDiff = latestSample.value() - bestOldSample.value();
-
-        double ratePerSecond = valueDiff / (double) timeDiffMillis * 1000;
-
-        return Optional.of( ratePerSecond );
+        var dV = last.value() - first.value();
+        var dT = between( first.instant(), last.instant() ).toMillis();
+        var scaleToSecond = 1000.0;
+        return Optional.of( dV * scaleToSecond / dT );
     }
 
     private Sample<Long> findClosestSample( Instant origin )
@@ -199,5 +134,52 @@ public class ThroughputMonitor extends LifecycleAdapter
             }
         }
         return closestSample;
+    }
+
+    private static class SamplesValidator
+    {
+        private final Log log;
+        private final Clock clock;
+        private final Duration lagThreshold;
+        private final Duration expectedPeriod;
+
+        private final Duration acceptableOffset;
+
+        SamplesValidator( Log log, Clock clock, Duration lagThreshold, Duration expectedPeriod, Duration acceptableOffset )
+        {
+            this.log = log;
+            this.clock = clock;
+            this.lagThreshold = lagThreshold;
+            this.expectedPeriod = expectedPeriod;
+            this.acceptableOffset = acceptableOffset;
+        }
+
+        boolean validSamples( Sample<Long> first, Sample<Long> last )
+        {
+            return lastSampleUpToDate( last ) && measuredPeriodIsAcceptable( first, last );
+        }
+
+        private boolean lastSampleUpToDate( Sample<Long> lastSample )
+        {
+            var durationSinceLastSample = between( lastSample.instant(), clock.instant() );
+            if ( durationSinceLastSample.compareTo( lagThreshold ) > 0 )
+            {
+                log.warn( "Last measurement was made " + durationSinceLastSample.toMillis() + " ms ago" );
+                return false;
+            }
+            return true;
+        }
+
+        private boolean measuredPeriodIsAcceptable( Sample<Long> first, Sample<Long> last )
+        {
+            var measuredPeriod = between( first.instant(), last.instant() );
+            var diff = measuredPeriod.minus( expectedPeriod ).abs();
+            if ( diff.compareTo( acceptableOffset ) > 0 )
+            {
+                log.warn( "Sampled window is not within its bound. Expected %s s, was %s s", expectedPeriod, measuredPeriod );
+                return false;
+            }
+            return true;
+        }
     }
 }

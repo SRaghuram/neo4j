@@ -34,6 +34,7 @@ import com.neo4j.causalclustering.logging.NullRaftMessageLogger;
 import com.neo4j.causalclustering.logging.RaftMessageLogger;
 import com.neo4j.causalclustering.messaging.RaftChannelPoolService;
 import com.neo4j.causalclustering.messaging.RaftSender;
+import com.neo4j.causalclustering.monitoring.ThroughputMonitorService;
 import com.neo4j.causalclustering.net.BootstrapConfiguration;
 import com.neo4j.causalclustering.net.InstalledProtocolHandler;
 import com.neo4j.causalclustering.net.Server;
@@ -107,8 +108,10 @@ import org.neo4j.kernel.recovery.RecoveryFacade;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.procedure.builtin.routing.BaseRoutingProcedureInstaller;
+import org.neo4j.scheduler.Group;
 import org.neo4j.ssl.config.SslPolicyLoader;
 
+import static com.neo4j.causalclustering.core.CausalClusteringSettings.status_throughput_window;
 import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 import static org.neo4j.kernel.recovery.Recovery.recoveryFacade;
 
@@ -317,6 +320,8 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         RecoveryFacade recoveryFacade = recoveryFacade( globalModule.getFileSystem(), globalModule.getPageCache(), globalModule.getTracers(), globalConfig,
                 globalModule.getStorageEngineFactory() );
 
+        addThroughputMonitorService();
+
         this.coreDatabaseFactory = new CoreDatabaseFactory( globalModule, panicService, databaseManager, topologyService, storageFactory,
                 temporaryDatabaseFactory, databaseInitializerMap, myIdentity, raftGroupFactory, raftMessageDispatcher, catchupComponentsProvider,
                 recoveryFacade, raftLogger, raftSender, databaseEventService, dbmsModel, databaseStartAborter );
@@ -331,6 +336,16 @@ public class CoreEditionModule extends ClusteringEditionModule implements Abstra
         createCoreServers( globalLife, databaseManager, fileSystem );
         //Reconciler module must start last, as it starting starts actual databases, which depend on all of the above components at runtime.
         globalModule.getGlobalLife().add( reconcilerModule );
+    }
+
+    private void addThroughputMonitorService()
+    {
+        var jobScheduler = globalModule.getJobScheduler();
+        jobScheduler.setParallelism( Group.THROUGHPUT_MONITOR, 1 );
+        Duration throughputWindow = globalModule.getGlobalConfig().get( status_throughput_window );
+        var throughputMonitorService = new ThroughputMonitorService( globalModule.getGlobalClock(), jobScheduler, throughputWindow, logProvider );
+        globalModule.getGlobalLife().add( throughputMonitorService );
+        globalModule.getGlobalDependencies().satisfyDependencies( throughputMonitorService );
     }
 
     @Override

@@ -13,6 +13,7 @@ import com.neo4j.causalclustering.monitoring.ThroughputMonitor;
 
 import java.time.Duration;
 import java.util.Collection;
+import java.util.Optional;
 import javax.ws.rs.core.Response;
 
 import org.neo4j.common.DependencyResolver;

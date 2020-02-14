@@ -35,8 +35,8 @@ public class ClusterStatusResponse
         this.votingMembers = votingMembers.stream().map( member -> member.getUuid().toString() ).sorted().collect( Collectors.toList() );
         this.isHealthy = isHealthy;
         this.memberId = memberId.getUuid().toString();
-        this.leader = Optional.ofNullable( leader ).map( MemberId::getUuid ).map( UUID::toString ).orElse( null );
-        this.millisSinceLastLeaderMessage = Optional.ofNullable( millisSinceLastLeaderMessage ).map( Duration::toMillis ).orElse( null );
+        this.leader = leader == null ? null : leader.getUuid().toString();
+        this.millisSinceLastLeaderMessage = millisSinceLastLeaderMessage == null ? null : millisSinceLastLeaderMessage.toMillis();
         this.raftCommandsPerSecond = raftCommandsPerSecond;
         this.isCore = isCore;
     }
