@@ -57,8 +57,6 @@ class ExecutorConcurrencyTest
     static void beforeAll() throws KernelException
     {
 
-        PortUtils.Ports ports = PortUtils.findFreePorts();
-
         Map<String,String> configProperties = new HashMap<>();
         configProperties.put( "fabric.database.name", "mega" );
         configProperties.put( "fabric.graph.0.uri", "bolt://mega:1000" );
@@ -66,9 +64,8 @@ class ExecutorConcurrencyTest
         configProperties.put( "fabric.graph.2.uri", "bolt://mega:1002" );
         configProperties.put( "fabric.graph.3.uri", "bolt://mega:1003" );
         configProperties.put( "fabric.graph.4.uri", "bolt://mega:1004" );
-        configProperties.put( "fabric.routing.servers", "localhost:" + ports.bolt );
         configProperties.put( "fabric.driver.connection.encrypted", "false" );
-        configProperties.put( "dbms.connector.bolt.listen_address", "0.0.0.0:" + ports.bolt );
+        configProperties.put( "dbms.connector.bolt.listen_address", "0.0.0.0:0" );
         configProperties.put( "dbms.connector.bolt.enabled", "true" );
         configProperties.put( "fabric.stream.concurrency", "3" );
         configProperties.put( "fabric.stream.batch_size", "6" );
@@ -90,7 +87,7 @@ class ExecutorConcurrencyTest
                 .registerProcedure( ProxyFunctions.class );
 
         clientDriver = GraphDatabase.driver(
-                "neo4j://localhost:" + ports.bolt,
+                testServer.getBoltRoutingUri(),
                 AuthTokens.none(),
                 org.neo4j.driver.Config.builder()
                         .withoutEncryption()

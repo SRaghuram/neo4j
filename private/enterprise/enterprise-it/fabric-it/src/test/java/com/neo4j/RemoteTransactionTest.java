@@ -102,15 +102,13 @@ class RemoteTransactionTest
         FabricConfig.Graph graph2 = new FabricConfig.Graph( 2, FabricConfig.RemoteUri.create( "bolt://somewhere:1002" ), null, null, emptyDriverConfig() );
         FabricConfig.Graph graph3 = new FabricConfig.Graph( 3, FabricConfig.RemoteUri.create( "bolt://somewhere:1003" ), null, null, emptyDriverConfig() );
 
-        var ports = PortUtils.findFreePorts();
         var configProperties = Map.of(
                 "fabric.database.name", "mega",
                 "fabric.graph.1.uri", getUri( graph1 ),
                 "fabric.graph.2.uri", getUri( graph2 ),
                 "fabric.graph.3.uri", getUri( graph3 ),
-                "fabric.routing.servers", "localhost:" + ports.bolt,
                 "dbms.transaction.timeout", "1000",
-                "dbms.connector.bolt.listen_address", "0.0.0.0:" + ports.bolt,
+                "dbms.connector.bolt.listen_address", "0.0.0.0:0",
                 "dbms.connector.bolt.enabled", "true"
         );
         var config = Config.newBuilder().setRaw( configProperties ).build();
@@ -126,7 +124,7 @@ class RemoteTransactionTest
 
         mockFabricDatabaseManager();
 
-        clientDriver = GraphDatabase.driver( "bolt://localhost:" + ports.bolt, AuthTokens.none(),
+        clientDriver = GraphDatabase.driver( testServer.getBoltDirectUri(), AuthTokens.none(),
                 org.neo4j.driver.Config.builder()
                         .withMaxConnectionPoolSize( 3 )
                         .withoutEncryption().build() );

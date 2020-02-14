@@ -26,6 +26,7 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.helpers.NormalizedDatabaseName;
 import org.neo4j.configuration.helpers.NormalizedGraphName;
 import org.neo4j.configuration.helpers.SocketAddress;
+import org.neo4j.configuration.helpers.SocketAddressParser;
 import org.neo4j.logging.Level;
 
 import static org.apache.commons.lang3.builder.EqualsBuilder.reflectionEquals;
@@ -35,11 +36,12 @@ public class FabricConfig
 {
     private final boolean enabled;
     private final Database database;
-    private final List<SocketAddress> fabricServers;
     private final Duration routingTtl;
     private final Duration transactionTimeout;
     private final GlobalDriverConfig globalDriverConfig;
     private final DataStream dataStream;
+
+    private volatile List<SocketAddress> fabricServers;
 
     public FabricConfig(
             boolean enabled,
@@ -67,6 +69,11 @@ public class FabricConfig
     public List<SocketAddress> getFabricServers()
     {
         return fabricServers;
+    }
+
+    public void setFabricServers( List<SocketAddress> fabricServers )
+    {
+        this.fabricServers = fabricServers;
     }
 
     public Duration getRoutingTtl()
@@ -166,7 +173,11 @@ public class FabricConfig
 
         var dataStream = new DataStream( bufferLowWatermark, bufferSize, syncBatchSize, concurrency );
 
-        return new FabricConfig( true, database.get(), serverAddresses, routingTtl, transactionTimeout, remoteGraphDriver, dataStream );
+        var fabricConfig = new FabricConfig( true, database.get(), serverAddresses, routingTtl, transactionTimeout, remoteGraphDriver, dataStream );
+
+        config.addListener( FabricSettings.fabricServersSetting, ( oldValue, newValue ) -> fabricConfig.setFabricServers( newValue ) );
+
+        return fabricConfig;
     }
 
     private static Optional<Database> parseDatabase( Config config )
@@ -559,7 +570,8 @@ public class FabricConfig
                             throw new IllegalArgumentException( "Host name and port must be provided: " + uris );
                         }
                     } )
-                    .map( uri -> new SocketAddress( uri.getHost(), uri.getPort() ) )
+                    // IPv6 address will be in [] which is invalid from socket perspective. SocketAddressParser can deal with it
+                    .map( uri -> SocketAddressParser.socketAddress( uri.getHost() + ":" + uri.getPort(), SocketAddress::new ) )
                     .collect( Collectors.toList() );
         }
 

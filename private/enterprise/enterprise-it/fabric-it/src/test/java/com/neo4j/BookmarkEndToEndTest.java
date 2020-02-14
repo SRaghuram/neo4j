@@ -52,21 +52,20 @@ class BookmarkEndToEndTest
     static void beforeAll()
     {
 
-        var remote1Ports = PortUtils.findFreePorts();
-        remote1 = new TestBoltServer( remote1Ports.bolt );
+        remote1 = new TestBoltServer();
+        remote2 = new TestBoltServer();
 
-        var remote2Ports = PortUtils.findFreePorts();
-        remote2 = new TestBoltServer( remote2Ports.bolt );
-
-        var fabricServerPorts = PortUtils.findFreePorts();
+        List.<Runnable>of(
+                () -> remote1.start(),
+                () -> remote2.start()
+        ).parallelStream().forEach( Runnable::run );
 
         var configProperties = Map.of(
                 "fabric.database.name", "mega",
-                "fabric.graph.0.uri", String.format( "bolt://localhost:%s", remote1Ports.bolt ),
-                "fabric.graph.1.uri", String.format( "bolt://localhost:%s", remote2Ports.bolt ),
-                "fabric.routing.servers", "localhost:" + fabricServerPorts.bolt,
+                "fabric.graph.0.uri", remote1.getBoltUri().toString(),
+                "fabric.graph.1.uri", remote2.getBoltUri().toString(),
                 "fabric.driver.connection.encrypted", "false",
-                "dbms.connector.bolt.listen_address", "0.0.0.0:" + fabricServerPorts.bolt,
+                "dbms.connector.bolt.listen_address", "0.0.0.0:0",
                 "dbms.connector.bolt.enabled", "true"
         );
 
@@ -74,20 +73,15 @@ class BookmarkEndToEndTest
                 .setRaw( configProperties )
                 .build();
         testServer = new TestServer( config );
+        testServer.start();
 
         clientDriver = GraphDatabase.driver(
-                "neo4j://localhost:" + fabricServerPorts.bolt,
+                testServer.getBoltRoutingUri(),
                 AuthTokens.none(),
                 org.neo4j.driver.Config.builder()
                         .withoutEncryption()
                         .withMaxConnectionPoolSize( 3 )
                         .build() );
-
-        List.<Runnable>of(
-                () -> remote1.start(),
-                () -> remote2.start(),
-                () -> testServer.start()
-        ).parallelStream().forEach( Runnable::run );
     }
 
     @AfterAll

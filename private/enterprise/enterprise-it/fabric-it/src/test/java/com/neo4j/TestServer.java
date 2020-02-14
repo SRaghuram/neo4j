@@ -5,7 +5,11 @@
  */
 package com.neo4j;
 
+import com.neo4j.fabric.config.FabricSettings;
+
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -14,7 +18,11 @@ import java.util.List;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.connectors.BoltConnector;
+import org.neo4j.configuration.connectors.ConnectorPortRegister;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.api.DatabaseManagementService;
+import org.neo4j.internal.helpers.HostnamePort;
 import org.neo4j.io.fs.FileUtils;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.lifecycle.LifeSupport;
@@ -25,7 +33,10 @@ public class TestServer implements AutoCloseable
     private final LifeSupport lifeSupport = new LifeSupport();
     private final List<Object> mocks = new ArrayList<>();
     private Dependencies dependencies;
+    // instance of config that was supplied
     private Config config;
+    // instance of config that was created by DBMS
+    private Config runtimeConfig;
     private DatabaseManagementService dbms;
     private Path directory;
     private boolean databaseRootDirProvided;
@@ -77,12 +88,20 @@ public class TestServer implements AutoCloseable
         {
             dbmsBuilder.setUserLogProvider( logService.getUserLogProvider() );
         }
-        this.dbms = dbmsBuilder.setConfig( config )
-                .build();
+        this.dbms = dbmsBuilder.setConfig( config ).build();
 
         dependencies = dbmsBuilder.getDependencies();
 
         lifeSupport.start();
+
+        runtimeConfig = dependencies.resolveDependency( Config.class );
+
+        var hostPort = getHostnamePort();
+        if ( hostPort != null )
+        {
+            runtimeConfig.setDynamic( FabricSettings.fabricServersSetting, List.of( new SocketAddress( hostPort.getHost(), hostPort.getPort() ) ),
+                    "TestServer" );
+        }
     }
 
     public void stop()
@@ -146,5 +165,39 @@ public class TestServer implements AutoCloseable
     public Dependencies getDependencies()
     {
         return dependencies;
+    }
+
+    public URI getBoltRoutingUri()
+    {
+        return getBoltUri( "neo4j" );
+    }
+
+    public URI getBoltDirectUri()
+    {
+        return getBoltUri( "bolt" );
+    }
+
+    private URI getBoltUri( String scheme )
+    {
+        HostnamePort hostPort = getHostnamePort();
+        try
+        {
+            return new URI( scheme, null, hostPort.getHost(), hostPort.getPort(), null, null, null );
+        }
+        catch ( URISyntaxException x )
+        {
+            throw new IllegalArgumentException( x.getMessage(), x );
+        }
+    }
+
+    public HostnamePort getHostnamePort()
+    {
+        var portRegister = dependencies.resolveDependency( ConnectorPortRegister.class );
+        return portRegister.getLocalAddress( BoltConnector.NAME );
+    }
+
+    public Config getRuntimeConfig()
+    {
+        return runtimeConfig;
     }
 }

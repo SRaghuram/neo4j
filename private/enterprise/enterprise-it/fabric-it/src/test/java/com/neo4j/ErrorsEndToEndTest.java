@@ -57,13 +57,11 @@ class ErrorsEndToEndTest
                 .withFixture( "MATCH (e {name:'Carrie'}), (c {name:'Eve'}) CREATE (e)-[:RESPONSIBLE_FOR {since: date('2019-03-01'), dummyMarker:true}]->(c)" )
                 .withFixture( "MATCH (c {name:'Carrie'}), (b {name:'Bob'}) CREATE (c)-[:SUPERVISES]->(b)" )
                 .build();
-        var ports = PortUtils.findFreePorts();
         var configProperties = Map.of(
                 "fabric.database.name", "mega",
                 "fabric.graph.0.uri", remote.boltURI().toString(),
-                "fabric.routing.servers", "localhost:" + ports.bolt,
                 "fabric.driver.connection.encrypted", "false",
-                "dbms.connector.bolt.listen_address", "0.0.0.0:" + ports.bolt,
+                "dbms.connector.bolt.listen_address", "0.0.0.0:0",
                 "dbms.connector.bolt.enabled", "true" );
         var config = Config.newBuilder().setRaw( configProperties ).build();
         testServer = new TestServer( config );
@@ -71,7 +69,7 @@ class ErrorsEndToEndTest
         testServer.start();
 
         clientDriver = GraphDatabase.driver(
-                "neo4j://localhost:" + ports.bolt,
+                testServer.getBoltRoutingUri(),
                 AuthTokens.none(),
                 org.neo4j.driver.Config.builder()
                         .withMaxConnectionPoolSize( 3 )

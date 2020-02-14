@@ -49,6 +49,7 @@ public class FabricSettings implements SettingsDeclaration
     public static Setting<List<SocketAddress>> fabricServersSetting = newBuilder( "fabric.routing.servers",
             SettingValueParsers.listOf( SettingValueParsers.SOCKET_ADDRESS ),
             List.of(new SocketAddress( "localhost", 7687 )))
+            .dynamic()
             .build();
 
     @Description( "Name of the Fabric database. Only one Fabric database is currently supported per Neo4j instance." )

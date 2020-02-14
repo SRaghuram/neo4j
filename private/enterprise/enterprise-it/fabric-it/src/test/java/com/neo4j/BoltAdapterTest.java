@@ -82,11 +82,8 @@ class BoltAdapterTest
     @BeforeAll
     static void setUpServer() throws UnavailableException
     {
-        PortUtils.Ports ports = PortUtils.findFreePorts();
-
         var configProperties = Map.of(
-                "fabric.routing.servers", "localhost:" + ports.bolt,
-                "dbms.connector.bolt.listen_address", "0.0.0.0:" + ports.bolt,
+                "dbms.connector.bolt.listen_address", "0.0.0.0:0",
                 "dbms.connector.bolt.enabled", "true"
         );
 
@@ -109,7 +106,7 @@ class BoltAdapterTest
                 Duration.ZERO, transactionIdTracker );
         testServer.addMocks( databaseManagementService, databaseManager );
         testServer.start();
-        driver = GraphDatabase.driver( "bolt://localhost:" +  ports.bolt, AuthTokens.none(), Config.builder()
+        driver = GraphDatabase.driver( testServer.getBoltDirectUri(), AuthTokens.none(), Config.builder()
                 .withMaxConnectionPoolSize( 3 )
                 .withoutEncryption()
                 .build() );

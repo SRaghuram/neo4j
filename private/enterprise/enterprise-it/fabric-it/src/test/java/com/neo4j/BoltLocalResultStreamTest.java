@@ -38,14 +38,11 @@ class BoltLocalResultStreamTest
     @BeforeAll
     static void setUp() throws KernelException
     {
-
-        PortUtils.Ports ports = PortUtils.findFreePorts();
         var configProperties = Map.of(
                 "fabric.database.name", "mega",
                 "fabric.graph.0.uri", "neo4j://somewhere:6666",
-                "fabric.routing.servers", "localhost:" + ports.bolt,
                 "fabric.driver.connection.encrypted", "false",
-                "dbms.connector.bolt.listen_address", "0.0.0.0:" + ports.bolt,
+                "dbms.connector.bolt.listen_address", "0.0.0.0:0",
                 "dbms.connector.bolt.enabled", "true"
         );
 
@@ -58,7 +55,7 @@ class BoltLocalResultStreamTest
                 .registerFunction( ProxyFunctions.class );
 
         clientDriver = GraphDatabase.driver(
-                "neo4j://localhost:" + ports.bolt,
+                testServer.getBoltRoutingUri(),
                 AuthTokens.none(),
                 org.neo4j.driver.Config.builder()
                         .withMaxConnectionPoolSize( 3 )

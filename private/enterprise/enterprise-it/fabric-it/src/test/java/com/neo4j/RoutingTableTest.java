@@ -5,6 +5,7 @@
  */
 package com.neo4j;
 
+import com.neo4j.fabric.config.FabricSettings;
 import com.neo4j.utils.ProxyFunctions;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -18,6 +19,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
@@ -34,19 +36,15 @@ class RoutingTableTest
 {
     private static Driver clientDriver;
     private static TestServer testServer;
-    private static PortUtils.Ports ports;
 
     @BeforeAll
     static void setUp() throws KernelException
     {
-        ports = PortUtils.findFreePorts();
-
         var configProperties = Map.of(
                 "fabric.database.name", "mega",
                 "fabric.graph.0.uri", "neo4j://somewhere:1234",
                 "fabric.routing.ttl", "1234000",
-                "fabric.routing.servers", "localhost:" + ports.bolt + ",host1:1001,host2:1002,host3:1003",
-                "dbms.connector.bolt.listen_address", "0.0.0.0:" + ports.bolt,
+                "dbms.connector.bolt.listen_address", "0.0.0.0:0",
                 "dbms.connector.bolt.enabled", "true"
         );
 
@@ -57,16 +55,30 @@ class RoutingTableTest
 
         testServer.start();
 
+        var hostPort = testServer.getHostnamePort();
+        var newRoutingTable = List.of(
+                socket( hostPort.getHost(), hostPort.getPort() ),
+                socket( "host1", 1001 ),
+                socket( "host2", 1002 ),
+                socket( "host3", 1003 )
+        );
+        testServer.getRuntimeConfig().setDynamic( FabricSettings.fabricServersSetting, newRoutingTable, "RoutingTableTest" );
+
         testServer.getDependencies().resolveDependency( GlobalProceduresRegistry.class )
                 .registerFunction( ProxyFunctions.class );
 
         clientDriver = GraphDatabase.driver(
-                "neo4j://localhost:" + ports.bolt,
+                testServer.getBoltRoutingUri(),
                 AuthTokens.none(),
                 org.neo4j.driver.Config.builder()
                         .withMaxConnectionPoolSize( 3 )
                         .withoutEncryption()
                         .build() );
+    }
+
+    private static SocketAddress socket( String host, int port )
+    {
+        return new SocketAddress( host, port );
     }
 
     @AfterAll
@@ -90,7 +102,10 @@ class RoutingTableTest
         var record1 = records.get( 0 );
         assertEquals( 1234, record1.get( 0 ).asLong() );
         Value serverList = record1.get( 1 );
-        verifyRole( serverList, "ROUTE", "localhost:" + ports.bolt, "host1:1001", "host2:1002", "host3:1003" );
+        var hostPort = testServer.getHostnamePort();
+        // to get the required formatting of IPv6 addresses
+        var serverAddress = new SocketAddress( hostPort.getHost(), hostPort.getPort() ).toString();
+        verifyRole( serverList, "ROUTE", serverAddress, "host1:1001", "host2:1002", "host3:1003" );
     }
 
     private void verifyRole( Value serverList, String role, String... servers )

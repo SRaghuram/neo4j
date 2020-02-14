@@ -46,13 +46,11 @@ class PermissionsEndToEndTest
 
         remote = Neo4jBuilders.newInProcessBuilder()
                 .build();
-        var ports = PortUtils.findFreePorts();
         var configProperties = Map.of(
                 "fabric.database.name", "mega",
                 "fabric.graph.0.uri", remote.boltURI().toString(),
-                "fabric.routing.servers", "localhost:" + ports.bolt,
                 "fabric.driver.connection.encrypted", "false",
-                "dbms.connector.bolt.listen_address", "0.0.0.0:" + ports.bolt,
+                "dbms.connector.bolt.listen_address", "0.0.0.0:0",
                 "dbms.connector.bolt.enabled", "true",
                 "dbms.security.auth_enabled", "true" );
         var config = Config.newBuilder().setRaw( configProperties ).build();
@@ -63,7 +61,7 @@ class PermissionsEndToEndTest
         testServer.getDependencies().resolveDependency( GlobalProceduresRegistry.class )
                 .registerFunction( ProxyFunctions.class );
 
-        try ( var initDriver = createDriver( "neo4j", "neo4j", ports.bolt ) )
+        try ( var initDriver = createDriver( "neo4j", "neo4j" ) )
         {
             try ( var tx = begin( initDriver, "system" ) )
             {
@@ -72,7 +70,7 @@ class PermissionsEndToEndTest
             }
         }
 
-        adminDriver = createDriver( "neo4j", "1234", ports.bolt );
+        adminDriver = createDriver( "neo4j", "1234" );
 
         try ( var tx = adminDriver.session( SessionConfig.builder().withDatabase( "system" ).build() ).beginTransaction() )
         {
@@ -85,8 +83,8 @@ class PermissionsEndToEndTest
             tx.commit();
         }
 
-        accessDriver = createDriver( "userWithAccessPermission", "1234", ports.bolt );
-        noPermissionDriver = createDriver( "userWithNoPermission", "1234", ports.bolt );
+        accessDriver = createDriver( "userWithAccessPermission", "1234" );
+        noPermissionDriver = createDriver( "userWithNoPermission", "1234" );
     }
 
     @AfterAll
@@ -234,10 +232,10 @@ class PermissionsEndToEndTest
         assertEquals( "`PatternComprehension` should have been rewritten away", e.getMessage() );
     }
 
-    private static Driver createDriver( String user, String password, int boltPort )
+    private static Driver createDriver( String user, String password )
     {
         return GraphDatabase.driver(
-                "neo4j://localhost:" + boltPort,
+                testServer.getBoltRoutingUri(),
                 AuthTokens.basic( user, password ),
                 org.neo4j.driver.Config.builder()
                         .withMaxConnectionPoolSize( 3 )

@@ -96,8 +96,6 @@ class FabricExecutorTest
     @Inject
     TestDirectory testDirectory;
 
-    private final PortUtils.Ports ports = PortUtils.findFreePorts();
-
     private Config config;
     private TestServer testServer;
     private Driver clientDriver;
@@ -124,8 +122,7 @@ class FabricExecutorTest
                 .set( FabricSettings.databaseName, "mega" )
                 .set( FabricSettings.GraphSetting.of( "0" ).uris, List.of( URI.create( "bolt://localhost:1111" ) ) )
                 .set( FabricSettings.GraphSetting.of( "1" ).uris, List.of( URI.create( "bolt://localhost:2222" ) ) )
-                .set( FabricSettings.fabricServersSetting, List.of( new SocketAddress( "localhost", ports.bolt ) ) )
-                .set( BoltConnector.listen_address, new SocketAddress( "0.0.0.0", ports.bolt ) )
+                .set( BoltConnector.listen_address, new SocketAddress( "0.0.0.0", 0 ) )
                 .set( BoltConnector.enabled, true )
                 .set( GraphDatabaseSettings.log_queries, GraphDatabaseSettings.LogQueryLevel.VERBOSE )
                 .build();
@@ -142,7 +139,7 @@ class FabricExecutorTest
                 .addMonitorListener( queryExecutionMonitor );
 
         clientDriver = GraphDatabase.driver(
-                "bolt://localhost:" + ports.bolt,
+                testServer.getBoltDirectUri(),
                 AuthTokens.none(),
                 org.neo4j.driver.Config.builder()
                         .withMaxConnectionPoolSize( 3 )

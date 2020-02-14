@@ -73,18 +73,15 @@ class TransactionIntegrationTest
         remote0 = Neo4jBuilders.newInProcessBuilder().build();
         remote1 = Neo4jBuilders.newInProcessBuilder().build();
 
-        PortUtils.Ports ports = PortUtils.findFreePorts();
-
         var configProperties = Map.of(
                 "fabric.database.name", "mega",
                 "fabric.graph.0.uri", remote0.boltURI().toString(),
                 "fabric.graph.1.uri", remote1.boltURI().toString(),
-                "fabric.routing.servers", "localhost:" + ports.bolt,
                 "fabric.driver.connection.encrypted", "false",
                 "fabric.stream.buffer.low_watermark", "1",
                 "fabric.stream.batch_size", "1",
                 "fabric.stream.buffer.size", "10",
-                "dbms.connector.bolt.listen_address", "0.0.0.0:" + ports.bolt,
+                "dbms.connector.bolt.listen_address", "0.0.0.0:0",
                 "dbms.connector.bolt.enabled", "true"
         );
 
@@ -99,7 +96,7 @@ class TransactionIntegrationTest
                 .registerFunction( ProxyFunctions.class );
 
         clientDriver = GraphDatabase.driver(
-                "neo4j://localhost:" + ports.bolt,
+                testServer.getBoltRoutingUri(),
                 AuthTokens.none(),
                 org.neo4j.driver.Config.builder()
                         .withoutEncryption()

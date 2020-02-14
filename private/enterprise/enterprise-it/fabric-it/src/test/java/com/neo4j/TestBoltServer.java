@@ -5,6 +5,8 @@
  */
 package com.neo4j;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
@@ -14,7 +16,9 @@ import org.neo4j.bolt.dbapi.BoltGraphDatabaseManagementServiceSPI;
 import org.neo4j.bolt.runtime.BoltConnectionMetricsMonitor;
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
+import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
+import org.neo4j.internal.helpers.HostnamePort;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
 import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.kernel.api.net.NetworkConnectionTracker;
@@ -39,15 +43,16 @@ public class TestBoltServer
     private final JobScheduler jobScheduler = JobSchedulerFactory.createScheduler();
     private final Config config;
     private final Dependencies dependencies = new Dependencies();
+    private final ConnectorPortRegister connectorPortRegister = new ConnectorPortRegister();
     private BoltServer boltServer;
 
     BoltGraphDatabaseManagementServiceSPI boltGraphDatabaseManagementService = mock( BoltGraphDatabaseManagementServiceSPI.class );
 
-    public TestBoltServer( int port )
+    public TestBoltServer()
     {
         var configProperties = Map.of(
                 "fabric.driver.connection.encrypted", "false",
-                "dbms.connector.bolt.listen_address", "0.0.0.0:" + port,
+                "dbms.connector.bolt.listen_address", "0.0.0.0:0",
                 "dbms.connector.bolt.enabled", "true"
         );
 
@@ -86,7 +91,7 @@ public class TestBoltServer
 
         boltServer = new BoltServer( boltGraphDatabaseManagementService,
                 jobScheduler,
-                mock( ConnectorPortRegister.class ),
+                connectorPortRegister,
                 networkConnectionTracker,
                 dbIdRepository,
                 config,
@@ -118,6 +123,19 @@ public class TestBoltServer
         catch ( Exception e )
         {
             throw new IllegalStateException( "Failed to stop test Bolt server", e );
+        }
+    }
+
+    public URI getBoltUri()
+    {
+        HostnamePort hostPort = connectorPortRegister.getLocalAddress( BoltConnector.NAME );
+        try
+        {
+            return new URI( "bolt", null, hostPort.getHost(), hostPort.getPort(), null, null, null );
+        }
+        catch ( URISyntaxException x )
+        {
+            throw new IllegalArgumentException( x.getMessage(), x );
         }
     }
 }

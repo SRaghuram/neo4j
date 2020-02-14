@@ -75,17 +75,14 @@ class EndToEndTest
         shard0 = Neo4jBuilders.newInProcessBuilder().withProcedure( ShardFunctions.class ).build();
         shard1 = Neo4jBuilders.newInProcessBuilder().withProcedure( ShardFunctions.class ).build();
 
-        PortUtils.Ports ports = PortUtils.findFreePorts();
-
         var configProperties = Map.of(
                 "fabric.database.name", "mega",
                 "fabric.graph.0.uri", shard0.boltURI().toString(),
                 "fabric.graph.0.name", "myGraph0",
                 "fabric.graph.1.uri", shard1.boltURI().toString(),
                 "fabric.graph.1.name", "myGraph1",
-                "fabric.routing.servers", "localhost:" + ports.bolt,
                 "fabric.driver.connection.encrypted", "false",
-                "dbms.connector.bolt.listen_address", "0.0.0.0:" + ports.bolt,
+                "dbms.connector.bolt.listen_address", "0.0.0.0:0",
                 "dbms.connector.bolt.enabled", "true"
         );
 
@@ -103,7 +100,7 @@ class EndToEndTest
                 .registerProcedure( ProxyFunctions.class );
 
         clientDriver = GraphDatabase.driver(
-                "neo4j://localhost:" + ports.bolt,
+                testServer.getBoltRoutingUri(),
                 AuthTokens.none(),
                 org.neo4j.driver.Config.builder()
                         .withoutEncryption()

@@ -51,17 +51,13 @@ class CredentialsTest
     private final AuthSubject authSubject = mock( AuthSubject.class );
     private Driver driver;
     private TestServer testServer;
-    private PortUtils.Ports ports;
 
     @BeforeEach
     void setUp() throws InvalidAuthTokenException, UnavailableException
     {
-        ports = PortUtils.findFreePorts();
-
         var configProperties = Map.of(
                 "fabric.database.name", "mega",
-                "fabric.routing.servers", "localhost:" + ports.bolt,
-                "dbms.connector.bolt.listen_address", "0.0.0.0:" + ports.bolt,
+                "dbms.connector.bolt.listen_address", "0.0.0.0:0",
                 "dbms.connector.bolt.enabled", "true"
         );
 
@@ -139,7 +135,7 @@ class CredentialsTest
 
     private void createDriver( AuthToken authToken )
     {
-        driver = GraphDatabase.driver( "bolt://localhost:" + ports.bolt, authToken, Config.builder()
+        driver = GraphDatabase.driver( testServer.getBoltDirectUri(), authToken, Config.builder()
                 .withMaxConnectionPoolSize( 1 )
                 .withoutEncryption()
                 .build() );
