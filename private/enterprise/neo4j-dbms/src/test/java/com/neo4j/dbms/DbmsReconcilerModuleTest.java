@@ -38,7 +38,6 @@ import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
 import static java.util.Collections.singletonList;
 import static java.util.Collections.singletonMap;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -52,8 +51,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.neo4j.kernel.database.DatabaseIdRepository.NAMED_SYSTEM_DATABASE_ID;
 import static org.neo4j.logging.NullLogProvider.nullLogProvider;
-import static org.neo4j.test.conditions.Conditions.TRUE;
 import static org.neo4j.test.assertion.Assert.assertEventually;
+import static org.neo4j.test.conditions.Conditions.TRUE;
 
 @ExtendWith( LifeExtension.class )
 class DbmsReconcilerModuleTest
