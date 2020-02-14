@@ -12,6 +12,7 @@ import org.neo4j.cypher.internal.runtime.ast.RuntimeExpression
 import org.neo4j.cypher.internal.runtime.ast.RuntimeProperty
 import org.neo4j.cypher.internal.runtime.ast.RuntimeVariable
 
+// These first three case classes are used to null check primitive entities stored in long slots
 case class NullCheck(offset: Int, inner: Expression) extends RuntimeExpression
 
 // This needs to be used to be able to rewrite an expression declared as a LogicalVariable
@@ -31,3 +32,6 @@ case class NullCheckProperty(offset: Int, inner: LogicalProperty) extends Runtim
       copy(offset = newOffset, inner = newInner).asInstanceOf[this.type]
   }
 }
+
+// This is used to null check an AnyValue variable stored in a ref slot
+case class NullCheckReference(offset: Int, inner: Expression) extends RuntimeExpression

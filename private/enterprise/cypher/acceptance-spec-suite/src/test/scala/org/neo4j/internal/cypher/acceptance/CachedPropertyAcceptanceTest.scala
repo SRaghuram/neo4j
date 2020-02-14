@@ -211,4 +211,50 @@ class CachedPropertyAcceptanceTest extends ExecutionEngineFunSuite with CypherCo
     res.toList should contain theSameElementsAs List(Map("y.prop" -> 2))
   }
 
+  test("should handle cached property on null entity") {
+    val a = createLabeledNode("A")
+
+    val query = """MATCH (a:A)
+                  |OPTIONAL MATCH (a)-[r:R]->(b:B)
+                  |WITH a, {
+                  |  x: b,
+                  |  y: b.prop,
+                  |  z: b.prop
+                  |} as m
+                  |RETURN a, m""".stripMargin
+
+    val result = executeWith(Configs.CachedProperty, query)
+
+    result.executionPlanDescription() should includeSomewhere.
+      aPlan("Projection").containingArgument("{m : {x: b, y: cache[b.prop], z: cache[b.prop]}}")
+
+    result.toList should equal(List(Map("a" -> a,
+                                        "m" -> Map("x" -> null,
+                                                   "y" -> null,
+                                                   "z" -> null))))
+  }
+
+  test("should handle cached property on null entity passed through list") {
+    val a = createLabeledNode("A")
+
+    val query = """MATCH (a:A)
+                  |OPTIONAL MATCH (a)-[r:R]->(b:B)
+                  |WITH collect(b)[0] as c, a
+                  |WITH a, {
+                  |  x: c,
+                  |  y: c.prop,
+                  |  z: c.prop
+                  |} as m
+                  |RETURN a, m""".stripMargin
+
+    val result = executeWith(Configs.CachedProperty, query)
+
+    result.executionPlanDescription() should includeSomewhere.
+      aPlan("Projection").containingArgument("{m : {x: c, y: cache[c.prop], z: cache[c.prop]}}")
+
+    result.toList should equal(List(Map("a" -> a,
+                                        "m" -> Map("x" -> null,
+                                                   "y" -> null,
+                                                   "z" -> null))))
+  }
 }

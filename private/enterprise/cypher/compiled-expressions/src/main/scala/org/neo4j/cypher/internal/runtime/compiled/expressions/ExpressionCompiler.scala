@@ -224,7 +224,7 @@ import org.neo4j.internal.kernel.api.RelationshipScanCursor
 import org.neo4j.internal.kernel.api.procs.Neo4jTypes
 import org.neo4j.internal.kernel.api.procs.Neo4jTypes.AnyType
 import org.neo4j.kernel.api.StatementConstants
-import org.neo4j.kernel.api.StatementConstants.NO_SUCH_NODE
+import org.neo4j.kernel.api.StatementConstants.NO_SUCH_ENTITY
 import org.neo4j.kernel.impl.util.ValueUtils
 import org.neo4j.kernel.impl.util.ValueUtils.asAnyValue
 import org.neo4j.values.AnyValue
@@ -1596,7 +1596,7 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
       val getAndCacheProperty =
         block(
           declareAndAssign(typeRefOf[Value], variableName, noValue),
-          condition(and(notEqual(entityId, constant(NO_SUCH_NODE)), notEqual(loadField(f), constant(-1))))(
+          condition(and(notEqual(entityId, constant(NO_SUCH_ENTITY)), notEqual(loadField(f), constant(-1))))(
             checkPropertyTxState(
                 block(
                   assign(variableName,
@@ -1834,6 +1834,9 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
     case IsPrimitiveNull(offset) =>
       Some(IntermediateExpression(ternary(equal(getLongAt(offset), constant(-1L)), trueValue, falseValue),
                                   Seq.empty, Seq.empty, Set.empty))
+
+    case NullCheckReference(offset, inner) =>
+      intermediateCompileExpression(inner).map(i => i.copy(nullChecks = i.nullChecks + equal(getRefAt(offset), noValue), requireNullCheck = true))
 
     case _ => None
   }

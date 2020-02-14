@@ -180,6 +180,8 @@ class SlottedRewriter(tokenContext: TokenContext) {
             else
               propExpression
 
+          // The map-expression is always checked for NO_VALUE at runtime by the Property command expression,
+          // which is why we do not need an explicit null-check here when the slot is nullable
           case RefSlot(offset, _, _) =>
             prop.copy(map = ReferenceFromSlot(offset, key))(prop.position)
         }
@@ -188,21 +190,29 @@ class SlottedRewriter(tokenContext: TokenContext) {
         slotConfiguration(variable.name) match {
           case LongSlot(offset, _, cypherType) if
           (cypherType == CTNode && entityType == NODE_TYPE) || (cypherType == CTRelationship && entityType == RELATIONSHIP_TYPE) =>
-            tokenContext.getOptPropertyKeyId(propKey) match {
+            val propExpression = tokenContext.getOptPropertyKeyId(propKey) match {
               case Some(propId) => ast.SlottedCachedPropertyWithPropertyToken(originalEntityName, pkn, offset, offsetIsForLongSlot = true, propId, slotConfiguration.getCachedPropertyOffsetFor(prop), entityType)
               case None => ast.SlottedCachedPropertyWithoutPropertyToken(originalEntityName, pkn, offset, offsetIsForLongSlot = true, propKey, slotConfiguration.getCachedPropertyOffsetFor(prop), entityType)
             }
+            // Primitive entities are always null-checked by the CachedNodeProperty command expression itself at runtime,
+            // which is why we do not need an explicit null-check here when the slot is nullable
+            propExpression
+
           case slot@LongSlot(_, _, _) =>
             throw new InternalException(s"Unexpected type on slot '$slot' for cached property $prop")
 
           // We can skip checking the type of the refslot. We will only get cached properties, if semantic analysis determined that an expression is
           // a node or a relationship. We loose this information for RefSlots for some expressions, otherwise we would have allocated long slots
           // in the first place.
-          case RefSlot(offset, _, _) =>
-            tokenContext.getOptPropertyKeyId(propKey) match {
+          case RefSlot(offset, nullable, _) =>
+            val propExpression = tokenContext.getOptPropertyKeyId(propKey) match {
               case Some(propId) => ast.SlottedCachedPropertyWithPropertyToken(originalEntityName, pkn, offset, offsetIsForLongSlot = false, propId, slotConfiguration.getCachedPropertyOffsetFor(prop), entityType)
               case None => ast.SlottedCachedPropertyWithoutPropertyToken(originalEntityName, pkn, offset, offsetIsForLongSlot = false, propKey, slotConfiguration.getCachedPropertyOffsetFor(prop), entityType)
             }
+            if (nullable)
+              NullCheckReference(offset, propExpression)
+            else
+              propExpression
         }
 
       case e@Equals(Variable(k1), Variable(k2)) =>
