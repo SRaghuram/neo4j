@@ -272,7 +272,7 @@ class MutableNodeRecordData
         return this.forwardPointer;
     }
 
-    void serialize( ByteBuffer buffer )
+    void serialize( ByteBuffer buffer, SimpleBigValueStore bigPropertyValueStore )
     {
         buffer.clear();
         int offsetHeaderPosition = buffer.position();
@@ -289,7 +289,7 @@ class MutableNodeRecordData
         if ( properties.notEmpty() )
         {
             propertiesOffset = buffer.position();
-            writeProperties( properties, buffer );
+            writeProperties( properties, buffer, bigPropertyValueStore );
         }
         int relationshipsOffset = relationships.notEmpty() ? buffer.position() : 0;
 
@@ -329,7 +329,7 @@ class MutableNodeRecordData
                         // this to efficiently be able to skip through to a specific properties set
                         int blockSizeHeaderOffset = buffer.position();
                         buffer.put( (byte) 0 );
-                        writeProperties( relationship.properties, buffer );
+                        writeProperties( relationship.properties, buffer, bigPropertyValueStore );
                         int blockSize = buffer.position() - blockSizeHeaderOffset;
                         buffer.put( blockSizeHeaderOffset, safeCastIntToUnsignedByte( blockSize ) );
                     }
@@ -364,11 +364,11 @@ class MutableNodeRecordData
         buffer.putInt( offsetHeaderPosition, fw | ((endOffset & 0x3FF) << 20) | ((relationshipsOffset & 0x3FF) << 10) | propertiesOffset & 0x3FF );
     }
 
-    private static void writeProperties( MutableIntObjectMap<Value> properties, ByteBuffer buffer )
+    private static void writeProperties( MutableIntObjectMap<Value> properties, ByteBuffer buffer, SimpleBigValueStore bigPropertyValueStore )
     {
         int[] propertyKeys = properties.keySet().toSortedArray();
         writeIntDeltas( propertyKeys, buffer );
-        PropertyValueFormat writer = new PropertyValueFormat( buffer );
+        PropertyValueFormat writer = new PropertyValueFormat( bigPropertyValueStore, buffer );
         for ( int propertyKey : propertyKeys )
         {
             properties.get( propertyKey ).writeTo( writer );

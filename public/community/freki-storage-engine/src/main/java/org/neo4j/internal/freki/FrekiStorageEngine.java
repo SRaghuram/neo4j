@@ -160,7 +160,8 @@ public class FrekiStorageEngine implements StorageEngine
             }
             bigPropertyValueStore =
                     new BigPropertyValueStore( fs, databaseLayout.file( "big-values" ), pageCache, false, createStoreIfNotExists, cursorTracerSupplier );
-            denseStore = new DenseStore( pageCache, databaseLayout.file( "dense-store" ), recoveryCleanupWorkCollector, false, pageCacheTracer );
+            denseStore = new DenseStore( pageCache, databaseLayout.file( "dense-store" ), recoveryCleanupWorkCollector, false, pageCacheTracer,
+                    bigPropertyValueStore );
             relationshipsIdGenerator =
                     idGeneratorFactory.create( pageCache, databaseLayout.relationshipStore(), IdType.RELATIONSHIP, 0, false, Long.MAX_VALUE, false,
                             cursorTracerSupplier.get(), Sets.immutable.empty() );

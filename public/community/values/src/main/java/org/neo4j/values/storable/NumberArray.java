@@ -34,7 +34,7 @@ public abstract class NumberArray extends ArrayValue
     abstract int compareTo( FloatingPointArray other );
 
     @Override
-    int unsafeCompareTo( Value otherValue )
+    public int unsafeCompareTo( Value otherValue )
     {
         if ( otherValue instanceof IntegralArray )
         {

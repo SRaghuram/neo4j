@@ -121,7 +121,7 @@ class MutableNodeRecordDataTest
     {
         //Given
         ByteBuffer buffer = ByteBuffer.wrap( new byte[256] );
-        record.serialize( buffer );
+        record.serialize( buffer, null );
 
         //When
         buffer.position( 0 );

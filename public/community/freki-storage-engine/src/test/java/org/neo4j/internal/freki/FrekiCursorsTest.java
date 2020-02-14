@@ -97,7 +97,7 @@ abstract class FrekiCursorsTest
             {
                 try
                 {
-                    data.serialize( record.dataForWriting() );
+                    data.serialize( record.dataForWriting(), stores.bigPropertyValueStore );
                 }
                 catch ( BufferOverflowException e )
                 {
@@ -108,12 +108,12 @@ abstract class FrekiCursorsTest
                     {
                         Record largeRecord = largeStore.newRecord( largeData.id );
                         largeRecord.setFlag( FLAG_IN_USE, true );
-                        largeData.serialize( largeRecord.dataForWriting() );
+                        largeData.serialize( largeRecord.dataForWriting(), stores.bigPropertyValueStore );
                         largeStore.write( largeCursor, largeRecord );
                     }
 
                     data.setForwardPointer( forwardPointer( largeStore.recordSizeExponential(), false, largeData.id ) );
-                    data.serialize( record.dataForWriting() );
+                    data.serialize( record.dataForWriting(), stores.bigPropertyValueStore );
                 }
                 store.write( cursor, record );
             }

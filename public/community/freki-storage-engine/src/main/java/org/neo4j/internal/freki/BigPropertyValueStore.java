@@ -35,7 +35,8 @@ class BigPropertyValueStore extends BareBoneStore implements SimpleBigValueStore
 {
     private static final int LENGTH_SIZE = 4;
 
-    private final AtomicLong nextPosition = new AtomicLong();
+    // TODO Ehrm, reserved 8B for writing the position in the header, but don't care about that now
+    private final AtomicLong nextPosition = new AtomicLong( Long.BYTES );
 
     BigPropertyValueStore( FileSystemAbstraction fs, File file, PageCache pageCache, boolean readOnly,
             boolean createIfNotExists, PageCursorTracerSupplier tracerSupplier )
@@ -44,12 +45,11 @@ class BigPropertyValueStore extends BareBoneStore implements SimpleBigValueStore
     }
 
     @Override
-    public long write( PageCursor cursor, ByteBuffer buffer ) throws IOException
+    public void write( PageCursor cursor, ByteBuffer buffer, long position ) throws IOException
     {
         int length = buffer.remaining();
-        long cursorPosition = advanceStorePosition( length );
-        long page = cursorPosition / pageSize;
-        int offset = (int) (cursorPosition % pageSize);
+        long page = position / pageSize;
+        int offset = (int) (position % pageSize);
         goToPage( cursor, page );
         cursor.setOffset( offset );
         cursor.putInt( length );
@@ -64,7 +64,6 @@ class BigPropertyValueStore extends BareBoneStore implements SimpleBigValueStore
                 goToNextPage( cursor );
             }
         }
-        return cursorPosition;
     }
 
     @Override
@@ -129,7 +128,8 @@ class BigPropertyValueStore extends BareBoneStore implements SimpleBigValueStore
      * to write parts of that int in one page and part on the next page, so if there's less than 4 bytes available on the current page
      * it will skip to the next page and start there instead.
      */
-    private long advanceStorePosition( int length )
+    @Override
+    public long allocateSpace( int length )
     {
         long expect;
         long pos;

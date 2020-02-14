@@ -68,7 +68,7 @@ class DenseStoreTest
     @BeforeEach
     void start()
     {
-        store = new DenseStore( pageCache, directory.file( "store" ), immediate(), false, PageCacheTracer.NULL );
+        store = new DenseStore( pageCache, directory.file( "store" ), immediate(), false, PageCacheTracer.NULL, null );
     }
 
     @AfterEach
