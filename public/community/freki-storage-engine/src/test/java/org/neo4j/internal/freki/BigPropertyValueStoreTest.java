@@ -73,7 +73,8 @@ class BigPropertyValueStoreTest
                 for ( int i = 0; i < datas.length; i++ )
                 {
                     byte[] data = datas[i] = randomData( random.random() );
-                    positions[i] = store.write( cursor, wrap( data ) );
+                    positions[i] = store.allocateSpace( data.length );
+                    store.write( cursor, wrap( data ), positions[i] );
                 }
             }
 
@@ -105,7 +106,8 @@ class BigPropertyValueStoreTest
                 byte[] data = randomData( ThreadLocalRandom.current() );
                 try ( PageCursor cursor = store.openWriteCursor() )
                 {
-                    long position = store.write( cursor, ByteBuffer.wrap( data ) );
+                    long position = store.allocateSpace( data.length );
+                    store.write( cursor, ByteBuffer.wrap( data ), position );
                     expectedData[i].put( position, data );
                 }
             } ), 100 );

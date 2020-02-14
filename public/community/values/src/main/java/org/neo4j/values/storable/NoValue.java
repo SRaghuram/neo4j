@@ -123,7 +123,7 @@ public final class NoValue extends Value
     }
 
     @Override
-    int unsafeCompareTo( Value other )
+    public int unsafeCompareTo( Value other )
     {
         return 0;
     }

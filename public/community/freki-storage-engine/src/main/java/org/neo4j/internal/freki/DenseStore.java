@@ -68,9 +68,12 @@ class DenseStore extends LifecycleAdapter implements Closeable
 
     private final DenseStoreLayout layout;
     private final GBPTree<DenseStoreKey,DenseStoreValue> tree;
+    private final SimpleBigValueStore bigPropertyValueStore;
 
-    DenseStore( PageCache pageCache, File file, RecoveryCleanupWorkCollector collector, boolean readOnly, PageCacheTracer tracer )
+    DenseStore( PageCache pageCache, File file, RecoveryCleanupWorkCollector collector, boolean readOnly, PageCacheTracer tracer,
+            SimpleBigValueStore bigPropertyValueStore )
     {
+        this.bigPropertyValueStore = bigPropertyValueStore;
         this.layout = new DenseStoreLayout();
         this.tree = new GBPTree<>( pageCache, file, layout, 0, GBPTree.NO_MONITOR, GBPTree.NO_HEADER_READER, GBPTree.NO_HEADER_WRITER, collector, readOnly,
                 tracer, Sets.immutable.empty() );
@@ -286,7 +289,7 @@ class DenseStore extends LifecycleAdapter implements Closeable
         void deleteNode( long nodeId );
     }
 
-    private static class DenseStoreLayout extends Layout.Adapter<DenseStoreKey,DenseStoreValue>
+    private class DenseStoreLayout extends Layout.Adapter<DenseStoreKey,DenseStoreValue>
     {
         DenseStoreLayout()
         {
@@ -529,7 +532,7 @@ class DenseStore extends LifecycleAdapter implements Closeable
         }
     }
 
-    private static class DenseStoreValue
+    private class DenseStoreValue
     {
         // TODO for simplicity just have this a ByteBuffer so that the other serialize/deserialize stuff can be used in here too
         // TODO let's just make up some upper limit here and the rest will go to big-value store anyway
@@ -566,7 +569,7 @@ class DenseStore extends LifecycleAdapter implements Closeable
         {
             if ( propertyValueFormat == null )
             {
-                propertyValueFormat = new PropertyValueFormat( data );
+                propertyValueFormat = new PropertyValueFormat( bigPropertyValueStore, data );
             }
             return propertyValueFormat;
         }
