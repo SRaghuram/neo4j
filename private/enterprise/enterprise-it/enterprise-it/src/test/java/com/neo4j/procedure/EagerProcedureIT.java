@@ -5,7 +5,6 @@
  */
 package com.neo4j.procedure;
 
-import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,9 +34,7 @@ import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.jar.JarBuilder;
 import org.neo4j.test.rule.TestDirectory;
 
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsString;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.procedure.Mode.READ;
@@ -63,7 +60,7 @@ public class EagerProcedureIT
             // Then we can run an eagerized destructive procedure
             Result res = transaction.execute( "MATCH (n) WHERE n.key = 'value' " + "WITH n CALL com.neo4j.procedure.deleteNeighboursEagerized(n, 'FOLLOWS') " +
                     "YIELD value RETURN value" );
-            assertThat( "Should get as many rows as original nodes", res.resultAsString(), containsString( "2 rows" ) );
+            assertThat( res.resultAsString() ).as( "Should get as many rows as original nodes" ).contains( "2 rows" );
             transaction.commit();
         }
     }
@@ -80,7 +77,7 @@ public class EagerProcedureIT
             QueryExecutionException exception = assertThrows( QueryExecutionException.class, () -> transaction.execute(
                     "MATCH (n) WHERE n.key = 'value' " + "WITH n CALL com.neo4j.procedure.deleteNeighboursNotEagerized(n, 'FOLLOWS') " +
                             "YIELD value RETURN value" ) );
-            assertThat( exception.getMessage(), equalTo( "Node with id 1 has been deleted in this transaction" ) );
+            assertThat( exception.getMessage() ).isEqualTo( "Node with id 1 has been deleted in this transaction" );
         }
     }
 
@@ -97,8 +94,8 @@ public class EagerProcedureIT
             Result res = transaction.execute(
                     "MATCH (n) WHERE n.key = 'value' " + "CALL com.neo4j.procedure.findNeighboursNotEagerized(n) " + "YIELD relationship AS r, node as m " +
                             "DELETE r, m RETURN true" );
-            assertThat( "Should get one fewer rows than original nodes", res.resultAsString(), containsString( (count - 1) + " rows" ) );
-            assertThat( "The plan description should contain the 'Eager' operation", res.getExecutionPlanDescription().toString(), containsString( "+Eager" ) );
+            assertThat( res.resultAsString() ).as( "Should get one fewer rows than original nodes" ).contains( (count - 1) + " rows" );
+            assertThat( res.getExecutionPlanDescription().toString() ).as( "The plan description should contain the 'Eager' operation" ).contains( "+Eager" );
             transaction.commit();
         }
     }
@@ -112,8 +109,7 @@ public class EagerProcedureIT
             Result res = transaction.execute(
                     "EXPLAIN MATCH (n) WHERE n.key = 'value' " + "WITH n CALL com.neo4j.procedure.deleteNeighboursEagerized(n, 'FOLLOWS') " +
                             "YIELD value RETURN value" );
-            assertThat( "The plan description should contain the 'Eager' operation",
-                    res.getExecutionPlanDescription().toString(), containsString( "+Eager" ) );
+            assertThat( res.getExecutionPlanDescription().toString() ).as( "The plan description should contain the 'Eager' operation" ).contains( "+Eager" );
             transaction.commit();
         }
     }
@@ -127,8 +123,8 @@ public class EagerProcedureIT
             Result res = transaction.execute(
                     "EXPLAIN MATCH (n) WHERE n.key = 'value' " + "WITH n CALL com.neo4j.procedure.deleteNeighboursNotEagerized(n, 'FOLLOWS') " +
                             "YIELD value RETURN value" );
-            assertThat( "The plan description shouldn't contain the 'Eager' operation", res.getExecutionPlanDescription().toString(),
-                    Matchers.not( containsString( "+Eager" ) ) );
+            assertThat( res.getExecutionPlanDescription().toString() ).as( "The plan description shouldn't contain the 'Eager' operation" )
+                    .doesNotContain( "+Eager" );
             transaction.commit();
         }
     }

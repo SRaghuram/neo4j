@@ -69,8 +69,7 @@ import org.neo4j.test.server.HTTP;
 import org.neo4j.time.Clocks;
 import org.neo4j.time.FakeClock;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.startsWith;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
@@ -130,7 +129,7 @@ class TransactionGuardIT
             }
         } );
 
-        assertThat( exception.getMessage(), startsWith( "The transaction has been terminated." ) );
+        assertThat( exception.getMessage() ).startsWith( "The transaction has been terminated." );
         assertEquals( Status.Transaction.TransactionTimedOut, exception.status() );
 
         assertDatabaseDoesNotHaveNodes( database );
@@ -174,7 +173,7 @@ class TransactionGuardIT
                 transaction.createNode();
             }
         } );
-        assertThat( exception.getMessage(), startsWith( "The transaction has been terminated." ) );
+        assertThat( exception.getMessage() ).startsWith( "The transaction has been terminated." );
 
         assertDatabaseDoesNotHaveNodes( database );
     }
@@ -196,7 +195,7 @@ class TransactionGuardIT
                 tx.execute( "create (n)" );
             }
         } );
-        assertThat( exception.getMessage(), startsWith( "The transaction has been terminated." ) );
+        assertThat( exception.getMessage() ).startsWith( "The transaction has been terminated." );
 
         assertDatabaseDoesNotHaveNodes( database );
     }
@@ -224,7 +223,7 @@ class TransactionGuardIT
                 tx.execute( "create (n)" );
             }
         } );
-        assertThat( exception.getMessage(), startsWith( "The transaction has been terminated." ) );
+        assertThat( exception.getMessage() ).startsWith( "The transaction has been terminated." );
 
         assertDatabaseDoesNotHaveNodes( database );
     }
@@ -350,7 +349,7 @@ class TransactionGuardIT
                 tx.execute( "create (n)" );
             }
         } );
-        assertThat( exception.getMessage(), startsWith( "The transaction has been terminated." ) );
+        assertThat( exception.getMessage() ).startsWith( "The transaction has been terminated." );
 
         assertDatabaseDoesNotHaveNodes( database );
 

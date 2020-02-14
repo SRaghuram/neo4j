@@ -28,9 +28,8 @@ import org.neo4j.test.rule.DbmsRule;
 import org.neo4j.test.rule.OtherThreadRule;
 
 import static com.neo4j.kernel.impl.locking.DeferringStatementLocksFactory.Configuration.deferred_locks_enabled;
-import static org.hamcrest.Matchers.instanceOf;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.neo4j.internal.helpers.collection.Iterables.count;
 
@@ -176,7 +175,7 @@ public class DeferringLocksIT
         catch ( TransactionFailureException e )
         {
             // Node was already deleted, fine.
-            assertThat( e.getCause(), instanceOf( InvalidRecordException.class ) );
+            assertThat( e.getCause() ).isInstanceOf( InvalidRecordException.class );
         }
 
         future.get();

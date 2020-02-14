@@ -29,8 +29,7 @@ import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.Neo4jLayoutExtension;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.hasItem;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -161,8 +160,8 @@ class DefaultDatabaseSelectionIT
     {
         DatabaseManager<?> databaseManager = getDatabaseManager( database );
         Set<String> databases = databaseManager.registeredDatabases().keySet().stream().map( NamedDatabaseId::name ).collect( Collectors.toSet() );
-        assertThat( databases, hasItem( new NormalizedDatabaseName( databaseName ).name() ) );
-        assertThat( databases, hasItem( SYSTEM_DATABASE_NAME ) );
+        assertThat( databases ).contains( new NormalizedDatabaseName( databaseName ).name() );
+        assertThat( databases ).contains( SYSTEM_DATABASE_NAME );
     }
 
     private void prepareLegacyStandalone( String databaseName ) throws IOException

@@ -13,9 +13,7 @@ import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.extension.Inject;
 
-import static co.unruly.matchers.OptionalMatchers.empty;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.not;
+import static org.assertj.core.api.Assertions.assertThat;
 
 @EnterpriseDbmsExtension
 class StandaloneDatabaseIdRepositoryInvalidateIT
@@ -34,14 +32,14 @@ class StandaloneDatabaseIdRepositoryInvalidateIT
         var databaseIdRepository = databaseManager.databaseIdRepository();
         var databaseName = "woot";
 
-        assertThat( databaseIdRepository.getByName( databaseName ), empty() );
+        assertThat( databaseIdRepository.getByName( databaseName ) ).isEmpty();
 
         dbms.createDatabase( databaseName );
 
-        assertThat( databaseIdRepository.getByName( databaseName ), not( empty() ) );
+        assertThat( databaseIdRepository.getByName( databaseName ) ).isNotEmpty();
 
         dbms.dropDatabase( databaseName );
 
-        assertThat( databaseIdRepository.getByName( databaseName ), empty() );
+        assertThat( databaseIdRepository.getByName( databaseName ) ).isEmpty();
     }
 }

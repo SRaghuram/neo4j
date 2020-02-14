@@ -49,8 +49,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.commons.lang3.exception.ExceptionUtils.getRootCause;
-import static org.hamcrest.Matchers.instanceOf;
-import static org.hamcrest.Matchers.is;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
@@ -196,7 +195,7 @@ public class SessionResetIT
         }
         catch ( Exception e )
         {
-            assertThat( e, instanceOf( ExecutionException.class ) );
+            assertThat( e ).isInstanceOf( ExecutionException.class );
             assertTrue( isTransactionTerminatedException( e.getCause() ) );
         }
 

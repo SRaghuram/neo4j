@@ -17,8 +17,7 @@ import org.neo4j.cli.CommandFailedException;
 import org.neo4j.cli.ExecutionContext;
 import org.neo4j.io.fs.FileUtils;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.startsWith;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -31,7 +30,7 @@ class RestoreCommandIT extends AbstractCommandIT
         File testBackup = testDirectory.directory( "testbackup" );
         FileUtils.copyRecursively( databaseAPI.databaseLayout().databaseDirectory(), testBackup );
         CommandFailedException exception = assertThrows( CommandFailedException.class, () -> restoreDatabase( databaseName, testBackup.toPath() ) );
-        assertThat( exception.getMessage(), startsWith( "The database is in use. Stop database" ) );
+        assertThat( exception.getMessage() ).startsWith( "The database is in use. Stop database" );
     }
 
     @Test

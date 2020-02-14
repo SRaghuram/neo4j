@@ -33,8 +33,7 @@ import org.neo4j.time.Clocks;
 import static java.time.Duration.ofMinutes;
 import static java.time.Duration.ofSeconds;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -86,7 +85,7 @@ class TransactionIdTrackerIT
         var lastCommittedTxId = lastCommittedTxId( nonSystemDb );
         var newestTransactionId = tracker.newestTransactionId( databaseId );
 
-        assertThat( lastCommittedTxId, greaterThanOrEqualTo( 42L ) );
+        assertThat( lastCommittedTxId ).isGreaterThanOrEqualTo( 42L );
         assertEquals( lastCommittedTxId, newestTransactionId );
     }
 
@@ -100,7 +99,7 @@ class TransactionIdTrackerIT
         var lastCommittedTxIdAfter = lastCommittedTxId( SYSTEM_DATABASE_NAME );
         var newestTransactionId = tracker.newestTransactionId( databaseId( SYSTEM_DATABASE_NAME ) );
 
-        assertThat( lastCommittedTxIdAfter, greaterThanOrEqualTo( lastCommittedTxIdBefore + 5 ) );
+        assertThat( lastCommittedTxIdAfter ).isGreaterThanOrEqualTo( lastCommittedTxIdBefore + 5 );
         assertEquals( lastCommittedTxIdAfter, newestTransactionId );
     }
 

@@ -68,11 +68,7 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonList;
-import static org.hamcrest.CoreMatchers.containsString;
-import static org.hamcrest.CoreMatchers.startsWith;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.core.IsEqual.equalTo;
-import static org.hamcrest.core.IsNull.nullValue;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -150,7 +146,7 @@ public class ProcedureIT
             Result res = tx.execute( "CALL com.neo4j.procedure.simpleArgument", map( "name", 42L ) );
 
             // Then
-            assertThat( res.next(), equalTo( map( "someVal", 42L ) ) );
+            assertThat( res.next() ).isEqualTo( map( "someVal", 42L ) );
             assertFalse( res.hasNext() );
         }
     }
@@ -164,7 +160,7 @@ public class ProcedureIT
             Result res = transaction.execute( "CALL com.neo4j.procedure.simpleArgumentWithDefault" );
 
             // Then
-            assertThat( res.next(), equalTo( map( "someVal", 42L ) ) );
+            assertThat( res.next() ).isEqualTo( map( "someVal", 42L ) );
             assertFalse( res.hasNext() );
             transaction.commit();
         }
@@ -179,8 +175,8 @@ public class ProcedureIT
             Result res = transaction.execute( "CALL com.neo4j.procedure.inheritedOutput" );
 
             // Then
-            assertThat( res.next(), equalTo( map( "someVal", 42L, "anotherVal", "a" ) ) );
-            assertThat( res.next(), equalTo( map( "someVal", 42L, "anotherVal", "b" ) ) );
+            assertThat( res.next() ).isEqualTo( map( "someVal", 42L, "anotherVal", "a" ) );
+            assertThat( res.next() ).isEqualTo( map( "someVal", 42L, "anotherVal", "b" ) );
             assertFalse( res.hasNext() );
             transaction.commit();
         }
@@ -195,7 +191,7 @@ public class ProcedureIT
             Result res = transaction.execute( "CALL com.neo4j.procedure.simpleArgumentWithDefault() YIELD someVal as n RETURN n + 1295 as val" );
 
             // Then
-            assertThat( res.next(), equalTo( map( "val", 1337L ) ) );
+            assertThat( res.next() ).isEqualTo( map( "val", 1337L ) );
             assertFalse( res.hasNext() );
             transaction.commit();
         }
@@ -210,7 +206,7 @@ public class ProcedureIT
             Result res = transaction.execute( "CALL com.neo4j.procedure.defaultValues" );
 
             // Then
-            assertThat( res.next(), equalTo( map( "string", "a string", "integer", 42L, "aFloat", 3.14, "aBoolean", true ) ) );
+            assertThat( res.next() ).isEqualTo( map( "string", "a string", "integer", 42L, "aFloat", 3.14, "aBoolean", true ) );
             assertFalse( res.hasNext() );
             transaction.commit();
         }
@@ -225,7 +221,7 @@ public class ProcedureIT
             Result res = transaction.execute( "CALL com.neo4j.procedure.defaultValues('another string')" );
 
             // Then
-            assertThat( res.next(), equalTo( map( "string", "another string", "integer", 42L, "aFloat", 3.14, "aBoolean", true ) ) );
+            assertThat( res.next() ).isEqualTo( map( "string", "another string", "integer", 42L, "aFloat", 3.14, "aBoolean", true ) );
             assertFalse( res.hasNext() );
             transaction.commit();
         }
@@ -240,7 +236,7 @@ public class ProcedureIT
             Result res = transaction.execute( "CALL com.neo4j.procedure.defaultValues('another string', 1337)" );
 
             // Then
-            assertThat( res.next(), equalTo( map( "string", "another string", "integer", 1337L, "aFloat", 3.14, "aBoolean", true ) ) );
+            assertThat( res.next() ).isEqualTo( map( "string", "another string", "integer", 1337L, "aFloat", 3.14, "aBoolean", true ) );
             assertFalse( res.hasNext() );
             transaction.commit();
         }
@@ -255,7 +251,7 @@ public class ProcedureIT
             Result res = transaction.execute( "CALL com.neo4j.procedure.defaultValues('another string', 1337, 2.718281828)" );
 
             // Then
-            assertThat( res.next(), equalTo( map( "string", "another string", "integer", 1337L, "aFloat", 2.718281828, "aBoolean", true ) ) );
+            assertThat( res.next() ).isEqualTo( map( "string", "another string", "integer", 1337L, "aFloat", 2.718281828, "aBoolean", true ) );
             assertFalse( res.hasNext() );
             transaction.commit();
         }
@@ -270,7 +266,7 @@ public class ProcedureIT
             Result res = transaction.execute( "CALL com.neo4j.procedure.defaultValues('another string', 1337, 2.718281828, false)" );
 
             // Then
-            assertThat( res.next(), equalTo( map( "string", "another string", "integer", 1337L, "aFloat", 2.718281828, "aBoolean", false ) ) );
+            assertThat( res.next() ).isEqualTo( map( "string", "another string", "integer", 1337L, "aFloat", 2.718281828, "aBoolean", false ) );
             assertFalse( res.hasNext() );
             transaction.commit();
         }
@@ -285,7 +281,7 @@ public class ProcedureIT
             //Make sure argument here is not auto parameterized away as that will drop all type information on the floor
             QueryExecutionException exception =
                     assertThrows( QueryExecutionException.class, () -> tx.execute( "CALL com.neo4j.procedure.simpleArgument('42')" ) );
-            assertThat( exception.getMessage(), startsWith( "Type mismatch: expected Integer but was String (line 1, column 41 (offset: 40))" ) );
+            assertThat( exception.getMessage() ).startsWith( "Type mismatch: expected Integer but was String (line 1, column 41 (offset: 40))" );
         }
     }
 
@@ -408,7 +404,7 @@ public class ProcedureIT
             Result res = tx.execute( "CALL com.neo4j.procedure.delegatingProcedure", map( "name", 43L ) );
 
             // Then
-            assertThat( res.next(), equalTo( map( "someVal", 43L ) ) );
+            assertThat( res.next() ).isEqualTo( map( "someVal", 43L ) );
             assertFalse( res.hasNext() );
         }
     }
@@ -423,7 +419,7 @@ public class ProcedureIT
             Result res = tx.execute( "CALL com.neo4j.procedure.recursiveSum", map( "order", 10L ) );
 
             // Then
-            assertThat( res.next(), equalTo( map( "someVal", 55L ) ) );
+            assertThat( res.next() ).isEqualTo( map( "someVal", 55L ) );
             assertFalse( res.hasNext() );
         }
     }
@@ -438,7 +434,7 @@ public class ProcedureIT
             Result res = tx.execute( "CALL com.neo4j.procedure.genericArguments([ ['graphs'], ['are'], ['everywhere']], " + "[ [[1, 2, 3]], [[4, 5]]] )" );
 
             // Then
-            assertThat( res.next(), equalTo( map( "someVal", 5L ) ) );
+            assertThat( res.next() ).isEqualTo( map( "someVal", 5L ) );
             assertFalse( res.hasNext() );
         }
     }
@@ -453,7 +449,7 @@ public class ProcedureIT
             Result res = tx.execute( "CALL com.neo4j.procedure.mapArgument({foo: 42, bar: 'hello'})" );
 
             // Then
-            assertThat( res.next(), equalTo( map( "someVal", 2L ) ) );
+            assertThat( res.next() ).isEqualTo( map( "someVal", 2L ) );
             assertFalse( res.hasNext() );
         }
     }
@@ -468,19 +464,10 @@ public class ProcedureIT
             Result res = tx.execute( "CALL com.neo4j.procedure.procedureWithSubtypeDefaults()" );
 
             // Then
-            assertThat( res.next(), equalTo( map( "map", map(
-                    "defaultMap", emptyMap(),
-                    "defaultList", emptyList(),
-                    "defaultBoolean", true,
-                    "defaultInteger", 42L,
-                    "defaultFloat", 3.14,
-                    "defaultString", "foo",
-                    "defaultNumberInteger", 42L,
-                    "defaultNumberFloat", 3.14,
-                    "defaultNullObject", null,
-                    "defaultNullMap", null,
-                    "defaultNullList", null
-            ) ) ) );
+            assertThat( res.next() ).isEqualTo( map( "map",
+                    map( "defaultMap", emptyMap(), "defaultList", emptyList(), "defaultBoolean", true, "defaultInteger", 42L, "defaultFloat", 3.14,
+                            "defaultString", "foo", "defaultNumberInteger", 42L, "defaultNumberFloat", 3.14, "defaultNullObject", null, "defaultNullMap", null,
+                            "defaultNullList", null ) ) );
             assertFalse( res.hasNext() );
         }
     }
@@ -495,7 +482,7 @@ public class ProcedureIT
             Result res = tx.execute( "CALL com.neo4j.procedure.mapWithOtherDefault" );
 
             // Then
-            assertThat( res.next(), equalTo( map( "map", map( "default", true ) ) ) );
+            assertThat( res.next() ).isEqualTo( map( "map", map( "default", true ) ) );
             assertFalse( res.hasNext() );
         }
     }
@@ -510,7 +497,7 @@ public class ProcedureIT
             Result res = tx.execute( "CALL com.neo4j.procedure.listWithDefault" );
 
             // Then
-            assertThat( res.next(), equalTo( map( "list", asList( 42L, 1337L ) ) ) );
+            assertThat( res.next() ).isEqualTo( map( "list", asList( 42L, 1337L ) ) );
             assertFalse( res.hasNext() );
         }
     }
@@ -525,7 +512,7 @@ public class ProcedureIT
             Result res = tx.execute( "CALL com.neo4j.procedure.genericListWithDefault" );
 
             // Then
-            assertThat( res.next(), equalTo( map( "list", asList( 42L, 1337L ) ) ) );
+            assertThat( res.next() ).isEqualTo( map( "list", asList( 42L, 1337L ) ) );
             assertFalse( res.hasNext() );
         }
     }
@@ -540,7 +527,7 @@ public class ProcedureIT
             Result res = tx.execute( "CALL com.neo4j.procedure.incrBytes($param)", map( "param", new byte[]{4, 5, 6} ) );
 
             // Then
-            assertThat( res.columnAs( "bytes" ).next(), equalTo( new byte[]{5, 6, 7} ) );
+            assertThat( res.columnAs( "bytes" ).next() ).isEqualTo( new byte[]{5, 6, 7} );
             assertFalse( res.hasNext() );
         }
     }
@@ -555,7 +542,7 @@ public class ProcedureIT
             Result res = tx.execute( "WITH $param AS b CALL com.neo4j.procedure.incrBytes(b) YIELD bytes RETURN bytes", map( "param", new byte[]{7, 8, 9} ) );
 
             // Then
-            assertThat( res.columnAs( "bytes" ).next(), equalTo( new byte[]{8, 9, 10} ) );
+            assertThat( res.columnAs( "bytes" ).next() ).isEqualTo( new byte[]{8, 9, 10} );
             assertFalse( res.hasNext() );
         }
     }
@@ -574,8 +561,8 @@ public class ProcedureIT
             assertTrue( res.hasNext() );
             Map<String,Object> results = res.next();
             assertFalse( res.hasNext() );
-            assertThat( results.get( "bytes" ), equalTo( new byte[]{11, 12, 13} ) );
-            assertThat( results.get( "param" ), equalTo( new byte[]{10, 11, 12} ) );
+            assertThat( results.get( "bytes" ) ).isEqualTo( new byte[]{11, 12, 13} );
+            assertThat( results.get( "param" ) ).isEqualTo( new byte[]{10, 11, 12} );
         }
     }
 
@@ -590,7 +577,7 @@ public class ProcedureIT
                 result.next();
             }
         } );
-        assertThat( exception.getMessage(), containsString( "Cannot convert 1 to byte for input to procedure" ) );
+        assertThat( exception.getMessage() ).contains( "Cannot convert 1 to byte for input to procedure" );
     }
 
     @Test
@@ -603,7 +590,7 @@ public class ProcedureIT
             Result res = tx.execute( "CALL com.neo4j.procedure.genericListWithDefault(null)" );
 
             // Then
-            assertThat( res.next(), equalTo( map( "list", null ) ) );
+            assertThat( res.next() ).isEqualTo( map( "list", null ) );
             assertFalse( res.hasNext() );
         }
     }
@@ -618,7 +605,7 @@ public class ProcedureIT
             Result res = tx.execute( "CALL com.neo4j.procedure.genericListWithDefault([[42, null, 57]])" );
 
             // Then
-            assertThat( res.next(), equalTo( map( "list", asList( 42L, null, 57L ) ) ) );
+            assertThat( res.next() ).isEqualTo( map( "list", asList( 42L, null, 57L ) ) );
             assertFalse( res.hasNext() );
         }
     }
@@ -636,7 +623,7 @@ public class ProcedureIT
 
             // Then
             Node node = (Node) res.next().get( "node" );
-            assertThat( node.getId(), equalTo( nodeId ) );
+            assertThat( node.getId() ).isEqualTo( nodeId );
             assertFalse( res.hasNext() );
         }
     }
@@ -648,7 +635,7 @@ public class ProcedureIT
         {
             Result res = transaction.execute( "CALL com.neo4j.procedure.node(-1)" );
 
-            assertThat( res.next().get( "node" ), nullValue() );
+            assertThat( res.next().get( "node" ) ).isNull();
             assertFalse( res.hasNext() );
             transaction.commit();
         }
@@ -661,7 +648,7 @@ public class ProcedureIT
         {
             Result res = transaction.execute( "CALL com.neo4j.procedure.node(-1) YIELD node as node RETURN node" );
 
-            assertThat( res.next().get( "node" ), nullValue() );
+            assertThat( res.next().get( "node" ) ).isNull();
             assertFalse( res.hasNext() );
             transaction.commit();
         }
@@ -674,9 +661,9 @@ public class ProcedureIT
         {
             QueryExecutionException exception =
                     assertThrows( QueryExecutionException.class, () -> transaction.execute( "CALL someProcedureThatDoesNotExist" ) );
-            assertThat( exception.getMessage(), equalTo( "There is no procedure with the name `someProcedureThatDoesNotExist` " +
+            assertThat( exception.getMessage() ).isEqualTo( "There is no procedure with the name `someProcedureThatDoesNotExist` " +
                     "registered for this database instance. Please ensure you've spelled the " +
-                    "procedure name correctly and that the procedure is properly deployed." ) );
+                    "procedure name correctly and that the procedure is properly deployed." );
         }
     }
 
@@ -690,8 +677,8 @@ public class ProcedureIT
             Result result = tx.execute( "CALL com.neo4j.procedure.throwsExceptionInStream" );
 
             QueryExecutionException exception = assertThrows( QueryExecutionException.class, result::next );
-            assertThat( exception.getMessage(),
-                    equalTo( "Failed to invoke procedure `com.neo4j.procedure.throwsExceptionInStream`: Caused by: java.lang.RuntimeException: Kaboom" ) );
+            assertThat( exception.getMessage() ).isEqualTo(
+                    "Failed to invoke procedure `com.neo4j.procedure.throwsExceptionInStream`: Caused by: java.lang.RuntimeException: Kaboom" );
         }
     }
 
@@ -704,9 +691,8 @@ public class ProcedureIT
         {
             QueryExecutionException exception = assertThrows( QueryExecutionException.class,
                     () -> tx.execute( "CALL com.neo4j.procedure.indexOutOfBounds" ).next() );
-            assertThat( exception.getMessage(),
-                    startsWith(
-                            "Failed to invoke procedure `com.neo4j.procedure.indexOutOfBounds`: Caused by: java.lang.ArrayIndexOutOfBoundsException" ) );
+            assertThat( exception.getMessage() ).startsWith(
+                    "Failed to invoke procedure `com.neo4j.procedure.indexOutOfBounds`: Caused by: java.lang.ArrayIndexOutOfBoundsException" );
         }
     }
 
@@ -766,7 +752,7 @@ public class ProcedureIT
         {
             QueryExecutionException exception =
                     assertThrows( QueryExecutionException.class, () -> tx.execute( "CALL com.neo4j.procedure.readOnlyTryingToWrite()" ).next() );
-            assertThat( exception.getMessage(), startsWith( "Write operations are not allowed" ) );
+            assertThat( exception.getMessage() ).startsWith( "Write operations are not allowed" );
         }
     }
 
@@ -843,7 +829,7 @@ public class ProcedureIT
         {
             QueryExecutionException exception =
                     assertThrows( QueryExecutionException.class, () -> tx.execute( "CALL com.neo4j.procedure.readOnlyCallingWriteProcedure" ).next() );
-            assertThat( exception.getMessage(), containsString( "Write operations are not allowed" ) );
+            assertThat( exception.getMessage() ).contains( "Write operations are not allowed" );
         }
     }
 
@@ -895,7 +881,7 @@ public class ProcedureIT
             QueryExecutionException exception =
                     assertThrows( QueryExecutionException.class,
                             () -> tx.execute( "CALL com.neo4j.procedure.writeProcedureCallingSchemaProcedure" ).next() );
-            assertThat( exception.getMessage(), startsWith( "Schema operations are not allowed" ) );
+            assertThat( exception.getMessage() ).startsWith( "Schema operations are not allowed" );
         }
     }
 
@@ -908,7 +894,7 @@ public class ProcedureIT
             // When
             QueryExecutionException exception =
                     assertThrows( QueryExecutionException.class, () -> tx.execute( "CALL com.neo4j.procedure.readOnlyTryingToWriteSchema" ).next() );
-            assertThat( exception.getMessage(), startsWith( "Schema operations are not allowed" ) );
+            assertThat( exception.getMessage() ).startsWith( "Schema operations are not allowed" );
         }
     }
 
@@ -921,7 +907,7 @@ public class ProcedureIT
             // When
             QueryExecutionException exception =
                     assertThrows( QueryExecutionException.class, () -> tx.execute( "CALL com.neo4j.procedure.readWriteTryingToWriteSchema" ).next() );
-            assertThat( exception.getMessage(), equalTo( "Schema operations are not allowed for AUTH_DISABLED with FULL restricted to TOKEN_WRITE." ) );
+            assertThat( exception.getMessage() ).isEqualTo( "Schema operations are not allowed for AUTH_DISABLED with FULL restricted to TOKEN_WRITE." );
         }
     }
 
@@ -962,7 +948,7 @@ public class ProcedureIT
 
             // Then
             Node node = (Node) res.next().get( "node" );
-            assertThat( node.getId(), equalTo( nodeId ) );
+            assertThat( node.getId() ).isEqualTo( nodeId );
             assertFalse( res.hasNext() );
         }
     }
@@ -976,7 +962,7 @@ public class ProcedureIT
             // When
             QueryExecutionException exception =
                     assertThrows( QueryExecutionException.class, () -> tx.execute( "CALL com.neo4j.procedure.schemaTryingToWrite" ).next() );
-            assertThat( exception.getMessage(), containsString( "Cannot perform data updates in a transaction that has performed schema updates" ) );
+            assertThat( exception.getMessage() ).contains( "Cannot perform data updates in a transaction that has performed schema updates" );
         }
     }
 
@@ -990,7 +976,7 @@ public class ProcedureIT
             Result res = tx.execute( "CALL com.neo4j.procedure.squareDouble", map( "value", 4L ) );
 
             // Then
-            assertThat( res.next(), equalTo( map( "result", 16.0d ) ) );
+            assertThat( res.next() ).isEqualTo( map( "result", 16.0d ) );
             assertFalse( res.hasNext() );
         }
     }
@@ -1005,7 +991,7 @@ public class ProcedureIT
             Result res = tx.execute( "CALL com.neo4j.procedure.avgNumberList($param)", map( "param", Arrays.<Number>asList( 1L, 2L, 3L ) ) );
 
             // Then
-            assertThat( res.next(), equalTo( map( "result", 2.0d ) ) );
+            assertThat( res.next() ).isEqualTo( map( "result", 2.0d ) );
             assertFalse( res.hasNext() );
         }
     }
@@ -1020,7 +1006,7 @@ public class ProcedureIT
             Result res = tx.execute( "CALL com.neo4j.procedure.avgDoubleList([$long, $double])", map( "long", 1L, "double", 2.0d ) );
 
             // Then
-            assertThat( res.next(), equalTo( map( "result", 1.5d ) ) );
+            assertThat( res.next() ).isEqualTo( map( "result", 1.5d ) );
             assertFalse( res.hasNext() );
         }
     }
@@ -1035,7 +1021,7 @@ public class ProcedureIT
             Result res = tx.execute( "CALL com.neo4j.procedure.squareLong", map( "value", 4L ) );
 
             // Then
-            assertThat( res.next(), equalTo( map( "someVal", 16L ) ) );
+            assertThat( res.next() ).isEqualTo( map( "someVal", 16L ) );
             assertFalse( res.hasNext() );
         }
     }
@@ -1047,7 +1033,7 @@ public class ProcedureIT
         {
             tx.execute( "CALL com.neo4j.procedure.sideEffect('PONTUS')" );
 
-            assertThat( tx.execute( "MATCH (n:PONTUS) RETURN count(n) AS c" ).next().get( "c" ), equalTo( 1L ) );
+            assertThat( tx.execute( "MATCH (n:PONTUS) RETURN count(n) AS c" ).next().get( "c" ) ).isEqualTo( 1L );
         }
     }
 
@@ -1058,7 +1044,7 @@ public class ProcedureIT
         {
             tx.execute( "CALL com.neo4j.procedure.sideEffectWithDefault('Person','name')" );
             Result result = tx.execute( "MATCH (n:Person) RETURN n.name AS name" );
-            assertThat( result.next().get( "name" ), equalTo( "Zhang Wei" ) );
+            assertThat( result.next().get( "name" ) ).isEqualTo( "Zhang Wei" );
             assertFalse( result.hasNext() );
         }
     }
@@ -1070,7 +1056,7 @@ public class ProcedureIT
         {
             tx.execute( "CALL com.neo4j.procedure.delegatingSideEffect('SUTNOP')" );
 
-            assertThat( tx.execute( "MATCH (n:SUTNOP) RETURN count(n) AS c" ).next().get( "c" ), equalTo( 1L ) );
+            assertThat( tx.execute( "MATCH (n:SUTNOP) RETURN count(n) AS c" ).next().get( "c" ) ).isEqualTo( 1L );
         }
     }
 
@@ -1138,15 +1124,15 @@ public class ProcedureIT
         {
             try ( Result result = transaction.execute( "MATCH () RETURN count(*) as n" ) )
             {
-                assertThat( result.hasNext(), equalTo( true ) );
+                assertThat( result.hasNext() ).isEqualTo( true );
                 while ( result.hasNext() )
                 {
-                    assertThat( result.next().get( "n" ), equalTo( (long) numThreads ) );
+                    assertThat( result.next().get( "n" ) ).isEqualTo( (long) numThreads );
                 }
             }
             transaction.commit();
         }
-        assertThat( "Should be no exceptions in procedures", exceptionsInProcedure.isEmpty(), equalTo( true ) );
+        assertThat( exceptionsInProcedure.isEmpty() ).as( "Should be no exceptions in procedures" ).isEqualTo( true );
     }
 
     @Test
@@ -1168,7 +1154,7 @@ public class ProcedureIT
                     while ( result.hasNext() )
                     {
                         var row = result.next();
-                        assertThat( row.get( "n.prop" ), equalTo( Integer.toString( counter++ ) ) );
+                        assertThat( row.get( "n.prop" ) ).isEqualTo( Integer.toString( counter++ ) );
                     }
                     return counter;
                 } );
@@ -1178,7 +1164,7 @@ public class ProcedureIT
         {
             //Make sure all the lines has been properly commited to the database.
             String[] dbContents = transaction.execute( "MATCH (n) return n.prop" ).stream().map( m -> (String) m.get( "n.prop" ) ).toArray( String[]::new );
-            assertThat( dbContents, equalTo( lines ) );
+            assertThat( dbContents ).isEqualTo( lines );
         }
     }
 
@@ -1192,7 +1178,7 @@ public class ProcedureIT
             QueryExecutionException exception = assertThrows( QueryExecutionException.class, () -> transaction.execute(
                     "USING PERIODIC COMMIT 1 " + "LOAD CSV FROM '" + url + "' AS line " +
                             "CALL com.neo4j.procedure.simpleArgument(toInteger(line[0])) YIELD someVal as val " + "RETURN val" ) );
-            assertThat( exception.getMessage(), startsWith( "Cannot use periodic commit in a non-updating query (line 1, column 1 (offset: 0))" ) );
+            assertThat( exception.getMessage() ).startsWith( "Cannot use periodic commit in a non-updating query (line 1, column 1 (offset: 0))" );
         }
     }
 
@@ -1208,7 +1194,7 @@ public class ProcedureIT
             Result result = transaction.execute( "LOAD CSV FROM '" + url +
                     "' AS line CALL com.neo4j.procedure.createNode(line[0]) YIELD node as n SET n.p = 42 RETURN n.p" );
             // THEN
-            assertThat( result.next().get( "n.p" ), equalTo( 42L ) );
+            assertThat( result.next().get( "n.p" ) ).isEqualTo( 42L );
             transaction.commit();
         }
     }
@@ -1230,10 +1216,10 @@ public class ProcedureIT
             assertTrue( res.hasNext() );
             Map<String,Object> value = res.next();
             Path path = (Path) value.get( "path" );
-            assertThat( path.length(), equalTo( 1 ) );
-            assertThat( path.startNode(), equalTo( node1 ) );
-            assertThat( asList( path.relationships() ), equalTo( singletonList( rel ) ) );
-            assertThat( path.endNode(), equalTo( node2 ) );
+            assertThat( path.length() ).isEqualTo( 1 );
+            assertThat( path.startNode() ).isEqualTo( node1 );
+            assertThat( asList( path.relationships() ) ).isEqualTo( singletonList( rel ) );
+            assertThat( path.endNode() ).isEqualTo( node2 );
             assertFalse( res.hasNext() );
         }
     }
@@ -1306,7 +1292,7 @@ public class ProcedureIT
 
             // Then
             assertTrue( res.hasNext() );
-            assertThat( ((List<?>) res.next().get( "ids" )).size(), equalTo( 2 ) );
+            assertThat( ((List<?>) res.next().get( "ids" )).size() ).isEqualTo( 2 );
             assertFalse( res.hasNext() );
             transaction.commit();
         }
@@ -1338,7 +1324,7 @@ public class ProcedureIT
                     "MATCH (n:Person) WITH collect(n) as persons " + "CALL com.neo4j.procedure.nodeListArgument(persons) YIELD someVal RETURN someVal" );
 
             // THEN
-            assertThat( res.next().get( "someVal" ), equalTo( 2L ) );
+            assertThat( res.next().get( "someVal" ) ).isEqualTo( 2L );
         }
     }
 
@@ -1379,7 +1365,7 @@ public class ProcedureIT
                         tx.commit();
                     }
                 } );
-        assertThat( exception.getMessage(), startsWith( "Write operations are not allowed" ) );
+        assertThat( exception.getMessage() ).startsWith( "Write operations are not allowed" );
     }
 
     @Test
@@ -1397,7 +1383,7 @@ public class ProcedureIT
                         tx.commit();
                     }
                 } );
-        assertThat( exception.getMessage(), startsWith( "Schema operations are not allowed" ) );
+        assertThat( exception.getMessage() ).startsWith( "Schema operations are not allowed" );
     }
 
     @Test
@@ -1409,7 +1395,7 @@ public class ProcedureIT
             Result res = transaction.execute( "CALL com.neo4j.procedure.nodeWithDefault" );
 
             // Then
-            assertThat( res.next(), equalTo( map( "node", null ) ) );
+            assertThat( res.next() ).isEqualTo( map( "node", null ) );
             assertFalse( res.hasNext() );
             transaction.commit();
         }
@@ -1425,7 +1411,7 @@ public class ProcedureIT
                     record -> record.get( "name" ).equals( "com.neo4j.procedure.nodeWithDefault" ) ).collect( Collectors.toList() );
             // Then
             assertFalse( results.isEmpty(), "Expected to find test procedure" );
-            assertThat( results.get( 0 ).get( "signature" ), equalTo( "com.neo4j.procedure.nodeWithDefault(node = null :: NODE?) :: (node :: NODE?)" ) );
+            assertThat( results.get( 0 ).get( "signature" ) ).isEqualTo( "com.neo4j.procedure.nodeWithDefault(node = null :: NODE?) :: (node :: NODE?)" );
             transaction.commit();
         }
     }
@@ -1440,7 +1426,7 @@ public class ProcedureIT
                     record -> record.get( "name" ).equals( "com.neo4j.procedure.nodeWithDescription" ) ).collect( Collectors.toList() );
             // Then
             assertFalse( results.isEmpty(), "Expected to find test procedure" );
-            assertThat( results.get( 0 ).get( "description" ), equalTo( "This is a description" ) );
+            assertThat( results.get( 0 ).get( "description" ) ).isEqualTo( "This is a description" );
             transaction.commit();
         }
     }
@@ -1455,7 +1441,7 @@ public class ProcedureIT
                     record -> record.get( "name" ).equals( "com.neo4j.procedure.nodeWithDescription" ) ).collect( Collectors.toList() );
             // Then
             assertFalse( results.isEmpty(), "Expected to find test procedure" );
-            assertThat( results.get( 0 ).get( "mode" ), equalTo( "WRITE" ) );
+            assertThat( results.get( 0 ).get( "mode" ) ).isEqualTo( "WRITE" );
             transaction.commit();
         }
     }
@@ -1471,7 +1457,7 @@ public class ProcedureIT
                                 .collect( Collectors.toList() );
             // Then
             assertFalse( results.isEmpty(), "Expected to find test function" );
-            assertThat( results.get( 0 ).get( "signature" ), equalTo( "com.neo4j.procedure.getNodeName(node = null :: NODE?) :: (STRING?)" ) );
+            assertThat( results.get( 0 ).get( "signature" ) ).isEqualTo( "com.neo4j.procedure.getNodeName(node = null :: NODE?) :: (STRING?)" );
             transaction.commit();
         }
     }
@@ -1486,7 +1472,7 @@ public class ProcedureIT
                     record -> record.get( "name" ).equals( "com.neo4j.procedure.functionWithDescription" ) ).collect( Collectors.toList() );
             // Then
             assertFalse( results.isEmpty(), "Expected to find test function" );
-            assertThat( results.get( 0 ).get( "description" ), equalTo( "This is a description" ) );
+            assertThat( results.get( 0 ).get( "description" ) ).isEqualTo( "This is a description" );
             transaction.commit();
         }
     }
@@ -1501,7 +1487,7 @@ public class ProcedureIT
             Result res = tx.execute( "RETURN com.neo4j.procedure.decrBytes($param) AS bytes", map( "param", new byte[]{4, 5, 6} ) );
 
             // Then
-            assertThat( res.columnAs( "bytes" ).next(), equalTo( new byte[]{3, 4, 5} ) );
+            assertThat( res.columnAs( "bytes" ).next() ).isEqualTo( new byte[]{3, 4, 5} );
             assertFalse( res.hasNext() );
         }
     }
@@ -1520,8 +1506,8 @@ public class ProcedureIT
             assertTrue( res.hasNext() );
             Map<String,Object> results = res.next();
             assertFalse( res.hasNext() );
-            assertThat( results.get( "bytes" ), equalTo( new byte[]{9, 10, 11} ) );
-            assertThat( results.get( "param" ), equalTo( new byte[]{10, 11, 12} ) );
+            assertThat( results.get( "bytes" ) ).isEqualTo( new byte[]{9, 10, 11} );
+            assertThat( results.get( "param" ) ).isEqualTo( new byte[]{10, 11, 12} );
         }
     }
 
@@ -1538,7 +1524,7 @@ public class ProcedureIT
                         result.next();
                     }
                 } );
-        assertThat( exception.getMessage(), containsString( "Cannot convert 1 to byte for input to procedure" ) );
+        assertThat( exception.getMessage() ).contains( "Cannot convert 1 to byte for input to procedure" );
     }
 
     @Test
@@ -1555,7 +1541,7 @@ public class ProcedureIT
             Result res = tx.execute( "UNWIND $data AS bytes RETURN com.neo4j.procedure.aggregateByteArrays(bytes) AS bytes", map( "data", data ) );
 
             // Then
-            assertThat( res.columnAs( "bytes" ).next(), equalTo( new byte[]{5, 6, 5} ) );
+            assertThat( res.columnAs( "bytes" ).next() ).isEqualTo( new byte[]{5, 6, 5} );
             assertFalse( res.hasNext() );
         }
     }
@@ -1567,8 +1553,8 @@ public class ProcedureIT
         {
             QueryExecutionException exception = assertThrows( QueryExecutionException.class,
                     () -> transaction.execute( "CALL com.neo4j.procedure.guardMe" ).next() );
-            assertThat( exception.getMessage(), equalTo( "The transaction has been terminated. Retry your operation in a new " +
-                    "transaction, and you should see a successful result. Explicitly terminated by the user. " ) );
+            assertThat( exception.getMessage() ).isEqualTo( "The transaction has been terminated. Retry your operation in a new " +
+                    "transaction, and you should see a successful result. Explicitly terminated by the user. " );
         }
     }
 
@@ -1600,10 +1586,10 @@ public class ProcedureIT
             assertTrue(res.hasNext());
             Map<String,Object> results = res.next();
             assertFalse( res.hasNext() );
-            assertThat( results.get( "string" ), equalTo( "Yay" ) );
-            assertThat( results.get( "integer" ), equalTo( 1L ) );
-            assertThat( results.get( "aFloat" ), equalTo( 1.0 ) );
-            assertThat( results.get( "aBoolean" ), equalTo( true ) );
+            assertThat( results.get( "string" ) ).isEqualTo( "Yay" );
+            assertThat( results.get( "integer" ) ).isEqualTo( 1L );
+            assertThat( results.get( "aFloat" ) ).isEqualTo( 1.0 );
+            assertThat( results.get( "aBoolean" ) ).isEqualTo( true );
 
             // When
             res = tx.execute( "CALL com.neo4j.procedure.outputDependsOnYield() yield string, integer, aFloat, aBoolean RETURN *" );
@@ -1612,10 +1598,10 @@ public class ProcedureIT
             assertTrue(res.hasNext());
             results = res.next();
             assertFalse( res.hasNext() );
-            assertThat( results.get( "string" ), equalTo( "Yay" ) );
-            assertThat( results.get( "integer" ), equalTo( 1L ) );
-            assertThat( results.get( "aFloat" ), equalTo( 1.0 ) );
-            assertThat( results.get( "aBoolean" ), equalTo( true ) );
+            assertThat( results.get( "string" ) ).isEqualTo( "Yay" );
+            assertThat( results.get( "integer" ) ).isEqualTo( 1L );
+            assertThat( results.get( "aFloat" ) ).isEqualTo( 1.0 );
+            assertThat( results.get( "aBoolean" ) ).isEqualTo( true );
 
             // Not request "string" now should change result of other values:
             // When
@@ -1625,9 +1611,9 @@ public class ProcedureIT
             assertTrue(res.hasNext());
             results = res.next();
             assertFalse( res.hasNext() );
-            assertThat( results.get( "integer" ), equalTo( 0L ) );
-            assertThat( results.get( "aFloat" ), equalTo( 0.0 ) );
-            assertThat( results.get( "aBoolean" ), equalTo( false ) );
+            assertThat( results.get( "integer" ) ).isEqualTo( 0L );
+            assertThat( results.get( "aFloat" ) ).isEqualTo( 0.0 );
+            assertThat( results.get( "aBoolean" ) ).isEqualTo( false );
 
             // Renaming should not interfere with this
             // When
@@ -1637,10 +1623,10 @@ public class ProcedureIT
             assertTrue(res.hasNext());
             results = res.next();
             assertFalse( res.hasNext() );
-            assertThat( results.get( "s" ), equalTo( "Yay" ) );
-            assertThat( results.get( "i" ), equalTo( 1L ) );
-            assertThat( results.get( "f" ), equalTo( 1.0 ) );
-            assertThat( results.get( "b" ), equalTo( true ) );
+            assertThat( results.get( "s" ) ).isEqualTo( "Yay" );
+            assertThat( results.get( "i" ) ).isEqualTo( 1L );
+            assertThat( results.get( "f" ) ).isEqualTo( 1.0 );
+            assertThat( results.get( "b" ) ).isEqualTo( true );
 
             // When
             res = tx.execute( "CALL com.neo4j.procedure.outputDependsOnYield() yield integer as i, aFloat as f, aBoolean as b RETURN *" );
@@ -1649,9 +1635,9 @@ public class ProcedureIT
             assertTrue(res.hasNext());
             results = res.next();
             assertFalse( res.hasNext() );
-            assertThat( results.get( "i" ), equalTo( 0L ) );
-            assertThat( results.get( "f" ), equalTo( 0.0 ) );
-            assertThat( results.get( "b" ), equalTo( false ) );
+            assertThat( results.get( "i" ) ).isEqualTo( 0L );
+            assertThat( results.get( "f" ) ).isEqualTo( 0.0 );
+            assertThat( results.get( "b" ) ).isEqualTo( false );
         }
     }
 
@@ -1668,8 +1654,8 @@ public class ProcedureIT
             assertTrue(res.hasNext());
             Map<String,Object> results = res.next();
             assertFalse( res.hasNext() );
-            assertThat( results.get( "string" ), equalTo( DEFAULT_DATABASE_NAME ) );
-            assertThat( results.get( "aBoolean" ), equalTo( false ) );
+            assertThat( results.get( "string" ) ).isEqualTo( DEFAULT_DATABASE_NAME );
+            assertThat( results.get( "aBoolean" ) ).isEqualTo( false );
         }
 
         // Given
@@ -1682,8 +1668,8 @@ public class ProcedureIT
             assertTrue(res.hasNext());
             Map<String,Object> results = res.next();
             assertFalse( res.hasNext() );
-            assertThat( results.get( "string" ), equalTo( SYSTEM_DATABASE_NAME ) );
-            assertThat( results.get( "aBoolean" ), equalTo( true ) );
+            assertThat( results.get( "string" ) ).isEqualTo( SYSTEM_DATABASE_NAME );
+            assertThat( results.get( "aBoolean" ) ).isEqualTo( true );
         }
     }
 
@@ -1700,7 +1686,7 @@ public class ProcedureIT
             assertTrue(res.hasNext());
             Map<String,Object> results = res.next();
             assertFalse( res.hasNext() );
-            assertThat( results.get( "someVal" ).getClass(), equalTo( Long.class ) );
+            assertThat( results.get( "someVal" ).getClass() ).isEqualTo( Long.class );
         }
     }
 

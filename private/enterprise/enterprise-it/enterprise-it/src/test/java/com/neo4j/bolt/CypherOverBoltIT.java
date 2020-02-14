@@ -30,8 +30,7 @@ import org.neo4j.io.fs.FileUtils;
 import org.neo4j.test.rule.SuppressOutput;
 
 import static com.neo4j.bolt.BoltDriverHelper.graphDatabaseDriver;
-import static org.hamcrest.CoreMatchers.containsString;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -306,7 +305,7 @@ public class CypherOverBoltIT
             }
             catch ( ClientException e )
             {
-                assertThat( e.code(), containsString( "ArithmeticError" ) );
+                assertThat( e.code() ).contains( "ArithmeticError" );
             }
 
             try

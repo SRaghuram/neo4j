@@ -15,8 +15,7 @@ import org.neo4j.test.server.ExclusiveWebContainerTestBase;
 import org.neo4j.test.server.HTTP;
 
 import static com.neo4j.server.enterprise.helpers.EnterpriseWebContainerBuilder.serverOnRandomPorts;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.nullValue;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 
@@ -50,9 +49,9 @@ public class EnterpriseDiscoveryServiceIT extends ExclusiveWebContainerTestBase
 
         // Then
         assertEquals( 200, res.status() );
-        assertThat( res.get( "neo4j_edition" ).asText(), equalTo( "enterprise" ) );
-        assertThat( res.get( "neo4j_version" ).asText(), equalTo( releaseVersion ) );
+        assertThat( res.get( "neo4j_edition" ).asText() ).isEqualTo( "enterprise" );
+        assertThat( res.get( "neo4j_version" ).asText() ).isEqualTo( releaseVersion );
 
-        assertThat( res.get( CausalClusteringService.NAME ), nullValue() ); // no CC URI in standalone
+        assertThat( res.get( CausalClusteringService.NAME ) ).isNull(); // no CC URI in standalone
     }
 }

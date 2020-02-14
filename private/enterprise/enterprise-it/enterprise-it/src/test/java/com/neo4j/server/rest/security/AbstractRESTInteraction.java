@@ -49,8 +49,7 @@ import org.neo4j.test.server.HTTP;
 import org.neo4j.test.server.HTTP.Response;
 
 import static io.netty.channel.local.LocalAddress.ANY;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.not;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
@@ -202,7 +201,7 @@ abstract class AbstractRESTInteraction extends CommunityWebContainerTestBase imp
     public void assertAuthenticated( RESTSubject subject )
     {
         Response authenticate = authenticate( subject.principalCredentials );
-        assertThat( authenticate.rawContent(), authenticate.status(), equalTo( 200 ) );
+        assertThat( authenticate.status() ).as( authenticate.rawContent() ).isEqualTo( 200 );
     }
 
     @Override
@@ -210,7 +209,7 @@ abstract class AbstractRESTInteraction extends CommunityWebContainerTestBase imp
     {
         // Should be ok to authenticate from REST
         Response authResponse = authenticate( subject.principalCredentials );
-        assertThat( authResponse.status(), equalTo( 200 ) );
+        assertThat( authResponse.status() ).isEqualTo( 200 );
 
         // Should be blocked on data access by the server
         Response dataResponse =
@@ -230,7 +229,7 @@ abstract class AbstractRESTInteraction extends CommunityWebContainerTestBase imp
     @Override
     public void assertUnauthenticated( RESTSubject subject )
     {
-        assertThat( authenticate( subject.principalCredentials ).status(), not( equalTo( 200 ) ) );
+        assertThat( authenticate( subject.principalCredentials ).status() ).isNotEqualTo( 200 );
     }
 
     @Override

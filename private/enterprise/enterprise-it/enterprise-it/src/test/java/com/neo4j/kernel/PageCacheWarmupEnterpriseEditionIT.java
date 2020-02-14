@@ -45,9 +45,7 @@ import static com.neo4j.metrics.MetricsTestHelper.metricsCsv;
 import static com.neo4j.metrics.MetricsTestHelper.readLongCounterValue;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.commons.io.FileUtils.cleanDirectory;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.greaterThanOrEqualTo;
-import static org.hamcrest.Matchers.lessThanOrEqualTo;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertThat;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_TX_LOGS_ROOT_DIR_NAME;
@@ -266,9 +264,9 @@ public class PageCacheWarmupEnterpriseEditionIT extends PageCacheWarmupTestSuppo
         touchAllPages( db, pageCacheTracer );
         long pagesInMemoryWithPrefetchAfterTouch = pageCacheTracer.faults();
 
-        assertThat( pagesInMemoryWithoutPrefetch, lessThanOrEqualTo( pagesInMemoryWithoutPrefetchAfterTouch ) ); //we dont prefetch everything by default
-        assertThat( pagesInMemoryWithoutPrefetchAfterTouch, lessThanOrEqualTo( pagesInMemoryWithPrefetch ) ); //prefetch should load same or more pages
-        assertThat( pagesInMemoryWithPrefetch, equalTo( pagesInMemoryWithPrefetchAfterTouch ) ); //touching everything should not generate faults
+        assertThat( pagesInMemoryWithoutPrefetch ).isLessThanOrEqualTo( pagesInMemoryWithoutPrefetchAfterTouch ); //we dont prefetch everything by default
+        assertThat( pagesInMemoryWithoutPrefetchAfterTouch ).isLessThanOrEqualTo( pagesInMemoryWithPrefetch ); //prefetch should load same or more pages
+        assertThat( pagesInMemoryWithPrefetch ).isEqualTo( pagesInMemoryWithPrefetchAfterTouch ); //touching everything should not generate faults
     }
 
     private static void touchAllPages( EnterpriseDbmsRule db, PageCacheTracer pageCacheTracer ) throws IOException

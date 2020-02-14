@@ -105,16 +105,7 @@ import static com.neo4j.causalclustering.common.TransactionBackupServiceProvider
 import static com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings.online_backup_enabled;
 import static java.util.Collections.singletonList;
 import static org.apache.commons.lang3.exception.ExceptionUtils.getRootCause;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.arrayContainingInAnyOrder;
-import static org.hamcrest.Matchers.arrayWithSize;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.either;
-import static org.hamcrest.Matchers.emptyArray;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.greaterThan;
-import static org.hamcrest.Matchers.hasItemInArray;
-import static org.hamcrest.Matchers.instanceOf;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -203,7 +194,7 @@ class BackupIT
 
         BackupExecutionException error = assertThrows( BackupExecutionException.class, () -> executeBackupWithoutFallbackToFull( db ) );
 
-        assertThat( error.getCause(), instanceOf( StoreIdDownloadFailedException.class ) );
+        assertThat( error.getCause() ).isInstanceOf( StoreIdDownloadFailedException.class );
     }
 
     @TestWithRecordFormats
@@ -331,7 +322,7 @@ class BackupIT
         // Data should be OK, but store id check should prevent that.
         final GraphDatabaseService finalDb = db;
         BackupExecutionException error = assertThrows( BackupExecutionException.class, () -> executeBackupWithoutFallbackToFull( finalDb ) );
-        assertThat( error.getCause(), instanceOf( StoreIdDownloadFailedException.class ) );
+        assertThat( error.getCause() ).isInstanceOf( StoreIdDownloadFailedException.class );
         managementService.shutdown();
 
         // Just make sure incremental backup can be received properly from
@@ -465,11 +456,11 @@ class BackupIT
         LogFiles backupLogFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( backupDatabasePath, fs ).build();
 
         executeBackup( db );
-        assertThat( backupLogFiles.logFiles(), arrayWithSize( 1 ) );
+        assertThat( backupLogFiles.logFiles() ).hasSize( 1 );
 
         DbRepresentation representation = addLotsOfData( db );
         executeBackupWithoutFallbackToFull( db );
-        assertThat( backupLogFiles.logFiles(), arrayWithSize( 1 ) );
+        assertThat( backupLogFiles.logFiles() ).hasSize( 1 );
 
         assertEquals( representation, getBackupDbRepresentation() );
 
@@ -496,7 +487,7 @@ class BackupIT
             executor.shutdown();
 
             BackupExecutionException error = assertThrows( BackupExecutionException.class, () -> executeBackup( "localhost", port ) );
-            assertThat( getRootCause( error ), either( instanceOf( ConnectException.class ) ).or( instanceOf( ClosedChannelException.class ) ) );
+            assertThat( getRootCause( error ) ).isInstanceOfAny( ConnectException.class, ClosedChannelException.class );
 
             assertNull( serverAcceptFuture.get( 1, TimeUnit.MINUTES ) );
             assertTrue( executor.awaitTermination( 1, TimeUnit.MINUTES ) );
@@ -521,7 +512,7 @@ class BackupIT
         assertTrue( fs.fileExists( new File( incorrectExistingBackupDir, incorrectFile.getName() ) ) );
 
         // no temporary directories are present, i.e. 'neo4j.temp.0'
-        assertThat( backupsDir.list(), arrayContainingInAnyOrder( DEFAULT_DATABASE_NAME, "neo4j.err.0" ) );
+        assertThat( backupsDir.list() ).contains( DEFAULT_DATABASE_NAME, "neo4j.err.0" );
 
         // backup produced a correct database
         assertEquals( DbRepresentation.of( db ), getBackupDbRepresentation() );
@@ -548,7 +539,7 @@ class BackupIT
         assertTrue( fs.fileExists( new File( movedIncorrectDir, incorrectFile.getName() ) ) );
 
         // no temporary directories are present, i.e. 'neo4j.temp.0'
-        assertThat( backupsDir.list(), arrayContainingInAnyOrder( DEFAULT_DATABASE_NAME, "neo4j.err.0" ) );
+        assertThat( backupsDir.list() ).contains( DEFAULT_DATABASE_NAME, "neo4j.err.0" );
 
         // backup produced a correct database
         assertEquals( DbRepresentation.of( db ), getBackupDbRepresentation() );
@@ -566,17 +557,17 @@ class BackupIT
 
         File[] backupStoreFiles = backupDatabaseLayout.databaseDirectory().listFiles();
         assertNotNull( backupStoreFiles );
-        assertThat( backupStoreFiles, arrayWithSize( greaterThan( 0 ) ) );
+        assertThat( backupStoreFiles ).hasSizeGreaterThan( 0 );
 
         for ( File storeFile : backupDatabaseLayout.storeFiles() )
         {
             if ( backupDatabaseLayout.countStore().equals( storeFile ) )
             {
-                assertThat( backupStoreFiles, hasItemInArray( equalTo( backupDatabaseLayout.countStore() ) ) );
+                assertThat( backupStoreFiles ).contains( backupDatabaseLayout.countStore() );
             }
             else
             {
-                assertThat( backupStoreFiles, hasItemInArray( storeFile ) );
+                assertThat( backupStoreFiles ).contains( storeFile );
             }
         }
 
@@ -761,9 +752,9 @@ class BackupIT
 
         ConsistencyCheckExecutionException error = assertThrows( ConsistencyCheckExecutionException.class, () -> executeBackup( db ) );
 
-        assertThat( error.getMessage(), containsString( "Inconsistencies found" ) );
+        assertThat( error.getMessage() ).contains( "Inconsistencies found" );
         String[] reportFiles = findBackupInconsistenciesReports();
-        assertThat( reportFiles, arrayWithSize( 1 ) );
+        assertThat( reportFiles ).hasSize( 1 );
     }
 
     @Test
@@ -782,7 +773,7 @@ class BackupIT
 
         // no consistency check report files
         String[] reportFiles = findBackupInconsistenciesReports();
-        assertThat( reportFiles, emptyArray() );
+        assertThat( reportFiles ).isEmpty();
 
         // store is inconsistent after backup
         ConsistencyCheckService.Result backupConsistencyCheckResult = checkConsistency( backupDatabaseLayout ); // wrong file location
@@ -796,8 +787,8 @@ class BackupIT
 
         BackupExecutionException error = assertThrows( BackupExecutionException.class, () -> executeBackupWithoutFallbackToFull( db ) );
         Throwable cause = error.getCause();
-        assertThat( cause, instanceOf( StoreCopyFailedException.class ) );
-        assertThat( cause.getMessage(), containsString( "Pulling tx failed consecutively without progress" ) );
+        assertThat( cause ).isInstanceOf( StoreCopyFailedException.class );
+        assertThat( cause.getMessage() ).contains( "Pulling tx failed consecutively without progress" );
     }
 
     @Test
@@ -853,7 +844,7 @@ class BackupIT
         setUpgradeTimeInMetaDataStore( backupDatabaseLayout, pageCache, 424242 );
 
         BackupExecutionException error = assertThrows( BackupExecutionException.class, () -> executeBackupWithoutFallbackToFull( db ) );
-        assertThat( error.getCause(), instanceOf( StoreIdDownloadFailedException.class ) );
+        assertThat( error.getCause() ).isInstanceOf( StoreIdDownloadFailedException.class );
     }
 
     @Test
@@ -899,7 +890,7 @@ class BackupIT
                 .build();
 
         var error = assertThrows( BackupExecutionException.class, () -> executeBackup( context ) );
-        assertThat( error.getMessage(), containsString( "Database '" + unknownDbName + "' does not exist" ) );
+        assertThat( error.getMessage() ).contains( "Database '" + unknownDbName + "' does not exist" );
     }
 
     private void createTransactionWithWeirdRelationshipGroupRecord( GraphDatabaseService db )
@@ -1058,7 +1049,7 @@ class BackupIT
         RuntimeException error = assertThrows( RuntimeException.class, () -> startDb( path ),
                 "Could build up database in same process, store not locked" );
 
-        assertThat( error.getCause().getCause(), instanceOf( FileLockException.class ) );
+        assertThat( error.getCause().getCause() ).isInstanceOf( FileLockException.class );
     }
 
     private DbRepresentation addMoreData( File path, String recordFormatName )

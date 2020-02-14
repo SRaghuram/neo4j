@@ -16,8 +16,7 @@ import org.neo4j.storageengine.api.TransactionIdStore;
 import org.neo4j.test.extension.Inject;
 
 import static java.util.concurrent.TimeUnit.MINUTES;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.greaterThan;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.test.assertion.Assert.assertEventually;
 import static org.neo4j.test.conditions.Conditions.equalityCondition;
@@ -42,7 +41,7 @@ class StandaloneReconciledTransactionTrackerIT
     void shouldInitializeReconciledTransactionIdAfterStart() throws Exception
     {
         var lastClosedSystemTxId = txIdStore.getLastClosedTransactionId();
-        assertThat( lastClosedSystemTxId, greaterThan( 0L ) );
+        assertThat( lastClosedSystemTxId ).isGreaterThan( 0L );
         assertEventually( () -> tracker.getLastReconciledTransactionId(), equalityCondition( lastClosedSystemTxId ), 1, MINUTES );
     }
 
@@ -62,7 +61,7 @@ class StandaloneReconciledTransactionTrackerIT
         dbService.shutdownDatabase( dbName1 );
 
         var lastClosedSystemTxIdAfter = txIdStore.getLastClosedTransactionId();
-        assertThat( lastClosedSystemTxIdAfter, greaterThan( lastClosedSystemTxIdBefore ) );
+        assertThat( lastClosedSystemTxIdAfter ).isGreaterThan( lastClosedSystemTxIdBefore );
 
         assertEventually( () -> tracker.getLastReconciledTransactionId(), equalityCondition( lastClosedSystemTxIdAfter ), 1, MINUTES );
     }

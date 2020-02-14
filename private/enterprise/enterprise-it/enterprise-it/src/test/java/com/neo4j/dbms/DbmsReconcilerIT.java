@@ -23,8 +23,7 @@ import org.neo4j.test.extension.Inject;
 import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
 import static com.neo4j.dbms.EnterpriseOperatorState.UNKNOWN;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsString;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomDatabaseId;
@@ -69,7 +68,7 @@ class DbmsReconcilerIT
 
         // then
         var error = assertThrows( CompletionException.class, () -> reconcilerResult.await( db.databaseId() ) );
-        assertThat( error.getCause().getMessage(), containsString( "unsupported state transition" ) );
+        assertThat( error.getCause().getMessage() ).contains( "unsupported state transition" );
         var dbHealth = db.getDependencyResolver().resolveDependency( DatabaseHealth.class );
         assertEventually( "Database is expected to panic", dbHealth::isHealthy, FALSE, 30, SECONDS );
     }

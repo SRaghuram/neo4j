@@ -28,8 +28,7 @@ import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.driver.SessionConfig.forDatabase;
@@ -75,7 +74,7 @@ class MultiDatabaseBoltIT
                 session.run( "CREATE (n)" ).consume();
             }
         } );
-        assertThat( transientException.getMessage(), equalTo( "Database 'testDatabase' is unavailable." ) );
+        assertThat( transientException.getMessage() ).isEqualTo( "Database 'testDatabase' is unavailable." );
     }
 
     @Test
@@ -106,7 +105,7 @@ class MultiDatabaseBoltIT
             {
                 system.run( "CREATE DATABASE foo" ).consume();
             } );
-            assertThat( exception.getMessage(), equalTo( "Failed to create the specified database 'foo': Database already exists." ) );
+            assertThat( exception.getMessage() ).isEqualTo( "Failed to create the specified database 'foo': Database already exists." );
             assertDatabasesFound( "foo" );
         }
     }
@@ -147,7 +146,7 @@ class MultiDatabaseBoltIT
             {
                 managementService.database( name );
             } );
-            assertThat( exception.getMessage(), equalTo( name ) );
+            assertThat( exception.getMessage() ).isEqualTo( name );
         }
     }
 

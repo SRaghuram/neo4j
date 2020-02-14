@@ -18,8 +18,7 @@ import org.neo4j.driver.exceptions.ClientException;
 import org.neo4j.harness.junit.rule.Neo4jRule;
 
 import static com.neo4j.bolt.BoltDriverHelper.graphDatabaseDriver;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.empty;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.driver.AuthTokens.basic;
 
@@ -47,7 +46,7 @@ abstract class SecurityStressTestBase
     void assertNoUnexpectedErrors()
     {
         String msg = errors.stream().map( Throwable::getMessage ).collect( Collectors.joining( System.lineSeparator() ) );
-        assertThat( msg, errors, empty() );
+        assertThat( errors ).as( msg ).isEmpty();
     }
 
     final Runnable createUserWork =

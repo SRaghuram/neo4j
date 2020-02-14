@@ -65,11 +65,7 @@ import org.neo4j.test.rule.TestDirectory;
 import static java.util.concurrent.Executors.newSingleThreadExecutor;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.stream.Collectors.toSet;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.arrayWithSize;
-import static org.hamcrest.Matchers.hasItem;
-import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.not;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -138,7 +134,7 @@ class BookmarkIT
         assertNotEquals( firstBookmark, lastBookmark );
 
         // all bookmarks received while a transaction was blocked committing should be unique
-        assertThat( otherBookmarks, hasSize( 10 ) );
+        assertThat( otherBookmarks ).hasSize( 10 );
     }
 
     @Test
@@ -151,7 +147,7 @@ class BookmarkIT
         var bookmarkStr = Iterables.first( bookmark.values() );
 
         var split = bookmarkStr.split( ":" );
-        assertThat( split, arrayWithSize( 2 ) );
+        assertThat( split ).hasSize( 2 );
     }
 
     @Test
@@ -190,7 +186,7 @@ class BookmarkIT
         assertFalse( future.isDone() );
         assertEventually( "Tracker did not continue waiting", waitTrackingMonitor::isWaiting, equalityCondition( true ), 1, MINUTES );
 
-        assertThat( "Dbms already has database foo", managementService.listDatabases(), not( hasItem( "foo" ) ) );
+        assertThat( managementService.listDatabases() ).as( "Dbms already has database foo" ).doesNotContain( "foo" );
 
         for ( var i = 0; i < txCount; i++ )
         {
@@ -200,11 +196,11 @@ class BookmarkIT
         assertEventually( future::isDone, equalityCondition( true ), 1, MINUTES );
 
         var databaseNames = managementService.listDatabases();
-        assertThat( databaseNames, hasItem( "foo" ) );
-        assertThat( databaseNames, hasItem( "bar" ) );
+        assertThat( databaseNames ).contains( "foo" );
+        assertThat( databaseNames ).contains( "bar" );
         for ( var i = 0; i < txCount; i++ )
         {
-            assertThat( databaseNames, hasItem( "baz" + i ) );
+            assertThat( databaseNames ).contains( "baz" + i );
         }
     }
 

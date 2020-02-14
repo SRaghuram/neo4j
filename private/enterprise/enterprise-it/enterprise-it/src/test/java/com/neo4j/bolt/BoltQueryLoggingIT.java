@@ -19,9 +19,7 @@ import org.neo4j.harness.junit.rule.Neo4jRule;
 import org.neo4j.server.WebContainerTestUtils;
 
 import static com.neo4j.bolt.BoltDriverHelper.graphDatabaseDriver;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.hasSize;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.neo4j.configuration.GraphDatabaseSettings.log_queries_filename;
 
 public class BoltQueryLoggingIT
@@ -52,15 +50,15 @@ public class BoltQueryLoggingIT
 
         Path queriesLog = neo4j.config().get( log_queries_filename );
         List<String> lines = Files.readAllLines( queriesLog );
-        assertThat( lines, hasSize( 5 ) );
+        assertThat( lines ).hasSize( 5 );
         for ( String line : lines )
         {
-            assertThat( line, containsString( "INFO" ) );
-            assertThat( line, containsString( "bolt-session" ) );
-            assertThat( line, containsString( "neo4j-java" ) );
-            assertThat( line, containsString( "client/127.0.0.1:" ) );
-            assertThat( line, containsString( "server/127.0.0.1:" + neo4j.boltURI().getPort() ) );
-            assertThat( line, containsString( " - RETURN 1 AS num - {} - {}" ) );
+            assertThat( line ).contains( "INFO" );
+            assertThat( line ).contains( "bolt-session" );
+            assertThat( line ).contains( "neo4j-java" );
+            assertThat( line ).contains( "client/127.0.0.1:" );
+            assertThat( line ).contains( "server/127.0.0.1:" + neo4j.boltURI().getPort() );
+            assertThat( line ).contains( " - RETURN 1 AS num - {} - {}" );
         }
     }
 }

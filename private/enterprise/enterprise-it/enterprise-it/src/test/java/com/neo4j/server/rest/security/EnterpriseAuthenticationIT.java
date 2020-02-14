@@ -19,9 +19,7 @@ import org.neo4j.test.rule.TestDirectory;
 import org.neo4j.test.server.HTTP;
 
 import static com.neo4j.server.enterprise.helpers.EnterpriseWebContainerBuilder.serverOnRandomPorts;
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.CoreMatchers.hasItems;
-import static org.junit.Assert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class EnterpriseAuthenticationIT extends AuthenticationIT
 {
@@ -52,15 +50,15 @@ public class EnterpriseAuthenticationIT extends AuthenticationIT
                 .request( method, txCommitURL( "system" ), payload );
 
         // Then
-        assertThat(response.status(), equalTo(200));
+        assertThat( response.status() ).isEqualTo( 200 );
         ArrayNode errors = (ArrayNode) response.get("errors");
-        assertThat( "Should have no errors", errors.size(), equalTo( 0 ) );
+        assertThat( errors.size() ).as( "Should have no errors" ).isEqualTo( 0 );
         ArrayNode results = (ArrayNode) response.get("results");
         ArrayNode data = (ArrayNode) results.get(0).get("data");
-        assertThat( "Should have 6 predefined roles", data.size(), equalTo( 6 ) );
+        assertThat( data.size() ).as( "Should have 6 predefined roles" ).isEqualTo( 6 );
         Stream<String> values = data.findValues( "row" ).stream().map( row -> row.get(0).asText() );
-        assertThat( "Expected specific roles", values.collect( Collectors.toList()),
-                hasItems( "admin", "architect", "publisher", "editor", "reader", "PUBLIC") );
+        assertThat( values.collect( Collectors.toList() ) ).as( "Expected specific roles" ).contains( "admin", "architect", "publisher", "editor", "reader",
+                "PUBLIC" );
 
     }
 
@@ -77,12 +75,12 @@ public class EnterpriseAuthenticationIT extends AuthenticationIT
         HTTP.Response response = HTTP.request( method, txCommitURL(), payload );
 
         // Then
-        assertThat(response.status(), equalTo(200));
+        assertThat( response.status() ).isEqualTo( 200 );
         ArrayNode errors = (ArrayNode) response.get("errors");
-        assertThat( "Should have no errors", errors.size(), equalTo( 0 ) );
+        assertThat( errors.size() ).as( "Should have no errors" ).isEqualTo( 0 );
         ArrayNode results = (ArrayNode) response.get("results");
         ArrayNode data = (ArrayNode) results.get(0).get("data");
-        assertThat( "Should see our own query", data.size(), equalTo( 1 ) );
+        assertThat( data.size() ).as( "Should see our own query" ).isEqualTo( 1 );
     }
 
     private void startServerWithAuthDisabled() throws IOException

@@ -41,8 +41,7 @@ import org.neo4j.procedure.Mode;
 import org.neo4j.procedure.Procedure;
 
 import static com.neo4j.bolt.BoltDriverHelper.graphDatabaseDriver;
-import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.hamcrest.Matchers.equalTo;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -120,18 +119,18 @@ public class BoltProceduresIT
             var result = session.run( "CALL dbms.routing.getRoutingTable($context, $database)", params );
 
             var servers = result.single().get( "servers" ).asList( Values.ofMap( Values.ofValue() ) );
-            assertThat( servers.size(), equalTo( 3 ) );
+            assertThat( servers.size() ).isEqualTo( 3 );
             var routingTable = new HashMap<String,String>();
             for ( var entry : servers )
             {
                 var addresses = entry.get( "addresses" ).asList( Values.ofString() );
-                assertThat( addresses.size(), equalTo( 1 ) );
+                assertThat( addresses.size() ).isEqualTo( 1 );
                 routingTable.put( entry.get( "role" ).asString(), addresses.get( 0 ) );
             }
 
-            assertThat( routingTable.keySet(), containsInAnyOrder( "WRITE", "READ", "ROUTE" ) );
-            assertThat( routingTable.get( "WRITE" ), equalTo( routingTable.get( "READ" ) ) );
-            assertThat( routingTable.get( "WRITE" ), equalTo( routingTable.get( "ROUTE" ) ) );
+            assertThat( routingTable.keySet() ).contains( "WRITE", "READ", "ROUTE" );
+            assertThat( routingTable.get( "WRITE" ) ).isEqualTo( routingTable.get( "READ" ) );
+            assertThat( routingTable.get( "WRITE" ) ).isEqualTo( routingTable.get( "ROUTE" ) );
         }
     }
 
@@ -145,18 +144,18 @@ public class BoltProceduresIT
             var result = session.run( "CALL dbms.cluster.routing.getRoutingTable($context)", params );
 
             var servers = result.single().get( "servers" ).asList( Values.ofMap( Values.ofValue() ) );
-            assertThat( servers.size(), equalTo( 3 ) );
+            assertThat( servers.size() ).isEqualTo( 3 );
             var routingTable = new HashMap<String,String>();
             for ( var entry : servers )
             {
                 var addresses = entry.get( "addresses" ).asList( Values.ofString() );
-                assertThat( addresses.size(), equalTo( 1 ) );
+                assertThat( addresses.size() ).isEqualTo( 1 );
                 routingTable.put( entry.get( "role" ).asString(), addresses.get( 0 ) );
             }
 
-            assertThat( routingTable.keySet(), containsInAnyOrder( "WRITE", "READ", "ROUTE" ) );
-            assertThat( routingTable.get( "WRITE" ), equalTo( routingTable.get( "READ" ) ) );
-            assertThat( routingTable.get( "WRITE" ), equalTo( routingTable.get( "ROUTE" ) ) );
+            assertThat( routingTable.keySet() ).contains( "WRITE", "READ", "ROUTE" );
+            assertThat( routingTable.get( "WRITE" ) ).isEqualTo( routingTable.get( "READ" ) );
+            assertThat( routingTable.get( "WRITE" ) ).isEqualTo( routingTable.get( "ROUTE" ) );
         }
     }
 
