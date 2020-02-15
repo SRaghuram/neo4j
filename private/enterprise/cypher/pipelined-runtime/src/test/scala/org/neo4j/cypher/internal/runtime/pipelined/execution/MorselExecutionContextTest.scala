@@ -38,8 +38,7 @@ class MorselExecutionContextTest extends CypherFunSuite {
         .newReference("x", nullable = true, CTAny)
 
     // WHEN
-    val morsel = Morsel.create(slots, morselSize)
-    val ctx = new MorselExecutionContext(morsel, slots, morselSize, 0, 0, morselSize).view(1, morselSize )
+    val ctx = MorselFactory.allocate(slots, morselSize).view(1, morselSize)
 
     // THEN
     val expectedSizeOfLongs = morselSize * 8L
