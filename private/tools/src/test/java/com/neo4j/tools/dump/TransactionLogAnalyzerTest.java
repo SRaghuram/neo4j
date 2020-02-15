@@ -21,6 +21,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.neo4j.collection.PrimitiveLongArrayQueue;
 import org.neo4j.internal.recordstorage.Command;
 import org.neo4j.io.ByteUnit;
+import org.neo4j.internal.recordstorage.RecordStorageCommandReaderFactory;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
@@ -92,6 +93,7 @@ class TransactionLogAnalyzerTest
                 .withTransactionIdStore( new SimpleTransactionIdStore() )
                 .withRotationThreshold( ByteUnit.mebiBytes( 1 ) )
                 .withStoreId( StoreId.UNKNOWN )
+                .withCommandReaderFactory( RecordStorageCommandReaderFactory.INSTANCE )
                 .build();
         life.add( logFiles );
         logFile = logFiles.getLogFile();

@@ -25,6 +25,7 @@ import org.neo4j.storageengine.api.StoreId;
 import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.neo4j.internal.recordstorage.RecordStorageCommandReaderFactory.INSTANCE;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_CHECKSUM;
 
 class TxPullResponseEncodeDecodeV3Test
@@ -58,7 +59,7 @@ class TxPullResponseEncodeDecodeV3Test
     void shouldEncodeAndDecodePullResponseMessage( ChunkSize chunkSize )
     {
         // given
-        channel = new EmbeddedChannel( new TxPullResponseEncoder( chunkSize.chunkSize ), new TxPullResponseDecoder() );
+        channel = new EmbeddedChannel( new TxPullResponseEncoder( chunkSize.chunkSize ), new TxPullResponseDecoder( INSTANCE ) );
         TxPullResponse sent = new TxPullResponse( new StoreId( 1, 2, 3 ), newCommittedTransactionRepresentation() );
 
         // when
@@ -73,7 +74,7 @@ class TxPullResponseEncodeDecodeV3Test
     void shouldDecodeTwoTransactionsAfterOneAnther( ChunkSize chunkSize )
     {
         // given
-        channel = new EmbeddedChannel( new TxPullResponseEncoder( chunkSize.chunkSize ), new TxPullResponseDecoder() );
+        channel = new EmbeddedChannel( new TxPullResponseEncoder( chunkSize.chunkSize ), new TxPullResponseDecoder( INSTANCE ) );
         TxPullResponse sent = new TxPullResponse( new StoreId( 1, 2, 3 ), newCommittedTransactionRepresentation() );
 
         // when
@@ -94,7 +95,7 @@ class TxPullResponseEncodeDecodeV3Test
     void shouldDecodeStreamOfTransactions( ChunkSize chunkSize )
     {
         // given
-        channel = new EmbeddedChannel( new TxPullResponseEncoder( chunkSize.chunkSize ), new TxPullResponseDecoder() );
+        channel = new EmbeddedChannel( new TxPullResponseEncoder( chunkSize.chunkSize ), new TxPullResponseDecoder( INSTANCE ) );
         TxPullResponse sent = new TxPullResponse( new StoreId( 1, 2, 3 ), newCommittedTransactionRepresentation() );
 
         // when

@@ -124,6 +124,7 @@ public class BackupSupportingClassesFactory
                 .inactivityTimeout( config.get( CausalClusteringSettings.catch_up_client_inactivity_timeout ) )
                 .scheduler( jobScheduler )
                 .bootstrapConfig( BootstrapConfiguration.clientConfig( config ) )
+                .commandReader( storageEngineFactory.commandReaderFactory() )
                 .handShakeTimeout( config.get( CausalClusteringSettings.handshake_timeout ) )
                 .clock( clock )
                 .debugLogProvider( logProvider )

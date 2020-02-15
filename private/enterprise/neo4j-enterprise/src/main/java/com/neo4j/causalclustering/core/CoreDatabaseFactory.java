@@ -271,12 +271,15 @@ class CoreDatabaseFactory
         StateMachineCommitHelper commitHelper = new StateMachineCommitHelper( raftContext.commandIndexTracker(), versionContextSupplier,
                 databaseEventDispatch, pageCacheTracer );
 
-        ReplicatedTokenStateMachine labelTokenStateMachine = new ReplicatedTokenStateMachine( commitHelper, labelTokenRegistry, debugLog );
-        ReplicatedTokenStateMachine propertyKeyTokenStateMachine = new ReplicatedTokenStateMachine( commitHelper, propertyKeyTokenRegistry, debugLog );
-        ReplicatedTokenStateMachine relTypeTokenStateMachine = new ReplicatedTokenStateMachine( commitHelper, relationshipTypeTokenRegistry, debugLog );
+        ReplicatedTokenStateMachine labelTokenStateMachine =
+                new ReplicatedTokenStateMachine( commitHelper, labelTokenRegistry, debugLog, storageEngineFactory.commandReaderFactory() );
+        ReplicatedTokenStateMachine propertyKeyTokenStateMachine =
+                new ReplicatedTokenStateMachine( commitHelper, propertyKeyTokenRegistry, debugLog, storageEngineFactory.commandReaderFactory() );
+        ReplicatedTokenStateMachine relTypeTokenStateMachine =
+                new ReplicatedTokenStateMachine( commitHelper, relationshipTypeTokenRegistry, debugLog, storageEngineFactory.commandReaderFactory() );
 
         ReplicatedTransactionStateMachine replicatedTxStateMachine = new ReplicatedTransactionStateMachine( commitHelper, replicatedLeaseStateMachine,
-                config.get( state_machine_apply_max_batch_size ), debugLog );
+                config.get( state_machine_apply_max_batch_size ), debugLog, storageEngineFactory.commandReaderFactory() );
 
         Locks lockManager = createLockManager( config, clock, logService );
 

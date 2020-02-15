@@ -63,6 +63,7 @@ import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.internal.index.label.TokenScanStore;
 import org.neo4j.internal.recordstorage.Command;
+import org.neo4j.internal.recordstorage.RecordStorageCommandReaderFactory;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.FileUtils;
 import org.neo4j.io.layout.DatabaseFile;
@@ -91,6 +92,7 @@ import org.neo4j.logging.FormattedLogProvider;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.storageengine.api.StorageEngine;
+import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.storageengine.api.TransactionApplicationMode;
 import org.neo4j.storageengine.api.TransactionIdStore;
 import org.neo4j.test.Barrier;
@@ -455,7 +457,10 @@ class BackupIT
         GraphDatabaseService db = startDb( serverHomeDir, settings );
         createInitialDataSet( db );
 
-        LogFiles backupLogFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( backupDatabasePath, fs ).build();
+        StorageEngineFactory storageEngineFactory = ((GraphDatabaseAPI) db).getDependencyResolver().resolveDependency( StorageEngineFactory.class );
+        LogFiles backupLogFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( backupDatabasePath, fs )
+                .withCommandReaderFactory( storageEngineFactory.commandReaderFactory() )
+                .build();
 
         executeBackup( db );
         assertThat( backupLogFiles.logFiles() ).hasSize( 1 );
@@ -1314,7 +1319,9 @@ class BackupIT
     private void checkPreviousCommittedTxIdFromBackupTxLog( long logVersion, long txId ) throws IOException
     {
         // Assert header of specified log version containing correct txId
-        LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( backupDatabaseLayout.databaseDirectory(), fs ).build();
+        LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( backupDatabaseLayout.databaseDirectory(), fs )
+                .withCommandReaderFactory( RecordStorageCommandReaderFactory.INSTANCE )
+                .build();
         LogHeader logHeader = LogHeaderReader.readLogHeader( fs, logFiles.getLogFileForVersion( logVersion ) );
         assertEquals( txId, logHeader.getLastCommittedTxId() );
     }

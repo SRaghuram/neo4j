@@ -79,9 +79,9 @@ public final class CatchupComponentsProvider
         this.pageCache = globalModule.getPageCache();
         this.globalLife = globalModule.getGlobalLife();
         this.fileSystem = globalModule.getFileSystem();
+        this.storageEngineFactory = globalModule.getStorageEngineFactory();
         this.catchupClientFactory = createCatchupClientFactory();
         this.portRegister = globalModule.getConnectorPortRegister();
-        this.storageEngineFactory = globalModule.getStorageEngineFactory();
         this.databaseTracers = new DatabaseTracers( globalModule.getTracers() );
         this.copiedStoreRecovery = globalLife.add(
                 new CopiedStoreRecovery( pageCache, databaseTracers, fileSystem, globalModule.getStorageEngineFactory() ) );
@@ -98,6 +98,7 @@ public final class CatchupComponentsProvider
                 .inactivityTimeout( config.get( CausalClusteringSettings.catch_up_client_inactivity_timeout ) )
                 .scheduler( scheduler )
                 .bootstrapConfig( clientConfig( config ) )
+                .commandReader( storageEngineFactory.commandReaderFactory() )
                 .handShakeTimeout( config.get( CausalClusteringSettings.handshake_timeout ) )
                 .debugLogProvider( logProvider )
                 .userLogProvider( userLogProvider )

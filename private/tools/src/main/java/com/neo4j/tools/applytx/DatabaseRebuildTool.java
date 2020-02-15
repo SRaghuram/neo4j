@@ -35,6 +35,8 @@ import org.neo4j.kernel.impl.util.Listener;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.FormattedLogProvider;
+import org.neo4j.storageengine.api.CommandReaderFactory;
+import org.neo4j.storageengine.api.StorageEngineFactory;
 
 import static org.neo4j.kernel.lifecycle.LifecycleAdapter.onShutdown;
 
@@ -86,6 +88,7 @@ public class DatabaseRebuildTool
 
         Args args = Args.withFlags( "i", "overwrite-to" ).parse( arguments );
         DatabaseLayout fromLayout = getFrom( args );
+        StorageEngineFactory fromStorageEngineFactory = StorageEngineFactory.selectStorageEngine();
         File toPath = getTo( args );
         String databaseName = toPath.getName();
         File storeDir = toPath.getParentFile();
@@ -99,7 +102,7 @@ public class DatabaseRebuildTool
         @SuppressWarnings( "resource" )
         InputStream input = interactive ? in : ConsoleUtil.oneCommand( args.orphansAsArray() );
         LifeSupport life = new LifeSupport();
-        ConsoleInput consoleInput = console( fromLayout, dbBuilder, databaseName, input,
+        ConsoleInput consoleInput = console( fromLayout, fromStorageEngineFactory.commandReaderFactory(), dbBuilder, databaseName, input,
                 interactive ? ConsoleUtil.staticPrompt( "# " ) : ConsoleUtil.NO_PROMPT, life );
         life.start();
         try
@@ -189,19 +192,18 @@ public class DatabaseRebuildTool
         }
     }
 
-    private ConsoleInput console( final DatabaseLayout fromLayout, final DatabaseManagementServiceBuilder dbBuilder, String databaseName,
-            InputStream in, Listener<PrintStream> prompt, LifeSupport life )
+    private ConsoleInput console( final DatabaseLayout fromLayout, CommandReaderFactory fromCommandReader, final DatabaseManagementServiceBuilder dbBuilder,
+            String databaseName, InputStream in, Listener<PrintStream> prompt, LifeSupport life )
     {
         // We must have this indirection here since in order to perform CC (one of the commands) we must shut down
         // the database and let CC instantiate its own to run on. After that completes the db
         // should be restored. The commands has references to providers of things to accommodate for this.
-        final AtomicReference<Store> store =
-                new AtomicReference<>( new Store( dbBuilder, databaseName ) );
+        final AtomicReference<Store> store = new AtomicReference<>( new Store( dbBuilder, databaseName ) );
         final Supplier<StoreAccess> storeAccess = () -> store.get().access;
         final Supplier<GraphDatabaseAPI> dbAccess = () -> store.get().db;
 
         ConsoleInput consoleInput = life.add( new ConsoleInput( in, out, prompt ) );
-        consoleInput.add( "apply", new ApplyTransactionsCommand( fromLayout, dbAccess ) );
+        consoleInput.add( "apply", new ApplyTransactionsCommand( fromLayout, fromCommandReader, dbAccess ) );
         consoleInput.add( "reapply", new ReapplyTransactionsCommand( dbAccess ) );
         consoleInput.add( DumpRecordsCommand.NAME, new DumpRecordsCommand( storeAccess ) );
         consoleInput.add( "cc", new ArgsCommand()
@@ -213,9 +215,9 @@ public class DatabaseRebuildTool
                 store.get().shutdown();
                 try
                 {
-                    Result result = new ConsistencyCheckService().runFullConsistencyCheck( databaseLayout,
-                            Config.defaults(), ProgressMonitorFactory.textual( out ),
-                            FormattedLogProvider.toOutputStream( System.out ), false );
+                    Result result =
+                            new ConsistencyCheckService().runFullConsistencyCheck( databaseLayout, Config.defaults(), ProgressMonitorFactory.textual( out ),
+                                    FormattedLogProvider.toOutputStream( System.out ), false );
                     out.println( result.isSuccessful() ? "consistent" : "INCONSISTENT" );
                 }
                 finally

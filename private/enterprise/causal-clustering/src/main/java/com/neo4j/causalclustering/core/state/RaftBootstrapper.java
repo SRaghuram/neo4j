@@ -261,6 +261,7 @@ public class RaftBootstrapper
                     .withConfig( config )
                     .withStoreId( storeId )
                     .withLastCommittedTransactionIdSupplier( () -> readOnlyTransactionIdStore.getLastClosedTransactionId() - 1 )
+                    .withCommandReaderFactory( storageEngineFactory.commandReaderFactory() )
                     .build();
 
             long dummyTransactionId;

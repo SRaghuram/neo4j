@@ -21,6 +21,7 @@ import java.util.function.LongFunction;
 
 import org.neo4j.function.ThrowingConsumer;
 import org.neo4j.internal.recordstorage.Command;
+import org.neo4j.internal.recordstorage.RecordStorageCommandReaderFactory;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.fs.PhysicalFlushableChecksumChannel;
 import org.neo4j.io.fs.StoreChannel;
@@ -117,7 +118,9 @@ class CheckTxLogsTest
 
     private LogFiles getLogFiles() throws IOException
     {
-        return LogFilesBuilder.logFilesBasedOnlyBuilder( databaseLayout.databaseDirectory(), fs ).build();
+        return LogFilesBuilder.logFilesBasedOnlyBuilder( databaseLayout.databaseDirectory(), fs )
+                .withCommandReaderFactory( RecordStorageCommandReaderFactory.INSTANCE )
+                .build();
     }
 
     @Test

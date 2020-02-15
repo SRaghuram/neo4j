@@ -32,6 +32,7 @@ import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.storageengine.api.CommandReaderFactory;
 import org.neo4j.storageengine.api.StorageEngine;
 import org.neo4j.storageengine.api.TransactionIdStore;
 
@@ -50,11 +51,13 @@ import static org.neo4j.storageengine.api.TransactionApplicationMode.EXTERNAL;
 public class ApplyTransactionsCommand extends ArgsCommand
 {
     private final DatabaseLayout fromLayout;
+    private final CommandReaderFactory fromCommandReader;
     private final Supplier<GraphDatabaseAPI> to;
 
-    ApplyTransactionsCommand( DatabaseLayout fromLayout, Supplier<GraphDatabaseAPI> to )
+    ApplyTransactionsCommand( DatabaseLayout fromLayout, CommandReaderFactory fromCommandReader, Supplier<GraphDatabaseAPI> to )
     {
         this.fromLayout = fromLayout;
+        this.fromCommandReader = fromCommandReader;
         this.to = to;
     }
 
@@ -101,7 +104,8 @@ public class ApplyTransactionsCommand extends ArgsCommand
               JobScheduler jobScheduler = createInitialisedScheduler();
               PageCache pageCache = StandalonePageCacheFactory.createPageCache( fileSystem, jobScheduler, PageCacheTracer.NULL ) )
         {
-            LogicalTransactionStore source = life.add( new ReadOnlyTransactionStore( pageCache, fileSystem, fromLayout, Config.defaults(), new Monitors() ) );
+            LogicalTransactionStore source =
+                    life.add( new ReadOnlyTransactionStore( pageCache, fileSystem, fromLayout, Config.defaults(), new Monitors(), fromCommandReader ) );
             life.start();
             long lastAppliedTx = fromTxExclusive;
             // Some progress if there are more than a couple of transactions to apply

@@ -21,6 +21,7 @@ import org.neo4j.common.DependencyResolver;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
+import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.test.extension.Inject;
 
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
@@ -85,7 +86,9 @@ class ClusterCustomLogLocationIT
     private static void logFileInStoreDirectoryDoesNotExist( DatabaseLayout databaseLayout, DependencyResolver dependencyResolver ) throws IOException
     {
         FileSystemAbstraction fileSystem = dependencyResolver.resolveDependency( FileSystemAbstraction.class );
-        LogFiles storeLogFiles = logFilesBasedOnlyBuilder( databaseLayout.databaseDirectory(), fileSystem ).build();
+        LogFiles storeLogFiles = logFilesBasedOnlyBuilder( databaseLayout.databaseDirectory(), fileSystem )
+                .withCommandReaderFactory( dependencyResolver.resolveDependency( StorageEngineFactory.class ).commandReaderFactory() )
+                .build();
         assertFalse( storeLogFiles.versionExists( 0 ) );
     }
 }

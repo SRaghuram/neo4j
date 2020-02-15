@@ -22,8 +22,10 @@ import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.kernel.internal.locker.DatabaseLocker;
 import org.neo4j.kernel.internal.locker.Locker;
+import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.Neo4jLayoutExtension;
@@ -200,14 +202,21 @@ class RestoreDatabaseCommandIT
 
         GraphDatabaseService db = createDatabase( toLayout );
         createTestData( toNodeCount, db );
+        StorageEngineFactory storageEngineFactory = ((GraphDatabaseAPI) db).getDependencyResolver().resolveDependency( StorageEngineFactory.class );
         managementService.shutdown();
 
         // when
         new RestoreDatabaseCommand( fileSystem, fromLayout.databaseDirectory(), config, DEFAULT_DATABASE_NAME, true ).execute();
 
-        LogFiles fromStoreLogFiles = logFilesBasedOnlyBuilder( fromLayout.databaseDirectory(), fileSystem ).build();
-        LogFiles toStoreLogFiles = logFilesBasedOnlyBuilder( toLayout.databaseDirectory(), fileSystem ).build();
-        LogFiles customLogLocationLogFiles = logFilesBasedOnlyBuilder( toLayout.getTransactionLogsDirectory(), fileSystem ).build();
+        LogFiles fromStoreLogFiles = logFilesBasedOnlyBuilder( fromLayout.databaseDirectory(), fileSystem )
+                .withCommandReaderFactory( storageEngineFactory.commandReaderFactory() )
+                .build();
+        LogFiles toStoreLogFiles = logFilesBasedOnlyBuilder( toLayout.databaseDirectory(), fileSystem )
+                .withCommandReaderFactory( storageEngineFactory.commandReaderFactory() )
+                .build();
+        LogFiles customLogLocationLogFiles = logFilesBasedOnlyBuilder( toLayout.getTransactionLogsDirectory(), fileSystem )
+                .withCommandReaderFactory( storageEngineFactory.commandReaderFactory() )
+                .build();
         assertThat( toStoreLogFiles.logFiles() ).isEmpty();
         assertThat( customLogLocationLogFiles.logFiles() ).hasSize( 1 );
         assertThat( fromStoreLogFiles.getLogFileForVersion( 0 ).length() ).isGreaterThan( 0L );

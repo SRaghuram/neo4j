@@ -21,6 +21,7 @@ import java.util.stream.Stream;
 
 import org.neo4j.internal.helpers.Args;
 import org.neo4j.internal.recordstorage.Command;
+import org.neo4j.internal.recordstorage.RecordStorageCommandReaderFactory;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
@@ -33,6 +34,7 @@ import org.neo4j.kernel.impl.transaction.log.entry.LogEntryCommit;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 import org.neo4j.storageengine.api.StorageCommand;
+import org.neo4j.storageengine.api.StorageEngineFactory;
 
 import static com.neo4j.tools.util.TransactionLogUtils.openLogs;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_ID;
@@ -79,7 +81,9 @@ public class CheckTxLogs
         boolean success;
         try ( FileSystemAbstraction fs = new DefaultFileSystemAbstraction() )
         {
-            LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( dir, fs ).build();
+            LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( dir, fs )
+                    .withCommandReaderFactory( RecordStorageCommandReaderFactory.INSTANCE )
+                    .build();
             int numberOfLogFilesFound = (int) (logFiles.getHighestLogVersion() - logFiles.getLowestLogVersion() + 1);
             out.println( "Found " + numberOfLogFilesFound + " log files to verify in " + dir.getCanonicalPath() );
 
@@ -102,7 +106,9 @@ public class CheckTxLogs
     // used in other projects do not remove!
     public boolean checkAll( File storeDirectory ) throws IOException
     {
-        LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( storeDirectory, fs ).build();
+        LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( storeDirectory, fs )
+                .withCommandReaderFactory( RecordStorageCommandReaderFactory.INSTANCE )
+                .build();
         InconsistenciesHandler handler = new PrintingInconsistenciesHandler( out );
         boolean success = scan( logFiles, handler, CheckTypes.CHECK_TYPES );
         success &= validateCheckPoints( logFiles, handler );
@@ -148,7 +154,7 @@ public class CheckTxLogs
 
     LogEntryCursor openLogEntryCursor( LogFiles logFiles ) throws IOException
     {
-        return openLogs( fs, logFiles );
+        return openLogs( fs, logFiles, StorageEngineFactory.selectStorageEngine().commandReaderFactory() );
     }
 
     boolean scan( LogFiles logFiles, InconsistenciesHandler handler, CheckType<?,?>... checkTypes )

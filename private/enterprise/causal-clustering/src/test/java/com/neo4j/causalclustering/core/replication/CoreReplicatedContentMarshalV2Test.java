@@ -29,6 +29,7 @@ import java.util.UUID;
 
 import org.neo4j.internal.recordstorage.Command;
 import org.neo4j.kernel.database.NamedDatabaseId;
+import org.neo4j.kernel.impl.api.TestCommandReaderFactory;
 import org.neo4j.kernel.impl.store.record.LabelTokenRecord;
 import org.neo4j.kernel.impl.transaction.TransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionRepresentation;
@@ -124,7 +125,7 @@ class CoreReplicatedContentMarshalV2Test
         }
         TransactionRepresentation representation =
                 ReplicatedTransactionFactory.extractTransactionRepresentation( (ReplicatedTransaction) unmarshal, extraHeader,
-                        new VersionAwareLogEntryReader() );
+                        new VersionAwareLogEntryReader( new TestCommandReaderFactory() ) );
         assertThat( representation, equalTo( tx ) );
     }
 }

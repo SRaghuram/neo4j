@@ -20,6 +20,7 @@ import org.neo4j.kernel.impl.transaction.log.entry.LogEntryCommand;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryReader;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryWriter;
 import org.neo4j.kernel.impl.transaction.log.entry.VersionAwareLogEntryReader;
+import org.neo4j.storageengine.api.CommandReaderFactory;
 import org.neo4j.storageengine.api.StorageCommand;
 
 public class StorageCommandMarshal
@@ -48,12 +49,12 @@ public class StorageCommandMarshal
         return commandsBytes;
     }
 
-    static Collection<StorageCommand> bytesToCommands( byte[] commandBytes )
+    static Collection<StorageCommand> bytesToCommands( byte[] commandBytes, CommandReaderFactory commandReaderFactory )
     {
         ByteBuf txBuffer = Unpooled.wrappedBuffer( commandBytes );
         NetworkReadableChannel channel = new NetworkReadableChannel( txBuffer );
 
-        LogEntryReader reader = new VersionAwareLogEntryReader();
+        LogEntryReader reader = new VersionAwareLogEntryReader( commandReaderFactory );
 
         LogEntryCommand entryRead;
         List<StorageCommand> commands = new LinkedList<>();

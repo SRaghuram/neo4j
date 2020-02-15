@@ -14,6 +14,7 @@ import org.neo4j.io.layout.Neo4jLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
+import org.neo4j.storageengine.api.StorageEngineFactory;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.TEMP_STORE_COPY_DIRECTORY_NAME;
 
@@ -26,13 +27,16 @@ public class TemporaryStoreDirectory implements AutoCloseable
     private final LogFiles tempLogFiles;
     private boolean keepStore;
 
-    TemporaryStoreDirectory( FileSystemAbstraction fs, PageCache pageCache, DatabaseLayout databaseLayout ) throws IOException
+    TemporaryStoreDirectory( FileSystemAbstraction fs, PageCache pageCache, DatabaseLayout databaseLayout, StorageEngineFactory storageEngineFactory )
+            throws IOException
     {
         this.tempHomeDir = databaseLayout.file( TEMP_STORE_COPY_DIRECTORY_NAME );
         this.tempDatabaseLayout = Neo4jLayout.ofFlat( tempHomeDir ).databaseLayout( databaseLayout.getDatabaseName() );
         this.fs = fs;
         storeFiles = new StoreFiles( fs, pageCache, ( directory, name ) -> true );
-        tempLogFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( tempDatabaseLayout.getTransactionLogsDirectory(), fs ).build();
+        tempLogFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( tempDatabaseLayout.getTransactionLogsDirectory(), fs )
+                .withCommandReaderFactory( storageEngineFactory.commandReaderFactory() )
+                .build();
         storeFiles.delete( tempDatabaseLayout, tempLogFiles );
     }
 

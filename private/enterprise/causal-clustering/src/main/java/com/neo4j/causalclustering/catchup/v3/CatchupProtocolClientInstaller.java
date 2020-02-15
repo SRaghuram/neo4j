@@ -51,6 +51,7 @@ import java.util.stream.Collectors;
 
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.storageengine.api.CommandReaderFactory;
 
 public class CatchupProtocolClientInstaller implements ProtocolInstaller<ProtocolInstaller.Orientation.Client>
 {
@@ -58,9 +59,11 @@ public class CatchupProtocolClientInstaller implements ProtocolInstaller<Protoco
 
     public static class Factory extends ProtocolInstaller.Factory<Orientation.Client,CatchupProtocolClientInstaller>
     {
-        public Factory( NettyPipelineBuilderFactory pipelineBuilder, LogProvider logProvider, CatchupResponseHandler handler )
+        public Factory( NettyPipelineBuilderFactory pipelineBuilder, LogProvider logProvider, CatchupResponseHandler handler,
+                CommandReaderFactory commandReaderFactory )
         {
-            super( APPLICATION_PROTOCOL, modifiers -> new CatchupProtocolClientInstaller( pipelineBuilder, modifiers, logProvider, handler ) );
+            super( APPLICATION_PROTOCOL,
+                    modifiers -> new CatchupProtocolClientInstaller( pipelineBuilder, modifiers, logProvider, handler, commandReaderFactory ) );
         }
     }
 
@@ -69,15 +72,17 @@ public class CatchupProtocolClientInstaller implements ProtocolInstaller<Protoco
     private final Log log;
     private final NettyPipelineBuilderFactory pipelineBuilder;
     private final CatchupResponseHandler handler;
+    private final CommandReaderFactory commandReaderFactory;
 
     public CatchupProtocolClientInstaller( NettyPipelineBuilderFactory pipelineBuilder, List<ModifierProtocolInstaller<Orientation.Client>> modifiers,
-            LogProvider logProvider, CatchupResponseHandler handler )
+            LogProvider logProvider, CatchupResponseHandler handler, CommandReaderFactory commandReaderFactory )
     {
         this.modifiers = modifiers;
         this.logProvider = logProvider;
         this.log = logProvider.getLog( getClass() );
         this.pipelineBuilder = pipelineBuilder;
         this.handler = handler;
+        this.commandReaderFactory = commandReaderFactory;
     }
 
     /**
@@ -91,7 +96,7 @@ public class CatchupProtocolClientInstaller implements ProtocolInstaller<Protoco
         RequestDecoderDispatcher<CatchupClientProtocol.State> decoderDispatcher = new RequestDecoderDispatcher<>( protocol, logProvider );
         decoderDispatcher.register( CatchupClientProtocol.State.STORE_ID, new GetStoreIdResponseDecoder() );
         decoderDispatcher.register( CatchupClientProtocol.State.DATABASE_ID, new GetDatabaseIdResponseDecoder() );
-        decoderDispatcher.register( CatchupClientProtocol.State.TX_PULL_RESPONSE, new TxPullResponseDecoder() );
+        decoderDispatcher.register( CatchupClientProtocol.State.TX_PULL_RESPONSE, new TxPullResponseDecoder( commandReaderFactory ) );
         decoderDispatcher.register( CatchupClientProtocol.State.CORE_SNAPSHOT, new CoreSnapshotDecoder() );
         decoderDispatcher.register( CatchupClientProtocol.State.STORE_COPY_FINISHED, new StoreCopyFinishedResponseDecoder() );
         decoderDispatcher.register( CatchupClientProtocol.State.TX_STREAM_FINISHED, new TxStreamFinishedResponseDecoder() );

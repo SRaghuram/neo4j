@@ -43,6 +43,7 @@ import org.neo4j.kernel.impl.transaction.log.files.LogFile;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.storageengine.api.TransactionIdStore;
 
 import static com.neo4j.bench.micro.data.DataGenerator.GraphWriter.TRANSACTIONAL;
@@ -113,9 +114,11 @@ public class DatabaseRecovery extends AbstractCoreBenchmark
     @Setup( Level.Iteration )
     public void truncateCheckpointFromLogs() throws Exception
     {
-        DatabaseLayout databaseLayout = ((GraphDatabaseAPI) managedStore.db()).databaseLayout();
+        GraphDatabaseAPI db = (GraphDatabaseAPI) managedStore.db();
+        DatabaseLayout databaseLayout = db.databaseLayout();
+        StorageEngineFactory storageEngineFactory = db.getDependencyResolver().resolveDependency( StorageEngineFactory.class );
         ManagedStore.getManagementService().shutdown();
-        removeLastCheckpointsRecordFromLastLogFile( databaseLayout );
+        removeLastCheckpointsRecordFromLastLogFile( databaseLayout, storageEngineFactory );
         if ( !isRecoveryRequired( databaseLayout, Config.defaults() ) )
         {
             throw new IllegalStateException( "Store should require recovery." );
@@ -141,13 +144,13 @@ public class DatabaseRecovery extends AbstractCoreBenchmark
         return false;
     }
 
-    private static void removeLastCheckpointsRecordFromLastLogFile( DatabaseLayout databaseLayout ) throws Exception
+    private static void removeLastCheckpointsRecordFromLastLogFile( DatabaseLayout databaseLayout, StorageEngineFactory storageEngineFactory ) throws Exception
     {
         DefaultFileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction();
         LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( databaseLayout.getTransactionLogsDirectory(), fileSystem ).build();
 
         LogFile logFile = logFiles.getLogFile();
-        VersionAwareLogEntryReader entryReader = new VersionAwareLogEntryReader();
+        VersionAwareLogEntryReader entryReader = new VersionAwareLogEntryReader( storageEngineFactory.commandReaderFactory() );
         ReadableLogChannel reader = logFile.getReader( logFiles.extractHeader( logFiles.getHighestLogVersion() ).getStartPosition() );
         LogEntry logEntry;
         Deque<CheckPoint> checkPoints = new ArrayDeque<>();

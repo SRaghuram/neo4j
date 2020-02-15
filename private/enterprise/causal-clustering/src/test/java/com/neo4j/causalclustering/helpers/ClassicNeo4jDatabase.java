@@ -25,6 +25,7 @@ import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASES_ROOT_DIR_NAME;
@@ -180,6 +181,7 @@ public class ClassicNeo4jDatabase
             {
                 fileSystem.copyFile( file, new File( temporaryDirectory, file.getName() ) );
             }
+            StorageEngineFactory storageEngineFactory = ((GraphDatabaseAPI) db).getDependencyResolver().resolveDependency( StorageEngineFactory.class );
 
             managementService.shutdown();
 
@@ -190,7 +192,9 @@ public class ClassicNeo4jDatabase
             }
 
             /* Restore the previously copied transaction logs. */
-            LogFiles copyLogFiles = logFilesBasedOnlyBuilder( temporaryDirectory, fileSystem ).build();
+            LogFiles copyLogFiles = logFilesBasedOnlyBuilder( temporaryDirectory, fileSystem )
+                    .withCommandReaderFactory( storageEngineFactory.commandReaderFactory() )
+                    .build();
             for ( File file : copyLogFiles.logFiles() )
             {
                 fileSystem.copyToDirectory( file, logFilesDirectory );

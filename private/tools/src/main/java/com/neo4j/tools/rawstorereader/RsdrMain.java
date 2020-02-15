@@ -38,6 +38,7 @@ import org.neo4j.kernel.impl.transaction.log.entry.LogEntry;
 import org.neo4j.kernel.impl.transaction.log.files.ChannelNativeAccessor;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.string.HexString;
 
 import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.immediate;
@@ -275,7 +276,7 @@ public class RsdrMain
             DatabaseLayout databaseLayout ) throws IOException
     {
         return TransactionLogUtils.openLogEntryCursor( fileSystem, new File( databaseLayout.databaseDirectory(), fname ),
-                NO_MORE_CHANNELS, ChannelNativeAccessor.EMPTY_ACCESSOR );
+                NO_MORE_CHANNELS, ChannelNativeAccessor.EMPTY_ACCESSOR, StorageEngineFactory.selectStorageEngine().commandReaderFactory() );
     }
 
     private static void readLog(

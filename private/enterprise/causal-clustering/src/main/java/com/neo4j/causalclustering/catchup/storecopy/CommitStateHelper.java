@@ -66,7 +66,8 @@ public class CommitStateHelper
         }
 
         // this is not really a read-only store, because it will create an empty transaction log if there is none
-        ReadOnlyTransactionStore txStore = new ReadOnlyTransactionStore( pageCache, fs, databaseLayout, config, new Monitors() );
+        ReadOnlyTransactionStore txStore = new ReadOnlyTransactionStore( pageCache, fs, databaseLayout, config, new Monitors(),
+                storageEngineFactory.commandReaderFactory() );
 
         long lastTxId = BASE_TX_ID;
         try ( Lifespan ignored = new Lifespan( txStore );
@@ -88,6 +89,10 @@ public class CommitStateHelper
 
     public boolean hasTxLogs( DatabaseLayout databaseLayout ) throws IOException
     {
-        return LogFilesBuilder.activeFilesBuilder( databaseLayout, fs, pageCache ).withConfig( config ).build().logFiles().length > 0;
+        return LogFilesBuilder.activeFilesBuilder( databaseLayout, fs, pageCache )
+                .withConfig( config )
+                .withCommandReaderFactory( storageEngineFactory.commandReaderFactory() )
+                .build()
+                .logFiles().length > 0;
     }
 }

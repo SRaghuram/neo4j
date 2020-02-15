@@ -33,6 +33,7 @@ import org.neo4j.internal.helpers.Args;
 import org.neo4j.internal.helpers.progress.ProgressMonitorFactory;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.index.label.LabelScanStore;
+import org.neo4j.internal.recordstorage.RecordStorageCommandReaderFactory;
 import org.neo4j.internal.recordstorage.RecordStorageEngine;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -66,6 +67,7 @@ import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.kernel.monitoring.tracing.Tracers;
 import org.neo4j.logging.FormattedLog;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.token.TokenHolders;
 
 import static org.neo4j.kernel.impl.scheduler.JobSchedulerFactory.createInitialisedScheduler;
@@ -151,7 +153,9 @@ class RebuildFromLogs
               PageCache pageCache = StandalonePageCacheFactory.createPageCache( fs, scheduler, PageCacheTracer.NULL ) )
         {
             File transactionLogsDirectory = sourceDatabaseLayout.getTransactionLogsDirectory();
-            LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( transactionLogsDirectory, fs ).build();
+            LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( transactionLogsDirectory, fs )
+                    .withCommandReaderFactory( RecordStorageCommandReaderFactory.INSTANCE )
+                    .build();
             long highestVersion = logFiles.getHighestLogVersion();
             if ( highestVersion < 0 )
             {
@@ -209,7 +213,9 @@ class RebuildFromLogs
 
         long applyTransactionsFrom( File sourceDir, long upToTxId ) throws Exception
         {
-            LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( sourceDir, fs ).build();
+            LogFiles logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( sourceDir, fs )
+                    .withCommandReaderFactory( RecordStorageCommandReaderFactory.INSTANCE )
+                    .build();
             int startVersion = 0;
             ReaderLogVersionBridge versionBridge = new ReaderLogVersionBridge( logFiles );
             PhysicalLogVersionedStoreChannel startingChannel = logFiles.openForVersion( startVersion );
@@ -217,7 +223,8 @@ class RebuildFromLogs
             long txId = BASE_TX_ID;
             TransactionQueue queue = new TransactionQueue( 10_000,
                     ( tx, last ) -> commitProcess.commit( tx, CommitEvent.NULL, EXTERNAL ) );
-            LogEntryReader entryReader = new VersionAwareLogEntryReader();
+            StorageEngineFactory storageEngineFactory = StorageEngineFactory.selectStorageEngine();
+            LogEntryReader entryReader = new VersionAwareLogEntryReader( storageEngineFactory.commandReaderFactory() );
             try ( IOCursor<CommittedTransactionRepresentation> cursor = new PhysicalTransactionCursor( channel, entryReader ) )
             {
                 while ( cursor.next() )

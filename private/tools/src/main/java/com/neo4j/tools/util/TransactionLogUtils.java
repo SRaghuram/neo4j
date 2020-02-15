@@ -21,6 +21,7 @@ import org.neo4j.kernel.impl.transaction.log.entry.LogHeader;
 import org.neo4j.kernel.impl.transaction.log.entry.VersionAwareLogEntryReader;
 import org.neo4j.kernel.impl.transaction.log.files.ChannelNativeAccessor;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
+import org.neo4j.storageengine.api.CommandReaderFactory;
 
 import static java.util.Objects.requireNonNull;
 import static org.neo4j.io.memory.ByteBuffers.allocate;
@@ -35,11 +36,11 @@ public class TransactionLogUtils
      * @param fs {@link FileSystemAbstraction} to find {@code storeDirectory} in.
      * @param logFiles the physical log files to read from
      */
-    public static LogEntryCursor openLogs( final FileSystemAbstraction fs, LogFiles logFiles )
+    public static LogEntryCursor openLogs( final FileSystemAbstraction fs, LogFiles logFiles, CommandReaderFactory commandReaderFactory )
             throws IOException
     {
         File firstFile = logFiles.getLogFileForVersion( logFiles.getLowestLogVersion() );
-        return openLogEntryCursor( fs, firstFile, new ReaderLogVersionBridge( logFiles ), logFiles.getChannelNativeAccessor() );
+        return openLogEntryCursor( fs, firstFile, new ReaderLogVersionBridge( logFiles ), logFiles.getChannelNativeAccessor(), commandReaderFactory );
     }
 
     /**
@@ -50,11 +51,11 @@ public class TransactionLogUtils
      * @param readerLogVersionBridge log version bridge to use
      */
     public static LogEntryCursor openLogEntryCursor( FileSystemAbstraction fileSystem, File file,
-            LogVersionBridge readerLogVersionBridge, ChannelNativeAccessor nativeAccessor ) throws IOException
+            LogVersionBridge readerLogVersionBridge, ChannelNativeAccessor nativeAccessor, CommandReaderFactory commandReaderFactory ) throws IOException
     {
         LogVersionedStoreChannel channel = openVersionedChannel( fileSystem, file, nativeAccessor );
         ReadableLogChannel logChannel = new ReadAheadLogChannel( channel, readerLogVersionBridge );
-        return new LogEntryCursor( new VersionAwareLogEntryReader(), logChannel );
+        return new LogEntryCursor( new VersionAwareLogEntryReader( commandReaderFactory ), logChannel );
     }
 
     /**

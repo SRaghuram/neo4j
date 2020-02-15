@@ -68,6 +68,8 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.Monitors;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.storageengine.api.CommandReaderFactory;
+import org.neo4j.storageengine.api.StorageEngineFactory;
 
 import static com.neo4j.causalclustering.core.RaftServerFactory.RAFT_SERVER_NAME;
 import static com.neo4j.causalclustering.net.BootstrapConfiguration.clientConfig;
@@ -128,6 +130,7 @@ public final class CausalClusteringTestHelpers
                 .pipelineBuilder( NettyPipelineBuilderFactory.insecure() )
                 .inactivityTimeout( Duration.of( 10, ChronoUnit.SECONDS ) ).scheduler( scheduler )
                 .bootstrapConfig( clientConfig( Config.defaults() ) )
+                .commandReader( StorageEngineFactory.selectStorageEngine().commandReaderFactory() )
                 .debugLogProvider( logProvider )
                 .userLogProvider( logProvider )
                 .build();
@@ -224,10 +227,13 @@ public final class CausalClusteringTestHelpers
         var fs = new DefaultFileSystemAbstraction();
         var databaseLayout = member.databaseLayout();
         var txLogsDirectory = databaseLayout.getTransactionLogsDirectory();
-        var logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( txLogsDirectory, fs ).build();
+        var storageEngineFactory = StorageEngineFactory.selectStorageEngine();
+        var logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( txLogsDirectory, fs )
+                .withCommandReaderFactory( storageEngineFactory.commandReaderFactory() )
+                .build();
 
         var checkPointsRemoved = 0;
-        while ( removeCheckPointFromTxLog( logFiles, fs ) )
+        while ( removeCheckPointFromTxLog( logFiles, fs, storageEngineFactory.commandReaderFactory() ) )
         {
             checkPointsRemoved++;
         }
@@ -476,9 +482,10 @@ public final class CausalClusteringTestHelpers
         dependencyResolver.resolveDependency( CheckPointer.class ).forceCheckPoint( info );
     }
 
-    private static boolean removeCheckPointFromTxLog( LogFiles logFiles, FileSystemAbstraction fs ) throws IOException
+    private static boolean removeCheckPointFromTxLog( LogFiles logFiles, FileSystemAbstraction fs,
+            CommandReaderFactory commandReaderFactory ) throws IOException
     {
-        var logTailScanner = new LogTailScanner( logFiles, new VersionAwareLogEntryReader(), new Monitors() );
+        var logTailScanner = new LogTailScanner( logFiles, new VersionAwareLogEntryReader( commandReaderFactory ), new Monitors() );
         var logTailInformation = logTailScanner.getTailInformation();
 
         if ( logTailInformation.commitsAfterLastCheckpoint() )

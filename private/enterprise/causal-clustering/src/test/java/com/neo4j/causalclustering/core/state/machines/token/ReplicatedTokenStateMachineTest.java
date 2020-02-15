@@ -66,6 +66,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector.immediate;
+import static org.neo4j.internal.recordstorage.RecordStorageCommandReaderFactory.INSTANCE;
 import static org.neo4j.lock.LockService.NO_LOCK_SERVICE;
 import static org.neo4j.logging.NullLogProvider.nullLogProvider;
 import static org.neo4j.storageengine.api.CommandVersion.AFTER;
@@ -245,7 +246,7 @@ public class ReplicatedTokenStateMachineTest
 
     private static ReplicatedTokenStateMachine newTokenStateMachine( TokenRegistry tokenRegistry )
     {
-        return new ReplicatedTokenStateMachine( new DummyStateMachineCommitHelper(), tokenRegistry, nullLogProvider() );
+        return new ReplicatedTokenStateMachine( new DummyStateMachineCommitHelper(), tokenRegistry, nullLogProvider(), INSTANCE );
     }
 
     private static class StubTransactionCommitProcess extends TransactionRepresentationCommitProcess

@@ -23,6 +23,7 @@ import org.neo4j.kernel.impl.transaction.log.entry.LogEntryReader;
 import org.neo4j.kernel.impl.transaction.log.entry.VersionAwareLogEntryReader;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.storageengine.api.CommandReaderFactory;
 
 import static com.neo4j.causalclustering.core.state.machines.tx.LogIndexTxHeaderEncoding.encodeLogIndexAsTxHeader;
 import static java.lang.String.format;
@@ -34,17 +35,18 @@ public class ReplicatedTransactionStateMachine implements StateMachine<Replicate
     private final ReplicatedLeaseStateMachine leaseStateMachine;
     private final int maxBatchSize;
     private final Log log;
-    private final LogEntryReader reader = new VersionAwareLogEntryReader();
+    private final LogEntryReader reader;
 
     private TransactionQueue queue;
     private long lastCommittedIndex = -1;
 
     public ReplicatedTransactionStateMachine( StateMachineCommitHelper commitHelper, ReplicatedLeaseStateMachine leaseStateMachine,
-            int maxBatchSize, LogProvider logProvider )
+            int maxBatchSize, LogProvider logProvider, CommandReaderFactory commandReaderFactory )
     {
         this.commitHelper = commitHelper;
         this.leaseStateMachine = leaseStateMachine;
         this.maxBatchSize = maxBatchSize;
+        this.reader = new VersionAwareLogEntryReader( commandReaderFactory );
         this.log = logProvider.getLog( getClass() );
     }
 

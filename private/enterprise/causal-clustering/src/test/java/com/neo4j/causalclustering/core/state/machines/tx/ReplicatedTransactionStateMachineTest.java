@@ -19,6 +19,7 @@ import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
+import org.neo4j.kernel.impl.api.TestCommandReaderFactory;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionToApply;
 import org.neo4j.kernel.impl.locking.Locks;
@@ -195,6 +196,6 @@ class ReplicatedTransactionStateMachineTest
     {
         var batchSize = 16;
         var commitHelper = new DummyStateMachineCommitHelper( commandIndexTracker, pageCacheTracer );
-        return new ReplicatedTransactionStateMachine( commitHelper, lockState, batchSize, logProvider );
+        return new ReplicatedTransactionStateMachine( commitHelper, lockState, batchSize, logProvider, new TestCommandReaderFactory() );
     }
 }

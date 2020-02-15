@@ -81,6 +81,7 @@ public class TransactionLogCatchUpWriter implements TxPullResponseListener, Auto
                 .withLogVersionRepository( metaDataStore )
                 .withTransactionIdStore( metaDataStore )
                 .withStoreId( metaDataStore.getStoreId() )
+                .withCommandReaderFactory( storageEngineFactory.commandReaderFactory() )
                 .withLastClosedTransactionPositionSupplier( () -> startPosition );
         this.logFiles = logFilesBuilder.build();
         this.lifespan.add( logFiles );

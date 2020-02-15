@@ -18,6 +18,7 @@ import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionRepresentation;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.storageengine.api.CommandReaderFactory;
 import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.token.TokenRegistry;
 
@@ -30,15 +31,18 @@ public class ReplicatedTokenStateMachine implements StateMachine<ReplicatedToken
     private final StateMachineCommitHelper commitHelper;
     private final TokenRegistry tokenRegistry;
     private final Log log;
+    private final CommandReaderFactory commandReaderFactory;
 
     private TransactionCommitProcess commitProcess;
     private long lastCommittedIndex = -1;
 
-    public ReplicatedTokenStateMachine( StateMachineCommitHelper commitHelper, TokenRegistry tokenRegistry, LogProvider logProvider )
+    public ReplicatedTokenStateMachine( StateMachineCommitHelper commitHelper, TokenRegistry tokenRegistry, LogProvider logProvider,
+            CommandReaderFactory commandReaderFactory )
     {
         this.commitHelper = commitHelper;
         this.tokenRegistry = tokenRegistry;
         this.log = logProvider.getLog( getClass() );
+        this.commandReaderFactory = commandReaderFactory;
     }
 
     public synchronized void installCommitProcess( TransactionCommitProcess commitProcess, long lastCommittedIndex )
@@ -59,7 +63,7 @@ public class ReplicatedTokenStateMachine implements StateMachine<ReplicatedToken
             return;
         }
 
-        Collection<StorageCommand> commands = bytesToCommands( tokenRequest.commandBytes() );
+        Collection<StorageCommand> commands = bytesToCommands( tokenRequest.commandBytes(), commandReaderFactory );
         int newTokenId = extractTokenId( commands );
         boolean internal = isInternal( commands );
 

@@ -137,7 +137,10 @@ public abstract class ClusteredMultiDatabaseManager extends MultiDatabaseManager
     {
         try
         {
-            return LogFilesBuilder.activeFilesBuilder( dbLayout, fs, pageCache ).withConfig( config ).build();
+            return LogFilesBuilder.activeFilesBuilder( dbLayout, fs, pageCache )
+                    .withConfig( config )
+                    .withCommandReaderFactory( globalModule.getStorageEngineFactory().commandReaderFactory() )
+                    .build();
         }
         catch ( IOException e )
         {

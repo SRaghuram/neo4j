@@ -22,6 +22,7 @@ import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryReader;
 import org.neo4j.kernel.impl.transaction.log.entry.VersionAwareLogEntryReader;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 import org.neo4j.time.Clocks;
 
@@ -49,6 +50,8 @@ public class ReplayRaftLog
         System.out.println( "logDirectory = " + logDirectory );
         Config config = Config.defaults();
 
+        StorageEngineFactory storageEngineFactory = StorageEngineFactory.selectStorageEngine();
+
         try ( DefaultFileSystemAbstraction fileSystem = new DefaultFileSystemAbstraction() )
         {
             LogProvider logProvider = getInstance();
@@ -60,7 +63,7 @@ public class ReplayRaftLog
                     Clocks.systemClock(), new ThreadPoolJobScheduler(), pruningStrategy );
 
             long totalCommittedEntries = log.appendIndex(); // Not really, but we need to have a way to pass in the commit index
-            LogEntryReader reader = new VersionAwareLogEntryReader();
+            LogEntryReader reader = new VersionAwareLogEntryReader( storageEngineFactory.commandReaderFactory() );
             for ( int i = 0; i <= totalCommittedEntries; i++ )
             {
                 ReplicatedContent content = readLogEntry( log, i ).content();

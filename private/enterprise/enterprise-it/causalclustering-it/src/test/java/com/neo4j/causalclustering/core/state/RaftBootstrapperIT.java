@@ -29,6 +29,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.graphdb.factory.module.DatabaseInitializer;
 import org.neo4j.internal.recordstorage.ReadOnlyTransactionIdStore;
+import org.neo4j.internal.recordstorage.RecordStorageCommandReaderFactory;
 import org.neo4j.io.fs.DefaultFileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
@@ -44,6 +45,7 @@ import org.neo4j.logging.AssertableLogProvider;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.monitoring.Monitors;
+import org.neo4j.storageengine.api.CommandReaderFactory;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.test.extension.Inject;
@@ -348,14 +350,15 @@ class RaftBootstrapperIT
         assertEquals( INITIAL_LEASE_STATE, leaseState );
     }
 
-    private void verifyDatabase( DatabaseLayout databaseLayout, PageCache pageCache, Config config ) throws IOException
+    private void verifyDatabase( DatabaseLayout databaseLayout, PageCache pageCache, Config config )
+            throws IOException
     {
-        ReadOnlyTransactionStore transactionStore = new ReadOnlyTransactionStore( pageCache, fileSystem,
-                databaseLayout, config, monitors );
+        CommandReaderFactory commandReaderFactory = StorageEngineFactory.selectStorageEngine().commandReaderFactory();
+        ReadOnlyTransactionStore transactionStore =
+                new ReadOnlyTransactionStore( pageCache, fileSystem, databaseLayout, config, monitors, commandReaderFactory );
 
-        LastCommittedIndexFinder lastCommittedIndexFinder = new LastCommittedIndexFinder(
-                new ReadOnlyTransactionIdStore( fileSystem, pageCache, databaseLayout, NULL ),
-                transactionStore, logProvider );
+        LastCommittedIndexFinder lastCommittedIndexFinder =
+                new LastCommittedIndexFinder( new ReadOnlyTransactionIdStore( fileSystem, pageCache, databaseLayout, NULL ), transactionStore, logProvider );
 
         long lastCommittedIndex = lastCommittedIndexFinder.getLastCommittedIndex();
         assertEquals( -1, lastCommittedIndex );
@@ -365,6 +368,7 @@ class RaftBootstrapperIT
     {
         return LogFilesBuilder.logFilesBasedOnlyBuilder( databaseLayout.getTransactionLogsDirectory(), fileSystem )
                 .withConfig( defaultConfig )
+                .withCommandReaderFactory( RecordStorageCommandReaderFactory.INSTANCE )
                 .build();
     }
 

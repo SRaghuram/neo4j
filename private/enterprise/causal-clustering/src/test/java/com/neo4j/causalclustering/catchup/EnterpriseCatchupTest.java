@@ -35,6 +35,7 @@ import org.neo4j.kernel.availability.DatabaseAvailabilityGuard;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
+import org.neo4j.kernel.impl.api.TestCommandReaderFactory;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.storageengine.api.StoreId;
@@ -184,7 +185,8 @@ abstract class EnterpriseCatchupTest
     {
         if ( applicationProtocols == ApplicationProtocols.CATCHUP_3_0 )
         {
-            new CatchupProtocolClientInstaller( pipelineBuilderFactory, emptyList(), LOG_PROVIDER, catchupResponseHandler ).install( client );
+            new CatchupProtocolClientInstaller( pipelineBuilderFactory, emptyList(), LOG_PROVIDER, catchupResponseHandler,
+                    new TestCommandReaderFactory() ).install( client );
             new CatchupProtocolServerInstaller( pipelineBuilderFactory, emptyList(), LOG_PROVIDER, serverResponseHandler ).install( server );
         }
         else

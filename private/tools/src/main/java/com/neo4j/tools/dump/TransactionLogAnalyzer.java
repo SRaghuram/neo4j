@@ -28,6 +28,7 @@ import org.neo4j.kernel.impl.transaction.log.entry.LogEntryStart;
 import org.neo4j.kernel.impl.transaction.log.entry.VersionAwareLogEntryReader;
 import org.neo4j.kernel.impl.transaction.log.files.LogFiles;
 import org.neo4j.kernel.impl.transaction.log.files.LogFilesBuilder;
+import org.neo4j.storageengine.api.StorageEngineFactory;
 
 import static java.lang.String.format;
 import static org.neo4j.kernel.impl.transaction.log.LogVersionBridge.NO_MORE_CHANNELS;
@@ -106,7 +107,9 @@ public class TransactionLogAnalyzer
         if ( storeDirOrLogFile.isDirectory() )
         {
             // Use natural log version bridging if a directory is supplied
-            logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( storeDirOrLogFile, fileSystem ).build();
+            logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( storeDirOrLogFile, fileSystem )
+                    .withCommandReaderFactory( StorageEngineFactory.selectStorageEngine().commandReaderFactory() )
+                    .build();
             bridge = new ReaderLogVersionBridge( logFiles )
             {
                 @Override
@@ -133,13 +136,16 @@ public class TransactionLogAnalyzer
         {
             // Use no bridging, simply reading this single log file if a file is supplied
             firstFile = storeDirOrLogFile;
-            logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( storeDirOrLogFile, fileSystem ).build();
+            logFiles = LogFilesBuilder.logFilesBasedOnlyBuilder( storeDirOrLogFile, fileSystem )
+                    .withCommandReaderFactory( StorageEngineFactory.selectStorageEngine().commandReaderFactory() )
+                    .build();
             monitor.logFile( firstFile, logFiles.getLogVersion( firstFile ) );
             bridge = NO_MORE_CHANNELS;
         }
 
         channel = new ReadAheadLogChannel( TransactionLogUtils.openVersionedChannel( fileSystem, firstFile, logFiles.getChannelNativeAccessor() ), bridge );
-        entryReader = new VersionAwareLogEntryReader();
+        StorageEngineFactory storageEngineFactory = StorageEngineFactory.selectStorageEngine();
+        entryReader = new VersionAwareLogEntryReader( storageEngineFactory.commandReaderFactory() );
         positionMarker = new LogPositionMarker();
         try ( TransactionLogEntryCursor cursor = new TransactionLogEntryCursor( new LogEntryCursor( entryReader, channel ) ) )
         {

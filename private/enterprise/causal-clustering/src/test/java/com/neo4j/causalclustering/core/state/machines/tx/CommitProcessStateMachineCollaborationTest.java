@@ -17,6 +17,7 @@ import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
+import org.neo4j.kernel.impl.api.TestCommandReaderFactory;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionToApply;
 import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionRepresentation;
@@ -42,7 +43,7 @@ class CommitProcessStateMachineCollaborationTest
         int finalLeaseId = 24;
         TransactionCommitProcess localCommitProcess = mock( TransactionCommitProcess.class );
         ReplicatedTransactionStateMachine stateMachine = new ReplicatedTransactionStateMachine( new DummyStateMachineCommitHelper(),
-                leaseState( finalLeaseId ), 16, NullLogProvider.getInstance() );
+                leaseState( finalLeaseId ), 16, NullLogProvider.getInstance(), new TestCommandReaderFactory() );
         stateMachine.installCommitProcess( localCommitProcess, -1L );
 
         DirectReplicator<ReplicatedTransaction> replicator = new DirectReplicator<>( stateMachine );

@@ -17,20 +17,23 @@ import java.util.List;
 
 import org.neo4j.kernel.impl.transaction.CommittedTransactionRepresentation;
 import org.neo4j.kernel.impl.transaction.log.PhysicalTransactionCursor;
-import org.neo4j.kernel.impl.transaction.log.ServiceLoadingCommandReaderFactory;
 import org.neo4j.kernel.impl.transaction.log.entry.LogEntryReader;
 import org.neo4j.kernel.impl.transaction.log.entry.VersionAwareLogEntryReader;
+import org.neo4j.storageengine.api.CommandReaderFactory;
 import org.neo4j.storageengine.api.StoreId;
 
 public class TxPullResponseDecoder extends ByteToMessageDecoder
 {
-
-    private static final ServiceLoadingCommandReaderFactory commandReaderFactory = new ServiceLoadingCommandReaderFactory();
     private PhysicalTransactionCursor transactionCursor;
     private NextTxInfo nextTxInfo;
     private StoreId storeId;
-    private LogEntryReader reader = new VersionAwareLogEntryReader( commandReaderFactory );
+    private LogEntryReader reader;
     private ReadableNetworkChannelDelegator delegatingChannel = new ReadableNetworkChannelDelegator();
+
+    public TxPullResponseDecoder( CommandReaderFactory commandReaderFactory )
+    {
+        reader = new VersionAwareLogEntryReader( commandReaderFactory );
+    }
 
     @Override
     protected void decode( ChannelHandlerContext ctx, ByteBuf in, List<Object> out ) throws Exception

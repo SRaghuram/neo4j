@@ -30,6 +30,7 @@ import java.util.function.Function;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.NullLogProvider;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.storageengine.api.CommandReaderFactory;
 
 import static org.neo4j.time.Clocks.systemClock;
 
@@ -45,7 +46,7 @@ public final class CatchupClientBuilder
     }
 
     private static class StepBuilder implements NeedsCatchupProtocols, NeedsModifierProtocols, NeedsPipelineBuilder,
-            NeedsInactivityTimeout, NeedsScheduler, NeedBootstrapConfig, AcceptsOptionalParams
+            NeedsInactivityTimeout, NeedsScheduler, NeedBootstrapConfig, NeedCommandReader, AcceptsOptionalParams
     {
         private NettyPipelineBuilderFactory pipelineBuilder;
         private ApplicationSupportedProtocols catchupProtocols;
@@ -57,6 +58,7 @@ public final class CatchupClientBuilder
         private Duration handshakeTimeout = Duration.ofSeconds( 5 );
         private Clock clock = systemClock();
         private BootstrapConfiguration<? extends SocketChannel> bootstrapConfiguration;
+        private CommandReaderFactory commandReaderFactory;
 
         private StepBuilder()
         {
@@ -126,9 +128,16 @@ public final class CatchupClientBuilder
         }
 
         @Override
-        public AcceptsOptionalParams bootstrapConfig( BootstrapConfiguration<? extends SocketChannel> bootstrapConfiguration )
+        public NeedCommandReader bootstrapConfig( BootstrapConfiguration<? extends SocketChannel> bootstrapConfiguration )
         {
             this.bootstrapConfiguration = bootstrapConfiguration;
+            return this;
+        }
+
+        @Override
+        public AcceptsOptionalParams commandReader( CommandReaderFactory commandReaderFactory )
+        {
+            this.commandReaderFactory = commandReaderFactory;
             return this;
         }
 
@@ -141,7 +150,7 @@ public final class CatchupClientBuilder
             Function<CatchupResponseHandler,ClientChannelInitializer> channelInitializerFactory = handler ->
             {
                 List<ProtocolInstaller.Factory<ProtocolInstaller.Orientation.Client,?>> installers = List.of(
-                        new CatchupProtocolClientInstaller.Factory( pipelineBuilder, debugLogProvider, handler ) );
+                        new CatchupProtocolClientInstaller.Factory( pipelineBuilder, debugLogProvider, handler, commandReaderFactory ) );
 
                 ProtocolInstallerRepository<ProtocolInstaller.Orientation.Client> protocolInstallerRepository = new ProtocolInstallerRepository<>( installers,
                         ModifierProtocolInstaller.allClientInstallers );
@@ -186,7 +195,12 @@ public final class CatchupClientBuilder
 
     public interface NeedBootstrapConfig
     {
-        AcceptsOptionalParams bootstrapConfig( BootstrapConfiguration<? extends SocketChannel> bootstrapConfiguration );
+        NeedCommandReader bootstrapConfig( BootstrapConfiguration<? extends SocketChannel> bootstrapConfiguration );
+    }
+
+    public interface NeedCommandReader
+    {
+        AcceptsOptionalParams commandReader( CommandReaderFactory commandReaderFactory );
     }
 
     public interface AcceptsOptionalParams
