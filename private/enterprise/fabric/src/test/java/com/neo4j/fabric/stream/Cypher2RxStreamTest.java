@@ -19,6 +19,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.neo4j.kernel.impl.query.QueryExecution;
 
@@ -53,8 +54,18 @@ class Cypher2RxStreamTest
 
         when( queryExecution.fieldNames() ).thenReturn( new String[] { "a" } );
 
+        AtomicReference<Runnable> secondRequestReference = new AtomicReference<>();
         doAnswer( invocationOnMock ->
         {
+            // if this is the first call to 'request', a send call should be triggered
+            // a first call is recognized by 'secondRequestReference' holding not null second call reference
+            var secondRequest = secondRequestReference.get();
+            if ( secondRequest != null )
+            {
+                secondRequestReference.set( null );
+                secondRequest.run();
+            }
+
             requestingThreads.add( Thread.currentThread() );
             // to make sure that the first thread that gets into 'request' will wait there
             firstRequestLatch.await( 5, TimeUnit.SECONDS );
@@ -65,7 +76,9 @@ class Cypher2RxStreamTest
         Flux<Record> records = StatementResults.create( querySubscriber -> queryExecution ).records();
         var subscriber = new ConcurrentSubscriber();
         records.subscribeWith( subscriber);
-        subscriber.request();
+        secondRequestReference.set( subscriber::secondRequest );
+
+        subscriber.firstRequest();
 
         // wait until 'request' was invoked twice
         assertTrue(completionLatch.await( 5, TimeUnit.SECONDS ));
@@ -103,17 +116,19 @@ class Cypher2RxStreamTest
 
         }
 
-        void request()
+        void firstRequest()
         {
-            Runnable requester = () ->
+            executorService.submit( () -> subscription.request( 1 ) );
+        }
+
+        void secondRequest()
+        {
+            executorService.submit( () ->
             {
                 subscription.request( 1 );
                 // unblock the other thread waiting in 'request'
                 firstRequestLatch.countDown();
-            };
-
-            executorService.submit( requester );
-            executorService.submit( requester );
+            } );
         }
     }
 }
