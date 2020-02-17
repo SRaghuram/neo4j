@@ -44,8 +44,8 @@ class SchedulerProceduresTest
     {
         try ( Transaction tx = db.beginTx() )
         {
-            String result = tx.execute( "CALL dbms.scheduler.profile('sample', 'CypherWorker', '5s')" ).resultAsString();
-            assertThat( result ).contains( "pipelined.Worker.run" );
+            String result = tx.execute( "CALL dbms.scheduler.profile('sample', 'PageCacheEviction', '5s')" ).resultAsString();
+            assertThat( result ).contains( "MuninnPageCache.parkUntilEvictionRequired" );
             tx.commit();
         }
     }

@@ -106,6 +106,7 @@ class FixedWorkersQueryExecutor(val workerResourceProvider: WorkerResourceProvid
     queryContext.transactionalContext.transaction.freezeLocks()
 
     executionState.initializeState()
+    workerManager.ensureStarted()
     workerManager.queryManager.addQuery(executingQuery)
     ProfiledQuerySubscription(executingQuery, queryProfile, stateFactory.memoryTracker)
   }
