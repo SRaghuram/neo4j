@@ -2892,6 +2892,18 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
     }
   }
 
+  test("map projection with item that needs null check") {
+    val propertyMap = VirtualValues.map(Array("prop"), Array(stringValue("hello")))
+    val offset = 0
+    val slots = SlotConfiguration(Map("n" -> RefSlot(offset, nullable = false, symbols.CTMap)), 0, 1)
+    //needed for interpreted
+    SlotConfigurationUtils.generateSlotAccessorFunctions(slots)
+    val context = SlottedRow(slots)
+    context.setRefAt(offset, propertyMap)
+    evaluate(compile(mapProjection("n", includeAllProps = true, "foo" -> function("toString", nullLiteral)), slots),
+             context) should equal(VirtualValues.map(Array("prop", "foo"), Array(stringValue("hello"), NO_VALUE)))
+  }
+
   test("call function by id") {
     // given
     registerUserDefinedFunction("foo") { builder =>

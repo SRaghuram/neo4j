@@ -569,7 +569,7 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
             expressionMap.map {
               case (key, exp) => invokeSideEffect(load(builderVar),
                                                   method[MapValueBuilder, AnyValue, String, AnyValue]("add"),
-                                                  constant(key), exp.ir)
+                                                  constant(key), nullCheckIfRequired(exp))
             }
         } else Seq.empty
 
