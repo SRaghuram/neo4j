@@ -67,7 +67,7 @@ class LogicalPlanFuzzTest extends CypherFunSuite
         case WithState(logicalQuery, state) =>
           val parameters = state.parameters.map(_ -> randVals.nextValue().asObject()).toMap
 
-          val cost = CardinalityCostModel(null).apply(logicalQuery.logicalPlan, QueryGraphSolverInput.empty, logicalQuery.cardinalities)
+          val cost = CardinalityCostModel(logicalQuery.logicalPlan, QueryGraphSolverInput.empty, logicalQuery.cardinalities)
 
           println(logicalQuery.logicalPlan)
           println(parameters)
