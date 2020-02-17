@@ -49,16 +49,16 @@ public class DatabaseCountMetrics extends LifecycleAdapter
     {
         registry.register( nodeCounts, (Gauge<Long>) () ->
         {
-            try ( var cursor = pageCacheTracer.createPageCursorTracer( COUNT_ALL_NODES_TAG ) )
+            try ( var cursorTracer = pageCacheTracer.createPageCursorTracer( COUNT_ALL_NODES_TAG ) )
             {
-                return countsSource.get().allNodesCountStore( cursor );
+                return countsSource.get().allNodesCountStore( cursorTracer );
             }
         } );
         registry.register( relationshipCounts, (Gauge<Long>) () ->
         {
-            try ( var cursor = pageCacheTracer.createPageCursorTracer( COUNT_ALL_RELATIONSHIP_TAG ) )
+            try ( var cursorTracer = pageCacheTracer.createPageCursorTracer( COUNT_ALL_RELATIONSHIP_TAG ) )
             {
-                return countsSource.get().allRelationshipsCountStore( cursor );
+                return countsSource.get().allRelationshipsCountStore( cursorTracer );
             }
         } );
     }
