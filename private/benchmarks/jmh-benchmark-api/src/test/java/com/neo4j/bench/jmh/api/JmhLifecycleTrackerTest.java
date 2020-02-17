@@ -106,6 +106,7 @@ public class JmhLifecycleTrackerTest
     public void shouldUpdateMultipleEventLogEntriesWithOneProfiler() throws IOException
     {
         // given
+        boolean isForking = true;
         Path workDir = temporaryFolder.newFolder().toPath();
         RunnerParams runnerParams = RunnerParams.create( workDir )
                                                 .copyWithProfilerTypes( Lists.newArrayList( ProfilerType.NO_OP ) );
@@ -136,21 +137,21 @@ public class JmhLifecycleTrackerTest
         assertThat( forkDirs.get( 0 ).toAbsolutePath(), equalTo( forkDir0.toAbsolutePath() ) );
 
         // (2) onSetup use fork0
-        assertThat( before.getForkDirectory( runnerParams, GROUP, BENCHMARK ).toAbsolutePath(), equalTo( forkDir0.toAbsolutePath() ) );
+        assertThat( before.getForkDirectory( runnerParams, isForking, GROUP, BENCHMARK ).toAbsolutePath(), equalTo( forkDir0.toAbsolutePath() ) );
 
         // (3) new fork directory is created by profiler: fork1
         ForkDirectory forkDir1 = before.addTrial( runnerParams, GROUP, BENCHMARK );
         assertThat( forkDir1.toAbsolutePath(), not( equalTo( forkDir0.toAbsolutePath() ) ) );
 
         // (4) onSetup use fork1
-        assertThat( before.getForkDirectory( runnerParams, GROUP, BENCHMARK ).toAbsolutePath(), equalTo( forkDir1.toAbsolutePath() ) );
+        assertThat( before.getForkDirectory( runnerParams, isForking, GROUP, BENCHMARK ).toAbsolutePath(), equalTo( forkDir1.toAbsolutePath() ) );
 
         // (5) new fork directory is created by profiler: fork2
         ForkDirectory forkDir2 = before.addTrial( runnerParams, GROUP, BENCHMARK );
         assertThat( forkDir2.toAbsolutePath(), not( equalTo( forkDir1.toAbsolutePath() ) ) );
 
         // (6) onSetup use fork1
-        assertThat( before.getForkDirectory( runnerParams, GROUP, BENCHMARK ).toAbsolutePath(), equalTo( forkDir2.toAbsolutePath() ) );
+        assertThat( before.getForkDirectory( runnerParams, isForking, GROUP, BENCHMARK ).toAbsolutePath(), equalTo( forkDir2.toAbsolutePath() ) );
 
         // should load multiple events correctly
         JmhLifecycleTracker after = JmhLifecycleTracker.load( workDir );

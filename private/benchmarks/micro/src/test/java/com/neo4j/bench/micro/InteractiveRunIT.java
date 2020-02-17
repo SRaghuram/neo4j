@@ -59,7 +59,10 @@ class InteractiveRunIT extends AnnotationsFixture
         int expectedBenchmarkCount = benchmarkDescription.executionCount( 1 ) / benchmarkMethodCount;
         // parameters affect store content, in this benchmark
         int expectedStoreCount = benchmarkDescription.storeCount( newArrayList( "format" ) );
-        runInteractively( benchmark, expectedBenchmarkCount, expectedStoreCount, ErrorPolicy.FAIL, "randomNodeById" );
+        for ( int forkCount = 0; forkCount < 2; forkCount++ )
+        {
+            runInteractively( benchmark, expectedBenchmarkCount, expectedStoreCount, ErrorPolicy.FAIL, forkCount, "randomNodeById" );
+        }
     }
 
     @Test
@@ -70,7 +73,10 @@ class InteractiveRunIT extends AnnotationsFixture
         int expectedBenchmarkCount = benchmarkDescription.executionCount( 1 );
         // parameters affect store content, in this benchmark
         int expectedStoreCount = benchmarkDescription.storeCount( newArrayList( "auth" ) );
-        runInteractively( benchmark, expectedBenchmarkCount, expectedStoreCount, ErrorPolicy.FAIL );
+        for ( int forkCount = 0; forkCount < 2; forkCount++ )
+        {
+            runInteractively( benchmark, expectedBenchmarkCount, expectedStoreCount, ErrorPolicy.FAIL, forkCount );
+        }
     }
 
     @Test
@@ -81,7 +87,8 @@ class InteractiveRunIT extends AnnotationsFixture
         int expectedBenchmarkCount = benchmarkDescription.executionCount( 1 );
         // parameters affect store content, in this benchmark
         int expectedStoreCount = benchmarkDescription.storeCount( newArrayList( "format", "count" ) );
-        runInteractively( benchmark, expectedBenchmarkCount, expectedStoreCount, ErrorPolicy.FAIL );
+        int forkCount = 1;
+        runInteractively( benchmark, expectedBenchmarkCount, expectedStoreCount, ErrorPolicy.FAIL, forkCount );
     }
 
     @Test
@@ -92,7 +99,8 @@ class InteractiveRunIT extends AnnotationsFixture
         int expectedBenchmarkCount = benchmarkDescription.executionCount( 1 );
         // parameters DO NOT affect store content, in this benchmark
         int expectedStoreCount = 1;
-        runInteractively( benchmark, expectedBenchmarkCount, expectedStoreCount, ErrorPolicy.FAIL );
+        int forkCount = 1;
+        runInteractively( benchmark, expectedBenchmarkCount, expectedStoreCount, ErrorPolicy.FAIL, forkCount );
     }
 
     @Test
@@ -102,7 +110,9 @@ class InteractiveRunIT extends AnnotationsFixture
         BenchmarkDescription benchmarkDescription = of( benchmark, new Validation(), getTestOnlyAnnotations() );
         int expectedBenchmarkCount = benchmarkDescription.executionCount( 1 );
         // parameters affect store content, in this benchmark
-        runInteractively( benchmark, expectedBenchmarkCount, expectedBenchmarkCount, ErrorPolicy.FAIL );
+        int expectedStoreCount = expectedBenchmarkCount;
+        int forkCount = 1;
+        runInteractively( benchmark, expectedBenchmarkCount, expectedStoreCount, ErrorPolicy.FAIL, forkCount );
     }
 
     @Test
@@ -113,7 +123,8 @@ class InteractiveRunIT extends AnnotationsFixture
         int expectedBenchmarkCount = benchmarkDescription.executionCount( 1 );
         // extends BaseRegularBenchmark not BaseDatabaseBenchmark, so no store should be created
         int expectedStoreCount = 0;
-        runInteractively( benchmark, expectedBenchmarkCount, expectedStoreCount, ErrorPolicy.FAIL );
+        int forkCount = 1;
+        runInteractively( benchmark, expectedBenchmarkCount, expectedStoreCount, ErrorPolicy.FAIL, forkCount );
     }
 
     @Test
@@ -125,7 +136,8 @@ class InteractiveRunIT extends AnnotationsFixture
         // parameters DO NOT affect store content, in this benchmark
         // even though benchmark will crash, it will do so after the store was already created
         int expectedStoreCount = 1;
-        runInteractively( benchmark, expectedBenchmarkCount, expectedStoreCount, ErrorPolicy.SKIP );
+        int forkCount = 1;
+        runInteractively( benchmark, expectedBenchmarkCount, expectedStoreCount, ErrorPolicy.SKIP, forkCount );
     }
 
     @Test
@@ -137,8 +149,9 @@ class InteractiveRunIT extends AnnotationsFixture
         // parameters DO NOT affect store content, in this benchmark
         // even though benchmark will crash, it will do so after the store was already created
         int expectedStoreCount = 1;
+        int forkCount = 1;
         BenchmarkUtil.assertException( RuntimeException.class,
-                                       () -> runInteractively( benchmark, expectedBenchmarkCount, expectedStoreCount, ErrorPolicy.FAIL ) );
+                                       () -> runInteractively( benchmark, expectedBenchmarkCount, expectedStoreCount, ErrorPolicy.FAIL, forkCount ) );
     }
 
     private void runInteractively(
@@ -146,11 +159,11 @@ class InteractiveRunIT extends AnnotationsFixture
             int expectedBenchmarkCount,
             int expectedStoreCount,
             ErrorPolicy errorPolicy,
+            int measurementForks,
             String... methods ) throws Exception
     {
         File storesDir = temporaryFolder.directory( "store" );
         Path profilerRecordingDirectory = temporaryFolder.directory( "recordings" ).toPath();
-        int measurementForks = 1;
         int iterationCount = 1;
         TimeValue iterationDuration = TimeValue.seconds( 1 );
         Main.run(

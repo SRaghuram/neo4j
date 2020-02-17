@@ -45,6 +45,14 @@ public class RunIT
     @Test
     public void shouldRunFromConfigFile() throws IOException
     {
+        for ( int forkCount = 0; forkCount < 2; forkCount++ )
+        {
+            shouldRunFromConfigFile( forkCount );
+        }
+    }
+
+    private void shouldRunFromConfigFile( int forkCount ) throws IOException
+    {
         Path benchmarkConfig = Files.createTempFile( temporaryFolder, "benchmarkConfig", ".tmp" );
         Path workDir = Files.createTempDirectory( temporaryFolder, "work" );
         Path profilerRecordingsOutputDir = Files.createTempDirectory( temporaryFolder, "recordings" );
@@ -60,7 +68,7 @@ public class RunIT
 
         ErrorReporter errorReporter = new ErrorReporter( ErrorReporter.ErrorPolicy.SKIP );
 
-        SimpleRunner simpleRunner = new SimpleRunner( 1, 1, TimeValue.seconds( 5 ) );
+        SimpleRunner simpleRunner = new SimpleRunner( forkCount, 1, TimeValue.seconds( 5 ) );
 
         SuiteDescription suiteDescription = Runner.createSuiteDescriptionFor( SimpleBenchmark.class.getPackage().getName(), benchmarkConfig );
 
@@ -125,12 +133,20 @@ public class RunIT
     @Test
     public void shouldRunFromSingleBenchmark() throws IOException
     {
+        for ( int forkCount = 0; forkCount < 2; forkCount++ )
+        {
+            shouldRunFromSingleBenchmark( forkCount );
+        }
+    }
+
+    private void shouldRunFromSingleBenchmark( int forkCount ) throws IOException
+    {
         Path workDir = Files.createTempDirectory( temporaryFolder, "work" );
         Path profilerRecordingsOutputDir = Files.createTempDirectory( temporaryFolder, "recordings" );
 
         ErrorReporter errorReporter = new ErrorReporter( ErrorReporter.ErrorPolicy.SKIP );
 
-        SimpleRunner simpleRunner = new SimpleRunner( 1, 1, TimeValue.seconds( 5 ) );
+        SimpleRunner simpleRunner = new SimpleRunner( forkCount, 1, TimeValue.seconds( 5 ) );
 
         SuiteDescription suiteDescription = Runner.createSuiteDescriptionFor( SimpleBenchmark.class, "count" );
 

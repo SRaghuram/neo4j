@@ -138,13 +138,17 @@ public class JmhLifecycleTracker
         }
     }
 
-    public ForkDirectory getForkDirectory( RunnerParams runnerParams, BenchmarkGroup benchmarkGroup, Benchmark benchmark )
+    public ForkDirectory getForkDirectory( RunnerParams runnerParams, boolean isForking, BenchmarkGroup benchmarkGroup, Benchmark benchmark )
     {
         assertProfilersNotEmpty( runnerParams );
         BenchmarkGroupDirectory benchmarkGroupDir = BenchmarkGroupDirectory.findOrCreateAt( runnerParams.workDir(), benchmarkGroup );
         BenchmarkDirectory benchmarkDir = benchmarkGroupDir.findOrCreate( benchmark );
         ForkDirectoryStatus forkDirectoryStatus = computeForkStatusFor( runnerParams );
-        return benchmarkDir.findOrFail( forkDirectoryStatus.forkName );
+        return isForking
+               // when fork count > 0, the fork directory should have been created already
+               ? benchmarkDir.findOrFail( forkDirectoryStatus.forkName )
+               // when fork count = 0 (special/debug case) the first call into this method will need to create the fork directory too
+               : benchmarkDir.findOrCreate( forkDirectoryStatus.forkName, runnerParams.profilerTypes() );
     }
 
     public void reset()

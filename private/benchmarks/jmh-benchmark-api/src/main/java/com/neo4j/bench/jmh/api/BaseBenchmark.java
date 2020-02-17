@@ -39,7 +39,8 @@ public abstract class BaseBenchmark
         Benchmark benchmark = BenchmarkDiscoveryUtils.toBenchmarks( benchmarkParams, runnerParams ).parentBenchmark();
 
         JmhLifecycleTracker jmhLifecycleTracker = JmhLifecycleTracker.load( runnerParams.workDir() );
-        ForkDirectory forkDirectory = jmhLifecycleTracker.getForkDirectory( runnerParams, group, benchmark );
+        boolean isForking = benchmarkParams.getForks() > 0;
+        ForkDirectory forkDirectory = jmhLifecycleTracker.getForkDirectory( runnerParams, isForking, group, benchmark );
 
         onSetup( group, benchmark, runnerParams, benchmarkParams, forkDirectory );
     }
