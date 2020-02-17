@@ -21,7 +21,7 @@ class SlottedTCKTests extends EnterpriseBaseTCKTests {
 
   @TestFactory
   def runSlotted(): util.Collection[DynamicTest] = {
-    createTests(scenarios, SlottedTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder())
+    createTests(scenarios, SlottedTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder(), enterpriseDefaultTestConfig)
   }
 
   @Disabled

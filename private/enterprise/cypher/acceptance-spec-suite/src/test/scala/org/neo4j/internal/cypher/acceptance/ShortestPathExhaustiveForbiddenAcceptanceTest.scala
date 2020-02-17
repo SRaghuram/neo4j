@@ -6,6 +6,7 @@
 package org.neo4j.internal.cypher.acceptance
 
 import java.lang.Boolean.TRUE
+import java.lang.Boolean.FALSE
 
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.ExecutionEngineFunSuite
@@ -20,8 +21,10 @@ import scala.collection.mutable
 
 class ShortestPathExhaustiveForbiddenAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
 
-  override def databaseConfig(): Map[Setting[_], Object] =
-    Map(GraphDatabaseSettings.forbid_exhaustive_shortestpath -> TRUE)
+  override def databaseConfig(): Map[Setting[_], Object] = super.databaseConfig() ++
+    Map(
+      GraphDatabaseSettings.cypher_hints_error -> FALSE,
+      GraphDatabaseSettings.forbid_exhaustive_shortestpath -> TRUE)
 
   test("should fail at run time when using the shortest path fallback") {
     // when

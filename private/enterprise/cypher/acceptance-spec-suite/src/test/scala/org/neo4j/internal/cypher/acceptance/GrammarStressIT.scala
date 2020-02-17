@@ -351,7 +351,6 @@ class GrammarStressIT extends ExecutionEngineFunSuite with PropertyChecks with C
 
 
   // Need to override so that grpah.execute will not throw an exception
-  override def databaseConfig(): collection.Map[Setting[_], Object] = {
+  override def databaseConfig(): Map[Setting[_], Object] = super.databaseConfig() ++
     Map(GraphDatabaseSettings.cypher_hints_error -> FALSE)
-  }
 }

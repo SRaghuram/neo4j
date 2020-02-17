@@ -72,13 +72,12 @@ trait CypherComparisonSupport extends AbstractCypherComparisonSupport {
 
   override def transactionalContext(tx: InternalTransaction, query: (String, Map[String, Any])): TransactionalContext = graph.transactionalContext(tx, query = query)
 
-  override def databaseConfig(): collection.Map[Setting[_], Object] = {
+  override def databaseConfig(): Map[Setting[_], Object] = super.databaseConfig() ++
     Map(GraphDatabaseSettings.cypher_hints_error -> TRUE,
       GraphDatabaseSettings.cypher_pipelined_batch_size_small -> Integer.valueOf(4),
       GraphDatabaseSettings.cypher_pipelined_batch_size_big -> Integer.valueOf(4),
       GraphDatabaseSettings.cypher_worker_count -> Integer.valueOf(0)
     )
-  }
 }
 
 trait AbstractCypherComparisonSupport extends CypherFunSuite with CypherTestSupport with EnterpriseGraphDatabaseTestSupport {

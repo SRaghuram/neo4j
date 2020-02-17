@@ -20,8 +20,6 @@ import org.neo4j.kernel.GraphDatabaseQueryService
 import org.neo4j.kernel.internal.GraphDatabaseAPI
 import org.neo4j.monitoring.Monitors
 
-import scala.collection.Map
-
 trait ResourceTracking extends CypherFunSuite with GraphDatabaseTestSupport {
 
   var resourceMonitor: TrackingResourceMonitor = _

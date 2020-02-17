@@ -21,7 +21,7 @@ class PipelinedFullTCKTests extends EnterpriseBaseTCKTests {
 
   @TestFactory
   def runPipelinedFull(): util.Collection[DynamicTest] = {
-    createTests(scenarios, PipelinedFullTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder())
+    createTests(scenarios, PipelinedFullTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder(), enterpriseDefaultTestConfig)
   }
 
   @Disabled

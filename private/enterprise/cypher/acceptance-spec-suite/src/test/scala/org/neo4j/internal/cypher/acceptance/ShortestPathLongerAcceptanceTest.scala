@@ -78,7 +78,7 @@ class ShortestPathLongerAcceptanceTest extends ExecutionEngineFunSuite with Cyph
 
   val VERBOSE = false // Lots of debug prints
 
-  override def databaseConfig = Map(GraphDatabaseSettings.forbid_shortestpath_common_nodes -> FALSE)
+  override def databaseConfig = super.databaseConfig() ++ Map(GraphDatabaseSettings.forbid_shortestpath_common_nodes -> FALSE)
 
   test("shortestPath with same start and end node should return zero length path with no fallback") {
     val start = System.currentTimeMillis

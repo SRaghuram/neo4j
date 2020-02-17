@@ -22,7 +22,7 @@ class CompiledTCKTests extends EnterpriseBaseTCKTests {
 
   @TestFactory
   def runCostCompiled(): util.Collection[DynamicTest] = {
-    createTests(scenarios, CompiledTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder())
+    createTests(scenarios, CompiledTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder(), enterpriseDefaultTestConfig)
   }
 
   @Disabled

@@ -21,7 +21,7 @@ class DefaultTCKTests extends EnterpriseBaseTCKTests {
 
   @TestFactory
   def runDefault(): util.Collection[DynamicTest] = {
-    createTests(scenarios, DefaultTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder() )
+    createTests(scenarios, DefaultTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder(), enterpriseDefaultTestConfig)
   }
 
   @Disabled

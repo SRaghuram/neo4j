@@ -21,8 +21,6 @@ import org.neo4j.logging.AssertableLogProvider.Level
 import org.neo4j.logging.LogAssertions.assertThat
 import org.neo4j.values.virtual.VirtualValues.EMPTY_MAP
 
-import scala.collection.Map
-
 class CypherCompilerStringCacheMonitoringAcceptanceTest extends ExecutionEngineFunSuite {
 
   case class CacheCounts(hits: Int = 0, misses: Int = 0, flushes: Int = 0, evicted: Int = 0) {
@@ -47,7 +45,7 @@ class CypherCompilerStringCacheMonitoringAcceptanceTest extends ExecutionEngineF
     }
   }
 
-  override def databaseConfig(): Map[Setting[_],Object] = Map(GraphDatabaseSettings.cypher_min_replan_interval -> Duration.ZERO)
+  override def databaseConfig(): Map[Setting[_],Object] = super.databaseConfig() ++ Map(GraphDatabaseSettings.cypher_min_replan_interval -> Duration.ZERO)
 
   test("should monitor cache miss") {
     // given

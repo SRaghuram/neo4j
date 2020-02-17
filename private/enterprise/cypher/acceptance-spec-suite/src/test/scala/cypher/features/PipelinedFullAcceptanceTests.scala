@@ -21,7 +21,7 @@ class PipelinedFullAcceptanceTests extends EnterpriseBaseAcceptanceTest {
 
   @TestFactory
   def runPipelinedSingleThreadedFull(): util.Collection[DynamicTest] = {
-    createTests(scenarios, PipelinedFullTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder())
+    createTests(scenarios, PipelinedFullTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder(), enterpriseDefaultTestConfig)
   }
 
   @Disabled

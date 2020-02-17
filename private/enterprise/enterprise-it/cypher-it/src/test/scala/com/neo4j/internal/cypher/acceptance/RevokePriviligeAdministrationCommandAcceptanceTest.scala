@@ -5,9 +5,11 @@
  */
 package com.neo4j.internal.cypher.acceptance
 
+import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import org.neo4j.exceptions.DatabaseAdministrationException
 import org.neo4j.exceptions.SyntaxException
+import org.neo4j.graphdb.config.Setting
 import org.scalatest.enablers.Messaging.messagingNatureOfThrowable
 
 // Tests for REVOKE TRAVERSE and REVOKE READ plus disabled tests for REVOKE MATCH

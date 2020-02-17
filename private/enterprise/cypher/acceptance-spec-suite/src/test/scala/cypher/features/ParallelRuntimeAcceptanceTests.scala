@@ -26,7 +26,7 @@ class ParallelRuntimeAcceptanceTests extends EnterpriseBaseAcceptanceTest {
     if (Configs.runOnlySafeScenarios) {
       Collections.emptyList()
     } else {
-      createTests(scenarios, ParallelTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder())
+      createTests(scenarios, ParallelTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder(), enterpriseDefaultTestConfig)
     }
   }
 

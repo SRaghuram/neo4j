@@ -39,8 +39,6 @@ import org.neo4j.logging.Log
 import org.neo4j.server.security.auth.InMemoryUserRepository
 import org.neo4j.server.security.auth.SecurityTestUtils
 
-import scala.collection.Map
-
 abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFunSuite with EnterpriseGraphDatabaseTestSupport {
   val GRANTED: String = "GRANTED"
   val DENIED: String = "DENIED"
@@ -132,7 +130,7 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
 
   def authManager: EnterpriseAuthManager = graph.getDependencyResolver.resolveDependency(classOf[EnterpriseAuthManager])
 
-  override def databaseConfig(): Map[Setting[_], Object] = Map(GraphDatabaseSettings.auth_enabled -> TRUE)
+  override def databaseConfig(): Map[Setting[_], Object] = super.databaseConfig() ++ Map(GraphDatabaseSettings.auth_enabled -> TRUE)
 
   def user(username: String, roles: Seq[String] = Seq.empty, suspended: Boolean = false, passwordChangeRequired: Boolean = true): Map[String, Any] = {
     val rolesWithPublic = roles.sorted :+ PUBLIC

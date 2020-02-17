@@ -14,8 +14,6 @@ import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 import org.neo4j.internal.schema.IndexDescriptor
 
-import scala.collection.Map
-
 class UniqueIndexUsageAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
 
   test("should be able to use indexes") {

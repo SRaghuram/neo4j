@@ -7,9 +7,11 @@ package com.neo4j.internal.cypher.acceptance
 
 import java.util
 
+import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import org.neo4j.graphdb.Label
+import org.neo4j.graphdb.config.Setting
 import org.neo4j.graphdb.security.AuthorizationViolationException
 
 // Tests for actual behaviour of authorization rules for restricted users based on node privileges

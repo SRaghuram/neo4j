@@ -16,7 +16,7 @@ import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSu
 
 class LenientCreateRelationshipAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport {
 
-  override def databaseConfig(): collection.Map[Setting[_], Object] = super.databaseConfig() ++ Map(
+  override def databaseConfig(): Map[Setting[_], Object] = super.databaseConfig() ++ Map(
     GraphDatabaseSettings.cypher_lenient_create_relationship -> TRUE
   )
 

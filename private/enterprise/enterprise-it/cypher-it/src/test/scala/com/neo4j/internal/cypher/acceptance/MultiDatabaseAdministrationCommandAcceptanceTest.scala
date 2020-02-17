@@ -1362,6 +1362,4 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
   // Disable normal database creation because we need different settings on each test
   override protected def initTest() {}
 
-  // Use the default value instead of the new value in AdministrationCommandAcceptanceTestBase
-  override def databaseConfig(): Map[Setting[_], Object] = Map()
 }

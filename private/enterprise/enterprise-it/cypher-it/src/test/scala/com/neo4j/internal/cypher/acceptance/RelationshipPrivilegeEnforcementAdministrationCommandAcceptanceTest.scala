@@ -7,9 +7,11 @@ package com.neo4j.internal.cypher.acceptance
 
 import java.util
 
+import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import org.neo4j.graphdb.Node
+import org.neo4j.graphdb.config.Setting
 
 import scala.collection.JavaConverters.iterableAsScalaIterableConverter
 

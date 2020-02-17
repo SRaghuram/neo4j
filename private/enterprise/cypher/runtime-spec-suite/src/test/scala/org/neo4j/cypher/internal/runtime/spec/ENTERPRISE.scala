@@ -8,6 +8,7 @@ package org.neo4j.cypher.internal.runtime.spec
 import java.lang.Boolean.TRUE
 import java.util.concurrent.ThreadLocalRandom
 
+import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.internal.EnterpriseRuntimeContext
@@ -44,7 +45,9 @@ object ENTERPRISE {
     },
     GraphDatabaseSettings.cypher_hints_error -> TRUE,
     GraphDatabaseSettings.cypher_pipelined_batch_size_small -> Integer.valueOf(MORSEL_SIZE),
-    GraphDatabaseSettings.cypher_pipelined_batch_size_big -> Integer.valueOf(MORSEL_SIZE))
+    GraphDatabaseSettings.cypher_pipelined_batch_size_big -> Integer.valueOf(MORSEL_SIZE),
+    MetricsSettings.metricsEnabled -> java.lang.Boolean.FALSE
+  )
 
   val FUSING = edition.copyWith(GraphDatabaseSettings.cypher_worker_count -> Integer.valueOf(0),
     GraphDatabaseSettings.cypher_operator_engine -> GraphDatabaseSettings.CypherOperatorEngine.COMPILED)

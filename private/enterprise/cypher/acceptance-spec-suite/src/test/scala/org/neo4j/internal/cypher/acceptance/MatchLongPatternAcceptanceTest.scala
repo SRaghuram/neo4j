@@ -33,7 +33,7 @@ class MatchLongPatternAcceptanceTest extends ExecutionEngineFunSuite with QueryS
 
   val VERBOSE = false
 
-  override def databaseConfig(): collection.Map[Setting[_], Object] = super.databaseConfig() ++ Map(
+  override def databaseConfig(): Map[Setting[_], Object] = super.databaseConfig() ++ Map(
     GraphDatabaseSettings.cypher_min_replan_interval -> Duration.ZERO,
     GraphDatabaseSettings.cypher_compiler_tracing -> TRUE,
     GraphDatabaseSettings.pagecache_memory -> "8M"

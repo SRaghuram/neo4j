@@ -21,7 +21,7 @@ class SlottedWithCompiledExpressionsAcceptanceTests extends EnterpriseBaseAccept
 
   @TestFactory
   def runSlottedWithCompiledExpressions(): util.Collection[DynamicTest] = {
-    createTests(scenarios, SlottedWithCompiledExpressionsTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder())
+    createTests(scenarios, SlottedWithCompiledExpressionsTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder(), enterpriseDefaultTestConfig)
   }
 
   @Disabled

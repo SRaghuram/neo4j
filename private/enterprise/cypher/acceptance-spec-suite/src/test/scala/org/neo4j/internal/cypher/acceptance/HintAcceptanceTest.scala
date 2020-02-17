@@ -14,8 +14,6 @@ import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSu
 import org.neo4j.values.storable.CoordinateReferenceSystem
 import org.neo4j.values.storable.Values
 
-import scala.collection.Map
-
 class HintAcceptanceTest
   extends ExecutionEngineFunSuite with CypherComparisonSupport {
 

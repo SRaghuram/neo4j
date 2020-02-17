@@ -25,7 +25,7 @@ class ParallelRuntimeTCKTests extends EnterpriseBaseTCKTests {
     if (runOnlySafeScenarios) {
       Collections.emptyList()
     } else {
-      createTests(scenarios, ParallelTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder())
+      createTests(scenarios, ParallelTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder(), enterpriseDefaultTestConfig)
     }
   }
 

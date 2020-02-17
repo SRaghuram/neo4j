@@ -891,7 +891,7 @@ order by a.COL1""".format(a, b))
     })
   }
 
-  override def databaseConfig(): collection.Map[Setting[_], Object] = super.databaseConfig() ++ Map(
+  override def databaseConfig(): Map[Setting[_], Object] = super.databaseConfig() ++ Map(
     GraphDatabaseSettings.cypher_min_replan_interval -> Duration.ZERO,
     GraphDatabaseSettings.cypher_compiler_tracing -> TRUE
   )

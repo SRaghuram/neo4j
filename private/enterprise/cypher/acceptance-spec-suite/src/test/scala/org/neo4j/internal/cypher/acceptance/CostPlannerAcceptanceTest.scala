@@ -26,7 +26,7 @@ class CostPlannerAcceptanceTest extends ExecutionEngineFunSuite {
 
   private var missCounter: MissCounter = _
 
-  override def databaseConfig(): Map[Setting[_], Object] =
+  override def databaseConfig(): Map[Setting[_], Object] = super.databaseConfig() ++
     Map(GraphDatabaseSettings.query_non_indexed_label_warning_threshold -> Long.valueOf(10))
 
   override protected def initTest() {

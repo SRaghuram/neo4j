@@ -17,7 +17,6 @@ import org.neo4j.graphdb.config.Setting
 import org.neo4j.internal.cypher.acceptance.ParallelRuntimeAcceptanceTest.MORSEL_SIZE
 
 import scala.collection.JavaConverters.iterableAsScalaIterableConverter
-import scala.collection.Map
 
 object ParallelRuntimeAcceptanceTest {
   val MORSEL_SIZE = 4 // The morsel size to use in the config for testing
@@ -25,7 +24,7 @@ object ParallelRuntimeAcceptanceTest {
 
 class ParallelRuntimeAcceptanceTest extends ExecutionEngineFunSuite with EnterpriseGraphDatabaseTestSupport {
   //we use a ridiculously small morsel size in order to trigger as many morsel overflows as possible
-  override def databaseConfig(): Map[Setting[_], Object] = Map(
+  override def databaseConfig(): Map[Setting[_], Object] = super.databaseConfig() ++ Map(
     GraphDatabaseSettings.cypher_hints_error -> TRUE,
     GraphDatabaseSettings.cypher_pipelined_batch_size_small -> Integer.valueOf(MORSEL_SIZE),
     GraphDatabaseSettings.cypher_pipelined_batch_size_big -> Integer.valueOf(MORSEL_SIZE),

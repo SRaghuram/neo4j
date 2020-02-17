@@ -7,9 +7,11 @@ package com.neo4j.cypher
 
 import java.io.File
 
+import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings.metricsEnabled
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder
 import org.neo4j.cypher.GraphDatabaseTestSupport
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
+import org.neo4j.graphdb.config.Setting
 import org.neo4j.test.TestDatabaseManagementServiceBuilder
 
 /**
@@ -18,6 +20,8 @@ import org.neo4j.test.TestDatabaseManagementServiceBuilder
  */
 trait EnterpriseGraphDatabaseTestSupport extends GraphDatabaseTestSupport {
   self: CypherFunSuite =>
+
+  override def databaseConfig(): Map[Setting[_], Object] = super.databaseConfig() ++ Map(metricsEnabled -> java.lang.Boolean.FALSE)
 
   override protected def createDatabaseFactory(databaseRootDir: File): TestDatabaseManagementServiceBuilder = {
     new TestEnterpriseDatabaseManagementServiceBuilder(databaseRootDir)

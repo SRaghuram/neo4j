@@ -15,8 +15,6 @@ import org.neo4j.graphdb.ConstraintViolationException
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.Configs
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 
-import scala.collection.Map
-
 class CompositeNodeKeyConstraintAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport with QueryStatisticsTestSupport {
 
   test("Node key constraint creation should be reported") {

@@ -20,7 +20,7 @@ import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSu
 import org.neo4j.kernel.api.exceptions.Status
 
 class UsingAcceptanceTest extends ExecutionEngineFunSuite with RunWithConfigTestSupport with CypherComparisonSupport {
-  override def databaseConfig(): Map[Setting[_], Object] = Map(GraphDatabaseSettings.cypher_hints_error -> TRUE)
+  override def databaseConfig(): Map[Setting[_], Object] = super.databaseConfig() ++ Map(GraphDatabaseSettings.cypher_hints_error -> TRUE)
 
   test("should use index on literal value") {
     val node = createLabeledNode(Map("id" -> 123), "Foo")

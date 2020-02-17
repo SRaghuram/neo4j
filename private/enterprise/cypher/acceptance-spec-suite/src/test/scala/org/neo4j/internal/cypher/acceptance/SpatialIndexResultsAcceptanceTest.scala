@@ -13,7 +13,6 @@ import org.neo4j.values.storable.CoordinateReferenceSystem
 import org.neo4j.values.storable.PointValue
 import org.neo4j.values.storable.Values
 
-import scala.collection.Map
 import scala.collection.immutable
 
 class SpatialIndexResultsAcceptanceTest extends IndexingTestSupport {

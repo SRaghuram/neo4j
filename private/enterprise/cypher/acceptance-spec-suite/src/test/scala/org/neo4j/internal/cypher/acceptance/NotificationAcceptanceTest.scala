@@ -49,7 +49,7 @@ import scala.collection.JavaConverters.setAsJavaSetConverter
 class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
 
   // Need to override so that graph.execute will not throw an exception
-  override def databaseConfig(): collection.Map[Setting[_], Object] = super.databaseConfig() ++ Map(
+  override def databaseConfig(): Map[Setting[_], Object] = super.databaseConfig() ++ Map(
     GraphDatabaseSettings.cypher_hints_error -> FALSE,
     GraphDatabaseSettings.query_non_indexed_label_warning_threshold -> java.lang.Long.valueOf(10)
   )
@@ -685,7 +685,7 @@ class NotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComp
 class LuceneIndexNotificationAcceptanceTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
 
   // Need to override so that graph.execute will not throw an exception
-  override def databaseConfig(): collection.Map[Setting[_], Object] = super.databaseConfig() ++ Map(
+  override def databaseConfig(): Map[Setting[_], Object] = super.databaseConfig() ++ Map(
     GraphDatabaseSettings.cypher_hints_error -> FALSE,
     GraphDatabaseSettings.query_non_indexed_label_warning_threshold -> java.lang.Long.valueOf(10),
     GraphDatabaseSettings.default_schema_provider -> "lucene+native-3.0"

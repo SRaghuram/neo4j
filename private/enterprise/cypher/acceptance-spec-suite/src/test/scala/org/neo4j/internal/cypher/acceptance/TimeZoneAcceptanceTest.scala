@@ -25,7 +25,7 @@ import scala.collection.JavaConverters.mapAsJavaMapConverter
 
 abstract class TimeZoneAcceptanceTest(timezone: String) extends ExecutionEngineFunSuite with QueryStatisticsTestSupport with CypherComparisonSupport {
 
-  override def databaseConfig(): Map[Setting[_], Object] = Map(
+  override def databaseConfig(): Map[Setting[_], Object] = super.databaseConfig() ++ Map(
     GraphDatabaseSettings.cypher_hints_error -> TRUE,
     GraphDatabaseSettings.db_temporal_timezone -> DateTimeValue.parseZoneOffsetOrZoneName(timezone))
 
