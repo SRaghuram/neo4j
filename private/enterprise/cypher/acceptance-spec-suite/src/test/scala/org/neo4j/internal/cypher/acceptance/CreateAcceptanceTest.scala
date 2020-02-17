@@ -246,4 +246,15 @@ class CreateAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsT
     val deleted = result.single("deleted")
     executeSingle(s"MATCH (n {p: $deleted}) RETURN n").toList should be(empty)
   }
+
+  test("should allow scientific exponent notation in create") {
+    val query =
+      """
+        |CREATE (n {freq1: 3.9e-05, freq2: 3.9e05, freq3: 3.9e+05})
+        |RETURN n.freq1 AS freqMinus, n.freq2 AS freqNoPlus, n.freq3 AS freqPlus
+        |""".stripMargin
+
+    val result = executeSingle(query)
+    result.toList should be(List(Map("freqMinus" -> 3.9e-05, "freqNoPlus" -> 3.9e05, "freqPlus" -> 3.9e05)))
+  }
 }
