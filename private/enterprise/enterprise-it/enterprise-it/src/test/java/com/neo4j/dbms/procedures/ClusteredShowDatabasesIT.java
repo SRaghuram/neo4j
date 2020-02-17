@@ -16,13 +16,8 @@ import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
 import com.neo4j.test.causalclustering.ClusterConfig;
 import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
+import org.assertj.core.api.Assertions;
 import org.assertj.core.api.Condition;
-import org.assertj.core.api.HamcrestCondition;
-import org.hamcrest.Description;
-import org.hamcrest.FeatureMatcher;
-import org.hamcrest.Matcher;
-import org.hamcrest.Matchers;
-import org.hamcrest.TypeSafeMatcher;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,7 +26,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -60,9 +54,6 @@ import static java.util.Collections.singleton;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toList;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.Matchers.empty;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
@@ -177,7 +168,7 @@ class ClusteredShowDatabasesIT
             // then
             var newClusterSize = initialClusterSize + 1;
             assertEventually( "SHOW DATABASES should return one row per database per cluster member", () -> showDatabases( cluster ),
-                              new HamcrestCondition<>( hasSize( newClusterSize * defaultDatabases.size() ) ), timeoutSeconds, SECONDS );
+                              sizeCondition( newClusterSize * defaultDatabases.size() ), timeoutSeconds, SECONDS );
             assertEventually( "SHOW DATABASES should return 1 leader per database", () -> showDatabases( cluster ),
                               containsRole( "leader", defaultDatabases, 1 ), timeoutSeconds, SECONDS );
             assertEventually( "SHOW DATABASES should return 3 followers per database", () -> showDatabases( cluster ),
@@ -215,7 +206,7 @@ class ClusteredShowDatabasesIT
             // then
             var newClusterSize = initialClusterSize + 1;
             assertEventually( "SHOW DATABASES should return one row per database per cluster member", () -> showDatabases( cluster ),
-                              new HamcrestCondition<>( hasSize( newClusterSize * defaultDatabases.size() ) ), timeoutSeconds, SECONDS );
+                              sizeCondition( newClusterSize * defaultDatabases.size() ), timeoutSeconds, SECONDS );
             assertEventually( "SHOW DATABASES should return 1 leader per database", () -> showDatabases( cluster ),
                               containsRole( "leader", defaultDatabases, 1 ), timeoutSeconds, SECONDS );
             assertEventually( "SHOW DATABASES should return 2 followers per database", () -> showDatabases( cluster ),
@@ -242,7 +233,7 @@ class ClusteredShowDatabasesIT
 
             var initialClusterSize = cluster.allMembers().size();
             assertEventually( "SHOW DATABASES should return one row per database per cluster member", () -> showDatabases( cluster ),
-                              new HamcrestCondition<>( hasSize( initialClusterSize * defaultDatabases.size() ) ), timeoutSeconds, SECONDS );
+                              sizeCondition( initialClusterSize * defaultDatabases.size() ), timeoutSeconds, SECONDS );
             assertEventually( "SHOW DATABASES should return 1 leader per database", () -> showDatabases( cluster ),
                               containsRole( "leader", defaultDatabases, 1 ), timeoutSeconds, SECONDS );
             assertEventually( "SHOW DATABASES should return 2 followers per database", () -> showDatabases( cluster ),
@@ -258,7 +249,7 @@ class ClusteredShowDatabasesIT
             // then
             var newClusterSize = initialClusterSize - 1;
             assertEventually( "SHOW DATABASES should return one row per database per cluster member", () -> showDatabases( cluster ),
-                              new HamcrestCondition<>( hasSize( newClusterSize * defaultDatabases.size() ) ), timeoutSeconds, SECONDS );
+                              sizeCondition( newClusterSize * defaultDatabases.size() ), timeoutSeconds, SECONDS );
             assertEventually( "SHOW DATABASES should return 1 leader per database", () -> showDatabases( cluster ),
                               containsRole( "leader", defaultDatabases, 1 ), timeoutSeconds, SECONDS );
             assertEventually( "SHOW DATABASES should return 2 followers per database", () -> showDatabases( cluster ),
@@ -283,7 +274,7 @@ class ClusteredShowDatabasesIT
             var initialClusterSize = cluster.allMembers().size();
 
             assertEventually( "SHOW DATABASES should return one row per database per cluster member", () -> showDatabases( cluster ),
-                              new HamcrestCondition<>( hasSize( initialClusterSize * defaultDatabases.size() ) ), timeoutSeconds, SECONDS );
+                              sizeCondition( initialClusterSize * defaultDatabases.size() ), timeoutSeconds, SECONDS );
             assertEventually( "SHOW DATABASES should return 1 leader per database", () -> showDatabases( cluster ),
                               containsRole( "leader", defaultDatabases, 1 ), timeoutSeconds, SECONDS );
             assertEventually( "SHOW DATABASES should return 2 followers per database", () -> showDatabases( cluster ),
@@ -299,7 +290,7 @@ class ClusteredShowDatabasesIT
             // then
             var newClusterSize = initialClusterSize - 1;
             assertEventually( "SHOW DATABASES should return one row per database per cluster member", () -> showDatabases( cluster ),
-                              new HamcrestCondition<>( hasSize( newClusterSize * defaultDatabases.size() ) ), timeoutSeconds, SECONDS );
+                              sizeCondition( newClusterSize * defaultDatabases.size() ), timeoutSeconds, SECONDS );
             assertEventually( "SHOW DATABASES should return 1 leader per database", () -> showDatabases( cluster ),
                               containsRole( "leader", defaultDatabases, 1 ), timeoutSeconds, SECONDS );
             assertEventually( "SHOW DATABASES should return 2 followers per database", () -> showDatabases( cluster ),
@@ -325,7 +316,7 @@ class ClusteredShowDatabasesIT
                     .collect( Collectors.toSet() );
 
             assertEventually( "SHOW DATABASES should return one row per database per cluster member", () -> showDatabases( cluster ),
-                              new HamcrestCondition<>( hasSize( clusterSize * databasesWithAdditional.size() ) ), timeoutSeconds, SECONDS );
+                              sizeCondition( clusterSize * databasesWithAdditional.size() ), timeoutSeconds, SECONDS );
             assertEventually( "SHOW DATABASES should return 1 leader per database", () -> showDatabases( cluster ),
                               containsRole( "leader", databasesWithAdditional, 1 ), timeoutSeconds, SECONDS );
             assertEventually( "SHOW DATABASES should return 2 followers per database", () -> showDatabases( cluster ),
@@ -341,7 +332,8 @@ class ClusteredShowDatabasesIT
 
             // then
             assertEventually( format( "SHOW DATABASES should show Stopped status for members %s, for additional database", clusterAddresses ),
-                    () -> membersHaveStateForDatabases( clusterAddresses, singleton( ADDITIONAL_DATABASE_NAME ), STOPPED, cluster ), TRUE, timeoutSeconds, SECONDS );
+                    () -> membersHaveStateForDatabases( clusterAddresses, singleton( ADDITIONAL_DATABASE_NAME ), STOPPED, cluster ), TRUE, timeoutSeconds,
+                              SECONDS );
             assertEventually( "SHOW DATABASES should show unknown role for all members for stopped additional database", () -> showDatabases( cluster ),
                               containsRole( "unknown", singleton( ADDITIONAL_DATABASE_NAME ), clusterSize ), timeoutSeconds, SECONDS );
             assertEventually( format( "SHOW DATABASES should still show Started status for members %s, for default databases", clusterAddresses ),
@@ -381,7 +373,8 @@ class ClusteredShowDatabasesIT
             assertEventually( "SHOW DATABASES should return 2 replicas for foo", () -> showDatabases( cluster ),
                               containsRole( "read_replica", singleton( ADDITIONAL_DATABASE_NAME ), 2 ), timeoutSeconds, SECONDS );
             assertEventually( format( "SHOW DATABASES should show Started status for members %s, for foo", clusterAddresses ),
-                    () -> membersHaveStateForDatabases( clusterAddresses, singleton( ADDITIONAL_DATABASE_NAME ), STARTED, cluster ), TRUE, timeoutSeconds, SECONDS );
+                    () -> membersHaveStateForDatabases( clusterAddresses, singleton( ADDITIONAL_DATABASE_NAME ), STARTED, cluster ), TRUE, timeoutSeconds,
+                              SECONDS );
         }
 
         @Test
@@ -399,7 +392,7 @@ class ClusteredShowDatabasesIT
                     .collect( Collectors.toSet() );
 
             assertEventually( "SHOW DATABASES should return one row per database per cluster member", () -> showDatabases( cluster ),
-                              new HamcrestCondition<>( hasSize( clusterSize * databasesWithAdditional.size() ) ), timeoutSeconds, SECONDS );
+                              sizeCondition( clusterSize * databasesWithAdditional.size() ), timeoutSeconds, SECONDS );
             assertEventually( "SHOW DATABASES should return 1 leader per database", () -> showDatabases( cluster ),
                               containsRole( "leader", databasesWithAdditional, 1 ), timeoutSeconds, SECONDS );
             assertEventually( "SHOW DATABASES should return 2 followers per database", () -> showDatabases( cluster ),
@@ -461,7 +454,7 @@ class ClusteredShowDatabasesIT
             misConfiguredRR.start();
 
             assertEventually( "SHOW DATABASES should return one row per database per cluster member", () -> showDatabases( cluster ),
-                              new HamcrestCondition<>( hasSize( cluster.allMembers().size() * defaultDatabases.size() ) ), timeoutSeconds, SECONDS );
+                              sizeCondition( cluster.allMembers().size() * defaultDatabases.size() ), timeoutSeconds, SECONDS );
             assertEventually( "SHOW DATABASES should return 1 leader per database", () -> showDatabases( cluster ),
                               containsRole( "leader", defaultDatabases, 1 ), timeoutSeconds, SECONDS );
             assertEventually( "SHOW DATABASES should return 3 followers per database", () -> showDatabases( cluster ),
@@ -477,32 +470,26 @@ class ClusteredShowDatabasesIT
             assertEventually( "SHOW DATABASES should return 2 rows with an error for database foo", () -> showDatabases( cluster ),
                               containsError( "The total limit of databases is already reached", "foo", 2 ), timeoutSeconds, SECONDS );
             assertEventually( format( "SHOW DATABASES should show Started status for members %s, for database foo", initialClusterAddresses ),
-                    () -> membersHaveStateForDatabases( initialClusterAddresses, singleton( ADDITIONAL_DATABASE_NAME ), STARTED, cluster ), TRUE, timeoutSeconds,
-                    SECONDS );
+                              () -> membersHaveStateForDatabases( initialClusterAddresses, singleton( ADDITIONAL_DATABASE_NAME ), STARTED, cluster ), TRUE,
+                              timeoutSeconds,
+                              SECONDS );
         }
     }
 
     private static Condition<List<? extends ShowDatabasesResultRow>> containsRole( String expectedRole, Set<String> databaseNames, long expectedCount )
     {
-        Iterable<Matcher<? super List<ShowDatabasesResultRow>>> allMatchers = databaseNames.stream()
+        Iterable<Condition<Collection<? extends ShowDatabasesResultRow>>> allConditions = databaseNames.stream()
                 .map( databaseName -> containsRole( expectedRole, databaseName, expectedCount ) ).collect( toList() );
-        return new HamcrestCondition<>( Matchers.allOf( allMatchers ) );
+        return Assertions.allOf( allConditions );
     }
 
-    private static Matcher<? super Collection<ShowDatabasesResultRow>> containsRole( String expectedRole, String databaseName, long expectedCount )
+    private static Condition<Collection<? extends ShowDatabasesResultRow>> containsRole( String expectedRole, String databaseName, long expectedCount )
     {
-        var featureDescription = format( "Counts the number of members with role %s for the database %s", expectedRole, databaseName );
-        return new FeatureMatcher<>( equalTo( expectedCount ), featureDescription, "count" )
-        {
-            @Override
-            protected Long featureValueOf( Collection<ShowDatabasesResultRow> showDatabasesResultRows )
-            {
-                return showDatabasesResultRows.stream()
-                        .filter( row -> Objects.equals( row.name(), databaseName ) &&
-                                Objects.equals( row.role(), expectedRole ) )
-                        .count();
-            }
-        };
+        var featureDescription = format( "Expected exactly %s members with role %s for the database %s", expectedCount, expectedRole, databaseName );
+        return new Condition<>( showDatabasesResultRows -> showDatabasesResultRows.stream()
+                                                                   .filter( row -> Objects.equals( row.name(), databaseName ) &&
+                                                                                   Objects.equals( row.role(), expectedRole ) )
+                                                                   .count() == expectedCount, featureDescription );
     }
 
     private static Condition<Collection<ShowDatabasesResultRow>> containsError( String expectedError, String databaseName, long expectedCount )
@@ -555,17 +542,15 @@ class ClusteredShowDatabasesIT
 
     private static void waitForClusterToReachLocalState( Cluster cluster, NamedDatabaseId namedDatabaseId, EnterpriseOperatorState operatorState,
             int timeoutSeconds )
-            throws InterruptedException
     {
         waitForClusterToReachLocalState( cluster.allMembers(), namedDatabaseId, operatorState, timeoutSeconds );
     }
 
     private static void waitForClusterToReachLocalState( Set<ClusterMember> members, NamedDatabaseId namedDatabaseId, EnterpriseOperatorState operatorState,
             int timeoutSeconds )
-            throws InterruptedException
     {
         var databaseStateServices = databaseStateServices( members );
-        assertEventually( () -> getOperatorStates( namedDatabaseId, databaseStateServices ), new AllStatesMatchMatcher( operatorState ), timeoutSeconds,
+        assertEventually( () -> getOperatorStates( namedDatabaseId, databaseStateServices ), allStatesMatchCondition( operatorState ), timeoutSeconds,
                           SECONDS );
     }
 
@@ -592,27 +577,10 @@ class ClusteredShowDatabasesIT
                                                                    .stateOfDatabase( namedDatabaseId ) ).collect( toList() );
     }
 
-    private static class AllStatesMatchMatcher extends TypeSafeMatcher<Collection<OperatorState>>
+    private static Condition<Collection<OperatorState>> allStatesMatchCondition( EnterpriseOperatorState enterpriseOperatorState )
     {
-        private EnterpriseOperatorState enterpriseOperatorState;
-
-        AllStatesMatchMatcher( EnterpriseOperatorState enterpriseOperatorState )
-        {
-            this.enterpriseOperatorState = enterpriseOperatorState;
-        }
-
-        @Override
-        protected boolean matchesSafely( Collection<OperatorState> item )
-        {
-            return item.stream()
-                    .allMatch( operatorState -> operatorState == enterpriseOperatorState );
-        }
-
-        @Override
-        public void describeTo( Description description )
-        {
-            description.appendText( "Assume all databases has state " + enterpriseOperatorState );
-        }
+        return new Condition<>( states -> states.stream()
+                .allMatch( operatorState -> operatorState == enterpriseOperatorState ), "Assume all databases has state " + enterpriseOperatorState );
     }
 
     private static Collection<DatabaseStateService> databaseStateServices( Set<ClusterMember> members )
