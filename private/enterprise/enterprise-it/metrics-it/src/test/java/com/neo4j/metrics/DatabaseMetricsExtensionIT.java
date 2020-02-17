@@ -82,6 +82,7 @@ class DatabaseMetricsExtensionIT
         outputPath = new File( directory.homeDir(), "metrics" );
         builder.setConfig( MetricsSettings.metricsEnabled, true );
         builder.setConfig( MetricsSettings.csvEnabled, true );
+        builder.setConfig( MetricsSettings.csvInterval, Duration.ofMillis( 30 ) );
         builder.setConfig( cypher_min_replan_interval, Duration.ofMinutes( 0 ) );
         builder.setConfig( MetricsSettings.csvPath, outputPath.toPath().toAbsolutePath() );
         builder.setConfig( check_point_interval_time, Duration.ofMillis( 100 ) );
@@ -184,8 +185,15 @@ class DatabaseMetricsExtensionIT
         addNodes( 100 );
         File metricsFile = metricsCsv( outputPath, "neo4j." + db.databaseName() + ".log.appended_bytes" );
 
-        long appendedBytes = readLongCounterAndAssert( metricsFile,
-                ( newValue, currentValue ) -> newValue >= currentValue );
+        long appendedBytes = 0;
+        int attempts = 0;
+        do
+        {
+            attempts += 1;
+            appendedBytes += readLongCounterAndAssert( metricsFile,
+                    ( newValue, currentValue ) -> newValue >= currentValue );
+        }
+        while ( attempts <= 5 && appendedBytes == 0 );
 
         // THEN
         assertThat( appendedBytes ).isGreaterThan( 0L );
