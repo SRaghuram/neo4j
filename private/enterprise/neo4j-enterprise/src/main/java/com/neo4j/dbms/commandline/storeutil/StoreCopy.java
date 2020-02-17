@@ -190,7 +190,7 @@ public class StoreCopy
         SchemaRuleAccess schemaRuleAccess = SchemaRuleAccess.getSchemaRuleAccess( schemaStore, tokenHolders );
         Map<String,IndexDescriptor> indexes = new HashMap<>();
         List<ConstraintDescriptor> constraints = new ArrayList<>();
-        schemaRuleAccess.indexesGetAll( TRACER_SUPPLIER.get() ).forEachRemaining( i -> indexes.put( i.getName(), i ) );
+        schemaRuleAccess.indexesGetAllIgnoreMalformed( TRACER_SUPPLIER.get() ).forEachRemaining( i -> indexes.put( i.getName(), i ) );
         schemaRuleAccess.constraintsGetAllIgnoreMalformed( TRACER_SUPPLIER.get() ).forEachRemaining(constraints::add );
 
         Map<String,String> schemaStatements = new HashMap<>();
