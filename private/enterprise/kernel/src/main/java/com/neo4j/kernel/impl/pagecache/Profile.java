@@ -97,7 +97,7 @@ final class Profile implements Comparable<Profile>
         fs.mkdirs( profileFile.getParentFile() ); // Create PROFILE_FOLDER if it does not exist.
         try
         {
-            return CompressionFormat.compress( () -> fs.openAsOutputStream( profileFile, false ), CompressionFormat.GZIP );
+            return CompressionFormat.compress( () -> fs.openAsOutputStream( profileFile, true ), CompressionFormat.GZIP );
         }
         catch ( IOException e )
         {
