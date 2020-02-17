@@ -159,7 +159,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       )
 
     // CREATE [OR REPLACE] USER foo [IF NOT EXISTS] SET PASSWORD password
-    case CreateUser(source, userName, Some(initialPassword), None, requirePasswordChange, suspendedOptional) => (context, parameterMapping, securityContext) =>
+    case CreateUser(source, userName, Left(initialPassword), requirePasswordChange, suspendedOptional) => (context, parameterMapping, securityContext) =>
       val suspended = suspendedOptional.getOrElse(false)
       try {
         validatePassword(initialPassword)
@@ -191,7 +191,15 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       }
 
     // ALTER USER foo
-    case AlterUser(source, userName, initialPassword, None, requirePasswordChange, suspended) => (context, parameterMapping, securityContext) =>
+    // TODO: This should actually work at runtime
+    case AlterUser(_, userName, Some(Right(_)), _, _) =>
+      throw new IllegalStateException(s"Failed to alter the specified user '$userName': Did not resolve parameters correctly.")
+
+    // ALTER USER foo
+    case AlterUser(source, userName, password, requirePasswordChange, suspended) => (context, parameterMapping, securityContext) =>
+      val initialPassword: Option[Array[Byte]] = password.map {
+        case Left(bytes) => bytes
+      }
       val params = Seq(
         initialPassword -> "credentials",
         requirePasswordChange -> "passwordChangeRequired",
@@ -233,10 +241,6 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           }),
         Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext))
       )
-
-    // ALTER USER foo
-    case AlterUser(_, userName, _, Some(_), _, _) =>
-      throw new IllegalStateException(s"Failed to alter the specified user '$userName': Did not resolve parameters correctly.")
 
     // SHOW [ ALL | POPULATED ] ROLES [ WITH USERS ]
     case ShowRoles(source, withUsers, showAll) => (context, parameterMapping, securityContext) =>
