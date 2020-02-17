@@ -53,9 +53,9 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
 
   val cachedProperties: Array[SlottedCachedProperty] =
     Array(
-      SlottedCachedPropertyWithoutPropertyToken("a", PropertyKeyName("prop")(NONE), 0, false, "prop", 0, NODE_TYPE),
-      SlottedCachedPropertyWithoutPropertyToken("b", PropertyKeyName("prop")(NONE), 1, false, "prop", 1, NODE_TYPE),
-      SlottedCachedPropertyWithoutPropertyToken("c", PropertyKeyName("prop")(NONE), 2, false, "prop", 2, NODE_TYPE)
+      SlottedCachedPropertyWithoutPropertyToken("a", PropertyKeyName("prop")(NONE), 0, false, "prop", 0, NODE_TYPE, false),
+      SlottedCachedPropertyWithoutPropertyToken("b", PropertyKeyName("prop")(NONE), 1, false, "prop", 1, NODE_TYPE, false),
+      SlottedCachedPropertyWithoutPropertyToken("c", PropertyKeyName("prop")(NONE), 2, false, "prop", 2, NODE_TYPE, false)
     )
 
   val getFromStoreIr = print(constant("getFromStore"))
@@ -494,7 +494,7 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
   }
 
   test("should handle writeLocalsToSlots in nested scope") {
-    val cachedProp9 = SlottedCachedPropertyWithoutPropertyToken("r9", PropertyKeyName("prop")(NONE), 9, false, "prop", 9, NODE_TYPE)
+    val cachedProp9 = SlottedCachedPropertyWithoutPropertyToken("r9", PropertyKeyName("prop")(NONE), 9, false, "prop", 9, NODE_TYPE, false)
 
     // Given
     val slots = SlotConfiguration.empty

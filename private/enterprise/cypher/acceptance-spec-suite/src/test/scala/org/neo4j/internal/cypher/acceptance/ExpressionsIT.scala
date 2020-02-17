@@ -3531,8 +3531,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
         VirtualValues.node,
         token => NodeProperty(0, token, "prop")(null),
         _ => NodePropertyLate(0, "prop", "prop")(null),
-        (pkn, token, cachedPropertyOffset, offsetIsForLongSlot) => ast.SlottedCachedPropertyWithPropertyToken("n", pkn, 0, offsetIsForLongSlot, token, cachedPropertyOffset, NODE_TYPE),
-        (pkn, _, cachedPropertyOffset, offsetIsForLongSlot) => ast.SlottedCachedPropertyWithoutPropertyToken("n", pkn, 0, offsetIsForLongSlot, "prop", cachedPropertyOffset, NODE_TYPE),
+        (pkn, token, cachedPropertyOffset, offsetIsForLongSlot) => ast.SlottedCachedPropertyWithPropertyToken("n", pkn, 0, offsetIsForLongSlot, token, cachedPropertyOffset, NODE_TYPE, nullable = false),
+        (pkn, _, cachedPropertyOffset, offsetIsForLongSlot) => ast.SlottedCachedPropertyWithoutPropertyToken("n", pkn, 0, offsetIsForLongSlot, "prop", cachedPropertyOffset, NODE_TYPE, nullable = false),
         _.invalidateCachedNodeProperties(_)),
       PropertyTest("relationship",
         prop => relate(createNode(), createNode(), "prop" -> prop),
@@ -3542,8 +3542,8 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
         VirtualValues.relationship,
         token => RelationshipProperty(0, token, "prop")(null),
         _ => RelationshipPropertyLate(0, "prop", "prop")(null),
-        (pkn, token, cachedPropertyOffset, offsetIsForLongSlot) => ast.SlottedCachedPropertyWithPropertyToken("n", pkn, 0, offsetIsForLongSlot, token, cachedPropertyOffset, RELATIONSHIP_TYPE),
-        (pkn, _, cachedPropertyOffset, offsetIsForLongSlot) => ast.SlottedCachedPropertyWithoutPropertyToken("n", pkn, 0, offsetIsForLongSlot, "prop", cachedPropertyOffset, RELATIONSHIP_TYPE),
+        (pkn, token, cachedPropertyOffset, offsetIsForLongSlot) => ast.SlottedCachedPropertyWithPropertyToken("n", pkn, 0, offsetIsForLongSlot, token, cachedPropertyOffset, RELATIONSHIP_TYPE, nullable = false),
+        (pkn, _, cachedPropertyOffset, offsetIsForLongSlot) => ast.SlottedCachedPropertyWithoutPropertyToken("n", pkn, 0, offsetIsForLongSlot, "prop", cachedPropertyOffset, RELATIONSHIP_TYPE, nullable = false),
         _.invalidateCachedRelationshipProperties(_))
     )
     RuntimeAccess(time, expression, cachedExpression) <- Seq(

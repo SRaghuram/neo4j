@@ -1503,12 +1503,12 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
       val nullChecks = block(lazySet, equal(load(variableName), noValue))
       Some(IntermediateExpression(ops, Seq.empty, Seq(vNODE_CURSOR, vPROPERTY_CURSOR), Set(nullChecks), requireNullCheck = false))
 
-    case property@SlottedCachedPropertyWithPropertyToken(_, _, offset, offsetIsForLongSlot, token, _, entityType) =>
+    case property@SlottedCachedPropertyWithPropertyToken(_, _, offset, offsetIsForLongSlot, token, _, entityType, nullable) =>
       if (token == StatementConstants.NO_SUCH_PROPERTY_KEY) Some(
         IntermediateExpression(noValue, Seq.empty, Seq.empty, Set.empty, requireNullCheck = false))
       else {
         val variableName = namer.nextVariableName()
-        val entityId = getEntityId(offsetIsForLongSlot, offset, entityType)
+        val entityId = getEntityId(offsetIsForLongSlot, offset, entityType, nullable)
         val (propertyGet, txStatePropertyGet, cursor, cursorVar) = callPropertyGet(entityType)
         def checkPropertyTxState(continuation: IntermediateRepresentation): IntermediateRepresentation = {
           if (readOnly) continuation
@@ -1564,10 +1564,10 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
       val nullChecks = block(lazySet, equal(load(variableName), noValue))
       Some(IntermediateExpression(ops, Seq(f), Seq(vNODE_CURSOR, vPROPERTY_CURSOR), Set(nullChecks), requireNullCheck = false))
 
-    case property@SlottedCachedPropertyWithoutPropertyToken(_, _, offset, offsetIsForLongSlot, propKey, cachedPropertyOffset, entityType) =>
+    case property@SlottedCachedPropertyWithoutPropertyToken(_, _, offset, offsetIsForLongSlot, propKey, _, entityType, nullable) =>
       val f = field[Int](namer.nextVariableName(), constant(-1))
       val variableName = namer.nextVariableName()
-      val entityId = getEntityId(offsetIsForLongSlot, offset, entityType)
+      val entityId = getEntityId(offsetIsForLongSlot, offset, entityType, nullable)
       val (propertyGet, txStatePropertyGet, cursor, cursorVar) = callPropertyGet(entityType)
       def checkPropertyTxState(continuation: IntermediateRepresentation): IntermediateRepresentation = {
         if (readOnly) continuation
@@ -3012,13 +3012,13 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
   }
 
   private def cachedExists(property: ASTCachedProperty) = property match {
-    case property@SlottedCachedPropertyWithPropertyToken(_, _, entityOffset, offsetIsForLongSlot, prop, _, entityType) =>
+    case property@SlottedCachedPropertyWithPropertyToken(_, _, entityOffset, offsetIsForLongSlot, prop, _, entityType, nullable) =>
       if (prop == StatementConstants.NO_SUCH_PROPERTY_KEY) Some(
         IntermediateExpression(falseValue, Seq.empty, Seq.empty, Set.empty, requireNullCheck = false))
       else {
         val existsVariable = namer.nextVariableName()
         val propertyVariable = namer.nextVariableName()
-        val entityId = getEntityId(offsetIsForLongSlot, entityOffset, entityType)
+        val entityId = getEntityId(offsetIsForLongSlot, entityOffset, entityType, nullable)
         val (propertyGet, txStateHasCachedProperty, cursor, cursorVar) = callPropertyExists(entityType)
         def checkPropertyTxState(onNoChanges: IntermediateRepresentation): IntermediateRepresentation = {
           val hasChanges = namer.nextVariableName()
@@ -3075,11 +3075,11 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
                                     requireNullCheck = false))
       }
 
-    case property@SlottedCachedPropertyWithoutPropertyToken(_, _, entityOffset, offsetIsForLongSlot, prop, _, entityType) =>
+    case property@SlottedCachedPropertyWithoutPropertyToken(_, _, entityOffset, offsetIsForLongSlot, prop, _, entityType, nullable) =>
       val f = field[Int](namer.nextVariableName(), constant(-1))
       val existsVariable = namer.nextVariableName()
       val propertyVariable = namer.nextVariableName()
-      val entityId = getEntityId(offsetIsForLongSlot, entityOffset, entityType)
+      val entityId = getEntityId(offsetIsForLongSlot, entityOffset, entityType, nullable)
       val (propertyGet, txStateHasCachedProperty, cursor, cursorVar) = callPropertyExists(entityType)
       def checkPropertyTxState(onNoChanges: IntermediateRepresentation): IntermediateRepresentation = {
         val hasChanges = namer.nextVariableName()
@@ -3151,18 +3151,20 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
     arrayLoad(load("expressionVariables"), ev.offset)
   }
 
-  private def getEntityId(offsetIsForLongSlot: Boolean, offset: Int, entityType: EntityType): IntermediateRepresentation = {
+  private def getEntityId(offsetIsForLongSlot: Boolean, offset: Int, entityType: EntityType, nullable: Boolean): IntermediateRepresentation = {
     if (offsetIsForLongSlot) getLongAt(offset)
     else {
       val entityVar = namer.nextVariableName()
+
       val getId = entityType match {
         case NODE_TYPE => invoke(cast[VirtualNodeValue](getRefAt(offset)),
                                  method[VirtualNodeValue, Long]("id"))
         case RELATIONSHIP_TYPE => invoke(cast[VirtualRelationshipValue](getRefAt(offset)),
                                          method[VirtualRelationshipValue, Long]("id"))
       }
+      val nullChecked = if (nullable) ternary(equal(getRefAt(offset), noValue), constant(-1L), getId) else getId
       block(
-        oneTime(declareAndAssign(typeRefOf[Long], entityVar, getId)),
+        oneTime(declareAndAssign(typeRefOf[Long], entityVar, nullChecked)),
         load(entityVar))
     }
   }

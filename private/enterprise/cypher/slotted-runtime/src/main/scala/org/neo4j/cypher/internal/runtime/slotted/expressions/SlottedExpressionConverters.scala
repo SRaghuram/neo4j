@@ -97,9 +97,9 @@ case class SlottedExpressionConverters(physicalPlan: PhysicalPlan) extends Expre
         Some(slotted.expressions.ReferenceFromSlot(offset))
       case physicalplanning.ast.NodeProperty(offset, token, _) =>
         Some(slotted.expressions.NodeProperty(offset, token))
-      case physicalplanning.ast.SlottedCachedPropertyWithPropertyToken(_, _, offset, offsetIsForLongSlot, token, cachedPropertyOffset, NODE_TYPE) =>
+      case physicalplanning.ast.SlottedCachedPropertyWithPropertyToken(_, _, offset, offsetIsForLongSlot, token, cachedPropertyOffset, NODE_TYPE, _) =>
         Some(slotted.expressions.SlottedCachedNodeProperty(offset, offsetIsForLongSlot, token, cachedPropertyOffset))
-      case physicalplanning.ast.SlottedCachedPropertyWithPropertyToken(_, _, offset, offsetIsForLongSlot, token, cachedPropertyOffset, RELATIONSHIP_TYPE) =>
+      case physicalplanning.ast.SlottedCachedPropertyWithPropertyToken(_, _, offset, offsetIsForLongSlot, token, cachedPropertyOffset, RELATIONSHIP_TYPE, _) =>
         Some(slotted.expressions.SlottedCachedRelationshipProperty(offset, offsetIsForLongSlot, token, cachedPropertyOffset))
       case physicalplanning.ast.RelationshipProperty(offset, token, _) =>
         Some(slotted.expressions.RelationshipProperty(offset, token))
@@ -113,9 +113,9 @@ case class SlottedExpressionConverters(physicalPlan: PhysicalPlan) extends Expre
         Some(slotted.expressions.RelationshipTypeFromSlot(offset))
       case physicalplanning.ast.NodePropertyLate(offset, propKey, _) =>
         Some(slotted.expressions.NodePropertyLate(offset, propKey))
-      case physicalplanning.ast.SlottedCachedPropertyWithoutPropertyToken(_, _, offset, offsetIsForLongSlot, propertyKey, cachedPropertyOffset, NODE_TYPE) =>
+      case physicalplanning.ast.SlottedCachedPropertyWithoutPropertyToken(_, _, offset, offsetIsForLongSlot, propertyKey, cachedPropertyOffset, NODE_TYPE, _) =>
         Some(slotted.expressions.SlottedCachedNodePropertyLate(offset, offsetIsForLongSlot, propertyKey, cachedPropertyOffset))
-      case physicalplanning.ast.SlottedCachedPropertyWithoutPropertyToken(_, _, offset, offsetIsForLongSlot, propertyKey, cachedPropertyOffset, RELATIONSHIP_TYPE) =>
+      case physicalplanning.ast.SlottedCachedPropertyWithoutPropertyToken(_, _, offset, offsetIsForLongSlot, propertyKey, cachedPropertyOffset, RELATIONSHIP_TYPE, _) =>
         Some(slotted.expressions.SlottedCachedRelationshipPropertyLate(offset, offsetIsForLongSlot, propertyKey, cachedPropertyOffset))
       case physicalplanning.ast.RelationshipPropertyLate(offset, propKey, _) =>
         Some(slotted.expressions.RelationshipPropertyLate(offset, propKey))

@@ -188,11 +188,27 @@ class SlottedRewriter(tokenContext: TokenContext) {
 
       case prop@CachedProperty(originalEntityName, variable, pkn@PropertyKeyName(propKey), entityType) =>
         slotConfiguration(variable.name) match {
-          case LongSlot(offset, _, cypherType) if
+          case LongSlot(offset, nullable, cypherType) if
           (cypherType == CTNode && entityType == NODE_TYPE) || (cypherType == CTRelationship && entityType == RELATIONSHIP_TYPE) =>
             val propExpression = tokenContext.getOptPropertyKeyId(propKey) match {
-              case Some(propId) => ast.SlottedCachedPropertyWithPropertyToken(originalEntityName, pkn, offset, offsetIsForLongSlot = true, propId, slotConfiguration.getCachedPropertyOffsetFor(prop), entityType)
-              case None => ast.SlottedCachedPropertyWithoutPropertyToken(originalEntityName, pkn, offset, offsetIsForLongSlot = true, propKey, slotConfiguration.getCachedPropertyOffsetFor(prop), entityType)
+              case Some(propId) =>
+                ast.SlottedCachedPropertyWithPropertyToken(originalEntityName,
+                                                           pkn,
+                                                           offset,
+                                                           offsetIsForLongSlot = true,
+                                                           propId,
+                                                           slotConfiguration.getCachedPropertyOffsetFor(prop),
+                                                           entityType,
+                                                           nullable)
+              case None =>
+                ast.SlottedCachedPropertyWithoutPropertyToken(originalEntityName,
+                                                              pkn,
+                                                              offset,
+                                                              offsetIsForLongSlot = true,
+                                                              propKey,
+                                                              slotConfiguration.getCachedPropertyOffsetFor(prop),
+                                                              entityType,
+                                                              nullable)
             }
             // Primitive entities are always null-checked by the CachedNodeProperty command expression itself at runtime,
             // which is why we do not need an explicit null-check here when the slot is nullable
@@ -206,8 +222,24 @@ class SlottedRewriter(tokenContext: TokenContext) {
           // in the first place.
           case RefSlot(offset, nullable, _) =>
             val propExpression = tokenContext.getOptPropertyKeyId(propKey) match {
-              case Some(propId) => ast.SlottedCachedPropertyWithPropertyToken(originalEntityName, pkn, offset, offsetIsForLongSlot = false, propId, slotConfiguration.getCachedPropertyOffsetFor(prop), entityType)
-              case None => ast.SlottedCachedPropertyWithoutPropertyToken(originalEntityName, pkn, offset, offsetIsForLongSlot = false, propKey, slotConfiguration.getCachedPropertyOffsetFor(prop), entityType)
+              case Some(propId) =>
+                ast.SlottedCachedPropertyWithPropertyToken(originalEntityName,
+                                                           pkn,
+                                                           offset,
+                                                           offsetIsForLongSlot = false,
+                                                           propId,
+                                                           slotConfiguration.getCachedPropertyOffsetFor(prop),
+                                                           entityType,
+                                                           nullable)
+              case None =>
+                ast.SlottedCachedPropertyWithoutPropertyToken(originalEntityName,
+                                                              pkn,
+                                                              offset,
+                                                              offsetIsForLongSlot = false,
+                                                              propKey,
+                                                              slotConfiguration.getCachedPropertyOffsetFor(prop),
+                                                              entityType,
+                                                              nullable)
             }
             if (nullable)
               NullCheckReference(offset, propExpression)
