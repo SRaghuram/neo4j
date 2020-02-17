@@ -14,6 +14,7 @@ import org.neo4j.codegen.api.IntermediateRepresentation.block
 import org.neo4j.codegen.api.IntermediateRepresentation.cast
 import org.neo4j.codegen.api.IntermediateRepresentation.condition
 import org.neo4j.codegen.api.IntermediateRepresentation.constant
+import org.neo4j.codegen.api.IntermediateRepresentation.equal
 import org.neo4j.codegen.api.IntermediateRepresentation.field
 import org.neo4j.codegen.api.IntermediateRepresentation.greaterThan
 import org.neo4j.codegen.api.IntermediateRepresentation.invoke
@@ -21,6 +22,7 @@ import org.neo4j.codegen.api.IntermediateRepresentation.invokeStatic
 import org.neo4j.codegen.api.IntermediateRepresentation.load
 import org.neo4j.codegen.api.IntermediateRepresentation.loadField
 import org.neo4j.codegen.api.IntermediateRepresentation.method
+import org.neo4j.codegen.api.IntermediateRepresentation.setField
 import org.neo4j.codegen.api.IntermediateRepresentation.subtract
 import org.neo4j.codegen.api.IntermediateRepresentation.variable
 import org.neo4j.codegen.api.LocalVariable
@@ -43,6 +45,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.LimitOperator.evalu
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.OUTPUT_COUNTER
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.OUTPUT_ROW
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.SHOULD_BREAK
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profileRows
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelLimitOperatorTaskTemplate.SerialTopLevelLimitState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
@@ -262,9 +265,14 @@ class SerialTopLevelLimitOperatorTaskTemplate(val inner: OperatorTaskTemplate,
       condition(greaterThan(load(countLeftVar), constant(0L))) (
         block(
           inner.genOperateWithExpressions,
-          doIfInnerCantContinue(assign(countLeftVar, subtract(load(countLeftVar), constant(1L)))))
+          doIfInnerCantContinue(
+              assign(countLeftVar, subtract(load(countLeftVar), constant(1L)))))
+        ),
+      doIfInnerCantContinue(
+        condition(equal(load(countLeftVar), constant(0L)))(
+          setField(SHOULD_BREAK, constant(true)))
+        )
       )
-    )
   }
 
   override def genOperateExit: IntermediateRepresentation = {

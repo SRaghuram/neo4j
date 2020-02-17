@@ -73,6 +73,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.DATA_READ
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_MORSEL
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.SHOULD_BREAK
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.QUERY_STATE
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.QUERY_RESOURCE_PARAMETER
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.CURSOR_POOL_V
@@ -630,7 +631,7 @@ trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
         )
       ),
       // NOTE: This has to be called after genOperate!
-      genFields = () => staticFields ++ Seq(DATA_READ, INPUT_MORSEL) ++ flatMap[Field](op => op.genFields ++
+      genFields = () => staticFields ++ Seq(DATA_READ, INPUT_MORSEL, SHOULD_BREAK) ++ flatMap[Field](op => op.genFields ++
         op.genProfileEventField ++
         op.genExpressions.flatMap(_.fields)))
   }
@@ -640,13 +641,15 @@ trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
 // and also for providing demand operations
 class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
                                    var shouldCheckDemand: Boolean = false,
-                                   var shouldCheckOutputCounter: Boolean = false)
+                                   var shouldCheckOutputCounter: Boolean = false,
+                                   var shouldCheckBreak: Boolean = false)
                                   (protected val codeGen: OperatorExpressionCompiler) extends OperatorTaskTemplate {
   // Reset configuration to the default settings
   def reset(): Unit = {
     shouldWriteToContext = true
     shouldCheckDemand = false
     shouldCheckOutputCounter = false
+    shouldCheckBreak = false
   }
 
   override def inner: OperatorTaskTemplate = null
@@ -701,6 +704,10 @@ class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
     }
     if (shouldCheckOutputCounter) {
       conditions += HAS_REMAINING_OUTPUT
+    }
+
+    if (shouldCheckBreak) {
+      conditions += not(loadField(SHOULD_BREAK))
     }
 
     and(conditions)

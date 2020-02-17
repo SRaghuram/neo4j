@@ -119,6 +119,7 @@ object OperatorCodeGenHelperTemplates {
   val WORK_IDENTITY_STATIC_FIELD_NAME  = "_workIdentity"
   val DATA_READ: InstanceField = field[Read]("dataRead", load(DATA_READ_CONSTRUCTOR_PARAMETER.name))
   val INPUT_MORSEL: InstanceField = field[MorselCypherRow]("inputMorsel", load(INPUT_MORSEL_CONSTRUCTOR_PARAMETER.name))
+  val SHOULD_BREAK: InstanceField = field[Boolean]("shouldBreak", constant(false))
 
   // IntermediateRepresentation code
   val QUERY_PROFILER: IntermediateRepresentation = load("queryProfiler")

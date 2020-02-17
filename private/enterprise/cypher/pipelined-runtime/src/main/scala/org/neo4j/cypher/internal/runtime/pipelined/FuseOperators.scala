@@ -918,6 +918,7 @@ class FuseOperators(operatorFactory: OperatorFactory,
           // Special case for limit when not nested under an apply and with serial execution
           case plan@Limit(_, countExpression, DoNotIncludeTies) if hasNoNestedArguments(plan) && serialExecutionOnly =>
             val argumentStateMapId = operatorFactory.executionGraphDefinition.findArgumentStateMapForPlan(plan.id)
+            innermostTemplate.shouldCheckBreak = true
             val newTemplate = new SerialTopLevelLimitOperatorTaskTemplate(acc.template,
               plan.id,
               innermostTemplate,

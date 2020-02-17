@@ -164,7 +164,7 @@ class InputOperatorTemplate(override val inner: OperatorTaskTemplate,
                            (protected val codeGen: OperatorExpressionCompiler) extends ContinuableOperatorTaskWithMorselTemplate {
 
   private val inputCursorField = field[MutatingInputCursor](codeGen.namer.nextVariableName())
-  private val canContinue = field[Boolean](codeGen.namer.nextVariableName())
+  private val canContinue = field[Boolean](codeGen.namer.nextVariableName("canContinue"))
 
   override protected def scopeId: String = "input" + id.x
 
