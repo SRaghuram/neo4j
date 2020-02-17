@@ -2792,7 +2792,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       val slots = SlotConfiguration(Map("n" -> RefSlot(offset, nullable, symbols.CTNode)), 0, 1)
       //needed for interpreted
       SlotConfigurationUtils.generateSlotAccessorFunctions(slots)
-      val context = SlottedExecutionContext(slots)
+      val context = SlottedRow(slots)
       context.setRefAt(offset, node)
       evaluate(compile(mapProjection("n", includeAllProps = true, "foo" -> literalString("projected")), slots),
                context) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
@@ -2857,7 +2857,7 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
       val slots = SlotConfiguration(Map("r" -> RefSlot(offset, nullable, symbols.CTRelationship)), 0, 1)
       //needed for interpreted
       SlotConfigurationUtils.generateSlotAccessorFunctions(slots)
-      val context = SlottedExecutionContext(slots)
+      val context = SlottedRow(slots)
       context.setRefAt(offset, relationship)
       evaluate(compile(mapProjection("r", includeAllProps = true, "foo" -> literalString("projected")), slots),
                context) should equal(propertyMap.updatedWith("foo", stringValue("projected")))
