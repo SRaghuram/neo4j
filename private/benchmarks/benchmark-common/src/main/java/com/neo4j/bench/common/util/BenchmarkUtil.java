@@ -227,26 +227,6 @@ public class BenchmarkUtil
         }
     }
 
-    public static void assertDirectoryEmpty( Path dir )
-    {
-        assertDirectoryExists(dir);
-        try
-        {
-            if ( Files.list( dir ).count() != 0 )
-            {
-                throw new RuntimeException( "Directory was not empty: " + dir.toAbsolutePath() );
-            }
-            else
-            {
-                assertIsDirectory( dir );
-            }
-        }
-        catch ( IOException e )
-        {
-            throw new RuntimeException( e );
-        }
-    }
-
     public static void assertFileExists( Path file )
     {
         if ( !Files.exists( file ) )
