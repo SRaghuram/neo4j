@@ -7,6 +7,7 @@ package com.neo4j.internal.cypher.planner
 
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import org.neo4j.cypher.internal.plandescription.Arguments.DatabaseAction
+import org.neo4j.cypher.internal.plandescription.Arguments.Qualifier
 
 class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCommandPlannerTestBase {
   private val default = "DEFAULT"
@@ -954,6 +955,252 @@ class DatabasePrivilegeAdministrationCommandPlannerTest extends AdministrationCo
                   )
                 )
               )
+            )
+          )
+        )
+      ).toString
+    )
+  }
+
+  // Transaction privileges
+
+  test("Grant show transaction")
+  {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute("EXPLAIN GRANT SHOW TRANSACTION (*) ON DATABASE * TO reader, editor").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        databasePrivilegePlan("GrantDatabaseAction", "SHOW TRANSACTION", Qualifier("ALL USERS"), "editor",
+          databasePrivilegePlan("GrantDatabaseAction", "SHOW TRANSACTION", Qualifier("ALL USERS"), "reader",
+            assertDbmsAdminPlan("GRANT PRIVILEGE")
+          )
+        )
+      ).toString
+    )
+
+  }
+
+  test("Deny show transaction") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute(s"EXPLAIN DENY SHOW TRANSACTION (*) ON DATABASE $SYSTEM_DATABASE_NAME TO reader").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        databasePrivilegePlan("DenyDatabaseAction", "SHOW TRANSACTION", SYSTEM_DATABASE_NAME, Qualifier("ALL USERS"), "reader",
+          assertDbmsAdminPlan("DENY PRIVILEGE")
+        )
+      ).toString
+    )
+  }
+
+  test("Revoke show transaction") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute(s"EXPLAIN REVOKE SHOW TRANSACTION (*) ON DEFAULT DATABASE FROM reader").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "SHOW TRANSACTION", default, Qualifier("ALL USERS"), "reader",
+          databasePrivilegePlan("RevokeDatabaseAction(GRANTED)", "SHOW TRANSACTION", default, Qualifier("ALL USERS"), "reader",
+            helperPlan("AssertValidRevoke", Seq(DatabaseAction("SHOW TRANSACTION"), roleArg("reader")),
+              assertDbmsAdminPlan("REVOKE PRIVILEGE")
+            )
+          )
+        )
+      ).toString
+    )
+  }
+
+  test("Revoke grant show transaction") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute(s"EXPLAIN REVOKE GRANT SHOW TRANSACTION (username) ON DEFAULT DATABASE FROM reader").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        databasePrivilegePlan("RevokeDatabaseAction(GRANTED)", "SHOW TRANSACTION", default, qualifierArg("USER", "username"), "reader",
+          helperPlan("AssertValidRevoke", Seq(DatabaseAction("SHOW TRANSACTION"), roleArg("reader")),
+            assertDbmsAdminPlan("REVOKE PRIVILEGE")
+          )
+        )
+      ).toString
+    )
+  }
+
+  test("Revoke deny show transaction") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute(s"EXPLAIN REVOKE DENY SHOW TRANSACTION (user1, user2) ON DEFAULT DATABASE FROM reader").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "SHOW TRANSACTION", default, qualifierArg("USER", "user2"), "reader",
+          databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "SHOW TRANSACTION", default, qualifierArg("USER", "user1"), "reader",
+            helperPlan("AssertValidRevoke", Seq(DatabaseAction("SHOW TRANSACTION"), roleArg("reader")),
+              assertDbmsAdminPlan("REVOKE PRIVILEGE")
+            )
+          )
+        )
+      ).toString
+    )
+  }
+
+  test("Grant terminate transaction")
+  {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute("EXPLAIN GRANT TERMINATE TRANSACTION (*) ON DATABASE * TO reader, editor").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        databasePrivilegePlan("GrantDatabaseAction", "TERMINATE TRANSACTION", Qualifier("ALL USERS"), "editor",
+          databasePrivilegePlan("GrantDatabaseAction", "TERMINATE TRANSACTION", Qualifier("ALL USERS"), "reader",
+            assertDbmsAdminPlan("GRANT PRIVILEGE")
+          )
+        )
+      ).toString
+    )
+
+  }
+
+  test("Deny terminate transaction") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute(s"EXPLAIN DENY TERMINATE TRANSACTION (*) ON DATABASE $SYSTEM_DATABASE_NAME TO reader").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        databasePrivilegePlan("DenyDatabaseAction", "TERMINATE TRANSACTION", SYSTEM_DATABASE_NAME, Qualifier("ALL USERS"), "reader",
+          assertDbmsAdminPlan("DENY PRIVILEGE")
+        )
+      ).toString
+    )
+  }
+
+  test("Revoke terminate transaction") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute(s"EXPLAIN REVOKE TERMINATE TRANSACTION (*) ON DEFAULT DATABASE FROM reader").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "TERMINATE TRANSACTION", default, Qualifier("ALL USERS"), "reader",
+          databasePrivilegePlan("RevokeDatabaseAction(GRANTED)", "TERMINATE TRANSACTION", default, Qualifier("ALL USERS"), "reader",
+            helperPlan("AssertValidRevoke", Seq(DatabaseAction("TERMINATE TRANSACTION"), roleArg("reader")),
+              assertDbmsAdminPlan("REVOKE PRIVILEGE")
+            )
+          )
+        )
+      ).toString
+    )
+  }
+
+  test("Revoke grant terminate transaction") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute(s"EXPLAIN REVOKE GRANT TERMINATE TRANSACTION (username) ON DEFAULT DATABASE FROM reader").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        databasePrivilegePlan("RevokeDatabaseAction(GRANTED)", "TERMINATE TRANSACTION", default, qualifierArg("USER", "username"), "reader",
+          helperPlan("AssertValidRevoke", Seq(DatabaseAction("TERMINATE TRANSACTION"), roleArg("reader")),
+            assertDbmsAdminPlan("REVOKE PRIVILEGE")
+          )
+        )
+      ).toString
+    )
+  }
+
+  test("Revoke deny terminate transaction") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute(s"EXPLAIN REVOKE DENY TERMINATE TRANSACTION (user1, user2) ON DEFAULT DATABASE FROM reader").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "TERMINATE TRANSACTION", default, qualifierArg("USER", "user2"), "reader",
+          databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "TERMINATE TRANSACTION", default, qualifierArg("USER", "user1"), "reader",
+            helperPlan("AssertValidRevoke", Seq(DatabaseAction("TERMINATE TRANSACTION"), roleArg("reader")),
+              assertDbmsAdminPlan("REVOKE PRIVILEGE")
+            )
+          )
+        )
+      ).toString
+    )
+  }
+
+  test("Grant transaction management") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute("EXPLAIN GRANT TRANSACTION MANAGEMENT ON DATABASE * TO reader, editor").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        databasePrivilegePlan("GrantDatabaseAction", "TRANSACTION MANAGEMENT", Qualifier("ALL USERS"), "editor",
+          databasePrivilegePlan("GrantDatabaseAction", "TRANSACTION MANAGEMENT", Qualifier("ALL USERS"), "reader",
+            assertDbmsAdminPlan("GRANT PRIVILEGE")
+          )
+        )
+      ).toString
+    )
+  }
+
+  test("Deny transaction management") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute(s"EXPLAIN DENY TRANSACTION (user1,user2) ON DATABASE $SYSTEM_DATABASE_NAME TO reader").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        databasePrivilegePlan("DenyDatabaseAction", "TRANSACTION MANAGEMENT", SYSTEM_DATABASE_NAME, qualifierArg("USER", "user2"), "reader",
+          databasePrivilegePlan("DenyDatabaseAction", "TRANSACTION MANAGEMENT", SYSTEM_DATABASE_NAME, qualifierArg("USER", "user1"), "reader",
+            assertDbmsAdminPlan("DENY PRIVILEGE")
+          )
+        )
+      ).toString
+    )
+  }
+
+  test("Revoke transaction management") {
+    selectDatabase(SYSTEM_DATABASE_NAME)
+
+    // When
+    val plan = execute(s"EXPLAIN REVOKE TRANSACTION MANAGEMENT ON DEFAULT DATABASE FROM reader").executionPlanString()
+
+    // Then
+    plan should include(
+      logPlan(
+        databasePrivilegePlan("RevokeDatabaseAction(DENIED)", "TRANSACTION MANAGEMENT", default, Qualifier("ALL USERS"), "reader",
+          databasePrivilegePlan("RevokeDatabaseAction(GRANTED)", "TRANSACTION MANAGEMENT", default, Qualifier("ALL USERS"), "reader",
+            helperPlan("AssertValidRevoke", Seq(DatabaseAction("TRANSACTION MANAGEMENT"), roleArg("reader")),
+              assertDbmsAdminPlan("REVOKE PRIVILEGE")
             )
           )
         )

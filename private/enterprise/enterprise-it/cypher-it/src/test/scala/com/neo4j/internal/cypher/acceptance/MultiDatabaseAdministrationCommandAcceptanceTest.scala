@@ -447,7 +447,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
       access().database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map,
       read().node("*").database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map,
       traverse().node("*").database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map,
-      access().database("DEFAULT").user("joe").role("PUBLIC").map
+      access().database(DEFAULT).user("joe").role("PUBLIC").map
     ))
 
     // WHEN
@@ -469,7 +469,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name") should be(0)
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute(s"SHOW USER joe PRIVILEGES").toSet should be(Set(
-      access().database("DEFAULT").user("joe").role("PUBLIC").map
+      access().database(DEFAULT).user("joe").role("PUBLIC").map
     ))
   }
 
@@ -509,7 +509,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
       access().database("foo").user("joe").role("custom").map,
       read().node("*").database("foo").user("joe").role("custom").map,
       traverse().node("*").database("foo").user("joe").role("custom").map,
-      access().database("DEFAULT").user("joe").role("PUBLIC").map
+      access().database(DEFAULT).user("joe").role("PUBLIC").map
     ))
     executeOn("foo", "joe", "soap", "MATCH (n) RETURN n.name",
       resultHandler = (row, _) => row.get("n.name") should be("a")) should be(1)
@@ -535,7 +535,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     } should have message "Database access is not allowed for user 'joe' with roles [PUBLIC, custom]."
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute(s"SHOW USER joe PRIVILEGES").toSet should be(Set(
-      access().database("DEFAULT").user("joe").role("PUBLIC").map
+      access().database(DEFAULT).user("joe").role("PUBLIC").map
     ))
   }
 
@@ -558,7 +558,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
       access().database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map,
       read().node("*").database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map,
       traverse().node("*").database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map,
-      access().database("DEFAULT").user("joe").role("PUBLIC").map
+      access().database(DEFAULT).user("joe").role("PUBLIC").map
     ))
     executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name",
       resultHandler = (row, _) => row.get("n.name") should be("a")) should be(1)
@@ -585,7 +585,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
 
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute(s"SHOW USER joe PRIVILEGES").toSet should be(Set(
-      access().database("DEFAULT").user("joe").role("PUBLIC").map
+      access().database(DEFAULT).user("joe").role("PUBLIC").map
     ))
   }
 

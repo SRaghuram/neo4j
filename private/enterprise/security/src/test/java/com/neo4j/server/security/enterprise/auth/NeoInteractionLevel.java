@@ -37,6 +37,8 @@ public interface NeoInteractionLevel<S>
 
     InternalTransaction beginLocalTransactionAsUser( S subject, KernelTransaction.Type txType ) throws Throwable;
 
+    InternalTransaction beginLocalTransactionAsUser( S subject, KernelTransaction.Type txType, String database ) throws Throwable;
+
     /*
      * The returned String is empty if the query executed as expected, and contains an error msg otherwise
      */

@@ -5,6 +5,8 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
+import org.neo4j.internal.kernel.api.security.Segment;
+
 public class RelTypeSegment implements Segment
 {
     private final String relType;
@@ -52,6 +54,17 @@ public class RelTypeSegment implements Segment
     public String toString()
     {
         return relType == null ? "All relationships" : "relType: '" + relType + "'";
+    }
+
+    @Override
+    public boolean satisfies( Segment segment )
+    {
+        if ( segment instanceof RelTypeSegment )
+        {
+            var other = (RelTypeSegment) segment;
+            return relType == null || relType.equals( other.relType );
+        }
+        return false;
     }
 
     public static final RelTypeSegment ALL = new RelTypeSegment( null );

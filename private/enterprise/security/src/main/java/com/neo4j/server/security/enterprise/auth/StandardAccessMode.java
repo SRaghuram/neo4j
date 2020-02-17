@@ -26,6 +26,7 @@ import org.neo4j.internal.kernel.api.security.AccessMode;
 import org.neo4j.internal.kernel.api.security.AdminActionOnResource;
 import org.neo4j.internal.kernel.api.security.LoginContext.IdLookup;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
+import org.neo4j.internal.kernel.api.security.Segment;
 
 import static com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny.DENY;
 import static com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny.GRANT;
@@ -175,7 +176,7 @@ class StandardAccessMode implements AccessMode
     @Override
     public boolean allowsTokenCreates( PrivilegeAction action )
     {
-        return allowsTokenCreates && adminAccessMode.allows( new AdminActionOnResource( action, database ) );
+        return allowsTokenCreates && adminAccessMode.allows( new AdminActionOnResource( action, database, Segment.ALL ) );
     }
 
     @Override
@@ -187,7 +188,7 @@ class StandardAccessMode implements AccessMode
     @Override
     public boolean allowsSchemaWrites( PrivilegeAction action )
     {
-        return allowsSchemaWrites && adminAccessMode.allows( new AdminActionOnResource( action, database ) );
+        return allowsSchemaWrites && adminAccessMode.allows( new AdminActionOnResource( action, database, Segment.ALL ) );
     }
 
     @Override
@@ -707,7 +708,7 @@ class StandardAccessMode implements AccessMode
             {
                 dbScope = new AdminActionOnResource.DatabaseScope( privilege.getDbName() );
             }
-            var adminAction = new AdminActionOnResource( privilege.getAction(), dbScope );
+            var adminAction = new AdminActionOnResource( privilege.getAction(), dbScope, privilege.getSegment() );
             if ( privilege.getPrivilegeType().isGrant() )
             {
                 adminModeBuilder.allow( adminAction );

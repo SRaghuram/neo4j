@@ -7,18 +7,18 @@ package com.neo4j.internal.cypher.planner
 
 import com.neo4j.internal.cypher.acceptance.AdministrationCommandAcceptanceTestBase
 import org.neo4j.cypher.internal.ast.prettifier.Prettifier
+import org.neo4j.cypher.internal.plandescription.Argument
 import org.neo4j.cypher.internal.plandescription.Arguments.Database
-import org.neo4j.cypher.internal.plandescription.Arguments.User
-import org.neo4j.cypher.internal.plandescription.Arguments.Role
-import org.neo4j.cypher.internal.plandescription.Arguments.Qualifier
 import org.neo4j.cypher.internal.plandescription.Arguments.DatabaseAction
 import org.neo4j.cypher.internal.plandescription.Arguments.DbmsAction
-import org.neo4j.cypher.internal.plandescription.Argument
+import org.neo4j.cypher.internal.plandescription.Arguments.Qualifier
+import org.neo4j.cypher.internal.plandescription.Arguments.Role
+import org.neo4j.cypher.internal.plandescription.Arguments.User
 import org.neo4j.cypher.internal.plandescription.Children
-import org.neo4j.cypher.internal.plandescription.NoChildren
-import org.neo4j.cypher.internal.plandescription.SingleChild
-import org.neo4j.cypher.internal.plandescription.PlanDescriptionImpl
 import org.neo4j.cypher.internal.plandescription.InternalPlanDescription
+import org.neo4j.cypher.internal.plandescription.NoChildren
+import org.neo4j.cypher.internal.plandescription.PlanDescriptionImpl
+import org.neo4j.cypher.internal.plandescription.SingleChild
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.internal.util.test_helpers.WindowsStringSafe
 
@@ -47,7 +47,10 @@ class AdministrationCommandPlannerTestBase extends AdministrationCommandAcceptan
   def managementPlan(name: String, arguments: Seq[Argument] = Seq.empty): PlanDescriptionImpl = planDescription(name, arguments)
 
   def databasePrivilegePlan(name: String, action: String, database: String, roleName: String, source: InternalPlanDescription): PlanDescriptionImpl = planDescription(name, Seq(DatabaseAction(action), databaseArg(database), roleArg(roleName)), SingleChild(source))
-  def databasePrivilegePlan(name: String, action: String, roleName: String, source: InternalPlanDescription): PlanDescriptionImpl = planDescription(name, Seq(DatabaseAction(action), Database("*"), roleArg(roleName)), SingleChild(source))
+  def databasePrivilegePlan(name: String, action: String, roleName: String, source: InternalPlanDescription): PlanDescriptionImpl = planDescription(name, Seq(DatabaseAction(action), Database("ALL DATABASES"), roleArg(roleName)), SingleChild(source))
+
+  def databasePrivilegePlan(name: String, action: String, database: String, qualifier: Qualifier, roleName: String, source: InternalPlanDescription): PlanDescriptionImpl = planDescription(name, Seq(DatabaseAction(action), databaseArg(database), qualifier, roleArg(roleName)), SingleChild(source))
+  def databasePrivilegePlan(name: String, action: String, qualifier: Qualifier, roleName: String, source: InternalPlanDescription): PlanDescriptionImpl = planDescription(name, Seq(DatabaseAction(action), Database("ALL DATABASES"), qualifier, roleArg(roleName)), SingleChild(source))
 
   def rolePrivilegePlan(name: String, action: String, roleName: String, source: InternalPlanDescription): PlanDescriptionImpl = planDescription(name, Seq(DbmsAction(action), roleArg(roleName)), SingleChild(source))
   def userPrivilegePlan(name: String, action: String, username: String, source: InternalPlanDescription): PlanDescriptionImpl = planDescription(name, Seq(DbmsAction(action), userArg(username)), SingleChild(source))

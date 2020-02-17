@@ -38,6 +38,8 @@ import org.neo4j.cypher.internal.ast.RelationshipQualifier
 import org.neo4j.cypher.internal.ast.ShowAllPrivileges
 import org.neo4j.cypher.internal.ast.ShowRolePrivileges
 import org.neo4j.cypher.internal.ast.ShowUserPrivileges
+import org.neo4j.cypher.internal.ast.UserAllQualifier
+import org.neo4j.cypher.internal.ast.UserQualifier
 import org.neo4j.cypher.internal.compiler.phases.LogicalPlanState
 import org.neo4j.cypher.internal.logical.plans.AlterUser
 import org.neo4j.cypher.internal.logical.plans.AssertValidRevoke
@@ -93,10 +95,10 @@ import org.neo4j.exceptions.DatabaseAdministrationOnFollowerException
 import org.neo4j.exceptions.InternalException
 import org.neo4j.internal.kernel.api.security.PrivilegeAction
 import org.neo4j.internal.kernel.api.security.SecurityContext
-import org.neo4j.kernel.api.exceptions.Status.HasStatus
-import org.neo4j.kernel.api.exceptions.schema.UniquePropertyValueValidationException
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException
 import org.neo4j.kernel.api.exceptions.Status
+import org.neo4j.kernel.api.exceptions.Status.HasStatus
+import org.neo4j.kernel.api.exceptions.schema.UniquePropertyValueValidationException
 import org.neo4j.kernel.impl.store.format.standard.Standard
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.LongValue
@@ -427,19 +429,19 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
         source = source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)))
 
     // GRANT/DENY/REVOKE ACCESS ON DATABASE foo TO role
-    case GrantDatabaseAction(source, action, database, roleName) => (context, parameterMapping, securityContext) =>
+    case GrantDatabaseAction(source, action, database, qualifier, roleName) => (context, parameterMapping, securityContext) =>
       val databaseAction = AdminActionMapper.asKernelAction(action).toString
-      makeGrantOrDenyExecutionPlan(databaseAction, DatabaseResource()(InputPosition.NONE), database, AllQualifier()(InputPosition.NONE), roleName,
+      makeGrantOrDenyExecutionPlan(databaseAction, DatabaseResource()(InputPosition.NONE), database, qualifier, roleName,
         source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), GRANT, s"Failed to grant access privilege to role '$roleName'")
 
-    case DenyDatabaseAction(source, action, database, roleName) => (context, parameterMapping, securityContext) =>
+    case DenyDatabaseAction(source, action, database, qualifier, roleName) => (context, parameterMapping, securityContext) =>
       val databaseAction = AdminActionMapper.asKernelAction(action).toString
-      makeGrantOrDenyExecutionPlan(databaseAction, DatabaseResource()(InputPosition.NONE), database, AllQualifier()(InputPosition.NONE), roleName,
+      makeGrantOrDenyExecutionPlan(databaseAction, DatabaseResource()(InputPosition.NONE), database, qualifier, roleName,
         source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), DENY, s"Failed to deny access privilege to role '$roleName'")
 
-    case RevokeDatabaseAction(source, action, database, roleName, revokeType) => (context, parameterMapping, securityContext) =>
+    case RevokeDatabaseAction(source, action, database, qualifier, roleName, revokeType) => (context, parameterMapping, securityContext) =>
       val databaseAction = AdminActionMapper.asKernelAction(action).toString
-      makeRevokeExecutionPlan(databaseAction, DatabaseResource()(InputPosition.NONE), database, AllQualifier()(InputPosition.NONE), roleName, revokeType,
+      makeRevokeExecutionPlan(databaseAction, DatabaseResource()(InputPosition.NONE), database, qualifier, roleName, revokeType,
         source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), s"Failed to revoke access privilege from role '$roleName'")
 
     // GRANT/DENY/REVOKE TRAVERSE ON GRAPH foo NODES A (*) TO role
@@ -497,6 +499,7 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
           |  WHEN 'node' THEN 'NODE('+q.label+')'
           |  WHEN 'relationship' THEN 'RELATIONSHIP('+q.label+')'
           |  WHEN 'database' THEN 'database'
+          |  WHEN 'user' THEN 'USER('+q.label+')'
           |  ELSE 'ELEMENT('+q.label+')'
           |END
         """.stripMargin
@@ -758,6 +761,8 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
     case LabelAllQualifier() => (Values.NO_VALUE, matchOrMerge + " (q:LabelQualifierAll {type: 'node', label: '*'})") // The label is just for later printout of results
     case RelationshipQualifier(name) => (Values.stringValue(name), matchOrMerge + " (q:RelationshipQualifier {type: 'relationship', label: $label})")
     case RelationshipAllQualifier() => (Values.NO_VALUE, matchOrMerge + " (q:RelationshipQualifierAll {type: 'relationship', label: '*'})") // The label is just for later printout of results
+    case UserAllQualifier() => (Values.NO_VALUE, matchOrMerge + " (q:UserQualifierAll {type: 'user', label: '*'})") // The label is just for later printout of results
+    case UserQualifier(name) => (Values.stringValue(name), matchOrMerge + " (q:UserQualifier {type: 'user', label: $label})")
     case _ => throw new IllegalStateException(s"$startOfErrorMessage: Invalid privilege $grantName qualifier $qualifier")
   }
 

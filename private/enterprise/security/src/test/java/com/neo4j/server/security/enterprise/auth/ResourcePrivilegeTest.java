@@ -14,6 +14,7 @@ import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.SpecialDataba
 import org.junit.jupiter.api.Test;
 
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
+import org.neo4j.internal.kernel.api.security.Segment;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -166,7 +167,5 @@ class ResourcePrivilegeTest
         new ResourcePrivilege( privilegeType, action, resource, TEST_SEGMENT, SpecialDatabase.ALL );
     }
 
-    private static Segment TEST_SEGMENT = new Segment()
-    {
-    };
+    private static Segment TEST_SEGMENT = segment -> false;
 }

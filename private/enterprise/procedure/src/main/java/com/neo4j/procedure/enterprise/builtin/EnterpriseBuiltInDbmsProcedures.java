@@ -33,7 +33,11 @@ import org.neo4j.graphdb.security.AuthorizationViolationException;
 import org.neo4j.internal.helpers.TimeUtil;
 import org.neo4j.internal.kernel.api.procs.ProcedureSignature;
 import org.neo4j.internal.kernel.api.procs.UserFunctionSignature;
+import org.neo4j.internal.kernel.api.security.AdminActionOnResource;
+import org.neo4j.internal.kernel.api.security.AdminActionOnResource.DatabaseScope;
+import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.internal.kernel.api.security.SecurityContext;
+import org.neo4j.internal.kernel.api.security.UserSegment;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.KernelTransactionHandle;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
@@ -311,12 +315,15 @@ public class EnterpriseBuiltInDbmsProcedures
         List<QueryStatusResult> result = new ArrayList<>();
         for ( DatabaseContext databaseContext : getDatabaseManager().registeredDatabases().values() )
         {
+            DatabaseScope dbScope = new DatabaseScope( databaseContext.database().getNamedDatabaseId().name() );
             for ( KernelTransactionHandle tx : getExecutingTransactions( databaseContext ) )
             {
                 if ( tx.executingQuery().isPresent() )
                 {
                     ExecutingQuery query = tx.executingQuery().get();
-                    if ( isAdminOrSelf( query.username() ) )
+                    String username = query.username();
+                    var action = new AdminActionOnResource( PrivilegeAction.SHOW_TRANSACTION, dbScope, new UserSegment( username ) );
+                    if ( isSelfOrAllows( username, action ) )
                     {
                         result.add(
                                 new QueryStatusResult( query, (InternalTransaction) transaction, zoneId, databaseContext.databaseFacade().databaseName() ) );
@@ -338,10 +345,13 @@ public class EnterpriseBuiltInDbmsProcedures
         List<TransactionStatusResult> result = new ArrayList<>();
         for ( DatabaseContext databaseContext : getDatabaseManager().registeredDatabases().values() )
         {
+            DatabaseScope dbScope = new DatabaseScope( databaseContext.database().getNamedDatabaseId().name() );
             Map<KernelTransactionHandle,Optional<QuerySnapshot>> handleQuerySnapshotsMap = new HashMap<>();
             for ( KernelTransactionHandle tx : getExecutingTransactions( databaseContext ) )
             {
-                if ( isAdminOrSelf( tx.subject().username() ) )
+                String username = tx.subject().username();
+                var action = new AdminActionOnResource( PrivilegeAction.SHOW_TRANSACTION, dbScope, new UserSegment( username ) );
+                if ( isSelfOrAllows( username, action ) )
                 {
                     handleQuerySnapshotsMap.put( tx, tx.executingQuery().map( ExecutingQuery::snapshot ) );
                 }
@@ -391,6 +401,7 @@ public class EnterpriseBuiltInDbmsProcedures
         for ( Map.Entry<NamedDatabaseId,Set<DbmsTransactionId>> entry : byDatabase.entrySet() )
         {
             NamedDatabaseId databaseId = entry.getKey();
+            var dbScope = new DatabaseScope( databaseId.name() );
             Optional<DatabaseContext> maybeDatabaseContext = databaseManager.getDatabaseContext( databaseId );
             if ( maybeDatabaseContext.isPresent() )
             {
@@ -398,7 +409,9 @@ public class EnterpriseBuiltInDbmsProcedures
                 DatabaseContext databaseContext = maybeDatabaseContext.get();
                 for ( KernelTransactionHandle tx : getExecutingTransactions( databaseContext ) )
                 {
-                    if ( !isAdminOrSelf( tx.subject().username() ) )
+                    String username = tx.subject().username();
+                    var action = new AdminActionOnResource( PrivilegeAction.TERMINATE_TRANSACTION, dbScope, new UserSegment( username ) );
+                    if ( !isSelfOrAllows( username, action ) )
                     {
                         continue;
                     }
@@ -517,7 +530,7 @@ public class EnterpriseBuiltInDbmsProcedures
                     );
                     if ( dbmsQueryIds.remove( internalDbmsQueryId ) )
                     {
-                        result.add( killQueryTransaction( internalDbmsQueryId, tx ) );
+                        result.add( killQueryTransaction( internalDbmsQueryId, tx, databaseId ) );
                     }
                 }
             }
@@ -637,19 +650,20 @@ public class EnterpriseBuiltInDbmsProcedures
         return databaseContext.dependencies().resolveDependency( KernelTransactions.class ).executingTransactions();
     }
 
-    private QueryTerminationResult killQueryTransaction( DbmsQueryId dbmsQueryId, KernelTransactionHandle handle )
+    private QueryTerminationResult killQueryTransaction( DbmsQueryId dbmsQueryId, KernelTransactionHandle handle, NamedDatabaseId databaseId )
     {
         Optional<ExecutingQuery> query = handle.executingQuery();
         ExecutingQuery executingQuery = query.orElseThrow( () -> new IllegalStateException( "Query should exist since we filtered based on query ids" ) );
-        if ( isAdminOrSelf( executingQuery.username() ) )
+        String username = executingQuery.username();
+        var action = new AdminActionOnResource( PrivilegeAction.TERMINATE_TRANSACTION, new DatabaseScope( databaseId.name() ), new UserSegment( username ) );
+        if ( isSelfOrAllows( username, action ) )
         {
             if ( handle.isClosing() )
             {
-                return new QueryFailedTerminationResult( dbmsQueryId, executingQuery.username(),
-                        "Unable to kill queries when underlying transaction is closing." );
+                return new QueryFailedTerminationResult( dbmsQueryId, username, "Unable to kill queries when underlying transaction is closing." );
             }
             handle.markForTermination( Status.Transaction.Terminated );
-            return new QueryTerminationResult( dbmsQueryId, executingQuery.username(), "Query found" );
+            return new QueryTerminationResult( dbmsQueryId, username, "Query found" );
         }
         else
         {
@@ -661,6 +675,11 @@ public class EnterpriseBuiltInDbmsProcedures
     {
         Config config = resolver.resolveDependency( Config.class );
         return config.get( GraphDatabaseSettings.db_timezone ).getZoneId();
+    }
+
+    private boolean isSelfOrAllows( String username, AdminActionOnResource actionOnResource )
+    {
+        return securityContext.subject().hasUsername( username ) || securityContext.allowsAdminAction( actionOnResource );
     }
 
     private boolean isAdminOrSelf( String username )

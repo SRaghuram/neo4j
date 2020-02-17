@@ -5,6 +5,8 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
+import org.neo4j.internal.kernel.api.security.Segment;
+
 public class LabelSegment implements Segment
 {
     private final String label;
@@ -52,6 +54,17 @@ public class LabelSegment implements Segment
     public String toString()
     {
         return label == null ? "All labels" : "label: '" + label + "'";
+    }
+
+    @Override
+    public boolean satisfies( Segment segment )
+    {
+        if ( segment instanceof LabelSegment )
+        {
+            var other = (LabelSegment) segment;
+            return label == null || label.equals( other.label );
+        }
+        return false;
     }
 
     public static final LabelSegment ALL = new LabelSegment( null );

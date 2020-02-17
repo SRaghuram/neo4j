@@ -18,7 +18,6 @@ import org.neo4j.graphdb.security.AuthorizationViolationException
 import org.neo4j.internal.kernel.api.security.PrivilegeAction
 
 class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
-  private val default = "DEFAULT"
 
   test("should return empty counts to the outside for commands that update the system graph internally") {
     //TODO: ADD ANY NEW UPDATING COMMANDS HERE
@@ -131,7 +130,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
       createIndex().role("role").map,
       dropIndex().database("foo").role("role").map,
-      createIndex("DENIED").database("bar").role("role").map
+      createIndex(DENIED).database("bar").role("role").map
     ))
 
     // WHEN
@@ -167,7 +166,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      createIndex().database(default).role("role").map
+      createIndex().database(DEFAULT).role("role").map
     ))
   }
 
@@ -183,7 +182,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      createIndex().database(default).role("role").map
+      createIndex().database(DEFAULT).role("role").map
     ))
 
     // WHEN
@@ -192,7 +191,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      dropIndex("DENIED").database(default).role("role").map
+      dropIndex(DENIED).database(DEFAULT).role("role").map
     ))
 
     // WHEN
@@ -201,8 +200,8 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      createIndex().database(default).role("role").map,
-      dropIndex().database(default).role("role").map
+      createIndex().database(DEFAULT).role("role").map,
+      dropIndex().database(DEFAULT).role("role").map
     ))
 
     // WHEN
@@ -246,7 +245,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
       createConstraint().role("role").map,
       dropConstraint().database("foo").role("role").map,
-      createConstraint("DENIED").database("bar").role("role").map
+      createConstraint(DENIED).database("bar").role("role").map
     ))
 
     // WHEN
@@ -282,7 +281,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      dropConstraint().database(default).role("role").map
+      dropConstraint().database(DEFAULT).role("role").map
     ))
   }
 
@@ -298,7 +297,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      createConstraint().database(default).role("role").map
+      createConstraint().database(DEFAULT).role("role").map
     ))
 
     // WHEN
@@ -307,7 +306,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      dropConstraint("DENIED").database(default).role("role").map
+      dropConstraint(DENIED).database(DEFAULT).role("role").map
     ))
 
     // WHEN
@@ -316,8 +315,8 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      createConstraint().database(default).role("role").map,
-      dropConstraint().database(default).role("role").map
+      createConstraint().database(DEFAULT).role("role").map,
+      dropConstraint().database(DEFAULT).role("role").map
     ))
 
     // WHEN
@@ -365,7 +364,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       createNodeLabel().role("role").map,
       createRelationshipType().database("foo").role("role").map,
       createPropertyKey().database("foo").role("role").map,
-      createPropertyKey("DENIED").database("bar").role("role").map
+      createPropertyKey(DENIED).database("bar").role("role").map
     ))
 
     // WHEN
@@ -403,7 +402,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      createNodeLabel().database(default).role("role").map
+      createNodeLabel().database(DEFAULT).role("role").map
     ))
   }
 
@@ -419,7 +418,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      createNodeLabel().database(default).role("role").map
+      createNodeLabel().database(DEFAULT).role("role").map
     ))
 
     // WHEN
@@ -428,7 +427,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      createRelationshipType("DENIED").database(default).role("role").map
+      createRelationshipType(DENIED).database(DEFAULT).role("role").map
     ))
 
     // WHEN
@@ -437,7 +436,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      createPropertyKey("DENIED").database(default).role("role").map
+      createPropertyKey(DENIED).database(DEFAULT).role("role").map
     ))
 
     // WHEN
@@ -446,9 +445,9 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      createNodeLabel().database(default).role("role").map,
-      createRelationshipType().database(default).role("role").map,
-      createPropertyKey().database(default).role("role").map
+      createNodeLabel().database(DEFAULT).role("role").map,
+      createRelationshipType().database(DEFAULT).role("role").map,
+      createPropertyKey().database(DEFAULT).role("role").map
     ))
 
     // WHEN
@@ -572,9 +571,9 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
       createIndex().role("custom").map,
-      createIndex("DENIED").role("custom").map,
+      createIndex(DENIED).role("custom").map,
       dropIndex().role("custom").map,
-      dropIndex("DENIED").role("custom").map
+      dropIndex(DENIED).role("custom").map
     ))
 
     // WHEN
@@ -599,9 +598,9 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
       createConstraint().role("custom").map,
-      createConstraint("DENIED").role("custom").map,
+      createConstraint(DENIED).role("custom").map,
       dropConstraint().role("custom").map,
-      dropConstraint("DENIED").role("custom").map
+      dropConstraint(DENIED).role("custom").map
     ))
 
     // WHEN
@@ -628,11 +627,11 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
       createNodeLabel().role("custom").map,
-      createNodeLabel("DENIED").role("custom").map,
+      createNodeLabel(DENIED).role("custom").map,
       createRelationshipType().role("custom").map,
-      createRelationshipType("DENIED").role("custom").map,
+      createRelationshipType(DENIED).role("custom").map,
       createPropertyKey().role("custom").map,
-      createPropertyKey("DENIED").role("custom").map
+      createPropertyKey(DENIED).role("custom").map
     ))
 
     // WHEN
@@ -1043,8 +1042,8 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       createNodeLabel().role("role").map,
       createRelationshipType().role("role").map,
       createPropertyKey().role("role").map,
-      createIndex().database(default).role("role").map,
-      dropIndex().database(default).role("role").map
+      createIndex().database(DEFAULT).role("role").map,
+      dropIndex().database(DEFAULT).role("role").map
     ))
 
     // WHEN: creating index on default
@@ -1077,8 +1076,8 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       createNodeLabel().role("role").map,
       createRelationshipType().role("role").map,
       createPropertyKey().role("role").map,
-      createIndex().database(default).role("role").map,
-      dropIndex().database(default).role("role").map
+      createIndex().database(DEFAULT).role("role").map,
+      dropIndex().database(DEFAULT).role("role").map
     ))
 
     // WHEN: dropping index on default
@@ -1279,8 +1278,8 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       createNodeLabel().role("role").map,
       createRelationshipType().role("role").map,
       createPropertyKey().role("role").map,
-      createConstraint().database(default).role("role").map,
-      dropConstraint().database(default).role("role").map
+      createConstraint().database(DEFAULT).role("role").map,
+      dropConstraint().database(DEFAULT).role("role").map
     ))
 
     // WHEN: creating constraint on default
@@ -1313,8 +1312,8 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       createNodeLabel().role("role").map,
       createRelationshipType().role("role").map,
       createPropertyKey().role("role").map,
-      createConstraint().database(default).role("role").map,
-      dropConstraint().database(default).role("role").map
+      createConstraint().database(DEFAULT).role("role").map,
+      dropConstraint().database(DEFAULT).role("role").map
     ))
 
     // WHEN: dropping constraint on default
@@ -1476,9 +1475,9 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       access().role("role").map,
       write().node("*").role("role").map,
       write().relationship("*").role("role").map,
-      createNodeLabel().database(default).role("role").map,
-      createRelationshipType().database(default).role("role").map,
-      createPropertyKey().database(default).role("role").map
+      createNodeLabel().database(DEFAULT).role("role").map,
+      createRelationshipType().database(DEFAULT).role("role").map,
+      createPropertyKey().database(DEFAULT).role("role").map
     ))
 
     // WHEN: creating on default
@@ -1513,9 +1512,9 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       access().role("role").map,
       write().node("*").role("role").map,
       write().relationship("*").role("role").map,
-      createNodeLabel().database(default).role("role").map,
-      createRelationshipType().database(default).role("role").map,
-      createPropertyKey().database(default).role("role").map
+      createNodeLabel().database(DEFAULT).role("role").map,
+      createRelationshipType().database(DEFAULT).role("role").map,
+      createPropertyKey().database(DEFAULT).role("role").map
     ))
 
     // WHEN: creating on default

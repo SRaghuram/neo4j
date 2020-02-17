@@ -96,6 +96,13 @@ public class EmbeddedInteraction implements NeoInteractionLevel<EnterpriseLoginC
     }
 
     @Override
+    public InternalTransaction beginLocalTransactionAsUser( EnterpriseLoginContext loginContext, KernelTransaction.Type txType, String database )
+    {
+        var gdb = (GraphDatabaseFacade) managementService.database( database );
+        return gdb.beginTransaction( txType, loginContext );
+    }
+
+    @Override
     public String executeQuery( EnterpriseLoginContext loginContext, String database, String call, Map<String,Object> params,
                                 Consumer<ResourceIterator<Map<String,Object>>> resultConsumer )
     {

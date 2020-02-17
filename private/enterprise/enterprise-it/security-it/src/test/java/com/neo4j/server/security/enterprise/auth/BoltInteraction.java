@@ -27,6 +27,7 @@ import org.neo4j.bolt.v3.messaging.response.RecordMessage;
 import org.neo4j.bolt.v3.messaging.response.SuccessMessage;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.SettingImpl;
+import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.function.Factory;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.config.Setting;
@@ -124,6 +125,16 @@ class BoltInteraction implements NeoInteractionLevel<BoltInteraction.BoltSubject
     {
         LoginContext loginContext = authManager.login( newBasicAuthToken( subject.username, subject.password ) );
         return getLocalGraph().beginTransaction( txType, loginContext, new BoltConnectionInfo( "testSConnection", "test", ANY, ANY ) );
+    }
+
+    @Override
+    public InternalTransaction beginLocalTransactionAsUser( BoltSubject subject, KernelTransaction.Type txType, String database )
+            throws Throwable
+    {
+        LoginContext loginContext = authManager.login( newBasicAuthToken( subject.username, subject.password ) );
+        DatabaseManagementService managementService = server.getManagementService();
+        var db = (GraphDatabaseFacade) managementService.database( database );
+        return db.beginTransaction( txType, loginContext, new BoltConnectionInfo( "testSConnection", "test", ANY, ANY ) );
     }
 
     @Override

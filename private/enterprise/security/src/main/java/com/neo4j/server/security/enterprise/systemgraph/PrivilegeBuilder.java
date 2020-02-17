@@ -5,19 +5,19 @@
  */
 package com.neo4j.server.security.enterprise.systemgraph;
 
-import com.neo4j.server.security.enterprise.auth.DatabaseSegment;
 import com.neo4j.server.security.enterprise.auth.LabelSegment;
 import com.neo4j.server.security.enterprise.auth.RelTypeSegment;
 import com.neo4j.server.security.enterprise.auth.Resource;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege;
 import com.neo4j.server.security.enterprise.auth.ResourcePrivilege.SpecialDatabase;
-import com.neo4j.server.security.enterprise.auth.Segment;
 
 import java.util.NoSuchElementException;
 
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
+import org.neo4j.internal.kernel.api.security.Segment;
+import org.neo4j.internal.kernel.api.security.UserSegment;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 
 import static org.neo4j.internal.helpers.collection.Iterables.single;
@@ -69,7 +69,7 @@ class PrivilegeBuilder
         switch ( qualifierType.name() )
         {
         case "DatabaseQualifier":
-            this.segment = DatabaseSegment.ALL;
+            this.segment = Segment.ALL;
             break;
         case "LabelQualifier":
             String label = qualifierNode.getProperty( "label" ).toString();
@@ -84,6 +84,13 @@ class PrivilegeBuilder
             break;
         case "RelationshipQualifierAll":
             this.segment = RelTypeSegment.ALL;
+            break;
+        case "UserQualifier":
+            String username = qualifierNode.getProperty( "label" ).toString();
+            this.segment = new UserSegment( username );
+            break;
+        case "UserQualifierAll":
+            this.segment = UserSegment.ALL;
             break;
         default:
             throw new IllegalArgumentException( "Unknown privilege qualifier type: " + qualifierType.name() );

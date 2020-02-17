@@ -30,6 +30,7 @@ import org.neo4j.common.DependencyResolver;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.connectors.BoltConnector;
 import org.neo4j.configuration.connectors.ConnectorPortRegister;
+import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.graphdb.event.TransactionEventListener;
@@ -126,6 +127,17 @@ abstract class AbstractRESTInteraction extends CommunityWebContainerTestBase imp
         LoginContext loginContext = authManager.login( newBasicAuthToken( subject.username, subject.password ) );
         HttpConnectionInfo clientInfo = new HttpConnectionInfo( "testConnection", "http", ANY, ANY, "db/rest" );
         return getLocalGraph().beginTransaction( txType, loginContext, clientInfo );
+    }
+
+    @Override
+    public InternalTransaction beginLocalTransactionAsUser( RESTSubject subject, KernelTransaction.Type txType, String database )
+            throws Throwable
+    {
+        LoginContext loginContext = authManager.login( newBasicAuthToken( subject.username, subject.password ) );
+        HttpConnectionInfo clientInfo = new HttpConnectionInfo( "testConnection", "http", ANY, ANY, "db/rest" );
+        DatabaseManagementService managementService = testWebContainer.getDatabaseManagementService();
+        var db = (GraphDatabaseFacade) managementService.database( database );
+        return db.beginTransaction( txType, loginContext, clientInfo );
     }
 
     @Override

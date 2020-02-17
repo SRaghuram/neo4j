@@ -17,8 +17,6 @@ import org.neo4j.graphdb.config.Setting
 import org.neo4j.graphdb.security.AuthorizationViolationException
 
 class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBase {
-  private val default = "DEFAULT"
-
   test("should return empty counts to the outside for commands that update the system graph internally") {
     //TODO: ADD ANY NEW UPDATING COMMANDS HERE
 
@@ -88,7 +86,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
       startDatabase().role("role").map,
       stopDatabase().database("foo").role("role").map,
-      startDatabase("DENIED").database("bar").role("role").map
+      startDatabase(DENIED).database("bar").role("role").map
     ))
 
     // WHEN
@@ -107,7 +105,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
       startDatabase().role("role").map,
       stopDatabase().database("foo").role("role").map,
-      stopDatabase("DENIED").database(default).role("role").map
+      stopDatabase(DENIED).database(DEFAULT).role("role").map
     ))
   }
 
@@ -130,7 +128,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
       access().database(DEFAULT_DATABASE_NAME).role("custom").map,
-      access("DENIED").database(SYSTEM_DATABASE_NAME).role("custom").map
+      access(DENIED).database(SYSTEM_DATABASE_NAME).role("custom").map
     ))
 
     // WHEN
@@ -147,7 +145,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
       access().database(DEFAULT_DATABASE_NAME).role("custom").map,
-      access("DENIED").database(default).role("custom").map
+      access(DENIED).database(DEFAULT).role("custom").map
     ))
 
     // WHEN
@@ -156,7 +154,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
       access().database(DEFAULT_DATABASE_NAME).role("custom").map,
-      access("DENIED").database(default).role("custom").map
+      access(DENIED).database(DEFAULT).role("custom").map
     ))
 
     // WHEN
@@ -165,7 +163,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
       access().database(DEFAULT_DATABASE_NAME).role("custom").map,
-      access("DENIED").database(default).role("custom").map
+      access(DENIED).database(DEFAULT).role("custom").map
     ))
   }
 
@@ -181,7 +179,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      access().database(default).role("role").map
+      access().database(DEFAULT).role("role").map
     ))
 
     // WHEN
@@ -190,7 +188,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      startDatabase("DENIED").database(default).role("role").map
+      startDatabase(DENIED).database(DEFAULT).role("role").map
     ))
 
     // WHEN
@@ -199,7 +197,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
 
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
-      stopDatabase().database(default).role("role").map
+      stopDatabase().database(DEFAULT).role("role").map
     ))
 
     // WHEN
@@ -395,7 +393,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     execute(s"GRANT START ON DEFAULT DATABASE TO role")
 
     // THEN: Get privilege on default
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(startDatabase().database(default).role("role").map))
+    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(startDatabase().database(DEFAULT).role("role").map))
 
     // WHEN: Starting the databases
     executeOnSystem("alice", "abc", s"START DATABASE $DEFAULT_DATABASE_NAME")
@@ -419,7 +417,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     execute(s"SHOW DATABASE $newDefaultDatabase").toSet should be(Set(db(newDefaultDatabase, offlineStatus, default = true)))
 
     // THEN: confirm privilege
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(startDatabase().database(default).role("role").map))
+    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(startDatabase().database(DEFAULT).role("role").map))
 
     // WHEN: Starting the databases
     the[AuthorizationViolationException] thrownBy {
@@ -611,7 +609,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     execute(s"GRANT STOP ON DEFAULT DATABASE TO role")
 
     // THEN: Get privilege on default
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(stopDatabase().database(default).role("role").map))
+    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(stopDatabase().database(DEFAULT).role("role").map))
 
     // WHEN: Stopping the databases
     executeOnSystem("alice", "abc", s"STOP DATABASE $DEFAULT_DATABASE_NAME")
@@ -635,7 +633,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     execute(s"SHOW DATABASE $newDefaultDatabase").toSet should be(Set(db(newDefaultDatabase, onlineStatus, default = true)))
 
     // THEN: confirm privilege
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(stopDatabase().database(default).role("role").map))
+    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(stopDatabase().database(DEFAULT).role("role").map))
 
     // WHEN: Stopping the databases
     the[AuthorizationViolationException] thrownBy {
@@ -721,7 +719,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     execute(s"GRANT ACCESS ON DEFAULT DATABASE TO role")
 
     // THEN: Get privilege on default
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(access().database(default).role("role").map))
+    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(access().database(DEFAULT).role("role").map))
 
     // WHEN & THEN: accessing the databases
     executeOn(DEFAULT_DATABASE_NAME, "alice", "abc", "MATCH (n) RETURN n") should be(0)
@@ -738,7 +736,7 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     execute(s"SHOW DEFAULT DATABASE").toSet should be(Set(defaultDb(newDefaultDatabase)))
 
     // THEN: confirm privilege
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(access().database(default).role("role").map))
+    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(access().database(DEFAULT).role("role").map))
 
     // WHEN & THEN: accessing the databases
     the[AuthorizationViolationException] thrownBy {

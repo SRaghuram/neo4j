@@ -20,6 +20,7 @@ import org.neo4j.test.rule.concurrent.ThreadingRule;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 class ThreadedTransaction<S>
 {
@@ -44,6 +45,11 @@ class ThreadedTransaction<S>
         return doExecute( threading, subject, KernelTransaction.Type.EXPLICIT, false, query )[0];
     }
 
+    String execute( ThreadingRule threading, String database, S subject, String query )
+    {
+        return doExecute( threading, subject, KernelTransaction.Type.EXPLICIT, database, false, query )[0];
+    }
+
     String[] execute( ThreadingRule threading, S subject, String... queries )
     {
         return doExecute( threading, subject, KernelTransaction.Type.EXPLICIT, false, queries );
@@ -55,7 +61,13 @@ class ThreadedTransaction<S>
     }
 
     private String[] doExecute(
-        ThreadingRule threading, S subject, KernelTransaction.Type txType, boolean startEarly, String... queries )
+            ThreadingRule threading, S subject, KernelTransaction.Type txType, boolean startEarly, String... queries )
+    {
+        return doExecute( threading, subject, txType, DEFAULT_DATABASE_NAME, startEarly, queries );
+    }
+
+    private String[] doExecute(
+        ThreadingRule threading, S subject, KernelTransaction.Type txType, String database, boolean startEarly, String... queries )
     {
         NamedFunction<S, Throwable> startTransaction =
                 new NamedFunction<>( "threaded-transaction-" + Arrays.hashCode( queries ) )
@@ -63,7 +75,7 @@ class ThreadedTransaction<S>
                     @Override
                     public Throwable apply( S subject )
                     {
-                        try ( InternalTransaction tx = neo.beginLocalTransactionAsUser( subject, txType ) )
+                        try ( InternalTransaction tx = neo.beginLocalTransactionAsUser( subject, txType, database ) )
                         {
                             Result result = null;
                             try

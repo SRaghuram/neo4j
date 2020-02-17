@@ -212,7 +212,7 @@ public abstract class ProcedureInteractionTestBase<S>
         authDisabledAdminstrationCommand( String.format( "GRANT ROLE %s TO %s", role, user ) );
     }
 
-    private void authDisabledAdminstrationCommand( String query )
+    void authDisabledAdminstrationCommand( String query )
     {
         try ( Transaction tx = neo.getSystemGraph().beginTx() )
         {
@@ -487,7 +487,12 @@ public abstract class ProcedureInteractionTestBase<S>
 
     void assertFail( S subject, String call, String partOfErrorMsg )
     {
-        String err = assertCallEmpty( subject, DEFAULT_DATABASE_NAME, call, null );
+        assertFail( DEFAULT_DATABASE_NAME, subject, call, partOfErrorMsg );
+    }
+
+    void assertFail( String database, S subject, String call, String partOfErrorMsg )
+    {
+        String err = assertCallEmpty( subject, database, call, null );
         if ( StringUtils.isEmpty( err ) )
         {
             fail( format( "Should have failed with an error message containing: %s", partOfErrorMsg ) );
@@ -537,12 +542,23 @@ public abstract class ProcedureInteractionTestBase<S>
 
     void assertSuccess( S subject, String call, Consumer<ResourceIterator<Map<String,Object>>> resultConsumer )
     {
-        assertSuccess( subject, call, null, resultConsumer );
+        assertSuccess( subject, DEFAULT_DATABASE_NAME, call, null, resultConsumer );
+    }
+
+    void assertSuccess( S subject, String database, String call, Consumer<ResourceIterator<Map<String,Object>>> resultConsumer )
+    {
+        assertSuccess( subject, database, call, null, resultConsumer );
     }
 
     void assertSuccess( S subject, String call, Map<String, Object> params, Consumer<ResourceIterator<Map<String,Object>>> resultConsumer )
     {
-        String err = neo.executeQuery( subject, DEFAULT_DATABASE_NAME, call, params, resultConsumer );
+        assertSuccess( subject, DEFAULT_DATABASE_NAME, call, params, resultConsumer );
+    }
+
+    private void assertSuccess( S subject, String database, String call, Map<String,Object> params,
+                                Consumer<ResourceIterator<Map<String,Object>>> resultConsumer )
+    {
+        String err = neo.executeQuery( subject, database, call, params, resultConsumer );
         assertThat( err ).isEqualTo( "" );
     }
 

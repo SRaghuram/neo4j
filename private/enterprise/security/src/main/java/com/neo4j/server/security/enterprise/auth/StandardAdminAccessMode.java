@@ -11,6 +11,7 @@ import java.util.HashSet;
 
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.internal.kernel.api.security.AdminActionOnResource;
+import org.neo4j.internal.kernel.api.security.Segment;
 
 public class StandardAdminAccessMode implements AdminAccessMode
 {
@@ -50,7 +51,7 @@ public class StandardAdminAccessMode implements AdminAccessMode
         {
             for ( PrivilegeAction a : PrivilegeAction.values() )
             {
-                whitelist.add( new AdminActionOnResource( a, AdminActionOnResource.DatabaseScope.ALL ) );
+                whitelist.add( new AdminActionOnResource( a, AdminActionOnResource.DatabaseScope.ALL, Segment.ALL ) );
             }
             return this;
         }

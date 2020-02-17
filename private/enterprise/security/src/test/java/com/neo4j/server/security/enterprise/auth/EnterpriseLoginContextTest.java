@@ -22,6 +22,7 @@ import org.neo4j.graphdb.security.AuthorizationViolationException;
 import org.neo4j.internal.kernel.api.security.AuthenticationResult;
 import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.internal.kernel.api.security.SecurityContext;
+import org.neo4j.internal.kernel.api.security.Segment;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
 import org.neo4j.server.security.auth.ShiroAuthenticationInfo;
@@ -78,16 +79,16 @@ class EnterpriseLoginContextTest
 
     private void createPrivileges() throws InvalidArgumentsException
     {
-        accessPrivilege = new ResourcePrivilege( GRANT, ACCESS, new Resource.DatabaseResource(), DatabaseSegment.ALL, SpecialDatabase.ALL );
+        accessPrivilege = new ResourcePrivilege( GRANT, ACCESS, new Resource.DatabaseResource(), Segment.ALL, SpecialDatabase.ALL );
         traverseNodePrivilege = new ResourcePrivilege( GRANT, TRAVERSE, new Resource.GraphResource(), LabelSegment.ALL, SpecialDatabase.ALL );
         traverseRelPrivilege = new ResourcePrivilege( GRANT, TRAVERSE, new Resource.GraphResource(), RelTypeSegment.ALL, SpecialDatabase.ALL );
         readNodePrivilege = new ResourcePrivilege( GRANT, READ, new Resource.AllPropertiesResource(), LabelSegment.ALL, SpecialDatabase.ALL );
         readRelPrivilege = new ResourcePrivilege( GRANT, READ, new Resource.AllPropertiesResource(), RelTypeSegment.ALL, SpecialDatabase.ALL );
         writeNodePrivilege = new ResourcePrivilege( GRANT, WRITE, new Resource.AllPropertiesResource(), LabelSegment.ALL, SpecialDatabase.ALL );
         writeRelPrivilege = new ResourcePrivilege( GRANT, WRITE, new Resource.AllPropertiesResource(), RelTypeSegment.ALL, SpecialDatabase.ALL );
-        tokenPrivilege = new ResourcePrivilege( GRANT, TOKEN, new Resource.DatabaseResource(), DatabaseSegment.ALL, SpecialDatabase.ALL );
-        schemaPrivilege = new ResourcePrivilege( GRANT, SCHEMA, new Resource.DatabaseResource(), DatabaseSegment.ALL, SpecialDatabase.ALL );
-        adminPrivilege = new ResourcePrivilege( GRANT, ADMIN, new Resource.DatabaseResource(), DatabaseSegment.ALL, SpecialDatabase.ALL );
+        tokenPrivilege = new ResourcePrivilege( GRANT, TOKEN, new Resource.DatabaseResource(), Segment.ALL, SpecialDatabase.ALL );
+        schemaPrivilege = new ResourcePrivilege( GRANT, SCHEMA, new Resource.DatabaseResource(), Segment.ALL, SpecialDatabase.ALL );
+        adminPrivilege = new ResourcePrivilege( GRANT, ADMIN, new Resource.DatabaseResource(), Segment.ALL, SpecialDatabase.ALL );
     }
 
     @Test

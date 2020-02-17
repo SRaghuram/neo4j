@@ -322,6 +322,134 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     }
 
     @Test
+    void listAllowedTransactions() throws Throwable
+    {
+        authDisabledAdminstrationCommand( "CREATE USER alice SET PASSWORD 'foo' CHANGE NOT REQUIRED" );
+        authDisabledAdminstrationCommand( "CREATE ROLE custom" );
+        authDisabledAdminstrationCommand( "GRANT ROLE custom TO alice" );
+        authDisabledAdminstrationCommand( "GRANT ACCESS ON DEFAULT DATABASE TO custom" );
+        authDisabledAdminstrationCommand( "GRANT SHOW TRANSACTION (readSubject,editorSubject) ON DATABASE * TO custom" );
+        S subject = neo.login( "alice", "foo" );
+
+        DoubleLatch latch = new DoubleLatch( 4, true );
+        OffsetDateTime startTime = getStartTime();
+
+        ThreadedTransaction<S> read1 = new ThreadedTransaction<>( neo, latch );
+        ThreadedTransaction<S> read2 = new ThreadedTransaction<>( neo, latch );
+        ThreadedTransaction<S> read3 = new ThreadedTransaction<>( neo, latch );
+
+        String q1 = read1.execute( threading, readSubject, "UNWIND [1,2,3] AS x RETURN x" );
+        String q2 = read2.execute( threading, editorSubject, "UNWIND [4,5,6] AS y RETURN y" );
+        read3.execute( threading, writeSubject, "UNWIND [7,8,9] AS z RETURN z" );
+        latch.startAndWaitForAllToStart();
+
+        String query = "CALL dbms.listTransactions()";
+        assertSuccess( subject, query, r ->
+        {
+            List<Map<String,Object>> maps = collectResults( r );
+
+            Matcher<Map<String,Object>> thisTransaction = listedTransactionOfInteractionLevel( startTime, "alice", query );
+            Matcher<Map<String,Object>> matcher1 = listedTransaction( startTime, "readSubject", q1 );
+            Matcher<Map<String,Object>> matcher2 = listedTransaction( startTime, "editorSubject", q2 );
+
+            assertThat( maps, matchesOneToOneInAnyOrder( matcher1, matcher2, thisTransaction ) );
+        } );
+
+        latch.finishAndWaitForAllToFinish();
+
+        read1.closeAndAssertSuccess();
+        read2.closeAndAssertSuccess();
+        read3.closeAndAssertSuccess();
+    }
+
+    @Test
+    void shouldNotListTransactionsWhenDenied() throws Throwable
+    {
+        authDisabledAdminstrationCommand( "CREATE USER alice SET PASSWORD 'foo' CHANGE NOT REQUIRED" );
+        authDisabledAdminstrationCommand( "CREATE ROLE custom AS COPY OF admin" );
+        authDisabledAdminstrationCommand( "GRANT ROLE custom TO alice" );
+        authDisabledAdminstrationCommand( "DENY SHOW TRANSACTION (editorSubject) ON DEFAULT DATABASE TO custom" );
+        S subject = neo.login( "alice", "foo" );
+
+        DoubleLatch latch = new DoubleLatch( 4, true );
+        OffsetDateTime startTime = getStartTime();
+
+        ThreadedTransaction<S> read1 = new ThreadedTransaction<>( neo, latch );
+        ThreadedTransaction<S> read2 = new ThreadedTransaction<>( neo, latch );
+        ThreadedTransaction<S> read3 = new ThreadedTransaction<>( neo, latch );
+
+        String q1 = read1.execute( threading, readSubject, "UNWIND [1,2,3] AS x RETURN x" );
+        read2.execute( threading, editorSubject, "UNWIND [4,5,6] AS y RETURN y" );
+        String q3 = read3.execute( threading, writeSubject, "UNWIND [7,8,9] AS z RETURN z" );
+        latch.startAndWaitForAllToStart();
+
+        String query = "CALL dbms.listTransactions()";
+        assertSuccess( subject, query, r ->
+        {
+            List<Map<String,Object>> maps = collectResults( r );
+
+            Matcher<Map<String,Object>> thisTransaction = listedTransactionOfInteractionLevel( startTime, "alice", query );
+            Matcher<Map<String,Object>> matcher1 = listedTransaction( startTime, "readSubject", q1 );
+            Matcher<Map<String,Object>> matcher2 = listedTransaction( startTime, "writeSubject", q3 );
+
+            assertThat( maps, matchesOneToOneInAnyOrder( matcher1, matcher2, thisTransaction ) );
+        } );
+
+        latch.finishAndWaitForAllToFinish();
+
+        read1.closeAndAssertSuccess();
+        read2.closeAndAssertSuccess();
+        read3.closeAndAssertSuccess();
+    }
+
+    @Test
+    void listAllowedTransactionsDifferentDatabases() throws Throwable
+    {
+        authDisabledAdminstrationCommand( "CREATE DATABASE foo" );
+        authDisabledAdminstrationCommand( "CREATE USER alice SET PASSWORD 'foo' CHANGE NOT REQUIRED" );
+        authDisabledAdminstrationCommand( "CREATE ROLE custom" );
+        authDisabledAdminstrationCommand( "GRANT ACCESS ON DATABASE * TO custom" );
+        authDisabledAdminstrationCommand( "GRANT ROLE custom TO alice" );
+        authDisabledAdminstrationCommand( "GRANT SHOW TRANSACTION (*) ON DATABASE foo TO custom" );
+        S subject = neo.login( "alice", "foo" );
+
+        DoubleLatch latch = new DoubleLatch( 3, true );
+        OffsetDateTime startTime = getStartTime();
+
+        ThreadedTransaction<S> tx1 = new ThreadedTransaction<>( neo, latch );
+        ThreadedTransaction<S> tx2 = new ThreadedTransaction<>( neo, latch );
+
+        tx1.execute( threading, DEFAULT_DATABASE_NAME, readSubject, "UNWIND [1,2,3] AS x RETURN x" );
+        String q2 = tx2.execute( threading, "foo", readSubject, "UNWIND [4,5,6] AS y RETURN y" );
+        latch.startAndWaitForAllToStart();
+
+        String query = "CALL dbms.listTransactions()";
+        assertSuccess( subject, DEFAULT_DATABASE_NAME, query, r ->
+        {
+            List<Map<String,Object>> maps = collectResults( r );
+
+            Matcher<Map<String,Object>> thisTransaction = listedTransactionOfInteractionLevel( startTime, "alice", query );
+
+            assertThat( maps, matchesOneToOneInAnyOrder( thisTransaction ) );
+        } );
+
+        assertSuccess( subject, "foo", query, r ->
+        {
+            List<Map<String,Object>> maps = collectResults( r );
+
+            Matcher<Map<String,Object>> thisTransaction = listedTransactionOfInteractionLevel( startTime, "alice", query );
+            Matcher<Map<String,Object>> matcher1 = listedTransaction( startTime, "readSubject", q2 );
+
+            assertThat( maps, matchesOneToOneInAnyOrder( matcher1, thisTransaction ) );
+        } );
+
+        latch.finishAndWaitForAllToFinish();
+
+        tx1.closeAndAssertSuccess();
+        tx2.closeAndAssertSuccess();
+    }
+
+    @Test
     void listTransactionInitialisationTraceWhenAvailable() throws Throwable
     {
         neo.tearDown();
@@ -413,7 +541,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     }
 
     @Test
-    void killAlreadyTerminatedTransactionEndsSuccesfully()
+    void killAlreadyTerminatedTransactionEndsSuccessfully()
     {
         DoubleLatch latch = new DoubleLatch( 2, true );
         try
@@ -537,8 +665,13 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
 
     private String getTransactionIdExecutingQuery( String q1, String listTransactionQuery, S subject )
     {
+        return getTransactionIdExecutingQuery( q1, DEFAULT_DATABASE_NAME, listTransactionQuery, subject );
+    }
+
+    private String getTransactionIdExecutingQuery( String q1, String database, String listTransactionQuery, S subject )
+    {
         MutableObject<String> transactionIdContainer = new MutableObject<>();
-        assertSuccess( subject, listTransactionQuery, r ->
+        assertSuccess( subject, database, listTransactionQuery, r ->
         {
             List<Map<String,Object>> listTransactionsResult = collectResults( r );
             String transactionId = listTransactionsResult.stream().filter( map -> map.containsValue( q1 ) ).map(
@@ -559,6 +692,141 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
             assertThat( result, matchesOneToOneInAnyOrder( hasResultEntry( "message", "Transaction not found." ) ) );
             assertThat( result, matchesOneToOneInAnyOrder( hasResultEntry( "transactionId", "neo4j-transaction-17" ) ) );
         } );
+    }
+
+    @Test
+    void killAllowedTransactions() throws Exception
+    {
+        authDisabledAdminstrationCommand( "CREATE USER alice SET PASSWORD 'foo' CHANGE NOT REQUIRED" );
+        authDisabledAdminstrationCommand( "CREATE ROLE custom" );
+        authDisabledAdminstrationCommand( "GRANT ROLE custom TO alice" );
+        authDisabledAdminstrationCommand( "GRANT ACCESS ON DEFAULT DATABASE TO custom" );
+        authDisabledAdminstrationCommand( "GRANT TERMINATE TRANSACTION (readSubject) ON DATABASE * TO custom" );
+        S subject = neo.login( "alice", "foo" );
+
+        DoubleLatch latch = new DoubleLatch( 3, true );
+        try
+        {
+            ThreadedTransaction<S> tx1 = new ThreadedTransaction<>( neo, latch );
+            ThreadedTransaction<S> tx2 = new ThreadedTransaction<>( neo, latch );
+
+            String q1 = tx1.execute( threading, readSubject, "UNWIND [1,2,3] AS x RETURN x" );
+            String q2 = tx2.execute( threading, writeSubject, "UNWIND [4,5,6] AS y RETURN y" );
+            latch.startAndWaitForAllToStart();
+
+            String listTransactionQuery = "CALL dbms.listTransactions()";
+            String txId1 = getTransactionIdExecutingQuery( q1, listTransactionQuery, adminSubject );
+            String txId2 = getTransactionIdExecutingQuery( q2, listTransactionQuery, adminSubject );
+            String killTransactionQueryTemplate = "CALL dbms.killTransaction('%s')";
+            assertSuccess( subject, format( killTransactionQueryTemplate, txId1 ), r ->
+            {
+                List<Map<String,Object>> killQueryResult = collectResults( r );
+                assertThat( killQueryResult, matchesOneToOneInAnyOrder( hasUsername( "readSubject" ) ) );
+                assertThat( killQueryResult, matchesOneToOneInAnyOrder( hasResultEntry( "message", "Transaction terminated." ) ) );
+                assertThat( killQueryResult, matchesOneToOneInAnyOrder( hasResultEntry( "transactionId", txId1 ) ) );
+            } );
+            assertSuccess( subject, format( killTransactionQueryTemplate, txId2 ), r ->
+            {
+                List<Map<String,Object>> killQueryResult = collectResults( r );
+                assertThat( killQueryResult, matchesOneToOneInAnyOrder( hasUsername( "alice" ) ) );
+                assertThat( killQueryResult, matchesOneToOneInAnyOrder( hasResultEntry( "message", "Transaction not found." ) ) );
+                assertThat( killQueryResult, matchesOneToOneInAnyOrder( hasResultEntry( "transactionId", txId2 ) ) );
+            } );
+        }
+        finally
+        {
+            latch.finishAndWaitForAllToFinish();
+        }
+    }
+
+    @Test
+    void shouldFailKillDeniedTransactions() throws Exception
+    {
+        authDisabledAdminstrationCommand( "CREATE USER alice SET PASSWORD 'foo' CHANGE NOT REQUIRED" );
+        authDisabledAdminstrationCommand( "CREATE ROLE custom AS COPY OF admin" );
+        authDisabledAdminstrationCommand( "GRANT ROLE custom TO alice" );
+        authDisabledAdminstrationCommand( "DENY TERMINATE TRANSACTION (writeSubject) ON DEFAULT DATABASE TO custom" );
+        S subject = neo.login( "alice", "foo" );
+
+        DoubleLatch latch = new DoubleLatch( 3, true );
+        try
+        {
+            ThreadedTransaction<S> tx1 = new ThreadedTransaction<>( neo, latch );
+            ThreadedTransaction<S> tx2 = new ThreadedTransaction<>( neo, latch );
+
+            String q1 = tx1.execute( threading, readSubject, "UNWIND [1,2,3] AS x RETURN x" );
+            String q2 = tx2.execute( threading, writeSubject, "UNWIND [4,5,6] AS y RETURN y" );
+            latch.startAndWaitForAllToStart();
+
+            String listTransactionQuery = "CALL dbms.listTransactions()";
+            String txId1 = getTransactionIdExecutingQuery( q1, listTransactionQuery, adminSubject );
+            String txId2 = getTransactionIdExecutingQuery( q2, listTransactionQuery, adminSubject );
+            String killTransactionQueryTemplate = "CALL dbms.killTransaction('%s')";
+            assertSuccess( subject, format( killTransactionQueryTemplate, txId1 ), r ->
+            {
+                List<Map<String,Object>> killQueryResult = collectResults( r );
+                assertThat( killQueryResult, matchesOneToOneInAnyOrder( hasUsername( "readSubject" ) ) );
+                assertThat( killQueryResult, matchesOneToOneInAnyOrder( hasResultEntry( "message", "Transaction terminated." ) ) );
+                assertThat( killQueryResult, matchesOneToOneInAnyOrder( hasResultEntry( "transactionId", txId1 ) ) );
+            } );
+            assertSuccess( subject, format( killTransactionQueryTemplate, txId2 ), r ->
+            {
+                List<Map<String,Object>> killQueryResult = collectResults( r );
+                assertThat( killQueryResult, matchesOneToOneInAnyOrder( hasUsername( "alice" ) ) );
+                assertThat( killQueryResult, matchesOneToOneInAnyOrder( hasResultEntry( "message", "Transaction not found." ) ) );
+                assertThat( killQueryResult, matchesOneToOneInAnyOrder( hasResultEntry( "transactionId", txId2 ) ) );
+            } );
+        }
+        finally
+        {
+            latch.finishAndWaitForAllToFinish();
+        }
+    }
+
+    @Test
+    void killAllowedTransactionsDifferentDatabases() throws Exception
+    {
+        authDisabledAdminstrationCommand( "CREATE USER alice SET PASSWORD 'foo' CHANGE NOT REQUIRED" );
+        authDisabledAdminstrationCommand( "CREATE ROLE custom" );
+        authDisabledAdminstrationCommand( "GRANT ROLE custom TO alice" );
+        authDisabledAdminstrationCommand( "GRANT ACCESS ON DATABASE * TO custom" );
+        authDisabledAdminstrationCommand( "CREATE DATABASE foo" );
+        authDisabledAdminstrationCommand( "GRANT TERMINATE TRANSACTION (*) ON DATABASE foo TO custom" );
+        S subject = neo.login( "alice", "foo" );
+
+        DoubleLatch latch = new DoubleLatch( 3, true );
+        try
+        {
+            ThreadedTransaction<S> tx1 = new ThreadedTransaction<>( neo, latch );
+            ThreadedTransaction<S> tx2 = new ThreadedTransaction<>( neo, latch );
+
+            String q1 = tx1.execute( threading, DEFAULT_DATABASE_NAME, readSubject, "UNWIND [1,2,3] AS x RETURN x" );
+            String q2 = tx2.execute( threading, "foo", readSubject, "UNWIND [4,5,6] AS y RETURN y" );
+            latch.startAndWaitForAllToStart();
+
+            String listTransactionQuery = "CALL dbms.listTransactions()";
+            String txId1 = getTransactionIdExecutingQuery( q1, DEFAULT_DATABASE_NAME, listTransactionQuery, adminSubject );
+            String txId2 = getTransactionIdExecutingQuery( q2, "foo", listTransactionQuery, adminSubject );
+            String killTransactionQueryTemplate = "CALL dbms.killTransaction('%s')";
+            assertSuccess( subject, DEFAULT_DATABASE_NAME, format( killTransactionQueryTemplate, txId1 ), r ->
+            {
+                List<Map<String,Object>> killQueryResult = collectResults( r );
+                assertThat( killQueryResult, matchesOneToOneInAnyOrder( hasUsername( "alice" ) ) );
+                assertThat( killQueryResult, matchesOneToOneInAnyOrder( hasResultEntry( "message", "Transaction not found." ) ) );
+                assertThat( killQueryResult, matchesOneToOneInAnyOrder( hasResultEntry( "transactionId", txId1 ) ) );
+            } );
+            assertSuccess( subject, "foo", format( killTransactionQueryTemplate, txId2 ), r ->
+            {
+                List<Map<String,Object>> killQueryResult = collectResults( r );
+                assertThat( killQueryResult, matchesOneToOneInAnyOrder( hasUsername( "readSubject" ) ) );
+                assertThat( killQueryResult, matchesOneToOneInAnyOrder( hasResultEntry( "message", "Transaction terminated." ) ) );
+                assertThat( killQueryResult, matchesOneToOneInAnyOrder( hasResultEntry( "transactionId", txId2 ) ) );
+            } );
+        }
+        finally
+        {
+            latch.finishAndWaitForAllToFinish();
+        }
     }
 
     //---------- list running queries -----------
@@ -645,6 +913,134 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
 
         read1.closeAndAssertSuccess();
         read2.closeAndAssertSuccess();
+    }
+
+    @Test
+    void shouldOnlyListQueriesForAllowedUsers() throws Throwable
+    {
+        authDisabledAdminstrationCommand( "CREATE USER alice SET PASSWORD 'foo' CHANGE NOT REQUIRED" );
+        authDisabledAdminstrationCommand( "CREATE ROLE custom" );
+        authDisabledAdminstrationCommand( "GRANT ROLE custom TO alice" );
+        authDisabledAdminstrationCommand( "GRANT ACCESS ON DEFAULT DATABASE TO custom" );
+        authDisabledAdminstrationCommand( "GRANT SHOW TRANSACTION (readSubject,editorSubject) ON DATABASE * TO custom" );
+        S subject = neo.login( "alice", "foo" );
+
+        DoubleLatch latch = new DoubleLatch( 4, true );
+        OffsetDateTime startTime = getStartTime();
+
+        ThreadedTransaction<S> read1 = new ThreadedTransaction<>( neo, latch );
+        ThreadedTransaction<S> read2 = new ThreadedTransaction<>( neo, latch );
+        ThreadedTransaction<S> read3 = new ThreadedTransaction<>( neo, latch );
+
+        String q1 = read1.execute( threading, readSubject, "UNWIND [1,2,3] AS x RETURN x" );
+        read2.execute( threading, writeSubject, "UNWIND [4,5,6] AS y RETURN y" );
+        String q3 = read3.execute( threading, editorSubject, "UNWIND [7,8,9] AS z RETURN z" );
+        latch.startAndWaitForAllToStart();
+
+        String query = "CALL dbms.listQueries()";
+        assertSuccess( subject, query, r ->
+        {
+            List<Map<String,Object>> maps = collectResults( r );
+
+            Matcher<Map<String,Object>> thisQuery = listedQueryOfInteractionLevel( startTime, "alice", query );
+            Matcher<Map<String,Object>> matcher1 = listedQuery( startTime, "readSubject", q1 );
+            Matcher<Map<String,Object>> matcher2 = listedQuery( startTime, "editorSubject", q3 );
+
+            assertThat( maps, matchesOneToOneInAnyOrder( matcher1, matcher2, thisQuery ) );
+        } );
+
+        latch.finishAndWaitForAllToFinish();
+
+        read1.closeAndAssertSuccess();
+        read2.closeAndAssertSuccess();
+        read3.closeAndAssertSuccess();
+    }
+
+    @Test
+    void shouldNotListQueriesForDeniedUsers() throws Throwable
+    {
+        authDisabledAdminstrationCommand( "CREATE USER alice SET PASSWORD 'foo' CHANGE NOT REQUIRED" );
+        authDisabledAdminstrationCommand( "CREATE ROLE custom AS COPY OF admin" );
+        authDisabledAdminstrationCommand( "GRANT ROLE custom TO alice" );
+        authDisabledAdminstrationCommand( "DENY SHOW TRANSACTION (writeSubject) ON DEFAULT DATABASE TO custom" );
+        S subject = neo.login( "alice", "foo" );
+
+        DoubleLatch latch = new DoubleLatch( 4, true );
+        OffsetDateTime startTime = getStartTime();
+
+        ThreadedTransaction<S> read1 = new ThreadedTransaction<>( neo, latch );
+        ThreadedTransaction<S> read2 = new ThreadedTransaction<>( neo, latch );
+        ThreadedTransaction<S> read3 = new ThreadedTransaction<>( neo, latch );
+
+        String q1 = read1.execute( threading, readSubject, "UNWIND [1,2,3] AS x RETURN x" );
+        read2.execute( threading, writeSubject, "UNWIND [4,5,6] AS y RETURN y" );
+        String q3 = read3.execute( threading, editorSubject, "UNWIND [7,8,9] AS z RETURN z" );
+        latch.startAndWaitForAllToStart();
+
+        String query = "CALL dbms.listQueries()";
+        assertSuccess( subject, query, r ->
+        {
+            List<Map<String,Object>> maps = collectResults( r );
+
+            Matcher<Map<String,Object>> thisQuery = listedQueryOfInteractionLevel( startTime, "alice", query );
+            Matcher<Map<String,Object>> matcher1 = listedQuery( startTime, "readSubject", q1 );
+            Matcher<Map<String,Object>> matcher2 = listedQuery( startTime, "editorSubject", q3 );
+
+            assertThat( maps, matchesOneToOneInAnyOrder( matcher1, matcher2, thisQuery ) );
+        } );
+
+        latch.finishAndWaitForAllToFinish();
+
+        read1.closeAndAssertSuccess();
+        read2.closeAndAssertSuccess();
+        read3.closeAndAssertSuccess();
+    }
+
+    @Test
+    void shouldListAllowedQueriesDifferentDatabases() throws Throwable
+    {
+        authDisabledAdminstrationCommand( "CREATE USER alice SET PASSWORD 'foo' CHANGE NOT REQUIRED" );
+        authDisabledAdminstrationCommand( "CREATE ROLE custom" );
+        authDisabledAdminstrationCommand( "GRANT ROLE custom TO alice" );
+        authDisabledAdminstrationCommand( "GRANT ACCESS ON DATABASE * TO custom" );
+        authDisabledAdminstrationCommand( "CREATE DATABASE foo" );
+        authDisabledAdminstrationCommand( "GRANT SHOW TRANSACTION (*) ON DATABASE foo TO custom" );
+        S subject = neo.login( "alice", "foo" );
+
+        DoubleLatch latch = new DoubleLatch( 3, true );
+        OffsetDateTime startTime = getStartTime();
+
+        ThreadedTransaction<S> tx1 = new ThreadedTransaction<>( neo, latch );
+        ThreadedTransaction<S> tx2 = new ThreadedTransaction<>( neo, latch );
+
+        tx1.execute( threading, DEFAULT_DATABASE_NAME, readSubject, "UNWIND [1,2,3] AS x RETURN x" );
+        String q2 = tx2.execute( threading, "foo", readSubject, "UNWIND [4,5,6] AS y RETURN y" );
+        latch.startAndWaitForAllToStart();
+
+        String query = "CALL dbms.listQueries()";
+        assertSuccess( subject, DEFAULT_DATABASE_NAME, query, r ->
+        {
+            List<Map<String,Object>> maps = collectResults( r );
+
+            Matcher<Map<String,Object>> thisQuery = listedQueryOfInteractionLevel( startTime, "alice", query );
+
+            assertThat( maps, matchesOneToOneInAnyOrder( thisQuery ) );
+        } );
+
+        assertSuccess( subject, "foo", query, r ->
+        {
+            List<Map<String,Object>> maps = collectResults( r );
+
+            Matcher<Map<String,Object>> thisQuery = listedQueryOfInteractionLevel( startTime, "alice", query );
+            Matcher<Map<String,Object>> matcher1 = listedQuery( startTime, "readSubject", q2 );
+
+            assertThat( maps, matchesOneToOneInAnyOrder( matcher1, thisQuery ) );
+        } );
+
+        latch.finishAndWaitForAllToFinish();
+
+        tx1.closeAndAssertSuccess();
+        tx2.closeAndAssertSuccess();
     }
 
     @Test
@@ -861,6 +1257,81 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         executeTwoQueriesAndKillTheFirst( readSubject, writeSubject, readSubject );
     }
 
+    @Test
+    void shouldOnlyKillQueryForUserWithPrivilege() throws Throwable
+    {
+        authDisabledAdminstrationCommand( "CREATE USER alice SET PASSWORD 'foo' CHANGE NOT REQUIRED" );
+        authDisabledAdminstrationCommand( "CREATE ROLE custom" );
+        authDisabledAdminstrationCommand( "GRANT ROLE custom TO alice" );
+        authDisabledAdminstrationCommand( "GRANT ACCESS ON DEFAULT DATABASE TO custom" );
+        authDisabledAdminstrationCommand( "GRANT TERMINATE TRANSACTION (readSubject) ON DATABASE * TO custom" );
+        S subject = neo.login( "alice", "foo" );
+        executeTwoQueriesAndKillTheFirst( readSubject, writeSubject, subject );
+        executeQueryAndFailToKill( writeSubject, subject );
+    }
+
+    @Test
+    void shouldNotKillQueryForUserDeniedPrivilege() throws Throwable
+    {
+        authDisabledAdminstrationCommand( "CREATE USER alice SET PASSWORD 'foo' CHANGE NOT REQUIRED" );
+        authDisabledAdminstrationCommand( "CREATE ROLE custom AS COPY OF admin" );
+        authDisabledAdminstrationCommand( "GRANT ROLE custom TO alice" );
+        authDisabledAdminstrationCommand( "DENY TERMINATE TRANSACTION (writeSubject) ON DEFAULT DATABASE TO custom" );
+        S subject = neo.login( "alice", "foo" );
+        executeTwoQueriesAndKillTheFirst( readSubject, writeSubject, subject );
+        executeQueryAndFailToKill( writeSubject, subject );
+    }
+
+    @Test
+    void shouldOnlyKillQueryForDatabaseWithPrivilege() throws Throwable
+    {
+        authDisabledAdminstrationCommand( "CREATE USER alice SET PASSWORD 'foo' CHANGE NOT REQUIRED" );
+        authDisabledAdminstrationCommand( "CREATE ROLE custom" );
+        authDisabledAdminstrationCommand( "GRANT ROLE custom TO alice" );
+        authDisabledAdminstrationCommand( "GRANT ACCESS ON DATABASE * TO custom" );
+        authDisabledAdminstrationCommand( "CREATE DATABASE foo" );
+        authDisabledAdminstrationCommand( "GRANT TERMINATE TRANSACTION (*) ON DATABASE foo TO custom" );
+        S subject = neo.login( "alice", "foo" );
+        DoubleLatch latch = new DoubleLatch( 3 );
+        ThreadedTransaction<S> tx1 = new ThreadedTransaction<>( neo, latch );
+        ThreadedTransaction<S> tx2 = new ThreadedTransaction<>( neo, latch );
+        String q1 = tx1.execute( threading, DEFAULT_DATABASE_NAME, readSubject, "UNWIND [1,2,3] AS x RETURN x" );
+        String q2 = tx2.execute( threading, "foo", readSubject, "UNWIND [4,5,6] AS y RETURN y" );
+        latch.startAndWaitForAllToStart();
+
+        String id1 = extractQueryId( q1 );
+        String id2 = extractQueryId( q2 );
+
+        assertFail(
+                DEFAULT_DATABASE_NAME,
+                subject,
+                "CALL dbms.killQuery('" + id1 + "') YIELD username RETURN *",
+                PERMISSION_DENIED
+        );
+
+        assertSuccess(
+                subject,
+                "foo",
+                "CALL dbms.killQuery('" + id2 + "') YIELD username " +
+                "RETURN count(username) AS count, username", r ->
+                {
+                    List<Map<String,Object>> actual = collectResults( r );
+                    @SuppressWarnings( "unchecked" )
+                    Matcher<Map<String,Object>> mapMatcher = allOf(
+                            (Matcher) hasEntry( equalTo( "count" ), anyOf( equalTo( 1 ), equalTo( 1L ) ) ),
+                            (Matcher) hasEntry( equalTo( "username" ), equalTo( "readSubject" ) )
+                    );
+                    assertThat( actual, matchesOneToOneInAnyOrder( mapMatcher ) );
+                }
+        );
+
+        latch.finishAndWaitForAllToFinish();
+        tx1.closeAndAssertSuccess();
+        tx2.closeAndAssertExplicitTermination();
+
+        assertEmpty( adminSubject, "CALL dbms.listQueries() YIELD query WITH * WHERE NOT query CONTAINS 'listQueries' RETURN *" );
+    }
+
     private void executeTwoQueriesAndKillTheFirst( S executor1, S executor2, S killer ) throws Throwable
     {
         DoubleLatch latch = new DoubleLatch( 3 );
@@ -918,24 +1389,27 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     @Test
     void shouldFailToTerminateOtherUsersQuery() throws Throwable
     {
-        DoubleLatch latch = new DoubleLatch( 3, true );
-        ThreadedTransaction<S> read = new ThreadedTransaction<>( neo, latch );
-        ThreadedTransaction<S> write = new ThreadedTransaction<>( neo, latch );
-        String q1 = read.execute( threading, readSubject, "UNWIND [1,2,3] AS x RETURN x" );
-        write.execute( threading, writeSubject, "UNWIND [4,5,6] AS y RETURN y" );
+        executeQueryAndFailToKill( readSubject, writeSubject );
+    }
+
+    private void executeQueryAndFailToKill( S executor, S killer ) throws Throwable
+    {
+        DoubleLatch latch = new DoubleLatch( 2, true );
+        ThreadedTransaction<S> tx = new ThreadedTransaction<>( neo, latch );
+        String q1 = tx.execute( threading, executor, "UNWIND [1,2,3] AS x RETURN x" );
         latch.startAndWaitForAllToStart();
+
+        String id1 = extractQueryId( q1 );
 
         try
         {
-            String id1 = extractQueryId( q1 );
             assertFail(
-                    writeSubject,
+                    killer,
                     "CALL dbms.killQuery('" + id1 + "') YIELD username RETURN *",
                     PERMISSION_DENIED
             );
             latch.finishAndWaitForAllToFinish();
-            read.closeAndAssertSuccess();
-            write.closeAndAssertSuccess();
+            tx.closeAndAssertSuccess();
         }
         catch ( Throwable t )
         {
@@ -1051,6 +1525,131 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         read2.closeAndAssertExplicitTermination();
         read3.closeAndAssertSuccess();
         write.closeAndAssertSuccess();
+
+        assertEmpty(
+                adminSubject,
+                "CALL dbms.listQueries() YIELD query WITH * WHERE NOT query CONTAINS 'listQueries' RETURN *" );
+    }
+
+    @Test
+    void shouldListQueriesAndTransactionWithTransactionPrivilege() throws Throwable
+    {
+        authDisabledAdminstrationCommand( "CREATE USER alice SET PASSWORD 'foo' CHANGE NOT REQUIRED" );
+        authDisabledAdminstrationCommand( "CREATE ROLE custom" );
+        authDisabledAdminstrationCommand( "GRANT ROLE custom TO alice" );
+        authDisabledAdminstrationCommand( "GRANT ACCESS ON DEFAULT DATABASE TO custom" );
+        authDisabledAdminstrationCommand( "GRANT TRANSACTION MANAGEMENT (readSubject) ON DATABASE * TO custom" );
+        S subject = neo.login( "alice", "foo" );
+
+        OffsetDateTime startTime = getStartTime();
+        DoubleLatch latch = new DoubleLatch( 3 );
+        ThreadedTransaction<S> tx1 = new ThreadedTransaction<>( neo, latch );
+        ThreadedTransaction<S> tx2 = new ThreadedTransaction<>( neo, latch );
+        String q1 = tx1.execute( threading, readSubject, "UNWIND [1,2,3] AS x RETURN x" );
+        tx2.execute( threading, writeSubject, "UNWIND [4,5,6] AS y RETURN y" );
+        latch.startAndWaitForAllToStart();
+
+        String listQueries = "CALL dbms.listQueries()";
+        assertSuccess( subject, listQueries, r ->
+        {
+            List<Map<String,Object>> maps = collectResults( r );
+
+            Matcher<Map<String,Object>> thisQuery = listedQueryOfInteractionLevel( startTime, "alice", listQueries );
+            Matcher<Map<String,Object>> matcher = listedQuery( startTime, "readSubject", q1 );
+
+            assertThat( maps, matchesOneToOneInAnyOrder( matcher, thisQuery ) );
+        } );
+
+        String listTransactions = "CALL dbms.listTransactions()";
+        assertSuccess( subject, listTransactions, r ->
+        {
+            List<Map<String,Object>> maps = collectResults( r );
+
+            Matcher<Map<String,Object>> thisTransaction = listedTransactionOfInteractionLevel( startTime, "alice", listTransactions );
+            Matcher<Map<String,Object>> matcher = listedTransaction( startTime, "readSubject", q1 );
+
+            assertThat( maps, matchesOneToOneInAnyOrder( matcher, thisTransaction ) );
+        } );
+
+        latch.finishAndWaitForAllToFinish();
+        tx1.closeAndAssertSuccess();
+        tx2.closeAndAssertSuccess();
+    }
+
+    @Test
+    void shouldListAndKillQueriesAndTransactionsWithManagementPrivilege() throws Throwable
+    {
+        authDisabledAdminstrationCommand( "CREATE USER alice SET PASSWORD 'foo' CHANGE NOT REQUIRED" );
+        authDisabledAdminstrationCommand( "CREATE ROLE custom" );
+        authDisabledAdminstrationCommand( "GRANT ROLE custom TO alice" );
+        authDisabledAdminstrationCommand( "GRANT ACCESS ON DEFAULT DATABASE TO custom" );
+        authDisabledAdminstrationCommand( "GRANT TRANSACTION MANAGEMENT ON DATABASE * TO custom" );
+        S subject = neo.login( "alice", "foo" );
+        DoubleLatch transactionLatch = new DoubleLatch( 2 );
+        DoubleLatch queryLatch = new DoubleLatch( 2 );
+
+        OffsetDateTime startTime = getStartTime();
+        ThreadedTransaction<S> tx1 = new ThreadedTransaction<>( neo, queryLatch );
+        ThreadedTransaction<S> tx2 = new ThreadedTransaction<>( neo, transactionLatch );
+        String q1 = tx1.execute( threading, readSubject, "UNWIND [1,2,3] AS x RETURN x" );
+        String q2 = tx2.execute( threading, writeSubject, "UNWIND [4,5,6] AS y RETURN y" );
+        queryLatch.startAndWaitForAllToStart();
+        transactionLatch.startAndWaitForAllToStart();
+
+        String queryId = extractQueryId( q1 );
+
+        String listQueries = "CALL dbms.listQueries()";
+        assertSuccess( subject, listQueries, r ->
+        {
+            List<Map<String,Object>> maps = collectResults( r );
+
+            Matcher<Map<String,Object>> thisQuery = listedQueryOfInteractionLevel( startTime, "alice", listQueries );
+            Matcher<Map<String,Object>> matcher1 = listedQuery( startTime, "readSubject", q1 );
+            Matcher<Map<String,Object>> matcher2 = listedQuery( startTime, "writeSubject", q2 );
+
+            assertThat( maps, matchesOneToOneInAnyOrder( matcher1, matcher2, thisQuery ) );
+        } );
+
+        assertSuccess(
+                subject,
+                "CALL dbms.killQuery('" + queryId + "') YIELD username " +
+                "RETURN count(username) AS count, username", r ->
+                {
+                    List<Map<String,Object>> actual = collectResults( r );
+                    @SuppressWarnings( {"unchecked", "RedundantCast"} )
+                    Matcher<Map<String,Object>> mapMatcher = allOf(
+                            (Matcher) hasEntry( equalTo( "count" ), anyOf( equalTo( 1 ), equalTo( 1L ) ) ),
+                            (Matcher) hasEntry( equalTo( "username" ), equalTo( "readSubject" ) )
+                    );
+                    assertThat( actual, matchesOneToOneInAnyOrder( mapMatcher ) );
+                }
+        );
+
+        queryLatch.finishAndWaitForAllToFinish();
+        tx1.closeAndAssertExplicitTermination();
+
+        String listTransactions = "CALL dbms.listTransactions()";
+        assertSuccess( subject, listTransactions, r ->
+        {
+            List<Map<String,Object>> maps = collectResults( r );
+
+            Matcher<Map<String,Object>> thisTransaction = listedTransactionOfInteractionLevel( startTime, "alice", listTransactions );
+            Matcher<Map<String,Object>> matcher = listedTransaction( startTime, "writeSubject", q2 );
+
+            assertThat( maps, matchesOneToOneInAnyOrder( matcher, thisTransaction ) );
+        } );
+
+        String txId = getTransactionIdExecutingQuery( q2, listTransactions, adminSubject );
+        assertSuccess( subject, format( "CALL dbms.killTransaction('%s')", txId ), r ->
+        {
+            List<Map<String,Object>> killQueryResult = collectResults( r );
+            assertThat( killQueryResult, matchesOneToOneInAnyOrder( hasUsername( "writeSubject" ) ) );
+            assertThat( killQueryResult, matchesOneToOneInAnyOrder( hasResultEntry( "message", "Transaction terminated." ) ) );
+            assertThat( killQueryResult, matchesOneToOneInAnyOrder( hasResultEntry( "transactionId", txId ) ) );
+        } );
+
+        transactionLatch.finishAndWaitForAllToFinish();
+        tx2.closeAndAssertExplicitTermination();
 
         assertEmpty(
                 adminSubject,

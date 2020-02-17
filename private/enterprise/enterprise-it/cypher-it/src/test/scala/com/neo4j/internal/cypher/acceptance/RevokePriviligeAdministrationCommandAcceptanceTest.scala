@@ -1424,8 +1424,8 @@ class RevokePriviligeAdministrationCommandAcceptanceTest extends AdministrationC
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          segmentFunction(traverse("GRANTED").role("custom"), "A").map,
-          segmentFunction(traverse("DENIED").role("custom"), "A").map
+          segmentFunction(traverse(GRANTED).role("custom"), "A").map,
+          segmentFunction(traverse(DENIED).role("custom"), "A").map
         ))
 
         // WHEN
@@ -1446,8 +1446,8 @@ class RevokePriviligeAdministrationCommandAcceptanceTest extends AdministrationC
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          segmentFunction(read("GRANTED").role("custom").property("prop"), "A").map,
-          segmentFunction(read("DENIED").role("custom").property("prop"), "A").map
+          segmentFunction(read(GRANTED).role("custom").property("prop"), "A").map,
+          segmentFunction(read(DENIED).role("custom").property("prop"), "A").map
         ))
 
         // WHEN
@@ -1469,10 +1469,10 @@ class RevokePriviligeAdministrationCommandAcceptanceTest extends AdministrationC
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          segmentFunction(traverse("GRANTED").role("custom"), "A").map,
-          segmentFunction(traverse("DENIED").role("custom"), "A").map,
-          segmentFunction(read("GRANTED").role("custom").property("prop"), "A").map,
-          segmentFunction(read("DENIED").role("custom").property("prop"), "A").map
+          segmentFunction(traverse(GRANTED).role("custom"), "A").map,
+          segmentFunction(traverse(DENIED).role("custom"), "A").map,
+          segmentFunction(read(GRANTED).role("custom").property("prop"), "A").map,
+          segmentFunction(read(DENIED).role("custom").property("prop"), "A").map
         ))
 
         // WHEN
@@ -1480,8 +1480,8 @@ class RevokePriviligeAdministrationCommandAcceptanceTest extends AdministrationC
 
         // THEN
         execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
-          segmentFunction(traverse("GRANTED").role("custom"), "A").map,
-          segmentFunction(traverse("DENIED").role("custom"), "A").map
+          segmentFunction(traverse(GRANTED).role("custom"), "A").map,
+          segmentFunction(traverse(DENIED).role("custom"), "A").map
         ))
       }
   }

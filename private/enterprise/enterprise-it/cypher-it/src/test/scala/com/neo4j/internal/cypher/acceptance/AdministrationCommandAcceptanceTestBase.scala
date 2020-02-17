@@ -42,6 +42,10 @@ import org.neo4j.server.security.auth.SecurityTestUtils
 import scala.collection.Map
 
 abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFunSuite with EnterpriseGraphDatabaseTestSupport {
+  val GRANTED: String = "GRANTED"
+  val DENIED: String = "DENIED"
+  val DEFAULT: String = "DEFAULT"
+
   val neo4jUser: Map[String, Any] = user("neo4j", Seq(PredefinedRoles.ADMIN))
   val neo4jUserActive: Map[String, Any] = user("neo4j", Seq(PredefinedRoles.ADMIN), passwordChangeRequired = false)
   val onlineStatus: String = DatabaseStatus.Online.stringValue()
@@ -189,30 +193,37 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
     def property(property: String) = PrivilegeMapBuilder(map + ("resource" -> s"property($property)"))
   }
 
-  def baseMap(grant: String = "GRANTED"): Map[String, String] = Map("access" -> grant, "graph" -> "*", "segment" -> "database")
+  def baseMap(grant: String = GRANTED): Map[String, String] = Map("access" -> grant, "graph" -> "*", "segment" -> "database")
 
-  def adminAction(action: String, grant: String = "GRANTED"): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ( "resource" -> "database" )).action(action)
+  def adminAction(action: String, grant: String = GRANTED): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ( "resource" -> "database" )).action(action)
 
-  def startDatabase(grant: String = "GRANTED"): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "database")).action("start_database")
-  def stopDatabase(grant: String = "GRANTED"): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "database")).action("stop_database")
+  def startDatabase(grant: String = GRANTED): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "database")).action("start_database")
+  def stopDatabase(grant: String = GRANTED): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "database")).action("stop_database")
 
-  def createIndex(grant: String = "GRANTED"): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "database")).action("create_index")
-  def dropIndex(grant: String = "GRANTED"): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "database")).action("drop_index")
-  def createConstraint(grant: String = "GRANTED"): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "database")).action("create_constraint")
-  def dropConstraint(grant: String = "GRANTED"): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "database")).action("drop_constraint")
+  def createIndex(grant: String = GRANTED): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "database")).action("create_index")
+  def dropIndex(grant: String = GRANTED): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "database")).action("drop_index")
+  def createConstraint(grant: String = GRANTED): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "database")).action("create_constraint")
+  def dropConstraint(grant: String = GRANTED): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "database")).action("drop_constraint")
 
-  def createNodeLabel(grant: String = "GRANTED"): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "database")).action("create_label")
-  def createRelationshipType(grant: String = "GRANTED"): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "database")).action("create_reltype")
-  def createPropertyKey(grant: String = "GRANTED"): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "database")).action("create_propertykey")
+  def createNodeLabel(grant: String = GRANTED): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "database")).action("create_label")
+  def createRelationshipType(grant: String = GRANTED): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "database")).action("create_reltype")
+  def createPropertyKey(grant: String = GRANTED): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "database")).action("create_propertykey")
 
-  def access(grant: String = "GRANTED"): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "database")).action("access")
-  def traverse(grant: String = "GRANTED"): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "graph")).action("traverse")
-  def read(grant: String = "GRANTED"): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "all_properties")).action("read")
-  def write(grant: String = "GRANTED"): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "all_properties")).action("write")
+  def access(grant: String = GRANTED): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "database")).action("access")
+  def traverse(grant: String = GRANTED): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "graph")).action("traverse")
+  def read(grant: String = GRANTED): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "all_properties")).action("read")
+  def write(grant: String = GRANTED): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "all_properties")).action("write")
 
   def grantToken(): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap() + ("resource" -> "database")).action("token")
   def grantSchema(): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap() + ("resource" -> "database")).action("schema")
   def grantAdmin(): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap() + ("resource" -> "database")).action("admin")
+
+  def showTransaction(username: String, grant: String = GRANTED): PrivilegeMapBuilder =
+    PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "database", "segment" -> s"USER($username)")).action("show_transaction")
+  def terminateTransaction(username: String, grant: String = GRANTED): PrivilegeMapBuilder =
+    PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "database", "segment" -> s"USER($username)")).action("terminate_transaction")
+  def transaction(username: String, grant: String = GRANTED): PrivilegeMapBuilder =
+    PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "database", "segment" -> s"USER($username)")).action("transaction_management")
 
   type builderType = (PrivilegeMapBuilder, String) => PrivilegeMapBuilder
   def addNode(source: PrivilegeMapBuilder, name: String): PrivilegeMapBuilder = source.node(name)

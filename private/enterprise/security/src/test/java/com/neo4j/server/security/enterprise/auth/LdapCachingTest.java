@@ -32,6 +32,7 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.cypher.internal.security.SecureHasher;
 import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
+import org.neo4j.internal.kernel.api.security.Segment;
 import org.neo4j.kernel.api.security.exception.InvalidAuthTokenException;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -59,7 +60,7 @@ class LdapCachingTest
         fakeTicker = new FakeTicker();
         SystemGraphRealm systemGraphRealm = mock( SystemGraphRealm.class );
         when( systemGraphRealm.getPrivilegesForRoles( anySet() ) ).thenReturn( Collections.singleton(
-                new ResourcePrivilege( ResourcePrivilege.GrantOrDeny.GRANT, PrivilegeAction.ACCESS, new Resource.DatabaseResource(), DatabaseSegment.ALL,
+                new ResourcePrivilege( ResourcePrivilege.GrantOrDeny.GRANT, PrivilegeAction.ACCESS, new Resource.DatabaseResource(), Segment.ALL,
                         SpecialDatabase.ALL ) ) );
 
         authManager = new MultiRealmAuthManager( systemGraphRealm, Collections.singletonList( testRealm ),
