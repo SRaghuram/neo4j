@@ -8,6 +8,8 @@ package com.neo4j.dbms.procedures;
 import com.neo4j.causalclustering.common.Cluster;
 import com.neo4j.causalclustering.common.ClusterMember;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
+import com.neo4j.causalclustering.core.CoreClusterMember;
+import com.neo4j.dbms.EnterpriseOperatorState;
 import com.neo4j.dbms.ShowDatabasesHelpers;
 import com.neo4j.dbms.ShowDatabasesHelpers.ShowDatabasesResultRow;
 import com.neo4j.kernel.impl.enterprise.configuration.EnterpriseEditionSettings;
@@ -16,9 +18,11 @@ import com.neo4j.test.causalclustering.ClusterExtension;
 import com.neo4j.test.causalclustering.ClusterFactory;
 import org.assertj.core.api.Condition;
 import org.assertj.core.api.HamcrestCondition;
+import org.hamcrest.Description;
 import org.hamcrest.FeatureMatcher;
 import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
+import org.hamcrest.TypeSafeMatcher;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,9 +38,12 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.neo4j.dbms.DatabaseStateService;
 import org.neo4j.dbms.OperatorState;
+import org.neo4j.dbms.api.DatabaseNotFoundException;
 import org.neo4j.internal.helpers.collection.Pair;
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 
@@ -44,12 +51,14 @@ import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.crea
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.dropDatabase;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.showDatabases;
 import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.stopDatabase;
+import static com.neo4j.dbms.EnterpriseOperatorState.DROPPED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
 import static java.lang.String.format;
 import static java.util.Collections.emptySet;
 import static java.util.Collections.singleton;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static java.util.stream.Collectors.toList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
@@ -66,17 +75,17 @@ import static org.neo4j.test.conditions.Conditions.sizeCondition;
 class ClusteredShowDatabasesIT
 {
 
-    private static final String ADDITIONAL_DATABASE_NAME = "foo";
-    private static final Set<String> defaultDatabases = Set.of( DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME );
-    private static final Set<String> databasesWithAdditional = Set.of( DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME, ADDITIONAL_DATABASE_NAME );
+    private final String ADDITIONAL_DATABASE_NAME = "foo";
+    private final Set<String> defaultDatabases = Set.of( DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME );
+    private final Set<String> databasesWithAdditional = Set.of( DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME, ADDITIONAL_DATABASE_NAME );
 
-    private static final int additionalRRId = 127;
-    private static final int additionalCoreId = 128;
+    private final int additionalRRId = 127;
+    private final int additionalCoreId = 128;
 
-    private static final int numCores = 3;
-    private static final int numRRs = 2;
+    private final int numCores = 3;
+    private final int numRRs = 2;
 
-    private static final int timeout = 60;
+    private final int timeoutSeconds = 60;
 
     @Nested
     @TestDirectoryExtension
@@ -121,16 +130,28 @@ class ClusteredShowDatabasesIT
             }
 
             // drop the additional database if it exists
-            cluster.systemTx( ( db, tx ) ->
+            NamedDatabaseId namedDatabaseId;
+            try
             {
-                tx.execute( "DROP DATABASE " + ADDITIONAL_DATABASE_NAME + " IF EXISTS" );
-                tx.commit();
-            } );
+                namedDatabaseId = getNamedDatabaseId( cluster, ADDITIONAL_DATABASE_NAME );
+            }
+            catch ( DatabaseNotFoundException e )
+            {
+                // database does not exist
+                return;
+            }
+            cluster.systemTx( ( db, tx ) ->
+                              {
+                                  tx.execute( "DROP DATABASE " + ADDITIONAL_DATABASE_NAME + " IF EXISTS" );
+                                  tx.commit();
+                              } );
+
+            waitForClusterToReachLocalState( cluster, namedDatabaseId, EnterpriseOperatorState.DROPPED, timeoutSeconds );
 
             assertEventually( "SHOW DATABASE returns no members hosting additional database",
-                    () -> membersHostingDatabase( ADDITIONAL_DATABASE_NAME, cluster ), Set::isEmpty, timeout, SECONDS );
+                              () -> membersHostingDatabase( ADDITIONAL_DATABASE_NAME, cluster ), Set::isEmpty, timeoutSeconds, SECONDS );
             assertEventually( "SHOW DATABASES should return one row per default database per initial cluster member", () -> showDatabases( cluster ),
-                    result -> result.size() == ( numCores + numRRs ) * defaultDatabases.size(), timeout, SECONDS );
+                              result -> result.size() == ( numCores + numRRs ) * defaultDatabases.size(), timeoutSeconds, SECONDS );
         }
 
         @Test
@@ -156,17 +177,18 @@ class ClusteredShowDatabasesIT
             // then
             var newClusterSize = initialClusterSize + 1;
             assertEventually( "SHOW DATABASES should return one row per database per cluster member", () -> showDatabases( cluster ),
-                    new HamcrestCondition<>( hasSize( newClusterSize * defaultDatabases.size() ) ), timeout, SECONDS );
+                              new HamcrestCondition<>( hasSize( newClusterSize * defaultDatabases.size() ) ), timeoutSeconds, SECONDS );
             assertEventually( "SHOW DATABASES should return 1 leader per database", () -> showDatabases( cluster ),
-                    containsRole( "leader", defaultDatabases, 1 ), timeout, SECONDS );
+                              containsRole( "leader", defaultDatabases, 1 ), timeoutSeconds, SECONDS );
             assertEventually( "SHOW DATABASES should return 3 followers per database", () -> showDatabases( cluster ),
-                    containsRole( "follower", defaultDatabases, 3 ), timeout, SECONDS );
+                              containsRole( "follower", defaultDatabases, 3 ), timeoutSeconds, SECONDS );
             assertEventually( "SHOW DATABASES should return 2 replicas per database", () -> showDatabases( cluster ),
-                    containsRole( "read_replica", defaultDatabases, 2 ), timeout, SECONDS );
+                              containsRole( "read_replica", defaultDatabases, 2 ), timeoutSeconds, SECONDS );
             assertEventually( format( "SHOW DATABASES should return member with address %s for all databases", newAddress ),
-                    () -> databasesHostedByMember( newAddress, cluster ), equalityCondition( defaultDatabases ), timeout, SECONDS );
+                              () -> databasesHostedByMember( newAddress, cluster ), equalityCondition( defaultDatabases ), timeoutSeconds, SECONDS );
             assertEventually( format( "SHOW DATABASES should show Started status for member with address %s, for all databases", newAddress ),
-                    () -> membersHaveStateForDatabases( Set.of( newAddress ), defaultDatabases, STARTED, cluster ), TRUE, timeout, SECONDS );
+                              () -> membersHaveStateForDatabases( Set.of( newAddress ), defaultDatabases, STARTED, cluster ), TRUE, timeoutSeconds,
+                              SECONDS );
         }
 
         @Test
@@ -193,17 +215,18 @@ class ClusteredShowDatabasesIT
             // then
             var newClusterSize = initialClusterSize + 1;
             assertEventually( "SHOW DATABASES should return one row per database per cluster member", () -> showDatabases( cluster ),
-                    new HamcrestCondition<>( hasSize( newClusterSize * defaultDatabases.size() ) ), timeout, SECONDS );
+                              new HamcrestCondition<>( hasSize( newClusterSize * defaultDatabases.size() ) ), timeoutSeconds, SECONDS );
             assertEventually( "SHOW DATABASES should return 1 leader per database", () -> showDatabases( cluster ),
-                    containsRole( "leader", defaultDatabases, 1 ), timeout, SECONDS );
+                              containsRole( "leader", defaultDatabases, 1 ), timeoutSeconds, SECONDS );
             assertEventually( "SHOW DATABASES should return 2 followers per database", () -> showDatabases( cluster ),
-                    containsRole( "follower", defaultDatabases, 2 ), timeout, SECONDS );
+                              containsRole( "follower", defaultDatabases, 2 ), timeoutSeconds, SECONDS );
             assertEventually( "SHOW DATABASES should return 3 replicas per database", () -> showDatabases( cluster ),
-                    containsRole( "read_replica", defaultDatabases, 3 ), timeout, SECONDS );
+                              containsRole( "read_replica", defaultDatabases, 3 ), timeoutSeconds, SECONDS );
             assertEventually( format( "SHOW DATABASES should return member with address %s for all databases", newAddress ),
-                    () -> databasesHostedByMember( newAddress, cluster ), equalityCondition( defaultDatabases ), timeout, SECONDS );
+                              () -> databasesHostedByMember( newAddress, cluster ), equalityCondition( defaultDatabases ), timeoutSeconds, SECONDS );
             assertEventually( format( "SHOW DATABASES should show Started status for member with address %s, for all databases", newAddress ),
-                    () -> membersHaveStateForDatabases( Set.of( newAddress ), defaultDatabases, STARTED, cluster ), TRUE, timeout, SECONDS );
+                              () -> membersHaveStateForDatabases( Set.of( newAddress ), defaultDatabases, STARTED, cluster ), TRUE, timeoutSeconds,
+                              SECONDS );
         }
 
         @Test
@@ -219,15 +242,15 @@ class ClusteredShowDatabasesIT
 
             var initialClusterSize = cluster.allMembers().size();
             assertEventually( "SHOW DATABASES should return one row per database per cluster member", () -> showDatabases( cluster ),
-                    new HamcrestCondition<>( hasSize( initialClusterSize * defaultDatabases.size() ) ), timeout, SECONDS );
+                              new HamcrestCondition<>( hasSize( initialClusterSize * defaultDatabases.size() ) ), timeoutSeconds, SECONDS );
             assertEventually( "SHOW DATABASES should return 1 leader per database", () -> showDatabases( cluster ),
-                    containsRole( "leader", defaultDatabases, 1 ), timeout, SECONDS );
+                              containsRole( "leader", defaultDatabases, 1 ), timeoutSeconds, SECONDS );
             assertEventually( "SHOW DATABASES should return 2 followers per database", () -> showDatabases( cluster ),
-                    containsRole( "follower", defaultDatabases, 3 ), timeout, SECONDS );
+                              containsRole( "follower", defaultDatabases, 3 ), timeoutSeconds, SECONDS );
             assertEventually( "SHOW DATABASES should return 3 replicas per database", () -> showDatabases( cluster ),
-                    containsRole( "read_replica", defaultDatabases, 2 ), timeout, SECONDS );
+                              containsRole( "read_replica", defaultDatabases, 2 ), timeoutSeconds, SECONDS );
             assertEventually( format( "SHOW DATABASES should show Started status for members %s, for all databases", clusterAddresses ),
-                    () -> membersHaveStateForDatabases( clusterAddresses, defaultDatabases, STARTED, cluster ), TRUE, timeout, SECONDS );
+                              () -> membersHaveStateForDatabases( clusterAddresses, defaultDatabases, STARTED, cluster ), TRUE, timeoutSeconds, SECONDS );
 
             // when
             cluster.removeCoreMemberWithServerId( additionalCoreId );
@@ -235,15 +258,15 @@ class ClusteredShowDatabasesIT
             // then
             var newClusterSize = initialClusterSize - 1;
             assertEventually( "SHOW DATABASES should return one row per database per cluster member", () -> showDatabases( cluster ),
-                    new HamcrestCondition<>( hasSize( newClusterSize * defaultDatabases.size() ) ), timeout, SECONDS );
+                              new HamcrestCondition<>( hasSize( newClusterSize * defaultDatabases.size() ) ), timeoutSeconds, SECONDS );
             assertEventually( "SHOW DATABASES should return 1 leader per database", () -> showDatabases( cluster ),
-                    containsRole( "leader", defaultDatabases, 1 ), timeout, SECONDS );
+                              containsRole( "leader", defaultDatabases, 1 ), timeoutSeconds, SECONDS );
             assertEventually( "SHOW DATABASES should return 2 followers per database", () -> showDatabases( cluster ),
-                    containsRole( "follower", defaultDatabases, 2 ), timeout, SECONDS );
+                              containsRole( "follower", defaultDatabases, 2 ), timeoutSeconds, SECONDS );
             assertEventually( "SHOW DATABASES should return 2 replicas per database", () -> showDatabases( cluster ),
-                    containsRole( "read_replica", defaultDatabases, 2 ), timeout, SECONDS );
+                              containsRole( "read_replica", defaultDatabases, 2 ), timeoutSeconds, SECONDS );
             assertEventually( format( "SHOW DATABASES should return no rows for member %s", newAddress ),
-                    () -> databasesHostedByMember( newAddress, cluster ), equalityCondition( emptySet() ), timeout, SECONDS );
+                              () -> databasesHostedByMember( newAddress, cluster ), equalityCondition( emptySet() ), timeoutSeconds, SECONDS );
         }
 
         @Test
@@ -260,15 +283,15 @@ class ClusteredShowDatabasesIT
             var initialClusterSize = cluster.allMembers().size();
 
             assertEventually( "SHOW DATABASES should return one row per database per cluster member", () -> showDatabases( cluster ),
-                    new HamcrestCondition<>( hasSize( initialClusterSize * defaultDatabases.size() ) ), timeout, SECONDS );
+                              new HamcrestCondition<>( hasSize( initialClusterSize * defaultDatabases.size() ) ), timeoutSeconds, SECONDS );
             assertEventually( "SHOW DATABASES should return 1 leader per database", () -> showDatabases( cluster ),
-                    containsRole( "leader", defaultDatabases, 1 ), timeout, SECONDS );
+                              containsRole( "leader", defaultDatabases, 1 ), timeoutSeconds, SECONDS );
             assertEventually( "SHOW DATABASES should return 2 followers per database", () -> showDatabases( cluster ),
-                    containsRole( "follower", defaultDatabases, 2 ), timeout, SECONDS );
+                              containsRole( "follower", defaultDatabases, 2 ), timeoutSeconds, SECONDS );
             assertEventually( "SHOW DATABASES should return 3 replicas per database", () -> showDatabases( cluster ),
-                    containsRole( "read_replica", defaultDatabases, 3 ), timeout, SECONDS );
+                              containsRole( "read_replica", defaultDatabases, 3 ), timeoutSeconds, SECONDS );
             assertEventually( format( "SHOW DATABASES should show Started status for members %s, for all databases", clusterAddresses ),
-                    () -> membersHaveStateForDatabases( clusterAddresses, defaultDatabases, STARTED, cluster ), TRUE, timeout, SECONDS );
+                              () -> membersHaveStateForDatabases( clusterAddresses, defaultDatabases, STARTED, cluster ), TRUE, timeoutSeconds, SECONDS );
 
             // when
             cluster.removeReadReplicaWithMemberId( additionalRRId );
@@ -276,15 +299,15 @@ class ClusteredShowDatabasesIT
             // then
             var newClusterSize = initialClusterSize - 1;
             assertEventually( "SHOW DATABASES should return one row per database per cluster member", () -> showDatabases( cluster ),
-                    new HamcrestCondition<>( hasSize( newClusterSize * defaultDatabases.size() ) ), timeout, SECONDS );
+                              new HamcrestCondition<>( hasSize( newClusterSize * defaultDatabases.size() ) ), timeoutSeconds, SECONDS );
             assertEventually( "SHOW DATABASES should return 1 leader per database", () -> showDatabases( cluster ),
-                    containsRole( "leader", defaultDatabases, 1 ), timeout, SECONDS );
+                              containsRole( "leader", defaultDatabases, 1 ), timeoutSeconds, SECONDS );
             assertEventually( "SHOW DATABASES should return 2 followers per database", () -> showDatabases( cluster ),
-                    containsRole( "follower", defaultDatabases, 2 ), timeout, SECONDS );
+                              containsRole( "follower", defaultDatabases, 2 ), timeoutSeconds, SECONDS );
             assertEventually( "SHOW DATABASES should return 2 replicas per database", () -> showDatabases( cluster ),
-                    containsRole( "read_replica", defaultDatabases, 2 ), timeout, SECONDS );
+                              containsRole( "read_replica", defaultDatabases, 2 ), timeoutSeconds, SECONDS );
             assertEventually( format( "SHOW DATABASES should return no rows for member %s", newAddress ),
-                    () -> databasesHostedByMember( newAddress, cluster ), equalityCondition( emptySet() ), timeout, SECONDS );
+                              () -> databasesHostedByMember( newAddress, cluster ), equalityCondition( emptySet() ), timeoutSeconds, SECONDS );
         }
 
         @Test
@@ -292,6 +315,8 @@ class ClusteredShowDatabasesIT
         {
             // given
             createDatabase( ADDITIONAL_DATABASE_NAME, cluster );
+            var additionalDatabaseId = getNamedDatabaseId( cluster, ADDITIONAL_DATABASE_NAME );
+            waitForClusterToReachLocalState( cluster, additionalDatabaseId, STARTED, timeoutSeconds );
             cluster.awaitLeader( ADDITIONAL_DATABASE_NAME );
 
             var clusterSize = cluster.allMembers().size();
@@ -300,26 +325,27 @@ class ClusteredShowDatabasesIT
                     .collect( Collectors.toSet() );
 
             assertEventually( "SHOW DATABASES should return one row per database per cluster member", () -> showDatabases( cluster ),
-                    new HamcrestCondition<>( hasSize( clusterSize * databasesWithAdditional.size() ) ), timeout, SECONDS );
+                              new HamcrestCondition<>( hasSize( clusterSize * databasesWithAdditional.size() ) ), timeoutSeconds, SECONDS );
             assertEventually( "SHOW DATABASES should return 1 leader per database", () -> showDatabases( cluster ),
-                    containsRole( "leader", databasesWithAdditional, 1 ), timeout, SECONDS );
+                              containsRole( "leader", databasesWithAdditional, 1 ), timeoutSeconds, SECONDS );
             assertEventually( "SHOW DATABASES should return 2 followers per database", () -> showDatabases( cluster ),
-                    containsRole( "follower", databasesWithAdditional, 2 ), timeout, SECONDS );
+                              containsRole( "follower", databasesWithAdditional, 2 ), timeoutSeconds, SECONDS );
             assertEventually( "SHOW DATABASES should return 2 replicas per database", () -> showDatabases( cluster ),
-                    containsRole( "read_replica", databasesWithAdditional, 2 ), timeout, SECONDS );
+                              containsRole( "read_replica", databasesWithAdditional, 2 ), timeoutSeconds, SECONDS );
             assertEventually( format( "SHOW DATABASES should show Started status for members %s, for all databases", clusterAddresses ),
-                    () -> membersHaveStateForDatabases( clusterAddresses, databasesWithAdditional, STARTED, cluster ), TRUE, timeout, SECONDS );
+                    () -> membersHaveStateForDatabases( clusterAddresses, databasesWithAdditional, STARTED, cluster ), TRUE, timeoutSeconds, SECONDS );
 
             // when
             stopDatabase( ADDITIONAL_DATABASE_NAME, cluster );
+            waitForClusterToReachLocalState( cluster, additionalDatabaseId, STOPPED, timeoutSeconds );
 
             // then
             assertEventually( format( "SHOW DATABASES should show Stopped status for members %s, for additional database", clusterAddresses ),
-                    () -> membersHaveStateForDatabases( clusterAddresses, singleton( ADDITIONAL_DATABASE_NAME ), STOPPED, cluster ), TRUE, timeout, SECONDS );
-            assertEventually(  "SHOW DATABASES should show unknown role for all members for stopped additional database", () -> showDatabases( cluster ),
-                    containsRole( "unknown", singleton( ADDITIONAL_DATABASE_NAME ), clusterSize ), timeout, SECONDS );
+                    () -> membersHaveStateForDatabases( clusterAddresses, singleton( ADDITIONAL_DATABASE_NAME ), STOPPED, cluster ), TRUE, timeoutSeconds, SECONDS );
+            assertEventually( "SHOW DATABASES should show unknown role for all members for stopped additional database", () -> showDatabases( cluster ),
+                              containsRole( "unknown", singleton( ADDITIONAL_DATABASE_NAME ), clusterSize ), timeoutSeconds, SECONDS );
             assertEventually( format( "SHOW DATABASES should still show Started status for members %s, for default databases", clusterAddresses ),
-                    () -> membersHaveStateForDatabases( clusterAddresses, defaultDatabases, STARTED, cluster ), TRUE, timeout, SECONDS );
+                    () -> membersHaveStateForDatabases( clusterAddresses, defaultDatabases, STARTED, cluster ), TRUE, timeoutSeconds, SECONDS );
         }
 
         @Test
@@ -333,28 +359,29 @@ class ClusteredShowDatabasesIT
 
             var initialShowDatabases = showDatabases( cluster );
             assertEquals( clusterSize * defaultDatabases.size(), initialShowDatabases.size(),
-                    "SHOW DATABASES should return one row per database per cluster member" );
+                          "SHOW DATABASES should return one row per database per cluster member" );
             assertThat( initialShowDatabases ).as( "SHOW DATABASES should return 2 followers per database" )
-                    .satisfies( containsRole( "follower", defaultDatabases, 2 ) );
+                        .satisfies( containsRole( "follower", defaultDatabases, 2 ) );
             assertThat( initialShowDatabases ).as( "SHOW DATABASES should return 1 leader per database" )
-                    .satisfies( containsRole( "leader", defaultDatabases, 1 ) );
+                        .satisfies( containsRole( "leader", defaultDatabases, 1 ) );
             assertThat( initialShowDatabases ).as( "SHOW DATABASES should return 2 replicas per database" )
-                    .satisfies( containsRole( "read_replica", defaultDatabases, 2 ) );
+                        .satisfies( containsRole( "read_replica", defaultDatabases, 2 ) );
             assertEventually( format( "SHOW DATABASES should show Started status for members %s, for all databases", clusterAddresses ),
-                    () -> membersHaveStateForDatabases( clusterAddresses, defaultDatabases, STARTED, cluster ), TRUE, timeout, SECONDS );
+                              () -> membersHaveStateForDatabases( clusterAddresses, defaultDatabases, STARTED, cluster ), TRUE, timeoutSeconds, SECONDS );
 
             // when
             createDatabase( ADDITIONAL_DATABASE_NAME, cluster );
+            waitForClusterToReachLocalState( cluster, getNamedDatabaseId( cluster, ADDITIONAL_DATABASE_NAME ), STARTED, timeoutSeconds );
 
             // then
             assertEventually( "SHOW DATABASES should return 1 leader for foo", () -> showDatabases( cluster ),
-                    containsRole( "leader", singleton( ADDITIONAL_DATABASE_NAME ), 1 ), timeout, SECONDS );
+                              containsRole( "leader", singleton( ADDITIONAL_DATABASE_NAME ), 1 ), timeoutSeconds, SECONDS );
             assertEventually( "SHOW DATABASES should return 2 followers for foo", () -> showDatabases( cluster ),
-                    containsRole( "follower", singleton( ADDITIONAL_DATABASE_NAME ), 2 ), timeout, SECONDS );
+                              containsRole( "follower", singleton( ADDITIONAL_DATABASE_NAME ), 2 ), timeoutSeconds, SECONDS );
             assertEventually( "SHOW DATABASES should return 2 replicas for foo", () -> showDatabases( cluster ),
-                    containsRole( "read_replica", singleton( ADDITIONAL_DATABASE_NAME ), 2 ), timeout, SECONDS );
+                              containsRole( "read_replica", singleton( ADDITIONAL_DATABASE_NAME ), 2 ), timeoutSeconds, SECONDS );
             assertEventually( format( "SHOW DATABASES should show Started status for members %s, for foo", clusterAddresses ),
-                    () -> membersHaveStateForDatabases( clusterAddresses, singleton( ADDITIONAL_DATABASE_NAME ), STARTED, cluster ), TRUE, timeout, SECONDS );
+                    () -> membersHaveStateForDatabases( clusterAddresses, singleton( ADDITIONAL_DATABASE_NAME ), STARTED, cluster ), TRUE, timeoutSeconds, SECONDS );
         }
 
         @Test
@@ -362,6 +389,8 @@ class ClusteredShowDatabasesIT
         {
             // given
             createDatabase( ADDITIONAL_DATABASE_NAME, cluster );
+            var additionalDatabaseId = getNamedDatabaseId( cluster, ADDITIONAL_DATABASE_NAME );
+            waitForClusterToReachLocalState( cluster, additionalDatabaseId, STARTED, timeoutSeconds );
             cluster.awaitLeader( ADDITIONAL_DATABASE_NAME );
 
             var clusterSize = cluster.allMembers().size();
@@ -370,22 +399,24 @@ class ClusteredShowDatabasesIT
                     .collect( Collectors.toSet() );
 
             assertEventually( "SHOW DATABASES should return one row per database per cluster member", () -> showDatabases( cluster ),
-                    new HamcrestCondition<>( hasSize( clusterSize * databasesWithAdditional.size() ) ), timeout, SECONDS );
+                              new HamcrestCondition<>( hasSize( clusterSize * databasesWithAdditional.size() ) ), timeoutSeconds, SECONDS );
             assertEventually( "SHOW DATABASES should return 1 leader per database", () -> showDatabases( cluster ),
-                    containsRole( "leader", databasesWithAdditional, 1 ), timeout, SECONDS );
+                              containsRole( "leader", databasesWithAdditional, 1 ), timeoutSeconds, SECONDS );
             assertEventually( "SHOW DATABASES should return 2 followers per database", () -> showDatabases( cluster ),
-                    containsRole( "follower", databasesWithAdditional, 2 ), timeout, SECONDS );
+                              containsRole( "follower", databasesWithAdditional, 2 ), timeoutSeconds, SECONDS );
             assertEventually( "SHOW DATABASES should return 2 replicas per database", () -> showDatabases( cluster ),
-                    containsRole( "read_replica", databasesWithAdditional, 2 ), timeout, SECONDS );
+                              containsRole( "read_replica", databasesWithAdditional, 2 ), timeoutSeconds, SECONDS );
             assertEventually( format( "SHOW DATABASES should show Started status for members %s, for all databases", clusterAddresses ),
-                    () -> membersHaveStateForDatabases( clusterAddresses, databasesWithAdditional, STARTED, cluster ), TRUE, timeout, SECONDS );
+                              () -> membersHaveStateForDatabases( clusterAddresses, databasesWithAdditional, STARTED, cluster ), TRUE, timeoutSeconds,
+                              SECONDS );
 
             // when
             dropDatabase( ADDITIONAL_DATABASE_NAME, cluster );
+            waitForClusterToReachLocalState( cluster, additionalDatabaseId, DROPPED, timeoutSeconds );
 
             // then
             assertEventually( "SHOW DATABASES should return no rows for additional database",
-                    () -> membersHostingDatabase( ADDITIONAL_DATABASE_NAME, cluster ), Set::isEmpty, timeout, SECONDS );
+                              () -> membersHostingDatabase( ADDITIONAL_DATABASE_NAME, cluster ), Set::isEmpty, timeoutSeconds, SECONDS );
         }
     }
 
@@ -413,7 +444,8 @@ class ClusteredShowDatabasesIT
         void shouldDisplayErrorForFailedDatabases() throws Exception
         {
             // given
-            var initialClusterAddresses = cluster.allMembers().stream()
+            var initialMembers = cluster.allMembers();
+            var initialClusterAddresses = initialMembers.stream()
                     .map( ClusterMember::boltAdvertisedAddress )
                     .collect( Collectors.toSet() );
 
@@ -429,22 +461,23 @@ class ClusteredShowDatabasesIT
             misConfiguredRR.start();
 
             assertEventually( "SHOW DATABASES should return one row per database per cluster member", () -> showDatabases( cluster ),
-                    new HamcrestCondition<>( hasSize( cluster.allMembers().size() * defaultDatabases.size() ) ), timeout, SECONDS );
+                              new HamcrestCondition<>( hasSize( cluster.allMembers().size() * defaultDatabases.size() ) ), timeoutSeconds, SECONDS );
             assertEventually( "SHOW DATABASES should return 1 leader per database", () -> showDatabases( cluster ),
-                    containsRole( "leader", defaultDatabases, 1 ), timeout, SECONDS );
+                              containsRole( "leader", defaultDatabases, 1 ), timeoutSeconds, SECONDS );
             assertEventually( "SHOW DATABASES should return 3 followers per database", () -> showDatabases( cluster ),
-                    containsRole( "follower", defaultDatabases, 3 ), timeout, SECONDS );
+                              containsRole( "follower", defaultDatabases, 3 ), timeoutSeconds, SECONDS );
             assertEventually( "SHOW DATABASES should return 3 read replicas per database", () -> showDatabases( cluster ),
-                    containsRole( "read_replica", defaultDatabases, 3 ), timeout, SECONDS );
+                              containsRole( "read_replica", defaultDatabases, 3 ), timeoutSeconds, SECONDS );
 
             // when
             createDatabase( ADDITIONAL_DATABASE_NAME, cluster );
+            waitForClusterToReachLocalState( initialMembers, getNamedDatabaseId( cluster, ADDITIONAL_DATABASE_NAME ), STARTED, timeoutSeconds );
 
             // then
             assertEventually( "SHOW DATABASES should return 2 rows with an error for database foo", () -> showDatabases( cluster ),
-                    containsError( "The total limit of databases is already reached", "foo", 2 ), timeout, SECONDS );
+                              containsError( "The total limit of databases is already reached", "foo", 2 ), timeoutSeconds, SECONDS );
             assertEventually( format( "SHOW DATABASES should show Started status for members %s, for database foo", initialClusterAddresses ),
-                    () -> membersHaveStateForDatabases( initialClusterAddresses, singleton( ADDITIONAL_DATABASE_NAME ), STARTED, cluster ), TRUE, timeout,
+                    () -> membersHaveStateForDatabases( initialClusterAddresses, singleton( ADDITIONAL_DATABASE_NAME ), STARTED, cluster ), TRUE, timeoutSeconds,
                     SECONDS );
         }
     }
@@ -452,8 +485,7 @@ class ClusteredShowDatabasesIT
     private static Condition<List<? extends ShowDatabasesResultRow>> containsRole( String expectedRole, Set<String> databaseNames, long expectedCount )
     {
         Iterable<Matcher<? super List<ShowDatabasesResultRow>>> allMatchers = databaseNames.stream()
-                .map( databaseName -> containsRole( expectedRole, databaseName, expectedCount ) )
-                .collect( Collectors.toList() );
+                .map( databaseName -> containsRole( expectedRole, databaseName, expectedCount ) ).collect( toList() );
         return new HamcrestCondition<>( Matchers.allOf( allMatchers ) );
     }
 
@@ -519,6 +551,73 @@ class ClusteredShowDatabasesIT
                     var actualState = statesByAddressAndName.get( addressNameKey );
                     return Objects.equals( expectedState.description(), actualState );
                 } );
+    }
+
+    private static void waitForClusterToReachLocalState( Cluster cluster, NamedDatabaseId namedDatabaseId, EnterpriseOperatorState operatorState,
+            int timeoutSeconds )
+            throws InterruptedException
+    {
+        waitForClusterToReachLocalState( cluster.allMembers(), namedDatabaseId, operatorState, timeoutSeconds );
+    }
+
+    private static void waitForClusterToReachLocalState( Set<ClusterMember> members, NamedDatabaseId namedDatabaseId, EnterpriseOperatorState operatorState,
+            int timeoutSeconds )
+            throws InterruptedException
+    {
+        var databaseStateServices = databaseStateServices( members );
+        assertEventually( () -> getOperatorStates( namedDatabaseId, databaseStateServices ), new AllStatesMatchMatcher( operatorState ), timeoutSeconds,
+                          SECONDS );
+    }
+
+    private static NamedDatabaseId getNamedDatabaseId( Cluster cluster, String databaseName )
+    {
+        for ( CoreClusterMember coreMember : cluster.coreMembers() )
+        {
+            try
+            {
+                return coreMember.databaseId( databaseName );
+            }
+            catch ( DatabaseNotFoundException ignore )
+            {
+            }
+        }
+        throw new DatabaseNotFoundException( "Could not get database id for `" + databaseName + "` from any core member." );
+    }
+
+    private static List<OperatorState> getOperatorStates( NamedDatabaseId namedDatabaseId,
+            Collection<DatabaseStateService> databaseStateServices )
+    {
+        return databaseStateServices.stream().map( databaseStateService ->
+                                                           databaseStateService == null ? DROPPED : databaseStateService
+                                                                   .stateOfDatabase( namedDatabaseId ) ).collect( toList() );
+    }
+
+    private static class AllStatesMatchMatcher extends TypeSafeMatcher<Collection<OperatorState>>
+    {
+        private EnterpriseOperatorState enterpriseOperatorState;
+
+        AllStatesMatchMatcher( EnterpriseOperatorState enterpriseOperatorState )
+        {
+            this.enterpriseOperatorState = enterpriseOperatorState;
+        }
+
+        @Override
+        protected boolean matchesSafely( Collection<OperatorState> item )
+        {
+            return item.stream()
+                    .allMatch( operatorState -> operatorState == enterpriseOperatorState );
+        }
+
+        @Override
+        public void describeTo( Description description )
+        {
+            description.appendText( "Assume all databases has state " + enterpriseOperatorState );
+        }
+    }
+
+    private static Collection<DatabaseStateService> databaseStateServices( Set<ClusterMember> members )
+    {
+        return members.stream().map( member -> member.resolveDependency( DEFAULT_DATABASE_NAME, DatabaseStateService.class ) ).collect( toList() );
     }
 
     private static Pair<String,String> boltDbNameCompositeKey( ShowDatabasesResultRow row )
