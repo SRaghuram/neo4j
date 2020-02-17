@@ -27,6 +27,9 @@
         <neo4j.version>${project.version}</neo4j.version>
         <s3mock.version>0.2.5</s3mock.version>
         <benchmarks.deploy.skip>true</benchmarks.deploy.skip>
+        <!-- This is benchmark version, that is going to be used for internal release -->
+        <!-- DO NOT REMOVE IT !!!, TOUCH IT ONLY WHEN YOU WANT TO DO INTERNAL RELEASE -->
+        <benchmarks.version>1.0.0-alpha2</benchmarks.version>
     </properties>
 
     <licenses>
@@ -119,6 +122,7 @@
         <module>benchmark-infra</module>
         <module>benchmark-neo4j-common</module>
         <module>benchmark-neo4j-common-test</module>
+        <module>benchmark-results-client-tests</module>
     </modules>
 
     <profiles>
