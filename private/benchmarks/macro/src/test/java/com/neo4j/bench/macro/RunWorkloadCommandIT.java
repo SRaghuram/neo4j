@@ -5,7 +5,6 @@
  */
 package com.neo4j.bench.macro;
 
-import com.google.common.collect.Lists;
 import com.neo4j.bench.client.AddProfilesCommand;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.database.Store;
@@ -14,6 +13,7 @@ import com.neo4j.bench.common.options.Edition;
 import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
 import com.neo4j.bench.common.process.JvmArgs;
+import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.tool.macro.ExecutionMode;
@@ -31,9 +31,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.test.extension.Inject;
@@ -58,7 +56,7 @@ class RunWorkloadCommandIT
     @Test
     void executeReadWorkloadForkedWithEmbedded() throws Exception
     {
-        ArrayList<ProfilerType> profilers = Lists.newArrayList( ProfilerType.JFR, ProfilerType.GC );
+        List<ParameterizedProfiler> profilers = ParameterizedProfiler.defaultProfilers( ProfilerType.JFR, ProfilerType.GC );
         executeWorkloadViaCommand( 1,
                                    Deployment.embedded(),
                                    READ_WORKLOAD,
@@ -70,7 +68,7 @@ class RunWorkloadCommandIT
     @Test
     void executeWriteWorkloadForkedWithEmbedded() throws Exception
     {
-        ArrayList<ProfilerType> profilers = Lists.newArrayList( ProfilerType.JFR, ProfilerType.GC );
+        List<ParameterizedProfiler> profilers = ParameterizedProfiler.defaultProfilers( ProfilerType.JFR, ProfilerType.GC );
         executeWorkloadViaCommand( 1,
                                    Deployment.embedded(),
                                    WRITE_WORKLOAD,
@@ -82,7 +80,7 @@ class RunWorkloadCommandIT
     @Test
     void executeLoadCsvWorkloadForkedWithEmbedded() throws Exception
     {
-        ArrayList<ProfilerType> profilers = Lists.newArrayList( ProfilerType.JFR, ProfilerType.GC );
+        List<ParameterizedProfiler> profilers = ParameterizedProfiler.defaultProfilers( ProfilerType.JFR, ProfilerType.GC );
         executeWorkloadViaCommand( 1,
                                    Deployment.embedded(),
                                    LOAD_CSV_WORKLOAD,
@@ -99,7 +97,7 @@ class RunWorkloadCommandIT
     void executeReadWorkloadForkedWithServer() throws Exception
     {
         // TODO run with GC profiler too, once it works
-        ArrayList<ProfilerType> profilers = Lists.newArrayList( ProfilerType.JFR );
+        List<ParameterizedProfiler> profilers = ParameterizedProfiler.defaultProfilers( ProfilerType.JFR );
         executeWorkloadViaCommand( 1,
                                    Deployment.server( getNeo4jDir() ),
                                    READ_WORKLOAD,
@@ -112,7 +110,7 @@ class RunWorkloadCommandIT
     void executeWriteWorkloadsForkedWithServer() throws Exception
     {
         // TODO run with GC profiler too, once it works
-        ArrayList<ProfilerType> profilers = Lists.newArrayList( ProfilerType.JFR );
+        List<ParameterizedProfiler> profilers = ParameterizedProfiler.defaultProfilers( ProfilerType.JFR );
         executeWorkloadViaCommand( 1,
                                    Deployment.server( getNeo4jDir() ),
                                    WRITE_WORKLOAD,
@@ -125,7 +123,7 @@ class RunWorkloadCommandIT
     void executeLoadCsvWorkloadsForkedWithServer() throws Exception
     {
         // TODO run with GC profiler too, once it works
-        ArrayList<ProfilerType> profilers = Lists.newArrayList( ProfilerType.JFR );
+        List<ParameterizedProfiler> profilers = ParameterizedProfiler.defaultProfilers( ProfilerType.JFR );
         executeWorkloadViaCommand( 1,
                                    Deployment.server( getNeo4jDir() ),
                                    LOAD_CSV_WORKLOAD,
@@ -138,7 +136,7 @@ class RunWorkloadCommandIT
     @Test
     void executeReadWorkloadInProcessWithEmbedded() throws Exception
     {
-        ArrayList<ProfilerType> profilers = Lists.newArrayList( ProfilerType.JFR, ProfilerType.GC );
+        List<ParameterizedProfiler> profilers = ParameterizedProfiler.defaultProfilers( ProfilerType.JFR, ProfilerType.GC );
         executeWorkloadViaCommand( 0,
                                    Deployment.embedded(),
                                    READ_WORKLOAD,
@@ -151,7 +149,7 @@ class RunWorkloadCommandIT
     @Test
     void executeWriteWorkloadInProcessWithEmbedded() throws Exception
     {
-        ArrayList<ProfilerType> profilers = Lists.newArrayList( ProfilerType.JFR, ProfilerType.GC );
+        List<ParameterizedProfiler> profilers = ParameterizedProfiler.defaultProfilers( ProfilerType.JFR, ProfilerType.GC );
         executeWorkloadViaCommand( 0,
                                    Deployment.embedded(),
                                    WRITE_WORKLOAD,
@@ -164,7 +162,7 @@ class RunWorkloadCommandIT
     @Test
     void executeLoadCsvWorkloadInProcessWithEmbedded() throws Exception
     {
-        ArrayList<ProfilerType> profilers = Lists.newArrayList( ProfilerType.JFR, ProfilerType.GC );
+        List<ParameterizedProfiler> profilers = ParameterizedProfiler.defaultProfilers( ProfilerType.JFR, ProfilerType.GC );
         executeWorkloadViaCommand( 0,
                                    Deployment.embedded(),
                                    LOAD_CSV_WORKLOAD,
@@ -182,7 +180,7 @@ class RunWorkloadCommandIT
     void executeReadWorkloadInProcessWithServer() throws Exception
     {
         // TODO run with GC profiler too, once it works
-        ArrayList<ProfilerType> profilers = Lists.newArrayList( ProfilerType.JFR );
+        List<ParameterizedProfiler> profilers = ParameterizedProfiler.defaultProfilers( ProfilerType.JFR );
         executeWorkloadViaCommand( 0,
                                    Deployment.server( getNeo4jDir() ),
                                    READ_WORKLOAD,
@@ -196,7 +194,7 @@ class RunWorkloadCommandIT
     void executeWriteWorkloadInProcessWithServer() throws Exception
     {
         // TODO run with GC profiler too, once it works
-        ArrayList<ProfilerType> profilers = Lists.newArrayList( ProfilerType.JFR );
+        List<ParameterizedProfiler> profilers = ParameterizedProfiler.defaultProfilers( ProfilerType.JFR );
         executeWorkloadViaCommand( 0,
                                    Deployment.server( getNeo4jDir() ),
                                    WRITE_WORKLOAD,
@@ -210,7 +208,7 @@ class RunWorkloadCommandIT
     void executeLoadCsvWorkloadInProcessWithServer() throws Exception
     {
         // TODO run with GC profiler too, once it works
-        ArrayList<ProfilerType> profilers = Lists.newArrayList( ProfilerType.JFR );
+        List<ParameterizedProfiler> profilers = ParameterizedProfiler.defaultProfilers( ProfilerType.JFR );
         executeWorkloadViaCommand( 0,
                                    Deployment.server( getNeo4jDir() ),
                                    LOAD_CSV_WORKLOAD,
@@ -222,14 +220,14 @@ class RunWorkloadCommandIT
     private void executeWorkloadViaCommand( int measurementForks,
                                             Deployment deployment,
                                             String workloadName,
-                                            ArrayList<ProfilerType> profilers,
+                                            List<ParameterizedProfiler> profilers,
                                             int minimumExpectedProfilerRecordingCount ) throws Exception
     {
         try ( Resources resources = new Resources( temporaryFolder.absolutePath().toPath() ) )
         {
             Path outputDir = Files.createTempDirectory( temporaryFolder.absolutePath().toPath(), "output" );
             Workload workload = Workload.fromName( workloadName, resources, deployment );
-            Path neo4jConfigFile = Files.createTempFile(temporaryFolder.absolutePath().toPath(),"neo4j", ".conf" );
+            Path neo4jConfigFile = Files.createTempFile( temporaryFolder.absolutePath().toPath(), "neo4j", ".conf" );
             Neo4jConfigBuilder.withDefaults().writeToFile( neo4jConfigFile );
             Store store = StoreTestUtil.createEmptyStoreFor( workload,
                                                              Files.createTempDirectory( temporaryFolder.absolutePath().toPath(), "store" ), // store
@@ -251,7 +249,6 @@ class RunWorkloadCommandIT
             String toolCommit = "1234abc";
 
             String triggeredBy = "xyz";
-            String jobId = "abc123";
 
             long parentTeamcityBuild = 0;
             long teamcityBuild = 1;

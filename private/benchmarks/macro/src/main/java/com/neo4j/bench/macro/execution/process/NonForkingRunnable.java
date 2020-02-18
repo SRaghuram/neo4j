@@ -8,7 +8,7 @@ package com.neo4j.bench.macro.execution.process;
 import com.neo4j.bench.common.database.Store;
 import com.neo4j.bench.common.model.Parameters;
 import com.neo4j.bench.common.process.JvmArgs;
-import com.neo4j.bench.common.profiling.ProfilerType;
+import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.common.util.Resources;
@@ -23,7 +23,7 @@ public class NonForkingRunnable<LAUNCHER extends DatabaseLauncher<CONNECTION>, C
     NonForkingRunnable( LAUNCHER launcher,
                         Query query,
                         ForkDirectory forkDirectory,
-                        List<ProfilerType> profilerTypes,
+                        List<ParameterizedProfiler> profilers,
                         Store originalStore,
                         Path neo4jConfigFile,
                         Jvm jvm,
@@ -33,7 +33,7 @@ public class NonForkingRunnable<LAUNCHER extends DatabaseLauncher<CONNECTION>, C
         super( launcher,
                query,
                forkDirectory,
-               profilerTypes,
+               profilers,
                originalStore,
                neo4jConfigFile,
                jvm,
@@ -46,19 +46,19 @@ public class NonForkingRunnable<LAUNCHER extends DatabaseLauncher<CONNECTION>, C
                                CONNECTION connection,
                                Query query,
                                ForkDirectory forkDirectory,
-                               List<ProfilerType> profilerTypes,
+                               List<ParameterizedProfiler> profilers,
                                Jvm jvm,
                                Path neo4jConfigFile,
                                JvmArgs jvmArgs,
                                Parameters clientParameters,
                                Resources resources )
     {
-        ProfilerType.assertInternal( profilerTypes );
+        ParameterizedProfiler.assertInternal( profilers );
         boolean isClientForked = false;
         List<String> commandArgs = launcher.toolArgs( query,
                                                       connection,
                                                       forkDirectory,
-                                                      profilerTypes,
+                                                      ParameterizedProfiler.profilerTypes( profilers ),
                                                       isClientForked,
                                                       neo4jConfigFile,
                                                       resources );

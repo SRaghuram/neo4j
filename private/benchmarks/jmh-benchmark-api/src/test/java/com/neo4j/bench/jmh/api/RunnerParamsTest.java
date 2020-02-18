@@ -7,6 +7,7 @@ package com.neo4j.bench.jmh.api;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import org.junit.Rule;
 import org.junit.Test;
@@ -49,7 +50,7 @@ public class RunnerParamsTest
         HashSet<String> expectedParamKeys = newHashSet( RunnerParams.PARAM_RUNNER_PARAMS,
                                                         RunnerParams.PARAM_WORK_DIR,
                                                         RunnerParams.PARAM_RUN_ID,
-                                                        RunnerParams.PARAM_PROFILER_TYPES );
+                                                        RunnerParams.PARAM_PROFILERS );
 
         assertThat( paramKeys, equalTo( expectedParamKeys ) );
         assertThat( runnerParams.workDir(), equalTo( workDir ) );
@@ -63,7 +64,7 @@ public class RunnerParamsTest
         HashSet<String> baseParamKeys = newHashSet( RunnerParams.PARAM_RUNNER_PARAMS,
                                                     RunnerParams.PARAM_WORK_DIR,
                                                     RunnerParams.PARAM_RUN_ID,
-                                                    RunnerParams.PARAM_PROFILER_TYPES );
+                                                    RunnerParams.PARAM_PROFILERS );
         Path workDir = temporaryFolder.newFolder().toPath();
 
         // when
@@ -71,7 +72,8 @@ public class RunnerParamsTest
 
         // update profiler types
         List<ProfilerType> expectedProfilerTypes1 = Lists.newArrayList( ProfilerType.GC, ProfilerType.ASYNC );
-        RunnerParams runnerParams1 = runnerParams0.copyWithProfilerTypes( expectedProfilerTypes1 );
+        RunnerParams runnerParams1 =
+                runnerParams0.copyWithProfilers( ParameterizedProfiler.defaultProfilers( expectedProfilerTypes1 ) );
         // update run ID
         RunnerParams runnerParams2 = runnerParams1.copyWithNewRunId();
         // add parameter

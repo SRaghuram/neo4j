@@ -10,7 +10,7 @@ import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
 import com.neo4j.bench.common.options.Version;
 import com.neo4j.bench.common.process.JvmArgs;
-import com.neo4j.bench.common.profiling.ProfilerType;
+import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 
@@ -40,7 +40,7 @@ public class RunMacroWorkloadParams
     private Path jvm;
 
     public static final String CMD_PROFILERS = "--profilers";
-    private List<ProfilerType> profilers;
+    private List<ParameterizedProfiler> profilers;
 
     public static final String CMD_WARMUP = "--warmup-count";
     private int warmupCount;
@@ -139,7 +139,7 @@ public class RunMacroWorkloadParams
     public RunMacroWorkloadParams( String workloadName,
                                    Edition neo4jEdition,
                                    Path jvm,
-                                   List<ProfilerType> profilers,
+                                   List<ParameterizedProfiler> profilers,
                                    int warmupCount,
                                    int measurementCount,
                                    Duration minMeasurementDuration,
@@ -214,7 +214,7 @@ public class RunMacroWorkloadParams
         return jvm;
     }
 
-    public List<ProfilerType> profilers()
+    public List<ParameterizedProfiler> profilers()
     {
         return profilers;
     }
@@ -369,7 +369,7 @@ public class RunMacroWorkloadParams
         map.put( CMD_WORKLOAD, workloadName );
         map.put( CMD_EDITION, neo4jEdition.name() );
         map.put( CMD_JVM_PATH, jvm.toAbsolutePath().toString() );
-        map.put( CMD_PROFILERS, ProfilerType.serializeProfilers( profilers ) );
+        map.put( CMD_PROFILERS, ParameterizedProfiler.serialize( profilers ) );
         map.put( CMD_WARMUP, Integer.toString( warmupCount ) );
         map.put( CMD_MEASUREMENT, Integer.toString( measurementCount ) );
         map.put( CMD_MIN_MEASUREMENT_DURATION, Long.toString( minMeasurementDuration.getSeconds() ) );

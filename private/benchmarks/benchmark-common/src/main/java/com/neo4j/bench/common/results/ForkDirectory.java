@@ -8,6 +8,7 @@ package com.neo4j.bench.common.results;
 import com.neo4j.bench.common.model.Benchmark;
 import com.neo4j.bench.common.model.BenchmarkGroup;
 import com.neo4j.bench.common.model.Parameters;
+import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.profiling.ProfilerRecordingDescriptor;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.profiling.RecordingType;
@@ -51,7 +52,7 @@ public class ForkDirectory
         return openAt( forkDir );
     }
 
-    static ForkDirectory findOrCreateAt( Path parentDir, String name, List<ProfilerType> profilers )
+    static ForkDirectory findOrCreateAt( Path parentDir, String name, List<ParameterizedProfiler> profilers )
     {
         Path dir = parentDir.resolve( BenchmarkUtil.sanitize( name ) );
         if ( Files.exists( dir ) )
@@ -66,7 +67,7 @@ public class ForkDirectory
         }
     }
 
-    static ForkDirectory createAt( Path parentDir, String name, List<ProfilerType> profilers )
+    static ForkDirectory createAt( Path parentDir, String name, List<ParameterizedProfiler> profilers )
     {
         try
         {
@@ -89,7 +90,7 @@ public class ForkDirectory
         return new ForkDirectory( dir );
     }
 
-    private static void saveForkDetails( Path dir, String name, List<ProfilerType> profilers )
+    private static void saveForkDetails( Path dir, String name, List<ParameterizedProfiler> profilers )
     {
         Path jsonPath = create( dir, FORK_JSON );
         ForkDescription forkDescription = new ForkDescription( name );
@@ -97,7 +98,7 @@ public class ForkDirectory
         JsonUtil.serializeJson( jsonPath, forkDescription );
     }
 
-    private static void updateForkDetails( Path jsonPath, List<ProfilerType> profilers )
+    private static void updateForkDetails( Path jsonPath, List<ParameterizedProfiler> profilers )
     {
         ForkDescription forkDescription = loadDescription( jsonPath );
         forkDescription.addProfilers( profilers );
@@ -287,7 +288,7 @@ public class ForkDirectory
 
     public Set<ProfilerType> profilers()
     {
-        return forkDescription.profilers();
+        return forkDescription.parameterizedProfilers().stream().map( ParameterizedProfiler::profilerType ).collect( Collectors.toSet() );
     }
 
     private static ForkDescription loadDescription( Path jsonPath )
@@ -328,7 +329,7 @@ public class ForkDirectory
     private static class ForkDescription
     {
         private final String name;
-        private final Set<ProfilerType> profilers;
+        private final Set<ParameterizedProfiler> parameterizedProfilers;
 
         private ForkDescription()
         {
@@ -338,7 +339,7 @@ public class ForkDirectory
         private ForkDescription( String name )
         {
             this.name = name;
-            this.profilers = new HashSet<>();
+            this.parameterizedProfilers = new HashSet<>();
         }
 
         private String name()
@@ -350,14 +351,14 @@ public class ForkDirectory
             return name;
         }
 
-        private Set<ProfilerType> profilers()
+        private Set<ParameterizedProfiler> parameterizedProfilers()
         {
-            return profilers;
+            return parameterizedProfilers;
         }
 
-        private void addProfilers( Collection<ProfilerType> newProfilers )
+        private void addProfilers( Collection<ParameterizedProfiler> newProfilers )
         {
-            this.profilers.addAll( newProfilers );
+            this.parameterizedProfilers.addAll( newProfilers );
         }
     }
 }

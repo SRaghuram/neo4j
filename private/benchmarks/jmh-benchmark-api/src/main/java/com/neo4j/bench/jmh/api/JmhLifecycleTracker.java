@@ -8,6 +8,7 @@ package com.neo4j.bench.jmh.api;
 import com.neo4j.bench.common.model.Benchmark;
 import com.neo4j.bench.common.model.BenchmarkGroup;
 import com.neo4j.bench.common.process.HasPid;
+import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.results.BenchmarkDirectory;
 import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
@@ -130,7 +131,7 @@ public class JmhLifecycleTracker
         BenchmarkDirectory benchmarkDir = benchmarkGroupDir.findOrCreate( benchmark );
         if ( forkDirectoryStatus.isNew )
         {
-            return benchmarkDir.create( forkDirectoryStatus.forkName, runnerParams.profilerTypes() );
+            return benchmarkDir.create( forkDirectoryStatus.forkName, runnerParams.profilers() );
         }
         else
         {
@@ -148,7 +149,7 @@ public class JmhLifecycleTracker
                // when fork count > 0, the fork directory should have been created already
                ? benchmarkDir.findOrFail( forkDirectoryStatus.forkName )
                // when fork count = 0 (special/debug case) the first call into this method will need to create the fork directory too
-               : benchmarkDir.findOrCreate( forkDirectoryStatus.forkName, runnerParams.profilerTypes() );
+               : benchmarkDir.findOrCreate( forkDirectoryStatus.forkName, runnerParams.profilers() );
     }
 
     public void reset()
@@ -235,7 +236,7 @@ public class JmhLifecycleTracker
     {
         private final String runId;
         private final long pid;
-        private final List<ProfilerType> profilerTypes;
+        private final List<ParameterizedProfiler> profilers;
 
         /**
          * WARNING: Never call this explicitly.
@@ -245,14 +246,14 @@ public class JmhLifecycleTracker
         {
             this.runId = null;
             this.pid = 42L;
-            this.profilerTypes = null;
+            this.profilers = null;
         }
 
         private LifeCycleEvent( RunnerParams runnerParams )
         {
             this.runId = runnerParams.runId();
             this.pid = HasPid.getPid().get();
-            this.profilerTypes = runnerParams.profilerTypes();
+            this.profilers = runnerParams.profilers();
         }
 
         private String runId()
@@ -267,7 +268,7 @@ public class JmhLifecycleTracker
 
         private List<ProfilerType> profilerTypes()
         {
-            return profilerTypes;
+            return ParameterizedProfiler.profilerTypes( profilers );
         }
 
         @Override

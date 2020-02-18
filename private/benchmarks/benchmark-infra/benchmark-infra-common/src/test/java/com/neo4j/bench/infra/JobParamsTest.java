@@ -25,9 +25,9 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Paths;
 import java.time.Duration;
-import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
+import static com.neo4j.bench.common.profiling.ParameterizedProfiler.defaultProfilers;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class JobParamsTest
@@ -57,7 +57,7 @@ public class JobParamsTest
                                         new RunMacroWorkloadParams( "workloadName",
                                                                     Edition.ENTERPRISE,
                                                                     Paths.get( "jvm" ).toAbsolutePath(),
-                                                                    Arrays.asList( ProfilerType.GC, ProfilerType.JFR ),
+                                                                    defaultProfilers( ProfilerType.GC, ProfilerType.JFR ),
                                                                     1,
                                                                     1,
                                                                     Duration.ofMillis( 1 ),
@@ -107,32 +107,32 @@ public class JobParamsTest
                         new BenchmarkingTool(
                                 MacroToolRunner.class,
                                 new RunMacroWorkloadParams( "workloadName",
-                                                       Edition.ENTERPRISE,
-                                                       Paths.get( "jvm" ).toAbsolutePath(),
-                                                       Arrays.asList( ProfilerType.GC, ProfilerType.JFR ),
-                                                       1,
-                                                       1,
-                                                       Duration.ofMillis( 1 ),
-                                                       Duration.ofMillis( 2 ),
-                                                       1,
-                                                       TimeUnit.MILLISECONDS,
-                                                       Runtime.DEFAULT,
-                                                       Planner.DEFAULT,
-                                                       ExecutionMode.EXECUTE,
-                                                       JvmArgs.from( "-Xmx4g", "-Xms4g" ),
-                                                       false,
-                                                       false,
-                                                       Deployment.server( temporaryFolder.newFolder().toPath().toString() ),
-                                                       "neo4jCommit",
-                                                       "3.4.12",
-                                                       "neo4jBranch",
-                                                       "neo4jBranchOwner",
-                                                       "toolCommit",
-                                                       "toolOwner",
-                                                       "toolBranch",
-                                                       123456L,
-                                                       123455L,
-                                                       "triggeredBy" ) ) ) );
+                                                            Edition.ENTERPRISE,
+                                                            Paths.get( "jvm" ).toAbsolutePath(),
+                                                            defaultProfilers( ProfilerType.GC, ProfilerType.JFR ),
+                                                            1,
+                                                            1,
+                                                            Duration.ofMillis( 1 ),
+                                                            Duration.ofMillis( 2 ),
+                                                            1,
+                                                            TimeUnit.MILLISECONDS,
+                                                            Runtime.DEFAULT,
+                                                            Planner.DEFAULT,
+                                                            ExecutionMode.EXECUTE,
+                                                            JvmArgs.from( "-Xmx4g", "-Xms4g" ),
+                                                            false,
+                                                            false,
+                                                            Deployment.server( temporaryFolder.newFolder().toPath().toString() ),
+                                                            "neo4jCommit",
+                                                            "3.4.12",
+                                                            "neo4jBranch",
+                                                            "neo4jBranchOwner",
+                                                            "toolCommit",
+                                                            "toolOwner",
+                                                            "toolBranch",
+                                                            123456L,
+                                                            123455L,
+                                                            "triggeredBy" ) ) ) );
         // when
 
         JobParams actual = JsonUtil.deserializeJson( JsonUtil.serializeJson( jobParams ), JobParams.class );

@@ -5,7 +5,7 @@
  */
 package com.neo4j.bench.micro;
 
-import com.google.common.collect.Lists;
+import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.profiling.RecordingType;
 import com.neo4j.bench.common.util.BenchmarkUtil;
@@ -193,7 +193,7 @@ class InteractiveRunIT extends AnnotationsFixture
                 measurementForks,
                 iterationCount,
                 iterationDuration,
-                Lists.newArrayList( ProfilerType.JFR ),
+                ParameterizedProfiler.defaultProfilers( ProfilerType.JFR ),
                 storesDir.toPath(),
                 profilerRecordingDirectory,
                 errorPolicy,

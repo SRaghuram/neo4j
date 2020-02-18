@@ -5,7 +5,6 @@
  */
 package com.neo4j.bench.macro;
 
-import com.google.common.collect.Lists;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
 import com.neo4j.bench.common.database.Neo4jStore;
 import com.neo4j.bench.common.model.Neo4jConfig;
@@ -13,6 +12,7 @@ import com.neo4j.bench.common.options.Edition;
 import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
 import com.neo4j.bench.common.process.JvmArgs;
+import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
 import com.neo4j.bench.common.tool.macro.Deployment;
@@ -60,7 +60,7 @@ class ConvenientLocalExecutionIT
     private static final int FORK_COUNT = 1;
     private static final int WARMUP_COUNT = 1;
     private static final int MEASUREMENT_COUNT = 1;
-    private static final List<ProfilerType> PROFILERS = Lists.newArrayList( ProfilerType.JFR );
+    private static final List<ParameterizedProfiler> PROFILERS = ParameterizedProfiler.defaultProfilers( ProfilerType.JFR );
     private static final ExecutionMode EXECUTION_MODE = ExecutionMode.EXECUTE;
     private static final JvmArgs JVM_ARGS = JvmArgs.from( "-Xms4g", "-Xmx4g" );
     private static final boolean RECREATE_SCHEMA = false;

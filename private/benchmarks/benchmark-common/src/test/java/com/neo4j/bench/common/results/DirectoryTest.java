@@ -9,6 +9,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.neo4j.bench.common.model.Benchmark;
 import com.neo4j.bench.common.model.BenchmarkGroup;
+import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import org.junit.jupiter.api.Test;
@@ -118,7 +119,7 @@ public class DirectoryTest
 
         assertThat( "New bench dir was not empty", benchDir.forks(), equalTo( Collections.emptyList() ) );
 
-        ForkDirectory forkDir1 = benchDir.create( FORK1, expectedProfilers1 );
+        ForkDirectory forkDir1 = benchDir.create( FORK1, ParameterizedProfiler.defaultProfilers( expectedProfilers1 ) );
         Path benchDirPath = Paths.get( benchDir.toAbsolutePath() );
         Path forkDirPath1 = Paths.get( forkDir1.toAbsolutePath() );
         Path expectedForkDirPath1 = benchDirPath.resolve( sanitize( FORK1 ) );
@@ -127,7 +128,7 @@ public class DirectoryTest
         assertThat( "Fork dir should know its profilers", forkDir1.profilers(), equalTo( Sets.newHashSet( expectedProfilers1 ) ) );
         assertThat( "Fork dir should know its name", forkDir1.name(), equalTo( FORK1 ) );
 
-        ForkDirectory forkDir2 = benchDir.create( FORK2, expectedProfilers2 );
+        ForkDirectory forkDir2 = benchDir.create( FORK2, ParameterizedProfiler.defaultProfilers( expectedProfilers2 ) );
 
         assertThat( forkDir2.profilers(), equalTo( Sets.newHashSet( expectedProfilers2 ) ) );
 
@@ -147,7 +148,8 @@ public class DirectoryTest
         BenchmarkGroupDirectory groupDir = BenchmarkGroupDirectory.createAt( parentDir, GROUP_1 );
         BenchmarkDirectory benchDir = groupDir.findOrCreate( BENCH_1 );
         List<ProfilerType> expectedProfilers = Lists.newArrayList( ProfilerType.JFR, ProfilerType.GC );
-        ForkDirectory forkDirBefore = benchDir.create( FORK1, expectedProfilers );
+        ForkDirectory forkDirBefore =
+                benchDir.create( FORK1, ParameterizedProfiler.defaultProfilers( expectedProfilers ) );
         ForkDirectory forkDirAfter = ForkDirectory.openAt( Paths.get( forkDirBefore.toAbsolutePath() ) );
         assertThat( forkDirBefore.toAbsolutePath(), equalTo( forkDirAfter.toAbsolutePath() ) );
         assertThat( forkDirBefore.name(), equalTo( forkDirAfter.name() ) );

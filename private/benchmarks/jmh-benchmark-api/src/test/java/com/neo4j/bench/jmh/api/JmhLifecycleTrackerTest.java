@@ -5,9 +5,9 @@
  */
 package com.neo4j.bench.jmh.api;
 
-import com.google.common.collect.Lists;
 import com.neo4j.bench.common.model.Benchmark;
 import com.neo4j.bench.common.model.BenchmarkGroup;
+import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.results.BenchmarkDirectory;
 import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
@@ -72,7 +72,7 @@ public class JmhLifecycleTrackerTest
         // given
         Path workDir = temporaryFolder.newFolder().toPath();
         RunnerParams runnerParams = RunnerParams.create( workDir )
-                                                .copyWithProfilerTypes( Lists.newArrayList( ProfilerType.GC ) );
+                                                .copyWithProfilers( ParameterizedProfiler.defaultProfilers( ProfilerType.GC ) );
         JmhLifecycleTracker before = JmhLifecycleTracker.init( workDir );
         List<BenchmarkGroupDirectory> groupsBefore = BenchmarkGroupDirectory.searchAllIn( workDir );
         assertTrue( groupsBefore.isEmpty() );
@@ -109,7 +109,7 @@ public class JmhLifecycleTrackerTest
         boolean isForking = true;
         Path workDir = temporaryFolder.newFolder().toPath();
         RunnerParams runnerParams = RunnerParams.create( workDir )
-                                                .copyWithProfilerTypes( Lists.newArrayList( ProfilerType.NO_OP ) );
+                                                .copyWithProfilers( ParameterizedProfiler.defaultProfilers( ProfilerType.NO_OP ) );
         JmhLifecycleTracker before = JmhLifecycleTracker.init( workDir );
 
         /*
@@ -165,7 +165,7 @@ public class JmhLifecycleTrackerTest
         // given
         Path workDir = temporaryFolder.newFolder().toPath();
         RunnerParams runnerParams = RunnerParams.create( workDir )
-                                                .copyWithProfilerTypes( Lists.newArrayList( ProfilerType.GC, ProfilerType.JFR ) );
+                                                .copyWithProfilers( ParameterizedProfiler.defaultProfilers( ProfilerType.GC, ProfilerType.JFR ) );
         JmhLifecycleTracker before = JmhLifecycleTracker.init( workDir );
 
         /*
@@ -224,7 +224,7 @@ public class JmhLifecycleTrackerTest
         // given
         Path workDir = temporaryFolder.newFolder().toPath();
         RunnerParams runnerParams = RunnerParams.create( workDir )
-                                                .copyWithProfilerTypes( Lists.newArrayList( ProfilerType.GC ) );
+                                                .copyWithProfilers( ParameterizedProfiler.defaultProfilers( ProfilerType.GC ) );
         JmhLifecycleTracker before = JmhLifecycleTracker.init( workDir );
 
         before.addTrial( runnerParams, GROUP, BENCHMARK );

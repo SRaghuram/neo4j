@@ -16,15 +16,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
-import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.testdirectory.TestDirectoryExtension;
 import org.neo4j.test.rule.TestDirectory;
 
-import static java.util.Collections.singletonList;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.hasXPath;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @TestDirectoryExtension
@@ -44,7 +40,7 @@ public class FlamegraphTest
                 BenchmarkGroupDirectory.findOrCreateAt( tempFolder.directory( "benchmark" ).toPath(), new BenchmarkGroup( "group" ) );
         BenchmarkDirectory benchmarkDirectory =
                 benchmarkGroupDirectory.findOrCreate( Benchmark.benchmarkFor( "description", "simpleName", Benchmark.Mode.LATENCY, Collections.emptyMap() ) );
-        ForkDirectory forkDirectory = benchmarkDirectory.create( "1", singletonList( ProfilerType.JFR ) );
+        ForkDirectory forkDirectory = benchmarkDirectory.create( "1", ParameterizedProfiler.defaultProfilers( ProfilerType.JFR ) );
         // when
         Flamegraph.createFlamegraphs( forkDirectory, flamegraphDir, collapsedStack, svgPath );
         // then

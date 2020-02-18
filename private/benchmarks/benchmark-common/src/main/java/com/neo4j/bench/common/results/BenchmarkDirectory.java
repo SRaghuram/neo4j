@@ -7,6 +7,7 @@ package com.neo4j.bench.common.results;
 
 import com.neo4j.bench.common.model.Benchmark;
 import com.neo4j.bench.common.model.BenchmarkGroup;
+import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.profiling.RecordingType;
 import com.neo4j.bench.common.util.BenchmarkUtil;
@@ -137,12 +138,12 @@ public class BenchmarkDirectory
         return ForkDirectory.findOrFailAt( dir, forkName );
     }
 
-    public ForkDirectory findOrCreate( String forkName, List<ProfilerType> profilers )
+    public ForkDirectory findOrCreate( String forkName, List<ParameterizedProfiler> profilers )
     {
         return ForkDirectory.findOrCreateAt( dir, forkName, profilers );
     }
 
-    public ForkDirectory create( String forkName, List<ProfilerType> profilers )
+    public ForkDirectory create( String forkName, List<ParameterizedProfiler> profilers )
     {
         return ForkDirectory.createAt( dir, forkName, profilers );
     }

@@ -49,6 +49,7 @@ import com.neo4j.bench.common.options.Version;
 import com.neo4j.bench.common.process.JvmArgs;
 import com.neo4j.bench.common.profiling.ExternalProfiler;
 import com.neo4j.bench.common.profiling.InternalProfiler;
+import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.profiling.Profiler;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.profiling.RecordingType;
@@ -106,9 +107,9 @@ public class RunExportCommand implements Runnable
 
     private static final String CMD_JSON_OUTPUT = "--json-output";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_JSON_OUTPUT},
-            description = "Path specifying where to export JSON-formatted results",
-            title = "JSON output" )
+             name = {CMD_JSON_OUTPUT},
+             description = "Path specifying where to export JSON-formatted results",
+             title = "JSON output" )
     @Required
     private File jsonOutput;
 
@@ -118,25 +119,25 @@ public class RunExportCommand implements Runnable
 
     private static final String CMD_NEO4J_COMMIT = "--neo4j-commit";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_NEO4J_COMMIT},
-            description = "Commit of Neo4j that benchmark is run against",
-            title = "Neo4j Commit" )
+             name = {CMD_NEO4J_COMMIT},
+             description = "Commit of Neo4j that benchmark is run against",
+             title = "Neo4j Commit" )
     @Required
     private String neo4jCommit;
 
     private static final String CMD_NEO4J_VERSION = "--neo4j-version";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_NEO4J_VERSION},
-            description = "Version of Neo4j that benchmark is run against (e.g., '3.0.2')",
-            title = "Neo4j Version" )
+             name = {CMD_NEO4J_VERSION},
+             description = "Version of Neo4j that benchmark is run against (e.g., '3.0.2')",
+             title = "Neo4j Version" )
     @Required
     private String neo4jVersion;
 
     private static final String CMD_NEO4J_BRANCH = "--neo4j-branch";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_NEO4J_BRANCH},
-            description = "Neo4j branch name",
-            title = "Neo4j Branch" )
+             name = {CMD_NEO4J_BRANCH},
+             description = "Neo4j branch name",
+             title = "Neo4j Branch" )
     @Required
     private String neo4jBranch;
 
@@ -149,17 +150,17 @@ public class RunExportCommand implements Runnable
 
     private static final String CMD_TEAMCITY_BUILD = "--teamcity_build";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_TEAMCITY_BUILD},
-            description = "Build number of the TeamCity build that ran the benchmarks",
-            title = "TeamCity Build Number" )
+             name = {CMD_TEAMCITY_BUILD},
+             description = "Build number of the TeamCity build that ran the benchmarks",
+             title = "TeamCity Build Number" )
     @Required
     private Long build;
 
     private static final String CMD_TEAMCITY_PARENT_BUILD = "--teamcity_parent_build";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_TEAMCITY_PARENT_BUILD},
-            description = "Build number of the TeamCity parent build, e.g., Packaging",
-            title = "TeamCity Parent Build Number" )
+             name = {CMD_TEAMCITY_PARENT_BUILD},
+             description = "Build number of the TeamCity parent build, e.g., Packaging",
+             title = "TeamCity Parent Build Number" )
     @Required
     private Long parentBuild;
 
@@ -169,25 +170,25 @@ public class RunExportCommand implements Runnable
 
     private static final String CMD_TOOL_COMMIT = "--tool-commit";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_TOOL_COMMIT},
-            description = "Commit of benchmarking tool used to run benchmark",
-            title = "Benchmark Tool Commit" )
+             name = {CMD_TOOL_COMMIT},
+             description = "Commit of benchmarking tool used to run benchmark",
+             title = "Benchmark Tool Commit" )
     @Required
     private String toolCommit;
 
     private static final String CMD_TOOL_BRANCH = "--tool-branch";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_TOOL_BRANCH},
-            description = "Tool branch name",
-            title = "Tool Branch" )
+             name = {CMD_TOOL_BRANCH},
+             description = "Tool branch name",
+             title = "Tool Branch" )
     @Required
     private String toolBranch;
 
     private static final String CMD_TOOL_BRANCH_OWNER = "--tool-branch-owner";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_TOOL_BRANCH_OWNER},
-            description = "Owner of repository containing Tool branch",
-            title = "Tool Branch Owner" )
+             name = {CMD_TOOL_BRANCH_OWNER},
+             description = "Owner of repository containing Tool branch",
+             title = "Tool Branch Owner" )
     @Required
     private String toolBranchOwner = "neo4j";
 
@@ -197,9 +198,9 @@ public class RunExportCommand implements Runnable
 
     private static final String CMD_LDBC_CONFIG = "--ldbc-config";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_LDBC_CONFIG},
-            description = "LDBC driver configuration file",
-            title = "LDBC Config" )
+             name = {CMD_LDBC_CONFIG},
+             description = "LDBC driver configuration file",
+             title = "LDBC Config" )
     @Required
     private File ldbcConfigFile;
 
@@ -226,9 +227,9 @@ public class RunExportCommand implements Runnable
 
     private static final String CMD_READ_THREADS = "--read-threads";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_READ_THREADS},
-            description = "Number of threads for executing read queries (write thread count is function of dataset)",
-            title = "Read thread count" )
+             name = {CMD_READ_THREADS},
+             description = "Number of threads for executing read queries (write thread count is function of dataset)",
+             title = "Read thread count" )
     @Required
     private int readThreads = 1;
 
@@ -248,9 +249,9 @@ public class RunExportCommand implements Runnable
 
     static final String CMD_TRIGGERED_BY = "--triggered-by";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_TRIGGERED_BY},
-            description = "Specifies user that triggered this build",
-            title = "Specifies user that triggered this build" )
+             name = {CMD_TRIGGERED_BY},
+             description = "Specifies user that triggered this build",
+             title = "Specifies user that triggered this build" )
     @Required
     private String triggeredBy;
 
@@ -260,25 +261,25 @@ public class RunExportCommand implements Runnable
 
     private static final String CMD_NEO4J_CONFIG = "--neo4j-config";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_NEO4J_CONFIG},
-            description = "Default Neo4j Configuration",
-            title = "Default Neo4j Configuration" )
+             name = {CMD_NEO4J_CONFIG},
+             description = "Default Neo4j Configuration",
+             title = "Default Neo4j Configuration" )
     @Required
     private File neo4jConfigFile;
 
     private static final String CMD_NEO4J_BENCHMARK_CONFIG = "--neo4j-benchmark-config";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_NEO4J_BENCHMARK_CONFIG},
-            description = "Benchmark Neo4j Configuration",
-            title = "Benchmark Neo4j Configuration" )
+             name = {CMD_NEO4J_BENCHMARK_CONFIG},
+             description = "Benchmark Neo4j Configuration",
+             title = "Benchmark Neo4j Configuration" )
     @Required
     private File neo4jBenchmarkConfigFile;
 
     static final String CMD_JVM_PATH = "--jvm";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_JVM_PATH},
-            description = "Path to JVM -- will also be used when launching fork processes",
-            title = "Path to JVM" )
+             name = {CMD_JVM_PATH},
+             description = "Path to JVM -- will also be used when launching fork processes",
+             title = "Path to JVM" )
     @Required
     private File jvmFile;
 
@@ -294,7 +295,7 @@ public class RunExportCommand implements Runnable
              name = {CMD_DB},
              description = "Neo4j database (graph.db) to copy into working directory," +
                            "E.g. 'db_sf001_p064_regular_utc_40ce/' not 'store/db_sf001_p064_regular_utc_40ce/'",
-            title = "Neo4j database" )
+             title = "Neo4j database" )
     @Required
     private File sourceDbDir;
 
@@ -328,17 +329,17 @@ public class RunExportCommand implements Runnable
 
     private static final String CMD_LDBC_JAR = "--ldbc-jar";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_LDBC_JAR},
-            description = "Neo4j LDBC executable .jar file",
-            title = "Executable .jar" )
+             name = {CMD_LDBC_JAR},
+             description = "Neo4j LDBC executable .jar file",
+             title = "Executable .jar" )
     @Required
     private File neo4jLdbcJar;
 
     private static final String CMD_REPETITION_COUNT = "--repetition-count";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_REPETITION_COUNT},
-            description = "Number of complete benchmark executions to perform, to average results over",
-            title = "Repetition count" )
+             name = {CMD_REPETITION_COUNT},
+             description = "Number of complete benchmark executions to perform, to average results over",
+             title = "Repetition count" )
     @Required
     private int repetitionCount = 1;
 
@@ -358,9 +359,9 @@ public class RunExportCommand implements Runnable
 
     private static final String CMD_WORKING_DIR = "--working-dir";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_WORKING_DIR},
-            description = "Working directory into which database will be copied",
-            title = "Working directory" )
+             name = {CMD_WORKING_DIR},
+             description = "Working directory into which database will be copied",
+             title = "Working directory" )
     @Required
     private File workingDir;
 
@@ -380,9 +381,9 @@ public class RunExportCommand implements Runnable
 
     private static final String CMD_PROFILES_DIR = "--profiles-dir";
     @Option( type = OptionType.COMMAND,
-            name = {CMD_PROFILES_DIR},
-            description = "Top level output directory for profiled forks",
-            title = "Profiling output directory" )
+             name = {CMD_PROFILES_DIR},
+             description = "Top level output directory for profiled forks",
+             title = "Profiling output directory" )
     @Required
     private File profilesDir;
 
@@ -406,17 +407,17 @@ public class RunExportCommand implements Runnable
             Jvm jvm = Jvm.bestEffortOrFail( this.jvmFile );
 
             // base profilers are run on every fork
-            ArrayList<ProfilerType> baseProfilers = Lists.newArrayList( ProfilerType.OOM );
+            List<ParameterizedProfiler> baseProfilers = ParameterizedProfiler.defaultProfilers( ProfilerType.OOM );
             if ( doTrace )
             {
-                baseProfilers.add( ProfilerType.JVM_LOGGING );
+                baseProfilers.addAll( ParameterizedProfiler.defaultProfilers( ProfilerType.JVM_LOGGING ) );
             }
             // additional profilers are run on one, profiling fork
-            List<ProfilerType> additionalProfilers = ProfilerType.deserializeProfilers( profilerNames );
-            for ( ProfilerType profiler : additionalProfilers )
+            List<ParameterizedProfiler> additionalProfilers = ParameterizedProfiler.parse( profilerNames );
+            for ( ParameterizedProfiler profiler : additionalProfilers )
             {
                 boolean errorOnMissingSecondaryEnvironmentVariables = true;
-                profiler.assertEnvironmentVariablesPresent( errorOnMissingSecondaryEnvironmentVariables );
+                profiler.profilerType().assertEnvironmentVariablesPresent( errorOnMissingSecondaryEnvironmentVariables );
             }
 
             System.out.println(
@@ -576,8 +577,8 @@ public class RunExportCommand implements Runnable
             BenchmarkGroup benchmarkGroup,
             Benchmark summaryBenchmark,
             LdbcRunConfig ldbcRunConfig,
-            List<ProfilerType> baseProfilers,
-            List<ProfilerType> additionalProfilers,
+            List<ParameterizedProfiler> baseProfilers,
+            List<ParameterizedProfiler> additionalProfilers,
             Jvm jvm )
     {
         BenchmarkGroupDirectory groupDir = BenchmarkGroupDirectory.createAt( resultsDir.toPath(), benchmarkGroup );
@@ -590,11 +591,11 @@ public class RunExportCommand implements Runnable
                 copyStore( ldbcRunConfig );
             }
 
-            for ( ProfilerType profiler : additionalProfilers )
+            for ( ParameterizedProfiler profiler : additionalProfilers )
             {
-                ArrayList<ProfilerType> profilers = new ArrayList<>( baseProfilers );
+                List<ParameterizedProfiler> profilers = new ArrayList<>( baseProfilers );
                 profilers.add( profiler );
-                ForkDirectory forkDir = benchmarkDir.create( "profiling-fork-" + profiler.name(), profilers );
+                ForkDirectory forkDir = benchmarkDir.create( "profiling-fork-" + profiler.profilerType().name(), profilers );
                 runBenchmarkRepetition(
                         benchmarkGroup,
                         summaryBenchmark,
@@ -629,6 +630,7 @@ public class RunExportCommand implements Runnable
                 // base profilers are run on every fork, we would get duplicate recordings if we copied them all into one folder
                 // also they are not interesting to upload to results store, it is enough that we have them in TeamCity artifacts
                 Set<RecordingType> excludedRecordingTypes = baseProfilers.stream()
+                                                                         .map( ParameterizedProfiler::profilerType )
                                                                          .map( ProfilerType::allRecordingTypes )
                                                                          .flatMap( List::stream )
                                                                          .collect( toSet() );
@@ -665,7 +667,7 @@ public class RunExportCommand implements Runnable
             String jvmArgs,
             File neo4jLdbcJar,
             String cliPrefix,
-            List<ProfilerType> profilerTypes )
+            List<ParameterizedProfiler> profilers )
     {
         try
         {
@@ -681,8 +683,9 @@ public class RunExportCommand implements Runnable
 
             List<InternalProfiler> internalProfilers = new ArrayList<>();
             List<ExternalProfiler> externalProfilers = new ArrayList<>();
-            for ( ProfilerType profilerType : profilerTypes )
+            for ( ParameterizedProfiler parameterizedProfiler : profilers )
             {
+                ProfilerType profilerType = parameterizedProfiler.profilerType();
                 Profiler profiler = profilerType.create();
                 if ( profilerType.isInternal() )
                 {

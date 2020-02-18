@@ -9,7 +9,7 @@ import com.neo4j.bench.common.model.Neo4jConfig;
 import com.neo4j.bench.common.options.Edition;
 import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
-import com.neo4j.bench.common.profiling.ProfilerType;
+import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.util.Jvm;
 import com.neo4j.bench.macro.workload.Query;
 
@@ -22,7 +22,7 @@ public class Options
 {
     private final Neo4jDeployment neo4jDeployment;
     private final Query query;
-    private final List<ProfilerType> profilers;
+    private final List<ParameterizedProfiler> profilers;
     private final List<String> jvmArgs;
     private final Planner planner;
     private final Runtime runtime;
@@ -40,7 +40,7 @@ public class Options
 
     Options( Neo4jDeployment neo4jDeployment,
              Query query,
-             List<ProfilerType> profilers,
+             List<ParameterizedProfiler> profilers,
              List<String> jvmArgs,
              Planner planner,
              Runtime runtime,
@@ -85,7 +85,7 @@ public class Options
         return query;
     }
 
-    public List<ProfilerType> profilers()
+    public List<ParameterizedProfiler> profilers()
     {
         return profilers;
     }

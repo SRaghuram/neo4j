@@ -20,7 +20,7 @@ import org.openjdk.jmh.infra.ThreadParams;
 public abstract class BaseBenchmark
 {
     @Param( {} )
-    public String profilerTypes;
+    public String profilers;
 
     @Param( {} )
     public String workDir;

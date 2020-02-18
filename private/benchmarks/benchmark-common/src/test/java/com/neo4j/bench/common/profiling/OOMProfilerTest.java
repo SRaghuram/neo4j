@@ -35,7 +35,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static java.lang.String.format;
-import static java.util.Collections.singletonList;
 import static org.hamcrest.Matchers.contains;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
@@ -73,18 +72,18 @@ public class OOMProfilerTest
                 Collections.emptyMap() );
         BenchmarkDirectory benchmarkDirectory = benchmarkGroupDirectory.findOrCreate( benchmark );
 
-        forkDirectory = benchmarkDirectory.findOrCreate( "fork", singletonList( ProfilerType.OOM ) );
+        forkDirectory = benchmarkDirectory.findOrCreate( "fork", ParameterizedProfiler.defaultProfilers( ProfilerType.OOM ) );
         forkDirectoryPath = Paths.get( forkDirectory.toAbsolutePath() );
     }
 
     @Test
-    public void jvmArgsShouldContainHeapDumpArgs() throws Exception
+    public void jvmArgsShouldContainHeapDumpArgs()
     {
 
         OOMProfiler oomProfiler = new OOMProfiler();
 
         // when
-        JvmArgs jvmArgs = null;
+        JvmArgs jvmArgs;
         try ( Resources resources = new Resources( forkDirectoryPath ) )
         {
             jvmArgs = oomProfiler.jvmArgs( jvmVersion, forkDirectory, benchmarkGroup, benchmark, Parameters.NONE, resources );
@@ -127,7 +126,7 @@ public class OOMProfilerTest
     }
 
     @Test
-    public void copyEmptyHeapDumpWhenProcessSucceeded() throws Exception
+    public void copyEmptyHeapDumpWhenProcessSucceeded()
     {
 
         OOMProfiler oomProfiler = new OOMProfiler();

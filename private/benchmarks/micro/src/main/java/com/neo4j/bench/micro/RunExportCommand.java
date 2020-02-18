@@ -20,7 +20,7 @@ import com.neo4j.bench.common.model.Repository;
 import com.neo4j.bench.common.model.TestRun;
 import com.neo4j.bench.common.model.TestRunReport;
 import com.neo4j.bench.common.options.Version;
-import com.neo4j.bench.common.profiling.ProfilerType;
+import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.tool.micro.BaseRunExportCommand;
 import com.neo4j.bench.common.tool.micro.RunExportParams;
 import com.neo4j.bench.common.util.BenchmarkUtil;
@@ -56,11 +56,11 @@ public class RunExportCommand extends BaseRunExportCommand
     @Override
     public void doRun( RunExportParams runExportParams )
     {
-        List<ProfilerType> profilers = ProfilerType.deserializeProfilers( runExportParams.profilerNames() );
-        for ( ProfilerType profiler : profilers )
+        List<ParameterizedProfiler> profilers = ParameterizedProfiler.parse( runExportParams.parameterizedProfilers() );
+        for ( ParameterizedProfiler profiler : profilers )
         {
             boolean errorOnMissingSecondaryEnvironmentVariables = true;
-            profiler.assertEnvironmentVariablesPresent( errorOnMissingSecondaryEnvironmentVariables );
+            profiler.profilerType().assertEnvironmentVariablesPresent( errorOnMissingSecondaryEnvironmentVariables );
         }
 
         // trim anything like '-M01' from end of Neo4j version string

@@ -7,7 +7,7 @@ package com.neo4j.bench.infra.macro;
 
 import com.google.common.collect.Lists;
 import com.neo4j.bench.common.options.Version;
-import com.neo4j.bench.common.profiling.ProfilerType;
+import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.tool.macro.RunMacroWorkloadParams;
 import com.neo4j.bench.common.tool.macro.RunToolMacroWorkloadParams;
 import com.neo4j.bench.common.util.BenchmarkUtil;
@@ -134,7 +134,7 @@ public class MacroToolRunner implements BenchmarkingToolRunner<RunToolMacroWorkl
                                    runMacroWorkloadParams.jvm().toAbsolutePath().toString(),
                                    neo4jConfigFile.toAbsolutePath().toString(),
                                    workDir.toAbsolutePath().toString(),
-                                   ProfilerType.serializeProfilers( runMacroWorkloadParams.profilers() ),
+                                   ParameterizedProfiler.serialize( runMacroWorkloadParams.profilers() ),
                                    Integer.toString( runMacroWorkloadParams.measurementForkCount() ),
                                    resultsJson.toAbsolutePath().toString(),
                                    runMacroWorkloadParams.unit().name(),

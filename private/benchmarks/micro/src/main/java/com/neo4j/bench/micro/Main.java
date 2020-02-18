@@ -8,8 +8,8 @@ package com.neo4j.bench.micro;
 import com.github.rvesse.airline.Cli;
 import com.github.rvesse.airline.builder.CliBuilder;
 import com.github.rvesse.airline.help.Help;
-import com.google.common.collect.Lists;
 import com.neo4j.bench.common.Neo4jConfigBuilder;
+import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.util.ErrorReporter;
 import com.neo4j.bench.common.util.Jvm;
@@ -22,7 +22,7 @@ import org.openjdk.jmh.runner.options.TimeValue;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
+import java.util.List;
 
 import static com.neo4j.bench.common.util.BenchmarkUtil.tryMkDir;
 
@@ -64,7 +64,7 @@ public class Main
         Path storesDir = Paths.get( "benchmark_stores" );
         Path profilerRecordingsOutputDir = Paths.get( "profiler_recordings" );
         int forkCount = 1;
-        ArrayList<ProfilerType> profilers = Lists.newArrayList( ProfilerType.JFR );
+        List<ParameterizedProfiler> profilers = ParameterizedProfiler.defaultProfilers( ProfilerType.JFR );
         ErrorReporter.ErrorPolicy errorPolicy = ErrorReporter.ErrorPolicy.FAIL;
         Path jvmFile = null;
         run( benchmark,
@@ -96,7 +96,7 @@ public class Main
             int forkCount,
             int iterationCount,
             TimeValue iterationDuration,
-            ArrayList<ProfilerType> profilers,
+            List<ParameterizedProfiler> profilers,
             Path storesDir,
             Path profilerRecordingsOutputDir,
             ErrorReporter.ErrorPolicy errorPolicy,

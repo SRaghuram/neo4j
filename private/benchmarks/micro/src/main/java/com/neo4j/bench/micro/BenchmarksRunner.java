@@ -5,10 +5,10 @@
  */
 package com.neo4j.bench.micro;
 
-import com.google.common.collect.Lists;
 import com.neo4j.bench.common.model.Benchmark;
 import com.neo4j.bench.common.model.BenchmarkGroup;
 import com.neo4j.bench.common.model.Neo4jConfig;
+import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.util.ErrorReporter;
 import com.neo4j.bench.common.util.Jvm;
@@ -95,7 +95,7 @@ class BenchmarksRunner extends Runner
                 {
                     ChainedOptionsBuilder builder = baseBuilder(
                             runnerParams.copyWithNewRunId()
-                                        .copyWithProfilerTypes( Lists.newArrayList( ProfilerType.NO_OP ) ),
+                                        .copyWithProfilers( ParameterizedProfiler.defaultProfilers( ProfilerType.NO_OP ) ),
                             benchmark,
                             1, // thread count
                             jvm,

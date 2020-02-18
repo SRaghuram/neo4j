@@ -12,7 +12,7 @@ import com.neo4j.bench.common.options.Edition;
 import com.neo4j.bench.common.options.Planner;
 import com.neo4j.bench.common.options.Runtime;
 import com.neo4j.bench.common.process.JvmArgs;
-import com.neo4j.bench.common.profiling.ProfilerType;
+import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 
 import java.io.File;
 import java.io.IOException;
@@ -245,7 +245,7 @@ public abstract class BaseRunWorkloadCommand implements Runnable
         }
 
         Deployment deployment = Deployment.parse( deploymentMode );
-        List<ProfilerType> profilers = ProfilerType.deserializeProfilers( profilerNames );
+        List<ParameterizedProfiler> profilers = ParameterizedProfiler.parse( profilerNames );
         Duration minMeasurementDuration = Duration.ofSeconds( minMeasurementSeconds );
         Duration maxMeasurementDuration = Duration.ofSeconds( maxMeasurementSeconds );
         JvmArgs jvmArgs = JvmArgs.parse( this.jvmArgs );

@@ -5,6 +5,7 @@
  */
 package com.neo4j.bench.jmh.api;
 
+import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import org.openjdk.jmh.infra.BenchmarkParams;
@@ -28,7 +29,7 @@ public final class RunnerParams
     static final String PARAM_RUNNER_PARAMS = "runnerParams";
     static final String PARAM_WORK_DIR = "workDir";
     static final String PARAM_RUN_ID = "runId";
-    static final String PARAM_PROFILER_TYPES = "profilerTypes";
+    static final String PARAM_PROFILERS = "profilers";
 
     public static RunnerParams extractFrom( BenchmarkParams benchmarkParams )
     {
@@ -46,7 +47,7 @@ public final class RunnerParams
         }
         assertParamExists( runnerParamNames, PARAM_WORK_DIR );
         assertParamExists( runnerParamNames, PARAM_RUN_ID );
-        assertParamExists( runnerParamNames, PARAM_PROFILER_TYPES );
+        assertParamExists( runnerParamNames, PARAM_PROFILERS );
         return runnerParams;
     }
 
@@ -63,7 +64,7 @@ public final class RunnerParams
         return new RunnerParams()
                 .copyWithParam( PARAM_WORK_DIR, workDir.toAbsolutePath().toString() )
                 .copyWithParam( PARAM_RUN_ID, UUID.randomUUID().toString() )
-                .copyWithParam( PARAM_PROFILER_TYPES, "" );
+                .copyWithParam( PARAM_PROFILERS, "" );
     }
 
     private final Map<String,String> runnerParams;
@@ -86,11 +87,11 @@ public final class RunnerParams
      *
      * @return new {@link RunnerParams} instance, with <code>profilerTypes<code/> updated.
      */
-    public RunnerParams copyWithProfilerTypes( List<ProfilerType> profilerTypes )
+    public RunnerParams copyWithProfilers( List<ParameterizedProfiler> profilers )
     {
         RunnerParams newRunnerParams = new RunnerParams();
         newRunnerParams.runnerParams.putAll( runnerParams );
-        newRunnerParams.runnerParams.put( PARAM_PROFILER_TYPES, ProfilerType.serializeProfilers( profilerTypes ) );
+        newRunnerParams.runnerParams.put( PARAM_PROFILERS, ParameterizedProfiler.serialize( profilers ) );
         return newRunnerParams;
     }
 
@@ -119,7 +120,12 @@ public final class RunnerParams
 
     public List<ProfilerType> profilerTypes()
     {
-        return ProfilerType.deserializeProfilers( runnerParams.get( PARAM_PROFILER_TYPES ) );
+        return ParameterizedProfiler.profilerTypes( profilers() );
+    }
+
+    public List<ParameterizedProfiler> profilers()
+    {
+        return ParameterizedProfiler.parse( runnerParams.get( PARAM_PROFILERS ) );
     }
 
     public boolean containsParam( String paramName )

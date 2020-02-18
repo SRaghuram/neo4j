@@ -6,11 +6,11 @@
 package com.neo4j.bench.jmh.api;
 
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
 import com.neo4j.bench.common.model.BenchmarkGroupBenchmark;
 import com.neo4j.bench.common.model.BenchmarkGroupBenchmarkMetrics;
 import com.neo4j.bench.common.model.Metrics;
 import com.neo4j.bench.common.model.TestRunError;
+import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.profiling.RecordingType;
 import com.neo4j.bench.common.util.ErrorReporter;
@@ -32,6 +32,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.function.Supplier;
 
+import static com.google.common.collect.Lists.newArrayList;
+import static com.neo4j.bench.common.profiling.ParameterizedProfiler.defaultProfilers;
 import static java.util.stream.Collectors.joining;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
@@ -63,8 +65,8 @@ public class RunIT
         Path workDir = Files.createTempDirectory( temporaryFolder, "work" );
         Path profilerRecordingsOutputDir = Files.createTempDirectory( temporaryFolder, "recordings" );
 
-        List<ProfilerType> profilers = (forkCount == 0) ? Collections.emptyList()
-                                                        : Lists.newArrayList( ProfilerType.JFR );
+        List<ParameterizedProfiler> profilers = (forkCount == 0) ? Collections.emptyList()
+                                                                 : defaultProfilers( ProfilerType.JFR );
 
         BenchmarksFinder benchmarksFinder = new BenchmarksFinder( SimpleBenchmark.class.getPackage().getName() );
         SuiteDescription defaultSuiteDescription = SuiteDescription.fromAnnotations( benchmarksFinder, new Validation() );
@@ -162,8 +164,8 @@ public class RunIT
         Path workDir = Files.createTempDirectory( temporaryFolder, "work" );
         Path profilerRecordingsOutputDir = Files.createTempDirectory( temporaryFolder, "recordings" );
 
-        List<ProfilerType> profilers = (forkCount == 0) ? Collections.emptyList()
-                                                        : Lists.newArrayList( ProfilerType.JFR );
+        List<ParameterizedProfiler> profilers = (forkCount == 0) ? Collections.emptyList()
+                                                                 : defaultProfilers(  ProfilerType.JFR  );
 
         ErrorReporter errorReporter = new ErrorReporter( ErrorReporter.ErrorPolicy.SKIP );
 

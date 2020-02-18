@@ -66,7 +66,7 @@ public class RunExportParams
     private File profilerOutput;
 
     public static final String CMD_PROFILERS = "--profilers";
-    private String profilerNames = "";
+    private String parameterizedProfilers = "";
 
     public static final String CMD_STORES_DIR = "--stores-dir";
     private File storesDir = Paths.get( "benchmark_stores" ).toFile();
@@ -118,7 +118,7 @@ public class RunExportParams
         this.benchConfigFile = benchConfigFile;
         this.jmhArgs = jmhArgs;
         this.profilerOutput = profilerOutput;
-        this.profilerNames = profilerNames;
+        this.parameterizedProfilers = profilerNames;
         this.storesDir = storesDir;
         this.errorPolicy = errorPolicy;
         this.jvmFile = jvmFile;
@@ -205,9 +205,9 @@ public class RunExportParams
         return profilerOutput;
     }
 
-    public String profilerNames()
+    public String parameterizedProfilers()
     {
-        return profilerNames;
+        return parameterizedProfilers;
     }
 
     public File storesDir()

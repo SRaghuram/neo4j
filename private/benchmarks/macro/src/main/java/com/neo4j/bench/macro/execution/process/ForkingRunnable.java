@@ -13,7 +13,7 @@ import com.neo4j.bench.common.process.JvmProcess;
 import com.neo4j.bench.common.process.JvmProcessArgs;
 import com.neo4j.bench.common.process.PgrepAndPsPid;
 import com.neo4j.bench.common.profiling.ExternalProfiler;
-import com.neo4j.bench.common.profiling.ProfilerType;
+import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.profiling.ScheduledProfilerRunner;
 import com.neo4j.bench.common.results.ForkDirectory;
 import com.neo4j.bench.common.util.Jvm;
@@ -35,7 +35,7 @@ public class ForkingRunnable<LAUNCHER extends DatabaseLauncher<CONNECTION>, CONN
     ForkingRunnable( LAUNCHER launcher,
                      Query query,
                      ForkDirectory forkDirectory,
-                     List<ProfilerType> profilerTypes,
+                     List<ParameterizedProfiler> profilers,
                      Store originalStore,
                      Path neo4jConfigFile,
                      Jvm jvm,
@@ -45,7 +45,7 @@ public class ForkingRunnable<LAUNCHER extends DatabaseLauncher<CONNECTION>, CONN
         super( launcher,
                query,
                forkDirectory,
-               profilerTypes,
+               profilers,
                originalStore,
                neo4jConfigFile,
                jvm,
@@ -58,19 +58,19 @@ public class ForkingRunnable<LAUNCHER extends DatabaseLauncher<CONNECTION>, CONN
                                CONNECTION connection,
                                Query query,
                                ForkDirectory forkDirectory,
-                               List<ProfilerType> profilerTypes,
+                               List<ParameterizedProfiler> profilers,
                                Jvm jvm,
                                Path neo4jConfigFile,
                                JvmArgs jvmArgs,
                                Parameters clientParameters,
                                Resources resources )
     {
-        ProfilerType.assertInternal( profilerTypes );
+        ParameterizedProfiler.assertInternal( profilers );
         boolean isClientForked = true;
         List<String> commandArgs = launcher.toolArgs( query,
                                                       connection,
                                                       forkDirectory,
-                                                      profilerTypes,
+                                                      ParameterizedProfiler.profilerTypes( profilers ),
                                                       isClientForked,
                                                       neo4jConfigFile,
                                                       resources );
@@ -86,12 +86,12 @@ public class ForkingRunnable<LAUNCHER extends DatabaseLauncher<CONNECTION>, CONN
                                                          .collect( toList() );
 
         JvmArgs clientJvmArgs = RunnableFork.addExternalProfilerJvmArgs( externalProfilers,
-                                                                              jvm,
-                                                                              forkDirectory,
-                                                                              query,
-                                                                              clientParameters,
-                                                                              jvmArgs,
-                                                                              resources );
+                                                                         jvm,
+                                                                         forkDirectory,
+                                                                         query,
+                                                                         clientParameters,
+                                                                         jvmArgs,
+                                                                         resources );
 
         JvmArgs enrichedClientJvmArgs = launcher.toolJvmArgs( clientJvmArgs );
 
@@ -111,13 +111,13 @@ public class ForkingRunnable<LAUNCHER extends DatabaseLauncher<CONNECTION>, CONN
         // redirect error to file
         Redirect errorRedirect = Redirect.to( forkDirectory.newErrorLog().toFile() );
         JvmProcess jvmProcess = JvmProcess.start(
-                                                jvmProcessArgs,
-                                                outputRedirect,
-                                                errorRedirect,
-                                                Arrays.asList( new JpsPid(), new PgrepAndPsPid() ));
+                jvmProcessArgs,
+                outputRedirect,
+                errorRedirect,
+                Arrays.asList( new JpsPid(), new PgrepAndPsPid() ) );
 
         // if any, schedule runs of scheduled profilers
-        ScheduledProfilerRunner scheduledProfilersRunner = ScheduledProfilerRunner.from(externalProfilers);
+        ScheduledProfilerRunner scheduledProfilersRunner = ScheduledProfilerRunner.from( externalProfilers );
         scheduledProfilersRunner.start( forkDirectory, query.benchmarkGroup(), query.benchmark(), clientParameters, jvm, jvmProcess.pid() );
 
         try
@@ -128,9 +128,9 @@ public class ForkingRunnable<LAUNCHER extends DatabaseLauncher<CONNECTION>, CONN
         {
             // make sure we clean up in profilers
             externalProfilers.forEach( profiler -> profiler.processFailed( forkDirectory,
-                    query.benchmarkGroup(),
-                    query.benchmark(),
-                    clientParameters ) );
+                                                                           query.benchmarkGroup(),
+                                                                           query.benchmark(),
+                                                                           clientParameters ) );
             // re throw exception
             throw e;
         }

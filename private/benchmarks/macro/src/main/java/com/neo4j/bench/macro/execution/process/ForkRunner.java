@@ -15,6 +15,7 @@ import com.neo4j.bench.common.process.JvmArgs;
 import com.neo4j.bench.common.process.JvmProcess;
 import com.neo4j.bench.common.process.JvmProcessArgs;
 import com.neo4j.bench.common.process.PgrepAndPsPid;
+import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.results.BenchmarkDirectory;
 import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
@@ -46,7 +47,7 @@ public class ForkRunner
                                                   Store store,
                                                   Edition edition,
                                                   Neo4jConfig neo4jConfig,
-                                                  List<ProfilerType> profilers,
+                                                  List<ParameterizedProfiler> profilers,
                                                   Jvm jvm,
                                                   int measurementForkCount,
                                                   TimeUnit unit,
@@ -59,9 +60,9 @@ public class ForkRunner
         try
         {
             // profiler forks: each profiler run in separate fork
-            for ( ProfilerType profiler : profilers )
+            for ( ParameterizedProfiler profiler : profilers )
             {
-                String forkName = "profiler-fork-" + profiler.name().toLowerCase();
+                String forkName = "profiler-fork-" + profiler.profilerType().name().toLowerCase();
                 ForkDirectory forkDirectory = benchmarkDir.create( forkName, singletonList( profiler ) );
                 Path neo4jConfigFile = forkDirectory.create( "neo4j.conf" );
                 Neo4jConfigBuilder.writeToFile( neo4jConfig, neo4jConfigFile );
@@ -92,7 +93,7 @@ public class ForkRunner
                                                      store,
                                                      neo4jConfigFile,
                                                      forkDirectory,
-                                                     singletonList( ProfilerType.OOM ),
+                                                     ParameterizedProfiler.defaultProfilers( ProfilerType.OOM ),
                                                      jvm,
                                                      doFork,
                                                      jvmArgs,
@@ -138,7 +139,7 @@ public class ForkRunner
                                       Store store,
                                       Path neo4jConfigFile,
                                       ForkDirectory forkDirectory,
-                                      List<ProfilerType> profilers,
+                                      List<ParameterizedProfiler> profilers,
                                       Jvm jvm,
                                       boolean doFork,
                                       JvmArgs jvmArgs,

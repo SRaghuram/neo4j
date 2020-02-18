@@ -5,13 +5,13 @@
  */
 package com.neo4j.bench.jmh.api;
 
-import com.google.common.collect.Lists;
 import com.neo4j.bench.common.model.Benchmark;
 import com.neo4j.bench.common.model.BenchmarkGroup;
 import com.neo4j.bench.common.model.BenchmarkGroupBenchmarkMetrics;
 import com.neo4j.bench.common.model.Benchmarks;
 import com.neo4j.bench.common.model.Metrics;
 import com.neo4j.bench.common.model.Neo4jConfig;
+import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.profiling.ProfilerType;
 import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
 import com.neo4j.bench.common.util.BenchmarkGroupBenchmarkMetricsPrinter;
@@ -40,6 +40,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 import static com.neo4j.bench.common.profiling.ProfilerType.NO_OP;
@@ -118,7 +119,7 @@ public abstract class Runner
 
     public BenchmarkGroupBenchmarkMetrics run(
             SuiteDescription suiteDescription,
-            List<ProfilerType> profilerTypes,
+            List<ParameterizedProfiler> profilers,
             String[] jvmArgs,
             int[] threadCounts,
             Path workDir,
@@ -160,7 +161,7 @@ public abstract class Runner
                         jvmArgs,
                         jmhArgs,
                         threadCounts,
-                        profilerTypes,
+                        profilers,
                         runnerParams,
                         errorReporter );
 
@@ -180,7 +181,7 @@ public abstract class Runner
                             runnerParams,
                             errorReporter );
 
-                    if ( !profilerTypes.isEmpty() )
+                    if ( !profilers.isEmpty() )
                     {
                         moveProfilerRecordingsTo( profilerRecordingsOutputDir, workDir );
                     }
@@ -281,7 +282,7 @@ public abstract class Runner
             String[] jvmArgs,
             String[] jmhArgs,
             int[] threadCounts,
-            List<ProfilerType> profilerTypes,
+            List<ParameterizedProfiler> profilers,
             RunnerParams runnerParams,
             ErrorReporter errorReporter )
     {
@@ -293,7 +294,7 @@ public abstract class Runner
 
         List<BenchmarkDescription> benchmarksWithProfiles = new ArrayList<>( benchmarks );
 
-        for ( ProfilerType profilerType : profilerTypes )
+        for ( ParameterizedProfiler profiler : profilers )
         {
             for ( int threadCount : threadCounts )
             {
@@ -304,9 +305,9 @@ public abstract class Runner
                         try
                         {
                             RunnerParams finalRunnerParams = runnerParams.copyWithNewRunId()
-                                                                         .copyWithProfilerTypes( Lists.newArrayList( profilerType ) );
+                                                                         .copyWithProfilers( Collections.singletonList( profiler ) );
 
-                            Class<? extends AbstractMicroProfiler> profiler = AbstractMicroProfiler.toJmhProfiler( profilerType );
+                            Class<? extends AbstractMicroProfiler> microProfiler = AbstractMicroProfiler.toJmhProfiler( profiler.profilerType() );
 
                             ChainedOptionsBuilder builder = baseBuilder(
                                     finalRunnerParams,
@@ -315,10 +316,10 @@ public abstract class Runner
                                     jvm,
                                     jvmArgs );
                             // profile using exactly one profiler
-                            builder = builder.addProfiler( profiler )
+                            builder = builder.addProfiler( microProfiler )
                                              .forks( 1 );
                             // allow Runner implementation to override/enrich JMH configuration
-                            builder = beforeProfilerRun( benchmark, profilerType, runnerParams, builder );
+                            builder = beforeProfilerRun( benchmark, profiler.profilerType(), runnerParams, builder );
                             // user provided 'additional' JMH arguments these take precedence over all other configurations. apply then last.
                             builder = JmhOptionsUtil.applyOptions( builder, new CommandLineOptions( jmhArgs ) );
                             Options options = builder.build();
@@ -340,7 +341,7 @@ public abstract class Runner
                         }
                         finally
                         {
-                            afterProfilerRun( benchmark, profilerType, runnerParams, errorReporter );
+                            afterProfilerRun( benchmark, profiler.profilerType(), runnerParams, errorReporter );
                         }
                     }
                 }
@@ -365,7 +366,7 @@ public abstract class Runner
         System.out.println( "-------------------------------------------------------------------------" );
         System.out.println( "\n\n" );
 
-        RunnerParams finalRunnerParams = runnerParams.copyWithProfilerTypes( Lists.newArrayList( NO_OP ) );
+        RunnerParams finalRunnerParams = runnerParams.copyWithProfilers( ParameterizedProfiler.defaultProfilers( NO_OP ) );
         for ( int threadCount : threadCounts )
         {
             for ( BenchmarkDescription benchmark : benchmarks )

@@ -26,7 +26,7 @@ import com.neo4j.bench.common.model.Plan;
 import com.neo4j.bench.common.model.Repository;
 import com.neo4j.bench.common.model.TestRun;
 import com.neo4j.bench.common.model.TestRunReport;
-import com.neo4j.bench.common.profiling.ProfilerType;
+import com.neo4j.bench.common.profiling.ParameterizedProfiler;
 import com.neo4j.bench.common.results.BenchmarkDirectory;
 import com.neo4j.bench.common.results.BenchmarkGroupDirectory;
 import com.neo4j.bench.common.tool.macro.BaseRunWorkloadCommand;
@@ -122,10 +122,10 @@ public class RunMacroWorkloadCommand extends BaseRunWorkloadCommand
     @Override
     protected void doRun( RunMacroWorkloadParams params )
     {
-        for ( ProfilerType profiler : params.profilers() )
+        for ( ParameterizedProfiler profiler : params.profilers() )
         {
             boolean errorOnMissingFlameGraphDependencies = !params.isSkipFlameGraphs();
-            profiler.assertEnvironmentVariablesPresent( errorOnMissingFlameGraphDependencies );
+            profiler.profilerType().assertEnvironmentVariablesPresent( errorOnMissingFlameGraphDependencies );
         }
 
         Neo4jDeployment neo4jDeployment = Neo4jDeployment.from( params.deployment() );
