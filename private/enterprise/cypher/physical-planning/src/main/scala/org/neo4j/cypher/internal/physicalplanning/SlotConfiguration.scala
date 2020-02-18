@@ -10,28 +10,23 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.ApplyPlanSlo
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.CachedPropertySlotKey
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.SlotKey
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.VariableSlotKey
-import org.neo4j.cypher.internal.runtime.EntityById
 import org.neo4j.cypher.internal.runtime.CypherRow
+import org.neo4j.cypher.internal.runtime.EntityById
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.cypher.internal.util.symbols.CTAny
 import org.neo4j.cypher.internal.util.symbols.CypherType
 import org.neo4j.exceptions.InternalException
 import org.neo4j.values.AnyValue
 
-import scala.collection.immutable
 import scala.collection.mutable
 
 object SlotConfiguration {
   def empty = new SlotConfiguration(mutable.Map.empty, 0, 0)
 
+  // This method uses `empty`, `newLong`, and `newReference`, instead of passing in a Map, so that aliases are computed correctly.
   def apply(slots: Map[String, Slot], numberOfLongs: Int, numberOfReferences: Int): SlotConfiguration = {
     val stringToSlot = mutable.Map[SlotKey, Slot](slots.toSeq.map(kv => (VariableSlotKey(kv._1), kv._2)): _*)
     new SlotConfiguration(stringToSlot, numberOfLongs, numberOfReferences)
-  }
-
-  def isLongSlot(slot: Slot): Boolean = slot match {
-    case _: LongSlot => true
-    case _ => false
   }
 
   case class Size(nLongs: Int, nReferences: Int)
@@ -58,12 +53,15 @@ object SlotConfiguration {
  * @param numberOfLongs the number of long slots.
  * @param numberOfReferences the number of ref slots.
  */
-class SlotConfiguration(private val slots: mutable.Map[SlotConfiguration.SlotKey, Slot],
+class SlotConfiguration private(private val slots: mutable.Map[SlotConfiguration.SlotKey, Slot],
                         var numberOfLongs: Int,
                         var numberOfReferences: Int) {
 
-  private val aliases: mutable.Set[String] = mutable.Set()
-  private val slotAliases = new mutable.HashMap[Slot, mutable.Set[String]] with mutable.MultiMap[Slot, String]
+
+  // For each existing variable key, a mapping to all aliases.
+  // If x is added first, and y and z are aliases of x, the mapping will look like "x" -> Set("y", "z")
+  // Contains only information about VariableSlotKeys
+  private val slotAliases = new mutable.HashMap[String, mutable.Set[String]] with mutable.MultiMap[String, String]
 
   private val getters: mutable.Map[String, CypherRow => AnyValue] = new mutable.HashMap[String, CypherRow => AnyValue]()
   private val setters: mutable.Map[String, (CypherRow, AnyValue) => Unit] = new mutable.HashMap[String, (CypherRow, AnyValue) => Unit]()
@@ -76,19 +74,22 @@ class SlotConfiguration(private val slots: mutable.Map[SlotConfiguration.SlotKey
     val slot = slots.getOrElse(VariableSlotKey(existingKey),
       throw new SlotAllocationFailed(s"Tried to alias non-existing slot '$existingKey'  with alias '$newKey'"))
     slots.put(VariableSlotKey(newKey), slot)
-    aliases.add(newKey)
-    slotAliases.addBinding(slot, newKey)
+    slotAliases.addBinding(existingKey, newKey)
     this
   }
 
+  /**
+   * Test if a slot key refers to an alias.
+   * NOTE: method can only test keys that are either 'original key' or alias, MUST NOT be called on keys that are neither (i.e., do not exist in the configuration).
+   */
   def isAlias(key: String): Boolean = {
-    aliases.contains(key)
+    !slotAliases.contains(key)
   }
 
   def apply(key: String): Slot = slots.apply(VariableSlotKey(key))
 
   def nameOfLongSlot(offset: Int): Option[String] = slots.collectFirst {
-    case (VariableSlotKey(name), LongSlot(o, _, _)) if o == offset && !aliases(name) => name
+    case (VariableSlotKey(name), LongSlot(o, _, _)) if o == offset && !isAlias(name) => name
   }
 
   def filterSlots[U](f: ((SlotKey,Slot)) => Boolean): Iterable[Slot] = {
@@ -104,8 +105,11 @@ class SlotConfiguration(private val slots: mutable.Map[SlotConfiguration.SlotKey
 
   def copy(): SlotConfiguration = {
     val newPipeline = new SlotConfiguration(this.slots.clone(), numberOfLongs, numberOfReferences)
-    newPipeline.aliases ++= aliases
-    newPipeline.slotAliases ++= slotAliases
+    slotAliases.foreach {
+      case (key, aliases) =>
+        newPipeline.slotAliases.put(key, mutable.Set.empty[String])
+        aliases.foreach(alias => newPipeline.slotAliases.addBinding(key, alias))
+    }
     newPipeline
   }
 
@@ -115,15 +119,20 @@ class SlotConfiguration(private val slots: mutable.Map[SlotConfiguration.SlotKey
     new SlotConfiguration(applyPlanSlots, 0, 0)
   }
 
+  @scala.annotation.tailrec
   private def replaceExistingSlot(key: String, existingSlot: Slot, modifiedSlot: Slot): Unit = {
-    val existingAliases = slotAliases.getOrElse(existingSlot,
-      throw new InternalError(s"Slot allocation failure - missing slot $existingSlot for $key")
-    )
-    require(existingAliases.contains(key))
-    slotAliases.put(modifiedSlot, existingAliases)
-    // Propagate changes to all corresponding entries in the slots map
-    existingAliases.foreach(alias => slots.put(VariableSlotKey(alias), modifiedSlot))
-    slotAliases.remove(existingSlot)
+    if (slotAliases.contains(key)) {
+      val existingAliases = slotAliases(key)
+      // Propagate changes to all corresponding entries in the slots map
+      slots.put(VariableSlotKey(key), modifiedSlot)
+      existingAliases.foreach(alias => slots.put(VariableSlotKey(alias), modifiedSlot))
+    } else {
+      // Find original key
+      val originalKey = slotAliases.find {
+        case (_, aliases) => aliases.contains(key)
+      }.map(_._1).getOrElse(throw new InternalException(s"No original key found for alias $key"))
+      replaceExistingSlot(originalKey, existingSlot, modifiedSlot)
+    }
   }
 
   private def unifyTypeAndNullability(key: String, existingSlot: Slot, newSlot: Slot): Unit = {
@@ -163,7 +172,7 @@ class SlotConfiguration(private val slots: mutable.Map[SlotConfiguration.SlotKey
 
       case None =>
         slots.put(VariableSlotKey(key), slot)
-        slotAliases.addBinding(slot, key)
+        slotAliases.put(key, mutable.Set.empty[String])
         numberOfLongs = numberOfLongs + 1
     }
     this
@@ -193,7 +202,7 @@ class SlotConfiguration(private val slots: mutable.Map[SlotConfiguration.SlotKey
 
       case None =>
         slots.put(slotKey, slot)
-        slotAliases.addBinding(slot, key)
+        slotAliases.put(key, mutable.Set.empty[String])
         numberOfReferences = numberOfReferences + 1
     }
     this
@@ -205,6 +214,11 @@ class SlotConfiguration(private val slots: mutable.Map[SlotConfiguration.SlotKey
       case Some(_) =>
         // RefSlots for cached node properties are always compatible and identical in nullability and type. We can therefore reuse the existing slot.
         if (shouldDuplicate) {
+          // In case we want to copy a whole bunch of slots at runtime using Arraycopy, we dont want to exclude same cached property slot,
+          // even if it already exists in the row. To make that possible, we increase the number of references here, which will mean that there will be no
+          // assigned slot for that array index in the references array. We can then simply copy the cached property into that position together with all
+          // the other slots. We won't read it ever again from that array position, we will rather read the duplicate that exists at some other position
+          // in the row.
           numberOfReferences += 1
         }
 
@@ -244,13 +258,15 @@ class SlotConfiguration(private val slots: mutable.Map[SlotConfiguration.SlotKey
 
   def getCachedPropertyOffsetFor(key: ASTCachedProperty): Int = slots(CachedPropertySlotKey(key)).offset
 
-  def updateAccessorFunctions(key: String, getter: CypherRow => AnyValue, setter: (CypherRow, AnyValue) => Unit,
+  def updateAccessorFunctions(key: String,
+                              getter: CypherRow => AnyValue,
+                              setter: (CypherRow, AnyValue) => Unit,
                               primitiveNodeSetter: Option[(CypherRow, Long, EntityById) => Unit],
                               primitiveRelationshipSetter: Option[(CypherRow, Long, EntityById) => Unit]): Unit = {
     getters += key -> getter
     setters += key -> setter
-    primitiveNodeSetter.map(primitiveNodeSetters += key -> _)
-    primitiveRelationshipSetter.map(primitiveRelationshipSetters += key -> _)
+    primitiveNodeSetter.foreach(primitiveNodeSetters += key -> _)
+    primitiveRelationshipSetter.foreach(primitiveRelationshipSetters += key -> _)
   }
 
   def getter(key: String): CypherRow => AnyValue = {
@@ -277,12 +293,21 @@ class SlotConfiguration(private val slots: mutable.Map[SlotConfiguration.SlotKey
     primitiveRelationshipSetters.get(key)
   }
 
-  // NOTE: This will give duplicate slots when we have aliases
+  /**
+   * Apply a function to all SlotKey->Slot tuples.
+   * If there are aliases to the same Slot, the function will be applied for each SlotKey.
+   */
   def foreachSlot[U](f: ((SlotKey, Slot)) => U): Unit = {
     slots.foreach(f)
   }
 
-  // NOTE: This will give duplicate slots when we have aliases
+  /**
+   * Apply a function to all SlotKey->Slot tuples.
+   * The function will be applied in increasing slot offset order, first for the long slots and then for the ref slots.
+   * If there are aliases to the same Slot, the function will be applied for each SlotKey.
+   *
+   * @param skipFirst the amount of longs and refs to be skipped in the beginning
+   */
   def foreachSlotOrdered(f: ((SlotKey, Slot)) => Unit,
                          skipFirst: SlotConfiguration.Size = SlotConfiguration.Size.zero
                         ): Unit = {
@@ -328,53 +353,7 @@ class SlotConfiguration(private val slots: mutable.Map[SlotConfiguration.SlotKey
 
   override def toString = s"SlotConfiguration(longs=$numberOfLongs, refs=$numberOfReferences, slots=$slots)"
 
-  /**
-   * NOTE: Only use for debugging
-   */
-  def getLongSlots: immutable.IndexedSeq[SlotWithAliases] =
-    slotAliases.toIndexedSeq.collect {
-      case (slot: LongSlot, aliasesForSlot) => LongSlotWithAliases(slot, aliasesForSlot.toSet)
-    }.sorted(SlotWithAliasesOrdering)
-
-  /**
-   * NOTE: Only use for debugging
-   */
-  def getRefSlots: immutable.IndexedSeq[SlotWithAliases] =
-    slotAliases.toIndexedSeq.collect {
-      case (slot: RefSlot, aliasesForSlot) => RefSlotWithAliases(slot, aliasesForSlot.toSet)
-    }.sorted(SlotWithAliasesOrdering)
-
-  /**
-   * NOTE: Only use for debugging
-   */
-  def getCachedPropertySlots: immutable.IndexedSeq[SlotWithAliases] =
-    slots.toIndexedSeq.collect {
-      case (CachedPropertySlotKey(cachedProperty), slot: RefSlot) => RefSlotWithAliases(slot, Set(cachedProperty.asCanonicalStringVal))
-    }.sorted(SlotWithAliasesOrdering)
-
   def hasCachedPropertySlot(key: ASTCachedProperty): Boolean = slots.contains(CachedPropertySlotKey(key))
 
   def getCachedPropertySlot(key: ASTCachedProperty): Option[RefSlot] = slots.get(CachedPropertySlotKey(key)).asInstanceOf[Option[RefSlot]]
-
-  object SlotWithAliasesOrdering extends Ordering[SlotWithAliases] {
-    def compare(x: SlotWithAliases, y: SlotWithAliases): Int = (x, y) match {
-      case (_: LongSlotWithAliases, _: RefSlotWithAliases) =>
-        -1
-      case (_: RefSlotWithAliases, _: LongSlotWithAliases) =>
-        1
-      case _ =>
-        x.slot.offset - y.slot.offset
-    }
-  }
-
-  object SlotOrdering extends Ordering[Slot] {
-    def compare(x: Slot, y: Slot): Int = (x, y) match {
-      case (_: LongSlot, _: RefSlot) =>
-        -1
-      case (_: RefSlot, _: LongSlot) =>
-        1
-      case _ =>
-        x.offset - y.offset
-    }
-  }
 }

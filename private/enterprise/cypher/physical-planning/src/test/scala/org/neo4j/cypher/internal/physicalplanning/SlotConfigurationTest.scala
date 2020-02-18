@@ -102,6 +102,31 @@ class SlotConfigurationTest extends CypherFunSuite with AstConstructionTestSuppo
     slots("x") should equal(RefSlot(0, nullable = true, CTList(CTNumber)))
   }
 
+  test("allocating same variable name on an alias should change slot for all aliases") {
+    // given
+    val slots = SlotConfiguration.empty
+    slots.newReference("x", nullable = false, CTList(CTNumber))
+    slots.newReference("y", nullable = false, CTList(CTNumber))
+    slots.addAlias("x2", "x")
+    slots.addAlias("x3", "x")
+    slots.addAlias("y2", "y")
+
+    // when called on original key
+    slots.newReference("y", nullable = true, CTList(CTInteger))
+
+    // then
+    slots("y") should equal(RefSlot(1, nullable = true, CTList(CTNumber)))
+    slots("y2") should equal(RefSlot(1, nullable = true, CTList(CTNumber)))
+
+    // and when called on an alias
+    slots.newReference("x2", nullable = true, CTList(CTInteger))
+
+    // then
+    slots("x") should equal(RefSlot(0, nullable = true, CTList(CTNumber)))
+    slots("x2") should equal(RefSlot(0, nullable = true, CTList(CTNumber)))
+    slots("x3") should equal(RefSlot(0, nullable = true, CTList(CTNumber)))
+  }
+
   test("can't overwrite variable name by mistake1") {
     // given
     val slots = SlotConfiguration.empty
@@ -165,7 +190,7 @@ class SlotConfigurationTest extends CypherFunSuite with AstConstructionTestSuppo
     clone.get("a") shouldBe empty
     clone.numberOfReferences should equal(0)
     clone.isAlias("z") shouldBe true
-    clone.isAlias("w") shouldBe false
+    clone.get("w") shouldBe None
     clone("z") should equal(clone("x"))
   }
 

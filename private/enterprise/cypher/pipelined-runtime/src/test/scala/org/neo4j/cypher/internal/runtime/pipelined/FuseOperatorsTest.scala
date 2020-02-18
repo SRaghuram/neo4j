@@ -388,9 +388,7 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
   private val fusionPolicy = OperatorFusionPolicy(fusionEnabled = true, fusionOverPipelinesEnabled = true)
 
   class PipelineBuilder(head: LogicalPlan) {
-    private val slots = mutable.Map.empty[SlotKey, Slot]
-    private var longCount = 0
-    private var refCount = 0
+    private val slotConfig = SlotConfiguration.empty
     private var current = head
     private var bufferId = 0
     val applyPlans = new ApplyPlans()
@@ -425,21 +423,18 @@ class FuseOperatorsTest extends CypherFunSuite with AstConstructionTestSupport  
     }
 
     def addNode(node: String): Unit = {
-      slots += VariableSlotKey(node) -> LongSlot(longCount, nullable = false, symbols.CTNode)
-      longCount += 1
+      slotConfig.newLong(node, nullable = false, symbols.CTNode)
     }
 
     def addRelationship(relationship: String): Unit = {
-      slots += VariableSlotKey(relationship) -> LongSlot(longCount, nullable = false, symbols.CTRelationship)
-      longCount += 1
+      slotConfig.newLong(relationship, nullable = false, symbols.CTNode)
     }
 
     def addReference(ref: String): Unit = {
-      slots += VariableSlotKey(ref) -> RefSlot(refCount, nullable = true, symbols.CTAny)
-      refCount += 1
+      slotConfig.newReference(ref, nullable = true, symbols.CTAny)
     }
 
-    def slotConfiguration = new SlotConfiguration(slots, longCount, refCount)
+    def slotConfiguration: SlotConfiguration = slotConfig
 
   }
   private object fused extends BeMatcher[Operator] {

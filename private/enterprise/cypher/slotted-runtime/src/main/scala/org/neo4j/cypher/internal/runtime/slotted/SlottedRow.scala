@@ -368,18 +368,13 @@ case class SlottedRow(slots: SlotConfiguration) extends CypherRow {
   private def iterator: Iterator[(String, AnyValue)] = {
     // This method implementation is for debug usage only.
     // Please do not use in production code.
-    val longSlots = slots.getLongSlots
-    val longSlotValues = for (x <- longSlots)
-      yield (x.toString, Values.longValue(longs(x.slot.offset)))
-
-    val refSlots = slots.getRefSlots
-    val refSlotValues = for (x <- refSlots)
-      yield (x.toString, refs(x.slot.offset))
-
-    val cachedSlots = slots.getCachedPropertySlots
-    val cachedPropertySlotValues = for (x <- cachedSlots)
-      yield (x.toString, refs(x.slot.offset))
-
-    (longSlotValues ++ refSlotValues ++ cachedPropertySlotValues).iterator
+    var tuples: List[(String, AnyValue)] = Nil
+    slots.foreachSlot({
+      case (VariableSlotKey(key), RefSlot(offset, _, _)) => tuples ::= ((key, refs(offset)))
+      case (VariableSlotKey(key), LongSlot(offset, _, _)) => tuples ::= ((key, Values.longValue(longs(offset))))
+      case (CachedPropertySlotKey(cachedProperty), slot) => tuples ::= ((cachedProperty.asCanonicalStringVal, refs(slot.offset)))
+      case (ApplyPlanSlotKey(id), slot) => tuples ::= ((s"Apply-Plan($id)", Values.longValue(longs(slot.offset))))
+    })
+    tuples.iterator
   }
 }
