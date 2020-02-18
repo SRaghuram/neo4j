@@ -68,7 +68,8 @@ import static org.neo4j.test.conditions.Conditions.sizeCondition;
 class ClusteredShowDatabasesIT
 {
 
-    private final String ADDITIONAL_DATABASE_NAME = "foo";
+    private static final int LOCAL_STATE_CHAGNE_TIMEOUT_SECONDS = 120;
+    private static final String ADDITIONAL_DATABASE_NAME = "foo";
     private final Set<String> defaultDatabases = Set.of( DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME );
     private final Set<String> databasesWithAdditional = Set.of( DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME, ADDITIONAL_DATABASE_NAME );
 
@@ -139,7 +140,7 @@ class ClusteredShowDatabasesIT
                                   tx.commit();
                               } );
 
-            waitForClusterToReachLocalState( cluster, namedDatabaseId, EnterpriseOperatorState.DROPPED, timeoutSeconds );
+            waitForClusterToReachLocalState( cluster, namedDatabaseId, EnterpriseOperatorState.DROPPED );
 
             assertEventually( "SHOW DATABASE returns no members hosting additional database",
                               () -> membersHostingDatabase( ADDITIONAL_DATABASE_NAME, cluster ), Set::isEmpty, timeoutSeconds, SECONDS );
@@ -311,7 +312,7 @@ class ClusteredShowDatabasesIT
             // given
             createDatabase( ADDITIONAL_DATABASE_NAME, cluster );
             var additionalDatabaseId = getNamedDatabaseId( cluster, ADDITIONAL_DATABASE_NAME );
-            waitForClusterToReachLocalState( cluster, additionalDatabaseId, STARTED, timeoutSeconds );
+            waitForClusterToReachLocalState( cluster, additionalDatabaseId, STARTED );
             cluster.awaitLeader( ADDITIONAL_DATABASE_NAME );
 
             var clusterSize = cluster.allMembers().size();
@@ -333,7 +334,7 @@ class ClusteredShowDatabasesIT
 
             // when
             stopDatabase( ADDITIONAL_DATABASE_NAME, cluster );
-            waitForClusterToReachLocalState( cluster, additionalDatabaseId, STOPPED, timeoutSeconds );
+            waitForClusterToReachLocalState( cluster, additionalDatabaseId, STOPPED );
 
             // then
             assertEventually( format( "SHOW DATABASES should show Stopped status for members %s, for additional database", clusterAddresses ),
@@ -370,7 +371,7 @@ class ClusteredShowDatabasesIT
 
             // when
             createDatabase( ADDITIONAL_DATABASE_NAME, cluster );
-            waitForClusterToReachLocalState( cluster, getNamedDatabaseId( cluster, ADDITIONAL_DATABASE_NAME ), STARTED, timeoutSeconds );
+            waitForClusterToReachLocalState( cluster, getNamedDatabaseId( cluster, ADDITIONAL_DATABASE_NAME ), STARTED );
 
             // then
             assertEventually( "SHOW DATABASES should return 1 leader for foo", () -> showDatabases( cluster ),
@@ -390,7 +391,7 @@ class ClusteredShowDatabasesIT
             // given
             createDatabase( ADDITIONAL_DATABASE_NAME, cluster );
             var additionalDatabaseId = getNamedDatabaseId( cluster, ADDITIONAL_DATABASE_NAME );
-            waitForClusterToReachLocalState( cluster, additionalDatabaseId, STARTED, timeoutSeconds );
+            waitForClusterToReachLocalState( cluster, additionalDatabaseId, STARTED );
             cluster.awaitLeader( ADDITIONAL_DATABASE_NAME );
 
             var clusterSize = cluster.allMembers().size();
@@ -412,7 +413,7 @@ class ClusteredShowDatabasesIT
 
             // when
             dropDatabase( ADDITIONAL_DATABASE_NAME, cluster );
-            waitForClusterToReachLocalState( cluster, additionalDatabaseId, DROPPED, timeoutSeconds );
+            waitForClusterToReachLocalState( cluster, additionalDatabaseId, DROPPED );
 
             // then
             assertEventually( "SHOW DATABASES should return no rows for additional database",
@@ -546,10 +547,9 @@ class ClusteredShowDatabasesIT
                                        databaseNames, expectedState ) );
     }
 
-    private static void waitForClusterToReachLocalState( Cluster cluster, NamedDatabaseId namedDatabaseId, EnterpriseOperatorState operatorState,
-            int timeoutSeconds )
+    private static void waitForClusterToReachLocalState( Cluster cluster, NamedDatabaseId namedDatabaseId, EnterpriseOperatorState operatorState )
     {
-        waitForClusterToReachLocalState( cluster.allMembers(), namedDatabaseId, operatorState, timeoutSeconds );
+        waitForClusterToReachLocalState( cluster.allMembers(), namedDatabaseId, operatorState, LOCAL_STATE_CHAGNE_TIMEOUT_SECONDS );
     }
 
     private static void waitForClusterToReachLocalState( Set<ClusterMember> members, NamedDatabaseId namedDatabaseId, EnterpriseOperatorState operatorState,
