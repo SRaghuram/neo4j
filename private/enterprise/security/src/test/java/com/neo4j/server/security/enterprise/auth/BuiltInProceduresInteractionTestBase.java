@@ -1724,44 +1724,47 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     void shouldTerminateLongRunningProcedureThatChecksTheGuardRegularlyIfKilled() throws Throwable
     {
         final DoubleLatch latch = new DoubleLatch( 2, true );
-        ClassWithProcedures.volatileLatch = latch;
-
-        String loopQuery = "CALL test.loop";
-
-        Thread loopQueryThread =
-                new Thread( () -> assertFail( readSubject, loopQuery, "Explicitly terminated by the user." ) );
-        loopQueryThread.start();
-        latch.startAndWaitForAllToStart();
-
-        try
+        try ( Support support = ClassWithProcedures.getSupport() )
         {
-            String loopId = extractQueryId( loopQuery );
+            support.volatileLatch = latch;
 
-            assertSuccess(
+            String loopQuery = "CALL test.loop(" + support.getId() + ")";
+
+            Thread loopQueryThread =
+                    new Thread( () -> assertFail( readSubject, loopQuery, "Explicitly terminated by the user." ) );
+            loopQueryThread.start();
+            latch.startAndWaitForAllToStart();
+
+            try
+            {
+                String loopId = extractQueryId( loopQuery );
+
+                assertSuccess(
+                        adminSubject,
+                        "CALL dbms.killQuery('" + loopId + "') YIELD username " +
+                                "RETURN count(username) AS count, username", r ->
+                        {
+                            List<Map<String,Object>> actual = collectResults( r );
+                            Matcher<Map<String,Object>> mapMatcher = allOf(
+                                    (Matcher) hasEntry( equalTo( "count" ), anyOf( equalTo( 1 ), equalTo( 1L ) ) ),
+                                    (Matcher) hasEntry( equalTo( "username" ), equalTo( "readSubject" ) )
+                            );
+                            assertThat( actual, matchesOneToOneInAnyOrder( mapMatcher ) );
+                        }
+                );
+            }
+            finally
+            {
+                latch.finishAndWaitForAllToFinish();
+            }
+
+            // there is a race with "test.loop" procedure - after decrementing latch it may take time to actually exit
+            loopQueryThread.join( 10_000 );
+
+            assertEmpty(
                     adminSubject,
-                    "CALL dbms.killQuery('" + loopId + "') YIELD username " +
-                    "RETURN count(username) AS count, username", r ->
-                    {
-                        List<Map<String,Object>> actual = collectResults( r );
-                        Matcher<Map<String,Object>> mapMatcher = allOf(
-                                (Matcher) hasEntry( equalTo( "count" ), anyOf( equalTo( 1 ), equalTo( 1L ) ) ),
-                                (Matcher) hasEntry( equalTo( "username" ), equalTo( "readSubject" ) )
-                        );
-                        assertThat( actual, matchesOneToOneInAnyOrder( mapMatcher ) );
-                    }
-            );
+                    "CALL dbms.listQueries() YIELD query WITH * WHERE NOT query CONTAINS 'listQueries' RETURN *" );
         }
-        finally
-        {
-            latch.finishAndWaitForAllToFinish();
-        }
-
-        // there is a race with "test.loop" procedure - after decrementing latch it may take time to actually exit
-        loopQueryThread.join( 10_000 );
-
-        assertEmpty(
-                adminSubject,
-                "CALL dbms.listQueries() YIELD query WITH * WHERE NOT query CONTAINS 'listQueries' RETURN *" );
     }
 
     @Test

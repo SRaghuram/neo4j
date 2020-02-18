@@ -5,8 +5,6 @@
  */
 package com.neo4j.server.security.enterprise.auth;
 
-import org.junit.Assert;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
@@ -810,30 +808,52 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     @Test
     void shouldAllowProcedureStartingTransactionInNewThread()
     {
-        ClassWithProcedures.exceptionsInProcedure.clear();
-        DoubleLatch latch = new DoubleLatch( 2 );
-        ClassWithProcedures.doubleLatch = latch;
-        latch.start();
-        assertEmpty( writeSubject, "CALL test.threadTransaction" );
-        latch.finishAndWaitForAllToFinish();
-        assertThat( ClassWithProcedures.exceptionsInProcedure.size() ).isEqualTo( 0 );
-        assertSuccess( adminSubject, "MATCH (:VeryUniqueLabel) RETURN toString(count(*)) as n",
-                r -> assertKeyIs( r, "n", "1" ) );
+        try ( Support support = ClassWithProcedures.getSupport() )
+        {
+            DoubleLatch latch = new DoubleLatch( 2 );
+            support.doubleLatch = latch;
+            latch.start();
+            assertEmpty( writeSubject, "CALL test.threadTransaction(" + support.getId() + ")" );
+            latch.finishAndWaitForAllToFinish();
+            if ( !support.exceptionsInProcedure.isEmpty() )
+            {
+                RuntimeException exception = new RuntimeException(
+                        "Expected no exceptions from this procedure, but the attached suppressed exceptions were thrown." );
+                for ( Exception e : support.exceptionsInProcedure )
+                {
+                    exception.addSuppressed( e );
+                }
+                throw exception;
+            }
+            assertSuccess( adminSubject, "MATCH (:VeryUniqueLabel) RETURN toString(count(*)) as n",
+                    r -> assertKeyIs( r, "n", "1" ) );
+        }
     }
 
     @Test
     void shouldInheritSecurityContextWhenProcedureStartingTransactionInNewThread()
     {
-        ClassWithProcedures.exceptionsInProcedure.clear();
-        DoubleLatch latch = new DoubleLatch( 2 );
-        ClassWithProcedures.doubleLatch = latch;
-        latch.start();
-        assertEmpty( readSubject, "CALL test.threadReadDoingWriteTransaction" );
-        latch.finishAndWaitForAllToFinish();
-        assertThat( ClassWithProcedures.exceptionsInProcedure.size() ).isEqualTo( 1 );
-        assertThat( ClassWithProcedures.exceptionsInProcedure.get( 0 ).getMessage() ).contains( WRITE_OPS_NOT_ALLOWED );
-                assertSuccess( adminSubject, "MATCH (:VeryUniqueLabel) RETURN toString(count(*)) as n",
-                r -> assertKeyIs( r, "n", "0" ) );
+        try ( Support support = ClassWithProcedures.getSupport() )
+        {
+            DoubleLatch latch = new DoubleLatch( 2 );
+            support.doubleLatch = latch;
+            latch.start();
+            assertEmpty( readSubject, "CALL test.threadReadDoingWriteTransaction(" + support.getId() + ")" );
+            latch.finishAndWaitForAllToFinish();
+            if ( support.exceptionsInProcedure.size() != 1 )
+            {
+                RuntimeException exception = new RuntimeException( "Expected only one exception from this procedure, but got " +
+                        support.exceptionsInProcedure.size() + " instead, which have been attached as suppressed exceptions." );
+                for ( Exception e : support.exceptionsInProcedure )
+                {
+                    exception.addSuppressed( e );
+                }
+                throw exception;
+            }
+            assertThat( support.exceptionsInProcedure.get( 0 ).getMessage() ).contains( WRITE_OPS_NOT_ALLOWED );
+            assertSuccess( adminSubject, "MATCH (:VeryUniqueLabel) RETURN toString(count(*)) as n",
+                    r -> assertKeyIs( r, "n", "0" ) );
+        }
     }
 
     @Test

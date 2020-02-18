@@ -7,7 +7,6 @@ package com.neo4j.server.security.enterprise.auth;
 
 import org.apache.commons.lang3.StringUtils;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -21,7 +20,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
@@ -79,7 +79,6 @@ import static org.neo4j.internal.kernel.api.security.PrivilegeAction.CREATE_LABE
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.CREATE_PROPERTYKEY;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.CREATE_RELTYPE;
 import static org.neo4j.kernel.api.exceptions.Status.Transaction.TransactionTimedOut;
-import static org.neo4j.procedure.Mode.READ;
 import static org.neo4j.procedure.Mode.WRITE;
 
 @ExtendWith( {TestDirectorySupportExtension.class, ThreadingExtension.class} )
@@ -740,9 +739,47 @@ public abstract class ProcedureInteractionTestBase<S>
         }
     }
 
+    public static final class Support implements AutoCloseable
+    {
+        private final long id;
+        private final ConcurrentHashMap<Long,Support> registry;
+        public volatile DoubleLatch doubleLatch;
+        public volatile DoubleLatch volatileLatch;
+        public final List<Exception> exceptionsInProcedure;
+
+        public Support( long id, ConcurrentHashMap<Long,Support> registry )
+        {
+            this.id = id;
+            this.registry = registry;
+            exceptionsInProcedure = Collections.synchronizedList( new ArrayList<>() );
+        }
+
+        public long getId()
+        {
+            return id;
+        }
+
+        @Override
+        public void close()
+        {
+            registry.remove( id );
+        }
+    }
+
     @SuppressWarnings( {"unused", "WeakerAccess"} )
     public static class ClassWithProcedures
     {
+        private static final AtomicLong COUNTER = new AtomicLong();
+        private static final ConcurrentHashMap<Long,Support> SUPPORT_REGISTRY = new ConcurrentHashMap<>();
+
+        public static Support getSupport()
+        {
+            long id = COUNTER.incrementAndGet();
+            Support support = new Support( id, SUPPORT_REGISTRY );
+            SUPPORT_REGISTRY.put( id, support );
+            return support;
+        }
+
         @Context
         public GraphDatabaseService db;
 
@@ -752,21 +789,14 @@ public abstract class ProcedureInteractionTestBase<S>
         @Context
         public Log log;
 
-        private static final AtomicReference<LatchedRunnables> testLatch = new AtomicReference<>();
-
-        static DoubleLatch doubleLatch;
-
-        public static volatile DoubleLatch volatileLatch;
-
-        public static List<Exception> exceptionsInProcedure = Collections.synchronizedList( new ArrayList<>() );
-
         @Context
         public TerminationGuard guard;
 
         @Procedure( name = "test.loop" )
-        public void loop()
+        public void loop( @Name( "supportId" ) long supportId )
         {
-            DoubleLatch latch = volatileLatch;
+            Support support = SUPPORT_REGISTRY.get( supportId );
+            DoubleLatch latch = support.volatileLatch;
 
             if ( latch != null )
             {
@@ -906,44 +936,24 @@ public abstract class ProcedureInteractionTestBase<S>
             transaction.createNode();
         }
 
-        @Procedure( name = "test.waitForLatch", mode = READ )
-        public void waitForLatch()
-        {
-            try
-            {
-                testLatch.get().runBefore.run();
-            }
-            finally
-            {
-                testLatch.get().doubleLatch.startAndWaitForAllToStart();
-            }
-            try
-            {
-                testLatch.get().runAfter.run();
-            }
-            finally
-            {
-                testLatch.get().doubleLatch.finishAndWaitForAllToFinish();
-            }
-        }
-
         @Procedure( name = "test.threadTransaction", mode = WRITE )
-        public void newThreadTransaction()
+        public void newThreadTransaction( @Name( "supportId" ) long supportId )
         {
-            startWriteThread();
+            startWriteThread( supportId );
         }
 
         @Procedure( name = "test.threadReadDoingWriteTransaction" )
-        public void threadReadDoingWriteTransaction()
+        public void threadReadDoingWriteTransaction( @Name( "supportId" ) long supportId )
         {
-            startWriteThread();
+            startWriteThread( supportId );
         }
 
-        private void startWriteThread()
+        private void startWriteThread( long supportId )
         {
+            Support support = SUPPORT_REGISTRY.get( supportId );
             new Thread( () ->
             {
-                doubleLatch.start();
+                support.doubleLatch.start();
                 try ( Transaction tx = db.beginTx() )
                 {
                     tx.createNode( Label.label( "VeryUniqueLabel" ) );
@@ -951,38 +961,13 @@ public abstract class ProcedureInteractionTestBase<S>
                 }
                 catch ( Exception e )
                 {
-                    exceptionsInProcedure.add( e );
+                    support.exceptionsInProcedure.add( e );
                 }
                 finally
                 {
-                    doubleLatch.finish();
+                    support.doubleLatch.finish();
                 }
             } ).start();
-        }
-
-        protected static class LatchedRunnables implements AutoCloseable
-        {
-            DoubleLatch doubleLatch;
-            Runnable runBefore;
-            Runnable runAfter;
-
-            LatchedRunnables( DoubleLatch doubleLatch, Runnable runBefore, Runnable runAfter )
-            {
-                this.doubleLatch = doubleLatch;
-                this.runBefore = runBefore;
-                this.runAfter = runAfter;
-            }
-
-            @Override
-            public void close()
-            {
-                ClassWithProcedures.testLatch.set( null );
-            }
-        }
-
-        static void setTestLatch( LatchedRunnables testLatch )
-        {
-            ClassWithProcedures.testLatch.set( testLatch );
         }
     }
 
