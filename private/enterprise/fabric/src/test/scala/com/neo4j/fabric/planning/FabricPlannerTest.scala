@@ -120,7 +120,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
           |""".stripMargin
 
       the[SyntaxException].thrownBy(
-        planner.init(q, params).fabricQuery
+        planner.plan(q, params)
       )
         .check(_.getMessage.should(include("USE can only appear at the beginning of a (sub-)query")))
 
@@ -137,7 +137,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
           |""".stripMargin
 
       the[SyntaxException].thrownBy(
-        planner.init(q, params).fabricQuery
+        planner.plan(q, params)
       )
         .check(_.getMessage.should(include("USE can only appear at the beginning of a (sub-)query")))
     }
@@ -152,7 +152,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
           |RETURN x
           |""".stripMargin
 
-      planner.init(q, params).fabricQuery
+      planner.plan(q, params).query
         .asChainedQuery
         .check(_.queries(1).asApply.asDirect.asShardQuery.use.shouldEqual(use(function("g", varFor("x")))))
     }
@@ -168,7 +168,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
           |RETURN x
           |""".stripMargin
 
-      planner.init(q, params).fabricQuery
+      planner.plan(q, params).query
         .asChainedQuery
         .check(_.queries(1).asApply.asDirect.asShardQuery.use.shouldEqual(use(function("g", varFor("x")))))
     }
@@ -184,7 +184,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
           |""".stripMargin
 
       the[SyntaxException].thrownBy(
-        planner.init(q, params).fabricQuery
+        planner.plan(q, params)
       )
         .check(_.getMessage.should(include("Variable `z` not defined")))
     }
@@ -201,7 +201,7 @@ class FabricPlannerTest extends FabricTest with AstConstructionTestSupport with 
           |""".stripMargin
 
       the[SyntaxException].thrownBy(
-        planner.init(q, params).fabricQuery
+        planner.plan(q, params)
       )
         .check(_.getMessage.should(include("Variable `y` not defined")))
     }
