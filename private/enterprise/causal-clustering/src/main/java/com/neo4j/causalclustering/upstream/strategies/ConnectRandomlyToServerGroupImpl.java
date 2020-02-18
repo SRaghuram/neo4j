@@ -10,6 +10,8 @@ import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.MemberId;
 
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -36,11 +38,7 @@ public class ConnectRandomlyToServerGroupImpl
 
     public Optional<MemberId> upstreamMemberForDatabase( NamedDatabaseId namedDatabaseId )
     {
-        Map<MemberId,ReadReplicaInfo> replicas = topologyService.readReplicaTopologyForDatabase( namedDatabaseId ).members();
-
-        List<MemberId> choices =
-                groups.stream().flatMap( group -> replicas.entrySet().stream().filter( isMyGroupAndNotMe( group ) ) ).map( Map.Entry::getKey ).collect(
-                        Collectors.toList() );
+        var choices = choices( namedDatabaseId );
 
         if ( choices.isEmpty() )
         {
@@ -50,6 +48,21 @@ public class ConnectRandomlyToServerGroupImpl
         {
             return Optional.of( choices.get( random.nextInt( choices.size() ) ) );
         }
+    }
+
+    public Collection<MemberId> upstreamMembersForDatabase( NamedDatabaseId namedDatabaseId )
+    {
+        var choices = choices( namedDatabaseId );
+        Collections.shuffle( choices );
+        return choices;
+    }
+
+    private List<MemberId> choices( NamedDatabaseId namedDatabaseId )
+    {
+        Map<MemberId,ReadReplicaInfo> replicas = topologyService.readReplicaTopologyForDatabase( namedDatabaseId ).members();
+
+        return groups.stream().flatMap( group -> replicas.entrySet().stream().filter( isMyGroupAndNotMe( group ) ) ).map( Map.Entry::getKey ).collect(
+                        Collectors.toList() );
     }
 
     private Predicate<Map.Entry<MemberId,ReadReplicaInfo>> isMyGroupAndNotMe( ServerGroupName group )

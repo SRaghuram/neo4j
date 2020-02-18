@@ -20,12 +20,13 @@ import com.neo4j.dbms.ClusterInternalDbmsOperator;
 import com.neo4j.dbms.DatabaseStartAborter;
 
 import java.io.IOException;
-import java.util.concurrent.TimeUnit;
+import java.util.Collection;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.function.Supplier;
 
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.database.DatabaseStartAbortedException;
-import org.neo4j.internal.helpers.ExponentialBackoffStrategy;
 import org.neo4j.internal.helpers.TimeoutStrategy;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -47,13 +48,13 @@ class ReadReplicaBootstrap
 
     ReadReplicaBootstrap( ReadReplicaDatabaseContext databaseContext, UpstreamDatabaseStrategySelector selectionStrategy, LogProvider debugLogProvider,
             LogProvider userLogProvider, TopologyService topologyService, Supplier<CatchupComponentsRepository.CatchupComponents> catchupComponentsSupplier,
-            ClusterInternalDbmsOperator internalOperator, DatabaseStartAborter databaseStartAborter )
+            ClusterInternalDbmsOperator internalOperator, DatabaseStartAborter databaseStartAborter, TimeoutStrategy syncRetryStrategy )
     {
         this.databaseContext = databaseContext;
         this.catchupComponentsSupplier = catchupComponentsSupplier;
         this.selectionStrategy = selectionStrategy;
         this.databaseStartAborter = databaseStartAborter;
-        this.syncRetryStrategy = new ExponentialBackoffStrategy( 1, 30, TimeUnit.SECONDS );
+        this.syncRetryStrategy = syncRetryStrategy;
         this.debugLog = debugLogProvider.getLog( getClass() );
         this.userLog = userLogProvider.getLog( getClass() );
         this.topologyService = topologyService;
@@ -67,18 +68,31 @@ class ReadReplicaBootstrap
         try
         {
             TimeoutStrategy.Timeout syncRetryWaitPeriod = syncRetryStrategy.newTimeout();
+            var upstreamsQueue = new LinkedList<>( selectUpstreams( databaseContext ) );
+
             boolean synced = false;
             while ( !( synced || shouldAbort ) )
             {
                 try
                 {
+                    var shouldBackoff = false;
                     debugLog.info( "Syncing db: %s", databaseContext.databaseId() );
-                    synced = doSyncStoreCopyWithUpstream( databaseContext );
+
+                    var upstream = upstreamsQueue.poll(); // Cannot be null
+
+                    synced = doSyncStoreCopyWithUpstream( databaseContext, upstream );
+
+                    if ( upstreamsQueue.isEmpty() )
+                    {
+                        upstreamsQueue.addAll( selectUpstreams( databaseContext ) );
+                        shouldBackoff = true;
+                    }
+
                     if ( synced )
                     {
                         debugLog.info( "Successfully synced db: %s", databaseContext.databaseId() );
                     }
-                    else
+                    else if ( shouldBackoff )
                     {
                         Thread.sleep( syncRetryWaitPeriod.getMillis() );
                         syncRetryWaitPeriod.increment();
@@ -110,19 +124,21 @@ class ReadReplicaBootstrap
         }
     }
 
-    private boolean doSyncStoreCopyWithUpstream( ReadReplicaDatabaseContext databaseContext )
+    private Collection<MemberId> selectUpstreams( ReadReplicaDatabaseContext databaseContext )
     {
-        MemberId source;
         try
         {
-            source = selectionStrategy.bestUpstreamMemberForDatabase( databaseContext.databaseId() );
+            return selectionStrategy.bestUpstreamMembersForDatabase( databaseContext.databaseId() );
         }
         catch ( UpstreamDatabaseSelectionException e )
         {
             debugLog.warn( "Unable to find upstream member for database " + databaseContext.databaseId().name() );
-            return false;
         }
+        return List.of();
+    }
 
+    private boolean doSyncStoreCopyWithUpstream( ReadReplicaDatabaseContext databaseContext, MemberId source )
+    {
         try
         {
             syncStoreWithUpstream( databaseContext, source );

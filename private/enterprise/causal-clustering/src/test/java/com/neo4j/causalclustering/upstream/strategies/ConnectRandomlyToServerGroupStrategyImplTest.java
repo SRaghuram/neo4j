@@ -9,8 +9,10 @@ import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.discovery.FakeTopologyService;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.MemberId;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Optional;
@@ -27,8 +29,12 @@ import static co.unruly.matchers.OptionalMatchers.empty;
 import static com.neo4j.causalclustering.discovery.FakeTopologyService.memberId;
 import static java.util.Collections.singleton;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.emptyCollectionOf;
+import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.in;
 import static org.hamcrest.Matchers.is;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ConnectRandomlyToServerGroupStrategyImplTest
 {
@@ -48,8 +54,10 @@ class ConnectRandomlyToServerGroupStrategyImplTest
 
         // when
         Optional<MemberId> memberId = strategy.upstreamMemberForDatabase( DATABASE_ID );
+        Collection<MemberId> memberIds = strategy.upstreamMembersForDatabase( DATABASE_ID );
 
         // then
+        assertThat( memberIds, everyItem( is( in( myGroupMemberIds ) ) ) );
         assertThat( memberId, contains( is( in( myGroupMemberIds ) ) ) );
     }
 
@@ -66,8 +74,10 @@ class ConnectRandomlyToServerGroupStrategyImplTest
 
         // when
         Optional<MemberId> memberId = strategy.upstreamMemberForDatabase( DATABASE_ID );
+        Collection<MemberId> memberIds = strategy.upstreamMembersForDatabase( DATABASE_ID );
 
         // then
+        assertThat( memberIds, everyItem( is( in( myGroupMemberIds ) ) ) );
         assertThat( memberId, contains( is( in( myGroupMemberIds ) ) ) );
     }
 
@@ -83,8 +93,10 @@ class ConnectRandomlyToServerGroupStrategyImplTest
 
         // when
         Optional<MemberId> memberId = strategy.upstreamMemberForDatabase( DATABASE_ID );
+        Collection<MemberId> memberIds = strategy.upstreamMembersForDatabase( DATABASE_ID );
 
         // then
+        assertThat( memberIds, emptyCollectionOf( MemberId.class ) );
         assertThat( memberId, empty() );
     }
 
@@ -101,8 +113,10 @@ class ConnectRandomlyToServerGroupStrategyImplTest
 
         // when
         Optional<MemberId> memberId = strategy.upstreamMemberForDatabase( DATABASE_ID );
+        Collection<MemberId> memberIds = strategy.upstreamMembersForDatabase( DATABASE_ID );
 
         // then
+        assertThat( memberIds, emptyCollectionOf( MemberId.class ) );
         assertThat( memberId, empty() );
     }
 

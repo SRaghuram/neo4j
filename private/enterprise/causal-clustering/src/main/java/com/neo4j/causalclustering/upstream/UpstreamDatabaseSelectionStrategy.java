@@ -8,7 +8,9 @@ package com.neo4j.causalclustering.upstream;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.MemberId;
 
+import java.util.Collection;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.neo4j.annotations.service.Service;
 import org.neo4j.configuration.Config;
@@ -53,6 +55,11 @@ public abstract class UpstreamDatabaseSelectionStrategy implements NamedService
     }
 
     public abstract Optional<MemberId> upstreamMemberForDatabase( NamedDatabaseId namedDatabaseId ) throws UpstreamDatabaseSelectionException;
+
+    public Collection<MemberId> upstreamMembersForDatabase( NamedDatabaseId namedDatabaseId ) throws UpstreamDatabaseSelectionException
+    {
+        return upstreamMemberForDatabase( namedDatabaseId ).stream().collect( Collectors.toList() );
+    }
 
     @Override
     public String toString()

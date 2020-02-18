@@ -5,6 +5,7 @@
  */
 package com.neo4j.causalclustering.upstream.strategies;
 
+import co.unruly.matchers.OptionalMatchers;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.discovery.ClientConnectorAddresses;
@@ -15,6 +16,7 @@ import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.jupiter.api.Test;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -32,13 +34,14 @@ import org.neo4j.kernel.database.DatabaseId;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.logging.NullLogProvider;
 
-import static co.unruly.matchers.OptionalMatchers.contains;
-import static co.unruly.matchers.OptionalMatchers.empty;
 import static com.neo4j.causalclustering.discovery.ClientConnectorAddresses.Scheme.bolt;
 import static com.neo4j.causalclustering.discovery.FakeTopologyService.memberId;
 import static com.neo4j.causalclustering.discovery.FakeTopologyService.memberIds;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.in;
 import static org.hamcrest.Matchers.is;
 import static org.neo4j.kernel.database.TestDatabaseIdRepository.randomNamedDatabaseId;
@@ -70,9 +73,11 @@ class UserDefinedConfigurationStrategyTest
 
         //when
         Optional<MemberId> memberId = strategy.upstreamMemberForDatabase( DATABASE_ID );
+        Collection<MemberId> memberIds = strategy.upstreamMembersForDatabase( DATABASE_ID );
 
         // then
-        assertThat( memberId, contains( theCoreMemberId ) );
+        assertThat( memberIds, contains( theCoreMemberId ) );
+        assertThat( memberId, OptionalMatchers.contains( theCoreMemberId ) );
     }
 
     @Test
@@ -92,10 +97,14 @@ class UserDefinedConfigurationStrategyTest
 
         //when
         Optional<MemberId> memberId = strategy.upstreamMemberForDatabase( DATABASE_ID );
+        Collection<MemberId> memberIds = strategy.upstreamMembersForDatabase( DATABASE_ID );
 
         // then
-        assertThat( memberId, contains( is( in( replicaIds ) ) ) );
-        assertThat( memberId.map( this::noEastGroupGenerator ), contains( equalTo( wantedGroup ) ) );
+        assertThat( memberIds, everyItem( is( in( replicaIds ) ) ) );
+        assertThat( memberId, OptionalMatchers.contains( is( in( replicaIds ) ) ) );
+        assertThat( memberId.map( this::noEastGroupGenerator ), OptionalMatchers.contains( equalTo( wantedGroup ) ) );
+        var memberGroups = memberIds.stream().map( this::noEastGroupGenerator ).collect( Collectors.toList() );
+        assertThat( memberGroups, everyItem( equalTo( wantedGroup ) ) );
     }
 
     @Test
@@ -114,9 +123,11 @@ class UserDefinedConfigurationStrategyTest
 
         //when
         Optional<MemberId> memberId = strategy.upstreamMemberForDatabase( DATABASE_ID );
+        Collection<MemberId> memberIds = strategy.upstreamMembersForDatabase( DATABASE_ID );
 
         // then
-        assertThat( memberId, empty() );
+        assertThat( memberId, OptionalMatchers.empty() );
+        assertThat( memberIds, empty() );
     }
 
     @Test
@@ -135,9 +146,11 @@ class UserDefinedConfigurationStrategyTest
 
         //when
         Optional<MemberId> memberId = strategy.upstreamMemberForDatabase( DATABASE_ID );
+        Collection<MemberId> memberIds = strategy.upstreamMembersForDatabase( DATABASE_ID );
 
         // then
-        assertThat( memberId, empty() );
+        assertThat( memberId, OptionalMatchers.empty() );
+        assertThat( memberIds, empty() );
     }
 
     @Test
@@ -158,9 +171,11 @@ class UserDefinedConfigurationStrategyTest
 
         //when
         Optional<MemberId> memberId = strategy.upstreamMemberForDatabase( DATABASE_ID );
+        Collection<MemberId> memberIds = strategy.upstreamMembersForDatabase( DATABASE_ID );
 
         // then
-        assertThat( memberId, empty() );
+        assertThat( memberId, OptionalMatchers.empty() );
+        assertThat( memberIds, empty() );
     }
 
     private Config configWithFilter( String filter )
@@ -212,6 +227,7 @@ class UserDefinedConfigurationStrategyTest
 
     private ServerGroupName noEastGroupGenerator( MemberId memberId )
     {
+        // Random selection of non-east group, stable w.r.t MemberId
         int index = Math.abs( memberId.hashCode() % noEastGroup.size() );
         return noEastGroup.get( index );
     }

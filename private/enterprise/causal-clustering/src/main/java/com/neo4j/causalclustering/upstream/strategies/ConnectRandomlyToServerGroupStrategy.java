@@ -8,8 +8,10 @@ package com.neo4j.causalclustering.upstream.strategies;
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.causalclustering.core.ServerGroupName;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionException;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionStrategy;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -49,5 +51,11 @@ public class ConnectRandomlyToServerGroupStrategy extends UpstreamDatabaseSelect
     public Optional<MemberId> upstreamMemberForDatabase( NamedDatabaseId namedDatabaseId )
     {
         return strategyImpl.upstreamMemberForDatabase( namedDatabaseId );
+    }
+
+    @Override
+    public Collection<MemberId> upstreamMembersForDatabase( NamedDatabaseId namedDatabaseId )
+    {
+        return strategyImpl.upstreamMembersForDatabase( namedDatabaseId );
     }
 }

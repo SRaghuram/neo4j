@@ -13,6 +13,8 @@ import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.upstream.strategies.ConnectToRandomCoreServerStrategy;
 import org.junit.jupiter.api.Test;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -25,6 +27,7 @@ import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.NullLogProvider;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -39,13 +42,13 @@ public class UpstreamDatabaseStrategySelectorTest
     void shouldReturnTheMemberIdFromFirstSuccessfulStrategy() throws Exception
     {
         // given
-        UpstreamDatabaseSelectionStrategy badOne = mock( UpstreamDatabaseSelectionStrategy.class );
+        UpstreamDatabaseSelectionStrategy badOne = mock( UpstreamDatabaseSelectionStrategy.class, CALLS_REAL_METHODS );
         when( badOne.upstreamMemberForDatabase( NAMED_DATABASE_ID ) ).thenReturn( Optional.empty() );
 
-        UpstreamDatabaseSelectionStrategy anotherBadOne = mock( UpstreamDatabaseSelectionStrategy.class );
+        UpstreamDatabaseSelectionStrategy anotherBadOne = mock( UpstreamDatabaseSelectionStrategy.class, CALLS_REAL_METHODS );
         when( anotherBadOne.upstreamMemberForDatabase( NAMED_DATABASE_ID ) ).thenReturn( Optional.empty() );
 
-        UpstreamDatabaseSelectionStrategy goodOne = mock( UpstreamDatabaseSelectionStrategy.class );
+        UpstreamDatabaseSelectionStrategy goodOne = mock( UpstreamDatabaseSelectionStrategy.class, CALLS_REAL_METHODS );
         MemberId theMemberId = new MemberId( UUID.randomUUID() );
         when( goodOne.upstreamMemberForDatabase( NAMED_DATABASE_ID ) ).thenReturn( Optional.of( theMemberId ) );
 
@@ -54,8 +57,10 @@ public class UpstreamDatabaseStrategySelectorTest
 
         // when
         MemberId result = selector.bestUpstreamMemberForDatabase( NAMED_DATABASE_ID );
+        Collection<MemberId> results = selector.bestUpstreamMembersForDatabase( NAMED_DATABASE_ID );
 
         // then
+        assertEquals( List.of( theMemberId ), results );
         assertEquals( theMemberId, result );
     }
 
@@ -75,9 +80,11 @@ public class UpstreamDatabaseStrategySelectorTest
 
         // when
         MemberId instance = selector.bestUpstreamMemberForDatabase( NAMED_DATABASE_ID );
+        Collection<MemberId> instances = selector.bestUpstreamMembersForDatabase( NAMED_DATABASE_ID );
 
         // then
         assertEquals( memberId, instance );
+        assertEquals( List.of( memberId ), instances );
     }
 
     @Test
@@ -99,6 +106,7 @@ public class UpstreamDatabaseStrategySelectorTest
 
         // when
         selector.bestUpstreamMemberForDatabase( NAMED_DATABASE_ID );
+        selector.bestUpstreamMembersForDatabase( NAMED_DATABASE_ID );
 
         // then
         verifyNoInteractions( shouldNotUse );

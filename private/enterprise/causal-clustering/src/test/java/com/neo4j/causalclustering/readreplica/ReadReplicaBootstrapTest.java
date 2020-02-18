@@ -18,20 +18,25 @@ import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionStrategy;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
+import com.neo4j.causalclustering.upstream.strategies.ConnectToRandomCoreServerStrategy;
 import com.neo4j.dbms.ClusterInternalDbmsOperator;
 import com.neo4j.dbms.DatabaseStartAborter;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import org.neo4j.annotations.service.ServiceProvider;
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.dbms.database.DatabaseStartAbortedException;
+import org.neo4j.internal.helpers.ExponentialBackoffStrategy;
+import org.neo4j.internal.helpers.TimeoutStrategy;
 import org.neo4j.kernel.database.Database;
 import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
@@ -60,12 +65,60 @@ class ReadReplicaBootstrapTest
     private final SocketAddress addressA = new SocketAddress( "127.0.0.1", 123 );
     private final StoreId storeA = new StoreId( 0, 1, 2, 3, 4 );
     private final StoreId storeB = new StoreId( 5, 6, 7, 8, 9 );
+    private final TimeoutStrategy timeoutStrategy = new ExponentialBackoffStrategy( 100, 3000, TimeUnit.MILLISECONDS );
 
     private ReadReplicaBootstrap createBootstrap( TopologyService topologyService, CatchupComponentsRepository.CatchupComponents catchupComponents,
             ReadReplicaDatabaseContext databaseContext, DatabaseStartAborter aborter )
     {
-        return new ReadReplicaBootstrap( databaseContext, chooseFirstMember( topologyService ), nullLogProvider(), nullLogProvider(), topologyService,
-                () -> catchupComponents, new ClusterInternalDbmsOperator(), aborter );
+        return createBootstrap( topologyService, catchupComponents, databaseContext, aborter, chooseFirstMember( topologyService ), timeoutStrategy );
+    }
+
+    private ReadReplicaBootstrap createBootstrap( TopologyService topologyService, CatchupComponentsRepository.CatchupComponents catchupComponents,
+            ReadReplicaDatabaseContext databaseContext, DatabaseStartAborter aborter, UpstreamDatabaseStrategySelector selectionStrategy,
+            TimeoutStrategy timeoutStrategy )
+    {
+        return new ReadReplicaBootstrap( databaseContext, selectionStrategy, nullLogProvider(), nullLogProvider(), topologyService,
+                () -> catchupComponents, new ClusterInternalDbmsOperator(), aborter, timeoutStrategy );
+    }
+
+    @Test
+    void shouldTryAllUpstreamMembersBeforeBackingOff() throws Exception
+    {
+        // given
+        var memberB = new MemberId( UUID.randomUUID() );
+        var topologyService = mock( TopologyService.class );
+        var members = Map.of(
+                memberA, mock( CoreServerInfo.class ),
+                memberB, mock( CoreServerInfo.class ) );
+        when( topologyService.allCoreServers() )
+                .thenReturn( members );
+        when( topologyService.coreTopologyForDatabase( namedDatabaseA ) )
+                .thenReturn( new DatabaseCoreTopology( namedDatabaseA.databaseId(), raftId, members ) );
+        when( topologyService.lookupCatchupAddress( any( MemberId.class ) ) )
+                .thenThrow( new CatchupAddressResolutionException( memberA ) )
+                .thenThrow( new CatchupAddressResolutionException( memberA ) )
+                .thenReturn( addressA );
+
+        var catchupComponents = catchupComponents( addressA, storeA );
+        var databaseContext = normalDatabase( namedDatabaseA, storeA, false );
+
+        var timeoutStrategy = mock( TimeoutStrategy.class );
+        var timeout = mock( TimeoutStrategy.Timeout.class );
+        when( timeoutStrategy.newTimeout() ).thenReturn( timeout );
+        when( timeout.getAndIncrement() ).thenReturn( 10L );
+        when( timeout.getMillis() ).thenReturn( 10L );
+        var bootstrapper = createBootstrap( topologyService, catchupComponents, databaseContext, neverAbort(),
+                chooseRandomCore( topologyService ), timeoutStrategy );
+
+        var inOrder = Mockito.inOrder( topologyService, timeout );
+
+        // when
+        bootstrapper.perform();
+
+        // then
+        inOrder.verify( topologyService, times( 2 ) ).lookupCatchupAddress( any( MemberId.class ) );
+        inOrder.verify( timeout ).getMillis();
+        inOrder.verify( timeout ).increment();
     }
 
     @Test
@@ -304,6 +357,13 @@ class ReadReplicaBootstrapTest
         return new UpstreamDatabaseStrategySelector( firstMember );
     }
 
+    private UpstreamDatabaseStrategySelector chooseRandomCore( TopologyService topologyService )
+    {
+        var randomCoreStrategy = new ConnectToRandomCoreServerStrategy();
+        randomCoreStrategy.inject( topologyService, Config.defaults(), nullLogProvider(), null );
+        return new UpstreamDatabaseStrategySelector( randomCoreStrategy );
+    }
+
     @ServiceProvider
     public static class AlwaysChooseFirstMember extends UpstreamDatabaseSelectionStrategy
     {
@@ -318,5 +378,7 @@ class ReadReplicaBootstrapTest
             DatabaseCoreTopology coreTopology = topologyService.coreTopologyForDatabase( namedDatabaseId );
             return Optional.ofNullable( coreTopology.members().keySet().iterator().next() );
         }
+
     }
+
 }
