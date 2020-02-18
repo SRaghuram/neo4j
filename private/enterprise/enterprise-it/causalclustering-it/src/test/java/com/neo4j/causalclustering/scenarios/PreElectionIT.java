@@ -16,20 +16,25 @@ import com.neo4j.test.causalclustering.ClusterFactory;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import org.neo4j.test.extension.Inject;
 
 import static com.neo4j.test.causalclustering.ClusterConfig.clusterConfig;
+import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.SettingValueParsers.TRUE;
+import static org.neo4j.test.assertion.Assert.assertEventually;
 
 @ClusterExtension
 @TestInstance( PER_METHOD )
@@ -41,7 +46,6 @@ class PreElectionIT
     private final ClusterConfig clusterConfig = clusterConfig()
             .withNumberOfCoreMembers( 3 )
             .withNumberOfReadReplicas( 0 )
-            .withSharedCoreParam( CausalClusteringSettings.leader_election_timeout, "2s" )
             .withSharedCoreParam( CausalClusteringSettings.enable_pre_voting, TRUE );
 
     @Test
@@ -55,7 +59,7 @@ class PreElectionIT
     {
         assertDoesNotThrow( () -> startCluster(
                 clusterConfig
-                        .withInstanceCoreParam( CausalClusteringSettings.refuse_to_be_leader, this::firstServerRefusesToBeLeader )
+                        .withInstanceCoreParam( CausalClusteringSettings.refuse_to_be_leader, this::trueIfServerIdZero )
                         .withSharedCoreParam( CausalClusteringSettings.multi_dc_license, TRUE ) ) );
     }
 
@@ -64,13 +68,16 @@ class PreElectionIT
     {
         // given
         Cluster cluster = startCluster( clusterConfig );
-        CoreClusterMember follower = cluster.awaitCoreMemberWithRole( Role.FOLLOWER, 1, TimeUnit.MINUTES );
+        CoreClusterMember follower = cluster.awaitCoreMemberWithRole( Role.FOLLOWER, 1, MINUTES );
 
         // when
         follower.resolveDependency( DEFAULT_DATABASE_NAME, RaftMachine.class ).triggerElection();
 
         // then
-        assertThrows( TimeoutException.class, () -> cluster.awaitCoreMemberWithRole( Role.CANDIDATE, 1, TimeUnit.MINUTES ) );
+        Duration electionTimeout = follower.config().get( CausalClusteringSettings.leader_election_timeout );
+        assertThrows(
+                TimeoutException.class,
+                () -> cluster.awaitCoreMemberWithRole( Role.CANDIDATE, electionTimeout.multipliedBy( 2 ).toSeconds(), TimeUnit.SECONDS ) );
     }
 
     @Test
@@ -94,20 +101,31 @@ class PreElectionIT
     {
         // given
         Cluster cluster = startCluster( clusterConfig
-                .withInstanceCoreParam( CausalClusteringSettings.refuse_to_be_leader, this::firstServerRefusesToBeLeader )
+                .withInstanceCoreParam( CausalClusteringSettings.refuse_to_be_leader, this::trueIfServerIdZero )
                 .withSharedCoreParam( CausalClusteringSettings.multi_dc_license, TRUE ) );
+
         CoreClusterMember oldLeader = cluster.awaitLeader();
+        assertNotEquals( oldLeader.serverId(), 0 );
+
+        int expectedNextLeaderId = oldLeader.serverId() == 1 ? 2 : 1;
+        assertEventually( () -> getAppendIndex( cluster.getCoreMemberById( expectedNextLeaderId ) ), i -> i == getAppendIndex( oldLeader ), 1, MINUTES );
 
         // when
         cluster.removeCoreMember( oldLeader );
 
         // then
         CoreClusterMember newLeader = cluster.awaitLeader();
+        assertEquals( newLeader.serverId(), expectedNextLeaderId );
 
         assertThat( newLeader.serverId(), not( equalTo( oldLeader.serverId() ) ) );
     }
 
-    private String firstServerRefusesToBeLeader( int id )
+    private long getAppendIndex( CoreClusterMember oldLeader )
+    {
+        return oldLeader.resolveDependency( DEFAULT_DATABASE_NAME, RaftMachine.class ).state().appendIndex();
+    }
+
+    private String trueIfServerIdZero( int id )
     {
         return id == 0 ? "true" : "false";
     }
