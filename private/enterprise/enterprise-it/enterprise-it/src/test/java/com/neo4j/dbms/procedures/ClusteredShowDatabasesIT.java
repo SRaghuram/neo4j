@@ -53,13 +53,15 @@ import static java.util.Collections.emptySet;
 import static java.util.Collections.singleton;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
+import static java.util.stream.Collectors.toSet;
+import static org.assertj.core.api.Assertions.allOf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.test.assertion.Assert.assertEventually;
-import static org.neo4j.test.conditions.Conditions.TRUE;
 import static org.neo4j.test.conditions.Conditions.equalityCondition;
 import static org.neo4j.test.conditions.Conditions.sizeCondition;
 
@@ -178,7 +180,7 @@ class ClusteredShowDatabasesIT
             assertEventually( format( "SHOW DATABASES should return member with address %s for all databases", newAddress ),
                               () -> databasesHostedByMember( newAddress, cluster ), equalityCondition( defaultDatabases ), timeoutSeconds, SECONDS );
             assertEventually( format( "SHOW DATABASES should show Started status for member with address %s, for all databases", newAddress ),
-                              () -> membersHaveStateForDatabases( Set.of( newAddress ), defaultDatabases, STARTED, cluster ), TRUE, timeoutSeconds,
+                              () -> showDatabases( cluster ), membersHaveStateForDatabases( Set.of( newAddress ), defaultDatabases, STARTED ), timeoutSeconds,
                               SECONDS );
         }
 
@@ -216,7 +218,7 @@ class ClusteredShowDatabasesIT
             assertEventually( format( "SHOW DATABASES should return member with address %s for all databases", newAddress ),
                               () -> databasesHostedByMember( newAddress, cluster ), equalityCondition( defaultDatabases ), timeoutSeconds, SECONDS );
             assertEventually( format( "SHOW DATABASES should show Started status for member with address %s, for all databases", newAddress ),
-                              () -> membersHaveStateForDatabases( Set.of( newAddress ), defaultDatabases, STARTED, cluster ), TRUE, timeoutSeconds,
+                              () -> showDatabases( cluster ), membersHaveStateForDatabases( Set.of( newAddress ), defaultDatabases, STARTED ), timeoutSeconds,
                               SECONDS );
         }
 
@@ -241,7 +243,8 @@ class ClusteredShowDatabasesIT
             assertEventually( "SHOW DATABASES should return 3 replicas per database", () -> showDatabases( cluster ),
                               containsRole( "read_replica", defaultDatabases, 2 ), timeoutSeconds, SECONDS );
             assertEventually( format( "SHOW DATABASES should show Started status for members %s, for all databases", clusterAddresses ),
-                              () -> membersHaveStateForDatabases( clusterAddresses, defaultDatabases, STARTED, cluster ), TRUE, timeoutSeconds, SECONDS );
+                              () -> showDatabases( cluster ), membersHaveStateForDatabases( clusterAddresses, defaultDatabases, STARTED ), timeoutSeconds,
+                              SECONDS );
 
             // when
             cluster.removeCoreMemberWithServerId( additionalCoreId );
@@ -282,7 +285,8 @@ class ClusteredShowDatabasesIT
             assertEventually( "SHOW DATABASES should return 3 replicas per database", () -> showDatabases( cluster ),
                               containsRole( "read_replica", defaultDatabases, 3 ), timeoutSeconds, SECONDS );
             assertEventually( format( "SHOW DATABASES should show Started status for members %s, for all databases", clusterAddresses ),
-                              () -> membersHaveStateForDatabases( clusterAddresses, defaultDatabases, STARTED, cluster ), TRUE, timeoutSeconds, SECONDS );
+                              () -> showDatabases( cluster ), membersHaveStateForDatabases( clusterAddresses, defaultDatabases, STARTED ), timeoutSeconds,
+                              SECONDS );
 
             // when
             cluster.removeReadReplicaWithMemberId( additionalRRId );
@@ -324,7 +328,8 @@ class ClusteredShowDatabasesIT
             assertEventually( "SHOW DATABASES should return 2 replicas per database", () -> showDatabases( cluster ),
                               containsRole( "read_replica", databasesWithAdditional, 2 ), timeoutSeconds, SECONDS );
             assertEventually( format( "SHOW DATABASES should show Started status for members %s, for all databases", clusterAddresses ),
-                    () -> membersHaveStateForDatabases( clusterAddresses, databasesWithAdditional, STARTED, cluster ), TRUE, timeoutSeconds, SECONDS );
+                              () -> showDatabases( cluster ), membersHaveStateForDatabases( clusterAddresses, databasesWithAdditional, STARTED ),
+                              timeoutSeconds, SECONDS );
 
             // when
             stopDatabase( ADDITIONAL_DATABASE_NAME, cluster );
@@ -332,12 +337,13 @@ class ClusteredShowDatabasesIT
 
             // then
             assertEventually( format( "SHOW DATABASES should show Stopped status for members %s, for additional database", clusterAddresses ),
-                    () -> membersHaveStateForDatabases( clusterAddresses, singleton( ADDITIONAL_DATABASE_NAME ), STOPPED, cluster ), TRUE, timeoutSeconds,
-                              SECONDS );
+                              () -> showDatabases( cluster ), membersHaveStateForDatabases( clusterAddresses, singleton( ADDITIONAL_DATABASE_NAME ), STOPPED ),
+                              timeoutSeconds, SECONDS );
             assertEventually( "SHOW DATABASES should show unknown role for all members for stopped additional database", () -> showDatabases( cluster ),
                               containsRole( "unknown", singleton( ADDITIONAL_DATABASE_NAME ), clusterSize ), timeoutSeconds, SECONDS );
             assertEventually( format( "SHOW DATABASES should still show Started status for members %s, for default databases", clusterAddresses ),
-                    () -> membersHaveStateForDatabases( clusterAddresses, defaultDatabases, STARTED, cluster ), TRUE, timeoutSeconds, SECONDS );
+                              () -> showDatabases( cluster ), membersHaveStateForDatabases( clusterAddresses, defaultDatabases, STARTED ), timeoutSeconds,
+                              SECONDS );
         }
 
         @Test
@@ -359,7 +365,8 @@ class ClusteredShowDatabasesIT
             assertThat( initialShowDatabases ).as( "SHOW DATABASES should return 2 replicas per database" )
                         .satisfies( containsRole( "read_replica", defaultDatabases, 2 ) );
             assertEventually( format( "SHOW DATABASES should show Started status for members %s, for all databases", clusterAddresses ),
-                              () -> membersHaveStateForDatabases( clusterAddresses, defaultDatabases, STARTED, cluster ), TRUE, timeoutSeconds, SECONDS );
+                              () -> showDatabases( cluster ), membersHaveStateForDatabases( clusterAddresses, defaultDatabases, STARTED ), timeoutSeconds,
+                              SECONDS );
 
             // when
             createDatabase( ADDITIONAL_DATABASE_NAME, cluster );
@@ -373,8 +380,8 @@ class ClusteredShowDatabasesIT
             assertEventually( "SHOW DATABASES should return 2 replicas for foo", () -> showDatabases( cluster ),
                               containsRole( "read_replica", singleton( ADDITIONAL_DATABASE_NAME ), 2 ), timeoutSeconds, SECONDS );
             assertEventually( format( "SHOW DATABASES should show Started status for members %s, for foo", clusterAddresses ),
-                    () -> membersHaveStateForDatabases( clusterAddresses, singleton( ADDITIONAL_DATABASE_NAME ), STARTED, cluster ), TRUE, timeoutSeconds,
-                              SECONDS );
+                              () -> showDatabases( cluster ), membersHaveStateForDatabases( clusterAddresses, singleton( ADDITIONAL_DATABASE_NAME ), STARTED ),
+                              timeoutSeconds, SECONDS );
         }
 
         @Test
@@ -400,8 +407,8 @@ class ClusteredShowDatabasesIT
             assertEventually( "SHOW DATABASES should return 2 replicas per database", () -> showDatabases( cluster ),
                               containsRole( "read_replica", databasesWithAdditional, 2 ), timeoutSeconds, SECONDS );
             assertEventually( format( "SHOW DATABASES should show Started status for members %s, for all databases", clusterAddresses ),
-                              () -> membersHaveStateForDatabases( clusterAddresses, databasesWithAdditional, STARTED, cluster ), TRUE, timeoutSeconds,
-                              SECONDS );
+                              () -> showDatabases( cluster ), membersHaveStateForDatabases( clusterAddresses, databasesWithAdditional, STARTED ),
+                              timeoutSeconds, SECONDS );
 
             // when
             dropDatabase( ADDITIONAL_DATABASE_NAME, cluster );
@@ -470,8 +477,8 @@ class ClusteredShowDatabasesIT
             assertEventually( "SHOW DATABASES should return 2 rows with an error for database foo", () -> showDatabases( cluster ),
                               containsError( "The total limit of databases is already reached", "foo", 2 ), timeoutSeconds, SECONDS );
             assertEventually( format( "SHOW DATABASES should show Started status for members %s, for database foo", initialClusterAddresses ),
-                              () -> membersHaveStateForDatabases( initialClusterAddresses, singleton( ADDITIONAL_DATABASE_NAME ), STARTED, cluster ), TRUE,
-                              timeoutSeconds,
+                              () -> showDatabases( cluster ),
+                              membersHaveStateForDatabases( initialClusterAddresses, singleton( ADDITIONAL_DATABASE_NAME ), STARTED ), timeoutSeconds,
                               SECONDS );
         }
     }
@@ -515,29 +522,28 @@ class ClusteredShowDatabasesIT
                 .collect( Collectors.toSet() );
     }
 
-    private static boolean membersHaveStateForDatabases( Set<String> memberBoltAddresses, Set<String> databaseNames,
-            OperatorState expectedState, Cluster cluster ) throws Exception
+    private static Condition<List<ShowDatabasesResultRow>> membersHaveStateForDatabases( Set<String> memberBoltAddresses, Set<String> databaseNames,
+            EnterpriseOperatorState expectedState )
     {
-        var statesByAddressAndName = showDatabases( cluster ).stream()
-                .collect( Collectors.toMap( ClusteredShowDatabasesIT::boltDbNameCompositeKey, ShowDatabasesHelpers.ShowDatabasesResultRow::currentStatus ) );
-
         var expectedAddressDatabaseCombinations = memberBoltAddresses.stream()
                 .flatMap( bolt -> databaseNames.stream().map( name -> Pair.of( bolt, name ) ) )
                 .collect( Collectors.toSet() );
+        return allOf( new Condition<>(
+                              resultRows -> resultRows.stream().map( ClusteredShowDatabasesIT::boltDbNameCompositeKey ).collect( toSet() )
+                                      .containsAll( expectedAddressDatabaseCombinations ),
+                              "Expected SHOW DATABASE result for databases %s to contain all following bolt addresses: %s", databaseNames,
+                              expectedAddressDatabaseCombinations ),
 
-        var databasesExistOnExpectedMembers = statesByAddressAndName.keySet().containsAll( expectedAddressDatabaseCombinations );
-
-        if ( !databasesExistOnExpectedMembers )
-        {
-            return false;
-        }
-
-        return expectedAddressDatabaseCombinations.stream()
-                .allMatch( addressNameKey ->
-                {
-                    var actualState = statesByAddressAndName.get( addressNameKey );
-                    return Objects.equals( expectedState.description(), actualState );
-                } );
+                      new Condition<>( resultRows -> expectedAddressDatabaseCombinations.stream().allMatch( addressNameKey ->
+                                        {
+                                            var statesByAddressAndName = resultRows.stream().collect(
+                                                            toMap( ClusteredShowDatabasesIT::boltDbNameCompositeKey,
+                                                                   ShowDatabasesHelpers.ShowDatabasesResultRow::currentStatus ) );
+                                            var actualState = statesByAddressAndName.get( addressNameKey );
+                                            return Objects.equals( expectedState.description(), actualState );
+                                        } ),
+                                       "Expected SHOW DATABASE result for members %s for databases %s to all be in state %s", memberBoltAddresses,
+                                       databaseNames, expectedState ) );
     }
 
     private static void waitForClusterToReachLocalState( Cluster cluster, NamedDatabaseId namedDatabaseId, EnterpriseOperatorState operatorState,
