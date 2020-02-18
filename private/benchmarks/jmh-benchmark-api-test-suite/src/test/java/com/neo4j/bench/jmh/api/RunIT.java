@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.function.Supplier;
 
@@ -43,12 +44,17 @@ public class RunIT
     Path temporaryFolder;
 
     @Test
-    public void shouldRunFromConfigFile() throws IOException
+    public void shouldRunFromConfigFileInProcess() throws IOException
     {
-        for ( int forkCount = 0; forkCount < 2; forkCount++ )
-        {
-            shouldRunFromConfigFile( forkCount );
-        }
+        int forkCount = 0;
+        shouldRunFromConfigFile( forkCount );
+    }
+
+    @Test
+    public void shouldRunFromConfigFileForked() throws IOException
+    {
+        int forkCount = 1;
+        shouldRunFromConfigFile( forkCount );
     }
 
     private void shouldRunFromConfigFile( int forkCount ) throws IOException
@@ -56,6 +62,9 @@ public class RunIT
         Path benchmarkConfig = Files.createTempFile( temporaryFolder, "benchmarkConfig", ".tmp" );
         Path workDir = Files.createTempDirectory( temporaryFolder, "work" );
         Path profilerRecordingsOutputDir = Files.createTempDirectory( temporaryFolder, "recordings" );
+
+        List<ProfilerType> profilers = (forkCount == 0) ? Collections.emptyList()
+                                                        : Lists.newArrayList( ProfilerType.JFR );
 
         BenchmarksFinder benchmarksFinder = new BenchmarksFinder( SimpleBenchmark.class.getPackage().getName() );
         SuiteDescription defaultSuiteDescription = SuiteDescription.fromAnnotations( benchmarksFinder, new Validation() );
@@ -77,7 +86,7 @@ public class RunIT
 
         BenchmarkGroupBenchmarkMetrics results = simpleRunner.run(
                 suiteDescription,
-                Lists.newArrayList( ProfilerType.JFR ),
+                profilers,
                 jvmArgs,
                 new int[]{1},
                 workDir,
@@ -124,25 +133,37 @@ public class RunIT
         Supplier<String> errorMessage = () -> errorReporter.errors().stream().map( TestRunError::toString ).collect( joining( "\n" ) );
         assertTrue( errorReporter.errors().isEmpty(), errorMessage );
 
-        // Check that the correct profiler recordings are created
-        long jfrRecordingType = ProfilerRecordingsTestUtil.recordingCountIn( profilerRecordingsOutputDir, RecordingType.JFR );
-        long expectedJfrRecordingCount = suiteDescription.benchmarks().stream().mapToLong( b -> b.explode().size() ).sum();
-        assertThat( jfrRecordingType, equalTo( expectedJfrRecordingCount ) );
+        // JFR requires a forked process to work
+        if ( forkCount > 0 )
+        {
+            // Check that the correct profiler recordings are created
+            long jfrRecordingType = ProfilerRecordingsTestUtil.recordingCountIn( profilerRecordingsOutputDir, RecordingType.JFR );
+            long expectedJfrRecordingCount = suiteDescription.benchmarks().stream().mapToLong( b -> b.explode().size() ).sum();
+            assertThat( jfrRecordingType, equalTo( expectedJfrRecordingCount ) );
+        }
     }
 
     @Test
-    public void shouldRunFromSingleBenchmark() throws IOException
+    public void shouldRunFromSingleBenchmarkInProcess() throws IOException
     {
-        for ( int forkCount = 0; forkCount < 2; forkCount++ )
-        {
-            shouldRunFromSingleBenchmark( forkCount );
-        }
+        int forkCount = 0;
+        shouldRunFromSingleBenchmark( forkCount );
+    }
+
+    @Test
+    public void shouldRunFromSingleBenchmarkForked() throws IOException
+    {
+        int forkCount = 1;
+        shouldRunFromSingleBenchmark( forkCount );
     }
 
     private void shouldRunFromSingleBenchmark( int forkCount ) throws IOException
     {
         Path workDir = Files.createTempDirectory( temporaryFolder, "work" );
         Path profilerRecordingsOutputDir = Files.createTempDirectory( temporaryFolder, "recordings" );
+
+        List<ProfilerType> profilers = (forkCount == 0) ? Collections.emptyList()
+                                                        : Lists.newArrayList( ProfilerType.JFR );
 
         ErrorReporter errorReporter = new ErrorReporter( ErrorReporter.ErrorPolicy.SKIP );
 
@@ -155,7 +176,7 @@ public class RunIT
 
         BenchmarkGroupBenchmarkMetrics results = simpleRunner.run(
                 suiteDescription,
-                Lists.newArrayList( ProfilerType.JFR ),
+                profilers,
                 jvmArgs,
                 new int[]{1},
                 workDir,
@@ -188,9 +209,13 @@ public class RunIT
         Supplier<String> errorMessage = () -> errorReporter.errors().stream().map( TestRunError::toString ).collect( joining( "\n" ) );
         assertTrue( errorReporter.errors().isEmpty(), errorMessage );
 
-        // Check that the correct profiler recordings are created
-        long jfrRecordingType = ProfilerRecordingsTestUtil.recordingCountIn( profilerRecordingsOutputDir, RecordingType.JFR );
-        long expectedJfrRecordingCount = suiteDescription.benchmarks().stream().mapToLong( b -> b.explode().size() ).sum();
-        assertThat( jfrRecordingType, equalTo( expectedJfrRecordingCount ) );
+        // JFR requires a forked process to work
+        if ( forkCount > 0 )
+        {
+            // Check that the correct profiler recordings are created
+            long jfrRecordingType = ProfilerRecordingsTestUtil.recordingCountIn( profilerRecordingsOutputDir, RecordingType.JFR );
+            long expectedJfrRecordingCount = suiteDescription.benchmarks().stream().mapToLong( b -> b.explode().size() ).sum();
+            assertThat( jfrRecordingType, equalTo( expectedJfrRecordingCount ) );
+        }
     }
 }
