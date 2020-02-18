@@ -66,6 +66,29 @@ class GraphCountsPlanContext(data: GraphCountData)(tc: TransactionalContextWrapp
   private val indexes = data.indexes
   private val userDefinedFunctions = mutable.Map.empty[QualifiedName, UserFunctionSignature]
 
+  // Assume native index
+  private val indexCapability: IndexCapability = GenericNativeIndexProvider.CAPABILITY
+
+  // Same as product code in TransactionBoundPlanContext
+  private val orderCapability: OrderCapability = tps => {
+    indexCapability.orderCapability(tps.map(typeToValueCategory): _*) match {
+      case Array() => IndexOrderCapability.NONE
+      case Array(IndexOrder.ASCENDING, IndexOrder.DESCENDING) => IndexOrderCapability.BOTH
+      case Array(IndexOrder.DESCENDING, IndexOrder.ASCENDING) => IndexOrderCapability.BOTH
+      case Array(IndexOrder.ASCENDING) => IndexOrderCapability.ASC
+      case Array(IndexOrder.DESCENDING) => IndexOrderCapability.DESC
+      case _ => IndexOrderCapability.NONE
+    }
+  }
+  private val valueCapability: ValueCapability = tps => {
+    indexCapability.valueCapability(tps.map(typeToValueCategory): _*) match {
+      // As soon as the kernel provides an array of IndexValueCapability, this mapping can change
+      case IndexValueCapability.YES => tps.map(_ => CanGetValue)
+      case IndexValueCapability.PARTIAL => tps.map(_ => DoNotGetValue)
+      case IndexValueCapability.NO => tps.map(_ => DoNotGetValue)
+    }
+  }
+
   def addUDF(udf: UserFunctionSignature): Unit = {
     userDefinedFunctions.put(udf.name, udf)
   }
@@ -75,29 +98,6 @@ class GraphCountsPlanContext(data: GraphCountData)(tc: TransactionalContextWrapp
     new MutableGraphStatisticsSnapshot())
 
   override def indexesGetForLabel(labelId: Int): Iterator[IndexDescriptor] = {
-    // Assume native index
-    val indexCapability: IndexCapability = GenericNativeIndexProvider.CAPABILITY
-
-    // Same as product code in TransactionBoundPlanContext
-    val orderCapability: OrderCapability = tps => {
-      indexCapability.orderCapability(tps.map(typeToValueCategory): _*) match {
-        case Array() => IndexOrderCapability.NONE
-        case Array(IndexOrder.ASCENDING, IndexOrder.DESCENDING) => IndexOrderCapability.BOTH
-        case Array(IndexOrder.DESCENDING, IndexOrder.ASCENDING) => IndexOrderCapability.BOTH
-        case Array(IndexOrder.ASCENDING) => IndexOrderCapability.ASC
-        case Array(IndexOrder.DESCENDING) => IndexOrderCapability.DESC
-        case _ => IndexOrderCapability.NONE
-      }
-    }
-    val valueCapability: ValueCapability = tps => {
-      indexCapability.valueCapability(tps.map(typeToValueCategory): _*) match {
-        // As soon as the kernel provides an array of IndexValueCapability, this mapping can change
-        case IndexValueCapability.YES => tps.map(_ => CanGetValue)
-        case IndexValueCapability.PARTIAL => tps.map(_ => DoNotGetValue)
-        case IndexValueCapability.NO => tps.map(_ => DoNotGetValue)
-      }
-    }
-
     indexes
       .filter(_.labels.contains(getLabelName(labelId)))
       .map(x => IndexDescriptor(LabelId(labelId),
@@ -137,7 +137,8 @@ class GraphCountsPlanContext(data: GraphCountData)(tc: TransactionalContextWrapp
     indexes
       .filter(x => x.labels.contains(labelName) && x.properties == propertyKeys)
       .map(x => IndexDescriptor(LabelId(getLabelId(labelName)),
-        x.properties.map(propertyName => PropertyKeyId(getPropertyKeyId(propertyName))))
+        x.properties.map(propertyName => PropertyKeyId(getPropertyKeyId(propertyName))),
+                                orderCapability = orderCapability, valueCapability = valueCapability)
       ).headOption
 
   override def indexExistsForLabelAndProperties(labelName: String, propertyKey: Seq[String]): Boolean = {

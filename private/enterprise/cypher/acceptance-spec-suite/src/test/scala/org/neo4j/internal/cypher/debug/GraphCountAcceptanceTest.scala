@@ -15,10 +15,12 @@ import org.json4s.native.Serialization
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.QueryStatisticsTestSupport
 import org.neo4j.cypher.internal.frontend.phases.InternalNotificationLogger
+import org.neo4j.cypher.internal.frontend.phases.devNullLogger
 import org.neo4j.cypher.internal.logical.plans.CypherValue
 import org.neo4j.cypher.internal.logical.plans.FieldSignature
 import org.neo4j.cypher.internal.logical.plans.QualifiedName
 import org.neo4j.cypher.internal.logical.plans.UserFunctionSignature
+import org.neo4j.cypher.internal.planner.spi.IndexOrderCapability.BOTH
 import org.neo4j.cypher.internal.planning.CypherPlanner
 import org.neo4j.cypher.internal.runtime.interpreted.TransactionalContextWrapper
 import org.neo4j.cypher.internal.util.symbols.CTAny
@@ -27,12 +29,19 @@ import org.neo4j.cypher.internal.util.symbols.CTDateTime
 import org.neo4j.cypher.internal.util.symbols.CTDuration
 import org.neo4j.cypher.internal.util.symbols.CTLocalDateTime
 import org.neo4j.cypher.internal.util.symbols.CTLocalTime
+import org.neo4j.cypher.internal.util.symbols.CTString
 import org.neo4j.cypher.internal.util.symbols.CTTime
 import org.neo4j.internal.collector.DataCollectorMatchers.beListWithoutOrder
 import org.neo4j.internal.collector.DataCollectorMatchers.beMapContaining
 import org.neo4j.internal.collector.SampleGraphs
 import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
+import org.neo4j.internal.kernel.api.security.LoginContext.AUTH_DISABLED
+import org.neo4j.kernel.GraphDatabaseQueryService
+import org.neo4j.kernel.api.KernelTransaction.Type.EXPLICIT
+import org.neo4j.kernel.impl.coreapi.InternalTransaction
+import org.neo4j.kernel.impl.query.Neo4jTransactionalContextFactory
 import org.neo4j.logging.Log
+import org.neo4j.values.virtual.VirtualValues.EMPTY_MAP
 
 class GraphCountAcceptanceTest extends ExecutionEngineFunSuite
                                with QueryStatisticsTestSupport
@@ -224,22 +233,41 @@ class GraphCountAcceptanceTest extends ExecutionEngineFunSuite
     implicit val formats: Formats = DefaultFormats + RowSerializer
     val graphCountData = JsonMethods.parse(StringInput(json)).extract[GraphCountData]
 
-    // Create a custom plan context like the one in the support case template above
-    def getPlanContext(tc: TransactionalContextWrapper, logger: InternalNotificationLogger, log: Log): GraphCountsPlanContext = {
-      new GraphCountsPlanContext(graphCountData)(tc, logger)
-    }
-    CypherPlanner.customPlanContextCreator = Some(getPlanContext)
-
     createGraph(graphCountData)
 
-    val query =
-      """
-        | MATCH (p: Person)
-        | WHERE p.name STARTS WITH "s"
-        | RETURN p.name ORDER BY p.name
-        |""".stripMargin
+    val tx = graph.beginTransaction(EXPLICIT, AUTH_DISABLED)
+    val transactionalContext = createTransactionContext(graph, tx)
 
-    val result = executeSingle(query)
-    result.executionPlanDescription() should not(includeSomewhere.aPlan("Sort"))
+    // Create a custom plan context like the one in the support case template above
+    val planContext = new GraphCountsPlanContext(graphCountData)(TransactionalContextWrapper(transactionalContext), devNullLogger)
+
+    try {
+      // Index Seek code path
+      val indexDescriptorIterator = planContext.indexesGetForLabel(0)
+      indexDescriptorIterator.hasNext should be(true)
+      val seekIndexDescriptor = indexDescriptorIterator.next()
+      seekIndexDescriptor.orderCapability(Seq(CTString)) should be(BOTH)
+
+      // Index Scan code path
+      val maybeIndexDescriptor = planContext.indexGetForLabelAndProperties("Person", Seq("name"))
+      maybeIndexDescriptor.isDefined should be(true)
+      val scanIndexDescriptor = maybeIndexDescriptor.get
+      scanIndexDescriptor.orderCapability(Seq(CTString)) should be(BOTH)
+
+      transactionalContext.close()
+      tx.commit()
+    } catch {
+      case t: Throwable =>
+        transactionalContext.close()
+        tx.rollback()
+        throw t
+    } finally {
+      tx.close()
+    }
+  }
+
+  private def createTransactionContext(graphDatabaseCypherService: GraphDatabaseQueryService, tx: InternalTransaction) = {
+    val contextFactory = Neo4jTransactionalContextFactory.create(graphDatabaseCypherService)
+    contextFactory.newContext(tx, "no query", EMPTY_MAP)
   }
 }
