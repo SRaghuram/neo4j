@@ -174,7 +174,7 @@ class DefaultNodeCursor extends TraceableCursor implements NodeCursor
             {
                 return true;
             }
-            if ( diffSets.getRemoved().contains( label ) )
+            if ( diffSets.getRemoved().contains( label ) || currentAddedInTx != NO_ID )
             {
                 return false;
             }
