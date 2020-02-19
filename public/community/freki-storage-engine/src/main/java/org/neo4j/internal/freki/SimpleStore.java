@@ -24,6 +24,7 @@ import java.io.IOException;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.lifecycle.Lifecycle;
+import org.neo4j.storageengine.util.IdUpdateListener;
 
 public interface SimpleStore extends Lifecycle, AutoCloseable
 {
@@ -37,7 +38,7 @@ public interface SimpleStore extends Lifecycle, AutoCloseable
 
     PageCursor openWriteCursor() throws IOException;
 
-    void write( PageCursor cursor, Record record ) throws IOException;
+    void write( PageCursor cursor, Record record, IdUpdateListener idUpdateListener, PageCursorTracer cursorTracer ) throws IOException;
 
     PageCursor openReadCursor();
 

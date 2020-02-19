@@ -31,6 +31,7 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
+import org.neo4j.storageengine.util.IdUpdateListener;
 
 public class Store extends BareBoneStore implements SimpleStore
 {
@@ -104,7 +105,7 @@ public class Store extends BareBoneStore implements SimpleStore
     }
 
     @Override
-    public void write( PageCursor cursor, Record record ) throws IOException
+    public void write( PageCursor cursor, Record record, IdUpdateListener idUpdateListener, PageCursorTracer cursorTracer ) throws IOException
     {
         long id = record.id;
         long pageId = id / recordsPerPage;
@@ -116,6 +117,7 @@ public class Store extends BareBoneStore implements SimpleStore
         cursor.setOffset( offset );
         record.serialize( cursor );
         cursor.checkAndClearBoundsFlag();
+        idUpdateListener.markId( idGenerator, id, record.hasFlag( Record.FLAG_IN_USE ), cursorTracer );
     }
 
     @Override

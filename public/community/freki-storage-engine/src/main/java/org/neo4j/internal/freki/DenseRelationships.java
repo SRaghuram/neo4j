@@ -55,7 +55,7 @@ class DenseRelationships implements Iterable<DenseRelationships.DenseRelationshi
         boolean outgoing;
         IntObjectMap<ByteBuffer> properties;
 
-        public DenseRelationship( long internalId, long sourceNodeId, long otherNodeId, boolean outgoing, IntObjectMap<ByteBuffer> properties )
+        DenseRelationship( long internalId, long sourceNodeId, long otherNodeId, boolean outgoing, IntObjectMap<ByteBuffer> properties )
         {
             this.internalId = internalId;
             this.sourceNodeId = sourceNodeId;

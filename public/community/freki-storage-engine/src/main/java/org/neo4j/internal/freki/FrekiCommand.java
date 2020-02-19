@@ -20,15 +20,22 @@
 package org.neo4j.internal.freki;
 
 import org.eclipse.collections.api.map.primitive.IntObjectMap;
+import org.eclipse.collections.api.map.primitive.MutableIntObjectMap;
 import org.eclipse.collections.api.set.primitive.IntSet;
+import org.eclipse.collections.api.set.primitive.MutableIntSet;
 import org.eclipse.collections.api.tuple.primitive.IntObjectPair;
+import org.eclipse.collections.impl.factory.primitive.IntObjectMaps;
+import org.eclipse.collections.impl.factory.primitive.IntSets;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.HashMap;
 import java.util.Map;
 
+import org.neo4j.internal.kernel.api.exceptions.schema.MalformedSchemaRuleException;
 import org.neo4j.internal.schema.SchemaRule;
 import org.neo4j.internal.schema.SchemaRuleMapifier;
+import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
 import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.string.UTF8;
@@ -41,6 +48,7 @@ import org.neo4j.values.storable.LongValue;
 import org.neo4j.values.storable.TextValue;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.ValueGroup;
+import org.neo4j.values.storable.Values;
 
 abstract class FrekiCommand implements StorageCommand
 {
@@ -98,6 +106,14 @@ abstract class FrekiCommand implements StorageCommand
             before.serialize( channel );
             after.serialize( channel );
         }
+
+        static SparseNode deserialize( ReadableChannel channel ) throws IOException
+        {
+            long id = channel.getLong();
+            Record before = Record.deserialize( channel, id );
+            Record after = Record.deserialize( channel, id );
+            return new SparseNode( before, after );
+        }
     }
 
     static class DenseNode extends FrekiCommand
@@ -138,7 +154,7 @@ abstract class FrekiCommand implements StorageCommand
             channel.put( (byte) (inUse ? 1 : 0) );
 
             // added/changed node properties
-            writeProperties( channel );
+            writeProperties( channel, addedProperties );
 
             // removed node properties
             channel.putInt( removedProperties.size() );
@@ -148,27 +164,69 @@ abstract class FrekiCommand implements StorageCommand
             }
 
             // created relationships
-            channel.putInt( createdRelationships.size() );
-            for ( IntObjectPair<DenseRelationships> relationships : createdRelationships.keyValuesView() )
-            {
-                channel.putInt( relationships.getOne() ); // type
-                channel.putInt( relationships.getTwo().relationships.size() ); // number of relationships of this type
-                for ( DenseRelationships.DenseRelationship relationship : relationships.getTwo() )
-                {
-                    writeRelationshipMainData( channel, relationship );
-                    writeProperties( channel );
-                }
-            }
+            writeRelationships( channel, createdRelationships, true );
 
             // deleted relationships
-            channel.putInt( deletedRelationships.size() );
-            for ( IntObjectPair<DenseRelationships> relationships : createdRelationships.keyValuesView() )
+            writeRelationships( channel, deletedRelationships, false );
+        }
+
+        private void writeProperties( WritableChannel channel, IntObjectMap<ByteBuffer> properties ) throws IOException
+        {
+            channel.putInt( properties.size() );
+            for ( IntObjectPair<ByteBuffer> property : properties.keyValuesView() )
+            {
+                writeProperty( channel, property.getOne(), property.getTwo() );
+            }
+        }
+
+        private void writeProperty( WritableChannel channel, int key, ByteBuffer value ) throws IOException
+        {
+            channel.putInt( key );
+            channel.putInt( value.limit() );
+            channel.put( value.array(), value.limit() );
+        }
+
+        private static IntObjectMap<ByteBuffer> readProperties( ReadableChannel channel ) throws IOException
+        {
+            MutableIntObjectMap<ByteBuffer> properties = IntObjectMaps.mutable.empty();
+            int numProperties = channel.getInt();
+            for ( int i = 0; i < numProperties; i++ )
+            {
+                int key = channel.getInt();
+                int length = channel.getInt();
+                byte[] data = new byte[length];
+                channel.get( data, length );
+                properties.put( key, ByteBuffer.wrap( data ) );
+            }
+            return properties;
+        }
+
+        private static IntSet readRemovedProperties( ReadableChannel channel ) throws IOException
+        {
+            MutableIntSet removedProperties = IntSets.mutable.empty();
+            int numProperties = channel.getInt();
+            for ( int i = 0; i < numProperties; i++ )
+            {
+                removedProperties.add( channel.getInt() );
+            }
+            return null;
+        }
+
+        private void writeRelationships( WritableChannel channel, IntObjectMap<DenseRelationships> relationshipTypeMap, boolean includeProperties )
+                throws IOException
+        {
+            channel.putInt( relationshipTypeMap.size() );
+            for ( IntObjectPair<DenseRelationships> relationships : relationshipTypeMap.keyValuesView() )
             {
                 channel.putInt( relationships.getOne() ); // type
                 channel.putInt( relationships.getTwo().relationships.size() ); // number of relationships of this type
                 for ( DenseRelationships.DenseRelationship relationship : relationships.getTwo() )
                 {
                     writeRelationshipMainData( channel, relationship );
+                    if ( includeProperties )
+                    {
+                        writeProperties( channel, relationship.properties );
+                    }
                 }
             }
         }
@@ -181,19 +239,39 @@ abstract class FrekiCommand implements StorageCommand
             channel.put( (byte) (relationship.outgoing ? 1 : 0) );
         }
 
-        private void writeProperties( WritableChannel channel ) throws IOException
+        private static IntObjectMap<DenseRelationships> readRelationships( ReadableChannel channel, boolean includeProperties ) throws IOException
         {
-            channel.putInt( addedProperties.size() );
-            for ( IntObjectPair<ByteBuffer> property : addedProperties.keyValuesView() )
+            MutableIntObjectMap<DenseRelationships> relationships = IntObjectMaps.mutable.empty();
+            int numRelationshipTypes = channel.getInt();
+            for ( int i = 0; i < numRelationshipTypes; i++ )
             {
-                writeProperty( channel, property.getOne(), property.getTwo() );
+                int type = channel.getInt();
+                int numRelationships = channel.getInt();
+                DenseRelationships denseRelationships = new DenseRelationships( type );
+                for ( int j = 0; j < numRelationships; j++ )
+                {
+                    long internalId = channel.getLong();
+                    long sourceNodeId = channel.getLong();
+                    long otherNodeId = channel.getLong();
+                    boolean outgoing = channel.get() != 0;
+                    IntObjectMap<ByteBuffer> properties = includeProperties ? readProperties( channel ) : IntObjectMaps.immutable.empty();
+                    denseRelationships.add( internalId, sourceNodeId, otherNodeId, outgoing, properties );
+                }
             }
+            return relationships;
         }
 
-        private void writeProperty( WritableChannel channel, int key, ByteBuffer value ) throws IOException
+        static DenseNode deserialize( ReadableChannel channel ) throws IOException
         {
-            channel.putInt( key );
-            channel.put( value.array(), value.limit() );
+            long nodeId = channel.getLong();
+            boolean inUse = channel.get() != 0;
+
+            IntObjectMap<ByteBuffer> addedProperties = readProperties( channel );
+            IntSet removedProperties = readRemovedProperties( channel );
+            IntObjectMap<DenseRelationships> createdRelationships = readRelationships( channel, true );
+            IntObjectMap<DenseRelationships> deletedRelationships = readRelationships( channel, false );
+
+            return new DenseNode( nodeId, inUse, addedProperties, removedProperties,createdRelationships, deletedRelationships );
         }
     }
 
@@ -226,10 +304,19 @@ abstract class FrekiCommand implements StorageCommand
             channel.putInt( bytes.length );
             channel.put( bytes, bytes.length );
         }
+
+        static BigPropertyValue deserialize( ReadableChannel channel ) throws IOException
+        {
+            long pointer = channel.getLong();
+            byte[] data = new byte[channel.getInt()];
+            channel.get( data, data.length );
+            return new BigPropertyValue( pointer, data );
+        }
     }
 
     abstract static class Token extends FrekiCommand implements StorageCommand.TokenCommand
     {
+
         final NamedToken token;
 
         Token( byte recordType, NamedToken token )
@@ -255,9 +342,13 @@ abstract class FrekiCommand implements StorageCommand
         {
             super.serialize( channel );
             channel.putInt( token.id() );
-            byte[] name = UTF8.encode( token.name() );
-            channel.putInt( name.length );
-            channel.put( name, name.length );
+            FrekiCommand.writeString( channel, token.name() );
+        }
+
+        static NamedToken deserializeNamedToken( ReadableChannel channel ) throws IOException
+        {
+            int id = channel.getInt();
+            return new NamedToken( FrekiCommand.readString( channel ), id );
         }
     }
 
@@ -276,6 +367,11 @@ abstract class FrekiCommand implements StorageCommand
             applier.handle( this );
             return false;
         }
+
+        static LabelToken deserialize( ReadableChannel channel ) throws IOException
+        {
+            return new LabelToken( deserializeNamedToken( channel ) );
+        }
     }
 
     static class RelationshipTypeToken extends Token
@@ -292,6 +388,11 @@ abstract class FrekiCommand implements StorageCommand
         {
             applier.handle( this );
             return false;
+        }
+
+        static RelationshipTypeToken deserialize( ReadableChannel channel ) throws IOException
+        {
+            return new RelationshipTypeToken( deserializeNamedToken( channel ) );
         }
     }
 
@@ -310,9 +411,14 @@ abstract class FrekiCommand implements StorageCommand
             applier.handle( this );
             return false;
         }
+
+        static PropertyKeyToken deserialize( ReadableChannel channel ) throws IOException
+        {
+            return new PropertyKeyToken( deserializeNamedToken( channel ) );
+        }
     }
 
-    enum Mode
+    enum Mode //Dont change order, will break format
     {
         CREATE,
         UPDATE,
@@ -351,14 +457,17 @@ abstract class FrekiCommand implements StorageCommand
         {
             super.serialize( channel );
             channel.putLong( descriptor.getId() );
+            channel.put( (byte) mode.ordinal() );
             Map<String,Value> properties = SchemaRuleMapifier.mapifySchemaRule( descriptor );
+            channel.putInt( properties.size() );
             for ( Map.Entry<String,Value> property : properties.entrySet() )
             {
+                FrekiCommand.writeString( channel, property.getKey() );
                 writeValue( channel, property.getValue() );
             }
         }
 
-        public void writeValue( WritableChannel channel, Value value ) throws IOException
+        void writeValue( WritableChannel channel, Value value ) throws IOException
         {
             // TODO copied from GBPTreeSchemaStore, this could be unified to one thing later on
             if ( value.valueGroup() == ValueGroup.TEXT )
@@ -408,6 +517,91 @@ abstract class FrekiCommand implements StorageCommand
                 throw new UnsupportedOperationException( "Unsupported value type " + value + " " + value.getClass() );
             }
         }
+
+        private static Value readValue( ReadableChannel channel ) throws IOException
+        {
+            Value value;
+            byte type = channel.get();
+            switch ( type )
+            {
+            case VALUE_TYPE_STRING:
+                int stringLength = channel.getInt();
+                byte[] stringBytes = new byte[stringLength];
+                channel.get( stringBytes, stringLength );
+                value = Values.stringValue( UTF8.decode( stringBytes ) );
+                break;
+            case VALUE_TYPE_BOOLEAN:
+                byte booleanValue = channel.get();
+                value = Values.booleanValue( booleanValue != 0 );
+                break;
+            case VALUE_TYPE_INT:
+                value = Values.intValue( channel.getInt() );
+                break;
+            case VALUE_TYPE_LONG:
+                value = Values.longValue( channel.getLong() );
+                break;
+            case VALUE_TYPE_INT_ARRAY:
+                int intArrayLength = channel.getInt();
+                int[] intArray = new int[intArrayLength];
+                for ( int i = 0; i < intArrayLength; i++ )
+                {
+                    intArray[i] = channel.getInt();
+                }
+                value = Values.intArray( intArray );
+                break;
+            case VALUE_TYPE_DOUBLE_ARRAY:
+                int doubleArrayLength = channel.getInt();
+                double[] doubleArray = new double[doubleArrayLength];
+                for ( int i = 0; i < doubleArrayLength; i++ )
+                {
+                    doubleArray[i] = Double.longBitsToDouble( channel.getLong() );
+                }
+                value = Values.doubleArray( doubleArray );
+                break;
+            default:
+                throw new UnsupportedOperationException( "Unknown type " + type );
+            }
+            return value;
+        }
+
+        static Schema deserialize( ReadableChannel channel ) throws IOException
+        {
+            long descriptorId = channel.getLong();
+            Mode mode = Mode.values()[channel.get()];
+
+            int numProperties = channel.getInt();
+            Map<String,Value> properties = new HashMap<>();
+            for ( int i = 0; i < numProperties; i++ )
+            {
+                String key = FrekiCommand.readString( channel );
+                Value value = readValue( channel );
+                properties.put( key, value );
+            }
+
+            try
+            {
+                SchemaRule schemaRule = SchemaRuleMapifier.unmapifySchemaRule( descriptorId, properties );
+                return new Schema( schemaRule, mode );
+            }
+            catch ( MalformedSchemaRuleException e )
+            {
+                throw new IOException( "Could not read schema", e );
+            }
+        }
+    }
+
+    private static void writeString( WritableChannel channel, String string ) throws IOException
+    {
+        byte[] data = UTF8.encode( string );
+        channel.putInt( data.length );
+        channel.put( data, data.length );
+    }
+
+    private static String readString( ReadableChannel channel ) throws IOException
+    {
+        byte[] nameBytes = new byte[channel.getInt()];
+        channel.get( nameBytes, nameBytes.length );
+        return UTF8.decode( nameBytes );
     }
 
     interface Dispatcher
