@@ -7,12 +7,11 @@ package com.neo4j.causalclustering.core;
 
 import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.PriorityBlockingQueue;
-import java.util.concurrent.TimeUnit;
+import java.util.PriorityQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 import static com.neo4j.causalclustering.core.BoundedPriorityQueue.Result.E_COUNT_EXCEEDED;
 import static com.neo4j.causalclustering.core.BoundedPriorityQueue.Result.E_SIZE_EXCEEDED;
@@ -46,31 +45,6 @@ public class BoundedPriorityQueue<E>
         }
     }
 
-    public interface Removable<E>
-    {
-        E get();
-
-        boolean remove();
-
-        default <T> Removable<T> map( Function<E,T> fn )
-        {
-            return new Removable<>()
-            {
-                @Override
-                public T get()
-                {
-                    return fn.apply( Removable.this.get() );
-                }
-
-                @Override
-                public boolean remove()
-                {
-                    return Removable.this.remove();
-                }
-            };
-        }
-    }
-
     public enum Result
     {
         OK,
@@ -81,7 +55,7 @@ public class BoundedPriorityQueue<E>
     private final Config config;
     private final Function<E,Long> sizeOf;
 
-    private final BlockingQueue<StableElement> queue;
+    private final PriorityQueue<StableElement> queue;
     private final AtomicLong seqGen = new AtomicLong();
     private final AtomicInteger count = new AtomicInteger();
     private final AtomicLong bytes = new AtomicLong();
@@ -90,7 +64,7 @@ public class BoundedPriorityQueue<E>
     {
         this.config = config;
         this.sizeOf = sizeOf;
-        this.queue = new PriorityBlockingQueue<>( config.maxCount, new Comparator( comparator ) );
+        this.queue = new PriorityQueue<>( config.maxCount, new Comparator( comparator ) );
     }
 
     public int count()
@@ -110,7 +84,7 @@ public class BoundedPriorityQueue<E>
      * @param element The element offered.
      * @return OK if successful, and a specific error code otherwise.
      */
-    public Result offer( E element )
+    public synchronized Result offer( E element )
     {
         int updatedCount = count.incrementAndGet();
         if ( updatedCount > config.maxCount )
@@ -155,22 +129,23 @@ public class BoundedPriorityQueue<E>
         return Optional.of( element.element );
     }
 
-    public Optional<E> poll()
+    public synchronized Optional<E> poll()
     {
         return deduct( queue.poll() );
     }
 
-    public Optional<E> poll( int timeout, TimeUnit unit ) throws InterruptedException
+    synchronized Optional<E> pollIf( Predicate<E> predicate )
     {
-        return deduct( queue.poll( timeout, unit ) );
+        StableElement nextElement = queue.peek();
+        if ( nextElement != null && predicate.test( nextElement.element ) )
+        {
+            return poll();
+        }
+
+        return Optional.empty();
     }
 
-    Optional<Removable<E>> peek()
-    {
-        return Optional.ofNullable( queue.peek() );
-    }
-
-    class StableElement implements Removable<E>
+    class StableElement
     {
         private final long seqNo = seqGen.getAndIncrement();
         private final E element;
@@ -180,21 +155,9 @@ public class BoundedPriorityQueue<E>
             this.element = element;
         }
 
-        @Override
         public E get()
         {
             return element;
-        }
-
-        @Override
-        public boolean remove()
-        {
-            boolean removed = queue.remove( this );
-            if ( removed )
-            {
-                deduct( this );
-            }
-            return removed;
         }
 
         @Override

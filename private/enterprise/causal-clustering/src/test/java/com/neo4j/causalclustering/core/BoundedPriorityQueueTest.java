@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.core;
 
 import com.neo4j.causalclustering.core.BoundedPriorityQueue.Config;
-import com.neo4j.causalclustering.core.BoundedPriorityQueue.Removable;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -14,7 +13,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
@@ -23,6 +21,8 @@ import static com.neo4j.causalclustering.core.BoundedPriorityQueue.Result.E_COUN
 import static com.neo4j.causalclustering.core.BoundedPriorityQueue.Result.E_SIZE_EXCEEDED;
 import static com.neo4j.causalclustering.core.BoundedPriorityQueue.Result.OK;
 import static java.util.Comparator.comparingInt;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 class BoundedPriorityQueueTest
 {
@@ -119,57 +119,31 @@ class BoundedPriorityQueueTest
     }
 
     @Test
-    void shouldBeAbleToPeekEntries()
+    void shouldPollWithPredicate()
     {
         BoundedPriorityQueue<Integer> queue = new BoundedPriorityQueue<>( BASE_CONFIG, Integer::longValue, NO_PRIORITY );
 
-        Assertions.assertEquals( OK, queue.offer( 1 ) );
-        Assertions.assertEquals( OK, queue.offer( 2 ) );
-        Assertions.assertEquals( OK, queue.offer( 3 ) );
+        assertEquals( OK, queue.offer( 1 ) );
+        assertEquals( OK, queue.offer( 2 ) );
+        assertEquals( OK, queue.offer( 3 ) );
+        assertEquals( 3, queue.count() );
+        assertEquals( 6, queue.bytes() );
 
-        Assertions.assertEquals( Optional.of( 1 ), queue.peek().map( Removable::get ) );
-        Assertions.assertEquals( Optional.of( 1 ), queue.peek().map( Removable::get ) );
-        Assertions.assertEquals( Optional.of( 1 ), queue.peek().map( Removable::get ) );
+        assertEquals( Integer.valueOf( 1 ), queue.pollIf( v -> v.equals( 1 ) ).get() );
+        assertEquals( 2, queue.count() );
+        assertEquals( 5, queue.bytes() );
 
-        Assertions.assertEquals( 3, queue.count() );
-        Assertions.assertEquals( 6, queue.bytes() );
-    }
+        assertTrue( queue.pollIf( v -> v.equals( 1 ) ).isEmpty() );
+        assertEquals( 2, queue.count() );
+        assertEquals( 5, queue.bytes() );
 
-    @Test
-    void shouldBeAbleToRemovePeekedEntries()
-    {
-        BoundedPriorityQueue<Integer> queue = new BoundedPriorityQueue<>( BASE_CONFIG, Integer::longValue, NO_PRIORITY );
+        assertEquals( Integer.valueOf( 2 ), queue.pollIf( v -> v.equals( 2 ) ).get() );
+        assertEquals( 1, queue.count() );
+        assertEquals( 3, queue.bytes() );
 
-        Assertions.assertEquals( OK, queue.offer( 1 ) );
-        Assertions.assertEquals( OK, queue.offer( 2 ) );
-        Assertions.assertEquals( OK, queue.offer( 3 ) );
-        Assertions.assertEquals( 3, queue.count() );
-        Assertions.assertEquals( 6, queue.bytes() );
-
-        Assertions.assertTrue( queue.peek().isPresent() );
-        Assertions.assertTrue( queue.peek().get().remove() );
-        Assertions.assertEquals( 2, queue.count() );
-        Assertions.assertEquals( 5, queue.bytes() );
-
-        Assertions.assertTrue( queue.peek().isPresent() );
-        Assertions.assertTrue( queue.peek().get().remove() );
-        Assertions.assertEquals( 1, queue.count() );
-        Assertions.assertEquals( 3, queue.bytes() );
-
-        Assertions.assertTrue( queue.peek().isPresent() );
-        Assertions.assertTrue( queue.peek().get().remove() );
-        Assertions.assertEquals( 0, queue.count() );
-        Assertions.assertEquals( 0, queue.bytes() );
-
-        Assertions.assertFalse( queue.peek().isPresent() );
-        try
-        {
-            queue.peek().get().remove();
-            Assertions.fail();
-        }
-        catch ( NoSuchElementException ignored )
-        {
-        }
+        assertEquals( Integer.valueOf( 3 ), queue.pollIf( v -> v.equals( 3 ) ).get() );
+        assertEquals( 0, queue.count() );
+        assertEquals( 0, queue.bytes() );
     }
 
     @Test

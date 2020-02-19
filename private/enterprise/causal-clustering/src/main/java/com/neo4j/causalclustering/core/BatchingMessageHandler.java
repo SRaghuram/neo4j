@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.core;
 
-import com.neo4j.causalclustering.core.BoundedPriorityQueue.Removable;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.RaftMessages.AppendEntries;
 import com.neo4j.causalclustering.core.consensus.RaftMessages.InboundRaftMessageContainer;
@@ -19,11 +18,11 @@ import com.neo4j.causalclustering.messaging.ComposableMessageHandler;
 import com.neo4j.causalclustering.messaging.LifecycleMessageHandler;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Predicate;
 
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -32,7 +31,7 @@ import org.neo4j.scheduler.JobScheduler;
 
 import static com.neo4j.causalclustering.core.BoundedPriorityQueue.Result.OK;
 import static java.lang.Long.max;
-import static java.util.concurrent.TimeUnit.SECONDS;
+import static java.util.Arrays.stream;
 import static org.neo4j.internal.helpers.ArrayUtil.lastOf;
 
 /**
@@ -99,7 +98,7 @@ class BatchingMessageHandler implements Runnable, LifecycleMessageHandler<Inboun
     {
         stopped = true;
         handler.stop();
-        scheduler.stopAll();
+        scheduler.abort();
     }
 
     @Override
@@ -144,18 +143,11 @@ class BatchingMessageHandler implements Runnable, LifecycleMessageHandler<Inboun
     @Override
     public void run()
     {
-        try
-        {
-            inQueue.poll( 1, SECONDS ).ifPresent( message ->
-                                                  {
-                                                      var batchedMessage = message.message().dispatch( new BatchingHandler( message ) );
-                                                      handler.handle( batchedMessage == null ? message : batchedMessage );
-                                                  } );
-        }
-        catch ( InterruptedException e )
-        {
-            log.warn( "Not expecting to be interrupted.", e );
-        }
+        inQueue.poll().ifPresent( message ->
+                                  {
+                                      var batchedMessage = message.message().dispatch( new BatchingHandler( message ) );
+                                      handler.handle( batchedMessage == null ? message : batchedMessage );
+                                  } );
     }
 
     /**
@@ -166,28 +158,16 @@ class BatchingMessageHandler implements Runnable, LifecycleMessageHandler<Inboun
         contentBatch.clear();
 
         contentBatch.add( first.content() );
-        long totalBytes = first.content().size().orElse( 0L );
+        long totalBytes = getSize( first.content() );
 
         while ( contentBatch.size() < batchConfig.maxBatchCount )
         {
-            Optional<Removable<NewEntry.Request>> peeked = peekNext( NewEntry.Request.class );
-
-            if ( peeked.isEmpty() )
+            var optionalRequest = pollNext( NewEntry.Request.class, request -> (totalBytes + getSize( request.content() )) <= batchConfig.maxBatchBytes );
+            if ( optionalRequest.isEmpty() )
             {
                 break;
             }
-
-            ReplicatedContent content = peeked.get().get().content();
-
-            if ( content.size().isPresent() && (totalBytes + content.size().getAsLong()) > batchConfig.maxBatchBytes )
-            {
-                break;
-            }
-
-            contentBatch.add( content );
-
-            boolean removed = peeked.get().remove();
-            assert removed; // single consumer assumed
+            contentBatch.add( optionalRequest.get().content() );
         }
 
         /*
@@ -201,70 +181,63 @@ class BatchingMessageHandler implements Runnable, LifecycleMessageHandler<Inboun
     {
         entryBatch.clear();
 
-        long totalBytes = 0;
-
-        for ( RaftLogEntry entry : first.entries() )
-        {
-            totalBytes += entry.content().size().orElse( 0L );
-            entryBatch.add( entry );
-        }
-
+        long totalBytes = addAndGetSize( first.entries() );
         long leaderCommit = first.leaderCommit();
         long lastTerm = lastOf( first.entries() ).term();
 
         while ( entryBatch.size() < batchConfig.maxBatchCount )
         {
-            Optional<Removable<AppendEntries.Request>> peeked = peekNext( AppendEntries.Request.class );
-
-            if ( peeked.isEmpty() )
+            var optionalRequest = pollNext( AppendEntries.Request.class,
+                                            validAppendEntriesPoll( first, totalBytes, entryBatch.size(), batchConfig.maxBatchCount,
+                                                                    batchConfig.maxBatchBytes ) );
+            if ( optionalRequest.isEmpty() )
             {
                 break;
             }
-
-            AppendEntries.Request request = peeked.get().get();
-
-            if ( request.entries().length == 0 || !consecutiveOrigin( first, request, entryBatch.size() ) )
-            {
-                // probe (RaftLogShipper#sendEmpty) or leader switch
-                break;
-            }
+            var request = optionalRequest.get();
 
             assert lastTerm == request.prevLogTerm();
 
             // note that this code is backwards compatible, but AppendEntries.Request generation by the leader
             // will be changed to only generate single entry AppendEntries.Requests and the code here
             // will be responsible for the batching of the individual and consecutive entries
-
-            RaftLogEntry[] entries = request.entries();
-            lastTerm = lastOf( entries ).term();
-
-            if ( entries.length + entryBatch.size() > batchConfig.maxBatchCount )
-            {
-                break;
-            }
-
-            long requestBytes = Arrays.stream( entries )
-                    .mapToLong( entry -> entry.content().size().orElse( 0L ) )
-                    .sum();
-
-            if ( requestBytes > 0 && (totalBytes + requestBytes) > batchConfig.maxBatchBytes )
-            {
-                break;
-            }
-
-            entryBatch.addAll( Arrays.asList( entries ) );
-            totalBytes += requestBytes;
+            var entries = request.entries();
+            totalBytes += addAndGetSize( entries );
             leaderCommit = max( leaderCommit, request.leaderCommit() );
-
-            boolean removed = peeked.get().remove();
-            assert removed; // single consumer assumed
+            lastTerm = lastOf( entries ).term();
         }
 
-        return new AppendEntries.Request( first.from(), first.leaderTerm(), first.prevLogIndex(), first.prevLogTerm(),
-                entryBatch.toArray( RaftLogEntry.empty ), leaderCommit );
+        return new AppendEntries.Request( first.from(), first.leaderTerm(), first.prevLogIndex(), first.prevLogTerm(), entryBatch.toArray( RaftLogEntry.empty ),
+                                          leaderCommit );
     }
 
-    private boolean consecutiveOrigin( AppendEntries.Request first, AppendEntries.Request request, int currentSize )
+    private static Predicate<AppendEntries.Request> validAppendEntriesPoll( AppendEntries.Request first, long currentBytes, int currentSize, int maxSize,
+            long maxBytes )
+    {
+        Predicate<AppendEntries.Request> consecutiveOrigin =
+                request -> request.entries().length != 0 && consecutiveOrigin( first, request, currentSize );
+        Predicate<AppendEntries.Request> checkLength =
+                request -> request.entries().length + currentSize <= maxSize;
+        Predicate<AppendEntries.Request> checkSize =
+                request -> {
+                    long requestBytes = getSize( request.entries() );
+                    return !(requestBytes > 0 && (currentBytes + requestBytes) > maxBytes);
+                };
+
+        return consecutiveOrigin.and( checkLength ).and( checkSize );
+    }
+
+    private static long getSize( ReplicatedContent content )
+    {
+        return content.size().orElse( 0L );
+    }
+
+    private static long getSize( RaftLogEntry[] entries )
+    {
+        return stream( entries ).flatMapToLong( raftLogEntry -> raftLogEntry.content().size().stream() ).sum();
+    }
+
+    private static boolean consecutiveOrigin( AppendEntries.Request first, AppendEntries.Request request, int currentSize )
     {
         if ( request.leaderTerm() != first.leaderTerm() )
         {
@@ -276,15 +249,31 @@ class BatchingMessageHandler implements Runnable, LifecycleMessageHandler<Inboun
         }
     }
 
-    private <M> Optional<Removable<M>> peekNext( Class<M> acceptedType )
+    private long addAndGetSize( RaftLogEntry[] entries )
     {
-        return inQueue.peek()
-                .filter( r -> acceptedType.isInstance( r.get().message() ) )
-                .map( r -> r.map( m -> acceptedType.cast( m.message() ) ) );
+        long totalBytes = 0;
+        for ( RaftLogEntry entry : entries )
+        {
+            totalBytes += getSize( entry.content() );
+            entryBatch.add( entry );
+        }
+        return totalBytes;
+    }
+
+    private <M> Optional<M> pollNext( Class<M> acceptedType, Predicate<M> additionalPredicate )
+    {
+        return inQueue.pollIf( typeSafePoll( acceptedType, additionalPredicate ) ).map( r -> acceptedType.cast( r.message() ) );
+    }
+
+    private <M> Predicate<ReceivedInstantRaftIdAwareMessage<?>> typeSafePoll( Class<M> instanceType, Predicate<M> additionalPredicate )
+    {
+        return receivedInstantRaftIdAwareMessage -> instanceType.isInstance( receivedInstantRaftIdAwareMessage.message() ) &&
+                                                    additionalPredicate.test( instanceType.cast( receivedInstantRaftIdAwareMessage.message() ) );
     }
 
     private static class ContentSize extends RaftMessages.HandlerAdaptor<Long,RuntimeException>
     {
+
         private static final ContentSize INSTANCE = new ContentSize();
 
         private ContentSize()
@@ -300,7 +289,7 @@ class BatchingMessageHandler implements Runnable, LifecycleMessageHandler<Inboun
         @Override
         public Long handle( NewEntry.Request request ) throws RuntimeException
         {
-            return request.content().size().orElse( 0L );
+            return getSize( request.content() );
         }
 
         @Override
@@ -321,6 +310,7 @@ class BatchingMessageHandler implements Runnable, LifecycleMessageHandler<Inboun
     private static class MessagePriority extends RaftMessages.HandlerAdaptor<Integer,RuntimeException>
             implements Comparator<InboundRaftMessageContainer<?>>
     {
+
         private final Integer BASE_PRIORITY = 10; // lower number means higher priority
 
         @Override
@@ -353,11 +343,10 @@ class BatchingMessageHandler implements Runnable, LifecycleMessageHandler<Inboun
             return priority == null ? BASE_PRIORITY : priority;
         }
     }
-
     private class BatchingHandler extends RaftMessages.HandlerAdaptor<InboundRaftMessageContainer,RuntimeException>
     {
-        private final InboundRaftMessageContainer<?> baseMessage;
 
+        private final InboundRaftMessageContainer<?> baseMessage;
         BatchingHandler( InboundRaftMessageContainer<?> baseMessage )
         {
             this.baseMessage = baseMessage;
@@ -385,3 +374,4 @@ class BatchingMessageHandler implements Runnable, LifecycleMessageHandler<Inboun
         }
     }
 }
+

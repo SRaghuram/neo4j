@@ -300,7 +300,7 @@ public class CommandApplicationProcess implements DatabasePanicEventHandler
 
         if ( pauseCount == 1 )
         {
-            scheduler.stopAll();
+            scheduler.abort();
         }
     }
 

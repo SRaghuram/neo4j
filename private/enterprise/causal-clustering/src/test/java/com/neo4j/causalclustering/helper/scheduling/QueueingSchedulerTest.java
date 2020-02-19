@@ -88,7 +88,7 @@ class QueueingSchedulerTest
 
         // and
         countDownLatch.countDown();
-        scheduler.stopAll();
+        scheduler.abort();
         assertEquals( 0, integer.get() );
     }
 
@@ -101,7 +101,7 @@ class QueueingSchedulerTest
         var future = new CompletableFuture<>();
         var stopThread = new Thread( () ->
                                      {
-                                         scheduler.stopAll();
+                                         scheduler.abort();
                                          future.complete( new Object() );
                                      } );
 

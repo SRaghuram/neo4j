@@ -50,7 +50,7 @@ public class QueueingScheduler
 
     /**
      * The job that is offer has no guarantee that it will run. If it cannot be scheduled right away it will be offered to the queue which may or may not accept
-     * the job. If {@link #stopAll()} is currently being called, then no jobs are accepted and all jobs currently in the queue will be removed.
+     * the job. If {@link #abort()} is currently being called, then no jobs are accepted and all jobs currently in the queue will be removed.
      */
     public synchronized void offerJob( Runnable runnable )
     {
@@ -59,10 +59,10 @@ public class QueueingScheduler
             return;
         }
         queuedJobs.offer( runnable );
-        tryNextJob();
+        scheduleNextJob();
     }
 
-    private void tryNextJob()
+    private void scheduleNextJob()
     {
         if ( stopCount.get() > 0 )
         {
@@ -83,7 +83,10 @@ public class QueueingScheduler
         }
     }
 
-    public void stopAll()
+    /**
+     * Aborts any offered jobs that are not running and waits for currently running jobs to complete.
+     */
+    public void abort()
     {
         stopCount.incrementAndGet();
         try
@@ -126,7 +129,7 @@ public class QueueingScheduler
             finally
             {
                 scheduledJobs.remove( this );
-                tryNextJob();
+                scheduleNextJob();
             }
         }
 
@@ -150,22 +153,22 @@ public class QueueingScheduler
     {
         private final ConcurrentHashMap<AbortableJob,JobHandle<?>> jobs = new ConcurrentHashMap<>();
         private final Log log;
-        private int size;
+        private final AtomicInteger size = new AtomicInteger();
 
         private ScheduledJobsTracker( Log log )
         {
             this.log = log;
         }
 
-        synchronized void put( AbortableJob job, JobHandle<?> handle )
+        void put( AbortableJob job, JobHandle<?> handle )
         {
-            size++;
+            size.incrementAndGet();
             jobs.put( job, handle );
         }
 
-        synchronized void remove( AbortableJob job )
+        void remove( AbortableJob job )
         {
-            size--;
+            size.decrementAndGet();
             jobs.remove( job );
         }
 
@@ -201,7 +204,7 @@ public class QueueingScheduler
 
         int scheduledJobs()
         {
-            return size;
+            return size.get();
         }
     }
 }

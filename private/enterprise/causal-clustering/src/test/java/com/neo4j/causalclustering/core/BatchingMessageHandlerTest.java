@@ -10,6 +10,7 @@ import com.neo4j.causalclustering.core.consensus.ReplicatedString;
 import com.neo4j.causalclustering.core.consensus.log.RaftLogEntry;
 import com.neo4j.causalclustering.core.replication.ReplicatedContent;
 import com.neo4j.causalclustering.helper.scheduling.QueueingScheduler;
+import com.neo4j.causalclustering.helper.scheduling.ReoccurringJobQueue;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.identity.RaftId;
 import com.neo4j.causalclustering.identity.RaftIdFactory;
@@ -27,12 +28,14 @@ import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import org.neo4j.internal.helpers.ArrayUtil;
 import org.neo4j.logging.AssertableLogProvider;
+import org.neo4j.logging.NullLog;
 import org.neo4j.logging.NullLogProvider;
+import org.neo4j.scheduler.Group;
+import org.neo4j.test.OnDemandJobScheduler;
 
 import static com.neo4j.causalclustering.core.consensus.RaftMessages.AppendEntries;
 import static com.neo4j.causalclustering.core.consensus.RaftMessages.Heartbeat;
@@ -96,27 +99,21 @@ class BatchingMessageHandlerTest
     }
 
     @Test
-    void shouldInvokeHandlerOnQueuedMessage() throws Throwable
+    void shouldInvokeHandlerOnQueuedMessage()
     {
         // given
+        var scheduler = new OnDemandJobScheduler();
+        var queueingScheduler = new QueueingScheduler( scheduler, Group.RAFT_BATCH_HANDLER, NullLog.getInstance(), 1, new ReoccurringJobQueue<>() );
         BatchingMessageHandler batchHandler = new BatchingMessageHandler( downstreamHandler, IN_QUEUE_CONFIG,
-                                                                          BATCH_CONFIG, jobScheduler, NullLogProvider.getInstance() );
+                                                                          BATCH_CONFIG, queueingScheduler, NullLogProvider.getInstance() );
         ReplicatedString content = new ReplicatedString( "dummy" );
         NewEntry.Request message = new NewEntry.Request( null, content );
 
-        Future<?> future = executor.submit( batchHandler );
-
-        // Some time for letting the batch handler block on its internal queue.
-        //
-        // It is fine if it sometimes doesn't get that far in time, just that we
-        // usually want to test the wake up from blocking state.
-        Thread.sleep( 50 );
-
         // when
         batchHandler.handle( wrap( message ) );
+        scheduler.runJob();
 
         // then
-        future.get();
         NewEntry.BatchRequest expected = new NewEntry.BatchRequest( singletonList( content ) );
         verify( downstreamHandler ).handle( wrap( expected ) );
     }
@@ -459,7 +456,7 @@ class BatchingMessageHandlerTest
         batchHandler.stop();
 
         // then
-        Mockito.verify( jobScheduler ).stopAll();
+        Mockito.verify( jobScheduler ).abort();
     }
 
     private InboundRaftMessageContainer wrap( RaftMessage message )
