@@ -7,12 +7,18 @@ package com.neo4j.causalclustering.catchup;
 
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.MemberId;
+import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionException;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionStrategy;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -21,6 +27,7 @@ import org.neo4j.kernel.database.NamedDatabaseId;
 import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.logging.NullLogProvider;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.eq;
@@ -85,6 +92,27 @@ class UpstreamAddressLookupTest
         assertThrows( CatchupAddressResolutionException.class, () -> upstreamAddressLookup.lookupAddressForDatabase( namedDatabaseId ) );
     }
 
+    @Test
+    void multiLookupShouldReturnAllAddressFromSingleStrategy() throws CatchupAddressResolutionException
+    {
+        // given
+        var strategySelector = new UpstreamDatabaseStrategySelector(
+                new RandomCountedSelectionStrategy( 1, secondMember, defaultMember ),
+                List.of( new RandomCountedSelectionStrategy(1, firstMember, secondMember ) ), NullLogProvider.getInstance() );
+
+        var upstreamAddressLookup = new UpstreamAddressLookup( strategySelector, topologyService );
+
+        // when
+        var firstResults = upstreamAddressLookup.lookupAddressesForDatabase( namedDatabaseId );
+        var secondResults = upstreamAddressLookup.lookupAddressesForDatabase( namedDatabaseId );
+
+        // then
+        assertThat( firstResults, Matchers.containsInAnyOrder( firstAddress, secondAddress ) );
+        assertThat( firstResults, Matchers.hasSize( 2 ) );
+        assertThat( secondResults, Matchers.containsInAnyOrder( secondAddress, defaultAddress ) );
+        assertThat( secondResults, Matchers.hasSize( 2 ) );
+    }
+
     private static class CountedSelectionStrategy extends UpstreamDatabaseSelectionStrategy
     {
         private final MemberId upstreamDatabase;
@@ -106,6 +134,50 @@ class UpstreamAddressLookupTest
             }
             numberOfIterations--;
             return Optional.of( upstreamDatabase );
+        }
+    }
+
+    private static class RandomCountedSelectionStrategy extends UpstreamDatabaseSelectionStrategy
+    {
+        private final List<MemberId> members;
+        private int numberOfIterations;
+
+        RandomCountedSelectionStrategy( int numberOfIterations, MemberId... members )
+        {
+            super( "RandomSelectionStrategy" );
+            this.members = List.of( members );
+            this.numberOfIterations = numberOfIterations;
+        }
+
+        private boolean iterationsReached()
+        {
+            return numberOfIterations-- <= 0;
+        }
+
+        @Override
+        public Optional<MemberId> upstreamMemberForDatabase( NamedDatabaseId namedDatabaseId ) throws UpstreamDatabaseSelectionException
+        {
+            if ( iterationsReached() )
+            {
+                return Optional.empty();
+            }
+
+            var choices = new ArrayList<>( members );
+            Collections.shuffle( choices );
+            return choices.stream().findFirst();
+        }
+
+        @Override
+        public Collection<MemberId> upstreamMembersForDatabase( NamedDatabaseId namedDatabaseId ) throws UpstreamDatabaseSelectionException
+        {
+            if ( iterationsReached() )
+            {
+                return List.of();
+            }
+
+            var choices = new ArrayList<>( members );
+            Collections.shuffle( choices );
+            return choices;
         }
     }
 }

@@ -15,6 +15,7 @@ import com.neo4j.causalclustering.catchup.VersionedCatchupClients.PreparedReques
 import java.io.File;
 import java.net.ConnectException;
 import java.nio.file.Paths;
+import java.util.LinkedList;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -102,15 +103,24 @@ public class StoreCopyClient
             StoreFileStreamProvider storeFileStream,
             TerminationCondition terminationCondition, TransactionIdHandler txIdHandler ) throws StoreCopyFailedException
     {
+        var secondaryAddresses = new LinkedList<SocketAddress>();
+        var initial = true;
+        var shouldBackoff = false;
         TimeoutStrategy.Timeout timeout = backOffStrategy.newTimeout();
+
         while ( true )
         {
             try
             {
-                SocketAddress address = addressProvider.secondary( namedDatabaseId );
-                log.info( format( "Sending request StoreCopyRequest to '%s'", address ) );
+                if ( secondaryAddresses.isEmpty() )
+                {
+                    secondaryAddresses.addAll( addressProvider.allSecondaries( namedDatabaseId ) );
+                    shouldBackoff = !initial; //We shouldn't backoff on first go around
+                }
+                var secondary = secondaryAddresses.poll(); // Cannot be null
+                log.info( format( "Sending request StoreCopyRequest to '%s'", secondary ) );
 
-                StoreCopyFinishedResponse response = catchUpClientFactory.getClient( address, log )
+                StoreCopyFinishedResponse response = catchUpClientFactory.getClient( secondary, log )
                         .v3( v3Request )
                         .withResponseHandler( StoreCopyResponseAdaptors.filesCopyAdaptor( storeFileStream, log ) )
                         .request();
@@ -135,8 +145,13 @@ public class StoreCopyClient
                 // it seems like we're at risk of swallowing runtime exceptions in some cases where we otherwise wouldn't
                 log.warn( "StoreCopyRequest failed exceptionally.", e );
             }
+
             terminationCondition.assertContinue();
-            awaitAndIncrementTimeout( timeout );
+            if ( shouldBackoff )
+            {
+                awaitAndIncrementTimeout( timeout );
+            }
+            initial = false;
         }
     }
 

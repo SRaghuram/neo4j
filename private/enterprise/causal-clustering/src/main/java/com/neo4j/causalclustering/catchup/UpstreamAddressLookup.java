@@ -10,6 +10,10 @@ import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseSelectionException;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.stream.Collectors;
+
 import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.kernel.database.NamedDatabaseId;
 
@@ -30,6 +34,24 @@ public class UpstreamAddressLookup
         {
             MemberId upstreamMember = strategySelector.bestUpstreamMemberForDatabase( namedDatabaseId );
             return topologyService.lookupCatchupAddress( upstreamMember );
+        }
+        catch ( UpstreamDatabaseSelectionException e )
+        {
+            throw new CatchupAddressResolutionException( e );
+        }
+    }
+
+    public Collection<SocketAddress> lookupAddressesForDatabase( NamedDatabaseId namedDatabaseId ) throws CatchupAddressResolutionException
+    {
+        try
+        {
+            var upstreamMembers = strategySelector.bestUpstreamMembersForDatabase( namedDatabaseId );
+            var upstreamAddresses = new ArrayList<SocketAddress>();
+            for ( var member : upstreamMembers )
+            {
+                upstreamAddresses.add( topologyService.lookupCatchupAddress( member ) );
+            }
+            return upstreamAddresses;
         }
         catch ( UpstreamDatabaseSelectionException e )
         {
