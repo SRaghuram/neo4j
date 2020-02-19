@@ -75,8 +75,8 @@ import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
 import static org.neo4j.internal.helpers.NamedThreadFactory.daemon;
 import static org.neo4j.kernel.api.exceptions.Status.Transaction.BookmarkTimeout;
 import static org.neo4j.kernel.impl.factory.DatabaseInfo.ENTERPRISE;
-import static org.neo4j.test.conditions.Conditions.TRUE;
 import static org.neo4j.test.assertion.Assert.assertEventually;
+import static org.neo4j.test.conditions.Conditions.TRUE;
 import static org.neo4j.test.conditions.Conditions.equalityCondition;
 
 @TestDirectoryExtension
@@ -277,6 +277,7 @@ class BookmarkIT
                 .set( OnlineBackupSettings.online_backup_enabled, false )
                 .set( BoltConnector.listen_address, new SocketAddress( "localhost", 0 ) )
                 .set( GraphDatabaseSettings.neo4j_home, directory.homeDir().toPath().toAbsolutePath() )
+                .set( GraphDatabaseSettings.preallocate_logical_logs, false )
                 .build();
     }
 

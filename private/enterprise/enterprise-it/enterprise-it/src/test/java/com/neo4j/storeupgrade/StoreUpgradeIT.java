@@ -197,6 +197,7 @@ public class StoreUpgradeIT
             props.setProperty( HttpConnector.listen_address.name(), "localhost:0" );
             props.setProperty( HttpsConnector.enabled.name(), FALSE );
             props.setProperty( BoltConnector.enabled.name(), FALSE );
+            props.setProperty( GraphDatabaseSettings.preallocate_logical_logs.name(), FALSE );
             try ( FileWriter writer = new FileWriter( configFile ) )
             {
                 props.store( writer, "" );

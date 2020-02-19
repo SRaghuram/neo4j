@@ -46,6 +46,7 @@ import org.neo4j.test.scheduler.ThreadPoolJobScheduler;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.preallocate_logical_logs;
 import static org.neo4j.internal.batchimport.AdditionalInitialIds.EMPTY;
 import static org.neo4j.internal.batchimport.Configuration.DEFAULT;
 import static org.neo4j.internal.batchimport.ImportLogic.NO_MONITOR;
@@ -268,7 +269,8 @@ class RestartableParallelBatchImporterIT
 
     private BatchImporter importer( ExecutionMonitor monitor )
     {
-        return BatchImporterFactory.withHighestPriority().instantiate( databaseLayout, fs, null, DEFAULT, NullLogService.getInstance(), monitor,
-              EMPTY, Config.defaults(), RecordFormatSelector.defaultFormat(), NO_MONITOR, jobScheduler, Collector.EMPTY, TransactionLogsInitializer.INSTANCE );
+        return BatchImporterFactory.withHighestPriority().instantiate( databaseLayout, fs, null, DEFAULT, NullLogService.getInstance(), monitor, EMPTY,
+                Config.defaults( preallocate_logical_logs, false ), RecordFormatSelector.defaultFormat(), NO_MONITOR, jobScheduler, Collector.EMPTY,
+                TransactionLogsInitializer.INSTANCE );
     }
 }
