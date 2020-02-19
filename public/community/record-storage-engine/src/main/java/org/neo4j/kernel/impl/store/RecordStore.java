@@ -46,6 +46,7 @@ import org.neo4j.kernel.impl.store.record.RelationshipGroupRecord;
 import org.neo4j.kernel.impl.store.record.RelationshipRecord;
 import org.neo4j.kernel.impl.store.record.RelationshipTypeTokenRecord;
 import org.neo4j.kernel.impl.store.record.SchemaRecord;
+import org.neo4j.storageengine.util.IdUpdateListener;
 
 /**
  * A store for {@link #updateRecord(AbstractBaseRecord, PageCursorTracer) updating} and

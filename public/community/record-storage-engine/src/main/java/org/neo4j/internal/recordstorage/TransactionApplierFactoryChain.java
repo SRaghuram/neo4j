@@ -20,10 +20,9 @@
 package org.neo4j.internal.recordstorage;
 
 import java.io.IOException;
-import java.util.function.Supplier;
 
-import org.neo4j.kernel.impl.store.IdUpdateListener;
 import org.neo4j.storageengine.api.CommandsToApply;
+import org.neo4j.storageengine.util.IdGeneratorUpdatesWorkSync;
 
 /**
  * This class wraps several {@link TransactionApplierFactory}s which will do their work sequentially. See also {@link
@@ -33,18 +32,13 @@ import org.neo4j.storageengine.api.CommandsToApply;
  */
 public class TransactionApplierFactoryChain implements TransactionApplierFactory
 {
-    private final Supplier<IdUpdateListener> idUpdateListenerSupplier;
+    private final IdGeneratorUpdatesWorkSync idGeneratorUpdatesWorkSync;
     private final TransactionApplierFactory[] appliers;
 
-    public TransactionApplierFactoryChain( Supplier<IdUpdateListener> idUpdateListenerSupplier, TransactionApplierFactory... appliers )
+    public TransactionApplierFactoryChain( IdGeneratorUpdatesWorkSync idGeneratorUpdatesWorkSync, TransactionApplierFactory... appliers )
     {
-        this.idUpdateListenerSupplier = idUpdateListenerSupplier;
+        this.idGeneratorUpdatesWorkSync = idGeneratorUpdatesWorkSync;
         this.appliers = appliers;
-    }
-
-    public Supplier<IdUpdateListener> getIdUpdateListenerSupplier()
-    {
-        return idUpdateListenerSupplier;
     }
 
     @Override
