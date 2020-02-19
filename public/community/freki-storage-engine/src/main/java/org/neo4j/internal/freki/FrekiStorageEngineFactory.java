@@ -41,10 +41,12 @@ import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.LogService;
 import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.scheduler.JobScheduler;
+import org.neo4j.storageengine.api.CommandReaderFactory;
 import org.neo4j.storageengine.api.ConstraintRuleAccessor;
 import org.neo4j.storageengine.api.LogVersionRepository;
 import org.neo4j.storageengine.api.StorageEngine;
 import org.neo4j.storageengine.api.StorageEngineFactory;
+import org.neo4j.storageengine.api.StorageFilesState;
 import org.neo4j.storageengine.api.StoreId;
 import org.neo4j.storageengine.api.StoreVersion;
 import org.neo4j.storageengine.api.StoreVersionCheck;
@@ -137,5 +139,17 @@ public class FrekiStorageEngineFactory implements StorageEngineFactory
             LogService logService, String recordFormats, PageCacheTracer cacheTracer )
     {
         return null;
+    }
+
+    @Override
+    public StorageFilesState checkRecoveryRequired( FileSystemAbstraction fs, DatabaseLayout databaseLayout, PageCache pageCache )
+    {
+        return StorageFilesState.recoveredState();
+    }
+
+    @Override
+    public CommandReaderFactory commandReaderFactory()
+    {
+        return FrekiCommandReaderFactory.INSTANCE;
     }
 }

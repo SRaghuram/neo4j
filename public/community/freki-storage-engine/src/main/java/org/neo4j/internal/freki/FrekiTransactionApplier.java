@@ -31,12 +31,14 @@ import org.neo4j.internal.schema.SchemaRule;
 import org.neo4j.io.IOUtils;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
-import org.neo4j.lock.LockGroup;
-import org.neo4j.storageengine.api.CommandsToApply;
 import org.neo4j.storageengine.api.IndexUpdateListener;
 import org.neo4j.storageengine.api.StorageCommand;
+import org.neo4j.storageengine.api.TransactionApplicationMode;
+import org.neo4j.storageengine.util.IdGeneratorUpdatesWorkSync;
+import org.neo4j.storageengine.util.IdUpdateListener;
 
 import static org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier.TRACER_SUPPLIER;
+import static org.neo4j.storageengine.api.TransactionApplicationMode.REVERSE_RECOVERY;
 
 class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements Visitor<StorageCommand,IOException>, AutoCloseable
 {
@@ -44,17 +46,15 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
     private PageCursor[] storeCursors;
     private final IndexUpdateListener indexUpdateListener;
     private List<IndexDescriptor> createdIndexes;
+    private final IdGeneratorUpdatesWorkSync.Batch idUpdates;
 
-    FrekiTransactionApplier( Stores stores, IndexUpdateListener indexUpdateListener ) throws IOException
+    FrekiTransactionApplier( Stores stores, IndexUpdateListener indexUpdateListener, TransactionApplicationMode mode,
+            IdGeneratorUpdatesWorkSync idGeneratorUpdatesWorkSync ) throws IOException
     {
         this.stores = stores;
         this.storeCursors = stores.openMainStoreWriteCursors();
         this.indexUpdateListener = indexUpdateListener;
-    }
-
-    FrekiTransactionApplier startTx( CommandsToApply batch, LockGroup locks )
-    {
-        return this;
+        this.idUpdates = mode == REVERSE_RECOVERY ? null : idGeneratorUpdatesWorkSync.newBatch();
     }
 
     @Override
@@ -68,7 +68,8 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
     {
         Record record = node.after();
         int sizeExp = record.sizeExp();
-        stores.mainStore( sizeExp ).write( storeCursors[sizeExp], node.after() );
+        stores.mainStore( sizeExp ).write( storeCursors[sizeExp], node.after(), idUpdates != null ? idUpdates : IdUpdateListener.IGNORE,
+                PageCursorTracer.NULL );
     }
 
     @Override
@@ -174,6 +175,10 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
         if ( createdIndexes != null )
         {
             indexUpdateListener.createIndexes( createdIndexes.toArray( new IndexDescriptor[createdIndexes.size()] ) );
+        }
+        if ( idUpdates != null )
+        {
+            idUpdates.close();
         }
     }
 }

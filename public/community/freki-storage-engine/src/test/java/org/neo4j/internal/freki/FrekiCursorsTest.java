@@ -36,6 +36,7 @@ import org.neo4j.storageengine.api.StorageNodeCursor;
 import org.neo4j.storageengine.api.StoragePropertyCursor;
 import org.neo4j.storageengine.api.StorageRelationshipCursor;
 import org.neo4j.storageengine.api.StorageRelationshipTraversalCursor;
+import org.neo4j.storageengine.util.IdUpdateListener;
 import org.neo4j.test.extension.EphemeralFileSystemExtension;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.RandomExtension;
@@ -112,13 +113,13 @@ abstract class FrekiCursorsTest
                         Record largeRecord = largeStore.newRecord( largeData.id );
                         largeRecord.setFlag( FLAG_IN_USE, true );
                         largeData.serialize( largeRecord.dataForWriting(), stores.bigPropertyValueStore, bigValueApplier );
-                        largeStore.write( largeCursor, largeRecord );
+                        largeStore.write( largeCursor, largeRecord, IdUpdateListener.IGNORE, PageCursorTracer.NULL );
                     }
 
                     data.setForwardPointer( forwardPointer( largeStore.recordSizeExponential(), false, largeData.id ) );
                     data.serialize( record.dataForWriting(), stores.bigPropertyValueStore, bigValueApplier );
                 }
-                store.write( cursor, record );
+                store.write( cursor, record, IdUpdateListener.IGNORE, PageCursorTracer.NULL );
             }
             return record;
         }

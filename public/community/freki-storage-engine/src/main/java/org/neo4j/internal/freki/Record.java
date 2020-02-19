@@ -23,15 +23,24 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
+import org.neo4j.io.fs.ReadableChannel;
 import org.neo4j.io.fs.WritableChannel;
 import org.neo4j.io.pagecache.PageCursor;
 
 class Record
 {
+    /*
+      Header 1B
+     [____,____]
+      │││| |└└└─ SizeExp (3b)
+      │││| └──── InUse (1b)
+      └└└└────── Unused (4b)
+     */
+    static int FLAG_SIZE_EXP = 0x7;
     static int FLAG_IN_USE = 0x8;
 
-    public static final int SIZE_BASE = 64;
-    public static final int HEADER_SIZE = 1;
+    static final int SIZE_BASE = 64;
+    private static final int HEADER_SIZE = 1;
 
     // not stored
     private int sizeExp;
@@ -127,6 +136,24 @@ class Record
             channel.putShort( (short) length );
             channel.put( data.array(), length );
         }
+    }
+
+    static Record deserialize( ReadableChannel channel, long id ) throws IOException
+    {
+        byte flags = channel.get();
+        boolean inUse = (flags & FLAG_IN_USE) != 0;
+        int sizeExp = flags & FLAG_SIZE_EXP;
+        Record record = new Record( sizeExp, id );
+        record.flags = flags;
+        if ( inUse )
+        {
+            short length = channel.getShort();
+            assert length <= recordSize( sizeExp ) - HEADER_SIZE; // if incorrect, fail here instead of OOM
+            byte[] data = new byte[length];
+            channel.get( data, data.length );
+            record.data = ByteBuffer.wrap( data );
+        }
+        return record;
     }
 
     // === UNIFY THESE SOMEHOW LATER ===

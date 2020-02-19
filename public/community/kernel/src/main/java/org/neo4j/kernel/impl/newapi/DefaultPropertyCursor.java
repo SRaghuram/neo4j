@@ -77,14 +77,14 @@ public class DefaultPropertyCursor extends TraceableCursor implements PropertyCu
 
     void initNode( DefaultNodeCursor nodeCursor, Read read, AssertOpen assertOpen )
     {
-        assert nodeReference != NO_ID;
+        entityReference = nodeCursor.nodeReference();
+        assert entityReference != NO_ID;
 
         init( read, assertOpen );
+        this.type = NODE;
         storeCursor.initNodeProperties( nodeCursor.storeCursor );
-        this.nodeReference = nodeCursor.nodeReference();
-        relationshipReference = NO_RELATIONSHIP;
 
-        initializeNodeTransactionState( nodeReference, read );
+        initializeNodeTransactionState( entityReference, read );
     }
 
     private void initializeNodeTransactionState( long nodeReference, Read read )
@@ -114,14 +114,13 @@ public class DefaultPropertyCursor extends TraceableCursor implements PropertyCu
 
     void initRelationship( DefaultRelationshipCursor<?> relationshipCursor, Read read, AssertOpen assertOpen )
     {
-        assert relationshipReference != NO_ID;
+        entityReference = relationshipCursor.relationshipReference();
+        assert entityReference != NO_ID;
 
         init( read, assertOpen );
         storeCursor.initRelationshipProperties( relationshipCursor.storeCursor );
-        nodeReference = NO_NODE;
-        this.relationshipReference = relationshipCursor.relationshipReference();
 
-        initializeRelationshipTransactionState( relationshipReference, read );
+        initializeRelationshipTransactionState( entityReference, read );
     }
 
     private void initializeRelationshipTransactionState( long relationshipReference, Read read )
