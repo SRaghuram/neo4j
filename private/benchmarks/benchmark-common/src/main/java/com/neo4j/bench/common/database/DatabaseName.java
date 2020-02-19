@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2002-2019 "Neo4j,"
+ * Copyright (c) 2002-2020 "Neo4j,"
  * Neo4j Sweden AB [http://neo4j.com]
- * This file is a commercial add-on to Neo4j Enterprise Edition.
+ * This file is part of Neo4j internal tooling.
  */
 package com.neo4j.bench.common.database;
 
@@ -14,9 +14,9 @@ public class DatabaseName
 
     private final String databaseName;
 
-    public static DatabaseName ofNullable(String name)
+    public static DatabaseName ofNullable( String name )
     {
-        return new DatabaseName(name == null ? DEFAULT_DATABASE_NAME : name);
+        return new DatabaseName( name == null ? DEFAULT_DATABASE_NAME : name );
     }
 
     public static DatabaseName defaultDatabase()
@@ -38,5 +38,4 @@ public class DatabaseName
     {
         return databaseName;
     }
-
 }
