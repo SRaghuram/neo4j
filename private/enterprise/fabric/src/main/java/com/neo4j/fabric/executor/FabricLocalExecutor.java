@@ -25,6 +25,7 @@ import org.neo4j.cypher.internal.FullyParsedQuery;
 import org.neo4j.cypher.internal.javacompat.ExecutionEngine;
 import org.neo4j.internal.kernel.api.security.AccessMode;
 import org.neo4j.internal.kernel.api.security.AuthSubject;
+import org.neo4j.internal.kernel.api.security.LoginContext;
 import org.neo4j.kernel.GraphDatabaseQueryService;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.exceptions.Status;
@@ -142,7 +143,8 @@ public class FabricLocalExecutor
         {
             InternalTransaction internalTransaction;
             KernelTransaction.Type kernelTransactionType = getKernelTransactionType( transactionInfo );
-            FabricLocalLoginContext loginContext = new FabricLocalLoginContext( (EnterpriseLoginContext) transactionInfo.getLoginContext() );
+            var loginContext = maybeRestrictLoginContext( (EnterpriseLoginContext) transactionInfo.getLoginContext(), databaseFacade.databaseName() );
+
             if ( transactionInfo.getTxTimeout() == null )
             {
                 internalTransaction = databaseFacade.beginTransaction( kernelTransactionType, loginContext, transactionInfo.getClientConnectionInfo() );
@@ -159,6 +161,14 @@ public class FabricLocalExecutor
             }
 
             return internalTransaction;
+        }
+
+        private LoginContext maybeRestrictLoginContext( EnterpriseLoginContext originalContext, String databaseName )
+        {
+            boolean isConfiguredFabricDatabase = dbms.isConfiguredFabricDatabase( databaseName );
+            return isConfiguredFabricDatabase
+                   ? new FabricLocalLoginContext( originalContext )
+                   : transactionInfo.getLoginContext();
         }
     }
 
