@@ -74,12 +74,17 @@ public class StandaloneDbmsReconcilerModule extends LifecycleAdapter
         // Initially trigger system operator to start system db, it always desires the system db to be STARTED
         systemOperator.trigger( ReconcilerRequest.simple() ).await( NAMED_SYSTEM_DATABASE_ID );
 
+        var systemDatabase = getSystemDatabase( databaseManager );
+        long lastClosedTxId = getLastClosedTransactionId( systemDatabase );
+
         // Manually kick off the reconciler to start all other databases in the system database, now that the system database is started
         systemOperator.updateDesiredStates();
         systemOperator.trigger( ReconcilerRequest.simple() ).awaitAll();
 
-        var systemDatabase = getSystemDatabase( databaseManager );
-        initializeReconciledTxTracker( systemDatabase );
+        // More state changes might have been committed into the system database and been reconciled before
+        // the following call, and those will independently and concurrently call offerReconciledTransactionId
+        // from the transactional threads.
+        reconciledTxTracker.enable( lastClosedTxId );
     }
 
     /**
@@ -130,11 +135,10 @@ public class StandaloneDbmsReconcilerModule extends LifecycleAdapter
                 globalModule.getJobScheduler() );
     }
 
-    private void initializeReconciledTxTracker( GraphDatabaseAPI systemDb )
+    private long getLastClosedTransactionId( GraphDatabaseAPI db )
     {
-        var resolver = systemDb.getDependencyResolver();
+        var resolver = db.getDependencyResolver();
         var txIdStore = resolver.resolveDependency( TransactionIdStore.class );
-        reconciledTxTracker.initialize( txIdStore.getLastClosedTransactionId() );
+        return txIdStore.getLastClosedTransactionId();
     }
-
 }

@@ -49,10 +49,13 @@ class SystemGraphDbmsOperator extends DbmsOperator
     private void reconcile( long txId, TransactionData transactionData, boolean asPartOfStoreCopy )
     {
         var databasesToAwait = extractUpdatedDatabases( transactionData );
-
         updateDesiredStates(); // TODO: Handle exceptions from this!
+        if ( asPartOfStoreCopy )
+        {
+            reconciledTxTracker.disable();
+        }
         ReconcilerResult reconcilerResult = trigger( ReconcilerRequest.simple() );
-        reconcilerResult.whenComplete( () -> updateLastReconciledTransactionId( txId, asPartOfStoreCopy ) );
+        reconcilerResult.whenComplete( () -> offerReconciledTransactionId( txId, asPartOfStoreCopy ) );
 
         // Note: only blocks for completed reconciliation on this machine. Global reconciliation (e.g. including other cluster members) is still asynchronous
         reconcilerResult.await( databasesToAwait );
@@ -79,17 +82,17 @@ class SystemGraphDbmsOperator extends DbmsOperator
         return dbmsModel.updatedDatabases( transactionData );
     }
 
-    private void updateLastReconciledTransactionId( long txId, boolean asPartOfStoreCopy )
+    private void offerReconciledTransactionId( long txId, boolean asPartOfStoreCopy )
     {
         try
         {
             if ( asPartOfStoreCopy )
             {
-                reconciledTxTracker.initialize( txId );
+                reconciledTxTracker.enable( txId );
             }
             else
             {
-                reconciledTxTracker.setLastReconciledTransactionId( txId );
+                reconciledTxTracker.offerReconciledTransactionId( txId );
             }
         }
         catch ( Throwable t )
