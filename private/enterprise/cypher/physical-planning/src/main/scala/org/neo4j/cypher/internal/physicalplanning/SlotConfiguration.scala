@@ -317,6 +317,28 @@ class SlotConfiguration private(private val slots: mutable.Map[SlotConfiguration
     refs.filter(_._2.offset >= skipFirst.nReferences).sortBy(_._2.offset).foreach(f)
   }
 
+  /**
+   * Add all slots to another slot configuration. Also add aliases.
+   *
+   * @param other     the slots will be added here
+   * @param skipFirst the amount of longs and refs to be skipped in the beginning
+   */
+  def addAllSlotsInOrderTo(other: SlotConfiguration,
+                           skipFirst: SlotConfiguration.Size = SlotConfiguration.Size.zero
+                        ): Unit = {
+    foreachSlotOrdered({
+      case (VariableSlotKey(key), slot) =>
+        if (!isAlias(key)) {
+          other.add(key, slot)
+          slotAliases(key).foreach { alias =>
+            if(alias != key) other.addAlias(alias, key)
+          }
+        }
+      case (CachedPropertySlotKey(key), _) => other.newCachedProperty(key, shouldDuplicate = true)
+      case (ApplyPlanSlotKey(applyPlanId), _) => other.newArgument(applyPlanId)
+    }, skipFirst)
+  }
+
   def foreachCachedSlot[U](onCachedProperty: ((ASTCachedProperty, RefSlot)) => Unit): Unit = {
     slots.iterator.foreach {
       case (CachedPropertySlotKey(key), slot: RefSlot) => onCachedProperty(key, slot)

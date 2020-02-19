@@ -244,3 +244,4 @@ Feature "SubqueryAcceptance": Scenario "Aggregating top and bottom results withi
 Feature "SubqueryAcceptance": Scenario "Aggregating top and bottom results from correlated subquery"
 Feature "SubqueryAcceptance": Scenario "Aggregation on imported variables"
 Feature "SubqueryAcceptance": Scenario "Grouping and aggregating within correlated subquery"
+Feature "SubqueryAcceptance": Scenario "Sorting in a subquery"

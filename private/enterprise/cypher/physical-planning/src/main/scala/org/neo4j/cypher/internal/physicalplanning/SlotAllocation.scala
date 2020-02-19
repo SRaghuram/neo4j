@@ -661,12 +661,7 @@ class SingleQuerySlotAllocator private[physicalplanning](allocateArgumentSlots: 
         val result = breakingPolicy.invoke(lp, lhs, argument.slotConfiguration)
         // For the implementation of the slotted pipe to use array copy
         // it is very important that we add the slots in the same order
-        rhs.foreachSlotOrdered({
-          case (VariableSlotKey(key), slot) => result.add(key, slot)
-          case (CachedPropertySlotKey(key), _) => result.newCachedProperty(key, shouldDuplicate = true)
-          case (ApplyPlanSlotKey(applyPlanId), _) => result.newArgument(applyPlanId)
-        }, argument.argumentSize)
-
+        rhs.addAllSlotsInOrderTo(result, argument.argumentSize)
         result
 
       case RightOuterHashJoin(nodes, _, _) =>

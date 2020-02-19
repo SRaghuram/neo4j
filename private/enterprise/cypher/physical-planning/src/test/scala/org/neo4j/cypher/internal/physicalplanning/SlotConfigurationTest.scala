@@ -257,6 +257,61 @@ class SlotConfigurationTest extends CypherFunSuite with AstConstructionTestSuppo
     ))
   }
 
+  test("addAllSlotsInOrderTo with refs/cached props/longs/applyPlans and skipSlots and aliases") {
+    // given
+
+    // slots
+    val slots = SlotConfiguration(Map.empty, 0, 0)
+    slots.newArgument(Id(0)) // skipped
+    slots.newLong("a", nullable = false, CTNode) // skipped
+    slots.addAlias("aa", "a") // skipped
+    slots.newLong("b", nullable = false, CTNode)
+    slots.newArgument(Id(1))
+    slots.newReference("c", nullable = false, CTNode) // skipped
+    slots.newReference("d", nullable = false, CTNode)
+    val dCP = CachedProperty("d", varFor("d"), PropertyKeyName("prop")(pos), NODE_TYPE)(pos)
+    slots.newCachedProperty(dCP)
+    slots.newReference("e", nullable = false, CTNode)
+    slots.addAlias("ee", "e")
+    val eCP = CachedProperty("e", varFor("e"), PropertyKeyName("prop")(pos), NODE_TYPE)(pos)
+    slots.newCachedProperty(eCP)
+
+    // ... which are added to result
+    val result = SlotConfiguration(Map.empty, 0, 0)
+    result.newLong("z", nullable = false, CTNode)
+    result.addAlias("zz", "z")
+    result.newReference("y", nullable = false, CTNode)
+    result.newArgument(Id(2))
+    result.newLong("x", nullable = false, CTNode)
+    result.addAlias("xx", "x")
+    val xCP = CachedProperty("x", varFor("x"), PropertyKeyName("prop")(pos), NODE_TYPE)(pos)
+    result.newCachedProperty(xCP)
+
+    // when
+    slots.addAllSlotsInOrderTo(result, skipFirst = SlotConfiguration.Size(nLongs = 2, nReferences = 1))
+
+    // then
+    // the old stuff
+    result("z") should equal(LongSlot(0, nullable = false, CTNode))
+    result("zz") should equal(LongSlot(0, nullable = false, CTNode))
+    result.isAlias("zz") shouldBe true
+    result("y") should equal(RefSlot(0, nullable = false, CTNode))
+    result.getArgumentLongOffsetFor(Id(2)) should equal(1)
+    result("x") should equal(LongSlot(2, nullable = false, CTNode))
+    result("xx") should equal(LongSlot(2, nullable = false, CTNode))
+    result.isAlias("xx") shouldBe true
+    result.getCachedPropertyOffsetFor(xCP) should equal(1)
+    // the new stuff
+    result("b") should equal(LongSlot(3, nullable = false, CTNode))
+    result.getArgumentLongOffsetFor(Id(1)) should equal(4)
+    result("d") should equal(RefSlot(2, nullable = false, CTNode))
+    result.getCachedPropertyOffsetFor(dCP) should equal(3)
+    result("e") should equal(RefSlot(4, nullable = false, CTNode))
+    result("ee") should equal(RefSlot(4, nullable = false, CTNode))
+    result.isAlias("ee") shouldBe true
+    result.getCachedPropertyOffsetFor(eCP) should equal(5)
+  }
+
   trait HasSlot {
     def slot: Slot
   }
