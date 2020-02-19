@@ -6,7 +6,9 @@
 package com.neo4j.fabric.planning
 
 import com.neo4j.fabric.planning.FabricQuery.Columns
-import com.neo4j.fabric.planning.Fragment.{Chain, Leaf, Union}
+import com.neo4j.fabric.planning.Fragment.Chain
+import com.neo4j.fabric.planning.Fragment.Leaf
+import com.neo4j.fabric.planning.Fragment.Union
 import com.neo4j.fabric.util.Errors
 import org.neo4j.cypher.internal.ast
 

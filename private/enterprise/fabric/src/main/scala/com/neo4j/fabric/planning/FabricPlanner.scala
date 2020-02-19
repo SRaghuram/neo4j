@@ -11,13 +11,9 @@ import com.neo4j.fabric.eval.Catalog
 import com.neo4j.fabric.executor.FabricException
 import com.neo4j.fabric.pipeline.Pipeline
 import com.neo4j.fabric.planning.FabricPlan.DebugOptions
-import com.neo4j.fabric.planning.FabricQuery.Columns
 import com.neo4j.fabric.planning.FabricQuery.LeafQuery
 import com.neo4j.fabric.planning.FabricQuery.LocalQuery
 import com.neo4j.fabric.planning.FabricQuery.RemoteQuery
-import com.neo4j.fabric.planning.Fragment.Chain
-import com.neo4j.fabric.planning.Fragment.Leaf
-import com.neo4j.fabric.planning.Fragment.Union
 import com.neo4j.fabric.util.Errors
 import com.neo4j.fabric.util.Rewritten.RewritingOps
 import org.neo4j.cypher.internal.ast.semantics.SemanticState
