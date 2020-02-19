@@ -24,11 +24,13 @@ import org.eclipse.collections.impl.factory.primitive.IntObjectMaps;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.nio.BufferOverflowException;
+import java.util.function.Consumer;
 import java.util.stream.IntStream;
 
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.storageengine.api.RelationshipSelection;
+import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.storageengine.api.StorageEntityCursor;
 import org.neo4j.storageengine.api.StorageNodeCursor;
 import org.neo4j.storageengine.api.StoragePropertyCursor;
@@ -73,6 +75,7 @@ abstract class FrekiCursorsTest
     {
         private final Record record;
         private final MutableNodeRecordData data;
+        private final Consumer<StorageCommand> bigValueApplier = InMemoryBigValueTestStore.applyToStoreImmediately( stores.bigPropertyValueStore );
 
         Node( long id )
         {
@@ -97,7 +100,7 @@ abstract class FrekiCursorsTest
             {
                 try
                 {
-                    data.serialize( record.dataForWriting(), stores.bigPropertyValueStore );
+                    data.serialize( record.dataForWriting(), stores.bigPropertyValueStore, bigValueApplier );
                 }
                 catch ( BufferOverflowException e )
                 {
@@ -108,12 +111,12 @@ abstract class FrekiCursorsTest
                     {
                         Record largeRecord = largeStore.newRecord( largeData.id );
                         largeRecord.setFlag( FLAG_IN_USE, true );
-                        largeData.serialize( largeRecord.dataForWriting(), stores.bigPropertyValueStore );
+                        largeData.serialize( largeRecord.dataForWriting(), stores.bigPropertyValueStore, bigValueApplier );
                         largeStore.write( largeCursor, largeRecord );
                     }
 
                     data.setForwardPointer( forwardPointer( largeStore.recordSizeExponential(), false, largeData.id ) );
-                    data.serialize( record.dataForWriting(), stores.bigPropertyValueStore );
+                    data.serialize( record.dataForWriting(), stores.bigPropertyValueStore, bigValueApplier );
                 }
                 store.write( cursor, record );
             }

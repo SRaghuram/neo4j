@@ -30,8 +30,10 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Consumer;
 import javax.annotation.Nonnull;
 
+import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.util.Preconditions;
 import org.neo4j.values.storable.Value;
 
@@ -179,7 +181,7 @@ class MutableNodeRecordData
     static class Relationships implements Iterable<Relationship>, Comparable<Relationships>
     {
         private final int type;
-        private final List<Relationship> relationships = new ArrayList<>();
+        final List<Relationship> relationships = new ArrayList<>();
 
         Relationships( int type )
         {
@@ -284,7 +286,7 @@ class MutableNodeRecordData
         return this.forwardPointer;
     }
 
-    void serialize( ByteBuffer buffer, SimpleBigValueStore bigPropertyValueStore )
+    void serialize( ByteBuffer buffer, SimpleBigValueStore bigPropertyValueStore, Consumer<StorageCommand> commandConsumer )
     {
         buffer.clear();
         int offsetHeaderPosition = buffer.position();
@@ -301,7 +303,7 @@ class MutableNodeRecordData
         if ( properties.notEmpty() )
         {
             propertiesOffset = buffer.position();
-            writeProperties( properties, buffer, bigPropertyValueStore );
+            writeProperties( properties, buffer, bigPropertyValueStore, commandConsumer );
         }
         int relationshipsOffset = relationships.notEmpty() ? buffer.position() : 0;
 
@@ -341,7 +343,7 @@ class MutableNodeRecordData
                         // this to efficiently be able to skip through to a specific properties set
                         int blockSizeHeaderOffset = buffer.position();
                         buffer.put( (byte) 0 );
-                        writeProperties( relationship.properties, buffer, bigPropertyValueStore );
+                        writeProperties( relationship.properties, buffer, bigPropertyValueStore, commandConsumer );
                         int blockSize = buffer.position() - blockSizeHeaderOffset;
                         buffer.put( blockSizeHeaderOffset, safeCastIntToUnsignedByte( blockSize ) );
                     }
@@ -376,11 +378,12 @@ class MutableNodeRecordData
         buffer.putInt( offsetHeaderPosition, fw | ((endOffset & 0x3FF) << 20) | ((relationshipsOffset & 0x3FF) << 10) | propertiesOffset & 0x3FF );
     }
 
-    private static void writeProperties( MutableIntObjectMap<Value> properties, ByteBuffer buffer, SimpleBigValueStore bigPropertyValueStore )
+    private static void writeProperties( MutableIntObjectMap<Value> properties, ByteBuffer buffer, SimpleBigValueStore bigPropertyValueStore,
+            Consumer<StorageCommand> commandConsumer )
     {
         int[] propertyKeys = properties.keySet().toSortedArray();
         writeIntDeltas( propertyKeys, buffer );
-        PropertyValueFormat writer = new PropertyValueFormat( bigPropertyValueStore, buffer );
+        PropertyValueFormat writer = new PropertyValueFormat( bigPropertyValueStore, commandConsumer, buffer );
         for ( int propertyKey : propertyKeys )
         {
             properties.get( propertyKey ).writeTo( writer );

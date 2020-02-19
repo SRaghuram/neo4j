@@ -20,6 +20,7 @@
 package org.neo4j.internal.freki;
 
 import org.eclipse.collections.api.IntIterable;
+import org.eclipse.collections.api.map.primitive.IntObjectMap;
 import org.eclipse.collections.api.map.primitive.MutableIntObjectMap;
 import org.eclipse.collections.api.map.primitive.MutableLongObjectMap;
 import org.eclipse.collections.api.set.primitive.LongSet;
@@ -29,9 +30,11 @@ import org.eclipse.collections.impl.factory.primitive.IntSets;
 import org.eclipse.collections.impl.factory.primitive.LongObjectMaps;
 
 import java.nio.BufferOverflowException;
+import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.OptionalLong;
+import java.util.function.Consumer;
 
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.internal.freki.FrekiCommand.Mode;
@@ -221,7 +224,7 @@ class CommandCreator implements TxStateVisitor
             {
                 try
                 {
-                    mutation.current.prepareForCommandExtraction();
+                    mutation.current.prepareForCommandExtraction( commands::add );
                     break;
                 }
                 catch ( BufferOverflowException | ArrayIndexOutOfBoundsException e )
@@ -245,7 +248,7 @@ class CommandCreator implements TxStateVisitor
                 // TODO we should track whether or not we need to do this preparation actually
                 // TODO for the time being we expect this to work because there should only be labels in it, 60 or so should fit
                 mutation.small.data.setForwardPointer( mutation.current.asForwardPointer() );
-                mutation.small.prepareForCommandExtraction();
+                mutation.small.prepareForCommandExtraction( commands::add );
             }
 
             mutation.small.createCommands( commands );
@@ -293,7 +296,7 @@ class CommandCreator implements TxStateVisitor
                 }
                 else
                 {
-                    mutation.large = new DenseRecordAndData( stores.denseStore, mutation.small );
+                    mutation.large = new DenseRecordAndData( stores.denseStore, stores.bigPropertyValueStore, mutation.small );
                 }
                 mutation.current = mutation.large;
                 mutation.current.loadExistingData();
@@ -337,7 +340,7 @@ class CommandCreator implements TxStateVisitor
 
         abstract void removeLabels( LongSet removed );
 
-        abstract void prepareForCommandExtraction();
+        abstract void prepareForCommandExtraction( Consumer<StorageCommand> commandConsumer );
 
         abstract RecordAndData growAndRelocate();
 
@@ -433,9 +436,9 @@ class CommandCreator implements TxStateVisitor
         }
 
         @Override
-        void prepareForCommandExtraction()
+        void prepareForCommandExtraction( Consumer<StorageCommand> commandConsumer )
         {
-            data.serialize( after.dataForWriting(), stores.bigPropertyValueStore );
+            data.serialize( after.dataForWriting(), stores.bigPropertyValueStore, commandConsumer );
             if ( data.id == -1 )
             {
                 acquireId();
@@ -456,7 +459,7 @@ class CommandCreator implements TxStateVisitor
             else
             {
                 // Time to move over to GBPTree-style data
-                DenseRecordAndData denseRecord = new DenseRecordAndData( stores.denseStore, smallRecord );
+                DenseRecordAndData denseRecord = new DenseRecordAndData( stores.denseStore, stores.bigPropertyValueStore, smallRecord );
                 denseRecord.movePropertiesAndRelationshipsFrom( data );
                 result = denseRecord;
             }
@@ -488,6 +491,7 @@ class CommandCreator implements TxStateVisitor
     {
         // meta
         private final DenseStore store;
+        private final SimpleBigValueStore bigValueStore;
         private final SparseRecordAndData smallRecord;
         private boolean created;
         private boolean inUse;
@@ -499,9 +503,10 @@ class CommandCreator implements TxStateVisitor
         private MutableIntObjectMap<Value> addedProperties = IntObjectMaps.mutable.empty();
         private MutableIntSet removedProperties = IntSets.mutable.empty();
 
-        DenseRecordAndData( DenseStore store, SparseRecordAndData smallRecord )
+        DenseRecordAndData( DenseStore store, SimpleBigValueStore bigValueStore, SparseRecordAndData smallRecord )
         {
             this.store = store;
+            this.bigValueStore = bigValueStore;
             this.smallRecord = smallRecord;
         }
 
@@ -568,7 +573,7 @@ class CommandCreator implements TxStateVisitor
         }
 
         @Override
-        void prepareForCommandExtraction()
+        void prepareForCommandExtraction( Consumer<StorageCommand> commandConsumer )
         {
             // Thoughts: no special preparation should be required here either
         }
@@ -591,7 +596,29 @@ class CommandCreator implements TxStateVisitor
         {
             // Thoughts: take all the logical changes and add to logical commands, either separate for each change or one big command containing all
             commands.add(
-                    new FrekiCommand.DenseNode( smallRecord.after.id, inUse, addedProperties, removedProperties, createdRelationships, deletedRelationships ) );
+                    new FrekiCommand.DenseNode( smallRecord.after.id, inUse, convertProperties( addedProperties, commands::add ), removedProperties,
+                            convertRelationships( createdRelationships, commands::add ), convertRelationships( deletedRelationships, commands::add ) ) );
+        }
+
+        private IntObjectMap<DenseRelationships> convertRelationships( MutableIntObjectMap<MutableNodeRecordData.Relationships> relationships,
+                Consumer<StorageCommand> commandConsumer )
+        {
+            MutableIntObjectMap<DenseRelationships> converted = IntObjectMaps.mutable.empty();
+            relationships.forEachKeyValue( ( type, value ) ->
+            {
+                DenseRelationships convertedRelationships = new DenseRelationships( type );
+                converted.put( type, convertedRelationships );
+                value.relationships.forEach( relationship -> convertedRelationships.add( relationship.internalId, relationship.sourceNodeId,
+                        relationship.otherNode, relationship.outgoing, convertProperties( relationship.properties, commandConsumer ) ) );
+            } );
+            return converted;
+        }
+
+        private IntObjectMap<ByteBuffer> convertProperties( IntObjectMap<Value> properties, Consumer<StorageCommand> commandConsumer )
+        {
+            MutableIntObjectMap<ByteBuffer> converted = IntObjectMaps.mutable.empty();
+            properties.forEachKeyValue( ( key, value ) -> converted.put( key, serializeValue( bigValueStore, value, commandConsumer ) ) );
+            return converted;
         }
 
         void movePropertiesAndRelationshipsFrom( MutableNodeRecordData data )
@@ -600,5 +627,15 @@ class CommandCreator implements TxStateVisitor
             createdRelationships.putAll( data.relationships );
             data.clearPropertiesAndRelationships();
         }
+    }
+
+    private static ByteBuffer serializeValue( SimpleBigValueStore bigValueStore, Value value, Consumer<StorageCommand> commandConsumer )
+    {
+        // TODO hand-wavy upper limit
+        ByteBuffer buffer = ByteBuffer.wrap( new byte[256] );
+        PropertyValueFormat format = new PropertyValueFormat( bigValueStore, commandConsumer, buffer );
+        value.writeTo( format );
+        buffer.flip();
+        return buffer;
     }
 }
