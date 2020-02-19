@@ -7,8 +7,7 @@ package org.neo4j.cypher.internal.physicalplanning
 
 import java.util.function.ToLongFunction
 
-import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.ApplyPlanSlotKey
-import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.CachedPropertySlotKey
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.SlotWithKeyAndAliases
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.VariableSlotKey
 import org.neo4j.cypher.internal.runtime.EntityById
 import org.neo4j.cypher.internal.runtime.CypherRow
@@ -311,8 +310,8 @@ object SlotConfigurationUtils {
    * Generate and update accessors for all slots in a SlotConfiguration
    */
   def generateSlotAccessorFunctions(slots: SlotConfiguration): Unit = {
-    slots.foreachSlot({
-      case (VariableSlotKey(key), slot) =>
+    slots.foreachSlotAndAliases({
+      case SlotWithKeyAndAliases(VariableSlotKey(key), slot, aliases) =>
         val getter = SlotConfigurationUtils.makeGetValueFromSlotFunctionFor(slot)
         val setter = SlotConfigurationUtils.makeSetValueInSlotFunctionFor(slot)
         val primitiveNodeSetter =
@@ -325,10 +324,10 @@ object SlotConfigurationUtils {
             Some(SlotConfigurationUtils.makeSetPrimitiveRelationshipInSlotFunctionFor(slot))
           else
             None
-
         slots.updateAccessorFunctions(key, getter, setter, primitiveNodeSetter, primitiveRelationshipSetter)
-      case (_: CachedPropertySlotKey, _) => // do nothing
-      case (_: ApplyPlanSlotKey, _) => // do nothing
+        aliases.foreach(alias => slots.updateAccessorFunctions(alias, getter, setter, primitiveNodeSetter, primitiveRelationshipSetter))
+
+      case _ => // do nothing
     })
   }
 }

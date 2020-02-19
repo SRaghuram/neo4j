@@ -50,6 +50,7 @@ import org.neo4j.cypher.internal.logical.plans.ValueHashJoin
 import org.neo4j.cypher.internal.logical.plans.VarExpand
 import org.neo4j.cypher.internal.logical.plans.VariablePredicate
 import org.neo4j.cypher.internal.logical.plans
+import org.neo4j.cypher.internal.logical.plans.CrossApply
 import org.neo4j.cypher.internal.physicalplanning.PipelineBreakingPolicy.breakFor
 import org.neo4j.cypher.internal.runtime.ast.ExpressionVariable
 import org.neo4j.cypher.internal.runtime.expressionVariableAllocation.AvailableExpressionVariables
@@ -510,6 +511,91 @@ class SlotAllocationTest extends CypherFunSuite with LogicalPlanningTestSupport2
     allocations(hashJoin.id) should equal(SlotConfiguration(numberOfLongs = 1, numberOfReferences = 0, slots = Map(
       "x" -> LongSlot(0, nullable = false, CTNode)
     )))
+  }
+
+  test("most joins - with LHS & RHS aliases") {
+    // given
+    val lhs =
+    Projection(
+      Projection(
+        NodeByLabelScan("x", labelName("label1"), Set.empty),
+        Map("cLhs" -> literalInt(1))
+      ),
+      Map("cLhs2" -> varFor("cLhs"), "xLhs2" -> varFor("x"))
+    )
+
+    val rhs = Projection(
+      Projection(
+        NodeByLabelScan("x", labelName("label2"), Set.empty),
+        Map("cRhs" -> literalInt(1))
+      ),
+      Map("cRhs2" -> varFor("cRhs"), "xRhs2" -> varFor("x"))
+    )
+
+    val joins =
+      List(
+        CartesianProduct(lhs, rhs),
+        NodeHashJoin(Set("x"), lhs, rhs),
+        LeftOuterHashJoin(Set("x"), lhs, rhs),
+        ValueHashJoin(lhs, rhs, equals(varFor("x"), varFor("x"))),
+        CrossApply(lhs, rhs)
+      )
+
+    for (join <- joins) {
+      withClue(s"operator[${join.getClass.getSimpleName}]:") {
+        // when
+        val allocations = SlotAllocation.allocateSlots(join, semanticTable, breakFor(join), NO_EXPR_VARS).slotConfigurations
+
+        // then
+        val expectedJoinSlotConfig = SlotConfiguration.empty
+          .newLong("x", nullable = false, CTNode)
+          .newReference("cLhs", nullable = true, CTAny)
+          .addAlias("cLhs2", "cLhs")
+          .addAlias("xLhs2", "x")
+          .newReference("cRhs", nullable = true, CTAny)
+          .addAlias("cRhs2", "cRhs")
+          .addAlias("xRhs2", "x")
+
+        allocations(join.id) should equal(expectedJoinSlotConfig)
+      }
+    }
+  }
+
+  test("right outer join - with LHS & RHS aliases") {
+    // given
+    val lhs =
+      Projection(
+        Projection(
+          NodeByLabelScan("x", labelName("label1"), Set.empty),
+          Map("cLhs" -> literalInt(1))
+        ),
+        Map("cLhs2" -> varFor("cLhs"), "xLhs2" -> varFor("x"))
+      )
+
+    val rhs = Projection(
+      Projection(
+        NodeByLabelScan("x", labelName("label2"), Set.empty),
+        Map("cRhs" -> literalInt(1))
+      ),
+      Map("cRhs2" -> varFor("cRhs"), "xRhs2" -> varFor("x"))
+    )
+
+    val join = RightOuterHashJoin(Set("x"), lhs, rhs)
+
+    // when
+    val allocations = SlotAllocation.allocateSlots(join, semanticTable, breakFor(join), NO_EXPR_VARS).slotConfigurations
+
+    // then
+    val expectedJoinSlotConfig = SlotConfiguration.empty
+      .newLong("x", nullable = false, CTNode)
+      .newReference("cRhs", nullable = true, CTAny)
+      .addAlias("cRhs2", "cRhs")
+      .addAlias("xRhs2", "x")
+      .newReference("cLhs", nullable = true, CTAny)
+      .addAlias("cLhs2", "cLhs")
+      .addAlias("xLhs2", "x")
+
+    allocations(join.id) should equal(expectedJoinSlotConfig)
   }
 
   test("node hash join II") {

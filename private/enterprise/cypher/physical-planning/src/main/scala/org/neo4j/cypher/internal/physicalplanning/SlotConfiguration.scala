@@ -10,6 +10,7 @@ import org.neo4j.cypher.internal.macros.AssertMacros
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.ApplyPlanSlotKey
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.CachedPropertySlotKey
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.SlotKey
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.SlotWithKeyAndAliases
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.VariableSlotKey
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.EntityById
@@ -43,6 +44,8 @@ object SlotConfiguration {
   case class VariableSlotKey(name: String) extends SlotKey
   case class CachedPropertySlotKey(property: ASTCachedProperty) extends SlotKey
   case class ApplyPlanSlotKey(applyPlanId: Id) extends SlotKey
+
+  case class SlotWithKeyAndAliases(key: SlotKey, slot: Slot, aliases: collection.Set[String])
 }
 
 /**
@@ -82,7 +85,7 @@ class SlotConfiguration private(private val slots: mutable.Map[SlotConfiguration
    * Test if a slot key refers to an alias.
    * NOTE: method can only test keys that are either 'original key' or alias, MUST NOT be called on keys that are neither (i.e., do not exist in the configuration).
    */
-  def isAlias(key: String): Boolean = {
+  private def isAlias(key: String): Boolean = {
     AssertMacros.checkOnlyWhenAssertionsAreEnabled(get(key).isDefined, s"Ran `isAlias` on $key which is not part of the slot configuration.")
     !slotAliases.contains(key)
   }
@@ -294,28 +297,75 @@ class SlotConfiguration private(private val slots: mutable.Map[SlotConfiguration
     primitiveRelationshipSetters.get(key)
   }
 
-  /**
-   * Apply a function to all SlotKey->Slot tuples.
-   * If there are aliases to the same Slot, the function will be applied for each SlotKey.
-   */
-  def foreachSlot[U](f: ((SlotKey, Slot)) => U): Unit = {
-    slots.foreach(f)
+  // Helper to filter the slots map by aliases
+  private def slotsAliasesFilter: mutable.Map[SlotKey, Slot] = slots.filter {
+    case (VariableSlotKey(name), _) => !isAlias(name)
+    case _ => true
+  }
+
+  // Helper to map tuples of (SlotKey, Slot) to SlotWithKeyAndAliases
+  private val slotKeySlotTupleAliasesMapper: ((SlotKey, Slot)) => SlotWithKeyAndAliases = {
+    case (slotKey@VariableSlotKey(name), slot) => SlotWithKeyAndAliases(slotKey, slot, slotAliases(name))
+    case (otherKey, slot) => SlotWithKeyAndAliases(otherKey, slot, Set.empty)
   }
 
   /**
-   * Apply a function to all SlotKey->Slot tuples.
+   * Apply a function to all SlotKeys.
+   * SlotKeys that are aliases will be skipped.
+   */
+  def foreachSlot[U](f: ((SlotKey, Slot)) => U): Unit = {
+    slotsAliasesFilter.foreach(f)
+  }
+
+  /**
+   * Map all SlotKeys with the provided function.
+   * SlotKeys that are aliases will NOT be skipped.
+   */
+  def mapSlotsDoNotSkipAliases[U](f: ((SlotKey, Slot)) => U): Iterable[U] = {
+    slots.map(f)
+  }
+
+  /**
+   * Apply a function to all SlotKeys.
+   * SlotKeys that are aliases will be skipped. But, all aliases of a SlotKey are given together with the original SlotKey,
+   * in case the caller wants to do something with the aliases.
+   */
+  def foreachSlotAndAliases(f: SlotWithKeyAndAliases => Unit): Unit = {
+    foreachSlot(slotKeySlotTupleAliasesMapper.andThen(f))
+  }
+
+  /**
+   * Apply a function to all SlotKeys.
    * The function will be applied in increasing slot offset order, first for the long slots and then for the ref slots.
-   * If there are aliases to the same Slot, the function will be applied for each SlotKey.
+   * SlotKeys that are aliases will be skipped. But, all aliases of a SlotKey are given together with the original SlotKey,
+   * in case the caller wants to do something with the aliases.
    *
    * @param skipFirst the amount of longs and refs to be skipped in the beginning
    */
-  def foreachSlotOrdered(f: ((SlotKey, Slot)) => Unit,
-                         skipFirst: SlotConfiguration.Size = SlotConfiguration.Size.zero
+  def foreachSlotAndAliasesOrdered(f: SlotWithKeyAndAliases => Unit,
+                                   skipFirst: SlotConfiguration.Size = SlotConfiguration.Size.zero
                         ): Unit = {
     val (longs, refs) = slots.toSeq.partition(_._2.isLongSlot)
 
-    longs.filter(_._2.offset >= skipFirst.nLongs).sortBy(_._2.offset).foreach(f)
-    refs.filter(_._2.offset >= skipFirst.nReferences).sortBy(_._2.offset).foreach(f)
+    def shouldApplyFunction(slotKey: SlotKey): Boolean = slotKey match {
+      case VariableSlotKey(name) => !isAlias(name)
+      case _ => true
+    }
+
+    longs.filter {
+      case (slotkey, slot) =>
+        slot.offset >= skipFirst.nLongs && shouldApplyFunction(slotkey)
+    }.sortBy(_._2.offset).map {
+      case (slotKey@VariableSlotKey(name), slot) => SlotWithKeyAndAliases(slotKey, slot, slotAliases(name))
+      case (otherKey, slot) => SlotWithKeyAndAliases(otherKey, slot, Set.empty)
+    }.foreach(f)
+
+    refs.filter {
+      case (slotkey, slot) => slot.offset >= skipFirst.nReferences && shouldApplyFunction(slotkey)
+    }.sortBy(_._2.offset).map {
+      case (slotKey@VariableSlotKey(name), slot) => SlotWithKeyAndAliases(slotKey, slot, slotAliases(name))
+      case (otherKey, slot) => SlotWithKeyAndAliases(otherKey, slot, Set.empty)
+    }.foreach(f)
   }
 
   /**
@@ -327,16 +377,14 @@ class SlotConfiguration private(private val slots: mutable.Map[SlotConfiguration
   def addAllSlotsInOrderTo(other: SlotConfiguration,
                            skipFirst: SlotConfiguration.Size = SlotConfiguration.Size.zero
                         ): Unit = {
-    foreachSlotOrdered({
-      case (VariableSlotKey(key), slot) =>
-        if (!isAlias(key)) {
-          other.add(key, slot)
-          slotAliases(key).foreach { alias =>
-            if(alias != key) other.addAlias(alias, key)
-          }
+    foreachSlotAndAliasesOrdered({
+      case SlotWithKeyAndAliases(VariableSlotKey(key), slot, aliases) =>
+        other.add(key, slot)
+        aliases.foreach { alias =>
+          other.addAlias(alias, key)
         }
-      case (CachedPropertySlotKey(key), _) => other.newCachedProperty(key, shouldDuplicate = true)
-      case (ApplyPlanSlotKey(applyPlanId), _) => other.newArgument(applyPlanId)
+      case SlotWithKeyAndAliases(CachedPropertySlotKey(key), _, _) => other.newCachedProperty(key, shouldDuplicate = true)
+      case SlotWithKeyAndAliases(ApplyPlanSlotKey(applyPlanId), _, _) => other.newArgument(applyPlanId)
     }, skipFirst)
   }
 
@@ -344,17 +392,6 @@ class SlotConfiguration private(private val slots: mutable.Map[SlotConfiguration
     slots.iterator.foreach {
       case (CachedPropertySlotKey(key), slot: RefSlot) => onCachedProperty(key, slot)
       case _ => // do nothing
-    }
-  }
-
-  // NOTE: This will give duplicate slots when we have aliases
-  def mapSlot[U](onVariable: ((String,Slot)) => U,
-                 onCachedProperty: ((ASTCachedProperty, RefSlot)) => U
-                ): Iterable[U] = {
-    slots.map {
-      case (VariableSlotKey(key), slot) => onVariable(key, slot)
-      case (CachedPropertySlotKey(key), slot: RefSlot) => onCachedProperty(key, slot)
-      case (_: ApplyPlanSlotKey, slot) => throw new SlotAllocationFailed("SlotConfiguration.mapSlot does not support ApplyPlanSlots yet")
     }
   }
 

@@ -80,7 +80,9 @@ import org.neo4j.cypher.internal.physicalplanning.PhysicalPlan
 import org.neo4j.cypher.internal.physicalplanning.RefSlot
 import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.ApplyPlanSlotKey
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.CachedPropertySlotKey
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.SlotWithKeyAndAliases
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.VariableSlotKey
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.isRefSlotAndNotAlias
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils
@@ -598,13 +600,13 @@ class SlottedPipeMapper(fallback: PipeMapper,
 
     // When executing, the LHS will be copied to the first slots in the produced row, and any additional RHS columns that are not
     // part of the join comparison
-    rhsSlots.foreachSlotOrdered({
-      case (VariableSlotKey(key), LongSlot(offset, _, _)) if offset >= argumentSize.nLongs =>
+    rhsSlots.foreachSlotAndAliasesOrdered({
+      case SlotWithKeyAndAliases(VariableSlotKey(key), LongSlot(offset, _, _), _) if offset >= argumentSize.nLongs =>
         copyLongsFromRHS += ((offset, slots.getLongOffsetFor(key)))
-      case (VariableSlotKey(key), RefSlot(offset, _, _)) if offset >= argumentSize.nReferences =>
+      case SlotWithKeyAndAliases(VariableSlotKey(key), RefSlot(offset, _, _), _) if offset >= argumentSize.nReferences =>
         copyRefsFromRHS += ((offset, slots.getReferenceOffsetFor(key)))
-      case (_: VariableSlotKey, _) => // do nothing, already added by lhs
-      case (CachedPropertySlotKey(cnp), _) =>
+      case SlotWithKeyAndAliases(_: VariableSlotKey, _, _) => // do nothing, already added by lhs
+      case SlotWithKeyAndAliases(CachedPropertySlotKey(cnp), _, _) =>
         val offset = rhsSlots.getCachedPropertyOffsetFor(cnp)
         if (offset >= argumentSize.nReferences) {
           copyCachedPropertiesFromRHS += offset -> slots.getCachedPropertyOffsetFor(cnp)
@@ -754,26 +756,30 @@ class SlottedPipeMapper(fallback: PipeMapper,
     val lhsArgRefSlots = mutable.ArrayBuffer.empty[(String, Slot)]
     val rhsArgLongSlots = mutable.ArrayBuffer.empty[(String, Slot)]
     val rhsArgRefSlots = mutable.ArrayBuffer.empty[(String, Slot)]
-    lhsSlots.foreachSlot({
-      case (VariableSlotKey(key), slot)  =>
+    lhsSlots.foreachSlotAndAliases({
+      case SlotWithKeyAndAliases(VariableSlotKey(key), slot, aliases)  =>
         if (slot.isLongSlot && slot.offset < argumentSize.nLongs) {
           lhsArgLongSlots += (key -> slot)
+          aliases.foreach(alias => lhsArgLongSlots += (alias -> slot))
         }  else if (!slot.isLongSlot && slot.offset < argumentSize.nReferences) {
           lhsArgRefSlots += (key -> slot)
+          aliases.foreach(alias => lhsArgRefSlots += (alias -> slot))
         }
-      case (CachedPropertySlotKey(key), slot)  =>
+      case SlotWithKeyAndAliases(CachedPropertySlotKey(key), slot, _)  =>
         if (slot.offset < argumentSize.nReferences) {
           lhsArgRefSlots += (key.asCanonicalStringVal -> slot)
         }
     })
-    rhsSlots.foreachSlot({
-      case (VariableSlotKey(key), slot)  =>
+    rhsSlots.foreachSlotAndAliases({
+      case SlotWithKeyAndAliases(VariableSlotKey(key), slot, aliases)  =>
         if (slot.isLongSlot && slot.offset < argumentSize.nLongs) {
           rhsArgLongSlots += (key -> slot)
+          aliases.foreach(alias => rhsArgLongSlots += (alias -> slot))
         }  else if (!slot.isLongSlot && slot.offset < argumentSize.nReferences) {
           rhsArgRefSlots += (key -> slot)
+          aliases.foreach(alias => rhsArgRefSlots += (alias -> slot))
         }
-      case (CachedPropertySlotKey(key), slot) =>
+      case SlotWithKeyAndAliases(CachedPropertySlotKey(key), slot, _) =>
         if (slot.offset < argumentSize.nReferences) {
           rhsArgRefSlots += (key.asCanonicalStringVal -> slot)
         }
@@ -834,40 +840,39 @@ object SlottedPipeMapper {
   //we have a reference slot in the output but a long slot on one of the inputs,
   //e.g. MATCH (n) RETURN n UNION RETURN 42 AS n
   def computeUnionMapping(in: SlotConfiguration, out: SlotConfiguration): RowMapping = {
-    val mapSlots: Iterable[(CypherRow, CypherRow, QueryState) => Unit] = in.mapSlot(
-      onVariable = {
-        case (k, inSlot: LongSlot) =>
-          out.get(k) match {
-            // The output does not have a slot for this, so we don't need to copy
-            case None => (_, _, _) => ()
-            case Some(l: LongSlot) =>
-              (in, out, _) => out.setLongAt(l.offset, in.getLongAt(inSlot.offset))
-            case Some(r: RefSlot) =>
-              //here we must map the long slot to a reference slot
-              val projectionExpression = projectSlotExpression(inSlot) // Pre-compute projection expression
-              (in, out, state) => out.setRefAt(r.offset, projectionExpression(in, state))
-          }
-        case (k, inSlot: RefSlot) =>
-          // This means out must be a ref slot as well, if it exists, otherwise slot allocation was wrong
-          out.get(k) match {
-            // The output does not have a slot for this, so we don't need to copy
-            case None => (_, _, _) => ()
-            case Some(l: LongSlot) =>
-              throw new IllegalStateException(s"Expected Union output slot to be a refslot but was: $l")
-            case Some(r: RefSlot) =>
-              (in, out, _) => out.setRefAt(r.offset, in.getRefAt(inSlot.offset))
-          }
-      }, onCachedProperty = {
-        case (cachedProp, inRefSlot) =>
-          out.getCachedPropertySlot(cachedProp) match {
-            case Some(outRefSlot) =>
-              // Copy the cached property if the output has it as well
-              (in, out, _) => out.setCachedPropertyAt(outRefSlot.offset, in.getCachedPropertyAt(inRefSlot.offset))
-            case None =>
-              // Otherwise do nothing
-              (_, _, _) => ()
-          }
-      })
+    val mapSlots: Iterable[(CypherRow, CypherRow, QueryState) => Unit] = in.mapSlotsDoNotSkipAliases {
+      case (VariableSlotKey(k), inSlot: LongSlot) =>
+        out.get(k) match {
+          // The output does not have a slot for this, so we don't need to copy
+          case None => (_, _, _) => ()
+          case Some(l: LongSlot) =>
+            (in, out, _) => out.setLongAt(l.offset, in.getLongAt(inSlot.offset))
+          case Some(r: RefSlot) =>
+            //here we must map the long slot to a reference slot
+            val projectionExpression = projectSlotExpression(inSlot) // Pre-compute projection expression
+            (in, out, state) => out.setRefAt(r.offset, projectionExpression(in, state))
+        }
+      case (VariableSlotKey(k), inSlot: RefSlot) =>
+        // This means out must be a ref slot as well, if it exists, otherwise slot allocation was wrong
+        out.get(k) match {
+          // The output does not have a slot for this, so we don't need to copy
+          case None => (_, _, _) => ()
+          case Some(l: LongSlot) =>
+            throw new IllegalStateException(s"Expected Union output slot to be a refslot but was: $l")
+          case Some(r: RefSlot) =>
+            (in, out, _) => out.setRefAt(r.offset, in.getRefAt(inSlot.offset))
+        }
+      case (CachedPropertySlotKey(cachedProp), inRefSlot) =>
+        out.getCachedPropertySlot(cachedProp) match {
+          case Some(outRefSlot) =>
+            // Copy the cached property if the output has it as well
+            (in, out, _) => out.setCachedPropertyAt(outRefSlot.offset, in.getCachedPropertyAt(inRefSlot.offset))
+          case None =>
+            // Otherwise do nothing
+            (_, _, _) => ()
+        }
+      case (_: ApplyPlanSlotKey, _) => throw new InternalException("computeUnionMapping does not support ApplyPlanSlots yet")
+    }
     //Apply all transformations
     (incoming: CypherRow, outgoing: CypherRow, state: QueryState) => {
       mapSlots.foreach(f => f(incoming, outgoing, state))

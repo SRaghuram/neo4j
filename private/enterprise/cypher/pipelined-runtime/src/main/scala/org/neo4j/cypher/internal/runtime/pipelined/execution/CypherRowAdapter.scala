@@ -37,9 +37,6 @@ class CypherRowAdapter extends CypherRow {
 
   override def copyWith(newEntries: Seq[(String, AnyValue)]): CypherRow = ???
 
-  override def boundEntities(materializeNode: Long => AnyValue,
-                             materializeRelationship: Long => AnyValue): Map[String, AnyValue] = ???
-
   override def isNull(key: String): Boolean = ???
 
   override def setLongAt(offset: Int, value: Long): Unit = ???

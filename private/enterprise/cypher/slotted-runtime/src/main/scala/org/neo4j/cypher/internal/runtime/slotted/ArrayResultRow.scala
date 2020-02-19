@@ -143,8 +143,6 @@ case class ArrayResultRow(resultArray: Array[AnyValue],
 
   override def copyWith(newEntries: Seq[(String, AnyValue)]): CypherRow = fail()
 
-  override def boundEntities(materializeNode: Long => AnyValue, materializeRelationship: Long => AnyValue): Map[String, AnyValue] = fail()
-
   override def isNull(key: String): Boolean = fail()
 
   override def setCachedProperty(key: ASTCachedProperty, value: Value): Unit = fail()

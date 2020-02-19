@@ -28,6 +28,7 @@ import org.neo4j.cypher.internal.physicalplanning.RefSlot
 import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.ApplyPlanSlotKey
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.CachedPropertySlotKey
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.SlotWithKeyAndAliases
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.VariableSlotKey
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.isRefSlotAndNotAlias
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.generateSlotAccessorFunctions
@@ -366,14 +367,14 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
 
         // When executing the HashJoin, the LHS will be copied to the first slots in the produced row, and any additional RHS columns that are not
         // part of the join comparison
-        rhsSlots.foreachSlotOrdered({
-          case (VariableSlotKey(key), LongSlot(offset, _, _)) if offset >= argumentSize.nLongs =>
+        rhsSlots.foreachSlotAndAliasesOrdered({
+          case SlotWithKeyAndAliases(VariableSlotKey(key), LongSlot(offset, _, _), _) if offset >= argumentSize.nLongs =>
             copyLongsFromRHS += ((offset, slots.getLongOffsetFor(key)))
-          case (VariableSlotKey(key), RefSlot(offset, _, _)) if offset >= argumentSize.nReferences =>
+          case SlotWithKeyAndAliases(VariableSlotKey(key), RefSlot(offset, _, _), _) if offset >= argumentSize.nReferences =>
             copyRefsFromRHS += ((offset, slots.getReferenceOffsetFor(key)))
-          case (_: VariableSlotKey, _) => // do nothing, already added by lhs
-          case (_: ApplyPlanSlotKey, _) => // do nothing, already added by lhs
-          case (CachedPropertySlotKey(cnp), refSlot) =>
+          case SlotWithKeyAndAliases(_: VariableSlotKey, _, _) => // do nothing, already added by lhs
+          case SlotWithKeyAndAliases(_: ApplyPlanSlotKey, _, _) => // do nothing, already added by lhs
+          case SlotWithKeyAndAliases(CachedPropertySlotKey(cnp), refSlot, _) =>
             val offset = refSlot.offset
             if (offset >= argumentSize.nReferences)
               copyCachedPropertiesFromRHS += offset -> slots.getCachedPropertyOffsetFor(cnp)

@@ -16,6 +16,7 @@ import org.neo4j.cypher.internal.runtime.slotted.helpers.NullChecker.entityIsNul
 import org.neo4j.cypher.internal.util.symbols.CTNode
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.ApplyPlanSlotKey
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.CachedPropertySlotKey
+import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.SlotWithKeyAndAliases
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.VariableSlotKey
 import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.runtime.WritableRow
@@ -315,44 +316,6 @@ case class SlottedRow(slots: SlotConfiguration) extends CypherRow {
     clone
   }
 
-  // TODO: If we save currently utilized slot size per logical plan this could be simplified to checking
-  // if the slot offset is less than the current size.
-  // This is also the only way that we could detect if a LongSlot was not initialized
-  override def boundEntities(materializeNode: Long => AnyValue, materializeRelationship: Long => AnyValue): Map[String, AnyValue] = {
-    val entities = mutable.Map.empty[String, AnyValue]
-    slots.foreachSlot({
-      case (VariableSlotKey(key), RefSlot(offset, _, _)) =>
-        if (isRefInitialized(offset)) {
-          val entity = getRefAtWithoutCheckingInitialized(offset)
-          entity match {
-            case _: NodeValue | _: RelationshipValue =>
-              entities += key -> entity
-            case nodeRef: NodeReference =>
-              entities += key -> materializeNode(nodeRef.id())
-            case relRef: RelationshipReference =>
-              entities += key -> materializeRelationship(relRef.id())
-            case _ => // Do nothing
-          }
-        }
-      case (VariableSlotKey(key), LongSlot(offset, false, CTNode)) =>
-        entities += key -> materializeNode(getLongAt(offset))
-      case (VariableSlotKey(key), LongSlot(offset, false, CTRelationship)) =>
-        entities += key -> materializeRelationship(getLongAt(offset))
-      case (VariableSlotKey(key), LongSlot(offset, true, CTNode)) =>
-        val entityId = getLongAt(offset)
-        if (entityId >= 0)
-          entities += key -> materializeNode(getLongAt(offset))
-      case (VariableSlotKey(key), LongSlot(offset, true, CTRelationship)) =>
-        val entityId = getLongAt(offset)
-        if (entityId >= 0)
-          entities += key -> materializeRelationship(getLongAt(offset))
-      case (_: VariableSlotKey, _) => // Do nothing
-      case (_: CachedPropertySlotKey, _) => // Do nothing
-      case (_: ApplyPlanSlotKey, _) => // Do nothing
-    })
-    entities.toMap
-  }
-
   override def isNull(key: String): Boolean =
     slots.get(key) match {
       case Some(RefSlot(offset, true, _)) if isRefInitialized(offset) =>
@@ -369,11 +332,12 @@ case class SlottedRow(slots: SlotConfiguration) extends CypherRow {
     // This method implementation is for debug usage only.
     // Please do not use in production code.
     var tuples: List[(String, AnyValue)] = Nil
-    slots.foreachSlot({
-      case (VariableSlotKey(key), RefSlot(offset, _, _)) => tuples ::= ((key, refs(offset)))
-      case (VariableSlotKey(key), LongSlot(offset, _, _)) => tuples ::= ((key, Values.longValue(longs(offset))))
-      case (CachedPropertySlotKey(cachedProperty), slot) => tuples ::= ((cachedProperty.asCanonicalStringVal, refs(slot.offset)))
-      case (ApplyPlanSlotKey(id), slot) => tuples ::= ((s"Apply-Plan($id)", Values.longValue(longs(slot.offset))))
+    def prettyKey(key: String, aliases: collection.Set[String]): String = (key +: aliases.toSeq).mkString(",")
+    slots.foreachSlotAndAliasesOrdered({
+      case SlotWithKeyAndAliases(VariableSlotKey(key), RefSlot(offset, _, _), aliases) => tuples ::= ((prettyKey(key, aliases), refs(offset)))
+      case SlotWithKeyAndAliases(VariableSlotKey(key), LongSlot(offset, _, _), aliases) => tuples ::= ((prettyKey(key, aliases), Values.longValue(longs(offset))))
+      case SlotWithKeyAndAliases(CachedPropertySlotKey(cachedProperty), slot, _) => tuples ::= ((cachedProperty.asCanonicalStringVal, refs(slot.offset)))
+      case SlotWithKeyAndAliases(ApplyPlanSlotKey(id), slot, _) => tuples ::= ((s"Apply-Plan($id)", Values.longValue(longs(slot.offset))))
     })
     tuples.iterator
   }

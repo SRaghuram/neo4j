@@ -5,11 +5,15 @@
  */
 package org.neo4j.cypher.internal.runtime.slotted
 
+import org.mockito.Mockito
 import org.mockito.Mockito.when
 import org.neo4j.cypher.internal.ast.semantics.SemanticTable
 import org.neo4j.cypher.internal.compiler.planner.LogicalPlanningTestSupport2
+import org.neo4j.cypher.internal.expressions.CachedProperty
 import org.neo4j.cypher.internal.expressions.LabelName
 import org.neo4j.cypher.internal.expressions.LabelToken
+import org.neo4j.cypher.internal.expressions.NODE_TYPE
+import org.neo4j.cypher.internal.expressions.PropertyKeyName
 import org.neo4j.cypher.internal.expressions.SemanticDirection
 import org.neo4j.cypher.internal.ir.CreateNode
 import org.neo4j.cypher.internal.ir.VarPatternLength
@@ -47,11 +51,16 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.Size
 import org.neo4j.cypher.internal.physicalplanning.SlottedIndexedProperty
 import org.neo4j.cypher.internal.physicalplanning.VariablePredicates
 import org.neo4j.cypher.internal.planner.spi.TokenContext
+import org.neo4j.cypher.internal.runtime.NodeOperations
+import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.QueryIndexRegistrator
+import org.neo4j.cypher.internal.runtime.RelationshipOperations
 import org.neo4j.cypher.internal.runtime.interpreted.InterpretedPipeMapper
+import org.neo4j.cypher.internal.runtime.interpreted.QueryStateHelper
 import org.neo4j.cypher.internal.runtime.interpreted.commands
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.CommunityExpressionConverter
 import org.neo4j.cypher.internal.runtime.interpreted.commands.convert.ExpressionConverters
+import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.FakeEntityTestSupport
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Literal
 import org.neo4j.cypher.internal.runtime.interpreted.commands.predicates
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.EagerAggregationPipe
@@ -94,9 +103,12 @@ import org.neo4j.cypher.internal.util.symbols.CTList
 import org.neo4j.cypher.internal.util.symbols.CTNode
 import org.neo4j.cypher.internal.util.symbols.CTRelationship
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
+import org.neo4j.kernel.impl.util.ValueUtils.fromNodeEntity
+import org.neo4j.kernel.impl.util.ValueUtils.fromRelationshipEntity
+import org.neo4j.values.storable.Values
 
 //noinspection NameBooleanParameters
-class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSupport2 {
+class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSupport2 with FakeEntityTestSupport {
 
   implicit private val table: SemanticTable = SemanticTable()
 
@@ -773,5 +785,153 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
       lhsNodes(i) should equal(rhsNodes(i))
     }
     lhsNodes.toSet should be(nodes)
+  }
+
+  test("should compute union mapping with aliases if out defined for original") {
+    // given
+    val aProp = CachedProperty("a", varFor("a"), PropertyKeyName("prop")(pos), NODE_TYPE)(pos)
+    val xProp = CachedProperty("x", varFor("x"), PropertyKeyName("prop")(pos), NODE_TYPE)(pos)
+    val in = SlotConfiguration.empty
+      .newLong("a", false, CTNode)
+      .addAlias("aa", "a")
+      .newReference("b", true, CTAny)
+      .addAlias("bb", "b")
+      .newLong("x", false, CTNode)
+      .newReference("y", false, CTAny)
+      .newCachedProperty(aProp)
+      .newCachedProperty(xProp)
+
+    val inRow = SlottedRow(in)
+    inRow.setLongAt(0, 1) // a
+    inRow.setLongAt(1, 2) // x
+    inRow.setRefAt(0, Values.stringValue("b")) // b
+    inRow.setRefAt(1, Values.stringValue("y")) // y
+    inRow.setCachedPropertyAt(2, Values.stringValue("aprop")) // a.prop
+    inRow.setCachedPropertyAt(3, Values.stringValue("xprop")) // x.prop
+
+    val out = SlotConfiguration.empty
+      .newLong("a", false, CTNode)
+      .newReference("b", true, CTAny)
+      .newCachedProperty(aProp)
+
+    val mapping = SlottedPipeMapper.computeUnionMapping(in, out)
+
+    // when
+    val outRow = SlottedRow(out)
+    mapping.mapRows(inRow, outRow, null)
+
+    // then
+    outRow.getLongAt(0) should equal(1) // a
+    outRow.getRefAt(0) should equal(Values.stringValue("b")) // b
+    outRow.getCachedPropertyAt(1) should equal(Values.stringValue("aprop")) // a.prop
+  }
+
+  test("should compute union mapping with aliases if out has separate slots for aliases") {
+    // given
+    val in = SlotConfiguration.empty
+      .newLong("a", false, CTNode)
+      .addAlias("aa", "a")
+      .newReference("b", true, CTAny)
+      .addAlias("bb", "b")
+
+    val inRow = SlottedRow(in)
+    inRow.setLongAt(0, 1) // a
+    inRow.setRefAt(0, Values.stringValue("b")) // b
+
+    val out = SlotConfiguration.empty
+      .newLong("a", false, CTNode)
+      .newLong("aa", false, CTNode)
+      .newReference("b", true, CTAny)
+      .newReference("bb", true, CTAny)
+
+    val mapping = SlottedPipeMapper.computeUnionMapping(in, out)
+
+    // when
+    val outRow = SlottedRow(out)
+    mapping.mapRows(inRow, outRow, null)
+
+    // then
+    outRow.getLongAt(0) should equal(1) // a
+    outRow.getLongAt(1) should equal(1) // aa
+    outRow.getRefAt(0) should equal(Values.stringValue("b")) // b
+    outRow.getRefAt(1) should equal(Values.stringValue("b")) // bb
+  }
+
+  test("should compute union mapping with aliases if out defined for alias") {
+    // given
+    val aProp = CachedProperty("a", varFor("a"), PropertyKeyName("prop")(pos), NODE_TYPE)(pos)
+    val in = SlotConfiguration.empty
+      .newLong("a", false, CTNode)
+      .addAlias("aa", "a")
+      .newReference("b", true, CTAny)
+      .addAlias("bb", "b")
+      .newCachedProperty(aProp)
+
+    val inRow = SlottedRow(in)
+    inRow.setLongAt(0, 1) // a
+    inRow.setRefAt(0, Values.stringValue("b")) // b
+    inRow.setCachedPropertyAt(1, Values.stringValue("aprop")) // a.prop
+
+
+    val aaProp = CachedProperty("a", varFor("aa"), PropertyKeyName("prop")(pos), NODE_TYPE)(pos)
+    val out = SlotConfiguration.empty
+      .newLong("aa", false, CTNode)
+      .newReference("bb", true, CTAny)
+      .newCachedProperty(aaProp)
+
+    val mapping = SlottedPipeMapper.computeUnionMapping(in, out)
+
+    // when
+    val outRow = SlottedRow(out)
+    mapping.mapRows(inRow, outRow, null)
+
+    // then
+    outRow.getLongAt(0) should equal(1) // aa
+    outRow.getRefAt(0) should equal(Values.stringValue("b")) // bb
+    outRow.getCachedPropertyAt(1) should equal(Values.stringValue("aprop")) // aa.prop
+  }
+
+
+
+  test("should compute union mapping with projecting a long slot to a ref slot") {
+    // given
+    val in = SlotConfiguration.empty
+      .newLong("a", false, CTNode)
+      .newLong("b", false, CTRelationship)
+
+    val a = fromNodeEntity(new FakeNode {
+      override def getId: Long = 1L
+    })
+    val b = fromRelationshipEntity(new FakeRel(null, null, null) {
+      override def getId: Long = 2L
+    })
+    val queryState = {
+      val queryContext = Mockito.mock(classOf[QueryContext])
+      val nodeOps = Mockito.mock(classOf[NodeOperations])
+      val relOps = Mockito.mock(classOf[RelationshipOperations])
+      when(queryContext.nodeOps).thenReturn(nodeOps)
+      when(queryContext.relationshipOps).thenReturn(relOps)
+      when(nodeOps.getById(1)).thenReturn(a)
+      when(relOps.getById(2)).thenReturn(b)
+      QueryStateHelper.emptyWith(query = queryContext)
+    }
+
+    val inRow = SlottedRow(in)
+    inRow.setLongAt(0, a.id()) // a
+    inRow.setLongAt(1, b.id()) // b
+
+    val out = SlotConfiguration.empty
+      .newReference("a", false, CTNode)
+      .newReference("b", false, CTRelationship)
+
+    val mapping = SlottedPipeMapper.computeUnionMapping(in, out)
+
+    // when
+    val outRow = SlottedRow(out)
+    mapping.mapRows(inRow, outRow, queryState)
+
+    // then
+    outRow.getRefAt(0) should equal(a)
+    outRow.getRefAt(1) should equal(b)
   }
 }

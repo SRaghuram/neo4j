@@ -48,6 +48,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexEndsWithScanTestBas
 import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexPointDistanceSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexScanTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexSeekRangeAndCompositeTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.LeftOuterHashJoinTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.NodeIndexStartsWithSeekTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.NodeLockingUniqueIndexSeekTestBase
@@ -71,6 +72,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.PruningVarLengthExpandTestBa
 import org.neo4j.cypher.internal.runtime.spec.tests.ReactiveResultStressTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ReactiveResultTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.RelationshipCountFromCountStoreTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.RightOuterHashJoinTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ShortestPathTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.SortTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.SubscriberErrorTestBase
@@ -132,6 +134,8 @@ class SlottedLimitTest extends LimitTestBase(ENTERPRISE.DEFAULT, SlottedRuntime,
 class SlottedSkipTest extends SkipTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedNodeHashJoinTest extends NodeHashJoinTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedValueHashJoinTest extends ValueHashJoinTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
+class SlottedRightOuterHashJoinTest extends RightOuterHashJoinTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
+class SlottedLeftOuterHashJoinTest extends LeftOuterHashJoinTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedReactiveResultsTest extends ReactiveResultTestBase(ENTERPRISE.DEFAULT, SlottedRuntime)
 class SlottedReactiveResultsStressTest extends ReactiveResultStressTestBase(ENTERPRISE.DEFAULT, SlottedRuntime, SIZE_HINT)
 class SlottedMiscTest extends MiscTestBase(ENTERPRISE.DEFAULT, SlottedRuntime)
