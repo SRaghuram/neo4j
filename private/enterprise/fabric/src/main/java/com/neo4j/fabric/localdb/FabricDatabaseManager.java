@@ -11,6 +11,7 @@ import java.util.UUID;
 import java.util.function.Function;
 
 import org.neo4j.common.DependencyResolver;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.configuration.helpers.NormalizedDatabaseName;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseNotFoundException;
@@ -27,6 +28,7 @@ import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.util.FeatureToggles;
 
 import static org.neo4j.dbms.database.SystemGraphDbmsModel.DATABASE_DEFAULT_PROPERTY;
 import static org.neo4j.dbms.database.SystemGraphDbmsModel.DATABASE_LABEL;
@@ -36,6 +38,8 @@ import static org.neo4j.dbms.database.SystemGraphDbmsModel.DATABASE_UUID_PROPERT
 
 public class FabricDatabaseManager extends LifecycleAdapter
 {
+    public static final String FABRIC_BY_DEFAULT_FLAG_NAME = "fabric_by_default";
+
     private final FabricConfig fabricConfig;
     private final DependencyResolver dependencyResolver;
     private final Log log;
@@ -91,6 +95,14 @@ public class FabricDatabaseManager extends LifecycleAdapter
     }
 
     public boolean isFabricDatabase( String databaseNameRaw )
+    {
+        var fabricByDefault = FeatureToggles.flag( FabricDatabaseManager.class, FABRIC_BY_DEFAULT_FLAG_NAME, false );
+        var databaseName = new NormalizedDatabaseName( databaseNameRaw ).name();
+        var isSystemDatabase = databaseName.equals( GraphDatabaseSettings.SYSTEM_DATABASE_NAME );
+        return !isSystemDatabase && (fabricByDefault || isConfiguredFabricDatabase( databaseNameRaw ));
+    }
+
+    public boolean isConfiguredFabricDatabase( String databaseNameRaw )
     {
         var databaseName = new NormalizedDatabaseName( databaseNameRaw );
         return fabricConfig.isEnabled() && fabricConfig.getDatabase().getName().equals( databaseName );
