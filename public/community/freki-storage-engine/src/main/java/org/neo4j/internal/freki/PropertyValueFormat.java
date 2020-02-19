@@ -32,9 +32,11 @@ import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.temporal.TemporalAmount;
+import java.util.function.Consumer;
 
 import org.neo4j.hashing.HashFunction;
 import org.neo4j.io.pagecache.PageCursor;
+import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.string.UTF8;
 import org.neo4j.values.ValueMapper;
 import org.neo4j.values.storable.CoordinateReferenceSystem;
@@ -107,6 +109,7 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
     private static final short SPECIAL_TYPE_ARRAY = 0x10;
 
     private final SimpleBigValueStore bigPropertyValueStore;
+    private final Consumer<StorageCommand> commands;
     private final ByteBuffer buffer;
 
     //Array state
@@ -116,9 +119,10 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
     //Nested properties
     private int nestedPropertyCount;
 
-    PropertyValueFormat( SimpleBigValueStore bigPropertyValueStore, ByteBuffer buffer )
+    PropertyValueFormat( SimpleBigValueStore bigPropertyValueStore, Consumer<StorageCommand> commands, ByteBuffer buffer )
     {
         this.bigPropertyValueStore = bigPropertyValueStore;
+        this.commands = commands;
         this.buffer = buffer;
     }
 
@@ -511,14 +515,7 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
         {
             long pointer = bigPropertyValueStore.allocateSpace( bytes.length );
             writePointer( EXTERNAL_TYPE_STRING, pointer );
-            try ( PageCursor cursor = bigPropertyValueStore.openWriteCursor() )
-            {
-                bigPropertyValueStore.write( cursor, ByteBuffer.wrap( bytes ), pointer );
-            }
-            catch ( IOException e )
-            {
-                throw new UncheckedIOException( e );
-            }
+            commands.accept( new FrekiCommand.BigPropertyValue( pointer, bytes ) );
         }
         else
         {
