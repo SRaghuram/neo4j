@@ -47,6 +47,7 @@ import org.neo4j.kernel.impl.store.record.PropertyBlock;
 import org.neo4j.kernel.impl.store.record.PropertyRecord;
 import org.neo4j.kernel.impl.store.record.RecordLoad;
 import org.neo4j.logging.LogProvider;
+import org.neo4j.storageengine.util.IdUpdateListener;
 import org.neo4j.string.UTF8;
 import org.neo4j.util.Bits;
 import org.neo4j.values.storable.ArrayValue;

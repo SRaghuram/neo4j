@@ -20,7 +20,7 @@ import org.neo4j.internal.id.ScanOnOpenReadOnlyIdGeneratorFactory;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
-import org.neo4j.kernel.impl.store.IdUpdateListener;
+import org.neo4j.storageengine.util.IdUpdateListener;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.NodeStore;
 import org.neo4j.kernel.impl.store.StoreFactory;

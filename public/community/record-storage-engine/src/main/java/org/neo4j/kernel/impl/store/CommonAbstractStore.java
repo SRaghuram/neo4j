@@ -56,6 +56,7 @@ import org.neo4j.kernel.impl.store.record.RecordLoad;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.Logger;
+import org.neo4j.storageengine.util.IdUpdateListener;
 import org.neo4j.util.concurrent.Runnables;
 
 import static java.lang.Math.max;
@@ -960,25 +961,25 @@ public abstract class CommonAbstractStore<RECORD extends AbstractBaseRecord,HEAD
                 checkForDecodingErrors( cursor, id, NORMAL ); // We don't free ids if something weird goes wrong
                 if ( !record.inUse() )
                 {
-                    idUpdateListener.markIdAsUnused( idType, idGenerator, id, cursorTracer );
+                    idUpdateListener.markIdAsUnused( idGenerator, id, cursorTracer );
                 }
                 else if ( record.isCreated() )
                 {
-                    idUpdateListener.markIdAsUsed( idType, idGenerator, id, cursorTracer );
+                    idUpdateListener.markIdAsUsed( idGenerator, id, cursorTracer );
                 }
 
                 if ( (!record.inUse() || !record.requiresSecondaryUnit()) && record.hasSecondaryUnitId() )
                 {
                     // If record was just now deleted, or if the record used a secondary unit, but not anymore
                     // then free the id of that secondary unit.
-                    idUpdateListener.markIdAsUnused( idType, idGenerator, record.getSecondaryUnitId(), cursorTracer );
+                    idUpdateListener.markIdAsUnused( idGenerator, record.getSecondaryUnitId(), cursorTracer );
                 }
                 if ( record.inUse() && record.isSecondaryUnitCreated() )
                 {
                     // Triggers on:
                     // - (a) record got created right now and has a secondary unit, or
                     // - (b) it already existed and just now grew into a secondary unit then mark the secondary unit as used
-                    idUpdateListener.markIdAsUsed( idType, idGenerator, record.getSecondaryUnitId(), cursorTracer );
+                    idUpdateListener.markIdAsUsed( idGenerator, record.getSecondaryUnitId(), cursorTracer );
                 }
             }
         }

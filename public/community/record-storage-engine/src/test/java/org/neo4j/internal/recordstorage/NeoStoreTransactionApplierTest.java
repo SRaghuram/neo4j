@@ -22,8 +22,7 @@ package org.neo4j.internal.recordstorage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.EnumMap;
-import java.util.Map;
+import java.util.stream.Stream;
 
 import org.neo4j.internal.id.IdGenerator;
 import org.neo4j.internal.id.IdType;
@@ -38,11 +37,9 @@ import org.neo4j.internal.schema.IndexProviderDescriptor;
 import org.neo4j.internal.schema.LabelSchemaDescriptor;
 import org.neo4j.internal.schema.SchemaCache;
 import org.neo4j.internal.schema.constraints.ConstraintDescriptorFactory;
-import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.impl.store.CommonAbstractStore;
 import org.neo4j.kernel.impl.store.DynamicArrayStore;
-import org.neo4j.kernel.impl.store.IdUpdateListener;
 import org.neo4j.kernel.impl.store.LabelTokenStore;
 import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.impl.store.NeoStores;
@@ -67,6 +64,8 @@ import org.neo4j.lock.LockService;
 import org.neo4j.storageengine.api.CommandsToApply;
 import org.neo4j.storageengine.api.EntityTokenUpdateListener;
 import org.neo4j.storageengine.api.IndexUpdateListener;
+import org.neo4j.storageengine.util.IdGeneratorUpdatesWorkSync;
+import org.neo4j.storageengine.util.IdUpdateListener;
 import org.neo4j.token.api.NamedToken;
 import org.neo4j.util.concurrent.WorkSync;
 
@@ -685,9 +684,9 @@ class NeoStoreTransactionApplierTest
         // given
         TransactionApplierFactory base = newApplier( false );
         TransactionApplierFactory indexApplier = newIndexApplier();
-        Map<IdType,WorkSync<IdGenerator,IdGeneratorUpdateWork>> idGeneratorWorkSyncs = new EnumMap<>( IdType.class );
-        TransactionApplierFactoryChain applier = new TransactionApplierFactoryChain(
-                () -> new EnqueuingIdUpdateListener( idGeneratorWorkSyncs, PageCacheTracer.NULL ), base, indexApplier );
+        IdGeneratorUpdatesWorkSync idGeneratorUpdatesWorkSync = new IdGeneratorUpdatesWorkSync();
+        Stream.of( IdType.values() ).forEach( idType -> idGeneratorUpdatesWorkSync.add( mock( IdGenerator.class ) ) );
+        TransactionApplierFactoryChain applier = new TransactionApplierFactoryChain( idGeneratorUpdatesWorkSync, base, indexApplier );
         SchemaRecord before = new SchemaRecord( 21 ).initialize( true, Record.NO_NEXT_PROPERTY.longValue() );
         SchemaRecord after = before.copy().initialize( false, Record.NO_NEXT_PROPERTY.longValue() );
         IndexDescriptor rule = indexRule( 0, 1, 2, "K", "X.Y" );
@@ -874,8 +873,9 @@ class NeoStoreTransactionApplierTest
 
     private TransactionApplierFactory newApplierFacade( TransactionApplierFactory... appliers )
     {
-        Map<IdType,WorkSync<IdGenerator,IdGeneratorUpdateWork>> idGeneratorWorkSyncs = new EnumMap<>( IdType.class );
-        return new TransactionApplierFactoryChain( () -> new EnqueuingIdUpdateListener( idGeneratorWorkSyncs, PageCacheTracer.NULL ), appliers );
+        IdGeneratorUpdatesWorkSync idGeneratorWorkSyncs = new IdGeneratorUpdatesWorkSync();
+        Stream.of( IdType.values() ).forEach( idType -> idGeneratorWorkSyncs.add( mock( IdGenerator.class ) ) );
+        return new TransactionApplierFactoryChain( idGeneratorWorkSyncs, appliers );
     }
 
     private TransactionApplierFactory newIndexApplier()

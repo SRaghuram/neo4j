@@ -24,9 +24,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
+import org.neo4j.internal.schema.SchemaCache;
 import org.neo4j.io.IOUtils;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
-import org.neo4j.kernel.impl.store.IdUpdateListener;
 import org.neo4j.kernel.impl.store.NodeStore;
 import org.neo4j.kernel.impl.store.PropertyStore;
 import org.neo4j.lock.LockGroup;
@@ -34,6 +34,7 @@ import org.neo4j.storageengine.api.EntityTokenUpdate;
 import org.neo4j.storageengine.api.EntityTokenUpdateListener;
 import org.neo4j.storageengine.api.IndexUpdateListener;
 import org.neo4j.storageengine.api.StorageEngine;
+import org.neo4j.storageengine.util.IdUpdateListener;
 import org.neo4j.util.concurrent.AsyncApply;
 import org.neo4j.util.concurrent.WorkSync;
 
