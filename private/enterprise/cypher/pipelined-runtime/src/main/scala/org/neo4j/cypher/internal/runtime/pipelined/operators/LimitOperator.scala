@@ -279,6 +279,9 @@ class SerialTopLevelLimitOperatorTaskTemplate(val inner: OperatorTaskTemplate,
     block(
       invoke(loadField(limitStateField), method[SerialTopLevelLimitState, Unit, Long]("update"), subtract(load(reservedVar), load(countLeftVar))),
       profileRows(id, cast[Int](subtract(load(reservedVar), load(countLeftVar)))),
+      condition(greaterThan(load(reservedVar), constant(0L)))(
+        setField(SHOULD_BREAK, constant(false))
+        ),
       inner.genOperateExit
     )
   }
