@@ -48,6 +48,7 @@ import static com.neo4j.causalclustering.common.CausalClusteringTestHelpers.stop
 import static com.neo4j.dbms.EnterpriseOperatorState.DROPPED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STARTED;
 import static com.neo4j.dbms.EnterpriseOperatorState.STOPPED;
+import static com.neo4j.dbms.EnterpriseOperatorState.UNKNOWN;
 import static java.lang.String.format;
 import static java.util.Collections.emptySet;
 import static java.util.Collections.singleton;
@@ -68,7 +69,7 @@ import static org.neo4j.test.conditions.Conditions.sizeCondition;
 class ClusteredShowDatabasesIT
 {
 
-    private static final int LOCAL_STATE_CHAGNE_TIMEOUT_SECONDS = 120;
+    private static final int LOCAL_STATE_CHANGE_TIMEOUT_SECONDS = 120;
     private static final String ADDITIONAL_DATABASE_NAME = "foo";
     private final Set<String> defaultDatabases = Set.of( DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME );
     private final Set<String> databasesWithAdditional = Set.of( DEFAULT_DATABASE_NAME, SYSTEM_DATABASE_NAME, ADDITIONAL_DATABASE_NAME );
@@ -486,7 +487,7 @@ class ClusteredShowDatabasesIT
 
     private static Condition<List<? extends ShowDatabasesResultRow>> containsRole( String expectedRole, Set<String> databaseNames, long expectedCount )
     {
-        Iterable<Condition<Collection<? extends ShowDatabasesResultRow>>> allConditions = databaseNames.stream()
+        var allConditions = databaseNames.stream()
                 .map( databaseName -> containsRole( expectedRole, databaseName, expectedCount ) ).collect( toList() );
         return Assertions.allOf( allConditions );
     }
@@ -529,27 +530,38 @@ class ClusteredShowDatabasesIT
         var expectedAddressDatabaseCombinations = memberBoltAddresses.stream()
                 .flatMap( bolt -> databaseNames.stream().map( name -> Pair.of( bolt, name ) ) )
                 .collect( Collectors.toSet() );
-        return allOf( new Condition<>(
+        return allOf( containsAllAddressesCondition( databaseNames, expectedAddressDatabaseCombinations ),
+                      expectedStateForMembersCondition( memberBoltAddresses, databaseNames, expectedState, expectedAddressDatabaseCombinations ) );
+    }
+
+    private static Condition<List<ShowDatabasesResultRow>> expectedStateForMembersCondition( Set<String> memberBoltAddresses,
+            Set<String> databaseNames, EnterpriseOperatorState expectedState, Set<Pair<String,String>> expectedAddressDatabaseCombinations )
+    {
+        return new Condition<>( resultRows -> expectedAddressDatabaseCombinations.stream().allMatch( addressNameKey ->
+                          {
+                              var statesByAddressAndName = resultRows.stream().collect(
+                                              toMap( ClusteredShowDatabasesIT::boltDbNameCompositeKey,
+                                                     ShowDatabasesResultRow::currentStatus ) );
+                              var actualState = statesByAddressAndName.get( addressNameKey );
+                              return Objects.equals( expectedState.description(), actualState );
+                          } ),
+                                "Expected SHOW DATABASE result for members %s for databases %s to all be in state %s", memberBoltAddresses,
+                                databaseNames, expectedState );
+    }
+
+    private static Condition<List<ShowDatabasesResultRow>> containsAllAddressesCondition( Set<String> databaseNames,
+            Set<Pair<String,String>> expectedAddressDatabaseCombinations )
+    {
+        return new Condition<>(
                               resultRows -> resultRows.stream().map( ClusteredShowDatabasesIT::boltDbNameCompositeKey ).collect( toSet() )
                                       .containsAll( expectedAddressDatabaseCombinations ),
                               "Expected SHOW DATABASE result for databases %s to contain all following bolt addresses: %s", databaseNames,
-                              expectedAddressDatabaseCombinations ),
-
-                      new Condition<>( resultRows -> expectedAddressDatabaseCombinations.stream().allMatch( addressNameKey ->
-                                        {
-                                            var statesByAddressAndName = resultRows.stream().collect(
-                                                            toMap( ClusteredShowDatabasesIT::boltDbNameCompositeKey,
-                                                                   ShowDatabasesHelpers.ShowDatabasesResultRow::currentStatus ) );
-                                            var actualState = statesByAddressAndName.get( addressNameKey );
-                                            return Objects.equals( expectedState.description(), actualState );
-                                        } ),
-                                       "Expected SHOW DATABASE result for members %s for databases %s to all be in state %s", memberBoltAddresses,
-                                       databaseNames, expectedState ) );
+                              expectedAddressDatabaseCombinations );
     }
 
     private static void waitForClusterToReachLocalState( Cluster cluster, NamedDatabaseId namedDatabaseId, EnterpriseOperatorState operatorState )
     {
-        waitForClusterToReachLocalState( cluster.allMembers(), namedDatabaseId, operatorState, LOCAL_STATE_CHAGNE_TIMEOUT_SECONDS );
+        waitForClusterToReachLocalState( cluster.allMembers(), namedDatabaseId, operatorState, LOCAL_STATE_CHANGE_TIMEOUT_SECONDS );
     }
 
     private static void waitForClusterToReachLocalState( Set<ClusterMember> members, NamedDatabaseId namedDatabaseId, EnterpriseOperatorState operatorState,
@@ -579,7 +591,7 @@ class ClusteredShowDatabasesIT
             Collection<DatabaseStateService> databaseStateServices )
     {
         return databaseStateServices.stream().map( databaseStateService ->
-                                                           databaseStateService == null ? DROPPED : databaseStateService
+                                                           databaseStateService == null ? UNKNOWN : databaseStateService
                                                                    .stateOfDatabase( namedDatabaseId ) ).collect( toList() );
     }
 
@@ -591,7 +603,7 @@ class ClusteredShowDatabasesIT
 
     private static Collection<DatabaseStateService> databaseStateServices( Set<ClusterMember> members )
     {
-        return members.stream().map( member -> member.resolveDependency( DEFAULT_DATABASE_NAME, DatabaseStateService.class ) ).collect( toList() );
+        return members.stream().map( member -> member.resolveDependency( SYSTEM_DATABASE_NAME, DatabaseStateService.class ) ).collect( toList() );
     }
 
     private static Pair<String,String> boltDbNameCompositeKey( ShowDatabasesResultRow row )
