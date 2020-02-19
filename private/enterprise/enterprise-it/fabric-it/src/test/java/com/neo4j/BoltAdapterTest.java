@@ -16,6 +16,7 @@ import com.neo4j.fabric.stream.summary.EmptySummary;
 import com.neo4j.fabric.transaction.FabricTransaction;
 import com.neo4j.fabric.transaction.TransactionBookmarkManager;
 import com.neo4j.fabric.transaction.TransactionManager;
+import com.neo4j.utils.DriverUtils;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -50,8 +51,6 @@ import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.values.AnyValue;
 import org.neo4j.values.storable.Values;
 
-import static com.neo4j.utils.DriverUtils.doInMegaSession;
-import static com.neo4j.utils.DriverUtils.doInMegaTx;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -73,6 +72,7 @@ class BoltAdapterTest
     private static TestServer testServer;
     private static Driver driver;
     private static FabricConfig fabricConfig;
+    private static DriverUtils driverUtils;
     private final ResultPublisher publisher = new ResultPublisher();
     private final StatementResult statementResult = mock( StatementResult.class );
     private final CountDownLatch transactionLatch = new CountDownLatch( 1 );
@@ -110,6 +110,8 @@ class BoltAdapterTest
                 .withMaxConnectionPoolSize( 3 )
                 .withoutEncryption()
                 .build() );
+
+        driverUtils = new DriverUtils( "mega" );
     }
 
     @BeforeEach
@@ -145,7 +147,7 @@ class BoltAdapterTest
         mockConfig();
 
         CountDownLatch latch = new CountDownLatch( 1 );
-        executorService.submit( () -> doInMegaTx( driver, tx ->
+        executorService.submit( () -> driverUtils.doInTx( driver, tx ->
         {
             var result =  tx.run( "Some Cypher query" );
             verifyDefaultResult( result );
@@ -168,7 +170,7 @@ class BoltAdapterTest
         mockConfig();
 
         CountDownLatch latch = new CountDownLatch( 1 );
-        executorService.submit( () -> doInMegaSession( driver, session ->
+        executorService.submit( () -> driverUtils.doInSession( driver, session ->
         {
             var result =  session.run( "Some Cypher query" );
             verifyDefaultResult( result );
@@ -191,7 +193,7 @@ class BoltAdapterTest
         mockConfig();
 
         CountDownLatch latch = new CountDownLatch( 1 );
-        executorService.submit( () -> doInMegaTx( driver, tx ->
+        executorService.submit( () -> driverUtils.doInTx( driver, tx ->
         {
             var result = tx.run( "Some Cypher query" );
             verifyDefaultResult( result );
@@ -218,7 +220,7 @@ class BoltAdapterTest
         CountDownLatch latch = new CountDownLatch( 1 );
         executorService.submit( () ->
         {
-            var e = assertThrows( DatabaseException.class, () -> doInMegaTx( driver, tx ->
+            var e = assertThrows( DatabaseException.class, () -> driverUtils.doInTx( driver, tx ->
             {
                 var result = tx.run( "Some Cypher query" );
                 verifyDefaultResult( result );
@@ -247,7 +249,7 @@ class BoltAdapterTest
         CountDownLatch latch = new CountDownLatch( 1 );
         executorService.submit( () ->
         {
-            var e = assertThrows( DatabaseException.class, () -> doInMegaSession( driver, session ->
+            var e = assertThrows( DatabaseException.class, () -> driverUtils.doInSession( driver, session ->
             {
                 var result = session.run( "Some Cypher query" );
                 verifyDefaultResult( result );
@@ -274,7 +276,7 @@ class BoltAdapterTest
         CountDownLatch latch = new CountDownLatch( 1 );
         executorService.submit( () ->
         {
-            var e = assertThrows( DatabaseException.class, () -> doInMegaTx( driver, tx ->
+            var e = assertThrows( DatabaseException.class, () -> driverUtils.doInTx( driver, tx ->
             {
                 var result = tx.run( "Some Cypher query" );
                 verifyDefaultResult( result );
@@ -305,7 +307,7 @@ class BoltAdapterTest
         CountDownLatch latch = new CountDownLatch( 1 );
         executorService.submit( () ->
         {
-            var e = assertThrows( DatabaseException.class, () -> doInMegaSession( driver, session ->
+            var e = assertThrows( DatabaseException.class, () -> driverUtils.doInSession( driver, session ->
             {
                 var result = session.run( "Some Cypher query" );
                 verifyDefaultResult( result );

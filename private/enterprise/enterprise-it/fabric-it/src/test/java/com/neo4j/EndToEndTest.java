@@ -67,6 +67,7 @@ class EndToEndTest
     private static Neo4j shard1;
     private static Driver shard0Driver;
     private static Driver shard1Driver;
+    private static DriverUtils driverUtils;
 
     @BeforeAll
     static void beforeAll() throws KernelException
@@ -121,6 +122,8 @@ class EndToEndTest
                         .withoutEncryption()
                         .withMaxConnectionPoolSize( 3 )
                         .build() );
+
+        driverUtils = new DriverUtils( "mega" );
     }
 
     @BeforeEach
@@ -1095,21 +1098,21 @@ class EndToEndTest
 
     private <T> T inMegaTx( Function<Transaction, T> workload )
     {
-        return DriverUtils.inMegaTx( clientDriver, workload );
+        return driverUtils.inTx( clientDriver, workload );
     }
 
     private void doInMegaTx( Consumer<Transaction> workload )
     {
-        DriverUtils.doInMegaTx( clientDriver, workload );
+        driverUtils.doInTx( clientDriver, workload );
     }
 
     private <T> T inMegaTx( AccessMode accessMode, Function<Transaction,T> workload )
     {
-        return DriverUtils.inMegaTx( clientDriver, accessMode, workload );
+        return driverUtils.inTx( clientDriver, accessMode, workload );
     }
 
     private void doInMegaTx( AccessMode accessMode, Consumer<Transaction> workload )
     {
-        DriverUtils.doInMegaTx( clientDriver, accessMode, workload );
+        driverUtils.doInTx( clientDriver, accessMode, workload );
     }
 }

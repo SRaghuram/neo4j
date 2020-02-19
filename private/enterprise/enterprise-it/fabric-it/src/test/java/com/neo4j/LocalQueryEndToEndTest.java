@@ -35,6 +35,7 @@ class LocalQueryEndToEndTest
     private Driver clientDriver;
     private TestServer testServer;
     private Neo4j shard0;
+    private DriverUtils driverUtils;
 
     @BeforeEach
     void setUp() throws KernelException
@@ -72,6 +73,8 @@ class LocalQueryEndToEndTest
                         .withMaxConnectionPoolSize( 3 )
                         .withoutEncryption()
                         .build() );
+
+        driverUtils = new DriverUtils( "mega" );
     }
 
     @AfterEach
@@ -281,6 +284,6 @@ class LocalQueryEndToEndTest
 
     private <T> T inMegaTx( Function<Transaction, T> workload )
     {
-        return DriverUtils.inMegaTx( clientDriver, workload );
+        return driverUtils.inTx( clientDriver, workload );
     }
 }

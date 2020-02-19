@@ -5,6 +5,7 @@
  */
 package com.neo4j;
 
+import com.neo4j.utils.DriverUtils;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -22,7 +23,6 @@ import org.neo4j.harness.Neo4jBuilders;
 import org.neo4j.kernel.impl.api.KernelTransactions;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 
-import static com.neo4j.utils.DriverUtils.doInMegaTx;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -41,6 +41,7 @@ class ErrorsEndToEndTest
     private static Driver clientDriver;
     private static TestServer testServer;
     private static Neo4j remote;
+    private static DriverUtils driverUtils;
 
     @BeforeAll
     static void setUp()
@@ -75,6 +76,8 @@ class ErrorsEndToEndTest
                         .withMaxConnectionPoolSize( 3 )
                         .withoutEncryption()
                         .build() );
+
+        driverUtils = new DriverUtils( "mega" );
     }
 
     @AfterAll
@@ -328,7 +331,7 @@ class ErrorsEndToEndTest
 
     private void verifyNoFabricTransactions()
     {
-        doInMegaTx( clientDriver, tx ->
+        driverUtils.doInTx( clientDriver, tx ->
         {
             var openTransactions = tx.run( "CALL dbms.listTransactions() YIELD transactionId, currentQuery,status" ).list();
             if ( !openTransactions.isEmpty() )
@@ -347,6 +350,6 @@ class ErrorsEndToEndTest
 
     private ClientException run( String query )
     {
-        return assertThrows( ClientException.class, () -> doInMegaTx( clientDriver, tx -> tx.run( query ).list() ) );
+        return assertThrows( ClientException.class, () -> driverUtils.doInTx( clientDriver, tx -> tx.run( query ).list() ) );
     }
 }

@@ -89,6 +89,7 @@ class RemoteTransactionTest
     private static final CallableExecutorService callableFabricWorkerExecutorService = new CallableExecutorService( fabricWorkerExecutorService );
     private static final DatabaseManagementService databaseManagementService = mock( DatabaseManagementService.class );
     private static final FabricDatabaseManager fabricDatabaseManager = mock( FabricDatabaseManager.class );
+    private static DriverUtils driverUtils;
 
     private final CountDownLatch latch = new CountDownLatch( 3 );
     private final FabricDriverTransaction tx1 = mockTransactionWithDefaultResult();
@@ -128,6 +129,8 @@ class RemoteTransactionTest
                 org.neo4j.driver.Config.builder()
                         .withMaxConnectionPoolSize( 3 )
                         .withoutEncryption().build() );
+
+        driverUtils = new DriverUtils( "mega" );
 
         mockDriverPool( graph1, shard1Driver );
         mockDriverPool( graph2, shard2Driver );
@@ -466,6 +469,6 @@ class RemoteTransactionTest
 
     private void doInMegaTx( Consumer<Transaction> workload )
     {
-        DriverUtils.doInMegaTx( clientDriver, workload );
+        driverUtils.doInTx( clientDriver, workload );
     }
 }

@@ -19,22 +19,24 @@ import org.neo4j.driver.reactive.RxTransaction;
 
 public final class DriverUtils
 {
-    private DriverUtils()
-    {
+    private final String defaultDatabaseName;
 
+    public DriverUtils( String defaultDatabaseName )
+    {
+        this.defaultDatabaseName = defaultDatabaseName;
     }
 
-    public static <T> T inMegaTx( Driver driver, Function<Transaction,T> workload )
+    public <T> T inTx( Driver driver, Function<Transaction,T> workload )
     {
-        try ( var session = driver.session( SessionConfig.builder().withDatabase( "mega" ).build() ) )
+        try ( var session = driver.session( SessionConfig.builder().withDatabase( defaultDatabaseName ).build() ) )
         {
             return session.writeTransaction( workload::apply );
         }
     }
 
-    public static <T> T inMegaTx( Driver driver, AccessMode accessMode, Function<Transaction,T> workload )
+    public <T> T inTx( Driver driver, AccessMode accessMode, Function<Transaction,T> workload )
     {
-        try ( var session = driver.session( SessionConfig.builder().withDatabase( "mega" ).withDefaultAccessMode( accessMode ).build() );
+        try ( var session = driver.session( SessionConfig.builder().withDatabase( defaultDatabaseName ).withDefaultAccessMode( accessMode ).build() );
                 var tx = session.beginTransaction() )
         {
             T value = workload.apply( tx );
@@ -43,51 +45,51 @@ public final class DriverUtils
         }
     }
 
-    public static void doInMegaTx( Driver driver, Consumer<Transaction> workload )
+    public void doInTx( Driver driver, Consumer<Transaction> workload )
     {
-        inMegaTx( driver, tx ->
+        inTx( driver, tx ->
         {
             workload.accept( tx );
             return null;
         } );
     }
 
-    public static void doInMegaTx( Driver driver, AccessMode accessMode, Consumer<Transaction> workload )
+    public void doInTx( Driver driver, AccessMode accessMode, Consumer<Transaction> workload )
     {
-        inMegaTx( driver, accessMode, tx ->
+        inTx( driver, accessMode, tx ->
         {
             workload.accept( tx );
             return null;
         } );
     }
 
-    public static <T> T inMegaSession( Driver driver, Function<Session,T> workload )
+    public <T> T inSession( Driver driver, Function<Session,T> workload )
     {
-        try ( var session = driver.session( SessionConfig.builder().withDatabase( "mega" ).build() ) )
+        try ( var session = driver.session( SessionConfig.builder().withDatabase( defaultDatabaseName ).build() ) )
         {
             return workload.apply( session );
         }
     }
 
-    public static void doInMegaSession( Driver driver, Consumer<Session> workload )
+    public void doInSession( Driver driver, Consumer<Session> workload )
     {
-        try ( var session = driver.session( SessionConfig.builder().withDatabase( "mega" ).build() ) )
+        try ( var session = driver.session( SessionConfig.builder().withDatabase( defaultDatabaseName ).build() ) )
         {
             workload.accept( session );
         }
     }
 
-    public static void doInMegaSession( Driver driver, AccessMode accessMode, Consumer<Session> workload )
+    public void doInSession( Driver driver, AccessMode accessMode, Consumer<Session> workload )
     {
-        try ( var session = driver.session( SessionConfig.builder().withDatabase( "mega" ).withDefaultAccessMode( accessMode ).build() ) )
+        try ( var session = driver.session( SessionConfig.builder().withDatabase( defaultDatabaseName ).withDefaultAccessMode( accessMode ).build() ) )
         {
             workload.accept( session );
         }
     }
 
-    public static <T> T inMegaRxTx( Driver driver, Function<RxTransaction,T> workload )
+    public <T> T inRxTx( Driver driver, Function<RxTransaction,T> workload )
     {
-        var session = driver.rxSession( SessionConfig.builder().withDatabase( "mega" ).build());
+        var session = driver.rxSession( SessionConfig.builder().withDatabase( defaultDatabaseName ).build() );
         try
         {
             var tx = Mono.from( session.beginTransaction() ).block();

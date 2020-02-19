@@ -49,6 +49,7 @@ class ExecutorConcurrencyTest
     private static TestServer testServer;
 
     private static FabricRemoteExecutor remoteExecutor = mock( FabricRemoteExecutor.class );
+    private static DriverUtils driverUtils;
 
     private final List<RemoteQueryRecord> remoteQueryRecords = mockRemoteQueries( 10 );
     private final FabricRemoteExecutor.FabricRemoteTransaction fabricRemoteTransaction = mock( FabricRemoteExecutor.FabricRemoteTransaction.class );
@@ -93,6 +94,8 @@ class ExecutorConcurrencyTest
                         .withoutEncryption()
                         .withMaxConnectionPoolSize( 3 )
                         .build() );
+
+        driverUtils = new DriverUtils( "mega" );
     }
 
     @BeforeEach
@@ -134,7 +137,7 @@ class ExecutorConcurrencyTest
     @Test
     void testParallelism()
     {
-        var records = DriverUtils.inMegaRxTx(clientDriver, tx -> {
+        var records = driverUtils.inRxTx( clientDriver, tx -> {
             var query = joinAsLines(
                     "UNWIND range(0, 4) AS x",
                     "CALL {",
@@ -162,7 +165,7 @@ class ExecutorConcurrencyTest
     @Test
     void testAllStreamsFullyConsumed()
     {
-        var records = DriverUtils.inMegaTx( clientDriver, tx -> {
+        var records = driverUtils.inTx( clientDriver, tx -> {
             var query = joinAsLines(
                     "UNWIND range(0, 4) AS x",
                     "CALL {",

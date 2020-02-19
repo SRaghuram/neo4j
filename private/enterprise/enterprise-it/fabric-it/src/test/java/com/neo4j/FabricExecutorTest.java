@@ -106,6 +106,7 @@ class FabricExecutorTest
     private final AutoCommitStatementResult graph1Result = mock( AutoCommitStatementResult.class );
     private AssertableLogProvider internalLogProvider;
     private AssertableQueryExecutionMonitor.Monitor queryExecutionMonitor;
+    private DriverUtils driverUtils;
 
     @AfterEach
     void afterAll()
@@ -145,6 +146,8 @@ class FabricExecutorTest
                         .withMaxConnectionPoolSize( 3 )
                         .withoutEncryption()
                         .build() );
+
+        driverUtils = new DriverUtils( "mega" );
 
         mockResult( graph0Result );
         mockResult( graph1Result );
@@ -694,11 +697,11 @@ class FabricExecutorTest
 
     private void doInMegaTx( AccessMode mode, Consumer<Transaction> workload )
     {
-        DriverUtils.doInMegaTx( clientDriver, mode, workload );
+        driverUtils.doInTx( clientDriver, mode, workload );
     }
 
     private void doInMegaSession( AccessMode mode, Consumer<Session> workload )
     {
-        DriverUtils.doInMegaSession( clientDriver, mode, workload );
+        driverUtils.doInSession( clientDriver, mode, workload );
     }
 }

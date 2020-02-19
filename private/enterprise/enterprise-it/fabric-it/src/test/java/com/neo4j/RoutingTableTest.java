@@ -6,6 +6,7 @@
 package com.neo4j;
 
 import com.neo4j.fabric.config.FabricSettings;
+import com.neo4j.utils.DriverUtils;
 import com.neo4j.utils.ProxyFunctions;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -28,7 +29,6 @@ import org.neo4j.driver.Value;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.procedure.impl.GlobalProceduresRegistry;
 
-import static com.neo4j.utils.DriverUtils.inMegaTx;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -36,6 +36,7 @@ class RoutingTableTest
 {
     private static Driver clientDriver;
     private static TestServer testServer;
+    private static DriverUtils driverUtils;
 
     @BeforeAll
     static void setUp() throws KernelException
@@ -74,6 +75,8 @@ class RoutingTableTest
                         .withMaxConnectionPoolSize( 3 )
                         .withoutEncryption()
                         .build() );
+
+        driverUtils = new DriverUtils( "mega" );
     }
 
     private static SocketAddress socket( String host, int port )
@@ -91,7 +94,7 @@ class RoutingTableTest
     @Test
     void testGettingRoutingTable()
     {
-        List<Record> records = inMegaTx( clientDriver, tx ->
+        List<Record> records = driverUtils.inTx( clientDriver, tx ->
         {
             var params = Map.of( "context", Map.of(), "database", "mega" );
             return tx.run( "CALL dbms.cluster.routing.getRoutingTable($context , $database)", params ).list();
