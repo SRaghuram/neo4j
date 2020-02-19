@@ -15,6 +15,8 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
+import org.neo4j.cypher.internal.util.symbols.CTAny
+import org.neo4j.cypher.internal.util.symbols.CTNode
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.Values
@@ -93,7 +95,9 @@ abstract class MorselUnitTest extends CypherFunSuite {
     }
 
     def build() : Morsel = {
-      val slots = SlotConfiguration(Map.empty, longSlots, refSlots)
+      val slots = SlotConfiguration.empty
+      for(i <- 0 until longSlots) slots.newLong(s"long$i", nullable = false, CTNode)
+      for(i <- 0 until refSlots) slots.newReference(s"ref$i", nullable = true, CTAny)
       val context = Morsel(longs, refs, slots, rows)
       context
     }
@@ -101,7 +105,9 @@ abstract class MorselUnitTest extends CypherFunSuite {
 
   class FilteringInput extends Input {
     override def build(): FilteringMorsel = {
-      val slots = SlotConfiguration(Map.empty, longSlots, refSlots)
+      val slots = SlotConfiguration.empty
+      for(i <- 0 until longSlots) slots.newLong(s"long$i", nullable = false, CTNode)
+      for(i <- 0 until refSlots) slots.newReference(s"ref$i", nullable = true, CTAny)
       val context = Morsel(longs, refs, slots, rows)
       val filteringContext = FilteringMorsel(context)
       filteringContext

@@ -196,7 +196,7 @@ class SlotConfigurationTest extends CypherFunSuite with AstConstructionTestSuppo
 
   test("foreachSlotAndAliasesOrdered with refs/cached props/longs/applyPlans and skipSlots and aliases") {
     // given
-    val slots = SlotConfiguration(Map.empty, 0, 0)
+    val slots = SlotConfiguration.empty
     slots.newArgument(Id(0))
     slots.newLong("a", nullable = false, CTNode)
     slots.addAlias("aa", "a")
@@ -233,7 +233,7 @@ class SlotConfigurationTest extends CypherFunSuite with AstConstructionTestSuppo
 
   test("foreachSlotAndAliases with refs/cached props/longs/applyPlans and skipSlots and aliases") {
     // given
-    val slots = SlotConfiguration(Map.empty, 0, 0)
+    val slots = SlotConfiguration.empty
     slots.newArgument(Id(0))
     slots.newLong("a", nullable = false, CTNode)
     slots.addAlias("aa", "a")
@@ -273,7 +273,7 @@ class SlotConfigurationTest extends CypherFunSuite with AstConstructionTestSuppo
 
   test("foreachSlot with refs/cached props/longs/applyPlans and skipSlots and aliases") {
     // given
-    val slots = SlotConfiguration(Map.empty, 0, 0)
+    val slots = SlotConfiguration.empty
     slots.newArgument(Id(0))
     slots.newLong("a", nullable = false, CTNode)
     slots.addAlias("aa", "a")
@@ -331,7 +331,7 @@ class SlotConfigurationTest extends CypherFunSuite with AstConstructionTestSuppo
     slots.newCachedProperty(eCP)
 
     // ... which are added to result
-    val result = SlotConfiguration(Map.empty, 0, 0)
+    val result = SlotConfiguration.empty
     result.newLong("z", nullable = false, CTNode)
     result.addAlias("zz", "z")
     result.newReference("y", nullable = false, CTNode)

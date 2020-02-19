@@ -247,10 +247,10 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
       xNodeSlot, rRelSlot.offset, zNodeSlot.offset,
       SemanticDirection.INCOMING,
       RelationshipTypes.empty,
-      SlotConfiguration(Map(
-        "x" -> xNodeSlot,
-        "r" -> rRelSlot,
-        "z" -> zNodeSlot), numberOfLongs = 3, numberOfReferences = 0)
+      SlotConfiguration.empty
+          .newLong("x", xNodeSlot.nullable, xNodeSlot.typ)
+          .newLong("r", rRelSlot.nullable, rRelSlot.typ)
+          .newLong("z", zNodeSlot.nullable, zNodeSlot.typ)
     )())
   }
 
@@ -268,7 +268,9 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
     pipe should equal(ExpandIntoSlottedPipe(
       AllNodesScanSlottedPipe("x", X_NODE_SLOTS, Size.zero)(),
       nodeSlot, relSlot.offset, nodeSlot, SemanticDirection.INCOMING, RelationshipTypes.empty,
-      SlotConfiguration(Map("x" -> nodeSlot, "r" -> relSlot), numberOfLongs = 2, numberOfReferences = 0)
+      SlotConfiguration.empty
+        .newLong("x", nodeSlot.nullable, nodeSlot.typ)
+        .newLong("r", relSlot.nullable, relSlot.typ)
     )())
   }
 
@@ -285,12 +287,12 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
     val xNodeSlot = LongSlot(0, nullable = true, CTNode)
     val rRelSlot = LongSlot(1, nullable = false, CTRelationship)
     val zNodeSlot = LongSlot(2, nullable = false, CTNode)
-    val allNodeScanSlots = SlotConfiguration(Map("x" -> xNodeSlot), numberOfLongs = 1, numberOfReferences = 0)
-    val expandSlots = SlotConfiguration(Map(
-      "x" -> xNodeSlot,
-      "r" -> rRelSlot,
-      "z" -> zNodeSlot), numberOfLongs = 3, numberOfReferences = 0)
-
+    val allNodeScanSlots = SlotConfiguration.empty
+      .newLong("x", xNodeSlot.nullable, xNodeSlot.typ)
+    val expandSlots = SlotConfiguration.empty
+      .newLong("x", xNodeSlot.nullable, xNodeSlot.typ)
+      .newLong("r", rRelSlot.nullable, rRelSlot.typ)
+      .newLong("z", zNodeSlot.nullable, zNodeSlot.typ)
     pipe should equal(
       ExpandAllSlottedPipe(
         OptionalSlottedPipe(
@@ -318,8 +320,11 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
     // then
     val nodeSlot = LongSlot(0, nullable = true, CTNode)
     val relSlot = LongSlot(1, nullable = false, CTRelationship)
-    val allNodeScanSlots = SlotConfiguration(Map("x" -> nodeSlot), numberOfLongs = 1, numberOfReferences = 0)
-    val expandSlots = SlotConfiguration(Map("x" -> nodeSlot, "r" -> relSlot), numberOfLongs = 2, numberOfReferences = 0)
+    val allNodeScanSlots = SlotConfiguration.empty
+      .newLong("x", nodeSlot.nullable, nodeSlot.typ)
+    val expandSlots =SlotConfiguration.empty
+      .newLong("x", nodeSlot.nullable, nodeSlot.typ)
+      .newLong("r", relSlot.nullable, relSlot.typ)
 
     pipe should equal(
       ExpandIntoSlottedPipe(
@@ -344,7 +349,8 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
     val nodeSlot = LongSlot(0, nullable = true, CTNode)
 
     // then
-    val expectedSlots = SlotConfiguration(Map("x" -> nodeSlot), numberOfLongs = 1, numberOfReferences = 0)
+    val expectedSlots = SlotConfiguration.empty
+      .newLong("x", nodeSlot.nullable, nodeSlot.typ)
     pipe should equal(OptionalSlottedPipe(
       AllNodesScanSlottedPipe("x", expectedSlots, Size.zero)(),
       Array(nodeSlot),
@@ -364,7 +370,8 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
     val refSlot = RefSlot(0, nullable = true, CTAny)
 
     // then
-    val expectedSlots = SlotConfiguration(Map("x" -> refSlot), numberOfLongs = 0, numberOfReferences = 1)
+    val expectedSlots = SlotConfiguration.empty
+      .newReference("x", refSlot.nullable, refSlot.typ)
     pipe should equal(OptionalSlottedPipe(
       ProjectionPipe(
         ArgumentSlottedPipe(expectedSlots, Size.zero)(),
@@ -388,10 +395,10 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
     pipe should equal(OptionalExpandAllSlottedPipe(
       AllNodesScanSlottedPipe("x", X_NODE_SLOTS, Size.zero)(),
       X_NODE_SLOTS("x"), 1, 2, SemanticDirection.INCOMING, RelationshipTypes.empty,
-      SlotConfiguration(Map(
-        "x" -> LongSlot(0, nullable = false, CTNode),
-        "r" -> LongSlot(1, nullable = true, CTRelationship),
-        "z" -> LongSlot(2, nullable = true, CTNode)), numberOfLongs = 3, numberOfReferences = 0),
+      SlotConfiguration.empty
+        .newLong("x", nullable = false, CTNode)
+        .newLong("r", nullable = true, CTRelationship)
+        .newLong("z", nullable = true, CTNode),
       None
     )())
   }
@@ -408,9 +415,9 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
     pipe should equal(OptionalExpandIntoSlottedPipe(
       AllNodesScanSlottedPipe("x", X_NODE_SLOTS, Size.zero)(),
       X_NODE_SLOTS("x"), 1, X_NODE_SLOTS("x"), SemanticDirection.INCOMING, RelationshipTypes.empty,
-      SlotConfiguration(Map(
-        "x" -> LongSlot(0, nullable = false, CTNode),
-        "r" -> LongSlot(1, nullable = true, CTRelationship)), numberOfLongs = 2, numberOfReferences = 0),
+      SlotConfiguration.empty
+        .newLong("x", nullable = false, CTNode)
+        .newLong("r", nullable = true, CTRelationship),
       None
     )())
   }
@@ -430,13 +437,13 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
     val zNodeSlot = LongSlot(1, nullable = false, CTNode)
     val rRelSlot = RefSlot(0, nullable = false, CTList(CTRelationship))
 
-    val allNodeScanSlots = SlotConfiguration(Map(
-      "x" -> xNodeSlot), numberOfLongs = 1, numberOfReferences = 0)
+    val allNodeScanSlots = SlotConfiguration.empty
+      .newLong("x", xNodeSlot.nullable, xNodeSlot.typ)
 
-    val varExpandSlots = SlotConfiguration(Map(
-      "x" -> xNodeSlot,
-      "r" -> rRelSlot,
-      "z" -> zNodeSlot), numberOfLongs = 2, numberOfReferences = 1)
+    val varExpandSlots = SlotConfiguration.empty
+      .newLong("x", xNodeSlot.nullable, xNodeSlot.typ)
+      .newReference("r", rRelSlot.nullable, rRelSlot.typ)
+      .newLong("z", zNodeSlot.nullable, zNodeSlot.typ)
 
     pipe should equal(VarLengthExpandSlottedPipe(
       AllNodesScanSlottedPipe("x", allNodeScanSlots, Size.zero)(),
@@ -468,25 +475,19 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
     val zNodeSlot = LongSlot(2, nullable = false, CTNode)
     val r2RelSlot = RefSlot(0, nullable = false, CTList(CTRelationship))
 
-    val allNodeScanSlots =
-      SlotConfiguration(Map(
-        "x" -> LongSlot(0, nullable = false, CTNode)),
-        numberOfLongs = 1, numberOfReferences = 0)
+    val allNodeScanSlots = SlotConfiguration.empty
+      .newLong("x", nullable = false, CTNode)
 
-    val expandSlots =
-      SlotConfiguration(Map(
-        "x" -> LongSlot(0, nullable = false, CTNode),
-        "r" -> LongSlot(1, nullable = false, CTRelationship),
-        "z" -> LongSlot(2, nullable = false, CTNode)),
-        numberOfLongs = 3, numberOfReferences = 0)
+    val expandSlots = SlotConfiguration.empty
+      .newLong("x", xNodeSlot.nullable, xNodeSlot.typ)
+      .newLong("r", rRelSlot.nullable, rRelSlot.typ)
+      .newLong("z", zNodeSlot.nullable, zNodeSlot.typ)
 
-    val varExpandSlots =
-      SlotConfiguration(Map(
-        "x" -> LongSlot(0, nullable = false, CTNode),
-        "r" -> LongSlot(1, nullable = false, CTRelationship),
-        "z" -> LongSlot(2, nullable = false, CTNode),
-        "r2" -> RefSlot(0, nullable = false, CTList(CTRelationship))),
-        numberOfLongs = 3, numberOfReferences = 1)
+    val varExpandSlots = SlotConfiguration.empty
+      .newLong("x", xNodeSlot.nullable, xNodeSlot.typ)
+      .newLong("r", rRelSlot.nullable, rRelSlot.typ)
+      .newLong("z", zNodeSlot.nullable, zNodeSlot.typ)
+      .newReference("r2", r2RelSlot.nullable, r2RelSlot.typ)
 
     pipe should equal(
       VarLengthExpandSlottedPipe(
@@ -712,7 +713,8 @@ class SlottedPipeMapperTest extends CypherFunSuite with LogicalPlanningTestSuppo
     // then
     val expectedSlots1 = SlotConfiguration.empty
     val xSlot = RefSlot(0, nullable = true, CTAny)
-    val expectedSlots2 = SlotConfiguration(numberOfLongs = 0, numberOfReferences = 1, slots = Map("x" -> xSlot))
+    val expectedSlots2 = SlotConfiguration.empty
+      .newReference("x", xSlot.nullable, xSlot.typ)
 
     // We have to use mathPattern to ignore equality on the comparator, which does not implement equals in a sensible way.
     pipe should matchPattern {

@@ -14,6 +14,7 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.util.InputPosition
 import org.neo4j.cypher.internal.util.symbols.CTAny
+import org.neo4j.cypher.internal.util.symbols.CTNode
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 import org.neo4j.exceptions.InternalException
 import org.neo4j.values.storable.BooleanValue
@@ -21,7 +22,12 @@ import org.neo4j.values.storable.Values.stringValue
 
 class SlottedRowTest extends CypherFunSuite {
 
-  private def slots(longs: Int, refs: Int) = SlotConfiguration(Map.empty, longs, refs)
+  private def slots(longs: Int, refs: Int) = {
+    val sc = SlotConfiguration.empty
+    for(i <- 1 to longs) sc.newLong(s"long$i", nullable = false, CTNode)
+    for(i <- 1 to refs) sc.newReference(s"ref$i", nullable = true, CTAny)
+    sc
+  }
 
   test("copy fills upp the first few elements") {
     val input = SlottedRow(slots(2, 1))

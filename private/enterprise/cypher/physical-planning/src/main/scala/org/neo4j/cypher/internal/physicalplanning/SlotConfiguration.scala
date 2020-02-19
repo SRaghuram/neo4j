@@ -25,11 +25,6 @@ import scala.collection.mutable
 object SlotConfiguration {
   def empty = new SlotConfiguration(mutable.Map.empty, 0, 0)
 
-  def apply(slots: Map[String, Slot], numberOfLongs: Int, numberOfReferences: Int): SlotConfiguration = {
-    val stringToSlot = mutable.Map[SlotKey, Slot](slots.toSeq.map(kv => (VariableSlotKey(kv._1), kv._2)): _*)
-    new SlotConfiguration(stringToSlot, numberOfLongs, numberOfReferences)
-  }
-
   case class Size(nLongs: Int, nReferences: Int)
   object Size {
     val zero = Size(nLongs = 0, nReferences = 0)
