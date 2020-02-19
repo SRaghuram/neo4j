@@ -123,6 +123,7 @@ public class StatementResults
         private Subscriber<? super Record> subscriber;
         private QueryExecution queryExecution;
         private Throwable cachedError;
+        private boolean cachedCompleted;
         private boolean errorReceived;
 
         void setQueryExecution( QueryExecution queryExecution )
@@ -154,7 +155,14 @@ public class StatementResults
         @Override
         public void onResultCompleted( QueryStatistics statistics )
         {
-            subscriber.onComplete();
+            if ( subscriber == null )
+            {
+                cachedCompleted = true;
+            }
+            else
+            {
+                subscriber.onComplete();
+            }
         }
 
         @Override
@@ -219,7 +227,7 @@ public class StatementResults
 
                 private void doRequest( long size )
                 {
-                    maybeSendCachedError();
+                    maybeSendCachedEvents();
                     try
                     {
                         queryExecution.request( size );
@@ -245,16 +253,20 @@ public class StatementResults
                 }
             };
             subscriber.onSubscribe( subscription );
-            maybeSendCachedError();
+            maybeSendCachedEvents();
         }
 
-        private void maybeSendCachedError()
+        private void maybeSendCachedEvents()
         {
-
             if ( cachedError != null )
             {
                 subscriber.onError( cachedError );
                 cachedError = null;
+            }
+            else if ( cachedCompleted )
+            {
+                subscriber.onComplete();
+                cachedCompleted = false;
             }
         }
     }
