@@ -14,12 +14,12 @@ import org.neo4j.server.configuration.ServerSettings;
 import org.neo4j.server.modules.ServerModule;
 import org.neo4j.server.web.WebServer;
 
-public class DatabaseRoleInfoServerModule implements ServerModule
+public class ClusterModule implements ServerModule
 {
     private final WebServer server;
     private final Config config;
 
-    public DatabaseRoleInfoServerModule( WebServer server, Config config )
+    public ClusterModule( WebServer server, Config config )
     {
         this.server = server;
         this.config = config;

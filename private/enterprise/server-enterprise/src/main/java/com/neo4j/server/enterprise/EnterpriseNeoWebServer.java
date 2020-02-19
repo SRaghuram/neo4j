@@ -7,7 +7,7 @@ package com.neo4j.server.enterprise;
 
 import com.neo4j.causalclustering.core.CausalClusteringSettings;
 import com.neo4j.server.enterprise.modules.EnterpriseAuthorizationModule;
-import com.neo4j.server.rest.DatabaseRoleInfoServerModule;
+import com.neo4j.server.rest.ClusterModule;
 import com.neo4j.server.rest.LegacyManagementModule;
 import com.neo4j.server.rest.causalclustering.CausalClusteringService;
 import com.neo4j.server.rest.causalclustering.LegacyCausalClusteringRedirectService;
@@ -19,7 +19,6 @@ import java.util.regex.Pattern;
 
 import org.neo4j.collection.Dependencies;
 import org.neo4j.configuration.Config;
-import org.neo4j.configuration.connectors.ConnectorPortRegister;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.kernel.impl.factory.DatabaseInfo;
 import org.neo4j.logging.LogProvider;
@@ -49,9 +48,9 @@ public class EnterpriseNeoWebServer extends CommunityNeoWebServer
     @Override
     protected DBMSModule createDBMSModule()
     {
-        // ConnectorPortRegister isn't available until runtime, so defer loading until then
-        Supplier<DiscoverableURIs> discoverableURIs  = () -> enterpriseDiscoverableURIs(
-                getConfig(), getGlobalDependencies().resolveDependency( ConnectorPortRegister.class ) );
+        // Bolt port isn't available until runtime, so defer loading until then
+        Supplier<DiscoverableURIs> discoverableURIs =
+                () -> enterpriseDiscoverableURIs( getConfig(), connectorPortRegister );
         return new DBMSModule( webServer, getConfig(), discoverableURIs, userLogProvider );
     }
 
@@ -59,7 +58,7 @@ public class EnterpriseNeoWebServer extends CommunityNeoWebServer
     protected Iterable<ServerModule> createServerModules()
     {
         List<ServerModule> modules = new ArrayList<>();
-        modules.add( new DatabaseRoleInfoServerModule( webServer, getConfig() ) );
+        modules.add( new ClusterModule( webServer, getConfig() ) );
         modules.add( new LegacyManagementModule( webServer, getConfig() ) );
         super.createServerModules().forEach( modules::add );
         return modules;
