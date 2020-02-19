@@ -19,7 +19,7 @@ import org.neo4j.exceptions.InternalException
 import org.neo4j.values.storable.BooleanValue
 import org.neo4j.values.storable.Values.stringValue
 
-class SlottedExecutionContextTest extends CypherFunSuite {
+class SlottedRowTest extends CypherFunSuite {
 
   private def slots(longs: Int, refs: Int) = SlotConfiguration(Map.empty, longs, refs)
 

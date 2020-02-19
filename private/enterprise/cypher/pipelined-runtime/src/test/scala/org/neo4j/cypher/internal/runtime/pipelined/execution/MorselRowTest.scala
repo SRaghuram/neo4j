@@ -10,7 +10,7 @@ import org.neo4j.cypher.internal.util.symbols.CTAny
 import org.neo4j.cypher.internal.util.symbols.CTNode
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
 
-class MorselExecutionContextTest extends CypherFunSuite {
+class MorselRowTest extends CypherFunSuite {
 
   test("should ignore null refs on estimateHeapUsage") {
     // GIVEN
