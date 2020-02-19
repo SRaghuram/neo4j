@@ -38,7 +38,7 @@ import org.neo4j.kernel.impl.store.record.Record;
 import org.neo4j.kernel.impl.store.record.RelationshipRecord;
 
 import static java.lang.String.format;
-import static org.neo4j.kernel.impl.store.IdUpdateListener.IGNORE;
+import static org.neo4j.storageengine.util.IdUpdateListener.IGNORE;
 
 /**
  * Imports relationships using data from {@link InputChunk}.

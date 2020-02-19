@@ -35,7 +35,7 @@ import org.neo4j.kernel.database.TestDatabaseIdRepository;
 import org.neo4j.kernel.impl.api.TransactionCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionRepresentationCommitProcess;
 import org.neo4j.kernel.impl.api.TransactionToApply;
-import org.neo4j.kernel.impl.store.IdUpdateListener;
+import org.neo4j.storageengine.util.IdUpdateListener;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.PropertyType;
 import org.neo4j.kernel.impl.store.StoreFactory;

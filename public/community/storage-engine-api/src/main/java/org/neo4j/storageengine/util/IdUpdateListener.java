@@ -17,18 +17,29 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.kernel.impl.store;
+package org.neo4j.storageengine.util;
 
 import org.neo4j.internal.id.IdGenerator;
 import org.neo4j.internal.id.IdGenerator.Marker;
-import org.neo4j.internal.id.IdType;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 
 public interface IdUpdateListener extends AutoCloseable
 {
-    void markIdAsUsed( IdType idType, IdGenerator idGenerator, long id, PageCursorTracer cursorTracer );
+    void markIdAsUsed( IdGenerator idGenerator, long id, PageCursorTracer cursorTracer );
 
-    void markIdAsUnused( IdType idType, IdGenerator idGenerator, long id, PageCursorTracer cursorTracer );
+    void markIdAsUnused( IdGenerator idGenerator, long id, PageCursorTracer cursorTracer );
+
+    default void markId( IdGenerator idGenerator, long id, boolean used, PageCursorTracer cursorTracer )
+    {
+        if ( used )
+        {
+            markIdAsUsed( idGenerator, id, cursorTracer );
+        }
+        else
+        {
+            markIdAsUnused( idGenerator, id, cursorTracer );
+        }
+    }
 
     IdUpdateListener DIRECT = new IdUpdateListener()
     {
@@ -39,7 +50,7 @@ public interface IdUpdateListener extends AutoCloseable
         }
 
         @Override
-        public void markIdAsUsed( IdType idType, IdGenerator idGenerator, long id, PageCursorTracer cursorTracer )
+        public void markIdAsUsed( IdGenerator idGenerator, long id, PageCursorTracer cursorTracer )
         {
             try ( Marker marker = idGenerator.marker( cursorTracer ) )
             {
@@ -48,7 +59,7 @@ public interface IdUpdateListener extends AutoCloseable
         }
 
         @Override
-        public void markIdAsUnused( IdType idType, IdGenerator idGenerator, long id, PageCursorTracer cursorTracer )
+        public void markIdAsUnused( IdGenerator idGenerator, long id, PageCursorTracer cursorTracer )
         {
             try ( Marker marker = idGenerator.marker( cursorTracer ) )
             {
@@ -66,12 +77,12 @@ public interface IdUpdateListener extends AutoCloseable
         }
 
         @Override
-        public void markIdAsUsed( IdType idType, IdGenerator idGenerator, long id, PageCursorTracer cursorTracer )
+        public void markIdAsUsed( IdGenerator idGenerator, long id, PageCursorTracer cursorTracer )
         {   // no-op
         }
 
         @Override
-        public void markIdAsUnused( IdType idType, IdGenerator idGenerator, long id, PageCursorTracer cursorTracer )
+        public void markIdAsUnused( IdGenerator idGenerator, long id, PageCursorTracer cursorTracer )
         {   // no-op
         }
     };

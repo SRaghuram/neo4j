@@ -25,7 +25,7 @@ import java.util.Collection;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.configuration.GraphDatabaseSettings;
@@ -37,7 +37,6 @@ import org.neo4j.internal.counts.CountsBuilder;
 import org.neo4j.internal.counts.GBPTreeCountsStore;
 import org.neo4j.internal.diagnostics.DiagnosticsManager;
 import org.neo4j.internal.id.IdController;
-import org.neo4j.internal.id.IdGenerator;
 import org.neo4j.internal.id.IdGeneratorFactory;
 import org.neo4j.internal.id.IdType;
 import org.neo4j.internal.kernel.api.exceptions.TransactionApplyKernelException;
@@ -57,7 +56,6 @@ import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.impl.store.CountsComputer;
-import org.neo4j.kernel.impl.store.IdUpdateListener;
 import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.RecordStore;
@@ -88,6 +86,7 @@ import org.neo4j.storageengine.api.TransactionIdStore;
 import org.neo4j.storageengine.api.txstate.ReadableTransactionState;
 import org.neo4j.storageengine.api.txstate.TransactionCountingStateVisitor;
 import org.neo4j.storageengine.api.txstate.TxStateVisitor;
+import org.neo4j.storageengine.util.IdGeneratorUpdatesWorkSync;
 import org.neo4j.token.TokenHolders;
 import org.neo4j.util.Preconditions;
 import org.neo4j.util.VisibleForTesting;
@@ -123,7 +122,7 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
     private final PageCacheTracer cacheTracer;
     private final GBPTreeCountsStore countsStore;
     private final int denseNodeThreshold;
-    private final Map<IdType,WorkSync<IdGenerator,IdGeneratorUpdateWork>> idGeneratorWorkSyncs = new EnumMap<>( IdType.class );
+    private final IdGeneratorUpdatesWorkSync idGeneratorWorkSyncs = new IdGeneratorUpdatesWorkSync();
     private final Map<TransactionApplicationMode,TransactionApplierFactoryChain> applierChains = new EnumMap<>( TransactionApplicationMode.class );
 
     // installed later
@@ -159,10 +158,7 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
 
         StoreFactory factory = new StoreFactory( databaseLayout, config, idGeneratorFactory, pageCache, fs, logProvider, cacheTracer );
         neoStores = factory.openAllNeoStores( createStoreIfNotExists );
-        for ( IdType idType : IdType.values() )
-        {
-            idGeneratorWorkSyncs.put( idType, new WorkSync<>( idGeneratorFactory.get( idType ) ) );
-        }
+        Stream.of( IdType.values() ).forEach( idType -> idGeneratorWorkSyncs.add( idGeneratorFactory.get( idType ) ) );
 
         try
         {
@@ -195,8 +191,6 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
 
     private TransactionApplierFactoryChain buildApplierFacadeChain( TransactionApplicationMode mode )
     {
-        Supplier<IdUpdateListener> listenerSupplier = mode == REVERSE_RECOVERY ? () -> IdUpdateListener.IGNORE :
-                                                      () -> new EnqueuingIdUpdateListener( idGeneratorWorkSyncs, cacheTracer );
         ArrayList<TransactionApplierFactory> appliers = new ArrayList<>();
         // Graph store application. The order of the decorated store appliers is irrelevant
         if ( consistencyCheckApply && mode.needsAuxiliaryStores() )
@@ -220,7 +214,7 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
             // Schema index application
             appliers.add( new IndexTransactionApplierFactory( indexUpdateListener ) );
         }
-        return new TransactionApplierFactoryChain( listenerSupplier, appliers.toArray( new TransactionApplierFactory[0] ) );
+        return new TransactionApplierFactoryChain( idGeneratorWorkSyncs, appliers.toArray( new TransactionApplierFactory[0] ) );
     }
 
     private GBPTreeCountsStore openCountsStore( PageCache pageCache, FileSystemAbstraction fs, DatabaseLayout layout, Config config, LogProvider logProvider,
@@ -345,7 +339,7 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
         CommandsToApply initialBatch = batch;
         try ( BatchContext context = new BatchContext( indexUpdateListener, labelScanStoreSync, relationshipTypeScanStoreSync, indexUpdatesSync,
                 neoStores.getNodeStore(), neoStores.getPropertyStore(), this, schemaCache, initialBatch.cursorTracer(),
-                batchApplier.getIdUpdateListenerSupplier().get() ) )
+                idGeneratorWorkSyncs.newBatch( cacheTracer ) ) )
         {
             while ( batch != null )
             {

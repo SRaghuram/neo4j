@@ -23,7 +23,7 @@ import org.neo4j.internal.recordstorage.Command.BaseCommand;
 import org.neo4j.internal.schema.SchemaRule;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.impl.store.CommonAbstractStore;
-import org.neo4j.kernel.impl.store.IdUpdateListener;
+import org.neo4j.storageengine.util.IdUpdateListener;
 import org.neo4j.kernel.impl.store.NeoStores;
 import org.neo4j.kernel.impl.store.record.AbstractBaseRecord;
 import org.neo4j.lock.LockGroup;
