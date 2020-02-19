@@ -28,6 +28,7 @@ import org.neo4j.io.pagecache.ByteArrayPageCursor;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
+import org.neo4j.storageengine.util.IdUpdateListener;
 
 class InMemoryTestStore extends LifecycleAdapter implements SimpleStore
 {
@@ -71,7 +72,7 @@ class InMemoryTestStore extends LifecycleAdapter implements SimpleStore
     }
 
     @Override
-    public void write( PageCursor cursor, Record record )
+    public void write( PageCursor cursor, Record record, IdUpdateListener idUpdateListener, PageCursorTracer cursorTracer )
     {
         Record copy = new Record( 1, 0 );
         copy.copyContentsFrom( record );
