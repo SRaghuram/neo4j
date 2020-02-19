@@ -50,6 +50,7 @@ import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.impl.coreapi.InternalTransaction;
 import org.neo4j.kernel.impl.factory.GraphDatabaseFacade;
 import org.neo4j.kernel.impl.newapi.Operations;
+import org.neo4j.procedure.Name;
 import org.neo4j.procedure.Procedure;
 import org.neo4j.test.Barrier;
 import org.neo4j.test.DoubleLatch;
@@ -234,6 +235,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         }
     }
 
+    @SuppressWarnings( "unchecked" )
     @Test
     void listTransactionWithNullInMetadata()
     {
@@ -1210,39 +1212,42 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     @Test
     void queryWaitingForLocksShouldBeKilledBeforeLocksAreReleased() throws Throwable
     {
-        assertEmpty( adminSubject, "CREATE (:MyNode {prop: 2})" );
+        try ( Support support = Support.getSupport() )
+        {
+            assertEmpty( adminSubject, "CREATE (:MyNode {prop: 2})" );
 
-        // create new latch
-        TestProcedures.testProcedureLatch = new DoubleLatch( 2 );
+            // create new latch
+            support.doubleLatch = new DoubleLatch( 2 );
 
-        // start never-ending query
-        String query1 = "MATCH (n:MyNode) SET n.prop = 5 WITH * CALL test.neverEnding() RETURN 1";
-        ThreadedTransaction<S> tx1 = new ThreadedTransaction<>( neo, new DoubleLatch() );
-        tx1.executeEarly( threading, writeSubject, KernelTransaction.Type.EXPLICIT, query1 );
+            // start never-ending query
+            String query1 = "MATCH (n:MyNode) SET n.prop = 5 WITH * CALL test.neverEnding(" + support.getId() + ") RETURN 1";
+            ThreadedTransaction<S> tx1 = new ThreadedTransaction<>( neo, new DoubleLatch() );
+            tx1.executeEarly( threading, writeSubject, KernelTransaction.Type.EXPLICIT, query1 );
 
-        // wait for query1 to be stuck in procedure with its write lock
-        TestProcedures.testProcedureLatch.startAndWaitForAllToStart();
+            // wait for query1 to be stuck in procedure with its write lock
+            support.doubleLatch.startAndWaitForAllToStart();
 
-        // start query2
-        ThreadedTransaction<S> tx2 = new ThreadedTransaction<>( neo, new DoubleLatch() );
-        String query2 = "MATCH (n:MyNode) SET n.prop = 10 RETURN 1";
-        tx2.executeEarly( threading, writeSubject, KernelTransaction.Type.EXPLICIT, query2 );
+            // start query2
+            ThreadedTransaction<S> tx2 = new ThreadedTransaction<>( neo, new DoubleLatch() );
+            String query2 = "MATCH (n:MyNode) SET n.prop = 10 RETURN 1";
+            tx2.executeEarly( threading, writeSubject, KernelTransaction.Type.EXPLICIT, query2 );
 
-        assertQueryIsRunning( query2 );
+            assertQueryIsRunning( query2 );
 
-        // get the query id of query2 and kill it
-        assertSuccess( adminSubject,
-                "CALL dbms.listQueries() YIELD query, queryId " +
-                "WITH query, queryId WHERE query = '" + query2 + "'" +
-                "CALL dbms.killQuery(queryId) YIELD queryId AS killedId " +
-                        "RETURN 1",
-                itr -> assertThat( Iterators.count( itr ), equalTo( 1L ) ) ); // consume iterator so resources are closed
+            // get the query id of query2 and kill it
+            assertSuccess( adminSubject,
+                    "CALL dbms.listQueries() YIELD query, queryId " +
+                            "WITH query, queryId WHERE query = '" + query2 + "'" +
+                            "CALL dbms.killQuery(queryId) YIELD queryId AS killedId " +
+                            "RETURN 1",
+                    itr -> assertThat( Iterators.count( itr ), equalTo( 1L ) ) ); // consume iterator so resources are closed
 
-        tx2.closeAndAssertSomeTermination();
+            tx2.closeAndAssertSomeTermination();
 
-        // allow query1 to exit procedure and finish
-        TestProcedures.testProcedureLatch.finish();
-        tx1.closeAndAssertSuccess();
+            // allow query1 to exit procedure and finish
+            support.doubleLatch.finish();
+            tx1.closeAndAssertSuccess();
+        }
     }
 
     @Test
@@ -1316,10 +1321,9 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
                 "RETURN count(username) AS count, username", r ->
                 {
                     List<Map<String,Object>> actual = collectResults( r );
-                    @SuppressWarnings( "unchecked" )
                     Matcher<Map<String,Object>> mapMatcher = allOf(
-                            (Matcher) hasEntry( equalTo( "count" ), anyOf( equalTo( 1 ), equalTo( 1L ) ) ),
-                            (Matcher) hasEntry( equalTo( "username" ), equalTo( "readSubject" ) )
+                            hasEntry( equalTo( "count" ), anyOf( ONE_AS_INT, ONE_AS_LONG ) ),
+                            hasEntry( equalTo( "username" ), equalTo( "readSubject" ) )
                     );
                     assertThat( actual, matchesOneToOneInAnyOrder( mapMatcher ) );
                 }
@@ -1349,10 +1353,9 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
                 "RETURN count(username) AS count, username", r ->
                 {
                     List<Map<String,Object>> actual = collectResults( r );
-                    @SuppressWarnings( "unchecked" )
                     Matcher<Map<String,Object>> mapMatcher = allOf(
-                            (Matcher) hasEntry( equalTo( "count" ), anyOf( equalTo( 1 ), equalTo( 1L ) ) ),
-                            (Matcher) hasEntry( equalTo( "username" ), equalTo( "readSubject" ) )
+                            hasEntry( equalTo( "count" ), anyOf( ONE_AS_INT, ONE_AS_LONG ) ),
+                            hasEntry( equalTo( "username" ), equalTo( "readSubject" ) )
                     );
                     assertThat( actual, matchesOneToOneInAnyOrder( mapMatcher ) );
                 }
@@ -1422,7 +1425,6 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
                 "CALL dbms.listQueries() YIELD query WITH * WHERE NOT query CONTAINS 'listQueries' RETURN *" );
     }
 
-    @SuppressWarnings( "unchecked" )
     @Test
     @DisabledOnOs( OS.WINDOWS )
     void shouldTerminateQueriesEvenIfUsingPeriodicCommit() throws Throwable
@@ -1461,8 +1463,8 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
                         {
                             List<Map<String,Object>> actual = collectResults( r );
                             Matcher<Map<String,Object>> mapMatcher = allOf(
-                                    (Matcher) hasEntry( equalTo( "count" ), anyOf( equalTo( 1 ), equalTo( 1L ) ) ),
-                                    (Matcher) hasEntry( equalTo( "username" ), equalTo( "writeSubject" ) )
+                                    hasEntry( equalTo( "count" ), anyOf( ONE_AS_INT, ONE_AS_LONG ) ),
+                                    hasEntry( equalTo( "username" ), equalTo( "writeSubject" ) )
                             );
                             assertThat( actual, matchesOneToOneInAnyOrder( mapMatcher ) );
                         }
@@ -1513,8 +1515,8 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
                 {
                     List<Map<String,Object>> actual = collectResults( r );
                     Matcher<Map<String,Object>> mapMatcher = allOf(
-                            (Matcher) hasEntry( equalTo( "count" ), anyOf( equalTo( 2 ), equalTo( 2L ) ) ),
-                            (Matcher) hasEntry( equalTo( "username" ), equalTo( "readSubject" ) )
+                            hasEntry( equalTo( "count" ), anyOf( TWO_AS_INT, TWO_AS_LONG ) ),
+                            hasEntry( equalTo( "username" ), equalTo( "readSubject" ) )
                     );
                     assertThat( actual, matchesOneToOneInAnyOrder( mapMatcher ) );
                 }
@@ -1616,10 +1618,9 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
                 "RETURN count(username) AS count, username", r ->
                 {
                     List<Map<String,Object>> actual = collectResults( r );
-                    @SuppressWarnings( {"unchecked", "RedundantCast"} )
                     Matcher<Map<String,Object>> mapMatcher = allOf(
-                            (Matcher) hasEntry( equalTo( "count" ), anyOf( equalTo( 1 ), equalTo( 1L ) ) ),
-                            (Matcher) hasEntry( equalTo( "username" ), equalTo( "readSubject" ) )
+                            hasEntry( equalTo( "count" ), anyOf( ONE_AS_INT, ONE_AS_LONG ) ),
+                            hasEntry( equalTo( "username" ), equalTo( "readSubject" ) )
                     );
                     assertThat( actual, matchesOneToOneInAnyOrder( mapMatcher ) );
                 }
@@ -1674,12 +1675,12 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         assertEmpty( writeSubject, "CALL tx.setMetaData( { aKey: 'aValue' } )" );
     }
 
+    @SuppressWarnings( "unchecked" )
     @Test
     void readUpdatedMetadataValue() throws Throwable
     {
         String testValue = "testValue";
         String testKey = "test";
-        GraphDatabaseFacade graph = neo.getLocalGraph();
         try ( InternalTransaction transaction = neo
                 .beginLocalTransactionAsUser( writeSubject, KernelTransaction.Type.EXPLICIT ) )
         {
@@ -1724,7 +1725,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     void shouldTerminateLongRunningProcedureThatChecksTheGuardRegularlyIfKilled() throws Throwable
     {
         final DoubleLatch latch = new DoubleLatch( 2, true );
-        try ( Support support = ClassWithProcedures.getSupport() )
+        try ( Support support = Support.getSupport() )
         {
             support.volatileLatch = latch;
 
@@ -1746,8 +1747,8 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
                         {
                             List<Map<String,Object>> actual = collectResults( r );
                             Matcher<Map<String,Object>> mapMatcher = allOf(
-                                    (Matcher) hasEntry( equalTo( "count" ), anyOf( equalTo( 1 ), equalTo( 1L ) ) ),
-                                    (Matcher) hasEntry( equalTo( "username" ), equalTo( "readSubject" ) )
+                                    hasEntry( equalTo( "count" ), anyOf( ONE_AS_INT, ONE_AS_LONG ) ),
+                                    hasEntry( equalTo( "username" ), equalTo( "readSubject" ) )
                             );
                             assertThat( actual, matchesOneToOneInAnyOrder( mapMatcher ) );
                         }
@@ -1953,6 +1954,7 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     ==================================================================================
      */
 
+    @SuppressWarnings( "unchecked" )
     private static Map<String,Object> getResultRowForMetadataQuery( Transaction tx )
     {
         Result result = tx.execute( "call tx.getMetaData() yield metadata return metadata" );
@@ -2047,51 +2049,61 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     @SuppressWarnings( "unchecked" )
     private static Matcher<Map<String,Object>> hasQuery( String query )
     {
-        return (Matcher) hasEntry( equalTo( "query" ), equalTo( query ) );
+        Matcher<?> queryMatcher = hasEntry( equalTo( "query" ), Matchers.<Object>equalTo( query ) );
+        return (Matcher<Map<String,Object>>) queryMatcher;
     }
 
+    @SuppressWarnings( "unchecked" )
     private static Matcher<Map<String,Object>> hasCurrentQuery( String currentQuery )
     {
-        return (Matcher) hasEntry( equalTo( "currentQuery" ), equalTo( currentQuery ) );
+        Matcher<?> currentQueryMatcher = hasEntry( equalTo( "currentQuery" ), equalTo( currentQuery ) );
+        return (Matcher<Map<String,Object>>) currentQueryMatcher;
     }
 
+    @SuppressWarnings( "unchecked" )
     private static Matcher<Map<String,Object>> hasStatus( String statusPrefix )
     {
-        return (Matcher) hasEntry( equalTo( "status" ), startsWith( statusPrefix ) );
+        Matcher<?> statusMatcher = hasEntry( equalTo( "status" ), startsWith( statusPrefix ) );
+        return (Matcher<Map<String,Object>>) statusMatcher;
     }
 
+    @SuppressWarnings( "unchecked" )
     private static Matcher<Map<String,Object>> hasResultEntry( String entryKey, String entryPrefix )
     {
-        return (Matcher) hasEntry( equalTo( entryKey ), startsWith( entryPrefix ) );
+        Matcher<?> resultsEntryMatcher = hasEntry( equalTo( entryKey ), startsWith( entryPrefix ) );
+        return (Matcher<Map<String,Object>>) resultsEntryMatcher;
     }
 
     @SuppressWarnings( "unchecked" )
     private static Matcher<Map<String,Object>> hasUsername( String username )
     {
-        return (Matcher) hasEntry( equalTo( "username" ), equalTo( username ) );
+        Matcher<?> usernameMatcher = hasEntry( equalTo( "username" ), equalTo( username ) );
+        return (Matcher<Map<String,Object>>) usernameMatcher;
     }
 
     @SuppressWarnings( "unchecked" )
     private static Matcher<Map<String,Object>> hasQueryId()
     {
         Matcher<String> queryId = equalTo( "queryId" );
-        Matcher valueMatcher =
-                allOf( isA( String.class ), containsString( DbmsQueryId.QUERY_ID_SEPARATOR ) );
-        return hasEntry( queryId, valueMatcher );
+        Matcher<String> valueMatcher = allOf( isA( String.class ), containsString( DbmsQueryId.QUERY_ID_SEPARATOR ) );
+        Matcher<?> queryIdMatcher = hasEntry( queryId, valueMatcher );
+        return (Matcher<Map<String,Object>>) queryIdMatcher;
     }
 
+    @SuppressWarnings( "unchecked" )
     private static Matcher<Map<String,Object>> hasTransactionId()
     {
         Matcher<String> transactionId = equalTo( "transactionId" );
-        Matcher valueMatcher =
+        Matcher<String> valueMatcher =
                 allOf( isA( String.class ), containsString( "-transaction-" ) );
-        return hasEntry( transactionId, valueMatcher );
+        Matcher<?> transactionIdMatcher = hasEntry( transactionId, valueMatcher );
+        return (Matcher<Map<String,Object>>) transactionIdMatcher;
     }
 
     @SuppressWarnings( "unchecked" )
     private static Matcher<Map<String,Object>> hasStartTimeAfter( OffsetDateTime startTime )
     {
-        return (Matcher) hasEntry( equalTo( "startTime" ), new BaseMatcher<String>()
+        Matcher<?> startTimeMatcher = hasEntry( equalTo( "startTime" ), new BaseMatcher<String>()
         {
             @Override
             public void describeTo( Description description )
@@ -2106,38 +2118,40 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
                 return startTime.compareTo( otherTime ) <= 0;
             }
         } );
+        return (Matcher<Map<String,Object>>) startTimeMatcher;
     }
 
     @SuppressWarnings( "unchecked" )
     private static Matcher<Map<String,Object>> hasNoParameters()
     {
-        return (Matcher) hasEntry( equalTo( "parameters" ), equalTo( emptyMap() ) );
+        Matcher<?> noParametersMatcher = hasEntry( equalTo( "parameters" ), equalTo( emptyMap() ) );
+        return (Matcher<Map<String,Object>>) noParametersMatcher;
     }
 
     @SuppressWarnings( "unchecked" )
     private static Matcher<Map<String,Object>> hasProtocol( String expected )
     {
-        return (Matcher) hasEntry( "protocol", expected );
+        Matcher<?> protocolMatcher = hasEntry( "protocol", expected );
+        return (Matcher<Map<String,Object>>) protocolMatcher;
     }
 
     @SuppressWarnings( "unchecked" )
     private static Matcher<Map<String,Object>> hasMetaData( Map<String,Object> expected )
     {
-        return (Matcher) hasEntry( equalTo( "metaData" ), allOf(
-                expected.entrySet().stream().map(
-                        entryMapper()
-                ).collect( Collectors.toList() )
-        ) );
+        Matcher<?> metaDataMatcher =
+                hasEntry( equalTo( "metaData" ), allOf( expected.entrySet().stream().map( entryMapper() ).collect( toList() ) ) );
+        return (Matcher<Map<String,Object>>) metaDataMatcher;
     }
 
-    @SuppressWarnings( {"rawtypes", "unchecked"} )
+    @SuppressWarnings( "unchecked" )
     private static Function<Entry<String,Object>,Matcher<Entry<String,Object>>> entryMapper()
     {
         return entry ->
         {
-            Matcher keyMatcher = equalTo( entry.getKey() );
-            Matcher valueMatcher = equalTo( entry.getValue() );
-            return hasEntry( keyMatcher, valueMatcher );
+            Matcher<String> keyMatcher = equalTo( entry.getKey() );
+            Matcher<Object> valueMatcher = equalTo( entry.getValue() );
+            Matcher<?> entryMatcher = hasEntry( keyMatcher, valueMatcher );
+            return (Matcher<Entry<String,Object>>) entryMatcher;
         };
     }
 
@@ -2210,13 +2224,12 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     @SuppressWarnings( "unused" )
     public static class TestProcedures
     {
-        static DoubleLatch testProcedureLatch;
-
         @Procedure( name = "test.neverEnding" )
-        public void neverEndingWithLock()
+        public void neverEndingWithLock( @Name( "supportId" ) long supportId )
         {
-            testProcedureLatch.start();
-            testProcedureLatch.finishAndWaitForAllToFinish();
+            Support support = Support.getSupport( supportId );
+            support.doubleLatch.start();
+            support.doubleLatch.finishAndWaitForAllToFinish();
         }
     }
 }

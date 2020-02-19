@@ -808,7 +808,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     @Test
     void shouldAllowProcedureStartingTransactionInNewThread()
     {
-        try ( Support support = ClassWithProcedures.getSupport() )
+        try ( Support support = Support.getSupport() )
         {
             DoubleLatch latch = new DoubleLatch( 2 );
             support.doubleLatch = latch;
@@ -833,7 +833,7 @@ public abstract class AuthProceduresInteractionTestBase<S> extends ProcedureInte
     @Test
     void shouldInheritSecurityContextWhenProcedureStartingTransactionInNewThread()
     {
-        try ( Support support = ClassWithProcedures.getSupport() )
+        try ( Support support = Support.getSupport() )
         {
             DoubleLatch latch = new DoubleLatch( 2 );
             support.doubleLatch = latch;

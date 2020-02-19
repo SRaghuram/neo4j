@@ -6,6 +6,7 @@
 package com.neo4j.server.security.enterprise.auth;
 
 import org.apache.commons.lang3.StringUtils;
+import org.hamcrest.Matcher;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -69,6 +70,7 @@ import static com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRol
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -84,6 +86,10 @@ import static org.neo4j.procedure.Mode.WRITE;
 @ExtendWith( {TestDirectorySupportExtension.class, ThreadingExtension.class} )
 public abstract class ProcedureInteractionTestBase<S>
 {
+    public static final Matcher<Object> ONE_AS_INT = equalTo( 1 );
+    public static final Matcher<Object> ONE_AS_LONG = equalTo( 1L );
+    public static final Matcher<Object> TWO_AS_INT = equalTo( 2 );
+    public static final Matcher<Object> TWO_AS_LONG = equalTo( 2L );
     private static final String PROCEDURE_TIMEOUT_ERROR = "Procedure got: Transaction guard check failed";
     protected String CHANGE_PWD_ERR_MSG = AuthorizationViolationException.PERMISSION_DENIED;
     private static final String BOLT_PWD_ERR_MSG =
@@ -741,6 +747,22 @@ public abstract class ProcedureInteractionTestBase<S>
 
     public static final class Support implements AutoCloseable
     {
+        private static final AtomicLong COUNTER = new AtomicLong();
+        private static final ConcurrentHashMap<Long,Support> SUPPORT_REGISTRY = new ConcurrentHashMap<>();
+
+        public static Support getSupport()
+        {
+            long id = COUNTER.incrementAndGet();
+            Support support = new Support( id, SUPPORT_REGISTRY );
+            SUPPORT_REGISTRY.put( id, support );
+            return support;
+        }
+
+        public static Support getSupport( long supportId )
+        {
+            return SUPPORT_REGISTRY.get( supportId );
+        }
+
         private final long id;
         private final ConcurrentHashMap<Long,Support> registry;
         public volatile DoubleLatch doubleLatch;
@@ -769,17 +791,6 @@ public abstract class ProcedureInteractionTestBase<S>
     @SuppressWarnings( {"unused", "WeakerAccess"} )
     public static class ClassWithProcedures
     {
-        private static final AtomicLong COUNTER = new AtomicLong();
-        private static final ConcurrentHashMap<Long,Support> SUPPORT_REGISTRY = new ConcurrentHashMap<>();
-
-        public static Support getSupport()
-        {
-            long id = COUNTER.incrementAndGet();
-            Support support = new Support( id, SUPPORT_REGISTRY );
-            SUPPORT_REGISTRY.put( id, support );
-            return support;
-        }
-
         @Context
         public GraphDatabaseService db;
 
@@ -795,7 +806,7 @@ public abstract class ProcedureInteractionTestBase<S>
         @Procedure( name = "test.loop" )
         public void loop( @Name( "supportId" ) long supportId )
         {
-            Support support = SUPPORT_REGISTRY.get( supportId );
+            Support support = Support.getSupport( supportId );
             DoubleLatch latch = support.volatileLatch;
 
             if ( latch != null )
@@ -950,7 +961,7 @@ public abstract class ProcedureInteractionTestBase<S>
 
         private void startWriteThread( long supportId )
         {
-            Support support = SUPPORT_REGISTRY.get( supportId );
+            Support support = Support.getSupport( supportId );
             new Thread( () ->
             {
                 support.doubleLatch.start();
