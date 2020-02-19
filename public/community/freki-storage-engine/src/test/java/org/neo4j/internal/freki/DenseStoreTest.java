@@ -19,11 +19,15 @@
  */
 package org.neo4j.internal.freki;
 
+import org.eclipse.collections.api.map.primitive.IntObjectMap;
+import org.eclipse.collections.api.map.primitive.MutableIntObjectMap;
+import org.eclipse.collections.impl.factory.primitive.IntObjectMaps;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Objects;
@@ -40,8 +44,8 @@ import org.neo4j.storageengine.api.StorageProperty;
 import org.neo4j.test.extension.Inject;
 import org.neo4j.test.extension.pagecache.PageCacheExtension;
 import org.neo4j.test.rule.TestDirectory;
+import org.neo4j.values.storable.Value;
 
-import static java.util.Collections.emptyList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.neo4j.graphdb.Direction.BOTH;
 import static org.neo4j.graphdb.Direction.INCOMING;
@@ -153,7 +157,7 @@ class DenseStoreTest
         {
             for ( int i = 0; i < 10_000; i++ )
             {
-                updater.createRelationship( i, nodeId, i % 3, i, i % 2 == 0, emptyList() );
+                updater.createRelationship( i, nodeId, i % 3, i, i % 2 == 0, IntObjectMaps.immutable.empty() );
             }
             createRelationship( updater, out );
             createRelationship( updater, in );
@@ -206,7 +210,23 @@ class DenseStoreTest
     private void createRelationship( DenseStore.Updater updater, Rel relationship )
     {
         updater.createRelationship( relationship.internalId(), relationship.originNodeId(), relationship.type(), relationship.neighbourNodeId(),
-                relationship.direction() == RelationshipDirection.OUTGOING, relationship.properties );
+                relationship.direction() == RelationshipDirection.OUTGOING, serialize( relationship.properties ) );
+    }
+
+    private IntObjectMap<ByteBuffer> serialize( Set<StorageProperty> properties )
+    {
+        MutableIntObjectMap<ByteBuffer> serialized = IntObjectMaps.mutable.empty();
+        properties.forEach( property -> serialized.put( property.propertyKeyId(), serialize( property.value() ) ) );
+        return serialized;
+    }
+
+    private ByteBuffer serialize( Value value )
+    {
+        ByteBuffer buffer = ByteBuffer.wrap( new byte[256] );
+        PropertyValueFormat format = new PropertyValueFormat( null, null, buffer );
+        value.writeTo( format );
+        buffer.flip();
+        return buffer;
     }
 
     private void removeProperties( long nodeId, int... propertyKeys ) throws IOException
@@ -242,7 +262,7 @@ class DenseStoreTest
         {
             for ( StorageProperty property : expectedProperties )
             {
-                updater.setProperty( nodeId, property );
+                updater.setProperty( nodeId, property.propertyKeyId(), serialize( property.value() ) );
             }
         }
     }

@@ -22,17 +22,37 @@ package org.neo4j.internal.freki;
 import org.eclipse.collections.api.map.primitive.MutableLongObjectMap;
 import org.eclipse.collections.impl.factory.primitive.LongObjectMaps;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
 
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
+import org.neo4j.storageengine.api.StorageCommand;
 
 import static org.neo4j.internal.freki.InMemoryTestStore.NO_PAGE_CURSOR;
 
-public class InMemoryBigValueTestStore extends LifecycleAdapter implements SimpleBigValueStore
+class InMemoryBigValueTestStore extends LifecycleAdapter implements SimpleBigValueStore
 {
+    static Consumer<StorageCommand> applyToStoreImmediately( SimpleBigValueStore store )
+    {
+        return command ->
+        {
+            FrekiCommand.BigPropertyValue valueCommand = (FrekiCommand.BigPropertyValue) command;
+            try ( PageCursor cursor = store.openWriteCursor() )
+            {
+                store.write( cursor, ByteBuffer.wrap( valueCommand.bytes ), valueCommand.pointer );
+            }
+            catch ( IOException e )
+            {
+                throw new UncheckedIOException( e );
+            }
+        };
+    }
+
     private final AtomicLong position = new AtomicLong();
     private final MutableLongObjectMap<byte[]> data = LongObjectMaps.mutable.empty();
 

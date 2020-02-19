@@ -20,14 +20,13 @@
 package org.neo4j.internal.freki;
 
 import org.eclipse.collections.api.factory.Sets;
+import org.eclipse.collections.api.map.primitive.IntObjectMap;
 
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.function.Predicate;
@@ -215,10 +214,10 @@ class DenseStore extends LifecycleAdapter implements Closeable
             private final DenseStoreValue value = new DenseStoreValue();
 
             @Override
-            public void setProperty( long nodeId, StorageProperty property )
+            public void setProperty( long nodeId, int propertyKey, ByteBuffer propertyValue )
             {
-                key.initializeProperty( nodeId, property.propertyKeyId() );
-                value.initializeProperty( property.value() );
+                key.initializeProperty( nodeId, propertyKey );
+                value.initializeProperty( propertyValue );
                 writer.put( key, value );
             }
 
@@ -231,7 +230,7 @@ class DenseStore extends LifecycleAdapter implements Closeable
 
             @Override
             public void createRelationship( long internalId, long sourceNodeId, int type, long targetNodeId, boolean outgoing,
-                    Collection<StorageProperty> properties )
+                    IntObjectMap<ByteBuffer> properties )
             {
                 key.initializeRelationship( sourceNodeId, type, outgoing ? Direction.OUTGOING : Direction.INCOMING, targetNodeId, internalId );
                 value.initializeRelationship( properties );
@@ -278,11 +277,11 @@ class DenseStore extends LifecycleAdapter implements Closeable
 
     interface Updater extends Closeable
     {
-        void setProperty( long nodeId, StorageProperty property );
+        void setProperty( long nodeId, int key, ByteBuffer value );
 
         void removeProperty( long nodeId, int key );
 
-        void createRelationship( long internalId, long sourceNodeId, int type, long targetNodeId, boolean outgoing, Collection<StorageProperty> properties );
+        void createRelationship( long internalId, long sourceNodeId, int type, long targetNodeId, boolean outgoing, IntObjectMap<ByteBuffer> properties );
 
         void deleteRelationship( long internalId, long sourceNodeId, int type, long targetNodeId, boolean outgoing );
 
@@ -536,42 +535,26 @@ class DenseStore extends LifecycleAdapter implements Closeable
     {
         // TODO for simplicity just have this a ByteBuffer so that the other serialize/deserialize stuff can be used in here too
         // TODO let's just make up some upper limit here and the rest will go to big-value store anyway
-        private PropertyValueFormat propertyValueFormat;
         ByteBuffer data = ByteBuffer.wrap( new byte[MAX_ENTRY_VALUE_SIZE] );
 
-        void initializeProperty( Value value )
+        void initializeProperty( ByteBuffer value )
         {
             data.clear();
-            value.writeTo( valueFormat() );
+            data.put( value );
             data.flip();
         }
 
-        void initializeRelationship( Collection<StorageProperty> properties )
+        void initializeRelationship( IntObjectMap<ByteBuffer> properties )
         {
             data.clear();
-            StorageProperty[] array = properties.toArray( new StorageProperty[properties.size()] );
-            Arrays.sort( array, PROPERTY_SORTER );
-            int[] keys = new int[array.length];
-            for ( int i = 0; i < array.length; i++ )
+            properties.keySet().toSortedArray();
+            int[] sortedKeys = properties.keySet().toSortedArray();
+            StreamVByte.writeIntDeltas( sortedKeys, data );
+            for ( int key : sortedKeys )
             {
-                keys[i] = array[i].propertyKeyId();
-            }
-            StreamVByte.writeIntDeltas( keys, data );
-            PropertyValueFormat format = valueFormat();
-            for ( StorageProperty property : array )
-            {
-                property.value().writeTo( format );
+                data.put( properties.get( key ) );
             }
             data.flip();
-        }
-
-        private PropertyValueFormat valueFormat()
-        {
-            if ( propertyValueFormat == null )
-            {
-                propertyValueFormat = new PropertyValueFormat( bigPropertyValueStore, data );
-            }
-            return propertyValueFormat;
         }
     }
 

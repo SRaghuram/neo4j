@@ -45,6 +45,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.neo4j.internal.freki.InMemoryBigValueTestStore.applyToStoreImmediately;
 
 class PropertyValueFormatTest
 {
@@ -52,7 +53,7 @@ class PropertyValueFormatTest
     private final ByteBuffer readBuffer = ByteBuffer.wrap( data);
     private final ByteBuffer writeBuffer = ByteBuffer.wrap( data );
     private final SimpleBigValueStore bigValueStore = new InMemoryBigValueTestStore();
-    private final PropertyValueFormat propertyValueFormat = new PropertyValueFormat( bigValueStore, writeBuffer );
+    private final PropertyValueFormat propertyValueFormat = new PropertyValueFormat( bigValueStore, applyToStoreImmediately( bigValueStore ), writeBuffer );
 
     @BeforeEach
     void setUp()
