@@ -87,6 +87,7 @@ import org.neo4j.storageengine.api.txstate.ReadableTransactionState;
 import org.neo4j.storageengine.api.txstate.TransactionCountingStateVisitor;
 import org.neo4j.storageengine.api.txstate.TxStateVisitor;
 import org.neo4j.storageengine.util.IdGeneratorUpdatesWorkSync;
+import org.neo4j.storageengine.util.IndexUpdatesWorkSync;
 import org.neo4j.storageengine.util.LabelIndexUpdatesWorkSync;
 import org.neo4j.storageengine.util.TokenUpdateWork;
 import org.neo4j.token.TokenHolders;
@@ -119,7 +120,7 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
     private final boolean consistencyCheckApply;
     private LabelIndexUpdatesWorkSync labelScanStoreSync;
     private WorkSync<EntityTokenUpdateListener,TokenUpdateWork> relationshipTypeScanStoreSync;
-    private WorkSync<IndexUpdateListener,IndexUpdatesWork> indexUpdatesSync;
+    private IndexUpdatesWorkSync indexUpdatesSync;
     private final IdController idController;
     private final PageCacheTracer cacheTracer;
     private final GBPTreeCountsStore countsStore;
@@ -268,7 +269,7 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
         Preconditions.checkState( this.indexUpdateListener == null,
                 "Only supports a single listener. Tried to add " + listener + ", but " + this.indexUpdateListener + " has already been added" );
         this.indexUpdateListener = listener;
-        this.indexUpdatesSync = new WorkSync<>( listener );
+        this.indexUpdatesSync = new IndexUpdatesWorkSync( listener );
         this.integrityValidator.setIndexValidator( listener );
     }
 
@@ -339,7 +340,7 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
     {
         TransactionApplierFactoryChain batchApplier = applierChain( mode );
         CommandsToApply initialBatch = batch;
-        try ( BatchContext context = new BatchContext( indexUpdateListener, labelScanStoreSync.newBatch(), relationshipTypeScanStoreSync, indexUpdatesSync,
+        try ( BatchContext context = new BatchContext( indexUpdateListener, labelScanStoreSync, relationshipTypeScanStoreSync, indexUpdatesSync,
                 neoStores.getNodeStore(), neoStores.getPropertyStore(), this, schemaCache, initialBatch.cursorTracer(),
                 idGeneratorWorkSyncs.newBatch( cacheTracer ) ) )
         {
