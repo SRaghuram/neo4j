@@ -1303,7 +1303,8 @@ object LdbcQueries {
       Map("friendLastName" -> "one one-ᚠさ丵פش", "friendId" -> 11, "companyName" -> "company zero",
         "friendFirstName" -> "friend friend", "workFromYear" -> 3))
 
-    override def expectedToSucceedIn: TestConfiguration = Configs.InterpretedAndSlottedAndPipelined
+    override def expectedToSucceedIn: TestConfiguration = Configs.InterpretedAndSlotted
+    //Pipelined does not yet support `CartesianProduct if the LHS has a provided order`
 
   }
 

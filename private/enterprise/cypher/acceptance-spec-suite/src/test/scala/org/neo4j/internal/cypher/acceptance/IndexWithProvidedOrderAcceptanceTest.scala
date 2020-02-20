@@ -1173,6 +1173,45 @@ class IndexWithProvidedOrderAcceptanceTest extends ExecutionEngineFunSuite
       }
       result.toSet should equal(expected)
     }
+
+    test(s"$cypherToken:  should use index order for range predicate with parameter") {
+      val query = s"MATCH (n:Awesome) WHERE n.prop2 > $$param RETURN n.prop2 ORDER BY n.prop2 $cypherToken"
+      val result = executeWith(Configs.InterpretedAndSlotted + Configs.Pipelined, query, executeBefore = createSomeNodes, params = Map("param" -> 1))
+
+      result.executionPlanDescription() should not(includeSomewhere.aPlan("Sort"))
+      result.toList should be(expectedOrder(List(
+        Map("n.prop2" -> 2), Map("n.prop2" -> 2),
+        Map("n.prop2" -> 3), Map("n.prop2" -> 3),
+        Map("n.prop2" -> 3), Map("n.prop2" -> 3),
+        Map("n.prop2" -> 5), Map("n.prop2" -> 5),
+        Map("n.prop2" -> 7), Map("n.prop2" -> 7),
+        Map("n.prop2" -> 7), Map("n.prop2" -> 7),
+        Map("n.prop2" -> 8), Map("n.prop2" -> 8),
+        Map("n.prop2" -> 9), Map("n.prop2" -> 9)
+      )))
+    }
+
+    test(s"$cypherToken:  should use index order for range predicate with string parameter") {
+      graph.withTx( tx => createStringyNodes(tx))
+      val query = s"MATCH (n:Awesome) WHERE n.prop3 STARTS WITH $$param RETURN n.prop3 ORDER BY n.prop3 $cypherToken"
+      val result = executeWith(Configs.InterpretedAndSlotted + Configs.Pipelined, query, executeBefore = createSomeNodes, params = Map("param" -> "s"))
+
+      result.executionPlanDescription() should not(includeSomewhere.aPlan("Sort"))
+      result.toList should be(expectedOrder(List(
+        Map("n.prop3" -> "scat"), Map("n.prop3" -> "scratch")
+      )))
+    }
+
+    test(s"$cypherToken:  should use index order for range predicate with multiple of the same string parameter") {
+      graph.withTx( tx => createStringyNodes(tx))
+      val query = s"MATCH (n:Awesome) WHERE n.prop3 STARTS WITH $$param AND NOT n.prop3 ENDS WITH $$param RETURN n.prop3 ORDER BY n.prop3 $cypherToken"
+      val result = executeWith(Configs.InterpretedAndSlotted + Configs.Pipelined, query, executeBefore = createSomeNodes, params = Map("param" -> "s"))
+
+      result.executionPlanDescription() should not(includeSomewhere.aPlan("Sort"))
+      result.toList should be(expectedOrder(List(
+        Map("n.prop3" -> "scat"), Map("n.prop3" -> "scratch")
+      )))
+    }
   }
 
   // Only tested in ASC mode because it's hard to make compatibility check out otherwise

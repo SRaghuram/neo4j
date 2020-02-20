@@ -155,7 +155,7 @@ class FunctionCallSupportAcceptanceTest extends ProcedureCallAcceptanceTest {
     try {
       // When & then
       val exception = the [QueryExecutionException] thrownBy transaction.execute("RETURN my.first.func($value) as u", map("value", value)).next()
-      exception.getMessage should fullyMatch regex "Wrong argument type: Can't coerce `Map[^`]*` to String".r
+      exception.getMessage should startWith("Type mismatch for parameter 'value': expected String but was Map, Node or Relationship")
     } finally {
       transaction.close()
     }

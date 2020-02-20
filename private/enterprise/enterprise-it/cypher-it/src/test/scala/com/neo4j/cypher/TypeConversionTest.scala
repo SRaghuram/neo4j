@@ -7,18 +7,18 @@ package com.neo4j.cypher
 
 import org.neo4j.cypher.ExecutionEngineFunSuite
 import org.neo4j.cypher.internal.RewindableExecutionResult
-import org.neo4j.exceptions.CypherTypeException
+import org.neo4j.exceptions.SyntaxException
 
 class TypeConversionTest extends ExecutionEngineFunSuite with EnterpriseGraphDatabaseTestSupport {
   test("should not allow adding node and number") {
     val x = createNode()
-    val failure = intercept[CypherTypeException] {
+    val failure = intercept[SyntaxException] {
       val result = execute("debug=generate_java_source debug=show_java_source profile match (n) return n + $x as res", "x" -> 5)
       // should not get here, if we do, this is for debugging:
       println(result.executionPlanDescription())
     }
 
-    failure.getMessage should equal("Cannot add `NodeReference` and `Integer`")
+    failure.getMessage should startWith("Type mismatch for parameter 'x': expected List<T> but was Integer")
   }
 
   test("shouldHandlePatternMatchingWithParameters") {

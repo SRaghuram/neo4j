@@ -176,9 +176,10 @@ class SetAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTest
 
   //Not suitable for the TCK
   test("should fail at runtime when the expression is not a node or a relationship") {
-    failWithError(Configs.InterpretedAndSlotted, "SET (CASE WHEN true THEN $node END).name = 'neo4j' RETURN count(*)",
+    failWithError(Configs.InterpretedAndSlotted + Configs.Compiled + Configs.Pipelined, "SET (CASE WHEN true THEN $node END).name = 'neo4j' RETURN count(*)",
       List("The expression GenericCase(Vector((true,$node)),None) should have been a node or a relationship",
-        "Developer: Stefan claims that: This should be a node or a relationship"), params = Map("node" -> 42))
+        "Type mismatch: expected Map, Node, Relationship, Point, Duration, Date, Time, LocalTime, LocalDateTime or DateTime but was Integer"
+      ), params = Map("node" -> 42))
   }
 
   //Not suitable for the TCK

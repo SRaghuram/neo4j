@@ -134,7 +134,7 @@ object ExpressionConverter {
         MapProperty(callback(mapExpression), propKeyName)
 
       case internal.expressions.Parameter(name, cypherType) =>
-        // Parameters always comes as AnyValue
+        // Parameters will be expected as AnyValue in Compiled
         expressions.Parameter(name, context.namer.newVarName(), CypherCodeGenType(cypherType, AnyValueType))
 
       case lit: internal.expressions.IntegerLiteral => Literal(lit.value)

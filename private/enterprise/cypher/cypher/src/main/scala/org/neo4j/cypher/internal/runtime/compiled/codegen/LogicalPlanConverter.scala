@@ -612,6 +612,12 @@ object LogicalPlanConverter {
           CypherCodeGenType(innerType, ReferenceType)
         case CypherCodeGenType(symbols.CTAny, _) =>
           CypherCodeGenType(symbols.CTAny, ReferenceType)
+        case CypherCodeGenType(symbols.CTInteger, _) =>
+          CypherCodeGenType(symbols.CTInteger, ReferenceType)
+        case CypherCodeGenType(symbols.CTString, _) =>
+          CypherCodeGenType(symbols.CTString, ReferenceType)
+        case CypherCodeGenType(symbols.CTFloat, _) =>
+          CypherCodeGenType(symbols.CTFloat, ReferenceType)
         case t =>
           throw new CantCompileQueryException(s"Unwind collection type $t not supported")
       }

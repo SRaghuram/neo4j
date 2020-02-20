@@ -200,8 +200,9 @@ class MutatingIntegrationTest extends ExecutionEngineFunSuite with QueryStatisti
       Map("name" -> "Michael", "prefers" -> "Java"),
       Map("name" -> "Peter", "prefers" -> "Java"))
 
-    val errorMessages = List("If you want to create multiple nodes, please use UNWIND.", "Parameter provided for node creation is not a Map")
-    failWithError(Configs.InterpretedAndSlotted, "create ($params)", params = Map("params" -> maps), message = errorMessages)
+    val errorMessages = List("If you want to create multiple nodes, please use UNWIND.", "Parameter provided for node creation is not a Map",
+      "Type mismatch for parameter 'params': expected Map, Node or Relationship but was List<T>")
+    failWithError(Configs.InterpretedAndSlotted + Configs.Compiled + Configs.Pipelined, "create ($params)", params = Map("params" -> maps), message = errorMessages)
   }
 
   test("fail to create from two iterables") {
@@ -214,8 +215,9 @@ class MutatingIntegrationTest extends ExecutionEngineFunSuite with QueryStatisti
       Map("name" -> "Michael"),
       Map("name" -> "Peter"))
     val query = "create (a $params1), (b $params2)"
-    val errorMessages = List("If you want to create multiple nodes, please use UNWIND.", "Parameter provided for node creation is not a Map", "If you create multiple elements, you can only create one of each.")
-    failWithError(Configs.InterpretedAndSlotted, query, message = errorMessages, params = Map("params1" -> maps1, "params2" -> maps2))
+    val errorMessages = List("If you want to create multiple nodes, please use UNWIND.", "Parameter provided for node creation is not a Map", "If you create multiple elements, you can only create one of each.",
+      "Type mismatch for parameter 'params1': expected Map, Node or Relationship but was List<T>")
+    failWithError(Configs.InterpretedAndSlotted + Configs.Compiled + Configs.Pipelined, query, message = errorMessages, params = Map("params1" -> maps1, "params2" -> maps2))
   }
 
   test("first read then write") {
