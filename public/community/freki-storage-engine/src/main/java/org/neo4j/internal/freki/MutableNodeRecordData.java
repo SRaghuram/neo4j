@@ -63,6 +63,7 @@ class MutableNodeRecordData
     final MutableIntObjectMap<Relationships> relationships = IntObjectMaps.mutable.empty();
     private long internalRelationshipIdCounter = 1;
     private long forwardPointer = NULL;
+    private long backPointer = NULL;
 
     MutableNodeRecordData( long id )
     {
@@ -81,14 +82,15 @@ class MutableNodeRecordData
             return false;
         }
         MutableNodeRecordData that = (MutableNodeRecordData) o;
-        return id == that.id && internalRelationshipIdCounter == that.internalRelationshipIdCounter && forwardPointer == that.forwardPointer &&
+        return id == that.id && internalRelationshipIdCounter == that.internalRelationshipIdCounter &&
+                forwardPointer == that.forwardPointer && backPointer == that.backPointer &&
                 labels.equals( that.labels ) && Objects.equals( properties, that.properties ) && Objects.equals( relationships, that.relationships );
     }
 
     @Override
     public int hashCode()
     {
-        int result = Objects.hash( id, properties, relationships, internalRelationshipIdCounter, forwardPointer );
+        int result = Objects.hash( id, properties, relationships, internalRelationshipIdCounter, forwardPointer, backPointer );
         result = 31 * result + labels.hashCode();
         return result;
     }
@@ -96,7 +98,8 @@ class MutableNodeRecordData
     @Override
     public String toString()
     {
-        return String.format( "ID:%s, labels:%s, properties:%s, relationships:%s, fw:%d", id, labels, properties, relationships, forwardPointer );
+        return String.format( "ID:%s, labels:%s, properties:%s, relationships:%s, fw:%d, bw:%d",
+                id, labels, properties, relationships, forwardPointer, backPointer );
     }
 
     /**
@@ -286,6 +289,12 @@ class MutableNodeRecordData
         return this.forwardPointer;
     }
 
+    void setBackPointer( long backPointer )
+    {
+        // For "large" records this is the node id, i.e. back-ref to the small record
+        this.backPointer = backPointer;
+    }
+
     void serialize( ByteBuffer buffer, SimpleBigValueStore bigPropertyValueStore, Consumer<StorageCommand> commandConsumer )
     {
         buffer.clear();
@@ -367,15 +376,21 @@ class MutableNodeRecordData
                 buffer.putLong( internalRelationshipIdCounter );
             }
         }
+        else if ( backPointer != NULL )
+        {
+            writeLongs( new long[]{backPointer}, buffer );
+        }
 
         // Write the offsets (properties,relationships,end) at the reserved offsets header position at the beginning
-        // [ fee,eeee][eeee,eeee][rrrr,rrrr][rrpp,pppp][pppp,pppp]
+        // [bfee,eeee][eeee,eeee][rrrr,rrrr][rrpp,pppp][pppp,pppp]
+        // b: this record contains back pointer, i.e. node id
         // f: this record contains forward pointer
         // e: end offset
         // r: relationships offset
         // p: properties offset
         int fw = forwardPointer == NULL ? 0 : 0x40000000;
-        buffer.putInt( offsetHeaderPosition, fw | ((endOffset & 0x3FF) << 20) | ((relationshipsOffset & 0x3FF) << 10) | propertiesOffset & 0x3FF );
+        int bw = backPointer == NULL ? 0 : 0x80000000;
+        buffer.putInt( offsetHeaderPosition, bw | fw | ((endOffset & 0x3FF) << 20) | ((relationshipsOffset & 0x3FF) << 10) | propertiesOffset & 0x3FF );
     }
 
     private static void writeProperties( MutableIntObjectMap<Value> properties, ByteBuffer buffer, SimpleBigValueStore bigPropertyValueStore,
@@ -420,6 +435,7 @@ class MutableNodeRecordData
         int relationshipOffset = relationshipOffset( offsetHeader );
         int endOffset = endOffset( offsetHeader );
         boolean containsForwardPointer = containsForwardPointer( offsetHeader );
+        boolean containsBackPointer = containsBackPointer( offsetHeader );
 
         labels.clear();
         labels.addAll( readIntDeltas( intArrayTarget(), buffer ).array() );
@@ -476,6 +492,10 @@ class MutableNodeRecordData
                     internalRelationshipIdCounter = buffer.getLong();
                 }
             }
+            if ( containsBackPointer )
+            {
+                backPointer = readLongs( buffer )[0];
+            }
         }
     }
 
@@ -512,6 +532,11 @@ class MutableNodeRecordData
     static boolean containsForwardPointer( int offsetHeader )
     {
         return (offsetHeader & 0x40000000) != 0;
+    }
+
+    static boolean containsBackPointer( int offsetsHeader )
+    {
+        return (offsetsHeader & 0x80000000) != 0;
     }
 
     static long externalRelationshipId( long sourceNode, long internalRelationshipId, long otherNode, boolean outgoing )

@@ -32,6 +32,7 @@ import static org.neo4j.internal.freki.MutableNodeRecordData.sizeExponentialFrom
 import static org.neo4j.internal.freki.Record.FLAG_IN_USE;
 import static org.neo4j.internal.freki.StreamVByte.SKIP;
 import static org.neo4j.internal.freki.StreamVByte.readIntDeltas;
+import static org.neo4j.internal.freki.StreamVByte.readLongs;
 import static org.neo4j.util.Preconditions.checkState;
 
 abstract class FrekiMainStoreCursor implements AutoCloseable
@@ -125,6 +126,11 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
                 }
                 data = record.dataForReading();
                 readOffsets( false );
+                if ( headerState.backPointer != id )
+                {
+                    throw new IllegalStateException( "Loaded X1 record for node:" + id + " with a linked record " + headerState.forwardPointer +
+                            " that didn't point back, instead pointing to " + headerState.backPointer );
+                }
             }
         }
         loadedNodeId = id;
@@ -181,15 +187,30 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
             headerState.containsForwardPointer = MutableNodeRecordData.containsForwardPointer( offsetsHeader );
             if ( headerState.containsForwardPointer )
             {
-                data.position( headerState.endOffset );
-                if ( headerState.relationshipsOffset != 0 )
-                {
-                    // skip the type offsets array
-                    StreamVByte.readIntDeltas( SKIP, data );
-                }
+                setDataPositionAfterTypeOffsets();
                 headerState.forwardPointer = data.getLong();
                 headerState.isDense = isDenseFromForwardPointer( headerState.forwardPointer );
             }
+        }
+        else
+        {
+            headerState.containsBackPointer = MutableNodeRecordData.containsBackPointer( offsetsHeader );
+            if ( headerState.containsBackPointer )
+            {
+                data.position( headerState.endOffset );
+                setDataPositionAfterTypeOffsets();
+                headerState.backPointer = readLongs( data )[0];
+            }
+        }
+    }
+
+    private void setDataPositionAfterTypeOffsets()
+    {
+        data.position( headerState.endOffset );
+        if ( headerState.relationshipsOffset != 0 )
+        {
+            // skip the type offsets array
+            StreamVByte.readIntDeltas( SKIP, data );
         }
     }
 
