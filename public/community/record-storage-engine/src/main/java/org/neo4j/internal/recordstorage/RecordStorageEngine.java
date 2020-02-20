@@ -87,6 +87,8 @@ import org.neo4j.storageengine.api.txstate.ReadableTransactionState;
 import org.neo4j.storageengine.api.txstate.TransactionCountingStateVisitor;
 import org.neo4j.storageengine.api.txstate.TxStateVisitor;
 import org.neo4j.storageengine.util.IdGeneratorUpdatesWorkSync;
+import org.neo4j.storageengine.util.LabelIndexUpdatesWorkSync;
+import org.neo4j.storageengine.util.TokenUpdateWork;
 import org.neo4j.token.TokenHolders;
 import org.neo4j.util.Preconditions;
 import org.neo4j.util.VisibleForTesting;
@@ -115,7 +117,7 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
     private final ConstraintRuleAccessor constraintSemantics;
     private final LockService lockService;
     private final boolean consistencyCheckApply;
-    private WorkSync<EntityTokenUpdateListener,TokenUpdateWork> labelScanStoreSync;
+    private LabelIndexUpdatesWorkSync labelScanStoreSync;
     private WorkSync<EntityTokenUpdateListener,TokenUpdateWork> relationshipTypeScanStoreSync;
     private WorkSync<IndexUpdateListener,IndexUpdatesWork> indexUpdatesSync;
     private final IdController idController;
@@ -214,7 +216,7 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
             // Schema index application
             appliers.add( new IndexTransactionApplierFactory( indexUpdateListener ) );
         }
-        return new TransactionApplierFactoryChain( idGeneratorWorkSyncs, appliers.toArray( new TransactionApplierFactory[0] ) );
+        return new TransactionApplierFactoryChain( appliers.toArray( new TransactionApplierFactory[0] ) );
     }
 
     private GBPTreeCountsStore openCountsStore( PageCache pageCache, FileSystemAbstraction fs, DatabaseLayout layout, Config config, LogProvider logProvider,
@@ -276,7 +278,7 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
         Preconditions.checkState( this.nodeLabelUpdateListener == null,
                 "Only supports a single listener. Tried to add " + listener + ", but " + this.nodeLabelUpdateListener + " has already been added" );
         this.nodeLabelUpdateListener = listener;
-        this.labelScanStoreSync = new WorkSync<>( listener );
+        this.labelScanStoreSync = new LabelIndexUpdatesWorkSync( listener );
     }
 
     @Override
@@ -337,7 +339,7 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
     {
         TransactionApplierFactoryChain batchApplier = applierChain( mode );
         CommandsToApply initialBatch = batch;
-        try ( BatchContext context = new BatchContext( indexUpdateListener, labelScanStoreSync, relationshipTypeScanStoreSync, indexUpdatesSync,
+        try ( BatchContext context = new BatchContext( indexUpdateListener, labelScanStoreSync.newBatch(), relationshipTypeScanStoreSync, indexUpdatesSync,
                 neoStores.getNodeStore(), neoStores.getPropertyStore(), this, schemaCache, initialBatch.cursorTracer(),
                 idGeneratorWorkSyncs.newBatch( cacheTracer ) ) )
         {
