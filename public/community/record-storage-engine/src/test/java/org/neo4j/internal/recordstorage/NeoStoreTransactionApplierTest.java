@@ -67,6 +67,8 @@ import org.neo4j.storageengine.api.EntityTokenUpdateListener;
 import org.neo4j.storageengine.api.IndexUpdateListener;
 import org.neo4j.storageengine.util.IdGeneratorUpdatesWorkSync;
 import org.neo4j.storageengine.util.IdUpdateListener;
+import org.neo4j.storageengine.util.LabelIndexUpdatesWorkSync;
+import org.neo4j.storageengine.util.TokenUpdateWork;
 import org.neo4j.token.api.NamedToken;
 import org.neo4j.util.concurrent.WorkSync;
 
@@ -114,7 +116,7 @@ class NeoStoreTransactionApplierTest
     private final DynamicRecord one = DynamicRecord.dynamicRecord( 1, true );
     private final DynamicRecord two = DynamicRecord.dynamicRecord( 2, true );
     private final DynamicRecord three = DynamicRecord.dynamicRecord( 3, true );
-    private final WorkSync<EntityTokenUpdateListener,TokenUpdateWork> labelScanStoreSynchronizer = new WorkSync<>( labelUpdateListener );
+    private final LabelIndexUpdatesWorkSync labelScanStoreSynchronizer = new LabelIndexUpdatesWorkSync( labelUpdateListener );
     private final WorkSync<EntityTokenUpdateListener,TokenUpdateWork> relationshipTypeScanStoreSync = new WorkSync<>( relationshipTypeUpdateListener );
     private final CommandsToApply transactionToApply = mock( CommandsToApply.class );
     private final WorkSync<IndexUpdateListener,IndexUpdatesWork> indexUpdatesSync = new WorkSync<>( indexUpdateListener );
@@ -619,7 +621,7 @@ class NeoStoreTransactionApplierTest
     void shouldApplyUpdateIndexRuleSchemaRuleCommandToTheStore() throws Exception
     {
         // given
-        var batchContext = new BatchContext( indexingService, labelScanStoreSynchronizer, relationshipTypeScanStoreSync, indexUpdatesSync, nodeStore,
+        var batchContext = new BatchContext( indexingService, labelScanStoreSynchronizer.newBatch(), relationshipTypeScanStoreSync, indexUpdatesSync, nodeStore,
                 propertyStore, mock( RecordStorageEngine.class ), mock( SchemaCache.class ), NULL, INSTANCE, IdUpdateListener.IGNORE );
         TransactionApplierFactory applier = newApplierFacade( newIndexApplier(), newApplier( false ) );
         SchemaRecord before = new SchemaRecord( 21 );
@@ -643,7 +645,7 @@ class NeoStoreTransactionApplierTest
     void shouldApplyUpdateIndexRuleSchemaRuleCommandToTheStoreInRecovery() throws Exception
     {
         // given
-        var batchContext = new BatchContext( indexingService, labelScanStoreSynchronizer, relationshipTypeScanStoreSync, indexUpdatesSync, nodeStore,
+        var batchContext = new BatchContext( indexingService, labelScanStoreSynchronizer.newBatch(), relationshipTypeScanStoreSync, indexUpdatesSync, nodeStore,
                 propertyStore, mock( RecordStorageEngine.class ), mock( SchemaCache.class ), NULL, INSTANCE, IdUpdateListener.IGNORE );
         TransactionApplierFactory applier = newApplierFacade( newIndexApplier(), newApplier( true ) );
         SchemaRecord before = new SchemaRecord( 21 );
@@ -691,7 +693,7 @@ class NeoStoreTransactionApplierTest
         TransactionApplierFactory indexApplier = newIndexApplier();
         IdGeneratorUpdatesWorkSync idGeneratorUpdatesWorkSync = new IdGeneratorUpdatesWorkSync();
         Stream.of( IdType.values() ).forEach( idType -> idGeneratorUpdatesWorkSync.add( mock( IdGenerator.class ) ) );
-        TransactionApplierFactoryChain applier = new TransactionApplierFactoryChain( idGeneratorUpdatesWorkSync, base, indexApplier );
+        TransactionApplierFactoryChain applier = new TransactionApplierFactoryChain( base, indexApplier );
         SchemaRecord before = new SchemaRecord( 21 ).initialize( true, Record.NO_NEXT_PROPERTY.longValue() );
         SchemaRecord after = before.copy().initialize( false, Record.NO_NEXT_PROPERTY.longValue() );
         IndexDescriptor rule = indexRule( 0, 1, 2, "K", "X.Y" );
@@ -878,9 +880,7 @@ class NeoStoreTransactionApplierTest
 
     private TransactionApplierFactory newApplierFacade( TransactionApplierFactory... appliers )
     {
-        IdGeneratorUpdatesWorkSync idGeneratorWorkSyncs = new IdGeneratorUpdatesWorkSync();
-        Stream.of( IdType.values() ).forEach( idType -> idGeneratorWorkSyncs.add( mock( IdGenerator.class ) ) );
-        return new TransactionApplierFactoryChain( idGeneratorWorkSyncs, appliers );
+        return new TransactionApplierFactoryChain( appliers );
     }
 
     private TransactionApplierFactory newIndexApplier()

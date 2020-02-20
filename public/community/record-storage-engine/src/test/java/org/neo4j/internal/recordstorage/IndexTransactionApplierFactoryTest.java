@@ -29,7 +29,6 @@ import org.neo4j.internal.schema.SchemaCache;
 import org.neo4j.internal.schema.SchemaDescriptor;
 import org.neo4j.internal.schema.SchemaRule;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
-import org.neo4j.kernel.impl.store.IdUpdateListener;
 import org.neo4j.kernel.impl.store.NodeLabelsField;
 import org.neo4j.kernel.impl.store.NodeStore;
 import org.neo4j.kernel.impl.store.PropertyStore;
@@ -39,12 +38,13 @@ import org.neo4j.lock.LockGroup;
 import org.neo4j.storageengine.api.EntityTokenUpdate;
 import org.neo4j.storageengine.api.EntityTokenUpdateListener;
 import org.neo4j.storageengine.api.IndexUpdateListener;
+import org.neo4j.storageengine.util.IdUpdateListener;
+import org.neo4j.storageengine.util.LabelIndexUpdatesWorkSync;
+import org.neo4j.storageengine.util.TokenUpdateWork;
 import org.neo4j.util.concurrent.WorkSync;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
@@ -62,12 +62,12 @@ class IndexTransactionApplierFactoryTest
         // GIVEN
         IndexUpdateListener indexUpdateListener = mock( IndexUpdateListener.class );
         OrderVerifyingUpdateListener listener = new OrderVerifyingUpdateListener( 10, 15, 20 );
-        WorkSync<EntityTokenUpdateListener,TokenUpdateWork> labelScanSync = spy( new WorkSync<>( listener ) );
+        LabelIndexUpdatesWorkSync labelScanSync = new LabelIndexUpdatesWorkSync( listener );
         WorkSync<EntityTokenUpdateListener,TokenUpdateWork> relationshipTypeScanStoreSync = mock( WorkSync.class );
         WorkSync<IndexUpdateListener,IndexUpdatesWork> indexUpdatesSync = new WorkSync<>( indexUpdateListener );
         PropertyStore propertyStore = mock( PropertyStore.class );
         IndexTransactionApplierFactory applier = new IndexTransactionApplierFactory( indexUpdateListener );
-        try ( var batchContext = new BatchContext( indexUpdateListener, labelScanSync, relationshipTypeScanStoreSync, indexUpdatesSync,
+        try ( var batchContext = new BatchContext( indexUpdateListener, labelScanSync.newBatch(), relationshipTypeScanStoreSync, indexUpdatesSync,
                 mock( NodeStore.class ), propertyStore, mock( RecordStorageEngine.class ), mock( SchemaCache.class ), NULL, INSTANCE,
                 mock( IdUpdateListener.class ) ) )
         {
@@ -80,8 +80,6 @@ class IndexTransactionApplierFactoryTest
             }
         }
         listener.done();
-        // THEN all assertions happen inside the LabelScanWriter#write and #close
-        verify( labelScanSync ).applyAsync( any() );
     }
 
     @Test
@@ -90,7 +88,7 @@ class IndexTransactionApplierFactoryTest
         // given
         IndexUpdateListener indexUpdateListener = mock( IndexUpdateListener.class );
         OrderVerifyingUpdateListener listener = new OrderVerifyingUpdateListener( 10, 15, 20 );
-        WorkSync<EntityTokenUpdateListener,TokenUpdateWork> labelScanSync = spy( new WorkSync<>( listener ) );
+        LabelIndexUpdatesWorkSync labelScanSync = new LabelIndexUpdatesWorkSync( listener );
         WorkSync<IndexUpdateListener,IndexUpdatesWork> indexUpdatesSync = new WorkSync<>( indexUpdateListener );
         PropertyStore propertyStore = mock( PropertyStore.class );
         IndexActivator indexActivator = new IndexActivator( indexUpdateListener );

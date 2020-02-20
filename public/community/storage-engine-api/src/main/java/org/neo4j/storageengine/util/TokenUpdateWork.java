@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.internal.recordstorage;
+package org.neo4j.storageengine.util;
 
 import java.util.List;
 
@@ -30,26 +30,26 @@ import static org.neo4j.storageengine.api.EntityTokenUpdate.SORT_BY_ENTITY_ID;
 
 public class TokenUpdateWork implements Work<EntityTokenUpdateListener,TokenUpdateWork>
 {
-    private final List<EntityTokenUpdate> tokenUpdates;
-    private final PageCursorTracer cursorTracer;
+    private final List<EntityTokenUpdate> updates;
+    private PageCursorTracer cursorTracer;
 
-    TokenUpdateWork( List<EntityTokenUpdate> tokenUpdates, PageCursorTracer cursorTracer )
+    public TokenUpdateWork( List<EntityTokenUpdate> updates, PageCursorTracer cursorTracer )
     {
-        this.tokenUpdates = tokenUpdates;
+        this.updates = updates;
         this.cursorTracer = cursorTracer;
     }
 
     @Override
     public TokenUpdateWork combine( TokenUpdateWork work )
     {
-        tokenUpdates.addAll( work.tokenUpdates );
+        updates.addAll( work.updates );
         return this;
     }
 
     @Override
     public void apply( EntityTokenUpdateListener listener )
     {
-        tokenUpdates.sort( SORT_BY_ENTITY_ID );
-        listener.applyUpdates( tokenUpdates, cursorTracer );
+        updates.sort( SORT_BY_ENTITY_ID );
+        listener.applyUpdates( updates, cursorTracer );
     }
 }

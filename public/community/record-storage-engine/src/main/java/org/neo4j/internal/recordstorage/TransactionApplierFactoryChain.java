@@ -22,7 +22,6 @@ package org.neo4j.internal.recordstorage;
 import java.io.IOException;
 
 import org.neo4j.storageengine.api.CommandsToApply;
-import org.neo4j.storageengine.util.IdGeneratorUpdatesWorkSync;
 
 /**
  * This class wraps several {@link TransactionApplierFactory}s which will do their work sequentially. See also {@link
@@ -32,12 +31,10 @@ import org.neo4j.storageengine.util.IdGeneratorUpdatesWorkSync;
  */
 public class TransactionApplierFactoryChain implements TransactionApplierFactory
 {
-    private final IdGeneratorUpdatesWorkSync idGeneratorUpdatesWorkSync;
     private final TransactionApplierFactory[] appliers;
 
-    public TransactionApplierFactoryChain( IdGeneratorUpdatesWorkSync idGeneratorUpdatesWorkSync, TransactionApplierFactory... appliers )
+    public TransactionApplierFactoryChain( TransactionApplierFactory... appliers )
     {
-        this.idGeneratorUpdatesWorkSync = idGeneratorUpdatesWorkSync;
         this.appliers = appliers;
     }
 
