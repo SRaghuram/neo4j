@@ -473,7 +473,7 @@ class ClusteredShowDatabasesIT
 
             // when
             createDatabase( ADDITIONAL_DATABASE_NAME, cluster );
-            waitForClusterToReachLocalState( initialMembers, getNamedDatabaseId( cluster, ADDITIONAL_DATABASE_NAME ), STARTED, timeoutSeconds );
+            waitForClusterToReachLocalState( initialMembers, getNamedDatabaseId( cluster, ADDITIONAL_DATABASE_NAME ), STARTED );
 
             // then
             assertEventually( "SHOW DATABASES should return 2 rows with an error for database foo", () -> showDatabases( cluster ),
@@ -561,15 +561,14 @@ class ClusteredShowDatabasesIT
 
     private static void waitForClusterToReachLocalState( Cluster cluster, NamedDatabaseId namedDatabaseId, EnterpriseOperatorState operatorState )
     {
-        waitForClusterToReachLocalState( cluster.allMembers(), namedDatabaseId, operatorState, LOCAL_STATE_CHANGE_TIMEOUT_SECONDS );
+        waitForClusterToReachLocalState( cluster.allMembers(), namedDatabaseId, operatorState );
     }
 
-    private static void waitForClusterToReachLocalState( Set<ClusterMember> members, NamedDatabaseId namedDatabaseId, EnterpriseOperatorState operatorState,
-            int timeoutSeconds )
+    private static void waitForClusterToReachLocalState( Set<ClusterMember> members, NamedDatabaseId namedDatabaseId, EnterpriseOperatorState operatorState )
     {
         var databaseStateServices = databaseStateServices( members );
-        assertEventually( () -> getOperatorStates( namedDatabaseId, databaseStateServices ), allStatesMatchCondition( operatorState ), timeoutSeconds,
-                          SECONDS );
+        assertEventually( () -> getOperatorStates( namedDatabaseId, databaseStateServices ), allStatesMatchCondition( operatorState ),
+                          LOCAL_STATE_CHANGE_TIMEOUT_SECONDS, SECONDS );
     }
 
     private static NamedDatabaseId getNamedDatabaseId( Cluster cluster, String databaseName )
