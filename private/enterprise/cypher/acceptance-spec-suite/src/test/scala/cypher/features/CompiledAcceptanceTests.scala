@@ -22,7 +22,7 @@ class CompiledAcceptanceTests extends EnterpriseBaseAcceptanceTest {
 
   @TestFactory
   def runCompiled(): util.Collection[DynamicTest] = {
-    createTests(scenarios, CompiledTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder(), defaultTestConfig)
+    createTests(scenarios, CompiledTestConfig, () => new TestEnterpriseDatabaseManagementServiceBuilder(), enterpriseDefaultTestConfig)
   }
 
   @Disabled
