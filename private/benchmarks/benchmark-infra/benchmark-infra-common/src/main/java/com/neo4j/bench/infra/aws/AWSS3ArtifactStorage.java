@@ -13,11 +13,9 @@ import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
-import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.S3Object;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
 import com.amazonaws.services.s3.transfer.Upload;
@@ -144,28 +142,38 @@ public class AWSS3ArtifactStorage implements ArtifactStorage
     }
 
     @Override
-    public Workspace downloadBuildArtifacts( Path baseDir, URI artifactBaseURI ) throws ArtifactStoreException
+    public Workspace downloadBuildArtifacts( Path baseDir, URI artifactBaseURI, Workspace goalWorkspace ) throws ArtifactStoreException
+    {
+        Workspace.Builder builder = Workspace.create( baseDir );
+
+        for ( String key : goalWorkspace.allArtifactKeys() )
+        {
+            String artifactPath = goalWorkspace.getString( key );
+            downloadFile( baseDir, artifactBaseURI, artifactPath );
+            builder.withArtifact( key, artifactPath );
+        }
+        return builder.build();
+    }
+
+    @Override
+    public Path downloadParameterFile( Path baseDir, URI artifactBaseURI ) throws ArtifactStoreException
+    {
+        return downloadFile( baseDir, artifactBaseURI, Workspace.JOB_PARAMETERS_JSON );
+    }
+
+    private Path downloadFile( Path baseDir, URI artifactBaseURI, String artifactPath ) throws ArtifactStoreException
     {
         String bucketName = artifactBaseURI.getAuthority();
         String s3Path = getS3Path( artifactBaseURI.getPath() );
-        LOG.info( "downloading build artifacts from bucket {} at key prefix {}", bucketName, s3Path );
+        LOG.info( "downloading build artifacts from bucket {} at key prefix {}{}", bucketName, s3Path, artifactPath );
 
-        ObjectListing objectListing = amazonS3.listObjects( bucketName, s3Path );
+        S3Object s3Object = amazonS3.getObject( bucketName, s3Path + artifactPath );
+        Path absoluteArtifact = baseDir.resolve( artifactPath );
         try
         {
-            Workspace.Builder builder = Workspace.create( baseDir );
-            for ( S3ObjectSummary objectSummary : objectListing.getObjectSummaries() )
-            {
-                String key = objectSummary.getKey();
-                String relativeArtifact = key.replace( s3Path, "" );
-                S3Object s3Object = amazonS3.getObject( bucketName, key );
-                Path absoluteArtifact = baseDir.resolve( relativeArtifact );
-                Files.createDirectories( absoluteArtifact.getParent() );
-                LOG.info( "copying build artifact {} into {}", key, absoluteArtifact );
-                Files.copy( s3Object.getObjectContent(), absoluteArtifact, StandardCopyOption.REPLACE_EXISTING );
-                builder.withArtifacts( baseDir.relativize( absoluteArtifact ).toString() );
-            }
-            return builder.build();
+            Files.createDirectories( absoluteArtifact.getParent() );
+            Files.copy( s3Object.getObjectContent(), absoluteArtifact, StandardCopyOption.REPLACE_EXISTING );
+            return absoluteArtifact;
         }
         catch ( IOException e )
         {

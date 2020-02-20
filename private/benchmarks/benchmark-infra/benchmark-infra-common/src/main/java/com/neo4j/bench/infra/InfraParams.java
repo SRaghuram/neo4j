@@ -35,6 +35,8 @@ public class InfraParams
     public static final String CMD_ARTIFACT_BASE_URI = "--artifact-base-uri";
     private URI artifactBaseUri;
 
+    private Workspace workspaceStructure;
+
     // -----------------------------------------------------------------------
     // Common: Result Client Report Results Args
     // -----------------------------------------------------------------------
@@ -64,7 +66,8 @@ public class InfraParams
                         String resultsStorePasswordSecretName,
                         URI resultsStoreUri,
                         URI artifactBaseUri,
-                        ErrorReportingPolicy errorPolicy )
+                        ErrorReportingPolicy errorPolicy,
+                        Workspace workspaceStructure )
     {
         this.awsSecret = awsSecret;
         this.awsKey = awsKey;
@@ -75,6 +78,7 @@ public class InfraParams
         this.resultsStoreUri = resultsStoreUri;
         this.artifactBaseUri = artifactBaseUri;
         this.errorPolicy = errorPolicy;
+        this.workspaceStructure = workspaceStructure;
     }
 
     public String awsSecret()
@@ -125,6 +129,11 @@ public class InfraParams
     public ErrorReportingPolicy errorReportingPolicy()
     {
         return errorPolicy;
+    }
+
+    public Workspace workspaceStructure()
+    {
+        return workspaceStructure;
     }
 
     @Override

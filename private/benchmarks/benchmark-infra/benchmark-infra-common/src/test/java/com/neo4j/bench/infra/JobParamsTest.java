@@ -35,7 +35,7 @@ public class JobParamsTest
     public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
     @Test
-    public void serializeAndDeserialize()
+    public void serializeAndDeserialize() throws IOException
     {
         // given
         JobParams jobParams = new JobParams(
@@ -48,7 +48,8 @@ public class JobParamsTest
                         "resultsStorePassword",
                         URI.create( "bolt://localhost/" ),
                         URI.create( "s3://benchmarking.com/123456" ),
-                        ErrorReportingPolicy.REPORT_THEN_FAIL ),
+                        ErrorReportingPolicy.REPORT_THEN_FAIL,
+                        Workspace.create( temporaryFolder.newFolder().toPath() ).build() ),
                 new BenchmarkingEnvironment(
                         new BenchmarkingTool(
                                 MacroToolRunner.class,
@@ -99,7 +100,8 @@ public class JobParamsTest
                         "resultsStorePassword",
                         URI.create( "bolt://localhost/" ),
                         URI.create( "s3://benchmarking.com/123456" ),
-                        ErrorReportingPolicy.REPORT_THEN_FAIL ),
+                        ErrorReportingPolicy.REPORT_THEN_FAIL,
+                        Workspace.create( temporaryFolder.newFolder().toPath() ).build() ),
                 new BenchmarkingEnvironment(
                         new BenchmarkingTool(
                                 MacroToolRunner.class,

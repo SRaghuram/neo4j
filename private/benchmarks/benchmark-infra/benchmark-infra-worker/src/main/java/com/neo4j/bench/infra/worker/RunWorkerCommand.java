@@ -14,11 +14,6 @@ import com.neo4j.bench.common.util.JsonUtil;
 import com.neo4j.bench.infra.BenchmarkingTool;
 import com.neo4j.bench.infra.BenchmarkingToolRunner;
 import com.neo4j.bench.infra.InfraParams;
-import com.neo4j.bench.common.util.BenchmarkUtil;
-import com.neo4j.bench.common.util.JsonUtil;
-import com.neo4j.bench.infra.ArtifactStoreException;
-import com.neo4j.bench.infra.Dataset;
-import com.neo4j.bench.infra.Extractor;
 import com.neo4j.bench.infra.JobParams;
 import com.neo4j.bench.infra.PasswordManager;
 import com.neo4j.bench.infra.Workspace;
@@ -28,15 +23,6 @@ import com.neo4j.bench.infra.aws.AWSS3ArtifactStorage;
 import java.io.File;
 import java.net.URI;
 import java.nio.file.Path;
-import java.nio.file.attribute.PosixFilePermissions;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
-
-import static com.neo4j.bench.common.tool.macro.Deployment.Server;
-import static com.neo4j.bench.common.tool.macro.DeploymentModes.SERVER;
-import static java.lang.String.format;
-import static java.lang.String.join;
 
 @Command( name = "run-worker" )
 public class RunWorkerCommand implements Runnable
@@ -75,16 +61,18 @@ public class RunWorkerCommand implements Runnable
             AWSS3ArtifactStorage artifactStorage = AWSS3ArtifactStorage.create( awsRegion );
 
             // download artifacts
+
             Path workspacePath = workspaceDir.toPath();
-            Workspace artifactsWorkspace = artifactStorage.downloadBuildArtifacts( workspacePath, artifactBaseUri );
-
-            Path jobParametersJson = artifactsWorkspace.get( Workspace.JOB_PARAMETERS_JSON );
-            JobParams jobParams = JsonUtil.deserializeJson( jobParametersJson, JobParams.class );
-
-            Path workspaceJson = artifactsWorkspace.get( Workspace.WORKSPACE_STRUCTURE_JSON );
-            Workspace deserializeWorkspace = JsonUtil.deserializeJson( workspaceJson, Workspace.class );
-            Workspace.assertWorkspaceAreEqual( artifactsWorkspace, deserializeWorkspace );
+            Path parameterFilePath = artifactStorage.downloadParameterFile( workspacePath, artifactBaseUri );
+            JobParams jobParams = JsonUtil.deserializeJson( parameterFilePath, JobParams.class );
             InfraParams infraParams = jobParams.infraParams();
+
+            Workspace deserializeWorkspace = infraParams.workspaceStructure();
+            Workspace artifactsWorkspace = artifactStorage.downloadBuildArtifacts( workspacePath,
+                                                                                   artifactBaseUri,
+                                                                                   deserializeWorkspace );
+
+            Workspace.assertWorkspaceAreEqual( artifactsWorkspace, deserializeWorkspace );
 
             // fetch result db password
             PasswordManager awsSecretsManager = AWSPasswordManager.create( infraParams.awsRegion() );

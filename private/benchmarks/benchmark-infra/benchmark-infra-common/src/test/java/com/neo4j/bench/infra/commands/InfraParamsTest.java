@@ -9,7 +9,11 @@ import com.neo4j.bench.common.results.ErrorReportingPolicy;
 import com.neo4j.bench.common.util.JsonUtil;
 import com.neo4j.bench.infra.InfraParams;
 import org.junit.jupiter.api.Test;
+import com.neo4j.bench.infra.Workspace;
+import org.junit.Rule;
+import org.junit.rules.TemporaryFolder;
 
+import java.io.IOException;
 import java.net.URI;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -17,8 +21,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 public class InfraParamsTest
 {
 
+    @Rule
+    public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
     @Test
-    public void serializationTest()
+    public void serializationTest() throws IOException
     {
         InfraParams infraParams = new InfraParams( "awsSecret",
                                                    "awsKey",
@@ -28,7 +35,8 @@ public class InfraParamsTest
                                                    "resultStorePasswordSecretName",
                                                    URI.create( "http://resultStoreUri" ),
                                                    URI.create( "http://artifactBaseUri" ),
-                                                   ErrorReportingPolicy.FAIL );
+                                                   ErrorReportingPolicy.FAIL,
+                                                   Workspace.create( temporaryFolder.newFolder().toPath() ).build() );
         InfraParams actualInfraParams = JsonUtil.deserializeJson( JsonUtil.serializeJson( infraParams ), InfraParams.class );
         assertEquals( infraParams, actualInfraParams );
     }

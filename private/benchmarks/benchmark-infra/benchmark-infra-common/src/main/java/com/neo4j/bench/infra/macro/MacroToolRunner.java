@@ -8,7 +8,6 @@ package com.neo4j.bench.infra.macro;
 import com.google.common.collect.Lists;
 import com.neo4j.bench.common.options.Version;
 import com.neo4j.bench.common.profiling.ProfilerType;
-import com.neo4j.bench.common.tool.macro.Deployment;
 import com.neo4j.bench.common.tool.macro.RunWorkloadParams;
 import com.neo4j.bench.common.util.BenchmarkUtil;
 import com.neo4j.bench.infra.BenchmarkingToolRunner;
@@ -57,9 +56,9 @@ public class MacroToolRunner implements BenchmarkingToolRunner<RunWorkloadParams
         Dataset dataset = artifactStorage.downloadDataset( neo4jVersion.minorVersion(), infraParams.storeName() );
         dataset.extractInto( macroDir );
 
-        Files.setPosixFilePermissions( macroDir.resolve( "run-report-benchmarks.sh" ), PosixFilePermissions.fromString( "r-xr-xr-x" ) );
+        Files.setPosixFilePermissions( artifactsWorkspace.get( Workspace.RUN_SCRIPT ), PosixFilePermissions.fromString( "r-xr-xr-x" ) );
 
-        Path neo4jConfigFile = workspacePath.resolve( "neo4j.conf" );
+        Path neo4jConfigFile = artifactsWorkspace.get( Workspace.NEO4J_CONFIG );
         BenchmarkUtil.assertFileNotEmpty( neo4jConfigFile );
 
         Path workDir = macroDir.resolve( "execute_work_dir" );
@@ -71,8 +70,7 @@ public class MacroToolRunner implements BenchmarkingToolRunner<RunWorkloadParams
         // Unzip the neo4jJar
         if ( SERVER.equals( runWorkloadParams.deployment().deploymentModes() ) )
         {
-            Deployment.Server server = (Deployment.Server) runWorkloadParams.deployment();
-            Path neo4jTar = Workspace.findNeo4jArchive( server.path().toString(), workspacePath );
+            Path neo4jTar = artifactsWorkspace.get( Workspace.NEO4J_ARCHIVE );
             Extractor.extract( workspacePath.resolve( macroDir ), Files.newInputStream( neo4jTar ) );
         }
             /*

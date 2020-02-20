@@ -36,8 +36,6 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Collections;
@@ -152,27 +150,14 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
     @Override
     protected final void doRun( RunWorkloadParams runWorkloadParams )
     {
-        InfraParams infraParams = new InfraParams( awsSecret,
-                                                   awsKey,
-                                                   awsRegion,
-                                                   storeName,
-                                                   resultsStoreUsername,
-                                                   resultsStorePasswordSecretName,
-                                                   resultsStoreUri,
-                                                   artifactBaseUri,
-                                                   errorReportingPolicy );
         try
         {
-
-            // first store job params as JSON
-            JobParams jobParams = new JobParams( infraParams,
-                                                 new BenchmarkingEnvironment(
-                                                         new BenchmarkingTool<>( MacroToolRunner.class, runWorkloadParams ) ) );
+            // first start preparing the workspace
             Path workspacePath = workspaceDir.toPath();
-            Files.write( workspacePath.resolve( Workspace.JOB_PARAMETERS_JSON ), jobParams.toJson().getBytes( StandardCharsets.UTF_8 ) );
-            Path workspaceJson = workspacePath.resolve( Workspace.WORKSPACE_STRUCTURE_JSON );
-            Files.createFile( workspaceJson );
             Workspace workspace = null;
+            File jobParameterJson = workspacePath.resolve( Workspace.JOB_PARAMETERS_JSON ).toFile();
+            jobParameterJson.createNewFile();
+
             if ( runWorkloadParams.deployment().deploymentModes().equals( DeploymentModes.SERVER ) )
             {
                 Deployment.Server server = (Deployment.Server) runWorkloadParams.deployment();
@@ -186,8 +171,24 @@ public class ScheduleMacroCommand extends BaseRunWorkloadCommand
                                                              runWorkloadParams.neo4jEdition()
                                                            );
             }
+
+            // then store job params as JSON
+            InfraParams infraParams = new InfraParams( awsSecret,
+                                                       awsKey,
+                                                       awsRegion,
+                                                       storeName,
+                                                       resultsStoreUsername,
+                                                       resultsStorePasswordSecretName,
+                                                       resultsStoreUri,
+                                                       artifactBaseUri,
+                                                       errorReportingPolicy,
+                                                       workspace );
+
             AWSS3ArtifactStorage artifactStorage = AWSS3ArtifactStorage.getAWSS3ArtifactStorage( infraParams );
-            JsonUtil.serializeJson( workspaceJson, workspace );
+            JobParams jobParams = new JobParams( infraParams,
+                                                 new BenchmarkingEnvironment(
+                                                         new BenchmarkingTool( MacroToolRunner.class, runWorkloadParams ) ) );
+            JsonUtil.serializeJson( jobParameterJson.toPath(), jobParams );
 
             URI artifactBaseURI = infraParams.artifactBaseUri();
             artifactStorage.uploadBuildArtifacts( artifactBaseURI, workspace );

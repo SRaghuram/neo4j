@@ -32,10 +32,21 @@ public interface ArtifactStorage
      *
      * @param baseDir base directory, where artifacts will be downloaded
      * @param artifactBaseURI the bucket to download the files from, should exist
+     * @param goalWorkspace the workspace that we want to download
      * @throws ArtifactStoreException
      * @return workspace with downloaded artifacts
      */
-    Workspace downloadBuildArtifacts( Path baseDir, URI artifactBaseURI ) throws ArtifactStoreException;
+    Workspace downloadBuildArtifacts( Path baseDir, URI artifactBaseURI, Workspace goalWorkspace ) throws ArtifactStoreException;
+
+    /**
+     * Downloads Workspace Structure.
+     *
+     * @param baseDir base directory, where artifacts will be downloaded
+     * @param artifactBaseURI the bucket to download the files from, should exist
+     * @throws ArtifactStoreException
+     * @return workspace with downloaded artifacts
+     */
+    Path downloadParameterFile( Path baseDir, URI artifactBaseURI ) throws ArtifactStoreException;
 
     /**
      * Downloads data set for specific Neo4j version

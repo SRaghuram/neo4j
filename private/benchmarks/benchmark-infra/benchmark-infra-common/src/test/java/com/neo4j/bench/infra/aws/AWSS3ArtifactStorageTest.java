@@ -83,10 +83,9 @@ public class AWSS3ArtifactStorageTest
         Files.createFile( directory.resolve( "artifact1/artifact1.jar" ) );
 
         Workspace workspace = Workspace.create( directory )
-                                       .withArtifacts(
-                                               "artifact0.jar",
-                                               "artifact1/artifact1.jar"
-                                       ).build();
+                                       .withArtifact( Workspace.WORKER_JAR, "artifact0.jar" )
+                                       .withArtifact( Workspace.BENCHMARKING_JAR, "artifact1/artifact1.jar" )
+                                       .build();
 
         AWSS3ArtifactStorage artifactStorage = AWSS3ArtifactStorage.create( endpointConfiguration );
         //when
@@ -104,7 +103,8 @@ public class AWSS3ArtifactStorageTest
 
         // when
         Path downloadDir = temporaryFolder.newFolder( "download" ).toPath();
-        Workspace artifactsWorkspace = artifactStorage.downloadBuildArtifacts( downloadDir, artifactURI );
+        Workspace artifactsWorkspace =
+                artifactStorage.downloadBuildArtifacts( downloadDir, artifactURI, workspace );
         // then
         assertTrue( isValid( workspace, downloadDir ) );
         assertEquals( artifactsWorkspace.baseDir(), downloadDir );

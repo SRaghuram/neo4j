@@ -43,16 +43,15 @@ public class WorkspaceTest
         Files.createFile( workspaceBaseDir.resolve( "macro/run-report-benchmark.sh" ) );
         // when
         Workspace workspace = Workspace.create( workspaceBaseDir )
-                                       .withArtifacts(
-                                               "benchmark-infra-scheduler.jar",
-                                               "neo4j-enterprise-3.3.10-unix.tar.gz",
-                                               "macro/target/macro.jar",
-                                               "macro/run-report-benchmark.sh"
-                                       ).build();
+                                       .withArtifact( Workspace.WORKER_JAR, "benchmark-infra-scheduler.jar" )
+                                       .withArtifact( Workspace.NEO4J_ARCHIVE, "neo4j-enterprise-3.3.10-unix.tar.gz" )
+                                       .withArtifact( Workspace.BENCHMARKING_JAR, "macro/target/macro.jar" )
+                                       .withArtifact( Workspace.RUN_SCRIPT, "macro/run-report-benchmark.sh" )
+                                       .build();
         // then
         assertNotNull( workspace );
         // when
-        Path path = workspace.get( "benchmark-infra-scheduler.jar" );
+        Path path = workspace.get( Workspace.WORKER_JAR );
         assertTrue( Files.isRegularFile( path ) );
     }
 
@@ -65,35 +64,12 @@ public class WorkspaceTest
         assertThrows( IllegalStateException.class, () ->
         {
             Workspace.create( workspaceBaseDir )
-                     .withArtifacts(
-                             "benchmark-infra-scheduler.jar",
-                             "neo4j-enterprise-3.3.10-unix.tar.gz",
-                             "macro/target/macro.jar",
-                             "macro/run-report-benchmark.sh"
-                     ).build();
+                     .withArtifact( Workspace.WORKER_JAR, "benchmark-infra-scheduler.jar" )
+                     .withArtifact( Workspace.NEO4J_ARCHIVE, "neo4j-enterprise-3.3.10-unix.tar.gz" )
+                     .withArtifact( Workspace.BENCHMARKING_JAR, "macro/target/macro.jar" )
+                     .withArtifact( Workspace.RUN_SCRIPT, "macro/run-report-benchmark.sh" )
+                     .build();
         } );
-    }
-
-    @Test
-    public void filterFilesRecursively() throws Exception
-    {
-        // given
-        Path workspaceBaseDir = temporaryFolder.newFolder().toPath();
-        // create files & directories struture
-        Files.createDirectories( workspaceBaseDir.resolve( "a" ) );
-        Files.createFile( workspaceBaseDir.resolve( "a" ).resolve( "a.txt" ) );
-        Files.createDirectories( workspaceBaseDir.resolve( "a" ).resolve( "b" ) );
-        Files.createFile( workspaceBaseDir.resolve( "a" ).resolve( "b" ).resolve( "b.txt" ) );
-        // when
-        Workspace workspace = Workspace.create( workspaceBaseDir ).withFilesRecursively( TrueFileFilter.INSTANCE ).build();
-        // then
-        assertThat( workspace.allArtifacts(), containsInAnyOrder(
-                workspaceBaseDir.resolve( "a/a.txt" ),
-                workspaceBaseDir.resolve( "a/b/b.txt" ) ) );
-        // when
-        workspace = Workspace.create( workspaceBaseDir ).withFilesRecursively( new NameFileFilter( "b.txt" ) ).build();
-        // then
-        assertThat( workspace.allArtifacts(), contains( workspaceBaseDir.resolve( "a/b/b.txt" ) ) );
     }
 
     @Test( expected = RuntimeException.class )
@@ -104,9 +80,8 @@ public class WorkspaceTest
         // macro workspace structure
         Files.createFile( workspaceBaseDir.resolve( "benchmark-infra-scheduler.jar" ) );
         Workspace workspace = Workspace.create( workspaceBaseDir )
-                                       .withArtifacts(
-                                                "benchmark-infra-scheduler.jar"
-                                       ).build();
+                                       .withArtifact( Workspace.WORKER_JAR, "benchmark-infra-scheduler.jar"
+                                                    ).build();
         // when
         Path path = workspace.get( "artifact.jar" );
     }
@@ -121,10 +96,9 @@ public class WorkspaceTest
         Files.createDirectories( workspaceBaseDir.resolve( "macro" ) );
         Files.createFile( workspaceBaseDir.resolve( "macro/run-report-benchmark.sh" ) );
         Workspace workspace = Workspace.create( workspaceBaseDir )
-                                       .withArtifacts(
-                                               "neo4j-enterprise-3.3.10-unix.tar.gz",
-                                               "macro/run-report-benchmark.sh"
-                                                     ).build();
+                                       .withArtifact( Workspace.NEO4J_ARCHIVE, "neo4j-enterprise-3.3.10-unix.tar.gz" )
+                                       .withArtifact( Workspace.RUN_SCRIPT, "macro/run-report-benchmark.sh" )
+                                       .build();
         // when
         String json = JsonUtil.serializeJson( workspace );
         // then
