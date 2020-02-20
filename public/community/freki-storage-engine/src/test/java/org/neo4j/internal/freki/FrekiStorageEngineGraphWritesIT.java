@@ -67,6 +67,8 @@ import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.monitoring.DatabasePanicEventGenerator;
 import org.neo4j.storageengine.api.CommandCreationContext;
 import org.neo4j.storageengine.api.CommandsToApply;
+import org.neo4j.storageengine.api.NodeLabelUpdate;
+import org.neo4j.storageengine.api.NodeLabelUpdateListener;
 import org.neo4j.storageengine.api.PropertyKeyValue;
 import org.neo4j.storageengine.api.StandardConstraintRuleAccessor;
 import org.neo4j.storageengine.api.StorageCommand;
@@ -126,6 +128,7 @@ public class FrekiStorageEngineGraphWritesIT
 
     private LifeSupport life;
     private StorageEngine storageEngine;
+    private RecordingNodeLabelUpdateListener nodeLabelUpdateListener;
 
     @BeforeEach
     void start() throws IOException
@@ -145,6 +148,8 @@ public class FrekiStorageEngineGraphWritesIT
                         new NoopIndexConfigCompletor(), NO_LOCK_SERVICE, new DefaultIdGeneratorFactory( fs, RecoveryCleanupWorkCollector.immediate() ),
                         new DefaultIdController(), databaseHealth, NullLogProvider.getInstance(), RecoveryCleanupWorkCollector.immediate(),
                         PageCacheTracer.NULL, true ) );
+        nodeLabelUpdateListener = new RecordingNodeLabelUpdateListener();
+        storageEngine.addNodeLabelUpdateListener( nodeLabelUpdateListener );
         life.start();
     }
 
@@ -383,6 +388,7 @@ public class FrekiStorageEngineGraphWritesIT
             nodeCursor.single( nodeId );
             assertThat( nodeCursor.next() ).isTrue();
             assertArrayEquals( labelIds.toSortedArray(), nodeCursor.labels() );
+            nodeLabelUpdateListener.assertNodeHasLabels( nodeId, labelIds );
 
             // properties
             nodeCursor.properties( propertyCursor );
@@ -552,6 +558,27 @@ public class FrekiStorageEngineGraphWritesIT
         public int hashCode()
         {
             return Objects.hash( startNodeId, type, endNodeId, properties );
+        }
+    }
+
+    private static class RecordingNodeLabelUpdateListener implements NodeLabelUpdateListener
+    {
+        private final MutableLongObjectMap<long[]> nodeLabels = LongObjectMaps.mutable.empty();
+
+        @Override
+        public void applyUpdates( Iterable<NodeLabelUpdate> labelUpdates )
+        {
+            for ( NodeLabelUpdate labelUpdate : labelUpdates )
+            {
+                nodeLabels.put( labelUpdate.getNodeId(), labelUpdate.getLabelsAfter() );
+            }
+        }
+
+        void assertNodeHasLabels( long nodeId, LongSet expectedLabels )
+        {
+            long[] storedLabels = nodeLabels.get( nodeId );
+            assertThat( storedLabels ).isNotNull();
+            assertThat( LongSets.immutable.of( storedLabels ) ).isEqualTo( expectedLabels );
         }
     }
 }
