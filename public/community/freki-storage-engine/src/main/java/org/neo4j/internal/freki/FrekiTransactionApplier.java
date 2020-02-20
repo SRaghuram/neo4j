@@ -32,11 +32,17 @@ import org.neo4j.io.IOUtils;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.storageengine.api.IndexUpdateListener;
+import org.neo4j.storageengine.api.NodeLabelUpdate;
 import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.storageengine.api.TransactionApplicationMode;
 import org.neo4j.storageengine.util.IdGeneratorUpdatesWorkSync;
 import org.neo4j.storageengine.util.IdUpdateListener;
+import org.neo4j.storageengine.util.LabelIndexUpdatesWorkSync;
+import org.neo4j.util.concurrent.AsyncApply;
 
+import static org.apache.commons.lang3.ArrayUtils.EMPTY_LONG_ARRAY;
+import static org.neo4j.internal.freki.MutableNodeRecordData.SIZE_SLOT_HEADER;
+import static org.neo4j.internal.freki.StreamVByte.readIntDeltas;
 import static org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier.TRACER_SUPPLIER;
 import static org.neo4j.storageengine.api.TransactionApplicationMode.REVERSE_RECOVERY;
 
@@ -47,13 +53,15 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
     private final IndexUpdateListener indexUpdateListener;
     private List<IndexDescriptor> createdIndexes;
     private final IdGeneratorUpdatesWorkSync.Batch idUpdates;
+    private final LabelIndexUpdatesWorkSync.Batch labelIndexUpdates;
 
     FrekiTransactionApplier( Stores stores, IndexUpdateListener indexUpdateListener, TransactionApplicationMode mode,
-            IdGeneratorUpdatesWorkSync idGeneratorUpdatesWorkSync ) throws IOException
+            IdGeneratorUpdatesWorkSync idGeneratorUpdatesWorkSync, LabelIndexUpdatesWorkSync labelIndexUpdatesWorkSync ) throws IOException
     {
         this.stores = stores;
         this.storeCursors = stores.openMainStoreWriteCursors();
         this.indexUpdateListener = indexUpdateListener;
+        this.labelIndexUpdates = mode == REVERSE_RECOVERY || labelIndexUpdatesWorkSync == null ? null : labelIndexUpdatesWorkSync.newBatch();
         this.idUpdates = mode == REVERSE_RECOVERY ? null : idGeneratorUpdatesWorkSync.newBatch();
     }
 
@@ -70,6 +78,23 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
         int sizeExp = record.sizeExp();
         stores.mainStore( sizeExp ).write( storeCursors[sizeExp], node.after(), idUpdates != null ? idUpdates : IdUpdateListener.IGNORE,
                 PageCursorTracer.NULL );
+        // OK so this logic here is quite specific to the format, it knows that labels are kept in the smallest records only and
+        // reads label information from it and hands off to the label index updates listener.
+        if ( sizeExp == 0 && labelIndexUpdates != null )
+        {
+            labelIndexUpdates.add( NodeLabelUpdate.labelChanges( node.after().id, parseLabels( node.before() ), parseLabels( node.after() ) ) );
+        }
+    }
+
+    private long[] parseLabels( Record record )
+    {
+        if ( !record.hasFlag( Record.FLAG_IN_USE ) )
+        {
+            return EMPTY_LONG_ARRAY;
+        }
+        StreamVByte.LongArrayTarget target = new StreamVByte.LongArrayTarget();
+        readIntDeltas( target, record.dataForReading().array(), SIZE_SLOT_HEADER );
+        return target.array();
     }
 
     @Override
@@ -176,9 +201,11 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
         {
             indexUpdateListener.createIndexes( createdIndexes.toArray( new IndexDescriptor[createdIndexes.size()] ) );
         }
+        AsyncApply labelUpdatesAsyncApply = labelIndexUpdates != null ? labelIndexUpdates.applyAsync() : AsyncApply.EMPTY;
         if ( idUpdates != null )
         {
-            idUpdates.close();
+            idUpdates.apply();
         }
+        labelUpdatesAsyncApply.await();
     }
 }

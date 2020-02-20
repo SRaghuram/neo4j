@@ -80,6 +80,7 @@ import org.neo4j.storageengine.api.TransactionIdStore;
 import org.neo4j.storageengine.api.txstate.ReadableTransactionState;
 import org.neo4j.storageengine.api.txstate.TxStateVisitor;
 import org.neo4j.storageengine.util.IdGeneratorUpdatesWorkSync;
+import org.neo4j.storageengine.util.LabelIndexUpdatesWorkSync;
 import org.neo4j.token.TokenHolders;
 
 import static org.neo4j.internal.helpers.ArrayUtil.concat;
@@ -111,6 +112,7 @@ public class FrekiStorageEngine implements StorageEngine
 
     private final Stores stores;
     private final IdGeneratorUpdatesWorkSync idGeneratorUpdatesWorkSync;
+    private LabelIndexUpdatesWorkSync labelIndexUpdatesWorkSync;
     private final List<Pair<IdGeneratorFactory,IdType>> idGeneratorsToRegisterOnTheWorkSync = new ArrayList<>();
     private IndexUpdateListener indexUpdateListener;
     private NodeLabelUpdateListener nodeLabelUpdateListener;
@@ -247,6 +249,7 @@ public class FrekiStorageEngine implements StorageEngine
     public void addNodeLabelUpdateListener( NodeLabelUpdateListener nodeLabelUpdateListener )
     {
         this.nodeLabelUpdateListener = nodeLabelUpdateListener;
+        this.labelIndexUpdatesWorkSync = new LabelIndexUpdatesWorkSync( nodeLabelUpdateListener );
     }
 
     @Override
@@ -268,7 +271,8 @@ public class FrekiStorageEngine implements StorageEngine
         // point between closing this and the locks above
         CommandsToApply initialBatch = batch;
         try ( LockGroup locks = new LockGroup();
-              FrekiTransactionApplier txApplier = new FrekiTransactionApplier( stores, indexUpdateListener, mode, idGeneratorUpdatesWorkSync ) )
+                FrekiTransactionApplier txApplier = new FrekiTransactionApplier( stores, indexUpdateListener, mode, idGeneratorUpdatesWorkSync,
+                        labelIndexUpdatesWorkSync ) )
         {
             while ( batch != null )
             {
@@ -278,8 +282,8 @@ public class FrekiStorageEngine implements StorageEngine
         }
         catch ( Throwable cause )
         {
-            TransactionApplyKernelException kernelException = new TransactionApplyKernelException(
-                    cause, "Failed to apply transaction: %s", batch == null ? initialBatch : batch );
+            TransactionApplyKernelException kernelException =
+                    new TransactionApplyKernelException( cause, "Failed to apply transaction: %s", batch == null ? initialBatch : batch );
             databaseHealth.panic( kernelException );
             throw kernelException;
         }
