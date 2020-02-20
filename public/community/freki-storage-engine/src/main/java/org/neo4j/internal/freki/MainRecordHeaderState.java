@@ -28,8 +28,10 @@ class MainRecordHeaderState
     int relationshipsOffset;
     int endOffset;
     boolean containsForwardPointer;
+    boolean containsBackPointer;
     long forwardPointer;
     boolean isDense;
+    long backPointer;
 
     void reset()
     {
