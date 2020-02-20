@@ -6,6 +6,7 @@
 package org.neo4j.cypher.internal.physicalplanning
 
 import org.neo4j.cypher.internal.expressions.ASTCachedProperty
+import org.neo4j.cypher.internal.macros.AssertMacros
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.ApplyPlanSlotKey
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.CachedPropertySlotKey
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.SlotKey
@@ -23,7 +24,6 @@ import scala.collection.mutable
 object SlotConfiguration {
   def empty = new SlotConfiguration(mutable.Map.empty, 0, 0)
 
-  // This method uses `empty`, `newLong`, and `newReference`, instead of passing in a Map, so that aliases are computed correctly.
   def apply(slots: Map[String, Slot], numberOfLongs: Int, numberOfReferences: Int): SlotConfiguration = {
     val stringToSlot = mutable.Map[SlotKey, Slot](slots.toSeq.map(kv => (VariableSlotKey(kv._1), kv._2)): _*)
     new SlotConfiguration(stringToSlot, numberOfLongs, numberOfReferences)
@@ -83,6 +83,7 @@ class SlotConfiguration private(private val slots: mutable.Map[SlotConfiguration
    * NOTE: method can only test keys that are either 'original key' or alias, MUST NOT be called on keys that are neither (i.e., do not exist in the configuration).
    */
   def isAlias(key: String): Boolean = {
+    AssertMacros.checkOnlyWhenAssertionsAreEnabled(get(key).isDefined, s"Ran `isAlias` on $key which is not part of the slot configuration.")
     !slotAliases.contains(key)
   }
 
@@ -128,9 +129,9 @@ class SlotConfiguration private(private val slots: mutable.Map[SlotConfiguration
       existingAliases.foreach(alias => slots.put(VariableSlotKey(alias), modifiedSlot))
     } else {
       // Find original key
-      val originalKey = slotAliases.find {
-        case (_, aliases) => aliases.contains(key)
-      }.map(_._1).getOrElse(throw new InternalException(s"No original key found for alias $key"))
+      val originalKey = slotAliases.collectFirst {
+        case (slotKey, aliases) if aliases.contains(key) => slotKey
+      }.getOrElse(throw new InternalException(s"No original key found for alias $key"))
       replaceExistingSlot(originalKey, existingSlot, modifiedSlot)
     }
   }
