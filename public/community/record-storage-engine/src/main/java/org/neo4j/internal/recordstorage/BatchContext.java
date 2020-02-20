@@ -35,12 +35,14 @@ import org.neo4j.storageengine.api.EntityTokenUpdateListener;
 import org.neo4j.storageengine.api.IndexUpdateListener;
 import org.neo4j.storageengine.api.StorageEngine;
 import org.neo4j.storageengine.util.IdUpdateListener;
+import org.neo4j.storageengine.util.LabelIndexUpdatesWorkSync;
+import org.neo4j.storageengine.util.TokenUpdateWork;
 import org.neo4j.util.concurrent.AsyncApply;
 import org.neo4j.util.concurrent.WorkSync;
 
 public class BatchContext implements AutoCloseable
 {
-    private final WorkSync<EntityTokenUpdateListener,TokenUpdateWork> labelScanStoreSync;
+    private final LabelIndexUpdatesWorkSync.Batch labelScanStoreSync;
     private final WorkSync<EntityTokenUpdateListener,TokenUpdateWork> relationshipTypeScanStoreSync;
     private final WorkSync<IndexUpdateListener,IndexUpdatesWork> indexUpdatesSync;
     private final NodeStore nodeStore;
@@ -57,7 +59,7 @@ public class BatchContext implements AutoCloseable
     private IndexUpdates indexUpdates;
 
     public BatchContext( IndexUpdateListener indexUpdateListener,
-            WorkSync<EntityTokenUpdateListener,TokenUpdateWork> labelScanStoreSync,
+            LabelIndexUpdatesWorkSync.Batch labelScanStoreSync,
             WorkSync<EntityTokenUpdateListener,TokenUpdateWork> relationshipTypeScanStoreSync,
             WorkSync<IndexUpdateListener,IndexUpdatesWork> indexUpdatesSync, NodeStore nodeStore, PropertyStore propertyStore,
             RecordStorageEngine recordStorageEngine, SchemaCache schemaCache, PageCursorTracer cursorTracer,
@@ -102,7 +104,7 @@ public class BatchContext implements AutoCloseable
         {
             // Updates are sorted according to node id here, an artifact of node commands being sorted
             // by node id when extracting from TransactionRecordState.
-            labelUpdatesApply = labelScanStoreSync.applyAsync( new TokenUpdateWork( labelUpdates, cursorTracer ) );
+            labelUpdatesApply = labelScanStoreSync.applyAsync( cursorTracer );
             labelUpdates = null;
         }
         if ( relationshipTypeUpdates != null )
