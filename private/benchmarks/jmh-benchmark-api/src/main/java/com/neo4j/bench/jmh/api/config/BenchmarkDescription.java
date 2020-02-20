@@ -25,14 +25,13 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static com.google.common.collect.Lists.newArrayList;
 import static com.google.common.collect.Sets.newHashSet;
 import static java.lang.String.format;
 import static java.util.function.Function.identity;
-import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toMap;
-import static java.util.stream.Collectors.toSet;
+import static java.util.stream.Collectors.*;
 
 /**
  * Describes one available benchmark (class that extends AbstractBenchmark),
@@ -40,6 +39,47 @@ import static java.util.stream.Collectors.toSet;
  */
 public class BenchmarkDescription
 {
+
+    static List<BenchmarkDescription> implode(Set<BenchmarkDescription> benchmarkDescriptions) {
+        Map<String,List<BenchmarkDescription>> descriptionsByName =
+                benchmarkDescriptions.stream().collect( groupingBy( BenchmarkDescription::className ) );
+
+        return descriptionsByName.
+                values().
+                stream()
+                .map(group -> {
+
+                    Map<String,List<BenchmarkParamDescription>> parametersByName = group
+                            .stream()
+                            .flatMap( bd -> bd.parameters().values().stream() )
+                            .collect( groupingBy( BenchmarkParamDescription::name ) );
+
+                    Map<String,BenchmarkParamDescription> implodedParameters = parametersByName
+                            .values()
+                            .stream()
+                            .map( parameterGroup -> new BenchmarkParamDescription(
+                                    parameterGroup.get( 0 ).name(),
+                                    parameterGroup.get( 0 ).allowedValues(),
+                                    parameterGroup.stream().flatMap( param -> param.values().stream() ).collect( toSet() )
+                            ) ).collect( toMap(
+                                    BenchmarkParamDescription::name,
+                                    param -> param
+                            ) );
+
+
+                    return new BenchmarkDescription(
+                        group.get( 0 ).className(),
+                        group.get( 0 ).group(),
+                        group.get( 0 ).isThreadSafe(),
+                        group.stream().flatMap(bd -> bd.methods().stream()).distinct().collect( toMap( BenchmarkMethodDescription::name, bd -> bd ) ),
+                        implodedParameters,
+                        group.get( 0 ).description(),
+                        true
+                    );
+                }).collect( Collectors.toList() );
+    }
+
+
     private final String className;
     private final String group;
     private final boolean isThreadSafe;

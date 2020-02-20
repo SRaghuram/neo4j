@@ -5,6 +5,7 @@
  */
 package com.neo4j.bench.jmh.api.config;
 
+import com.neo4j.bench.common.model.Benchmark;
 import com.neo4j.bench.jmh.api.benchmarks.invalid.DuplicateAllowedBenchmark;
 import com.neo4j.bench.jmh.api.benchmarks.invalid.DuplicateBaseBenchmark;
 import com.neo4j.bench.jmh.api.benchmarks.valid.ValidDisabledBenchmark;
@@ -12,11 +13,7 @@ import com.neo4j.bench.jmh.api.benchmarks.valid.ValidEnabledBenchmark1;
 import org.junit.jupiter.api.Test;
 import org.openjdk.jmh.annotations.Mode;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Stream;
 
 import static com.google.common.collect.Lists.newArrayList;
@@ -804,5 +801,52 @@ class BenchmarkDescriptionTest extends BenchmarksFinderFixture
             assertThat( executionCount, equalTo( explodedSize ) );
         }
         assertThat( validation.report(), validation.isValid() );
+    }
+
+    @Test
+    public void shouldImplodeBenchmarkDescriptions()
+    {
+        String className = "classname";
+        String group = "group";
+        boolean isThreadSafe = true;
+        String description = "description";
+        boolean isEnabled = true;
+
+        String method1Name = "method1";
+        Mode[] method1Modes = {Mode.Throughput};
+        BenchmarkMethodDescription method1 = new BenchmarkMethodDescription( method1Name, method1Modes );
+        String method2Name = "method2";
+        Mode[] method2Modes = {Mode.SampleTime};
+        BenchmarkMethodDescription method2 = new BenchmarkMethodDescription( method2Name, method2Modes );
+        HashMap<String,BenchmarkMethodDescription> methods = new HashMap<>();
+        methods.put( method1.name(), method1 );
+        methods.put( method2.name(), method2 );
+
+        BenchmarkParamDescription number = new BenchmarkParamDescription(
+                "number",
+                newHashSet( "1", "2" ),
+                newHashSet( "1", "2" ) );
+        BenchmarkParamDescription character = new BenchmarkParamDescription(
+                "char",
+                newHashSet( "a", "b" ),
+                newHashSet( "a", "b" ) );
+        HashMap<String,BenchmarkParamDescription> parameters = new HashMap<>();
+        parameters.put( number.name(), number );
+        parameters.put( character.name(), character );
+
+        BenchmarkDescription original = new BenchmarkDescription(
+                className,
+                group,
+                isThreadSafe,
+                methods,
+                parameters,
+                description,
+                isEnabled );
+
+
+        List<BenchmarkDescription> originalExplodeImplode = BenchmarkDescription.implode( original.explode() );
+        assertThat( originalExplodeImplode.size(), equalTo( 1 ));
+
+        assertThat( originalExplodeImplode.get( 0 ), equalTo( original ) );
     }
 }
