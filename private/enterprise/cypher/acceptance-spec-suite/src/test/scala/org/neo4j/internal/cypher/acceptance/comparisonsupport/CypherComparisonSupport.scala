@@ -76,7 +76,7 @@ trait CypherComparisonSupport extends AbstractCypherComparisonSupport {
     Map(GraphDatabaseSettings.cypher_hints_error -> TRUE,
       GraphDatabaseSettings.cypher_pipelined_batch_size_small -> Integer.valueOf(4),
       GraphDatabaseSettings.cypher_pipelined_batch_size_big -> Integer.valueOf(4),
-      GraphDatabaseSettings.cypher_worker_count -> Integer.valueOf(0)
+      GraphDatabaseSettings.cypher_worker_count -> Integer.valueOf(if (Configs.runOnlySafeScenarios) -1 else 0)
     )
 }
 

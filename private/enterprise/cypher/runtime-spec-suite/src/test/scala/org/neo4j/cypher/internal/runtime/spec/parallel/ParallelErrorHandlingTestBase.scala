@@ -26,7 +26,7 @@ object ParallelErrorHandlingTestBase {
 }
 
 abstract class ParallelErrorHandlingTestBase(runtime: CypherRuntime[EnterpriseRuntimeContext])
-  extends RuntimeTestSuite(ENTERPRISE.NO_FUSING.copyWith(
+  extends RuntimeTestSuite(ENTERPRISE.WITH_NO_FUSING(ENTERPRISE.DEFAULT).copyWith(
     GraphDatabaseSettings.cypher_pipelined_batch_size_small -> Integer.valueOf(MORSEL_SIZE),
     GraphDatabaseSettings.cypher_pipelined_batch_size_big -> Integer.valueOf(MORSEL_SIZE),
     GraphDatabaseSettings.cypher_worker_count -> Integer.valueOf(WORKERS)), runtime) {

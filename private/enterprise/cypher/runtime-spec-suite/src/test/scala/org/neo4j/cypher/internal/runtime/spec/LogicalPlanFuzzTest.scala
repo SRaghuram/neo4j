@@ -32,7 +32,7 @@ class LogicalPlanFuzzTest extends CypherFunSuite
   private val managementService = ENTERPRISE.DEFAULT.newGraphManagementService()
   private val graphDb = managementService.database(DEFAULT_DATABASE_NAME)
   private val logProvider: AssertableLogProvider = new AssertableLogProvider()
-  private val runtimeTestSupport = new RuntimeTestSupport[EnterpriseRuntimeContext](graphDb, ENTERPRISE.FUSING, false, logProvider) with GraphCreation[EnterpriseRuntimeContext] {
+  private val runtimeTestSupport = new RuntimeTestSupport[EnterpriseRuntimeContext](graphDb, ENTERPRISE.WITH_FUSING(ENTERPRISE.DEFAULT), false, logProvider) with GraphCreation[EnterpriseRuntimeContext] {
     override protected def runtimeTestSupport: RuntimeTestSupport[EnterpriseRuntimeContext] = this
   }
   private val randVals = RandomValues.create()

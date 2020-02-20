@@ -11,10 +11,13 @@ import java.util.concurrent.atomic.AtomicBoolean
 import com.neo4j.cypher.EnterpriseGraphDatabaseTestSupport
 import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.ExecutionEngineFunSuite
+import org.neo4j.exceptions.RuntimeUnsupportedException
+import org.neo4j.graphdb.QueryExecutionException
 import org.neo4j.graphdb.Result
 import org.neo4j.graphdb.Result.ResultVisitor
 import org.neo4j.graphdb.config.Setting
 import org.neo4j.internal.cypher.acceptance.ParallelRuntimeAcceptanceTest.MORSEL_SIZE
+import org.neo4j.internal.cypher.acceptance.comparisonsupport.CypherComparisonSupport
 
 import scala.collection.JavaConverters.iterableAsScalaIterableConverter
 
@@ -78,5 +81,17 @@ class ParallelRuntimeAcceptanceTest extends ExecutionEngineFunSuite with Enterpr
     notifications.head.getDescription should equal("You are using an experimental feature (The parallel runtime is " +
       "experimental and might suffer from instability and potentially correctness issues.)")
 
+  }
+}
+
+class NoWorkersParallelRuntimeTest extends ExecutionEngineFunSuite with CypherComparisonSupport {
+  override def databaseConfig(): Map[Setting[_], Object] = super.databaseConfig() ++ Map(
+    GraphDatabaseSettings.cypher_worker_count -> java.lang.Integer.valueOf(-1)
+  )
+
+  test("should not use parallel runtime if there are no workers") {
+    the[RuntimeUnsupportedException] thrownBy {
+      executeSingle("CYPHER runtime=parallel MATCH (n) RETURN n")
+    } should have message "There are no workers configured for the parallel runtime. Change 'unsupported.cypher.number_of_workers' to something other than -1 to use the parallel runtime."
   }
 }

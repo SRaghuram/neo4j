@@ -7,7 +7,6 @@ package org.neo4j.cypher.internal.runtime.pipelined
 
 import java.util.concurrent.ThreadFactory
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.LockSupport
 
 import org.neo4j.cypher.internal.RuntimeResourceLeakException
@@ -43,11 +42,9 @@ trait WorkerManagement extends WorkerWaker {
   def assertNoWorkerIsActive(): Boolean
 
   /**
-   * WorkerManagement is lazy. It is allowed to defer starting of workers until they are needed.
-   * Users of WorkerManagement need to ensure that this method is called before submitting any
-   * work to be picked up by the Workers.
+   * @return `true` if there is at least one Worker for this WorkerManager. `false` otherwise.
    */
-  def ensureStarted(): Unit
+  def hasWorkers: Boolean
 }
 
 class WorkerManager(val numberOfWorkers: Int, threadFactory: ThreadFactory) extends WorkerManagement with Lifecycle {
@@ -91,32 +88,26 @@ class WorkerManager(val numberOfWorkers: Int, threadFactory: ThreadFactory) exte
 
   @volatile private var workerThreads: Array[Thread] = _
 
-  private val threadsStarted = new AtomicBoolean(false)
-
   override def init(): Unit = {}
 
   override def start(): Unit = {
-    // Workers will be started lazily when the first parallel query is issues.
+    DebugLog.log("starting worker threads")
+    _workers.foreach(_.reset())
+    workerThreads = _workers.map(threadFactory.newThread(_))
+    workerThreads.foreach(_.start())
+    DebugLog.logDiff("done")
   }
 
-  override def ensureStarted(): Unit = {
-    if (threadsStarted.compareAndSet(false, true)) {
-      DebugLog.log("starting worker threads")
-      _workers.foreach(_.reset())
-      workerThreads = _workers.map(threadFactory.newThread(_))
-      workerThreads.foreach(_.start())
-      DebugLog.logDiff("done")
-    }
+  override def hasWorkers: Boolean = {
+    _workers.nonEmpty
   }
 
   override def stop(): Unit = {
-    if (threadsStarted.compareAndSet(true, false)) {
-      DebugLog.log("stopping worker threads")
-      _workers.foreach(_.stop())
-      workerThreads.foreach(LockSupport.unpark)
-      workerThreads.foreach(_.join(threadJoinWait.toMillis))
-      DebugLog.logDiff("done")
-    }
+    DebugLog.log("stopping worker threads")
+    _workers.foreach(_.stop())
+    workerThreads.foreach(LockSupport.unpark)
+    workerThreads.foreach(_.join(threadJoinWait.toMillis))
+    DebugLog.logDiff("done")
   }
 
   override def shutdown(): Unit = {}

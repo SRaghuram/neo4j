@@ -11,11 +11,12 @@ import org.neo4j.cypher.internal.EnterpriseRuntimeContext
 import org.neo4j.cypher.internal.PipelinedRuntime.PIPELINED
 import org.neo4j.cypher.internal.logical.plans.Ascending
 import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE
-import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE.FUSING
 import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE.MORSEL_SIZE
-import org.neo4j.cypher.internal.runtime.spec.ENTERPRISE.NO_FUSING
+import org.neo4j.cypher.internal.runtime.spec.Edition
 import org.neo4j.cypher.internal.runtime.spec.LogicalQueryBuilder
 import org.neo4j.cypher.internal.runtime.spec.RuntimeTestSuite
+import org.neo4j.cypher.internal.runtime.spec.pipelined.PipelinedSpecSuite.FUSING
+import org.neo4j.cypher.internal.runtime.spec.pipelined.PipelinedSpecSuite.NO_FUSING
 import org.neo4j.cypher.internal.runtime.spec.pipelined.PipelinedSpecSuite.SIZE_HINT
 import org.neo4j.cypher.internal.runtime.spec.slotted.WithSlotsMemoryManagementTestBase
 import org.neo4j.cypher.internal.runtime.spec.stress.WorkloadTestBase
@@ -85,6 +86,9 @@ import org.scalatest.Outcome
 
 object PipelinedSpecSuite {
   val SIZE_HINT = 1000
+
+  val FUSING: Edition[EnterpriseRuntimeContext] = ENTERPRISE.WITH_FUSING(ENTERPRISE.DEFAULT)
+  val NO_FUSING: Edition[EnterpriseRuntimeContext] = ENTERPRISE.WITH_NO_FUSING(ENTERPRISE.DEFAULT)
 }
 
 trait PipelinedSpecSuite extends AssertFusingSucceeded {
@@ -344,9 +348,9 @@ class PipelinedProfileDbHitsTest extends PipelinedDbHitsTestBase(FUSING, PIPELIN
 
   override protected def canFuseOverPipelines: Boolean = true
 }
-class PipelinedProfileMemoryNoFusingTest extends ProfileMemoryTestBase(ENTERPRISE.NO_FUSING, PIPELINED)
+class PipelinedProfileMemoryNoFusingTest extends ProfileMemoryTestBase(NO_FUSING, PIPELINED)
                                          with ProfilePipelinedMemoryTestBase
-class PipelinedProfileMemoryTest extends ProfileMemoryTestBase(ENTERPRISE.FUSING, PIPELINED)
+class PipelinedProfileMemoryTest extends ProfileMemoryTestBase(FUSING, PIPELINED)
                                  with ProfilePipelinedMemoryTestBase
-class PipelinedProfileMemoryTrackingDisabledNoFusingTest extends ProfileMemoryTrackingDisabledTestBase(ENTERPRISE.NO_FUSING, PIPELINED, SIZE_HINT)
-class PipelinedProfileMemoryTrackingDisabledTest extends ProfileMemoryTrackingDisabledTestBase(ENTERPRISE.FUSING, PIPELINED, SIZE_HINT)
+class PipelinedProfileMemoryTrackingDisabledNoFusingTest extends ProfileMemoryTrackingDisabledTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
+class PipelinedProfileMemoryTrackingDisabledTest extends ProfileMemoryTrackingDisabledTestBase(FUSING, PIPELINED, SIZE_HINT)

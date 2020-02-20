@@ -8,7 +8,6 @@ package cypher.features
 import java.util
 
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder
-import cypher.features.Neo4jAdapter.defaultTestConfig
 import cypher.features.ScenarioTestHelper.createTests
 import cypher.features.ScenarioTestHelper.printComputedBlacklist
 import org.junit.jupiter.api.Assertions.fail

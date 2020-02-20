@@ -25,7 +25,13 @@ public interface AbstractEnterpriseEditionModule
         // Create Cypher workers
         Config globalConfig = globalModule.getGlobalConfig();
         int configuredWorkers = globalConfig.get( GraphDatabaseSettings.cypher_worker_count );
-        int numberOfThreads = configuredWorkers == 0 ? Runtime.getRuntime().availableProcessors() : configuredWorkers;
+        // -1 => no Threads
+        // 0  => `number of cores` Threads
+        // n  => n Threads
+        int numberOfThreads =
+                configuredWorkers == -1 ? 0 :
+                (configuredWorkers == 0 ? Runtime.getRuntime().availableProcessors() :
+                 configuredWorkers);
         WorkerManager workerManager =
                 new WorkerManager( numberOfThreads, globalModule.getJobScheduler().threadFactory( Group.CYPHER_WORKER ) );
         globalModule.getGlobalDependencies().satisfyDependency( workerManager );

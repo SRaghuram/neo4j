@@ -5,6 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.execution
 
+import org.neo4j.configuration.GraphDatabaseSettings
 import org.neo4j.cypher.internal.macros.AssertMacros.checkOnlyWhenAssertionsAreEnabled
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
 import org.neo4j.cypher.internal.runtime.debug.DebugLog
@@ -59,6 +60,11 @@ class FixedWorkersQueryExecutor(val workerResourceProvider: WorkerResourceProvid
       throw new RuntimeUnsupportedException("The parallel runtime is not supported if there are changes in the transaction state. Use another runtime.")
     }
 
+    if (!workerManager.hasWorkers) {
+      throw new RuntimeUnsupportedException("There are no workers configured for the parallel runtime. " +
+        s"Change '${GraphDatabaseSettings.cypher_worker_count.name()}' to something other than -1 to use the parallel runtime.")
+    }
+
     DebugLog.log("FixedWorkersQueryExecutor.execute()")
 
     val stateFactory = new ConcurrentStateFactory
@@ -106,7 +112,6 @@ class FixedWorkersQueryExecutor(val workerResourceProvider: WorkerResourceProvid
     queryContext.transactionalContext.transaction.freezeLocks()
 
     executionState.initializeState()
-    workerManager.ensureStarted()
     workerManager.queryManager.addQuery(executingQuery)
     ProfiledQuerySubscription(executingQuery, queryProfile, stateFactory.memoryTracker)
   }

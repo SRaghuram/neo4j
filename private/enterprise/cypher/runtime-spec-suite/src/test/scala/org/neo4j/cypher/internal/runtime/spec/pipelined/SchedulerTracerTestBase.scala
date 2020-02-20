@@ -32,7 +32,7 @@ object SchedulerTracerTestBase {
 
 
 abstract class SchedulerTracerTestBase(runtime: CypherRuntime[EnterpriseRuntimeContext], tempCSVPath: Path = SchedulerTracerTestBase.newTempCSVPath())
-  extends RuntimeTestSuite[EnterpriseRuntimeContext](ENTERPRISE.NO_FUSING.copyWith(
+  extends RuntimeTestSuite[EnterpriseRuntimeContext](ENTERPRISE.WITH_NO_FUSING(ENTERPRISE.DEFAULT).copyWith(
     GraphDatabaseSettings.cypher_pipelined_batch_size_small -> Integer.valueOf(MORSEL_SIZE),
     GraphDatabaseSettings.cypher_pipelined_batch_size_big -> Integer.valueOf(MORSEL_SIZE),
     GraphDatabaseSettings.cypher_worker_count -> Integer.valueOf(WORKER_COUNT),

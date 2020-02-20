@@ -44,16 +44,20 @@ object ENTERPRISE {
           new ParallelismTracer))
     },
     GraphDatabaseSettings.cypher_hints_error -> TRUE,
+    GraphDatabaseSettings.cypher_worker_count -> Integer.valueOf(-1),
     GraphDatabaseSettings.cypher_pipelined_batch_size_small -> Integer.valueOf(MORSEL_SIZE),
     GraphDatabaseSettings.cypher_pipelined_batch_size_big -> Integer.valueOf(MORSEL_SIZE),
     MetricsSettings.metricsEnabled -> java.lang.Boolean.FALSE
   )
 
-  val FUSING = edition.copyWith(GraphDatabaseSettings.cypher_worker_count -> Integer.valueOf(0),
-    GraphDatabaseSettings.cypher_operator_engine -> GraphDatabaseSettings.CypherOperatorEngine.COMPILED)
+  def WITH_FUSING(edition: Edition[EnterpriseRuntimeContext]): Edition[EnterpriseRuntimeContext] =
+    edition.copyWith(GraphDatabaseSettings.cypher_operator_engine -> GraphDatabaseSettings.CypherOperatorEngine.COMPILED)
 
-  val NO_FUSING = edition.copyWith(GraphDatabaseSettings.cypher_worker_count -> Integer.valueOf(0),
-    GraphDatabaseSettings.cypher_operator_engine -> GraphDatabaseSettings.CypherOperatorEngine.INTERPRETED)
+  def WITH_NO_FUSING(edition: Edition[EnterpriseRuntimeContext]): Edition[EnterpriseRuntimeContext] =
+    edition.copyWith(GraphDatabaseSettings.cypher_operator_engine -> GraphDatabaseSettings.CypherOperatorEngine.INTERPRETED)
+
+  def WITH_WORKERS(edition: Edition[EnterpriseRuntimeContext]): Edition[EnterpriseRuntimeContext] =
+    edition.copyWith(GraphDatabaseSettings.cypher_worker_count -> Integer.valueOf(0))
 
   val DEFAULT = edition
 

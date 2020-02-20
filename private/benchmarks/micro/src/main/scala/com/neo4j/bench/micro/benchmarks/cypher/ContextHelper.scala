@@ -41,7 +41,6 @@ object ContextHelper extends MockitoSugar {
   private val morselSize = GraphDatabaseSettings.cypher_pipelined_batch_size_big.defaultValue()
 
   private val runtimeConfig = CypherRuntimeConfiguration(
-    workers = Runtime.getRuntime.availableProcessors(),
     pipelinedBatchSizeSmall = morselSize,
     pipelinedBatchSizeBig = morselSize,
     schedulerTracing = NoSchedulerTracing,
