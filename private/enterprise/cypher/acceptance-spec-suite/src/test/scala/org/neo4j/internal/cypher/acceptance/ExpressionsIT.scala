@@ -3812,13 +3812,13 @@ abstract class ExpressionsIT extends ExecutionEngineFunSuite with AstConstructio
 
     //  read
     val propToken = tokenReader(tx, _.propertyKey("prop"))
-    val getN = compile(ast.SlottedCachedPropertyWithPropertyToken("n", pkn, 0, offsetIsForLongSlot = true, propToken, cachedNPropertyOffset, NODE_TYPE), slots)
+    val getN = compile(ast.SlottedCachedPropertyWithPropertyToken("n", pkn, 0, offsetIsForLongSlot = true, propToken, cachedNPropertyOffset, NODE_TYPE, nullable = false), slots)
     evaluate(getN, context) should equal(stringValue("hello from node disk"))
-    val getR = compile(ast.SlottedCachedPropertyWithPropertyToken("r", pkn, 1, offsetIsForLongSlot = true, propToken, cachedRPropertyOffset, RELATIONSHIP_TYPE), slots)
+    val getR = compile(ast.SlottedCachedPropertyWithPropertyToken("r", pkn, 1, offsetIsForLongSlot = true, propToken, cachedRPropertyOffset, RELATIONSHIP_TYPE,  nullable = false), slots)
     evaluate(getR, context) should equal(stringValue("hello from rel cache: 1"))
-    val getN2 = compile(ast.SlottedCachedPropertyWithPropertyToken("n2", pkn, 0, offsetIsForLongSlot = false, propToken, cachedN2PropertyOffset, NODE_TYPE), slots)
+    val getN2 = compile(ast.SlottedCachedPropertyWithPropertyToken("n2", pkn, 0, offsetIsForLongSlot = false, propToken, cachedN2PropertyOffset, NODE_TYPE,  nullable = false), slots)
     evaluate(getN2, context) should equal(stringValue("hello from node disk"))
-    val getR2 = compile(ast.SlottedCachedPropertyWithPropertyToken("r2", pkn, 1, offsetIsForLongSlot = false, propToken, cachedR2PropertyOffset, RELATIONSHIP_TYPE), slots)
+    val getR2 = compile(ast.SlottedCachedPropertyWithPropertyToken("r2", pkn, 1, offsetIsForLongSlot = false, propToken, cachedR2PropertyOffset, RELATIONSHIP_TYPE,  nullable = false), slots)
     evaluate(getR2, context) should equal(stringValue("hello from rel cache: 2"))
 
 
