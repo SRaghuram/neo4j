@@ -36,6 +36,7 @@ import org.neo4j.storageengine.api.EntityTokenUpdateListener;
 import org.neo4j.storageengine.api.IndexUpdateListener;
 import org.neo4j.storageengine.api.StorageEngine;
 import org.neo4j.storageengine.util.IdUpdateListener;
+import org.neo4j.storageengine.util.IndexUpdatesWorkSync;
 import org.neo4j.storageengine.util.LabelIndexUpdatesWorkSync;
 import org.neo4j.storageengine.util.TokenUpdateWork;
 import org.neo4j.util.concurrent.AsyncApply;
@@ -45,7 +46,7 @@ public class BatchContext implements AutoCloseable
 {
     private final LabelIndexUpdatesWorkSync.Batch labelScanStoreSync;
     private final WorkSync<EntityTokenUpdateListener,TokenUpdateWork> relationshipTypeScanStoreSync;
-    private final WorkSync<IndexUpdateListener,IndexUpdatesWork> indexUpdatesSync;
+    private final IndexUpdatesWorkSync.Batch indexUpdatesSync;
     private final NodeStore nodeStore;
     private final PropertyStore propertyStore;
     private final StorageEngine storageEngine;
@@ -61,16 +62,16 @@ public class BatchContext implements AutoCloseable
     private IndexUpdates indexUpdates;
 
     public BatchContext( IndexUpdateListener indexUpdateListener,
-            LabelIndexUpdatesWorkSync.Batch labelScanStoreSync,
+            LabelIndexUpdatesWorkSync labelScanStoreSync,
             WorkSync<EntityTokenUpdateListener,TokenUpdateWork> relationshipTypeScanStoreSync,
-            WorkSync<IndexUpdateListener,IndexUpdatesWork> indexUpdatesSync, NodeStore nodeStore, PropertyStore propertyStore,
+            IndexUpdatesWorkSync indexUpdatesSync, NodeStore nodeStore, PropertyStore propertyStore,
             RecordStorageEngine recordStorageEngine, SchemaCache schemaCache, PageCursorTracer cursorTracer, MemoryTracker memoryTracker,
             IdUpdateListener idUpdateListener )
     {
         this.indexActivator = new IndexActivator( indexUpdateListener );
-        this.labelScanStoreSync = labelScanStoreSync;
+        this.labelScanStoreSync = labelScanStoreSync.newBatch();
         this.relationshipTypeScanStoreSync = relationshipTypeScanStoreSync;
-        this.indexUpdatesSync = indexUpdatesSync;
+        this.indexUpdatesSync = indexUpdatesSync.newBatch();
         this.nodeStore = nodeStore;
         this.propertyStore = propertyStore;
         this.storageEngine = recordStorageEngine;
@@ -117,9 +118,10 @@ public class BatchContext implements AutoCloseable
         }
         if ( indexUpdates != null && indexUpdates.hasUpdates() )
         {
+            indexUpdatesSync.add( indexUpdates );
             try
             {
-                indexUpdatesSync.apply( new IndexUpdatesWork( indexUpdates, cursorTracer ) );
+                indexUpdatesSync.apply( cursorTracer );
             }
             catch ( ExecutionException e )
             {

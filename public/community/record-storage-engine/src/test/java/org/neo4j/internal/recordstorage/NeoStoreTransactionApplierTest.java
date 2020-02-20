@@ -67,6 +67,7 @@ import org.neo4j.storageengine.api.EntityTokenUpdateListener;
 import org.neo4j.storageengine.api.IndexUpdateListener;
 import org.neo4j.storageengine.util.IdGeneratorUpdatesWorkSync;
 import org.neo4j.storageengine.util.IdUpdateListener;
+import org.neo4j.storageengine.util.IndexUpdatesWorkSync;
 import org.neo4j.storageengine.util.LabelIndexUpdatesWorkSync;
 import org.neo4j.storageengine.util.TokenUpdateWork;
 import org.neo4j.token.api.NamedToken;
@@ -119,7 +120,7 @@ class NeoStoreTransactionApplierTest
     private final LabelIndexUpdatesWorkSync labelScanStoreSynchronizer = new LabelIndexUpdatesWorkSync( labelUpdateListener );
     private final WorkSync<EntityTokenUpdateListener,TokenUpdateWork> relationshipTypeScanStoreSync = new WorkSync<>( relationshipTypeUpdateListener );
     private final CommandsToApply transactionToApply = mock( CommandsToApply.class );
-    private final WorkSync<IndexUpdateListener,IndexUpdatesWork> indexUpdatesSync = new WorkSync<>( indexUpdateListener );
+    private final IndexUpdatesWorkSync indexUpdatesSync = new IndexUpdatesWorkSync( indexUpdateListener );
     private final IndexActivator indexActivator = new IndexActivator( indexingService );
 
     @BeforeEach
@@ -621,7 +622,7 @@ class NeoStoreTransactionApplierTest
     void shouldApplyUpdateIndexRuleSchemaRuleCommandToTheStore() throws Exception
     {
         // given
-        var batchContext = new BatchContext( indexingService, labelScanStoreSynchronizer.newBatch(), relationshipTypeScanStoreSync, indexUpdatesSync, nodeStore,
+        var batchContext = new BatchContext( indexingService, labelScanStoreSynchronizer, relationshipTypeScanStoreSync, indexUpdatesSync, nodeStore,
                 propertyStore, mock( RecordStorageEngine.class ), mock( SchemaCache.class ), NULL, INSTANCE, IdUpdateListener.IGNORE );
         TransactionApplierFactory applier = newApplierFacade( newIndexApplier(), newApplier( false ) );
         SchemaRecord before = new SchemaRecord( 21 );
@@ -645,7 +646,7 @@ class NeoStoreTransactionApplierTest
     void shouldApplyUpdateIndexRuleSchemaRuleCommandToTheStoreInRecovery() throws Exception
     {
         // given
-        var batchContext = new BatchContext( indexingService, labelScanStoreSynchronizer.newBatch(), relationshipTypeScanStoreSync, indexUpdatesSync, nodeStore,
+        var batchContext = new BatchContext( indexingService, labelScanStoreSynchronizer, relationshipTypeScanStoreSync, indexUpdatesSync, nodeStore,
                 propertyStore, mock( RecordStorageEngine.class ), mock( SchemaCache.class ), NULL, INSTANCE, IdUpdateListener.IGNORE );
         TransactionApplierFactory applier = newApplierFacade( newIndexApplier(), newApplier( true ) );
         SchemaRecord before = new SchemaRecord( 21 );

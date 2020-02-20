@@ -39,6 +39,7 @@ import org.neo4j.storageengine.api.EntityTokenUpdate;
 import org.neo4j.storageengine.api.EntityTokenUpdateListener;
 import org.neo4j.storageengine.api.IndexUpdateListener;
 import org.neo4j.storageengine.util.IdUpdateListener;
+import org.neo4j.storageengine.util.IndexUpdatesWorkSync;
 import org.neo4j.storageengine.util.LabelIndexUpdatesWorkSync;
 import org.neo4j.storageengine.util.TokenUpdateWork;
 import org.neo4j.util.concurrent.WorkSync;
@@ -64,10 +65,10 @@ class IndexTransactionApplierFactoryTest
         OrderVerifyingUpdateListener listener = new OrderVerifyingUpdateListener( 10, 15, 20 );
         LabelIndexUpdatesWorkSync labelScanSync = new LabelIndexUpdatesWorkSync( listener );
         WorkSync<EntityTokenUpdateListener,TokenUpdateWork> relationshipTypeScanStoreSync = mock( WorkSync.class );
-        WorkSync<IndexUpdateListener,IndexUpdatesWork> indexUpdatesSync = new WorkSync<>( indexUpdateListener );
+        IndexUpdatesWorkSync indexUpdatesSync = new IndexUpdatesWorkSync( indexUpdateListener );
         PropertyStore propertyStore = mock( PropertyStore.class );
         IndexTransactionApplierFactory applier = new IndexTransactionApplierFactory( indexUpdateListener );
-        try ( var batchContext = new BatchContext( indexUpdateListener, labelScanSync.newBatch(), relationshipTypeScanStoreSync, indexUpdatesSync,
+        try ( var batchContext = new BatchContext( indexUpdateListener, labelScanSync, relationshipTypeScanStoreSync, indexUpdatesSync,
                 mock( NodeStore.class ), propertyStore, mock( RecordStorageEngine.class ), mock( SchemaCache.class ), NULL, INSTANCE,
                 mock( IdUpdateListener.class ) ) )
         {
@@ -87,10 +88,6 @@ class IndexTransactionApplierFactoryTest
     {
         // given
         IndexUpdateListener indexUpdateListener = mock( IndexUpdateListener.class );
-        OrderVerifyingUpdateListener listener = new OrderVerifyingUpdateListener( 10, 15, 20 );
-        LabelIndexUpdatesWorkSync labelScanSync = new LabelIndexUpdatesWorkSync( listener );
-        WorkSync<IndexUpdateListener,IndexUpdatesWork> indexUpdatesSync = new WorkSync<>( indexUpdateListener );
-        PropertyStore propertyStore = mock( PropertyStore.class );
         IndexActivator indexActivator = new IndexActivator( indexUpdateListener );
         long indexId1 = 1;
         long indexId2 = 2;

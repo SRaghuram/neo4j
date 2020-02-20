@@ -25,7 +25,6 @@ import java.util.Collection;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import org.neo4j.configuration.Config;
@@ -89,9 +88,9 @@ import org.neo4j.storageengine.api.txstate.ReadableTransactionState;
 import org.neo4j.storageengine.api.txstate.TransactionCountingStateVisitor;
 import org.neo4j.storageengine.api.txstate.TxStateVisitor;
 import org.neo4j.storageengine.util.IdGeneratorUpdatesWorkSync;
+import org.neo4j.storageengine.util.IndexUpdatesWorkSync;
 import org.neo4j.storageengine.util.LabelIndexUpdatesWorkSync;
 import org.neo4j.storageengine.util.TokenUpdateWork;
-import org.neo4j.storageengine.util.IdUpdateListener;
 import org.neo4j.token.TokenHolders;
 import org.neo4j.util.Preconditions;
 import org.neo4j.util.VisibleForTesting;
@@ -122,7 +121,7 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
     private final boolean consistencyCheckApply;
     private LabelIndexUpdatesWorkSync labelScanStoreSync;
     private WorkSync<EntityTokenUpdateListener,TokenUpdateWork> relationshipTypeScanStoreSync;
-    private WorkSync<IndexUpdateListener,IndexUpdatesWork> indexUpdatesSync;
+    private IndexUpdatesWorkSync indexUpdatesSync;
     private final IdController idController;
     private final PageCacheTracer cacheTracer;
     private final MemoryTracker otherMemoryTracker;
@@ -199,8 +198,6 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
 
     private TransactionApplierFactoryChain buildApplierFacadeChain( TransactionApplicationMode mode )
     {
-        Supplier<IdUpdateListener> listenerSupplier = mode == REVERSE_RECOVERY ? () -> IdUpdateListener.IGNORE :
-                                                      () -> new EnqueuingIdUpdateListener( idGeneratorWorkSyncs, cacheTracer );
         List<TransactionApplierFactory> appliers = new ArrayList<>();
         // Graph store application. The order of the decorated store appliers is irrelevant
         if ( consistencyCheckApply && mode.needsAuxiliaryStores() )
@@ -276,7 +273,7 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
         Preconditions.checkState( this.indexUpdateListener == null,
                 "Only supports a single listener. Tried to add " + listener + ", but " + this.indexUpdateListener + " has already been added" );
         this.indexUpdateListener = listener;
-        this.indexUpdatesSync = new WorkSync<>( listener );
+        this.indexUpdatesSync = new IndexUpdatesWorkSync( listener );
         this.integrityValidator.setIndexValidator( listener );
     }
 
@@ -347,7 +344,7 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle
     {
         TransactionApplierFactoryChain batchApplier = applierChain( mode );
         CommandsToApply initialBatch = batch;
-        try ( BatchContext context = new BatchContext( indexUpdateListener, labelScanStoreSync.newBatch(), relationshipTypeScanStoreSync, indexUpdatesSync,
+        try ( BatchContext context = new BatchContext( indexUpdateListener, labelScanStoreSync, relationshipTypeScanStoreSync, indexUpdatesSync,
                 neoStores.getNodeStore(), neoStores.getPropertyStore(), this, schemaCache, initialBatch.cursorTracer(), otherMemoryTracker,
                 idGeneratorWorkSyncs.newBatch( cacheTracer ) ) )
         {
