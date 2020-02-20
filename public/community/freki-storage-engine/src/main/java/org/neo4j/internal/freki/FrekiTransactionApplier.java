@@ -37,6 +37,7 @@ import org.neo4j.storageengine.api.StorageCommand;
 import org.neo4j.storageengine.api.TransactionApplicationMode;
 import org.neo4j.storageengine.util.IdGeneratorUpdatesWorkSync;
 import org.neo4j.storageengine.util.IdUpdateListener;
+import org.neo4j.storageengine.util.IndexUpdatesWorkSync;
 import org.neo4j.storageengine.util.LabelIndexUpdatesWorkSync;
 import org.neo4j.util.concurrent.AsyncApply;
 
@@ -54,15 +55,18 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
     private List<IndexDescriptor> createdIndexes;
     private final IdGeneratorUpdatesWorkSync.Batch idUpdates;
     private final LabelIndexUpdatesWorkSync.Batch labelIndexUpdates;
+    private final IndexUpdatesWorkSync.Batch indexUpdates;
 
     FrekiTransactionApplier( Stores stores, IndexUpdateListener indexUpdateListener, TransactionApplicationMode mode,
-            IdGeneratorUpdatesWorkSync idGeneratorUpdatesWorkSync, LabelIndexUpdatesWorkSync labelIndexUpdatesWorkSync ) throws IOException
+            IdGeneratorUpdatesWorkSync idGeneratorUpdatesWorkSync, LabelIndexUpdatesWorkSync labelIndexUpdatesWorkSync,
+            IndexUpdatesWorkSync indexUpdatesWorkSync ) throws IOException
     {
         this.stores = stores;
         this.storeCursors = stores.openMainStoreWriteCursors();
         this.indexUpdateListener = indexUpdateListener;
         this.labelIndexUpdates = mode == REVERSE_RECOVERY || labelIndexUpdatesWorkSync == null ? null : labelIndexUpdatesWorkSync.newBatch();
         this.idUpdates = mode == REVERSE_RECOVERY ? null : idGeneratorUpdatesWorkSync.newBatch();
+        this.indexUpdates = mode == REVERSE_RECOVERY || indexUpdatesWorkSync == null ? null : indexUpdatesWorkSync.newBatch();
     }
 
     @Override
@@ -84,6 +88,7 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
         {
             labelIndexUpdates.add( NodeLabelUpdate.labelChanges( node.after().id, parseLabels( node.before() ), parseLabels( node.after() ) ) );
         }
+        // TODO extract index updates
     }
 
     private long[] parseLabels( Record record )
@@ -124,6 +129,7 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
                 node.deletedRelationships.forEachKeyValue( ( type, typedRelationships ) -> typedRelationships.forEach(
                         relationship -> updater.deleteRelationship( relationship.internalId, relationship.sourceNodeId, type,
                                 relationship.otherNodeId, relationship.outgoing ) ) );
+                // TODO extract index updates
             }
             else
             {
@@ -202,10 +208,12 @@ class FrekiTransactionApplier extends FrekiCommand.Dispatcher.Adapter implements
             indexUpdateListener.createIndexes( createdIndexes.toArray( new IndexDescriptor[createdIndexes.size()] ) );
         }
         AsyncApply labelUpdatesAsyncApply = labelIndexUpdates != null ? labelIndexUpdates.applyAsync() : AsyncApply.EMPTY;
+        AsyncApply indexUpdatesAsyncApply = indexUpdates != null ? indexUpdates.applyAsync( PageCursorTracer.NULL ) : AsyncApply.EMPTY;
         if ( idUpdates != null )
         {
             idUpdates.apply();
         }
         labelUpdatesAsyncApply.await();
+        indexUpdatesAsyncApply.await();
     }
 }
