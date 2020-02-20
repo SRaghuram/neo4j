@@ -32,6 +32,7 @@ import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.storageengine.api.IndexEntryUpdate;
 import org.neo4j.storageengine.api.IndexUpdateListener;
+import org.neo4j.util.concurrent.AsyncApply;
 import org.neo4j.util.concurrent.Work;
 import org.neo4j.util.concurrent.WorkSync;
 
@@ -61,6 +62,11 @@ public class IndexUpdatesWorkSync
         public void apply( PageCursorTracer cursorTracer ) throws ExecutionException
         {
             workSync.apply( new IndexUpdatesWork( updates, cursorTracer ) );
+        }
+
+        public AsyncApply applyAsync( PageCursorTracer cursorTracer )
+        {
+            return workSync.applyAsync( new IndexUpdatesWork( updates, cursorTracer ) );
         }
     }
 

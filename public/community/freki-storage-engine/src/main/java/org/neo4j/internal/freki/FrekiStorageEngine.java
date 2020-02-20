@@ -80,6 +80,7 @@ import org.neo4j.storageengine.api.TransactionIdStore;
 import org.neo4j.storageengine.api.txstate.ReadableTransactionState;
 import org.neo4j.storageengine.api.txstate.TxStateVisitor;
 import org.neo4j.storageengine.util.IdGeneratorUpdatesWorkSync;
+import org.neo4j.storageengine.util.IndexUpdatesWorkSync;
 import org.neo4j.storageengine.util.LabelIndexUpdatesWorkSync;
 import org.neo4j.token.TokenHolders;
 
@@ -113,6 +114,7 @@ public class FrekiStorageEngine implements StorageEngine
     private final Stores stores;
     private final IdGeneratorUpdatesWorkSync idGeneratorUpdatesWorkSync;
     private LabelIndexUpdatesWorkSync labelIndexUpdatesWorkSync;
+    private IndexUpdatesWorkSync indexUpdatesWorkSync;
     private final List<Pair<IdGeneratorFactory,IdType>> idGeneratorsToRegisterOnTheWorkSync = new ArrayList<>();
     private IndexUpdateListener indexUpdateListener;
     private NodeLabelUpdateListener nodeLabelUpdateListener;
@@ -243,6 +245,7 @@ public class FrekiStorageEngine implements StorageEngine
     public void addIndexUpdateListener( IndexUpdateListener indexUpdateListener )
     {
         this.indexUpdateListener = indexUpdateListener;
+        this.indexUpdatesWorkSync = new IndexUpdatesWorkSync( indexUpdateListener );
     }
 
     @Override
@@ -272,7 +275,7 @@ public class FrekiStorageEngine implements StorageEngine
         CommandsToApply initialBatch = batch;
         try ( LockGroup locks = new LockGroup();
                 FrekiTransactionApplier txApplier = new FrekiTransactionApplier( stores, indexUpdateListener, mode, idGeneratorUpdatesWorkSync,
-                        labelIndexUpdatesWorkSync ) )
+                        labelIndexUpdatesWorkSync, indexUpdatesWorkSync ) )
         {
             while ( batch != null )
             {
