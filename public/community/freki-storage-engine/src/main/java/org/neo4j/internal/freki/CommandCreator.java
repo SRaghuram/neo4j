@@ -366,9 +366,14 @@ class CommandCreator implements TxStateVisitor
             this.stores = stores;
             this.store = store;
             this.smallRecord = smallRecord != null ? smallRecord : this;
-            before = new Record( store.recordSizeExponential(), id );
-            after = new Record( store.recordSizeExponential(), id );
+            int sizeExp = store.recordSizeExponential();
+            before = new Record( sizeExp, id );
+            after = new Record( sizeExp, id );
             data = new MutableNodeRecordData( id );
+            if ( smallRecord != null )
+            {
+                data.setBackPointer( smallRecord.data.id );
+            }
         }
 
         @Override
