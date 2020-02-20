@@ -9,16 +9,10 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.neo4j.bench.common.model.BenchmarkConfig;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 import static java.util.function.Function.identity;
-import static java.util.stream.Collectors.toMap;
-import static java.util.stream.Collectors.toSet;
+import static java.util.stream.Collectors.*;
 
 /**
  * Describes final configuration (what will actually be used during execution) of the benchmark suite,
@@ -49,6 +43,16 @@ public class SuiteDescription
     {
         Map<String,BenchmarkDescription> benchmarks = Collections.singletonMap( benchmarkDescription.className(), benchmarkDescription );
         return new SuiteDescription( benchmarks );
+    }
+
+    public static SuiteDescription fromBenchmarkDescriptions( List<BenchmarkDescription> benchmarkDescriptions )
+    {
+        Map<String,BenchmarkDescription> descriptionMap = benchmarkDescriptions.stream().collect( toMap(
+                BenchmarkDescription::className,
+                benchmarkDescription -> benchmarkDescription
+        ) );
+
+        return new SuiteDescription( descriptionMap );
     }
 
     private static void addBenchmarkEntryToSuite( BenchmarkConfigFileEntry entry,
@@ -152,6 +156,38 @@ public class SuiteDescription
                                       ) );
         groupBenchmarks.keySet().forEach( group -> Collections.sort( groupBenchmarks.get( group ) ) );
         return groupBenchmarks;
+    }
+
+    public List<SuiteDescription> partition(int numberOfPartitions) {
+        List<BenchmarkDescription> enabledExplodedBenchmarks = explodeEnabledBenchmarks();
+
+        long benchmarksPerPartition = (long) Math.ceil( enabledExplodedBenchmarks.size() / (double) numberOfPartitions );
+
+        List<SuiteDescription> partitions = new ArrayList<>( numberOfPartitions );
+
+        for ( int partition = 0; partition < numberOfPartitions; partition++ )
+        {
+            Set<BenchmarkDescription> rawBenchmarkDescriptionPartition = enabledExplodedBenchmarks
+                    .stream()
+                    .skip( partition * benchmarksPerPartition )
+                    .limit( benchmarksPerPartition )
+                    .collect( toSet() );
+
+            List<BenchmarkDescription> condensedBenchmarkDescriptionPartition = BenchmarkDescription.implode( rawBenchmarkDescriptionPartition );
+
+            partitions.add( SuiteDescription.fromBenchmarkDescriptions( condensedBenchmarkDescriptionPartition ));
+        }
+
+        return partitions;
+    }
+
+    public List<BenchmarkDescription> explodeEnabledBenchmarks()
+    {
+        return benchmarks()
+                .stream()
+                .filter( BenchmarkDescription::isEnabled )
+                .flatMap( benchmark -> benchmark.explode().stream() )
+                .collect( toList() );
     }
 
     private void assertBenchmarkExists( String maybeBenchmark )

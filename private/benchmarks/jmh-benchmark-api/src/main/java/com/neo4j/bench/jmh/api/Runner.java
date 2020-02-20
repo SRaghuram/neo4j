@@ -140,10 +140,7 @@ public abstract class Runner
 
             // each benchmark description will represent 1 method and 1 combination of param values, i.e., one benchmark
             // necessary to ensure only specific failing benchmarks are excluded from results, not all for a given class
-            List<BenchmarkDescription> enabledExplodedBenchmarks = suiteDescription.benchmarks().stream()
-                                                                                   .filter( BenchmarkDescription::isEnabled )
-                                                                                   .flatMap( benchmark -> benchmark.explode().stream() )
-                                                                                   .collect( toList() );
+            List<BenchmarkDescription> enabledExplodedBenchmarks = suiteDescription.explodeEnabledBenchmarks();
 
             if ( enabledExplodedBenchmarks.isEmpty() )
             {
