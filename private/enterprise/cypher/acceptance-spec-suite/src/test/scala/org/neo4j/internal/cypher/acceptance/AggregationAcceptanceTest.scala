@@ -357,4 +357,30 @@ class AggregationAcceptanceTest extends ExecutionEngineFunSuite with CypherCompa
     // then
    executeWith(Configs.InterpretedAndSlottedAndPipelined, query).toList should equal(List(Map("names" -> List("C", "A", "B"))))
   }
+
+  test("should not inject shadowed variables into for-comprehension") {
+    val query =
+      """
+        |WITH {name: 'a_name', prop: 'a_prop'} AS a,
+        |     {name: 'b_name', prop: 'b_prop'} AS b
+        |RETURN a.name, [a IN collect(b) | [a.name, a.prop]] AS r
+        |""".stripMargin
+
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, query).toSet should equal(Set(
+      Map("a.name" -> "a_name", "r" -> Seq(Seq("b_name", "b_prop")))
+    ))
+  }
+
+  test("should not inject shadowed variables into reduce") {
+    val query =
+      """
+        |WITH {name: 'a_name', prop: 'a_prop'} AS a,
+        |     {name: 'b_name', prop: 'b_prop'} AS b
+        |RETURN a.name, reduce(acc = '', a IN collect(b) | acc + a.name  + ':' + a.prop) AS r
+        |""".stripMargin
+
+    executeWith(Configs.InterpretedAndSlottedAndPipelined, query).toSet should equal(Set(
+      Map("a.name" -> "a_name", "r" -> "b_name:b_prop")
+    ))
+  }
 }
