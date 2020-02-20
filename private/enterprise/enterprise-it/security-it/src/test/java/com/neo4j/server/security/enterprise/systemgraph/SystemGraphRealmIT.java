@@ -64,6 +64,7 @@ import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ADMIN;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.READ;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.SCHEMA;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.TOKEN;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.MATCH;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.TRAVERSE;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.WRITE;
 import static org.neo4j.kernel.api.security.AuthManager.INITIAL_PASSWORD;
@@ -423,8 +424,7 @@ class SystemGraphRealmIT
         SystemGraphRealm realm = startSystemGraphRealm();
 
         // Give Alice match privileges in 'neo4j'
-        ResourcePrivilege readPrivilege = new ResourcePrivilege( GRANT, READ, new Resource.AllPropertiesResource(), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
-        ResourcePrivilege findPrivilege = new ResourcePrivilege( GRANT, TRAVERSE, new Resource.GraphResource(), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
+        ResourcePrivilege matchPrivilege = new ResourcePrivilege( GRANT, MATCH, new Resource.AllPropertiesResource(), LabelSegment.ALL, DEFAULT_DATABASE_NAME );
         GraphDatabaseService systemDB = dbManager.getManagementService().database( SYSTEM_DATABASE_NAME );
         try ( Transaction transaction = systemDB.beginTx() )
         {
@@ -434,7 +434,7 @@ class SystemGraphRealmIT
 
         assertAuthenticationSucceeds( realmHelper, "alice", "bar" );
         Set<ResourcePrivilege> privileges = realm.getPrivilegesForRoles( Collections.singleton( "custom" ) );
-        assertThat( privileges, containsInAnyOrder( readPrivilege, findPrivilege ) );
+        assertThat( privileges, containsInAnyOrder( matchPrivilege ) );
 
         realm.stop();
 
@@ -449,11 +449,10 @@ class SystemGraphRealmIT
 
         // Alice should still have read privileges in 'neo4j'
         privileges = realm.getPrivilegesForRoles( Collections.singleton( "custom" ) );
-        assertThat( privileges, containsInAnyOrder( readPrivilege, findPrivilege ) );
+        assertThat( privileges, containsInAnyOrder( matchPrivilege ) );
 
         // Alice should NOT have read privileges in 'foo'
-        assertFalse( privileges.contains( new ResourcePrivilege( GRANT, READ, new Resource.AllPropertiesResource(), LabelSegment.ALL, "foo" ) ) );
-        assertFalse( privileges.contains( new ResourcePrivilege( GRANT, TRAVERSE, new Resource.GraphResource(), LabelSegment.ALL, "foo" ) ) );
+        assertFalse( privileges.contains( new ResourcePrivilege( GRANT, MATCH, new Resource.AllPropertiesResource(), LabelSegment.ALL, "foo" ) ) );
 
         realm.stop();
 
@@ -467,7 +466,7 @@ class SystemGraphRealmIT
 
         // Alice should still have read privileges in 'neo4j'
         privileges = realm.getPrivilegesForRoles( Collections.singleton( "custom" ) );
-        assertThat( privileges, containsInAnyOrder( readPrivilege, findPrivilege ) );
+        assertThat( privileges, containsInAnyOrder( matchPrivilege ) );
     }
 
     private SystemGraphRealm startSystemGraphRealm() throws Exception

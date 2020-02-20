@@ -28,6 +28,7 @@ import org.neo4j.internal.kernel.api.security.LoginContext.IdLookup;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.internal.kernel.api.security.Segment;
 
+import static com.neo4j.server.security.enterprise.auth.Resource.Type.PROPERTY;
 import static com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny.DENY;
 import static com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny.GRANT;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ADMIN;
@@ -561,106 +562,22 @@ class StandardAccessMode implements AccessMode
 
             case TRAVERSE:
                 anyRead.put( privilegeType, true );
-                if ( segment instanceof LabelSegment )
-                {
-                    if ( segment.equals( LabelSegment.ALL ) )
-                    {
-                        traverseAllLabels.put( privilegeType, true );
-                    }
-                    else
-                    {
-                        addLabel( traverseLabels.get( privilegeType ), (LabelSegment) segment );
-                    }
-                }
-                else if ( segment instanceof RelTypeSegment )
-                {
-                    if ( segment.equals( RelTypeSegment.ALL ) )
-                    {
-                        traverseAllRelTypes.put( privilegeType, true );
-                    }
-                    else
-                    {
-                        addRelType( traverseRelTypes.get( privilegeType ), (RelTypeSegment) segment );
-                    }
-                }
-                else
-                {
-                    throw new IllegalStateException( "Unsupported segment qualifier for traverse privilege: " + segment.getClass().getSimpleName() );
-                }
+                handleTraversePrivilege( segment, privilegeType, "traverse" );
                 break;
 
             case READ:
                 anyRead.put( privilegeType, true );
-                switch ( resource.type() )
+                handleReadPrivilege( resource, segment, privilegeType, "read" );
+                break;
+
+            case MATCH:
+                anyRead.put( privilegeType, true );
+                if ( !(privilegeType.isDeny() && resource.type() == PROPERTY) )
                 {
-                case GRAPH:
-                    readAllPropertiesAllLabels.put( privilegeType, true );
-                    readAllPropertiesAllRelTypes.put( privilegeType, true );
-                    break;
-                case PROPERTY:
-                    int propertyId = resolvePropertyId( resource.getArg1() );
-                    if ( propertyId == ANY_PROPERTY_KEY )
-                    {
-                        // there exists no property with this name at the start of this transaction
-                        break;
-                    }
-                    if ( segment instanceof LabelSegment )
-                    {
-                        if ( segment.equals( LabelSegment.ALL ) )
-                        {
-                            nodeProperties.get( privilegeType ).add( propertyId );
-                        }
-                        else
-                        {
-                            addLabel( nodeSegmentForProperty.get( privilegeType ), (LabelSegment) segment, propertyId );
-                        }
-                    }
-                    else if ( segment instanceof RelTypeSegment )
-                    {
-                        if ( segment.equals( RelTypeSegment.ALL ) )
-                        {
-                            relationshipProperties.get( privilegeType ).add( propertyId );
-                        }
-                        else
-                        {
-                            addRelType( relationshipSegmentForProperty.get( privilegeType ), (RelTypeSegment) segment, propertyId );
-                        }
-                    }
-                    else
-                    {
-                        throw new IllegalStateException( "Unsupported segment qualifier for read privilege: " + segment.getClass().getSimpleName() );
-                    }
-                    break;
-                case ALL_PROPERTIES:
-                    if ( segment instanceof LabelSegment )
-                    {
-                        if ( segment.equals( LabelSegment.ALL ) )
-                        {
-                            readAllPropertiesAllLabels.put( privilegeType, true );
-                        }
-                        else
-                        {
-                            addLabel( nodeSegmentForAllProperties.get( privilegeType ), (LabelSegment) segment );
-                        }
-                    }
-                    else if ( segment instanceof RelTypeSegment )
-                    {
-                        if ( segment.equals( RelTypeSegment.ALL ) )
-                        {
-                            readAllPropertiesAllRelTypes.put( privilegeType, true );
-                        }
-                        else
-                        {
-                            addRelType( relationshipSegmentForAllProperties.get( privilegeType ), (RelTypeSegment) segment );
-                        }
-                    }
-                    else
-                    {
-                        throw new IllegalStateException( "Unsupported segment qualifier for read privilege: " + segment.getClass().getSimpleName() );
-                    }
-                    break;
-                default:
+                    // don't deny TRAVERSE for DENY MATCH {prop}
+                    handleTraversePrivilege( segment, privilegeType, "match" );
                 }
+                handleReadPrivilege( resource, segment, privilegeType, "match" );
                 break;
 
             case WRITE:
@@ -699,6 +616,110 @@ class StandardAccessMode implements AccessMode
                 }
             }
             return this;
+        }
+
+        private void handleTraversePrivilege( Segment segment, ResourcePrivilege.GrantOrDeny privilegeType, String privilegeName )
+        {
+            if ( segment instanceof LabelSegment )
+            {
+                if ( segment.equals( LabelSegment.ALL ) )
+                {
+                    traverseAllLabels.put( privilegeType, true );
+                }
+                else
+                {
+                    addLabel( traverseLabels.get( privilegeType ), (LabelSegment) segment );
+                }
+            }
+            else if ( segment instanceof RelTypeSegment )
+            {
+                if ( segment.equals( RelTypeSegment.ALL ) )
+                {
+                    traverseAllRelTypes.put( privilegeType, true );
+                }
+                else
+                {
+                    addRelType( traverseRelTypes.get( privilegeType ), (RelTypeSegment) segment );
+                }
+            }
+            else
+            {
+                throw new IllegalStateException( "Unsupported segment qualifier for " + privilegeName + " privilege: " + segment.getClass().getSimpleName() );
+            }
+        }
+
+        private void handleReadPrivilege( Resource resource, Segment segment, ResourcePrivilege.GrantOrDeny privilegeType, String privilegeName )
+        {
+            switch ( resource.type() )
+            {
+            case GRAPH:
+                readAllPropertiesAllLabels.put( privilegeType, true );
+                readAllPropertiesAllRelTypes.put( privilegeType, true );
+                break;
+            case PROPERTY:
+                int propertyId = resolvePropertyId( resource.getArg1() );
+                if ( propertyId == ANY_PROPERTY_KEY )
+                {
+                    // there exists no property with this name at the start of this transaction
+                    break;
+                }
+                if ( segment instanceof LabelSegment )
+                {
+                    if ( segment.equals( LabelSegment.ALL ) )
+                    {
+                        nodeProperties.get( privilegeType ).add( propertyId );
+                    }
+                    else
+                    {
+                        addLabel( nodeSegmentForProperty.get( privilegeType ), (LabelSegment) segment, propertyId );
+                    }
+                }
+                else if ( segment instanceof RelTypeSegment )
+                {
+                    if ( segment.equals( RelTypeSegment.ALL ) )
+                    {
+                        relationshipProperties.get( privilegeType ).add( propertyId );
+                    }
+                    else
+                    {
+                        addRelType( relationshipSegmentForProperty.get( privilegeType ), (RelTypeSegment) segment, propertyId );
+                    }
+                }
+                else
+                {
+                    throw new IllegalStateException( "Unsupported segment qualifier for " + privilegeName + " privilege: " + segment.getClass().getSimpleName() );
+                }
+                break;
+            case ALL_PROPERTIES:
+                if ( segment instanceof LabelSegment )
+                {
+                    if ( segment.equals( LabelSegment.ALL ) )
+                    {
+                        readAllPropertiesAllLabels.put( privilegeType, true );
+                    }
+                    else
+                    {
+                        addLabel( nodeSegmentForAllProperties.get( privilegeType ), (LabelSegment) segment );
+                    }
+                }
+                else if ( segment instanceof RelTypeSegment )
+                {
+                    if ( segment.equals( RelTypeSegment.ALL ) )
+                    {
+                        readAllPropertiesAllRelTypes.put( privilegeType, true );
+                    }
+                    else
+                    {
+                        addRelType( relationshipSegmentForAllProperties.get( privilegeType ), (RelTypeSegment) segment );
+                    }
+                }
+                else
+                {
+                    throw new IllegalStateException( "Unsupported segment qualifier for " + privilegeName + " privilege: " + segment.getClass().getSimpleName() );
+                }
+                break;
+            default:
+            }
         }
 
         private void addPrivilegeAction( ResourcePrivilege privilege )

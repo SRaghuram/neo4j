@@ -93,12 +93,10 @@ class NodePrivilegeEnforcementAdministrationCommandAcceptanceTest extends Admini
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("REVOKE GRANT READ {name} ON GRAPH * NODES A (*) FROM custom")
+    execute("REVOKE GRANT MATCH {name} ON GRAPH * NODES A (*) FROM custom")
 
     // THEN
-    executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name", resultHandler = (row, _) => {
-      row.get("n.name") should be(null)
-    }) should be(1)
+    executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name") should be(0)
   }
 
   test("should read properties when granted MATCH privilege to custom role for a specific database") {

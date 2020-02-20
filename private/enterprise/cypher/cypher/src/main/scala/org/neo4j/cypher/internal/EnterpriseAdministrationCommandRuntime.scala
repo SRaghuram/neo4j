@@ -49,6 +49,7 @@ import org.neo4j.cypher.internal.logical.plans.CreateRole
 import org.neo4j.cypher.internal.logical.plans.CreateUser
 import org.neo4j.cypher.internal.logical.plans.DenyDatabaseAction
 import org.neo4j.cypher.internal.logical.plans.DenyDbmsAction
+import org.neo4j.cypher.internal.logical.plans.DenyMatch
 import org.neo4j.cypher.internal.logical.plans.DenyRead
 import org.neo4j.cypher.internal.logical.plans.DenyTraverse
 import org.neo4j.cypher.internal.logical.plans.DenyWrite
@@ -58,6 +59,7 @@ import org.neo4j.cypher.internal.logical.plans.EnsureValidNonSystemDatabase
 import org.neo4j.cypher.internal.logical.plans.EnsureValidNumberOfDatabases
 import org.neo4j.cypher.internal.logical.plans.GrantDatabaseAction
 import org.neo4j.cypher.internal.logical.plans.GrantDbmsAction
+import org.neo4j.cypher.internal.logical.plans.GrantMatch
 import org.neo4j.cypher.internal.logical.plans.GrantRead
 import org.neo4j.cypher.internal.logical.plans.GrantRoleToUser
 import org.neo4j.cypher.internal.logical.plans.GrantTraverse
@@ -67,6 +69,7 @@ import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.logical.plans.RequireRole
 import org.neo4j.cypher.internal.logical.plans.RevokeDatabaseAction
 import org.neo4j.cypher.internal.logical.plans.RevokeDbmsAction
+import org.neo4j.cypher.internal.logical.plans.RevokeMatch
 import org.neo4j.cypher.internal.logical.plans.RevokeRead
 import org.neo4j.cypher.internal.logical.plans.RevokeRoleFromUser
 import org.neo4j.cypher.internal.logical.plans.RevokeTraverse
@@ -469,6 +472,19 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
     case RevokeRead(source, resource, database, qualifier, roleName, revokeType) => (context, parameterMapping, securityContext) =>
       makeRevokeExecutionPlan(PrivilegeAction.READ.toString, resource, database, qualifier, roleName, revokeType,
         source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), s"Failed to revoke read privilege from role '$roleName'")
+
+    // GRANT/DENY/REVOKE MATCH {prop} ON GRAPH foo NODES A (*) TO role
+    case GrantMatch(source, resource, database, qualifier, roleName) => (context, parameterMapping, securityContext) =>
+      makeGrantOrDenyExecutionPlan(PrivilegeAction.MATCH.toString, resource, database, qualifier, roleName,
+        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), GRANT, s"Failed to grant match privilege to role '$roleName'")
+
+    case DenyMatch(source, resource, database, qualifier, roleName) => (context, parameterMapping, securityContext) =>
+      makeGrantOrDenyExecutionPlan(PrivilegeAction.MATCH.toString, resource, database, qualifier, roleName,
+        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), DENY, s"Failed to deny match privilege to role '$roleName'")
+
+    case RevokeMatch(source, resource, database, qualifier, roleName, revokeType) => (context, parameterMapping, securityContext) =>
+      makeRevokeExecutionPlan(PrivilegeAction.MATCH.toString, resource, database, qualifier, roleName, revokeType,
+        source.map(fullLogicalToExecutable.applyOrElse(_, throwCantCompile).apply(context, parameterMapping, securityContext)), s"Failed to revoke match privilege from role '$roleName'")
 
     // GRANT/DENY/REVOKE WRITE ON GRAPH foo NODES * (*) TO role
     case GrantWrite(source, resource, database, qualifier, roleName) => (context, parameterMapping, currentUser) =>

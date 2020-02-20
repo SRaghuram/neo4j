@@ -10,7 +10,6 @@ import com.neo4j.kernel.enterprise.api.security.EnterpriseSecurityContext;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.io.BufferedReader;
@@ -404,10 +403,9 @@ class SecurityAdministrationCommandLoggingIT
         assertThat( logLines.get( 6 ), containsString( withSubject( adminContext, "REVOKE READ {*} ON GRAPH * ELEMENTS * (*) FROM foo" ) ) );
     }
 
-    @Disabled
+    @Test
     void shouldLogRevokeMatch() throws IOException
     {
-        // TODO: enable once REVOKE MATCH exists again
         // GIVEN
         execute( adminContext, "CREATE ROLE foo" );
         execute( adminContext, "GRANT MATCH {*} ON GRAPH * TO foo" );

@@ -605,8 +605,7 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("REVOKE GRANT READ {x} ON GRAPH * NODES A (*) FROM custom")
-    execute("REVOKE GRANT TRAVERSE ON GRAPH * NODES A (*) FROM custom")
+    execute("REVOKE GRANT MATCH {x} ON GRAPH * NODES A (*) FROM custom")
     execute("GRANT MATCH {x} ON GRAPH * NODES B (*) TO custom")
 
     // THEN
@@ -623,8 +622,7 @@ class DBProceduresAcceptanceTest extends AdministrationCommandAcceptanceTestBase
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("REVOKE GRANT READ {x} ON GRAPH * NODES B (*) FROM custom")
-    execute("REVOKE GRANT TRAVERSE ON GRAPH * NODES B (*) FROM custom")
+    execute("REVOKE GRANT MATCH {x} ON GRAPH * NODES B (*) FROM custom")
     execute("GRANT MATCH {x} ON GRAPH * NODES * (*) TO custom")
 
     // THEN

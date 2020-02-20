@@ -24,6 +24,7 @@ import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ADMIN;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ALL_DATABASE_PRIVILEGES;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.DATABASE_ACTIONS;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.EXECUTE;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.MATCH;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.READ;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.SCHEMA;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.TOKEN;
@@ -48,6 +49,12 @@ class ResourcePrivilegeTest
                     assertOk( privilegeType, action, new GraphResource() );
                 }
                 else if ( READ.satisfies( action ) )
+                {
+                    assertOk( privilegeType, action, new GraphResource() );
+                    assertOk( privilegeType, action, new AllPropertiesResource() );
+                    assertOk( privilegeType, action, new PropertyResource( "foo" ) );
+                }
+                else if ( MATCH.satisfies( action ) )
                 {
                     assertOk( privilegeType, action, new GraphResource() );
                     assertOk( privilegeType, action, new AllPropertiesResource() );
@@ -113,6 +120,11 @@ class ResourcePrivilegeTest
                     assertFail( privilegeType, action, new DatabaseResource() );
                 }
                 else if ( READ.satisfies( action ) )
+                {
+                    assertFail( privilegeType, action, new ProcedureResource( "", "" ) );
+                    assertFail( privilegeType, action, new DatabaseResource() );
+                }
+                else if ( MATCH.satisfies( action ) )
                 {
                     assertFail( privilegeType, action, new ProcedureResource( "", "" ) );
                     assertFail( privilegeType, action, new DatabaseResource() );

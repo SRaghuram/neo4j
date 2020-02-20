@@ -120,17 +120,16 @@ class ElementsAndMixedPrivilegeEnforcementAdministrationCommandAcceptanceTest ex
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("REVOKE READ {name} ON GRAPH * ELEMENTS B FROM custom")
+    execute("REVOKE MATCH {name} ON GRAPH * ELEMENTS B FROM custom")
 
     // THEN
     executeOnDefault("joe", "soap", query, resultHandler = (row, _) => {
       (row.get("n1.name"), row.get("r.name"), row.get("n2.name")) should be((null, null, null))
-    }) should be(4) // TODO: should be 1 when revoking MATCH also revokes traverse
+    }) should be(1)
 
     // WHEN
     selectDatabase(SYSTEM_DATABASE_NAME)
-    execute("GRANT TRAVERSE ON GRAPH * ELEMENTS C TO custom") // unrelated privilege, just so we don't remove all access
-    execute("REVOKE TRAVERSE ON GRAPH * ELEMENTS A, B FROM custom") // TODO: won't work when revoking MATCH also revokes traverse, need to re-add traverse B
+    execute("REVOKE TRAVERSE ON GRAPH * ELEMENTS A FROM custom")
 
     // THEN
     executeOnDefault("joe", "soap", query) should be(0)

@@ -445,8 +445,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     execute(s"SHOW DATABASE $DEFAULT_DATABASE_NAME").toSet should be(Set(db(DEFAULT_DATABASE_NAME, default = true)))
     execute(s"SHOW USER joe PRIVILEGES").toSet should be(Set(
       access().database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map,
-      read().node("*").database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map,
-      traverse().node("*").database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map,
+      matchPrivilege().node("*").database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map,
       access().database(DEFAULT).user("joe").role("PUBLIC").map
     ))
 
@@ -507,8 +506,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     // THEN
     execute(s"SHOW USER joe PRIVILEGES").toSet should be(Set(
       access().database("foo").user("joe").role("custom").map,
-      read().node("*").database("foo").user("joe").role("custom").map,
-      traverse().node("*").database("foo").user("joe").role("custom").map,
+      matchPrivilege().node("*").database("foo").user("joe").role("custom").map,
       access().database(DEFAULT).user("joe").role("PUBLIC").map
     ))
     executeOn("foo", "joe", "soap", "MATCH (n) RETURN n.name",
@@ -556,8 +554,7 @@ class MultiDatabaseAdministrationCommandAcceptanceTest extends AdministrationCom
     // THEN
     execute(s"SHOW USER joe PRIVILEGES").toSet should be(Set(
       access().database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map,
-      read().node("*").database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map,
-      traverse().node("*").database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map,
+      matchPrivilege().node("*").database(DEFAULT_DATABASE_NAME).user("joe").role("custom").map,
       access().database(DEFAULT).user("joe").role("PUBLIC").map
     ))
     executeOnDefault("joe", "soap", "MATCH (n) RETURN n.name",
