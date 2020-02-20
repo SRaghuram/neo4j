@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Sets;
 import com.google.common.io.CharStreams;
 import com.neo4j.bench.common.database.DatabaseName;
+import com.neo4j.bench.common.database.Neo4jDatabaseNames;
 import com.neo4j.bench.common.model.BenchmarkGroup;
 import com.neo4j.bench.common.tool.macro.DeploymentMode;
 import com.neo4j.bench.common.util.Resources;
@@ -146,7 +147,7 @@ public class Workload
             }
             Path schemaFile = workloadConfigFile.getParent().resolve( (String) config.get( SCHEMA ) );
             Schema schema = loadSchema( schemaFile );
-            DatabaseName databaseName = DatabaseName.ofNullable( (String) config.get( DATABASE_NAME ) );
+            DatabaseName databaseName = Neo4jDatabaseNames.ofNullable( (String) config.get( DATABASE_NAME ) );
             return new Workload( queries, workloadName, workloadConfigFile, schema, databaseName );
         }
         catch ( WorkloadConfigException e )

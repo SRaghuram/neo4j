@@ -33,7 +33,7 @@ public class Neo4jStore extends Store
 
     public static Neo4jStore createFrom( Path originalTopLevelDir )
     {
-        return new Neo4jStore( originalTopLevelDir, DatabaseName.defaultDatabase(), false );
+        return new Neo4jStore( originalTopLevelDir, Neo4jDatabaseNames.defaultDatabase(), false );
     }
 
     public static Neo4jStore createFrom( Path originalTopLevelDir, DatabaseName databaseName )
@@ -43,7 +43,7 @@ public class Neo4jStore extends Store
 
     public static Neo4jStore createTemporaryFrom( Path originalTopLevelDir )
     {
-        return new Neo4jStore( originalTopLevelDir, DatabaseName.defaultDatabase(), true );
+        return new Neo4jStore( originalTopLevelDir, Neo4jDatabaseNames.defaultDatabase(), true );
     }
 
     @Override
