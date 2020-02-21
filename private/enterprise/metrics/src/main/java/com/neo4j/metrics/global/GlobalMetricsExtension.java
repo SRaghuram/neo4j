@@ -72,7 +72,8 @@ public class GlobalMetricsExtension implements Lifecycle, MetricsManager
     @Override
     public void stop()
     {
-        life.stop();
+        // We do not stop life here (it will be stopped on shutdown instead) because this is stopped before individual database life (per database metrics)
+        // Those metrics rely on MetricRegistry and EventReporterBuilder to be working
     }
 
     @Override

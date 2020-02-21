@@ -21,10 +21,10 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.SortedMap;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -40,6 +40,8 @@ public class RotatableCsvReporter extends ScheduledReporter
     private final Map<File,CsvRotatableWriter> writers;
     private final BiFunction<File,RotatingFileOutputStreamSupplier.RotationListener,RotatingFileOutputStreamSupplier> fileSupplierStreamCreator;
 
+    private boolean stopped;
+
     RotatableCsvReporter( MetricRegistry registry, Locale locale, TimeUnit rateUnit, TimeUnit durationUnit, Clock clock,
             File directory,
             BiFunction<File,RotatingFileOutputStreamSupplier.RotationListener,RotatingFileOutputStreamSupplier> fileSupplierStreamCreator )
@@ -49,7 +51,7 @@ public class RotatableCsvReporter extends ScheduledReporter
         this.clock = clock;
         this.directory = directory;
         this.fileSupplierStreamCreator = fileSupplierStreamCreator;
-        this.writers = new ConcurrentHashMap<>();
+        this.writers = new HashMap<>();
     }
 
     static Builder forRegistry( MetricRegistry registry )
@@ -61,6 +63,7 @@ public class RotatableCsvReporter extends ScheduledReporter
     public synchronized void stop()
     {
         super.stop();
+        stopped = true;
         writers.values().forEach( CsvRotatableWriter::close );
     }
 
@@ -68,6 +71,10 @@ public class RotatableCsvReporter extends ScheduledReporter
     public synchronized void report( SortedMap<String,Gauge> gauges, SortedMap<String,Counter> counters,
             SortedMap<String,Histogram> histograms, SortedMap<String,Meter> meters, SortedMap<String,Timer> timers )
     {
+        if ( stopped )
+        {
+            return;
+        }
         final long timestamp = TimeUnit.MILLISECONDS.toSeconds( clock.getTime() );
 
         for ( Map.Entry<String,Gauge> entry : gauges.entrySet() )
