@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.core.replication;
 
-import com.neo4j.causalclustering.core.consensus.NoLeaderFoundException;
 import com.neo4j.causalclustering.identity.MemberId;
 
 import java.time.Duration;
@@ -20,7 +19,7 @@ class LeaderProvider
         this.timeoutMillis = leaderAwaitTimeout.toMillis();
     }
 
-    MemberId awaitLeaderOrThrow() throws InterruptedException, NoLeaderFoundException
+    MemberId awaitLeader() throws InterruptedException
     {
         MemberId leader = currentLeader;
         if ( leader != null )
@@ -29,15 +28,11 @@ class LeaderProvider
             return leader;
         }
 
-        leader = awaitLeader();
-        if ( leader == null )
-        {
-            throw new NoLeaderFoundException();
-        }
+        leader = waitForLeader();
         return leader;
     }
 
-    private synchronized MemberId awaitLeader() throws InterruptedException
+    private synchronized MemberId waitForLeader() throws InterruptedException
     {
         if ( currentLeader == null )
         {

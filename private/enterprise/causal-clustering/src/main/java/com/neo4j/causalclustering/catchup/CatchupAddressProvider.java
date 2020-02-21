@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.catchup;
 
 import com.neo4j.causalclustering.core.consensus.LeaderLocator;
-import com.neo4j.causalclustering.core.consensus.NoLeaderFoundException;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.identity.MemberId;
 import com.neo4j.causalclustering.upstream.UpstreamDatabaseStrategySelector;
@@ -97,15 +96,12 @@ public interface CatchupAddressProvider
         @Override
         public SocketAddress primary( NamedDatabaseId namedDatabaseId ) throws CatchupAddressResolutionException
         {
-            try
+            MemberId leadMember = leaderLocator.getLeader();
+            if ( leadMember == null )
             {
-                MemberId leadMember = leaderLocator.getLeader();
-                return topologyService.lookupCatchupAddress( leadMember );
+                throw new CatchupAddressResolutionException( new IllegalStateException( "No Leader Found" ) );
             }
-            catch ( NoLeaderFoundException e )
-            {
-                throw new CatchupAddressResolutionException( e );
-            }
+            return topologyService.lookupCatchupAddress( leadMember );
         }
 
         @Override

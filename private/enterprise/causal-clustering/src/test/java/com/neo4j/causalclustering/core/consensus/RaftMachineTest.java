@@ -38,7 +38,6 @@ import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 import static org.neo4j.internal.helpers.collection.Iterables.last;
 import static org.neo4j.internal.helpers.collection.Iterators.asSet;
 
@@ -338,7 +337,7 @@ public class RaftMachineTest
     }
 
     @Test
-    public void shouldThrowExceptionIfReceivesClientRequestWithNoLeaderElected() throws Exception
+    public void shouldReturnNullIfReceivesClientRequestWithNoLeaderElected() throws Exception
     {
         // Given
         FakeClock fakeClock = Clocks.fakeClock();
@@ -350,18 +349,10 @@ public class RaftMachineTest
         raft.installCoreState( new RaftCoreState( new MembershipEntry( 0, asSet( myself, member1, member2 )  ) ) );
         raft.postRecoveryActions();
 
-        try
-        {
-            // When
-            // There is no leader
-            raft.getLeader();
-            fail( "Should have thrown exception" );
-        }
+        // When
+        // There is no leader
         // Then
-        catch ( NoLeaderFoundException e )
-        {
-            // expected
-        }
+        assertNull( raft.getLeader() );
     }
 
     @Test
@@ -436,18 +427,10 @@ public class RaftMachineTest
 
         raft.installCoreState( new RaftCoreState( new MembershipEntry( 0, asSet( myself, member1, member2 )  ) ) );
 
-        try
-        {
-            // When
-            // There is no leader
-            raft.getLeader();
-            fail( "Should have thrown exception" );
-        }
+        // When
+        // There is no leader
         // Then
-        catch ( NoLeaderFoundException e )
-        {
-            // expected
-        }
+        assertNull( raft.getLeader() );
     }
 
     @Test

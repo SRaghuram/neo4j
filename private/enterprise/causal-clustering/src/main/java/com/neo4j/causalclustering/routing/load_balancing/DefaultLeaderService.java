@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.routing.load_balancing;
 
 import com.neo4j.causalclustering.core.consensus.LeaderLocator;
-import com.neo4j.causalclustering.core.consensus.NoLeaderFoundException;
 import com.neo4j.causalclustering.discovery.ClientConnector;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.RoleInfo;
@@ -66,14 +65,7 @@ public class DefaultLeaderService implements LeaderService
 
     private static Optional<MemberId> getLeaderIdFromLeaderLocator( LeaderLocator leaderLocator )
     {
-        try
-        {
-            return Optional.of( leaderLocator.getLeader() );
-        }
-        catch ( NoLeaderFoundException e )
-        {
-            return Optional.empty();
-        }
+        return Optional.ofNullable( leaderLocator.getLeader() );
     }
 
     private Optional<MemberId> getLeaderIdFromTopologyService( NamedDatabaseId namedDatabaseId )

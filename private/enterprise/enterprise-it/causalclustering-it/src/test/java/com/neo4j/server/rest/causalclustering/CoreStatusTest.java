@@ -6,7 +6,6 @@
 package com.neo4j.server.rest.causalclustering;
 
 import com.neo4j.causalclustering.core.consensus.DurationSinceLastMessageMonitor;
-import com.neo4j.causalclustering.core.consensus.NoLeaderFoundException;
 import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import com.neo4j.causalclustering.core.consensus.membership.RaftMembershipManager;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
@@ -183,7 +182,7 @@ class CoreStatusTest
     }
 
     @Test
-    void expectedStatusFieldsAreIncluded() throws IOException, NoLeaderFoundException
+    void expectedStatusFieldsAreIncluded() throws IOException
     {
         // given ideal normal conditions
         commandIndexTracker.setAppliedCommandIndex( 123 );

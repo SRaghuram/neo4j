@@ -7,7 +7,6 @@ package com.neo4j.causalclustering.routing.load_balancing.procedure;
 
 import com.neo4j.causalclustering.common.StubClusteredDatabaseManager;
 import com.neo4j.causalclustering.core.consensus.LeaderLocator;
-import com.neo4j.causalclustering.core.consensus.NoLeaderFoundException;
 import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.CoreTopologyService;
 import com.neo4j.causalclustering.discovery.DatabaseCoreTopology;
@@ -493,22 +492,22 @@ class GetRoutingTableProcedureForSingleDCTest
         assertEquals( Status.Database.DatabaseUnavailable, error.status() );
     }
 
-    private LeaderLocatorForDatabase noLeaderAvailable() throws NoLeaderFoundException
+    private LeaderLocatorForDatabase noLeaderAvailable()
     {
         var leaderLocator = mock( LeaderLocator.class );
         var leaderLocatorForDatabase = mock( LeaderLocatorForDatabase.class );
 
-        when( leaderLocator.getLeader() ).thenThrow( new NoLeaderFoundException() );
+        when( leaderLocator.getLeader() ).thenReturn( null );
         when( leaderLocatorForDatabase.getLeader( namedDatabaseId ) ).thenReturn( Optional.of( leaderLocator ) );
         return leaderLocatorForDatabase;
     }
 
-    private LeaderLocatorForDatabase leaderIsMemberId( int memberId ) throws NoLeaderFoundException
+    private LeaderLocatorForDatabase leaderIsMemberId( int memberId )
     {
         return leaderIsMemberId( memberId, namedDatabaseId );
     }
 
-    private static LeaderLocatorForDatabase leaderIsMemberId( int memberId, NamedDatabaseId databaseId ) throws NoLeaderFoundException
+    private static LeaderLocatorForDatabase leaderIsMemberId( int memberId, NamedDatabaseId databaseId )
     {
         var leaderLocator = mock( LeaderLocator.class );
         var leaderLocatorForDatabase = mock( LeaderLocatorForDatabase.class );

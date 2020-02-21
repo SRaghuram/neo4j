@@ -5,7 +5,6 @@
  */
 package com.neo4j.causalclustering.core.replication;
 
-import com.neo4j.causalclustering.core.consensus.NoLeaderFoundException;
 import com.neo4j.causalclustering.identity.MemberId;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
@@ -43,12 +42,12 @@ class LeaderProviderTest
     }
 
     @Test
-    void shouldGiveCurrentLeaderImmediatelyIfAvailable() throws InterruptedException, NoLeaderFoundException
+    void shouldGiveCurrentLeaderImmediatelyIfAvailable() throws InterruptedException
     {
         LeaderProvider leaderProvider = new LeaderProvider( Duration.of( 0, SECONDS ) );
         leaderProvider.setLeader( MEMBER_ID );
 
-        assertEquals( leaderProvider.awaitLeaderOrThrow(), MEMBER_ID );
+        assertEquals( leaderProvider.awaitLeader(), MEMBER_ID );
     }
 
     @Test
@@ -85,14 +84,14 @@ class LeaderProviderTest
     }
 
     @Test
-    void shouldTimeoutWaitingForLeaderThatNeverComes()
+    void shouldTimeoutWaitingForLeaderThatNeverComes() throws InterruptedException
     {
         // given
         LeaderProvider leaderProvider = new LeaderProvider( Duration.of( 10, MILLIS ) );
         assertNull( leaderProvider.currentLeader() );
 
         // then
-        assertThrows( NoLeaderFoundException.class, leaderProvider::awaitLeaderOrThrow );
+        assertNull( leaderProvider.awaitLeader() );
     }
 
     private Supplier<MemberId> awaitLeader( LeaderProvider leaderProvider )
@@ -101,9 +100,9 @@ class LeaderProviderTest
         {
             try
             {
-                return leaderProvider.awaitLeaderOrThrow();
+                return leaderProvider.awaitLeader();
             }
-            catch ( InterruptedException | NoLeaderFoundException e )
+            catch ( InterruptedException e )
             {
                 throw new RuntimeException( e );
             }

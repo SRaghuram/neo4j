@@ -6,7 +6,6 @@
 package com.neo4j.causalclustering.core.state.machines.lease;
 
 import com.neo4j.causalclustering.core.consensus.LeaderLocator;
-import com.neo4j.causalclustering.core.consensus.NoLeaderFoundException;
 import com.neo4j.causalclustering.core.replication.ReplicationResult;
 import com.neo4j.causalclustering.core.replication.Replicator;
 import com.neo4j.causalclustering.identity.MemberId;
@@ -130,17 +129,7 @@ public class ClusterLeaseCoordinator implements LeaseService
 
     private void ensureLeader() throws LeaseException
     {
-        MemberId leader = null;
-
-        try
-        {
-            leader = leaderLocator.getLeader();
-        }
-        catch ( NoLeaderFoundException ignored )
-        {
-            // keep leader = null
-        }
-
+        MemberId leader = leaderLocator.getLeader();
         if ( !myself.equals( leader ) )
         {
             throw new LeaseException( NOT_ON_LEADER_ERROR_MESSAGE, NotALeader );

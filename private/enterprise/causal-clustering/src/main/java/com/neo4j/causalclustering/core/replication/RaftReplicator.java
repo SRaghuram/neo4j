@@ -8,7 +8,6 @@ package com.neo4j.causalclustering.core.replication;
 import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.core.consensus.LeaderListener;
 import com.neo4j.causalclustering.core.consensus.LeaderLocator;
-import com.neo4j.causalclustering.core.consensus.NoLeaderFoundException;
 import com.neo4j.causalclustering.core.consensus.RaftMessages;
 import com.neo4j.causalclustering.core.consensus.RaftMessages.RaftMessage;
 import com.neo4j.causalclustering.core.replication.monitoring.ReplicationMonitor;
@@ -86,7 +85,7 @@ public class RaftReplicator implements Replicator, LeaderListener
 
         try
         {
-            leader = leaderProvider.awaitLeaderOrThrow();
+            leader = leaderProvider.awaitLeader();
         }
         catch ( InterruptedException e )
         {
@@ -94,10 +93,10 @@ public class RaftReplicator implements Replicator, LeaderListener
             replicationMonitor.notReplicated();
             return ReplicationResult.notReplicated( e );
         }
-        catch ( NoLeaderFoundException e )
+        if ( leader == null )
         {
             replicationMonitor.notReplicated();
-            return ReplicationResult.notReplicated( e );
+            return ReplicationResult.notReplicated( new IllegalStateException( "No leader found" ));
         }
 
         OperationContext session = sessionPool.acquireSession();
@@ -128,7 +127,12 @@ public class RaftReplicator implements Replicator, LeaderListener
                 {
                     assertDatabaseAvailable();
                     // Refreshing the leader, in case a leader switch is the reason we failed to replicate!
-                    leader = leaderProvider.awaitLeaderOrThrow();
+                    leader = leaderProvider.awaitLeader();
+                    if ( leader == null )
+                    {
+                        throw new IllegalStateException( "No Leader Found" );
+                    }
+
                 }
             }
             while ( stateMachineResult == null );

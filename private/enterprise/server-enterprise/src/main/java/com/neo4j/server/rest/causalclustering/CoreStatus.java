@@ -6,7 +6,6 @@
 package com.neo4j.server.rest.causalclustering;
 
 import com.neo4j.causalclustering.core.consensus.DurationSinceLastMessageMonitor;
-import com.neo4j.causalclustering.core.consensus.NoLeaderFoundException;
 import com.neo4j.causalclustering.core.consensus.RaftMachine;
 import com.neo4j.causalclustering.core.consensus.membership.RaftMembershipManager;
 import com.neo4j.causalclustering.core.consensus.roles.Role;
@@ -101,13 +100,6 @@ class CoreStatus extends ClusterMemberStatus
 
     private MemberId getLeader()
     {
-        try
-        {
-            return raftMachine.getLeader();
-        }
-        catch ( NoLeaderFoundException e )
-        {
-            return null;
-        }
+        return raftMachine.getLeader();
     }
 }

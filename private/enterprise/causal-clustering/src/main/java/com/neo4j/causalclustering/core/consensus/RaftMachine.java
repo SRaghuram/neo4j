@@ -116,9 +116,9 @@ public class RaftMachine implements LeaderLocator, CoreMetaData, DatabasePanicEv
     }
 
     @Override
-    public MemberId getLeader() throws NoLeaderFoundException
+    public MemberId getLeader()
     {
-        return outcomeApplier.getLeader().orElseThrow( NoLeaderFoundException::new );
+        return outcomeApplier.getLeader().orElse( null );
     }
 
     @Override
