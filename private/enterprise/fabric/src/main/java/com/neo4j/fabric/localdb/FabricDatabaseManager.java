@@ -45,7 +45,6 @@ public class FabricDatabaseManager extends LifecycleAdapter
     private final Log log;
     private DatabaseManager<DatabaseContext> databaseManager;
     private DatabaseIdRepository databaseIdRepository;
-    private DatabaseManagementService managementService;
 
     public FabricDatabaseManager( FabricConfig fabricConfig, DependencyResolver dependencyResolver, LogProvider logProvider )
     {
