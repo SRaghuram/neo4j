@@ -5,6 +5,7 @@
  */
 package com.neo4j.consistency;
 
+import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import com.neo4j.kernel.impl.store.format.highlimit.HighLimitWithSmallRecords;
 
@@ -26,6 +27,7 @@ public class ExperimentalHighLimitDetectAllRelationshipInconsistenciesIT extends
     protected Map<Setting<?>,Object> getConfig()
     {
         Map<Setting<?>,Object> cfg = new HashMap<>( super.getConfig() );
+        cfg.put( MetricsSettings.metricsEnabled, false );
         cfg.put( OnlineBackupSettings.online_backup_enabled, false );
         return cfg;
     }
