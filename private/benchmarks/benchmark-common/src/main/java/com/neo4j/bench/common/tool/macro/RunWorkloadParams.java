@@ -127,6 +127,7 @@ public class RunWorkloadParams
     public static final String CMD_RESULTS_JSON = "--results";
     public static final String CMD_PROFILER_RECORDINGS_DIR = "--profiler-recordings-dir";
     public static final String CMD_BATCH_JOB_ID = "--batch-job-id";
+    public static final String CMD_JOB_PARAMETERS = "--job-parameters";
 
     // needed for JSON serialization
     private RunWorkloadParams()

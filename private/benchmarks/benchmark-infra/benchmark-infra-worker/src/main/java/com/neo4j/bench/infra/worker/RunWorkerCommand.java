@@ -53,6 +53,11 @@ public class RunWorkerCommand implements Runnable
     @Required
     private String batchJobId = "";
 
+    @Option( type = OptionType.COMMAND,
+            name = RunWorkloadParams.CMD_JOB_PARAMETERS,
+            title = "Job parameters file" )
+    private String jobParameters = Workspace.JOB_PARAMETERS_JSON;
+
     @Override
     public void run()
     {

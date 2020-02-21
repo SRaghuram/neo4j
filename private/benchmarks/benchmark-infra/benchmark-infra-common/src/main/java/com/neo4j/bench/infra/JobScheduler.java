@@ -7,6 +7,7 @@ package com.neo4j.bench.infra;
 
 import java.net.URI;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Scheduler of benchmark runs
@@ -23,6 +24,17 @@ public interface JobScheduler
      * @return ID of scheduled job
      */
     JobId schedule( URI workerArtifactUri, URI baseArtifactUri, String jobName );
+
+    /**
+     * Schedules a benchmark run
+     *
+     * @param workerArtifactUri URI to worker artifact
+     * @param baseArtifactUri URI to workspace base
+     * @param jobName human readable job name
+     * @param additionalParameters additional parameters passed to the job
+     * @return ID of scheduled job
+     */
+    JobId schedule( URI workerArtifactUri, URI baseArtifactUri, String jobName, Map<String, String> additionalParameters );
 
     /**
      * Fetches status of scheduled job

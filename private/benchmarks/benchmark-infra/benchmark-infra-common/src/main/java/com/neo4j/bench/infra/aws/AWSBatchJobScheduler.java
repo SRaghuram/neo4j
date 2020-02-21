@@ -161,10 +161,17 @@ public class AWSBatchJobScheduler implements JobScheduler
     @Override
     public JobId schedule( URI workerArtifactUri, URI baseArtifactUri, String jobName )
     {
+        return schedule( workerArtifactUri, baseArtifactUri, jobName, Collections.emptyMap() );
+    }
+
+    @Override
+    public JobId schedule( URI workerArtifactUri, URI baseArtifactUri, String jobName, Map<String, String> additionalParameters )
+    {
         assertJobName( jobName );
         Map<String,String> paramsMap = new HashMap<>();
         paramsMap.put( InfraParams.CMD_ARTIFACT_WORKER_URI, workerArtifactUri.toString() );
         paramsMap.put( InfraParams.CMD_ARTIFACT_BASE_URI, baseArtifactUri.toString() );
+        paramsMap.putAll( additionalParameters );
 
         SubmitJobRequest submitJobRequest = new SubmitJobRequest()
                 .withJobDefinition( jobDefinition )
