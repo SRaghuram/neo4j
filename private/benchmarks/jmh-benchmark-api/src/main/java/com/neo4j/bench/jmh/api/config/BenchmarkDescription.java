@@ -31,7 +31,10 @@ import static com.google.common.collect.Lists.newArrayList;
 import static com.google.common.collect.Sets.newHashSet;
 import static java.lang.String.format;
 import static java.util.function.Function.identity;
-import static java.util.stream.Collectors.*;
+import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
+import static java.util.stream.Collectors.toSet;
 
 /**
  * Describes one available benchmark (class that extends AbstractBenchmark),
@@ -40,51 +43,50 @@ import static java.util.stream.Collectors.*;
 public class BenchmarkDescription
 {
 
-    static List<BenchmarkDescription> implode(Set<BenchmarkDescription> benchmarkDescriptions) {
+    static List<BenchmarkDescription> implode( Set<BenchmarkDescription> benchmarkDescriptions )
+    {
         Map<String,List<BenchmarkDescription>> descriptionsByName =
                 benchmarkDescriptions.stream().collect( groupingBy( BenchmarkDescription::className ) );
 
-        return descriptionsByName.
-                values().
-                stream()
-                .map(group -> {
+        return descriptionsByName.values()
+                                 .stream()
+                                 .map( group ->
+                                       {
 
-                    Map<String,BenchmarkMethodDescription> implodedMethods = group.stream()
-                            .flatMap( bd -> bd.methods().stream() )
-                            .collect( toMap(
-                                    BenchmarkMethodDescription::name,
-                                    method -> method,
-                                    ( method1, method2 ) -> method1
-                            ) );
+                                           Map<String,BenchmarkMethodDescription> implodedMethods = group.stream()
+                                                                                                         .flatMap( bd -> bd.methods().stream() )
+                                                                                                         .collect( toMap(
+                                                                                                                 BenchmarkMethodDescription::name,
+                                                                                                                 method -> method,
+                                                                                                                 ( method1, method2 ) -> method1
+                                                                                                         ) );
 
-                    Map<String,BenchmarkParamDescription> implodedParameters = group
-                            .stream()
-                            .flatMap( bd1 -> bd1.parameters().values().stream() )
-                            .collect( groupingBy( BenchmarkParamDescription::name ) )
-                            .values()
-                            .stream()
-                            .map( parameterGroup -> new BenchmarkParamDescription(
-                                    parameterGroup.get( 0 ).name(),
-                                    parameterGroup.get( 0 ).allowedValues(),
-                                    parameterGroup.stream().flatMap( param -> param.values().stream() ).collect( toSet() )
-                            ) ).collect( toMap(
-                                    BenchmarkParamDescription::name,
-                                    param -> param
-                            ) );
+                                           Map<String,BenchmarkParamDescription> implodedParameters = group
+                                                   .stream()
+                                                   .flatMap( bd1 -> bd1.parameters().values().stream() )
+                                                   .collect( groupingBy( BenchmarkParamDescription::name ) )
+                                                   .values()
+                                                   .stream()
+                                                   .map( parameterGroup -> new BenchmarkParamDescription(
+                                                           parameterGroup.get( 0 ).name(),
+                                                           parameterGroup.get( 0 ).allowedValues(),
+                                                           parameterGroup.stream().flatMap( param -> param.values().stream() ).collect( toSet() )
+                                                   ) ).collect( toMap(
+                                                           BenchmarkParamDescription::name,
+                                                           param -> param
+                                                   ) );
 
-
-                    return new BenchmarkDescription(
-                        group.get( 0 ).className(),
-                        group.get( 0 ).group(),
-                        group.get( 0 ).isThreadSafe(),
-                        implodedMethods,
-                        implodedParameters,
-                        group.get( 0 ).description(),
-                        true
-                    );
-                }).collect( Collectors.toList() );
+                                           return new BenchmarkDescription(
+                                                   group.get( 0 ).className(),
+                                                   group.get( 0 ).group(),
+                                                   group.get( 0 ).isThreadSafe(),
+                                                   implodedMethods,
+                                                   implodedParameters,
+                                                   group.get( 0 ).description(),
+                                                   true
+                                           );
+                                       } ).collect( Collectors.toList() );
     }
-
 
     private final String className;
     private final String group;

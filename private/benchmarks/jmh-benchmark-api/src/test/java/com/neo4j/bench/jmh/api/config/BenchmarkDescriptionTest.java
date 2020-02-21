@@ -5,7 +5,6 @@
  */
 package com.neo4j.bench.jmh.api.config;
 
-import com.neo4j.bench.common.model.Benchmark;
 import com.neo4j.bench.jmh.api.benchmarks.invalid.DuplicateAllowedBenchmark;
 import com.neo4j.bench.jmh.api.benchmarks.invalid.DuplicateBaseBenchmark;
 import com.neo4j.bench.jmh.api.benchmarks.valid.ValidDisabledBenchmark;
@@ -13,7 +12,12 @@ import com.neo4j.bench.jmh.api.benchmarks.valid.ValidEnabledBenchmark1;
 import org.junit.jupiter.api.Test;
 import org.openjdk.jmh.annotations.Mode;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Stream;
 
 import static com.google.common.collect.Lists.newArrayList;
@@ -29,7 +33,9 @@ import static java.util.Collections.singleton;
 import static java.util.Collections.singletonMap;
 import static java.util.stream.Collectors.toMap;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -842,9 +848,8 @@ class BenchmarkDescriptionTest extends BenchmarksFinderFixture
                 description,
                 isEnabled );
 
-
         List<BenchmarkDescription> originalExplodeImplode = BenchmarkDescription.implode( original.explode() );
-        assertThat( originalExplodeImplode.size(), equalTo( 1 ));
+        assertThat( originalExplodeImplode.size(), equalTo( 1 ) );
 
         assertThat( originalExplodeImplode.get( 0 ), equalTo( original ) );
     }
@@ -897,12 +902,11 @@ class BenchmarkDescriptionTest extends BenchmarksFinderFixture
                 description,
                 isEnabled );
 
-
         Set<BenchmarkDescription> explodedDescriptions = original1.explode();
         explodedDescriptions.addAll( original2.explode() );
 
         List<BenchmarkDescription> implode = BenchmarkDescription.implode( explodedDescriptions );
-        assertThat( implode.size(), equalTo( 2 ));
+        assertThat( implode.size(), equalTo( 2 ) );
         assertThat( implode, containsInAnyOrder( original1, original2 ) );
     }
 }

@@ -9,10 +9,18 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.neo4j.bench.common.model.BenchmarkConfig;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import static java.util.function.Function.identity;
-import static java.util.stream.Collectors.*;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
+import static java.util.stream.Collectors.toSet;
 
 /**
  * Describes final configuration (what will actually be used during execution) of the benchmark suite,
@@ -158,7 +166,8 @@ public class SuiteDescription
         return groupBenchmarks;
     }
 
-    public List<SuiteDescription> partition(int numberOfPartitions) {
+    public List<SuiteDescription> partition( int numberOfPartitions )
+    {
         List<BenchmarkDescription> enabledExplodedBenchmarks = explodeEnabledBenchmarks();
 
         long benchmarksPerPartition = (long) Math.ceil( enabledExplodedBenchmarks.size() / (double) numberOfPartitions );
@@ -175,7 +184,7 @@ public class SuiteDescription
 
             List<BenchmarkDescription> condensedBenchmarkDescriptionPartition = BenchmarkDescription.implode( rawBenchmarkDescriptionPartition );
 
-            partitions.add( SuiteDescription.fromBenchmarkDescriptions( condensedBenchmarkDescriptionPartition ));
+            partitions.add( SuiteDescription.fromBenchmarkDescriptions( condensedBenchmarkDescriptionPartition ) );
         }
 
         return partitions;
