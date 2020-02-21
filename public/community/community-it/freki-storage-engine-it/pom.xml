@@ -13,7 +13,6 @@
     <artifactId>freki-storage-engine-it</artifactId>
     <version>4.1.0-SNAPSHOT</version>
 
-
     <name>Neo4j - Freki Storage Engine Integration Tests</name>
     <packaging>jar</packaging>
     <description>Neo4j freki storage engine integration tests.</description>
@@ -59,6 +58,12 @@
         </dependency>
         <dependency>
             <groupId>org.neo4j</groupId>
+            <artifactId>neo4j-freki-storage-engine</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.neo4j</groupId>
             <artifactId>neo4j-random-values</artifactId>
             <version>${project.version}</version>
             <scope>test</scope>
@@ -66,13 +71,6 @@
         <dependency>
             <groupId>org.neo4j</groupId>
             <artifactId>neo4j-kernel</artifactId>
-            <version>${project.version}</version>
-            <type>test-jar</type>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.neo4j</groupId>
-            <artifactId>neo4j-record-storage-engine</artifactId>
             <version>${project.version}</version>
             <type>test-jar</type>
             <scope>test</scope>

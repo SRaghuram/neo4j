@@ -29,6 +29,7 @@ import org.neo4j.configuration.Config;
 import org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector;
 import org.neo4j.internal.id.IdController;
 import org.neo4j.internal.id.IdGeneratorFactory;
+import org.neo4j.internal.metadatastore.GBPTreeMetaDataStore;
 import org.neo4j.internal.schema.IndexConfigCompleter;
 import org.neo4j.internal.schema.SchemaState;
 import org.neo4j.io.fs.FileSystemAbstraction;
@@ -36,6 +37,7 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.lock.LockService;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.LogService;
@@ -131,7 +133,10 @@ public class FrekiStorageEngineFactory implements StorageEngineFactory
     @Override
     public StoreId storeId( DatabaseLayout databaseLayout, PageCache pageCache ) throws IOException
     {
-        return null;
+        try ( GBPTreeMetaDataStore metaDataStore = openMetaDataStore( databaseLayout, pageCache, PageCacheTracer.NULL, PageCursorTracer.NULL ) )
+        {
+            return metaDataStore.getStoreId();
+        }
     }
 
     @Override
@@ -151,5 +156,12 @@ public class FrekiStorageEngineFactory implements StorageEngineFactory
     public CommandReaderFactory commandReaderFactory()
     {
         return FrekiCommandReaderFactory.INSTANCE;
+    }
+
+    static GBPTreeMetaDataStore openMetaDataStore( DatabaseLayout databaseLayout, PageCache pageCache, PageCacheTracer pageCacheTracer,
+            PageCursorTracer cursorTracer )
+    {
+        return new GBPTreeMetaDataStore( pageCache, databaseLayout.file( Stores.META_DATA_STORE_FILENAME ), 123456789, false, pageCacheTracer,
+                cursorTracer );
     }
 }
