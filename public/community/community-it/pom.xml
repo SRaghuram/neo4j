@@ -52,6 +52,7 @@
         <module>consistency-it</module>
         <module>bolt-it</module>
         <module>community-it</module>
+        <module>freki-storage-engine-it</module>
     </modules>
 
     <profiles>
