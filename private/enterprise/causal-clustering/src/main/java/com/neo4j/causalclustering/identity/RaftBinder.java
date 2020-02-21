@@ -193,7 +193,7 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
             {
                 var raftId = RaftId.from( namedDatabaseId.databaseId() );
                 monitor.logBootstrapAttemptWithDiscoveryService();
-                var outcome = publishRaftId( RaftId.from( namedDatabaseId.databaseId() ) );
+                var outcome = publishRaftId( raftId, bindingConditions );
 
                 if ( Publisher.successfullyPublishedBy( ME, outcome ) )
                 {
@@ -293,7 +293,7 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
     {
         while ( true )
         {
-            var outcome = publishRaftId( raftId );
+            var outcome = publishRaftId( raftId, bindingConditions );
             if ( outcome != FAILED_PUBLISH )
             {
                 return outcome;
@@ -305,23 +305,34 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
     }
 
     /**
-     * Publish the raft Id for the database being started to the discovery service,
-     * as a signal to other members that this database has been bootstrapped
+     * Publish the raft Id for the database being started to the discovery service, as a signal to other members that this database has been bootstrapped.
      *
      * @param localRaftId the raftId to be published
+     * @param bindingConditions determines if the publish step is allowed to retry on {@link TimeoutException}
      * @return the outcome of the publish attempt (i.e. whether successfully published by us, other or not at all)
      * @throws BindingException in the event of a non-retryable error.
      */
-    private PublishRaftIdOutcome publishRaftId( RaftId localRaftId ) throws BindingException
+    private PublishRaftIdOutcome publishRaftId( RaftId localRaftId, BindingConditions bindingConditions )
+            throws BindingException, TimeoutException, DatabaseStartAbortedException
     {
-        try
+        PublishRaftIdOutcome outcome;
+        do
         {
-            return topologyService.publishRaftId( localRaftId );
+            try
+            {
+                outcome = topologyService.publishRaftId( localRaftId );
+            }
+            catch ( TimeoutException e )
+            {
+                outcome = null;
+            }
+            catch ( Throwable t )
+            {
+                throw new BindingException( format( "Failed to publish raftId %s", localRaftId ), t );
+            }
         }
-        catch ( Throwable t )
-        {
-            throw new BindingException( format( "Failed to publish raftId %s", localRaftId ), t );
-        }
+        while ( outcome == null && bindingConditions.allowContinuePublishing( namedDatabaseId ) );
+        return outcome;
     }
 
     enum Publisher
@@ -364,20 +375,20 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
             this.endTime = clock.millis() + timeout.toMillis();
         }
 
-        void allowContinueBinding( NamedDatabaseId namedDatabaseId, DatabaseCoreTopology topology ) throws TimeoutException, DatabaseStartAbortedException
+        boolean allowContinueBinding( NamedDatabaseId namedDatabaseId, DatabaseCoreTopology topology ) throws TimeoutException, DatabaseStartAbortedException
         {
             var message = format( "Failed to join or bootstrap a raft group with id %s and members %s in time. " +
-                    "Please restart the cluster.", RaftId.from( namedDatabaseId.databaseId() ), topology );
-            allowContinue( namedDatabaseId, message );
+                                  "Please restart the cluster.", RaftId.from( namedDatabaseId.databaseId() ), topology );
+            return allowContinue( namedDatabaseId, message );
         }
 
-        void allowContinuePublishing( NamedDatabaseId namedDatabaseId ) throws TimeoutException, DatabaseStartAbortedException
+        boolean allowContinuePublishing( NamedDatabaseId namedDatabaseId ) throws TimeoutException, DatabaseStartAbortedException
         {
             var message = format( "Failed to publish raftId %s in time. Please restart the cluster.", RaftId.from( namedDatabaseId.databaseId() ) );
-            allowContinue( namedDatabaseId, message );
+            return allowContinue( namedDatabaseId, message );
         }
 
-        private void allowContinue( NamedDatabaseId namedDatabaseId, String timeoutMessage ) throws TimeoutException, DatabaseStartAbortedException
+        private boolean allowContinue( NamedDatabaseId namedDatabaseId, String timeoutMessage ) throws TimeoutException, DatabaseStartAbortedException
         {
             var shouldAbort = startAborter.shouldAbort( namedDatabaseId );
             var timedOut = endTime < clock.millis();
@@ -390,6 +401,7 @@ public class RaftBinder implements Supplier<Optional<RaftId>>
             {
                 throw new TimeoutException( timeoutMessage );
             }
+            return true;
         }
     }
 }

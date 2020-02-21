@@ -217,7 +217,7 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
     }
 
     @Override
-    public PublishRaftIdOutcome publishRaftId( RaftId raftId )
+    public PublishRaftIdOutcome publishRaftId( RaftId raftId ) throws TimeoutException
     {
         var coreTopologyActor = coreTopologyActorRef;
         if ( coreTopologyActor != null )
@@ -238,13 +238,13 @@ public class AkkaCoreTopologyService extends SafeLifecycle implements CoreTopolo
 
             try
             {
-                return  idSetJob.join();
+                return idSetJob.join();
             }
             catch ( CompletionException e )
             {
                 if ( e.getCause() instanceof AskTimeoutException )
                 {
-                    return PublishRaftIdOutcome.FAILED_PUBLISH;
+                    throw new TimeoutException( "Could not publsh raft id within " + timeout.toSeconds() + " seconds" );
                 }
                 throw new RuntimeException( e.getCause() );
             }

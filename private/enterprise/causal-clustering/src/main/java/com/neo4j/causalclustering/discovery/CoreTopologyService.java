@@ -9,6 +9,8 @@ import com.neo4j.causalclustering.core.consensus.LeaderInfo;
 import com.neo4j.causalclustering.discovery.procedures.ClusterOverviewProcedure;
 import com.neo4j.causalclustering.identity.RaftId;
 
+import java.util.concurrent.TimeoutException;
+
 import org.neo4j.kernel.database.NamedDatabaseId;
 
 /**
@@ -29,8 +31,9 @@ public interface CoreTopologyService extends TopologyService
      *
      * @param raftId The Raft ID to publish.
      * @return The outcome of this publish attempt
+     * @throws TimeoutException if request retries. This means that the outcome is unknown
      */
-    PublishRaftIdOutcome publishRaftId( RaftId raftId );
+    PublishRaftIdOutcome publishRaftId( RaftId raftId ) throws TimeoutException;
 
     /**
      * Sets or updates the leader memberId for the given database (i.e. Raft consensus group).
