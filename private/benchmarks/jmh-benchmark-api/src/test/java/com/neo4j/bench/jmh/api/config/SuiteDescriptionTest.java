@@ -13,6 +13,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.google.common.collect.Sets.newHashSet;
 import static com.neo4j.bench.jmh.api.config.Validation.ValidationError.CONFIGURED_PARAMETER_DOES_NOT_EXIST;
@@ -103,5 +105,22 @@ class SuiteDescriptionTest extends BenchmarksFinderFixture
         assertThat( exampleBenchmarks.size(), equalTo( 9 ) );
         getBenchmarksFinder().getBenchmarks().forEach(
                 benchmark -> assertTrue( exampleBenchmarks.contains( benchmark.getName() ) ) );
+    }
+
+    @Test
+    public void shouldPartitionIntoSmallerPartitions()
+    {
+        SuiteDescription suiteDescription = SuiteDescription.fromAnnotations( getValidBenchmarksFinder(), new Validation() );
+        List<SuiteDescription> partitions = suiteDescription.partition( 3 );
+
+        assertEquals( 3, partitions.size() );
+        assertEquals( 4, partitions.get( 0 ).explodeEnabledBenchmarks().size() );
+        assertEquals( 4, partitions.get( 1 ).explodeEnabledBenchmarks().size() );
+        assertEquals( 2, partitions.get( 2 ).explodeEnabledBenchmarks().size() );
+
+        assertEquals(
+                suiteDescription.explodeEnabledBenchmarks(),
+                partitions.stream().flatMap( partition -> partition.explodeEnabledBenchmarks().stream() ).collect( Collectors.toList() )
+        );
     }
 }

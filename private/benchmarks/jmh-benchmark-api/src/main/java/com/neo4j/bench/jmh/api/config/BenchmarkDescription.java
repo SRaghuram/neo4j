@@ -49,12 +49,18 @@ public class BenchmarkDescription
                 stream()
                 .map(group -> {
 
-                    Map<String,List<BenchmarkParamDescription>> parametersByName = group
-                            .stream()
-                            .flatMap( bd -> bd.parameters().values().stream() )
-                            .collect( groupingBy( BenchmarkParamDescription::name ) );
+                    Map<String,BenchmarkMethodDescription> implodedMethods = group.stream()
+                            .flatMap( bd -> bd.methods().stream() )
+                            .collect( toMap(
+                                    BenchmarkMethodDescription::name,
+                                    method -> method,
+                                    ( method1, method2 ) -> method1
+                            ) );
 
-                    Map<String,BenchmarkParamDescription> implodedParameters = parametersByName
+                    Map<String,BenchmarkParamDescription> implodedParameters = group
+                            .stream()
+                            .flatMap( bd1 -> bd1.parameters().values().stream() )
+                            .collect( groupingBy( BenchmarkParamDescription::name ) )
                             .values()
                             .stream()
                             .map( parameterGroup -> new BenchmarkParamDescription(
@@ -71,7 +77,7 @@ public class BenchmarkDescription
                         group.get( 0 ).className(),
                         group.get( 0 ).group(),
                         group.get( 0 ).isThreadSafe(),
-                        group.stream().flatMap(bd -> bd.methods().stream()).distinct().collect( toMap( BenchmarkMethodDescription::name, bd -> bd ) ),
+                        implodedMethods,
                         implodedParameters,
                         group.get( 0 ).description(),
                         true
