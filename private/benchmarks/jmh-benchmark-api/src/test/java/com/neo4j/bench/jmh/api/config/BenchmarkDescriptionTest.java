@@ -29,8 +29,7 @@ import static java.util.Collections.singleton;
 import static java.util.Collections.singletonMap;
 import static java.util.stream.Collectors.toMap;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -848,5 +847,62 @@ class BenchmarkDescriptionTest extends BenchmarksFinderFixture
         assertThat( originalExplodeImplode.size(), equalTo( 1 ));
 
         assertThat( originalExplodeImplode.get( 0 ), equalTo( original ) );
+    }
+
+    @Test
+    public void shouldNotImplodeTestsFromDifferentClasses()
+    {
+        String group = "group";
+        boolean isThreadSafe = true;
+        String description = "description";
+        boolean isEnabled = true;
+
+        String method1Name = "method1";
+        Mode[] method1Modes = {Mode.Throughput};
+        BenchmarkMethodDescription method1 = new BenchmarkMethodDescription( method1Name, method1Modes );
+        String method2Name = "method2";
+        Mode[] method2Modes = {Mode.SampleTime};
+        BenchmarkMethodDescription method2 = new BenchmarkMethodDescription( method2Name, method2Modes );
+        HashMap<String,BenchmarkMethodDescription> methods = new HashMap<>();
+        methods.put( method1.name(), method1 );
+        methods.put( method2.name(), method2 );
+
+        BenchmarkParamDescription number = new BenchmarkParamDescription(
+                "number",
+                newHashSet( "1", "2" ),
+                newHashSet( "1", "2" ) );
+        BenchmarkParamDescription character = new BenchmarkParamDescription(
+                "char",
+                newHashSet( "a", "b" ),
+                newHashSet( "a", "b" ) );
+        HashMap<String,BenchmarkParamDescription> parameters = new HashMap<>();
+        parameters.put( number.name(), number );
+        parameters.put( character.name(), character );
+
+        BenchmarkDescription original1 = new BenchmarkDescription(
+                "classname1",
+                group,
+                isThreadSafe,
+                methods,
+                parameters,
+                description,
+                isEnabled );
+
+        BenchmarkDescription original2 = new BenchmarkDescription(
+                "classname2",
+                group,
+                isThreadSafe,
+                methods,
+                parameters,
+                description,
+                isEnabled );
+
+
+        Set<BenchmarkDescription> explodedDescriptions = original1.explode();
+        explodedDescriptions.addAll( original2.explode() );
+
+        List<BenchmarkDescription> implode = BenchmarkDescription.implode( explodedDescriptions );
+        assertThat( implode.size(), equalTo( 2 ));
+        assertThat( implode, containsInAnyOrder( original1, original2 ) );
     }
 }
