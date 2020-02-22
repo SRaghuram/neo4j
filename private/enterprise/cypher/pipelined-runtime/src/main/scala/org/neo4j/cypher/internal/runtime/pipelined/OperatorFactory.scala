@@ -87,6 +87,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OutputOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ProduceResultOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ProjectOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.RelationshipCountFromCountStoreOperator
+import org.neo4j.cypher.internal.runtime.pipelined.operators.SkipOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SlottedPipeHeadOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SlottedPipeMiddleOperator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SlottedPipeOperator
@@ -554,6 +555,10 @@ class OperatorFactory(val executionGraphDefinition: ExecutionGraphDefinition,
       case plans.Limit(_, count, DoNotIncludeTies) =>
         val argumentStateMapId = executionGraphDefinition.findArgumentStateMapForPlan(id)
         Some(new LimitOperator(argumentStateMapId, WorkIdentity.fromPlan(plan), converters.toCommandExpression(plan.id, count)))
+
+      case plans.Skip(_, count) =>
+        val argumentStateMapId = executionGraphDefinition.findArgumentStateMapForPlan(id)
+        Some(new SkipOperator(argumentStateMapId, WorkIdentity.fromPlan(plan), converters.toCommandExpression(plan.id, count)))
 
       case plans.Distinct(_, groupingExpressions) =>
         val argumentStateMapId = executionGraphDefinition.findArgumentStateMapForPlan(id)

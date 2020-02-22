@@ -34,6 +34,7 @@ import org.neo4j.cypher.internal.logical.plans.RangeLessThan
 import org.neo4j.cypher.internal.logical.plans.RangeQueryExpression
 import org.neo4j.cypher.internal.logical.plans.SingleQueryExpression
 import org.neo4j.cypher.internal.logical.plans.SingleSeekableArg
+import org.neo4j.cypher.internal.logical.plans.Skip
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
 import org.neo4j.cypher.internal.physicalplanning.NoOutput
@@ -141,11 +142,13 @@ class FuseOperators(operatorFactory: OperatorFactory,
   private def interpretedOperatorRequiresThisPipelineToUseFilteringMorsel(plan: LogicalPlan): Boolean = plan match {
     case _:Distinct => true // Distinct calls ArgumentStateMap.filter
     case _:Limit => true // Limit (if not fused) calls ArgumentStateMap.filter
+    case _:Skip => true // Skip (if not fused) calls ArgumentStateMap.filter
     case _ => false
   }
 
   private def requiresUpstreamPipelinesToUseFilteringMorsel(plan: LogicalPlan): Boolean = plan match {
     case _:Limit => true // All upstreams from LIMIT need filtering morsels
+    case _:Skip => true // All upstreams from SKIP need filtering morsels
     case _ => false
   }
 

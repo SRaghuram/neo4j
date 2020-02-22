@@ -82,6 +82,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.ReactiveResultStressTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ReactiveResultTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.RelationshipCountFromCountStoreTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ShortestPathTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.SkipTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.SortTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.SubscriberErrorTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.TopTestBase
@@ -247,6 +248,10 @@ class ParallelRuntimeExpressionNoFusingStressTest extends ExpressionStressTestBa
 // LIMIT
 class ParallelRuntimeLimitTest extends LimitTestBase(FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
 class ParallelRuntimeLimitNoFusingTest extends LimitTestBase(NO_FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
+
+// SKIP
+class ParallelRuntimeSkipTest extends SkipTestBase(ENTERPRISE.FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
+class ParallelRuntimeSkipNoFusingTest extends SkipTestBase(ENTERPRISE.NO_FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite
 
 // DISTINCT
 class ParallelRuntimeDistinctTest extends DistinctTestBase(FUSING, PARALLEL, SIZE_HINT) with ParallelRuntimeSpecSuite

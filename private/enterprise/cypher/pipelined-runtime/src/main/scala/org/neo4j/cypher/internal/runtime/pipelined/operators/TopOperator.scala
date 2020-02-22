@@ -79,7 +79,7 @@ case class TopOperator(workIdentity: WorkIdentity,
                                  state: QueryState,
                                  resources: QueryResources,
                                  operatorExecutionEvent: OperatorProfileEvent): PreTopOutput = {
-        val limit = LimitOperator.evaluateCountValue(queryContext, state, resources, countExpression)
+        val limit = CountingState.evaluateCountValue(queryContext, state, resources, countExpression)
         val perArguments = if (limit <= 0) {
           IndexedSeq.empty
         } else {
@@ -114,7 +114,7 @@ case class TopOperator(workIdentity: WorkIdentity,
                              state: QueryState,
                              resources: QueryResources): ReduceOperatorState[Morsel, TopTable] = {
       // NOTE: If the _input size_ is larger than Int.MaxValue this will still fail, since an array cannot hold that many elements
-      val limit = Math.min(LimitOperator.evaluateCountValue(queryContext, state, resources, countExpression), Int.MaxValue).toInt
+      val limit = Math.min(CountingState.evaluateCountValue(queryContext, state, resources, countExpression), Int.MaxValue).toInt
       argumentStateCreator.createArgumentStateMap(argumentStateMapId, new TopOperator.Factory(stateFactory.memoryTracker, comparator, limit, id))
       this
     }

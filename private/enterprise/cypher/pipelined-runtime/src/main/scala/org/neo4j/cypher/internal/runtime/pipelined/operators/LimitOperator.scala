@@ -5,8 +5,6 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.operators
 
-import java.util.concurrent.atomic.AtomicLong
-
 import org.neo4j.codegen.api.Field
 import org.neo4j.codegen.api.IntermediateRepresentation
 import org.neo4j.codegen.api.IntermediateRepresentation.assign
@@ -29,20 +27,18 @@ import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.TopLevelArgument
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
-import org.neo4j.cypher.internal.runtime.CypherRow
-import org.neo4j.cypher.internal.runtime.NoMemoryTracker
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
-import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.NumericHelper
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
-import org.neo4j.cypher.internal.runtime.pipelined.operators.LimitOperator.LimitState
-import org.neo4j.cypher.internal.runtime.pipelined.operators.LimitOperator.evaluateCountValue
+import org.neo4j.cypher.internal.runtime.pipelined.operators.CountingState.ConcurrentCountingState
+import org.neo4j.cypher.internal.runtime.pipelined.operators.CountingState.StandardCountingState
+import org.neo4j.cypher.internal.runtime.pipelined.operators.CountingState.evaluateCountValue
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.OUTPUT_COUNTER
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.OUTPUT_MORSEL
@@ -53,101 +49,24 @@ import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
-import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.WorkCanceller
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
-import org.neo4j.cypher.internal.runtime.slotted.SlottedQueryState
 import org.neo4j.cypher.internal.util.attribution.Id
-import org.neo4j.exceptions.InvalidArgumentException
-import org.neo4j.internal.kernel.api.IndexReadSession
 import org.neo4j.util.Preconditions
 import org.neo4j.values.AnyValue
-import org.neo4j.values.storable.FloatingPointValue
 
 object LimitOperator {
-  def evaluateCountValue(queryContext: QueryContext,
-                         state: QueryState,
-                         resources: QueryResources,
-                         countExpression: Expression): Long = {
-    val queryState = new SlottedQueryState(queryContext,
-      resources = null,
-      params = state.params,
-      resources.expressionCursors,
-      Array.empty[IndexReadSession],
-      resources.expressionVariables(state.nExpressionSlots),
-      state.subscriber,
-      NoMemoryTracker)
 
-    val countValue = countExpression(CypherRow.empty, queryState)
-    evaluateCountValue(countValue)
-  }
-
-  def evaluateCountValue(countValue: AnyValue): Long = {
-    val limitNumber = NumericHelper.asNumber(countValue)
-    if (limitNumber.isInstanceOf[FloatingPointValue]) {
-      val limit = limitNumber.doubleValue()
-      throw new InvalidArgumentException(s"LIMIT: Invalid input. '$limit' is not a valid value. Must be a non-negative integer.")
-    }
-    val limit = limitNumber.longValue()
-
-    if (limit < 0) {
-      throw new InvalidArgumentException(s"LIMIT: Invalid input. '$limit' is not a valid value. Must be a non-negative integer.")
-    }
-    limit
-  }
-
-  class LimitStateFactory(count: Long) extends ArgumentStateFactory[LimitState] {
-    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): LimitState =
-      new StandardLimitState(argumentRowId, count, argumentRowIdsForReducers)
-
-    override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): LimitState =
-      new ConcurrentLimitState(argumentRowId, count, argumentRowIdsForReducers)
-  }
-
-  /**
-   * Query-wide row count for the rows from one argumentRowId.
-   */
-  abstract class LimitState extends WorkCanceller {
-    def reserve(wanted: Long): Long
-  }
-
-  class StandardLimitState(override val argumentRowId: Long,
-                           countTotal: Long,
-                           override val argumentRowIdsForReducers: Array[Long]) extends LimitState {
-    private var countLeft = countTotal
-
-    override def reserve(wanted: Long): Long = {
-      val got = math.min(countLeft, wanted)
-      countLeft -= got
-      got
-    }
-
-    override def isCancelled: Boolean = countLeft == 0
-
-    override def toString: String = s"StandardLimitState($argumentRowId, countLeft=$countLeft)"
-  }
-
-  class ConcurrentLimitState(override val argumentRowId: Long,
-                             countTotal: Long,
-                             override val argumentRowIdsForReducers: Array[Long]) extends LimitState {
-    private val countLeft = new AtomicLong(countTotal)
-
-    def reserve(wanted: Long): Long = {
-      if (countLeft.get() <= 0) {
-        0L
-      } else {
-        val newCountLeft = countLeft.addAndGet(-wanted)
-        if (newCountLeft >= 0) {
-          wanted
-        } else {
-          math.max(0L, wanted + newCountLeft)
-        }
+  class LimitStateFactory(count: Long) extends ArgumentStateFactory[CountingState] {
+    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): CountingState =
+      new StandardCountingState(argumentRowId, count, argumentRowIdsForReducers) {
+        override def isCancelled: Boolean =  getCount == 0
       }
-    }
 
-    override def isCancelled: Boolean = countLeft.get() <= 0
-
-    override def toString: String = s"ConcurrentLimitState($argumentRowId, countLeft=${countLeft.get()})"
+    override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): CountingState =
+      new ConcurrentCountingState(argumentRowId, count, argumentRowIdsForReducers) {
+        override def isCancelled: Boolean = getCount == 0
+      }
   }
 }
 
@@ -164,7 +83,7 @@ class LimitOperator(argumentStateMapId: ArgumentStateMapId,
       new LimitOperator.LimitStateFactory(limit)))
   }
 
-  class LimitOperatorTask(argumentStateMap: ArgumentStateMap[LimitState]) extends OperatorTask {
+  class LimitOperatorTask(argumentStateMap: ArgumentStateMap[CountingState]) extends OperatorTask {
 
     override def workIdentity: WorkIdentity = LimitOperator.this.workIdentity
 
@@ -253,9 +172,9 @@ class SerialTopLevelLimitOperatorTaskTemplate(val inner: OperatorTaskTemplate,
     block(
       condition(invoke(loadField(limitStateField), method[SerialTopLevelLimitState, Boolean]("isUninitialized")))(
         invoke(loadField(limitStateField), method[SerialTopLevelLimitState, Unit, Long]("initialize"),
-          invokeStatic(method[LimitOperator, Long, AnyValue]("evaluateCountValue"), countExpression.ir))
+          invokeStatic(method[CountingState, Long, AnyValue]("evaluateCountValue"), countExpression.ir))
       ),
-      assign(reservedVar, invoke(loadField(limitStateField), method[LimitState, Long, Long]("reserve"), howMuchToReserve)),
+      assign(reservedVar, invoke(loadField(limitStateField), method[CountingState, Long, Long]("reserve"), howMuchToReserve)),
       assign(countLeftVar, load(reservedVar)),
       inner.genOperateEnter
     )
@@ -321,7 +240,7 @@ object SerialTopLevelLimitOperatorTaskTemplate {
    *   }
    * }}}
    */
-  abstract class SerialTopLevelLimitState extends LimitState {
+  abstract class SerialTopLevelLimitState extends CountingState {
 
     protected def getCount: Long
     protected def setCount(count: Long): Unit

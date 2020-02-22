@@ -14,6 +14,7 @@ import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.logical.plans.LogicalPlans
 import org.neo4j.cypher.internal.logical.plans.Optional
 import org.neo4j.cypher.internal.logical.plans.ProduceResult
+import org.neo4j.cypher.internal.logical.plans.Skip
 import org.neo4j.cypher.internal.logical.plans.Sort
 import org.neo4j.cypher.internal.logical.plans.Top
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.ArgumentSizes
@@ -459,7 +460,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
           throw new UnsupportedOperationException(s"Not breaking on ${plan.getClass.getSimpleName} is not supported.")
         }
 
-      case _: Limit =>
+      case _: Limit | _: Skip =>
         val asm = stateDefiner.newArgumentStateMap(plan.id, argument.argumentSlotOffset)
         markInUpstreamBuffers(source.inputBuffer, argument, DownstreamWorkCanceller(asm.id))
         if (canFuseOverPipeline) {
