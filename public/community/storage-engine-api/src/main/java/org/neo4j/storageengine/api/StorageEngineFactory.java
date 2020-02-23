@@ -82,7 +82,8 @@ public interface StorageEngineFactory
             SchemaState schemaState, ConstraintRuleAccessor constraintSemantics, IndexConfigCompleter indexConfigCompleter, LockService lockService,
             IdGeneratorFactory idGeneratorFactory, IdController idController, DatabaseHealth databaseHealth,
             LogProvider logProvider, RecoveryCleanupWorkCollector recoveryCleanupWorkCollector, PageCacheTracer cacheTracer, boolean createStoreIfNotExists,
-            MemoryTracker memoryTracker );
+            MemoryTracker memoryTracker )
+            throws IOException;
 
     /**
      * Lists files of a specific storage location.

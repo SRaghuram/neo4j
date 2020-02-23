@@ -19,8 +19,6 @@
  */
 package org.neo4j.internal.freki;
 
-import org.apache.commons.lang3.NotImplementedException;
-
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
@@ -250,14 +248,13 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
     private static int sizeOfPoint( byte typeByte, ByteBuffer buffer )
     {
         int start = buffer.position();
-        int code = (int) read( buffer.position( start + 1 ) ).asObject();
+        int code = (int) read( buffer ).asObject();
         int dimension = CoordinateReferenceSystem.get( (typeByte >>> 4) & 0x7, code ).getDimension();
         int size = buffer.position() - start;
         for ( int i = 0; i < dimension; i++ )
         {
-            size += calculatePropertyValueSizeIncludingTypeHeader( buffer.position( start + size ) );
+            size += calculatePropertyValueSizeIncludingTypeHeaderInternal( buffer );
         }
-        buffer.position( start );
         return size;
     }
 
@@ -313,22 +310,20 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
 
     private static int sizeOfDuration( byte typeByte, ByteBuffer buffer )
     {
-        int start = buffer.position();
-        int size = 1; //Type
+        int size = 0;
         if ( (typeByte & INTERNAL_DURATION_HAS_MONTHS) != 0 )
         {
-            size += calculatePropertyValueSizeIncludingTypeHeader( buffer.position( start + size ) );
+            size += calculatePropertyValueSizeIncludingTypeHeaderInternal( buffer );
         }
         if ( (typeByte & INTERNAL_DURATION_HAS_DAYS) != 0 )
         {
-            size += calculatePropertyValueSizeIncludingTypeHeader( buffer.position( start + size ) );
+            size += calculatePropertyValueSizeIncludingTypeHeaderInternal( buffer );
         }
-        size += calculatePropertyValueSizeIncludingTypeHeader( buffer.position( start + size ) ); // seconds
+        size += calculatePropertyValueSizeIncludingTypeHeaderInternal( buffer ); // seconds
         if ( (typeByte & INTERNAL_DURATION_HAS_NANOS) != 0 )
         {
-            size += calculatePropertyValueSizeIncludingTypeHeader( buffer.position( start + size ) );
+            size += calculatePropertyValueSizeIncludingTypeHeaderInternal( buffer );
         }
-        buffer.position( start );
         return size;
     }
 
@@ -366,8 +361,9 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
 
     private static int sizeOfZonedTime( byte typeByte, ByteBuffer buffer )
     {
-        int size = 1 + sizeOfScalar( internalType( typeByte ) );
-        return size + calculatePropertyValueSizeIncludingTypeHeader( buffer.position( buffer.position() + size ) );
+        int scalarSize = sizeOfScalar( internalType( typeByte ) );
+        int size = scalarSize;
+        return size + calculatePropertyValueSizeIncludingTypeHeaderInternal( buffer.position( buffer.position() + scalarSize ) );
     }
 
     @Override
@@ -381,8 +377,9 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
 
     private static int sizeOfLocalDateTime( byte typeByte, ByteBuffer buffer )
     {
-        int size = 1 + sizeOfScalar( internalType( typeByte ) );
-        return size + calculatePropertyValueSizeIncludingTypeHeader( buffer.position( buffer.position() + size ) );
+        int scalarSize = sizeOfScalar( internalType( typeByte ) );
+        int size = scalarSize;
+        return size + calculatePropertyValueSizeIncludingTypeHeaderInternal( buffer.position( buffer.position() + scalarSize ) );
     }
 
     private static LocalDateTimeValue readLocalDateTime( ByteBuffer buffer, byte typeByte )
@@ -418,11 +415,10 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
 
     private static int sizeOfDateTime( byte typeByte, ByteBuffer buffer )
     {
-        int start = buffer.position();
-        int size = 1 + sizeOfScalar( internalType( typeByte ) );
-        size += calculatePropertyValueSizeIncludingTypeHeader( buffer.position( start + size ) );
-        size += calculatePropertyValueSizeIncludingTypeHeader( buffer.position( start + size ) );
-        buffer.position( start );
+        int scalarSize = sizeOfScalar( internalType( typeByte ) );
+        int size = scalarSize;
+        size += calculatePropertyValueSizeIncludingTypeHeaderInternal( buffer.position( buffer.position() + scalarSize ) );
+        size += calculatePropertyValueSizeIncludingTypeHeaderInternal( buffer );
         return size;
     }
 
@@ -588,6 +584,12 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
         }
     }
 
+    static Value readEagerly( ByteBuffer buffer, SimpleBigValueStore bigPropertyValueStore )
+    {
+        Value value = read( buffer, bigPropertyValueStore );
+        return value instanceof PointerValue ? ((PointerValue) value).bigValue() : value;
+    }
+
     private static Value readArray( byte externalType, int length, ByteBuffer buffer, SimpleBigValueStore bigPropertyValueStore )
     {
         //do nothing
@@ -660,40 +662,56 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
     static int calculatePropertyValueSizeIncludingTypeHeader( ByteBuffer buffer )
     {
         int startPosition = buffer.position();
-        byte typeByte = buffer.get( buffer.position() );
+        try
+        {
+            return calculatePropertyValueSizeIncludingTypeHeaderInternal( buffer );
+        }
+        finally
+        {
+            buffer.position( startPosition );
+        }
+    }
+
+    private static int calculatePropertyValueSizeIncludingTypeHeaderInternal( ByteBuffer buffer )
+    {
+        byte typeByte = buffer.get();
         boolean isSimpleInlinedValue = (typeByte & SPECIAL_TYPE_MASK) == 0;
+        int size = 1;
         if ( isSimpleInlinedValue )
         {
-            int size = sizeOfSimpleProperty( typeByte, buffer );
-            buffer.position( startPosition );
-            return size;
+            size += advanceBuffer( sizeOfSimpleProperty( typeByte, buffer ), buffer );
         }
         else
         {
             boolean isPointer = (typeByte & SPECIAL_TYPE_POINTER) != 0;
             if ( isPointer )
             {
-                throw new NotImplementedException( "Pointer values size" );
+                size += 1 + advanceBuffer( sizeOfSimpleProperty( buffer.get(), buffer ), buffer );
             }
 
             boolean isArray = (typeByte & SPECIAL_TYPE_ARRAY) != 0;
             if ( isArray )
             {
-                buffer.position( startPosition + 1 );
-                int size = 1 + calculatePropertyValueSizeIncludingTypeHeader( buffer ); // type + length
+                size += calculatePropertyValueSizeIncludingTypeHeader( buffer );
                 int length = (int) read( buffer ).asObject();
                 for ( int i = 0; i < length; i++ )
                 {
-                    buffer.position( startPosition + size );
-                    size += calculatePropertyValueSizeIncludingTypeHeader( buffer );
+                    size += calculatePropertyValueSizeIncludingTypeHeaderInternal( buffer );
                 }
-                buffer.position( startPosition );
-                return size;
             }
 
-            throw new IllegalArgumentException( "Unknown special type" );
+            if ( !isPointer && !isArray )
+            {
+                throw new IllegalArgumentException( "Unknown special type" );
+            }
         }
+        return size;
+    }
 
+    private static int advanceBuffer( int size, ByteBuffer buffer )
+    {
+        buffer.position( buffer.position() + size );
+        return size;
     }
 
     private static int sizeOfSimpleProperty( byte typeByte, ByteBuffer buffer )
@@ -708,15 +726,15 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
         case EXTERNAL_TYPE_SHORT:
         case EXTERNAL_TYPE_INT:
         case EXTERNAL_TYPE_LONG:
-            return 1 + sizeOfScalar( internalType( typeByte ) ); //Type + Scalar
+            return sizeOfScalar( internalType( typeByte ) );
         case EXTERNAL_TYPE_STRING:
-            int propertyLength = buffer.get( buffer.position() + 1 ) & 0xFF;
-            return 1 + 1 + propertyLength; // Type + length + data
+            int propertyLength = buffer.get( buffer.position() ) & 0xFF;
+            return 1 + propertyLength; // length + data
         case EXTERNAL_TYPE_BOOL:
-            return 1; //Type (value is embedded)
+            return 0; // (value is embedded)
         case EXTERNAL_TYPE_BYTE:
         case EXTERNAL_TYPE_CHAR:
-            return 1 + 1; //Type + data
+            return 1;
         case EXTERNAL_TYPE_DURATION:
             return sizeOfDuration( typeByte, buffer );
         case EXTERNAL_TYPE_POINT:
@@ -902,8 +920,13 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
             this.bigPropertyValueStore = bigPropertyValueStore;
         }
 
-        private Value readBigValue()
+        private Value bigValue()
         {
+            if ( cachedValue != null )
+            {
+                return cachedValue;
+            }
+
             ByteBuffer buffer;
             try ( PageCursor cursor = bigPropertyValueStore.openReadCursor() )
             {
@@ -918,14 +941,23 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
 
             if ( externalType == EXTERNAL_TYPE_STRING )
             {
-                return Values.utf8Value( buffer.array() );
+                cachedValue = Values.utf8Value( buffer.array() );
             }
-            return read( buffer );
+            else
+            {
+                cachedValue = read( buffer );
+            }
+            return cachedValue;
         }
 
         @Override
         public boolean equals( Value other )
         {
+            if ( other instanceof PointerValue )
+            {
+                PointerValue op = (PointerValue) other;
+                return op.externalType == externalType && op.pointer == pointer;
+            }
             return false;
         }
 
@@ -938,11 +970,7 @@ class PropertyValueFormat extends TemporalValueWriterAdapter<RuntimeException>
         @Override
         public Object asObjectCopy()
         {
-            if ( cachedValue == null )
-            {
-                cachedValue = readBigValue();
-            }
-            return cachedValue.asObjectCopy();
+            return bigValue().asObjectCopy();
         }
 
         @Override

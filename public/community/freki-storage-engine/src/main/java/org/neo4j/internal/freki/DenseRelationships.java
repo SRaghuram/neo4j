@@ -25,6 +25,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Objects;
 
 class DenseRelationships implements Iterable<DenseRelationships.DenseRelationship>
 {
@@ -36,9 +37,30 @@ class DenseRelationships implements Iterable<DenseRelationships.DenseRelationshi
         this.type = type;
     }
 
-    void add( long internalId, long sourceNodeId, long otherNodeId, boolean outgoing, IntObjectMap<ByteBuffer> properties )
+    void add( long internalId, long otherNodeId, boolean outgoing, IntObjectMap<ByteBuffer> properties )
     {
-        relationships.add( new DenseRelationship( internalId, sourceNodeId, otherNodeId, outgoing, properties ) );
+        relationships.add( new DenseRelationship( internalId, otherNodeId, outgoing, properties ) );
+    }
+
+    @Override
+    public boolean equals( Object o )
+    {
+        if ( this == o )
+        {
+            return true;
+        }
+        if ( o == null || getClass() != o.getClass() )
+        {
+            return false;
+        }
+        DenseRelationships that = (DenseRelationships) o;
+        return type == that.type && relationships.equals( that.relationships );
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return Objects.hash( type, relationships );
     }
 
     @Override
@@ -50,18 +72,37 @@ class DenseRelationships implements Iterable<DenseRelationships.DenseRelationshi
     static class DenseRelationship
     {
         long internalId;
-        long sourceNodeId;
         long otherNodeId;
         boolean outgoing;
         IntObjectMap<ByteBuffer> properties;
 
-        DenseRelationship( long internalId, long sourceNodeId, long otherNodeId, boolean outgoing, IntObjectMap<ByteBuffer> properties )
+        DenseRelationship( long internalId, long otherNodeId, boolean outgoing, IntObjectMap<ByteBuffer> properties )
         {
             this.internalId = internalId;
-            this.sourceNodeId = sourceNodeId;
             this.otherNodeId = otherNodeId;
             this.outgoing = outgoing;
             this.properties = properties;
+        }
+
+        @Override
+        public boolean equals( Object o )
+        {
+            if ( this == o )
+            {
+                return true;
+            }
+            if ( o == null || getClass() != o.getClass() )
+            {
+                return false;
+            }
+            DenseRelationship that = (DenseRelationship) o;
+            return internalId == that.internalId && otherNodeId == that.otherNodeId && outgoing == that.outgoing && properties.equals( that.properties );
+        }
+
+        @Override
+        public int hashCode()
+        {
+            return Objects.hash( internalId, otherNodeId, outgoing, properties );
         }
     }
 }

@@ -35,6 +35,7 @@ import org.neo4j.internal.schema.IndexDescriptor;
 import org.neo4j.internal.schema.SchemaCache;
 import org.neo4j.internal.schema.SchemaDescriptor;
 import org.neo4j.internal.schema.constraints.IndexBackedConstraintDescriptor;
+import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.storageengine.api.AllNodeScan;
 import org.neo4j.storageengine.api.AllRelationshipsScan;
@@ -248,7 +249,10 @@ class FrekiStorageReader implements StorageReader
     {
         try
         {
-            return stores.mainStore.exists( id );
+            try ( PageCursor cursor = stores.mainStore.openReadCursor() )
+            {
+                return stores.mainStore.exists( cursor, id );
+            }
         }
         catch ( IOException e )
         {

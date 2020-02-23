@@ -20,17 +20,23 @@
 package org.neo4j.internal.freki;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 
+import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.io.pagecache.PageCursor;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+import org.neo4j.kernel.lifecycle.Lifecycle;
 
-interface SimpleBigValueStore extends SingleFileStore
+public interface SingleFileStore extends Lifecycle, AutoCloseable
 {
-    long allocateSpace( int length );
+    PageCursor openWriteCursor() throws IOException;
 
-    void write( PageCursor cursor, ByteBuffer data, long position ) throws IOException;
+    PageCursor openReadCursor(); // not having IOException declared is of great convenience for most call sites
 
-    boolean read( PageCursor cursor, ByteBuffer data, long position ) throws IOException;
+    void flush( IOLimiter ioLimiter, PageCursorTracer cursorTracer ) throws IOException;
 
-    int length( PageCursor cursor, long position ) throws IOException;
+    @Override
+    default void close() throws Exception
+    {
+        shutdown();
+    }
 }

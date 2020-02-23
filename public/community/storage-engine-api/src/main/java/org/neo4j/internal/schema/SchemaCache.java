@@ -42,6 +42,7 @@ import org.neo4j.common.EntityType;
 import org.neo4j.internal.helpers.collection.Iterators;
 import org.neo4j.internal.schema.constraints.IndexBackedConstraintDescriptor;
 import org.neo4j.storageengine.api.ConstraintRuleAccessor;
+import org.neo4j.storageengine.api.EntityUpdates;
 
 import static org.apache.commons.lang3.ArrayUtils.EMPTY_INT_ARRAY;
 import static org.apache.commons.lang3.ArrayUtils.EMPTY_LONG_ARRAY;
@@ -193,6 +194,12 @@ public class SchemaCache
     public ConstraintDescriptor constraintForName( String name )
     {
         return schemaCacheState.constraintForName( name );
+    }
+
+    public Set<IndexDescriptor> getIndexesRelatedTo( EntityUpdates entityUpdates, EntityType entityType )
+    {
+        return getIndexesRelatedTo( entityUpdates.entityTokensChanged(), entityUpdates.entityTokensUnchanged(), entityUpdates.propertiesChanged(),
+                entityUpdates.isPropertyListComplete(), entityType );
     }
 
     public Set<IndexDescriptor> getIndexesRelatedTo(

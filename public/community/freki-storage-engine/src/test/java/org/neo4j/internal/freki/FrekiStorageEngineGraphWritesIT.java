@@ -19,6 +19,7 @@
  */
 package org.neo4j.internal.freki;
 
+import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.commons.lang3.mutable.MutableLong;
 import org.eclipse.collections.api.map.primitive.MutableLongObjectMap;
 import org.eclipse.collections.api.set.primitive.ImmutableLongSet;
@@ -38,19 +39,25 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.function.ThrowingConsumer;
 import org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector;
+import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.internal.helpers.collection.Visitor;
 import org.neo4j.internal.id.DefaultIdController;
 import org.neo4j.internal.id.DefaultIdGeneratorFactory;
 import org.neo4j.internal.schema.IndexConfigCompleter;
 import org.neo4j.internal.schema.IndexDescriptor;
+import org.neo4j.internal.schema.IndexPrototype;
+import org.neo4j.internal.schema.IndexProviderDescriptor;
+import org.neo4j.internal.schema.SchemaDescriptor;
 import org.neo4j.internal.schema.SchemaState;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
@@ -67,6 +74,8 @@ import org.neo4j.monitoring.DatabaseHealth;
 import org.neo4j.monitoring.DatabasePanicEventGenerator;
 import org.neo4j.storageengine.api.CommandCreationContext;
 import org.neo4j.storageengine.api.CommandsToApply;
+import org.neo4j.storageengine.api.IndexEntryUpdate;
+import org.neo4j.storageengine.api.IndexUpdateListener;
 import org.neo4j.storageengine.api.NodeLabelUpdate;
 import org.neo4j.storageengine.api.NodeLabelUpdateListener;
 import org.neo4j.storageengine.api.PropertyKeyValue;
@@ -91,9 +100,12 @@ import org.neo4j.token.DelegatingTokenHolder;
 import org.neo4j.token.TokenCreator;
 import org.neo4j.token.TokenHolders;
 import org.neo4j.token.api.TokenHolder;
+import org.neo4j.values.storable.Value;
 
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptySet;
+import static java.util.Collections.singleton;
+import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.mockito.ArgumentMatchers.any;
@@ -117,6 +129,8 @@ import static org.neo4j.values.storable.Values.stringValue;
 @ExtendWith( RandomExtension.class )
 public class FrekiStorageEngineGraphWritesIT
 {
+    private static final SchemaDescriptor SCHEMA_DESCRIPTOR = SchemaDescriptor.forLabel( 5, 10 );
+
     @Inject
     private FileSystemAbstraction fs;
     @Inject
@@ -129,6 +143,7 @@ public class FrekiStorageEngineGraphWritesIT
     private LifeSupport life;
     private StorageEngine storageEngine;
     private RecordingNodeLabelUpdateListener nodeLabelUpdateListener;
+    private RecordingIndexUpdatesListener indexUpdateListener;
 
     @BeforeEach
     void start() throws IOException
@@ -150,6 +165,8 @@ public class FrekiStorageEngineGraphWritesIT
                         PageCacheTracer.NULL, true ) );
         nodeLabelUpdateListener = new RecordingNodeLabelUpdateListener();
         storageEngine.addNodeLabelUpdateListener( nodeLabelUpdateListener );
+        indexUpdateListener = new RecordingIndexUpdatesListener();
+        storageEngine.addIndexUpdateListener( indexUpdateListener );
         life.start();
     }
 
@@ -321,7 +338,7 @@ public class FrekiStorageEngineGraphWritesIT
                 nodeProperties.add( new PropertyKeyValue( i, longValue( 1L << i ) ) );
             }
             target.visitNodePropertyChanges( nodeId, nodeProperties, emptyList(), IntSets.immutable.empty() );
-            for ( int i = 0; i < 5_000; i++ )
+            for ( int i = 0; i < 1_000; i++ )
             {
                 long otherNodeId = commandCreationContext.reserveNode();
                 target.visitCreatedNode( otherNodeId );
@@ -330,6 +347,47 @@ public class FrekiStorageEngineGraphWritesIT
                 relationships.add( new RelationshipSpec( nodeId, type, otherNodeId, relationshipProperties ) );
             }
         } );
+
+        // then
+        assertContentsOfNode( nodeId, labels, nodeProperties, relationships );
+    }
+
+    @Test
+    void shouldOverflowIntoLargerLargerAndDense() throws Exception
+    {
+        // given
+        CommandCreationContext commandCreationContext = storageEngine.newCommandCreationContext( NULL );
+        long nodeId = commandCreationContext.reserveNode();
+        ImmutableLongSet labels = LongSets.immutable.of( 1, 78, 95 );
+        Set<StorageProperty> nodeProperties = new HashSet<>();
+        Set<RelationshipSpec> relationships = new HashSet<>();
+        createAndApplyTransaction( target ->
+        {
+            target.visitCreatedNode( nodeId );
+            target.visitNodeLabelChanges( nodeId, labels, LongSets.immutable.empty() );
+        } );
+
+        // when
+        MutableLong nextRelationshipId = new MutableLong();
+        MutableLong nextOtherNodeId = new MutableLong( nodeId + 1 );
+        MutableInt nextPropertyKey = new MutableInt();
+        for ( int i = 0, relationshipsToAdd = 5; i < 5; i++, relationshipsToAdd *= 4 )
+        {
+            int relationshipCount = relationshipsToAdd;
+            createAndApplyTransaction( target ->
+            {
+                for ( int r = 0; r < relationshipCount; r++ )
+                {
+                    long otherNodeId = nextOtherNodeId.getAndIncrement();
+                    target.visitCreatedNode( otherNodeId );
+                    target.visitCreatedRelationship( nextRelationshipId.getAndIncrement(), 0, nodeId, otherNodeId, emptyList() );
+                    relationships.add( new RelationshipSpec( nodeId, 0, otherNodeId, emptySet() ) );
+                }
+                PropertyKeyValue property = new PropertyKeyValue( nextPropertyKey.getAndIncrement(), intValue( 1010 ) );
+                target.visitNodePropertyChanges( nodeId, singletonList( property ), emptyList(), IntSets.immutable.empty() );
+                nodeProperties.add( property );
+            } );
+        }
 
         // then
         assertContentsOfNode( nodeId, labels, nodeProperties, relationships );
@@ -375,6 +433,228 @@ public class FrekiStorageEngineGraphWritesIT
         {
             assertContentsOfNode( node, LongSets.immutable.empty(), emptySet(), expectedRelationships.get( node ) );
         }
+    }
+
+    @Test
+    void shouldGenerateIndexUpdatesOnSmallCreatedNode() throws Exception
+    {
+        long nodeId = 123;
+        Value value = intValue( 98765 );
+        shouldGenerateIndexUpdates( null, target ->
+        {
+            target.visitCreatedNode( nodeId );
+            target.visitNodeLabelChanges( nodeId, LongSets.immutable.of( SCHEMA_DESCRIPTOR.getLabelId() ), LongSets.immutable.empty() );
+            target.visitNodePropertyChanges( nodeId, singleton( new PropertyKeyValue( SCHEMA_DESCRIPTOR.getPropertyId(), value ) ), emptyList(),
+                    IntSets.immutable.empty() );
+        }, index -> asSet( IndexEntryUpdate.add( nodeId, index, value ) ) );
+    }
+
+    @Test
+    void shouldGenerateIndexUpdatesOnSmallUpdatedNode_Update() throws Exception
+    {
+        long nodeId = 123;
+        Value beforeValue = intValue( 98765 );
+        Value afterValue = intValue( 56789 );
+        shouldGenerateIndexUpdates( target ->
+        {
+            target.visitCreatedNode( nodeId );
+            target.visitNodeLabelChanges( nodeId, LongSets.immutable.of( SCHEMA_DESCRIPTOR.getLabelId() ), LongSets.immutable.empty() );
+            target.visitNodePropertyChanges( nodeId, singleton( new PropertyKeyValue( SCHEMA_DESCRIPTOR.getPropertyId(), beforeValue ) ), emptyList(),
+                    IntSets.immutable.empty() );
+        }, target ->
+        {
+            target.visitNodePropertyChanges( nodeId, emptyList(), singleton( new PropertyKeyValue( SCHEMA_DESCRIPTOR.getPropertyId(), afterValue ) ),
+                    IntSets.immutable.empty() );
+        }, index -> asSet( IndexEntryUpdate.change( nodeId, index, new Value[]{beforeValue}, new Value[]{afterValue} ) ) );
+    }
+
+    @Test
+    void shouldGenerateIndexUpdatesOnSmallUpdatedNode_Remove() throws Exception
+    {
+        long nodeId = 123;
+        Value value = intValue( 98765 );
+        shouldGenerateIndexUpdates( target ->
+        {
+            target.visitCreatedNode( nodeId );
+            target.visitNodeLabelChanges( nodeId, LongSets.immutable.of( SCHEMA_DESCRIPTOR.getLabelId() ), LongSets.immutable.empty() );
+            target.visitNodePropertyChanges( nodeId, singleton( new PropertyKeyValue( SCHEMA_DESCRIPTOR.getPropertyId(), value ) ), emptyList(),
+                    IntSets.immutable.empty() );
+        }, target ->
+        {
+            target.visitNodePropertyChanges( nodeId, emptyList(), emptyList(), IntSets.immutable.of( SCHEMA_DESCRIPTOR.getPropertyId() ) );
+        }, index -> asSet( IndexEntryUpdate.remove( nodeId, index, value ) ) );
+    }
+
+    @Test
+    void shouldGenerateIndexUpdatesOnSmallNodeRemoved() throws Exception
+    {
+        long nodeId = 123;
+        Value value = intValue( 98765 );
+        shouldGenerateIndexUpdates( target ->
+        {
+            target.visitCreatedNode( nodeId );
+            target.visitNodeLabelChanges( nodeId, LongSets.immutable.of( SCHEMA_DESCRIPTOR.getLabelId() ), LongSets.immutable.empty() );
+            target.visitNodePropertyChanges( nodeId, singleton( new PropertyKeyValue( SCHEMA_DESCRIPTOR.getPropertyId(), value ) ), emptyList(),
+                    IntSets.immutable.empty() );
+        }, target ->
+        {
+            target.visitDeletedNode( nodeId );
+        }, index -> asSet( IndexEntryUpdate.remove( nodeId, index, value ) ) );
+    }
+
+    @Test
+    void shouldGenerateIndexUpdatesOnSmallNodeOverflowingToLarge() throws Exception
+    {
+        long nodeId = 123;
+        Value beforeValue = intValue( 98765 );
+        Value afterValue = intValue( 56789 );
+        shouldGenerateIndexUpdates( target ->
+        {
+            target.visitCreatedNode( nodeId );
+            target.visitNodeLabelChanges( nodeId, LongSets.immutable.of( SCHEMA_DESCRIPTOR.getLabelId() ), LongSets.immutable.empty() );
+            target.visitNodePropertyChanges( nodeId, singleton( new PropertyKeyValue( SCHEMA_DESCRIPTOR.getPropertyId(), beforeValue ) ), emptyList(),
+                    IntSets.immutable.empty() );
+        }, target ->
+        {
+            List<StorageProperty> addedProperties = new ArrayList<>();
+            for ( int i = 0; i < 5; i++ )
+            {
+                addedProperties.add( new PropertyKeyValue( SCHEMA_DESCRIPTOR.getPropertyId() + 1 + i, stringValue( "string-" + i ) ) );
+            }
+            target.visitNodePropertyChanges( nodeId, addedProperties, singleton( new PropertyKeyValue( SCHEMA_DESCRIPTOR.getPropertyId(), afterValue ) ),
+                    IntSets.immutable.empty() );
+        }, index -> asSet( IndexEntryUpdate.change( nodeId, index, new Value[]{beforeValue}, new Value[]{afterValue} ) ) );
+    }
+
+    @Test
+    void shouldGenerateIndexUpdatesOnLargeNodeOverflowingToLarger() throws Exception
+    {
+        long nodeId = 123;
+        Value beforeValue = intValue( 98765 );
+        Value afterValue = intValue( 56789 );
+        shouldGenerateIndexUpdates( target ->
+        {
+            target.visitCreatedNode( nodeId );
+            target.visitNodeLabelChanges( nodeId, LongSets.immutable.of( SCHEMA_DESCRIPTOR.getLabelId() ), LongSets.immutable.empty() );
+            List<StorageProperty> addedProperties = new ArrayList<>();
+            for ( int i = 0; i < 5; i++ )
+            {
+                addedProperties.add( new PropertyKeyValue( SCHEMA_DESCRIPTOR.getPropertyId() + 1 + i, stringValue( "string-" + i ) ) );
+            }
+            addedProperties.add( new PropertyKeyValue( SCHEMA_DESCRIPTOR.getPropertyId(), beforeValue ) );
+            target.visitNodePropertyChanges( nodeId, addedProperties, emptyList(), IntSets.immutable.empty() );
+        }, target ->
+        {
+            List<StorageProperty> addedProperties = new ArrayList<>();
+            for ( int i = 0; i < 5; i++ )
+            {
+                addedProperties.add( new PropertyKeyValue( SCHEMA_DESCRIPTOR.getPropertyId() + 100 + i, stringValue( "string-" + i ) ) );
+            }
+            target.visitNodePropertyChanges( nodeId, addedProperties, singleton( new PropertyKeyValue( SCHEMA_DESCRIPTOR.getPropertyId(), afterValue ) ),
+                    IntSets.immutable.empty() );
+        }, index -> asSet( IndexEntryUpdate.change( nodeId, index, new Value[]{beforeValue}, new Value[]{afterValue} ) ) );
+    }
+
+    @Test
+    void shouldGenerateAddedIndexUpdateOnNodeOverflowingToDense() throws Exception
+    {
+        long nodeId = 123;
+        Value value = intValue( 98765 );
+        shouldGenerateIndexUpdates( target ->
+        {
+            target.visitCreatedNode( nodeId );
+            target.visitNodeLabelChanges( nodeId, LongSets.immutable.of( SCHEMA_DESCRIPTOR.getLabelId() ), LongSets.immutable.empty() );
+        }, target ->
+        {
+            // Just make the node dense by adding lots of relationships to it
+            for ( int i = 0; i < 200; i++ )
+            {
+                long otherNodeId = nodeId + i + 1;
+                target.visitCreatedNode( otherNodeId );
+                target.visitCreatedRelationship( i, 0, nodeId, otherNodeId, emptyList() );
+            }
+            target.visitNodePropertyChanges( nodeId, singletonList( new PropertyKeyValue( SCHEMA_DESCRIPTOR.getPropertyId(), value ) ), emptyList(),
+                    IntSets.immutable.empty() );
+        }, index -> asSet( IndexEntryUpdate.add( nodeId, index, value ) ) );
+    }
+
+    @Test
+    void shouldGenerateUpdatedIndexUpdateOnNodeOverflowingToDense() throws Exception
+    {
+        long nodeId = 123;
+        Value beforeValue = intValue( 98765 );
+        Value afterValue = intValue( 56789 );
+        shouldGenerateIndexUpdates( target ->
+        {
+            target.visitCreatedNode( nodeId );
+            target.visitNodeLabelChanges( nodeId, LongSets.immutable.of( SCHEMA_DESCRIPTOR.getLabelId() ), LongSets.immutable.empty() );
+            target.visitNodePropertyChanges( nodeId, singletonList( new PropertyKeyValue( SCHEMA_DESCRIPTOR.getPropertyId(), beforeValue ) ),
+                    emptyList(), IntSets.immutable.empty() );
+        }, target ->
+        {
+            // Just make the node dense by adding lots of relationships to it
+            for ( int i = 0; i < 200; i++ )
+            {
+                long otherNodeId = nodeId + i + 1;
+                target.visitCreatedNode( otherNodeId );
+                target.visitCreatedRelationship( i, 0, nodeId, otherNodeId, emptyList() );
+            }
+            target.visitNodePropertyChanges( nodeId, emptyList(), singletonList( new PropertyKeyValue( SCHEMA_DESCRIPTOR.getPropertyId(), afterValue ) ),
+                    IntSets.immutable.empty() );
+        }, index -> asSet( IndexEntryUpdate.change( nodeId, index, new Value[]{beforeValue}, new Value[]{afterValue} ) ) );
+    }
+
+    @Test
+    void shouldGenerateAddedIndexUpdateOnAddingToAlreadyDenseNode() throws Exception
+    {
+        long nodeId = 123;
+        Value value = intValue( 98765 );
+        shouldGenerateIndexUpdates( target ->
+        {
+            target.visitCreatedNode( nodeId );
+            target.visitNodeLabelChanges( nodeId, LongSets.immutable.of( SCHEMA_DESCRIPTOR.getLabelId() ), LongSets.immutable.empty() );
+            // Just make the node dense by adding lots of relationships to it
+            for ( int i = 0; i < 200; i++ )
+            {
+                long otherNodeId = nodeId + i + 1;
+                target.visitCreatedNode( otherNodeId );
+                target.visitCreatedRelationship( i, 0, nodeId, otherNodeId, emptyList() );
+            }
+        }, target ->
+        {
+            target.visitNodePropertyChanges( nodeId, singletonList( new PropertyKeyValue( SCHEMA_DESCRIPTOR.getPropertyId(), value ) ), emptyList(),
+                    IntSets.immutable.empty() );
+        }, index -> asSet( IndexEntryUpdate.add( nodeId, index, value ) ) );
+    }
+
+    private void shouldGenerateIndexUpdates(
+            ThrowingConsumer<TxStateVisitor,Exception> beforeState, ThrowingConsumer<TxStateVisitor,Exception> testState,
+            Function<IndexDescriptor,Set<IndexEntryUpdate<IndexDescriptor>>> expectedUpdates ) throws Exception
+    {
+        // given
+        IndexDescriptor index = createIndex( SCHEMA_DESCRIPTOR );
+        if ( beforeState != null )
+        {
+            createAndApplyTransaction( beforeState );
+        }
+        indexUpdateListener.clear();
+
+        // when
+        createAndApplyTransaction( testState );
+
+        // then
+        assertThat( Iterables.asSet( indexUpdateListener.updates ) ).isEqualTo( expectedUpdates.apply( index ) );
+    }
+
+    private IndexDescriptor createIndex( SchemaDescriptor schemaDescriptor ) throws Exception
+    {
+        IndexProviderDescriptor providerDescriptor = new IndexProviderDescriptor( "freki", "1" );
+        IndexDescriptor indexDescriptor = IndexPrototype.forSchema( schemaDescriptor, providerDescriptor ).withName( "the-index" ).materialise( 8 );
+        createAndApplyTransaction( target ->
+        {
+            target.visitAddedIndex( indexDescriptor );
+        } );
+        return indexDescriptor;
     }
 
     private void assertContentsOfNode( long nodeId, LongSet labelIds, Set<StorageProperty> nodeProperties, Set<RelationshipSpec> relationships )
@@ -579,6 +859,22 @@ public class FrekiStorageEngineGraphWritesIT
             long[] storedLabels = nodeLabels.get( nodeId );
             assertThat( storedLabels ).isNotNull();
             assertThat( LongSets.immutable.of( storedLabels ) ).isEqualTo( expectedLabels );
+        }
+    }
+
+    private static class RecordingIndexUpdatesListener extends IndexUpdateListener.Adapter
+    {
+        private final List<IndexEntryUpdate<IndexDescriptor>> updates = new ArrayList<>();
+
+        @Override
+        public void applyUpdates( Iterable<IndexEntryUpdate<IndexDescriptor>> updates, PageCursorTracer cursorTracer )
+        {
+            updates.forEach( this.updates::add );
+        }
+
+        void clear()
+        {
+            updates.clear();
         }
     }
 }

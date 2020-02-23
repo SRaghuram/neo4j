@@ -19,8 +19,6 @@
  */
 package org.neo4j.internal.freki;
 
-import static org.neo4j.internal.freki.FrekiMainStoreCursor.NULL;
-
 class MainRecordHeaderState
 {
     int labelsOffset;
@@ -35,7 +33,29 @@ class MainRecordHeaderState
 
     void reset()
     {
-        forwardPointer = NULL;
         isDense = false;
+        containsForwardPointer = false;
+        containsBackPointer = false;
+    }
+
+    void initializeForSmallRecord( int labelsOffset )
+    {
+        reset();
+        this.labelsOffset = labelsOffset;
+    }
+
+    void initialize( int offsetsHeader )
+    {
+        relationshipsOffset = MutableNodeRecordData.relationshipOffset( offsetsHeader );
+        nodePropertiesOffset = MutableNodeRecordData.propertyOffset( offsetsHeader );
+        endOffset = MutableNodeRecordData.endOffset( offsetsHeader );
+    }
+
+    @Override
+    public String toString()
+    {
+        return "MainRecordHeaderState{" + "labelsOffset=" + labelsOffset + ", nodePropertiesOffset=" + nodePropertiesOffset + ", relationshipsOffset=" +
+                relationshipsOffset + ", endOffset=" + endOffset + ", containsForwardPointer=" + containsForwardPointer + ", containsBackPointer=" +
+                containsBackPointer + ", forwardPointer=" + forwardPointer + ", isDense=" + isDense + ", backPointer=" + backPointer + '}';
     }
 }

@@ -391,6 +391,8 @@ class MutableNodeRecordData
         int fw = forwardPointer == NULL ? 0 : 0x40000000;
         int bw = backPointer == NULL ? 0 : 0x80000000;
         buffer.putInt( offsetHeaderPosition, bw | fw | ((endOffset & 0x3FF) << 20) | ((relationshipsOffset & 0x3FF) << 10) | propertiesOffset & 0x3FF );
+
+        buffer.flip();
     }
 
     private static void writeProperties( MutableIntObjectMap<Value> properties, ByteBuffer buffer, SimpleBigValueStore bigPropertyValueStore,
@@ -405,11 +407,11 @@ class MutableNodeRecordData
         }
     }
 
-    private void readProperties( MutableIntObjectMap<Value> into, ByteBuffer buffer )
+    private void readProperties( MutableIntObjectMap<Value> into, ByteBuffer buffer, SimpleBigValueStore bigPropertyValueStore )
     {
         for ( int propertyKey : readIntDeltas( intArrayTarget(), buffer ).array() )
         {
-            into.put( propertyKey, PropertyValueFormat.read( buffer ) );
+            into.put( propertyKey, PropertyValueFormat.read( buffer, bigPropertyValueStore ) );
         }
     }
 
@@ -428,7 +430,7 @@ class MutableNodeRecordData
         return relationshipOtherNodeRawLong >>> 2;
     }
 
-    void deserialize( ByteBuffer buffer )
+    void deserialize( ByteBuffer buffer, SimpleBigValueStore bigPropertyValueStore /*temporary, should not be necessary in this scenario*/ )
     {
         int offsetHeader = buffer.getInt(); // [_fee][eeee][eeee][rrrr][rrrr][rrpp][pppp][pppp]
         int propertiesOffset = propertyOffset( offsetHeader );
@@ -443,7 +445,7 @@ class MutableNodeRecordData
         if ( propertiesOffset != 0 )
         {
             Preconditions.checkState( buffer.position() == propertiesOffset, "Mismatching properties offset and expected offset" );
-            readProperties( properties, buffer );
+            readProperties( properties, buffer, bigPropertyValueStore );
         }
 
         relationships.clear();
@@ -470,7 +472,7 @@ class MutableNodeRecordData
                     if ( relationshipHasProperties( otherNodeRaw ) )
                     {
                         buffer.get(); //blocksize
-                        readProperties( relationship.properties, buffer );
+                        readProperties( relationship.properties, buffer, bigPropertyValueStore );
                     }
                 }
                 this.relationships.put( relationships.type, relationships );

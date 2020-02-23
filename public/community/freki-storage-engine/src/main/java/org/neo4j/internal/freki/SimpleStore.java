@@ -23,10 +23,9 @@ import java.io.IOException;
 
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
-import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.storageengine.util.IdUpdateListener;
 
-public interface SimpleStore extends Lifecycle, AutoCloseable
+public interface SimpleStore extends SingleFileStore
 {
     int recordSize();
 
@@ -36,19 +35,13 @@ public interface SimpleStore extends Lifecycle, AutoCloseable
 
     Record newRecord( long id );
 
-    PageCursor openWriteCursor() throws IOException;
-
     void write( PageCursor cursor, Record record, IdUpdateListener idUpdateListener, PageCursorTracer cursorTracer ) throws IOException;
-
-    PageCursor openReadCursor();
 
     boolean read( PageCursor cursor, Record record, long id );
 
-    void flush( PageCursorTracer cursorTracer );
-
     long nextId( PageCursorTracer cursorTracer );
 
-    boolean exists( long id ) throws IOException;
+    boolean exists( PageCursor cursor, long id ) throws IOException;
 
     long getHighId();
 }

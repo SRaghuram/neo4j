@@ -19,40 +19,25 @@
  */
 package org.neo4j.internal.freki;
 
-import org.apache.commons.lang3.tuple.Pair;
-import org.eclipse.collections.api.factory.Sets;
-
 import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
 
 import org.neo4j.configuration.Config;
 import org.neo4j.counts.CountsAccessor;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector;
 import org.neo4j.internal.counts.CountsBuilder;
-import org.neo4j.internal.counts.GBPTreeCountsStore;
 import org.neo4j.internal.diagnostics.DiagnosticsManager;
-import org.neo4j.internal.id.DefaultIdGeneratorFactory;
 import org.neo4j.internal.id.IdController;
-import org.neo4j.internal.id.IdGenerator;
 import org.neo4j.internal.id.IdGeneratorFactory;
-import org.neo4j.internal.id.IdType;
 import org.neo4j.internal.kernel.api.exceptions.TransactionApplyKernelException;
 import org.neo4j.internal.metadatastore.GBPTreeMetaDataStore;
 import org.neo4j.internal.schema.IndexConfigCompleter;
-import org.neo4j.internal.schema.SchemaCache;
 import org.neo4j.internal.schema.SchemaState;
-import org.neo4j.internal.schemastore.GBPTreeSchemaStore;
-import org.neo4j.internal.tokenstore.GBPTreeTokenStore;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.io.pagecache.PageCache;
-import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
@@ -84,14 +69,10 @@ import org.neo4j.storageengine.util.IndexUpdatesWorkSync;
 import org.neo4j.storageengine.util.LabelIndexUpdatesWorkSync;
 import org.neo4j.token.TokenHolders;
 
-import static org.neo4j.internal.helpers.ArrayUtil.concat;
-import static org.neo4j.io.IOUtils.closeAllSilently;
 import static org.neo4j.kernel.lifecycle.LifecycleAdapter.onInit;
 
 public class FrekiStorageEngine implements StorageEngine
 {
-    private static final int MAX_TOKEN_ID = (int) ((1L << 24) - 1);
-
     private final FileSystemAbstraction fs;
     private final DatabaseLayout databaseLayout;
     private final Config config;
@@ -115,7 +96,6 @@ public class FrekiStorageEngine implements StorageEngine
     private final IdGeneratorUpdatesWorkSync idGeneratorUpdatesWorkSync;
     private LabelIndexUpdatesWorkSync labelIndexUpdatesWorkSync;
     private IndexUpdatesWorkSync indexUpdatesWorkSync;
-    private final List<Pair<IdGeneratorFactory,IdType>> idGeneratorsToRegisterOnTheWorkSync = new ArrayList<>();
     private IndexUpdateListener indexUpdateListener;
     private NodeLabelUpdateListener nodeLabelUpdateListener;
 
@@ -123,7 +103,7 @@ public class FrekiStorageEngine implements StorageEngine
             SchemaState schemaState, ConstraintRuleAccessor constraintSemantics, IndexConfigCompleter indexConfigCompleter, LockService lockService,
             IdGeneratorFactory idGeneratorFactory, IdController idController, DatabaseHealth databaseHealth, LogProvider logProvider,
             RecoveryCleanupWorkCollector recoveryCleanupWorkCollector, boolean createStoreIfNotExists,
-            PageCacheTracer pageCacheTracer, PageCursorTracerSupplier cursorTracerSupplier )
+            PageCacheTracer pageCacheTracer, PageCursorTracerSupplier cursorTracerSupplier ) throws IOException
     {
         this.fs = fs;
         this.databaseLayout = databaseLayout;
@@ -143,77 +123,9 @@ public class FrekiStorageEngine implements StorageEngine
         this.pageCacheTracer = pageCacheTracer;
         this.cursorTracerSupplier = cursorTracerSupplier;
         this.idGeneratorUpdatesWorkSync = new IdGeneratorUpdatesWorkSync();
-
-        SimpleStore[] mainStores = new SimpleStore[4];
-        BigPropertyValueStore bigPropertyValueStore = null;
-        DenseStore denseStore = null;
-        IdGenerator relationshipsIdGenerator = null;
-        GBPTreeMetaDataStore metaDataStore = null;
-        GBPTreeCountsStore countsStore = null;
-        GBPTreeSchemaStore schemaStore = null;
-        GBPTreeTokenStore propertyKeyTokenStore = null;
-        GBPTreeTokenStore relationshipTypeTokenStore = null;
-        GBPTreeTokenStore labelTokenStore = null;
-        boolean success = false;
-        try
-        {
-            if ( createStoreIfNotExists )
-            {
-                fs.mkdirs( databaseLayout.databaseDirectory() );
-            }
-            mainStores[0] = new Store( fs, databaseLayout.file( "main-store-x1" ), pageCache, idGeneratorFactory, IdType.NODE, false, createStoreIfNotExists, 0,
-                    cursorTracerSupplier );
-            idGeneratorsToRegisterOnTheWorkSync.add( Pair.of( idGeneratorFactory, IdType.NODE ) );
-            for ( int i = 1; i < mainStores.length; i++ )
-            {
-                IdGeneratorFactory separateIdGeneratorFactory = new DefaultIdGeneratorFactory( fs, recoveryCleanupWorkCollector, false );
-                mainStores[i] = new Store( fs, databaseLayout.file( "main-store-x" + (1 << i) ), pageCache,
-                        separateIdGeneratorFactory, IdType.NODE, false, createStoreIfNotExists, i,
-                        cursorTracerSupplier );
-                idGeneratorsToRegisterOnTheWorkSync.add( Pair.of( separateIdGeneratorFactory, IdType.NODE ) );
-            }
-            bigPropertyValueStore =
-                    new BigPropertyValueStore( fs, databaseLayout.file( "big-values" ), pageCache, false, createStoreIfNotExists, cursorTracerSupplier );
-            denseStore = new DenseStore( pageCache, databaseLayout.file( "dense-store" ), recoveryCleanupWorkCollector, false, pageCacheTracer,
-                    bigPropertyValueStore );
-            relationshipsIdGenerator =
-                    idGeneratorFactory.create( pageCache, databaseLayout.relationshipStore(), IdType.RELATIONSHIP, 0, false, Long.MAX_VALUE, false,
-                            cursorTracerSupplier.get(), Sets.immutable.empty() );
-            idGeneratorsToRegisterOnTheWorkSync.add( Pair.of( idGeneratorFactory, IdType.RELATIONSHIP ) );
-            PageCursorTracer cursorTracer = cursorTracerSupplier.get();
-            metaDataStore = FrekiStorageEngineFactory.openMetaDataStore( databaseLayout, pageCache, pageCacheTracer, cursorTracer );
-            countsStore = new GBPTreeCountsStore( pageCache, databaseLayout.countStore(), recoveryCleanupWorkCollector,
-                    initialCountsBuilder( metaDataStore ), false, pageCacheTracer, GBPTreeCountsStore.NO_MONITOR );
-            schemaStore = new GBPTreeSchemaStore( pageCache, databaseLayout.schemaStore(), recoveryCleanupWorkCollector, idGeneratorFactory, false,
-                    pageCacheTracer, cursorTracer );
-            idGeneratorsToRegisterOnTheWorkSync.add( Pair.of( idGeneratorFactory, IdType.SCHEMA ) );
-            propertyKeyTokenStore = new GBPTreeTokenStore( pageCache, databaseLayout.propertyKeyTokenStore(), recoveryCleanupWorkCollector,
-                    idGeneratorFactory, IdType.PROPERTY_KEY_TOKEN, MAX_TOKEN_ID, false, pageCacheTracer, cursorTracer );
-            idGeneratorsToRegisterOnTheWorkSync.add( Pair.of( idGeneratorFactory, IdType.PROPERTY_KEY_TOKEN ) );
-            relationshipTypeTokenStore = new GBPTreeTokenStore( pageCache, databaseLayout.relationshipTypeTokenStore(), recoveryCleanupWorkCollector,
-                    idGeneratorFactory, IdType.RELATIONSHIP_TYPE_TOKEN, MAX_TOKEN_ID, false, pageCacheTracer, cursorTracer );
-            idGeneratorsToRegisterOnTheWorkSync.add( Pair.of( idGeneratorFactory, IdType.RELATIONSHIP_TYPE_TOKEN ) );
-            labelTokenStore = new GBPTreeTokenStore( pageCache, databaseLayout.labelTokenStore(), recoveryCleanupWorkCollector,
-                    idGeneratorFactory, IdType.LABEL_TOKEN, MAX_TOKEN_ID, false, pageCacheTracer, cursorTracer );
-            idGeneratorsToRegisterOnTheWorkSync.add( Pair.of( idGeneratorFactory, IdType.LABEL_TOKEN ) );
-            SchemaCache schemaCache = new SchemaCache( constraintSemantics, indexConfigCompleter );
-            this.stores = new Stores( mainStores, bigPropertyValueStore, denseStore, relationshipsIdGenerator, metaDataStore, countsStore, schemaStore,
-                    schemaCache, propertyKeyTokenStore, relationshipTypeTokenStore, labelTokenStore );
-            life.add( stores );
-            success = true;
-        }
-        catch ( IOException e )
-        {
-            throw new UncheckedIOException( e );
-        }
-        finally
-        {
-            if ( !success )
-            {
-                closeAllSilently( concat( mainStores, bigPropertyValueStore, denseStore, relationshipsIdGenerator, metaDataStore, countsStore, schemaStore,
-                        propertyKeyTokenStore, relationshipTypeTokenStore, labelTokenStore ) );
-            }
-        }
+        this.stores = new Stores( fs, databaseLayout, pageCache, idGeneratorFactory, pageCacheTracer, cursorTracerSupplier, recoveryCleanupWorkCollector,
+                createStoreIfNotExists, constraintSemantics, indexConfigCompleter );
+        life.add( stores );
     }
 
     private CountsBuilder initialCountsBuilder( GBPTreeMetaDataStore metaDataStore )
@@ -364,7 +276,7 @@ public class FrekiStorageEngine implements StorageEngine
     {
         life.init();
         // Now that all stores have been initialized and all id generators are opened then register them at the work-sync
-        idGeneratorsToRegisterOnTheWorkSync.forEach( generator -> idGeneratorUpdatesWorkSync.add( generator.getKey().get( generator.getRight() ) ) );
+        stores.idGenerators( idGeneratorUpdatesWorkSync::add );
     }
 
     @Override
@@ -383,40 +295,5 @@ public class FrekiStorageEngine implements StorageEngine
     public void shutdown()
     {
         life.shutdown();
-    }
-
-    public void printAverageFactorFilledRecords() throws IOException
-    {
-        for ( int i = 0; i < 4; i++ )
-        {
-            SimpleStore store = stores.mainStore( i );
-            if ( store != null )
-            {
-                System.out.println( averageFactorFilledRecords( store ) );
-            }
-        }
-    }
-
-    private double averageFactorFilledRecords( SimpleStore store )
-    {
-        long bytesUsed = 0;
-        long bytesMax = 9;
-        Record record = store.newRecord();
-        try ( PageCursor cursor = store.openReadCursor() )
-        {
-            long highId = store.getHighId();
-            for ( long id = 0; id < highId; id++ )
-            {
-                if ( store.read( cursor, record, id ) )
-                {
-                    MutableNodeRecordData data = new MutableNodeRecordData( id );
-                    ByteBuffer buffer = record.dataForReading();
-                    data.deserialize( buffer );
-                    bytesUsed += buffer.position();
-                    bytesMax += buffer.capacity();
-                }
-            }
-        }
-        return ((double) bytesUsed) / bytesMax;
     }
 }

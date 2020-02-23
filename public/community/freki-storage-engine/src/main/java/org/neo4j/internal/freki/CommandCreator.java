@@ -31,8 +31,10 @@ import org.eclipse.collections.impl.factory.primitive.LongObjectMaps;
 
 import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
 import java.util.OptionalLong;
 import java.util.function.Consumer;
 
@@ -119,11 +121,17 @@ class CommandCreator implements TxStateVisitor
     public void visitNodePropertyChanges( long id, Iterable<StorageProperty> added, Iterable<StorageProperty> changed, IntIterable removed )
     {
         Mutation mutation = getOrLoad( id );
+        setNodeProperties( added, mutation );
+        setNodeProperties( changed, mutation );
+        removed.forEach( propertyKey -> mutation.current.removeNodeProperty( propertyKey ) );
+    }
+
+    private void setNodeProperties( Iterable<StorageProperty> added, Mutation mutation )
+    {
         for ( StorageProperty property : added )
         {
             mutation.current.setNodeProperty( property.propertyKeyId(), property.value() );
         }
-        removed.forEach( propertyKey -> mutation.current.removeNodeProperty( propertyKey ) );
     }
 
     @Override
@@ -217,6 +225,9 @@ class CommandCreator implements TxStateVisitor
     @Override
     public void close()
     {
+        List<StorageCommand> bigValueCommands = new ArrayList<>();
+        List<StorageCommand> otherCommands = new ArrayList<>();
+
         mutations.each( mutation ->
         {
             RecordAndData abandonedLargeRecord = null;
@@ -224,7 +235,7 @@ class CommandCreator implements TxStateVisitor
             {
                 try
                 {
-                    mutation.current.prepareForCommandExtraction( commands::add );
+                    mutation.current.prepareForCommandExtraction( bigValueCommands::add );
                     break;
                 }
                 catch ( BufferOverflowException | ArrayIndexOutOfBoundsException e )
@@ -248,19 +259,22 @@ class CommandCreator implements TxStateVisitor
                 // TODO we should track whether or not we need to do this preparation actually
                 // TODO for the time being we expect this to work because there should only be labels in it, 60 or so should fit
                 mutation.small.data.setForwardPointer( mutation.current.asForwardPointer() );
-                mutation.small.prepareForCommandExtraction( commands::add );
+                mutation.small.prepareForCommandExtraction( bigValueCommands::add );
             }
 
-            mutation.small.createCommands( commands );
-            if ( mutation.large != null )
+            mutation.small.createCommands( otherCommands ); //Small
+            if ( abandonedLargeRecord != null ) //Large
             {
-                mutation.large.createCommands( commands );
+                abandonedLargeRecord.createCommands( otherCommands );
             }
-            if ( abandonedLargeRecord != null )
+            if ( mutation.large != null ) //Dense
             {
-                abandonedLargeRecord.createCommands( commands );
+                mutation.large.createCommands( otherCommands );
             }
         } );
+
+        commands.addAll( bigValueCommands );
+        commands.addAll( otherCommands );
     }
 
     private Mutation createNew( SimpleStore store, long id )
@@ -340,7 +354,7 @@ class CommandCreator implements TxStateVisitor
 
         abstract void removeLabels( LongSet removed );
 
-        abstract void prepareForCommandExtraction( Consumer<StorageCommand> commandConsumer );
+        abstract void prepareForCommandExtraction( Consumer<StorageCommand> bigValueCommandConsumer );
 
         abstract RecordAndData growAndRelocate();
 
@@ -401,7 +415,7 @@ class CommandCreator implements TxStateVisitor
             {
                 store.read( cursor, before, after.id );
             }
-            data.deserialize( before.dataForReading() );
+            data.deserialize( before.dataForReading(), stores.bigPropertyValueStore );
             after.copyContentsFrom( before );
         }
 
@@ -441,9 +455,9 @@ class CommandCreator implements TxStateVisitor
         }
 
         @Override
-        void prepareForCommandExtraction( Consumer<StorageCommand> commandConsumer )
+        void prepareForCommandExtraction( Consumer<StorageCommand> bigValueCommandConsumer )
         {
-            data.serialize( after.dataForWriting(), stores.bigPropertyValueStore, commandConsumer );
+            data.serialize( after.dataForWriting(), stores.bigPropertyValueStore, bigValueCommandConsumer );
             if ( data.id == -1 )
             {
                 acquireId();
@@ -488,7 +502,7 @@ class CommandCreator implements TxStateVisitor
         @Override
         void createCommands( Collection<StorageCommand> commands )
         {
-            commands.add( new FrekiCommand.SparseNode( before, after ) );
+            commands.add( new FrekiCommand.SparseNode( smallRecord.data.id, before, after ) );
         }
     }
 
@@ -578,7 +592,7 @@ class CommandCreator implements TxStateVisitor
         }
 
         @Override
-        void prepareForCommandExtraction( Consumer<StorageCommand> commandConsumer )
+        void prepareForCommandExtraction( Consumer<StorageCommand> bigValueCommandConsumer )
         {
             // Thoughts: no special preparation should be required here either
         }
@@ -613,7 +627,7 @@ class CommandCreator implements TxStateVisitor
             {
                 DenseRelationships convertedRelationships = new DenseRelationships( type );
                 converted.put( type, convertedRelationships );
-                value.relationships.forEach( relationship -> convertedRelationships.add( relationship.internalId, relationship.sourceNodeId,
+                value.relationships.forEach( relationship -> convertedRelationships.add( relationship.internalId,
                         relationship.otherNode, relationship.outgoing, convertProperties( relationship.properties, commandConsumer ) ) );
             } );
             return converted;
