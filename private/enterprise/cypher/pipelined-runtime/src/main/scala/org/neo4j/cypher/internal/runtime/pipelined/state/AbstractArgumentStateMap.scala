@@ -5,7 +5,6 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.state
 
-import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
@@ -51,6 +50,14 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
         f(controller.state)
       }
     })
+  }
+
+  override def skip(morsel: Morsel,
+                    reserve: (STATE, Long) => Long): Unit = {
+    ArgumentStateMap.skip(
+      argumentSlotOffset,
+      morsel,
+      (argumentRowId, nRows) => reserve(controllers.get(argumentRowId).state, nRows))
   }
 
   override def filterWithSideEffect[U](morsel: Morsel,

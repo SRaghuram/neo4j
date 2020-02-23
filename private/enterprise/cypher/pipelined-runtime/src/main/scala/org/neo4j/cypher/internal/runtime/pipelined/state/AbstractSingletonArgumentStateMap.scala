@@ -6,9 +6,7 @@
 package org.neo4j.cypher.internal.runtime.pipelined.state
 
 import org.neo4j.cypher.internal.physicalplanning.TopLevelArgument
-import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.ReadWriteRow
-import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
@@ -57,6 +55,14 @@ abstract class AbstractSingletonArgumentStateMap[STATE <: ArgumentState, CONTROL
       // is some outstanding work unit that wants to update count of accumulator
       f(controller.state)
     }
+  }
+
+
+  override def skip(morsel: Morsel,
+                    reserve: (STATE, Long) => Long): Unit = {
+    val end = reserve(controller.state, morsel.numberOfRows).asInstanceOf[Int]
+
+    ArgumentStateMap.skip(morsel, end)
   }
 
   override def filterWithSideEffect[U](morsel: Morsel,

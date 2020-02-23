@@ -61,25 +61,9 @@ class SkipOperator(argumentStateMapId: ArgumentStateMapId,
                          context: QueryContext,
                          state: QueryState,
                          resources: QueryResources): Unit = {
-      asm.filterWithSideEffect[SkipFilterState](output,
-                                            (rowCount, nRows) => new SkipFilterState(rowCount.reserve(nRows)),
-                                            (x, _) => x.next())
+      asm.skip(output, (state, nRows) => state.reserve(nRows))
     }
 
     override def workIdentity: WorkIdentity = SkipOperator.this.workIdentity
-
-    /**
-      * Filter state for the rows from one argumentRowId within one morsel.
-      */
-    class SkipFilterState(var countLeft: Long) {
-      def next(): Boolean = {
-        if (countLeft > 0) {
-          countLeft -= 1
-          false
-        } else {
-          true
-        }
-      }
-    }
   }
 }

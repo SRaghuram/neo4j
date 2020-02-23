@@ -33,6 +33,13 @@ trait ArgumentStateMap[S <: ArgumentState] {
   def update(argumentRowId: Long, onState: S => Unit): Unit
 
   /**
+    * Skip some number of items of the input morsel using the [[ArgumentState]] related to `argument`.
+    * @param morsel the morsel in question
+    * @param reserve called to get a number of items to skip, called once per argumentRowId
+    */
+  def skip(morsel: Morsel, reserve: (S, Long) => Long): Unit
+
+  /**
    * Filter the input morsel using the [[ArgumentState]] related to `argument`.
    *
    * @param onArgument is called once per argumentRowId, to generate a filter state.
@@ -230,6 +237,22 @@ object ArgumentStateMap {
    */
   case class ArgumentStateWithCompleted[S <: ArgumentState](argumentState: S, isCompleted: Boolean)
 
+  def skip(morsel: Morsel, toSkip: Int): Unit = {
+    val filteringMorsel = morsel.asInstanceOf[FilteringMorsel]
+
+    if (filteringMorsel.hasCancelledRows) {
+      val cursor = filteringMorsel.fullCursor()
+      var i = 0L
+      while (i < toSkip && cursor.next()) {
+        filteringMorsel.cancelRow(cursor.row)
+        i += 1
+      }
+    } else {
+      val cursor = filteringMorsel.fullCursor(onFirstRow = true)
+      filteringMorsel.cancelRows(cursor.row, cursor.row + toSkip)
+    }
+  }
+
   /**
    * Filter the rows of a morsel using a predicate, and redirect the morsel current row to
    * the rows new position.
@@ -266,6 +289,66 @@ object ArgumentStateMap {
     while (cursor.next()) {
       if (!predicate(cursor)) {
         filteringMorsel.cancelRow(cursor.row)
+      }
+    }
+  }
+
+  def skip(argumentSlotOffset: Int,
+              morsel: Morsel,
+              reserve: (Long, Long) => Long): Unit = {
+    val filteringMorsel = morsel.asInstanceOf[FilteringMorsel]
+   if (filteringMorsel.hasCancelledRows) skipSlow(argumentSlotOffset, filteringMorsel, reserve)
+   else skipFast(argumentSlotOffset, filteringMorsel, reserve)
+  }
+
+  /**
+    * Does fast skipping by skipping a full range instead of doing it row by row. Can only be called
+    * if we know there are no cancelled rows since otherwise we might skip an already skipped item and the number
+    * of skipped items will be wrong
+    */
+  private def skipFast(argumentSlotOffset: Int,
+                       filteringMorsel: FilteringMorsel,
+                       reserve: (Long, Long) => Long): Unit = {
+    val cursor = filteringMorsel.fullCursor(onFirstRow = true)
+    var last = -1
+    while (cursor.onValidRow() && last != 0) {
+      val arg = ArgumentSlots.getArgumentAt(cursor, argumentSlotOffset)
+      val start: Int = cursor.row
+      while (cursor.onValidRow() && ArgumentSlots.getArgumentAt(cursor, argumentSlotOffset) == arg) {
+        cursor.next()
+      }
+      val end: Int = cursor.row
+      last = reserve(arg, end - start).asInstanceOf[Int]
+      filteringMorsel.cancelRows(start, start + last)
+      cursor.next()
+    }
+
+  }
+
+  private def skipSlow(argumentSlotOffset: Int,
+                       filteringMorsel: FilteringMorsel,
+                       reserve: (Long, Long) => Long): Unit = {
+    val cursor = filteringMorsel.fullCursor(onFirstRow = true)
+
+    while (cursor.onValidRow()) {
+      val arg = ArgumentSlots.getArgumentAt(cursor, argumentSlotOffset)
+      val start: Int = cursor.row
+      while (cursor.onValidRow() && ArgumentSlots.getArgumentAt(cursor, argumentSlotOffset) == arg) {
+        cursor.next()
+      }
+      val end: Int = cursor.row
+      cursor.setRow(start)
+
+      val last = reserve(arg, end - start)
+      while (cursor.row < last) {
+        if (cursor.onValidRow()) {
+          filteringMorsel.cancelRow(cursor.row)
+        }
+        cursor.next()
+      }
+
+      if (last == 0) {
+        cursor.next()
       }
     }
   }

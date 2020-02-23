@@ -58,6 +58,11 @@ class FilteringMorsel(longs: Array[Long],
     cancelledRows.set(row)
   }
 
+  def cancelRows(fromIncluding: Int, toExcluded: Int): Unit = {
+    ensureCancelledRows()
+    this.cancelledRows.set(fromIncluding, toExcluded)
+  }
+
   def cancelRows(cancelledRows: java.util.BitSet): Unit = {
     ensureCancelledRows()
     this.cancelledRows.or(cancelledRows)
