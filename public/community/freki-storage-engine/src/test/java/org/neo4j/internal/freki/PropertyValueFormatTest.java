@@ -21,6 +21,7 @@ package org.neo4j.internal.freki;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.nio.ByteBuffer;
 import java.time.ZoneId;
@@ -28,6 +29,9 @@ import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.Map;
 
+import org.neo4j.test.extension.Inject;
+import org.neo4j.test.extension.RandomExtension;
+import org.neo4j.test.rule.RandomRule;
 import org.neo4j.values.storable.CoordinateReferenceSystem;
 import org.neo4j.values.storable.DateTimeValue;
 import org.neo4j.values.storable.DateValue;
@@ -47,8 +51,12 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.neo4j.internal.freki.InMemoryBigValueTestStore.applyToStoreImmediately;
 
+@ExtendWith( RandomExtension.class )
 class PropertyValueFormatTest
 {
+    @Inject
+    private RandomRule random;
+
     private final byte[] data = new byte[1024]; // should be enough to hold any properties we write in those tests
     private final ByteBuffer readBuffer = ByteBuffer.wrap( data);
     private final ByteBuffer writeBuffer = ByteBuffer.wrap( data );
@@ -596,6 +604,32 @@ class PropertyValueFormatTest
         Value value = readValue();
         assertArrayEquals((String[]) value.asObject(), new String[]{longString, shortString, anotherLongString} );
     }
+
+//    @RandomRule.Seed( 1582550321956L )
+//    @Test
+//    void shouldReadAndWriteAllTypesOfProperties()
+//    {
+//        for ( ValueType valueType : ValueType.values() )
+//        {
+//            // given
+//            Value value = random.nextValue( valueType );
+//            ByteBuffer buffer = ByteBuffer.wrap( new byte[1_000] );
+//            PropertyValueFormat format = new PropertyValueFormat( bigValueStore, applyToStoreImmediately( bigValueStore ), buffer );
+//            value.writeTo( format );
+//            int positionAfterWrite = buffer.position();
+//            buffer.flip();
+//
+//            // when
+//            int size = PropertyValueFormat.calculatePropertyValueSizeIncludingTypeHeader( buffer );
+//            Value readValue = PropertyValueFormat.readEagerly( buffer, bigValueStore );
+//            int positionAfterRead = buffer.position();
+//
+//            // then
+//            assertThat( readValue ).isEqualTo( value );
+//            assertThat( positionAfterRead ).isEqualTo( positionAfterWrite );
+//            assertThat( size ).isEqualTo( positionAfterWrite );
+//        }
+//    }
 
     private Value readValue()
     {

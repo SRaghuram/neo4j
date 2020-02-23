@@ -28,6 +28,7 @@ import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
+import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
@@ -108,7 +109,7 @@ class InMemoryBigValueTestStore extends LifecycleAdapter implements SimpleBigVal
     }
 
     @Override
-    public void flush( PageCursorTracer cursorTracer )
+    public void flush( IOLimiter ioLimiter, PageCursorTracer cursorTracer )
     {
     }
 }

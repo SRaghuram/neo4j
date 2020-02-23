@@ -28,7 +28,7 @@ import java.io.UncheckedIOException;
 import java.nio.file.OpenOption;
 import java.nio.file.StandardOpenOption;
 
-import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.PagedFile;
@@ -38,9 +38,8 @@ import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 
 import static org.neo4j.internal.helpers.ArrayUtil.concat;
 
-abstract class BareBoneStore extends LifecycleAdapter implements AutoCloseable
+abstract class BareBoneSingleFileStore extends LifecycleAdapter implements SingleFileStore
 {
-    private final FileSystemAbstraction fs;
     final File file;
     final PageCache pageCache;
     final boolean readOnly;
@@ -50,10 +49,8 @@ abstract class BareBoneStore extends LifecycleAdapter implements AutoCloseable
 
     protected PagedFile mappedFile;
 
-    BareBoneStore( FileSystemAbstraction fs, File file, PageCache pageCache, boolean readOnly, boolean createIfNotExists,
-            PageCursorTracerSupplier tracerSupplier )
+    BareBoneSingleFileStore( File file, PageCache pageCache, boolean readOnly, boolean createIfNotExists, PageCursorTracerSupplier tracerSupplier )
     {
-        this.fs = fs;
         this.file = file;
         this.pageCache = pageCache;
         this.pageSize = pageCache.pageSize();
@@ -75,11 +72,13 @@ abstract class BareBoneStore extends LifecycleAdapter implements AutoCloseable
         return Sets.immutable.of( openOptions );
     }
 
+    @Override
     public PageCursor openWriteCursor() throws IOException
     {
         return mappedFile.io( 0, PagedFile.PF_SHARED_WRITE_LOCK, PageCursorTracer.NULL );
     }
 
+    @Override
     public PageCursor openReadCursor()
     {
         try
@@ -92,19 +91,15 @@ abstract class BareBoneStore extends LifecycleAdapter implements AutoCloseable
         }
     }
 
-    public void flush( PageCursorTracer cursorTracer )
+    @Override
+    public void flush( IOLimiter ioLimiter, PageCursorTracer cursorTracer ) throws IOException
     {
+        mappedFile.flushAndForce( ioLimiter );
     }
 
     @Override
     public void shutdown()
     {
         mappedFile.close();
-    }
-
-    @Override
-    public void close()
-    {
-        shutdown();
     }
 }

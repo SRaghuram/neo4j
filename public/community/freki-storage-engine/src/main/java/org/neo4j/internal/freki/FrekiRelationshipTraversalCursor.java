@@ -59,7 +59,7 @@ public class FrekiRelationshipTraversalCursor extends FrekiRelationshipCursor im
     private DenseStore.RelationshipData currentDenseRelationship;
     private int selectionCriterionIndex;
 
-    FrekiRelationshipTraversalCursor( MainStores stores, PageCursorTracer cursorTracer )
+    public FrekiRelationshipTraversalCursor( MainStores stores, PageCursorTracer cursorTracer )
     {
         super( stores, cursorTracer );
     }

@@ -36,7 +36,7 @@ import static org.neo4j.internal.freki.PropertyValueFormat.calculatePropertyValu
 import static org.neo4j.internal.freki.StreamVByte.readIntDeltas;
 import static org.neo4j.internal.freki.StreamVByte.readLongs;
 
-class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropertyCursor
+public class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropertyCursor
 {
     private boolean initializedFromEntity;
 
@@ -45,13 +45,13 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
     private long internalRelationshipId;
     private int[] propertyKeyArray;
     private int propertyKeyIndex;
-    private int nextPropertyValueStartOffset;
+    private Value readValue;
 
     // ... or they are in the dense form, where these fields come into play
     private Iterator<StorageProperty> denseProperties;
     private StorageProperty currentDenseProperty;
 
-    FrekiPropertyCursor( MainStores stores, PageCursorTracer cursorTracer )
+    public FrekiPropertyCursor( MainStores stores, PageCursorTracer cursorTracer )
     {
         super( stores, cursorTracer );
     }
@@ -135,9 +135,15 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
     @Override
     public Value propertyValue()
     {
-        return headerState.isDense
-               ? currentDenseProperty.value()
-               : PropertyValueFormat.read( data );
+        if ( headerState.isDense )
+        {
+            return currentDenseProperty.value();
+        }
+        if ( readValue == null )
+        {
+            readValue = PropertyValueFormat.readEagerly( data, stores.bigPropertyValueStore );
+        }
+        return readValue;
     }
 
     @Override
@@ -188,11 +194,12 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
                 propertyKeyIndex = -1;
                 return false;
             }
-            data.position( nextPropertyValueStartOffset );
-
-            // Calculate the position in the buffer where the next value will be.
-            // If we decide to store an offset array along with the key array too then this becomes easier where we don't have to calculate it by hand.
-            nextPropertyValueStartOffset += calculatePropertyValueSizeIncludingTypeHeader( data );
+            if ( readValue == null && propertyKeyIndex > 0 )
+            {
+                // We didn't read the value, which means we'll have to figure out this position ourselves right here
+                data.position( data.position() + calculatePropertyValueSizeIncludingTypeHeader( data ) );
+            }
+            readValue = null;
             return true;
         }
         return false;
@@ -246,7 +253,6 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
 
         data.position( offset );
         propertyKeyArray = readIntDeltas( new StreamVByte.IntArrayTarget(), data ).array();
-        nextPropertyValueStartOffset = data.position();
         propertyKeyIndex = -1;
         return true;
     }
@@ -260,5 +266,6 @@ class FrekiPropertyCursor extends FrekiMainStoreCursor implements StoragePropert
         propertyKeyIndex = -1;
         initializedFromEntity = false;
         denseProperties = null;
+        readValue = null;
     }
 }
