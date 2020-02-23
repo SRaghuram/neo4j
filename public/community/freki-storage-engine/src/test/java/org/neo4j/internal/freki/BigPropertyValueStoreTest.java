@@ -31,8 +31,10 @@ import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.PageCursor;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.lifecycle.Lifespan;
 import org.neo4j.test.Race;
 import org.neo4j.test.extension.Inject;
@@ -66,7 +68,7 @@ class BigPropertyValueStoreTest
     {
         try ( Lifespan life = new Lifespan() )
         {
-            BigPropertyValueStore store = new BigPropertyValueStore( fs, directory.file( "dude" ), pageCache, false, true, TRACER_SUPPLIER );
+            BigPropertyValueStore store = new BigPropertyValueStore( directory.file( "dude" ), pageCache, false, true, TRACER_SUPPLIER );
             life.add( store );
             byte[][] datas = new byte[100][];
             long[] positions = new long[datas.length];
@@ -93,7 +95,7 @@ class BigPropertyValueStoreTest
         try ( Lifespan life = new Lifespan() )
         {
             // given
-            BigPropertyValueStore store = new BigPropertyValueStore( fs, directory.file( "dude" ), pageCache, false, true, TRACER_SUPPLIER );
+            BigPropertyValueStore store = new BigPropertyValueStore( directory.file( "dude" ), pageCache, false, true, TRACER_SUPPLIER );
             life.add( store );
             Race race = new Race();
             MutableLongObjectMap<byte[]>[] expectedData = new MutableLongObjectMap[4];
@@ -156,7 +158,7 @@ class BigPropertyValueStoreTest
         try ( Lifespan life = new Lifespan() )
         {
             // given
-            BigPropertyValueStore store = new BigPropertyValueStore( fs, directory.file( "dude" ), pageCache, false, true, TRACER_SUPPLIER );
+            BigPropertyValueStore store = new BigPropertyValueStore( directory.file( "dude" ), pageCache, false, true, TRACER_SUPPLIER );
             life.add( store );
 
             byte[] data = randomData( ThreadLocalRandom.current() );
@@ -175,14 +177,16 @@ class BigPropertyValueStoreTest
     {
         try ( Lifespan life = new Lifespan() )
         {
-            BigPropertyValueStore store = new BigPropertyValueStore( fs, directory.file( "dude" ), pageCache, false, true, TRACER_SUPPLIER );
+            BigPropertyValueStore store = new BigPropertyValueStore( directory.file( "dude" ), pageCache, false, true, TRACER_SUPPLIER );
             life.add( store );
+            long pointer;
             try ( PageCursor cursor = store.openWriteCursor() )
             {
-                long pointer = store.allocateSpace( data.length );
+                pointer = store.allocateSpace( data.length );
                 store.write( cursor, ByteBuffer.wrap( data ), pointer );
-                return pointer;
             }
+            store.flush( IOLimiter.UNLIMITED, PageCursorTracer.NULL );
+            return pointer;
         }
     }
 
@@ -190,7 +194,7 @@ class BigPropertyValueStoreTest
     {
         try ( Lifespan life = new Lifespan() )
         {
-            BigPropertyValueStore store = new BigPropertyValueStore( fs, directory.file( "dude" ), pageCache, true, true, TRACER_SUPPLIER );
+            BigPropertyValueStore store = new BigPropertyValueStore( directory.file( "dude" ), pageCache, true, true, TRACER_SUPPLIER );
             life.add( store );
             try ( PageCursor cursor = store.openReadCursor() )
             {

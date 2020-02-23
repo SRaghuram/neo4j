@@ -168,6 +168,30 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
         return false;
     }
 
+    boolean initializeFromRecord( Record record )
+    {
+        if ( !record.hasFlag( FLAG_IN_USE ) )
+        {
+            return false;
+        }
+
+        if ( record.sizeExp() == 0 )
+        {
+            smallRecord = record;
+            data = record.dataForReading( 0 );
+            readOffsets( true );
+            loadedNodeId = record.id;
+        }
+        else
+        {
+            this.record = record;
+            data = record.dataForReading( 0 );
+            readOffsets( false );
+            loadedNodeId = headerState.backPointer;
+        }
+        return true;
+    }
+
     private void readOffsets( boolean forSmallRecord )
     {
         int offsetsHeader = MutableNodeRecordData.readOffsetsHeader( data );
@@ -177,11 +201,9 @@ abstract class FrekiMainStoreCursor implements AutoCloseable
         }
         if ( forSmallRecord )
         {
-            headerState.labelsOffset = data.position();
+            headerState.initializeForSmallRecord( data.position() );
         }
-        headerState.relationshipsOffset = MutableNodeRecordData.relationshipOffset( offsetsHeader );
-        headerState.nodePropertiesOffset = MutableNodeRecordData.propertyOffset( offsetsHeader );
-        headerState.endOffset = MutableNodeRecordData.endOffset( offsetsHeader );
+        headerState.initialize( offsetsHeader );
         if ( forSmallRecord )
         {
             headerState.containsForwardPointer = MutableNodeRecordData.containsForwardPointer( offsetsHeader );

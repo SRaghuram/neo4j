@@ -51,6 +51,7 @@ import org.neo4j.storageengine.api.StorageProperty;
 import org.neo4j.values.storable.Value;
 
 import static java.lang.String.format;
+import static org.neo4j.internal.freki.PropertyValueFormat.calculatePropertyValueSizeIncludingTypeHeader;
 import static org.neo4j.token.api.TokenConstants.ANY_RELATIONSHIP_TYPE;
 
 /**
@@ -97,7 +98,7 @@ class DenseStore extends LifecycleAdapter implements Closeable
                 @Override
                 public Value value()
                 {
-                    return PropertyValueFormat.read( seek.value().data );
+                    return PropertyValueFormat.readEagerly( seek.value().data, bigPropertyValueStore );
                 }
             };
         }
@@ -174,7 +175,12 @@ class DenseStore extends LifecycleAdapter implements Closeable
                                 return null;
                             }
                             current++;
-                            currentValue = PropertyValueFormat.read( value.data );
+                            if ( currentValue == null && current > 0 )
+                            {
+                                // If we didn't read the value of the previous key then skip it in the buffer
+                                value.data.position( value.data.position() + calculatePropertyValueSizeIncludingTypeHeader( value.data ) );
+                            }
+                            currentValue = null;
                             return this;
                         }
 
@@ -187,6 +193,10 @@ class DenseStore extends LifecycleAdapter implements Closeable
                         @Override
                         public Value value()
                         {
+                            if ( currentValue == null )
+                            {
+                                currentValue = PropertyValueFormat.readEagerly( value.data, bigPropertyValueStore );
+                            }
                             return currentValue;
                         }
 

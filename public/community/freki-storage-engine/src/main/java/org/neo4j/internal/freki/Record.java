@@ -36,21 +36,17 @@ class Record
       │││| └──── InUse (1b)
       └└└└────── Unused (4b)
      */
-    static int FLAG_SIZE_EXP = 0x7;
+    static int MASK_SIZE_EXP = 0x7;
     static int FLAG_IN_USE = 0x8;
 
     static final int SIZE_BASE = 64;
-    private static final int HEADER_SIZE = 1;
+    static final int HEADER_SIZE = 1;
 
     // not stored
-    private int sizeExp;
     long id;
 
-    // stored header
+    // stored
     byte flags;
-
-    // stored data
-    // TODO this could be off-heap or something less garbagy
     private ByteBuffer data;
 
     Record( int sizeExp )
@@ -60,7 +56,13 @@ class Record
 
     Record( int sizeExp, long id )
     {
-        this.sizeExp = sizeExp;
+        setSizeExp( sizeExp );
+        this.id = id;
+    }
+
+    Record( byte flags, long id )
+    {
+        this.flags = flags;
         this.id = id;
     }
 
@@ -69,14 +71,24 @@ class Record
         return SIZE_BASE << sizeExp;
     }
 
-    private void createNewDataBuffer( int sizeExp )
+    static int recordXFactor( int sizeExp )
     {
-        data = ByteBuffer.wrap( new byte[recordSize( sizeExp ) - HEADER_SIZE] );
-        this.sizeExp = sizeExp;
+        return 1 << sizeExp;
+    }
+
+    private void createNewDataBuffer()
+    {
+        data = ByteBuffer.wrap( new byte[recordSize( sizeExp() ) - HEADER_SIZE] );
+    }
+
+    ByteBuffer dataForReading( int position )
+    {
+        return data.position( position );
     }
 
     ByteBuffer dataForReading()
     {
+        assert data.position() == 0 : data.position();
         return data;
     }
 
@@ -84,7 +96,7 @@ class Record
     {
         if ( data == null )
         {
-            createNewDataBuffer( sizeExp );
+            createNewDataBuffer();
         }
         return data;
     }
@@ -95,13 +107,15 @@ class Record
         this.flags = record.flags;
         if ( data == null || data.capacity() < record.data.capacity() )
         {
-            createNewDataBuffer( record.sizeExp );
+            createNewDataBuffer();
         }
         else
         {
             data.clear();
         }
-        System.arraycopy( record.data.array(), 0, data.array(), 0, record.data.capacity() );
+        System.arraycopy( record.data.array(), 0, data.array(), 0, record.data.limit() );
+        data.position( record.data.limit() );
+        data.flip();
     }
 
     void setFlag( int flag, boolean value )
@@ -121,9 +135,19 @@ class Record
         return (flags & flag) == flag;
     }
 
+    private void setSizeExp( int sizeExp )
+    {
+        flags = (byte) ((flags & ~MASK_SIZE_EXP) | sizeExp);
+    }
+
     byte sizeExp()
     {
-        return (byte) sizeExp;
+        return sizeExp( flags );
+    }
+
+    static byte sizeExp( byte flags )
+    {
+        return (byte) (flags & MASK_SIZE_EXP);
     }
 
     void serialize( WritableChannel channel ) throws IOException
@@ -141,17 +165,13 @@ class Record
     static Record deserialize( ReadableChannel channel, long id ) throws IOException
     {
         byte flags = channel.get();
-        boolean inUse = (flags & FLAG_IN_USE) != 0;
-        int sizeExp = flags & FLAG_SIZE_EXP;
-        Record record = new Record( sizeExp, id );
-        record.flags = flags;
-        if ( inUse )
+        Record record = new Record( flags, id );
+        if ( record.hasFlag( FLAG_IN_USE ) )
         {
             short length = channel.getShort();
-            assert length <= recordSize( sizeExp ) - HEADER_SIZE; // if incorrect, fail here instead of OOM
-            byte[] data = new byte[length];
-            channel.get( data, data.length );
-            record.data = ByteBuffer.wrap( data );
+            assert length <= recordSize( record.sizeExp() ) - HEADER_SIZE; // if incorrect, fail here instead of OOM
+            ByteBuffer data = record.dataForWriting();
+            channel.get( data.array(), length );
         }
         return record;
     }
@@ -160,8 +180,8 @@ class Record
 
     void serialize( PageCursor cursor )
     {
-        int length = data.position();
-        cursor.putByte( (byte) (flags | sizeExp()) );
+        int length = data.limit();
+        cursor.putByte( flags );
         cursor.putBytes( data.array(), 0, length );
     }
 
@@ -177,10 +197,9 @@ class Record
     void loadRecord( PageCursor cursor, int offset ) throws IOException
     {
         // First read the header byte in its own shouldRetry-loop because how we read the data depends on this
-        int flagsRaw = safelyReadHeader( cursor, offset );
-        int sizeExp = flagsRaw & 0b111;
+        flags = safelyReadFlags( cursor, offset );
+        int sizeExp = sizeExp( flags );
         int length = recordSize( sizeExp ) - HEADER_SIZE;
-        flags = (byte) (flagsRaw & 0b1111_1000);
         if ( length > cursor.getCurrentPageSize() || length <= 0 )
         {
             cursor.setCursorException( "Invalid length " + length );
@@ -188,31 +207,33 @@ class Record
         }
         if ( data == null || length > data.capacity() )
         {
-            createNewDataBuffer( sizeExp );
+            createNewDataBuffer();
         }
 
         do
         {
             cursor.setOffset( offset + HEADER_SIZE );
             cursor.getBytes( data.array(), 0, length );
+            data.position( length );
+            data.flip();
         }
         while ( cursor.shouldRetry() );
     }
 
-    private static int safelyReadHeader( PageCursor cursor, int offset ) throws IOException
+    private static byte safelyReadFlags( PageCursor cursor, int offset ) throws IOException
     {
-        int flagsRaw;
+        byte flags;
         do
         {
-            flagsRaw = cursor.getByte( offset ) & 0xFF;
+            flags = cursor.getByte( offset );
         }
         while ( cursor.shouldRetry() );
-        return flagsRaw;
+        return flags;
     }
 
     static boolean isInUse( PageCursor cursor, int offset ) throws IOException
     {
-        int flagsRaw = safelyReadHeader( cursor, offset );
+        int flagsRaw = safelyReadFlags( cursor, offset );
         return (flagsRaw & FLAG_IN_USE) != 0;
     }
 
@@ -220,10 +241,9 @@ class Record
     {
         id = source.id;
         flags = source.flags;
-        sizeExp = source.sizeExp;
         if ( source.data != null )
         {
-            createNewDataBuffer( sizeExp );
+            createNewDataBuffer();
             System.arraycopy( source.data.array(), 0, data.array(), 0, source.data.capacity() );
         }
         else
@@ -235,7 +255,13 @@ class Record
     @Override
     public String toString()
     {
-        return "Record{" + "sizeExp=" + sizeExp + ", id=" + id + ", flags=" + flags + ", data=" +
+        return "Record{" + "id=" + id + ", flags=" + flags + ", data=" +
                (data != null ? Arrays.toString( Arrays.copyOf( data.array(), data.position() ) ) : "[]") + '}';
+    }
+
+    boolean hasSameContentsAs( Record other )
+    {
+        return other.id == id && other.flags == flags &&
+                ((data == null && other.data == null) || Arrays.equals( other.data.array(), data.array() ));
     }
 }

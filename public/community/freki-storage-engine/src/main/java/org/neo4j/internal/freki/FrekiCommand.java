@@ -71,24 +71,16 @@ abstract class FrekiCommand implements StorageCommand
     {
         static final byte TYPE = 1;
 
-        private final Record before;
-        private final Record after;
+        final long nodeId;
+        final Record before;
+        final Record after;
 
-        SparseNode( Record before, Record after )
+        SparseNode( long nodeId, Record before, Record after )
         {
             super( TYPE );
+            this.nodeId = nodeId;
             this.before = before;
             this.after = after;
-        }
-
-        Record before()
-        {
-            return before;
-        }
-
-        Record after()
-        {
-            return after;
         }
 
         @Override
@@ -102,6 +94,7 @@ abstract class FrekiCommand implements StorageCommand
         public void serialize( WritableChannel channel ) throws IOException
         {
             super.serialize( channel );
+            channel.putLong( nodeId );
             channel.putLong( after.id );
             before.serialize( channel );
             after.serialize( channel );
@@ -109,10 +102,11 @@ abstract class FrekiCommand implements StorageCommand
 
         static SparseNode deserialize( ReadableChannel channel ) throws IOException
         {
+            long nodeId = channel.getLong();
             long id = channel.getLong();
             Record before = Record.deserialize( channel, id );
             Record after = Record.deserialize( channel, id );
-            return new SparseNode( before, after );
+            return new SparseNode( nodeId, before, after );
         }
     }
 
@@ -196,7 +190,8 @@ abstract class FrekiCommand implements StorageCommand
                 int length = channel.getInt();
                 byte[] data = new byte[length];
                 channel.get( data, length );
-                properties.put( key, ByteBuffer.wrap( data ) );
+                ByteBuffer buffer = ByteBuffer.wrap( data );
+                properties.put( key, buffer );
             }
             return properties;
         }
@@ -209,7 +204,7 @@ abstract class FrekiCommand implements StorageCommand
             {
                 removedProperties.add( channel.getInt() );
             }
-            return null;
+            return removedProperties;
         }
 
         private void writeRelationships( WritableChannel channel, IntObjectMap<DenseRelationships> relationshipTypeMap, boolean includeProperties )
@@ -234,7 +229,6 @@ abstract class FrekiCommand implements StorageCommand
         private void writeRelationshipMainData( WritableChannel channel, DenseRelationships.DenseRelationship relationship ) throws IOException
         {
             channel.putLong( relationship.internalId );
-            channel.putLong( relationship.sourceNodeId );
             channel.putLong( relationship.otherNodeId );
             channel.put( (byte) (relationship.outgoing ? 1 : 0) );
         }
@@ -247,15 +241,14 @@ abstract class FrekiCommand implements StorageCommand
             {
                 int type = channel.getInt();
                 int numRelationships = channel.getInt();
-                DenseRelationships denseRelationships = new DenseRelationships( type );
+                DenseRelationships denseRelationships = relationships.getIfAbsentPut( type, new DenseRelationships( type ) );
                 for ( int j = 0; j < numRelationships; j++ )
                 {
                     long internalId = channel.getLong();
-                    long sourceNodeId = channel.getLong();
                     long otherNodeId = channel.getLong();
                     boolean outgoing = channel.get() != 0;
                     IntObjectMap<ByteBuffer> properties = includeProperties ? readProperties( channel ) : IntObjectMaps.immutable.empty();
-                    denseRelationships.add( internalId, sourceNodeId, otherNodeId, outgoing, properties );
+                    denseRelationships.add( internalId, otherNodeId, outgoing, properties );
                 }
             }
             return relationships;

@@ -21,28 +21,27 @@ package org.neo4j.internal.freki;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.pagecache.IOLimiter;
 import org.neo4j.io.pagecache.PageCache;
 import org.neo4j.io.pagecache.PageCursor;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
 
 import static java.lang.Integer.min;
 
-class BigPropertyValueStore extends BareBoneStore implements SimpleBigValueStore
+class BigPropertyValueStore extends BareBoneSingleFileStore implements SimpleBigValueStore
 {
     private static final int LENGTH_SIZE = 4;
     private static final int HEADER_SIZE = Long.BYTES; //for now, only a long in the header
 
     private final AtomicLong nextPosition = new AtomicLong( HEADER_SIZE );
 
-    BigPropertyValueStore( FileSystemAbstraction fs, File file, PageCache pageCache, boolean readOnly,
-            boolean createIfNotExists, PageCursorTracerSupplier tracerSupplier )
+    BigPropertyValueStore( File file, PageCache pageCache, boolean readOnly, boolean createIfNotExists, PageCursorTracerSupplier tracerSupplier )
     {
-        super( fs, file, pageCache, readOnly, createIfNotExists, tracerSupplier );
+        super( file, pageCache, readOnly, createIfNotExists, tracerSupplier );
     }
 
     @Override
@@ -53,17 +52,10 @@ class BigPropertyValueStore extends BareBoneStore implements SimpleBigValueStore
     }
 
     @Override
-    public void shutdown()
+    public void flush( IOLimiter ioLimiter, PageCursorTracer cursorTracer ) throws IOException
     {
-        try
-        {
-            tryWriteHeader(); // what happens if we fail here?
-        }
-        catch ( IOException e )
-        {
-            throw new UncheckedIOException( e ); // header will be incorrect on next start leading to data-corruption on write
-        }
-        super.shutdown();
+        tryWriteHeader();
+        super.flush( ioLimiter, cursorTracer );
     }
 
     private void tryReadHeader() throws IOException
@@ -72,7 +64,6 @@ class BigPropertyValueStore extends BareBoneStore implements SimpleBigValueStore
         {
             if ( mappedFile.getLastPageId() >= 0 )
             {
-                //nextPos write is done on shutdown, we only read it here.
                 try ( PageCursor cursor = openReadCursor() )
                 {
                     nextPosition.set( cursor.getLong( 0 ) );

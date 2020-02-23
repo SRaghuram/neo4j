@@ -19,21 +19,85 @@
  */
 package org.neo4j.internal.freki;
 
-import java.io.IOException;
+import org.apache.commons.lang3.tuple.Pair;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Consumer;
+
+import org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector;
+import org.neo4j.internal.id.DefaultIdGeneratorFactory;
+import org.neo4j.internal.id.IdGenerator;
+import org.neo4j.internal.id.IdGeneratorFactory;
+import org.neo4j.internal.id.IdType;
+import org.neo4j.io.fs.FileSystemAbstraction;
+import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.IOLimiter;
-import org.neo4j.io.pagecache.PageCursor;
+import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.io.pagecache.tracing.PageCacheTracer;
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracerSupplier;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
+
+import static org.neo4j.internal.freki.Record.recordXFactor;
+import static org.neo4j.internal.helpers.ArrayUtil.concat;
+import static org.neo4j.io.IOUtils.closeAllSilently;
 
 class MainStores extends LifecycleAdapter
 {
     final LifeSupport life = new LifeSupport();
-    final SimpleStore mainStore;
+    public final SimpleStore mainStore;
     private final SimpleStore[] mainStores;
-    final SimpleBigValueStore bigPropertyValueStore;
-    final DenseStore denseStore;
+    public final SimpleBigValueStore bigPropertyValueStore;
+    public final DenseStore denseStore;
+    protected final List<Pair<IdGeneratorFactory,IdType>> idGeneratorsToRegisterOnTheWorkSync = new ArrayList<>();
+
+    MainStores( FileSystemAbstraction fs, DatabaseLayout databaseLayout, PageCache pageCache, IdGeneratorFactory idGeneratorFactory,
+            PageCacheTracer pageCacheTracer, PageCursorTracerSupplier cursorTracerSupplier, RecoveryCleanupWorkCollector recoveryCleanupWorkCollector,
+            boolean createStoreIfNotExists ) throws IOException
+    {
+        SimpleStore[] mainStores = new SimpleStore[4];
+        BigPropertyValueStore bigPropertyValueStore = null;
+        DenseStore denseStore = null;
+        boolean success = false;
+        try
+        {
+            if ( createStoreIfNotExists )
+            {
+                fs.mkdirs( databaseLayout.databaseDirectory() );
+            }
+            mainStores[0] = new Store( databaseLayout.file( "main-store-x1" ), pageCache, idGeneratorFactory, IdType.NODE, false, createStoreIfNotExists, 0,
+                    cursorTracerSupplier );
+            idGeneratorsToRegisterOnTheWorkSync.add( Pair.of( idGeneratorFactory, IdType.NODE ) );
+            for ( int i = 1; i < mainStores.length; i++ )
+            {
+                IdGeneratorFactory separateIdGeneratorFactory = new DefaultIdGeneratorFactory( fs, recoveryCleanupWorkCollector, false );
+                mainStores[i] = new Store( databaseLayout.file( "main-store-x" + recordXFactor( i ) ), pageCache, separateIdGeneratorFactory,
+                        IdType.NODE, false, createStoreIfNotExists, i, cursorTracerSupplier );
+                idGeneratorsToRegisterOnTheWorkSync.add( Pair.of( separateIdGeneratorFactory, IdType.NODE ) );
+            }
+            bigPropertyValueStore =
+                    new BigPropertyValueStore( databaseLayout.file( "big-values" ), pageCache, false, createStoreIfNotExists, cursorTracerSupplier );
+            denseStore = new DenseStore( pageCache, databaseLayout.file( "dense-store" ), recoveryCleanupWorkCollector, false, pageCacheTracer,
+                    bigPropertyValueStore );
+            success = true;
+
+            this.mainStores = mainStores;
+            this.mainStore = mainStores[0];
+            this.bigPropertyValueStore = bigPropertyValueStore;
+            this.denseStore = denseStore;
+            addMainStoresToLife();
+        }
+        finally
+        {
+            if ( !success )
+            {
+                closeAllSilently( concat( mainStores, bigPropertyValueStore, denseStore ) );
+            }
+        }
+    }
 
     MainStores( SimpleStore[] mainStores, SimpleBigValueStore bigPropertyValueStore, DenseStore denseStore )
     {
@@ -41,6 +105,11 @@ class MainStores extends LifecycleAdapter
         this.mainStore = mainStores[0];
         this.bigPropertyValueStore = bigPropertyValueStore;
         this.denseStore = denseStore;
+        addMainStoresToLife();
+    }
+
+    private void addMainStoresToLife()
+    {
         for ( SimpleStore store : mainStores )
         {
             if ( store != null )
@@ -56,12 +125,17 @@ class MainStores extends LifecycleAdapter
         }
     }
 
-    SimpleStore mainStore( int sizeExp )
+    void idGenerators( Consumer<IdGenerator> visitor )
+    {
+        idGeneratorsToRegisterOnTheWorkSync.forEach( idGenerator -> visitor.accept( idGenerator.getKey().get( idGenerator.getValue() ) ) );
+    }
+
+    public SimpleStore mainStore( int sizeExp )
     {
         return sizeExp >= mainStores.length ? null : mainStores[sizeExp];
     }
 
-    public SimpleStore nextLargerMainStore( int sizeExp )
+    SimpleStore nextLargerMainStore( int sizeExp )
     {
         for ( int i = sizeExp + 1; i < mainStores.length; i++ )
         {
@@ -73,13 +147,18 @@ class MainStores extends LifecycleAdapter
         return null;
     }
 
-    void flushAndForce( IOLimiter limiter, PageCursorTracer cursorTracer )
+    int getNumMainStores()
+    {
+        return mainStores.length;
+    }
+
+    void flushAndForce( IOLimiter limiter, PageCursorTracer cursorTracer ) throws IOException
     {
         for ( SimpleStore mainStore : mainStores )
         {
-            mainStore.flush( cursorTracer );
+            mainStore.flush( limiter, cursorTracer );
         }
-        bigPropertyValueStore.flush( cursorTracer );
+        bigPropertyValueStore.flush( limiter, cursorTracer );
         denseStore.checkpoint( limiter, cursorTracer );
     }
 
@@ -105,18 +184,5 @@ class MainStores extends LifecycleAdapter
     public void shutdown()
     {
         life.shutdown();
-    }
-
-    PageCursor[] openMainStoreWriteCursors() throws IOException
-    {
-        PageCursor[] cursors = new PageCursor[mainStores.length];
-        for ( int i = 0; i < mainStores.length; i++ )
-        {
-            if ( mainStores[i] != null )
-            {
-                cursors[i] = mainStores[i].openWriteCursor();
-            }
-        }
-        return cursors;
     }
 }

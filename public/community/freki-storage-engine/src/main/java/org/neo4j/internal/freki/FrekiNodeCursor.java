@@ -30,17 +30,20 @@ import org.neo4j.storageengine.api.StoragePropertyCursor;
 import org.neo4j.storageengine.api.StorageRelationshipTraversalCursor;
 import org.neo4j.storageengine.util.EagerDegrees;
 
+import static org.neo4j.internal.freki.MutableNodeRecordData.idFromForwardPointer;
+import static org.neo4j.internal.freki.MutableNodeRecordData.isDenseFromForwardPointer;
+import static org.neo4j.internal.freki.MutableNodeRecordData.sizeExponentialFromForwardPointer;
 import static org.neo4j.internal.freki.Record.FLAG_IN_USE;
 import static org.neo4j.internal.freki.StreamVByte.nonEmptyIntDeltas;
 import static org.neo4j.internal.freki.StreamVByte.readIntDeltas;
 
-class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
+public class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
 {
     private long singleId;
     private boolean inScan;
     private FrekiRelationshipTraversalCursor relationshipsCursor;
 
-    FrekiNodeCursor( MainStores stores, PageCursorTracer cursorTracer )
+    public FrekiNodeCursor( MainStores stores, PageCursorTracer cursorTracer )
     {
         super( stores, cursorTracer );
     }
@@ -48,8 +51,7 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
     @Override
     public long[] labels()
     {
-        ByteBuffer smallRecordData = smallRecord.dataForReading();
-        smallRecordData.position( headerState.labelsOffset );
+        ByteBuffer smallRecordData = smallRecord.dataForReading( headerState.labelsOffset );
         return readIntDeltas( new StreamVByte.LongArrayTarget(), smallRecordData ).array();
     }
 
@@ -197,5 +199,14 @@ class FrekiNodeCursor extends FrekiMainStoreCursor implements StorageNodeCursor
             relationshipsCursor = null;
         }
         super.close();
+    }
+
+    @Override
+    public String toString()
+    {
+        long fw = headerState.forwardPointer;
+        return String.format( "{nodeId:%d,fw:%s,pOff:%d,rOff:%d}", loadedNodeId, headerState.containsForwardPointer
+                ? isDenseFromForwardPointer( fw ) ? "DENSE" : idFromForwardPointer( fw ) + "(" + sizeExponentialFromForwardPointer( fw ) + ")" : "-",
+                headerState.nodePropertiesOffset, headerState.relationshipsOffset );
     }
 }
