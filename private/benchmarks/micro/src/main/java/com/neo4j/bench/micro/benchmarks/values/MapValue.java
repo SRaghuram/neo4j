@@ -97,7 +97,7 @@ public class MapValue extends AbstractValuesBenchmark
                 }
                 else
                 {
-                    String padding = StringUtils.repeat( "a", length - base.length() );
+                    String padding =  "a".repeat( length - base.length() );
                     keys[i] = base + padding + "-" + i;
                 }
 

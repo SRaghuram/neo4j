@@ -78,7 +78,7 @@ class SegmentedRaftLogRotationTest
 
     private static ReplicatedString replicatedStringOfBytes( int size )
     {
-        return new ReplicatedString( StringUtils.repeat( "i", size ) );
+        return new ReplicatedString( "i".repeat( size ) );
     }
 
     private SegmentedRaftLog createRaftLog( long rotateAtSize )
