@@ -330,6 +330,7 @@ class PipelinedRuntime private(parallelExecution: Boolean,
       maybePipelineInfo.toSeq
     }
 
+    // TODO remove this
     override def rewrittenPlan: Option[LogicalPlan] = Some(optimizedLogicalPlan)
 
     private def pipelineInfoForPlanInExecutionGraph(planId: Id): Option[PipelineInfo] = {
