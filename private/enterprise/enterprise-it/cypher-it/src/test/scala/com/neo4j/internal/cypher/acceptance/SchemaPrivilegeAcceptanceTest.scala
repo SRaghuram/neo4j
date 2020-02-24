@@ -958,7 +958,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       // WHEN
       execute("DENY ALL ON DATABASE * TO role")
       // THEN
-    } should have message "Failed to deny all_database_privileges privilege to role 'role': Role 'role' does not exist."
+    } should have message "Failed to deny database_actions privilege to role 'role': Role 'role' does not exist."
   }
 
   test("should fail to deny all database privilege with missing database") {
@@ -970,7 +970,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
       // WHEN
       execute("DENY ALL ON DATABASE foo TO role")
       // THEN
-    } should have message "Failed to deny all_database_privileges privilege to role 'role': Database 'foo' does not exist."
+    } should have message "Failed to deny database_actions privilege to role 'role': Database 'foo' does not exist."
   }
 
   test("Should revoke compound TOKEN privileges from built-in roles") {

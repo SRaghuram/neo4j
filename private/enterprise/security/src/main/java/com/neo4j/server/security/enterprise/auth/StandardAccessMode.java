@@ -32,7 +32,7 @@ import static com.neo4j.server.security.enterprise.auth.Resource.Type.PROPERTY;
 import static com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny.DENY;
 import static com.neo4j.server.security.enterprise.auth.ResourcePrivilege.GrantOrDeny.GRANT;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ADMIN;
-import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ALL_DATABASE_PRIVILEGES;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.DATABASE_ACTIONS;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.SCHEMA;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.TOKEN;
 import static org.neo4j.token.api.TokenConstants.ANY_LABEL;
@@ -607,7 +607,7 @@ class StandardAccessMode implements AccessMode
                 {
                     addPrivilegeAction( privilege );
                 }
-                else if ( ALL_DATABASE_PRIVILEGES.satisfies( action ) )
+                else if ( DATABASE_ACTIONS.satisfies( action ) )
                 {
                     anyAccess.put( privilegeType, true );
                     token = true;
