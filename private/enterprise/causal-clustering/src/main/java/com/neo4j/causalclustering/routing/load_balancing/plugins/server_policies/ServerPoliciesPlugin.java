@@ -47,12 +47,8 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
 {
     public static final String PLUGIN_NAME = "server_policies";
 
-    private TopologyService topologyService;
-    private LeaderService leaderService;
-    private Long timeToLive;
-    private boolean allowReadsOnFollowers;
+    private AddressCollector addressCollector;
     private Policies policies;
-    private boolean shouldShuffle;
 
     @Override
     public void validate( Config config, Log log )
@@ -63,12 +59,9 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
     @Override
     public void init( TopologyService topologyService, LeaderService leaderService, LogProvider logProvider, Config config )
     {
-        this.topologyService = topologyService;
-        this.leaderService = leaderService;
-        this.timeToLive = config.get( GraphDatabaseSettings.routing_ttl ).toMillis();
-        this.allowReadsOnFollowers = config.get( CausalClusteringSettings.cluster_allow_reads_on_followers );
-        this.policies = FilteringPolicyLoader.loadServerPolicies( config, logProvider.getLog( getClass() ) );
-        this.shouldShuffle = config.get( CausalClusteringSettings.load_balancing_shuffle );
+        var log = logProvider.getLog( getClass() );
+        this.policies = FilteringPolicyLoader.loadServerPolicies( config, log );
+        this.addressCollector = new AddressCollector( topologyService, leaderService, config, log );
     }
 
     @Override
@@ -87,94 +80,6 @@ public class ServerPoliciesPlugin implements LoadBalancingPlugin
     public RoutingResult run( NamedDatabaseId namedDatabaseId, MapValue context ) throws ProcedureException
     {
         var policy = policies.selectFor( context );
-
-        var coreTopology = coreTopologyFor( namedDatabaseId );
-        var rrTopology = readReplicaTopology( namedDatabaseId );
-
-        return new RoutingResult( routeEndpoints( coreTopology, policy ), writeEndpoints( namedDatabaseId ),
-                readEndpoints( coreTopology, rrTopology, policy, namedDatabaseId ), timeToLive );
-    }
-
-    private List<SocketAddress> routeEndpoints( DatabaseCoreTopology coreTopology, Policy policy )
-    {
-        var routers = coreTopology.members().entrySet().stream()
-                .map( ServerPoliciesPlugin::newServerInfo ).collect( toSet() );
-
-        var preferredRouters = policy.apply( routers );
-        var otherRoutersList = routers.stream().filter( not( preferredRouters::contains ) ).collect( toList() );
-        var preferredRoutersList = new ArrayList<>( preferredRouters );
-
-        if ( shouldShuffle )
-        {
-            Collections.shuffle( preferredRoutersList );
-            Collections.shuffle( otherRoutersList );
-        }
-
-        return Stream.concat( preferredRoutersList.stream(), otherRoutersList.stream() )
-                .map( ServerInfo::boltAddress ).collect( toList() );
-    }
-
-    private List<SocketAddress> writeEndpoints( NamedDatabaseId namedDatabaseId )
-    {
-        return leaderService.getLeaderBoltAddress( namedDatabaseId ).map( List::of ).orElse( emptyList() );
-    }
-
-    private List<SocketAddress> readEndpoints( DatabaseCoreTopology coreTopology, DatabaseReadReplicaTopology rrTopology, Policy policy,
-            NamedDatabaseId namedDatabaseId )
-    {
-        var possibleReaders = rrTopology.members().entrySet().stream()
-                .map( ServerPoliciesPlugin::newServerInfo )
-                .collect( toSet() );
-
-        if ( allowReadsOnFollowers || possibleReaders.isEmpty() )
-        {
-            var coreMembers = coreTopology.members();
-            var validCores = coreMembers.keySet();
-
-            var optionalLeaderId = leaderService.getLeaderId( namedDatabaseId );
-            if ( optionalLeaderId.isPresent() )
-            {
-                var leaderId = optionalLeaderId.get();
-                validCores = validCores.stream().filter( memberId -> !memberId.equals( leaderId ) ).collect( toSet() );
-            }
-            // leader might become available a bit later and we might end up using it for reading during this ttl, should be fine in general
-
-            for ( var validCore : validCores )
-            {
-                var coreServerInfo = coreMembers.get( validCore );
-                if ( coreServerInfo != null )
-                {
-                    possibleReaders.add( newServerInfo( validCore, coreServerInfo ) );
-                }
-            }
-        }
-
-        var readers = new ArrayList<>( policy.apply( possibleReaders ) );
-
-        if ( shouldShuffle )
-        {
-            Collections.shuffle( readers );
-        }
-        return readers.stream().map( ServerInfo::boltAddress ).collect( toList() );
-    }
-
-    private DatabaseCoreTopology coreTopologyFor( NamedDatabaseId namedDatabaseId )
-    {
-        return topologyService.coreTopologyForDatabase( namedDatabaseId );
-    }
-
-    private DatabaseReadReplicaTopology readReplicaTopology( NamedDatabaseId namedDatabaseId )
-    {
-        return topologyService.readReplicaTopologyForDatabase( namedDatabaseId );
-    }
-
-    private static ServerInfo newServerInfo( Map.Entry<MemberId,? extends DiscoveryServerInfo> entry )
-    {
-        return newServerInfo( entry.getKey(), entry.getValue() );
-    }
-
-    private static ServerInfo newServerInfo( MemberId memberId, DiscoveryServerInfo discoveryServerInfo )
-    {
-        return new ServerInfo( discoveryServerInfo.connectors().boltAddress(), memberId, discoveryServerInfo.groups() );
+        return addressCollector.createRoutingResult( namedDatabaseId, policy );
     }
 }
