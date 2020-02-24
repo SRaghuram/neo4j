@@ -16,7 +16,6 @@ import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefiner
 import org.neo4j.cypher.internal.physicalplanning.ExecutionGraphDefinition
 import org.neo4j.cypher.internal.physicalplanning.OperatorFusionPolicy
 import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanner
-import org.neo4j.cypher.internal.physicalplanning.PhysicalPlanningAttributes.RewrittenPlans
 import org.neo4j.cypher.internal.physicalplanning.ProduceResultOutput
 import org.neo4j.cypher.internal.plandescription.Argument
 import org.neo4j.cypher.internal.plandescription.Arguments.PipelineInfo
@@ -143,8 +142,7 @@ class PipelinedRuntime private(parallelExecution: Boolean,
                           queryIndexRegistrator: QueryIndexRegistrator,
                           warnings: Set[InternalNotification]): PipelinedExecutionPlan = {
     val batchSize = selectBatchSize(query, context)
-    val rewrittenPlans = new RewrittenPlans // Used to track which plans are rewritten by the optimizing rewriter
-    val optimizedLogicalPlan = optimizingRewriter(query, batchSize, rewrittenPlans)
+    val optimizedLogicalPlan = optimizingRewriter(query, batchSize)
 
     PipelinedBlacklist.throwOnUnsupportedPlan(optimizedLogicalPlan, parallelExecution, query.providedOrders)
 
@@ -251,7 +249,7 @@ class PipelinedRuntime private(parallelExecution: Boolean,
                                  metadata,
                                  warnings,
                                  executionGraphSchedulingPolicy,
-                                 rewrittenPlans)
+                                 optimizedLogicalPlan)
     } catch {
       case e:Exception if operatorFusionPolicy.fusionEnabled =>
         // We failed to compile all the pipelines. Retry physical planning with fusing disabled.
@@ -287,7 +285,7 @@ class PipelinedRuntime private(parallelExecution: Boolean,
                                override val metadata: Seq[Argument],
                                warnings: Set[InternalNotification],
                                executionGraphSchedulingPolicy: ExecutionGraphSchedulingPolicy,
-                               rewrittenPlans: RewrittenPlans) extends ExecutionPlan {
+                               optimizedLogicalPlan: LogicalPlan) extends ExecutionPlan {
 
     override def run(queryContext: QueryContext,
                      executionMode: ExecutionMode,
@@ -332,10 +330,7 @@ class PipelinedRuntime private(parallelExecution: Boolean,
       maybePipelineInfo.toSeq
     }
 
-    // TODO remove this
-    override def mapPlan(plan: LogicalPlan): LogicalPlan = {
-      rewrittenPlans.getOrElse(plan.id, plan)
-    }
+    override def rewrittenPlan: Option[LogicalPlan] = Some(optimizedLogicalPlan)
 
     private def pipelineInfoForPlanInExecutionGraph(planId: Id): Option[PipelineInfo] = {
       // If this proves to be too costly we could maintain a map structure

@@ -61,7 +61,7 @@ abstract class MultiNodeIndexSeekRewriterTestBase[CONTEXT <: RuntimeContext](
     val (runtimeResult, executionPlanDescription) = executeAndExplain(logicalQuery, runtime, inputRows)
 
     executionPlanDescription should includeSomewhere.nTimes(1, aPlan("MultiNodeIndexSeek"))
-    executionPlanDescription should includeSomewhere.nTimes(2, aPlan("NodeIndexSeekByRange"))
+    executionPlanDescription shouldNot includeSomewhere.aPlan("NodeIndexSeekByRange")
     executionPlanDescription shouldNot includeSomewhere.aPlan("CartesianProduct")
 
     runtimeResult should beColumns("nn", "mm").withRows(inOrder(expected))
@@ -103,7 +103,7 @@ abstract class MultiNodeIndexSeekRewriterTestBase[CONTEXT <: RuntimeContext](
     val (runtimeResult, executionPlanDescription) = executeAndExplain(logicalQuery, runtime, inputRows)
 
     executionPlanDescription should includeSomewhere.nTimes(1, aPlan("MultiNodeIndexSeek"))
-    executionPlanDescription should includeSomewhere.nTimes(2, aPlan("NodeIndexSeekByRange"))
+    executionPlanDescription shouldNot includeSomewhere.aPlan("NodeIndexSeekByRange")
     executionPlanDescription shouldNot includeSomewhere.aPlan("CartesianProduct")
 
     runtimeResult should beColumns("nn", "mm").withRows(inOrder(expected))

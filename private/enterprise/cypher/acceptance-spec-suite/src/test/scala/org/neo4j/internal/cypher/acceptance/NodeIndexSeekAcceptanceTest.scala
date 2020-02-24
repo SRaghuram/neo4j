@@ -512,7 +512,7 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
     result.toList should equal(List(Map("s" -> 11L)))
 
     result.executionPlanDescription() should includeSomewhere.nTimes(1, aPlan("MultiNodeIndexSeek"))
-    result.executionPlanDescription() should includeSomewhere.nTimes(2, aPlan("NodeUniqueIndexSeek"))
+    result.executionPlanDescription() shouldNot includeSomewhere.aPlan("NodeUniqueIndexSeek")
     result.executionPlanDescription() shouldNot includeSomewhere.aPlan("CartesianProduct")
   }
 
@@ -532,7 +532,7 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
     result.toList should equal(List(Map("s" -> 111L)))
 
     result.executionPlanDescription() should includeSomewhere.nTimes(1, aPlan("MultiNodeIndexSeek"))
-    result.executionPlanDescription() should includeSomewhere.nTimes(3, aPlan("NodeUniqueIndexSeek"))
+    result.executionPlanDescription() shouldNot includeSomewhere.aPlan("NodeUniqueIndexSeek")
     result.executionPlanDescription() shouldNot includeSomewhere.aPlan("CartesianProduct")
   }
 
@@ -553,7 +553,7 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
     result.toList should equal(List(Map("s" -> 11L), Map("s" -> 11L), Map("s" -> 11L), Map("s" -> 11L)))
 
     result.executionPlanDescription() should includeSomewhere.nTimes(1, aPlan("MultiNodeIndexSeek"))
-    result.executionPlanDescription() should includeSomewhere.nTimes(2, aPlan("NodeIndexSeek"))
+    result.executionPlanDescription() shouldNot includeSomewhere.aPlan("NodeIndexSeek")
     result.executionPlanDescription() shouldNot includeSomewhere.aPlan("CartesianProduct")
   }
 
@@ -576,7 +576,7 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
     result.toList should equal((1 to 8).map(_ => Map("s" -> 111L)).toList)
 
     result.executionPlanDescription() should includeSomewhere.nTimes(1, aPlan("MultiNodeIndexSeek"))
-    result.executionPlanDescription() should includeSomewhere.nTimes(3, aPlan("NodeIndexSeek"))
+    result.executionPlanDescription() shouldNot includeSomewhere.aPlan("NodeIndexSeek")
     result.executionPlanDescription() shouldNot includeSomewhere.aPlan("CartesianProduct")
   }
 
@@ -599,7 +599,7 @@ class NodeIndexSeekAcceptanceTest extends ExecutionEngineFunSuite with CypherCom
     result.toList should equal((1 to 8).map(_ => Map("s" -> 111L)).toList)
 
     result.executionPlanDescription() should includeSomewhere.nTimes(1, aPlan("MultiNodeIndexSeek"))
-    result.executionPlanDescription() should includeSomewhere.nTimes(3, aPlan("NodeIndexSeek"))
+    result.executionPlanDescription() shouldNot includeSomewhere.aPlan("NodeIndexSeek")
     result.executionPlanDescription() shouldNot includeSomewhere.aPlan("CartesianProduct")
   }
 
