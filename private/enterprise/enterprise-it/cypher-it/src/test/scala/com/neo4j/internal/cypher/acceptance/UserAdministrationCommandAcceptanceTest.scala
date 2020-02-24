@@ -580,6 +580,34 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     testUserLogin("foo", "bar", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
   }
 
+  test("should fail when alter user with empty password parameter") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    prepareUser("foo", "bar")
+
+    the[InvalidArgumentsException] thrownBy {
+      // WHEN
+      execute("ALTER USER foo SET PASSWORD $password", Map("password" -> ""))
+      // THEN
+    } should have message "A password cannot be empty."
+
+    testUserLogin("foo", "bar", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
+  }
+
+  test("should fail when alter user with current password parameter") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    prepareUser("foo", "bar")
+
+    the[InvalidArgumentsException] thrownBy {
+      // WHEN
+      execute("ALTER USER foo SET PASSWORD $password", Map("password" -> "bar"))
+      // THEN
+    } should have message "Failed to alter the specified user 'foo': Old password and new password cannot be the same."
+
+    testUserLogin("foo", "bar", AuthenticationResult.PASSWORD_CHANGE_REQUIRED)
+  }
+
   test("should alter user password as parameter") {
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -1238,6 +1266,55 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     testUserLogin("foo", "bar", AuthenticationResult.FAILURE)
   }
 
+  test("should fail to change own password from parameter to parameter with same value") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    prepareUser("foo", "bar")
+    execute("GRANT ROLE editor TO foo")
+    execute("ALTER USER foo SET PASSWORD CHANGE NOT REQUIRED")
+    execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin")), user("foo", Seq("editor"), passwordChangeRequired = false))
+
+    val parameter = new util.HashMap[String, Object]()
+    parameter.put("currentPassword", "bar")
+    parameter.put("newPassword", "bar")
+
+    // WHEN
+    // WHEN
+    the[QueryExecutionException] thrownBy { // the InvalidArgumentsException exception gets wrapped in this code path
+      // WHEN
+      executeOnSystem("foo", "bar", "ALTER CURRENT USER SET PASSWORD FROM $currentPassword TO $newPassword", params = parameter)
+      // THEN
+    } should have message "User 'foo' failed to alter their own password: Old password and new password cannot be the same."
+
+    // THEN
+    testUserLogin("foo", "bar", AuthenticationResult.SUCCESS)
+    testUserLogin("foo", "baz", AuthenticationResult.FAILURE)
+  }
+
+  test("should fail to change own password from parameter to same parameter") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    prepareUser("foo", "bar")
+    execute("GRANT ROLE editor TO foo")
+    execute("ALTER USER foo SET PASSWORD CHANGE NOT REQUIRED")
+    execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin")), user("foo", Seq("editor"), passwordChangeRequired = false))
+
+    val parameter = new util.HashMap[String, Object]()
+    parameter.put("currentPassword", "bar")
+
+    // WHEN
+    // WHEN
+    the[InvalidArgumentsException] thrownBy { // the InvalidArgumentsException exception is not wrapped due to been thrown at planning time
+      // WHEN
+      executeOnSystem("foo", "bar", "ALTER CURRENT USER SET PASSWORD FROM $currentPassword TO $currentPassword", params = parameter)
+      // THEN
+    } should have message "User 'foo' failed to alter their own password: Old password and new password cannot be the same."
+
+    // THEN
+    testUserLogin("foo", "bar", AuthenticationResult.SUCCESS)
+    testUserLogin("foo", "baz", AuthenticationResult.FAILURE)
+  }
+
   test("should fail when changing own password from wrong password parameter") {
     // GIVEN
     selectDatabase(SYSTEM_DATABASE_NAME)
@@ -1253,6 +1330,53 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
     the[QueryExecutionException] thrownBy { // the InvalidArgumentsException exception gets wrapped in this code path
       // WHEN
       executeOnSystem("foo", "bar", "ALTER CURRENT USER SET PASSWORD FROM $wrongPassword TO 'baz'", params = parameter)
+      // THEN
+    } should have message "User 'foo' failed to alter their own password: Invalid principal or credentials."
+
+    // THEN
+    testUserLogin("foo", "bar", AuthenticationResult.SUCCESS)
+    testUserLogin("foo", "baz", AuthenticationResult.FAILURE)
+  }
+
+  test("should fail when changing own password from wrong password parameter to password parameter") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    prepareUser("foo", "bar")
+    execute("GRANT ROLE editor TO foo")
+    execute("ALTER USER foo SET PASSWORD CHANGE NOT REQUIRED")
+    execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin")), user("foo", Seq("editor"), passwordChangeRequired = false))
+
+    val parameter = new util.HashMap[String, Object]()
+    parameter.put("wrongPassword", "boo")
+    parameter.put("newPassword", "baz")
+
+    // WHEN
+    the[QueryExecutionException] thrownBy { // the InvalidArgumentsException exception gets wrapped in this code path
+      // WHEN
+      executeOnSystem("foo", "bar", "ALTER CURRENT USER SET PASSWORD FROM $wrongPassword TO $newPassword", params = parameter)
+      // THEN
+    } should have message "User 'foo' failed to alter their own password: Invalid principal or credentials."
+
+    // THEN
+    testUserLogin("foo", "bar", AuthenticationResult.SUCCESS)
+    testUserLogin("foo", "baz", AuthenticationResult.FAILURE)
+  }
+
+  test("should fail when changing own password from wrong password to password parameter") {
+    // GIVEN
+    selectDatabase(SYSTEM_DATABASE_NAME)
+    prepareUser("foo", "bar")
+    execute("GRANT ROLE editor TO foo")
+    execute("ALTER USER foo SET PASSWORD CHANGE NOT REQUIRED")
+    execute("SHOW USERS").toSet shouldBe Set(user("neo4j", Seq("admin")), user("foo", Seq("editor"), passwordChangeRequired = false))
+
+    val parameter = new util.HashMap[String, Object]()
+    parameter.put("newPassword", "baz")
+
+    // WHEN
+    the[QueryExecutionException] thrownBy { // the InvalidArgumentsException exception gets wrapped in this code path
+      // WHEN
+      executeOnSystem("foo", "bar", "ALTER CURRENT USER SET PASSWORD FROM 'boo' TO $newPassword", params = parameter)
       // THEN
     } should have message "User 'foo' failed to alter their own password: Invalid principal or credentials."
 
@@ -1316,7 +1440,7 @@ class UserAdministrationCommandAcceptanceTest extends AdministrationCommandAccep
       executeOnSystem("foo", "bar", "ALTER CURRENT USER SET PASSWORD FROM $currentPassword TO $newPassword")
     }
     // THEN
-    e.getMessage should (be("Expected parameter(s): newPassword") or be("Expected parameter(s): currentPassword"))
+    e.getMessage should (be("Expected parameter(s): newPassword, currentPassword") or be("Expected parameter(s): currentPassword, newPassword"))
 
     // THEN
     testUserLogin("foo", "bar", AuthenticationResult.SUCCESS)

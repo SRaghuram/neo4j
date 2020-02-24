@@ -85,7 +85,6 @@ import org.neo4j.cypher.internal.procs.SystemCommandExecutionPlan
 import org.neo4j.cypher.internal.procs.UpdatingSystemCommandExecutionPlan
 import org.neo4j.cypher.internal.runtime.ParameterMapping
 import org.neo4j.cypher.internal.runtime.slottedParameters
-import org.neo4j.cypher.internal.security.SecureHasher
 import org.neo4j.cypher.internal.security.SystemGraphCredential
 import org.neo4j.cypher.internal.util.InputPosition
 import org.neo4j.dbms.api.DatabaseExistsException
@@ -103,10 +102,13 @@ import org.neo4j.kernel.api.exceptions.Status.HasStatus
 import org.neo4j.kernel.api.exceptions.schema.UniquePropertyValueValidationException
 import org.neo4j.kernel.impl.store.format.standard.Standard
 import org.neo4j.values.AnyValue
+import org.neo4j.values.storable.ByteArray
 import org.neo4j.values.storable.LongValue
 import org.neo4j.values.storable.TextValue
 import org.neo4j.values.storable.Value
 import org.neo4j.values.storable.Values
+import org.neo4j.values.virtual.ListValue
+import org.neo4j.values.virtual.MapValue
 import org.neo4j.values.virtual.VirtualValues
 
 import scala.collection.JavaConverters.asScalaSetConverter
@@ -141,8 +143,6 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
     resolver.resolveDependency(classOf[EnterpriseAuthManager])
   }
 
-  private val secureHasher = new SecureHasher
-
   // This allows both community and enterprise commands to be considered together, and chained together
   private def fullLogicalToExecutable = logicalToExecutable orElse communityCommandRuntime.logicalToExecutable
 
@@ -159,67 +159,49 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
       )
 
     // CREATE [OR REPLACE] USER foo [IF NOT EXISTS] SET PASSWORD password
-    case CreateUser(source, userName, Left(initialPassword), requirePasswordChange, suspendedOptional) => (context, parameterMapping, securityContext) =>
+    // CREATE [OR REPLACE] USER foo [IF NOT EXISTS] SET PASSWORD $password
+    case CreateUser(source, userName, password, requirePasswordChange, suspendedOptional) => (context, parameterMapping, securityContext) =>
       val suspended = suspendedOptional.getOrElse(false)
-      try {
-        validatePassword(initialPassword)
-        UpdatingSystemCommandExecutionPlan("CreateUser", normalExecutionEngine,
-          // NOTE: If username already exists we will violate a constraint
-          """CREATE (u:User {name: $name, credentials: $credentials, passwordChangeRequired: $passwordChangeRequired, suspended: $suspended})
-            |RETURN u.name""".stripMargin,
-          VirtualValues.map(
-            Array("name", "credentials", "passwordChangeRequired", "suspended"),
-            Array(
-              Values.utf8Value(userName),
-              Values.utf8Value(SystemGraphCredential.createCredentialForPassword(initialPassword, secureHasher).serialize()),
-              Values.booleanValue(requirePasswordChange),
-              Values.booleanValue(suspended))),
-          QueryHandler
-            .handleNoResult(() => Some(new IllegalStateException(s"Failed to create the specified user '$userName'.")))
-            .handleError(error => (error, error.getCause) match {
-              case (_, _: UniquePropertyValueValidationException) =>
-                new InvalidArgumentsException(s"Failed to create the specified user '$userName': User already exists.", error)
-              case (e: HasStatus, _) if e.status() == Status.Cluster.NotALeader =>
-                new DatabaseAdministrationOnFollowerException(s"Failed to create the specified user '$userName': $followerError", error)
-              case _ => new IllegalStateException(s"Failed to create the specified user '$userName'.", error)
-            }),
-          Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext))
-        )
-      } finally {
-        // Clear password
-        if (initialPassword != null) java.util.Arrays.fill(initialPassword, 0.toByte)
-      }
-
-    // ALTER USER foo
-    // TODO: This should actually work at runtime
-    case AlterUser(_, userName, Some(Right(_)), _, _) =>
-      throw new IllegalStateException(s"Failed to alter the specified user '$userName': Did not resolve parameters correctly.")
+      val sourcePlan: Option[ExecutionPlan] = Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext))
+      makeCreateUserExecutionPlan(userName, password, requirePasswordChange, suspended)(sourcePlan, normalExecutionEngine)
 
     // ALTER USER foo
     case AlterUser(source, userName, password, requirePasswordChange, suspended) => (context, parameterMapping, securityContext) =>
-      val initialPassword: Option[Array[Byte]] = password.map {
-        case Left(bytes) => bytes
-      }
-      val params = Seq(
-        initialPassword -> "credentials",
+      val params: Seq[(String, String, Value, MapValue => MapValue, Option[(String, Value)])] = Seq(
+        password -> "credentials",
         requirePasswordChange -> "passwordChangeRequired",
         suspended -> "suspended"
       ).flatMap { param =>
         param._1 match {
           case None => Seq.empty
-          case Some(value: Boolean) => Seq((param._2, Values.booleanValue(value)))
-          case Some(value: Array[Byte]) =>
-            Seq((param._2, Values.utf8Value(SystemGraphCredential.createCredentialForPassword(validatePassword(value), secureHasher).serialize())))
+          case Some(value: Boolean) => Seq((param._2, param._2, Values.booleanValue(value), identity[MapValue]_, None))
+          case Some(pw:Either[Array[Byte], AnyRef]) =>
+            val (key, value, pwMapper) = getPasswordFields(pw)
+            val (keyBytes, valueBytes, mapperBytes) = getPasswordFields(pw, rename = s => s + "_bytes", hashPw = false)
+            val mapper: MapValue => MapValue = m => pwMapper(mapperBytes(m))
+            Seq((param._2, key, value, mapper, Some(keyBytes -> valueBytes)))
           case Some(p) => throw new InvalidArgumentsException(s"Invalid option type for ALTER USER, expected byte array or boolean but got: ${p.getClass.getSimpleName}")
         }
       }
-      val (query, keys, values) = params.foldLeft(("MATCH (user:User {name: $name}) WITH user, user.credentials AS oldCredentials", Array.empty[String], Array.empty[AnyValue])) { (acc, param) =>
-        val key = param._1
-        (acc._1 + s" SET user.$key = $$$key", acc._2 :+ key, acc._3 :+ param._2)
+      val (query, keys, values, mapper, returnItems) = params.foldLeft(("MATCH (user:User {name: $name}) WITH user, user.credentials AS oldCredentials", Array.empty[String], Array.empty[Value], identity[MapValue]_, Seq.empty[(String, Value)])) { (acc, param) =>
+        val property = param._1
+        val key = param._2
+        val value: Value = param._3
+        val values: Array[Value] = acc._3 :+ value
+        val extraCredentials: Seq[(String, Value)] = param._5.toSeq
+        val currentCredentials: Seq[(String, Value)] = acc._5
+        val mapper: MapValue => MapValue = param._4
+        val accMap: MapValue => MapValue = acc._4
+        val combinedMapper: MapValue => MapValue = v => mapper(accMap(v))
+        val returnItems: Seq[(String, Value)] = currentCredentials ++ extraCredentials
+        (acc._1 + s" SET user.$property = $$$key", acc._2 :+ key, values, combinedMapper, returnItems)
       }
+      val returnText: String = (Seq("oldCredentials") ++ returnItems.map(p => s"$$${p._1}")).mkString(", ")
+      val returnKeys: Seq[String] = keys ++ returnItems.map(_._1)
+      val returnVals: Seq[Value] = values.toSeq ++ returnItems.map(_._2)
       UpdatingSystemCommandExecutionPlan("AlterUser", normalExecutionEngine,
-        s"$query RETURN oldCredentials",
-        VirtualValues.map(keys :+ "name", values :+ Values.utf8Value(userName)),
+        s"$query RETURN [$returnText] AS credentials",
+        VirtualValues.map(returnKeys.toArray :+ "name", returnVals.toArray :+ Values.utf8Value(userName)),
         QueryHandler
           .handleNoResult(() => Some(new InvalidArgumentsException(s"Failed to alter the specified user '$userName': User does not exist.")))
           .handleError {
@@ -228,10 +210,17 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
             case error => new IllegalStateException(s"Failed to alter the specified user '$userName'.", error)
           }
           .handleResult((_, value) => {
-            val maybeThrowable = initialPassword match {
-              case Some(password) =>
-                val oldCredentials = SystemGraphCredential.deserialize(value.asInstanceOf[TextValue].stringValue(), secureHasher)
+            val result = value.asInstanceOf[ListValue].asArray()
+            val oldCredentials = SystemGraphCredential.deserialize(result(0).asInstanceOf[TextValue].stringValue(), secureHasher)
+            val maybeThrowable = password match {
+              case Some(Left(password: Array[Byte])) =>
                 if (oldCredentials.matchesPassword(password))
+                  Some(new InvalidArgumentsException(s"Failed to alter the specified user '$userName': Old password and new password cannot be the same."))
+                else
+                  None
+              case Some(Right(_)) =>
+                val userNew: Array[Byte] = result(1).asInstanceOf[ByteArray].asObjectCopy()
+                if (oldCredentials.matchesPassword(userNew))
                   Some(new InvalidArgumentsException(s"Failed to alter the specified user '$userName': Old password and new password cannot be the same."))
                 else
                   None
@@ -239,7 +228,8 @@ case class EnterpriseAdministrationCommandRuntime(normalExecutionEngine: Executi
             }
             maybeThrowable
           }),
-        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext))
+        Some(fullLogicalToExecutable.applyOrElse(source, throwCantCompile).apply(context, parameterMapping, securityContext)),
+        parameterConverter = m => mapper(m)
       )
 
     // SHOW [ ALL | POPULATED ] ROLES [ WITH USERS ]
