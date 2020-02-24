@@ -22,7 +22,7 @@ public class PageCacheMetrics extends LifecycleAdapter
 
     @Documented( "The total number of exceptions seen during the eviction process in the page cache." )
     private static final String PC_EVICTION_EXCEPTIONS_TEMPLATE = name( PAGE_CACHE_PREFIX, "eviction_exceptions" );
-    @Documented( "The total number of flushes executed by the page cache." )
+    @Documented( "The total number of page flushes executed by the page cache." )
     private static final String PC_FLUSHES_TEMPLATE = name( PAGE_CACHE_PREFIX, "flushes" );
     @Documented( "The total number of page unpins executed by the page cache." )
     private static final String PC_UNPINS_TEMPLATE = name( PAGE_CACHE_PREFIX, "unpins" );
