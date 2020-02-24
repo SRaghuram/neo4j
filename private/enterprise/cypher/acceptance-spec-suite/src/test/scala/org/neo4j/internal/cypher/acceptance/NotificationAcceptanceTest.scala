@@ -691,28 +691,28 @@ class LuceneIndexNotificationAcceptanceTest extends ExecutionEngineFunSuite with
     GraphDatabaseSettings.default_schema_provider -> "lucene+native-3.0"
   )
 
-  test("should not warn when using contains on an index with no limitations") {
+  test("should not warn when using contains on an index with no special behaviours") {
     graph.createIndex("Person", "name")
     val query = "EXPLAIN MATCH (a:Person) WHERE a.name CONTAINS 'er' RETURN a"
     val result = executeSingle(query, Map.empty)
     result.notifications should not contain SUBOPTIMAL_INDEX_FOR_CONTAINS_QUERY.notification(graphdb.InputPosition.empty, suboptimalIndex("Person", "name"))
   }
 
-  test("should not warn when using ends with on an index with no limitations") {
+  test("should not warn when using ends with on an index with no special behaviours") {
     graph.createIndex("Person", "name")
     val query = "EXPLAIN MATCH (a:Person) WHERE a.name ENDS WITH 'son' RETURN a"
     val result = executeSingle(query, Map.empty)
     result.notifications should not contain SUBOPTIMAL_INDEX_FOR_ENDS_WITH_QUERY.notification(graphdb.InputPosition.empty, suboptimalIndex("Person", "name"))
   }
 
-  test("should not warn when using contains on a unique index with no limitations") {
+  test("should not warn when using contains on a unique index with no special behaviours") {
     graph.createUniqueConstraint("Person", "name")
     val query = "EXPLAIN MATCH (a:Person) WHERE a.name CONTAINS 'er' RETURN a"
     val result = executeSingle(query, Map.empty)
     result.notifications should not contain SUBOPTIMAL_INDEX_FOR_CONTAINS_QUERY.notification(graphdb.InputPosition.empty, suboptimalIndex("Person", "name"))
   }
 
-  test("should not warn when using ends with on a unique index with no limitations") {
+  test("should not warn when using ends with on a unique index with no special behaviours") {
     graph.createUniqueConstraint("Person", "name")
     val query = "EXPLAIN MATCH (a:Person) WHERE a.name ENDS WITH 'son' RETURN a"
     val result = executeSingle(query, Map.empty)
