@@ -31,7 +31,7 @@ public class EnterpriseTemporaryDatabaseFactory implements TemporaryDatabaseFact
     }
 
     @Override
-    public TemporaryDatabase startTemporaryDatabase( File rootDirectory, Config originalConfig )
+    public TemporaryDatabase startTemporaryDatabase( File rootDirectory, Config originalConfig, boolean isSystem )
     {
         Dependencies dependencies = new Dependencies();
         dependencies.satisfyDependency( new ExternallyManagedPageCache( pageCache ) );
@@ -40,7 +40,7 @@ public class EnterpriseTemporaryDatabaseFactory implements TemporaryDatabaseFact
                 .setExternalDependencies( dependencies );
 
         augmentConfig( managementServiceBuilder, originalConfig, rootDirectory );
-        return new TemporaryDatabase( managementServiceBuilder.build() );
+        return new TemporaryDatabase( managementServiceBuilder.build(), isSystem );
     }
 
     private static void augmentConfig( DatabaseManagementServiceBuilder managementServiceBuilder, Config originalConfig, File rootDirectory )

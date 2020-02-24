@@ -11,26 +11,28 @@ import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 
 public class TemporaryDatabase implements AutoCloseable
 {
     private final DatabaseManagementService managementService;
-    private final GraphDatabaseAPI defaultDatabase;
+    private final GraphDatabaseAPI database;
 
-    public TemporaryDatabase( DatabaseManagementService managementService )
+    public TemporaryDatabase( DatabaseManagementService managementService, boolean isSystem )
     {
+        String databaseName = isSystem ? SYSTEM_DATABASE_NAME : DEFAULT_DATABASE_NAME;
         this.managementService = managementService;
-        this.defaultDatabase = (GraphDatabaseAPI) managementService.database( DEFAULT_DATABASE_NAME );
+        this.database = (GraphDatabaseAPI) managementService.database( databaseName );
     }
 
     public GraphDatabaseService graphDatabaseService()
     {
-        return defaultDatabase;
+        return database;
     }
 
-    public DatabaseLayout defaultDatabaseDirectory()
+    public DatabaseLayout databaseDirectory()
     {
-        return defaultDatabase.databaseLayout();
+        return database.databaseLayout();
     }
 
     @Override

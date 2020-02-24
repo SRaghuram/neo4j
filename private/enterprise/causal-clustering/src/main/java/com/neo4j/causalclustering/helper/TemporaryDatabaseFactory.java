@@ -11,5 +11,5 @@ import org.neo4j.configuration.Config;
 
 public interface TemporaryDatabaseFactory
 {
-    TemporaryDatabase startTemporaryDatabase( File rootDirectory, Config originalConfig );
+    TemporaryDatabase startTemporaryDatabase( File rootDirectory, Config originalConfig, boolean isSystem );
 }

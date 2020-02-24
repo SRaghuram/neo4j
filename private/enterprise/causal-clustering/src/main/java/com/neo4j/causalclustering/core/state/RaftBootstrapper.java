@@ -48,7 +48,7 @@ import org.neo4j.storageengine.api.TransactionMetaDataStore;
 
 import static com.neo4j.causalclustering.core.CausalClusteringSettings.TEMP_BOOTSTRAP_DIRECTORY_NAME;
 import static java.lang.System.currentTimeMillis;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
+import static org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME;
 import static org.neo4j.io.pagecache.tracing.PageCacheTracer.NULL;
 import static org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier.TRACER_SUPPLIER;
 import static org.neo4j.storageengine.api.TransactionIdStore.BASE_TX_CHECKSUM;
@@ -120,7 +120,7 @@ public class RaftBootstrapper
             }
             else
             {
-                createStore( storeId, cursorTracer );
+                createStore( storeId, cursorTracer, bootstrapContext.databaseId().isSystemDatabase() );
             }
             appendNullTransactionLogEntryToSetRaftIndexToMinusOne( bootstrapContext, cursorTracer );
             CoreSnapshot snapshot = buildCoreSnapshot( members );
@@ -143,7 +143,7 @@ public class RaftBootstrapper
 
     /**
      * Copies store files and transaction logs of the system database seed, typically into
-     *   $NEO4J_HOME/data/databases/system/temp-bootstrap/neo4j
+     *   $NEO4J_HOME/data/databases/system/temp-bootstrap/system
      *
      * upon which a temporary DBMS will be started, so that the seed database
      * can be modified using the initializer, see {@link ClusterSystemGraphInitializer}.
@@ -161,12 +161,12 @@ public class RaftBootstrapper
     private void bootstrapExistingSystemDatabase() throws IOException
     {
         File bootstrapRootDir = new File( bootstrapContext.databaseLayout().databaseDirectory(), TEMP_BOOTSTRAP_DIRECTORY_NAME );
-        File tempDefaultDatabaseDir = new File( bootstrapRootDir, DEFAULT_DATABASE_NAME );
+        File tempDefaultDatabaseDir = new File( bootstrapRootDir, SYSTEM_DATABASE_NAME );
 
         fs.copyRecursively(  bootstrapContext.databaseLayout().databaseDirectory(), tempDefaultDatabaseDir );
         fs.copyRecursively(  bootstrapContext.databaseLayout().getTransactionLogsDirectory(), tempDefaultDatabaseDir );
 
-        DatabaseLayout databaseLayout = initializeStoreUsingTempDatabase( bootstrapRootDir );
+        DatabaseLayout databaseLayout = initializeStoreUsingTempDatabase( bootstrapRootDir, true );
 
         bootstrapContext.replaceWith( databaseLayout.databaseDirectory() );
     }
@@ -176,7 +176,7 @@ public class RaftBootstrapper
         return storageEngineFactory.storageExists( fs, bootstrapContext.databaseLayout(), pageCache );
     }
 
-    private void createStore( StoreId storeId, PageCursorTracer cursorTracer ) throws IOException
+    private void createStore( StoreId storeId, PageCursorTracer cursorTracer, boolean isSystemDatabase ) throws IOException
     {
         File bootstrapRootDir = new File( bootstrapContext.databaseLayout().databaseDirectory(), TEMP_BOOTSTRAP_DIRECTORY_NAME );
         fs.deleteRecursively( bootstrapRootDir ); // make sure temp bootstrap directory does not exist
@@ -184,7 +184,7 @@ public class RaftBootstrapper
         {
             String databaseName = bootstrapContext.databaseId().name();
             log.info( "Initializing the store for database " + databaseName + " using a temporary database in " + bootstrapRootDir );
-            DatabaseLayout bootstrapDatabaseLayout = initializeStoreUsingTempDatabase( bootstrapRootDir );
+            DatabaseLayout bootstrapDatabaseLayout = initializeStoreUsingTempDatabase( bootstrapRootDir, isSystemDatabase );
             if ( storeId != null )
             {
                 log.info( "Changing store ID of bootstrapped database to " + storeId );
@@ -203,13 +203,13 @@ public class RaftBootstrapper
         }
     }
 
-    private DatabaseLayout initializeStoreUsingTempDatabase( File bootstrapRootDir )
+    private DatabaseLayout initializeStoreUsingTempDatabase( File bootstrapRootDir, boolean isSystem )
     {
         DatabaseLayout databaseLayout;
-        try ( TemporaryDatabase tempDatabase = tempDatabaseFactory.startTemporaryDatabase( bootstrapRootDir, config ) )
+        try ( TemporaryDatabase tempDatabase = tempDatabaseFactory.startTemporaryDatabase( bootstrapRootDir, config, isSystem ) )
         {
             databaseInitializer.initialize( tempDatabase.graphDatabaseService() );
-            databaseLayout = tempDatabase.defaultDatabaseDirectory();
+            databaseLayout = tempDatabase.databaseDirectory();
         }
         return databaseLayout;
     }
