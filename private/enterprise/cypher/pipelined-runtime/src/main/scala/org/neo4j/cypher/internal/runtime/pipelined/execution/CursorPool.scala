@@ -19,7 +19,6 @@ import org.neo4j.internal.kernel.api.RelationshipIndexCursor
 import org.neo4j.internal.kernel.api.RelationshipScanCursor
 import org.neo4j.internal.kernel.api.RelationshipTraversalCursor
 import org.neo4j.io.IOUtils
-import org.neo4j.io.pagecache.tracing.cursor.DefaultPageCursorTracerSupplier.TRACER_SUPPLIER
 import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer
 
 class CursorPools(cursorFactory: CursorFactory, pageCursorTracer: PageCursorTracer) extends CursorFactory with AutoCloseable {
