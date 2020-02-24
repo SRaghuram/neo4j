@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.neo4j.io.ByteUnit;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.impl.store.record.NodeRecord;
 import org.neo4j.kernel.impl.store.record.Record;
 import org.neo4j.kernel.impl.store.record.RecordLoad;
@@ -170,7 +171,7 @@ class NodeRecordFormatTest
     {
         int oldRecordSize = NodeRecordFormatV3_4_0.RECORD_SIZE;
         NodeRecordFormatV3_4_0 recordFormatV30 = new NodeRecordFormatV3_4_0();
-        recordFormatV30.prepare( oldFormatRecord, oldRecordSize, idSequence );
+        recordFormatV30.prepare( oldFormatRecord, oldRecordSize, idSequence, PageCursorTracer.NULL );
         recordFormatV30.write( oldFormatRecord, pageCursor, oldRecordSize, pageCursor.getCurrentPageSize() / oldRecordSize );
         pageCursor.setOffset( 0 );
     }
@@ -189,7 +190,7 @@ class NodeRecordFormatTest
 
     private void writeReadRecord( NodeRecord source, NodeRecord target, int recordSize ) throws java.io.IOException
     {
-        recordFormat.prepare( source, recordSize, idSequence );
+        recordFormat.prepare( source, recordSize, idSequence, PageCursorTracer.NULL );
         recordFormat.write( source, pageCursor, recordSize, pageCursor.getCurrentPageSize() / recordSize );
         pageCursor.setOffset( 0 );
         recordFormat.read( target, pageCursor, RecordLoad.NORMAL, recordSize, pageCursor.getCurrentPageSize() / recordSize );

@@ -14,6 +14,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import org.neo4j.io.ByteUnit;
 import org.neo4j.io.pagecache.StubPageCursor;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.impl.store.IntStoreHeader;
 import org.neo4j.kernel.impl.store.record.PropertyRecord;
 import org.neo4j.kernel.impl.store.record.Record;
@@ -211,7 +212,7 @@ class PropertyRecordFormatTest
     {
         int oldRecordSize = PropertyRecordFormatV3_4_0.RECORD_SIZE;
         PropertyRecordFormatV3_4_0 recordFormatV30 = new PropertyRecordFormatV3_4_0();
-        recordFormatV30.prepare( oldFormatRecord, oldRecordSize, idSequence );
+        recordFormatV30.prepare( oldFormatRecord, oldRecordSize, idSequence, PageCursorTracer.NULL );
         recordFormatV30.write( oldFormatRecord, pageCursor, oldRecordSize, pageCursor.getCurrentPageSize() / oldRecordSize );
         pageCursor.setOffset( 0 );
     }
@@ -235,7 +236,7 @@ class PropertyRecordFormatTest
 
     private void writeReadRecord( PropertyRecord source, PropertyRecord target, int recordSize )
     {
-        recordFormat.prepare( source, recordSize, idSequence );
+        recordFormat.prepare( source, recordSize, idSequence, PageCursorTracer.NULL );
         recordFormat.write( source, pageCursor, recordSize, pageCursor.getCurrentPageSize() / recordSize );
         pageCursor.setOffset( 0 );
         recordFormat.read( target, pageCursor, RecordLoad.NORMAL, recordSize, pageCursor.getCurrentPageSize() / recordSize );

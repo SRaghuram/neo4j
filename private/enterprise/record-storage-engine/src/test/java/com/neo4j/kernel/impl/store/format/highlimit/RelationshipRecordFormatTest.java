@@ -16,6 +16,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import org.neo4j.io.ByteUnit;
 import org.neo4j.io.pagecache.StubPageCursor;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.impl.store.record.RecordLoad;
 import org.neo4j.kernel.impl.store.record.RelationshipRecord;
 
@@ -240,7 +241,7 @@ class RelationshipRecordFormatTest
 
     private void writeReadRecord( RelationshipRecord source, RelationshipRecord target, int recordSize ) throws java.io.IOException
     {
-        format.prepare( source, recordSize, idSequence );
+        format.prepare( source, recordSize, idSequence, PageCursorTracer.NULL );
         format.write( source, cursor, recordSize, cursor.getCurrentPageSize() / recordSize );
         cursor.setOffset( 0 );
         format.read( target, cursor, RecordLoad.NORMAL, recordSize, cursor.getCurrentPageSize() / recordSize );

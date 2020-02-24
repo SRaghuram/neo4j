@@ -14,6 +14,7 @@ import org.neo4j.exceptions.UnderlyingStorageException;
 import org.neo4j.internal.id.IdSequence;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.impl.CompositePageCursor;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.impl.store.StoreHeader;
 import org.neo4j.kernel.impl.store.format.BaseOneByteHeaderRecordFormat;
 import org.neo4j.kernel.impl.store.format.RecordFormat;
@@ -246,7 +247,7 @@ abstract class BaseHighLimitRecordFormatV3_1_0<RECORD extends AbstractBaseRecord
     protected abstract byte headerBits( RECORD record );
 
     @Override
-    public final void prepare( RECORD record, int recordSize, IdSequence idSequence )
+    public final void prepare( RECORD record, int recordSize, IdSequence idSequence, PageCursorTracer cursorTracer )
     {
         if ( record.inUse() )
         {
@@ -260,7 +261,7 @@ abstract class BaseHighLimitRecordFormatV3_1_0<RECORD extends AbstractBaseRecord
                 {
                     // Allocate a new id at this point, but this is not the time to free this ID the the case where
                     // this record doesn't need this secondary unit anymore... that needs to be done when applying to store.
-                    record.setSecondaryUnitIdOnCreate( idSequence.nextId( TRACER_SUPPLIER.get() ) );
+                    record.setSecondaryUnitIdOnCreate( idSequence.nextId( cursorTracer ) );
                 }
             }
         }

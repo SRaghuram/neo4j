@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.neo4j.internal.id.IdSequence;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.io.pagecache.StubPageCursor;
+import org.neo4j.io.pagecache.tracing.cursor.PageCursorTracer;
 import org.neo4j.kernel.impl.store.format.RecordFormat;
 import org.neo4j.kernel.impl.store.record.RelationshipTypeTokenRecord;
 
@@ -35,7 +36,7 @@ class RelationshipTypeTokenRecordFormatTest
         PageCursor cursor = new StubPageCursor( 0, (int) kibiBytes( 8 ) );
 
         // when
-        format.prepare( record, recordSize, doubleUnits );
+        format.prepare( record, recordSize, doubleUnits, PageCursorTracer.NULL );
         format.write( record, cursor, recordSize, cursor.getCurrentPageSize() / recordSize );
         verifyNoMoreInteractions( doubleUnits );
 
