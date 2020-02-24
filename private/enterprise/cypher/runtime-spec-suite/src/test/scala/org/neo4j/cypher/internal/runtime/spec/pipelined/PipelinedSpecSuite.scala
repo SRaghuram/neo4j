@@ -292,7 +292,8 @@ class PipelinedUnionTest extends UnionTestBase(FUSING, PIPELINED, SIZE_HINT) wit
 class PipelinedUnionNoFusingTest extends UnionTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 
 // SEMI APPLY
-class PipelinedSemiApplyNoFusingTest extends SemiApplyTestBase(ENTERPRISE.NO_FUSING, PIPELINED, SIZE_HINT)
+class PipelinedSemiApplyTest extends SemiApplyTestBase(FUSING, PIPELINED, SIZE_HINT)
+class PipelinedSemiApplyNoFusingTest extends SemiApplyTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
 
 // GENERAL
 class PipelinedMiscTest extends MiscTestBase(FUSING, PIPELINED) with PipelinedSpecSuite
