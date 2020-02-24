@@ -429,8 +429,8 @@ public class DbmsReconciler implements DatabaseStateService
         {
             // No exception occurred during this transition, but the request may still panic the database and mark it as failed anyway
             var nextState = result.state();
-            return shouldFailDatabaseWithCausePostSuccessfulReconcile( nextState.databaseId(), previousState, request )
-                    .map( nextState::failed );
+            var failure =  shouldFailDatabaseWithCausePostSuccessfulReconcile( nextState.databaseId(), previousState, request );
+            return failure.map( nextState::failed );
         }
     }
 
@@ -444,17 +444,24 @@ public class DbmsReconciler implements DatabaseStateService
     private static Optional<Throwable> shouldFailDatabaseWithCausePostSuccessfulReconcile( NamedDatabaseId namedDatabaseId,
             EnterpriseDatabaseState currentState, ReconcilerRequest request )
     {
-        if ( request.isPriorityRequestForDatabase( namedDatabaseId.name() ) )
+        var panicked = request.causeOfPanic( namedDatabaseId );
+        var isPriority = request.isPriorityRequestForDatabase( namedDatabaseId.name() );
+        var currentlyFailed = currentState != null && currentState.hasFailed();
+
+        if ( panicked.isPresent() )
         {
-            // a successful reconcile operation was forced, no need to keep the failed state
-            return Optional.empty();
+            return panicked;
         }
-        if ( currentState != null && currentState.hasFailed() )
+        else if ( currentlyFailed && !isPriority )
         {
-            // preserve the current failed state because we didn't force reconciliation
+            // Preserve the current failed state because the reconcile request is not a priority one
             return currentState.failure();
         }
-        return request.causeOfPanic( namedDatabaseId );
+        else
+        {
+            // Either the current state is not failed, or the request is a priority one, and therefore may override previous failed states
+            return Optional.empty();
+        }
     }
 
     /**
