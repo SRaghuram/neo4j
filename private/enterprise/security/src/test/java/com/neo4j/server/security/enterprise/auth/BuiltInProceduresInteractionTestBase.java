@@ -543,6 +543,41 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     }
 
     @Test
+    void allDatabasePrivilegeShouldNotImplyListTransaction() throws Throwable
+    {
+        authDisabledAdminstrationCommand( "CREATE USER alice SET PASSWORD 'foo' CHANGE NOT REQUIRED" );
+        authDisabledAdminstrationCommand( "CREATE ROLE custom" );
+        authDisabledAdminstrationCommand( "GRANT ROLE custom TO alice" );
+        authDisabledAdminstrationCommand( "GRANT ALL ON DEFAULT DATABASE TO custom" );
+        S subject = neo.login( "alice", "foo" );
+
+        DoubleLatch latch = new DoubleLatch( 3, true );
+        OffsetDateTime startTime = getStartTime();
+        ThreadedTransaction<S> read1 = new ThreadedTransaction<>( neo, latch );
+        ThreadedTransaction<S> read2 = new ThreadedTransaction<>( neo, latch );
+
+        String q1 = read1.execute( threading, subject, "UNWIND [1,2,3] AS x RETURN x" );
+        read2.execute( threading, readSubject, "UNWIND [4,5,6] AS y RETURN y" );
+        latch.startAndWaitForAllToStart();
+
+        String query = "CALL dbms.listTransactions()";
+        assertSuccess( subject, query, r ->
+        {
+            List<Map<String,Object>> maps = collectResults( r );
+
+            Matcher<Map<String,Object>> thisTransaction = listedTransaction( startTime, "alice", query );
+            Matcher<Map<String,Object>> queryMatcher = listedTransaction( startTime, "alice", q1 );
+
+            assertThat( maps, matchesOneToOneInAnyOrder( queryMatcher, thisTransaction ) );
+        } );
+
+        latch.finishAndWaitForAllToFinish();
+
+        read1.closeAndAssertSuccess();
+        read2.closeAndAssertSuccess();
+    }
+
+    @Test
     void killAlreadyTerminatedTransactionEndsSuccessfully()
     {
         DoubleLatch latch = new DoubleLatch( 2, true );
@@ -823,6 +858,40 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
                 assertThat( killQueryResult, matchesOneToOneInAnyOrder( hasUsername( "readSubject" ) ) );
                 assertThat( killQueryResult, matchesOneToOneInAnyOrder( hasResultEntry( "message", "Transaction terminated." ) ) );
                 assertThat( killQueryResult, matchesOneToOneInAnyOrder( hasResultEntry( "transactionId", txId2 ) ) );
+            } );
+        }
+        finally
+        {
+            latch.finishAndWaitForAllToFinish();
+        }
+    }
+
+    @Test
+    void allDatabasePrivilegeShouldNotImplyKillTransaction() throws Throwable
+    {
+        authDisabledAdminstrationCommand( "CREATE USER alice SET PASSWORD 'foo' CHANGE NOT REQUIRED" );
+        authDisabledAdminstrationCommand( "CREATE ROLE custom" );
+        authDisabledAdminstrationCommand( "GRANT ROLE custom TO alice" );
+        authDisabledAdminstrationCommand( "GRANT ALL ON DEFAULT DATABASE TO custom" );
+        S subject = neo.login( "alice", "foo" );
+
+        DoubleLatch latch = new DoubleLatch( 2, true );
+        try
+        {
+            ThreadedTransaction<S> read1 = new ThreadedTransaction<>( neo, latch );
+
+            String q1 = read1.execute( threading, writeSubject, "UNWIND [1,2,3] AS x RETURN x" );
+            latch.startAndWaitForAllToStart();
+
+            String listTransactionQuery = "CALL dbms.listTransactions()";
+            String unwindTransactionId = getTransactionIdExecutingQuery( q1, listTransactionQuery, writeSubject );
+            String killTransactionQueryTemplate = "CALL dbms.killTransaction('%s')";
+            assertSuccess( subject, format( killTransactionQueryTemplate, unwindTransactionId ), r ->
+            {
+                List<Map<String,Object>> killQueryResult = collectResults( r );
+                assertThat( killQueryResult, matchesOneToOneInAnyOrder( hasUsername( "alice" ) ) );
+                assertThat( killQueryResult, matchesOneToOneInAnyOrder( hasResultEntry( "message", "Transaction not found." ) ) );
+                assertThat( killQueryResult, matchesOneToOneInAnyOrder( hasResultEntry( "transactionId", unwindTransactionId ) ) );
             } );
         }
         finally
@@ -1163,6 +1232,41 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
         read.closeAndAssertSuccess();
     }
 
+    @Test
+    void allDatabasePrivilegeShouldNotImplyListQuery() throws Throwable
+    {
+        authDisabledAdminstrationCommand( "CREATE USER alice SET PASSWORD 'foo' CHANGE NOT REQUIRED" );
+        authDisabledAdminstrationCommand( "CREATE ROLE custom" );
+        authDisabledAdminstrationCommand( "GRANT ROLE custom TO alice" );
+        authDisabledAdminstrationCommand( "GRANT ALL ON DEFAULT DATABASE TO custom" );
+        S subject = neo.login( "alice", "foo" );
+
+        DoubleLatch latch = new DoubleLatch( 3, true );
+        OffsetDateTime startTime = getStartTime();
+        ThreadedTransaction<S> read1 = new ThreadedTransaction<>( neo, latch );
+        ThreadedTransaction<S> read2 = new ThreadedTransaction<>( neo, latch );
+
+        String q1 = read1.execute( threading, subject, "UNWIND [1,2,3] AS x RETURN x" );
+        read2.execute( threading, writeSubject, "UNWIND [4,5,6] AS y RETURN y" );
+        latch.startAndWaitForAllToStart();
+
+        String query = "CALL dbms.listQueries()";
+        assertSuccess( subject, query, r ->
+        {
+            List<Map<String,Object>> maps = collectResults( r );
+
+            Matcher<Map<String,Object>> thisQuery = listedQuery( startTime, "alice", query );
+            Matcher<Map<String,Object>> queryMatcher = listedQuery( startTime, "alice", q1 );
+
+            assertThat( maps, matchesOneToOneInAnyOrder( queryMatcher, thisQuery ) );
+        } );
+
+        latch.finishAndWaitForAllToFinish();
+
+        read1.closeAndAssertSuccess();
+        read2.closeAndAssertSuccess();
+    }
+
     //---------- Create Tokens query -------
 
     @Test
@@ -1393,6 +1497,18 @@ public abstract class BuiltInProceduresInteractionTestBase<S> extends ProcedureI
     void shouldFailToTerminateOtherUsersQuery() throws Throwable
     {
         executeQueryAndFailToKill( readSubject, writeSubject );
+    }
+
+    @Test
+    void allDatabasePrivilegeShouldNotImplyKillQuery() throws Throwable
+    {
+        authDisabledAdminstrationCommand( "CREATE USER alice SET PASSWORD 'foo' CHANGE NOT REQUIRED" );
+        authDisabledAdminstrationCommand( "CREATE ROLE custom" );
+        authDisabledAdminstrationCommand( "GRANT ROLE custom TO alice" );
+        authDisabledAdminstrationCommand( "GRANT ALL ON DEFAULT DATABASE TO custom" );
+        S subject = neo.login( "alice", "foo" );
+
+        executeQueryAndFailToKill( readSubject, subject );
     }
 
     private void executeQueryAndFailToKill( S executor, S killer ) throws Throwable
