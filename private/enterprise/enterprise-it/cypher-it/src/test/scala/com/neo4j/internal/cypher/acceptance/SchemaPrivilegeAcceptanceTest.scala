@@ -1000,7 +1000,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     execute("REVOKE ACCESS ON DATABASE * FROM custom")
     execute("REVOKE ALL ON DATABASE * FROM custom")
     execute("REVOKE NAME ON DATABASE * FROM custom")
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantAdmin().role("custom").map, grantSchema().role("custom").map))
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantAdmin().role("custom").map, indexManagement().role("custom").map, constraintManagement().role("custom").map))
 
     // Now try to revoke each sub-privilege (that we have syntax for) in turn
     //TODO: ADD ANY NEW SUB-PRIVILEGES HERE
@@ -1053,7 +1053,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     }
   }
 
-  test("Should get error when revoking a subset of a compound schema privilege") {
+  test("Should get error when revoking a subset of a compound index or constraint privilege") {
     // Given
     setup()
     execute("CREATE ROLE custom AS COPY OF architect")
@@ -1062,21 +1062,21 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     execute("REVOKE WRITE ON GRAPH * FROM custom")
     execute("REVOKE ACCESS ON DATABASE * FROM custom")
     execute("REVOKE NAME MANAGEMENT ON DATABASE * FROM custom")
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantSchema().role("custom").map))
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(indexManagement().role("custom").map, constraintManagement().role("custom").map))
 
     // Now try to revoke each sub-privilege in turn
     Seq(
       "CREATE INDEX",
       "DROP INDEX",
-      "INDEX MANAGEMENT",
       "CREATE CONSTRAINT",
-      "DROP CONSTRAINT",
-      "CONSTRAINT MANAGEMENT"
+      "DROP CONSTRAINT"
     ).foreach { privilege =>
       // When && Then
-      the[IllegalStateException] thrownBy {
+      val exception = the[IllegalStateException] thrownBy {
         execute(s"REVOKE $privilege ON DATABASE * FROM custom")
-      } should have message s"Unsupported to revoke a sub-privilege '$privilege' from a compound privilege 'SCHEMA MANAGEMENT', consider using DENY instead."
+      }
+      exception.getMessage should (be(s"Unsupported to revoke a sub-privilege '$privilege' from a compound privilege 'INDEX MANAGEMENT', consider using DENY instead.") or
+        be(s"Unsupported to revoke a sub-privilege '$privilege' from a compound privilege 'CONSTRAINT MANAGEMENT', consider using DENY instead."))
     }
   }
 

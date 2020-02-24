@@ -66,7 +66,8 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
     private Node defaultAccessPriv;
     private Node accessPriv;
     private Node tokenPriv;
-    private Node schemaPriv;
+    private Node indexPriv;
+    private Node constraintPriv;
     private Node adminPriv;
 
     public EnterpriseSecurityGraphInitializer( DatabaseManager<?> databaseManager, SystemGraphInitializer systemGraphInitializer, Log log,
@@ -115,6 +116,10 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
             // If no users or roles were migrated we setup the
             // default predefined roles and user and make sure we have an admin user
             ensureDefaultUserAndRoles( tx );
+
+            // migrate schema privilege to index + constraint privileges
+            migrateSystemGraph( tx );
+
             tx.commit();
         }
     }
@@ -316,7 +321,8 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
         accessPriv = tx.createNode( PRIVILEGE_LABEL );
         tokenPriv = tx.createNode( PRIVILEGE_LABEL );
         adminPriv = tx.createNode( PRIVILEGE_LABEL );
-        schemaPriv = tx.createNode( PRIVILEGE_LABEL );
+        indexPriv = tx.createNode( PRIVILEGE_LABEL );
+        constraintPriv = tx.createNode( PRIVILEGE_LABEL );
 
         setupPrivilegeNode( traverseNodePriv, PrivilegeAction.TRAVERSE, labelSegement, graphResource );
         setupPrivilegeNode( traverseRelPriv, PrivilegeAction.TRAVERSE, relSegement, graphResource );
@@ -327,7 +333,8 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
         setupPrivilegeNode( defaultAccessPriv, PrivilegeAction.ACCESS, defaultDbSegement, dbResource );
         setupPrivilegeNode( accessPriv, PrivilegeAction.ACCESS, dbSegement, dbResource );
         setupPrivilegeNode( tokenPriv, PrivilegeAction.TOKEN, dbSegement, dbResource );
-        setupPrivilegeNode( schemaPriv, PrivilegeAction.SCHEMA, dbSegement, dbResource );
+        setupPrivilegeNode( indexPriv, PrivilegeAction.INDEX, dbSegement, dbResource );
+        setupPrivilegeNode( constraintPriv, PrivilegeAction.CONSTRAINT, dbSegement, dbResource );
         setupPrivilegeNode( adminPriv, PrivilegeAction.ADMIN, dbSegement, dbResource );
     }
 
@@ -338,6 +345,45 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
         privNode.createRelationshipTo( resourceNode, APPLIES_TO );
     }
 
+    private void migrateSystemGraph( Transaction tx )
+    {
+        Node schemaNode = tx.findNode( PRIVILEGE_LABEL, "action", PrivilegeAction.SCHEMA.toString() );
+        if ( schemaNode == null )
+        {
+            return;
+        }
+        Relationship schemaSegmentRel = schemaNode.getSingleRelationship( SCOPE, Direction.OUTGOING );
+        Relationship schemaResourceRel = schemaNode.getSingleRelationship( APPLIES_TO, Direction.OUTGOING );
+
+        Node segment = schemaSegmentRel.getEndNode();
+        Node resource = schemaResourceRel.getEndNode();
+
+        Node indexNode = tx.findNode( PRIVILEGE_LABEL, "action", PrivilegeAction.INDEX.toString() );
+        if ( indexNode == null )
+        {
+            indexNode = tx.createNode( PRIVILEGE_LABEL );
+            setupPrivilegeNode( indexNode, PrivilegeAction.INDEX, segment, resource );
+        }
+        Node constraintNode = tx.findNode( PRIVILEGE_LABEL, "action", PrivilegeAction.CONSTRAINT.toString() );
+        if ( constraintNode == null )
+        {
+            constraintNode = tx.createNode( PRIVILEGE_LABEL );
+            setupPrivilegeNode( constraintNode, PrivilegeAction.CONSTRAINT, segment, resource );
+        }
+
+        for ( Relationship rel : schemaNode.getRelationships( GRANTED ) ) // incoming from roles
+        {
+            Node role = rel.getOtherNode( schemaNode );
+            role.createRelationshipTo( indexNode, GRANTED );
+            role.createRelationshipTo( constraintNode, GRANTED );
+            rel.delete();
+        }
+
+        schemaResourceRel.delete();
+        schemaSegmentRel.delete();
+        schemaNode.delete();
+    }
+
     private void assignDefaultPrivileges( Node role, SimpleRole simpleRole )
     {
         if ( simpleRole.isPermitted( PredefinedRolesBuilder.SYSTEM ) )
@@ -346,7 +392,8 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
         }
         if ( simpleRole.isPermitted( PredefinedRolesBuilder.SCHEMA ) )
         {
-            role.createRelationshipTo( schemaPriv, GRANTED );
+            role.createRelationshipTo( constraintPriv, GRANTED );
+            role.createRelationshipTo( indexPriv, GRANTED );
         }
         if ( simpleRole.isPermitted( PredefinedRolesBuilder.TOKEN ) )
         {

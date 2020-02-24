@@ -38,8 +38,9 @@ import static org.mockito.Mockito.when;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ACCESS;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.ADMIN;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.CONSTRAINT;
+import static org.neo4j.internal.kernel.api.security.PrivilegeAction.INDEX;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.READ;
-import static org.neo4j.internal.kernel.api.security.PrivilegeAction.SCHEMA;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.TOKEN;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.TRAVERSE;
 import static org.neo4j.internal.kernel.api.security.PrivilegeAction.WRITE;
@@ -60,7 +61,8 @@ class EnterpriseLoginContextTest
     private ResourcePrivilege writeNodePrivilege;
     private ResourcePrivilege writeRelPrivilege;
     private ResourcePrivilege tokenPrivilege;
-    private ResourcePrivilege schemaPrivilege;
+    private ResourcePrivilege indexPrivilege;
+    private ResourcePrivilege constraintPrivilege;
     private ResourcePrivilege adminPrivilege;
 
     @BeforeEach
@@ -87,7 +89,8 @@ class EnterpriseLoginContextTest
         writeNodePrivilege = new ResourcePrivilege( GRANT, WRITE, new Resource.AllPropertiesResource(), LabelSegment.ALL, SpecialDatabase.ALL );
         writeRelPrivilege = new ResourcePrivilege( GRANT, WRITE, new Resource.AllPropertiesResource(), RelTypeSegment.ALL, SpecialDatabase.ALL );
         tokenPrivilege = new ResourcePrivilege( GRANT, TOKEN, new Resource.DatabaseResource(), Segment.ALL, SpecialDatabase.ALL );
-        schemaPrivilege = new ResourcePrivilege( GRANT, SCHEMA, new Resource.DatabaseResource(), Segment.ALL, SpecialDatabase.ALL );
+        indexPrivilege = new ResourcePrivilege( GRANT, INDEX, new Resource.DatabaseResource(), Segment.ALL, SpecialDatabase.ALL );
+        constraintPrivilege = new ResourcePrivilege( GRANT, CONSTRAINT, new Resource.DatabaseResource(), Segment.ALL, SpecialDatabase.ALL );
         adminPrivilege = new ResourcePrivilege( GRANT, ADMIN, new Resource.DatabaseResource(), Segment.ALL, SpecialDatabase.ALL );
     }
 
@@ -98,7 +101,7 @@ class EnterpriseLoginContextTest
         when( realm.getAuthorizationInfoSnapshot( any() ) ).thenReturn( new SimpleAuthorizationInfo( Collections.singleton( PredefinedRoles.ADMIN ) ) );
         when( realm.getPrivilegesForRoles( Set.of( PredefinedRoles.PUBLIC, PredefinedRoles.ADMIN ) ) ).thenReturn(
                 Set.of( accessPrivilege, traverseNodePrivilege, traverseRelPrivilege, readNodePrivilege, readRelPrivilege, writeNodePrivilege,
-                        writeRelPrivilege, tokenPrivilege, schemaPrivilege, adminPrivilege ) );
+                        writeRelPrivilege, tokenPrivilege, indexPrivilege, constraintPrivilege, adminPrivilege ) );
         EnterpriseLoginContext loginContext = login();
 
         // When
@@ -117,7 +120,7 @@ class EnterpriseLoginContextTest
         when( realm.getAuthorizationInfoSnapshot( any() ) ).thenReturn( new SimpleAuthorizationInfo( Collections.singleton( PredefinedRoles.ARCHITECT ) ) );
         when( realm.getPrivilegesForRoles( Set.of( PredefinedRoles.PUBLIC, PredefinedRoles.ARCHITECT ) ) ).thenReturn(
                 Set.of( accessPrivilege, traverseNodePrivilege, traverseRelPrivilege, readNodePrivilege, readRelPrivilege, writeNodePrivilege,
-                        writeRelPrivilege, tokenPrivilege, schemaPrivilege ) );
+                        writeRelPrivilege, tokenPrivilege, indexPrivilege, constraintPrivilege ) );
         EnterpriseLoginContext loginContext = login();
 
         // When
@@ -191,7 +194,7 @@ class EnterpriseLoginContextTest
         when( realm.getAuthorizationInfoSnapshot( any() ) ).thenReturn( new SimpleAuthorizationInfo( Collections.singleton( PredefinedRoles.ARCHITECT ) ) );
         when( realm.getPrivilegesForRoles( Set.of( PredefinedRoles.PUBLIC, PredefinedRoles.ARCHITECT ) ) ).thenReturn(
                 Set.of( accessPrivilege, traverseNodePrivilege, traverseRelPrivilege, readNodePrivilege, readRelPrivilege, writeNodePrivilege,
-                        writeRelPrivilege, tokenPrivilege, schemaPrivilege ) );
+                        writeRelPrivilege, tokenPrivilege, indexPrivilege, constraintPrivilege ) );
         EnterpriseLoginContext loginContext = login();
 
         // When

@@ -101,7 +101,8 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
     write().role("architect").node("*").map,
     write().role("architect").relationship("*").map,
     nameManagement().role("architect").map,
-    grantSchema().role("architect").map,
+    indexManagement().role("architect").map,
+    constraintManagement().role("architect").map,
 
     access().role("admin").map,
     traverse().role("admin").node("*").map,
@@ -111,7 +112,8 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
     write().role("admin").node("*").map,
     write().role("admin").relationship("*").map,
     nameManagement().role("admin").map,
-    grantSchema().role("admin").map,
+    indexManagement().role("admin").map,
+    constraintManagement().role("admin").map,
     grantAdmin().role("admin").map,
   )
 
@@ -218,7 +220,6 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
   def write(grant: String = GRANTED): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "all_properties")).action("write")
 
   def allDatabasePrivilege(grant: String = GRANTED): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap(grant) + ("resource" -> "database")).action("database_actions")
-  def grantSchema(): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap() + ("resource" -> "database")).action("schema")
   def grantAdmin(): PrivilegeMapBuilder = PrivilegeMapBuilder(baseMap() + ("resource" -> "database")).action("admin")
 
   def showTransaction(username: String, grant: String = GRANTED): PrivilegeMapBuilder =
