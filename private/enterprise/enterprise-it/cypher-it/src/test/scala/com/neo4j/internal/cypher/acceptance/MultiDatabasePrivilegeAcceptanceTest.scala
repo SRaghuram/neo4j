@@ -433,18 +433,21 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     execute(s"SHOW DATABASE $newDefaultDatabase").toSet should be(Set(db(newDefaultDatabase, onlineStatus, default = true)))
   }
 
-  test("should be allowed to start database with all database privilege") {
+  test("should fail to start database with all database privilege") {
     setup()
     execute("CREATE DATABASE foo")
     execute("STOP DATABASE foo")
     setupUserWithCustomRole("alice", "abc")
     execute("GRANT ALL ON DATABASE foo TO custom")
 
-    // WHEN
-    executeOnSystem("alice", "abc", "START DATABASE foo")
+    the[AuthorizationViolationException] thrownBy {
+      // WHEN
+      executeOnSystem("alice", "abc", "START DATABASE foo")
+      // THEN
+    } should have message "Permission denied."
 
     // THEN
-    execute("SHOW DATABASE foo").toSet should be(Set(db("foo", onlineStatus)))
+    execute("SHOW DATABASE foo").toSet should be(Set(db("foo", offlineStatus)))
   }
 
   test("should fail to grant start database to non-existing role") {
@@ -686,17 +689,20 @@ class MultiDatabasePrivilegeAcceptanceTest extends AdministrationCommandAcceptan
     execute(s"SHOW DATABASE $newDefaultDatabase").toSet should be(Set(db(newDefaultDatabase, offlineStatus, default = true)))
   }
 
-  test("should be allowed to stop database with all database privilege") {
+  test("should fail to stop database with all database privilege") {
     setup()
     execute("CREATE DATABASE foo")
     setupUserWithCustomRole("alice", "abc")
     execute("GRANT ALL ON DATABASE foo TO custom")
 
-    // WHEN
-    executeOnSystem("alice", "abc", "STOP DATABASE foo")
+    the[AuthorizationViolationException] thrownBy {
+      // WHEN
+      executeOnSystem("alice", "abc", "STOP DATABASE foo")
+      // THEN
+    } should have message "Permission denied."
 
     // THEN
-    execute("SHOW DATABASE foo").toSet should be(Set(db("foo", offlineStatus)))
+    execute("SHOW DATABASE foo").toSet should be(Set(db("foo", onlineStatus)))
   }
 
   test("should fail to deny stop database to non-existing role") {
