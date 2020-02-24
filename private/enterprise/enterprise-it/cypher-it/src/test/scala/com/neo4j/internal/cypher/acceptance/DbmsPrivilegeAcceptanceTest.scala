@@ -196,7 +196,8 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
   test("should not revoke other role management privileges when revoking role management") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
+    createRoleWithOnlyAdminPrivilege()
+    execute("CREATE ROLE custom AS COPY OF adminOnly")
     execute("GRANT CREATE ROLE ON DBMS TO custom")
     execute("GRANT DROP ROLE ON DBMS TO custom")
     execute("GRANT ASSIGN ROLE ON DBMS TO custom")
@@ -205,6 +206,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
     execute("GRANT ROLE MANAGEMENT ON DBMS TO custom")
 
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantAdmin().role("custom").map,
       adminAction("create_role").role("custom").map,
       adminAction("drop_role").role("custom").map,
       adminAction("assign_role").role("custom").map,
@@ -218,6 +220,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantAdmin().role("custom").map,
       adminAction("create_role").role("custom").map,
       adminAction("drop_role").role("custom").map,
       adminAction("assign_role").role("custom").map,
@@ -229,7 +232,8 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
   test("should not revoke other user management privileges when revoking user management") {
     // GIVEN
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
+    createRoleWithOnlyAdminPrivilege()
+    execute("CREATE ROLE custom AS COPY OF adminOnly")
     execute("GRANT CREATE USER ON DBMS TO custom")
     execute("GRANT DROP USER ON DBMS TO custom")
     execute("GRANT SHOW USER ON DBMS TO custom")
@@ -237,6 +241,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
     execute("GRANT USER MANAGEMENT ON DBMS TO custom")
 
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantAdmin().role("custom").map,
       adminAction("create_user").role("custom").map,
       adminAction("drop_user").role("custom").map,
       adminAction("alter_user").role("custom").map,
@@ -249,6 +254,7 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
     // THEN
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantAdmin().role("custom").map,
       adminAction("create_user").role("custom").map,
       adminAction("drop_user").role("custom").map,
       adminAction("alter_user").role("custom").map,
@@ -256,47 +262,77 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
     ))
   }
 
-  test("Should get error when revoking a subset of role management privilege") {
+  test("Should revoke sub-privilege even if role management exists") {
     // Given
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
+    createRoleWithOnlyAdminPrivilege()
+    execute("CREATE ROLE custom AS COPY OF adminOnly")
+    execute("GRANT CREATE ROLE ON DBMS TO custom")
+    execute("GRANT DROP ROLE ON DBMS TO custom")
+    execute("GRANT ASSIGN ROLE ON DBMS TO custom")
+    execute("GRANT REMOVE ROLE ON DBMS TO custom")
+    execute("GRANT SHOW ROLE ON DBMS TO custom")
     execute("GRANT ROLE MANAGEMENT ON DBMS TO custom")
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(adminAction("role_management").role("custom").map))
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantAdmin().role("custom").map,
+      adminAction("create_role").role("custom").map,
+      adminAction("drop_role").role("custom").map,
+      adminAction("assign_role").role("custom").map,
+      adminAction("remove_role").role("custom").map,
+      adminAction("show_role").role("custom").map,
+      adminAction("role_management").role("custom").map
+    ))
 
-    // Now try to revoke each sub-privilege in turn
+    // When
+    // Now revoke each sub-privilege in turn
     Seq(
       "CREATE ROLE",
       "DROP ROLE",
       "SHOW ROLE",
       "ASSIGN ROLE",
       "REMOVE ROLE"
-    ).foreach { privilege =>
-      // When && Then
-      the[IllegalStateException] thrownBy {
-        execute(s"REVOKE $privilege ON DBMS FROM custom")
-      } should have message s"Unsupported to revoke a sub-privilege '$privilege' from a compound privilege 'ROLE MANAGEMENT', consider using DENY instead."
-    }
+    ).foreach(privilege => execute(s"REVOKE $privilege ON DBMS FROM custom"))
+
+    // Then
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantAdmin().role("custom").map,
+      adminAction("role_management").role("custom").map
+    ))
   }
 
-  test("Should get error when revoking a subset of user management privilege") {
+  test("Should revoke sub-privilege even if user management exists") {
     // Given
     selectDatabase(GraphDatabaseSettings.SYSTEM_DATABASE_NAME)
-    execute("CREATE ROLE custom")
+    createRoleWithOnlyAdminPrivilege()
+    execute("CREATE ROLE custom AS COPY OF adminOnly")
+    execute("GRANT CREATE USER ON DBMS TO custom")
+    execute("GRANT DROP USER ON DBMS TO custom")
+    execute("GRANT SHOW USER ON DBMS TO custom")
+    execute("GRANT ALTER USER ON DBMS TO custom")
     execute("GRANT USER MANAGEMENT ON DBMS TO custom")
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(adminAction("user_management").role("custom").map))
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantAdmin().role("custom").map,
+      adminAction("create_user").role("custom").map,
+      adminAction("drop_user").role("custom").map,
+      adminAction("alter_user").role("custom").map,
+      adminAction("show_user").role("custom").map,
+      adminAction("user_management").role("custom").map
+    ))
 
-    // Now try to revoke each sub-privilege in turn
+    // When
+    // Now revoke each sub-privilege in turn
     Seq(
       "CREATE USER",
       "DROP USER",
       "SHOW USER",
       "ALTER USER"
-    ).foreach { privilege =>
-      // When && Then
-      the[IllegalStateException] thrownBy {
-        execute(s"REVOKE $privilege ON DBMS FROM custom")
-      } should have message s"Unsupported to revoke a sub-privilege '$privilege' from a compound privilege 'USER MANAGEMENT', consider using DENY instead."
-    }
+    ).foreach(privilege => execute(s"REVOKE $privilege ON DBMS FROM custom"))
+
+    // Then
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      grantAdmin().role("custom").map,
+      adminAction("user_management").role("custom").map
+    ))
   }
 
   test("should do nothing when revoking role management privilege from non-existing role") {
@@ -317,6 +353,37 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
 
     // WHEN
     execute("REVOKE USER MANAGEMENT ON DBMS FROM wrongRole")
+  }
+
+  test("Should do nothing when revoking a non-existing subset of a compound (mostly dbms) admin privilege") {
+    // Given
+    setup()
+    createRoleWithOnlyAdminPrivilege("custom")
+
+    // When
+    // Now try to revoke each sub-privilege (that we have syntax for) in turn
+    //TODO: ADD ANY NEW SUB-PRIVILEGES HERE
+    Seq(
+      "CREATE ROLE ON DBMS",
+      "DROP ROLE ON DBMS",
+      "SHOW ROLE ON DBMS",
+      "ASSIGN ROLE ON DBMS",
+      "REMOVE ROLE ON DBMS",
+      "ROLE MANAGEMENT ON DBMS",
+      "CREATE USER ON DBMS",
+      "DROP USER ON DBMS",
+      "SHOW USER ON DBMS",
+      "ALTER USER ON DBMS",
+      "USER MANAGEMENT ON DBMS",
+      "SHOW TRANSACTION (*) ON DATABASES *",
+      "TERMINATE TRANSACTION (*) ON DATABASES *",
+      "TRANSACTION MANAGEMENT ON DATABASES *",
+      "START ON DATABASES *",
+      "STOP ON DATABASES *",
+    ).foreach(queryPart => execute(s"REVOKE $queryPart FROM custom"))
+
+    // Then
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantAdmin().role("custom").map))
   }
 
   // Enforcement tests
@@ -806,5 +873,20 @@ class DbmsPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestBas
     the[AuthorizationViolationException] thrownBy {
       executeOnSystem("foo", "bar", "SHOW USERS")
     } should have message "Permission denied."
+  }
+
+  // helper methods
+
+  private def createRoleWithOnlyAdminPrivilege(name: String = "adminOnly"): Unit = {
+    execute(s"CREATE ROLE $name AS COPY OF admin")
+    execute(s"REVOKE READ {*} ON GRAPH * FROM $name")
+    execute(s"REVOKE TRAVERSE ON GRAPH * FROM $name")
+    execute(s"REVOKE WRITE ON GRAPH * FROM $name")
+    execute(s"REVOKE ACCESS ON DATABASE * FROM $name")
+    execute(s"REVOKE ALL ON DATABASE * FROM $name")
+    execute(s"REVOKE NAME ON DATABASE * FROM $name")
+    execute(s"REVOKE INDEX ON DATABASE * FROM $name")
+    execute(s"REVOKE CONSTRAINT ON DATABASE * FROM $name")
+    execute(s"SHOW ROLE $name PRIVILEGES").toSet should be(Set(grantAdmin().role(name).map))
   }
 }

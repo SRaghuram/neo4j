@@ -89,6 +89,7 @@ class TransactionPrivilegeAdministrationCommandAcceptanceTest extends Administra
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE DATABASE foo")
     execute("CREATE ROLE role")
+    execute("GRANT TRANSACTION (*) ON DATABASE foo TO role")
     execute("GRANT SHOW TRANSACTION (*) ON DATABASE foo TO role")
     execute("DENY SHOW TRANSACTION (user1,user2) ON DEFAULT DATABASE TO role")
 
@@ -97,7 +98,7 @@ class TransactionPrivilegeAdministrationCommandAcceptanceTest extends Administra
     execute("REVOKE SHOW TRANSACTION (user1,user2) ON DEFAULT DATABASE FROM role")
 
     // THEN
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set.empty)
+    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(transaction("*").database("foo").role("role").map))
   }
 
   test("should fail to grant show transaction privilege to non-existing role") {
@@ -164,6 +165,7 @@ class TransactionPrivilegeAdministrationCommandAcceptanceTest extends Administra
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE DATABASE foo")
     execute("CREATE ROLE role")
+    execute("GRANT TRANSACTION (*) ON DATABASE foo TO role")
     execute("GRANT TERMINATE TRANSACTION (*) ON DATABASE foo TO role")
     execute("DENY TERMINATE TRANSACTION (user1,user2) ON DEFAULT DATABASE TO role")
 
@@ -172,7 +174,7 @@ class TransactionPrivilegeAdministrationCommandAcceptanceTest extends Administra
     execute("REVOKE TERMINATE TRANSACTION (user1,user2) ON DEFAULT DATABASE FROM role")
 
     // THEN
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set.empty)
+    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(transaction("*").database("foo").role("role").map))
   }
 
   test("should fail to deny terminate transaction privilege to non-existing role") {
@@ -243,6 +245,8 @@ class TransactionPrivilegeAdministrationCommandAcceptanceTest extends Administra
     selectDatabase(SYSTEM_DATABASE_NAME)
     execute("CREATE DATABASE foo")
     execute("CREATE ROLE role")
+    execute("GRANT SHOW TRANSACTION (*) ON DATABASE foo TO role")
+    execute("GRANT TERMINATE TRANSACTION (*) ON DATABASE foo TO role")
     execute("GRANT TRANSACTION (*) ON DATABASE foo TO role")
     execute("DENY TRANSACTION ON DEFAULT DATABASE TO role")
     execute("GRANT TRANSACTION (user1) ON DATABASE * TO role")
@@ -254,7 +258,10 @@ class TransactionPrivilegeAdministrationCommandAcceptanceTest extends Administra
     execute("REVOKE TRANSACTION (user1,user2) ON DATABASE * FROM role")
 
     // THEN
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set.empty)
+    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
+      showTransaction("*").database("foo").role("role").map,
+      terminateTransaction("*").database("foo").role("role").map
+    ))
   }
 
   test("should do nothing when revoking transaction management privilege from non-existing role") {

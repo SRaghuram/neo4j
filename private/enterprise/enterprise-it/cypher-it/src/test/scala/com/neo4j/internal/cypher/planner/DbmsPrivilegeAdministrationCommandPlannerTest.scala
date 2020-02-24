@@ -6,7 +6,6 @@
 package com.neo4j.internal.cypher.planner
 
 import org.neo4j.configuration.GraphDatabaseSettings.SYSTEM_DATABASE_NAME
-import org.neo4j.cypher.internal.plandescription.Arguments.DbmsAction
 
 class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationCommandPlannerTestBase {
 
@@ -57,9 +56,7 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
       logPlan(
         dbmsPrivilegePlan("RevokeDbmsAction(DENIED)", "SHOW ROLE", "reader",
           dbmsPrivilegePlan("RevokeDbmsAction(GRANTED)", "SHOW ROLE", "reader",
-            helperPlan("AssertValidRevoke", Seq(DbmsAction("SHOW ROLE"), rolePrivilegeArg("reader")),
-              assertDbmsAdminPlan("REVOKE PRIVILEGE")
-            )
+            assertDbmsAdminPlan("REVOKE PRIVILEGE")
           )
         )
       ).toString
@@ -111,9 +108,7 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
       logPlan(
         dbmsPrivilegePlan("RevokeDbmsAction(DENIED)", "CREATE ROLE", "reader",
           dbmsPrivilegePlan("RevokeDbmsAction(GRANTED)", "CREATE ROLE", "reader",
-            helperPlan("AssertValidRevoke", Seq(DbmsAction("CREATE ROLE"), rolePrivilegeArg("reader")),
-              assertDbmsAdminPlan("REVOKE PRIVILEGE")
-            )
+            assertDbmsAdminPlan("REVOKE PRIVILEGE")
           )
         )
       ).toString
@@ -165,9 +160,7 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
       logPlan(
         dbmsPrivilegePlan("RevokeDbmsAction(DENIED)", "DROP ROLE", "reader",
           dbmsPrivilegePlan("RevokeDbmsAction(GRANTED)", "DROP ROLE", "reader",
-            helperPlan("AssertValidRevoke", Seq(DbmsAction("DROP ROLE"), rolePrivilegeArg("reader")),
-              assertDbmsAdminPlan("REVOKE PRIVILEGE")
-            )
+            assertDbmsAdminPlan("REVOKE PRIVILEGE")
           )
         )
       ).toString
@@ -219,9 +212,7 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
       logPlan(
         dbmsPrivilegePlan("RevokeDbmsAction(DENIED)", "ASSIGN ROLE", "reader",
           dbmsPrivilegePlan("RevokeDbmsAction(GRANTED)", "ASSIGN ROLE", "reader",
-            helperPlan("AssertValidRevoke", Seq(DbmsAction("ASSIGN ROLE"), rolePrivilegeArg("reader")),
-              assertDbmsAdminPlan("REVOKE PRIVILEGE")
-            )
+            assertDbmsAdminPlan("REVOKE PRIVILEGE")
           )
         )
       ).toString
@@ -273,9 +264,7 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
       logPlan(
         dbmsPrivilegePlan("RevokeDbmsAction(DENIED)", "REMOVE ROLE", "reader",
           dbmsPrivilegePlan("RevokeDbmsAction(GRANTED)", "REMOVE ROLE", "reader",
-            helperPlan("AssertValidRevoke", Seq(DbmsAction("REMOVE ROLE"), rolePrivilegeArg("reader")),
-              assertDbmsAdminPlan("REVOKE PRIVILEGE")
-            )
+            assertDbmsAdminPlan("REVOKE PRIVILEGE")
           )
         )
       ).toString
@@ -327,9 +316,7 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
       logPlan(
         dbmsPrivilegePlan("RevokeDbmsAction(DENIED)", "ROLE MANAGEMENT", "reader",
           dbmsPrivilegePlan("RevokeDbmsAction(GRANTED)", "ROLE MANAGEMENT", "reader",
-            helperPlan("AssertValidRevoke", Seq(DbmsAction("ROLE MANAGEMENT"), rolePrivilegeArg("reader")),
-              assertDbmsAdminPlan("REVOKE PRIVILEGE")
-            )
+            assertDbmsAdminPlan("REVOKE PRIVILEGE")
           )
         )
       ).toString
@@ -383,9 +370,7 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
       logPlan(
         dbmsPrivilegePlan("RevokeDbmsAction(DENIED)", "SHOW USER", "reader",
           dbmsPrivilegePlan("RevokeDbmsAction(GRANTED)", "SHOW USER", "reader",
-            helperPlan("AssertValidRevoke", Seq(DbmsAction("SHOW USER"), rolePrivilegeArg("reader")),
-              assertDbmsAdminPlan("REVOKE PRIVILEGE")
-            )
+            assertDbmsAdminPlan("REVOKE PRIVILEGE")
           )
         )
       ).toString
@@ -437,9 +422,7 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
       logPlan(
         dbmsPrivilegePlan("RevokeDbmsAction(DENIED)", "CREATE USER", "reader",
           dbmsPrivilegePlan("RevokeDbmsAction(GRANTED)", "CREATE USER", "reader",
-            helperPlan("AssertValidRevoke", Seq(DbmsAction("CREATE USER"), rolePrivilegeArg("reader")),
-              assertDbmsAdminPlan("REVOKE PRIVILEGE")
-            )
+            assertDbmsAdminPlan("REVOKE PRIVILEGE")
           )
         )
       ).toString
@@ -491,9 +474,7 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
       logPlan(
         dbmsPrivilegePlan("RevokeDbmsAction(DENIED)", "DROP USER", "reader",
           dbmsPrivilegePlan("RevokeDbmsAction(GRANTED)", "DROP USER", "reader",
-            helperPlan("AssertValidRevoke", Seq(DbmsAction("DROP USER"), rolePrivilegeArg("reader")),
-              assertDbmsAdminPlan("REVOKE PRIVILEGE")
-            )
+            assertDbmsAdminPlan("REVOKE PRIVILEGE")
           )
         )
       ).toString
@@ -545,9 +526,7 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
       logPlan(
         dbmsPrivilegePlan("RevokeDbmsAction(DENIED)", "ALTER USER", "reader",
           dbmsPrivilegePlan("RevokeDbmsAction(GRANTED)", "ALTER USER", "reader",
-            helperPlan("AssertValidRevoke", Seq(DbmsAction("ALTER USER"), rolePrivilegeArg("reader")),
-              assertDbmsAdminPlan("REVOKE PRIVILEGE")
-            )
+            assertDbmsAdminPlan("REVOKE PRIVILEGE")
           )
         )
       ).toString
@@ -599,9 +578,7 @@ class DbmsPrivilegeAdministrationCommandPlannerTest extends AdministrationComman
       logPlan(
         dbmsPrivilegePlan("RevokeDbmsAction(DENIED)", "USER MANAGEMENT", "reader",
           dbmsPrivilegePlan("RevokeDbmsAction(GRANTED)", "USER MANAGEMENT", "reader",
-            helperPlan("AssertValidRevoke", Seq(DbmsAction("USER MANAGEMENT"), rolePrivilegeArg("reader")),
-              assertDbmsAdminPlan("REVOKE PRIVILEGE")
-            )
+            assertDbmsAdminPlan("REVOKE PRIVILEGE")
           )
         )
       ).toString

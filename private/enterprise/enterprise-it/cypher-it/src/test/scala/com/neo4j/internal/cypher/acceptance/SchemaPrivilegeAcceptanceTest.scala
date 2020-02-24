@@ -136,6 +136,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     // GIVEN
     setup()
     execute("CREATE ROLE role")
+    execute("GRANT INDEX ON DATABASE * TO role")
     execute("GRANT CREATE INDEX ON DATABASE * TO role")
     execute("DENY CREATE INDEX ON DATABASE * TO role")
 
@@ -143,7 +144,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     execute("REVOKE CREATE INDEX ON DATABASE * FROM role")
 
     // THEN
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set.empty)
+    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(indexManagement().role("role").map))
   }
 
   test("should fail to grant create index to non-existing role") {
@@ -208,6 +209,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     setup()
     execute("CREATE DATABASE foo")
     execute("CREATE ROLE role")
+    execute("GRANT INDEX ON DATABASE foo TO role")
     execute("GRANT DROP INDEX ON DATABASE foo TO role")
     execute("DENY DROP INDEX ON DATABASE foo TO role")
 
@@ -215,7 +217,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     execute("REVOKE DROP INDEX ON DATABASE foo FROM role")
 
     // THEN
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set.empty)
+    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(indexManagement().database("foo").role("role").map))
   }
 
   test("should fail to deny drop index to non-existing role") {
@@ -281,6 +283,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     execute("CREATE ROLE role")
     execute("GRANT CREATE INDEX ON DEFAULT DATABASE TO role")
     execute("DENY DROP INDEX ON DEFAULT DATABASE TO role")
+    execute("GRANT ALL ON DEFAULT DATABASE TO role")
     execute("GRANT INDEX ON DEFAULT DATABASE TO role")
     execute("DENY INDEX ON DEFAULT DATABASE TO role")
 
@@ -290,7 +293,8 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
       createIndex().database(DEFAULT).role("role").map,
-      dropIndex(DENIED).database(DEFAULT).role("role").map
+      dropIndex(DENIED).database(DEFAULT).role("role").map,
+      allDatabasePrivilege().database(DEFAULT).role("role").map
     ))
   }
 
@@ -375,6 +379,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     // GIVEN
     setup()
     execute("CREATE ROLE role")
+    execute("GRANT CONSTRAINT ON DATABASE * TO role")
     execute("GRANT CREATE CONSTRAINT ON DATABASE * TO role")
     execute("DENY CREATE CONSTRAINT ON DATABASE * TO role")
 
@@ -382,7 +387,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     execute("REVOKE CREATE CONSTRAINT ON DATABASE * FROM role")
 
     // THEN
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set.empty)
+    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(constraintManagement().role("role").map))
   }
 
   test("should fail to grant create constraint to non-existing role") {
@@ -447,6 +452,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     setup()
     execute("CREATE DATABASE foo")
     execute("CREATE ROLE role")
+    execute("GRANT CONSTRAINT ON DATABASE foo TO role")
     execute("GRANT DROP CONSTRAINT ON DATABASE foo TO role")
     execute("DENY DROP CONSTRAINT ON DATABASE foo TO role")
 
@@ -454,7 +460,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     execute("REVOKE DROP CONSTRAINT ON DATABASE foo FROM role")
 
     // THEN
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set.empty)
+    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(constraintManagement().database("foo").role("role").map))
   }
 
   test("should fail to deny drop constraint to non-existing role") {
@@ -520,6 +526,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     execute("CREATE ROLE role")
     execute("GRANT CREATE CONSTRAINT ON DEFAULT DATABASE TO role")
     execute("DENY DROP CONSTRAINT ON DEFAULT DATABASE TO role")
+    execute("GRANT ALL ON DEFAULT DATABASE TO role")
     execute("GRANT CONSTRAINT ON DEFAULT DATABASE TO role")
     execute("DENY CONSTRAINT ON DEFAULT DATABASE TO role")
 
@@ -529,7 +536,8 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     // THEN
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
       createConstraint().database(DEFAULT).role("role").map,
-      dropConstraint(DENIED).database(DEFAULT).role("role").map
+      dropConstraint(DENIED).database(DEFAULT).role("role").map,
+      allDatabasePrivilege().database(DEFAULT).role("role").map
     ))
   }
 
@@ -614,6 +622,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     // GIVEN
     setup()
     execute("CREATE ROLE role")
+    execute("GRANT NAME ON DATABASE * TO role")
     execute("GRANT CREATE NEW NODE LABEL ON DATABASE * TO role")
     execute("DENY CREATE NEW LABEL ON DATABASE * TO role")
 
@@ -621,7 +630,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     execute("REVOKE CREATE NEW LABEL ON DATABASE * FROM role")
 
     // THEN
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set.empty)
+    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(nameManagement().role("role").map))
   }
 
   test("should fail to grant create label to non-existing role") {
@@ -685,6 +694,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     // GIVEN
     setup()
     execute("CREATE ROLE role")
+    execute("GRANT NAME ON DATABASE * TO role")
     execute("GRANT CREATE NEW RELATIONSHIP TYPE ON DATABASE * TO role")
     execute("DENY CREATE NEW TYPE ON DATABASE * TO role")
 
@@ -692,7 +702,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     execute("REVOKE CREATE NEW TYPE ON DATABASE * FROM role")
 
     // THEN
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set.empty)
+    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(nameManagement().role("role").map))
   }
 
   test("should fail to deny create type to non-existing role") {
@@ -756,6 +766,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     // GIVEN
     setup()
     execute("CREATE ROLE role")
+    execute("GRANT NAME ON DATABASE * TO role")
     execute("GRANT CREATE NEW PROPERTY NAME ON DATABASE * TO role")
     execute("DENY CREATE NEW NAME ON DATABASE * TO role")
 
@@ -763,7 +774,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     execute("REVOKE CREATE NEW PROPERTY NAME ON DATABASE * FROM role")
 
     // THEN
-    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set.empty)
+    execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(nameManagement().role("role").map))
   }
 
   test("should do nothing when revoking create property key from non-existing role") {
@@ -828,6 +839,7 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     execute("GRANT CREATE NEW LABEL ON DEFAULT DATABASE TO role")
     execute("DENY CREATE NEW TYPE ON DEFAULT DATABASE TO role")
     execute("GRANT CREATE NEW PROPERTY NAME ON DEFAULT DATABASE TO role")
+    execute("GRANT ALL ON DEFAULT DATABASE TO role")
     execute("GRANT NAME ON DEFAULT DATABASE TO role")
     execute("DENY NAME ON DEFAULT DATABASE TO role")
 
@@ -838,7 +850,8 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     execute("SHOW ROLE role PRIVILEGES").toSet should be(Set(
       createNodeLabel().database(DEFAULT).role("role").map,
       createRelationshipType(DENIED).database(DEFAULT).role("role").map,
-      createPropertyKey().database(DEFAULT).role("role").map
+      createPropertyKey().database(DEFAULT).role("role").map,
+      allDatabasePrivilege().database(DEFAULT).role("role").map
     ))
   }
 
@@ -950,6 +963,58 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     ))
   }
 
+  test("should revoke sub-privilege even if all database privilege exists") {
+    // Given
+    setup()
+    execute("CREATE ROLE custom")
+    execute("CREATE DATABASE foo")
+    execute("GRANT ACCESS ON DATABASE foo TO custom")
+    execute("GRANT CREATE INDEX ON DATABASE foo TO custom")
+    execute("GRANT DROP INDEX ON DATABASE foo TO custom")
+    execute("GRANT INDEX ON DATABASE foo TO custom")
+    execute("GRANT CREATE CONSTRAINT ON DATABASE foo TO custom")
+    execute("GRANT DROP CONSTRAINT ON DATABASE foo TO custom")
+    execute("GRANT CONSTRAINT ON DATABASE foo TO custom")
+    execute("GRANT CREATE NEW LABEL ON DATABASE foo TO custom")
+    execute("GRANT CREATE NEW TYPE ON DATABASE foo TO custom")
+    execute("GRANT CREATE NEW PROPERTY NAME ON DATABASE foo TO custom")
+    execute("GRANT NAME ON DATABASE foo TO custom")
+    execute("GRANT ALL DATABASE PRIVILEGES ON DATABASE foo TO custom")
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(
+      access().database("foo").role("custom").map,
+      createIndex().database("foo").role("custom").map,
+      dropIndex().database("foo").role("custom").map,
+      indexManagement().database("foo").role("custom").map,
+      createConstraint().database("foo").role("custom").map,
+      dropConstraint().database("foo").role("custom").map,
+      constraintManagement().database("foo").role("custom").map,
+      createNodeLabel().database("foo").role("custom").map,
+      createRelationshipType().database("foo").role("custom").map,
+      createPropertyKey().database("foo").role("custom").map,
+      nameManagement().database("foo").role("custom").map,
+      allDatabasePrivilege().database("foo").role("custom").map
+    ))
+
+    // When
+    // Now revoke each sub-privilege in turn
+    Seq(
+      "ACCESS",
+      "CREATE INDEX",
+      "DROP INDEX",
+      "INDEX",
+      "CREATE CONSTRAINT",
+      "DROP CONSTRAINT",
+      "CONSTRAINT",
+      "CREATE NEW LABEL",
+      "CREATE NEW TYPE",
+      "CREATE NEW PROPERTY NAME",
+      "NAME"
+    ).foreach(privilege => execute(s"REVOKE $privilege ON DATABASE foo FROM custom"))
+
+    // Then
+    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(allDatabasePrivilege().database("foo").role("custom").map))
+  }
+
   test("should fail to deny all database privilege to non-existing role") {
     // GIVEN
     setup()
@@ -988,96 +1053,6 @@ class SchemaPrivilegeAcceptanceTest extends AdministrationCommandAcceptanceTestB
     // Then
     val expectedWithoutNameManagement = expected.filter(_ ("action") != PrivilegeAction.TOKEN.toString)
     execute("SHOW ROLE custom PRIVILEGES").toSet should be(expectedWithoutNameManagement)
-  }
-
-  test("Should get error when revoking a subset of a compound admin privilege") {
-    // Given
-    setup()
-    execute("CREATE ROLE custom AS COPY OF admin")
-    execute("REVOKE READ {*} ON GRAPH * FROM custom")
-    execute("REVOKE TRAVERSE ON GRAPH * FROM custom")
-    execute("REVOKE WRITE ON GRAPH * FROM custom")
-    execute("REVOKE ACCESS ON DATABASE * FROM custom")
-    execute("REVOKE ALL ON DATABASE * FROM custom")
-    execute("REVOKE NAME ON DATABASE * FROM custom")
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(grantAdmin().role("custom").map, indexManagement().role("custom").map, constraintManagement().role("custom").map))
-
-    // Now try to revoke each sub-privilege (that we have syntax for) in turn
-    //TODO: ADD ANY NEW SUB-PRIVILEGES HERE
-    Seq(
-      ("CREATE ROLE ON DBMS", "CREATE ROLE"),
-      ("DROP ROLE ON DBMS", "DROP ROLE"),
-      ("SHOW ROLE ON DBMS", "SHOW ROLE"),
-      ("ASSIGN ROLE ON DBMS", "ASSIGN ROLE"),
-      ("REMOVE ROLE ON DBMS", "REMOVE ROLE"),
-      ("ROLE MANAGEMENT ON DBMS", "ROLE MANAGEMENT"),
-      ("CREATE USER ON DBMS", "CREATE USER"),
-      ("DROP USER ON DBMS", "DROP USER"),
-      ("SHOW USER ON DBMS", "SHOW USER"),
-      ("ALTER USER ON DBMS", "ALTER USER"),
-      ("USER MANAGEMENT ON DBMS", "USER MANAGEMENT"),
-      ("SHOW TRANSACTION (*) ON DATABASES *", "SHOW TRANSACTION"),
-      ("TERMINATE TRANSACTION (*) ON DATABASES *", "TERMINATE TRANSACTION"),
-      ("TRANSACTION MANAGEMENT ON DATABASES *", "TRANSACTION MANAGEMENT"),
-      ("START ON DATABASES *", "START"),
-      ("STOP ON DATABASES *", "STOP"),
-    ).foreach {
-      case (queryPart, privilege) =>
-        // When && Then
-        the[IllegalStateException] thrownBy {
-          execute(s"REVOKE $queryPart FROM custom")
-        } should have message s"Unsupported to revoke a sub-privilege '$privilege' from a compound privilege 'ALL ADMIN PRIVILEGES', consider using DENY instead."
-    }
-  }
-
-  test("Should get error when revoking a subset of a compound token privilege") {
-    // Given
-    setup()
-    execute("CREATE ROLE custom AS COPY OF publisher")
-    execute("REVOKE READ {*} ON GRAPH * FROM custom")
-    execute("REVOKE TRAVERSE ON GRAPH * FROM custom")
-    execute("REVOKE WRITE ON GRAPH * FROM custom")
-    execute("REVOKE ACCESS ON DATABASE * FROM custom")
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(nameManagement().role("custom").map))
-
-    // Now try to revoke each sub-privilege in turn
-    Seq(
-      "CREATE NEW NODE LABEL",
-      "CREATE NEW RELATIONSHIP TYPE",
-      "CREATE NEW PROPERTY NAME"
-    ).foreach { privilege =>
-      // When && Then
-      the[IllegalStateException] thrownBy {
-        execute(s"REVOKE $privilege ON DATABASE * FROM custom")
-      } should have message s"Unsupported to revoke a sub-privilege '$privilege' from a compound privilege 'NAME MANAGEMENT', consider using DENY instead."
-    }
-  }
-
-  test("Should get error when revoking a subset of a compound index or constraint privilege") {
-    // Given
-    setup()
-    execute("CREATE ROLE custom AS COPY OF architect")
-    execute("REVOKE READ {*} ON GRAPH * FROM custom")
-    execute("REVOKE TRAVERSE ON GRAPH * FROM custom")
-    execute("REVOKE WRITE ON GRAPH * FROM custom")
-    execute("REVOKE ACCESS ON DATABASE * FROM custom")
-    execute("REVOKE NAME MANAGEMENT ON DATABASE * FROM custom")
-    execute("SHOW ROLE custom PRIVILEGES").toSet should be(Set(indexManagement().role("custom").map, constraintManagement().role("custom").map))
-
-    // Now try to revoke each sub-privilege in turn
-    Seq(
-      "CREATE INDEX",
-      "DROP INDEX",
-      "CREATE CONSTRAINT",
-      "DROP CONSTRAINT"
-    ).foreach { privilege =>
-      // When && Then
-      val exception = the[IllegalStateException] thrownBy {
-        execute(s"REVOKE $privilege ON DATABASE * FROM custom")
-      }
-      exception.getMessage should (be(s"Unsupported to revoke a sub-privilege '$privilege' from a compound privilege 'INDEX MANAGEMENT', consider using DENY instead.") or
-        be(s"Unsupported to revoke a sub-privilege '$privilege' from a compound privilege 'CONSTRAINT MANAGEMENT', consider using DENY instead."))
-    }
   }
 
   // Tests for actual behaviour of authorization rules for restricted users based on privileges
