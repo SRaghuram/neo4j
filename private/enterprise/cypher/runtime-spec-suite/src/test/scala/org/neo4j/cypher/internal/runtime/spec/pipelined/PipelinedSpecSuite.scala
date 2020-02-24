@@ -354,7 +354,7 @@ class PipelinedProfileDbHitsTest extends PipelinedDbHitsTestBase(FUSING, PIPELIN
   override protected def canFuseOverPipelines: Boolean = true
 }
 class PipelinedProfileMemoryNoFusingTest extends ProfileMemoryTestBase(NO_FUSING, PIPELINED)
-                                         with ProfilePipelinedMemoryTestBase
+                                         with ProfilePipelinedNoFusingMemoryTestBase
 class PipelinedProfileMemoryTest extends ProfileMemoryTestBase(FUSING, PIPELINED)
                                  with ProfilePipelinedMemoryTestBase
 class PipelinedProfileMemoryTrackingDisabledNoFusingTest extends ProfileMemoryTrackingDisabledTestBase(NO_FUSING, PIPELINED, SIZE_HINT)

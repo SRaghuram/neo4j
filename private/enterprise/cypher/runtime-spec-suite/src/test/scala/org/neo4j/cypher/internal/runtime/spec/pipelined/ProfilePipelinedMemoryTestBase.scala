@@ -46,7 +46,7 @@ trait ProfilePipelinedMemoryTestBase extends ProfileMemoryTestBase[EnterpriseRun
     assertOnMemory(logicalQuery, 4, 1)
   }
 
-  test("should profile memory in morsel buffer") {
+  test("should profile memory in apply buffer") {
     given {
       nodeGraph(SIZE)
     }
@@ -72,6 +72,25 @@ trait ProfilePipelinedMemoryTestBase extends ProfileMemoryTestBase[EnterpriseRun
     val logicalQuery = new LogicalQueryBuilder(this)
       .produceResults("x")
       .optional()
+      .allNodeScan("x")
+      .build()
+
+    // then
+    assertOnMemory(logicalQuery, 3, 1)
+  }
+}
+
+trait ProfilePipelinedNoFusingMemoryTestBase extends ProfilePipelinedMemoryTestBase {
+
+  test("should profile memory in morsel buffer") {
+    given {
+      circleGraph(SIZE)
+    }
+
+    // when
+    val logicalQuery = new LogicalQueryBuilder(this)
+      .produceResults("x")
+      .expandAll("(x)-->(y)")
       .allNodeScan("x")
       .build()
 

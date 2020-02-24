@@ -326,7 +326,7 @@ class PipelineTreeBuilder(breakingPolicy: PipelineBreakingPolicy,
   }
 
   private def outputToBuffer(pipeline: PipelineDefiner, nextPipelineHeadPlan: LogicalPlan): MorselBufferDefiner = {
-    val output = stateDefiner.newBuffer(pipeline.id, pipeline.headPlan.id, slotConfigurations(pipeline.headPlan.id))
+    val output = stateDefiner.newBuffer(pipeline.id, nextPipelineHeadPlan.id, slotConfigurations(pipeline.headPlan.id))
     pipeline.outputDefinition = MorselBufferOutput(output.id, nextPipelineHeadPlan.id)
     output
   }
