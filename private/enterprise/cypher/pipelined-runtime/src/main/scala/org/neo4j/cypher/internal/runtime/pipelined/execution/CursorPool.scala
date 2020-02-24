@@ -8,6 +8,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.execution
 import org.neo4j.cypher.internal.RuntimeResourceLeakException
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
 import org.neo4j.cypher.internal.util.AssertionRunner
+import org.neo4j.internal.helpers.Exceptions
 import org.neo4j.internal.kernel.api.Cursor
 import org.neo4j.internal.kernel.api.CursorFactory
 import org.neo4j.internal.kernel.api.KernelReadTracer
@@ -204,7 +205,7 @@ class CursorPool[CURSOR <: Cursor](cursorFactory: () => CURSOR) extends AutoClos
    * @param to first excluded stack trace frame, counting from the inner most nesting
    */
   private def stackTraceSlice(from: Int, to: Int): Seq[String] = {
-    new Exception().getStackTrace.slice(from, to).map(traceElement => "\tat "+traceElement)
+    Exceptions.getPartialStackTrace(from, to).map(traceElement => "\tat " + traceElement)
   }
 }
 
