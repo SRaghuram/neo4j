@@ -7,7 +7,6 @@ package com.neo4j.metrics.database;
 
 import com.codahale.metrics.MetricRegistry;
 import com.neo4j.metrics.global.MetricsManager;
-import com.neo4j.metrics.output.EventReporter;
 
 import java.util.Optional;
 
@@ -22,7 +21,7 @@ public class DatabaseMetricsExtension implements Lifecycle
     private final ExtensionContext context;
     private final DatabaseMetricsExtensionFactory.Dependencies dependencies;
 
-    DatabaseMetricsExtension( ExtensionContext context, DatabaseMetricsExtensionFactory.Dependencies dependencies )
+    public DatabaseMetricsExtension( ExtensionContext context, DatabaseMetricsExtensionFactory.Dependencies dependencies )
     {
         this.context = context;
         this.dependencies = dependencies;

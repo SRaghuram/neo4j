@@ -9,8 +9,13 @@ import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
 import com.neo4j.kernel.impl.enterprise.configuration.MetricsSettings;
 import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
+import com.neo4j.metrics.database.DatabaseMetricsExtension;
+import com.neo4j.metrics.database.DatabaseMetricsExtensionFactory;
+import com.neo4j.metrics.global.GlobalMetricsExtension;
+import com.neo4j.metrics.global.GlobalMetricsExtensionFactory;
 import com.neo4j.metrics.global.MetricsManager;
 import com.neo4j.metrics.source.db.DatabaseCountMetrics;
+import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import com.neo4j.test.extension.EnterpriseDbmsExtension;
 import org.assertj.core.api.Condition;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,6 +26,8 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.neo4j.dbms.api.DatabaseExistsException;
 import org.neo4j.dbms.api.DatabaseManagementService;
@@ -29,10 +36,12 @@ import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.io.pagecache.tracing.DefaultPageCacheTracer;
+import org.neo4j.kernel.extension.context.ExtensionContext;
 import org.neo4j.kernel.impl.store.stats.StoreEntityCounters;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.CheckPointer;
 import org.neo4j.kernel.impl.transaction.log.checkpoint.SimpleTriggerInfo;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.storageengine.api.TransactionIdStore;
 import org.neo4j.test.TestDatabaseManagementServiceBuilder;
 import org.neo4j.test.extension.ExtensionCallback;
@@ -280,6 +289,62 @@ class DatabaseMetricsExtensionIT
         managementService.shutdownDatabase( "testDb" );
         assertThat( metricsManager.getRegistry().getNames() ).doesNotContain( "neo4j.testdb.check_point.events" );
         managementService.dropDatabase( "testDb" );
+    }
+
+    @Test
+    void ensureGlobalMetricsOutliveDatabaseMetrics()
+    {
+        //Given
+        AtomicBoolean globalMetricsAlive = new AtomicBoolean( true );
+        AtomicInteger databaseMetricsStoppedBeforeGlobal = new AtomicInteger( 0 );
+
+        var gmeSpy = new GlobalMetricsExtensionFactory()
+        {
+            @Override
+            public Lifecycle newInstance( ExtensionContext context, Dependencies dependencies )
+            {
+                return new GlobalMetricsExtension( context, dependencies )
+                {
+                    @Override
+                    public void shutdown()
+                    {
+                        globalMetricsAlive.set( false );
+                        super.shutdown();
+                    }
+                };
+            }
+        };
+
+        var dmeSpy = new DatabaseMetricsExtensionFactory()
+        {
+            @Override
+            public Lifecycle newInstance( ExtensionContext context, Dependencies dependencies )
+            {
+                return new DatabaseMetricsExtension( context, dependencies )
+                {
+                    @Override
+                    public void shutdown()
+                    {
+                        if ( globalMetricsAlive.get() )
+                        {
+                            databaseMetricsStoppedBeforeGlobal.incrementAndGet();
+                        }
+                        super.shutdown();
+                    }
+                };
+            }
+        };
+
+        //When
+        DatabaseManagementService dbms = new TestEnterpriseDatabaseManagementServiceBuilder( directory.homeDir( "life" ) )
+                .removeExtensions( ef -> ef instanceof GlobalMetricsExtensionFactory || ef instanceof DatabaseMetricsExtensionFactory )
+                .addExtension( gmeSpy )
+                .addExtension( dmeSpy )
+                .build();
+        dbms.shutdown();
+
+        //Then
+        assertEquals( 2, databaseMetricsStoppedBeforeGlobal.get() ); // default and system
     }
 
     private void connectTwoNodes()

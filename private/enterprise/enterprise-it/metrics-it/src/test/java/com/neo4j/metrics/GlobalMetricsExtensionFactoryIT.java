@@ -10,9 +10,6 @@ import com.neo4j.kernel.impl.enterprise.configuration.OnlineBackupSettings;
 import com.neo4j.test.TestEnterpriseDatabaseManagementServiceBuilder;
 import com.neo4j.test.extension.EnterpriseDbmsExtension;
 import org.assertj.core.api.Condition;
-import org.assertj.core.data.Index;
-import org.hamcrest.Description;
-import org.hamcrest.TypeSafeMatcher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -22,7 +19,6 @@ import java.lang.management.ManagementFactory;
 import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
-import java.util.function.Predicate;
 import javax.management.MBeanServer;
 
 import org.neo4j.collection.RawIterator;
@@ -135,6 +131,7 @@ class GlobalMetricsExtensionFactoryIT
         DatabaseManagementService managementService = new TestEnterpriseDatabaseManagementServiceBuilder( disabledTracerDb )
                 .setConfig( MetricsSettings.metricsEnabled, true )
                 .setConfig( MetricsSettings.csvEnabled, true )
+                .setConfig( MetricsSettings.jmxEnabled, false )
                 .setConfig( MetricsSettings.csvPath, outputPath.toPath().toAbsolutePath() )
                 .setConfig( GraphDatabaseSettings.tracer, "null" ) // key point!
                 .setConfig( OnlineBackupSettings.online_backup_enabled, false )
