@@ -12,6 +12,7 @@ import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.Cardinalities
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.ProvidedOrders
 import org.neo4j.cypher.internal.rewriting.RewriterStepSequencer
 import org.neo4j.cypher.internal.util.Rewriter
+import org.neo4j.cypher.internal.util.attribution.IdGen
 import org.neo4j.cypher.internal.util.helpers.fixedPoint
 
 /*
@@ -23,16 +24,17 @@ case class PipelinedPlanRewriter(rewriterSequencer: String => RewriterStepSequen
 
   def description: String = "optimize logical plans for pipelined execution using heuristic rewriting"
 
-  def rewrite(cardinalities: Cardinalities, providedOrders: ProvidedOrders, batchSize: Int, rewrittenPlans: RewrittenPlans): AnyRef => AnyRef = {
+  def rewrite(cardinalities: Cardinalities, providedOrders: ProvidedOrders, idGen: IdGen, batchSize: Int, rewrittenPlans: RewrittenPlans): AnyRef => AnyRef = {
     fixedPoint(rewriterSequencer("PipelinedPlanRewriter")(
       combineCartesianProductOfMultipleIndexSeeks(cardinalities, providedOrders, rewrittenPlans),
+      semiApplyToLimitApply(cardinalities, providedOrders, idGen),
       noopRewriter // This is only needed to make rewriterSequencer happy when we have only a single rewriter enabled
       ).rewriter)
   }
 
   def apply(query: LogicalQuery, batchSize: Int, rewrittenPlans: RewrittenPlans): LogicalPlan = {
     val inputPlan = query.logicalPlan
-    val rewrittenPlan = inputPlan.endoRewrite(rewrite(query.cardinalities, query.providedOrders, batchSize, rewrittenPlans))
+    val rewrittenPlan = inputPlan.endoRewrite(rewrite(query.cardinalities, query.providedOrders, query.idGen, batchSize, rewrittenPlans))
     rewrittenPlan
   }
 }

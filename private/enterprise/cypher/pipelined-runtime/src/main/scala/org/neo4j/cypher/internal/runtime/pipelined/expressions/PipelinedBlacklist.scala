@@ -7,10 +7,13 @@ package org.neo4j.cypher.internal.runtime.pipelined.expressions
 
 import org.neo4j.cypher.internal.expressions.FunctionInvocation
 import org.neo4j.cypher.internal.expressions.functions
+import org.neo4j.cypher.internal.logical.plans.Aggregation
 import org.neo4j.cypher.internal.logical.plans.CartesianProduct
 import org.neo4j.cypher.internal.logical.plans.LogicalPlan
 import org.neo4j.cypher.internal.logical.plans.NestedPlanExpression
+import org.neo4j.cypher.internal.logical.plans.OrderedAggregation
 import org.neo4j.cypher.internal.logical.plans.ResolvedFunctionInvocation
+import org.neo4j.cypher.internal.logical.plans.SemiApply
 import org.neo4j.cypher.internal.planner.spi.PlanningAttributes.ProvidedOrders
 import org.neo4j.exceptions.CantCompileQueryException
 
@@ -35,9 +38,16 @@ object PipelinedBlacklist {
 
         case c: CartesianProduct if providedOrders.hasProvidedOrder(c.left.id) =>
           _ + "CartesianProduct if the LHS has a provided order"
+
+        case s: SemiApply if hasAggregation(s.right) =>
+          _ + "Aggregation on RHS of SemiApply"
       }
     if (unsupport.nonEmpty) {
       throw new CantCompileQueryException(s"Pipelined does not yet support ${unsupport.mkString("`", "`, `", "`")}, use another runtime.")
     }
+  }
+
+  private def hasAggregation(plan: LogicalPlan): Boolean = plan.treeExists {
+    case _: Aggregation | _: OrderedAggregation => true
   }
 }

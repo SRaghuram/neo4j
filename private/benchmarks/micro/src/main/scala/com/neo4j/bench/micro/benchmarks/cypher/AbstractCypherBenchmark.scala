@@ -11,6 +11,7 @@ import java.util.function.LongSupplier
 
 import com.neo4j.bench.micro.benchmarks.BaseDatabaseBenchmark
 import com.neo4j.bench.micro.data.DataGeneratorConfig
+import com.neo4j.bench.micro.data.Plans
 import com.neo4j.bench.micro.data.PropertyDefinition
 import com.neo4j.bench.micro.data.RelationshipDefinition
 import org.neo4j.cypher.CypherRuntimeOption
@@ -270,7 +271,8 @@ abstract class AbstractCypherBenchmark extends BaseDatabaseBenchmark {
       cardinalities,
       providedOrders,
       hasLoadCSV = false,
-      Option.empty)
+      Option.empty,
+      Plans.IdGen)
   }
 
   private def txContext(tx: InternalTransaction): TransactionalContext = {

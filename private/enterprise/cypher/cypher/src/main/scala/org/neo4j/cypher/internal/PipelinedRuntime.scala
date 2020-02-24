@@ -332,6 +332,7 @@ class PipelinedRuntime private(parallelExecution: Boolean,
       maybePipelineInfo.toSeq
     }
 
+    // TODO remove this
     override def mapPlan(plan: LogicalPlan): LogicalPlan = {
       rewrittenPlans.getOrElse(plan.id, plan)
     }

@@ -72,6 +72,7 @@ import org.neo4j.cypher.internal.runtime.spec.tests.PruningVarLengthExpandTestBa
 import org.neo4j.cypher.internal.runtime.spec.tests.ReactiveResultStressTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ReactiveResultTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.RelationshipCountFromCountStoreTestBase
+import org.neo4j.cypher.internal.runtime.spec.tests.SemiApplyTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.ShortestPathTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.SkipTestBase
 import org.neo4j.cypher.internal.runtime.spec.tests.SlottedPipeFallbackTestBase
@@ -289,6 +290,9 @@ class PipelinedShortestPathNoFusingTest extends ShortestPathTestBase(NO_FUSING, 
 // UNION
 class PipelinedUnionTest extends UnionTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 class PipelinedUnionNoFusingTest extends UnionTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+
+// SEMI APPLY
+class PipelinedSemiApplyNoFusingTest extends SemiApplyTestBase(ENTERPRISE.NO_FUSING, PIPELINED, SIZE_HINT)
 
 // GENERAL
 class PipelinedMiscTest extends MiscTestBase(FUSING, PIPELINED) with PipelinedSpecSuite
