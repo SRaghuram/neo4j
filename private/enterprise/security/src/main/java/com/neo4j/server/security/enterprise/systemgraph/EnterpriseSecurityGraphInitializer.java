@@ -10,8 +10,12 @@ import com.neo4j.server.security.enterprise.auth.Resource;
 import com.neo4j.server.security.enterprise.auth.RoleRecord;
 import com.neo4j.server.security.enterprise.auth.RoleRepository;
 import com.neo4j.server.security.enterprise.auth.plugin.api.PredefinedRoles;
+import com.neo4j.server.security.enterprise.configuration.SecuritySettings;
 import org.apache.shiro.authz.SimpleRole;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -19,6 +23,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.neo4j.configuration.Config;
 import org.neo4j.cypher.internal.security.SecureHasher;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.dbms.database.SystemGraphInitializer;
@@ -30,6 +35,7 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.ResourceIterator;
+import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.kernel.api.security.PrivilegeAction;
 import org.neo4j.kernel.api.exceptions.InvalidArgumentsException;
@@ -45,6 +51,7 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
 {
     private final RoleRepository migrationRoleRepository;
     private final UserRepository defaultAdminRepository;
+    private final Config config;
     private Label ROLE_LABEL = Label.label( "Role" );
     private Label PRIVILEGE_LABEL = Label.label( "Privilege" );
 
@@ -72,12 +79,14 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
 
     public EnterpriseSecurityGraphInitializer( DatabaseManager<?> databaseManager, SystemGraphInitializer systemGraphInitializer, Log log,
                                                UserRepository migrationUserRepository, RoleRepository migrationRoleRepository,
-                                               UserRepository initialUserRepository, UserRepository defaultAdminRepository, SecureHasher secureHasher )
+                                               UserRepository initialUserRepository, UserRepository defaultAdminRepository, SecureHasher secureHasher,
+                                               Config config )
     {
         super( databaseManager, systemGraphInitializer, log, migrationUserRepository, initialUserRepository,
                 secureHasher );
         this.migrationRoleRepository = migrationRoleRepository;
         this.defaultAdminRepository = defaultAdminRepository;
+        this.config = config;
     }
 
     @Override
@@ -115,12 +124,70 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
 
             // If no users or roles were migrated we setup the
             // default predefined roles and user and make sure we have an admin user
-            ensureDefaultUserAndRoles( tx );
+            if ( ensureDefaultUserAndRoles( tx ) && config.isExplicitlySet( SecuritySettings.security_initialization_file ) )
+            {
+                doCustomSecurityInitialization( tx );
+            }
 
             // migrate schema privilege to index + constraint privileges and write to have graph resource
             migrateSystemGraph( tx );
 
             tx.commit();
+        }
+    }
+
+    private void doCustomSecurityInitialization( Transaction tx ) throws IOException
+    {
+        // this is first startup and custom initialization specified
+        File initFile = config.get( SecuritySettings.security_initialization_file ).toFile();
+        BufferedReader reader = new BufferedReader( new FileReader( initFile ) );
+        String[] commands = reader.lines().filter( line -> !line.matches( "^\\s*//" ) ).collect( Collectors.joining( "\n" ) ).split( ";\\s*\n" );
+        reader.close();
+        for ( String command : commands )
+        {
+            if ( commandIsValid( command ) )
+            {
+                log.info( "Executing security initialization command: " + command );
+                Result result = tx.execute( command );
+                result.accept( new LoggingResultVisitor( result.columns() ) );
+                result.close();
+            }
+            else
+            {
+                log.warn( "Ignoring invalid security initialization command: " + command );
+            }
+        }
+    }
+
+    private boolean commandIsValid( String command )
+    {
+        return !command.matches( "^\\s*.*//" ) // Ignore comments
+                && command.replaceAll( "\n", " " ).matches( "^\\s*\\w+.*" ); // Ignore blank lines
+    }
+
+    private class LoggingResultVisitor implements Result.ResultVisitor<RuntimeException>
+    {
+        private List<String> columns;
+
+        private LoggingResultVisitor( List<String> columns )
+        {
+            this.columns = columns;
+        }
+
+        @Override
+        public boolean visit( Result.ResultRow row )
+        {
+            StringBuilder sb = new StringBuilder();
+            for ( String column : columns )
+            {
+                if ( sb.length() > 0 )
+                {
+                    sb.append( ", " );
+                }
+                sb.append( column ).append( ":" ).append( row.get( column ).toString() );
+            }
+            log.info( "Result: " + sb.toString() );
+            return true;
         }
     }
 
@@ -152,16 +219,19 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
         }
     }
 
-    private void ensureDefaultUserAndRoles( Transaction tx ) throws Exception
+    private boolean ensureDefaultUserAndRoles( Transaction tx ) throws Exception
     {
+        boolean initializing = false;
         if ( userNodes.isEmpty() )
         {
+            initializing = true;
             // This happens at startup of a new instance
             addDefaultUser( tx );
             ensureDefaultRolesAndPrivileges( tx, INITIAL_USER_NAME );
         }
         else if ( roleNodes.isEmpty() )
         {
+            initializing = true;
             // This will be the case when upgrading from community to enterprise system-graph
             String newAdmin = ensureAdmin();
             ensureDefaultRolesAndPrivileges( tx, newAdmin );
@@ -169,6 +239,7 @@ public class EnterpriseSecurityGraphInitializer extends UserSecurityGraphInitial
 
         // If applicable, give the default user the password set by set-initial-password command
         setInitialPassword();
+        return initializing;
     }
 
     /* Tries to find an admin candidate among the existing users */

@@ -277,7 +277,8 @@ public class EnterpriseSecurityModule extends SecurityModule
                                                        migrationRoleRepository,
                                                        initialUserRepository,
                                                        defaultAdminRepository,
-                                                       secureHasher );
+                                                       secureHasher,
+                                                       config );
     }
 
     private SystemGraphRealm createSystemGraphRealm( Config config, SecurityLog securityLog )

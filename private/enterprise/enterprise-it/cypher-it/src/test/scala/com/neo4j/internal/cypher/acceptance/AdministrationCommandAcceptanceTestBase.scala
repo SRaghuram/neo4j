@@ -345,7 +345,8 @@ abstract class AdministrationCommandAcceptanceTestBase extends ExecutionEngineFu
       new InMemoryRoleRepository,
       new InMemoryUserRepository,
       new InMemoryUserRepository,
-      new SecureHasher)
+      new SecureHasher,
+      config)
     securityGraphInitializer.initializeSecurityGraph()
     selectDatabase(SYSTEM_DATABASE_NAME)
   }

@@ -21,6 +21,7 @@ import org.neo4j.string.SecureString;
 
 import static java.time.Duration.ofMinutes;
 import static java.time.Duration.ofSeconds;
+import static org.neo4j.configuration.GraphDatabaseSettings.neo4j_home;
 import static org.neo4j.configuration.SettingConstraints.min;
 import static org.neo4j.configuration.SettingConstraints.range;
 import static org.neo4j.configuration.SettingImpl.newBuilder;
@@ -275,6 +276,11 @@ public class SecuritySettings implements SettingsDeclaration
             "system account." )
     public static final Setting<Boolean> ldap_authorization_connection_pooling =
             newBuilder( "unsupported.dbms.security.ldap.authorization.connection_pooling", BOOL, true ).build();
+
+    @Internal
+    @Description( "" )
+    public static final Setting<Path> security_initialization_file =
+            newBuilder( "unsupported.dbms.security.initialization_file", PATH, null ).immutable().setDependency( neo4j_home ).build();
 
     //=========================================================================
     // Property level security settings

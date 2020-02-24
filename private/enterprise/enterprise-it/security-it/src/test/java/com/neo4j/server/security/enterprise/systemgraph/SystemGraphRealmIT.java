@@ -478,7 +478,7 @@ class SystemGraphRealmIT
         EnterpriseSystemGraphInitializer systemGraphInitializer = new EnterpriseSystemGraphInitializer( dbManager, config );
         EnterpriseSecurityGraphInitializer securityGraphInitializer =
                 new EnterpriseSecurityGraphInitializer( dbManager, systemGraphInitializer, securityLog, oldUsers, oldRoles, initialPassword, defaultAdmin,
-                        secureHasher );
+                        secureHasher, config );
 
         RateLimitedAuthenticationStrategy authenticationStrategy = new RateLimitedAuthenticationStrategy( Clock.systemUTC(), config );
         SystemGraphRealm realm = new SystemGraphRealm( securityGraphInitializer, realmHelper, authenticationStrategy, true, true );

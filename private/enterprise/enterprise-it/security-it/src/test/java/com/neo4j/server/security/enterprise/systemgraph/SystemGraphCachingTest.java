@@ -70,7 +70,7 @@ class SystemGraphCachingTest
         EnterpriseSecurityGraphInitializer securityGraphInitializer =
                 new EnterpriseSecurityGraphInitializer( databaseManager, systemGraphInitializer, securityLog, new InMemoryUserRepository(),
                                                         new InMemoryRoleRepository(), new InMemoryUserRepository(), new InMemoryUserRepository(),
-                                                        secureHasher );
+                                                        secureHasher, Config.emptyBuilder().build() );
 
         cachingRealmHelper = new TestCachingRealmHelper( databaseManager );
         realm = new SystemGraphRealm( securityGraphInitializer, cachingRealmHelper,
