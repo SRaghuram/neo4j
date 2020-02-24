@@ -10,6 +10,7 @@ import com.neo4j.causalclustering.discovery.CoreServerInfo;
 import com.neo4j.causalclustering.discovery.ReadReplicaInfo;
 import com.neo4j.causalclustering.discovery.TopologyService;
 import com.neo4j.causalclustering.routing.load_balancing.LeaderService;
+import com.neo4j.causalclustering.routing.load_balancing.plugins.server_policies.AddressCollector;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -40,15 +41,13 @@ public class GetRoutingTableProcedureForSingleDC extends BaseGetRoutingTableProc
 {
     private static final String DESCRIPTION = "Returns cluster endpoints and their capabilities for single data center setup.";
 
-    private final TopologyService topologyService;
-    private final LeaderService leaderService;
+    private final AddressCollector addressCollector;
 
     public GetRoutingTableProcedureForSingleDC( List<String> namespace, TopologyService topologyService, LeaderService leaderService,
             DatabaseManager<?> databaseManager, Config config, LogProvider logProvider )
     {
         super( namespace, databaseManager, config, logProvider );
-        this.topologyService = topologyService;
-        this.leaderService = leaderService;
+        this.addressCollector = new AddressCollector( topologyService, leaderService, config, logProvider.getLog( getClass() ) );
     }
 
     @Override
@@ -60,75 +59,6 @@ public class GetRoutingTableProcedureForSingleDC extends BaseGetRoutingTableProc
     @Override
     protected RoutingResult invoke( NamedDatabaseId namedDatabaseId, MapValue routingContext )
     {
-        var routeEndpoints = routeEndpoints( namedDatabaseId );
-        var writeEndpoints = writeEndpoints( namedDatabaseId );
-        var readEndpoints = readEndpoints( namedDatabaseId );
-
-        var timeToLiveMillis = config.get( routing_ttl ).toMillis();
-
-        return new RoutingResult( routeEndpoints, writeEndpoints, readEndpoints, timeToLiveMillis );
-    }
-
-    private List<SocketAddress> routeEndpoints( NamedDatabaseId namedDatabaseId )
-    {
-        var routers = coreServersFor( namedDatabaseId )
-                .stream()
-                .map( ClientConnector::boltAddress )
-                .collect( toList() );
-
-        Collections.shuffle( routers );
-        return routers;
-    }
-
-    private List<SocketAddress> writeEndpoints( NamedDatabaseId namedDatabaseId )
-    {
-        var optionalLeaderAddress = leaderService.getLeaderBoltAddress( namedDatabaseId );
-        if ( optionalLeaderAddress.isEmpty() )
-        {
-            log.debug( "No leader server found. This can happen during a leader switch. No write end points available" );
-        }
-        return optionalLeaderAddress.stream().collect( toList() );
-    }
-
-    private List<SocketAddress> readEndpoints( NamedDatabaseId namedDatabaseId )
-    {
-        var readReplicas = readReplicasFor( namedDatabaseId )
-                .stream()
-                .map( ClientConnector::boltAddress )
-                .collect( toList() );
-
-        var allowReadsOnFollowers = readReplicas.isEmpty() || config.get( cluster_allow_reads_on_followers );
-        var coreReadEndPoints = allowReadsOnFollowers ? coreReadEndPoints( namedDatabaseId ) : Stream.<SocketAddress>empty();
-        var readEndPoints = Stream.concat( readReplicas.stream(), coreReadEndPoints ).collect( toList() );
-        Collections.shuffle( readEndPoints );
-        return readEndPoints;
-    }
-
-    private Stream<SocketAddress> coreReadEndPoints( NamedDatabaseId namedDatabaseId )
-    {
-        var optionalLeaderAddress = leaderService.getLeaderBoltAddress( namedDatabaseId );
-        var coreServerInfos = coreServersFor( namedDatabaseId );
-        var coreAddresses = coreServerInfos.stream().map( ClientConnector::boltAddress );
-
-        // if the leader is present and it is not alone filter it out from the read end points
-        if ( optionalLeaderAddress.isPresent() && coreServerInfos.size() > 1 )
-        {
-            var leaderAddress = optionalLeaderAddress.get();
-            return coreAddresses.filter( address -> !leaderAddress.equals( address ) );
-        }
-
-        // if there is only the leader return it as read end point
-        // or if we cannot locate the leader return all cores as read end points
-        return coreAddresses;
-    }
-
-    private Collection<CoreServerInfo> coreServersFor( NamedDatabaseId namedDatabaseId )
-    {
-        return topologyService.coreTopologyForDatabase( namedDatabaseId ).members().values();
-    }
-
-    private Collection<ReadReplicaInfo> readReplicasFor( NamedDatabaseId namedDatabaseId )
-    {
-        return topologyService.readReplicaTopologyForDatabase( namedDatabaseId ).members().values();
+        return addressCollector.createRoutingResult( namedDatabaseId );
     }
 }
