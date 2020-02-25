@@ -117,7 +117,7 @@ public class NativeAuthIT
             try ( Session session = driver.session( forDatabase( SYSTEM_DATABASE_NAME ) ) )
             {
                 List<Record> records = session.run( "SHOW ROLE fooRole PRIVILEGES" ).list();
-                assertThat( "Should have the right number of underlying privileges", records.size(), equalTo( 5 ) );
+                assertThat( "Should have the right number of underlying privileges", records.size(), equalTo( 4 ) );
                 List<Record> grants = records.stream().filter( r -> r.asMap().get( "resource" ).equals( "property(foo)" ) ).collect( Collectors.toList() );
                 assertThat( "Should have read access to nodes on all databases", grants.size(), equalTo( 1 ) );
             }
@@ -169,7 +169,7 @@ public class NativeAuthIT
             try ( Session session = driver.session( forDatabase( SYSTEM_DATABASE_NAME ) ) )
             {
                 List<Record> records = session.run( "SHOW ROLE custom PRIVILEGES" ).list();
-                assertThat( "Should have the right number of underlying privileges", records.size(), equalTo( 7 ) );
+                assertThat( "Should have the right number of underlying privileges", records.size(), equalTo( 6 ) );
                 List<Record> grants = records.stream().filter( r -> r.asMap().get( "resource" ).equals( "property(prop1)" ) ).collect( Collectors.toList() );
                 assertThat( "Should have read access to nodes on all databases", grants.size(), equalTo( 1 ) );
             }
@@ -224,7 +224,7 @@ public class NativeAuthIT
             try ( Session session = driver.session( forDatabase( SYSTEM_DATABASE_NAME ) ) )
             {
                 List<Record> records = session.run( "SHOW ROLE role PRIVILEGES" ).list();
-                assertThat( "Should have the right number of underlying privileges", records.size(), equalTo( 8 ) );
+                assertThat( "Should have the right number of underlying privileges", records.size(), equalTo( 6 ) );
                 List<Record> grants = records.stream().filter( r -> {
                     Map<String, Object> m = r.asMap();
                     return m.get( "access" ).equals( "DENIED" ) &&

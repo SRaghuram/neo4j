@@ -326,7 +326,7 @@ class BackwardsCompatibilityAcceptanceTest extends ExecutionEngineFunSuite with 
     val exception_41 = the[InvalidArgumentsException] thrownBy {
       executeSingle("DENY INDEX ON DEFAULT DATABASE TO role")
     }
-    exception_41.getMessage should include("Failed to deny access privilege to role 'role': Role 'role' does not exist.")
+    exception_41.getMessage should include("Failed to deny index privilege to role 'role': Role 'role' does not exist.")
   }
 
   test("revoke DEFAULT DATABASE is not supported in 3.5 or 4.0") {
