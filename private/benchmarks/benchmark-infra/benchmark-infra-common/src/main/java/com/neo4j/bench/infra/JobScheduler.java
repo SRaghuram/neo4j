@@ -31,10 +31,10 @@ public interface JobScheduler
      * @param workerArtifactUri URI to worker artifact
      * @param baseArtifactUri URI to workspace base
      * @param jobName human readable job name
-     * @param additionalParameters additional parameters passed to the job
+     * @param jobParameters name of the job parameters json file
      * @return ID of scheduled job
      */
-    JobId schedule( URI workerArtifactUri, URI baseArtifactUri, String jobName, Map<String, String> additionalParameters );
+    JobId schedule( URI workerArtifactUri, URI baseArtifactUri, String jobName, String jobParameters );
 
     /**
      * Fetches status of scheduled job

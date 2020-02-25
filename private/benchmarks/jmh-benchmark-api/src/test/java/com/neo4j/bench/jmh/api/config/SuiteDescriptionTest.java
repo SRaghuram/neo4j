@@ -21,6 +21,7 @@ import static com.neo4j.bench.jmh.api.config.Validation.ValidationError.CONFIGUR
 import static com.neo4j.bench.jmh.api.config.Validation.ValidationError.PARAM_OF_ENABLED_BENCHMARK_CONFIGURED_WITH_NO_VALUES;
 import static java.util.Collections.singleton;
 import static java.util.Collections.singletonMap;
+import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -120,7 +121,7 @@ class SuiteDescriptionTest extends BenchmarksFinderFixture
 
         assertEquals(
                 suiteDescription.explodeEnabledBenchmarks(),
-                partitions.stream().flatMap( partition -> partition.explodeEnabledBenchmarks().stream() ).collect( Collectors.toList() )
+                partitions.stream().flatMap( partition -> partition.explodeEnabledBenchmarks().stream() ).collect( toList() )
         );
     }
 }

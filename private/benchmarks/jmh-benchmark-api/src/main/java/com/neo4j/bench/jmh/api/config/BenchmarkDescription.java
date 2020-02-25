@@ -25,7 +25,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import static com.google.common.collect.Lists.newArrayList;
 import static com.google.common.collect.Sets.newHashSet;
@@ -43,6 +42,12 @@ import static java.util.stream.Collectors.toSet;
 public class BenchmarkDescription
 {
 
+    /**
+     * Combines BenchmarkDescriptions with the same className into a single BenchmarkDescription.
+     * Reverse operation of {@link BenchmarkDescription#explode()}
+     * @param benchmarkDescriptions BenchmarkDescriptions to implode
+     * @return imploded BenchmarkDescriptions
+     */
     static List<BenchmarkDescription> implode( Set<BenchmarkDescription> benchmarkDescriptions )
     {
         Map<String,List<BenchmarkDescription>> descriptionsByName =
@@ -50,42 +55,50 @@ public class BenchmarkDescription
 
         return descriptionsByName.values()
                                  .stream()
-                                 .map( group ->
-                                       {
+                                 .map( BenchmarkDescription::implodeBenchmarkDescription )
+                                 .collect( toList() );
+    }
 
-                                           Map<String,BenchmarkMethodDescription> implodedMethods = group.stream()
-                                                                                                         .flatMap( bd -> bd.methods().stream() )
-                                                                                                         .collect( toMap(
-                                                                                                                 BenchmarkMethodDescription::name,
-                                                                                                                 method -> method,
-                                                                                                                 ( method1, method2 ) -> method1
-                                                                                                         ) );
+    /**
+     * Implodes BenchmarkDescriptions with the same `className`
+     * @param group List of BenchmarkDescription with the same className
+     * @return imploded BenchmarkDescription
+     */
+    private static BenchmarkDescription implodeBenchmarkDescription( List<BenchmarkDescription> group )
+    {
+        Map<String,BenchmarkMethodDescription> implodedMethods = group
+                .stream()
+                .flatMap( bd -> bd.methods().stream() )
+                .collect( toMap(
+                        BenchmarkMethodDescription::name,
+                        Function.identity(),
+                        ( method1, method2 ) -> method1
+                ) );
 
-                                           Map<String,BenchmarkParamDescription> implodedParameters = group
-                                                   .stream()
-                                                   .flatMap( bd1 -> bd1.parameters().values().stream() )
-                                                   .collect( groupingBy( BenchmarkParamDescription::name ) )
-                                                   .values()
-                                                   .stream()
-                                                   .map( parameterGroup -> new BenchmarkParamDescription(
-                                                           parameterGroup.get( 0 ).name(),
-                                                           parameterGroup.get( 0 ).allowedValues(),
-                                                           parameterGroup.stream().flatMap( param -> param.values().stream() ).collect( toSet() )
-                                                   ) ).collect( toMap(
-                                                           BenchmarkParamDescription::name,
-                                                           param -> param
-                                                   ) );
+        Map<String,BenchmarkParamDescription> implodedParameters = group
+                .stream()
+                .flatMap( bd1 -> bd1.parameters().values().stream() )
+                .collect( groupingBy( BenchmarkParamDescription::name ) )
+                .values()
+                .stream()
+                .map( parameterGroup -> new BenchmarkParamDescription(
+                        parameterGroup.get( 0 ).name(),
+                        parameterGroup.get( 0 ).allowedValues(),
+                        parameterGroup.stream().flatMap( param -> param.values().stream() ).collect( toSet() )
+                ) ).collect( toMap(
+                        BenchmarkParamDescription::name,
+                        Function.identity()
+                ) );
 
-                                           return new BenchmarkDescription(
-                                                   group.get( 0 ).className(),
-                                                   group.get( 0 ).group(),
-                                                   group.get( 0 ).isThreadSafe(),
-                                                   implodedMethods,
-                                                   implodedParameters,
-                                                   group.get( 0 ).description(),
-                                                   true
-                                           );
-                                       } ).collect( Collectors.toList() );
+        return new BenchmarkDescription(
+                group.get( 0 ).className(),
+                group.get( 0 ).group(),
+                group.get( 0 ).isThreadSafe(),
+                implodedMethods,
+                implodedParameters,
+                group.get( 0 ).description(),
+                true
+        );
     }
 
     private final String className;

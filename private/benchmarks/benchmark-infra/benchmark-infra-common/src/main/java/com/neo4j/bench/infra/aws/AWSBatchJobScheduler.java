@@ -19,6 +19,7 @@ import com.amazonaws.services.cloudformation.AmazonCloudFormation;
 import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
 import com.amazonaws.services.cloudformation.model.DescribeStacksRequest;
 import com.amazonaws.services.cloudformation.model.Output;
+import com.neo4j.bench.common.tool.macro.RunWorkloadParams;
 import com.neo4j.bench.infra.InfraParams;
 import com.neo4j.bench.infra.JobId;
 import com.neo4j.bench.infra.JobScheduler;
@@ -165,7 +166,12 @@ public class AWSBatchJobScheduler implements JobScheduler
     }
 
     @Override
-    public JobId schedule( URI workerArtifactUri, URI baseArtifactUri, String jobName, Map<String, String> additionalParameters )
+    public JobId schedule( URI workerArtifactUri, URI baseArtifactUri, String jobName, String jobParameters )
+    {
+        return schedule( workerArtifactUri, baseArtifactUri, jobName, Collections.singletonMap( RunWorkloadParams.CMD_JOB_PARAMETERS, jobParameters ) );
+    }
+
+    private JobId schedule( URI workerArtifactUri, URI baseArtifactUri, String jobName, Map<String, String> additionalParameters )
     {
         assertJobName( jobName );
         Map<String,String> paramsMap = new HashMap<>();
