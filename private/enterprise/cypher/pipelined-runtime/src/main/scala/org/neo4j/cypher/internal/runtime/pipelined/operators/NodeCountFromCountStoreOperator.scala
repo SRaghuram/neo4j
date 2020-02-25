@@ -30,10 +30,14 @@ import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.DbAccess
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyLabel
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
+import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFullCursor
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselWriteCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.NO_TOKEN
@@ -71,24 +75,21 @@ class NodeCountFromCountStoreOperator(val workIdentity: WorkIdentity,
   }
 
 
-  class NodeFromCountStoreTask(val inputMorsel: MorselCypherRow) extends InputLoopTask {
+  class NodeFromCountStoreTask(inputMorsel: Morsel) extends InputLoopTask(inputMorsel) {
 
     override def toString: String = "NodeFromCountStoreTask"
 
     private var hasNext = false
     private var executionEvent: OperatorProfileEvent = _
 
-    override protected def initializeInnerLoop(context: QueryContext,
-                                               state: QueryState,
-                                               resources: QueryResources,
-                                               initExecutionContext: CypherRow): Boolean = {
+    override protected def initializeInnerLoop(context: QueryContext, state: QueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
       hasNext = true
       true
     }
 
     override def workIdentity: WorkIdentity = NodeCountFromCountStoreOperator.this.workIdentity
 
-    override protected def innerLoop(outputRow: MorselCypherRow, context: QueryContext, state: QueryState): Unit = {
+    override protected def innerLoop(outputRow: MorselFullCursor, context: QueryContext, state: QueryState): Unit = {
       if (hasNext) {
         var count = 1L
 
@@ -117,9 +118,9 @@ class NodeCountFromCountStoreOperator(val workIdentity: WorkIdentity,
           }
         }
 
-        outputRow.copyFrom(inputMorsel, argumentSize.nLongs, argumentSize.nReferences)
+        outputRow.copyFrom(inputCursor, argumentSize.nLongs, argumentSize.nReferences)
         outputRow.setRefAt(offset, Values.longValue(count))
-        outputRow.moveToNextRow()
+        outputRow.next()
         hasNext = false
       }
     }

@@ -57,7 +57,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.NodeCursorRepresentation
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.RelationshipCursorRepresentation
 import org.neo4j.cypher.internal.runtime.pipelined.execution.CursorPools
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
+import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandAllOperatorTaskTemplate.getNodeIdFromSlot
@@ -88,6 +88,11 @@ import OperatorCodeGenHelperTemplates.NodeCursorPool
 import OperatorCodeGenHelperTemplates.ALLOCATE_NODE_CURSOR
 import OperatorCodeGenHelperTemplates.ALLOCATE_TRAVERSAL_CURSOR
 import OperatorCodeGenHelperTemplates.cursorNext
+import org.neo4j.cypher.internal.runtime.ReadWriteRow
+import org.neo4j.cypher.internal.runtime.ReadableRow
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFullCursor
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselWriteCursor
 
 class ExpandAllOperator(val workIdentity: WorkIdentity,
                         fromSlot: Slot,
@@ -114,21 +119,21 @@ class ExpandAllOperator(val workIdentity: WorkIdentity,
 
 }
 
-class ExpandAllTask(val inputMorsel: MorselCypherRow,
+class ExpandAllTask(inputMorsel: Morsel,
                     val workIdentity: WorkIdentity,
                     fromSlot: Slot,
                     relOffset: Int,
                     toOffset: Int,
                     dir: SemanticDirection,
-                    types: RelationshipTypes) extends InputLoopTask {
+                    types: RelationshipTypes) extends InputLoopTask(inputMorsel) {
 
   override def toString: String = "ExpandAllTask"
 
   //===========================================================================
   // Compile-time initializations
   //===========================================================================
-  protected val getFromNodeFunction: ToLongFunction[CypherRow] =
-  makeGetPrimitiveNodeFromSlotFunctionFor(fromSlot)
+  protected val getFromNodeFunction: ToLongFunction[ReadableRow] =
+    makeGetPrimitiveNodeFromSlotFunctionFor(fromSlot)
 
   /*
   This might look wrong, but it's like this by design. This allows the loop to terminate early and still be
@@ -139,11 +144,8 @@ class ExpandAllTask(val inputMorsel: MorselCypherRow,
   private var traversalCursor: RelationshipTraversalCursor = _
   protected var relationships: RelationshipTraversalCursor = _
 
-  protected override def initializeInnerLoop(context: QueryContext,
-                                             state: QueryState,
-                                             resources: QueryResources,
-                                             initExecutionContext: CypherRow): Boolean = {
-    val fromNode = getFromNodeFunction.applyAsLong(inputMorsel)
+  protected override def initializeInnerLoop(context: QueryContext, state: QueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
+    val fromNode = getFromNodeFunction.applyAsLong(inputCursor)
     if (entityIsNull(fromNode))
       false
     else {
@@ -154,19 +156,17 @@ class ExpandAllTask(val inputMorsel: MorselCypherRow,
     }
   }
 
-  override protected def innerLoop(outputRow: MorselCypherRow,
-                                   context: QueryContext,
-                                   state: QueryState): Unit = {
+  override protected def innerLoop(outputRow: MorselFullCursor, context: QueryContext, state: QueryState): Unit = {
 
-    while (outputRow.isValidRow && relationships.next()) {
+    while (outputRow.onValidRow && relationships.next()) {
       val relId = relationships.relationshipReference()
       val otherSide = relationships.otherNodeReference()
 
       // Now we have everything needed to create a row.
-      outputRow.copyFrom(inputMorsel)
+      outputRow.copyFrom(inputCursor)
       outputRow.setLongAt(relOffset, relId)
       outputRow.setLongAt(toOffset, otherSide)
-      outputRow.moveToNextRow()
+      outputRow.next()
     }
   }
 

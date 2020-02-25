@@ -38,12 +38,17 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeGet
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.ReadWriteRow
+import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.RelationshipTypes
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.RelationshipCursorRepresentation
 import org.neo4j.cypher.internal.runtime.pipelined.execution.CursorPools
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
+import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFullCursor
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselWriteCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandAllOperatorTaskTemplate.getNodeIdFromSlot
@@ -99,19 +104,19 @@ class ExpandIntoOperator(val workIdentity: WorkIdentity,
 
 }
 
-class ExpandIntoTask(val inputMorsel: MorselCypherRow,
+class ExpandIntoTask(inputMorsel: Morsel,
                      val workIdentity: WorkIdentity,
                      fromSlot: Slot,
                      relOffset: Int,
                      toSlot: Slot,
                      dir: SemanticDirection,
-                     types: RelationshipTypes) extends InputLoopTask {
+                     types: RelationshipTypes) extends InputLoopTask(inputMorsel) {
 
   //===========================================================================
   // Compile-time initializations
   //===========================================================================
-  protected val getFromNodeFunction: ToLongFunction[CypherRow] = makeGetPrimitiveNodeFromSlotFunctionFor(fromSlot)
-  protected val getToNodeFunction: ToLongFunction[CypherRow] = makeGetPrimitiveNodeFromSlotFunctionFor(toSlot)
+  protected val getFromNodeFunction: ToLongFunction[ReadableRow] = makeGetPrimitiveNodeFromSlotFunctionFor(fromSlot)
+  protected val getToNodeFunction: ToLongFunction[ReadableRow] = makeGetPrimitiveNodeFromSlotFunctionFor(toSlot)
 
   override def toString: String = "ExpandIntoTask"
 
@@ -120,16 +125,13 @@ class ExpandIntoTask(val inputMorsel: MorselCypherRow,
   protected var relationships: RelationshipTraversalCursor = _
   protected var expandInto: CachingExpandInto = _
 
-  protected override def initializeInnerLoop(context: QueryContext,
-                                             state: QueryState,
-                                             resources: QueryResources,
-                                             initExecutionContext: CypherRow): Boolean = {
+  protected override def initializeInnerLoop(context: QueryContext, state: QueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
     if (expandInto == null) {
       expandInto = new CachingExpandInto(context.transactionalContext.dataRead,
         kernelDirection(dir))
     }
-    val fromNode = getFromNodeFunction.applyAsLong(inputMorsel)
-    val toNode = getToNodeFunction.applyAsLong(inputMorsel)
+    val fromNode = getFromNodeFunction.applyAsLong(inputCursor)
+    val toNode = getToNodeFunction.applyAsLong(inputCursor)
     if (entityIsNull(fromNode) || entityIsNull(toNode))
       false
     else {
@@ -151,17 +153,15 @@ class ExpandIntoTask(val inputMorsel: MorselCypherRow,
       toNode)
   }
 
-  override protected def innerLoop(outputRow: MorselCypherRow,
-                                   context: QueryContext,
-                                   state: QueryState): Unit = {
+  override protected def innerLoop(outputRow: MorselFullCursor, context: QueryContext, state: QueryState): Unit = {
 
-    while (outputRow.isValidRow && relationships.next()) {
+    while (outputRow.onValidRow && relationships.next()) {
       val relId = relationships.relationshipReference()
 
       // Now we have everything needed to create a row.
-      outputRow.copyFrom(inputMorsel)
+      outputRow.copyFrom(inputCursor)
       outputRow.setLongAt(relOffset, relId)
-      outputRow.moveToNextRow()
+      outputRow.next()
     }
   }
 

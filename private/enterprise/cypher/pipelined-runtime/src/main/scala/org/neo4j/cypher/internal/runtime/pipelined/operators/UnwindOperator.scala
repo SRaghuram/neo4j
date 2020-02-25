@@ -25,11 +25,15 @@ import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.ListSupport
 import org.neo4j.cypher.internal.runtime.NoMemoryTracker
 import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
+import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFullCursor
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselWriteCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.CURSOR_POOL_V
@@ -59,16 +63,13 @@ class UnwindOperator(val workIdentity: WorkIdentity,
     IndexedSeq(new OTask(inputMorsel.nextCopy))
   }
 
-  class OTask(val inputMorsel: MorselCypherRow) extends InputLoopTask {
+  class OTask(inputMorsel: Morsel) extends InputLoopTask(inputMorsel) {
 
     override def workIdentity: WorkIdentity = UnwindOperator.this.workIdentity
 
     private var unwoundValues: java.util.Iterator[AnyValue] = _
 
-    override protected def initializeInnerLoop(context: QueryContext,
-                                               state: QueryState,
-                                               resources: QueryResources,
-                                               initExecutionContext: CypherRow): Boolean = {
+    override protected def initializeInnerLoop(context: QueryContext, state: QueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
 
       val queryState = new SlottedQueryState(context,
         resources = null,
@@ -79,20 +80,18 @@ class UnwindOperator(val workIdentity: WorkIdentity,
         state.subscriber,
         NoMemoryTracker)
 
-      initExecutionContext.copyFrom(inputMorsel, inputMorsel.getLongsPerRow, inputMorsel.getRefsPerRow)
+      initExecutionContext.copyFrom(inputCursor, inputMorsel.longsPerRow, inputMorsel.refsPerRow)
       val value = collection(initExecutionContext, queryState)
       unwoundValues = makeTraversable(value).iterator
       true
     }
 
-    override protected def innerLoop(outputRow: MorselCypherRow,
-                                     context: QueryContext,
-                                     state: QueryState): Unit = {
-      while (unwoundValues.hasNext && outputRow.isValidRow) {
+    override protected def innerLoop(outputRow: MorselFullCursor, context: QueryContext, state: QueryState): Unit = {
+      while (unwoundValues.hasNext && outputRow.onValidRow) {
         val thisValue = unwoundValues.next()
-        outputRow.copyFrom(inputMorsel)
+        outputRow.copyFrom(inputCursor)
         outputRow.setRefAt(offset, thisValue)
-        outputRow.moveToNextRow()
+        outputRow.next()
       }
     }
 
@@ -102,7 +101,7 @@ class UnwindOperator(val workIdentity: WorkIdentity,
       unwoundValues = null
     }
 
-    override def canContinue: Boolean = unwoundValues != null || inputMorsel.isValidRow
+    override def canContinue: Boolean = unwoundValues != null || inputCursor.onValidRow()
   }
 }
 

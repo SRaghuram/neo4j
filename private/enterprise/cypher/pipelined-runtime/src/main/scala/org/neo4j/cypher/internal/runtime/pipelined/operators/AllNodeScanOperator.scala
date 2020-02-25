@@ -24,10 +24,15 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.pipelined.NodeCursorRepresentation
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
+import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCursor
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFullCursor
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselWriteCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.CURSOR_POOL_V
@@ -80,7 +85,7 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
    *
    * @param inputMorsel the input row, pointing to the beginning of the input morsel
    */
-  class SingleThreadedScanTask(val inputMorsel: MorselCypherRow) extends InputLoopTask {
+  class SingleThreadedScanTask(inputMorsel: Morsel) extends InputLoopTask(inputMorsel) {
 
     override def workIdentity: WorkIdentity = AllNodeScanOperator.this.workIdentity
 
@@ -91,17 +96,17 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
     override protected def initializeInnerLoop(context: QueryContext,
                                                state: QueryState,
                                                resources: QueryResources,
-                                               initExecutionContext: CypherRow): Boolean = {
+                                               initExecutionContext: ReadWriteRow): Boolean = {
       cursor = resources.cursorPools.nodeCursorPool.allocateAndTrace()
       context.transactionalContext.dataRead.allNodesScan(cursor)
       true
     }
 
-    override protected def innerLoop(outputRow: MorselCypherRow, context: QueryContext, state: QueryState): Unit = {
-      while (outputRow.isValidRow && cursor.next()) {
-        outputRow.copyFrom(inputMorsel, argumentSize.nLongs, argumentSize.nReferences)
+    override protected def innerLoop(outputRow: MorselFullCursor, context: QueryContext, state: QueryState): Unit = {
+      while (outputRow.onValidRow && cursor.next()) {
+        outputRow.copyFrom(inputCursor, argumentSize.nLongs, argumentSize.nReferences)
         outputRow.setLongAt(offset, cursor.nodeReference())
-        outputRow.moveToNextRow()
+        outputRow.next()
       }
     }
 
@@ -123,7 +128,7 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
    *
    * For each batch, it process all the nodes and combines them with each input row.
    */
-  class ParallelScanTask(val inputMorsel: MorselCypherRow,
+  class ParallelScanTask(val inputMorsel: Morsel,
                          scan: Scan[NodeCursor],
                          var cursor: NodeCursor,
                          val batchSizeHint: Int) extends ContinuableOperatorTaskWithMorsel {
@@ -134,29 +139,31 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
 
     private var _canContinue: Boolean = true
     private var deferredRow: Boolean = false
+    val inputCursor: MorselReadCursor = inputMorsel.readCursor()
 
     /**
      * These 2 lines make sure that the first call to [[next]] is correct.
      */
     scan.reserveBatch(cursor, batchSizeHint)
-    inputMorsel.setToAfterLastRow()
+    inputCursor.setToEnd()
 
-    override def operate(outputRow: MorselCypherRow,
+    override def operate(outputMorsel: Morsel,
                          context: QueryContext,
                          queryState: QueryState,
                          resources: QueryResources): Unit = {
 
-      while (next(queryState, resources) && outputRow.isValidRow) {
-        outputRow.copyFrom(inputMorsel, argumentSize.nLongs, argumentSize.nReferences)
-        outputRow.setLongAt(offset, cursor.nodeReference())
-        outputRow.moveToNextRow()
+      val outputCursor = outputMorsel.writeCursor(onFirstRow = true)
+      while (next(queryState, resources) && outputCursor.onValidRow) {
+        outputCursor.copyFrom(inputCursor, argumentSize.nLongs, argumentSize.nReferences)
+        outputCursor.setLongAt(offset, cursor.nodeReference())
+        outputCursor.next()
       }
 
-      if (!outputRow.isValidRow && _canContinue) {
+      if (!outputCursor.onValidRow && _canContinue) {
         deferredRow = true
       }
 
-      outputRow.finishedWriting()
+      outputCursor.truncate()
     }
 
 
@@ -165,11 +172,11 @@ class AllNodeScanOperator(val workIdentity: WorkIdentity,
         if (deferredRow) {
           deferredRow = false
           return true
-        } else if (inputMorsel.hasNextRow) {
-          inputMorsel.moveToNextRow()
+        } else if (inputCursor.hasNext) {
+          inputCursor.next()
           return true
         } else if (cursor.next()) {
-          inputMorsel.resetToBeforeFirstRow()
+          inputCursor.setToStart()
         } else if (scan.reserveBatch(cursor, batchSizeHint)) {
           // Do nothing
         } else {

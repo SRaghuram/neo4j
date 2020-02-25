@@ -47,7 +47,10 @@ import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.CursorPool
 import org.neo4j.cypher.internal.runtime.pipelined.execution.CursorPools
 import org.neo4j.cypher.internal.runtime.pipelined.execution.FlowControl
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
+import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCursor
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFullCursor
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
@@ -108,7 +111,7 @@ object OperatorCodeGenHelperTemplates {
 
   // Constructor parameters
   val DATA_READ_CONSTRUCTOR_PARAMETER: Parameter = param[Read]("dataRead")
-  val INPUT_MORSEL_CONSTRUCTOR_PARAMETER: Parameter = param[MorselCypherRow]("inputMorsel")
+  val INPUT_MORSEL_CONSTRUCTOR_PARAMETER: Parameter = param[Morsel]("inputMorsel")
   val ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER: Parameter = param[ArgumentStateMaps]("argumentStateMaps")
 
   // Other method parameters
@@ -118,7 +121,14 @@ object OperatorCodeGenHelperTemplates {
   // Fields
   val WORK_IDENTITY_STATIC_FIELD_NAME  = "_workIdentity"
   val DATA_READ: InstanceField = field[Read]("dataRead", load(DATA_READ_CONSTRUCTOR_PARAMETER.name))
-  val INPUT_MORSEL: InstanceField = field[MorselCypherRow]("inputMorsel", load(INPUT_MORSEL_CONSTRUCTOR_PARAMETER.name))
+  val INPUT_CURSOR_FIELD: InstanceField =
+    field[MorselReadCursor]("inputCursor",
+      invoke(
+        load(INPUT_MORSEL_CONSTRUCTOR_PARAMETER.name),
+        method[Morsel, MorselReadCursor, Boolean]("readCursor"), constant(true)
+      )
+    )
+  val INPUT_CURSOR: IntermediateRepresentation = loadField(INPUT_CURSOR_FIELD)
   val SHOULD_BREAK: InstanceField = field[Boolean]("shouldBreak", constant(false))
 
   // IntermediateRepresentation code
@@ -133,11 +143,8 @@ object OperatorCodeGenHelperTemplates {
   val CURSOR_POOL: IntermediateRepresentation =
     load(CURSOR_POOL_V)
 
-  val OUTPUT_ROW: IntermediateRepresentation =
-    load("context")
-
-  val OUTPUT_ROW_MOVE_TO_NEXT: IntermediateRepresentation =
-    invokeSideEffect(OUTPUT_ROW, method[MorselCypherRow, Unit]("moveToNextRow"))
+  val OUTPUT_MORSEL: IntermediateRepresentation =
+    load("outputMorsel")
 
   val DB_ACCESS: IntermediateRepresentation =
     load("dbAccess")
@@ -180,10 +187,15 @@ object OperatorCodeGenHelperTemplates {
   val ALLOCATE_TRAVERSAL_CURSOR: IntermediateRepresentation = allocateCursor(TraversalCursorPool)
   val ALLOCATE_REL_SCAN_CURSOR: IntermediateRepresentation = allocateCursor(RelScanCursorPool)
 
-  val INPUT_ROW_IS_VALID: IntermediateRepresentation = invoke(loadField(INPUT_MORSEL), method[MorselCypherRow, Boolean]("isValidRow"))
-  val OUTPUT_ROW_IS_VALID: IntermediateRepresentation = invoke(OUTPUT_ROW, method[MorselCypherRow, Boolean]("isValidRow"))
-  val OUTPUT_ROW_FINISHED_WRITING: IntermediateRepresentation = invokeSideEffect(OUTPUT_ROW, method[MorselCypherRow, Unit]("finishedWriting"))
-  val INPUT_ROW_MOVE_TO_NEXT: IntermediateRepresentation = invokeSideEffect(loadField(INPUT_MORSEL), method[MorselCypherRow, Unit]("moveToNextRow"))
+  val INPUT_ROW_IS_VALID: IntermediateRepresentation = invoke(INPUT_CURSOR, method[MorselReadCursor, Boolean]("onValidRow"))
+  val NEXT: Method = method[MorselCursor, Boolean]("next")
+
+  val OUTPUT_FULL_CURSOR: IntermediateRepresentation = invoke(OUTPUT_MORSEL, method[Morsel, MorselFullCursor, Boolean]("fullCursor"), constant(true))
+  val OUTPUT_CURSOR_VAR: LocalVariable = variable[MorselFullCursor](ExpressionCompiler.CONTEXT, OUTPUT_FULL_CURSOR)
+  val OUTPUT_CURSOR: IntermediateRepresentation = load(OUTPUT_CURSOR_VAR.name)
+  val OUTPUT_ROW_IS_VALID: IntermediateRepresentation = invoke(OUTPUT_CURSOR, method[MorselFullCursor, Boolean]("onValidRow"))
+
+  val OUTPUT_TRUNCATE: IntermediateRepresentation = invokeSideEffect(OUTPUT_CURSOR, method[MorselFullCursor, Unit]("truncate"))
   val UPDATE_DEMAND: IntermediateRepresentation =
     invokeSideEffect(load(SUBSCRIPTION), method[FlowControl, Unit, Long]("addServed"), load(SERVED))
 

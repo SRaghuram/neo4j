@@ -14,26 +14,33 @@ import org.neo4j.codegen.api.IntermediateRepresentation.condition
 import org.neo4j.codegen.api.IntermediateRepresentation.constant
 import org.neo4j.codegen.api.IntermediateRepresentation.field
 import org.neo4j.codegen.api.IntermediateRepresentation.ifElse
+import org.neo4j.codegen.api.IntermediateRepresentation.invoke
+import org.neo4j.codegen.api.IntermediateRepresentation.invokeSideEffect
 import org.neo4j.codegen.api.IntermediateRepresentation.loadField
 import org.neo4j.codegen.api.IntermediateRepresentation.loop
 import org.neo4j.codegen.api.IntermediateRepresentation.not
 import org.neo4j.codegen.api.IntermediateRepresentation.or
 import org.neo4j.codegen.api.IntermediateRepresentation.setField
-import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
+import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFullCursor
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_CURSOR
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_ROW_IS_VALID
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_ROW_MOVE_TO_NEXT
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.NEXT
 import org.neo4j.cypher.internal.util.attribution.Id
 
 /**
  * Operator task which takes an input morsel and produces one or many output rows
  * for each input row, and might require several operate calls to be fully executed.
  */
-abstract class InputLoopTask extends ContinuableOperatorTaskWithMorsel {
+abstract class InputLoopTask(final val inputMorsel: Morsel) extends ContinuableOperatorTaskWithMorsel {
+
+  final val inputCursor: MorselReadCursor = inputMorsel.readCursor(onFirstRow = true)
 
   /**
    * Initialize the inner loop for the current input row.
@@ -43,12 +50,12 @@ abstract class InputLoopTask extends ContinuableOperatorTaskWithMorsel {
   protected def initializeInnerLoop(context: QueryContext,
                                     state: QueryState,
                                     resources: QueryResources,
-                                    initExecutionContext: CypherRow): Boolean
+                                    initExecutionContext: ReadWriteRow): Boolean
 
   /**
    * Execute the inner loop for the current input row, and write results to the output.
    */
-  protected def innerLoop(outputRow: MorselCypherRow,
+  protected def innerLoop(outputRow: MorselFullCursor,
                           context: QueryContext,
                           state: QueryState): Unit
 
@@ -62,51 +69,52 @@ abstract class InputLoopTask extends ContinuableOperatorTaskWithMorsel {
 
   private var innerLoop: Boolean = false
 
-  override final def operate(outputRow: MorselCypherRow,
+  override final def operate(outputMorsel: Morsel,
                              context: QueryContext,
                              state: QueryState,
                              resources: QueryResources): Unit = {
 
     enterOperate(context, state, resources)
+    val outputCursor = outputMorsel.fullCursor(onFirstRow = true)
 
-    while ((inputMorsel.isValidRow || innerLoop) && outputRow.isValidRow) {
+    while ((inputCursor.onValidRow || innerLoop) && outputCursor.onValidRow) {
       if (!innerLoop) {
-        innerLoop = initializeInnerLoop(context, state, resources, outputRow)
+        innerLoop = initializeInnerLoop(context, state, resources, outputCursor)
       }
       // Do we have any output rows for this input row?
       if (innerLoop) {
         // Implementor is responsible for advancing both `outputRow` and `innerLoop`.
         // Typically the loop will look like this:
-        //        while (outputRow.hasMoreRows && cursor.next()) {
+        //        while (outputRow.hasNext && cursor.next()) {
         //          ... // Copy argumentSize #columns from inputRow to outputRow
         //          ... // Write additional columns to outputRow
-        //          outputRow.moveToNextRow()
+        //          outputRow.next()
         //        }
         // The reason the loop itself is not already coded here is to avoid too many fine-grained virtual calls
-        innerLoop(outputRow, context, state)
+        innerLoop(outputCursor, context, state)
 
         // If we have not filled the output rows, move to the next input row
-        if (outputRow.isValidRow) {
+        if (outputCursor.onValidRow()) {
           // NOTE: There is a small chance that we run out of output rows and innerLoop iterations simultaneously where we would generate
           // an additional empty work unit that will just close the innerLoop. This could be avoided if we changed the innerLoop interface to something
           // slightly more complicated, but since innerLoop iterations and output morsel size will have to match exactly for this to happen it is
           // probably not a big problem in practice, and the additional checks required may not be worthwhile.
           closeInnerLoop(resources)
           innerLoop = false
-          inputMorsel.moveToNextRow()
+          inputCursor.next()
         }
       } else {
         // Nothing to do for this input row, move to the next
-        inputMorsel.moveToNextRow()
+        inputCursor.next()
       }
     }
 
-    outputRow.finishedWriting()
+    outputCursor.truncate()
     exitOperate()
   }
 
   override def canContinue: Boolean =
-    inputMorsel.isValidRow || innerLoop
+    inputCursor.onValidRow || innerLoop
 
   override protected def closeCursors(resources: QueryResources): Unit = {
     // note: we always close, because `innerLoop` might not be reliable if
@@ -149,42 +157,31 @@ abstract class InputLoopTaskTemplate(override val inner: OperatorTaskTemplate,
 
   final override protected def genOperateHead: IntermediateRepresentation = {
     //// Based on this code from InputLoopTask
-    //while ((inputMorsel.isValidRow || innerLoop) && outputRow.isValidRow) {
+    //val outputCursor = outputRow.fullCursor(onFirstRow = true)
+    //
+    //while ((inputCursor.onValidRow || innerLoop) && outputCursor.onValidRow) {
     //  if (!innerLoop) {
-    //    innerLoop = initializeInnerLoop(context, state, resources) <<< genInitializeInnerLoop
+    //    innerLoop = initializeInnerLoop(context, state, resources, outputCursor) <<< genInitializeInnerLoop
     //  } else {
     //    // Continuation of ongoing inner loop. Restore the state of local variables
     //  }
     //  // Do we have any output rows for this input row?
     //  if (innerLoop) {
-    //    // Implementor is responsible for advancing both `outputRow` and `innerLoop`.
-    //    // Typically the loop will look like this:
-    //    //        while (outputRow.hasMoreRows && cursor.next()) {
-    //    //          ... // Copy argumentSize #columns from inputRow to outputRow
-    //    //          ... // Write additional columns to outputRow
-    //    //          outputRow.moveToNextRow()
-    //    //        }
-    //    // The reason the loop itself is not already coded here is to avoid too many fine-grained virtual calls
-    //    innerLoop(outputRow, context, state) <<< genInnerLoop
+    //    innerLoop(outputCursor, context, state) <<< genInnerLoop
     //
     //    // If we have not filled the output rows, move to the next input row
-    //    if (outputRow.isValidRow) {
-    //      // NOTE: There is a small chance that we run out of output rows and innerLoop iterations simultaneously where we would generate
-    //      // an additional empty work unit that will just close the innerLoop. This could be avoided if we changed the innerLoop interface to something
-    //      // slightly more complicated, but since innerLoop iterations and output morsel size will have to match exactly for this to happen it is
-    //      // probably not a big problem in practice, and the additional checks required may not be worthwhile.
+    //    if (outputCursor.onValidRow()) {
     //      closeInnerLoop(resources) <<< genCloseInnerLoop
     //      innerLoop = false
-    //      inputMorsel.moveToNextRow()
+    //      inputCursor.next()
     //    }
-    //  }
-    //  else {
+    //  } else {
     //    // Nothing to do for this input row, move to the next
-    //    inputMorsel.moveToNextRow()
+    //    inputCursor.next()
     //  }
     //}
     //
-    //outputRow.finishedWriting()
+    //outputCursor.close()
     block(
       loop(and(or(INPUT_ROW_IS_VALID, loadField(innerLoop)), innermost.predicate))(
         block(
@@ -199,13 +196,13 @@ abstract class InputLoopTaskTemplate(override val inner: OperatorTaskTemplate,
                 block(
                   genCloseInnerLoop,
                   setField(innerLoop, constant(false)),
-                  doIfInnerCantContinue(block(INPUT_ROW_MOVE_TO_NEXT, setField(canContinue, INPUT_ROW_IS_VALID)))
+                  doIfInnerCantContinue(setField(canContinue, invoke(INPUT_CURSOR, NEXT)))
                 )
               )
             )
           )(
             // Else if no inner operator can proceed we move to the next input row
-            doIfInnerCantContinue(INPUT_ROW_MOVE_TO_NEXT)
+            doIfInnerCantContinue(invokeSideEffect(INPUT_CURSOR, NEXT))
           ),
           innermost.resetCachedPropertyVariables
         )

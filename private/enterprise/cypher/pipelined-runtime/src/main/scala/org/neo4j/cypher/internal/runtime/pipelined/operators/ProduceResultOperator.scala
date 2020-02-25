@@ -35,7 +35,8 @@ import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpres
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.pipelined.ExecutionState
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
+import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.DB_ACCESS
@@ -85,14 +86,16 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
                                    argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorsel] =
     Array(new InputOTask(inputMorsel.nextCopy))
 
-  class InputOTask(val inputMorsel: MorselCypherRow) extends ContinuableOperatorTaskWithMorsel {
+  class InputOTask(val inputMorsel: Morsel) extends ContinuableOperatorTaskWithMorsel {
+
+    private val inputCursor = inputMorsel.readCursor(onFirstRow = true)
 
     override def workIdentity: WorkIdentity = ProduceResultOperator.this.workIdentity
 
     override def toString: String = "ProduceResultInputTask"
-    override def canContinue: Boolean = inputMorsel.isValidRow
+    override def canContinue: Boolean = inputCursor.onValidRow()
 
-    override def operateWithProfile(outputIgnore: MorselCypherRow,
+    override def operateWithProfile(outputIgnore: Morsel,
                                     context: QueryContext,
                                     state: QueryState,
                                     resources: QueryResources,
@@ -101,7 +104,7 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
       val operatorExecutionEvent = queryProfiler.executeOperator(workIdentity.workId)
 
       try {
-        produceOutputWithProfile(inputMorsel, context, state, resources, operatorExecutionEvent)
+        produceOutputWithProfile(inputCursor, context, state, resources, operatorExecutionEvent)
       } finally {
         if (operatorExecutionEvent != null) {
           operatorExecutionEvent.close()
@@ -109,7 +112,7 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
       }
     }
 
-    override def operate(output: MorselCypherRow,
+    override def operate(output: Morsel,
                          context: QueryContext,
                          state: QueryState,
                          resources: QueryResources): Unit = throw new UnsupportedOperationException("ProduceResults should be called via operateWithProfile")
@@ -124,22 +127,27 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
 
   class OutputOOperatorState extends OutputOperatorState with PreparedOutput {
 
-    private var _canContinue: Boolean = false
+    private var doneWithPreviousMorsel: Boolean = true
+    private var outputCursor: MorselReadCursor = _
 
     override def toString: String = "ProduceResultOutputTask"
 
-    override def canContinueOutput: Boolean = _canContinue
+    override def canContinueOutput: Boolean = !doneWithPreviousMorsel
 
     override def workIdentity: WorkIdentity = ProduceResultOperator.this.workIdentity
 
-    override def prepareOutput(outputMorsel: MorselCypherRow,
+    override def prepareOutput(outputMorsel: Morsel,
                                context: QueryContext,
                                state: QueryState,
                                resources: QueryResources,
                                operatorExecutionEvent: OperatorProfileEvent): PreparedOutput = {
 
-      produceOutputWithProfile(outputMorsel, context, state, resources, operatorExecutionEvent)
-      _canContinue = outputMorsel.isValidRow
+      if (doneWithPreviousMorsel) {
+        outputCursor = outputMorsel.readCursor(onFirstRow = true)
+      }
+
+      produceOutputWithProfile(outputCursor, context, state, resources, operatorExecutionEvent)
+      doneWithPreviousMorsel = !outputCursor.onValidRow()
       this
     }
 
@@ -152,7 +160,7 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
 
   //==========================================================================
 
-  protected def produceOutputWithProfile(output: MorselCypherRow,
+  protected def produceOutputWithProfile(output: MorselReadCursor,
                                          context: QueryContext,
                                          state: QueryState,
                                          resources: QueryResources,
@@ -163,7 +171,7 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
     }
   }
 
-  protected def produceOutput(output: MorselCypherRow,
+  protected def produceOutput(output: MorselReadCursor,
                               context: QueryContext,
                               state: QueryState,
                               resources: QueryResources): Int = {
@@ -182,7 +190,7 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
     var served = 0
     val demand: Long = state.flowControl.getDemand
     // Loop over the rows of the morsel and call the visitor for each one
-    while (output.isValidRow && served < demand) {
+    while (output.onValidRow && served < demand) {
       subscriber.onRecord()
       var i = 0
       while (i < expressions.length) {
@@ -196,7 +204,7 @@ class ProduceResultOperator(val workIdentity: WorkIdentity,
       subscriber.onRecordCompleted()
       served += 1
 
-      output.moveToNextRow()
+      output.next()
     }
     state.flowControl.addServed(served)
     served

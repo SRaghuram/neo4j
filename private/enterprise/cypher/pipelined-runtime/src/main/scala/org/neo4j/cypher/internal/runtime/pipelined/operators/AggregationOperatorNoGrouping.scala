@@ -42,7 +42,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.AggregatingAccumulator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.Aggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.Updater
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
+import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.AggregationMapperOperatorTaskTemplate.createAggregators
@@ -104,7 +104,7 @@ case class AggregationOperatorNoGrouping(workIdentity: WorkIdentity,
 
       override def trackTime: Boolean = true
 
-      override def prepareOutput(morsel: MorselCypherRow,
+      override def prepareOutput(outputMorsel: Morsel,
                                  context: QueryContext,
                                  state: QueryState,
                                  resources: QueryResources,
@@ -120,23 +120,23 @@ case class AggregationOperatorNoGrouping(workIdentity: WorkIdentity,
           NoMemoryTracker)
 
         val preAggregated = ArgumentStateMap.map(argumentSlotOffset,
-          morsel,
+          outputMorsel,
           preAggregate(queryState))
 
         new PreAggregatedOutput(preAggregated, sink)
       }
 
-      private def preAggregate(queryState: SlottedQueryState)(morsel: MorselCypherRow): Array[Updater] = {
+      private def preAggregate(queryState: SlottedQueryState)(morsel: Morsel): Array[Updater] = {
         val updaters = aggregations.map(_.newUpdater)
         //loop over the entire morsel view and apply the aggregation
-        while (morsel.isValidRow) {
+        val cursor = morsel.readCursor()
+        while (cursor.next()) {
           var i = 0
           while (i < aggregations.length) {
-            val value = expressionValues(i)(morsel, queryState)
+            val value = expressionValues(i)(cursor, queryState)
             updaters(i).update(value)
             i += 1
           }
-          morsel.moveToNextRow()
         }
         updaters
       }
@@ -182,18 +182,19 @@ case class AggregationOperatorNoGrouping(workIdentity: WorkIdentity,
 
       override def workIdentity: WorkIdentity = AggregationReduceOperatorNoGrouping.this.workIdentity
 
-      override def operate(outputRow: MorselCypherRow,
+      override def operate(outputMorsel: Morsel,
                            context: QueryContext,
                            state: QueryState,
                            resources: QueryResources): Unit = {
 
         var i = 0
+        val outputCursor = outputMorsel.writeCursor(onFirstRow = true)
         while (i < aggregations.length) {
-          outputRow.setRefAt(reducerOutputSlots(i), accumulator.result(i))
+          outputCursor.setRefAt(reducerOutputSlots(i), accumulator.result(i))
           i += 1
         }
-        outputRow.moveToNextRow()
-        outputRow.finishedWriting()
+        outputCursor.next()
+        outputCursor.truncate()
       }
 
       // This operator will never continue since it will always write a single row

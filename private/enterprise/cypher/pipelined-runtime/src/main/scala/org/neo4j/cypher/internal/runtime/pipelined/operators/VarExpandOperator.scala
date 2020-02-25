@@ -49,11 +49,12 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.NO_ENTI
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeGetPrimitiveNodeFromSlotFunctionFor
 import org.neo4j.cypher.internal.physicalplanning.VariablePredicates.NO_PREDICATE_OFFSET
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
-import org.neo4j.cypher.internal.runtime.DbAccess
 import org.neo4j.cypher.internal.runtime.CypherRow
+import org.neo4j.cypher.internal.runtime.DbAccess
 import org.neo4j.cypher.internal.runtime.ExpressionCursors
 import org.neo4j.cypher.internal.runtime.NoMemoryTracker
 import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledHelpers
 import org.neo4j.cypher.internal.runtime.compiled.expressions.DefaultExpressionCompiler
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
@@ -63,7 +64,8 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.RelationshipTypes
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.VarLengthExpandPipe
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.CursorPools
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
+import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFullCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.ALLOCATE_NODE_CURSOR
@@ -73,7 +75,7 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelp
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.DB_ACCESS
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.EXPRESSION_CURSORS
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.EXPRESSION_VARIABLES
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_MORSEL
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_CURSOR
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.PARAMS
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profilingCursorNext
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
@@ -136,7 +138,7 @@ class VarExpandOperator(val workIdentity: WorkIdentity,
                          argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorsel] =
     IndexedSeq(new OTask(inputMorsel.nextCopy))
 
-  class OTask(val inputMorsel: MorselCypherRow) extends InputLoopTask {
+  class OTask(inputMorsel: Morsel) extends InputLoopTask(inputMorsel) {
 
     override def workIdentity: WorkIdentity = VarExpandOperator.this.workIdentity
 
@@ -163,12 +165,9 @@ class VarExpandOperator(val workIdentity: WorkIdentity,
       }
     }
 
-    protected override def initializeInnerLoop(context: QueryContext,
-                                               state: QueryState,
-                                               resources: QueryResources,
-                                               initExecutionContext: CypherRow): Boolean = {
-      val fromNode = getFromNodeFunction.applyAsLong(inputMorsel)
-      val toNode = getToNodeFunction.applyAsLong(inputMorsel)
+    protected override def initializeInnerLoop(context: QueryContext, state: QueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
+      val fromNode = getFromNodeFunction.applyAsLong(inputCursor)
+      val toNode = getToNodeFunction.applyAsLong(inputCursor)
 
       val nodeVarExpandPredicate =
         if (tempNodeOffset != NO_PREDICATE_OFFSET) {
@@ -176,7 +175,7 @@ class VarExpandOperator(val workIdentity: WorkIdentity,
             override def isTrue(nodeId: Long): Boolean = {
               val value = context.nodeById(nodeId)
               predicateState.expressionVariables(tempNodeOffset) = value
-              nodePredicate(inputMorsel, predicateState) eq Values.TRUE
+              nodePredicate(inputCursor, predicateState) eq Values.TRUE
             }
           }
         } else {
@@ -189,7 +188,7 @@ class VarExpandOperator(val workIdentity: WorkIdentity,
             override def isTrue(cursor: RelationshipTraversalCursor): Boolean = {
               val value = VarExpandCursor.relationshipFromCursor(context, cursor)
               predicateState.expressionVariables(tempRelationshipOffset) = value
-              relationshipPredicate(inputMorsel, predicateState) eq Values.TRUE
+              relationshipPredicate(inputCursor, predicateState) eq Values.TRUE
             }
           }
         } else {
@@ -217,17 +216,15 @@ class VarExpandOperator(val workIdentity: WorkIdentity,
       }
     }
 
-    override protected def innerLoop(outputRow: MorselCypherRow,
-                                     context: QueryContext,
-                                     state: QueryState): Unit = {
+    override protected def innerLoop(outputRow: MorselFullCursor, context: QueryContext, state: QueryState): Unit = {
 
-      while (outputRow.isValidRow && varExpandCursor.next()) {
-        outputRow.copyFrom(inputMorsel)
+      while (outputRow.onValidRow && varExpandCursor.next()) {
+        outputRow.copyFrom(inputCursor)
         if (shouldExpandAll) {
           outputRow.setLongAt(toOffset, varExpandCursor.toNode)
         }
         outputRow.setRefAt(relOffset, varExpandCursor.relationships)
-        outputRow.moveToNextRow()
+        outputRow.next()
       }
     }
 
@@ -360,7 +357,7 @@ class VarExpandOperatorTaskTemplate(inner: OperatorTaskTemplate,
             constant(minLength),
             constant(maxLength),
             loadField(DATA_READ),
-            loadField(INPUT_MORSEL),
+            INPUT_CURSOR,
             DB_ACCESS,
             PARAMS,
             EXPRESSION_CURSORS,

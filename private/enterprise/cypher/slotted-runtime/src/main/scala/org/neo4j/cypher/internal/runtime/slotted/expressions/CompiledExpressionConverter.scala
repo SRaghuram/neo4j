@@ -35,7 +35,9 @@ import org.neo4j.exceptions.InternalException
 import org.neo4j.logging.Log
 import org.neo4j.values.AnyValue
 import CompiledExpressionConverter.COMPILE_LIMIT
+import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.ReadableRow
+import org.neo4j.cypher.internal.runtime.WritableRow
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledGroupingExpression
 
 class CompiledExpressionConverter(log: Log,
@@ -148,7 +150,7 @@ case class CompileWrappingDistinctGroupingExpression(grouping: CompiledGroupingE
 
   override type KeyType = AnyValue
 
-  override def computeGroupingKey(context: CypherRow, state: QueryState): AnyValue =
+  override def computeGroupingKey(context: ReadableRow, state: QueryState): AnyValue =
     grouping.computeGroupingKey(context, state.query, CompiledExpressionConverter.parametersOrFail(state), state.cursors, state.expressionVariables)
 
   override def computeOrderedGroupingKey(groupingKey: AnyValue): AnyValue =
@@ -156,7 +158,7 @@ case class CompileWrappingDistinctGroupingExpression(grouping: CompiledGroupingE
 
   override def getGroupingKey(context: CypherRow): AnyValue = grouping.getGroupingKey(context)
 
-  override def project(context: CypherRow, groupingKey: AnyValue): Unit =
+  override def project(context: WritableRow, groupingKey: AnyValue): Unit =
     grouping.projectGroupingKey(context, groupingKey)
 }
 
@@ -164,7 +166,7 @@ case class CompileWrappingProjection(projection: CompiledProjection, isEmpty: Bo
 
   override def registerOwningPipe(pipe: Pipe): Unit = {}
 
-  override def project(ctx: CypherRow, state: QueryState): Unit =
+  override def project(ctx: ReadWriteRow, state: QueryState): Unit =
     projection.project(ctx, state.query, CompiledExpressionConverter.parametersOrFail(state), state.cursors, state.expressionVariables)
 }
 

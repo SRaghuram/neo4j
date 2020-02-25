@@ -9,8 +9,12 @@ import java.util
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.BufferId
+import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
+import org.neo4j.cypher.internal.runtime.pipelined.execution.ArgumentSlots
+import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselRow
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentCountUpdater
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
@@ -43,7 +47,7 @@ class OptionalMorselBuffer(id: BufferId,
                           )
   extends ArgumentCountUpdater
   with AccumulatingBuffer
-  with Sink[IndexedSeq[PerArgument[MorselCypherRow]]]
+  with Sink[IndexedSeq[PerArgument[Morsel]]]
   with ClosingSource[MorselData]
   with DataHolder {
 
@@ -61,7 +65,7 @@ class OptionalMorselBuffer(id: BufferId,
         argumentState match {
           case ArgumentStateWithCompleted(completedArgument, true) =>
             if (!completedArgument.didReceiveData) {
-              MorselData(IndexedSeq.empty, EndOfEmptyStream(completedArgument.viewOfArgumentRow(argumentSlotOffset)), completedArgument.argumentRowIdsForReducers)
+              MorselData(IndexedSeq.empty, EndOfEmptyStream(completedArgument.argumentRow), completedArgument.argumentRowIdsForReducers)
             } else {
               val morsels = completedArgument.takeAll()
               if (morsels != null) {
@@ -96,7 +100,7 @@ class OptionalMorselBuffer(id: BufferId,
     buffer != null && buffer.canPut
   }
 
-  override def put(data: IndexedSeq[PerArgument[MorselCypherRow]]): Unit = {
+  override def put(data: IndexedSeq[PerArgument[Morsel]]): Unit = {
     if (DebugSupport.BUFFERS.enabled) {
       DebugSupport.BUFFERS.log(s"[put]   $this <- ${data.mkString(", ")}")
     }
@@ -119,7 +123,7 @@ class OptionalMorselBuffer(id: BufferId,
     argumentStateMap.nextArgumentStateIsCompletedOr(state => state.hasData)
   }
 
-  override def initiate(argumentRowId: Long, argumentMorsel: MorselCypherRow): Unit = {
+  override def initiate(argumentRowId: Long, argumentMorsel: MorselReadCursor): Unit = {
     if (DebugSupport.BUFFERS.enabled) {
       DebugSupport.BUFFERS.log(s"[init]  $this <- argumentRowId=$argumentRowId from $argumentMorsel")
     }
@@ -183,7 +187,7 @@ class OptionalMorselBuffer(id: BufferId,
 /**
  * Some Morsels for one argument row id. Depending on the [[ArgumentStream]] there might be more data for this argument row id.
  */
-case class MorselData(morsels: IndexedSeq[MorselCypherRow],
+case class MorselData(morsels: IndexedSeq[Morsel],
                       argumentStream: ArgumentStream,
                       argumentRowIdsForReducers: Array[Long])
 
@@ -194,7 +198,7 @@ trait EndOfStream extends ArgumentStream
  * The end of data for one argument row id, when there was actually no data (i.e. everything was filtered out).
  * @param viewOfArgumentRow the argument row for the id, as obtained from the [[MorselApplyBuffer]]
  */
-case class EndOfEmptyStream(viewOfArgumentRow: MorselCypherRow) extends EndOfStream
+case class EndOfEmptyStream(viewOfArgumentRow: MorselRow) extends EndOfStream
 
 /**
  * The end of data for one argument row id, when there was data.
@@ -224,8 +228,8 @@ trait OptionalBuffer {
  * Holds data for one argument row id in an [[OptionalBuffer]].
  */
 class OptionalArgumentStateBuffer(argumentRowId: Long,
-                                  val argumentMorsel: MorselCypherRow,
-                                  inner: Buffer[MorselCypherRow] with OptionalBuffer,
+                                  val argumentRow: MorselRow,
+                                  inner: Buffer[Morsel] with OptionalBuffer,
                                   argumentRowIdsForReducers: Array[Long]) extends ArgumentStateBuffer(argumentRowId, inner, argumentRowIdsForReducers) {
   /**
    * @return `true` if this buffer held data at any point in time, `false` if it was always empty.
@@ -233,31 +237,12 @@ class OptionalArgumentStateBuffer(argumentRowId: Long,
   def didReceiveData: Boolean = inner.didReceiveData
 
   /**
-   * Given the whole argument morsel, this creates a view of just the one argument row with [[argumentRowId]].
-   * @param argumentSlotOffset the offset at which to look for the [[argumentRowId]]
-   */
-  def viewOfArgumentRow(argumentSlotOffset: Int): MorselCypherRow = {
-    val view = argumentMorsel.shallowCopy()
-    view.resetToFirstRow()
-    var arg = view.getArgumentAt(argumentSlotOffset)
-    while (arg < argumentRowId && view.isValidRow) {
-      view.moveToNextRow()
-      arg = view.getArgumentAt(argumentSlotOffset)
-    }
-    if (arg == argumentRowId) {
-      view
-    } else {
-      throw new InternalException(s"Could not locate argumentRowId $argumentRowId in $argumentMorsel")
-    }
-  }
-
-  /**
    * Take all morsels from the buffer that are currently available.
    */
-  def takeAll(): IndexedSeq[MorselCypherRow] = {
+  def takeAll(): IndexedSeq[Morsel] = {
     var morsel = take()
     if (morsel != null) {
-      val morsels = new ArrayBuffer[MorselCypherRow]
+      val morsels = new ArrayBuffer[Morsel]
       do {
         morsels += morsel
         morsel = take()
@@ -269,17 +254,17 @@ class OptionalArgumentStateBuffer(argumentRowId: Long,
   }
 
   override def toString: String = {
-    s"OptionalArgumentStateBuffer(argumentRowId=$argumentRowId, argumentRowIdsForReducers=$argumentRowIdsForReducers, argumentMorsel=$argumentMorsel)"
+    s"OptionalArgumentStateBuffer(argumentRowId=$argumentRowId, argumentRowIdsForReducers=$argumentRowIdsForReducers, argumentMorsel=$argumentRow)"
   }
 }
 
 object OptionalArgumentStateBuffer {
   class Factory(stateFactory: StateFactory, operatorId: Id) extends ArgumentStateFactory[ArgumentStateBuffer] {
-    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselCypherRow, argumentRowIdsForReducers: Array[Long]): ArgumentStateBuffer =
-      new OptionalArgumentStateBuffer(argumentRowId, argumentMorsel, new StandardOptionalBuffer[MorselCypherRow](stateFactory.newBuffer[MorselCypherRow](operatorId)), argumentRowIdsForReducers)
+    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): ArgumentStateBuffer =
+      new OptionalArgumentStateBuffer(argumentRowId, argumentMorsel.snapshot(), new StandardOptionalBuffer[Morsel](stateFactory.newBuffer[Morsel](operatorId)), argumentRowIdsForReducers)
 
-    override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselCypherRow, argumentRowIdsForReducers: Array[Long]): ArgumentStateBuffer =
-      new OptionalArgumentStateBuffer(argumentRowId, argumentMorsel, new ConcurrentOptionalBuffer[MorselCypherRow](stateFactory.newBuffer[MorselCypherRow](operatorId)), argumentRowIdsForReducers)
+    override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): ArgumentStateBuffer =
+      new OptionalArgumentStateBuffer(argumentRowId, argumentMorsel.snapshot(), new ConcurrentOptionalBuffer[Morsel](stateFactory.newBuffer[Morsel](operatorId)), argumentRowIdsForReducers)
   }
 }
 

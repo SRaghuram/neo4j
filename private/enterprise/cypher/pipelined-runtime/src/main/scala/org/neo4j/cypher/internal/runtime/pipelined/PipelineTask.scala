@@ -9,7 +9,7 @@ import org.neo4j.cypher.internal.profiling.QueryProfiler
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.WithHeapUsageEstimation
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
+import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ContinuableOperatorTask
@@ -44,7 +44,7 @@ case class PipelineTask(startTask: ContinuableOperatorTask,
    * in order to retain the produced row order. Also we can never cancel a task with
    * unprocessed _output.
    */
-  private var _output: MorselCypherRow = _
+  private var _output: Morsel = _
 
   override def executeWorkUnit(resources: QueryResources,
                                workUnitEvent: WorkUnitEvent,
@@ -62,14 +62,12 @@ case class PipelineTask(startTask: ContinuableOperatorTask,
                                queryProfiler: QueryProfiler): Unit = {
     DebugSupport.logPipelines(PipelinedDebugSupport.prettyStartTask(startTask, pipelineState.pipeline.start.workIdentity))
     startTask.operateWithProfile(_output, queryContext, state, resources, queryProfiler)
-    _output.resetToFirstRow()
     DebugSupport.logPipelines(PipelinedDebugSupport.prettyPostStartTask(startTask))
     var i = 0
     while (i < middleTasks.length) {
       val op = middleTasks(i)
       DebugSupport.logPipelines(PipelinedDebugSupport.prettyWork(_output, pipelineState.pipeline.middleOperators(i).workIdentity))
       op.operateWithProfile(_output, queryContext, state, resources, queryProfiler)
-      _output.resetToFirstRow()
       i += 1
     }
   }

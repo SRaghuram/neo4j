@@ -35,12 +35,16 @@ import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.NoMemoryTracker
 import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.NumericHelper
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.SeekArgs
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
+import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFullCursor
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselWriteCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeByIdSeekOperator.asIdMethod
@@ -78,7 +82,7 @@ class NodeByIdSeekOperator(val workIdentity: WorkIdentity,
   }
 
 
-  class NodeByIdTask(val inputMorsel: MorselCypherRow) extends InputLoopTask {
+  class NodeByIdTask(inputMorsel: Morsel) extends InputLoopTask(inputMorsel) {
 
     override def toString: String = "NodeByIdTask"
 
@@ -90,10 +94,7 @@ class NodeByIdSeekOperator(val workIdentity: WorkIdentity,
      *
      * @return true iff the inner loop might result it output rows
      */
-    override protected def initializeInnerLoop(context: QueryContext,
-                                               state: QueryState,
-                                               resources: QueryResources,
-                                               initExecutionContext: CypherRow): Boolean = {
+    override protected def initializeInnerLoop(context: QueryContext, state: QueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
       val queryState = new SlottedQueryState(context,
         resources = null,
         params = state.params,
@@ -102,24 +103,24 @@ class NodeByIdSeekOperator(val workIdentity: WorkIdentity,
         resources.expressionVariables(state.nExpressionSlots),
         state.subscriber,
         NoMemoryTracker)
-      initExecutionContext.copyFrom(inputMorsel, argumentSize.nLongs, argumentSize.nReferences)
+      initExecutionContext.copyFrom(inputCursor, argumentSize.nLongs, argumentSize.nReferences)
       ids = nodeIdsExpr.expressions(initExecutionContext, queryState).iterator()
       true
     }
 
     override def workIdentity: WorkIdentity = NodeByIdSeekOperator.this.workIdentity
 
-    override protected def innerLoop(outputRow: MorselCypherRow, context: QueryContext, state: QueryState): Unit = {
+    override protected def innerLoop(outputRow: MorselFullCursor, context: QueryContext, state: QueryState): Unit = {
 
-      while (outputRow.isValidRow && ids.hasNext) {
+      while (outputRow.onValidRow && ids.hasNext) {
         val nextId = NumericHelper.asLongEntityIdPrimitive(ids.next())
         if (tracer != null) {
           tracer.onNode(nextId)
         }
         if (nextId >= 0L && context.transactionalContext.dataRead.nodeExists(nextId)) {
-          outputRow.copyFrom(inputMorsel, argumentSize.nLongs, argumentSize.nReferences)
+          outputRow.copyFrom(inputCursor, argumentSize.nLongs, argumentSize.nReferences)
           outputRow.setLongAt(offset, nextId)
-          outputRow.moveToNextRow()
+          outputRow.next()
         }
       }
     }

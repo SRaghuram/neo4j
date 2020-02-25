@@ -5,7 +5,8 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.state.buffers
 
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
+import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
@@ -15,26 +16,25 @@ import org.neo4j.cypher.internal.util.attribution.Id
  * Delegating [[Buffer]] used in argument state maps.
  */
 class ArgumentStateBuffer(override val argumentRowId: Long,
-                          inner: Buffer[MorselCypherRow],
+                          inner: Buffer[Morsel],
                           override val argumentRowIdsForReducers: Array[Long])
-  extends MorselAccumulator[MorselCypherRow]
-  with Buffer[MorselCypherRow] {
+  extends MorselAccumulator[Morsel]
+  with Buffer[Morsel] {
 
   // MorselAccumulator
-  override def update(morsel: MorselCypherRow): Unit = put(morsel)
+  override def update(morsel: Morsel): Unit = put(morsel)
 
   // Buffer
-  override def put(morsel: MorselCypherRow): Unit = {
-    morsel.resetToFirstRow()
+  override def put(morsel: Morsel): Unit = {
     inner.put(morsel)
   }
 
   override def canPut: Boolean = inner.canPut
   override def hasData: Boolean = inner.hasData
-  override def take(): MorselCypherRow = inner.take()
-  override def foreach(f: MorselCypherRow => Unit): Unit = inner.foreach(f)
+  override def take(): Morsel = inner.take()
+  override def foreach(f: Morsel => Unit): Unit = inner.foreach(f)
 
-  override def iterator: java.util.Iterator[MorselCypherRow] = {
+  override def iterator: java.util.Iterator[Morsel] = {
     inner.iterator
   }
 
@@ -45,10 +45,10 @@ class ArgumentStateBuffer(override val argumentRowId: Long,
 
 object ArgumentStateBuffer {
   class Factory(stateFactory: StateFactory, operatorId: Id) extends ArgumentStateFactory[ArgumentStateBuffer] {
-    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselCypherRow, argumentRowIdsForReducers: Array[Long]): ArgumentStateBuffer =
-      new ArgumentStateBuffer(argumentRowId, stateFactory.newBuffer[MorselCypherRow](operatorId), argumentRowIdsForReducers)
+    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): ArgumentStateBuffer =
+      new ArgumentStateBuffer(argumentRowId, stateFactory.newBuffer[Morsel](operatorId), argumentRowIdsForReducers)
 
-    override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselCypherRow, argumentRowIdsForReducers: Array[Long]): ArgumentStateBuffer =
-      new ArgumentStateBuffer(argumentRowId, stateFactory.newBuffer[MorselCypherRow](operatorId), argumentRowIdsForReducers)
+    override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): ArgumentStateBuffer =
+      new ArgumentStateBuffer(argumentRowId, stateFactory.newBuffer[Morsel](operatorId), argumentRowIdsForReducers)
   }
 }

@@ -5,10 +5,12 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined
 
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
+import org.neo4j.cypher.internal.runtime.debug.DebugSupport
+import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ContinuableOperatorTask
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ContinuableOperatorTaskWithAccumulator
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ContinuableOperatorTaskWithMorsel
+import org.neo4j.cypher.internal.runtime.pipelined.operators.InputLoopTask
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OptionalOperatorTask
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.EndOfEmptyStream
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.EndOfNonEmptyStream
@@ -23,18 +25,15 @@ object PipelinedDebugSupport {
   def prettyStartTask(startTask: ContinuableOperatorTask, workIdentity: WorkIdentity): Seq[String] = {
     startTask match {
       case withMorsel: ContinuableOperatorTaskWithMorsel =>
-        prettyMorselWithHeader("INPUT:", withMorsel.inputMorsel) ++
-          Array(
-            workIdentity.toString
-          )
-      case task:OptionalOperatorTask =>
+        prettyMorselWithHeader("INPUT:", withMorsel.inputMorsel, currentRow(withMorsel)) :+
+        prettyWorkIdentity(workIdentity)
+      case task: OptionalOperatorTask =>
         Array("INPUT:") ++
-          prettyStreamedData(task.morselData) ++
-          Array(
-            workIdentity.toString
-          )
+        prettyStreamedData(task.morselData) :+
+        prettyWorkIdentity(workIdentity)
+
       case withAccumulator: ContinuableOperatorTaskWithAccumulator[_, _] =>
-        Seq("INPUT:", withAccumulator.accumulator.toString, withAccumulator.workIdentity.toString)
+        Seq("INPUT:", withAccumulator.accumulator.toString, prettyWorkIdentity(withAccumulator.workIdentity))
     }
   }
 
@@ -43,25 +42,28 @@ object PipelinedDebugSupport {
       case withMorsel: ContinuableOperatorTaskWithMorsel =>
         prettyMorselWithHeader(
           "INPUT POST (canContinue: "+startTask.canContinue + "):",
-          withMorsel.inputMorsel)
-      case _:ContinuableOperatorTask => Array(
+          withMorsel.inputMorsel, currentRow(withMorsel))
+      case _: ContinuableOperatorTask => Array(
         s"INPUT POST (canContinue: ${startTask.canContinue})"
       )
     }
   }
 
-  def prettyWork(morsel: MorselCypherRow, workIdentity: WorkIdentity): Seq[String] = {
+  def prettyWork(morsel: Morsel, workIdentity: WorkIdentity): Seq[String] = {
     prettyMorselWithHeader("OUTPUT:", morsel) ++
       Array(
-        workIdentity.toString,
+        prettyWorkIdentity(workIdentity),
         ""
       )
   }
 
-  def prettyMorselWithHeader(header: String, morsel: MorselCypherRow): Seq[String] = {
+  def prettyWorkIdentity(workIdentity: WorkIdentity): String =
+    DebugSupport.Bold + workIdentity.toString + DebugSupport.Reset
+
+  def prettyMorselWithHeader(header: String, morsel: Morsel, currentRow: Int = -1): Seq[String] = {
     (
       Array(header) ++
-        morsel.prettyString
+        morsel.prettyString(currentRow)
       ).map(row => MORSEL_INDENT+row)
   }
 
@@ -69,11 +71,17 @@ object PipelinedDebugSupport {
     Seq("------------------------------------------------------------------------------------")
   }
 
+  private def currentRow(withMorsel: ContinuableOperatorTaskWithMorsel): Int =
+    withMorsel match {
+      case x: InputLoopTask => x.inputCursor.row
+      case _ => -1
+    }
+
   private def prettyStreamedData(streamedData: MorselData): Seq[String] = {
     Array(s"MorselData with downstream arg ids ${streamedData.argumentRowIdsForReducers.toSeq}") ++
       streamedData.morsels.flatMap(morsel => prettyMorselWithHeader("", morsel)) ++
       (streamedData.argumentStream match {
-        case EndOfEmptyStream(argRow) => prettyMorselWithHeader("EndOfEmptyStream", argRow)
+        case EndOfEmptyStream(argRow) => Array("EndOfEmptyStream: " + argRow.toString)
         case EndOfNonEmptyStream => Array("EndOfNonEmptyStream")
         case NotTheEnd => Array("NotTheEnd")
       })

@@ -7,7 +7,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.state.buffers
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentCountUpdater
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
@@ -67,7 +67,7 @@ class MorselArgumentStateBuffer[DATA <: AnyRef,
     accumulator
   }
 
-  override def initiate(argumentRowId: Long, argumentMorsel: MorselCypherRow): Unit = {
+  override def initiate(argumentRowId: Long, argumentMorsel: MorselReadCursor): Unit = {
     if (DebugSupport.BUFFERS.enabled) {
       DebugSupport.BUFFERS.log(s"[init]  $this <- argumentRowId=$argumentRowId from $argumentMorsel")
     }

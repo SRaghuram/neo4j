@@ -14,7 +14,6 @@ import org.neo4j.codegen.api.IntermediateRepresentation.block
 import org.neo4j.codegen.api.IntermediateRepresentation.cast
 import org.neo4j.codegen.api.IntermediateRepresentation.constant
 import org.neo4j.codegen.api.IntermediateRepresentation.load
-import org.neo4j.codegen.api.IntermediateRepresentation.loadField
 import org.neo4j.codegen.api.IntermediateRepresentation.print
 import org.neo4j.codegen.api.IntermediateRepresentation.variable
 import org.neo4j.codegen.api.Load
@@ -26,7 +25,7 @@ import org.neo4j.cypher.internal.physicalplanning.ast.SlottedCachedPropertyWitho
 import org.neo4j.cypher.internal.runtime.compiled.expressions.VariableNamer
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompilerTest.matchIR
 import org.neo4j.cypher.internal.runtime.pipelined.operators.MorselUnitTest
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_MORSEL
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_CURSOR
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.UNINITIALIZED_LONG_SLOT_VALUE
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.UNINITIALIZED_REF_SLOT_VALUE
 import org.neo4j.cypher.internal.util.InputPosition.NONE
@@ -583,11 +582,11 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
 
     // Then
     localState2.locals shouldEqual List(
-      variable[Long]("longSlot6", oec.getLongFromExecutionContext(6, loadField(INPUT_MORSEL))),
-      variable[Long]("longSlot7", oec.getLongFromExecutionContext(7, loadField(INPUT_MORSEL))),
+      variable[Long]("longSlot6", oec.getLongFromExecutionContext(6, INPUT_CURSOR)),
+      variable[Long]("longSlot7", oec.getLongFromExecutionContext(7, INPUT_CURSOR)),
       variable[Long]("longSlot8", UNINITIALIZED_LONG_SLOT_VALUE),
-      variable[AnyValue]("refSlot6", oec.getRefFromExecutionContext(6, loadField(INPUT_MORSEL))),
-      variable[AnyValue]("refSlot7", oec.getRefFromExecutionContext(7, loadField(INPUT_MORSEL))),
+      variable[AnyValue]("refSlot6", oec.getRefFromExecutionContext(6, INPUT_CURSOR)),
+      variable[AnyValue]("refSlot7", oec.getRefFromExecutionContext(7, INPUT_CURSOR)),
       variable[AnyValue]("refSlot8", UNINITIALIZED_REF_SLOT_VALUE),
       variable[AnyValue]("refSlot9", UNINITIALIZED_REF_SLOT_VALUE), // Cached properties are currently always initialized at runtime
     )
@@ -597,11 +596,11 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
 
     // Then
     localState1.locals shouldEqual List(
-      variable[Long]("longSlot3", oec.getLongFromExecutionContext(3, loadField(INPUT_MORSEL))),
-      variable[Long]("longSlot4", oec.getLongFromExecutionContext(4, loadField(INPUT_MORSEL))),
+      variable[Long]("longSlot3", oec.getLongFromExecutionContext(3, INPUT_CURSOR)),
+      variable[Long]("longSlot4", oec.getLongFromExecutionContext(4, INPUT_CURSOR)),
       variable[Long]("longSlot5", UNINITIALIZED_LONG_SLOT_VALUE),
-      variable[AnyValue]("refSlot3", oec.getRefFromExecutionContext(3, loadField(INPUT_MORSEL))),
-      variable[AnyValue]("refSlot4", oec.getRefFromExecutionContext(4, loadField(INPUT_MORSEL))),
+      variable[AnyValue]("refSlot3", oec.getRefFromExecutionContext(3, INPUT_CURSOR)),
+      variable[AnyValue]("refSlot4", oec.getRefFromExecutionContext(4, INPUT_CURSOR)),
       variable[AnyValue]("refSlot5", UNINITIALIZED_REF_SLOT_VALUE),
     )
 
@@ -610,11 +609,11 @@ class OperatorExpressionCompilerTest extends MorselUnitTest {
 
     // Then
     localState0.locals shouldEqual List(
-      variable[Long]("longSlot0", oec.getLongFromExecutionContext(0, loadField(INPUT_MORSEL))),
-      variable[Long]("longSlot1", oec.getLongFromExecutionContext(1, loadField(INPUT_MORSEL))),
+      variable[Long]("longSlot0", oec.getLongFromExecutionContext(0, INPUT_CURSOR)),
+      variable[Long]("longSlot1", oec.getLongFromExecutionContext(1, INPUT_CURSOR)),
       variable[Long]("longSlot2", UNINITIALIZED_LONG_SLOT_VALUE),
-      variable[AnyValue]("refSlot0", oec.getRefFromExecutionContext(0, loadField(INPUT_MORSEL))),
-      variable[AnyValue]("refSlot1", oec.getRefFromExecutionContext(1, loadField(INPUT_MORSEL))),
+      variable[AnyValue]("refSlot0", oec.getRefFromExecutionContext(0, INPUT_CURSOR)),
+      variable[AnyValue]("refSlot1", oec.getRefFromExecutionContext(1, INPUT_CURSOR)),
       variable[AnyValue]("refSlot2", UNINITIALIZED_REF_SLOT_VALUE),
     )
   }

@@ -10,60 +10,60 @@ import java.util.Comparator
 import org.neo4j.cypher.internal.macros.AssertMacros.checkOnlyWhenAssertionsAreEnabled
 import org.neo4j.cypher.internal.physicalplanning.LongSlot
 import org.neo4j.cypher.internal.physicalplanning.RefSlot
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
+import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFactory
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselRow
 import org.neo4j.cypher.internal.runtime.slotted.ColumnOrder
 
 object MorselSorting {
 
-  def createComparator(orderBy: Seq[ColumnOrder]): Comparator[MorselCypherRow] =
+  def createComparator(orderBy: Seq[ColumnOrder]): Comparator[MorselRow] =
     orderBy
       .map(MorselSorting.createMorselComparator)
-      .reduce((a: Comparator[MorselCypherRow], b: Comparator[MorselCypherRow]) => a.thenComparing(b))
+      .reduce((a: Comparator[MorselRow], b: Comparator[MorselRow]) => a.thenComparing(b))
 
-  def compareMorselIndexesByColumnOrder(row: MorselCypherRow)(order: ColumnOrder): Comparator[Integer] = order.slot match {
+  def compareMorselIndexesByColumnOrder(row: MorselReadCursor)(order: ColumnOrder): Comparator[Integer] = order.slot match {
     case LongSlot(offset, true, _) =>
       (idx1: Integer, idx2: Integer) => {
-        row.setCurrentRow(idx1)
+        row.setRow(idx1)
         val aVal = row.getLongAt(offset)
-        row.setCurrentRow(idx2)
+        row.setRow(idx2)
         val bVal = row.getLongAt(offset)
         order.compareNullableLongs(aVal, bVal)
       }
 
     case LongSlot(offset, false, _) =>
       (idx1: Integer, idx2: Integer) => {
-        row.setCurrentRow(idx1)
+        row.setRow(idx1)
         val aVal = row.getLongAt(offset)
-        row.setCurrentRow(idx2)
+        row.setRow(idx2)
         val bVal = row.getLongAt(offset)
         order.compareLongs(aVal, bVal)
       }
 
     case RefSlot(offset, _, _) =>
       (idx1: Integer, idx2: Integer) => {
-        row.setCurrentRow(idx1)
+        row.setRow(idx1)
         val aVal = row.getRefAt(offset)
-        row.setCurrentRow(idx2)
+        row.setRow(idx2)
         val bVal = row.getRefAt(offset)
         order.compareValues(aVal, bVal)
       }
   }
 
-  def createMorselIndexesArray(row: MorselCypherRow): Array[Integer] = {
-    val currentRow = row.getCurrentRow
-    val rows = row.getValidRows
+  def createMorselIndexesArray(morsel: Morsel): Array[Integer] = {
+    val rows = morsel.numberOfRows
     val indexes = new Array[Integer](rows)
     var i = 0
-    row.resetToFirstRow()
+    val cursor = morsel.readCursor(onFirstRow = true)
     while (i < rows) {
-      checkOnlyWhenAssertionsAreEnabled(row.isValidRow)
-      indexes(i) = row.getCurrentRow
-      row.moveToNextRow()
+      checkOnlyWhenAssertionsAreEnabled(cursor.onValidRow())
+      indexes(i) = cursor.row
+      cursor.next()
       i += 1
     }
-    checkOnlyWhenAssertionsAreEnabled(!row.isValidRow)
-    row.setCurrentRow(currentRow)
+    checkOnlyWhenAssertionsAreEnabled(!cursor.onValidRow())
     indexes
   }
 
@@ -73,39 +73,40 @@ object MorselSorting {
    *
    * Does this by sorting into a temp morsel first and then copying back the sorted data.
    */
-  def createSortedMorselData(inputRow: MorselCypherRow, outputToInputIndexes: Array[Integer]): Unit = {
-    val numInputRows = inputRow.getValidRows
+  def createSortedMorselData(morsel: Morsel, outputToInputIndexes: Array[Integer]): Unit = {
+    val numInputRows = morsel.numberOfRows
     // Create a temporary morsel
     // TODO: Do this without creating extra arrays
-    val outputRow = MorselFactory.allocate(inputRow.slots, numInputRows, inputRow.producingWorkUnitEvent)
+    val tempMorsel = MorselFactory.allocate(morsel.slots, numInputRows, morsel.producingWorkUnitEvent)
 
-    while (outputRow.isValidRow) {
-      val fromIndex = outputToInputIndexes(outputRow.getCurrentRow)
-      inputRow.setCurrentRow(fromIndex)
-
-      outputRow.copyFrom(inputRow)
-      outputRow.moveToNextRow()
+    val inputCursor = morsel.readCursor()
+    val writeCursor = tempMorsel.writeCursor()
+    while (writeCursor.next()) {
+      val fromIndex = outputToInputIndexes(writeCursor.row)
+      inputCursor.setRow(fromIndex)
+      writeCursor.copyFrom(inputCursor)
     }
+    writeCursor.truncate()
 
     // Copy from output morsel back to input morsel
-    inputRow.compactRowsFrom(outputRow)
+    morsel.compactRowsFrom(tempMorsel)
   }
 
-  def createMorselComparator(order: ColumnOrder): Comparator[MorselCypherRow] = order.slot match {
+  def createMorselComparator(order: ColumnOrder): Comparator[MorselRow] = order.slot match {
     case LongSlot(offset, true, _) =>
-      (m1: MorselCypherRow, m2: MorselCypherRow) => {
+      (m1: MorselRow, m2: MorselRow) => {
         val aVal = m1.getLongAt(offset)
         val bVal = m2.getLongAt(offset)
         order.compareNullableLongs(aVal, bVal)
       }
     case LongSlot(offset, false, _) =>
-      (m1: MorselCypherRow, m2: MorselCypherRow) => {
+      (m1: MorselRow, m2: MorselRow) => {
         val aVal = m1.getLongAt(offset)
         val bVal = m2.getLongAt(offset)
         order.compareLongs(aVal, bVal)
       }
     case RefSlot(offset, _, _) =>
-      (m1: MorselCypherRow, m2: MorselCypherRow) => {
+      (m1: MorselRow, m2: MorselRow) => {
         val aVal = m1.getRefAt(offset)
         val bVal = m2.getRefAt(offset)
         order.compareValues(aVal, bVal)

@@ -11,7 +11,7 @@ import org.neo4j.cypher.internal.physicalplanning.PipelineId
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
+import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFactory
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
@@ -152,7 +152,7 @@ class PipelineState(val pipeline: ExecutablePipeline,
     SchedulingResult(task, someTaskWasFilteredOut)
   }
 
-  def allocateMorsel(producingWorkUnitEvent: WorkUnitEvent, state: QueryState): MorselCypherRow = {
+  def allocateMorsel(producingWorkUnitEvent: WorkUnitEvent, state: QueryState): Morsel = {
     // TODO: Change pipeline.needsMorsel and needsFilteringMorsel into an Option[MorselFactory]
     //       The MorselFactory should probably originate from the MorselBuffer to play well with reuse/pooling
     if (pipeline.needsMorsel) {
@@ -162,7 +162,7 @@ class PipelineState(val pipeline: ExecutablePipeline,
       } else {
         MorselFactory.allocate(slots, state.morselSize, producingWorkUnitEvent)
       }
-    } else MorselCypherRow.empty
+    } else Morsel.empty
   }
 
   private def innerNextTask(context: QueryContext,
@@ -234,7 +234,7 @@ class PipelineState(val pipeline: ExecutablePipeline,
 
   /* OperatorCloser */
 
-  override def closeMorsel(morsel: MorselCypherRow): Unit = {
+  override def closeMorsel(morsel: Morsel): Unit = {
     executionState.closeMorselTask(pipeline, morsel)
   }
 
@@ -246,11 +246,11 @@ class PipelineState(val pipeline: ExecutablePipeline,
     executionState.closeAccumulatorTask(pipeline, accumulator)
   }
 
-  override def closeMorselAndAccumulatorTask(morsel: MorselCypherRow, accumulator: MorselAccumulator[_]): Unit = {
+  override def closeMorselAndAccumulatorTask(morsel: Morsel, accumulator: MorselAccumulator[_]): Unit = {
     executionState.closeMorselAndAccumulatorTask(pipeline, morsel, accumulator)
   }
 
-  override def filterCancelledArguments(morsel: MorselCypherRow): Boolean = {
+  override def filterCancelledArguments(morsel: Morsel): Boolean = {
     executionState.filterCancelledArguments(pipeline, morsel)
   }
 
@@ -258,7 +258,7 @@ class PipelineState(val pipeline: ExecutablePipeline,
     executionState.filterCancelledArguments(pipeline, accumulator)
   }
 
-  override def filterCancelledArguments(morsel: MorselCypherRow, accumulator: MorselAccumulator[_]): Boolean = {
+  override def filterCancelledArguments(morsel: Morsel, accumulator: MorselAccumulator[_]): Boolean = {
     executionState.filterCancelledArguments(pipeline, morsel, accumulator)
   }
 }

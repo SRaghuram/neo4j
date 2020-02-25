@@ -5,8 +5,11 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.state
 
+import org.neo4j.cypher.internal.runtime.CypherRow
+import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
+import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateWithCompleted
 import org.neo4j.util.Preconditions
@@ -33,7 +36,7 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
   /**
    * Create a new state controller
    */
-  protected def newStateController(argument: Long, argumentMorsel: MorselCypherRow, argumentRowIdsForReducers: Array[Long]): CONTROLLER
+  protected def newStateController(argument: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): CONTROLLER
 
   override def update(argumentRowId: Long, onState: STATE => Unit): Unit = {
     DebugSupport.ASM.log("ASM %s update %03d", argumentStateMapId, argumentRowId)
@@ -50,12 +53,12 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
     })
   }
 
-  override def filter[U](readingRow: MorselCypherRow,
-                         onArgument: (STATE, Long) => U,
-                         onRow: (U, MorselCypherRow) => Boolean): Unit = {
+  override def filterWithSideEffect[U](morsel: Morsel,
+                                       onArgument: (STATE, Long) => U,
+                                       onRow: (U, ReadWriteRow) => Boolean): Unit = {
     ArgumentStateMap.filter(
       argumentSlotOffset,
-      readingRow,
+      morsel,
       (argumentRowId, nRows) =>
         onArgument(controllers.get(argumentRowId).state, nRows),
       onRow
@@ -134,7 +137,7 @@ abstract class AbstractArgumentStateMap[STATE <: ArgumentState, CONTROLLER <: Ab
     controllers.remove(argument) != null
   }
 
-  override def initiate(argument: Long, argumentMorsel: MorselCypherRow, argumentRowIdsForReducers: Array[Long]): Unit = {
+  override def initiate(argument: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): Unit = {
     DebugSupport.ASM.log("ASM %s init %03d", argumentStateMapId, argument)
     val newController = newStateController(argument, argumentMorsel, argumentRowIdsForReducers)
     val previousValue = controllers.put(argument, newController)

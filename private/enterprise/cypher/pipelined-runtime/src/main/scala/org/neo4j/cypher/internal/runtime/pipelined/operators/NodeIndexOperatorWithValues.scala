@@ -7,7 +7,8 @@ package org.neo4j.cypher.internal.runtime.pipelined.operators
 
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.SlottedIndexedProperty
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselWriteCursor
 import org.neo4j.internal.kernel.api.NodeValueIndexCursor
 
 /**
@@ -19,18 +20,18 @@ abstract class NodeIndexOperatorWithValues[CURSOR <: NodeValueIndexCursor](nodeO
   protected val indexPropertyIndices: Array[Int] = properties.zipWithIndex.filter(_._1.getValueFromIndex).map(_._2)
   private val indexPropertySlotOffsets: Array[Int] = properties.flatMap(_.maybeCachedNodePropertySlot)
 
-  protected def iterate(inputRow: MorselCypherRow, outputRow: MorselCypherRow, cursor: CURSOR, argumentSize: SlotConfiguration.Size): Unit = {
-    while (outputRow.isValidRow && cursor.next()) {
-      outputRow.copyFrom(inputRow, argumentSize.nLongs, argumentSize.nReferences)
-      outputRow.setLongAt(nodeOffset, cursor.nodeReference())
+  protected def iterate(inputCursor: MorselReadCursor, outputCursor: MorselWriteCursor, cursor: CURSOR, argumentSize: SlotConfiguration.Size): Unit = {
+    while (outputCursor.onValidRow && cursor.next()) {
+      outputCursor.copyFrom(inputCursor, argumentSize.nLongs, argumentSize.nReferences)
+      outputCursor.setLongAt(nodeOffset, cursor.nodeReference())
 
       var i = 0
       while (i < indexPropertyIndices.length) {
-        outputRow.setCachedPropertyAt(indexPropertySlotOffsets(i), cursor.propertyValue(indexPropertyIndices(i)))
+        outputCursor.setCachedPropertyAt(indexPropertySlotOffsets(i), cursor.propertyValue(indexPropertyIndices(i)))
         i += 1
       }
 
-      outputRow.moveToNextRow()
+      outputCursor.next()
     }
   }
 }

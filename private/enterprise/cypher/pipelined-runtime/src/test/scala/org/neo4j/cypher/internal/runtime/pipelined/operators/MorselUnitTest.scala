@@ -10,8 +10,9 @@ import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.pipelined.execution.FilteringMorselCypherRow
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
+import org.neo4j.cypher.internal.runtime.pipelined.execution.FilteringMorsel
+import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.util.test_helpers.CypherFunSuite
@@ -91,18 +92,18 @@ abstract class MorselUnitTest extends CypherFunSuite {
       this
     }
 
-    def build() : MorselCypherRow = {
+    def build() : Morsel = {
       val slots = SlotConfiguration(Map.empty, longSlots, refSlots)
-      val context = MorselCypherRow(longs, refs, slots, rows)
+      val context = Morsel(longs, refs, slots, rows)
       context
     }
   }
 
   class FilteringInput extends Input {
-    override def build(): FilteringMorselCypherRow = {
+    override def build(): FilteringMorsel = {
       val slots = SlotConfiguration(Map.empty, longSlots, refSlots)
-      val context = MorselCypherRow(longs, refs, slots, rows)
-      val filteringContext = FilteringMorselCypherRow(context)
+      val context = Morsel(longs, refs, slots, rows)
+      val filteringContext = FilteringMorsel(context)
       filteringContext
     }
   }
@@ -166,7 +167,7 @@ abstract class MorselUnitTest extends CypherFunSuite {
   def gtePredicate(n: Long): Long => Boolean = _ >= n
   def eqPredicate(n: Long): Long => Boolean = _ == n
 
-  def buildSequentialInput(numberOfRows: Int): FilteringMorselCypherRow = {
+  def buildSequentialInput(numberOfRows: Int): FilteringMorsel = {
     var rb = new FilteringInput()
     (0 until numberOfRows).foreach { i =>
       rb = rb.addRow(Longs(i, i*2), Refs(Values.stringValue(i.toString), Values.stringValue((i*2).toString)))
@@ -174,43 +175,28 @@ abstract class MorselUnitTest extends CypherFunSuite {
     rb.build()
   }
 
-  def validateRows(row: FilteringMorselCypherRow, numberOfRows: Int, predicate: Long => Boolean): Unit = {
-    val rawRow = row.shallowCopy()
+  def validateRows(morsel: FilteringMorsel, numberOfRows: Int, predicate: Long => Boolean): Unit = {
 
     val expectedValidRows = (0 until numberOfRows).foldLeft(0)((count, i) => if (predicate(i)) count + 1 else count)
+    morsel.numberOfRows shouldEqual expectedValidRows
 
-    row.getCurrentRow shouldEqual 0
-    row.numberOfRows shouldEqual numberOfRows
-    rawRow.getCurrentRow shouldEqual 0
-    rawRow.numberOfRows shouldEqual numberOfRows
+    val cursor = morsel.readCursor()
+    cursor.next()
 
-    row.getValidRows shouldEqual expectedValidRows
-    rawRow.getValidRows shouldEqual expectedValidRows
-
-    row.resetToFirstRow()
     (0 until numberOfRows).foreach { i =>
-      rawRow.isValidRawRow shouldBe true
       if (predicate(i)) {
-        rawRow.isCancelled(i) shouldBe false
-        row.isValidRow shouldBe true
-        validateRowDataContent(row, i)
-        validateRowDataContent(rawRow, i)
+        morsel.isCancelled(cursor.row) shouldBe false
+        validateRowDataContent(cursor, i)
 
-        val hasNextRow = row.hasNextRow
-        row.moveToNextRow()
-        row.isValidRow shouldEqual hasNextRow
-      } else {
-        rawRow.isCancelled(i) shouldBe true
-        rawRow.isValidRow shouldBe false
+        val hasNextRow = cursor.hasNext
+        cursor.next()
+        cursor.onValidRow shouldEqual hasNextRow
       }
-      rawRow.moveToNextRawRow()
     }
-    row.isValidRow shouldEqual false
-    rawRow.isValidRow shouldEqual false
-    rawRow.isValidRawRow shouldEqual false
+    cursor.onValidRow shouldEqual false
   }
 
-  def validateRowDataContent(row: MorselCypherRow, i: Int): Unit = {
+  def validateRowDataContent(row: MorselReadCursor, i: Int): Unit = {
     row.getLongAt(0) shouldEqual i
     row.getLongAt(1) shouldEqual i*2
     row.getRefAt(0) shouldEqual Values.stringValue(i.toString)
@@ -220,16 +206,16 @@ abstract class MorselUnitTest extends CypherFunSuite {
   class StatelessOperatorGiven(operator: StatelessOperator) extends Given with HasOneInput {
 
     def whenOperate(): ThenOutput = {
-      val row = input.build
-      operator.operate(row, context, state, resources)
-      new ThenOutput(row, input.longSlots, input.refSlots)
+      val morsel = input.build
+      operator.operate(morsel, context, state, resources)
+      new ThenOutput(morsel, input.longSlots, input.refSlots)
     }
   }
 
-  class ThenOutput(outputRow: MorselCypherRow, longSlots: Int, refSlots: Int) {
+  class ThenOutput(outputMorsel: Morsel, longSlots: Int, refSlots: Int) {
     private var rowCount = 0
-    private val currentRow = outputRow.shallowCopy()
-    currentRow.resetToFirstRow()
+    private val currentRow = outputMorsel.readCursor()
+    currentRow.next()
 
     private def assertLongs(longs: Longs): Unit = {
       if (longs.longs.size != longSlots) {
@@ -257,7 +243,7 @@ abstract class MorselUnitTest extends CypherFunSuite {
       rowCount += 1
       assertLongs(longs)
       assertRefs(Refs())
-      currentRow.moveToNextRow()
+      currentRow.next()
       this
     }
 
@@ -276,14 +262,14 @@ abstract class MorselUnitTest extends CypherFunSuite {
     }
 
     def shouldBeDone(): Unit = {
-      outputRow.getValidRows should be(rowCount)
+      outputMorsel.numberOfRows should be(rowCount)
     }
   }
 
   class ThenContinuableOutput(task: ContinuableOperatorTask,
-                              outputRow: MorselCypherRow,
+                              outputMorsel: Morsel,
                               longSlots: Int,
-                              refSlots: Int) extends ThenOutput(outputRow, longSlots, refSlots) {
+                              refSlots: Int) extends ThenOutput(outputMorsel, longSlots, refSlots) {
 
     override def shouldBeDone(): Unit = {
       super.shouldBeDone()

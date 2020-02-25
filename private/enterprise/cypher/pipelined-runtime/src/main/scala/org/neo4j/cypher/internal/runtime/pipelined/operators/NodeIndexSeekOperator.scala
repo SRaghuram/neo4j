@@ -43,6 +43,7 @@ import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.KernelAPISupport.RANGE_SEEKABLE_VALUE_GROUPS
 import org.neo4j.cypher.internal.runtime.NoMemoryTracker
 import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CompiledHelpers
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
@@ -52,7 +53,10 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.IndexSeekMode
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.NodeIndexSeeker
 import org.neo4j.cypher.internal.runtime.pipelined.NodeIndexCursorRepresentation
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
+import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFullCursor
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselWriteCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ManyQueriesNodeIndexSeekTaskTemplate.compositeGetPropertyMethod
@@ -116,7 +120,7 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
 
   override val propertyIds: Array[Int] = properties.map(_.propertyKeyId)
 
-  class OTask(val inputMorsel: MorselCypherRow) extends InputLoopTask {
+  class OTask(inputMorsel: Morsel) extends InputLoopTask(inputMorsel) {
 
     override def workIdentity: WorkIdentity = NodeIndexSeekOperator.this.workIdentity
 
@@ -126,10 +130,7 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
 
     // INPUT LOOP TASK
 
-    override protected def initializeInnerLoop(context: QueryContext,
-                                               state: QueryState,
-                                               resources: QueryResources,
-                                               initExecutionContext: CypherRow): Boolean = {
+    override protected def initializeInnerLoop(context: QueryContext, state: QueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
 
       val queryState = new SlottedQueryState(context,
         resources = null,
@@ -139,16 +140,16 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
         resources.expressionVariables(state.nExpressionSlots),
         state.subscriber,
         NoMemoryTracker)
-      initExecutionContext.copyFrom(inputMorsel, argumentSize.nLongs, argumentSize.nReferences)
+      initExecutionContext.copyFrom(inputCursor, argumentSize.nLongs, argumentSize.nReferences)
       indexQueries = computeIndexQueries(queryState, initExecutionContext).toIterator
       nodeCursor = resources.cursorPools.nodeValueIndexCursorPool.allocateAndTrace()
       true
     }
 
-    override protected def innerLoop(outputRow: MorselCypherRow, context: QueryContext, state: QueryState): Unit = {
+    override protected def innerLoop(outputRow: MorselFullCursor, context: QueryContext, state: QueryState): Unit = {
       val read = context.transactionalContext.transaction.dataRead()
-      while (outputRow.isValidRow && next(state, read)) {
-        outputRow.copyFrom(inputMorsel, argumentSize.nLongs, argumentSize.nReferences)
+      while (outputRow.onValidRow && next(state, read)) {
+        outputRow.copyFrom(inputCursor, argumentSize.nLongs, argumentSize.nReferences)
         outputRow.setLongAt(offset, nodeCursor.nodeReference())
         var i = 0
         while (i < indexPropertyIndices.length) {
@@ -160,7 +161,7 @@ class NodeIndexSeekOperator(val workIdentity: WorkIdentity,
           outputRow.setCachedPropertyAt(indexPropertySlotOffsets(i), value)
           i += 1
         }
-        outputRow.moveToNextRow()
+        outputRow.next()
       }
     }
 

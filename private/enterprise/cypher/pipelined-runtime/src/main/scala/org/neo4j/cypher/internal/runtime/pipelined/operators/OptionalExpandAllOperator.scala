@@ -32,13 +32,16 @@ import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.NoMemoryTracker
 import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.RelationshipTypes
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.CursorPools
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
+import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFullCursor
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselWriteCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.ExpandAllOperatorTaskTemplate.getNodeIdFromSlot
@@ -78,7 +81,7 @@ class OptionalExpandAllOperator(val workIdentity: WorkIdentity,
     }
   }
 
-  class OptionalExpandAllTask(inputMorsel: MorselCypherRow) extends ExpandAllTask(inputMorsel,
+  class OptionalExpandAllTask(inputMorsel: Morsel) extends ExpandAllTask(inputMorsel,
     workIdentity,
     fromSlot,
     relOffset,
@@ -96,11 +99,8 @@ class OptionalExpandAllOperator(val workIdentity: WorkIdentity,
 
     }
 
-    protected override def initializeInnerLoop(context: QueryContext,
-                                               state: QueryState,
-                                               resources: QueryResources,
-                                               initExecutionContext: CypherRow): Boolean = {
-      val fromNode = getFromNodeFunction.applyAsLong(inputMorsel)
+    protected override def initializeInnerLoop(context: QueryContext, state: QueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
+      val fromNode = getFromNodeFunction.applyAsLong(inputCursor)
       hasWritten = false
       if (entityIsNull(fromNode)) {
         relationships = RelationshipTraversalCursor.EMPTY
@@ -113,40 +113,38 @@ class OptionalExpandAllOperator(val workIdentity: WorkIdentity,
       true
     }
 
-    override protected def innerLoop(outputRow: MorselCypherRow,
-                                     context: QueryContext,
-                                     state: QueryState): Unit = {
+    override protected def innerLoop(outputRow: MorselFullCursor, context: QueryContext, state: QueryState): Unit = {
 
-      while (outputRow.isValidRow && relationships.next()) {
+      while (outputRow.onValidRow && relationships.next()) {
         hasWritten = writeRow(outputRow,
           relationships.relationshipReference(),
           relationships.otherNodeReference())
       }
-      if (outputRow.isValidRow && !hasWritten) {
+      if (outputRow.onValidRow && !hasWritten) {
         writeNullRow(outputRow)
         hasWritten = true
       }
     }
 
-    private def writeNullRow(outputRow: MorselCypherRow): Unit = {
-      outputRow.copyFrom(inputMorsel)
+    private def writeNullRow(outputRow: MorselWriteCursor): Unit = {
+      outputRow.copyFrom(inputCursor)
       outputRow.setLongAt(relOffset, -1)
       outputRow.setLongAt(toOffset, -1)
-      outputRow.moveToNextRow()
+      outputRow.next()
     }
 
-    protected def writeRow(outputRow: MorselCypherRow, relId: Long, otherSide: Long): Boolean = {
-      outputRow.copyFrom(inputMorsel)
+    protected def writeRow(outputRow: MorselFullCursor, relId: Long, otherSide: Long): Boolean = {
+      outputRow.copyFrom(inputCursor)
       outputRow.setLongAt(relOffset, relId)
       outputRow.setLongAt(toOffset, otherSide)
-      outputRow.moveToNextRow()
+      outputRow.next()
       true
     }
   }
 
-  class FilteringOptionalExpandAllTask(inputMorsel: MorselCypherRow,
+  class FilteringOptionalExpandAllTask(inputMorsel: Morsel,
                                        predicate: Expression)
-    extends OptionalExpandAllTask(inputMorsel: MorselCypherRow) {
+    extends OptionalExpandAllTask(inputMorsel: Morsel) {
 
     private var expressionState: SlottedQueryState = _
 
@@ -163,15 +161,15 @@ class OptionalExpandAllOperator(val workIdentity: WorkIdentity,
         NoMemoryTracker)
     }
 
-    override protected def writeRow(outputRow: MorselCypherRow,
+    override protected def writeRow(outputRow: MorselFullCursor,
                                     relId: Long, otherSide: Long): Boolean = {
 
       //preemptively write the row, if predicate fails it will be overwritten
-      outputRow.copyFrom(inputMorsel)
+      outputRow.copyFrom(inputCursor)
       outputRow.setLongAt(relOffset, relId)
       outputRow.setLongAt(toOffset, otherSide)
       if (predicate.apply(outputRow, expressionState) eq Values.TRUE) {
-        outputRow.moveToNextRow()
+        outputRow.next()
         true
       } else {
         false

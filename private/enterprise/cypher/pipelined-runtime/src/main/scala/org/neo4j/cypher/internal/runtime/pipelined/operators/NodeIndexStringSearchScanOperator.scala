@@ -36,12 +36,16 @@ import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.IsNoValue
 import org.neo4j.cypher.internal.runtime.NoMemoryTracker
 import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.pipelined.NodeIndexCursorRepresentation
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
+import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFullCursor
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselWriteCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.NodeIndexStringSearchScanOperator.isValidOrThrowMethod
@@ -92,16 +96,13 @@ abstract class NodeIndexStringSearchScanOperator(val workIdentity: WorkIdentity,
 
   def computeIndexQuery(property: Int, value: TextValue): IndexQuery
 
-  class OTask(val inputMorsel: MorselCypherRow, index: IndexReadSession) extends InputLoopTask {
+  class OTask(inputMorsel: Morsel, index: IndexReadSession) extends InputLoopTask(inputMorsel) {
 
     override def workIdentity: WorkIdentity = NodeIndexStringSearchScanOperator.this.workIdentity
 
     private var cursor: NodeValueIndexCursor = _
 
-    override protected def initializeInnerLoop(context: QueryContext,
-                                               state: QueryState,
-                                               resources: QueryResources,
-                                               initExecutionContext: CypherRow): Boolean = {
+    override protected def initializeInnerLoop(context: QueryContext, state: QueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
 
       val read = context.transactionalContext.dataRead
       val queryState = new SlottedQueryState(context,
@@ -113,7 +114,7 @@ abstract class NodeIndexStringSearchScanOperator(val workIdentity: WorkIdentity,
         state.subscriber,
         NoMemoryTracker)
 
-      initExecutionContext.copyFrom(inputMorsel, argumentSize.nLongs, argumentSize.nReferences)
+      initExecutionContext.copyFrom(inputCursor, argumentSize.nLongs, argumentSize.nReferences)
       val value = valueExpr(initExecutionContext, queryState)
 
       value match {
@@ -129,8 +130,8 @@ abstract class NodeIndexStringSearchScanOperator(val workIdentity: WorkIdentity,
       }
     }
 
-    override protected def innerLoop(outputRow: MorselCypherRow, context: QueryContext, state: QueryState): Unit = {
-      iterate(inputMorsel, outputRow, cursor, argumentSize)
+    override protected def innerLoop(outputRow: MorselFullCursor, context: QueryContext, state: QueryState): Unit = {
+      iterate(inputCursor, outputRow, cursor, argumentSize)
     }
 
     override def setExecutionEvent(event: OperatorProfileEvent): Unit = {

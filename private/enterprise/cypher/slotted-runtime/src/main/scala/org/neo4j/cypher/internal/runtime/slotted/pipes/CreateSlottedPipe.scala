@@ -9,6 +9,7 @@ import java.util.function.ToLongFunction
 
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.LenientCreateRelationship
+import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.BaseCreatePipe
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.LazyLabel
@@ -78,9 +79,9 @@ case class CreateNodeSlottedCommand(idOffset: Int,
                                     properties: Option[Expression])
 
 case class CreateRelationshipSlottedCommand(relIdOffset: Int,
-                                            startNodeIdGetter: ToLongFunction[CypherRow],
+                                            startNodeIdGetter: ToLongFunction[ReadableRow],
                                             relType: LazyType,
-                                            endNodeIdGetter: ToLongFunction[CypherRow],
+                                            endNodeIdGetter: ToLongFunction[ReadableRow],
                                             properties: Option[Expression],
                                             relName: String,
                                             startName: String,

@@ -296,14 +296,14 @@ class PipelinedSlottedPipeFallbackTest extends SlottedPipeFallbackTestBase(FUSIN
 
 // WORKLOAD with PipelinedSpecSuite
 class PipelinedWorkloadTest extends WorkloadTestBase(FUSING, PIPELINED, SIZE_HINT)
-class PipelinedNoFusingWorkloadTest extends WorkloadTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedWorkloadNoFusingTest extends WorkloadTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
 
 // PROFILE
-class PipelinedProfileNoFusingRowsTest extends ProfileRowsTestBase(NO_FUSING, PIPELINED, SIZE_HINT, MORSEL_SIZE) with PipelinedSpecSuite
+class PipelinedProfileRowsNoFusingTest extends ProfileRowsTestBase(NO_FUSING, PIPELINED, SIZE_HINT, MORSEL_SIZE) with PipelinedSpecSuite
                                        with ProcedureCallRowsTestBase[EnterpriseRuntimeContext]
 class PipelinedProfileRowsTest extends ProfileRowsTestBase(FUSING, PIPELINED, SIZE_HINT, MORSEL_SIZE) with PipelinedSpecSuite
                                with ProcedureCallRowsTestBase[EnterpriseRuntimeContext]
-class PipelinedProfileNoFusingTimeTest extends ProfileTimeTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
+class PipelinedProfileTimeNoFusingTest extends ProfileTimeTestBase(NO_FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite
                                        with ProcedureCallTimeTestBase[EnterpriseRuntimeContext]
 class PipelinedProfileNoTimeTest extends ProfileNoTimeTestBase(FUSING, PIPELINED, SIZE_HINT) with PipelinedSpecSuite {
   //this test differs in Pipelined and Parallel since we fuse differently
@@ -335,7 +335,7 @@ class PipelinedProfileNoTimeTest extends ProfileNoTimeTestBase(FUSING, PIPELINED
     queryProfile.operatorProfile(Id.INVALID_ID.x) should be(NO_PROFILE)
   }
 }
-class PipelinedProfileNoFusingDbHitsTest extends PipelinedDbHitsTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
+class PipelinedProfileDbHitsNoFusingTest extends PipelinedDbHitsTestBase(NO_FUSING, PIPELINED, SIZE_HINT)
                                          with ProcedureCallDbHitsTestBase[EnterpriseRuntimeContext]
                                          with PipelinedSpecSuite
 class PipelinedProfileDbHitsTest extends PipelinedDbHitsTestBase(FUSING, PIPELINED, SIZE_HINT)
@@ -344,9 +344,9 @@ class PipelinedProfileDbHitsTest extends PipelinedDbHitsTestBase(FUSING, PIPELIN
 
   override protected def canFuseOverPipelines: Boolean = true
 }
-class PipelinedProfileNoFusingMemoryTest extends ProfileMemoryTestBase(ENTERPRISE.NO_FUSING, PIPELINED)
+class PipelinedProfileMemoryNoFusingTest extends ProfileMemoryTestBase(ENTERPRISE.NO_FUSING, PIPELINED)
                                          with ProfilePipelinedMemoryTestBase
 class PipelinedProfileMemoryTest extends ProfileMemoryTestBase(ENTERPRISE.FUSING, PIPELINED)
                                  with ProfilePipelinedMemoryTestBase
-class PipelinedProfileNoFusingMemoryTrackingDisabledTest extends ProfileMemoryTrackingDisabledTestBase(ENTERPRISE.NO_FUSING, PIPELINED, SIZE_HINT)
+class PipelinedProfileMemoryTrackingDisabledNoFusingTest extends ProfileMemoryTrackingDisabledTestBase(ENTERPRISE.NO_FUSING, PIPELINED, SIZE_HINT)
 class PipelinedProfileMemoryTrackingDisabledTest extends ProfileMemoryTrackingDisabledTestBase(ENTERPRISE.FUSING, PIPELINED, SIZE_HINT)

@@ -46,12 +46,16 @@ import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.NoMemoryTracker
 import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler.nullCheckIfRequired
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.NumericHelper
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.SeekArgs
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
+import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFullCursor
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselWriteCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.freeCursor
@@ -86,18 +90,12 @@ abstract class RelationshipByIdSeekOperator(val workIdentity: WorkIdentity,
                                             relId: SeekArgs,
                                             argumentSize: SlotConfiguration.Size) extends StreamingOperator {
 
-
-
-  abstract class RelationshipByIdTask(val inputMorsel: MorselCypherRow) extends InputLoopTask {
-
+  abstract class RelationshipByIdTask(inputMorsel: Morsel) extends InputLoopTask(inputMorsel) {
 
     protected var ids: java.util.Iterator[AnyValue] = _
     protected var cursor: RelationshipScanCursor = _
 
-    override protected def initializeInnerLoop(context: QueryContext,
-                                               state: QueryState,
-                                               resources: QueryResources,
-                                               initExecutionContext: CypherRow): Boolean = {
+    override protected def initializeInnerLoop(context: QueryContext, state: QueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
       cursor = resources.cursorPools.relationshipScanCursorPool.allocateAndTrace()
       val queryState = new SlottedQueryState(context,
         resources = null,
@@ -107,7 +105,7 @@ abstract class RelationshipByIdSeekOperator(val workIdentity: WorkIdentity,
         resources.expressionVariables(state.nExpressionSlots),
         state.subscriber,
         NoMemoryTracker)
-      initExecutionContext.copyFrom(inputMorsel, argumentSize.nLongs, argumentSize.nReferences)
+      initExecutionContext.copyFrom(inputCursor, argumentSize.nLongs, argumentSize.nReferences)
       ids = relId.expressions(initExecutionContext, queryState).iterator()
       true
     }
@@ -214,18 +212,18 @@ class DirectedRelationshipByIdSeekOperator(workIdentity: WorkIdentity,
                                    argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
 
     IndexedSeq(new RelationshipByIdTask(inputMorsel.nextCopy) {
-      override protected def innerLoop(outputRow: MorselCypherRow, context: QueryContext, state: QueryState): Unit = {
-        while (outputRow.isValidRow && ids.hasNext) {
+      override protected def innerLoop(outputRow: MorselFullCursor, context: QueryContext, state: QueryState): Unit = {
+        while (outputRow.onValidRow() && ids.hasNext) {
           val nextId = NumericHelper.asLongEntityIdPrimitive(ids.next())
           val read = context.transactionalContext.dataRead
           if (nextId >= 0L) {
             read.singleRelationship(nextId, cursor)
             if (cursor.next()) {
-              outputRow.copyFrom(inputMorsel, argumentSize.nLongs, argumentSize.nReferences)
+              outputRow.copyFrom(inputCursor, argumentSize.nLongs, argumentSize.nReferences)
               outputRow.setLongAt(relationship, nextId)
               outputRow.setLongAt(startNode, cursor.sourceNodeReference())
               outputRow.setLongAt(endNode, cursor.targetNodeReference())
-              outputRow.moveToNextRow()
+              outputRow.next()
             }
           }
         }
@@ -259,27 +257,27 @@ class UndirectedRelationshipByIdSeekOperator(workIdentity: WorkIdentity,
                                    argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorsel] = {
 
     IndexedSeq(new RelationshipByIdTask(inputMorsel.nextCopy) {
-      override protected def innerLoop(outputRow: MorselCypherRow, context: QueryContext, state: QueryState): Unit = {
-        while (outputRow.isValidRow && (!forwardDirection || ids.hasNext)) {
+      override protected def innerLoop(outputRow: MorselFullCursor, context: QueryContext, state: QueryState): Unit = {
+        while (outputRow.onValidRow && (!forwardDirection || ids.hasNext)) {
           if (forwardDirection) {
             val nextId = NumericHelper.asLongEntityIdPrimitive(ids.next())
             if (nextId >= 0L) {
               context.transactionalContext.dataRead.singleRelationship(nextId, cursor)
               if (cursor.next()) {
-                outputRow.copyFrom(inputMorsel, argumentSize.nLongs, argumentSize.nReferences)
+                outputRow.copyFrom(inputCursor, argumentSize.nLongs, argumentSize.nReferences)
                 outputRow.setLongAt(relationship, nextId)
                 outputRow.setLongAt(startNode, cursor.sourceNodeReference())
                 outputRow.setLongAt(endNode, cursor.targetNodeReference())
-                outputRow.moveToNextRow()
+                outputRow.next()
                 forwardDirection = false
               }
             }
           } else {
-            outputRow.copyFrom(inputMorsel, argumentSize.nLongs, argumentSize.nReferences)
+            outputRow.copyFrom(inputCursor, argumentSize.nLongs, argumentSize.nReferences)
             outputRow.setLongAt(relationship, cursor.relationshipReference())
             outputRow.setLongAt(startNode, cursor.targetNodeReference())
             outputRow.setLongAt(endNode, cursor.sourceNodeReference())
-            outputRow.moveToNextRow()
+            outputRow.next()
             forwardDirection = true
           }
         }

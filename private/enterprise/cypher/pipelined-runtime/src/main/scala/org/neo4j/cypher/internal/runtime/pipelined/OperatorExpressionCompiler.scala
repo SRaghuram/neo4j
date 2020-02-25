@@ -32,8 +32,8 @@ import org.neo4j.codegen.api.IntermediateRepresentation.variable
 import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.physicalplanning.ast.SlottedCachedProperty
-import org.neo4j.cypher.internal.runtime.DbAccess
 import org.neo4j.cypher.internal.runtime.CypherRow
+import org.neo4j.cypher.internal.runtime.DbAccess
 import org.neo4j.cypher.internal.runtime.ReadableRow
 import org.neo4j.cypher.internal.runtime.WritableRow
 import org.neo4j.cypher.internal.runtime.compiled.expressions.CursorRepresentation
@@ -44,8 +44,8 @@ import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler.Sc
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler.ScopeLocalsState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.DATA_READ
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_MORSEL
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.OUTPUT_ROW
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_CURSOR
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.OUTPUT_CURSOR
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.UNINITIALIZED_LONG_SLOT_VALUE
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.UNINITIALIZED_REF_SLOT_VALUE
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.nodeGetProperty
@@ -298,7 +298,7 @@ object OperatorExpressionCompiler {
      * @return continuationState The generated [[ScopeLocalsState]] for this scope
      */
     def endScope(mergeIntoParentScope: Boolean): ScopeLocalsState = {
-      endScope[ScopeLocalsState](_.genScopeLocalsState(operatorExpressionCompiler, loadField(INPUT_MORSEL)), mergeIntoParentScope)
+      endScope[ScopeLocalsState](_.genScopeLocalsState(operatorExpressionCompiler, INPUT_CURSOR), mergeIntoParentScope)
     }
 
     /**
@@ -313,7 +313,7 @@ object OperatorExpressionCompiler {
      * @return continuationState The generated [[ScopeContinuationState]] for this scope
      */
     def endInitializationScope(mergeIntoParentScope: Boolean): ScopeContinuationState = {
-      endScope[ScopeContinuationState](_.genScopeContinuationState(operatorExpressionCompiler, loadField(INPUT_MORSEL)), mergeIntoParentScope)
+      endScope[ScopeContinuationState](_.genScopeContinuationState(operatorExpressionCompiler, INPUT_CURSOR), mergeIntoParentScope)
     }
 
     private def endScope[T](genState: LocalVariableSlotMapper => T, mergeIntoParentScope: Boolean): T = {
@@ -539,7 +539,7 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
     }
     def initializeFromContextIR: IntermediateRepresentation = {
       block(
-        assign(local, getCachedPropertyFromExecutionContext(maybeCachedProperty.get.offset, loadField(INPUT_MORSEL))),
+        assign(local, getCachedPropertyFromExecutionContext(maybeCachedProperty.get.offset, INPUT_CURSOR)),
         condition(isNull(load(local)))(initializeFromStoreIR)
       )
     }
@@ -682,7 +682,7 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
     // Decide if we should use WritableRow.copyFrom or just prepend individual set operations for the remaining slots?
     if (nLongsToCopy > USE_ARRAY_COPY_THRESHOLD || nRefsToCopy > USE_ARRAY_COPY_THRESHOLD) {
       // Use the WritableRow.copyFrom method (which may use array copy)
-      writeOps += doCopyFromWithWritableRow(OUTPUT_ROW, loadField(INPUT_MORSEL), nLongsToCopy, nRefsToCopy)
+      writeOps += doCopyFromWithWritableRow(OUTPUT_CURSOR, INPUT_CURSOR, nLongsToCopy, nRefsToCopy)
       writeOps ++= writeLongSlotOps
       writeOps ++= writeRefSlotOps
     } else {
@@ -693,7 +693,7 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
           val local = mergedLocals.getLocalForLongSlot(i)
           val getOp =
             if (local == null)
-              getLongFromExecutionContext(i, loadField(INPUT_MORSEL))
+              getLongFromExecutionContext(i, INPUT_CURSOR)
             else
               load(local)
           writeOps += setLongInExecutionContext(i, getOp)
@@ -710,7 +710,7 @@ class OperatorExpressionCompiler(slots: SlotConfiguration,
           val local = mergedLocals.getLocalForRefSlot(i)
           val getOp =
             if (local == null)
-              getRefFromExecutionContext(i, loadField(INPUT_MORSEL))
+              getRefFromExecutionContext(i, INPUT_CURSOR)
             else
               load(local)
           setRefInExecutionContext(i, getOp) +=: writeRefSlotOps

@@ -18,7 +18,8 @@ import org.neo4j.cypher.internal.physicalplanning.LHSAccumulatingRHSStreamingBuf
 import org.neo4j.cypher.internal.physicalplanning.OptionalBufferVariant
 import org.neo4j.cypher.internal.physicalplanning.RegularBufferVariant
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
+import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.MorselAccumulator
 import org.neo4j.cypher.internal.runtime.pipelined.state.QueryCompletionTracker
@@ -163,7 +164,7 @@ class Buffers(numBuffers: Int,
             x.argumentStateMapId)
 
         case RegularBufferVariant =>
-          new MorselBuffer(bufferDefinition.id, tracker, reducers, workCancellers, argumentStateMaps, stateFactory.newBuffer[MorselCypherRow](bufferDefinition.operatorId))
+          new MorselBuffer(bufferDefinition.id, tracker, reducers, workCancellers, argumentStateMaps, stateFactory.newBuffer[Morsel](bufferDefinition.operatorId))
       }
   }
 
@@ -313,7 +314,7 @@ object Buffers {
      * If the accumulator is already initiated, this will increment the count.
      * Will be called when upstream apply buffers receive new morsels.
      */
-    def initiate(argumentRowId: Long, argumentMorsel: MorselCypherRow): Unit
+    def initiate(argumentRowId: Long, argumentMorsel: MorselReadCursor): Unit
 
     /**
      * Increment counts for the accumulator relevant to the given argument ID.
@@ -331,5 +332,5 @@ object Buffers {
   /**
    * Output of lhsAccumulatingRhsStreamingBuffers.
    */
-  case class AccumulatorAndMorsel[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]](acc: ACC, morsel: MorselCypherRow)
+  case class AccumulatorAndMorsel[DATA <: AnyRef, ACC <: MorselAccumulator[DATA]](acc: ACC, morsel: Morsel)
 }

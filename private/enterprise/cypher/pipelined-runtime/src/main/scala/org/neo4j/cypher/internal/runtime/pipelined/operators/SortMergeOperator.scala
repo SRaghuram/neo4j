@@ -11,7 +11,9 @@ import java.util.PriorityQueue
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
+import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselRow
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
@@ -32,17 +34,17 @@ class SortMergeOperator(val argumentStateMapId: ArgumentStateMapId,
                         argumentSlotOffset: Int)
                        (val id: Id = Id.INVALID_ID)
   extends Operator
-  with ReduceOperatorState[MorselCypherRow, ArgumentStateBuffer] {
+  with ReduceOperatorState[Morsel, ArgumentStateBuffer] {
 
   override def toString: String = "SortMerge"
 
-  private val comparator: Comparator[MorselCypherRow] = MorselSorting.createComparator(orderBy)
+  private val comparator: Comparator[MorselRow] = MorselSorting.createComparator(orderBy)
 
   override def createState(argumentStateCreator: ArgumentStateMapCreator,
                            stateFactory: StateFactory,
                            queryContext: QueryContext,
                            state: QueryState,
-                           resources: QueryResources): ReduceOperatorState[MorselCypherRow, ArgumentStateBuffer] = {
+                           resources: QueryResources): ReduceOperatorState[Morsel, ArgumentStateBuffer] = {
     argumentStateCreator.createArgumentStateMap(argumentStateMapId, new ArgumentStateBuffer.Factory(stateFactory, id))
     this
   }
@@ -51,7 +53,7 @@ class SortMergeOperator(val argumentStateMapId: ArgumentStateMapId,
                          state: QueryState,
                          input: ArgumentStateBuffer,
                          resources: QueryResources
-                        ): IndexedSeq[ContinuableOperatorTaskWithAccumulator[MorselCypherRow, ArgumentStateBuffer]] = {
+                        ): IndexedSeq[ContinuableOperatorTaskWithAccumulator[Morsel, ArgumentStateBuffer]] = {
     Array(new OTask(input))
   }
 
@@ -60,39 +62,40 @@ class SortMergeOperator(val argumentStateMapId: ArgumentStateMapId,
   produced, we remove the first morsel and consume the current row. If there is more data left, we re-insert
   the morsel, now pointing to the next row.
    */
-  class OTask(override val accumulator: ArgumentStateBuffer) extends ContinuableOperatorTaskWithAccumulator[MorselCypherRow, ArgumentStateBuffer] {
+  class OTask(override val accumulator: ArgumentStateBuffer) extends ContinuableOperatorTaskWithAccumulator[Morsel, ArgumentStateBuffer] {
 
     override def workIdentity: WorkIdentity = SortMergeOperator.this.workIdentity
 
     override def toString: String = "SortMergeTask"
 
-    var sortedInputPerArgument: PriorityQueue[MorselCypherRow] = _
+    var sortedInputPerArgument: PriorityQueue[MorselReadCursor] = _
 
-    override def operate(outputRow: MorselCypherRow,
+    override def operate(outputMorsel: Morsel,
                          context: QueryContext,
                          state: QueryState,
                          resources: QueryResources): Unit = {
       if (sortedInputPerArgument == null) {
-        sortedInputPerArgument = new PriorityQueue[MorselCypherRow](comparator)
+        sortedInputPerArgument = new PriorityQueue[MorselReadCursor](comparator)
         accumulator.foreach { morsel =>
           if (morsel.hasData) {
-            sortedInputPerArgument.add(morsel)
+            sortedInputPerArgument.add(morsel.readCursor(onFirstRow = true))
           }
         }
       }
 
-      while (outputRow.isValidRow && canContinue) {
-        val nextRow: MorselCypherRow = sortedInputPerArgument.poll()
-        outputRow.copyFrom(nextRow)
-        nextRow.moveToNextRow()
-        outputRow.moveToNextRow()
+      val outputCursor = outputMorsel.writeCursor(onFirstRow = true)
+      while (outputCursor.onValidRow && canContinue) {
+        val nextRow: MorselReadCursor = sortedInputPerArgument.poll()
+        outputCursor.copyFrom(nextRow)
+        nextRow.next()
+        outputCursor.next()
         // If there is more data in this Morsel, we'll re-insert it into the sortedInputs
-        if (nextRow.isValidRow) {
+        if (nextRow.onValidRow()) {
           sortedInputPerArgument.add(nextRow)
         }
       }
 
-      outputRow.finishedWriting()
+      outputCursor.truncate()
     }
 
     override def canContinue: Boolean = !sortedInputPerArgument.isEmpty

@@ -15,7 +15,7 @@ import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
+import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profileRow
@@ -28,7 +28,7 @@ import org.neo4j.internal.kernel.api.IndexReadSession
 class CachePropertiesOperator(val workIdentity: WorkIdentity,
                               val properties: Array[commands.expressions.Expression]) extends StatelessOperator {
 
-  override def operate(currentRow: MorselCypherRow,
+  override def operate(morsel: Morsel,
                        context: QueryContext,
                        state: QueryState,
                        resources: QueryResources): Unit = {
@@ -42,13 +42,13 @@ class CachePropertiesOperator(val workIdentity: WorkIdentity,
       state.subscriber,
       NoMemoryTracker)
 
-    while (currentRow.isValidRow) {
+    val cursor = morsel.readCursor()
+    while (cursor.next()) {
       var i = 0
       while (i < properties.length) {
-        properties(i)(currentRow, queryState)
+        properties(i)(cursor, queryState)
         i += 1
       }
-      currentRow.moveToNextRow()
     }
   }
 }

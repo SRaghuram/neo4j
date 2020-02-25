@@ -8,7 +8,7 @@ package org.neo4j.cypher.internal.runtime.pipelined.state.buffers
 import org.neo4j.cypher.internal.physicalplanning.BufferId
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
+import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFactory
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 
@@ -33,9 +33,9 @@ class MorselAttachBuffer(id: BufferId,
                          argumentSlotOffset: Int,
                          argumentNumLongs: Int,
                          argumentNumRefs: Int
-                        ) extends Sink[MorselCypherRow] {
+                        ) extends Sink[Morsel] {
 
-  def put(morsel: MorselCypherRow): Unit = {
+  def put(morsel: Morsel): Unit = {
     if (DebugSupport.BUFFERS.enabled) {
       DebugSupport.BUFFERS.log(s"[put]   $this <- $morsel")
     }
@@ -43,7 +43,9 @@ class MorselAttachBuffer(id: BufferId,
     if (morsel.hasData) {
       ArgumentStateMap.foreach(argumentSlotOffset, morsel, (_, view) => {
         val outputMorsel = MorselFactory.allocateFiltering(outputSlots, 1, morsel.producingWorkUnitEvent)
-        outputMorsel.copyFrom(view, argumentNumLongs, argumentNumRefs)
+        val outputCursor = outputMorsel.writeCursor(onFirstRow = true)
+        outputCursor.copyFrom(view.readCursor(onFirstRow = true), argumentNumLongs, argumentNumRefs)
+
         outputMorsel.attach(view)
 
         delegateApplyBuffer.put(outputMorsel)

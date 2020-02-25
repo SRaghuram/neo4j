@@ -19,6 +19,8 @@ import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.c
 import org.neo4j.cypher.internal.runtime.slotted.pipes.NodeHashJoinSlottedPipe.fillKeyArray
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.PrefetchingIterator
+import org.neo4j.cypher.internal.runtime.ReadableRow
+import org.neo4j.cypher.internal.runtime.WritableRow
 import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.values.storable.LongArray
 import org.neo4j.values.storable.Values
@@ -112,8 +114,8 @@ object NodeHashJoinSlottedPipe {
   def copyDataFromRhs(longsToCopy: Array[(Int, Int)],
                       refsToCopy: Array[(Int, Int)],
                       cachedPropertiesToCopy: Array[(Int, Int)],
-                      newRow: CypherRow,
-                      rhs: CypherRow): Unit = {
+                      newRow: WritableRow,
+                      rhs: ReadableRow): Unit = {
     var i = 0
     while (i < longsToCopy.length) {
       val (from, to) = longsToCopy(i)
@@ -141,7 +143,7 @@ object NodeHashJoinSlottedPipe {
    * If at least one node is null. It will write -1 into the first
    * position of the array.
    */
-  def fillKeyArray(current: CypherRow,
+  def fillKeyArray(current: ReadableRow,
                    key: Array[Long],
                    offsets: Array[Int]): Unit = {
     // We use a while loop like this to be able to break out early

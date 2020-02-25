@@ -23,7 +23,9 @@ import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.runtime.slotted.SlottedQueryState
 import org.neo4j.cypher.internal.runtime.NoMemoryTracker
 import org.neo4j.cypher.internal.runtime.QueryContext
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
+import org.neo4j.cypher.internal.runtime.ReadWriteRow
+import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFullCursor
 import org.neo4j.internal.kernel.api.IndexQuery
 import org.neo4j.internal.kernel.api.IndexQuery.ExactPredicate
 import org.neo4j.internal.kernel.api.IndexQueryConstraints
@@ -67,7 +69,7 @@ class MultiNodeIndexSeekOperator(val workIdentity: WorkIdentity,
     IndexedSeq(new OTask(inputMorsel.nextCopy))
   }
 
-  class OTask(val inputMorsel: MorselCypherRow) extends InputLoopTask {
+  class OTask(inputMorsel: Morsel) extends InputLoopTask(inputMorsel) {
 
     override def workIdentity: WorkIdentity = MultiNodeIndexSeekOperator.this.workIdentity
 
@@ -90,7 +92,7 @@ class MultiNodeIndexSeekOperator(val workIdentity: WorkIdentity,
     override protected def initializeInnerLoop(context: QueryContext,
                                                state: QueryState,
                                                resources: QueryResources,
-                                               initExecutionContext: CypherRow): Boolean = {
+                                               initExecutionContext: ReadWriteRow): Boolean = {
       // First time initialization: allocate node cursors and state holders for all index seeks
       if (nodeCursors == null) {
         nodeCursors = new Array(numberOfSeeks)
@@ -117,12 +119,12 @@ class MultiNodeIndexSeekOperator(val workIdentity: WorkIdentity,
                                              state.subscriber,
                                              NoMemoryTracker)
 
-      initExecutionContext.copyFrom(inputMorsel, argumentSize.nLongs, argumentSize.nReferences) // Copy arguments from the input row
+      initExecutionContext.copyFrom(inputCursor, argumentSize.nLongs, argumentSize.nReferences) // Copy arguments from the input row
       var i = 0
       while (i < numberOfSeeks) {
         // Recompute the index queries for the seek
         // [Here we have an optimization opportunity to skip this step if the variables that the seek depends on did not change compared to the last input row]
-        indexQueries = indexSeekers(i).computeIndexQueries(queryState, inputMorsel)
+        indexQueries = indexSeekers(i).computeIndexQueries(queryState, initExecutionContext)
         val indexQueryIterator = indexQueries.toIterator
         require(indexQueryIterator.hasNext, "An index query should always have at least one predicate")
         seeks(i).clear()
@@ -152,9 +154,9 @@ class MultiNodeIndexSeekOperator(val workIdentity: WorkIdentity,
       true
     }
 
-    override protected def innerLoop(outputRow: MorselCypherRow, context: QueryContext, state: QueryState): Unit = {
+    override protected def innerLoop(outputRow: MorselFullCursor, context: QueryContext, state: QueryState): Unit = {
 
-      while (outputRow.isValidRow && next(numberOfSeeks - 1)) {
+      while (outputRow.onValidRow && next(numberOfSeeks - 1)) {
         var j = 0
         while (j < numberOfSeeks) {
           val offset = nodeIndexSeekParameters(j).nodeSlotOffset
@@ -163,7 +165,7 @@ class MultiNodeIndexSeekOperator(val workIdentity: WorkIdentity,
           val indexPropertySlotOffsets = indexSeekers(j).indexPropertySlotOffsets
 
           // Copy arguments
-          outputRow.copyFrom(inputMorsel, argumentSize.nLongs, argumentSize.nReferences)
+          outputRow.copyFrom(inputCursor, argumentSize.nLongs, argumentSize.nReferences)
 
           // Set node id
           outputRow.setLongAt(offset, nodeCursor.nodeReference())
@@ -181,7 +183,7 @@ class MultiNodeIndexSeekOperator(val workIdentity: WorkIdentity,
           }
           j += 1
         }
-        outputRow.moveToNextRow()
+        outputRow.next()
       }
     }
 

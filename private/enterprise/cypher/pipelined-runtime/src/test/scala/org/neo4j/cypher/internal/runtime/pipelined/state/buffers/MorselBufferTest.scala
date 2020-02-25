@@ -8,8 +8,9 @@ package org.neo4j.cypher.internal.runtime.pipelined.state.buffers
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.BufferId
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
-import org.neo4j.cypher.internal.runtime.pipelined.execution.FilteringMorselCypherRow
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
+import org.neo4j.cypher.internal.runtime.pipelined.execution.FilteringMorsel
+import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.operators.MorselUnitTest
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.WorkCanceller
@@ -345,12 +346,10 @@ class MorselBufferTest extends MorselUnitTest {
           .addRow(Longs(6, 50))
           .addRow(Longs(6, 51))
           .build()
-      morsel.setCurrentRow(inputPos)
 
       initiate(cancellerMap, 1 to 6)
       x.filterCancelledArguments(morsel)
 
-      morsel.getCurrentRow should be(inputPos)
       new ThenOutput(morsel, 2, 0)
         .shouldReturnRow(Longs(1, 10))
         .shouldReturnRow(Longs(1, 11))
@@ -421,13 +420,13 @@ class MorselBufferTest extends MorselUnitTest {
 
   // HELPERS
 
-  private def longMorsel(longsPerRow: Int)(values: Long*): MorselCypherRow = {
+  private def longMorsel(longsPerRow: Int)(values: Long*): Morsel = {
     val nRows = values.size / longsPerRow
     val slots =
       (0 until longsPerRow)
         .foldLeft(SlotConfiguration.empty)( (slots, i) => slots.newLong(s"v$i", nullable = false, symbols.CTAny) )
 
-    new FilteringMorselCypherRow(values.toArray, Array.empty, slots, nRows, 0, 0, nRows)
+    new FilteringMorsel(values.toArray, Array.empty, slots, nRows, 0, nRows)
   }
 
   private def initiate(asm: ArgumentStateMap[_], argumentRowIds: Range): Unit = {
@@ -461,7 +460,7 @@ class MorselBufferTest extends MorselUnitTest {
       decrements.clear()
     }
 
-    override def initiate(argumentRowId: Long, argumentMorsel: MorselCypherRow): Unit =
+    override def initiate(argumentRowId: Long, argumentMorsel: MorselReadCursor): Unit =
       initiates(argumentRowId) = initiates.getOrElseUpdate(argumentRowId, 0) + 1
 
     override def increment(argumentRowId: Long): Unit =
@@ -477,12 +476,12 @@ class MorselBufferTest extends MorselUnitTest {
 
   case class CancellerFactory(predicate: Long => Boolean) extends ArgumentStateMap.ArgumentStateFactory[StaticCanceller] {
     override def newStandardArgumentState(argumentRowId: Long,
-                                          argumentMorsel: MorselCypherRow,
+                                          argumentMorsel: MorselReadCursor,
                                           argumentRowIdsForReducers: Array[Long]): StaticCanceller =
       new StaticCanceller(predicate(argumentRowId), argumentRowId)
 
     override def newConcurrentArgumentState(argumentRowId: Long,
-                                            argumentMorsel: MorselCypherRow,
+                                            argumentMorsel: MorselReadCursor,
                                             argumentRowIdsForReducers: Array[Long]): StaticCanceller = ???
   }
 

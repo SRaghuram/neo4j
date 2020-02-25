@@ -15,7 +15,6 @@ import org.neo4j.codegen.api.CodeGeneration.compileClass
 import org.neo4j.codegen.api.Constructor
 import org.neo4j.codegen.api.Field
 import org.neo4j.codegen.api.InstanceField
-import org.neo4j.codegen.api.IntermediateRepresentation.variable
 import org.neo4j.codegen.api.IntermediateRepresentation
 import org.neo4j.codegen.api.IntermediateRepresentation.and
 import org.neo4j.codegen.api.IntermediateRepresentation.assign
@@ -37,6 +36,7 @@ import org.neo4j.codegen.api.IntermediateRepresentation.self
 import org.neo4j.codegen.api.IntermediateRepresentation.setField
 import org.neo4j.codegen.api.IntermediateRepresentation.staticConstant
 import org.neo4j.codegen.api.IntermediateRepresentation.typeRefOf
+import org.neo4j.codegen.api.IntermediateRepresentation.variable
 import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.codegen.api.MethodDeclaration
 import org.neo4j.codegen.api.StaticField
@@ -51,32 +51,36 @@ import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpres
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
 import org.neo4j.cypher.internal.runtime.pipelined.ExecutionState
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
+import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.CURSOR_POOL_V
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.DATA_READ
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.DATA_READ_CONSTRUCTOR_PARAMETER
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.HAS_DEMAND
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.HAS_REMAINING_OUTPUT
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_CURSOR
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_CURSOR_FIELD
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_MORSEL_CONSTRUCTOR_PARAMETER
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.NEXT
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.NO_KERNEL_TRACER
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.NO_OPERATOR_PROFILE_EVENT
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.OUTPUT_COUNTER
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.OUTPUT_ROW_FINISHED_WRITING
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.OUTPUT_CURSOR
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.OUTPUT_CURSOR_VAR
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.OUTPUT_TRUNCATE
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.OUTPUT_ROW_IS_VALID
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.OUTPUT_ROW_MOVE_TO_NEXT
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.QUERY_PROFILER
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.QUERY_RESOURCES
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.QUERY_RESOURCE_PARAMETER
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.QUERY_STATE
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.SET_TRACER
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.SHOULD_BREAK
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.UPDATE_DEMAND
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.UPDATE_OUTPUT_COUNTER
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.WORK_IDENTITY_STATIC_FIELD_NAME
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.DATA_READ_CONSTRUCTOR_PARAMETER
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_MORSEL_CONSTRUCTOR_PARAMETER
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.DATA_READ
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_MORSEL
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.SHOULD_BREAK
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.QUERY_STATE
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.QUERY_RESOURCE_PARAMETER
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.CURSOR_POOL_V
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.closeEvent
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
@@ -108,7 +112,7 @@ trait CompiledStreamingOperator extends StreamingOperator {
   }
 
   protected def compiledNextTask(dataRead: Read,
-                                 inputMorsel: MorselCypherRow,
+                                 inputMorsel: Morsel,
                                  argumentStateMaps: ArgumentStateMaps): ContinuableOperatorTaskWithMorsel
 }
 
@@ -157,11 +161,11 @@ object CompiledStreamingOperator {
         MethodDeclaration("compiledNextTask",
           returnType = typeRefOf[ContinuableOperatorTaskWithMorsel],
           parameters = Seq(param[Read]("dataRead"),
-            param[MorselCypherRow]("inputMorsel"),
+            param[Morsel]("inputMorsel"),
             param[ArgumentStateMaps]("argumentStateMaps")),
           body = newInstance(Constructor(TypeReference.typeReference(taskClazz),
             Seq(TypeReference.typeReference(classOf[Read]),
-              TypeReference.typeReference(classOf[MorselCypherRow]),
+              TypeReference.typeReference(classOf[Morsel]),
               TypeReference.typeReference(classOf[ArgumentStateMaps]))),
             load("dataRead"),
             load("inputMorsel"),
@@ -217,7 +221,7 @@ trait CompiledTask extends ContinuableOperatorTaskWithMorsel
   //Fused plans doesn't support time tracking
   override def trackTime: Boolean = false
 
-  override def operateWithProfile(output: MorselCypherRow,
+  override def operateWithProfile(output: Morsel,
                                   context: QueryContext,
                                   state: QueryState,
                                   resources: QueryResources,
@@ -249,7 +253,7 @@ trait CompiledTask extends ContinuableOperatorTaskWithMorsel
   /**
    * Method of [[OutputOperatorState]] trait. Override to prevent creation of profiler event, which is not necessary when output operator is fused.
    */
-  override final def prepareOutputWithProfile(output: MorselCypherRow,
+  override final def prepareOutputWithProfile(output: Morsel,
                                               context: QueryContext,
                                               state: QueryState,
                                               resources: QueryResources,
@@ -258,7 +262,7 @@ trait CompiledTask extends ContinuableOperatorTaskWithMorsel
   /**
    * Method of [[OutputOperatorState]] trait. Implementing this allows the same [[CompiledTask]] instance to also act as a [[PreparedOutput]].
    */
-  override protected final def prepareOutput(outputMorsel: MorselCypherRow,
+  override protected final def prepareOutput(outputMorsel: Morsel,
                                              context: QueryContext,
                                              state: QueryState,
                                              resources: QueryResources,
@@ -279,7 +283,7 @@ trait CompiledTask extends ContinuableOperatorTaskWithMorsel
    * Generated code that executes the operator.
    */
   @throws[Exception]
-  def compiledOperate(context: MorselCypherRow,
+  def compiledOperate(outputMorsel: Morsel,
                       dbAccess: QueryContext,
                       state: QueryState,
                       resources: QueryResources,
@@ -312,7 +316,7 @@ trait CompiledTask extends ContinuableOperatorTaskWithMorsel
 
   override def setExecutionEvent(event: OperatorProfileEvent): Unit = throw new IllegalStateException("Fused operators should be called via operateWithProfile.")
 
-  override def operate(output: MorselCypherRow,
+  override def operate(output: Morsel,
                        context: QueryContext,
                        state: QueryState,
                        resources: QueryResources): Unit = throw new IllegalStateException("Fused operators should be called via operateWithProfile.")
@@ -550,7 +554,7 @@ trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
         ),
         MethodDeclaration("compiledOperate",
           returnType = typeRefOf[Unit],
-          Seq(param[MorselCypherRow]("context"),
+          Seq(param[Morsel]("outputMorsel"),
             param[QueryContext]("dbAccess"),
             param[QueryState]("state"),
             param[QueryResources]("resources"),
@@ -625,13 +629,13 @@ trait ContinuableOperatorTaskWithMorselTemplate extends OperatorTaskTemplate {
         ),
         // This is only needed because we extend an abstract scala class containing `val inputMorsel`
         MethodDeclaration("inputMorsel",
-          returnType = typeRefOf[MorselCypherRow],
+          returnType = typeRefOf[Morsel],
           parameters = Seq.empty,
-          body = loadField(INPUT_MORSEL)
+          body = invoke(INPUT_CURSOR, method[MorselReadCursor, Morsel]("morsel"))
         )
       ),
       // NOTE: This has to be called after genOperate!
-      genFields = () => staticFields ++ Seq(DATA_READ, INPUT_MORSEL, SHOULD_BREAK) ++ flatMap[Field](op => op.genFields ++
+      genFields = () => staticFields ++ Seq(DATA_READ, INPUT_CURSOR_FIELD, SHOULD_BREAK) ++ flatMap[Field](op => op.genFields ++
         op.genProfileEventField ++
         op.genExpressions.flatMap(_.fields)))
   }
@@ -670,7 +674,7 @@ class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
     val ops = new ArrayBuffer[IntermediateRepresentation]
 
     if (shouldWriteToContext) {
-      ops += block(codeGen.writeLocalsToSlots(), OUTPUT_ROW_MOVE_TO_NEXT)
+      ops += block(codeGen.writeLocalsToSlots(), invokeSideEffect(OUTPUT_CURSOR, NEXT))
     }
     if (shouldCheckOutputCounter) {
       ops += UPDATE_OUTPUT_COUNTER
@@ -724,7 +728,7 @@ class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
     val updates = new ArrayBuffer[IntermediateRepresentation]
 
     if (shouldWriteToContext) {
-      updates += OUTPUT_ROW_FINISHED_WRITING
+      updates += OUTPUT_TRUNCATE
     }
     if (shouldCheckDemand) {
       updates += UPDATE_DEMAND
@@ -740,11 +744,10 @@ class DelegateOperatorTaskTemplate(var shouldWriteToContext: Boolean = true,
   override def genFields: Seq[Field] = Seq.empty
 
   override def genLocalVariables: Seq[LocalVariable] = {
-    if (shouldCheckOutputCounter) {
-      Seq(OUTPUT_COUNTER)
-    } else {
-      Seq.empty
-    }
+    val seq = Seq.newBuilder[LocalVariable]
+    if (shouldCheckOutputCounter) seq += OUTPUT_COUNTER
+    if (shouldWriteToContext) seq += OUTPUT_CURSOR_VAR
+    seq.result()
   }
 
   override def genCanContinue: Option[IntermediateRepresentation] = None

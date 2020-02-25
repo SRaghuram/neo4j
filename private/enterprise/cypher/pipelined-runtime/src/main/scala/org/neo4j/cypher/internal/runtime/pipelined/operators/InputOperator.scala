@@ -31,7 +31,7 @@ import org.neo4j.cypher.internal.runtime.InputDataStream
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
+import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.InputOperator.nodeOrNoValue
@@ -70,35 +70,35 @@ class InputOperator(val workIdentity: WorkIdentity,
   /**
    * A [[InputTask]] reserves new batches from the InputStream, until there are no more batches.
    */
-  class InputTask(input: MutatingInputCursor, val inputMorsel: MorselCypherRow) extends ContinuableOperatorTaskWithMorsel {
+  class InputTask(input: MutatingInputCursor, val inputMorsel: Morsel) extends ContinuableOperatorTaskWithMorsel {
 
     override def workIdentity: WorkIdentity = InputOperator.this.workIdentity
 
-    override def operate(outputRow: MorselCypherRow,
+    override def operate(outputMorsel: Morsel,
                          context: QueryContext,
                          queryState: QueryState,
                          resources: QueryResources): Unit = {
 
-      while (outputRow.isValidRow && input.nextInput()) {
+      val outputCursor = outputMorsel.writeCursor()
+      while (outputCursor.next() && input.nextInput()) {
         var i = 0
         while (i < nodeOffsets.length) {
-          outputRow.setLongAt(nodeOffsets(i), nodeOrNoValue(input.value(i)))
+          outputCursor.setLongAt(nodeOffsets(i), nodeOrNoValue(input.value(i)))
           i += 1
         }
         i = 0
         while (i < relationshipOffsets.length) {
-          outputRow.setLongAt(relationshipOffsets(i), relationshipOrNoValue(input.value(i)))
+          outputCursor.setLongAt(relationshipOffsets(i), relationshipOrNoValue(input.value(i)))
           i += 1
         }
         i = 0
         while (i < refOffsets.length) {
-          outputRow.setRefAt(refOffsets(i), input.value(i))
+          outputCursor.setRefAt(refOffsets(i), input.value(i))
           i += 1
         }
-        outputRow.moveToNextRow()
       }
 
-      outputRow.finishedWriting()
+      outputCursor.truncate()
     }
 
     override def canContinue: Boolean = input.canContinue

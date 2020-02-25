@@ -25,10 +25,14 @@ import org.neo4j.cypher.internal.physicalplanning.SlottedIndexedProperty
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.pipelined.NodeIndexCursorRepresentation
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
+import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselFullCursor
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselWriteCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.CURSOR_POOL_V
@@ -70,16 +74,13 @@ class NodeIndexScanOperator(val workIdentity: WorkIdentity,
     IndexedSeq(new OTask(inputMorsel.nextCopy, indexSession))
   }
 
-  class OTask(val inputMorsel: MorselCypherRow, index: IndexReadSession) extends InputLoopTask {
+  class OTask(inputMorsel: Morsel, index: IndexReadSession) extends InputLoopTask(inputMorsel) {
 
     override def workIdentity: WorkIdentity = NodeIndexScanOperator.this.workIdentity
 
     private var cursor: NodeValueIndexCursor = _
 
-    protected override def initializeInnerLoop(context: QueryContext,
-                                               state: QueryState,
-                                               resources: QueryResources,
-                                               initExecutionContext: CypherRow): Boolean = {
+    protected override def initializeInnerLoop(context: QueryContext, state: QueryState, resources: QueryResources, initExecutionContext: ReadWriteRow): Boolean = {
 
       cursor = resources.cursorPools.nodeValueIndexCursorPool.allocateAndTrace()
       val read = context.transactionalContext.dataRead
@@ -87,8 +88,8 @@ class NodeIndexScanOperator(val workIdentity: WorkIdentity,
       true
     }
 
-    override protected def innerLoop(outputRow: MorselCypherRow, context: QueryContext, state: QueryState): Unit = {
-      iterate(inputMorsel, outputRow, cursor, argumentSize)
+    override protected def innerLoop(outputRow: MorselFullCursor, context: QueryContext, state: QueryState): Unit = {
+      iterate(inputCursor, outputRow, cursor, argumentSize)
     }
 
     override def setExecutionEvent(event: OperatorProfileEvent): Unit = {

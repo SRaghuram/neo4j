@@ -12,7 +12,7 @@ import org.neo4j.cypher.internal.profiling.QueryProfiler
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.pipelined.ExecutionState
 import org.neo4j.cypher.internal.runtime.pipelined.Task
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
+import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
@@ -41,7 +41,7 @@ trait OutputOperator extends HasWorkIdentity {
 trait OutputOperatorState extends HasWorkIdentity {
 
   def trackTime: Boolean
-  def prepareOutputWithProfile(output: MorselCypherRow,
+  def prepareOutputWithProfile(output: Morsel,
                                context: QueryContext,
                                state: QueryState,
                                resources: QueryResources,
@@ -59,7 +59,7 @@ trait OutputOperatorState extends HasWorkIdentity {
     }
   }
 
-  protected def prepareOutput(outputMorsel: MorselCypherRow,
+  protected def prepareOutput(outputMorsel: Morsel,
                               context: QueryContext,
                               state: QueryState,
                               resources: QueryResources,
@@ -77,7 +77,7 @@ trait PreparedOutput {
 case object NoOutputOperator extends OutputOperator with OutputOperatorState with PreparedOutput {
   override def outputBuffer: Option[BufferId] = None
   override def createState(executionState: ExecutionState): OutputOperatorState = this
-  override def prepareOutput(outputMorsel: MorselCypherRow,
+  override def prepareOutput(outputMorsel: Morsel,
                              context: QueryContext,
                              state: QueryState,
                              resources: QueryResources,
@@ -103,7 +103,7 @@ case class MorselBufferOutputState(override val workIdentity: WorkIdentity,
                                    override val trackTime: Boolean,
                                    bufferId: BufferId,
                                    executionState: ExecutionState) extends OutputOperatorState {
-  override def prepareOutput(outputMorsel: MorselCypherRow,
+  override def prepareOutput(outputMorsel: Morsel,
                              context: QueryContext,
                              state: QueryState,
                              resources: QueryResources,
@@ -112,7 +112,7 @@ case class MorselBufferOutputState(override val workIdentity: WorkIdentity,
 }
 case class MorselBufferPreparedOutput(bufferId: BufferId,
                                       executionState: ExecutionState,
-                                      outputMorsel: MorselCypherRow) extends PreparedOutput {
+                                      outputMorsel: Morsel) extends PreparedOutput {
   override def produce(): Unit =
     executionState.putMorsel(bufferId, outputMorsel)
 }
@@ -127,14 +127,14 @@ case class MorselArgumentStateBufferOutputOperator(bufferId: BufferId, argumentS
   override def createState(executionState: ExecutionState): OutputOperatorState =
   //if nextPipeLineFused is true we shouldn't attribute time to nextPipelineHeadPlanId
     MorselArgumentStateBufferOutputState(workIdentity,
-      executionState.getSink[IndexedSeq[PerArgument[MorselCypherRow]]](bufferId),
+      executionState.getSink[IndexedSeq[PerArgument[Morsel]]](bufferId),
       argumentSlotOffset, !nextPipelineFused)
 }
 case class MorselArgumentStateBufferOutputState(override val workIdentity: WorkIdentity,
-                                                sink: Sink[IndexedSeq[PerArgument[MorselCypherRow]]],
+                                                sink: Sink[IndexedSeq[PerArgument[Morsel]]],
                                                 argumentSlotOffset: Int,
                                                 trackTime: Boolean) extends OutputOperatorState {
-  override def prepareOutput(outputMorsel: MorselCypherRow,
+  override def prepareOutput(outputMorsel: Morsel,
                              context: QueryContext,
                              state: QueryState,
                              resources: QueryResources,
@@ -143,7 +143,7 @@ case class MorselArgumentStateBufferOutputState(override val workIdentity: WorkI
     MorselArgumentStateBufferPreparedOutput(sink, viewsPerArgument)
   }
 }
-case class MorselArgumentStateBufferPreparedOutput(sink: Sink[IndexedSeq[PerArgument[MorselCypherRow]]],
-                                                   data: IndexedSeq[PerArgument[MorselCypherRow]]) extends PreparedOutput {
+case class MorselArgumentStateBufferPreparedOutput(sink: Sink[IndexedSeq[PerArgument[Morsel]]],
+                                                   data: IndexedSeq[PerArgument[Morsel]]) extends PreparedOutput {
   override def produce(): Unit = sink.put(data)
 }

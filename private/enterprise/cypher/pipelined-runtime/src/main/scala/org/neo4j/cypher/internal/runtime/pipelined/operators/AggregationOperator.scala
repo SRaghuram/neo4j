@@ -58,7 +58,8 @@ import org.neo4j.cypher.internal.runtime.pipelined.aggregators.MinAggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.Reducer
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.SumAggregator
 import org.neo4j.cypher.internal.runtime.pipelined.aggregators.Updater
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
+import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.AggregationMapperOperatorTaskTemplate.createAggregators
@@ -129,7 +130,7 @@ case class AggregationOperator(workIdentity: WorkIdentity,
 
       override def workIdentity: WorkIdentity = AggregationOperator.this.workIdentity
 
-      override def prepareOutput(morsel: MorselCypherRow,
+      override def prepareOutput(morsel: Morsel,
                                  context: QueryContext,
                                  state: QueryState,
                                  resources: QueryResources,
@@ -152,21 +153,21 @@ case class AggregationOperator(workIdentity: WorkIdentity,
       }
 
       private def preAggregate(queryState: SlottedQueryState)
-                              (morsel: MorselCypherRow): AggPreMap = {
+                              (morsel: Morsel): AggPreMap = {
 
         val result = new AggPreMap()
 
         //loop over the entire morsel view and apply the aggregation
-        while (morsel.isValidRow) {
-          val groupingValue = groupings.computeGroupingKey(morsel, queryState)
+        val readCursor = morsel.readCursor()
+        while (readCursor.next()) {
+          val groupingValue = groupings.computeGroupingKey(readCursor, queryState)
           val updaters = result.computeIfAbsent(groupingValue, newUpdaters)
           var i = 0
           while (i < aggregations.length) {
-            val value = expressionValues(i)(morsel, queryState)
+            val value = expressionValues(i)(readCursor, queryState)
             updaters(i).update(value)
             i += 1
           }
-          morsel.moveToNextRow()
         }
         result
       }
@@ -242,10 +243,10 @@ case class AggregationOperator(workIdentity: WorkIdentity,
   object AggregatingAccumulator {
 
     class Factory(aggregators: Array[Aggregator], memoryTracker: QueryMemoryTracker, operatorId: Id) extends ArgumentStateFactory[AggregatingAccumulator] {
-      override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselCypherRow, argumentRowIdsForReducers: Array[Long]): AggregatingAccumulator =
+      override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): AggregatingAccumulator =
         new StandardAggregatingAccumulator(argumentRowId, aggregators, argumentRowIdsForReducers, memoryTracker, operatorId)
 
-      override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselCypherRow, argumentRowIdsForReducers: Array[Long]): AggregatingAccumulator =
+      override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): AggregatingAccumulator =
         new ConcurrentAggregatingAccumulator(argumentRowId, aggregators, argumentRowIdsForReducers)
     }
   }
@@ -285,25 +286,26 @@ case class AggregationOperator(workIdentity: WorkIdentity,
 
       private val resultIterator = accumulator.result()
 
-      override def operate(outputRow: MorselCypherRow,
+      override def operate(outputMorsel: Morsel,
                            context: QueryContext,
                            state: QueryState,
                            resources: QueryResources): Unit = {
 
-        while (resultIterator.hasNext && outputRow.isValidRow) {
+        val outputCursor = outputMorsel.fullCursor(onFirstRow = true)
+        while (resultIterator.hasNext && outputCursor.onValidRow()) {
           val entry = resultIterator.next()
           val key = entry.getKey
           val reducers = entry.getValue
 
-          groupings.project(outputRow, key)
+          groupings.project(outputCursor, key)
           var i = 0
           while (i < aggregations.length) {
-            outputRow.setRefAt(reducerOutputSlots(i), reducers(i).result)
+            outputCursor.setRefAt(reducerOutputSlots(i), reducers(i).result)
             i += 1
           }
-          outputRow.moveToNextRow()
+          outputCursor.next()
         }
-        outputRow.finishedWriting()
+        outputCursor.truncate()
       }
 
       override def canContinue: Boolean = resultIterator.hasNext

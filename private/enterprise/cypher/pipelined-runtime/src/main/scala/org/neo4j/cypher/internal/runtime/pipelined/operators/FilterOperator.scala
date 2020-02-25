@@ -18,7 +18,7 @@ import org.neo4j.cypher.internal.runtime.compiled.expressions.ExpressionCompiler
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
+import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profileRow
@@ -34,12 +34,11 @@ import org.neo4j.values.storable.Values
 class FilterOperator(val workIdentity: WorkIdentity,
                      predicate: Expression) extends StatelessOperator {
 
-  override def operate(readingRow: MorselCypherRow,
+  override def operate(morsel: Morsel,
                        context: QueryContext,
                        state: QueryState,
                        resources: QueryResources): Unit = {
 
-    val writingRow = readingRow.shallowCopy()
     val queryState = new SlottedQueryState(context,
       resources = null,
       params = state.params,
@@ -49,18 +48,20 @@ class FilterOperator(val workIdentity: WorkIdentity,
       state.subscriber,
       NoMemoryTracker)
 
-    while (readingRow.isValidRow) {
-      val matches = predicate(readingRow, queryState) eq Values.TRUE
+    val readCursor = morsel.readCursor()
+    val writeCursor = morsel.writeCursor(onFirstRow = true)
+
+    while (readCursor.next()) {
+      val matches = predicate(readCursor, queryState) eq Values.TRUE
       if (matches) {
-        writingRow.copyFrom(readingRow)
-        writingRow.moveToNextRow()
+        if (readCursor.row != writeCursor.row) {
+          writeCursor.copyFrom(readCursor)
+        }
+        writeCursor.next()
       }
-      readingRow.moveToNextRow()
     }
 
-    // We need to set validRows of the provided context
-    // to the current row of the local writing context
-    readingRow.finishedWritingUsing(writingRow)
+    writeCursor.truncate()
   }
 }
 

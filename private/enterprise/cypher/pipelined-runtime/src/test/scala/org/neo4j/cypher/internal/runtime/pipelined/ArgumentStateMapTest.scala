@@ -5,7 +5,7 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined
 
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
+import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.pipelined.operators.MorselUnitTest
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
 
@@ -23,20 +23,20 @@ class ArgumentStateMapTest extends MorselUnitTest {
       case (predicate, name) =>
         test(s"filter with predicate - $name - $numberOfRows rows") {
           // Given
-          val row = buildSequentialInput(numberOfRows)
+          val morsel = buildSequentialInput(numberOfRows)
           // When
-          ArgumentStateMap.filter(row, morselFilterPredicate(predicate))
+          ArgumentStateMap.filter(morsel, morselFilterPredicate(predicate))
           // Then
-          validateRows(row, numberOfRows, predicate)
+          validateRows(morsel, numberOfRows, predicate)
         }
 
         test(s"filter with argument state - $name - $numberOfRows rows") {
           // Given
-          val row = buildSequentialInput(numberOfRows)
+          val morsel = buildSequentialInput(numberOfRows)
           // When
-          ArgumentStateMap.filter[FILTER_STATE](0, row, onArgumentFilterPredicate(predicate), onRowFilterPredicate)
+          ArgumentStateMap.filter[FILTER_STATE](0, morsel, onArgumentFilterPredicate(predicate), onRowFilterPredicate)
           // Then
-          validateRows(row, numberOfRows, predicate)
+          validateRows(morsel, numberOfRows, predicate)
         }
     }
   }
@@ -57,22 +57,22 @@ class ArgumentStateMapTest extends MorselUnitTest {
       case (p1, p2, name) =>
         test(s"filter with predicate - $name - $numberOfRows rows") {
           // Given
-          val row = buildSequentialInput(numberOfRows)
+          val morsel = buildSequentialInput(numberOfRows)
           // When
-          ArgumentStateMap.filter(row, morselFilterPredicate(p1))
-          ArgumentStateMap.filter(row, morselFilterPredicate(p2))
+          ArgumentStateMap.filter(morsel, morselFilterPredicate(p1))
+          ArgumentStateMap.filter(morsel, morselFilterPredicate(p2))
           // Then
-          validateRows(row, numberOfRows, x => p1(x) && p2(x))
+          validateRows(morsel, numberOfRows, x => p1(x) && p2(x))
         }
 
         test(s"filter with argument state - $name - $numberOfRows rows") {
           // Given
-          val row = buildSequentialInput(numberOfRows)
+          val morsel = buildSequentialInput(numberOfRows)
           // When
-          ArgumentStateMap.filter(row, morselFilterPredicate(p1))
-          ArgumentStateMap.filter(row, morselFilterPredicate(p2))
+          ArgumentStateMap.filter(morsel, morselFilterPredicate(p1))
+          ArgumentStateMap.filter(morsel, morselFilterPredicate(p2))
           // Then
-          validateRows(row, numberOfRows, x => p1(x) && p2(x))
+          validateRows(morsel, numberOfRows, x => p1(x) && p2(x))
         }
     }
   }
@@ -90,12 +90,10 @@ class ArgumentStateMapTest extends MorselUnitTest {
         .addRow(Longs(5, 51))
         .build()
 
-      row.setCurrentRow(inputPos)
       ArgumentStateMap.filter[SumUntil32](0, row,
         (_, _) => new SumUntil32(),
         (state, currentRow) => state.sumAndCheckIfPast32(currentRow.getLongAt(1)))
 
-      row.getCurrentRow should be(inputPos)
       new ThenOutput(row, 2, 0)
         .shouldReturnRow(Longs(1, 10))
         .shouldReturnRow(Longs(1, 11))
@@ -107,7 +105,7 @@ class ArgumentStateMapTest extends MorselUnitTest {
 
   //-------------------
   // Creates a predicate for ArgumentStateMaps.filter(morsel: MorselExecutionContext, predicate: MorselExecutionContext => Boolean)
-  def morselFilterPredicate(predicate: Long => Boolean): MorselCypherRow => Boolean = {
+  def morselFilterPredicate(predicate: Long => Boolean): ReadWriteRow => Boolean = {
     m => predicate(m.getLongAt(0))
   }
 
@@ -125,7 +123,7 @@ class ArgumentStateMapTest extends MorselUnitTest {
       else
         -1L
 
-  val onRowFilterPredicate: (FILTER_STATE, MorselCypherRow) => Boolean =
+  val onRowFilterPredicate: (FILTER_STATE, ReadWriteRow) => Boolean =
     (state, row) =>
       row.getLongAt(0) == state
 

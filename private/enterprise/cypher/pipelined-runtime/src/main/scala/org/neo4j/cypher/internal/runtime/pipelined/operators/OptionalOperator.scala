@@ -13,8 +13,10 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.WritableRow
 import org.neo4j.cypher.internal.runtime.pipelined.ArgumentStateMapCreator
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
+import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
@@ -39,12 +41,12 @@ class OptionalOperator(val workIdentity: WorkIdentity,
   //===========================================================================
   // Compile-time initializations
   //===========================================================================
-  private val setNullableSlotToNullFunctions: Seq[CypherRow => Unit] =
+  private val setNullableSlotToNullFunctions: Seq[WritableRow => Unit] =
   nullableSlots.map {
     case LongSlot(offset, _, _) =>
-      (context: CypherRow) => context.setLongAt(offset, -1L)
+      (context: WritableRow) => context.setLongAt(offset, -1L)
     case RefSlot(offset, _, _) =>
-      (context: CypherRow) => context.setRefAt(offset, Values.NO_VALUE)
+      (context: WritableRow) => context.setRefAt(offset, Values.NO_VALUE)
   }
 
   //===========================================================================
@@ -80,16 +82,17 @@ class OptionalOperator(val workIdentity: WorkIdentity,
     private val morselIterator = morselData.morsels.iterator
     // To remember whether we already processed the ArgumentStream, which can lead to a null row.
     private var consumedArgumentStream = false
-    private var currentMorsel: MorselCypherRow = _
+    private var currentMorsel: MorselReadCursor = _
 
     override def workIdentity: WorkIdentity = OptionalOperator.this.workIdentity
 
-    override def operate(output: MorselCypherRow, context: QueryContext, state: QueryState, resources: QueryResources): Unit = {
-      while (output.isValidRow && canContinue) {
-        if (currentMorsel == null || !currentMorsel.isValidRow) {
+    override def operate(outputMorsel: Morsel, context: QueryContext, state: QueryState, resources: QueryResources): Unit = {
+      val outputCursor = outputMorsel.writeCursor(onFirstRow = true)
+      while (outputCursor.onValidRow && canContinue) {
+        if (currentMorsel == null || !currentMorsel.onValidRow) {
           if (morselIterator.hasNext) {
             // Take the next morsel to process
-            currentMorsel = morselIterator.next()
+            currentMorsel = morselIterator.next().readCursor(onFirstRow = true)
           } else {
             // No more morsels to process
             currentMorsel = null
@@ -97,20 +100,20 @@ class OptionalOperator(val workIdentity: WorkIdentity,
         }
 
         if (currentMorsel != null) {
-          while (output.isValidRow && currentMorsel.isValidRow) {
-            output.copyFrom(currentMorsel)
-            output.moveToNextRow()
-            currentMorsel.moveToNextRow()
+          while (outputCursor.onValidRow && currentMorsel.onValidRow) {
+            outputCursor.copyFrom(currentMorsel)
+            outputCursor.next()
+            currentMorsel.next()
           }
         } else if (!consumedArgumentStream) {
           morselData.argumentStream match {
             case EndOfEmptyStream(viewOfArgumentRow) =>
               // An argument id did not produce any rows. We need to manufacture a row with arguments + nulls
               // 1) Copy arguments from state
-              output.copyFrom(viewOfArgumentRow, argumentSize.nLongs, argumentSize.nReferences)
+              outputCursor.copyFrom(viewOfArgumentRow, argumentSize.nLongs, argumentSize.nReferences)
               // 2) Set nullable slots
-              setNullableSlotToNullFunctions.foreach(f => f(output))
-              output.moveToNextRow()
+              setNullableSlotToNullFunctions.foreach(f => f(outputCursor))
+              outputCursor.next()
 
             case _ =>
             // Do nothing
@@ -118,13 +121,13 @@ class OptionalOperator(val workIdentity: WorkIdentity,
           consumedArgumentStream = true
         }
       }
-      output.finishedWriting()
+      outputCursor.truncate()
     }
 
     override protected def closeCursors(resources: QueryResources): Unit = {}
 
     override def canContinue: Boolean =
-      (currentMorsel != null && currentMorsel.isValidRow) ||
+      (currentMorsel != null && currentMorsel.onValidRow) ||
         morselIterator.hasNext ||
         !consumedArgumentStream
 

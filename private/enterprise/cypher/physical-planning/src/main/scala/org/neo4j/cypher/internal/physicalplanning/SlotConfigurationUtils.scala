@@ -12,6 +12,8 @@ import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.CachedProper
 import org.neo4j.cypher.internal.physicalplanning.SlotConfiguration.VariableSlotKey
 import org.neo4j.cypher.internal.runtime.EntityById
 import org.neo4j.cypher.internal.runtime.CypherRow
+import org.neo4j.cypher.internal.runtime.ReadableRow
+import org.neo4j.cypher.internal.runtime.WritableRow
 import org.neo4j.cypher.internal.util.AssertionUtils
 import org.neo4j.cypher.internal.util.symbols.CTNode
 import org.neo4j.cypher.internal.util.symbols.CTRelationship
@@ -72,14 +74,14 @@ object SlotConfigurationUtils {
    * Use this to make a specialized getter function for a slot and a primitive return type (i.e. CTNode or CTRelationship),
    * that given an ExecutionContext returns a long.
    */
-  def makeGetPrimitiveFromSlotFunctionFor(slot: Slot, returnType: CypherType, throwOfTypeError: Boolean = true): ToLongFunction[CypherRow] =
+  def makeGetPrimitiveFromSlotFunctionFor(slot: Slot, returnType: CypherType, throwOfTypeError: Boolean = true): ToLongFunction[ReadableRow] =
     (slot, returnType, throwOfTypeError) match {
       case (LongSlot(offset, _, _), CTNode | CTRelationship, _) =>
-        (context: CypherRow) =>
+        (context: ReadableRow) =>
           context.getLongAt(offset)
 
       case (RefSlot(offset, false, _), CTNode, true) =>
-        (context: CypherRow) =>
+        (context: ReadableRow) =>
           val value = context.getRefAt(offset)
           try {
             value.asInstanceOf[VirtualNodeValue].id()
@@ -89,7 +91,7 @@ object SlotConfigurationUtils {
           }
 
       case (RefSlot(offset, false, _), CTRelationship, true) =>
-        (context: CypherRow) =>
+        (context: ReadableRow) =>
           val value = context.getRefAt(offset)
           try {
             value.asInstanceOf[VirtualRelationshipValue].id()
@@ -99,7 +101,7 @@ object SlotConfigurationUtils {
           }
 
       case (RefSlot(offset, true, _), CTNode, true) =>
-        (context: CypherRow) =>
+        (context: ReadableRow) =>
           val value = context.getRefAt(offset)
           try {
             if (value eq Values.NO_VALUE)
@@ -112,7 +114,7 @@ object SlotConfigurationUtils {
           }
 
       case (RefSlot(offset, true, _), CTRelationship, true) =>
-        (context: CypherRow) =>
+        (context: ReadableRow) =>
           val value = context.getRefAt(offset)
           try {
             if (value eq Values.NO_VALUE)
@@ -125,14 +127,14 @@ object SlotConfigurationUtils {
           }
 
       case (RefSlot(offset, _, _), CTNode, false) =>
-        (context: CypherRow) =>
+        (context: ReadableRow) =>
           context.getRefAt(offset) match {
             case n: VirtualNodeValue => n.id()
             case _ => PRIMITIVE_NULL
           }
 
       case (RefSlot(offset, _, _), CTRelationship, false) =>
-        (context: CypherRow) =>
+        (context: ReadableRow) =>
           context.getRefAt(offset) match {
             case r: VirtualRelationshipValue => r.id()
             case _ => PRIMITIVE_NULL
@@ -146,26 +148,26 @@ object SlotConfigurationUtils {
    * Use this to make a specialized getter function for a slot that is expected to contain a node
    * that given an ExecutionContext returns a long with the node id.
    */
-  def makeGetPrimitiveNodeFromSlotFunctionFor(slot: Slot, throwOnTypeError: Boolean = true): ToLongFunction[CypherRow] =
+  def makeGetPrimitiveNodeFromSlotFunctionFor(slot: Slot, throwOnTypeError: Boolean = true): ToLongFunction[ReadableRow] =
     makeGetPrimitiveFromSlotFunctionFor(slot, CTNode, throwOnTypeError)
 
   /**
    * Use this to make a specialized getter function for a slot that is expected to contain a node
    * that given an ExecutionContext returns a long with the relationship id.
    */
-  def makeGetPrimitiveRelationshipFromSlotFunctionFor(slot: Slot, throwOfTypeError: Boolean = true): ToLongFunction[CypherRow] =
+  def makeGetPrimitiveRelationshipFromSlotFunctionFor(slot: Slot, throwOfTypeError: Boolean = true): ToLongFunction[ReadableRow] =
     makeGetPrimitiveFromSlotFunctionFor(slot, CTRelationship, throwOfTypeError)
 
-  val NO_ENTITY_FUNCTION: ToLongFunction[CypherRow] = (value: CypherRow) => PRIMITIVE_NULL
+  val NO_ENTITY_FUNCTION: ToLongFunction[ReadableRow] = (value: ReadableRow) => PRIMITIVE_NULL
 
   /**
    * Use this to make a specialized setter function for a slot,
    * that takes as input an ExecutionContext and an AnyValue.
    */
-  def makeSetValueInSlotFunctionFor(slot: Slot): (CypherRow, AnyValue) => Unit =
+  def makeSetValueInSlotFunctionFor(slot: Slot): (WritableRow, AnyValue) => Unit =
     slot match {
       case LongSlot(offset, false, CTNode) =>
-        (context: CypherRow, value: AnyValue) =>
+        (context: WritableRow, value: AnyValue) =>
           try {
             context.setLongAt(offset, value.asInstanceOf[VirtualNodeValue].id())
           } catch {
@@ -174,7 +176,7 @@ object SlotConfigurationUtils {
           }
 
       case LongSlot(offset, false, CTRelationship) =>
-        (context: CypherRow, value: AnyValue) =>
+        (context: WritableRow, value: AnyValue) =>
           try {
             context.setLongAt(offset, value.asInstanceOf[VirtualRelationshipValue].id())
           } catch {
@@ -183,7 +185,7 @@ object SlotConfigurationUtils {
           }
 
       case LongSlot(offset, true, CTNode) =>
-        (context: CypherRow, value: AnyValue) =>
+        (context: WritableRow, value: AnyValue) =>
           if (value eq Values.NO_VALUE)
             context.setLongAt(offset, PRIMITIVE_NULL)
           else {
@@ -196,7 +198,7 @@ object SlotConfigurationUtils {
           }
 
       case LongSlot(offset, true, CTRelationship) =>
-        (context: CypherRow, value: AnyValue) =>
+        (context: WritableRow, value: AnyValue) =>
           if (value eq Values.NO_VALUE)
             context.setLongAt(offset, PRIMITIVE_NULL)
           else {
@@ -209,7 +211,7 @@ object SlotConfigurationUtils {
           }
 
       case RefSlot(offset, _, _) =>
-        (context: CypherRow, value: AnyValue) =>
+        (context: WritableRow, value: AnyValue) =>
           context.setRefAt(offset, value)
 
       case _ =>

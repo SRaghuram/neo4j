@@ -11,6 +11,7 @@ import org.neo4j.codegen.api.IntermediateRepresentation.and
 import org.neo4j.codegen.api.IntermediateRepresentation.block
 import org.neo4j.codegen.api.IntermediateRepresentation.invoke
 import org.neo4j.codegen.api.IntermediateRepresentation.loop
+import org.neo4j.codegen.api.IntermediateRepresentation.invokeSideEffect
 import org.neo4j.codegen.api.IntermediateRepresentation.method
 import org.neo4j.codegen.api.IntermediateRepresentation.or
 import org.neo4j.codegen.api.IntermediateRepresentation.self
@@ -20,12 +21,13 @@ import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
+import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_ROW_IS_VALID
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_ROW_MOVE_TO_NEXT
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_CURSOR
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profileRow
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.INPUT_ROW_IS_VALID
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.NEXT
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.MorselParallelizer
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
@@ -45,23 +47,23 @@ class ArgumentOperator(val workIdentity: WorkIdentity,
                                    argumentStateMaps: ArgumentStateMaps): IndexedSeq[ContinuableOperatorTaskWithMorsel] =
     IndexedSeq(new OTask(inputMorsel.nextCopy))
 
-  class OTask(val inputMorsel: MorselCypherRow) extends ContinuableOperatorTaskWithMorsel {
+  class OTask(val inputMorsel: Morsel) extends ContinuableOperatorTaskWithMorsel {
 
     override def workIdentity: WorkIdentity = ArgumentOperator.this.workIdentity
 
     override def toString: String = "ArgumentTask"
 
-    override def operate(outputRow: MorselCypherRow,
+    override def operate(outputMorsel: Morsel,
                          context: QueryContext,
                          state: QueryState,
                          resources: QueryResources): Unit = {
 
-      while (outputRow.isValidRow && inputMorsel.isValidRow) {
-        outputRow.copyFrom(inputMorsel, argumentSize.nLongs, argumentSize.nReferences)
-        inputMorsel.moveToNextRow()
-        outputRow.moveToNextRow()
+      val inputCursor = inputMorsel.readCursor()
+      val outputCursor = outputMorsel.writeCursor()
+      while (outputCursor.next() && inputCursor.next()) {
+        outputCursor.copyFrom(inputCursor, argumentSize.nLongs, argumentSize.nReferences)
       }
-      outputRow.finishedWriting()
+      outputCursor.truncate()
     }
 
     override def canContinue: Boolean = false
@@ -91,7 +93,7 @@ class ArgumentOperatorTaskTemplate(override val inner: OperatorTaskTemplate,
           codeGen.copyFromInput(argumentSize.nLongs, argumentSize.nReferences),
           inner.genOperateWithExpressions,
           // Else if no inner operator can proceed we move to the next input row
-          doIfInnerCantContinue(block(INPUT_ROW_MOVE_TO_NEXT,  profileRow(id))),
+          doIfInnerCantContinue(block(invokeSideEffect(INPUT_CURSOR, NEXT),  profileRow(id))),
           innermost.resetCachedPropertyVariables
         )
       )

@@ -9,6 +9,8 @@ import org.neo4j.cypher.internal.physicalplanning.Slot
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeGetValueFromSlotFunctionFor
 import org.neo4j.cypher.internal.physicalplanning.SlotConfigurationUtils.makeSetValueInSlotFunctionFor
 import org.neo4j.cypher.internal.runtime.CypherRow
+import org.neo4j.cypher.internal.runtime.ReadableRow
+import org.neo4j.cypher.internal.runtime.WritableRow
 import org.neo4j.cypher.internal.runtime.interpreted.GroupingExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.pipes.Pipe
@@ -24,14 +26,12 @@ case object EmptyGroupingExpression extends GroupingExpression {
   override type KeyType = AnyValue
 
   override def registerOwningPipe(pipe: Pipe): Unit = {}
-  override def computeGroupingKey(context: CypherRow,
-                                  state: QueryState): AnyValue = Values.NO_VALUE
+  override def computeGroupingKey(context: ReadableRow, state: QueryState): AnyValue = Values.NO_VALUE
   override def computeOrderedGroupingKey(groupingKey: AnyValue): AnyValue = Values.NO_VALUE
 
   override def getGroupingKey(context: CypherRow): AnyValue = Values.NO_VALUE
   override def isEmpty: Boolean = true
-  override def project(context: CypherRow,
-                       groupingKey: AnyValue): Unit = {}
+  override def project(context: WritableRow, groupingKey: AnyValue): Unit = {}
 }
 
 case class SlottedGroupingExpression1(groupingExpression: SlotExpression) extends GroupingExpression {
@@ -44,14 +44,13 @@ case class SlottedGroupingExpression1(groupingExpression: SlotExpression) extend
     if (groupingExpression.ordered) identity else _ => Values.NO_VALUE
 
   override def registerOwningPipe(pipe: Pipe): Unit = groupingExpression.expression.registerOwningPipe(pipe)
-  override def computeGroupingKey(context: CypherRow, state: QueryState): AnyValue = groupingExpression.expression(context, state)
+  override def computeGroupingKey(context: ReadableRow, state: QueryState): AnyValue = groupingExpression.expression(context, state)
   override def computeOrderedGroupingKey(groupingKey: AnyValue): AnyValue = ordered(groupingKey)
 
   override def getGroupingKey(context: CypherRow): AnyValue = getter(context)
 
   override def isEmpty: Boolean = false
-  override def project(context: CypherRow,
-                       groupingKey: AnyValue): Unit = setter(context, groupingKey)
+  override def project(context: WritableRow, groupingKey: AnyValue): Unit = setter(context, groupingKey)
 }
 
 case class SlottedGroupingExpression2(groupingExpression1: SlotExpression,
@@ -80,7 +79,7 @@ case class SlottedGroupingExpression2(groupingExpression1: SlotExpression,
     groupingExpression1.expression.registerOwningPipe(pipe)
     groupingExpression2.expression.registerOwningPipe(pipe)
   }
-  override def computeGroupingKey(context: CypherRow, state: QueryState): ListValue = list(
+  override def computeGroupingKey(context: ReadableRow, state: QueryState): ListValue = list(
     groupingExpression1.expression(context, state),
     groupingExpression2.expression(context, state))
 
@@ -89,8 +88,7 @@ case class SlottedGroupingExpression2(groupingExpression1: SlotExpression,
   override def getGroupingKey(context: CypherRow): ListValue = list(getter1(context), getter2(context))
 
   override def isEmpty: Boolean = false
-  override def project(context: CypherRow,
-                       groupingKey: ListValue): Unit = {
+  override def project(context: WritableRow, groupingKey: ListValue): Unit = {
     setter1(context, groupingKey.value(0))
     setter2(context, groupingKey.value(1))
   }
@@ -138,7 +136,7 @@ case class SlottedGroupingExpression3(groupingExpression1: SlotExpression,
     groupingExpression2.expression.registerOwningPipe(pipe)
     groupingExpression3.expression.registerOwningPipe(pipe)
   }
-  override def computeGroupingKey(context: CypherRow, state: QueryState): ListValue = list(
+  override def computeGroupingKey(context: ReadableRow, state: QueryState): ListValue = list(
     groupingExpression1.expression(context, state),
     groupingExpression2.expression(context, state),
     groupingExpression3.expression(context, state))
@@ -149,8 +147,7 @@ case class SlottedGroupingExpression3(groupingExpression1: SlotExpression,
 
   override def isEmpty: Boolean = false
 
-  override def project(context: CypherRow,
-                       groupingKey: ListValue): Unit = {
+  override def project(context: WritableRow, groupingKey: ListValue): Unit = {
     setter1(context, groupingKey.value(0))
     setter2(context, groupingKey.value(1))
     setter3(context, groupingKey.value(2))
@@ -170,7 +167,7 @@ case class SlottedGroupingExpression(sortedGroupingExpression: Array[SlotExpress
   override def registerOwningPipe(pipe: Pipe): Unit = {
     sortedGroupingExpression.foreach(e => e.expression.registerOwningPipe(pipe))
   }
-  override def computeGroupingKey(context: CypherRow, state: QueryState): ListValue = {
+  override def computeGroupingKey(context: ReadableRow, state: QueryState): ListValue = {
     val values = new Array[AnyValue](expressions.length)
     var i = 0
     while (i < values.length) {
@@ -195,8 +192,7 @@ case class SlottedGroupingExpression(sortedGroupingExpression: Array[SlotExpress
   }
 
   override def isEmpty: Boolean = false
-  override def project(context: CypherRow,
-                       groupingKey: ListValue): Unit = {
+  override def project(context: WritableRow, groupingKey: ListValue): Unit = {
     var i = 0
     while (i < groupingKey.size()) {
       setters(i)(context, groupingKey.value(i))

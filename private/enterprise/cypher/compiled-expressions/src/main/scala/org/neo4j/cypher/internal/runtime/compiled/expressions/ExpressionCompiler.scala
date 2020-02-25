@@ -188,7 +188,9 @@ import org.neo4j.cypher.internal.runtime.interpreted.pipes.NestedPipeExpression
 import org.neo4j.cypher.internal.runtime.DbAccess
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.ExpressionCursors
+import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.ReadableRow
+import org.neo4j.cypher.internal.runtime.WritableRow
 import org.neo4j.cypher.internal.util.symbols.CTAny
 import org.neo4j.cypher.internal.util.symbols.CTBoolean
 import org.neo4j.cypher.internal.util.symbols.CTDate
@@ -341,7 +343,7 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
           methods = Seq(
             MethodDeclaration("project",
                               returnType = typeRefOf[Unit],
-                              parameters = Seq(param[CypherRow]("context"),
+                              parameters = Seq(param[ReadWriteRow]("context"),
                                                param[DbAccess]("dbAccess"),
                                                param[Array[AnyValue]]("params"),
                                                param[ExpressionCursors]("cursors"),
@@ -383,14 +385,14 @@ abstract class ExpressionCompiler(val slots: SlotConfiguration,
           methods = Seq(
             MethodDeclaration("projectGroupingKey",
                               returnType = typeRefOf[Unit],
-                              parameters = Seq(param[CypherRow]("context"),
+                              parameters = Seq(param[WritableRow]("context"),
                                                param[AnyValue]("key")),
                               body = block(
                                 declarations(grouping.projectKey),
                                 grouping.projectKey.ir)),
             MethodDeclaration("computeGroupingKey",
                               returnType = typeRefOf[AnyValue],
-                              parameters = Seq(param[CypherRow]("context"),
+                              parameters = Seq(param[ReadableRow]("context"),
                                                param[DbAccess]("dbAccess"),
                                                param[Array[AnyValue]]("params"),
                                                param[ExpressionCursors]("cursors"),
@@ -3196,7 +3198,8 @@ object ExpressionCompiler {
 
   private val vCURSORS = Seq(vNODE_CURSOR, vRELATIONSHIP_CURSOR, vPROPERTY_CURSOR)
 
-  private val LOAD_CONTEXT = load("context")
+  val CONTEXT = "context"
+  private val LOAD_CONTEXT = load(CONTEXT)
 
   private val GET_TX_STATE_NODE_PROP: Method = method[DbAccess, Value, Long, Int]("getTxStateNodePropertyOrNull")
   private val GET_TX_STATE_RELATIONSHIP_PROP: Method = method[DbAccess, Value, Long, Int]("getTxStateRelationshipPropertyOrNull")

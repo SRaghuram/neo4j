@@ -8,7 +8,9 @@ package org.neo4j.cypher.internal.runtime.pipelined.state
 import java.util
 
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
+import org.neo4j.cypher.internal.runtime.pipelined.execution.ArgumentSlots
+import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
+import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselReadCursor
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.buffers.Buffers.AccumulatingBuffer
 
@@ -23,34 +25,30 @@ abstract class ArgumentCountUpdater {
   def argumentStateMaps: ArgumentStateMaps
 
   private def morselLoop(downstreamAccumulatingBuffers: IndexedSeq[AccumulatingBuffer],
-                         morsel: MorselCypherRow,
+                         morsel: Morsel,
                          operation: (AccumulatingBuffer, Long) => Unit): Unit = {
-    val originalRow = morsel.getCurrentRow
 
     val lastSeenRowIds = new Array[Long](downstreamAccumulatingBuffers.size)
     // Write all initial last seen ids to -1
     util.Arrays.fill(lastSeenRowIds, -1L)
 
     var i = 0
-    morsel.resetToFirstRow()
-    while(morsel.isValidRow) {
+    val cursor = morsel.readCursor()
+    while (cursor.next()) {
       i = 0
       while (i < downstreamAccumulatingBuffers.length) {
         val buffer = downstreamAccumulatingBuffers(i)
-        val currentRowId = morsel.getArgumentAt(buffer.argumentSlotOffset)
+        val currentRowId = ArgumentSlots.getArgumentAt(cursor, buffer.argumentSlotOffset)
         if (currentRowId != lastSeenRowIds(i)) {
           operation(buffer, currentRowId)
           lastSeenRowIds(i) = currentRowId
         }
         i += 1
       }
-      morsel.moveToNextRow()
     }
-    morsel.setCurrentRow(originalRow)
   }
 
   private def downstreamLoop[T](downstreamAccumulatingBuffers: IndexedSeq[T],
-                                morsel: MorselCypherRow,
                                 operation: T => Unit): Unit = {
     var i = 0
     while (i < downstreamAccumulatingBuffers.length) {
@@ -86,8 +84,8 @@ abstract class ArgumentCountUpdater {
    */
   protected def initiateArgumentStatesHere(argumentStates: IndexedSeq[ArgumentStateMapId],
                                            argumentRowId: Long,
-                                           morsel: MorselCypherRow): Unit = {
-    downstreamLoop[ArgumentStateMapId](argumentStates, morsel, id => argumentStateMaps(id).initiate(argumentRowId, morsel, null))
+                                           morsel: MorselReadCursor): Unit = {
+    downstreamLoop[ArgumentStateMapId](argumentStates, id => argumentStateMaps(id).initiate(argumentRowId, morsel, null))
   }
 
   /**
@@ -99,27 +97,27 @@ abstract class ArgumentCountUpdater {
    */
   protected def initiateArgumentReducersHere(accumulatingBuffers: IndexedSeq[AccumulatingBuffer],
                                              argumentRowId: Long,
-                                             morsel: MorselCypherRow): Unit = {
-    downstreamLoop[AccumulatingBuffer](accumulatingBuffers, morsel, _.initiate(argumentRowId, morsel))
+                                             morsel: MorselReadCursor): Unit = {
+    downstreamLoop[AccumulatingBuffer](accumulatingBuffers, _.initiate(argumentRowId, morsel))
   }
 
   /**
    * Apply function on each accumulating buffer, and returns the argument row id for each of them.
    *
    * @param accumulatingBuffers buffers to apply function to
-   * @param morsel must point at the row of `argumentRowId`
+   * @param morselRow must point at the row of `argumentRowId`
    * @param fun function to invoke on buffers
    * @return array of argument row ids
    */
   protected def forAllArgumentReducersAndGetArgumentRowIds(accumulatingBuffers: IndexedSeq[AccumulatingBuffer],
-                                                           morsel: MorselCypherRow,
+                                                           morselRow: MorselReadCursor,
                                                            fun: (AccumulatingBuffer, Long) => Unit): Array[Long] = {
     val argumentRowIdsForReducers: Array[Long] = new Array[Long](accumulatingBuffers.size)
     var i = 0
     while (i < accumulatingBuffers.length) {
       val reducer = accumulatingBuffers(i)
       val offset = reducer.argumentSlotOffset
-      val argumentRowIdForReducer = morsel.getArgumentAt(offset)
+      val argumentRowIdForReducer = ArgumentSlots.getArgumentAt(morselRow, offset)
       argumentRowIdsForReducers(i) = argumentRowIdForReducer
       fun(reducer, argumentRowIdForReducer)
       i += 1
@@ -150,7 +148,7 @@ abstract class ArgumentCountUpdater {
    * Increment each accumulating buffer for all argument row id in the given morsel.
    */
   protected def incrementArgumentCounts(accumulatingBuffers: IndexedSeq[AccumulatingBuffer],
-                                        morsel: MorselCypherRow): Unit = {
+                                        morsel: Morsel): Unit = {
     morselLoop(accumulatingBuffers, morsel, _.increment(_))
   }
 
@@ -158,7 +156,7 @@ abstract class ArgumentCountUpdater {
    * Decrement each accumulating buffer for all argument row id in the given morsel.
    */
   protected def decrementArgumentCounts(accumulatingBuffers: IndexedSeq[AccumulatingBuffer],
-                                        morsel: MorselCypherRow): Unit = {
+                                        morsel: Morsel): Unit = {
     morselLoop(accumulatingBuffers, morsel, _.decrement(_))
   }
 

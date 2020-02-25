@@ -8,7 +8,8 @@ package org.neo4j.cypher.internal.runtime.pipelined.state.buffers
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
 import org.neo4j.cypher.internal.physicalplanning.BufferId
 import org.neo4j.cypher.internal.runtime.debug.DebugSupport
-import org.neo4j.cypher.internal.runtime.pipelined.execution.MorselCypherRow
+import org.neo4j.cypher.internal.runtime.pipelined.execution.ArgumentSlots
+import org.neo4j.cypher.internal.runtime.pipelined.execution.Morsel
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentCountUpdater
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.IdAllocator
@@ -36,18 +37,20 @@ class MorselApplyBuffer(id: BufferId,
                         idAllocator: IdAllocator,
                         delegates: IndexedSeq[MorselBuffer]
                        ) extends ArgumentCountUpdater
-                         with Sink[MorselCypherRow] {
+                         with Sink[Morsel] {
 
-  def put(morsel: MorselCypherRow): Unit = {
+  def put(morsel: Morsel): Unit = {
     if (DebugSupport.BUFFERS.enabled) {
       DebugSupport.BUFFERS.log(s"[put]   $this <- $morsel")
     }
     if (morsel.hasData) {
-      var argumentRowId = idAllocator.allocateIdBatch(morsel.getValidRows)
+      var argumentRowId = idAllocator.allocateIdBatch(morsel.numberOfRows)
 
-      morsel.resetToFirstRow()
-      while (morsel.isValidRow) {
-        morsel.setArgumentAt(argumentSlotOffset, argumentRowId)
+      val cursor = morsel.writeCursor()
+      val readCursor = morsel.readCursor()
+      while (cursor.next()) {
+        ArgumentSlots.setArgumentAt(cursor, argumentSlotOffset, argumentRowId)
+        readCursor.setRow(cursor.row)
 
         // We can initiate the reducers/limits on the RHS inside of this loop, since they use the argumentRowIds we are generating here.
         // This does not hold for reducers on top of this apply.
@@ -55,13 +58,12 @@ class MorselApplyBuffer(id: BufferId,
         // Reducers on the RHS need to be initiated
         // It is important that the morsel is positioned at the row of the just added argumentRowId, so that the reducer
         // can read the argument row ids for _its_ downstream reducers from that row of the morsel.
-        initiateArgumentReducersHere(argumentReducersOnRHSOfThisApply, argumentRowId, morsel)
+        initiateArgumentReducersHere(argumentReducersOnRHSOfThisApply, argumentRowId, readCursor)
 
         // Initiate argument states for limit
-        initiateArgumentStatesHere(argumentStatesOnRHSOfThisApply, argumentRowId, morsel)
+        initiateArgumentStatesHere(argumentStatesOnRHSOfThisApply, argumentRowId, readCursor)
 
         argumentRowId += 1
-        morsel.moveToNextRow()
       }
 
       // Reducers after the apply need to be incremented

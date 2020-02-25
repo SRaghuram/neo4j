@@ -77,7 +77,9 @@ import org.neo4j.cypher.internal.runtime.MapCypherRow
 import org.neo4j.cypher.internal.runtime.NoMemoryTracker
 import org.neo4j.cypher.internal.runtime.ParameterMapping
 import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.ReadWriteRow
 import org.neo4j.cypher.internal.runtime.ReadableRow
+import org.neo4j.cypher.internal.runtime.WritableRow
 import org.neo4j.cypher.internal.runtime.ast.ExpressionVariable
 import org.neo4j.cypher.internal.runtime.ast.ParameterFromSlot
 import org.neo4j.cypher.internal.runtime.ast.RuntimeExpression
@@ -4207,9 +4209,9 @@ class InterpretedExpressionIT extends ExpressionsIT {
   override  def compileProjection(projections: Map[String, Expression],
                                   slots: SlotConfiguration): CompiledProjection = {
     val projector = converter(slots, (converter, id) => converter.toCommandProjection(id, projections))
-    (context: CypherRow, dbAccess: DbAccess, params: Array[AnyValue], cursors: ExpressionCursors,
+    (context: ReadWriteRow, dbAccess: DbAccess, params: Array[AnyValue], cursors: ExpressionCursors,
      expressionVariables: Array[AnyValue]) => projector
-      .project(context, state(dbAccess, params, cursors, expressionVariables))
+           .project(context, state(dbAccess, params, cursors, expressionVariables))
   }
 
   override  def compileGroupingExpression(projections: Map[String, Expression],
@@ -4217,14 +4219,9 @@ class InterpretedExpressionIT extends ExpressionsIT {
     val grouping = converter(slots, (converter, id) => converter.toGroupingExpression(id, projections, Seq.empty))
     new CompiledGroupingExpression {
 
-      override def projectGroupingKey(context: CypherRow,
-                                      groupingKey: AnyValue): Unit = grouping.project(context, groupingKey.asInstanceOf[grouping.KeyType])
+      override def projectGroupingKey(context: WritableRow, groupingKey: AnyValue): Unit = grouping.project(context, groupingKey.asInstanceOf[grouping.KeyType])
 
-      override def computeGroupingKey(context: CypherRow,
-                                      dbAccess: DbAccess,
-                                      params: Array[AnyValue],
-                                      cursors: ExpressionCursors,
-                                      expressionVariables: Array[AnyValue]): AnyValue =
+      override def computeGroupingKey(context: ReadableRow, dbAccess: DbAccess, params: Array[AnyValue], cursors: ExpressionCursors, expressionVariables: Array[AnyValue]): AnyValue =
         grouping.computeGroupingKey(context, state(dbAccess, params, cursors, expressionVariables))
 
 
