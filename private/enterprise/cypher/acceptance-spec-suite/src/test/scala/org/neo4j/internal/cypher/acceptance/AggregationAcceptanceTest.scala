@@ -127,7 +127,7 @@ class AggregationAcceptanceTest extends ExecutionEngineFunSuite with CypherCompa
     val node2 = createNode(Map("prop" -> 2))
     val query = "MATCH (a) RETURN DISTINCT a ORDER BY a.prop SKIP 1 LIMIT 1"
 
-    val result = executeWith(Configs.All - Configs.Pipelined, query)
+    val result = executeWith(Configs.All, query)
 
     result.toList should equal(List(Map("a" -> node2)))
   }
@@ -137,7 +137,7 @@ class AggregationAcceptanceTest extends ExecutionEngineFunSuite with CypherCompa
     createNode(Map("prop" -> 2))
     val query = "MATCH (a) RETURN DISTINCT a.prop ORDER BY a.prop SKIP 1 LIMIT 1"
 
-    val result = executeWith(Configs.All - Configs.Pipelined, query)
+    val result = executeWith(Configs.All, query)
 
     result.toList should equal(List(Map("a.prop" -> 2)))
   }
@@ -147,7 +147,7 @@ class AggregationAcceptanceTest extends ExecutionEngineFunSuite with CypherCompa
     createNode(Map("prop" -> 2))
     val query = "MATCH (a) RETURN DISTINCT a.prop ORDER BY a.prop SKIP 1"
 
-    val result = executeWith(Configs.All - Configs.Pipelined, query)
+    val result = executeWith(Configs.All, query)
 
     result.toList should equal(List(Map("a.prop" -> 2)))
   }
@@ -167,7 +167,7 @@ class AggregationAcceptanceTest extends ExecutionEngineFunSuite with CypherCompa
     createNode(Map("prop" -> 2))
     val query = "MATCH (a) WITH DISTINCT a SKIP 1 LIMIT 1 RETURN count(a)"
 
-    val result = executeWith(Configs.InterpretedAndSlotted, query)
+    val result = executeWith(Configs.InterpretedAndSlottedAndPipelined, query)
 
     result.toList should equal(List(Map("count(a)" -> 1)))
   }

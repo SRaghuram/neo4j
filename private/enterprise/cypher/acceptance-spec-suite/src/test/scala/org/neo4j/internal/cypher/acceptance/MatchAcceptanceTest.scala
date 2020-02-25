@@ -768,13 +768,13 @@ class MatchAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
     createNode()
     createNode()
 
-    executeWith(Configs.All - Configs.Pipelined, "MATCH (n) RETURN n SKIP 0") should have size 5
-    executeWith(Configs.All - Configs.Pipelined, "MATCH (n) RETURN n SKIP 1") should have size 4
-    executeWith(Configs.All - Configs.Pipelined, "MATCH (n) RETURN n SKIP 2") should have size 3
-    executeWith(Configs.All - Configs.Pipelined, "MATCH (n) RETURN n SKIP 3") should have size 2
-    executeWith(Configs.All - Configs.Pipelined, "MATCH (n) RETURN n SKIP 4") should have size 1
-    executeWith(Configs.All - Configs.Pipelined, "MATCH (n) RETURN n SKIP 5") should have size 0
-    executeWith(Configs.All - Configs.Pipelined, "MATCH (n) RETURN n SKIP 6") should have size 0
+    executeWith(Configs.All, "MATCH (n) RETURN n SKIP 0") should have size 5
+    executeWith(Configs.All, "MATCH (n) RETURN n SKIP 1") should have size 4
+    executeWith(Configs.All, "MATCH (n) RETURN n SKIP 2") should have size 3
+    executeWith(Configs.All, "MATCH (n) RETURN n SKIP 3") should have size 2
+    executeWith(Configs.All, "MATCH (n) RETURN n SKIP 4") should have size 1
+    executeWith(Configs.All, "MATCH (n) RETURN n SKIP 5") should have size 0
+    executeWith(Configs.All, "MATCH (n) RETURN n SKIP 6") should have size 0
 
   }
 

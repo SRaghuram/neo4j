@@ -23,7 +23,7 @@ import scala.collection.JavaConverters.mapAsScalaMapConverter
 class EnterpriseRootPlanAcceptanceTest extends ExecutionEngineFunSuite with EnterpriseGraphDatabaseTestSupport {
 
   test("query that does not go through the pipelined runtime") {
-    given("MATCH (n) RETURN n, count(*) SKIP 2")
+    given("MATCH (n) RETURN (n)-->()")
       .withCypherVersion(CypherVersion.default)
       .shouldHaveCypherVersion(CypherVersion.default)
       .shouldHaveRuntime(SlottedRuntimeName)

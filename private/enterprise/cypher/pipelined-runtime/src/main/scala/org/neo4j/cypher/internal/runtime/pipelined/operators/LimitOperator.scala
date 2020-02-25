@@ -53,7 +53,7 @@ object LimitOperator {
 
     override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): CountingState =
       new ConcurrentCountingState(argumentRowId, count, argumentRowIdsForReducers) {
-        override def isCancelled: Boolean = getCount == 0
+        override def isCancelled: Boolean = getCount <= 0
       }
   }
 }

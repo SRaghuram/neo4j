@@ -86,7 +86,7 @@ class OrderAcceptanceTest extends ExecutionEngineFunSuite with QueryStatisticsTe
 
   test("should use Top for SKIP and LIMIT") {
     val query = "MATCH (a:A) RETURN a.name ORDER BY a.name ASC SKIP 3 LIMIT 3"
-    val result = executeWith(Configs.InterpretedAndSlotted + Configs.Compiled, query)
+    val result = executeWith(Configs.All, query)
     result.executionPlanDescription() should includeSomewhere
       .aPlan("Skip")
       .containingArgument("$`  AUTOINT0`")
