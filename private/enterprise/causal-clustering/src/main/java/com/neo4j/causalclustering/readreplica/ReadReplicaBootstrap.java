@@ -21,7 +21,6 @@ import com.neo4j.dbms.DatabaseStartAborter;
 
 import java.io.IOException;
 import java.util.Collection;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.function.Supplier;
 
@@ -67,32 +66,24 @@ class ReadReplicaBootstrap
         boolean shouldAbort = false;
         try
         {
+            var synced = false;
             TimeoutStrategy.Timeout syncRetryWaitPeriod = syncRetryStrategy.newTimeout();
-            var upstreamsQueue = new LinkedList<>( selectUpstreams( databaseContext ) );
 
-            boolean synced = false;
             while ( !( synced || shouldAbort ) )
             {
                 try
                 {
-                    var shouldBackoff = false;
-                    debugLog.info( "Syncing db: %s", databaseContext.databaseId() );
-
-                    var upstream = upstreamsQueue.poll(); // Cannot be null
-
-                    synced = doSyncStoreCopyWithUpstream( databaseContext, upstream );
-
-                    if ( upstreamsQueue.isEmpty() )
+                    for ( var upstream : selectUpstreams(  databaseContext ) )
                     {
-                        upstreamsQueue.addAll( selectUpstreams( databaseContext ) );
-                        shouldBackoff = true;
+                        synced = doSyncStoreCopyWithUpstream( databaseContext, upstream );
+
+                        if ( synced )
+                        {
+                            break;
+                        }
                     }
 
-                    if ( synced )
-                    {
-                        debugLog.info( "Successfully synced db: %s", databaseContext.databaseId() );
-                    }
-                    else if ( shouldBackoff )
+                    if ( !synced )
                     {
                         Thread.sleep( syncRetryWaitPeriod.getMillis() );
                         syncRetryWaitPeriod.increment();
@@ -141,6 +132,7 @@ class ReadReplicaBootstrap
     {
         try
         {
+            debugLog.info( "Syncing db: %s", databaseContext.databaseId() );
             syncStoreWithUpstream( databaseContext, source );
             return true;
         }

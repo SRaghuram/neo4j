@@ -98,7 +98,7 @@ class UpstreamAddressLookupTest
         // given
         var strategySelector = new UpstreamDatabaseStrategySelector(
                 new RandomCountedSelectionStrategy( 1, secondMember, defaultMember ),
-                List.of( new RandomCountedSelectionStrategy(1, firstMember, secondMember ) ), NullLogProvider.getInstance() );
+                List.of( new RandomCountedSelectionStrategy( 1, firstMember, secondMember ) ), NullLogProvider.getInstance() );
 
         var upstreamAddressLookup = new UpstreamAddressLookup( strategySelector, topologyService );
 

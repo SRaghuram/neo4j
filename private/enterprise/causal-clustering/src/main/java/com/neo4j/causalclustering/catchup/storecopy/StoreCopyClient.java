@@ -15,7 +15,9 @@ import com.neo4j.causalclustering.catchup.VersionedCatchupClients.PreparedReques
 import java.io.File;
 import java.net.ConnectException;
 import java.nio.file.Paths;
+import java.util.Collection;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -103,56 +105,67 @@ public class StoreCopyClient
             StoreFileStreamProvider storeFileStream,
             TerminationCondition terminationCondition, TransactionIdHandler txIdHandler ) throws StoreCopyFailedException
     {
-        var secondaryAddresses = new LinkedList<SocketAddress>();
-        var initial = true;
-        var shouldBackoff = false;
+        var successful = false;
         TimeoutStrategy.Timeout timeout = backOffStrategy.newTimeout();
 
         while ( true )
         {
+            Collection<SocketAddress> secondaries = List.of();
+
             try
             {
-                if ( secondaryAddresses.isEmpty() )
-                {
-                    secondaryAddresses.addAll( addressProvider.allSecondaries( namedDatabaseId ) );
-                    shouldBackoff = !initial; //We shouldn't backoff on first go around
-                }
-                var secondary = secondaryAddresses.poll(); // Cannot be null
-                log.info( format( "Sending request StoreCopyRequest to '%s'", secondary ) );
-
-                StoreCopyFinishedResponse response = catchUpClientFactory.getClient( secondary, log )
-                        .v3( v3Request )
-                        .withResponseHandler( StoreCopyResponseAdaptors.filesCopyAdaptor( storeFileStream, log ) )
-                        .request();
-
-                if ( successfulRequest( response ) )
-                {
-                    txIdHandler.handle( response );
-                    break;
-                }
+                secondaries = addressProvider.allSecondaries( namedDatabaseId );
             }
             catch ( CatchupAddressResolutionException e )
             {
                 log.warn( "Unable to resolve address for StoreCopyRequest. %s", e.getMessage() );
             }
-            catch ( ConnectException e )
-            {
-                log.warn( "Unable to connect. %s", e.getMessage() );
-            }
-            catch ( Exception e )
-            {
-                //TODO: I understood the argument that we should just throw and catch Exception because anything can go wrong with a future/network request, but
-                // it seems like we're at risk of swallowing runtime exceptions in some cases where we otherwise wouldn't
-                log.warn( "StoreCopyRequest failed exceptionally.", e );
-            }
 
-            terminationCondition.assertContinue();
-            if ( shouldBackoff )
+            for ( var secondary : secondaries )
             {
-                awaitAndIncrementTimeout( timeout );
+                successful = requestToSecondary( secondary, storeFileStream, txIdHandler, v3Request );
+                if ( successful )
+                {
+                    return;
+                }
             }
-            initial = false;
+            awaitAndIncrementTimeout( timeout );
+            terminationCondition.assertContinue();
         }
+    }
+
+    private boolean requestToSecondary( SocketAddress secondary, StoreFileStreamProvider storeFileStream, TransactionIdHandler txIdHandler,
+            Function<VersionedCatchupClients.CatchupClientV3,PreparedRequest<StoreCopyFinishedResponse>> v3Request )
+    {
+        var successfulRequest = false;
+        try
+        {
+            log.info(format("Sending request StoreCopyRequest to '%s'", secondary));
+
+            StoreCopyFinishedResponse response = catchUpClientFactory.getClient(secondary, log)
+                    .v3(v3Request)
+                    .withResponseHandler(StoreCopyResponseAdaptors.filesCopyAdaptor(storeFileStream, log))
+                    .request();
+
+            successfulRequest = successfulRequest( response );
+
+            if ( successfulRequest )
+            {
+                txIdHandler.handle( response );
+            }
+        }
+        catch ( ConnectException e )
+        {
+            log.warn( "Unable to connect. %s", e.getMessage() );
+        }
+        catch ( Exception e )
+        {
+            //TODO: I understood the argument that we should just throw and catch Exception because anything can go wrong with a future/network request, but
+            // it seems like we're at risk of swallowing runtime exceptions in some cases where we otherwise wouldn't
+            log.warn( "StoreCopyRequest failed exceptionally.", e );
+        }
+
+        return successfulRequest;
     }
 
     private static void awaitAndIncrementTimeout( TimeoutStrategy.Timeout timeout ) throws StoreCopyFailedException
