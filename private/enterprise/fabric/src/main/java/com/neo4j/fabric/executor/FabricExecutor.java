@@ -11,6 +11,7 @@ import com.neo4j.fabric.eval.UseEvaluation;
 import com.neo4j.fabric.planning.FabricPlan;
 import com.neo4j.fabric.planning.FabricPlanner;
 import com.neo4j.fabric.planning.FabricQuery;
+import com.neo4j.fabric.planning.Fragment;
 import com.neo4j.fabric.planning.QueryType;
 import com.neo4j.fabric.stream.CompletionDelegatingOperator;
 import com.neo4j.fabric.stream.Prefetcher;
@@ -33,6 +34,9 @@ import java.util.stream.IntStream;
 
 import org.neo4j.bolt.runtime.AccessMode;
 import org.neo4j.cypher.internal.CypherQueryObfuscator;
+import org.neo4j.cypher.internal.FullyParsedQuery;
+import org.neo4j.cypher.internal.ast.GraphSelection;
+import org.neo4j.exceptions.InvalidSemanticsException;
 import org.neo4j.cypher.internal.ast.UseGraph;
 import org.neo4j.exceptions.InvalidSemanticsException;
 import org.neo4j.kernel.api.exceptions.Status;
@@ -60,7 +64,7 @@ public class FabricExecutor
     private final Executor fabricWorkerExecutor;
 
     public FabricExecutor( FabricConfig config, FabricPlanner planner, UseEvaluation useEvaluation, LogProvider internalLog,
-            FabricQueryMonitoring queryMonitoring, Executor fabricWorkerExecutor )
+                           FabricQueryMonitoring queryMonitoring, Executor fabricWorkerExecutor )
     {
         this.dataStreamConfig = config.getDataStream();
         this.planner = planner;
@@ -70,13 +74,15 @@ public class FabricExecutor
         this.fabricWorkerExecutor = fabricWorkerExecutor;
     }
 
-    public StatementResult run( FabricTransaction fabricTransaction, String statement, MapValue params )
+    public StatementResult run( FabricTransaction fabricTransaction, String queryString, MapValue queryParams )
     {
         Thread thread = Thread.currentThread();
-        FabricQueryMonitoring.QueryMonitor queryMonitor = queryMonitoring.queryMonitor( fabricTransaction.getTransactionInfo(), statement, params, thread );
+        FabricQueryMonitoring.QueryMonitor queryMonitor = queryMonitoring.queryMonitor( fabricTransaction.getTransactionInfo(), queryString, queryParams, thread );
         queryMonitor.start();
 
-        FabricPlan plan = planner.plan( statement, params );
+        String defaultGraphName = fabricTransaction.getTransactionInfo().getDatabaseName();
+        FabricPlanner.PlannerInstance plannerInstance = planner.instance( queryString, queryParams, defaultGraphName );
+        FabricPlan plan = plannerInstance.plan();
 
         queryMonitor.getMonitoredQuery().onObfuscatorReady( CypherQueryObfuscator.apply( plan.obfuscationMetadata() ) );
 
@@ -84,47 +90,48 @@ public class FabricExecutor
 
         if ( plan.debugOptions().logPlan() )
         {
-            log.debug( String.format( "Fabric plan: %s", FabricQuery.pretty().asString( plan.query() ) ) );
+            log.debug( String.format( "Fabric fragments: %s", Fragment.pretty().asString( plan.query() ) ) );
         }
-        return fabricTransaction.execute( ctx ->
-        {
-            var localDatabaseName = fabricTransaction.getTransactionInfo().getDatabaseName();
-
-            FabricStatementExecution execution;
-            if ( plan.debugOptions().logRecords() )
-            {
-                execution =
-                        new FabricLoggingStatementExecution( statement, plan, params, accessMode, ctx, localDatabaseName, log, queryMonitor, dataStreamConfig );
-            }
-            else
-            {
-                execution = new FabricStatementExecution( statement, plan, params, accessMode, ctx, localDatabaseName, queryMonitor, dataStreamConfig );
-            }
-            return execution.run();
-        } );
+        return fabricTransaction.execute(
+                ctx ->
+                {
+                    FabricStatementExecution execution;
+                    if ( plan.debugOptions().logRecords() )
+                    {
+                        execution = new FabricLoggingStatementExecution( plan, plannerInstance, queryParams, accessMode, ctx, log, queryMonitor, dataStreamConfig );
+                    }
+                    else
+                    {
+                        execution = new FabricStatementExecution( plan, plannerInstance, queryParams, accessMode, ctx, queryMonitor, dataStreamConfig );
+                    }
+                    return execution.run();
+                } );
     }
 
     class FabricStatementExecution
     {
-        private final String originalStatement;
         private final FabricPlan plan;
-        private final MapValue params;
+        private final FabricPlanner.PlannerInstance plannerInstance;
+        private final MapValue queryParams;
         private final FabricTransaction.FabricExecutionContext ctx;
         private final MergedSummary mergedSummary;
         private final FabricQueryMonitoring.QueryMonitor queryMonitor;
         private final Prefetcher prefetcher;
-        private final String localDatabaseName;
         private final AccessMode accessMode;
 
-        FabricStatementExecution( String originalStatement, FabricPlan plan, MapValue params, AccessMode accessMode,
-                FabricTransaction.FabricExecutionContext ctx, String localDatabaseName, FabricQueryMonitoring.QueryMonitor queryMonitor,
+        FabricStatementExecution(
+                FabricPlan plan,
+                FabricPlanner.PlannerInstance plannerInstance,
+                MapValue queryParams,
+                AccessMode accessMode,
+                FabricTransaction.FabricExecutionContext ctx,
+                FabricQueryMonitoring.QueryMonitor queryMonitor,
                 FabricConfig.DataStream dataStreamConfig )
         {
-            this.originalStatement = originalStatement;
             this.plan = plan;
-            this.params = params;
+            this.plannerInstance = plannerInstance;
+            this.queryParams = queryParams;
             this.ctx = ctx;
-            this.localDatabaseName = localDatabaseName;
             this.mergedSummary = new MergedSummary( plan, accessMode );
             this.queryMonitor = queryMonitor;
             this.prefetcher = new Prefetcher( dataStreamConfig );
@@ -135,8 +142,7 @@ public class FabricExecutor
         {
             queryMonitor.startExecution();
             var query = plan.query();
-            Flux<Record> unit = Flux.just( Records.empty() );
-            Flux<String> columns = Flux.fromIterable( asJavaIterable( query.columns().output() ) );
+            Flux<String> columns = Flux.fromIterable( asJavaIterable( query.outputColumns() ) );
             Mono<Summary> summary = Mono.just( mergedSummary );
 
             Flux<Record> records;
@@ -146,96 +152,96 @@ public class FabricExecutor
             }
             else
             {
-                records = run( query, unit );
+                records = run( query, null );
             }
-            return StatementResults.create( columns, records.doOnComplete( queryMonitor::endSuccess ).doOnError( queryMonitor::endFailure ), summary );
+            return StatementResults.create(
+                    columns,
+                    records.doOnComplete( queryMonitor::endSuccess )
+                           .doOnError( queryMonitor::endFailure ),
+                    summary
+            );
         }
 
-        Flux<Record> run( FabricQuery query, Flux<Record> input )
+        Flux<Record> run( Fragment fragment, Record argument )
         {
-            if ( query instanceof FabricQuery.Direct )
+            if ( fragment instanceof Fragment.Init )
             {
-                return runDirectQuery( (FabricQuery.Direct) query, input );
+                return runInput( (Fragment.Init) fragment, argument );
             }
-            else if ( query instanceof FabricQuery.Apply )
+            else if ( fragment instanceof Fragment.Apply )
             {
-                return runApplyQuery( (FabricQuery.Apply) query, input );
+                return runApply( (Fragment.Apply) fragment, argument );
             }
-            else if ( query instanceof FabricQuery.LocalQuery )
+            else if ( fragment instanceof Fragment.Union )
             {
-                return runLocalQuery( (FabricQuery.LocalQuery) query, input );
+                return runUnion( (Fragment.Union) fragment, argument );
             }
-            else if ( query instanceof FabricQuery.RemoteQuery )
+            else if ( fragment instanceof Fragment.Leaf )
             {
-                return runRemoteQuery( (FabricQuery.RemoteQuery) query, input );
-            }
-            else if ( query instanceof FabricQuery.ChainedQuery )
-            {
-                return runChainedQuery( (FabricQuery.ChainedQuery) query, input );
-            }
-            else if ( query instanceof FabricQuery.UnionQuery )
-            {
-                return runUnionQuery( (FabricQuery.UnionQuery) query, input );
+                return runLeaf( (Fragment.Leaf) fragment, argument );
             }
             else
             {
-                throw notImplemented( "Unsupported query", query );
+                throw notImplemented( "Invalid query fragment", fragment );
             }
         }
 
-        Flux<Record> runChainedQuery( FabricQuery.ChainedQuery query, Flux<Record> input )
+        Flux<Record> runInput( Fragment.Init input, Record argument )
         {
-            Flux<Record> previous = input;
-            for ( FabricQuery q : asJavaIterable( query.queries() ) )
-            {
-                previous = run( q, previous );
-            }
-
-            return previous;
+            return Flux.just( Records.empty() );
         }
 
-        Flux<Record> runUnionQuery( FabricQuery.UnionQuery query, Flux<Record> input )
+        Flux<Record> runApply( Fragment.Apply apply, Record argument )
         {
-            Flux<Record> lhs = run( query.lhs(), input );
-            Flux<Record> rhs = run( query.rhs(), input );
-            Flux<Record> merged = Flux.merge( lhs, rhs );
-            if ( query.distinct() )
-            {
-                merged = merged.distinct();
-            }
-            return merged;
-        }
+            Flux<Record> input = run( apply.input(), null );
 
-        Flux<Record> runDirectQuery( FabricQuery.Direct query, Flux<Record> input )
-        {
-            return run( query.query(), input );
-        }
-
-        Flux<Record> runApplyQuery( FabricQuery.Apply query, Flux<Record> input )
-        {
             return input.flatMap(
-                    inputRecord -> run( query.query(), Flux.just( inputRecord ) ).map( outputRecord -> Records.join( inputRecord, outputRecord ) ),
-                    dataStreamConfig.getConcurrency(), 1 );
+                    record -> run( apply, record ).map( outputRecord -> Records.join( record, outputRecord ) ),
+                    dataStreamConfig.getConcurrency(), 1
+            );
         }
 
-        Flux<Record> runLocalQuery( FabricQuery.LocalQuery query, Flux<Record> input )
+        Flux<Record> runUnion( Fragment.Union union, Record argument )
+        {
+            Flux<Record> lhs = run( union.lhs(), argument );
+            Flux<Record> rhs = run( union.rhs(), argument );
+            Flux<Record> merged = Flux.merge( lhs, rhs );
+            if ( union.distinct() )
+            {
+                return merged.distinct();
+            }
+            else
+            {
+                return merged;
+            }
+        }
+
+        Flux<Record> runLeaf( Fragment.Leaf leaf, Record argument )
+        {
+            Flux<Record> input = run( leaf.input(), argument );
+
+            Map<String,AnyValue> argumentValues = argumentValues( leaf, argument);
+
+            FabricConfig.Graph graph = evalUse( leaf.graph(), argumentValues );
+
+            MapValue parameters = addParamsFromRecord( queryParams, argumentValues, mapAsJavaMap( leaf.parameters() ) );
+
+            if ( isLocal( graph ) )
+            {
+                FabricQuery.LocalQuery localQuery = plannerInstance.asLocal( leaf );
+                return runLocalQueryAt( graph, localQuery.query(), parameters, input );
+            }
+            else
+            {
+                return null;
+            }
+        }
+
+        Flux<Record> runLocalQueryAt( FabricConfig.Graph graph, FullyParsedQuery query, MapValue parameters, Flux<Record> input )
         {
             var location = new Location.Local( -1, localDatabaseName );
             var transactionMode = getTransactionMode( location, query.queryType( ));
-            return ctx.getLocal().run( location, transactionMode, queryMonitor.getMonitoredQuery(), query.query(), params, input ).records();
-        }
-
-        Flux<Record> runRemoteQuery( FabricQuery.RemoteQuery query, Flux<Record> input )
-        {
-            String queryString = query.queryString();
-            QueryType queryType = query.queryType();
-            return input.flatMap( inputRecord ->
-            {
-                Map<String,AnyValue> recordValues = recordAsMap( query, inputRecord );
-                FabricConfig.Graph graph = evalUse( query.use(), recordValues );
-                MapValue parameters = addImportParams( recordValues, mapAsJavaMap( query.parameters() ) );
-                return runRemoteQueryAt( graph, queryString, queryType, parameters );
-            }, dataStreamConfig.getConcurrency(), 1 );
+            return ctx.getLocal().run( location, transactionMode, queryMonitor.getMonitoredQuery(), query, parameters, input ).records();
         }
 
         Flux<Record> runRemoteQueryAt( FabricConfig.Graph graph, String queryString, QueryType queryType, MapValue parameters )
@@ -256,14 +262,19 @@ public class FabricExecutor
             return prefetcher.addPrefetch( recordsWithCompletionDelegation );
         }
 
-        private Map<String,AnyValue> recordAsMap( FabricQuery.RemoteQuery query, Record inputRecord )
+        private boolean isLocal(FabricConfig.Graph graph)
         {
-            return Records.asMap( inputRecord, seqAsJavaList( query.columns().incoming() ) );
+            return true;
         }
 
-        private FabricConfig.Graph evalUse( UseGraph use, Map<String,AnyValue> record )
+        private Map<String,AnyValue> argumentValues( Fragment fragment, Record argument )
         {
-            Catalog.Graph graph = useEvaluation.evaluate( originalStatement, use, params, record );
+            return Records.asMap( argument, seqAsJavaList( fragment.argumentColumns() ) );
+        }
+
+        private FabricConfig.Graph evalUse( GraphSelection selection, Map<String,AnyValue> record )
+        {
+            Catalog.Graph graph = useEvaluation.evaluate( plannerInstance.queryString(), selection, queryParams, record );
             if ( graph instanceof Catalog.RemoteGraph )
             {
                 return ((Catalog.RemoteGraph) graph).graph();
@@ -274,7 +285,7 @@ public class FabricExecutor
             }
         }
 
-        private MapValue addImportParams( Map<String,AnyValue> record, Map<String,String> bindings )
+        private MapValue addParamsFromRecord( MapValue params, Map<String,AnyValue> record, Map<String,String> bindings )
         {
             int resultSize = params.size() + bindings.size();
             if ( resultSize == 0 )
@@ -316,9 +327,9 @@ public class FabricExecutor
             }
         }
 
-        private RuntimeException notImplemented( String msg, FabricQuery query )
+        private RuntimeException notImplemented( String msg, Fragment fragment )
         {
-            return notImplemented( msg, query.toString() );
+            return notImplemented( msg, fragment.toString() );
         }
 
         private RuntimeException notImplemented( String msg, String info )
@@ -356,21 +367,27 @@ public class FabricExecutor
         private final AtomicInteger step;
         private final Log log;
 
-        FabricLoggingStatementExecution( String originalStatement, FabricPlan plan, MapValue params, AccessMode accessMode,
-                                         FabricTransaction.FabricExecutionContext ctx, String localDatabaseName, Log log,
-                                         FabricQueryMonitoring.QueryMonitor queryMonitor, FabricConfig.DataStream dataStreamConfig )
+        FabricLoggingStatementExecution(
+                FabricPlan plan,
+                FabricPlanner.PlannerInstance plannerInstance,
+                MapValue params,
+                AccessMode accessMode,
+                FabricTransaction.FabricExecutionContext ctx,
+                Log log,
+                FabricQueryMonitoring.QueryMonitor queryMonitor,
+                FabricConfig.DataStream dataStreamConfig )
         {
-            super( originalStatement, plan, params, accessMode, ctx, localDatabaseName, queryMonitor, dataStreamConfig );
+            super( plan, plannerInstance, params, accessMode, ctx, queryMonitor, dataStreamConfig );
             this.step = new AtomicInteger( 0 );
             this.log = log;
         }
 
         @Override
-        Flux<Record> runLocalQuery( FabricQuery.LocalQuery query, Flux<Record> input )
+        Flux<Record> runLocalQueryAt( FabricConfig.Graph graph, FullyParsedQuery query, MapValue parameters, Flux<Record> input )
         {
             String id = executionId();
-            trace( id, "local", compact( query.query().description() ) );
-            return traceRecords( id, super.runLocalQuery( query, input ) );
+            trace( id, "local", compact( query.description() ) );
+            return traceRecords( id, super.runLocalQueryAt( graph, query, parameters, input ) );
         }
 
         @Override
@@ -389,12 +406,12 @@ public class FabricExecutor
         private Flux<Record> traceRecords( String id, Flux<Record> flux )
         {
             return flux.doOnNext( record ->
-            {
-                String rec = IntStream.range( 0, record.size() )
-                        .mapToObj( i -> record.getValue( i ).toString() )
-                        .collect( Collectors.joining( ", ", "[", "]" ) );
-                trace( id, "output", rec );
-            } );
+                                  {
+                                      String rec = IntStream.range( 0, record.size() )
+                                                            .mapToObj( i -> record.getValue( i ).toString() )
+                                                            .collect( Collectors.joining( ", ", "[", "]" ) );
+                                      trace( id, "output", rec );
+                                  } );
         }
 
         private void trace( String id, String event, String data )

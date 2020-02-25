@@ -10,61 +10,84 @@ import com.neo4j.fabric.util.PrettyPrinting
 import org.neo4j.cypher.internal.ast
 
 sealed trait Fragment {
-  def columns: Columns
+  /** Graph selection for this fragment */
+  def graph: ast.GraphSelection
+  /** Columns available to this fragment from an applied argument */
+  def argumentColumns: Seq[String]
+  /** Columns imported from the argument */
+  def importColumns: Seq[String]
+  /** Produced columns */
+  def outputColumns: Seq[String]
 }
 
 object Fragment {
 
-  case class Direct(
-    fragment: Fragment,
-    columns: Columns,
-  ) extends Fragment
+  object Init {
+    def unit(graph: ast.GraphSelection): Init = Init(graph, Seq.empty, Seq.empty)
+  }
+
+  case class Init(
+    graph: ast.GraphSelection,
+    argumentColumns: Seq[String],
+    importColumns: Seq[String],
+  ) extends Fragment {
+    val outputColumns: Seq[String] = Seq.empty
+  }
+
+  sealed trait ChainedFragment {
+    def input: Fragment
+    val graph: ast.GraphSelection = input.graph
+    val argumentColumns: Seq[String] = input.argumentColumns
+    val importColumns: Seq[String] = input.importColumns
+  }
 
   case class Apply(
+    input: Fragment,
     fragment: Fragment,
-    columns: Columns,
-  ) extends Fragment
-
-  case class Chain(
-    fragments: Seq[Fragment],
-    columns: Columns,
-  ) extends Fragment
+  ) extends Fragment with ChainedFragment {
+    val outputColumns: Seq[String] = Columns.combine(input.outputColumns, fragment.outputColumns)
+  }
 
   case class Union(
     distinct: Boolean,
     lhs: Fragment,
     rhs: Fragment,
-    columns: Columns,
-  ) extends Fragment
+    input: Fragment,
+  ) extends Fragment with ChainedFragment {
+    val outputColumns: Seq[String] = rhs.outputColumns
+  }
 
   case class Leaf(
-    use: Option[ast.UseGraph],
+    input: Fragment,
     clauses: Seq[ast.Clause],
-    columns: Columns,
-  ) extends Fragment
+    outputColumns: Seq[String],
+  ) extends Fragment with ChainedFragment {
+    val parameters: Map[String, String] = importColumns.map(varName => varName -> Columns.paramName(varName)).toMap
+  }
 
   val pretty: PrettyPrinting[Fragment] = new PrettyPrinting[Fragment] {
     def pretty: Fragment => Stream[String] = {
-      case f: Direct => node(
-        name = "direct",
-        fields = Columns.fields(f.columns),
-        children = Seq(f.fragment)
-      )
-      case f: Apply => node(
-        name = "apply",
-        fields = Columns.fields(f.columns),
-        children = Seq(f.fragment)
+      case f: Init => node(
+        name = "init",
+        fields = Seq(
+          "use" -> expr(f.graph.expression),
+          "arg" -> list(f.argumentColumns),
+          "imp" -> list(f.importColumns),
+        )
       )
 
-      case f: Fragment.Chain => node(
-        name = "chain",
-        fields = Columns.fields(f.columns),
-        children = f.fragments
+      case f: Apply => node(
+        name = "apply",
+        fields = Seq(
+          "out" -> list(f.outputColumns),
+        ),
+        children = Seq(f.fragment, f.input)
       )
 
       case f: Fragment.Union => node(
         name = "union",
-        fields = Columns.fields(f.columns) ++Seq(
+        fields = Seq(
+          "out" -> list(f.outputColumns),
           "dist" -> f.distinct
         ),
         children = Seq(f.lhs, f.rhs)
@@ -72,10 +95,14 @@ object Fragment {
 
       case f: Fragment.Leaf => node(
         name = "leaf",
-        fields = Columns.fields(f.columns) ++ Seq(
-          "use" -> f.use.map(_.expression).map(expr).getOrElse(""),
-          "qry" -> query(f.clauses)
-        )
+        fields = Seq(
+          "use" -> expr(f.graph.expression),
+          "arg" -> list(f.argumentColumns),
+          "imp" -> list(f.importColumns),
+          "out" -> list(f.outputColumns),
+          "qry" -> query(f.clauses),
+        ),
+        children = Seq(f.input)
       )
     }
   }

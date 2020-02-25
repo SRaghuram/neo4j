@@ -16,7 +16,7 @@ import org.neo4j.cypher.internal.ast.prettifier.Prettifier
 import org.neo4j.cypher.internal.util.ObfuscationMetadata
 
 case class FabricPlan(
-  query: FabricQuery,
+  query: Fragment,
   queryType: QueryType,
   executionType: FabricPlan.ExecutionType,
   debugOptions: DebugOptions,

@@ -27,7 +27,7 @@ trait PrettyPrinting[T] extends PrettyPrintingUtils {
 
       fields.toStream.flatMap {
         case (name, vs: Stream[_]) =>
-          val text = vs.map(e => "  ┊ " + e.toString)
+          val text = vs.map(e => "│ ┊ " + e.toString)
           Stream(s"╞ $name:") ++ text
         case (name, value)         =>
           val space = " " * (max - name.length)

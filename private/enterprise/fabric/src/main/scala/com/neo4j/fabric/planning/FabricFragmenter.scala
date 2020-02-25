@@ -5,125 +5,64 @@
  */
 package com.neo4j.fabric.planning
 
-import com.neo4j.fabric.planning.FabricQuery.Columns
-import com.neo4j.fabric.planning.Fragment.Chain
+import com.neo4j.fabric.planning.Fragment.Apply
 import com.neo4j.fabric.planning.Fragment.Leaf
+import com.neo4j.fabric.planning.Fragment.Init
 import com.neo4j.fabric.planning.Fragment.Union
 import com.neo4j.fabric.util.Errors
 import org.neo4j.cypher.internal.ast
+import org.neo4j.cypher.internal.ast.UseGraph
+import org.neo4j.cypher.internal.expressions.Variable
+import org.neo4j.cypher.internal.util.InputPosition
 
 class FabricFragmenter(
+  defaultGraphName: String,
   queryString: String,
   queryStatement: ast.Statement,
   semantics: ast.semantics.SemanticState,
 ) {
 
+  private val defaultGraphSelection = defaultUse(defaultGraphName, InputPosition.NONE)
+
   def fragment: Fragment = queryStatement match {
-    case ast.Query(_, part)  => fragment(part, Seq.empty, Seq.empty, Option.empty)
+    case ast.Query(_, part)  => fragment(Init.unit(defaultGraphSelection), part)
     case ddl: ast.CatalogDDL => Errors.ddlNotSupported(ddl)
     case _: ast.Command      => Errors.notSupported("Commands")
   }
 
-  /**
-   * Tracks fragmenter state as we walk through the query
-   * @param incoming columns in incoming scope
-   * @param locals columns added in current scope
-   * @param imports columns imported from incoming scope
-   * @param fragments sequence of fragments created so far
-   */
-  private case class State(
-    incoming: Seq[String],
-    locals: Seq[String],
-    imports: Seq[String],
-    fragments: Seq[Fragment] = Seq.empty
-  ) {
-
-    def columns: Columns = Columns(
-      incoming = incoming,
-      local = locals,
-      imports = imports,
-      output = Seq.empty,
-    )
-
-    def append(frag: Fragment): State =
-      copy(
-        incoming = frag.columns.output,
-        locals = frag.columns.output,
-        imports = Seq.empty,
-        fragments = fragments :+ frag,
-      )
-  }
-
   private def fragment(
+    input: Fragment,
     part: ast.QueryPart,
-    incoming: Seq[String],
-    local: Seq[String],
-    use: Option[ast.UseGraph]
   ): Fragment = part match {
+    case sq: ast.SingleQuery =>
+      val parts = partitioned(sq.clauses)
+      parts.foldLeft(input) {
+
+        case (in: Init, Right(clauses)) =>
+          // Input is Init which means that we are at the start of a chain
+          val graph = leadingUse(sq).getOrElse(in.graph)
+          Leaf(Init(graph, in.argumentColumns, sq.importColumns), clauses, produced(clauses))
+
+        case (in, Right(clauses)) =>
+          // Section of clauses in the middle of a query
+          Leaf(in, clauses, produced(clauses))
+
+        case (in, Left(subquery)) =>
+          // Recurse and start the child chain with Init
+          Apply(in, fragment(Init(in.graph, in.outputColumns, Seq.empty), subquery.part))
+      }
 
     case uq: ast.Union =>
-      val lhs = fragment(uq.part, incoming, local, use)
-      val rhs = fragment(uq.query, incoming, local, use)
-      val distinct = uq match {
-        case _: ast.UnionAll      => false
-        case _: ast.UnionDistinct => true
-      }
-      Union(distinct, lhs, rhs, rhs.columns)
-
-    case sq: ast.SingleQuery =>
-      val imports = sq.importColumns
-      val localUse = leadingUse(sq).orElse(use)
-      val parts = partitioned(sq.clauses)
-      val initial = State(incoming, local, imports)
-
-      val result = parts.foldLeft(initial) {
-
-        // A segment of normal clauses -> a leaf
-        case (state, Right(clauses)) =>
-          val leaf = Leaf(
-            use = localUse,
-            clauses = clauses.filterNot(_.isInstanceOf[ast.UseGraph]),
-            columns = state.columns.copy(
-              output = produced(clauses.last),
-            )
-          )
-          state.append(Fragment.Direct(leaf, leaf.columns))
-
-        // A subquery -> recurse
-        case (state, Left(sub)) =>
-          if (localUse.isDefined)
-            Errors.syntax("Nested subqueries in remote query-parts is not supported", queryString, sub.position)
-
-          val frag = fragment(
-            part = sub.part,
-            incoming = state.incoming,
-            local = Seq.empty,
-            use = localUse
-          )
-          state.append(Fragment.Apply(
-            frag,
-            state.columns.copy(
-              imports = Seq.empty,
-              output = Columns.combine(state.locals, frag.columns.output),
-            )
-          ))
-      }
-
-      result.fragments match {
-        case Seq(single) => single
-        case many        => Chain(
-          fragments = many,
-          columns = Columns(
-            incoming = incoming,
-            local = local,
-            imports = imports,
-            output = many.last.columns.output,
-          )
-        )
-      }
+      Union(isDistinct(uq), fragment(input, uq.part), fragment(input, uq.query), input)
   }
 
-  private def leadingUse(sq: ast.SingleQuery): Option[ast.UseGraph] = {
+  private def isDistinct(uq: ast.Union) =
+    uq match {
+      case _: ast.UnionAll      => false
+      case _: ast.UnionDistinct => true
+    }
+
+  private def leadingUse(sq: ast.SingleQuery): Option[ast.GraphSelection] = {
     val clauses = sq.clausesExceptImportWith
     val (use, rest) = clauses.headOption match {
       case Some(u: ast.UseGraph) => (Some(u), clauses.tail)
@@ -135,6 +74,12 @@ class FabricFragmenter(
 
     use
   }
+
+  def defaultUse(graphName: String, pos: InputPosition) =
+    UseGraph(Variable(graphName)(pos))(pos)
+
+  private def produced(clauses: Seq[ast.Clause]): Seq[String] =
+    produced(clauses.last)
 
   private def produced(clause: ast.Clause): Seq[String] = clause match {
     case r: ast.Return => r.returnColumns.map(_.name)

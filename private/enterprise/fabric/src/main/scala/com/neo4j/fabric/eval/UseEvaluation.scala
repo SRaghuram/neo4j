@@ -21,6 +21,7 @@ import org.neo4j.kernel.api.procedure.GlobalProcedures
 import org.neo4j.values.AnyValue
 import org.neo4j.values.virtual.MapValue
 import com.neo4j.fabric.util.Rewritten.RewritingOps
+import org.neo4j.cypher.internal.ast.GraphSelection
 
 import scala.collection.JavaConverters.mapAsScalaMapConverter
 import scala.collection.mutable
@@ -35,20 +36,20 @@ case class UseEvaluation(
 
   def evaluate(
     originalStatement: String,
-    use: UseGraph,
+    graphSelection: GraphSelection,
     parameters: MapValue,
     context: java.util.Map[String, AnyValue]
   ): Catalog.Graph =
-    evaluate(originalStatement, use, parameters, context.asScala)
+    evaluate(originalStatement, graphSelection, parameters, context.asScala)
 
   def evaluate(
     originalStatement: String,
-    use: UseGraph,
+    graphSelection: GraphSelection,
     parameters: MapValue,
     context: mutable.Map[String, AnyValue]
-  ): Catalog.Graph = Errors.errorContext(originalStatement, use) {
+  ): Catalog.Graph = Errors.errorContext(originalStatement, graphSelection) {
 
-    use.expression match {
+    graphSelection.expression match {
       case v: Variable =>
         catalog.resolve(nameFromVar(v))
 
