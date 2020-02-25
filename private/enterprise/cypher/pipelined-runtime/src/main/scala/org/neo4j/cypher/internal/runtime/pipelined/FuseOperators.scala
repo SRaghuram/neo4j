@@ -96,6 +96,8 @@ import org.neo4j.cypher.internal.runtime.pipelined.operators.RelationshipCountFr
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SeekExpression
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelLimitOperatorTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelLimitOperatorTaskTemplate.SerialTopLevelLimitStateFactory
+import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelSkipOperatorTaskTemplate
+import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelSkipOperatorTaskTemplate.SerialTopLevelSkipStateFactory
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SingleExactSeekQueryNodeIndexSeekTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SingleNodeByIdSeekTaskTemplate
 import org.neo4j.cypher.internal.runtime.pipelined.operators.SingleRangeSeekQueryNodeIndexSeekTaskTemplate
@@ -932,6 +934,20 @@ class FuseOperators(operatorFactory: OperatorFactory,
               fusedPlans = nextPlan :: acc.fusedPlans,
               argumentStates = (argumentStateMapId, SerialTopLevelLimitStateFactory) :: acc.argumentStates
             )
+
+          // Special case for limit when not nested under an apply and with serial execution
+          case plan@Skip(_, countExpression) if hasNoNestedArguments(plan) && serialExecutionOnly =>
+            val argumentStateMapId = operatorFactory.executionGraphDefinition.findArgumentStateMapForPlan(plan.id)
+            val newTemplate = new SerialTopLevelSkipOperatorTaskTemplate(acc.template,
+                                                                          plan.id,
+                                                                          innermostTemplate,
+                                                                          argumentStateMapId,
+                                                                          compileExpression(countExpression))(expressionCompiler)
+            acc.copy(
+              template = newTemplate,
+              fusedPlans = nextPlan :: acc.fusedPlans,
+              argumentStates = (argumentStateMapId, SerialTopLevelSkipStateFactory) :: acc.argumentStates
+              )
 
           case _ =>
             cantHandle(acc, nextPlan)

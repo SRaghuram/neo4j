@@ -7,17 +7,43 @@ package org.neo4j.cypher.internal.runtime.pipelined.operators
 
 import java.util.concurrent.atomic.AtomicLong
 
+import org.neo4j.codegen.api.Field
+import org.neo4j.codegen.api.InstanceField
+import org.neo4j.codegen.api.IntermediateRepresentation
+import org.neo4j.codegen.api.IntermediateRepresentation.assign
+import org.neo4j.codegen.api.IntermediateRepresentation.block
+import org.neo4j.codegen.api.IntermediateRepresentation.cast
+import org.neo4j.codegen.api.IntermediateRepresentation.condition
+import org.neo4j.codegen.api.IntermediateRepresentation.constant
+import org.neo4j.codegen.api.IntermediateRepresentation.field
+import org.neo4j.codegen.api.IntermediateRepresentation.invoke
+import org.neo4j.codegen.api.IntermediateRepresentation.invokeStatic
+import org.neo4j.codegen.api.IntermediateRepresentation.load
+import org.neo4j.codegen.api.IntermediateRepresentation.loadField
+import org.neo4j.codegen.api.IntermediateRepresentation.method
+import org.neo4j.codegen.api.IntermediateRepresentation.variable
+import org.neo4j.codegen.api.LocalVariable
+import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
+import org.neo4j.cypher.internal.physicalplanning.TopLevelArgument
 import org.neo4j.cypher.internal.runtime.CypherRow
 import org.neo4j.cypher.internal.runtime.NoMemoryTracker
 import org.neo4j.cypher.internal.runtime.QueryContext
+import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.Expression
 import org.neo4j.cypher.internal.runtime.interpreted.commands.expressions.NumericHelper
+import org.neo4j.cypher.internal.runtime.pipelined.OperatorExpressionCompiler
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryResources
 import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
+import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
+import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.WorkCanceller
 import org.neo4j.cypher.internal.runtime.slotted.SlottedQueryState
+import org.neo4j.cypher.internal.util.attribution.Id
 import org.neo4j.exceptions.InvalidArgumentException
 import org.neo4j.internal.kernel.api.IndexReadSession
+import org.neo4j.util.Preconditions
 import org.neo4j.values.AnyValue
 import org.neo4j.values.storable.FloatingPointValue
 
@@ -91,10 +117,129 @@ object CountingState {
 }
 
 /**
+  * This CountingState is intended for use with serial top level generated codegen templates.
+  *
+  * For example the SerialTopLevelLimitState (x) while be used in the following way from compiled code:
+  *
+  * {{{
+  *   def operate() {
+  *     if (x.isUnitialized) x.setCount(<THE_LIMIT_COUNT>) // setCount happens once
+  *     val reserved = x.reserve(<RESERVE_NBR>) // we don't know how many rows we'll get yet, so just
+  *                                             // reserve some number. Note that reserve itself does
+  *                                             // not modify the state, that only happens on update.
+  *
+  *     val countLeft = reserved
+  *     ...
+  *       countLeft -= 1
+  *     ...
+  *
+  *     x.update(reserved - countLeft) // Before returning we update the state.
+  *   }
+  * }}}
+  */
+abstract class SerialTopLevelCountingState extends CountingState {
+
+  protected def getCount: Long
+  protected def setCount(count: Long): Unit
+
+  // True iff initialize has never been called
+  def isUninitialized: Boolean = getCount == -1L
+
+  // Initialize the count. Intended to be called only once.
+  def initialize(count: Long): Unit = {
+    Preconditions.checkState(isUninitialized, "Can only call initialize once")
+    setCount(count)
+  }
+
+  // Update this state with the number of rows that passed the limit.
+  def update(usedCount: Long): Unit = {
+    Preconditions.checkState(usedCount >= 0, "Can not have used a negative number of rows")
+    val newCount = getCount - usedCount
+    Preconditions.checkState(newCount >= 0, "Used more rows than had count left")
+    setCount(newCount)
+  }
+
+  override def reserve(wanted: Long): Long = {
+    val count = getCount
+    Preconditions.checkState(count != -1, "SerialTopLevelLimitState has not been initialized")
+    math.min(count, wanted)
+  }
+}
+
+/**
   * Query-wide row count for the rows from one argumentRowId.
   */
 abstract class CountingState extends WorkCanceller {
   def reserve(wanted: Long): Long
 
   protected def getCount: Long
+}
+
+/**
+  * This is a (common) special case used when not nested under an apply, so we do not need to worry about the argument state map.
+  * It also needs to be run either single threaded execution or in a serial pipeline (i.e. the final produce pipeline) in parallel execution,
+  * since it does not synchronize the skip count between tasks.
+  */
+abstract class SerialTopLevelCountingOperatorTaskTemplate(val inner: OperatorTaskTemplate,
+                                                          override val id: Id,
+                                                          innermost: DelegateOperatorTaskTemplate,
+                                                          argumentStateMapId: ArgumentStateMapId,
+                                                          generateCountExpression: () => IntermediateExpression,
+                                                          protected val codeGen: OperatorExpressionCompiler)
+  extends OperatorTaskTemplate {
+
+
+  private var countExpression: IntermediateExpression = _
+  protected val countLeftVar: LocalVariable = variable[Long](codeGen.namer.nextVariableName("countLeft"), constant(0L))
+  protected val reservedVar: LocalVariable = variable[Long](codeGen.namer.nextVariableName("reserved"), constant(0L))
+  protected val countingStateField: InstanceField = field[SerialTopLevelCountingState](codeGen.namer.nextVariableName("countState"),
+                                                                                       // Get the skip operator state from the ArgumentStateMaps that is passed to the constructor
+                                                                                       // We do not generate any checks or error handling code, so the runtime compiler is responsible for this fitting together perfectly
+                                                                                       cast[SerialTopLevelCountingState](
+                                                                    invoke(
+                                                                      invoke(load(
+                                                                        ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER.name),
+                                                                             method[ArgumentStateMaps, ArgumentStateMap[_ <: ArgumentState], Int](
+                                                                               "applyByIntId"),
+                                                                             constant(argumentStateMapId.x)),
+                                                                      method[ArgumentStateMap[_ <: ArgumentState], ArgumentState, Long](
+                                                                        "peek"),
+                                                                      constant(TopLevelArgument.VALUE)
+                                                                      )
+                                                                    ))
+
+  override def genInit: IntermediateRepresentation = inner.genInit
+
+  override def genExpressions: Seq[IntermediateExpression] = Seq(countExpression)
+
+  override def genOperateEnter: IntermediateRepresentation = {
+    if (countExpression == null) {
+      countExpression = generateCountExpression()
+    }
+
+    // Initialize the state
+    // NOTE: We would typically prefer to do this in the constructor, but that is called using reflection, and the error handling
+    // does not work so well when exceptions are thrown from evaluateCountValue (which can be expected due to it performing user error checking!)
+    block(
+      condition(invoke(loadField(countingStateField), method[SerialTopLevelCountingState, Boolean]("isUninitialized")))(
+        invoke(loadField(countingStateField), method[SerialTopLevelCountingState, Unit, Long]("initialize"),
+               invokeStatic(method[CountingState, Long, AnyValue]("evaluateCountValue"), countExpression.ir))
+        ),
+      assign(reservedVar, invoke(loadField(countingStateField), method[CountingState, Long, Long]("reserve"), howMuchToReserve)),
+      assign(countLeftVar, load(reservedVar)),
+      inner.genOperateEnter
+      )
+  }
+
+  protected def howMuchToReserve: IntermediateRepresentation
+
+  override def genLocalVariables: Seq[LocalVariable] = Seq(countLeftVar, reservedVar)
+
+  override def genFields: Seq[Field] = Seq(countingStateField)
+
+  override def genCanContinue: Option[IntermediateRepresentation] = inner.genCanContinue
+
+  override def genCloseCursors: IntermediateRepresentation = inner.genCloseCursors
+
+  override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = inner.genSetExecutionEvent(event)
 }

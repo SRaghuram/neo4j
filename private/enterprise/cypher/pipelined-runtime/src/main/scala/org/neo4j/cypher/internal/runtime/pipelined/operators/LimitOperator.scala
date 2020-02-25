@@ -5,7 +5,6 @@
  */
 package org.neo4j.cypher.internal.runtime.pipelined.operators
 
-import org.neo4j.codegen.api.Field
 import org.neo4j.codegen.api.IntermediateRepresentation
 import org.neo4j.codegen.api.IntermediateRepresentation.assign
 import org.neo4j.codegen.api.IntermediateRepresentation.block
@@ -13,19 +12,14 @@ import org.neo4j.codegen.api.IntermediateRepresentation.cast
 import org.neo4j.codegen.api.IntermediateRepresentation.condition
 import org.neo4j.codegen.api.IntermediateRepresentation.constant
 import org.neo4j.codegen.api.IntermediateRepresentation.equal
-import org.neo4j.codegen.api.IntermediateRepresentation.field
 import org.neo4j.codegen.api.IntermediateRepresentation.greaterThan
 import org.neo4j.codegen.api.IntermediateRepresentation.invoke
-import org.neo4j.codegen.api.IntermediateRepresentation.invokeStatic
 import org.neo4j.codegen.api.IntermediateRepresentation.load
 import org.neo4j.codegen.api.IntermediateRepresentation.loadField
 import org.neo4j.codegen.api.IntermediateRepresentation.method
 import org.neo4j.codegen.api.IntermediateRepresentation.setField
 import org.neo4j.codegen.api.IntermediateRepresentation.subtract
-import org.neo4j.codegen.api.IntermediateRepresentation.variable
-import org.neo4j.codegen.api.LocalVariable
 import org.neo4j.cypher.internal.physicalplanning.ArgumentStateMapId
-import org.neo4j.cypher.internal.physicalplanning.TopLevelArgument
 import org.neo4j.cypher.internal.profiling.OperatorProfileEvent
 import org.neo4j.cypher.internal.runtime.QueryContext
 import org.neo4j.cypher.internal.runtime.compiled.expressions.IntermediateExpression
@@ -39,21 +33,15 @@ import org.neo4j.cypher.internal.runtime.pipelined.execution.QueryState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CountingState.ConcurrentCountingState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CountingState.StandardCountingState
 import org.neo4j.cypher.internal.runtime.pipelined.operators.CountingState.evaluateCountValue
-import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.OUTPUT_COUNTER
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.OUTPUT_MORSEL
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.SHOULD_BREAK
 import org.neo4j.cypher.internal.runtime.pipelined.operators.OperatorCodeGenHelperTemplates.profileRows
-import org.neo4j.cypher.internal.runtime.pipelined.operators.SerialTopLevelLimitOperatorTaskTemplate.SerialTopLevelLimitState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap
-import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentState
 import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateFactory
-import org.neo4j.cypher.internal.runtime.pipelined.state.ArgumentStateMap.ArgumentStateMaps
 import org.neo4j.cypher.internal.runtime.pipelined.state.StateFactory
 import org.neo4j.cypher.internal.runtime.scheduling.WorkIdentity
 import org.neo4j.cypher.internal.util.attribution.Id
-import org.neo4j.util.Preconditions
-import org.neo4j.values.AnyValue
 
 object LimitOperator {
 
@@ -120,65 +108,13 @@ class LimitOperator(argumentStateMapId: ArgumentStateMapId,
  * It also needs to be run either single threaded execution or in a serial pipeline (i.e. the final produce pipeline) in parallel execution,
  * since it does not synchronize the limit count between tasks.
  */
-class SerialTopLevelLimitOperatorTaskTemplate(val inner: OperatorTaskTemplate,
-                                              override val id: Id,
+class SerialTopLevelLimitOperatorTaskTemplate(inner: OperatorTaskTemplate,
+                                              id: Id,
                                               innermost: DelegateOperatorTaskTemplate,
                                               argumentStateMapId: ArgumentStateMapId,
                                               generateCountExpression: () => IntermediateExpression)
-                                             (protected val codeGen: OperatorExpressionCompiler) extends OperatorTaskTemplate {
-
-
-  private var countExpression: IntermediateExpression = _
-  private val countLeftVar: LocalVariable = variable[Long](codeGen.namer.nextVariableName("countLeft"), constant(0L))
-  private val reservedVar: LocalVariable = variable[Long](codeGen.namer.nextVariableName("reserved"), constant(0L))
-  private val limitStateField = field[SerialTopLevelLimitState](codeGen.namer.nextVariableName("limitState"),
-    // Get the limit operator state from the ArgumentStateMaps that is passed to the constructor
-    // We do not generate any checks or error handling code, so the runtime compiler is responsible for this fitting together perfectly
-    cast[SerialTopLevelLimitState](
-      invoke(
-        invoke(load(ARGUMENT_STATE_MAPS_CONSTRUCTOR_PARAMETER.name), method[ArgumentStateMaps, ArgumentStateMap[_ <: ArgumentState], Int]("applyByIntId"),
-          constant(argumentStateMapId.x)),
-        method[ArgumentStateMap[_ <: ArgumentState], ArgumentState, Long]("peek"),
-        constant(TopLevelArgument.VALUE)
-      )
-    )
-  )
-
-  override def genInit: IntermediateRepresentation = inner.genInit
-
-  override def genExpressions: Seq[IntermediateExpression] = Seq(countExpression)
-
-  override def genOperateEnter: IntermediateRepresentation = {
-    if (countExpression == null) {
-      countExpression = generateCountExpression()
-    }
-
-    val howMuchToReserve: IntermediateRepresentation =
-      if (innermost.shouldWriteToContext) {
-        // Use the available output morsel rows to determine our maximum chunk of the total limit
-        cast[Long](invoke(OUTPUT_MORSEL, method[Morsel, Int]("numberOfRows")))
-      } else if (innermost.shouldCheckOutputCounter) {
-        // Use the output counter to determine our maximum chunk of the total limit
-        cast[Long](load(OUTPUT_COUNTER))
-      } else {
-        // We do not seem to have any bound on the output of this task (i.e. we are the final produce result pipeline task)
-        // Reserve as much as we can get
-        constant(Long.MaxValue)
-      }
-
-    // Initialize the limit state
-    // NOTE: We would typically prefer to do this in the constructor, but that is called using reflection, and the error handling
-    // does not work so well when exceptions are thrown from evaluateCountValue (which can be expected due to it performing user error checking!)
-    block(
-      condition(invoke(loadField(limitStateField), method[SerialTopLevelLimitState, Boolean]("isUninitialized")))(
-        invoke(loadField(limitStateField), method[SerialTopLevelLimitState, Unit, Long]("initialize"),
-          invokeStatic(method[CountingState, Long, AnyValue]("evaluateCountValue"), countExpression.ir))
-      ),
-      assign(reservedVar, invoke(loadField(limitStateField), method[CountingState, Long, Long]("reserve"), howMuchToReserve)),
-      assign(countLeftVar, load(reservedVar)),
-      inner.genOperateEnter
-    )
-  }
+                                             (codeGen: OperatorExpressionCompiler)
+  extends SerialTopLevelCountingOperatorTaskTemplate(inner, id, innermost, argumentStateMapId, generateCountExpression, codeGen) {
 
   override def genOperate: IntermediateRepresentation = {
     block(
@@ -197,98 +133,53 @@ class SerialTopLevelLimitOperatorTaskTemplate(val inner: OperatorTaskTemplate,
 
   override def genOperateExit: IntermediateRepresentation = {
     block(
-      invoke(loadField(limitStateField), method[SerialTopLevelLimitState, Unit, Long]("update"), subtract(load(reservedVar), load(countLeftVar))),
+      invoke(loadField(countingStateField),
+             method[SerialTopLevelCountingState, Unit, Long]("update"),
+             subtract(load(reservedVar), load(countLeftVar))),
       profileRows(id, cast[Int](subtract(load(reservedVar), load(countLeftVar)))),
       condition(greaterThan(load(reservedVar), constant(0L)))(
         setField(SHOULD_BREAK, constant(false))
         ),
       inner.genOperateExit
-    )
+      )
   }
 
-  override def genLocalVariables: Seq[LocalVariable] = Seq(countLeftVar, reservedVar)
-
-  override def genFields: Seq[Field] = Seq(limitStateField)
-
-  override def genCanContinue: Option[IntermediateRepresentation] = inner.genCanContinue
-
-  override def genCloseCursors: IntermediateRepresentation = inner.genCloseCursors
-
-  override def genSetExecutionEvent(event: IntermediateRepresentation): IntermediateRepresentation = inner.genSetExecutionEvent(event)
+  override protected def howMuchToReserve: IntermediateRepresentation = {
+    if (innermost.shouldWriteToContext) {
+      // Use the available output morsel rows to determine our maximum chunk of the total limit
+      cast[Long](invoke(OUTPUT_MORSEL, method[Morsel, Int]("numberOfRows")))
+    } else if (innermost.shouldCheckOutputCounter) {
+      // Use the output counter to determine our maximum chunk of the total limit
+      cast[Long](load(OUTPUT_COUNTER))
+    } else {
+      // We do not seem to have any bound on the output of this task (i.e. we are the final produce result pipeline task)
+      // Reserve as much as we can get
+      constant(Long.MaxValue)
+    }
+  }
 }
 
 object SerialTopLevelLimitOperatorTaskTemplate {
 
-  /**
-   * This LimitState is intended for use with `SerialTopLevelLimitOperatorTaskTemplate`.
-   *
-   * The SerialTopLevelLimitState (x) while be used in the following way from compiled code:
-   *
-   * {{{
-   *   def operate() {
-   *     if (x.isUnitialized) x.setCount(<THE_LIMIT_COUNT>) // setCount happens once
-   *     val reserved = x.reserve(<RESERVE_NBR>) // we don't know how many rows we'll get yet, so just
-   *                                             // reserve some number. Note that reserve itself does
-   *                                             // not modify the state, that only happens on update.
-   *
-   *     val countLeft = reserved
-   *     ...
-   *       countLeft -= 1
-   *     ...
-   *
-   *     x.update(reserved - countLeft) // Before returning we update the state.
-   *   }
-   * }}}
-   */
-  abstract class SerialTopLevelLimitState extends CountingState {
-
-    protected def getCount: Long
-    protected def setCount(count: Long): Unit
-
-    // True iff initialize has never been called
-    def isUninitialized: Boolean = getCount == -1L
-
-    // Initialize the count. Intended to be called only once.
-    def initialize(count: Long): Unit = {
-      Preconditions.checkState(isUninitialized, "Can only call initialize once")
-      setCount(count)
-    }
-
-    // Update this state with the number of rows that passed the limit.
-    def update(usedCount: Long): Unit = {
-      Preconditions.checkState(usedCount >= 0, "Can not have used a negative number of rows")
-      val newCount = getCount - usedCount
-      Preconditions.checkState(newCount >= 0, "Used more rows than had count left")
-      setCount(newCount)
-    }
-
-    override def reserve(wanted: Long): Long = {
-      val count = getCount
-      Preconditions.checkState(count != -1, "SerialTopLevelLimitState has not been initialized")
-      math.min(count, wanted)
-    }
-
-    override def isCancelled: Boolean = getCount == 0
-  }
-
   // This is used by fused limit in a serial pipeline, i.e. only safe to use in single-threaded execution or by a serial pipeline in parallel execution
-  object SerialTopLevelLimitStateFactory extends ArgumentStateFactory[SerialTopLevelLimitState] {
-    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): SerialTopLevelLimitState =
+  object SerialTopLevelLimitStateFactory extends ArgumentStateFactory[SerialTopLevelCountingState] {
+    override def newStandardArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): SerialTopLevelCountingState =
       new StandardSerialTopLevelLimitState(argumentRowId, argumentRowIdsForReducers)
 
-    override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): SerialTopLevelLimitState =
+    override def newConcurrentArgumentState(argumentRowId: Long, argumentMorsel: MorselReadCursor, argumentRowIdsForReducers: Array[Long]): SerialTopLevelCountingState =
     // NOTE: This is actually _not_ threadsafe and only safe to use in a serial pipeline!
       new VolatileSerialTopLevelLimitState(argumentRowId, argumentRowIdsForReducers)
   }
 
   class StandardSerialTopLevelLimitState(override val argumentRowId: Long,
-                                         override val argumentRowIdsForReducers: Array[Long]) extends SerialTopLevelLimitState {
+                                         override val argumentRowIdsForReducers: Array[Long]) extends SerialTopLevelCountingState {
 
     private var countLeft: Long = -1L
 
     override protected def getCount: Long = countLeft
     override protected def setCount(count: Long): Unit = countLeft = count
     override def toString: String = s"StandardSerialTopLevelLimitState($argumentRowId, countLeft=$countLeft)"
+    override def isCancelled: Boolean = getCount == 0
   }
 
   /**
@@ -297,12 +188,13 @@ object SerialTopLevelLimitOperatorTaskTemplate {
    * to be accessed in serial.
    */
   class VolatileSerialTopLevelLimitState(override val argumentRowId: Long,
-                                         override val argumentRowIdsForReducers: Array[Long]) extends SerialTopLevelLimitState {
+                                         override val argumentRowIdsForReducers: Array[Long]) extends SerialTopLevelCountingState {
 
     @volatile private var countLeft: Long = -1L
 
     override protected def getCount: Long = countLeft
     override protected def setCount(count: Long): Unit = countLeft = count
     override def toString: String = s"VolatileSerialTopLevelLimitState($argumentRowId, countLeft=$countLeft)"
+    override def isCancelled: Boolean = getCount == 0
   }
 }
