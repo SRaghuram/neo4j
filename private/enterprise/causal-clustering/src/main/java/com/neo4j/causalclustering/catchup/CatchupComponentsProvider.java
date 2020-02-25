@@ -31,6 +31,7 @@ import org.neo4j.graphdb.factory.module.GlobalModule;
 import org.neo4j.internal.helpers.ExponentialBackoffStrategy;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.kernel.database.DatabaseTracers;
 import org.neo4j.kernel.lifecycle.LifeSupport;
 import org.neo4j.logging.LogProvider;
 import org.neo4j.logging.internal.DatabaseLogProvider;
@@ -80,7 +81,8 @@ public final class CatchupComponentsProvider
         this.catchupClientFactory = createCatchupClientFactory();
         this.portRegister = globalModule.getConnectorPortRegister();
         this.storageEngineFactory = globalModule.getStorageEngineFactory();
-        this.copiedStoreRecovery = globalLife.add( new CopiedStoreRecovery( pageCache, fileSystem, globalModule.getStorageEngineFactory() ) );
+        this.copiedStoreRecovery = globalLife.add(
+                new CopiedStoreRecovery( pageCache, new DatabaseTracers( globalModule.getTracers() ), fileSystem, globalModule.getStorageEngineFactory() ) );
         this.storeCopyBackoffStrategy = new ExponentialBackoffStrategy( 1,
                 config.get( CausalClusteringSettings.store_copy_backoff_max_wait ).toMillis(), TimeUnit.MILLISECONDS );
     }

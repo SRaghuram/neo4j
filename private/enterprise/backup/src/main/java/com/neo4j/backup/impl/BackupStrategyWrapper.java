@@ -13,7 +13,9 @@ import org.neo4j.configuration.helpers.SocketAddress;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.kernel.database.DatabaseTracers;
 import org.neo4j.kernel.lifecycle.Lifespan;
+import org.neo4j.kernel.monitoring.tracing.Tracers;
 import org.neo4j.kernel.recovery.Recovery;
 import org.neo4j.logging.Log;
 import org.neo4j.logging.LogProvider;
@@ -157,7 +159,7 @@ class BackupStrategyWrapper
     {
         try
         {
-            Recovery.performRecovery( fs, pageCache, config, backupLayout );
+            Recovery.performRecovery( fs, pageCache, DatabaseTracers.EMPTY, config, backupLayout );
         }
         catch ( IOException e )
         {

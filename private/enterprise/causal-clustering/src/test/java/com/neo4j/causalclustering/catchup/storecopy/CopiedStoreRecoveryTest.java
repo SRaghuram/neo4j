@@ -13,19 +13,21 @@ import org.neo4j.configuration.Config;
 import org.neo4j.io.fs.EphemeralFileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.kernel.database.DatabaseTracers;
 import org.neo4j.storageengine.api.StorageEngineFactory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
+import static org.neo4j.storageengine.api.StorageEngineFactory.selectStorageEngine;
 
 class CopiedStoreRecoveryTest
 {
     @Test
     void shouldThrowIfAlreadyShutdown()
     {
-        CopiedStoreRecovery copiedStoreRecovery = new CopiedStoreRecovery( mock( PageCache.class ), new EphemeralFileSystemAbstraction(),
-                StorageEngineFactory.selectStorageEngine() );
+        CopiedStoreRecovery copiedStoreRecovery = new CopiedStoreRecovery( mock( PageCache.class ), DatabaseTracers.EMPTY,
+                new EphemeralFileSystemAbstraction(), selectStorageEngine() );
         copiedStoreRecovery.shutdown();
 
         Exception exception = assertThrows( Exception.class,

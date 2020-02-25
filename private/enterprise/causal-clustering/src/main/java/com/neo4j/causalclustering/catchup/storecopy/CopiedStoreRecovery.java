@@ -13,6 +13,7 @@ import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.io.fs.FileSystemAbstraction;
 import org.neo4j.io.layout.DatabaseLayout;
 import org.neo4j.io.pagecache.PageCache;
+import org.neo4j.kernel.database.DatabaseTracers;
 import org.neo4j.kernel.impl.store.format.standard.Standard;
 import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.neo4j.logging.internal.NullLogService;
@@ -29,14 +30,16 @@ import static org.neo4j.kernel.recovery.Recovery.performRecovery;
 public class CopiedStoreRecovery extends LifecycleAdapter
 {
     private final PageCache pageCache;
+    private final DatabaseTracers databaseTracers;
     private final FileSystemAbstraction fs;
     private final StorageEngineFactory storageEngineFactory;
 
     private boolean shutdown;
 
-    public CopiedStoreRecovery( PageCache pageCache, FileSystemAbstraction fs, StorageEngineFactory storageEngineFactory )
+    public CopiedStoreRecovery( PageCache pageCache, DatabaseTracers databaseTracers, FileSystemAbstraction fs, StorageEngineFactory storageEngineFactory )
     {
         this.pageCache = pageCache;
+        this.databaseTracers = databaseTracers;
         this.fs = fs;
         this.storageEngineFactory = storageEngineFactory;
     }
@@ -74,7 +77,7 @@ public class CopiedStoreRecovery extends LifecycleAdapter
 
         try
         {
-            performRecovery( fs, pageCache, config, databaseLayout, storageEngineFactory );
+            performRecovery( fs, pageCache, databaseTracers, config, databaseLayout, storageEngineFactory );
         }
         catch ( Exception e )
         {
