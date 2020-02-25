@@ -61,6 +61,9 @@ class SlottedPrimitiveGroupingAggTable(slots: SlotConfiguration,
 
   private def createResultRow(groupingKey: LongArray, aggregateFunctions: Seq[AggregationFunction]): CypherRow = {
     val row = SlottedRow(slots)
+    if (state.initialContext.nonEmpty) {
+      state.initialContext.get.copyTo(row)
+    }
     projectGroupingKey(row, groupingKey)
     var i = 0
     while (i < aggregateFunctions.length) {

@@ -22,7 +22,6 @@ import org.neo4j.cypher.internal.logical.plans.AssertSameNode
 import org.neo4j.cypher.internal.logical.plans.CartesianProduct
 import org.neo4j.cypher.internal.logical.plans.ConditionalApply
 import org.neo4j.cypher.internal.logical.plans.Create
-import org.neo4j.cypher.internal.logical.plans.CrossApply
 import org.neo4j.cypher.internal.logical.plans.DeleteExpression
 import org.neo4j.cypher.internal.logical.plans.DeleteNode
 import org.neo4j.cypher.internal.logical.plans.DeletePath
@@ -134,7 +133,6 @@ import org.neo4j.cypher.internal.runtime.slotted.pipes.ConditionalApplySlottedPi
 import org.neo4j.cypher.internal.runtime.slotted.pipes.CreateNodeSlottedCommand
 import org.neo4j.cypher.internal.runtime.slotted.pipes.CreateRelationshipSlottedCommand
 import org.neo4j.cypher.internal.runtime.slotted.pipes.CreateSlottedPipe
-import org.neo4j.cypher.internal.runtime.slotted.pipes.CrossApplySlottedPipe
 import org.neo4j.cypher.internal.runtime.slotted.pipes.DistinctSlottedPipe
 import org.neo4j.cypher.internal.runtime.slotted.pipes.DistinctSlottedPrimitivePipe
 import org.neo4j.cypher.internal.runtime.slotted.pipes.DistinctSlottedSinglePrimitivePipe
@@ -491,11 +489,6 @@ class SlottedPipeMapper(fallback: PipeMapper,
     val pipe = plan match {
       case Apply(_, _) =>
         ApplySlottedPipe(lhs, rhs)(id)
-
-      case CrossApply(lhsPlan, rhsPlan) =>
-        val rhsArgumentSize = physicalPlan.argumentSizes(rhsPlan.leftmostLeaf.id)
-        val lhsSlots = slotConfigs(lhsPlan.id)
-        CrossApplySlottedPipe(lhs, rhs, lhsSlots.numberOfLongs, lhsSlots.numberOfReferences, slots, rhsArgumentSize)(id)
 
       case _: AbstractSemiApply |
            _: AbstractSelectOrSemiApply =>

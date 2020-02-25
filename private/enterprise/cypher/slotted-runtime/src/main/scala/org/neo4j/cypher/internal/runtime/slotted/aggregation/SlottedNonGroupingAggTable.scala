@@ -53,6 +53,9 @@ class SlottedNonGroupingAggTable(slots: SlotConfiguration,
 
   protected def resultRow(): CypherRow = {
     val row = SlottedRow(slots)
+    if (state.initialContext.nonEmpty) {
+      state.initialContext.get.copyTo(row)
+    }
     var i = 0
     while (i < aggregationFunctions.length) {
       row.setRefAt(aggregationOffsets(i), aggregationFunctions(i).result(state))

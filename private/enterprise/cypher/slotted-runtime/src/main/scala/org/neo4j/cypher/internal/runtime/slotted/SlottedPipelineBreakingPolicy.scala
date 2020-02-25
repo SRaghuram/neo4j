@@ -7,7 +7,6 @@ package org.neo4j.cypher.internal.runtime.slotted
 
 import org.neo4j.cypher.internal.logical.plans.Aggregation
 import org.neo4j.cypher.internal.logical.plans.CartesianProduct
-import org.neo4j.cypher.internal.logical.plans.CrossApply
 import org.neo4j.cypher.internal.logical.plans.Eager
 import org.neo4j.cypher.internal.logical.plans.Expand
 import org.neo4j.cypher.internal.logical.plans.LeftOuterHashJoin
@@ -49,7 +48,6 @@ object SlottedPipelineBreakingPolicy extends PipelineBreakingPolicy {
 
       // 2 child operators
       case _: CartesianProduct |
-           _: CrossApply |
            _: RightOuterHashJoin |
            _: LeftOuterHashJoin |
            _: NodeHashJoin |
