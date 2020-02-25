@@ -687,7 +687,8 @@ class StandardAccessMode implements AccessMode
                 }
                 else
                 {
-                    throw new IllegalStateException( "Unsupported segment qualifier for " + privilegeName + " privilege: " + segment.getClass().getSimpleName() );
+                    throw new IllegalStateException(
+                            "Unsupported segment qualifier for " + privilegeName + " privilege: " + segment.getClass().getSimpleName() );
                 }
                 break;
             case ALL_PROPERTIES:
@@ -715,7 +716,8 @@ class StandardAccessMode implements AccessMode
                 }
                 else
                 {
-                    throw new IllegalStateException( "Unsupported segment qualifier for " + privilegeName + " privilege: " + segment.getClass().getSimpleName() );
+                    throw new IllegalStateException(
+                            "Unsupported segment qualifier for " + privilegeName + " privilege: " + segment.getClass().getSimpleName() );
                 }
                 break;
             default:
